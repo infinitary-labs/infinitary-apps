@@ -18,6 +18,7 @@ import {
 } from "../personal/panelFiles";
 import { mediatedFetchCallSchema, mediatedFetchResultSchema } from "../plugins/fetch";
 import { frameMountRequestSchema, frameMountSchema } from "../plugins/frameDocument";
+import { actionNameSchema } from "../plugins/manifest";
 import { sqlAnswerSchema, sqlRequestSchema } from "../sql";
 import { type ChannelDeclaration, okSchema } from "./common";
 
@@ -147,6 +148,21 @@ export const panelChannels = {
       personalInvokeOptionsSchema.optional(),
     ]),
     response: panelIntegrationsResponseSchema,
+  },
+  // A panel's change to one app setting on the captain's own press in it
+  // (docs/ui-plugins.md, "Changing settings"): the core reads the panel's
+  // grant again, builds the request as the first mate's action line does,
+  // and runs it as the captain, naming the panel on Activity. Only this
+  // computer's own window asks it: a window elsewhere keeps its own look.
+  "inf:plugins:settings:change": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([personalIdSchema, actionNameSchema, z.record(z.string(), z.unknown())]),
+    response: z.discriminatedUnion("ok", [
+      okSchema,
+      z.object({ ok: z.literal(false), text: z.string().min(1) }),
+    ]),
   },
   // The captain's Ask again on a panel's integration call that waits on
   // the captain's approval card or that the captain turned down: the card shows again, or a

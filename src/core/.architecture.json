@@ -1392,6 +1392,11 @@
       "why": "reads panel manifests and contracts"
     },
     {
+      "from": "personal",
+      "to": "pi",
+      "why": "builds a panel's setting change as the first mate's"
+    },
+    {
       "from": "pi",
       "to": "shared",
       "why": "reads providers, sign-in failures and card shapes"

@@ -111,6 +111,9 @@
     "many": "{items} تُرسل مع اختيارك",
     "other": "{items} تُرسل مع اختيارك"
   },
+  "cardConsentChanges": "يغيّر",
+  "cardConsentChangesDetail": "هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.",
+  "cardConsentChangesLine": "يمكنه تغيير إعداد عند نقرك: {setting}",
   "cardConsentFrom": "من",
   "cardConsentFullDetails": "كل التفاصيل",
   "cardConsentGuidanceOnly": "يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.",

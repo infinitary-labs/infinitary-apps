@@ -51,6 +51,7 @@ import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import type { OwnWindow } from "./ownWindow";
+import { panelChange } from "./personal/panelChange";
 import { readPanelGraph } from "./personal/panelGraph";
 import { type PanelLibraryFile, readPanelLibrary } from "./personal/panelLibrary";
 import { answerPhoneAsk, isPhoneAsk, phoneOnly } from "./phoneAsks";
@@ -1526,6 +1527,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.personal.integrationsRequest(extensionId, request, options),
     "inf:plugins:ask-again": (extensionId, integration, action) =>
       services.personal.askAgain(extensionId, integration, action),
+    // A panel's change of a setting it was granted, run as the captain (`personal/panelChange.ts`).
+    "inf:plugins:settings:change": (extensionId, action, value) =>
+      panelChange(
+        outer,
+        (id, name) => services.personal.changeGrant(id, name),
+        extensionId,
+        action,
+        value,
+      ),
   };
 
   const { runOf, trail } = createActionTrail(services, options);
@@ -1617,7 +1627,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     return { ok: true };
   };
 
-  return (<C extends CoreInvokeChannel>(
+  const outer = (<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown,
     actor?: CoreActor,
@@ -1655,6 +1665,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         })
       : answer();
   }) as CoreDispatch;
+  return outer;
 
   function route<C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(
     channel: C,

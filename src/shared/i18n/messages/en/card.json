@@ -83,6 +83,9 @@
     "one": "{items} goes with your choice",
     "other": "{items} go with your choice"
   },
+  "cardConsentChanges": "Changes",
+  "cardConsentChangesDetail": "These settings, each only when you click or press a key in the panel. It never deletes anything.",
+  "cardConsentChangesLine": "Can change a setting when you click: {setting}",
   "cardConsentFrom": "From",
   "cardConsentFullDetails": "Full details",
   "cardConsentGuidanceOnly": "It supplies guidance, HTML parts and pictures, and runs nothing.",

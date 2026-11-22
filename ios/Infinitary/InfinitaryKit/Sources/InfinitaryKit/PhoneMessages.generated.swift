@@ -349,6 +349,9 @@ public enum PhoneMessages {
     public static func `cardCarriedNotes`(`count`: Int) -> String { PhoneWords.format("cardCarriedNotes", [`count`]) }
     public static func `cardCarriedPictures`(`count`: Int) -> String { PhoneWords.format("cardCarriedPictures", [`count`]) }
     public static func `cardCarriedWithChoice`(`count`: Int, `items`: String) -> String { PhoneWords.format("cardCarriedWithChoice", [`count`, `items`]) }
+    public static func `cardConsentChanges`() -> String { PhoneWords.format("cardConsentChanges", []) }
+    public static func `cardConsentChangesDetail`() -> String { PhoneWords.format("cardConsentChangesDetail", []) }
+    public static func `cardConsentChangesLine`(`setting`: String) -> String { PhoneWords.format("cardConsentChangesLine", [`setting`]) }
     public static func `cardConsentFrom`() -> String { PhoneWords.format("cardConsentFrom", []) }
     public static func `cardConsentFullDetails`() -> String { PhoneWords.format("cardConsentFullDetails", []) }
     public static func `cardConsentGuidanceOnly`() -> String { PhoneWords.format("cardConsentGuidanceOnly", []) }
@@ -841,10 +844,12 @@ public enum PhoneMessages {
     public static func `feedBranchPushed`() -> String { PhoneWords.format("feedBranchPushed", []) }
     public static func `feedBuiltInPlace`() -> String { PhoneWords.format("feedBuiltInPlace", []) }
     public static func `feedByCaptain`() -> String { PhoneWords.format("feedByCaptain", []) }
+    public static func `feedByCaptainInPanel`(`panel`: String) -> String { PhoneWords.format("feedByCaptainInPanel", [`panel`]) }
     public static func `feedByFirstMate`() -> String { PhoneWords.format("feedByFirstMate", []) }
     public static func `feedCaptainImage`() -> String { PhoneWords.format("feedCaptainImage", []) }
     public static func `feedCaptainSaid`(`preview`: String) -> String { PhoneWords.format("feedCaptainSaid", [`preview`]) }
     public static func `feedCaptainSet`(`text`: String) -> String { PhoneWords.format("feedCaptainSet", [`text`]) }
+    public static func `feedCaptainSetInPanel`(`panel`: String, `text`: String) -> String { PhoneWords.format("feedCaptainSetInPanel", [`panel`, `text`]) }
     public static func `feedCareQuick`() -> String { PhoneWords.format("feedCareQuick", []) }
     public static func `feedCareReviewed`() -> String { PhoneWords.format("feedCareReviewed", []) }
     public static func `feedCareStandard`() -> String { PhoneWords.format("feedCareStandard", []) }
@@ -1373,6 +1378,68 @@ public enum PhoneMessages {
     public static func `panelBackgroundStopped`() -> String { PhoneWords.format("panelBackgroundStopped", []) }
     public static func `panelBackgroundUpdate`() -> String { PhoneWords.format("panelBackgroundUpdate", []) }
     public static func `panelCardStopped`() -> String { PhoneWords.format("panelCardStopped", []) }
+    public static func `panelChangeAccountPause`() -> String { PhoneWords.format("panelChangeAccountPause", []) }
+    public static func `panelChangeAccountPrefer`() -> String { PhoneWords.format("panelChangeAccountPrefer", []) }
+    public static func `panelChangeAccountRename`() -> String { PhoneWords.format("panelChangeAccountRename", []) }
+    public static func `panelChangeAmbientAway`() -> String { PhoneWords.format("panelChangeAmbientAway", []) }
+    public static func `panelChangeAmbientMusic`() -> String { PhoneWords.format("panelChangeAmbientMusic", []) }
+    public static func `panelChangeAmbientOwnStyle`() -> String { PhoneWords.format("panelChangeAmbientOwnStyle", []) }
+    public static func `panelChangeAutomationEdit`() -> String { PhoneWords.format("panelChangeAutomationEdit", []) }
+    public static func `panelChangeAutomationPauseAll`() -> String { PhoneWords.format("panelChangeAutomationPauseAll", []) }
+    public static func `panelChangeAutomationState`() -> String { PhoneWords.format("panelChangeAutomationState", []) }
+    public static func `panelChangeCardSize`() -> String { PhoneWords.format("panelChangeCardSize", []) }
+    public static func `panelChangeCopyStop`() -> String { PhoneWords.format("panelChangeCopyStop", []) }
+    public static func `panelChangeCostLimit`() -> String { PhoneWords.format("panelChangeCostLimit", []) }
+    public static func `panelChangeCrewModelNames`() -> String { PhoneWords.format("panelChangeCrewModelNames", []) }
+    public static func `panelChangeCrewReasoning`() -> String { PhoneWords.format("panelChangeCrewReasoning", []) }
+    public static func `panelChangeCrewSlots`() -> String { PhoneWords.format("panelChangeCrewSlots", []) }
+    public static func `panelChangeCrewSlotsReset`() -> String { PhoneWords.format("panelChangeCrewSlotsReset", []) }
+    public static func `panelChangeCrewSpeed`() -> String { PhoneWords.format("panelChangeCrewSpeed", []) }
+    public static func `panelChangeDecisionModel`() -> String { PhoneWords.format("panelChangeDecisionModel", []) }
+    public static func `panelChangeDecisionUseOff`() -> String { PhoneWords.format("panelChangeDecisionUseOff", []) }
+    public static func `panelChangeDeviceFixWork`() -> String { PhoneWords.format("panelChangeDeviceFixWork", []) }
+    public static func `panelChangeDeviceKeep`() -> String { PhoneWords.format("panelChangeDeviceKeep", []) }
+    public static func `panelChangeDeviceTryAgain`() -> String { PhoneWords.format("panelChangeDeviceTryAgain", []) }
+    public static func `panelChangeDictation`() -> String { PhoneWords.format("panelChangeDictation", []) }
+    public static func `panelChangeFirstmateAccount`() -> String { PhoneWords.format("panelChangeFirstmateAccount", []) }
+    public static func `panelChangeFirstmateModel`() -> String { PhoneWords.format("panelChangeFirstmateModel", []) }
+    public static func `panelChangeFont`() -> String { PhoneWords.format("panelChangeFont", []) }
+    public static func `panelChangeHomeMoveCancel`() -> String { PhoneWords.format("panelChangeHomeMoveCancel", []) }
+    public static func `panelChangeInboxLink`() -> String { PhoneWords.format("panelChangeInboxLink", []) }
+    public static func `panelChangeIntegrationCheck`() -> String { PhoneWords.format("panelChangeIntegrationCheck", []) }
+    public static func `panelChangeIntegrationSettings`() -> String { PhoneWords.format("panelChangeIntegrationSettings", []) }
+    public static func `panelChangeKeptJobCheck`() -> String { PhoneWords.format("panelChangeKeptJobCheck", []) }
+    public static func `panelChangeLanguage`() -> String { PhoneWords.format("panelChangeLanguage", []) }
+    public static func `panelChangeModelPins`() -> String { PhoneWords.format("panelChangeModelPins", []) }
+    public static func `panelChangeNoDelete`() -> String { PhoneWords.format("panelChangeNoDelete", []) }
+    public static func `panelChangeNotAsked`() -> String { PhoneWords.format("panelChangeNotAsked", []) }
+    public static func `panelChangeNotGranted`(`setting`: String) -> String { PhoneWords.format("panelChangeNotGranted", [`setting`]) }
+    public static func `panelChangeNotifications`() -> String { PhoneWords.format("panelChangeNotifications", []) }
+    public static func `panelChangeOrigin`() -> String { PhoneWords.format("panelChangeOrigin", []) }
+    public static func `panelChangePanel`() -> String { PhoneWords.format("panelChangePanel", []) }
+    public static func `panelChangePanelCollapse`() -> String { PhoneWords.format("panelChangePanelCollapse", []) }
+    public static func `panelChangePersonalResources`() -> String { PhoneWords.format("panelChangePersonalResources", []) }
+    public static func `panelChangePrivateSiteRemove`() -> String { PhoneWords.format("panelChangePrivateSiteRemove", []) }
+    public static func `panelChangeProjectBatchAnswer`() -> String { PhoneWords.format("panelChangeProjectBatchAnswer", []) }
+    public static func `panelChangeProjectMove`() -> String { PhoneWords.format("panelChangeProjectMove", []) }
+    public static func `panelChangeProjectName`() -> String { PhoneWords.format("panelChangeProjectName", []) }
+    public static func `panelChangeProjectRunsOn`() -> String { PhoneWords.format("panelChangeProjectRunsOn", []) }
+    public static func `panelChangeProjectSettings`() -> String { PhoneWords.format("panelChangeProjectSettings", []) }
+    public static func `panelChangeProjectsFolder`() -> String { PhoneWords.format("panelChangeProjectsFolder", []) }
+    public static func `panelChangeRefreshUsage`() -> String { PhoneWords.format("panelChangeRefreshUsage", []) }
+    public static func `panelChangeReleasePage`() -> String { PhoneWords.format("panelChangeReleasePage", []) }
+    public static func `panelChangeRunbook`() -> String { PhoneWords.format("panelChangeRunbook", []) }
+    public static func `panelChangeRunbookCopy`() -> String { PhoneWords.format("panelChangeRunbookCopy", []) }
+    public static func `panelChangeShowInDock`() -> String { PhoneWords.format("panelChangeShowInDock", []) }
+    public static func `panelChangeShowWhatsNew`() -> String { PhoneWords.format("panelChangeShowWhatsNew", []) }
+    public static func `panelChangeStartAtLogin`() -> String { PhoneWords.format("panelChangeStartAtLogin", []) }
+    public static func `panelChangeTheme`() -> String { PhoneWords.format("panelChangeTheme", []) }
+    public static func `panelChangeUpdateChannel`() -> String { PhoneWords.format("panelChangeUpdateChannel", []) }
+    public static func `panelChangeUpdateCheck`() -> String { PhoneWords.format("panelChangeUpdateCheck", []) }
+    public static func `panelChangeUsageUnit`() -> String { PhoneWords.format("panelChangeUsageUnit", []) }
+    public static func `panelChangeVoiceModel`() -> String { PhoneWords.format("panelChangeVoiceModel", []) }
+    public static func `panelChangeWindowSize`() -> String { PhoneWords.format("panelChangeWindowSize", []) }
+    public static func `panelChangeWindowWash`() -> String { PhoneWords.format("panelChangeWindowWash", []) }
     public static func `panelCollapse`(`title`: String) -> String { PhoneWords.format("panelCollapse", [`title`]) }
     public static func `panelCommandGone`() -> String { PhoneWords.format("panelCommandGone", []) }
     public static func `panelCommandHidden`(`title`: String) -> String { PhoneWords.format("panelCommandHidden", [`title`]) }
@@ -4323,6 +4390,9 @@ extension PhoneWords {
         "cardCarriedNotes": ["count"],
         "cardCarriedPictures": ["count"],
         "cardCarriedWithChoice": ["count", "items"],
+        "cardConsentChanges": [],
+        "cardConsentChangesDetail": [],
+        "cardConsentChangesLine": ["setting"],
         "cardConsentFrom": [],
         "cardConsentFullDetails": [],
         "cardConsentGuidanceOnly": [],
@@ -4815,10 +4885,12 @@ extension PhoneWords {
         "feedBranchPushed": [],
         "feedBuiltInPlace": [],
         "feedByCaptain": [],
+        "feedByCaptainInPanel": ["panel"],
         "feedByFirstMate": [],
         "feedCaptainImage": [],
         "feedCaptainSaid": ["preview"],
         "feedCaptainSet": ["text"],
+        "feedCaptainSetInPanel": ["panel", "text"],
         "feedCareQuick": [],
         "feedCareReviewed": [],
         "feedCareStandard": [],
@@ -5347,6 +5419,68 @@ extension PhoneWords {
         "panelBackgroundStopped": [],
         "panelBackgroundUpdate": [],
         "panelCardStopped": [],
+        "panelChangeAccountPause": [],
+        "panelChangeAccountPrefer": [],
+        "panelChangeAccountRename": [],
+        "panelChangeAmbientAway": [],
+        "panelChangeAmbientMusic": [],
+        "panelChangeAmbientOwnStyle": [],
+        "panelChangeAutomationEdit": [],
+        "panelChangeAutomationPauseAll": [],
+        "panelChangeAutomationState": [],
+        "panelChangeCardSize": [],
+        "panelChangeCopyStop": [],
+        "panelChangeCostLimit": [],
+        "panelChangeCrewModelNames": [],
+        "panelChangeCrewReasoning": [],
+        "panelChangeCrewSlots": [],
+        "panelChangeCrewSlotsReset": [],
+        "panelChangeCrewSpeed": [],
+        "panelChangeDecisionModel": [],
+        "panelChangeDecisionUseOff": [],
+        "panelChangeDeviceFixWork": [],
+        "panelChangeDeviceKeep": [],
+        "panelChangeDeviceTryAgain": [],
+        "panelChangeDictation": [],
+        "panelChangeFirstmateAccount": [],
+        "panelChangeFirstmateModel": [],
+        "panelChangeFont": [],
+        "panelChangeHomeMoveCancel": [],
+        "panelChangeInboxLink": [],
+        "panelChangeIntegrationCheck": [],
+        "panelChangeIntegrationSettings": [],
+        "panelChangeKeptJobCheck": [],
+        "panelChangeLanguage": [],
+        "panelChangeModelPins": [],
+        "panelChangeNoDelete": [],
+        "panelChangeNotAsked": [],
+        "panelChangeNotGranted": ["setting"],
+        "panelChangeNotifications": [],
+        "panelChangeOrigin": [],
+        "panelChangePanel": [],
+        "panelChangePanelCollapse": [],
+        "panelChangePersonalResources": [],
+        "panelChangePrivateSiteRemove": [],
+        "panelChangeProjectBatchAnswer": [],
+        "panelChangeProjectMove": [],
+        "panelChangeProjectName": [],
+        "panelChangeProjectRunsOn": [],
+        "panelChangeProjectSettings": [],
+        "panelChangeProjectsFolder": [],
+        "panelChangeRefreshUsage": [],
+        "panelChangeReleasePage": [],
+        "panelChangeRunbook": [],
+        "panelChangeRunbookCopy": [],
+        "panelChangeShowInDock": [],
+        "panelChangeShowWhatsNew": [],
+        "panelChangeStartAtLogin": [],
+        "panelChangeTheme": [],
+        "panelChangeUpdateChannel": [],
+        "panelChangeUpdateCheck": [],
+        "panelChangeUsageUnit": [],
+        "panelChangeVoiceModel": [],
+        "panelChangeWindowSize": [],
+        "panelChangeWindowWash": [],
         "panelCollapse": ["title"],
         "panelCommandGone": [],
         "panelCommandHidden": ["title"],

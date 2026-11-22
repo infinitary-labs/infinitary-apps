@@ -29,6 +29,8 @@ export function createActionTrail(
     from: unknown;
     at: number;
     operationId: string;
+    /** The panel the run's steps were pressed in; Settings' own steps have none. */
+    panel: string | undefined;
   } | null = null;
 
   /**
@@ -39,6 +41,7 @@ export function createActionTrail(
   function runOf(name: ActionName, target: string, actor: ActionActor) {
     const run = openRun;
     if (actor.kind !== "captain" || !run || run.name !== name || run.target !== target) return null;
+    if (run.panel !== actor.panel) return null;
     if (services.ticker.now() - run.at > SETTLE_MS) return null;
     if (services.activityRun() !== run.id || !services.tasks.get(run.operationId)) return null;
     return run;
@@ -49,8 +52,14 @@ export function createActionTrail(
    * runs"): the run's first step writes its line and operation, a later one
    * rewrites both in place, and a run back where it started withdraws both.
    */
-  function settle(name: ActionName, value: Record<string, unknown>, step: SettingStep): void {
-    const run = runOf(name, step.target, { kind: "captain" });
+  function settle(
+    name: ActionName,
+    value: Record<string, unknown>,
+    step: SettingStep,
+    panel: string | undefined,
+  ): void {
+    const run = runOf(name, step.target, { kind: "captain", panel });
+    const named = panel ? { panel } : {};
     const from = (run ? run.from : step.from) as Record<string, unknown>;
     const text = ACTIONS[name].settled?.(from, value) ?? ACTIONS[name].done(value);
     const at = services.ticker.now();
@@ -61,6 +70,7 @@ export function createActionTrail(
         type: "personalized",
         text,
         actor: "captain",
+        ...named,
         run: { id: run.id, withdrawn: true },
       });
       return;
@@ -72,6 +82,7 @@ export function createActionTrail(
         type: "personalized",
         text,
         actor: "captain",
+        ...named,
         run: { id: run.id },
       });
       return;
@@ -90,11 +101,13 @@ export function createActionTrail(
       from: step.from,
       at,
       operationId: row.id,
+      panel,
     };
     services.broadcastEvent({
       type: "personalized",
       text,
       actor: "captain",
+      ...named,
       run: { id: openRun.id },
     });
   }
@@ -106,7 +119,7 @@ export function createActionTrail(
     step?: SettingStep,
   ): void {
     if (step && actor.kind === "captain") {
-      settle(name, value, step);
+      settle(name, value, step, actor.panel);
       return;
     }
     // A change asked of another computer's window names that computer.
@@ -160,6 +173,7 @@ export function createActionTrail(
         ...repoConfiguredEvent(value.repo as RepoView),
         ...(value.description ? { description: value.description as string } : {}),
         actor: actor.kind,
+        ...(actor.kind === "captain" && actor.panel ? { panel: actor.panel } : {}),
       });
     else if (name === "project-runs-on") {
       const repo = value.repo as RepoView;
@@ -171,8 +185,15 @@ export function createActionTrail(
         text,
         said: runsOnDoneSaid(value),
         actor: actor.kind,
+        ...(actor.kind === "captain" && actor.panel ? { panel: actor.panel } : {}),
       });
-    } else services.broadcastEvent({ type: "personalized", text, actor: actor.kind });
+    } else
+      services.broadcastEvent({
+        type: "personalized",
+        text,
+        actor: actor.kind,
+        ...(actor.kind === "captain" && actor.panel ? { panel: actor.panel } : {}),
+      });
   }
 
   return { runOf, trail };

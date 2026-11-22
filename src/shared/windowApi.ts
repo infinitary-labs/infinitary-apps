@@ -1104,6 +1104,15 @@ export type FirstmateApi = {
       request: PanelIntegrationsRequest,
       options?: PersonalInvokeOptions,
     ) => Promise<PanelIntegrationsResponse>;
+    /**
+     * A panel's change of a setting its manifest's `actions` grant names, on
+     * the captain's press in it (docs/ui-plugins.md, "Changing settings").
+     */
+    changeSetting: (
+      extensionId: string,
+      action: string,
+      value: Record<string, unknown>,
+    ) => Promise<{ ok: true } | { ok: false; text: string }>;
     invoke: (
       extensionId: string,
       action: string,

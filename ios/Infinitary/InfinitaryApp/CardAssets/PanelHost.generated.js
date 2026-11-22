@@ -4990,6 +4990,135 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     };
     return inst;
   }
+  const PANEL_CHANGES = {
+    "project-setup": [
+      "ruling",
+      "Adding a project stays on its own setup card and Settings → Projects (FI3-1531)"
+    ],
+    "project-remove": ["destructive", "Takes a project off the list and ends its planned work"],
+    "project-settings": true,
+    "project-move": true,
+    "project-name": true,
+    "project-runs-on": true,
+    "device-invite": ["credential", "Makes a joining link for a new computer"],
+    "private-site-allow": ["consent", "Widens what every task browser may reach"],
+    "device-remove": ["destructive", "Removes a computer and the work it holds"],
+    "device-update": ["other-computer", "Installs a new version on another computer"],
+    "device-sign-in": ["credential", "Signs another computer in to a subscription"],
+    "device-address": ["not-a-setting", "A link carries every address; nothing is chosen"],
+    theme: true,
+    font: true,
+    panel: true,
+    "voice-model": true,
+    "account-sign-in": ["credential", "A provider's sign-in"],
+    "custom-connection": ["credential", "A custom connection's key"],
+    "decision-key": ["credential", "A decision model's key"],
+    "panel-remove": ["destructive", "Removes a panel and its folder from the rail"],
+    "task-actions": ["crew-only", "A panel moves tasks through its own moves grant"],
+    settle: ["consent", "A merge or discard stays on its task's own card"],
+    "card-close": ["consent", "Closing a card stays the captain's on that card"],
+    "plugin-consent": ["consent", "A panel never answers its own or another panel's approval card"],
+    recovery: ["consent", "Recovery buttons stay on the recovery card"],
+    "ask-first-merge": ["consent", "An ask-first project's merge stays on its merge card"],
+    "show-card": ["crew-only", "A panel brings a card forward through its own pointing"],
+    "show-whats-new": true,
+    direction: [
+      "consent",
+      "A standing direction instructs every agent; only the captain's words or the first mate write one"
+    ],
+    "start-at-login": true,
+    "show-in-dock": true,
+    "release-page": true,
+    "integration-add": ["credential", "Connecting an integration signs in to it"],
+    "integration-add-mcp": ["consent", "Runs a program the captain names on this computer"],
+    "integration-remove": ["destructive", "Forgets an integration and its sign-in"],
+    "delete-outside": ["destructive", "Deletes saved Gmail and Calendar content"],
+    "integration-settings": true,
+    "integration-action-rule": ["consent", "An action's allowance is the captain's consent"],
+    "integration-key": ["credential", "An integration's key"],
+    "integration-check": true,
+    "forge-sign-out": ["credential", "Ends a project host's sign-in"],
+    diagnostics: ["consent", "Diagnostics is the captain's consent to share"],
+    contribution: ["consent", "Contribution is the captain's consent to share"],
+    "sharing-ask": ["consent", "The sharing ask is the captain's own answer"],
+    purge: ["destructive", "Erases this conversation"],
+    "panels-switch": ["consent", "The panels switch is the captain's consent to run panels at all"],
+    dictation: true,
+    "firstmate-model": true,
+    "firstmate-account": true,
+    "crew-slots": true,
+    "crew-speed": true,
+    "crew-reasoning": true,
+    "crew-slots-reset": true,
+    "model-pins": true,
+    "decision-model": true,
+    "refresh-usage": true,
+    "account-rename": true,
+    "account-pause": true,
+    "account-prefer": true,
+    "account-keep-going": ["consent", "Keep going on credits spends money past the plan"],
+    "account-use-reset": ["consent", "Spends one of an account's saved resets"],
+    "account-use-saved-resets": [
+      "consent",
+      "Lets work spend an account's saved resets with no click"
+    ],
+    "account-disconnect": ["credential", "Forgets an account's sign-in"],
+    "projects-folder": true,
+    "project-batch-answer": true,
+    "cost-limit": true,
+    notifications: true,
+    runbook: true,
+    "runbook-copy": true,
+    "personal-resources": true,
+    "window-wash": true,
+    "window-size": true,
+    "crew-model-names": true,
+    "ambient-music": true,
+    // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
+    "ambient-own-style": true,
+    "ambient-away": true,
+    "card-size": true,
+    language: true,
+    "usage-unit": true,
+    "key-reminders": [
+      "window",
+      "The key reminder is kept by each window's own program, which a panel's change does not reach"
+    ],
+    "panel-collapse": true,
+    "automation-edit": true,
+    "automation-state": true,
+    "automation-pause-all": true,
+    "automation-notes": ["crew-only", "An automation's notes are written by its run's crewmate"],
+    "automation-delete": ["destructive", "Deletes an automation and its run history"],
+    "kept-job-remove": ["destructive", "Runs a kept job's remove"],
+    "device-change-address": ["other-computer", "Changes how this computer reaches another"],
+    "home-move": ["other-computer", "Moves the first mate's whole record to another computer"],
+    "standby-keep": ["other-computer", "Keeps a copy of the record on another computer"],
+    "device-forge-sign-in": ["credential", "Signs another computer in to GitHub"],
+    "keep-home": ["other-computer", "Chooses which of two first mates keeps the record"],
+    "kept-job-forget": ["destructive", "Forgets a kept job whose remove did not finish"],
+    "secrets-page": ["credential", "Secrets stay in Settings → Secrets"],
+    "show-task": ["crew-only", "A panel opens a task's record through its own pointing"],
+    "show-settings": ["crew-only", "A panel opens Settings through its own pointing"],
+    "update-channel": true,
+    "update-check": true,
+    "inbox-link": true,
+    "panel-retry": [
+      "consent",
+      "Starting a panel's stopped background work again is the captain's call on that panel"
+    ],
+    "panel-ask-again": ["consent", "A panel's integration ask is answered on its own card"],
+    "decision-use-off": true,
+    "private-site-remove": true,
+    "secret-end-read": ["credential", "A permission to read secrets"],
+    "device-keep": true,
+    "home-move-cancel": true,
+    "copy-stop": true,
+    "device-fix-work": true,
+    "device-try-again": true,
+    "kept-job-check": true
+  };
+  const PANEL_CHANGE_NAMES = Object.keys(PANEL_CHANGES).filter((name) => PANEL_CHANGES[name] === true);
   const SQL_VIEWS = [
     "v_version_v1",
     "v_tasks_v1",
@@ -13601,6 +13730,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `${items} go with your choice`;
     }
+  }
+  function cardConsentChanges() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يغيّر`;
+      case "de":
+        return `Ändert`;
+      case "es":
+        return `Cambia`;
+      case "fr":
+        return `Modifie`;
+      case "ja":
+        return `変更`;
+      case "ko":
+        return `변경`;
+      case "pt-BR":
+        return `Altera`;
+      case "zh-Hans":
+        return `更改`;
+      case "zh-Hant":
+        return `更改`;
+      case "en-XA":
+        return `[Çĥáñĝéš ~~~]`;
+      case "ar-XB":
+        return `‮Changes‬`;
+    }
+    return `Changes`;
+  }
+  function cardConsentChangesDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.`;
+      case "de":
+        return `Diese Einstellungen, jede nur, wenn du im Panel klickst oder eine Taste drückst. Es löscht nie etwas.`;
+      case "es":
+        return `Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.`;
+      case "fr":
+        return `Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.`;
+      case "ja":
+        return `これらの設定は、パネル内でクリックかキーを押したときだけ変更します。何かを削除することはありません。`;
+      case "ko":
+        return `이 설정들은 패널 안에서 클릭하거나 키를 누를 때만 바꿔요. 아무것도 삭제하지 않아요.`;
+      case "pt-BR":
+        return `Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.`;
+      case "zh-Hans":
+        return `这些设置，每次仅在你于面板中点击或按键时更改。它从不删除任何内容。`;
+      case "zh-Hant":
+        return `這些設定，每次僅在你於面板中點按或按鍵時更改。它從不刪除任何內容。`;
+      case "en-XA":
+        return `[Ţĥéšé šéţţîñĝš, éáçĥ öñļý ŵĥéñ ýöû çļîçķ öŕ þŕéšš á ķéý îñ ţĥé þáñéļ. Îţ ñéṽéŕ ðéļéţéš áñýţĥîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These settings, each only when you click or press a key in the panel. It never deletes anything.‬`;
+    }
+    return `These settings, each only when you click or press a key in the panel. It never deletes anything.`;
+  }
+  function cardConsentChangesLine(input2) {
+    const setting = input2.setting;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنه تغيير إعداد عند نقرك: ${setting}`;
+      case "de":
+        return `Kann eine Einstellung auf deinen Klick ändern: ${setting}`;
+      case "es":
+        return `Puede cambiar un ajuste cuando haces clic: ${setting}`;
+      case "fr":
+        return `Peut modifier un réglage quand vous cliquez : ${setting}`;
+      case "ja":
+        return `クリックしたときに設定を変更できます: ${setting}`;
+      case "ko":
+        return `클릭할 때 설정을 바꿀 수 있어요: ${setting}`;
+      case "pt-BR":
+        return `Pode alterar uma configuração quando você clica: ${setting}`;
+      case "zh-Hans":
+        return `在你点击时可更改设置：${setting}`;
+      case "zh-Hant":
+        return `在你點按時可更改設定：${setting}`;
+      case "en-XA":
+        return `[Çáñ çĥáñĝé á šéţţîñĝ ŵĥéñ ýöû çļîçķ: ${setting} ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Can change a setting when you click: ‬${setting}`;
+    }
+    return `Can change a setting when you click: ${setting}`;
   }
   function cardConsentFrom() {
     switch (currentLanguage()) {
@@ -28650,6 +28861,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Captain · `;
   }
+  function feedByCaptainInPanel(input2) {
+    const panel = input2.panel;
+    switch (currentLanguage()) {
+      case "ar":
+        return `القبطان، في لوحة ${panel} · `;
+      case "de":
+        return `Kapitän, im Panel ${panel} · `;
+      case "es":
+        return `Capitán, en el panel ${panel} · `;
+      case "fr":
+        return `Capitaine, dans le panneau ${panel} · `;
+      case "ja":
+        return `船長（${panel} パネル）· `;
+      case "ko":
+        return `선장, ${panel} 패널에서 · `;
+      case "pt-BR":
+        return `Capitão, no painel ${panel} · `;
+      case "zh-Hans":
+        return `船长，在 ${panel} 面板中 · `;
+      case "zh-Hant":
+        return `船長，在 ${panel} 面板中 · `;
+      case "en-XA":
+        return `[Çáþţáîñ, îñ ţĥé ${panel} þáñéļ ·  ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Captain, in the ‬${panel}‮ panel · ‬`;
+    }
+    return `Captain, in the ${panel} panel · `;
+  }
   function feedByFirstMate() {
     switch (currentLanguage()) {
       case "ar":
@@ -28759,6 +28998,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Captain · ‬${text}`;
     }
     return `Captain · ${text}`;
+  }
+  function feedCaptainSetInPanel(input2) {
+    const panel = input2.panel;
+    const text = input2.text;
+    switch (currentLanguage()) {
+      case "ar":
+        return `القبطان، في لوحة ${panel} · ${text}`;
+      case "de":
+        return `Kapitän, im Panel ${panel} · ${text}`;
+      case "es":
+        return `Capitán, en el panel ${panel} · ${text}`;
+      case "fr":
+        return `Capitaine, dans le panneau ${panel} · ${text}`;
+      case "ja":
+        return `船長（${panel} パネル）· ${text}`;
+      case "ko":
+        return `선장, ${panel} 패널에서 · ${text}`;
+      case "pt-BR":
+        return `Capitão, no painel ${panel} · ${text}`;
+      case "zh-Hans":
+        return `船长，在 ${panel} 面板中 · ${text}`;
+      case "zh-Hant":
+        return `船長，在 ${panel} 面板中 · ${text}`;
+      case "en-XA":
+        return `[Çáþţáîñ, îñ ţĥé ${panel} þáñéļ · ${text} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Captain, in the ‬${panel}‮ panel · ‬${text}`;
+    }
+    return `Captain, in the ${panel} panel · ${text}`;
   }
   function feedCareQuick() {
     switch (currentLanguage()) {
@@ -33557,6 +33825,1681 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮This card stopped drawing.‬`;
     }
     return `This card stopped drawing.`;
+  }
+  function panelChangeAccountPause() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف حساب مؤقتًا أو استئنافه`;
+      case "de":
+        return `Konto pausieren oder fortsetzen`;
+      case "es":
+        return `Pausar o reanudar una cuenta`;
+      case "fr":
+        return `Mettre en pause ou reprendre un compte`;
+      case "ja":
+        return `アカウントの一時停止と再開`;
+      case "ko":
+        return `계정 일시 중지 또는 재개`;
+      case "pt-BR":
+        return `Pausar ou retomar uma conta`;
+      case "zh-Hans":
+        return `暂停或恢复账号`;
+      case "zh-Hant":
+        return `暫停或恢復帳號`;
+      case "en-XA":
+        return `[Þáûšé öŕ ŕéšûɱé áñ áççöûñţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pause or resume an account‬`;
+    }
+    return `Pause or resume an account`;
+  }
+  function panelChangeAccountPrefer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحساب الذي يُستخدم أولًا`;
+      case "de":
+        return `Welches Konto zuerst dran ist`;
+      case "es":
+        return `Qué cuenta va primero`;
+      case "fr":
+        return `Le compte utilisé en premier`;
+      case "ja":
+        return `最初に使うアカウント`;
+      case "ko":
+        return `먼저 쓸 계정`;
+      case "pt-BR":
+        return `Qual conta vai primeiro`;
+      case "zh-Hans":
+        return `优先使用的账号`;
+      case "zh-Hant":
+        return `優先使用的帳號`;
+      case "en-XA":
+        return `[Ŵĥîçĥ áççöûñţ ĝöéš ƒîŕšţ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which account goes first‬`;
+    }
+    return `Which account goes first`;
+  }
+  function panelChangeAccountRename() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسم حساب`;
+      case "de":
+        return `Name eines Kontos`;
+      case "es":
+        return `El nombre de una cuenta`;
+      case "fr":
+        return `Le nom d’un compte`;
+      case "ja":
+        return `アカウントの名前`;
+      case "ko":
+        return `계정 이름`;
+      case "pt-BR":
+        return `O nome de uma conta`;
+      case "zh-Hans":
+        return `账号的名称`;
+      case "zh-Hant":
+        return `帳號的名稱`;
+      case "en-XA":
+        return `[Åñ áççöûñţ'š ñáɱé ~~~~~~]`;
+      case "ar-XB":
+        return `‮An account's name‬`;
+    }
+    return `An account's name`;
+  }
+  function panelChangeAmbientAway() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الموسيقى أثناء غيابك`;
+      case "de":
+        return `Musik, während du weg bist`;
+      case "es":
+        return `Música mientras no estás`;
+      case "fr":
+        return `Musique pendant votre absence`;
+      case "ja":
+        return `不在中の音楽`;
+      case "ko":
+        return `자리를 비운 동안의 음악`;
+      case "pt-BR":
+        return `Música enquanto você está fora`;
+      case "zh-Hans":
+        return `离开时的音乐`;
+      case "zh-Hant":
+        return `離開時的音樂`;
+      case "en-XA":
+        return `[Ṁûšîç ŵĥîļé ýöû'ŕé áŵáý ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Music while you're away‬`;
+    }
+    return `Music while you're away`;
+  }
+  function panelChangeAmbientMusic() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الموسيقى المحيطة`;
+      case "de":
+        return `Hintergrundmusik`;
+      case "es":
+        return `Música ambiental`;
+      case "fr":
+        return `Musique d’ambiance`;
+      case "ja":
+        return `環境音楽`;
+      case "ko":
+        return `배경 음악`;
+      case "pt-BR":
+        return `Música ambiente`;
+      case "zh-Hans":
+        return `环境音乐`;
+      case "zh-Hant":
+        return `環境音樂`;
+      case "en-XA":
+        return `[Åɱƀîéñţ ɱûšîç ~~~~~]`;
+      case "ar-XB":
+        return `‮Ambient music‬`;
+    }
+    return `Ambient music`;
+  }
+  function panelChangeAmbientOwnStyle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنماطك الخاصة من الموسيقى المحيطة`;
+      case "de":
+        return `Deine eigenen Hintergrundmusik-Stile`;
+      case "es":
+        return `Tus propios estilos de música ambiental`;
+      case "fr":
+        return `Vos propres styles de musique d’ambiance`;
+      case "ja":
+        return `自分の環境音楽スタイル`;
+      case "ko":
+        return `나만의 배경 음악 스타일`;
+      case "pt-BR":
+        return `Seus próprios estilos de música ambiente`;
+      case "zh-Hans":
+        return `你自己的环境音乐风格`;
+      case "zh-Hant":
+        return `你自己的環境音樂風格`;
+      case "en-XA":
+        return `[Ýöûŕ öŵñ áɱƀîéñţ šţýļéš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your own ambient styles‬`;
+    }
+    return `Your own ambient styles`;
+  }
+  function panelChangeAutomationEdit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كتابة أتمتة أو تغييرها`;
+      case "de":
+        return `Automatisierung schreiben oder ändern`;
+      case "es":
+        return `Escribir o cambiar una automatización`;
+      case "fr":
+        return `Écrire ou modifier une automatisation`;
+      case "ja":
+        return `自動化を作成・変更`;
+      case "ko":
+        return `자동화 작성 또는 변경`;
+      case "pt-BR":
+        return `Escrever ou alterar uma automação`;
+      case "zh-Hans":
+        return `编写或修改自动化`;
+      case "zh-Hant":
+        return `撰寫或修改自動化`;
+      case "en-XA":
+        return `[Ŵŕîţé öŕ çĥáñĝé áñ áûţöɱáţîöñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Write or change an automation‬`;
+    }
+    return `Write or change an automation`;
+  }
+  function panelChangeAutomationPauseAll() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف كل الأتمتة مؤقتًا`;
+      case "de":
+        return `Alle Automatisierungen pausieren`;
+      case "es":
+        return `Pausar todas las automatizaciones`;
+      case "fr":
+        return `Mettre en pause toutes les automatisations`;
+      case "ja":
+        return `すべての自動化を一時停止`;
+      case "ko":
+        return `모든 자동화 일시 중지`;
+      case "pt-BR":
+        return `Pausar todas as automações`;
+      case "zh-Hans":
+        return `暂停所有自动化`;
+      case "zh-Hant":
+        return `暫停所有自動化`;
+      case "en-XA":
+        return `[Þáûšé éṽéŕý áûţöɱáţîöñ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pause every automation‬`;
+    }
+    return `Pause every automation`;
+  }
+  function panelChangeAutomationState() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف أتمتة مؤقتًا أو استئنافها`;
+      case "de":
+        return `Automatisierung pausieren oder fortsetzen`;
+      case "es":
+        return `Pausar o reanudar una automatización`;
+      case "fr":
+        return `Mettre en pause ou reprendre une automatisation`;
+      case "ja":
+        return `自動化の一時停止と再開`;
+      case "ko":
+        return `자동화 일시 중지 또는 재개`;
+      case "pt-BR":
+        return `Pausar ou retomar uma automação`;
+      case "zh-Hans":
+        return `暂停或恢复自动化`;
+      case "zh-Hant":
+        return `暫停或恢復自動化`;
+      case "en-XA":
+        return `[Þáûšé öŕ ŕéšûɱé áñ áûţöɱáţîöñ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pause or resume an automation‬`;
+    }
+    return `Pause or resume an automation`;
+  }
+  function panelChangeCardSize() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حجم البطاقات`;
+      case "de":
+        return `Kartengröße`;
+      case "es":
+        return `Tamaño de las tarjetas`;
+      case "fr":
+        return `Taille des cartes`;
+      case "ja":
+        return `カードのサイズ`;
+      case "ko":
+        return `카드 크기`;
+      case "pt-BR":
+        return `Tamanho dos cartões`;
+      case "zh-Hans":
+        return `卡片大小`;
+      case "zh-Hant":
+        return `卡片大小`;
+      case "en-XA":
+        return `[Çáŕð šîžé ~~~]`;
+      case "ar-XB":
+        return `‮Card size‬`;
+    }
+    return `Card size`;
+  }
+  function panelChangeCopyStop() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف الاحتفاظ بنسخة على حاسوب آخر`;
+      case "de":
+        return `Kopie auf einem anderen Computer nicht mehr führen`;
+      case "es":
+        return `Dejar de guardar una copia en otra computadora`;
+      case "fr":
+        return `Arrêter de garder une copie sur un autre ordinateur`;
+      case "ja":
+        return `別のコンピュータでのコピー保持をやめる`;
+      case "ko":
+        return `다른 컴퓨터의 사본 보관 중지`;
+      case "pt-BR":
+        return `Parar de manter uma cópia em outro computador`;
+      case "zh-Hans":
+        return `停止在另一台电脑上保留副本`;
+      case "zh-Hant":
+        return `停止在另一台電腦上保留副本`;
+      case "en-XA":
+        return `[Šţöþ ķééþîñĝ á çöþý öñ áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Stop keeping a copy on another computer‬`;
+    }
+    return `Stop keeping a copy on another computer`;
+  }
+  function panelChangeCostLimit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متى تسأل المهمة قبل أن تنفق أكثر`;
+      case "de":
+        return `Wann eine Aufgabe fragt, bevor sie mehr ausgibt`;
+      case "es":
+        return `Cuándo una tarea pregunta antes de gastar más`;
+      case "fr":
+        return `Quand une tâche demande avant de dépenser plus`;
+      case "ja":
+        return `タスクが追加の支出前に確認するタイミング`;
+      case "ko":
+        return `작업이 더 쓰기 전에 묻는 시점`;
+      case "pt-BR":
+        return `Quando uma tarefa pergunta antes de gastar mais`;
+      case "zh-Hans":
+        return `任务何时在多花之前询问`;
+      case "zh-Hant":
+        return `任務何時在多花之前詢問`;
+      case "en-XA":
+        return `[Ŵĥéñ á ţášķ ášķš ƀéƒöŕé îţ šþéñðš ɱöŕé ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a task asks before it spends more‬`;
+    }
+    return `When a task asks before it spends more`;
+  }
+  function panelChangeCrewModelNames() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إظهار أسماء نماذج الطاقم`;
+      case "de":
+        return `Modellnamen der Crew anzeigen`;
+      case "es":
+        return `Mostrar los nombres de modelo de la tripulación`;
+      case "fr":
+        return `Afficher les noms de modèle de l’équipage`;
+      case "ja":
+        return `クルーのモデル名を表示`;
+      case "ko":
+        return `크루의 모델 이름 표시`;
+      case "pt-BR":
+        return `Mostrar os nomes de modelo da tripulação`;
+      case "zh-Hans":
+        return `显示船员的模型名称`;
+      case "zh-Hant":
+        return `顯示船員的模型名稱`;
+      case "en-XA":
+        return `[Šĥöŵ ţĥé çŕéŵ'š ɱöðéļ ñáɱéš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Show the crew's model names‬`;
+    }
+    return `Show the crew's model names`;
+  }
+  function panelChangeCrewReasoning() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مدى تفكير الطاقم`;
+      case "de":
+        return `Wie gründlich die Crew nachdenkt`;
+      case "es":
+        return `Cuánto piensa la tripulación`;
+      case "fr":
+        return `La réflexion de l’équipage`;
+      case "ja":
+        return `クルーの思考の深さ`;
+      case "ko":
+        return `크루의 사고 수준`;
+      case "pt-BR":
+        return `Quanto a tripulação pensa`;
+      case "zh-Hans":
+        return `船员的思考深度`;
+      case "zh-Hant":
+        return `船員的思考深度`;
+      case "en-XA":
+        return `[Ĥöŵ ĥáŕð ţĥé çŕéŵ ţĥîñķš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮How hard the crew thinks‬`;
+    }
+    return `How hard the crew thinks`;
+  }
+  function panelChangeCrewSlots() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نماذج الطاقم`;
+      case "de":
+        return `Modelle der Crew`;
+      case "es":
+        return `Los modelos de la tripulación`;
+      case "fr":
+        return `Les modèles de l’équipage`;
+      case "ja":
+        return `クルーのモデル`;
+      case "ko":
+        return `크루의 모델`;
+      case "pt-BR":
+        return `Os modelos da tripulação`;
+      case "zh-Hans":
+        return `船员的模型`;
+      case "zh-Hant":
+        return `船員的模型`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵ'š ɱöðéļš ~~~~~~]`;
+      case "ar-XB":
+        return `‮The crew's models‬`;
+    }
+    return `The crew's models`;
+  }
+  function panelChangeCrewSlotsReset() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة ضبط نماذج الطاقم`;
+      case "de":
+        return `Modelle der Crew zurücksetzen`;
+      case "es":
+        return `Restablecer los modelos de la tripulación`;
+      case "fr":
+        return `Réinitialiser les modèles de l’équipage`;
+      case "ja":
+        return `クルーのモデルをリセット`;
+      case "ko":
+        return `크루 모델 초기화`;
+      case "pt-BR":
+        return `Redefinir os modelos da tripulação`;
+      case "zh-Hans":
+        return `重置船员的模型`;
+      case "zh-Hant":
+        return `重設船員的模型`;
+      case "en-XA":
+        return `[Ŕéšéţ ţĥé çŕéŵ'š ɱöðéļš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset the crew's models‬`;
+    }
+    return `Reset the crew's models`;
+  }
+  function panelChangeCrewSpeed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سرعة الطاقم`;
+      case "de":
+        return `Tempo der Crew`;
+      case "es":
+        return `La velocidad de la tripulación`;
+      case "fr":
+        return `La vitesse de l’équipage`;
+      case "ja":
+        return `クルーの速度`;
+      case "ko":
+        return `크루의 속도`;
+      case "pt-BR":
+        return `A velocidade da tripulação`;
+      case "zh-Hans":
+        return `船员的速度`;
+      case "zh-Hant":
+        return `船員的速度`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵ'š šþééð ~~~~~~]`;
+      case "ar-XB":
+        return `‮The crew's speed‬`;
+    }
+    return `The crew's speed`;
+  }
+  function panelChangeDecisionModel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج القرارات`;
+      case "de":
+        return `Entscheidungsmodell`;
+      case "es":
+        return `El modelo de decisiones`;
+      case "fr":
+        return `Le modèle de décision`;
+      case "ja":
+        return `判断モデル`;
+      case "ko":
+        return `판단 모델`;
+      case "pt-BR":
+        return `O modelo de decisões`;
+      case "zh-Hans":
+        return `决策模型`;
+      case "zh-Hant":
+        return `決策模型`;
+      case "en-XA":
+        return `[Ţĥé ðéçîšîöñ ɱöðéļ ~~~~~~]`;
+      case "ar-XB":
+        return `‮The decision model‬`;
+    }
+    return `The decision model`;
+  }
+  function panelChangeDecisionUseOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف أحد استخدامات نموذج القرارات`;
+      case "de":
+        return `Eine Verwendung des Entscheidungsmodells ausschalten`;
+      case "es":
+        return `Desactivar un uso del modelo de decisiones`;
+      case "fr":
+        return `Désactiver un usage du modèle de décision`;
+      case "ja":
+        return `判断モデルの用途を一つオフにする`;
+      case "ko":
+        return `판단 모델의 용도 하나 끄기`;
+      case "pt-BR":
+        return `Desativar um uso do modelo de decisões`;
+      case "zh-Hans":
+        return `关闭决策模型的一项用途`;
+      case "zh-Hant":
+        return `關閉決策模型的一項用途`;
+      case "en-XA":
+        return `[Ţûŕñ öƒƒ öñé ûšé öƒ ţĥé ðéçîšîöñ ɱöðéļ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Turn off one use of the decision model‬`;
+    }
+    return `Turn off one use of the decision model`;
+  }
+  function panelChangeDeviceFixWork() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إصلاح حاسوب ينفّذ العمل`;
+      case "de":
+        return `Arbeitscomputer reparieren`;
+      case "es":
+        return `Arreglar una computadora que ejecuta trabajo`;
+      case "fr":
+        return `Réparer un ordinateur qui exécute du travail`;
+      case "ja":
+        return `作業を実行するコンピュータを直す`;
+      case "ko":
+        return `작업 실행 컴퓨터 고치기`;
+      case "pt-BR":
+        return `Corrigir um computador que executa trabalho`;
+      case "zh-Hans":
+        return `修复运行工作的电脑`;
+      case "zh-Hant":
+        return `修復執行工作的電腦`;
+      case "en-XA":
+        return `[Ƒîẋ á çöɱþûţéŕ ţĥáţ ŕûñš ŵöŕķ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Fix a computer that runs work‬`;
+    }
+    return `Fix a computer that runs work`;
+  }
+  function panelChangeDeviceKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إبقاء حاسوب في القائمة`;
+      case "de":
+        return `Computer auf der Liste behalten`;
+      case "es":
+        return `Mantener una computadora en la lista`;
+      case "fr":
+        return `Garder un ordinateur dans la liste`;
+      case "ja":
+        return `コンピュータを一覧に残す`;
+      case "ko":
+        return `목록에 컴퓨터 유지`;
+      case "pt-BR":
+        return `Manter um computador na lista`;
+      case "zh-Hans":
+        return `将电脑保留在列表中`;
+      case "zh-Hant":
+        return `將電腦保留在列表中`;
+      case "en-XA":
+        return `[Ķééþ á çöɱþûţéŕ öñ ţĥé ļîšţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Keep a computer on the list‬`;
+    }
+    return `Keep a computer on the list`;
+  }
+  function panelChangeDeviceTryAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة محاولة حاسوب`;
+      case "de":
+        return `Computer erneut versuchen`;
+      case "es":
+        return `Volver a intentar con una computadora`;
+      case "fr":
+        return `Réessayer un ordinateur`;
+      case "ja":
+        return `コンピュータを再試行`;
+      case "ko":
+        return `컴퓨터 다시 시도`;
+      case "pt-BR":
+        return `Tentar um computador de novo`;
+      case "zh-Hans":
+        return `重试电脑`;
+      case "zh-Hant":
+        return `重試電腦`;
+      case "en-XA":
+        return `[Ţŕý á çöɱþûţéŕ áĝáîñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Try a computer again‬`;
+    }
+    return `Try a computer again`;
+  }
+  function panelChangeDictation() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإملاء`;
+      case "de":
+        return `Diktat`;
+      case "es":
+        return `Dictado`;
+      case "fr":
+        return `Dictée`;
+      case "ja":
+        return `音声入力`;
+      case "ko":
+        return `받아쓰기`;
+      case "pt-BR":
+        return `Ditado`;
+      case "zh-Hans":
+        return `听写`;
+      case "zh-Hant":
+        return `聽寫`;
+      case "en-XA":
+        return `[Ðîçţáţîöñ ~~~]`;
+      case "ar-XB":
+        return `‮Dictation‬`;
+    }
+    return `Dictation`;
+  }
+  function panelChangeFirstmateAccount() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حساب نائب القبطان`;
+      case "de":
+        return `Konto des Ersten Offiziers`;
+      case "es":
+        return `La cuenta del primer oficial`;
+      case "fr":
+        return `Le compte du second`;
+      case "ja":
+        return `一等航海士のアカウント`;
+      case "ko":
+        return `일등항해사의 계정`;
+      case "pt-BR":
+        return `A conta do imediato`;
+      case "zh-Hans":
+        return `大副的账号`;
+      case "zh-Hant":
+        return `大副的帳號`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕšţ ɱáţé'š áççöûñţ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The first mate's account‬`;
+    }
+    return `The first mate's account`;
+  }
+  function panelChangeFirstmateModel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج نائب القبطان`;
+      case "de":
+        return `Modell des Ersten Offiziers`;
+      case "es":
+        return `El modelo del primer oficial`;
+      case "fr":
+        return `Le modèle du second`;
+      case "ja":
+        return `一等航海士のモデル`;
+      case "ko":
+        return `일등항해사의 모델`;
+      case "pt-BR":
+        return `O modelo do imediato`;
+      case "zh-Hans":
+        return `大副的模型`;
+      case "zh-Hant":
+        return `大副的模型`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕšţ ɱáţé'š ɱöðéļ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The first mate's model‬`;
+    }
+    return `The first mate's model`;
+  }
+  function panelChangeFont() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الخطوط`;
+      case "de":
+        return `Schriften`;
+      case "es":
+        return `Fuentes`;
+      case "fr":
+        return `Polices`;
+      case "ja":
+        return `フォント`;
+      case "ko":
+        return `글꼴`;
+      case "pt-BR":
+        return `Fontes`;
+      case "zh-Hans":
+        return `字体`;
+      case "zh-Hant":
+        return `字體`;
+      case "en-XA":
+        return `[Ƒöñţš ~~]`;
+      case "ar-XB":
+        return `‮Fonts‬`;
+    }
+    return `Fonts`;
+  }
+  function panelChangeHomeMoveCancel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إلغاء نقل السجل`;
+      case "de":
+        return `Umzug der Aufzeichnung abbrechen`;
+      case "es":
+        return `Cancelar un traslado del registro`;
+      case "fr":
+        return `Annuler un déplacement du registre`;
+      case "ja":
+        return `記録の移動を取り消す`;
+      case "ko":
+        return `기록 이동 취소`;
+      case "pt-BR":
+        return `Cancelar uma mudança do registro`;
+      case "zh-Hans":
+        return `取消记录的迁移`;
+      case "zh-Hant":
+        return `取消記錄的遷移`;
+      case "en-XA":
+        return `[Çáñçéļ á ɱöṽé öƒ ţĥé ŕéçöŕð ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Cancel a move of the record‬`;
+    }
+    return `Cancel a move of the record`;
+  }
+  function panelChangeInboxLink() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربط صندوق وارد`;
+      case "de":
+        return `Postfach verknüpfen`;
+      case "es":
+        return `Vincular una bandeja de entrada`;
+      case "fr":
+        return `Lier une boîte de réception`;
+      case "ja":
+        return `受信トレイをリンク`;
+      case "ko":
+        return `받은편지함 연결`;
+      case "pt-BR":
+        return `Vincular uma caixa de entrada`;
+      case "zh-Hans":
+        return `关联收件箱`;
+      case "zh-Hant":
+        return `連結收件匣`;
+      case "en-XA":
+        return `[Ļîñķ áñ îñƀöẋ ~~~~~]`;
+      case "ar-XB":
+        return `‮Link an inbox‬`;
+    }
+    return `Link an inbox`;
+  }
+  function panelChangeIntegrationCheck() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فحص تكامل`;
+      case "de":
+        return `Integration prüfen`;
+      case "es":
+        return `Comprobar una integración`;
+      case "fr":
+        return `Vérifier une intégration`;
+      case "ja":
+        return `連携を確認`;
+      case "ko":
+        return `연동 확인`;
+      case "pt-BR":
+        return `Verificar uma integração`;
+      case "zh-Hans":
+        return `检查集成`;
+      case "zh-Hant":
+        return `檢查整合`;
+      case "en-XA":
+        return `[Çĥéçķ áñ îñţéĝŕáţîöñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Check an integration‬`;
+    }
+    return `Check an integration`;
+  }
+  function panelChangeIntegrationSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعدادات تكامل`;
+      case "de":
+        return `Einstellungen einer Integration`;
+      case "es":
+        return `Los ajustes de una integración`;
+      case "fr":
+        return `Les réglages d’une intégration`;
+      case "ja":
+        return `連携の設定`;
+      case "ko":
+        return `연동 설정`;
+      case "pt-BR":
+        return `As configurações de uma integração`;
+      case "zh-Hans":
+        return `集成的设置`;
+      case "zh-Hant":
+        return `整合的設定`;
+      case "en-XA":
+        return `[Åñ îñţéĝŕáţîöñ'š šéţţîñĝš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮An integration's settings‬`;
+    }
+    return `An integration's settings`;
+  }
+  function panelChangeKeptJobCheck() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فحص مهمة محفوظة`;
+      case "de":
+        return `Behaltenen Auftrag prüfen`;
+      case "es":
+        return `Comprobar un trabajo conservado`;
+      case "fr":
+        return `Vérifier une tâche conservée`;
+      case "ja":
+        return `保持中のジョブを確認`;
+      case "ko":
+        return `유지 중인 작업 확인`;
+      case "pt-BR":
+        return `Verificar um trabalho mantido`;
+      case "zh-Hans":
+        return `检查保留的作业`;
+      case "zh-Hant":
+        return `檢查保留的作業`;
+      case "en-XA":
+        return `[Çĥéçķ á ķéþţ ĵöƀ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Check a kept job‬`;
+    }
+    return `Check a kept job`;
+  }
+  function panelChangeLanguage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اللغة`;
+      case "de":
+        return `Sprache`;
+      case "es":
+        return `Idioma`;
+      case "fr":
+        return `Langue`;
+      case "ja":
+        return `言語`;
+      case "ko":
+        return `언어`;
+      case "pt-BR":
+        return `Idioma`;
+      case "zh-Hans":
+        return `语言`;
+      case "zh-Hant":
+        return `語言`;
+      case "en-XA":
+        return `[Ļáñĝûáĝé ~~~]`;
+      case "ar-XB":
+        return `‮Language‬`;
+    }
+    return `Language`;
+  }
+  function panelChangeModelPins() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النموذج لكل نوع من المهام`;
+      case "de":
+        return `Welches Modell jede Art von Aufgabe nutzt`;
+      case "es":
+        return `Qué modelo usa cada tipo de tarea`;
+      case "fr":
+        return `Le modèle de chaque type de tâche`;
+      case "ja":
+        return `タスクの種類ごとのモデル`;
+      case "ko":
+        return `작업 종류별 모델`;
+      case "pt-BR":
+        return `Qual modelo cada tipo de tarefa usa`;
+      case "zh-Hans":
+        return `每类任务使用的模型`;
+      case "zh-Hant":
+        return `每類任務使用的模型`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ɱöðéļ éáçĥ ķîñð öƒ ţášķ ûšéš ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which model each kind of task uses‬`;
+    }
+    return `Which model each kind of task uses`;
+  }
+  function panelChangeNoDelete() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تحذف اللوحة أي شيء يخصك أبدًا. لم يتغير شيء.`;
+      case "de":
+        return `Ein Panel löscht nie etwas von dir. Nichts wurde geändert.`;
+      case "es":
+        return `Un panel nunca borra nada tuyo. No se cambió nada.`;
+      case "fr":
+        return `Un panneau ne supprime jamais rien qui vous appartient. Rien n’a été modifié.`;
+      case "ja":
+        return `パネルがあなたのものを削除することはありません。何も変更されていません。`;
+      case "ko":
+        return `패널은 내 것을 절대 삭제하지 않아요. 아무것도 바뀌지 않았어요.`;
+      case "pt-BR":
+        return `Um painel nunca apaga nada seu. Nada foi alterado.`;
+      case "zh-Hans":
+        return `面板从不删除你的任何内容。没有任何更改。`;
+      case "zh-Hant":
+        return `面板從不刪除你的任何內容。沒有任何更改。`;
+      case "en-XA":
+        return `[Å þáñéļ ñéṽéŕ ðéļéţéš áñýţĥîñĝ öƒ ýöûŕš. Ñöţĥîñĝ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A panel never deletes anything of yours. Nothing was changed.‬`;
+    }
+    return `A panel never deletes anything of yours. Nothing was changed.`;
+  }
+  function panelChangeNotAsked() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يغيّر إعدادًا إلا نقرك أو ضغطك مفتاحًا بنفسك في هذه اللوحة. لم يتغير شيء.`;
+      case "de":
+        return `Nur dein eigener Klick oder Tastendruck in diesem Panel ändert eine Einstellung. Nichts wurde geändert.`;
+      case "es":
+        return `Solo tu propio clic o pulsación de tecla en este panel cambia un ajuste. No se cambió nada.`;
+      case "fr":
+        return `Seul votre propre clic ou appui sur une touche dans ce panneau modifie un réglage. Rien n’a été modifié.`;
+      case "ja":
+        return `設定を変更できるのは、このパネル内でのあなた自身のクリックやキー操作だけです。何も変更していません。`;
+      case "ko":
+        return `이 패널 안에서 직접 클릭하거나 키를 누를 때만 설정이 바뀝니다. 아무것도 바뀌지 않았습니다.`;
+      case "pt-BR":
+        return `Só o seu próprio clique ou tecla neste painel altera uma configuração. Nada foi alterado.`;
+      case "zh-Hans":
+        return `只有你在此面板中亲自点按或按键才会更改设置。没有任何更改。`;
+      case "zh-Hant":
+        return `只有你在此面板中親自點按或按鍵才會變更設定。沒有任何變更。`;
+      case "en-XA":
+        return `[Öñļý ýöûŕ öŵñ çļîçķ öŕ ķéý þŕéšš îñ ţĥîš þáñéļ çĥáñĝéš á šéţţîñĝ. Ñöţĥîñĝ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only your own click or key press in this panel changes a setting. Nothing was changed.‬`;
+    }
+    return `Only your own click or key press in this panel changes a setting. Nothing was changed.`;
+  }
+  function panelChangeNotGranted(input2) {
+    const setting = input2.setting;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن لهذه اللوحة تغيير ${setting}. لم يتغير شيء.`;
+      case "de":
+        return `Dieses Panel darf ${setting} nicht ändern. Nichts wurde geändert.`;
+      case "es":
+        return `Este panel no puede cambiar ${setting}. No se cambió nada.`;
+      case "fr":
+        return `Ce panneau ne peut pas modifier ${setting}. Rien n’a été modifié.`;
+      case "ja":
+        return `このパネルは ${setting} を変更できません。何も変更していません。`;
+      case "ko":
+        return `이 패널은 ${setting}을(를) 바꿀 수 없습니다. 아무것도 바뀌지 않았습니다.`;
+      case "pt-BR":
+        return `Este painel não pode alterar ${setting}. Nada foi alterado.`;
+      case "zh-Hans":
+        return `此面板不能更改 ${setting}。没有任何更改。`;
+      case "zh-Hant":
+        return `此面板不能變更 ${setting}。沒有任何變更。`;
+      case "en-XA":
+        return `[Ţĥîš þáñéļ ɱáý ñöţ çĥáñĝé ${setting}. Ñöţĥîñĝ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This panel may not change ‬${setting}‮. Nothing was changed.‬`;
+    }
+    return `This panel may not change ${setting}. Nothing was changed.`;
+  }
+  function panelChangeNotifications() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإشعارات`;
+      case "de":
+        return `Mitteilungen`;
+      case "es":
+        return `Notificaciones`;
+      case "fr":
+        return `Notifications`;
+      case "ja":
+        return `通知`;
+      case "ko":
+        return `알림`;
+      case "pt-BR":
+        return `Notificações`;
+      case "zh-Hans":
+        return `通知`;
+      case "zh-Hant":
+        return `通知`;
+      case "en-XA":
+        return `[Ñöţîƒîçáţîöñš ~~~~~]`;
+      case "ar-XB":
+        return `‮Notifications‬`;
+    }
+    return `Notifications`;
+  }
+  function panelChangeOrigin() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تغيّر اللوحة أبدًا مكان رمز المشروع أو المكان الذي يُدفع إليه. لم يتغير شيء.`;
+      case "de":
+        return `Ein Panel ändert nie, wo der Code eines Projekts liegt oder wohin er gepusht wird. Nichts wurde geändert.`;
+      case "es":
+        return `Un panel nunca cambia dónde está el código de un proyecto ni adónde se envía. No se cambió nada.`;
+      case "fr":
+        return `Un panneau ne modifie jamais l’endroit où se trouve le code d’un projet ni celui où il est poussé. Rien n’a été modifié.`;
+      case "ja":
+        return `パネルはプロジェクトのコードの場所やプッシュ先を変更しません。何も変更していません。`;
+      case "ko":
+        return `패널은 프로젝트 코드가 있는 곳이나 푸시하는 곳을 바꾸지 않습니다. 아무것도 바뀌지 않았습니다.`;
+      case "pt-BR":
+        return `Um painel nunca altera onde fica o código de um projeto nem para onde ele é enviado. Nada foi alterado.`;
+      case "zh-Hans":
+        return `面板从不更改项目代码所在的位置或推送到的位置。没有任何更改。`;
+      case "zh-Hant":
+        return `面板從不變更專案程式碼所在的位置或推送到的位置。沒有任何變更。`;
+      case "en-XA":
+        return `[Å þáñéļ ñéṽéŕ çĥáñĝéš ŵĥéŕé á þŕöĵéçţ'š çöðé ļîṽéš öŕ ŵĥéŕé îţ îš þûšĥéð. Ñöţĥîñĝ ŵáš çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A panel never changes where a project's code lives or where it is pushed. Nothing was changed.‬`;
+    }
+    return `A panel never changes where a project's code lives or where it is pushed. Nothing was changed.`;
+  }
+  function panelChangePanel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أماكن اللوحات`;
+      case "de":
+        return `Wo Panels sitzen`;
+      case "es":
+        return `Dónde están los paneles`;
+      case "fr":
+        return `L’emplacement des panneaux`;
+      case "ja":
+        return `パネルの配置`;
+      case "ko":
+        return `패널 위치`;
+      case "pt-BR":
+        return `Onde ficam os painéis`;
+      case "zh-Hans":
+        return `面板的位置`;
+      case "zh-Hant":
+        return `面板的位置`;
+      case "en-XA":
+        return `[Ŵĥéŕé þáñéļš šîţ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Where panels sit‬`;
+    }
+    return `Where panels sit`;
+  }
+  function panelChangePanelCollapse() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طي لوحة أو فتحها`;
+      case "de":
+        return `Panel ein- oder ausklappen`;
+      case "es":
+        return `Plegar o abrir un panel`;
+      case "fr":
+        return `Replier ou ouvrir un panneau`;
+      case "ja":
+        return `パネルを折りたたむ・開く`;
+      case "ko":
+        return `패널 접기 또는 펼치기`;
+      case "pt-BR":
+        return `Recolher ou abrir um painel`;
+      case "zh-Hans":
+        return `折叠或展开面板`;
+      case "zh-Hant":
+        return `摺疊或展開面板`;
+      case "en-XA":
+        return `[Ƒöļð öŕ öþéñ á þáñéļ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Fold or open a panel‬`;
+    }
+    return `Fold or open a panel`;
+  }
+  function panelChangePersonalResources() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مواردك الشخصية`;
+      case "de":
+        return `Deine persönlichen Ressourcen`;
+      case "es":
+        return `Tus recursos personales`;
+      case "fr":
+        return `Vos ressources personnelles`;
+      case "ja":
+        return `個人リソース`;
+      case "ko":
+        return `개인 리소스`;
+      case "pt-BR":
+        return `Seus recursos pessoais`;
+      case "zh-Hans":
+        return `你的个人资源`;
+      case "zh-Hant":
+        return `你的個人資源`;
+      case "en-XA":
+        return `[Ýöûŕ þéŕšöñáļ ŕéšöûŕçéš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your personal resources‬`;
+    }
+    return `Your personal resources`;
+  }
+  function panelChangePrivateSiteRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سحب موقع خاص يمكن لمتصفح مهمة الوصول إليه`;
+      case "de":
+        return `Privaten Ort zurücknehmen, den ein Aufgaben-Browser erreichen darf`;
+      case "es":
+        return `Retirar un sitio privado que puede abrir el navegador de una tarea`;
+      case "fr":
+        return `Retirer un site privé accessible au navigateur d’une tâche`;
+      case "ja":
+        return `タスクのブラウザが開ける非公開サイトを取り消す`;
+      case "ko":
+        return `작업 브라우저가 열 수 있는 비공개 사이트 취소`;
+      case "pt-BR":
+        return `Retirar um site privado que o navegador de uma tarefa pode abrir`;
+      case "zh-Hans":
+        return `收回任务浏览器可访问的私有站点`;
+      case "zh-Hant":
+        return `收回任務瀏覽器可存取的私人網站`;
+      case "en-XA":
+        return `[Ţáķé ƀáçķ á þŕîṽáţé šîţé á ţášķ ƀŕöŵšéŕ ɱáý ŕéáçĥ ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Take back a private site a task browser may reach‬`;
+    }
+    return `Take back a private site a task browser may reach`;
+  }
+  function panelChangeProjectBatchAnswer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإجابة عن سؤال دفعة مشروع`;
+      case "de":
+        return `Batch-Frage eines Projekts beantworten`;
+      case "es":
+        return `Responder la pregunta de lote de un proyecto`;
+      case "fr":
+        return `Répondre à la question de lot d’un projet`;
+      case "ja":
+        return `プロジェクトのバッチの質問に答える`;
+      case "ko":
+        return `프로젝트의 일괄 처리 질문에 답하기`;
+      case "pt-BR":
+        return `Responder à pergunta de lote de um projeto`;
+      case "zh-Hans":
+        return `回答项目的批次问题`;
+      case "zh-Hant":
+        return `回答專案的批次問題`;
+      case "en-XA":
+        return `[Åñšŵéŕ á þŕöĵéçţ'š ƀáţçĥ ǫûéšţîöñ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Answer a project's batch question‬`;
+    }
+    return `Answer a project's batch question`;
+  }
+  function panelChangeProjectMove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشروع الذي يضم مستودعًا`;
+      case "de":
+        return `In welchem Projekt ein Repository liegt`;
+      case "es":
+        return `En qué proyecto está un repositorio`;
+      case "fr":
+        return `Le projet d’un dépôt`;
+      case "ja":
+        return `リポジトリが属するプロジェクト`;
+      case "ko":
+        return `저장소가 속한 프로젝트`;
+      case "pt-BR":
+        return `Em qual projeto fica um repositório`;
+      case "zh-Hans":
+        return `仓库所在的项目`;
+      case "zh-Hant":
+        return `儲存庫所在的專案`;
+      case "en-XA":
+        return `[Ŵĥîçĥ þŕöĵéçţ á ŕéþöšîţöŕý îš îñ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which project a repository is in‬`;
+    }
+    return `Which project a repository is in`;
+  }
+  function panelChangeProjectName() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسم مشروع`;
+      case "de":
+        return `Name eines Projekts`;
+      case "es":
+        return `El nombre de un proyecto`;
+      case "fr":
+        return `Le nom d’un projet`;
+      case "ja":
+        return `プロジェクトの名前`;
+      case "ko":
+        return `프로젝트 이름`;
+      case "pt-BR":
+        return `O nome de um projeto`;
+      case "zh-Hans":
+        return `项目的名称`;
+      case "zh-Hant":
+        return `專案的名稱`;
+      case "en-XA":
+        return `[Å þŕöĵéçţ'š ñáɱé ~~~~~~]`;
+      case "ar-XB":
+        return `‮A project's name‬`;
+    }
+    return `A project's name`;
+  }
+  function panelChangeProjectRunsOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الذي ينفّذ مهام مشروع`;
+      case "de":
+        return `Welcher Computer die Aufgaben eines Projekts ausführt`;
+      case "es":
+        return `Qué computadora ejecuta las tareas de un proyecto`;
+      case "fr":
+        return `L’ordinateur qui exécute les tâches d’un projet`;
+      case "ja":
+        return `プロジェクトのタスクを実行するコンピュータ`;
+      case "ko":
+        return `프로젝트 작업을 실행하는 컴퓨터`;
+      case "pt-BR":
+        return `Qual computador executa as tarefas de um projeto`;
+      case "zh-Hans":
+        return `运行项目任务的电脑`;
+      case "zh-Hant":
+        return `執行專案任務的電腦`;
+      case "en-XA":
+        return `[Ŵĥîçĥ çöɱþûţéŕ ŕûñš á þŕöĵéçţ'š ţášķš ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which computer runs a project's tasks‬`;
+    }
+    return `Which computer runs a project's tasks`;
+  }
+  function panelChangeProjectSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعدادات مشروع`;
+      case "de":
+        return `Einstellungen eines Projekts`;
+      case "es":
+        return `Los ajustes de un proyecto`;
+      case "fr":
+        return `Les réglages d’un projet`;
+      case "ja":
+        return `プロジェクトの設定`;
+      case "ko":
+        return `프로젝트 설정`;
+      case "pt-BR":
+        return `As configurações de um projeto`;
+      case "zh-Hans":
+        return `项目的设置`;
+      case "zh-Hant":
+        return `專案的設定`;
+      case "en-XA":
+        return `[Å þŕöĵéçţ'š šéţţîñĝš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮A project's settings‬`;
+    }
+    return `A project's settings`;
+  }
+  function panelChangeProjectsFolder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجلد المشاريع`;
+      case "de":
+        return `Projektordner`;
+      case "es":
+        return `La carpeta de proyectos`;
+      case "fr":
+        return `Le dossier des projets`;
+      case "ja":
+        return `プロジェクトフォルダ`;
+      case "ko":
+        return `프로젝트 폴더`;
+      case "pt-BR":
+        return `A pasta de projetos`;
+      case "zh-Hans":
+        return `项目文件夹`;
+      case "zh-Hant":
+        return `專案資料夾`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţš ƒöļðéŕ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The projects folder‬`;
+    }
+    return `The projects folder`;
+  }
+  function panelChangeRefreshUsage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحديث الاستخدام`;
+      case "de":
+        return `Nutzung aktualisieren`;
+      case "es":
+        return `Actualizar el uso`;
+      case "fr":
+        return `Actualiser l’utilisation`;
+      case "ja":
+        return `使用量を更新`;
+      case "ko":
+        return `사용량 새로 고침`;
+      case "pt-BR":
+        return `Atualizar o uso`;
+      case "zh-Hans":
+        return `刷新用量`;
+      case "zh-Hant":
+        return `重新整理用量`;
+      case "en-XA":
+        return `[Ŕéƒŕéšĥ ûšáĝé ~~~~~]`;
+      case "ar-XB":
+        return `‮Refresh usage‬`;
+    }
+    return `Refresh usage`;
+  }
+  function panelChangeReleasePage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح صفحة إصدار`;
+      case "de":
+        return `Release-Seite einer Version öffnen`;
+      case "es":
+        return `Abrir la página de una versión`;
+      case "fr":
+        return `Ouvrir la page d’une version`;
+      case "ja":
+        return `バージョンのリリースページを開く`;
+      case "ko":
+        return `버전의 릴리스 페이지 열기`;
+      case "pt-BR":
+        return `Abrir a página de uma versão`;
+      case "zh-Hans":
+        return `打开版本的发布页面`;
+      case "zh-Hant":
+        return `開啟版本的發行頁面`;
+      case "en-XA":
+        return `[Öþéñ á ṽéŕšîöñ'š ŕéļéášé þáĝé ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open a version's release page‬`;
+    }
+    return `Open a version's release page`;
+  }
+  function panelChangeRunbook() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أدلة التشغيل المفعّلة`;
+      case "de":
+        return `Welche Leitfäden aktiv sind`;
+      case "es":
+        return `Qué manuales están activados`;
+      case "fr":
+        return `Les procédures activées`;
+      case "ja":
+        return `有効なランブック`;
+      case "ko":
+        return `켜진 런북`;
+      case "pt-BR":
+        return `Quais manuais estão ativos`;
+      case "zh-Hans":
+        return `启用的操作手册`;
+      case "zh-Hant":
+        return `啟用的作業手冊`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ŕûñƀööķš áŕé öñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which runbooks are on‬`;
+    }
+    return `Which runbooks are on`;
+  }
+  function panelChangeRunbookCopy() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إنشاء نسختك من دليل تشغيل`;
+      case "de":
+        return `Eigene Kopie eines Leitfadens anlegen`;
+      case "es":
+        return `Hacer tu propia copia de un manual`;
+      case "fr":
+        return `Faire votre copie d’une procédure`;
+      case "ja":
+        return `ランブックの自分用コピーを作る`;
+      case "ko":
+        return `런북의 내 사본 만들기`;
+      case "pt-BR":
+        return `Fazer sua própria cópia de um manual`;
+      case "zh-Hans":
+        return `复制一份自己的操作手册`;
+      case "zh-Hant":
+        return `複製一份自己的作業手冊`;
+      case "en-XA":
+        return `[Ṁáķé ýöûŕ öŵñ çöþý öƒ á ŕûñƀööķ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make your own copy of a runbook‬`;
+    }
+    return `Make your own copy of a runbook`;
+  }
+  function panelChangeShowInDock() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `العرض في Dock`;
+      case "de":
+        return `Im Dock anzeigen`;
+      case "es":
+        return `Mostrar en el Dock`;
+      case "fr":
+        return `Afficher dans le Dock`;
+      case "ja":
+        return `Dockに表示`;
+      case "ko":
+        return `Dock에 표시`;
+      case "pt-BR":
+        return `Mostrar no Dock`;
+      case "zh-Hans":
+        return `在程序坞中显示`;
+      case "zh-Hant":
+        return `在 Dock 中顯示`;
+      case "en-XA":
+        return `[Šĥöŵ îñ ţĥé Ðöçķ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Show in the Dock‬`;
+    }
+    return `Show in the Dock`;
+  }
+  function panelChangeShowWhatsNew() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرض الجديد`;
+      case "de":
+        return `Neuigkeiten anzeigen`;
+      case "es":
+        return `Mostrar las novedades`;
+      case "fr":
+        return `Afficher les nouveautés`;
+      case "ja":
+        return `新機能を表示`;
+      case "ko":
+        return `새 기능 보기`;
+      case "pt-BR":
+        return `Mostrar as novidades`;
+      case "zh-Hans":
+        return `显示新功能`;
+      case "zh-Hant":
+        return `顯示新功能`;
+      case "en-XA":
+        return `[Šĥöŵ ŵĥáţ'š ñéŵ ~~~~~]`;
+      case "ar-XB":
+        return `‮Show what's new‬`;
+    }
+    return `Show what's new`;
+  }
+  function panelChangeStartAtLogin() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل عند تسجيل الدخول`;
+      case "de":
+        return `Beim Anmelden starten`;
+      case "es":
+        return `Abrir al iniciar sesión`;
+      case "fr":
+        return `Ouvrir à la connexion`;
+      case "ja":
+        return `ログイン時に起動`;
+      case "ko":
+        return `로그인 시 시작`;
+      case "pt-BR":
+        return `Abrir ao iniciar a sessão`;
+      case "zh-Hans":
+        return `登录时启动`;
+      case "zh-Hant":
+        return `登入時啟動`;
+      case "en-XA":
+        return `[Šţáŕţ áţ ļöĝîñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Start at login‬`;
+    }
+    return `Start at login`;
+  }
+  function panelChangeTheme() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `السمة`;
+      case "de":
+        return `Design`;
+      case "es":
+        return `Tema`;
+      case "fr":
+        return `Thème`;
+      case "ja":
+        return `テーマ`;
+      case "ko":
+        return `테마`;
+      case "pt-BR":
+        return `Tema`;
+      case "zh-Hans":
+        return `主题`;
+      case "zh-Hant":
+        return `主題`;
+      case "en-XA":
+        return `[Ţĥéɱé ~~]`;
+      case "ar-XB":
+        return `‮Theme‬`;
+    }
+    return `Theme`;
+  }
+  function panelChangeUpdateChannel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التحديثات التي تصلك`;
+      case "de":
+        return `Welche Updates du bekommst`;
+      case "es":
+        return `Qué actualizaciones recibes`;
+      case "fr":
+        return `Les mises à jour que vous recevez`;
+      case "ja":
+        return `受け取るアップデート`;
+      case "ko":
+        return `받을 업데이트`;
+      case "pt-BR":
+        return `Quais atualizações você recebe`;
+      case "zh-Hans":
+        return `接收哪些更新`;
+      case "zh-Hant":
+        return `接收哪些更新`;
+      case "en-XA":
+        return `[Ŵĥîçĥ ûþðáţéš ýöû ĝéţ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Which updates you get‬`;
+    }
+    return `Which updates you get`;
+  }
+  function panelChangeUpdateCheck() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التحقق من التحديثات`;
+      case "de":
+        return `Nach Updates suchen`;
+      case "es":
+        return `Buscar actualizaciones`;
+      case "fr":
+        return `Rechercher des mises à jour`;
+      case "ja":
+        return `アップデートを確認`;
+      case "ko":
+        return `업데이트 확인`;
+      case "pt-BR":
+        return `Verificar atualizações`;
+      case "zh-Hans":
+        return `检查更新`;
+      case "zh-Hant":
+        return `檢查更新`;
+      case "en-XA":
+        return `[Çĥéçķ ƒöŕ ûþðáţéš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Check for updates‬`;
+    }
+    return `Check for updates`;
+  }
+  function panelChangeUsageUnit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طريقة احتساب الاستخدام`;
+      case "de":
+        return `Wie die Nutzung gezählt wird`;
+      case "es":
+        return `Cómo se cuenta el uso`;
+      case "fr":
+        return `L’unité d’utilisation`;
+      case "ja":
+        return `使用量の単位`;
+      case "ko":
+        return `사용량 단위`;
+      case "pt-BR":
+        return `Como o uso é contado`;
+      case "zh-Hans":
+        return `用量的计量方式`;
+      case "zh-Hant":
+        return `用量的計量方式`;
+      case "en-XA":
+        return `[Ĥöŵ ûšáĝé îš çöûñţéð ~~~~~~~]`;
+      case "ar-XB":
+        return `‮How usage is counted‬`;
+    }
+    return `How usage is counted`;
+  }
+  function panelChangeVoiceModel() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج الصوت`;
+      case "de":
+        return `Sprachmodell`;
+      case "es":
+        return `Modelo de voz`;
+      case "fr":
+        return `Modèle vocal`;
+      case "ja":
+        return `音声モデル`;
+      case "ko":
+        return `음성 모델`;
+      case "pt-BR":
+        return `Modelo de voz`;
+      case "zh-Hans":
+        return `语音模型`;
+      case "zh-Hant":
+        return `語音模型`;
+      case "en-XA":
+        return `[Ṽöîçé ɱöðéļ ~~~~]`;
+      case "ar-XB":
+        return `‮Voice model‬`;
+    }
+    return `Voice model`;
+  }
+  function panelChangeWindowSize() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حجم النص`;
+      case "de":
+        return `Textgröße`;
+      case "es":
+        return `Tamaño del texto`;
+      case "fr":
+        return `Taille du texte`;
+      case "ja":
+        return `文字サイズ`;
+      case "ko":
+        return `글자 크기`;
+      case "pt-BR":
+        return `Tamanho do texto`;
+      case "zh-Hans":
+        return `文字大小`;
+      case "zh-Hant":
+        return `文字大小`;
+      case "en-XA":
+        return `[Ţéẋţ šîžé ~~~]`;
+      case "ar-XB":
+        return `‮Text size‬`;
+    }
+    return `Text size`;
+  }
+  function panelChangeWindowWash() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تلوين النافذة`;
+      case "de":
+        return `Fenstertönung`;
+      case "es":
+        return `Velo de la ventana`;
+      case "fr":
+        return `Voile de la fenêtre`;
+      case "ja":
+        return `ウインドウの色合い`;
+      case "ko":
+        return `창 색조`;
+      case "pt-BR":
+        return `Véu da janela`;
+      case "zh-Hans":
+        return `窗口底色`;
+      case "zh-Hant":
+        return `視窗底色`;
+      case "en-XA":
+        return `[Ŵîñðöŵ ŵášĥ ~~~~]`;
+      case "ar-XB":
+        return `‮Window wash‬`;
+    }
+    return `Window wash`;
   }
   function panelCollapse(input2) {
     const title = input2.title;
@@ -90722,6 +92665,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardCarriedNotes,
     cardCarriedPictures,
     cardCarriedWithChoice,
+    cardConsentChanges,
+    cardConsentChangesDetail,
+    cardConsentChangesLine,
     cardConsentFrom,
     cardConsentFullDetails,
     cardConsentGuidanceOnly,
@@ -91214,10 +93160,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBranchPushed,
     feedBuiltInPlace,
     feedByCaptain,
+    feedByCaptainInPanel,
     feedByFirstMate,
     feedCaptainImage,
     feedCaptainSaid,
     feedCaptainSet,
+    feedCaptainSetInPanel,
     feedCareQuick,
     feedCareReviewed,
     feedCareStandard,
@@ -91386,6 +93334,68 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelBackgroundStopped,
     panelBackgroundUpdate,
     panelCardStopped,
+    panelChangeAccountPause,
+    panelChangeAccountPrefer,
+    panelChangeAccountRename,
+    panelChangeAmbientAway,
+    panelChangeAmbientMusic,
+    panelChangeAmbientOwnStyle,
+    panelChangeAutomationEdit,
+    panelChangeAutomationPauseAll,
+    panelChangeAutomationState,
+    panelChangeCardSize,
+    panelChangeCopyStop,
+    panelChangeCostLimit,
+    panelChangeCrewModelNames,
+    panelChangeCrewReasoning,
+    panelChangeCrewSlots,
+    panelChangeCrewSlotsReset,
+    panelChangeCrewSpeed,
+    panelChangeDecisionModel,
+    panelChangeDecisionUseOff,
+    panelChangeDeviceFixWork,
+    panelChangeDeviceKeep,
+    panelChangeDeviceTryAgain,
+    panelChangeDictation,
+    panelChangeFirstmateAccount,
+    panelChangeFirstmateModel,
+    panelChangeFont,
+    panelChangeHomeMoveCancel,
+    panelChangeInboxLink,
+    panelChangeIntegrationCheck,
+    panelChangeIntegrationSettings,
+    panelChangeKeptJobCheck,
+    panelChangeLanguage,
+    panelChangeModelPins,
+    panelChangeNoDelete,
+    panelChangeNotAsked,
+    panelChangeNotGranted,
+    panelChangeNotifications,
+    panelChangeOrigin,
+    panelChangePanel,
+    panelChangePanelCollapse,
+    panelChangePersonalResources,
+    panelChangePrivateSiteRemove,
+    panelChangeProjectBatchAnswer,
+    panelChangeProjectMove,
+    panelChangeProjectName,
+    panelChangeProjectRunsOn,
+    panelChangeProjectSettings,
+    panelChangeProjectsFolder,
+    panelChangeRefreshUsage,
+    panelChangeReleasePage,
+    panelChangeRunbook,
+    panelChangeRunbookCopy,
+    panelChangeShowInDock,
+    panelChangeShowWhatsNew,
+    panelChangeStartAtLogin,
+    panelChangeTheme,
+    panelChangeUpdateChannel,
+    panelChangeUpdateCheck,
+    panelChangeUsageUnit,
+    panelChangeVoiceModel,
+    panelChangeWindowSize,
+    panelChangeWindowWash,
     panelCollapse,
     panelCommandGone,
     panelCommandHidden,
@@ -93628,6 +95638,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardCarriedNotes": ["count"],
     "cardCarriedPictures": ["count"],
     "cardCarriedWithChoice": ["count", "items"],
+    "cardConsentChanges": [],
+    "cardConsentChangesDetail": [],
+    "cardConsentChangesLine": ["setting"],
     "cardConsentFrom": [],
     "cardConsentFullDetails": [],
     "cardConsentGuidanceOnly": [],
@@ -94120,10 +96133,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBranchPushed": [],
     "feedBuiltInPlace": [],
     "feedByCaptain": [],
+    "feedByCaptainInPanel": ["panel"],
     "feedByFirstMate": [],
     "feedCaptainImage": [],
     "feedCaptainSaid": ["preview"],
     "feedCaptainSet": ["text"],
+    "feedCaptainSetInPanel": ["panel", "text"],
     "feedCareQuick": [],
     "feedCareReviewed": [],
     "feedCareStandard": [],
@@ -94292,6 +96307,68 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelBackgroundStopped": [],
     "panelBackgroundUpdate": [],
     "panelCardStopped": [],
+    "panelChangeAccountPause": [],
+    "panelChangeAccountPrefer": [],
+    "panelChangeAccountRename": [],
+    "panelChangeAmbientAway": [],
+    "panelChangeAmbientMusic": [],
+    "panelChangeAmbientOwnStyle": [],
+    "panelChangeAutomationEdit": [],
+    "panelChangeAutomationPauseAll": [],
+    "panelChangeAutomationState": [],
+    "panelChangeCardSize": [],
+    "panelChangeCopyStop": [],
+    "panelChangeCostLimit": [],
+    "panelChangeCrewModelNames": [],
+    "panelChangeCrewReasoning": [],
+    "panelChangeCrewSlots": [],
+    "panelChangeCrewSlotsReset": [],
+    "panelChangeCrewSpeed": [],
+    "panelChangeDecisionModel": [],
+    "panelChangeDecisionUseOff": [],
+    "panelChangeDeviceFixWork": [],
+    "panelChangeDeviceKeep": [],
+    "panelChangeDeviceTryAgain": [],
+    "panelChangeDictation": [],
+    "panelChangeFirstmateAccount": [],
+    "panelChangeFirstmateModel": [],
+    "panelChangeFont": [],
+    "panelChangeHomeMoveCancel": [],
+    "panelChangeInboxLink": [],
+    "panelChangeIntegrationCheck": [],
+    "panelChangeIntegrationSettings": [],
+    "panelChangeKeptJobCheck": [],
+    "panelChangeLanguage": [],
+    "panelChangeModelPins": [],
+    "panelChangeNoDelete": [],
+    "panelChangeNotAsked": [],
+    "panelChangeNotGranted": ["setting"],
+    "panelChangeNotifications": [],
+    "panelChangeOrigin": [],
+    "panelChangePanel": [],
+    "panelChangePanelCollapse": [],
+    "panelChangePersonalResources": [],
+    "panelChangePrivateSiteRemove": [],
+    "panelChangeProjectBatchAnswer": [],
+    "panelChangeProjectMove": [],
+    "panelChangeProjectName": [],
+    "panelChangeProjectRunsOn": [],
+    "panelChangeProjectSettings": [],
+    "panelChangeProjectsFolder": [],
+    "panelChangeRefreshUsage": [],
+    "panelChangeReleasePage": [],
+    "panelChangeRunbook": [],
+    "panelChangeRunbookCopy": [],
+    "panelChangeShowInDock": [],
+    "panelChangeShowWhatsNew": [],
+    "panelChangeStartAtLogin": [],
+    "panelChangeTheme": [],
+    "panelChangeUpdateChannel": [],
+    "panelChangeUpdateCheck": [],
+    "panelChangeUsageUnit": [],
+    "panelChangeVoiceModel": [],
+    "panelChangeWindowSize": [],
+    "panelChangeWindowWash": [],
     "panelCollapse": ["title"],
     "panelCommandGone": [],
     "panelCommandHidden": ["title"],
@@ -97719,6 +99796,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   });
   const readNameSchema = string().min(1).max(64).regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/, "dotted read-catalog name");
+  const actionNameSchema = string().min(1).max(64).regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/);
   const capabilitiesSchema = strictObject({
     /** Retired: refused with `retiredGrantWords`. */
     net: never({ message: retiredGrantWords("net") }).optional(),
@@ -97744,7 +99822,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * unqueue - each only on his click or key in it (docs/ui-plugins.md, "A
      * panel's cards"). Never merge or discard.
      */
-    moves: literal(true).optional()
+    moves: literal(true).optional(),
+    /**
+     * The app settings it may change, by the action catalog's line names,
+     * each only on the captain's own press in it (docs/ui-plugins.md,
+     * "Changing settings"); the host serves only the lines on its allowlist
+     * (`PANEL_CHANGES`, src/shared/panelChanges.ts).
+     */
+    actions: array(actionNameSchema).max(PANEL_CHANGE_NAMES.length).optional()
   });
   strictObject({
     id: pluginIdSchema,
@@ -97783,6 +99868,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settings.current"
   ];
   const panelReadNameSchema = _enum(PANEL_READ_NAMES);
+  const panelSettingNameSchema$1 = _enum(
+    PANEL_CHANGE_NAMES
+  );
   const storeValueSchema = lazy(
     () => union([
       _null(),
@@ -97828,6 +99916,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commands: panelCommandsSchema.optional(),
     reads: array(panelReadNameSchema).max(PANEL_READ_NAMES.length).optional(),
     moves: literal(true).optional(),
+    actions: array(panelSettingNameSchema$1).max(PANEL_CHANGE_NAMES.length).optional(),
     sql: array(sqlViewNameSchema).max(64).optional(),
     integrations: panelIntegrationsSchema.optional(),
     /** Retired: a panel reaches a service through an integration (`retiredGrantWords`). */
@@ -97841,7 +99930,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   });
   ({
     reads: new Set(PANEL_READ_NAMES),
-    sql: new Set(SQL_VIEWS)
+    sql: new Set(SQL_VIEWS),
+    actions: new Set(PANEL_CHANGE_NAMES)
   });
   const personalErrorSchema = object({
     /** Which file refused: the manifest, the panel graph, or the server graph. */
@@ -97877,6 +99967,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     ownPresence: boolean(),
     /** It may move the captain's tasks: its manifest asks, and for an added one he agreed. */
     moves: boolean(),
+    /**
+     * The settings it may change on the captain's press: its manifest names
+     * them, and for an added one they agreed. Absent from a home before panels
+     * changed settings, which serves none.
+     */
+    actions: array(panelSettingNameSchema$1).optional(),
     /** A task on this extension is active: the header shows the running dot. */
     running: boolean(),
     /** The app's own reads the manifest declared; the panel is served these and no other. */
@@ -102867,6 +104963,12 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     moves: boolean().optional(),
     /**
+     * The captain agreed it may change named settings (`actions`): the
+     * runtime hands it `settings`, whose one action the host declared for this
+     * mount alone; the window and the core check each change.
+     */
+    settings: boolean().optional(),
+    /**
      * The panel may have background work of its own (`server.ts`, the
      * captain's own panels only): the runtime hands it an `invoke` that asks
      * the host's `server.invoke` action, which the host declared for this
@@ -106225,6 +108327,8 @@ ${FRAME_KEYBOARD_SCRIPT}
        */
       said: saidSchema.optional(),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       repoId: string(),
       name: string(),
       delivery: repoDeliverySchema,
@@ -106273,6 +108377,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     object({
       type: literal("repo_runs_on"),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       repoId: string(),
       name: string(),
       runsOn: string().nullable(),
@@ -106449,6 +108555,8 @@ ${FRAME_KEYBOARD_SCRIPT}
       type: literal("personalized"),
       text: string(),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       /**
        * The captain's settled run this line belongs to (docs/orchestrator-contract.md,
        * "Settled runs"): a later step of the same run rewrites the run's line
@@ -109259,8 +111367,18 @@ ${FRAME_KEYBOARD_SCRIPT}
   function isFeedEvent(event) {
     return feedTypes.has(event.type);
   }
-  function byWho(actor) {
-    return actor === "captain" ? saidPart("feedByCaptain") : actor === "firstmate" ? saidPart("feedByFirstMate") : "";
+  function inPanel(panel, text, fact) {
+    const part = fact ? saidPartSchema.safeParse(fact) : null;
+    return line(
+      "info",
+      said("feedCaptainSetInPanel", {
+        text: part?.success ? part.data : text || (fact ? englishOf(fact) : ""),
+        panel
+      })
+    );
+  }
+  function byWho(actor, panel) {
+    return actor === "captain" ? panel ? saidPart("feedByCaptainInPanel", { panel }) : saidPart("feedByCaptain") : actor === "firstmate" ? saidPart("feedByFirstMate") : "";
   }
   const DELIVERY_SAID = {
     "direct-pr": saidPart("feedDeliveryPull"),
@@ -109298,7 +111416,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         if (event.run?.withdrawn) return null;
         return line(
           "info",
-          event.actor === "captain" ? said("feedCaptainSet", { text: event.text }) : event.actor ? said("feedFirstMateSet", { text: event.text }) : said("feedPersonalized", { text: event.text })
+          event.actor === "captain" ? event.panel ? said("feedCaptainSetInPanel", { text: event.text, panel: event.panel }) : said("feedCaptainSet", { text: event.text }) : event.actor ? said("feedFirstMateSet", { text: event.text }) : said("feedPersonalized", { text: event.text })
         );
       case "user_turn": {
         const preview = reportSummary(event.text);
@@ -109317,11 +111435,13 @@ ${FRAME_KEYBOARD_SCRIPT}
         );
       }
       case "repo_configured": {
+        if (event.panel && (event.said || event.description))
+          return inPanel(event.panel, event.description ?? "", event.said);
         if (event.said)
           return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
         if (event.description) return { kind: "info", text: event.description };
         const fills = {
-          who: byWho(event.actor),
+          who: byWho(event.actor, event.panel),
           name: event.name,
           delivery: DELIVERY_SAID[event.delivery] ?? event.delivery,
           merging: event.autonomy ? saidPart("feedMergesOnItsOwn") : saidPart("feedAsksFirst")
@@ -109335,6 +111455,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         );
       }
       case "repo_runs_on":
+        if (event.panel) return inPanel(event.panel, event.text, event.said);
         return { kind: "info", text: event.text, ...event.said ? { said: event.said } : {} };
       case "repo_unregistered":
         return line(

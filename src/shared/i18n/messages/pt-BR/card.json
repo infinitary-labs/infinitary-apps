@@ -90,6 +90,9 @@
     "many": "{items} vão com sua escolha",
     "other": "{items} vão com sua escolha"
   },
+  "cardConsentChanges": "Altera",
+  "cardConsentChangesDetail": "Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.",
+  "cardConsentChangesLine": "Pode alterar uma configuração quando você clica: {setting}",
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Todos os detalhes",
   "cardConsentGuidanceOnly": "Fornece orientações, partes HTML e imagens, e não executa nada.",

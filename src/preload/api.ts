@@ -806,6 +806,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       },
       integrations: (extensionId, request, options) =>
         invoke("inf:plugins:integrations", extensionId, request, options),
+      changeSetting: (extensionId, action, value) =>
+        invoke("inf:plugins:settings:change", extensionId, action, value),
       invoke: (extensionId, action, input, options) =>
         invoke("inf:plugins:invoke", extensionId, action, input, options),
       db: {

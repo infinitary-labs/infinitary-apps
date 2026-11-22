@@ -15572,6 +15572,8 @@ ${events}` : prompt;
        */
       said: saidSchema.optional(),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       repoId: string(),
       name: string(),
       delivery: repoDeliverySchema,
@@ -15620,6 +15622,8 @@ ${events}` : prompt;
     object({
       type: literal("repo_runs_on"),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       repoId: string(),
       name: string(),
       runsOn: string().nullable(),
@@ -15796,6 +15800,8 @@ ${events}` : prompt;
       type: literal("personalized"),
       text: string(),
       actor: _enum(["captain", "firstmate"]).optional(),
+      /** The panel the captain changed it in, by its title (docs/ui-plugins.md, "Changing settings"). */
+      panel: string().optional(),
       /**
        * The captain's settled run this line belongs to (docs/orchestrator-contract.md,
        * "Settled runs"): a later step of the same run rewrites the run's line

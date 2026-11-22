@@ -17,7 +17,8 @@ import { escapeHtml } from "@shared/cardBodyMarkup";
 import type { FmEvent } from "@shared/events";
 import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
-import { wordSaidMarks } from "@shared/i18n/said";
+import { englishOf, said, wordSaidMarks } from "@shared/i18n/said";
+import { PANEL_CHANGE_NAMES } from "@shared/panelChanges";
 import { retiredGrantWords } from "@shared/plugins/manifest";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import { READ_WORDS, viewWords } from "@shared/vocabulary";
@@ -38,6 +39,7 @@ import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
+import { panelChangeLabel } from "./consentWords";
 import { consentCardId, PluginInstaller } from "./pluginInstaller";
 import { PluginRecords } from "./pluginRecords";
 
@@ -806,6 +808,9 @@ describe("PluginInstaller", () => {
   }, 10_000);
 });
 
+/** The look panel fixture: a panel that changes the theme and the window's size. */
+const LOOK = join(process.cwd(), "tests", "fixtures", "panel-settings", "look");
+
 function restoreEnv(name: string, value: string | undefined): void {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
@@ -883,6 +888,95 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
         version: "1.0.0",
         capabilities: { integrations: [github] },
       });
+    } finally {
+      h.personal.dispose();
+    }
+  });
+});
+
+// Intent: the approved plan's "one approval card line per setting": a panel
+// from elsewhere that names settings it may change lists each on its consent
+// card, is served them only once the captain agrees, never a setting the host
+// keeps from panels, and asks again when an update names more.
+// Fixture: the look panel's own manifest and code (tests/fixtures/panel-settings/look).
+describe('a panel that names settings it may change (docs/ui-plugins.md, "Changing settings")', () => {
+  const look = (actions: readonly string[]) => ({
+    "manifest.json": JSON.stringify({
+      ...JSON.parse(readFileSync(join(LOOK, "manifest.json"), "utf8")),
+      name: "Acme",
+      version: "1.0.0",
+      actions,
+    }),
+    "panel.tsx": readFileSync(join(LOOK, "panel.tsx"), "utf8"),
+  });
+
+  it("lists each setting on its consent card and is granted them only once the captain agrees", async () => {
+    const h = await harness();
+    // Every setting a panel may name, so each one's line is read.
+    const source = h.plugin("look", look(PANEL_CHANGE_NAMES));
+    try {
+      await h.installer.install({ source: "path", spec: source });
+      const card = h.cards().find((entry) => entry.id === consentCardId("look"));
+      // The Changes row: one value for each setting, beside Reads, Uses and Moves.
+      const row = (card?.body ?? "").match(
+        new RegExp(
+          `<dt [^>]*>${englishOf(said("cardConsentChanges"))}</dt>((?:<dd [^>]*>[^<]*</dd>)+)`,
+        ),
+      );
+      const lines = [...(row?.[1] ?? "").matchAll(/<dd [^>]*>([^<]*)<\/dd>/g)].map(
+        (match) => match[1],
+      );
+      expect(lines).toEqual(
+        PANEL_CHANGE_NAMES.map((name) => englishOf(said(panelChangeLabel(name)))),
+      );
+      expect(lines.every((line) => line && line.length > 0)).toBe(true);
+      expect(h.installed()).toEqual([]);
+      expect(h.personal.changeGrant("look", "theme")).toBeNull();
+
+      h.supervisor.cardActions.act(consentCardId("look"), "add");
+      await h.settled();
+      expect(h.installed()[0]).toMatchObject({ id: "look", error: null });
+      expect(h.installed()[0]?.actions).toEqual([...PANEL_CHANGE_NAMES]);
+      expect(h.personal.changeGrant("look", "theme")).toBe("Look");
+      expect(h.personal.changeGrant("look", "purge")).toBeNull();
+    } finally {
+      h.personal.dispose();
+    }
+  });
+
+  it("refuses a panel naming a setting the host keeps from panels, with no card", async () => {
+    const h = await harness();
+    const source = h.plugin("look", look(["theme", "purge"]));
+    try {
+      const answer = await h.installer.install({ source: "path", spec: source });
+      expect(answer).toMatch(/^Not added: /);
+      expect(answer).toContain("actions.1 is not one this app reads");
+      expect(h.cards().find((entry) => entry.id === consentCardId("look"))).toBeUndefined();
+    } finally {
+      h.personal.dispose();
+    }
+  });
+
+  it("asks again when an update names another setting, and keeps the old grant on Keep the old one", async () => {
+    const h = await harness();
+    const source = h.plugin("look", look(["theme"]));
+    try {
+      await h.installer.install({ source: "path", spec: source });
+      h.supervisor.cardActions.act(consentCardId("look"), "add");
+      await h.settled();
+      const wider = look(["theme", "window-size"]);
+      writeFileSync(
+        join(source, "manifest.json"),
+        JSON.stringify({ ...JSON.parse(wider["manifest.json"]), version: "1.1.0" }),
+      );
+      await h.installer.install({ source: "path", spec: source });
+      const ask = h.cards().find((entry) => entry.id === consentCardId("look"));
+      expect(ask?.title).toBe("Update the Look panel?");
+      expect(ask?.body).toContain(englishOf(said("panelChangeWindowSize")));
+      h.supervisor.cardActions.act(consentCardId("look"), "decline");
+      await h.settled();
+      expect(h.personal.changeGrant("look", "theme")).toBe("Look");
+      expect(h.personal.changeGrant("look", "window-size")).toBeNull();
     } finally {
       h.personal.dispose();
     }

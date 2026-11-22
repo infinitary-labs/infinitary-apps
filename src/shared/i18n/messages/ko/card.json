@@ -76,6 +76,9 @@
     "plural": "count",
     "other": "선택과 함께 보낼 항목: {items}"
   },
+  "cardConsentChanges": "변경",
+  "cardConsentChangesDetail": "이 설정들은 패널 안에서 클릭하거나 키를 누를 때만 바꿔요. 아무것도 삭제하지 않아요.",
+  "cardConsentChangesLine": "클릭할 때 설정을 바꿀 수 있어요: {setting}",
   "cardConsentFrom": "제공",
   "cardConsentFullDetails": "자세히",
   "cardConsentGuidanceOnly": "안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.",

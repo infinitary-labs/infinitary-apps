@@ -1839,6 +1839,11 @@ export type ActionActor =
   | {
       kind: "captain";
       projectBefore?: unknown;
+      /**
+       * The panel the captain pressed in, by its title, when a panel asked
+       * the change on that press (docs/ui-plugins.md, "Changing settings").
+       */
+      panel?: string;
       /** The paired view (a phone, or a Mac that controls this one) that asked, by its device id. */
       view?: string;
       /** The contract version that paired view's hello spoke, as its connection heard it. */

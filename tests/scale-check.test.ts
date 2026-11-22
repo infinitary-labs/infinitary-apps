@@ -481,6 +481,9 @@ async function buildRecord() {
       counts["task close"] = await counted("task close", async () => {
         tasks.close(closing, { status: "done", reason: "merged", actor: "host" });
         for (const sweeps of fileSweeps) await sweeps.settled();
+        // The presentation pass the close asks for runs at the end of an
+        // event-loop turn; it is part of the close's reads.
+        await settle();
       });
       // A merged close whose change declared a required action: the step
       // that files the captain's action task (INF-4224, where it read every
@@ -498,6 +501,7 @@ async function buildRecord() {
         async () => {
           tasks.close(declaring, { status: "done", reason: "merged", actor: "host" });
           for (const sweeps of fileSweeps) await sweeps.settled();
+          await settle();
         },
       );
       // The captain's card shows the action and its button confirms it.

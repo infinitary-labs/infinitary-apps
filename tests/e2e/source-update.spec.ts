@@ -9,7 +9,7 @@ import { UPDATE_STEP_WORDS, UPDATE_WORDS } from "../../src/shared/updateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { regionShot } from "./pictures";
-import { runFromSearch } from "./windowKeys";
+import { commandSearch, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 const GIT_ENV = {
   ...process.env,
@@ -21,14 +21,12 @@ const GIT_ENV = {
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV }).trim();
 
-// INF-5635's approved plan, piece 2: an app pnpm dev's starter started offers
-// Update and restart when main has newer commits, reached by keys, and hands
-// the update to the starter: it leaves its request naming both commits and ends.
-// Fixture: a throwaway project where it lives (a bare repository) and a clone of
-// it one commit behind, a starter folder the test writes as the starter does,
-// and an isolated app. The starter itself is tests/dev-starter.test.ts's.
-// Completion: the request in the starter folder and the app's own exit.
-test("a copy run from source updates from the keyboard, handing the update to its starter", async () => {
+/**
+ * A throwaway project where it lives (a bare repository), a clone of it, and
+ * a starter folder written as pnpm dev's starter writes it; `behind` newer
+ * commits on main the clone lacks.
+ */
+function sourceCopy(behind: number) {
   const base = scratchDir("infinitary-source-journey-");
   const seed = join(base, "seed");
   git(base, "init", "--quiet", "--initial-branch=main", seed);
@@ -40,13 +38,26 @@ test("a copy run from source updates from the keyboard, handing the update to it
   const copy = join(base, "copy");
   git(base, "clone", "--quiet", remote, copy);
   const from = git(copy, "rev-parse", "HEAD");
-  writeFileSync(join(seed, "README.md"), "two\n");
-  git(seed, "commit", "--quiet", "-am", "second");
-  git(seed, "push", "--quiet", remote, "main");
+  for (let i = 0; i < behind; i++) {
+    writeFileSync(join(seed, "README.md"), `newer ${i}\n`);
+    git(seed, "commit", "--quiet", "-am", `newer ${i}`);
+  }
+  if (behind > 0) git(seed, "push", "--quiet", remote, "main");
   const to = git(seed, "rev-parse", "HEAD");
-
   const starter = scratchDir("infinitary-source-starter-");
   writeStarterSession(starter, { root: copy, commit: from, edited: false, lockDigest: "" });
+  return { copy, from, to, starter };
+}
+
+// INF-5635's approved plan, piece 2: an app pnpm dev's starter started offers
+// Update and restart when main has newer commits, reached by keys, and hands
+// the update to the starter: it leaves its request naming both commits and ends.
+// Fixture: a throwaway project where it lives (a bare repository) and a clone of
+// it one commit behind, a starter folder the test writes as the starter does,
+// and an isolated app. The starter itself is tests/dev-starter.test.ts's.
+// Completion: the request in the starter folder and the app's own exit.
+test("a copy run from source updates from the keyboard, handing the update to its starter", async () => {
+  const { copy, from, to, starter } = sourceCopy(1);
   const launched = await launchApp({
     withMockProvider: true,
     env: { INFINITARY_DEV_STARTER: starter },
@@ -74,6 +85,34 @@ test("a copy run from source updates from the keyboard, handing the update to it
     expect(JSON.parse(readFileSync(join(starter, "update.json"), "utf8"))).toEqual({ from, to });
     // The app leaves moving the copy to its starter.
     expect(git(copy, "rev-parse", "HEAD")).toBe(from);
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-5635's approved plan, piece 2: with nothing newer on main, the update
+// command is refused in command search, with the reason beside it.
+// Fixture: the same throwaway project with a clone up to date, and an isolated app.
+// Completion: the refused row and no request in the starter folder.
+test("a copy run from source that is up to date refuses the update command, saying why", async () => {
+  const { starter } = sourceCopy(0);
+  const launched = await launchApp({
+    withMockProvider: true,
+    env: { INFINITARY_DEV_STARTER: starter },
+  });
+  const { app, page } = launched;
+  try {
+    await expect
+      .poll(() => page.evaluate(() => window.infinitary.update.status()))
+      .toMatchObject({ updateAvailable: false, source: { branch: "main", behind: 0 } });
+    const search = commandSearch(page);
+    await pressWindowKey(app, "k", ["meta"]);
+    await typeInto(search.field, m.commandUpdatesShow());
+    const row = search.row("updates.show");
+    await expect(row).toHaveAttribute("aria-disabled", "true");
+    await expect(row).toContainText(m.refuseNoUpdateIsAvailable());
+    await page.keyboard.press("Escape");
+    expect(existsSync(join(starter, "update.json"))).toBe(false);
   } finally {
     await launched.close();
   }

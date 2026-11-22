@@ -1420,6 +1420,23 @@ export class TaskStore {
     return counts;
   }
 
+  /**
+   * How many parts a program filed and how many of them are open or active,
+   * without composing them: the program pump runs on every task write while
+   * its calls wait, so it seeks two counts rather than every part's record.
+   */
+  programPartCounts(programId: string): { parts: number; open: number } {
+    // i18n-exempt: SQL, never shown to a person
+    const sql = this.shapes.exists()
+      ? `SELECT COUNT(*) AS parts, COALESCE(SUM(t.status IN ('open', 'active')), 0) AS open
+         FROM tasks t JOIN task_programs p ON p.task_id = t.id
+         WHERE t.parent_id = ? AND json_extract(p.value_json, '$.program_part') IS NOT NULL`
+      : `SELECT COUNT(*) AS parts, COALESCE(SUM(status IN ('open', 'active')), 0) AS open
+         FROM tasks WHERE parent_id = ? AND json_extract(shape_json, '$.program_part') IS NOT NULL`;
+    const row = prepared(this.db, sql).get(programId) as { parts: number; open: number };
+    return { parts: row.parts, open: row.open };
+  }
+
   /** Earliest child creation or start after a request, without composing child records. */
   firstChildActivityAfter(parentId: string, since: number): number | undefined {
     const row = prepared(

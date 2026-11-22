@@ -296,22 +296,23 @@ class RunningProgram {
     this.pump();
   }
 
-  /** Files queued calls while the bound and the open parts allow. */
+  /**
+   * Files queued calls while the bound and the open parts allow. It runs on
+   * every task write while calls wait, so it reads two counts, never the
+   * parts' records: at hundreds of parts those reads paused the main thread.
+   */
   pump(): void {
     if (this.ended) return;
     const tasks = this.host.tasks;
     while (this.queue.length > 0) {
       const program = this.program();
-      const parts = tasks.graph
-        .children(this.programId)
-        .filter((child) => child.shape?.program_part);
+      const counts = tasks.graph.programPartCounts(this.programId);
       const bound = program.shape?.program?.bound ?? 0;
-      if (parts.length >= bound) {
-        this.host.bounded(program, parts.length);
+      if (counts.parts >= bound) {
+        this.host.bounded(program, counts.parts);
         return;
       }
-      const open = parts.filter((part) => part.status === "open" || part.status === "active");
-      if (open.length >= (this.host.partsAtOnce ?? PROGRAM_PARTS_CAP)) return;
+      if (counts.open >= (this.host.partsAtOnce ?? PROGRAM_PARTS_CAP)) return;
       const next = this.queue.shift();
       if (!next) return;
       // Queued in call order, so a part it names was filed before it, unless refused.
@@ -330,7 +331,7 @@ class RunningProgram {
           ...next.part,
           ...(from ? { from } : {}),
           after,
-          call: parts.length,
+          call: counts.parts,
         });
       } catch (caught) {
         filed = { refused: `the part could not be filed: ${errorText(caught)}` };

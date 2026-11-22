@@ -438,6 +438,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The contributor agreement check, which holds a write token for an
     // outside pull request (docs/public-ci.md, "Outside contributors").
     "contributor-agreement.yml:check",
+    // The check-file flag, which holds a write token for an outside pull
+    // request (docs/public-ci.md, "Outside contributors").
+    "check-file-flag.yml:flag",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

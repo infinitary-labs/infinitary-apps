@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-file-flag",
+      "reason": "Internal: a new check labels an outside pull request that edits the project's check files, so a maintainer reads them before approving its runs; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+name: check-file-flag
+
+# The check-file flag (scripts/check-file-flag.mjs; docs/public-ci.md,
+# "Outside contributors"): it labels an outside pull request that edits check
+# files "edits checks" and names those files in one comment, so a maintainer
+# reads them before approving any run of its checks. It marks and never
+# fails or blocks a pull request. Started by hand with a pull request number,
+# it reads any pull request of the project, so the flag can be proved before
+# an outside copy exists.
+#
+# It writes on an outside pull request, so it runs from this project's
+# default branch (pull_request_target) rather than from the pull request's
+# own files, checks out only its script from that branch, never the pull
+# request's code, reads the changed file names from GitHub as data, uses no
+# secret beyond its own token, and runs on GitHub's own machines.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+    inputs:
+      pull:
+        description: The pull request number to read
+        required: true
+        type: number
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+# A newer version of the pull request replaces an older run.
+concurrency:
+  group: check-file-flag-${{ github.event.pull_request.number || inputs.pull }}
+  cancel-in-progress: true
+
+jobs:
+  flag:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Pull request' }} · Check-file flag
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/check-file-flag.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          PULL: ${{ inputs.pull }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {flag} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/check-file-flag.mjs`).href);
+            core.info(await flag({github, context, core, pullNumber: process.env.PULL}));

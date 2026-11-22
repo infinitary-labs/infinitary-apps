@@ -18,7 +18,8 @@ Only the pull request's author can accept, and a new version of the agreement as
 
 Material that is not your own work goes in a separate submission (section 3 of the agreement): keep the copyright and license information it came with, and in the pull request's description write "Submission containing materials of a third party:" followed by the third party's name and any licenses or other restrictions you know of.
 
-A maintainer approves each run of the project's checks on an outside pull request before it starts (`docs/public-ci.md`, "Outside contributors").
+A maintainer approves each run of the project's checks on an outside pull request before it starts, and every one of them runs on GitHub's machines; how an outside pull request is checked and merged is in `docs/public-ci.md`, "Outside contributors".
+A pull request adds a release note under `release-notes/changes/` when people using the app will notice the change, or an exclusion with a reason when they will not; the release-note check fails until it has one (`docs/release-notes.md`).
 
 ## How the code is worked on
 

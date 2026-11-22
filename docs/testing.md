@@ -997,7 +997,7 @@ It runs the same branch check on hosted `ubuntu-24.04`, and the docs site's chec
 A contributor cannot request a run, so `contributors.yml` requests for them what a task branch requests for itself ("What a task branch requests"): its `paths` job reads the merge commit against its base parent with `scripts/affected-journeys.ts --request` and `scripts/windows-paths.ts`.
 The chosen journeys run through `journeys.yml` with `hosted: true`, on hosted Ubuntu and, for their tests that need a Mac and each edited journey once (`mac_once`), on hosted `macos-15`.
 When the change reaches the Windows installer, `windows.yml` with `hosted: true` builds it on hosted `windows-2025` and skips the fresh Windows 11 check.
-The fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight need the project's own machines or signing material, so they run in the batch, which runs every check again before the change reaches `main`.
+The fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight need the project's own machines or signing material; an outside change joins no batch and merges as its own pull request, so it first meets them on `main`'s check and the next alpha's release check (`docs/public-ci.md`, "Outside contributors").
 This project's own pull requests start `contributors.yml` and skip every job.
 `tests/release-workflows-pr-checks.test.ts` holds which jobs an outside pull request starts and that each one it reaches names a hosted machine with every routing variable set.
 

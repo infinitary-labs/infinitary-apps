@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-annotation-journey-recipient",
+      "reason": "The desktop journey checks the card author's model request rather than the first mate's thread summary. App behavior is unchanged."
+    }
+  ]
+}

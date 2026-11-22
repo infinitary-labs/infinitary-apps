@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "typecheck-test-coarse-file-times",
+      "reason": "The type check's test dates each file it rewrites past the checker's build record, so it no longer fails on a computer whose file times advance in coarse steps; nothing a person sees changes."
+    }
+  ]
+}

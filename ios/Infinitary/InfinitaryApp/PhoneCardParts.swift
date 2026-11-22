@@ -564,3 +564,33 @@ struct PhoneCamera: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { dismiss() }
     }
 }
+
+/// The face's field and choices while the back shows past its edge: a blank as tall, since a hidden control is still
+/// found by a tap or by accessibility beside the back's own.
+struct PhoneFaceOnly: ViewModifier, Animatable {
+    var angle: Double
+    @State private var height: CGFloat = 0
+
+    nonisolated var animatableData: Double {
+        get { angle }
+        set { angle = newValue }
+    }
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if angle < 90 {
+            content.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        } else {
+            Color.clear.frame(height: height).accessibilityHidden(true)
+        }
+    }
+}
+
+/// INF-2568: a card taller than its pane is cut at the pane's top and foot, where the bar and the pager or the keyboard
+/// stand, while its shadow still reaches past the pane's sides; a card that fits keeps its whole shadow.
+struct PhonePaneClip: Shape {
+    var clips: Bool
+
+    func path(in rect: CGRect) -> Path {
+        Path(clips ? rect.insetBy(dx: -rect.width, dy: 0) : rect.insetBy(dx: -rect.width, dy: -max(rect.width, rect.height)))
+    }
+}

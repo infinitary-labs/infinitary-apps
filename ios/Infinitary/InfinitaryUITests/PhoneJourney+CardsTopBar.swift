@@ -23,6 +23,8 @@ extension PhoneJourney {
         showCard(title)
         waitForShownBodyRevealed()
         problems += topBarProblems("1 first shown")
+        // The release note's hero pair: the card at rest, its bar, title and body's start, in both appearances.
+        try await appearances("top-bar-hero", showing: app.buttons["put-aside-card"])
 
         // The thread, the crewmate's revision while it shows, then Card back to the face.
         let cue = app.buttons["thread-cue"]

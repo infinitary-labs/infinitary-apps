@@ -1945,7 +1945,7 @@ export async function startPhoneHome(
           );
           cards.closeOut({ kind: "crewmate", taskId: topBarRevision.taskId }, "idle");
           cards.flushBroadcast();
-          result = { added, messages: cards.thread(cardIDs.topBar).length };
+          result = { added };
           break;
         }
         // INF-3124: a first mate card whose thread is longer than the card's back, read from its start.

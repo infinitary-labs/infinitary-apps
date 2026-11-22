@@ -601,8 +601,10 @@ private struct PhoneCardPane: View {
     @State private var runsOn = false
     /// The height the stage offers the card, and its head's and choices' own heights.
     @State private var paneHeight: CGFloat = 0
-    @State private var headHeight: CGFloat = 0
+    @State private var barHeight: CGFloat = 0
+    /// The face's foot as the face draws it; while the back shows or turns, the foot's face-only parts are blanks.
     @State private var footHeight: CGFloat = 0
+    @State private var footMeasured: CGFloat = 0
     @State private var host: CardWebHost
     /// INF-1524: a settle card's fact strip, drawn read-only beside its choices once the body has split it off.
     @State private var factsHost: CardWebHost?
@@ -779,36 +781,41 @@ private struct PhoneCardPane: View {
         guard !showsBack, let readCount else { return 0 }
         return messages.dropFirst(readCount).filter { $0["who"].text != "captain" }.count
     }
-    /// A short stage, such as an iPhone on its side with a long draft, would leave the body a sliver between its pinned
-    /// head and choices; unless the body keeps at least the room they take, the whole card scrolls as it did before.
+    /// INF-6136: the choices stay at the card's foot while the body keeps at least the room the top bar and they take;
+    /// otherwise they come after the body, as a short stage, such as an iPhone on its side with a long draft, needs.
     @State private var pinsFrame = true
-    /// The stage height at which the frame last changed its shape.
-    @State private var shapedAt: CGFloat?
+    /// The stage, bar and foot heights at which the frame changed its shape.
+    @State private var shapedAt: Set<[CGFloat]> = []
 
-    /// Moving the head and choices changes what they measure, and while a rotation animates both places are drawn at once,
-    /// so the frame changes its shape at most once for each stage height and never animates the move; otherwise the two
-    /// could trade places on every frame and the app would never come to rest.
+    /// Moving the choices can change what they measure, and while a rotation animates both places are drawn at once, so
+    /// the frame changes its shape at most once for each stage, bar and foot height and never animates the move; otherwise
+    /// the two could trade places on every frame and the app would never come to rest. A new real measurement, such as
+    /// the foot growing a line, is a new height, so the frame shapes itself again.
     /// INF-1524: the reply field sits in the pinned foot, and moving the foot in or out of the scroller makes a new field,
     /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     private func shapeFrame() {
         guard paneHeight > 0, replyFocus == nil, pick == nil else { return }
-        let pins = paneHeight - headHeight - footHeight >= headHeight + footHeight
-        guard pins != pinsFrame, shapedAt != paneHeight else { return }
-        shapedAt = paneHeight
+        let pins = paneHeight - barHeight - footHeight >= barHeight + footHeight
+        let measured = [paneHeight, barHeight, footHeight].map { $0.rounded() }
+        guard pins != pinsFrame, !shapedAt.contains(measured) else { return }
+        shapedAt.insert(measured)
         var moved = Transaction()
         moved.disablesAnimations = true
         withTransaction(moved) { pinsFrame = pins }
     }
 
-    private var measuredHead: some View {
-        head.padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space3)
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headHeight = $0 }
+    private var measuredBar: some View {
+        bar.fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
     }
 
+    /// INF-6136: only the face's measure reaches the frame's shape; the blanks drawn while the back shows or turns never do.
     private var measuredFoot: some View {
         foot.fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footHeight = $0 }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                footMeasured = height
+                if !backMounted { footHeight = height }
+            }
     }
 
     var body: some View {
@@ -830,7 +837,8 @@ private struct PhoneCardPane: View {
         .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
         .clipShape(PhonePaneClip(clips: (showsBack ? backHeight : surfaceHeight) > paneHeight + 0.5))
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paneHeight = $0 }
-        .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
+        .onChange(of: [paneHeight, barHeight, footHeight]) { shapeFrame() }
+        .onChange(of: backMounted) { _, mounted in if !mounted { footHeight = footMeasured } }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
         .onChange(of: pick == nil) { _, closed in if closed { shapeFrame() } }
         // Only the shown card speaks for the reply's focus; one that slides aside lets its field go.
@@ -989,14 +997,15 @@ private struct PhoneCardPane: View {
     /// The card's face: everything a choice needs, with the thread's latest line at its foot.
     private var front: some View {
         let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
-        // INF-944 items 1 and 2, the Mac's shape: the head and the choices stay in the frame, and the body scrolls
-        // between them in this one native scroller. The body's web view never scrolls on its own.
+        // INF-944 items 1 and 2, the Mac's shape, with INF-6136's top bar: the one-line bar always stays in the frame,
+        // and the rest of the head and the body scroll under it in this one native scroller, the choices at the frame's
+        // foot when they fit (shapeFrame). The body's web view never scrolls on its own.
         return VStack(alignment: .leading, spacing: 0) {
-            if pinsFrame { measuredHead }
+            measuredBar
             ScrollViewReader { scroller in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        if !pinsFrame { measuredHead }
+                        headRest
                         content.padding([.horizontal], PhoneTheme.space4).padding(.bottom, PhoneTheme.space4)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if hasFoot && !pinsFrame { measuredFoot }
@@ -1050,7 +1059,8 @@ private struct PhoneCardPane: View {
         .clipShape(shape)
         // INF-1524 piece 1: the Mac's raised surface, its edge and shadow outside the clipped content.
         .phoneCardSurface()
-        // A frame holding only its scroller is that scroller to accessibility, which then keeps the scroller's name.
+        // The frame is card-frame while its choices stay at its foot; while they scroll it keeps the scroller's name, which
+        // journeys read as a card whose choices scroll, as when the frame held only its scroller.
         .accessibilityElement(children: .contain).accessibilityIdentifier(pinsFrame ? "card-frame" : "card-scroll")
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { surfaceHeight = $0; if shown { row.height = $0 } }
         // INF-3296's phone piece: the body lights what Point at, the queue and the open note say.
@@ -1164,30 +1174,48 @@ private struct PhoneCardPane: View {
         .accessibilityIdentifier("thread-cue")
     }
 
-    private var head: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+    /// INF-6136, the captain: the one row that stays in place, on one centre line: the kind of card, its marks, its task's
+    /// key and computer, which shortens first, then the size control and the minus.
+    private var bar: some View {
+        HStack(alignment: .center, spacing: PhoneTheme.space2) {
+            kind
+            if card.reviewTaskId != nil {
+                Text(PhoneCardWords.reviewFinding).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).lineLimit(1)
+            }
+            // INF-4344: the app's Quick answer mark on a crewmate's card from a task sorted as a quick answer.
+            if card.value["quick"].flag {
+                Text(PhoneMessages.cardQuickAnswer()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary).lineLimit(1)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+                    .accessibilityIdentifier("card-quick")
+            }
+            if let task {
+                Button(task.key) { onTask(task.key) }
+                    .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).buttonStyle(.plain).lineLimit(1)
+                    .frame(minHeight: 28).contentShape(Rectangle())
+                    .accessibilityHint(PhoneMessages.phoneCardsTaskKeyHint()).accessibilityIdentifier("card-task-key")
+            }
+            if let place = card.value["place"].text {
+                Text(place).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).lineLimit(1).truncationMode(.tail)
+                    .layoutPriority(-1).accessibilityIdentifier("card-place")
+            }
+            Spacer(minLength: 0)
+            PhoneCardSizeButton()
+            putAsideButton(.face)
+        }
+        .frame(minHeight: 44)
+        .padding(.horizontal, PhoneTheme.space4)
+        .contentShape(Rectangle())
+        // INF-3106 direction B: a tap on the card's head puts the keyboard away; the head's own buttons keep their taps.
+        .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
+    }
+
+    /// The rest of the head, which scrolls away with the body: the model and risk, the first mate's line, the title, the
+    /// revised line and the asked lines.
+    private var headRest: some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            if card.value["model"].text != nil || card.value["risk"]["declared"] != .null {
                 PhoneFlowRow(spacing: PhoneTheme.space2) {
-                    kind
-                    if card.reviewTaskId != nil {
-                        Text(PhoneCardWords.reviewFinding).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
-                    }
-                    // INF-4344: the app's Quick answer mark on a crewmate's card from a task sorted as a quick answer.
-                    if card.value["quick"].flag {
-                        Text(PhoneMessages.cardQuickAnswer()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
-                            .accessibilityIdentifier("card-quick")
-                    }
-                    if let task {
-                        Button(task.key) { onTask(task.key) }
-                            .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).buttonStyle(.plain)
-                            .frame(minHeight: 28).contentShape(Rectangle())
-                            .accessibilityHint(PhoneMessages.phoneCardsTaskKeyHint()).accessibilityIdentifier("card-task-key")
-                    }
-                    if let place = card.value["place"].text {
-                        Text(place).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-place")
-                    }
                     if let model = card.value["model"].text {
                         Text(model).font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -1196,21 +1224,19 @@ private struct PhoneCardPane: View {
                     }
                     if card.value["risk"]["declared"] != .null { PhoneRiskDots(declared: card.value["risk"]["declared"]) }
                 }
-                // A core from before INF-2714 names the task a first mate card speaks about; a crewmate's own name stays off the head.
-                if card.author == "firstmate", let meta = card.meta, meta != "firstmate" {
-                    Text(meta).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                }
-                Text(card.title).font(.custom("SpaceGrotesk-Light", size: 20, relativeTo: .title3).weight(.semibold))
-                    .accessibilityIdentifier("card-title")
-                if let revised { Text(revised).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-revised") }
-                if let asked = card.asked { PhoneAskedLine(asked: asked, open: $askedOpen) }
             }
-            Spacer(minLength: PhoneTheme.space2)
-            PhoneCardSizeButton()
-            putAsideButton(.face)
+            // A core from before INF-2714 names the task a first mate card speaks about; a crewmate's own name stays off the head.
+            if card.author == "firstmate", let meta = card.meta, meta != "firstmate" {
+                Text(meta).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+            }
+            Text(card.title).font(.custom("SpaceGrotesk-Light", size: 20, relativeTo: .title3).weight(.semibold))
+                .accessibilityIdentifier("card-title")
+            if let revised { Text(revised).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-revised") }
+            if let asked = card.asked { PhoneAskedLine(asked: asked, open: $askedOpen) }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space3)
         .contentShape(Rectangle())
-        // INF-3106 direction B: a tap on the card's head puts the keyboard away; the head's own buttons keep their taps.
         .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
     }
 
@@ -1612,6 +1638,7 @@ private struct PhoneCardPane: View {
             .foregroundStyle(attention ? PhoneTheme.danger : card.actions.isEmpty || card.isPast ? PhoneTheme.secondary : PhoneTheme.accent)
             .padding(.horizontal, PhoneTheme.space2).padding(.vertical, 4)
             .background(PhoneTheme.background, in: RoundedRectangle(cornerRadius: PhoneTheme.controlRadius))
+            .fixedSize().accessibilityIdentifier("card-kind")
     }
     private var ending: String {
         let end = card.endingForWords
@@ -1944,26 +1971,6 @@ private struct PhoneCardTurn: ViewModifier, Animatable {
     }
 }
 
-/// The face's field and choices while the back shows past its edge: a blank as tall, since a hidden control is still
-/// found by a tap or by accessibility beside the back's own.
-private struct PhoneFaceOnly: ViewModifier, Animatable {
-    var angle: Double
-    @State private var height: CGFloat = 0
-
-    nonisolated var animatableData: Double {
-        get { angle }
-        set { angle = newValue }
-    }
-
-    @ViewBuilder func body(content: Content) -> some View {
-        if angle < 90 {
-            content.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
-        } else {
-            Color.clear.frame(height: height).accessibilityHidden(true)
-        }
-    }
-}
-
 /// The card's saved question label and time; the shared bubble owns its interaction (INF-1610, INF-1963).
 /// INF-2326: the label also says a click, an automation or the task the work came from, as the Mac does.
 /// The card holds whether it is open: opening it can move the head into or out of the scroller, a new line.
@@ -1985,15 +1992,5 @@ private struct PhoneAskedLine: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("card-asked")
-    }
-}
-
-/// INF-2568: a card taller than its pane is cut at the pane's top and foot, where the bar and the pager or the keyboard
-/// stand, while its shadow still reaches past the pane's sides; a card that fits keeps its whole shadow.
-private struct PhonePaneClip: Shape {
-    var clips: Bool
-
-    func path(in rect: CGRect) -> Path {
-        Path(clips ? rect.insetBy(dx: -rect.width, dy: 0) : rect.insetBy(dx: -rect.width, dy: -max(rect.width, rect.height)))
     }
 }

@@ -5,6 +5,10 @@ import {
   PHONE_BOOT_BUDGET_MS,
   PHONE_IOS_BUILDS,
   PHONE_PIN,
+  PHONE_PREWARM_BUDGET_MS,
+  PREWARM_FAILURE_LOG,
+  PREWARM_LOG,
+  phonePrewarmFinished,
   phoneSharedCacheFolder,
   phoneSimulator,
   phoneSimulatorBooted,
@@ -13,6 +17,7 @@ import {
   SIMULATOR_CACHES,
   type SimulatorCatalog,
 } from "../scripts/phone-simulator";
+import { logTime } from "./helpers/phonePhotos";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-1645 (the captain's "Approve and build the pin"): every Mac's phone check uses the one Xcode phone-pin.json names
@@ -268,5 +273,158 @@ describe("the gate's wait for a simulator to boot", () => {
     await phoneSimulatorBooted({ device: "iphone", simulator: BOOTED, boot });
     expect(stops.map((stop) => stop.aborted)).toEqual([false]);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+// INF-6058: on a phone Mac the simulator's scheduler ran SpringBoard's wallpaper prewarm inside the take-over part, and
+// the Face ID prompt the part waited for never came. SpringBoard's real prewarm lines from that run's kept log: the
+// scheduler's run request, the launch and, 45 seconds later, the end. Its lane's simulator had begun its boot about
+// four minutes before the run request, and finished it about half a minute later.
+const PREWARM_READING = readFileSync(
+  "tests/fixtures/phone-simulator/prewarm-phone-mac.txt",
+  "utf8",
+).split("\n");
+const PREWARM_END = PREWARM_READING.findIndex((line) =>
+  line.includes("PosterBoardUpdate completed"),
+);
+const PREWARM_SIMULATOR = "D2CD5959-46C7-4235-9DC4-6B7936F03B11";
+const PREWARM_BOOT_BEGAN = new Date(2026, 10, 22, 1, 46, 34);
+const PREWARM_BOOTED = new Date(2026, 10, 22, 1, 47, 9);
+// The first lines a simulator's real `log stream` of those lines printed, on a Mac mini.
+const PREWARM_STREAM_STARTED = [
+  "getpwuid_r did not find a match for uid 501",
+  'Filtering the log data using "process == "SpringBoard" AND composedMessage CONTAINS "posterboardupdate.prewarm""',
+  "Timestamp               Ty Process[PID:TID]",
+];
+
+describe("the gate's wait for a simulator's wallpaper prewarm", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  // A stand-in for the gate's `run` of `xcrun`: the log stream prints its first lines and ends only once the wait stops
+  // it, `say` printing each line after them; every query since boot answers `shown`.
+  const simctl = (shown: string[]) => {
+    const calls: string[][] = [];
+    const stops: AbortSignal[] = [];
+    let streamHeard: ((line: string) => void) | undefined;
+    const run = async (args: string[], heard?: (line: string) => void, stop?: AbortSignal) => {
+      calls.push(args);
+      if (!args.includes("stream") || !heard || !stop) return shown.join("\n");
+      stops.push(stop);
+      streamHeard = heard;
+      for (const line of PREWARM_STREAM_STARTED) heard(line);
+      return new Promise<string>((_resolve, reject) => {
+        stop.addEventListener("abort", () => reject(new Error("xcrun failed (null)")), {
+          once: true,
+        });
+      });
+    };
+    return { run, calls, stops, say: (line: string) => streamHeard?.(line) };
+  };
+  const since = (predicate: string, ...info: string[]) => [
+    "simctl",
+    "spawn",
+    PREWARM_SIMULATOR,
+    "log",
+    "show",
+    "--style",
+    "compact",
+    ...info,
+    "--start",
+    logTime(PREWARM_BOOT_BEGAN),
+    "--predicate",
+    predicate,
+  ];
+
+  it("waits through the prewarm's run and ends when SpringBoard says it finished, stopping its stream", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.setSystemTime(PREWARM_BOOTED);
+    const said = vi.spyOn(console, "log").mockImplementation(() => {});
+    // Before the stream began the scheduler had not run the prewarm yet; then it runs it, as on the phone Mac.
+    const { run, calls, stops, say } = simctl(PREWARM_READING.slice(0, 2));
+    let ended = false;
+    const waiting = phonePrewarmFinished({
+      device: "iphone",
+      simulator: PREWARM_SIMULATOR,
+      booting: PREWARM_BOOT_BEGAN,
+      run,
+    }).finally(() => {
+      ended = true;
+    });
+    for (const line of PREWARM_READING.slice(2, PREWARM_END)) say(line);
+    await vi.advanceTimersByTimeAsync(
+      new Date(2026, 10, 22, 1, 51, 32).getTime() - PREWARM_BOOTED.getTime(),
+    );
+    expect(ended).toBe(false);
+    for (const line of PREWARM_READING.slice(PREWARM_END, PREWARM_END + 1)) say(line);
+    await waiting;
+    expect(calls).toEqual([
+      [
+        "simctl",
+        "spawn",
+        PREWARM_SIMULATOR,
+        "log",
+        "stream",
+        "--style",
+        "compact",
+        "--predicate",
+        PREWARM_LOG,
+      ],
+      since(PREWARM_LOG),
+    ]);
+    expect(stops.map((stop) => stop.aborted)).toEqual([true]);
+    expect(said.mock.calls).toEqual([
+      [
+        `iphone: simulator ${PREWARM_SIMULATOR}'s wallpaper prewarm finished 298 seconds after its boot began`,
+      ],
+    ]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("ends on a prewarm that finished before its stream began, which the query since boot reads", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { run, calls, stops } = simctl(PREWARM_READING);
+    await phonePrewarmFinished({
+      device: "iphone",
+      simulator: PREWARM_SIMULATOR,
+      booting: PREWARM_BOOT_BEGAN,
+      run,
+    });
+    expect(calls.at(-1)).toEqual(since(PREWARM_LOG));
+    expect(stops.map((stop) => stop.aborted)).toEqual([true]);
+  });
+
+  it("fails a prewarm still running once its budget has passed, naming the simulator and keeping the log since boot", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.setSystemTime(PREWARM_BOOTED);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const { run, calls, stops } = simctl(PREWARM_READING.slice(0, PREWARM_END));
+    let ended = false;
+    const waiting = phonePrewarmFinished({
+      device: "iphone",
+      simulator: PREWARM_SIMULATOR,
+      booting: PREWARM_BOOT_BEGAN,
+      run,
+    }).finally(() => {
+      ended = true;
+    });
+    waiting.catch(() => {});
+    await vi.advanceTimersByTimeAsync(PHONE_PREWARM_BUDGET_MS - 1);
+    expect(ended).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const failure = await waiting.then(
+      () => undefined,
+      (error: Error) => error.message,
+    );
+    expect(failure).toBe(
+      `iphone: simulator ${PREWARM_SIMULATOR}'s wallpaper prewarm had not finished ${(PHONE_PREWARM_BUDGET_MS / 60_000).toFixed(1)}` +
+        " minutes after its boot finished, so the gate stopped waiting rather than let it run during a part",
+    );
+    expect(stops.map((stop) => stop.aborted)).toEqual([true]);
+    // SpringBoard's wallpaper lines and the scheduler's about its task, since boot, are kept with the command logs.
+    expect(calls.at(-1)).toEqual(since(PREWARM_FAILURE_LOG, "--info"));
   });
 });

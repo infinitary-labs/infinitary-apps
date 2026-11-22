@@ -854,7 +854,7 @@ That job publishes the selection, keeps `phone-placement` and deals the selectio
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
 A manual request that chooses its parts runs one `native-phone` job for each job the chooser dealt, each on its own phone Mac at once (INF-5387's plan, piece 2, after the captain's "how can we make them last <30m at max").
 The chooser builds the passes the request's devices run (`requestPasses` in `scripts/affected-phone.ts`), each a device, a part, a round and any named tests, and deals them into jobs of at most 14 recorded minutes (`dealPhonePasses` in `scripts/phone-test-plan.ts`, `PHONE_JOB_BUDGET_MS` in `scripts/phone-deadlines.ts`).
-A job's minutes are its passes' recorded minutes and 2 for each device past its first (`PHONE_DEVICE_START_MS`, `phoneJobMs`), since a phone Mac with one simulator starts each device after the last one's parts end (INF-5546).
+A job's minutes are its passes' recorded minutes and 3 for each device past its first (`PHONE_DEVICE_START_MS`, `phoneJobMs`), since a phone Mac with one simulator starts each device after the last one's parts end and waits for its wallpaper prewarm before its first part (INF-5546, INF-6058).
 A pass longer than 14 minutes by itself runs in a job of its own, and no other job passes 14.
 The job count is those passes and the other passes' recorded minutes over 14, rounded up, and one more while a job of more than one pass would be past 14.
 Passes go longest first to the job they leave lightest, a pass of a part with no recorded time counting as the median part, and a pass joins a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the lightest choice would.
@@ -908,11 +908,12 @@ The phone queue is served from every Mac place the placement service runs, the t
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
-A dealt job is stopped at 25 minutes and its gate step at 21, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run.
-The first job of a check dealt into several jobs is stopped at 37 minutes instead, its build step's 12 more, since it builds and uploads the app before its gate.
+A dealt job is stopped at 27 minutes and its gate step at 23, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run.
+The first job of a check dealt into several jobs is stopped at 39 minutes instead, its build step's 12 more, since it builds and uploads the app before its gate.
 The recorded part times come from a full gate that ran two simulators at once.
 A phone Mac with one simulator runs a job's parts one after another at up to 1.08 of their recorded minutes, and its gate step also builds the app for up to 3.1 minutes and starts the first part about a minute late.
-So a gate of 14 recorded minutes ends near 19.5 minutes there, inside its 21, and sooner on a phone Mac with two simulators.
+It also starts no part until the simulator's wallpaper prewarm has finished, which on the phone Macs came up to 2.0 minutes after the build ended (`docs/ios.md`, "Disposable verification").
+So a gate of 14 recorded minutes ends near 21.5 minutes there, inside its 23, and sooner on a phone Mac with two simulators.
 The phone release's call keeps its job's 345 minutes, 165 for setup, the ordinary pass, cleanup and evidence upload and 90 for each of two further passes it never runs, and its gate step's 90; there is no command-admission wait.
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.

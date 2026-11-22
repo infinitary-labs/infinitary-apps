@@ -17,6 +17,8 @@ struct PhoneCards<Content: View>: View {
     /// INF-2565, the captain: "i don't think we should auto flip". A revision gives the card a new offer, so its pane is
     /// built again to draw the new body; the side it shows and the thread it has read live here, per card, and outlast that.
     @State private var sides: [String: PhoneCardSide] = [:]
+    /// INF-5608 piece 2: each card's field photos, kept here past its pane, so a refused press brings them back to it.
+    @State private var fieldPhotos: [String: [PhonePhoto]] = [:]
     /// INF-3110: where the row of cards stands while a finger or a page turn moves it.
     @State private var row = PhoneCardRow()
     /// The row is still moving to the card the count already names; that card is read once it settles.
@@ -108,7 +110,7 @@ struct PhoneCards<Content: View>: View {
             showRestored(ids)
             previousIDs = ids
             if !moving && swipedFrom == nil { bodies.keep(only: ids.isEmpty ? [] : rowCards.map(\.card)); bodies.setAside(except: card) }
-            sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }
+            sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }; fieldPhotos = fieldPhotos.filter { ids.contains($0.key) || !$0.value.isEmpty }
             if let past, ids.contains(past.id) { self.past = nil }
         }
         .onChange(of: messageContext.restoring) { _, _ in showRestored(stack.map(\.id)) }
@@ -174,6 +176,7 @@ struct PhoneCards<Content: View>: View {
                     fill: card.isPast ? card.value["answers"] : session.cardDrafts.fill(card.id),
                     reply: Binding(get: { session.cardDrafts.words[card.id] ?? "" }, set: { session.cardDrafts.type(card.id, words: $0) }),
                     notes: Binding(get: { session.cardDrafts.notes[card.id] ?? [] }, set: { session.cardDrafts.note(card.id, notes: $0) }),
+                    photos: Binding(get: { fieldPhotos[card.id] ?? [] }, set: { fieldPhotos[card.id] = $0 }),
                     onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
                     onSent: { sent += 1 },
@@ -577,6 +580,7 @@ private struct PhoneCardPane: View {
     @Binding var reply: String
     /// INF-3296's phone piece: the notes waiting for this card's reply.
     @Binding var notes: [PhoneJSON]
+    @Binding var photos: [PhonePhoto]
     let onSeen: () -> Void
     let onHide: () -> Void
     let onSent: () -> Void
@@ -630,7 +634,6 @@ private struct PhoneCardPane: View {
     @State private var retry = 0
     /// INF-1524: the choice pressed and still on its way, which shows its pending mark.
     @State private var pending: String?
-    @State private var photos: [PhonePhoto] = []
     @State private var photoSelection: [PhotosPickerItem] = []
     @State private var libraryOpen = false
     @State private var cameraOpen = false
@@ -676,10 +679,10 @@ private struct PhoneCardPane: View {
     enum CardSide { case face, back }
 
     init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>, notes: Binding<[PhoneJSON]>,
-         onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
+         photos: Binding<[PhonePhoto]>, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
          row: PhoneCardRow, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
          side: Binding<PhoneCardSide>) {
-        self.card = card; self.session = session; _reply = reply; _notes = notes
+        self.card = card; self.session = session; _reply = reply; _notes = notes; _photos = photos
         self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
         self.shown = shown; self.visible = visible; self.replyLeaves = replyLeaves
         self.row = row; self.onTask = onTask; self.onDraft = onDraft
@@ -1119,6 +1122,7 @@ private struct PhoneCardPane: View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if let problem { Text(problem).foregroundStyle(PhoneTheme.warning) }
             if takesReply { replyField(.back) }
+            PhoneCarryLine(carry: carry)
             choiceRow
         }
         .padding(.horizontal, PhoneTheme.space4).padding(.top, PhoneTheme.space2).padding(.bottom, PhoneTheme.space3)
@@ -1700,13 +1704,9 @@ private struct PhoneCardPane: View {
             // INF-1524: the field's words go with the choice as its anything-else answer, as the Mac's withAnythingElse sends them.
             let words = replyWords
             var answers = sendable(reading["answers"].list.filter { $0["name"].text != PhoneCardWords.anythingElse })
-            if !words.isEmpty {
-                answers.append(.object(["name": .string(PhoneCardWords.anythingElse), "values": .array([]),
-                                        "changed": .bool(true), "written": .string(words)]))
-            }
+            if !words.isEmpty { answers.append(PhoneCardHeld.written(words)) }
             // INF-5608 piece 2: the field's photos and queued notes go in the same press to a computer that takes them.
-            // A choice that opens a page on the computer leaves them in the field, as the Mac's docked request does.
-            let held = carry.holds || action["effect"]["kind"].text == "open" ? PhoneCardHeld() : PhoneCardHeld(photos: photos, notes: notes)
+            let held = carry.holds ? PhoneCardHeld() : PhoneCardHeld(photos: photos, notes: notes)
             // INF-2553: the card leaves at the tap with its words; a refusal brings it back to its place with them.
             if replyWords == words { reply = "" }
             held.take(from: $photos, $notes)

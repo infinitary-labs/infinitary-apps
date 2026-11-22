@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "cards",
       "title": "Photos and notes go with a card's buttons on your iPhone and iPad",
-      "body": "On your iPhone and iPad, a photo or a note you queued in a card's field now goes with the button you press, together with your words, and a line under the buttons says what goes. A past card names the notes and photos that went with its choice. Against a computer that has not updated yet, the buttons wait until you send them as a reply, so nothing is lost.",
+      "body": "On your iPhone and iPad, a photo or a note you queued in a card's field now goes with the button you press, together with your words, and a line above the buttons says what goes. A past card names the notes and photos that went with its choice. Against a computer that has not updated yet, the buttons wait until you send them as a reply, so nothing is lost.",
       "noPicture": "The phone draws the same line and past card as the computer's window, whose picture the note on pictures, files and notes going with a card's buttons carries; the phone's own screens are photographed only by its device check.",
       "provenance": { "origin": "change" }
     }

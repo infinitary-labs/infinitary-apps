@@ -10031,6 +10031,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [
@@ -10185,6 +10189,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [
@@ -14799,6 +14807,10 @@
                             "minLength": 1,
                             "maxLength": 255
                           },
+                          "addressForm": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "update": {
                             "type": "string",
                             "minLength": 1,
@@ -16276,6 +16288,10 @@
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 255
+                            },
+                            "addressForm": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "update": {
                               "type": "string",
@@ -65071,6 +65087,10 @@
               "label",
               "models"
             ]
+          },
+          "untouched": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -65195,6 +65215,10 @@
               "label",
               "models"
             ]
+          },
+          "untouched": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -74709,6 +74733,10 @@
                                   "type": "string",
                                   "minLength": 1,
                                   "maxLength": 255
+                                },
+                                "addressForm": {
+                                  "type": "boolean",
+                                  "const": true
                                 },
                                 "update": {
                                   "type": "string",
@@ -89157,6 +89185,10 @@
                             "minLength": 1,
                             "maxLength": 255
                           },
+                          "addressForm": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "update": {
                             "type": "string",
                             "minLength": 1,
@@ -99877,6 +99909,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [

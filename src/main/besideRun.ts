@@ -144,6 +144,13 @@ export function betweenStops(
 /** The argument Start it here starts the app again with: its own first mate, whatever entry is in place. */
 export const START_HERE_ARG = "--start-here";
 
+/**
+ * The argument beside Start it here once the window ended its own agent's
+ * run by force: the agent's job may start that run again, so the window
+ * starting here lets the job go once it holds the folder, and only then.
+ */
+export const LET_GO_JOB_ARG = "--let-go-job";
+
 /** The file in the data folder that names the ended command a person answered with Start it here. */
 export const STARTED_HERE = "run-started-here.json";
 

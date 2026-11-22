@@ -103,6 +103,8 @@
   "commandMoveRightWords": "flecha, derecha, siguiente",
   "commandMoveUp": "Mover hacia arriba",
   "commandMoveUpWords": "flecha, arriba, anterior",
+  "commandNoticeNotAnsweringRetry": "Tu primer oficial está en marcha pero no responde. Espéralo, o inícialo aquí para volver a conectarte con él.",
+  "commandNoticeStopping": "Tu primer oficial se está deteniendo. Esta ventana lo inicia aquí cuando se haya detenido.",
   "commandNoticeWindowCrashed": "Tu primer oficial se detuvo sin decir por qué y no se ha vuelto a iniciar. Inícialo aquí para volver a iniciarlo.",
   "commandNoticeWindowNotAnswering": "Tu primer oficial está en marcha pero no responde. Reinícialo para detenerlo e iniciarlo de nuevo, o espéralo.",
   "commandNoticeWindowRestarting": "Tu primer oficial se detuvo y se está iniciando de nuevo. Esta ventana lo espera.",

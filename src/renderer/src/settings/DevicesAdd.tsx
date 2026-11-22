@@ -10,74 +10,110 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "../design";
 import { focusWithRing } from "../design/focus";
 import { NearbyList, PortField, sshMustBeOn } from "../devices/NearbyList";
-import { useHereAs } from "../devices/useFirstMatePlace";
+import { useFirstMateName, useHereAs } from "../devices/useFirstMatePlace";
 import type { DevicesTabViewProps } from "./devicesState";
 import { type AddingMac, addingWords } from "./devicesWords";
 
 /**
  * Adding a computer in Settings -> Devices (design skill
- * `components/devices/AddAMac`): + A computer's question, the address with
- * Macs nearby under it, the check line, the password asked once, the
- * question for a Mac another first mate uses, and the row of one being added.
+ * `components/devices/AddAMac`): + A computer's address form with the
+ * computers nearby and the two other ways under it, the check line, the
+ * password asked once, the question for a Mac another first mate uses, and
+ * the row of one being added.
  */
 
 /**
- * + A Mac's question: a link for a Mac its person sits at, a command for one
- * with no screen, or its address, to set it up from here over Remote Login.
+ * The link and the command, each with when to use it, under + A computer's
+ * address form, and in its place on a home that adds no computer by its
+ * address (a Windows PC, `DeviceAddresses.addsByAddress`).
  */
-export function AddChooser({ busy, onMake, onCancelChoose, onAskAddress }: DevicesTabViewProps) {
+function OtherWays({
+  busy,
+  onMake,
+  onCancelAddress,
+  alone,
+}: DevicesTabViewProps & { alone: boolean }) {
+  // Choosing one here closes the address form, as its Cancel would, and drops a try still running.
+  const instead = (what: "link" | "command") => {
+    onCancelAddress();
+    onMake(what);
+  };
   return (
-    <div className="fm-devices-aside" data-device-chooser="">
-      <div className="fm-devices-question">{m.settingsDevicesAddHow()}</div>
-      <div className="fm-devices-aside-say">{m.settingsDevicesAddEachWay()}</div>
-      <div className="fm-devices-aside-actions">
+    <div className="fm-devices-other-ways" data-device-other-ways="">
+      <div className="fm-devices-question">
+        {alone ? m.settingsDevicesAddWays() : m.settingsDevicesAddOtherWays()}
+      </div>
+      <div className="fm-devices-other-way">
         <Button
           variant="secondary"
           size="sm"
+          type="button"
+          autoFocus={alone}
           disabled={busy === "link"}
-          onClick={() => onMake("link")}
+          onClick={() => instead("link")}
         >
           {m.settingsDevicesAddByLink()}
         </Button>
+        <span className="fm-devices-aside-say">{m.settingsDevicesAddByLinkWhen()}</span>
+      </div>
+      <div className="fm-devices-other-way">
         <Button
           variant="secondary"
           size="sm"
+          type="button"
           disabled={busy === "link"}
-          onClick={() => onMake("command")}
+          onClick={() => instead("command")}
         >
           {m.settingsDevicesAddByCommand()}
         </Button>
-        <Button variant="secondary" size="sm" disabled={busy === "link"} onClick={onAskAddress}>
-          {m.settingsDevicesAddByItsAddress()}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onCancelChoose}>
-          {m.settingsDevicesCancel()}
-        </Button>
+        <span className="fm-devices-aside-say">{m.settingsDevicesAddByCommandWhen()}</span>
       </div>
     </div>
   );
 }
 
 /**
- * By its address (design skill `components/devices/DevicesTab`): the one
- * thing the captain supplies, the address he uses with SSH. Macs nearby
- * stand under it; picking one fills the field with your user name selected,
- * to change before Add it, and ↓ in the field reaches them.
+ * + A computer's address form (design skill `components/devices/DevicesTab`,
+ * captain's pick on INF-4926): the one thing the captain supplies, the
+ * address they use with SSH. Computers nearby stand under it; picking one
+ * fills the field with your user name selected, to change before Add it, and
+ * ↓ in the field reaches them. Under them, the link and the command for a
+ * computer that cannot turn Remote Login on, each with when to use it. A
+ * worker's package update draws the same form with its own words and neither.
  */
-export function AddressQuestion({
-  addressDraft,
-  portDraft,
-  addressRefusal,
-  packageUpdate,
-  adding,
-  nearby,
-  devices,
-  onAddressDraft,
-  onPortDraft,
-  onAddAt,
-  onCancelAddress,
-}: DevicesTabViewProps) {
+export function AddressQuestion(props: DevicesTabViewProps) {
+  // A Windows PC's first mate adds no computer by its address: only the link and the command,
+  // which work from every home, as while the home has not yet said whether it does.
+  if (!props.packageUpdate && (!props.addresses || props.addresses.addsByAddress === false))
+    return (
+      <div className="fm-devices-aside" data-device-address-question="">
+        <OtherWays {...props} alone />
+        <div className="fm-devices-aside-actions">
+          <Button variant="ghost" size="sm" type="button" onClick={props.onCancelAddress}>
+            {m.settingsDevicesCancel()}
+          </Button>
+        </div>
+      </div>
+    );
+  return <AddressForm {...props} />;
+}
+
+function AddressForm(props: DevicesTabViewProps) {
+  const {
+    addressDraft,
+    portDraft,
+    addressRefusal,
+    packageUpdate,
+    adding,
+    nearby,
+    devices,
+    onAddressDraft,
+    onPortDraft,
+    onAddAt,
+    onCancelAddress,
+  } = props;
   const here = useHereAs();
+  const homeName = useFirstMateName();
   // The address with the port typed beside it, or null while either is not one.
   const typed = addressAtPort(addressDraft, portDraft);
   const trying = adding.some((mac) => mac.address === typed);
@@ -113,6 +149,13 @@ export function AddressQuestion({
           ? here(remoteLoginWords.packageUpdateAddress(packageUpdate))
           : m.settingsDevicesAddressSay({ sshOn: sshMustBeOn() })}
       </div>
+      {!packageUpdate && (
+        <div className="fm-devices-aside-say">
+          {homeName
+            ? m.settingsDevicesAddressKeepsThere({ name: homeName })
+            : m.settingsDevicesAddressKeeps()}
+        </div>
+      )}
       {addressRefusal && (
         <div role="alert">
           {addressRefusal.map((line) => (
@@ -183,6 +226,7 @@ export function AddressQuestion({
           }}
         />
       )}
+      {!packageUpdate && <OtherWays {...props} alone={false} />}
     </form>
   );
 }

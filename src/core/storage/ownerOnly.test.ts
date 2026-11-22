@@ -15,6 +15,8 @@ import {
   clearPrivateTemp,
   keepDataFolderPrivate,
   keepOwnerOnly,
+  keepsToOwner,
+  onlyOwnerReaches,
   ownerOnlyAccessList,
   ownerOnlyVerdict,
   PRIVATE_TEMP_DIR,
@@ -110,6 +112,96 @@ describe("reading a folder's access list", () => {
   it("finds a folder another account owns, and a drive with no list", () => {
     expect(ownerOnlyVerdict(readAccessList(OTHERS_FOLDER), USER)).toBe("other-owner");
     expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
+    // A folder with no list that another account owns is that account's, not one to set a list on.
+    expect(ownerOnlyVerdict(readAccessList(`O:${OTHER}G:${GROUP}D:NO_ACCESS_CONTROL`), USER)).toBe(
+      "other-owner",
+    );
+  });
+
+  it("refuses a reading it could not take whole, never judging the entries before the rest", () => {
+    // A conditional entry carries brackets of its own; what follows it, here another account's
+    // right to change the folder, would otherwise go unread.
+    const conditional = IN_PROFILE.replace(
+      `(A;OICIID;FA;;;${USER})`,
+      `(A;OICIID;FA;;;${USER})(XA;;FA;;;${USER};(x))(A;;0x1301bf;;;${OTHER})`,
+    );
+    expect(readAccessList(conditional).entries).toBeNull();
+    expect(onlyOwnerReaches(readAccessList(conditional), USER)).toBe(false);
+    // No owner read is no owner that keeps the folder this account's.
+    const ownerless = IN_PROFILE.replace(`O:${USER}`, "");
+    expect(onlyOwnerReaches(readAccessList(ownerless), USER)).toBe(false);
+    expect(ownerOnlyVerdict(readAccessList(ownerless), USER)).toBe("unread");
+    expect(ownerOnlyVerdict(readAccessList(conditional), USER)).toBe("unread");
+    // A drive with no list is read whole: it has none, which is a different answer.
+    expect(ownerOnlyVerdict(readAccessList(NO_LIST), USER)).toBe("no-list");
+    // No access list section at all, or the no-list word where the list is more than it, is not
+    // Windows saying the folder has no list.
+    expect(ownerOnlyVerdict(readAccessList(`O:${USER}G:${GROUP}`), USER)).toBe("unread");
+    expect(
+      ownerOnlyVerdict(
+        readAccessList(`O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(A;OICI;FA;;;${OTHER})`),
+        USER,
+      ),
+    ).toBe("unread");
+    // An entry missing its account or its rights, of a kind this reading does not judge, or
+    // whose account, rights or flags are not in Windows' own form - an account number cut short,
+    // rights no letters name, flags no pairs name - is not read whole either: an account read as
+    // nothing, or half read, is no account to judge.
+    for (const entry of [
+      `(A;OICI;FA;;)`,
+      `(A;OICI;FA;;;)`,
+      `(A;OICI;;;;${OTHER})`,
+      `(Q;OICI;FA;;;${OTHER})`,
+      `(A;OICI;FA;;;S-1-5-21-)`,
+      `(A;OICI;FA;;;S-1)`,
+      `(A;OICI;FA;;;QQ)`,
+      `(A;OICI;ZZ;;;${OTHER})`,
+      `(A;OICI;0x;;;${OTHER})`,
+      `(A;XXIO;FA;;;${OTHER})`,
+      `(A;OICI;FA;x;;${OTHER})`,
+      `(A;OICI;FA;;bf967aba-0de6-11d0-a285-00aa003049e2;${OTHER})`,
+      `(OA;OICI;FA;not-an-object;;${OTHER})`,
+      `(A;OICI;FA;;;S-1-5-21-4294967296)`,
+      `(A;OICI;FA;;;S-1-5-021)`,
+      // An authority Windows writes in decimal below 2^32, and in twelve digits of hex from it up.
+      `(A;OICI;FA;;;S-1-0x00000000FFFF-1)`,
+      `(A;OICI;FA;;;S-1-0x100000000-1)`,
+      `(A;OICI;FA;;;S-1-4294967296-1)`,
+      `(A;OICI;FA;;;S-1-5${"-1".repeat(16)})`,
+    ]) {
+      const reading = readAccessList(`O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})${entry}`);
+      expect(reading).toMatchObject({ entries: null, whole: false });
+      expect(ownerOnlyVerdict(reading, USER)).toBe("unread");
+    }
+    // Nor is a descriptor whose owner or group is not an account Windows writes, even one saying
+    // the folder has no list.
+    for (const descriptor of [
+      `O:S-1-5-21-99999999999G:${GROUP}D:NO_ACCESS_CONTROL`,
+      `O:QQG:${GROUP}D:NO_ACCESS_CONTROL`,
+      `O:${USER}G:S-1D:P(A;OICI;FA;;;${USER})`,
+    ])
+      expect(ownerOnlyVerdict(readAccessList(descriptor), USER)).toBe("unread");
+    // An account whose authority is past 32 bits, written as Windows writes it, is read whole, as
+    // an entry's account and as the owner.
+    for (const wide of ["S-1-0x000100000000-1", "S-1-0x0001000000aB-5-21"]) {
+      const reading = readAccessList(
+        `O:${wide}G:${GROUP}D:P(A;OICI;FA;;;${USER})(A;;FR;;;${wide})`,
+      );
+      expect(reading.whole).toBe(true);
+      expect(reading.entries?.[1]?.account).toBe(wide);
+    }
+    // An object entry naming one object's number is read whole.
+    expect(
+      readAccessList(
+        `O:${USER}G:${GROUP}D:P(A;OICI;FA;;;${USER})(OD;;WD;bf967aba-0de6-11d0-a285-00aa003049e2;;${OTHER})`,
+      ).whole,
+    ).toBe(true);
+    // Nor is a list whose own flags are not Windows' (`P`, `AI`, `AR`).
+    expect(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`).whole).toBe(false);
+    // The word only in what follows the list leaves the list itself to be judged.
+    const audited = `${IN_PROFILE}S:(AU;SA;FA;;;WD)`;
+    expect(readAccessList(audited).entries).toHaveLength(3);
+    expect(readAccessList(`${audited}D:NO_ACCESS_CONTROL`).entries).toHaveLength(3);
   });
 
   it("writes a protected list for this account alone, keeping an app package's own grant", () => {
@@ -117,6 +209,32 @@ describe("reading a folder's access list", () => {
     const written = ownerOnlyAccessList(readAccessList(withCapability), USER);
     expect(written).toBe(`D:P(A;OICI;FA;;;${USER})(A;OICI;FA;;;${CAPABILITY})`);
     expect(ownerOnlyVerdict(readAccessList(`O:${USER}${written}`), USER)).toBe("owner-only");
+  });
+});
+
+describe("a folder the app made inside its private data folder", () => {
+  // The review of INF-5409: a word's profile and its temporary folder are used only where their
+  // own lists keep to this account and hand that down to what is made in them.
+  it("keeps to this account only where it lets no one else in and hands that down at every depth", () => {
+    const inherited = `O:${USER}G:${GROUP}D:(A;OICIID;FA;;;SY)(A;OICIID;FA;;;${USER})`;
+    expect(keepsToOwner(readAccessList(inherited), USER)).toBe(true);
+    // Its own entry only, handed to nothing made in it: Windows would make up a list for those.
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
+    // Handed down to folders but not files, or only to the next level.
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;CI;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
+    expect(
+      keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:P(A;OICINP;FA;;;${USER})`), USER),
+    ).toBe(false);
+    // Another account let in, a folder another account owns, and a reading not taken whole.
+    expect(keepsToOwner(readAccessList(AT_DRIVE_TOP), USER)).toBe(false);
+    expect(keepsToOwner(readAccessList(OTHERS_FOLDER), USER)).toBe(false);
+    expect(keepsToOwner(readAccessList(`O:${USER}G:${GROUP}D:XP(A;OICI;FA;;;${USER})`), USER)).toBe(
+      false,
+    );
   });
 });
 
@@ -212,6 +330,47 @@ describe("the data folder on Windows", () => {
       run: windows({ [dataDir]: OTHERS_FOLDER, [temp]: IN_PROFILE }).run,
     });
     expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(UNSAFE_FOLDER_TITLE);
+  });
+
+  it("changes nothing on a data folder whose list it could not read whole, keeping its denies, nor on another account's with no list", async () => {
+    for (const partial of [
+      // A deny another tool set, then a conditional entry this reading does not take apart.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(XA;;FA;;;${USER};(x))`,
+      // An owner read, and no access list section at all.
+      `O:${USER}G:${GROUP}`,
+      // The no-list word, with entries after it: not Windows saying the folder has no list.
+      `O:${USER}G:${GROUP}D:NO_ACCESS_CONTROL(D;OICI;WD;;;${OTHER})`,
+      // A deny, then an entry missing its account: not an account besides this one to remove.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;)`,
+      // A deny, then an allow whose account number is cut short: not an account to remove.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;;;S-1-5-21-)`,
+      // A deny, then an allow whose rights no letters name.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;ZZ;;;${OTHER})`,
+      // A deny, then an allow carrying an object field a plain entry never has.
+      `O:${USER}G:${GROUP}D:P(D;OICI;WD;;;${OTHER})(A;OICI;FA;;;${USER})(A;OICI;FA;x;;${OTHER})`,
+      // No list, under an owner whose number is too large to be an account.
+      `O:S-1-5-21-99999999999G:${GROUP}D:NO_ACCESS_CONTROL`,
+      // No list, under another account: its folder, whatever list it has.
+      `O:${OTHER}G:${GROUP}D:NO_ACCESS_CONTROL`,
+    ]) {
+      const dataDir = join(scratchDir("fm-owner-only-"), "infinitary");
+      const temp = join(scratchDir("fm-owner-only-"), "Temp");
+      await mkdir(dataDir, { recursive: true });
+      const pc = windows({ [dataDir]: partial, [temp]: IN_PROFILE });
+      const privacy = await keepDataFolderPrivate({
+        platform: "win32",
+        dataDir,
+        env: {},
+        tempDir: temp,
+        run: pc.run,
+      });
+      expect(pc.asks.every((ask) => ask.set.length === 0)).toBe(true);
+      expect(pc.folders[dataDir]).toBe(partial);
+      expect(await readdir(dataDir)).toEqual([]);
+      expect(dataFolderRefusal(dataDir, privacy)?.title).toBe(
+        partial.startsWith(`O:${OTHER}`) ? UNSAFE_FOLDER_TITLE : UNCHECKED_FOLDER_TITLE,
+      );
+    }
   });
 
   it("says Windows could not check the folder when it cannot be asked, or could not finish", async () => {

@@ -5,6 +5,7 @@ import {
   AMBIENT_OWN_STYLES,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
+  DEVICE_ADDS_BY_ADDRESS,
   SETTINGS_CURRENT,
 } from "./cardCompatibility";
 import { listsChange } from "./contractChanges";
@@ -81,5 +82,7 @@ export function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
     ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
     ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) ? [] : ["ambientOwnStyles"]),
+    // Not the look, but read as strictly: where devices find a Windows home.
+    ...(listsChange(hello.changes, DEVICE_ADDS_BY_ADDRESS) ? [] : ["addsByAddress"]),
   ];
 }

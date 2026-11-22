@@ -11,6 +11,11 @@ export function useFirstMatePlace(): { this: string; This: string } {
   return firstMatePlace(useShellStore((s) => s.thisMac));
 }
 
+/** The first mate's computer's name on a computer that controls it; null on that computer itself. */
+export function useFirstMateName(): string | null {
+  return useShellStore((s) => (isView(s.thisMac) ? s.thisMac.name : null));
+}
+
 /**
  * Says a sentence the first mate's computer wrote of itself as this
  * computer where this app shows it: as written there, and naming that

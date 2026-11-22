@@ -870,6 +870,7 @@ export class CardActions {
             ...(effect.make ? { make: effect.make } : {}),
             ...(effect.remove ? { remove: effect.remove } : {}),
             ...(effect.add ? { add: effect.add } : {}),
+            ...(effect.addressForm ? { addressForm: effect.addressForm } : {}),
             ...(effect.update ? { update: effect.update } : {}),
             ...(effect.privateSite ? { privateSite: effect.privateSite } : {}),
             ...(effect.signInOn ? { signInOn: effect.signInOn } : {}),

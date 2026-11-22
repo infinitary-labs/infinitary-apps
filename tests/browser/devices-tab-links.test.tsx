@@ -1,5 +1,6 @@
 import { COMPUTER } from "@shared/deviceNames";
 import { type DeviceInvite, type DeviceInviteRequest, deviceJoinedLine } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { PANEL_WORDS, WAYS_WORDS } from "../../src/renderer/src/settings/devicesWords";
@@ -47,6 +48,12 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
   bridge.answer("inf:devices:addresses", ADDRESSES);
   bridge.answer("inf:devices:sign-ins", []);
   bridge.answer("inf:devices:stop", { ok: true });
+  // + A computer opens the address form, which looks for computers nearby while it is open.
+  bridge.answer("inf:devices:nearby", (watching: boolean) => ({
+    state: watching ? "looking" : "off",
+    user: watching ? "kun" : null,
+    macs: [],
+  }));
   let made = 0;
   /** How long the next link lives from when the home makes it; the home's own is thirty minutes. */
   let lives = THIRTY_MINUTES;
@@ -86,13 +93,13 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
   await openWindow(bridge);
   const devices = await openDevices();
 
-  // Section: + A computer, then a link to paste there, opens the panel with it.
+  // Section: + A computer, then a link to paste there under its address form, opens the panel with it.
   {
     await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
-    const chooser = await shown("[data-device-chooser]");
-    await userEvent.click(button(chooser, "Paste a link into Infinitary there"));
+    const ways = await shown("[data-device-other-ways]");
+    await userEvent.click(button(ways, m.settingsDevicesAddByLink()));
     const panel = await shown('[data-panel-state="open"]');
-    await gone("[data-device-chooser]");
+    await gone("[data-device-address-question]");
     expect(bridge.requests("inf:devices:invite")).toEqual([[{ kind: "mac" }]]);
     expect(panel.getAttribute("data-panel-holds")).toBe("link");
     expect(panel.querySelector("[data-device-link]")?.textContent).toBe(linkOf(1));
@@ -191,7 +198,9 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
   // Section: Done puts away a joined note of a Mac that found this one again.
   {
     await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
-    await userEvent.click(button(await shown("[data-device-chooser]"), "Run a command there"));
+    await userEvent.click(
+      button(await shown("[data-device-other-ways]"), m.settingsDevicesAddByCommand()),
+    );
     await shown('[data-panel-state="open"]');
     expect(bridge.requests("inf:devices:invite").at(-1)).toEqual([
       { kind: "mac", command: "another-mac" },

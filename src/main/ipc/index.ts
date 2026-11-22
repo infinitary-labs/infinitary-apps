@@ -1,10 +1,13 @@
 import { join } from "node:path";
 import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserViewer } from "@core/browser/browserViews";
+import { setUpHere, setUpStandIns } from "@core/devices/setUpHere";
 import { saveAllIntoDownloads, saveIntoDownloads } from "@core/files/downloadsSave";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
+import { hostPlatform } from "@core/platform";
 import { writePrivateFile } from "@core/secrets/custody";
+import { readStandIns } from "@core/standIns";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
 import * as m from "@shared/i18n/messages.generated";
 import {
@@ -45,6 +48,9 @@ import { SavedCardFileStore } from "./savedCardFiles";
  * shell's own surface is handled here: the browser it opens links in, the
  * folder picker, frames, microphone access, and what this app is.
  */
+
+/** A Mac's Sharing settings, where Remote Login is turned on. */
+const SHARING_SETTINGS_URL = "x-apple.systempreferences:com.apple.Sharing-Settings.extension";
 
 const announcements = eventBatch((events) => send("inf:events", events));
 
@@ -129,6 +135,20 @@ export function registerIpc(options: IpcOptions): void {
     return { ok: true as const };
   });
   handleInvoke("inf:devices:take-over", rendererSource, () => shell.takeOver());
+  // Set up from your first mate's computer, at the first launch (docs/view.md, "Joining").
+  // A development or end-to-end run reads its own stand-ins; an installed app reads none.
+  const setUpRead = setUpStandIns(readStandIns(host.app.packaged, process.env));
+  handleInvoke("inf:devices:set-up-here", rendererSource, (_event, reads) =>
+    setUpHere({ ...setUpRead, reads }),
+  );
+  handleInvoke("inf:devices:open-sharing", rendererSource, async () => {
+    if (hostPlatform() === "darwin") await host.openExternal(SHARING_SETTINGS_URL);
+    return { ok: true as const };
+  });
+  handleInvoke("inf:devices:follow-added", rendererSource, async () => ({
+    followed: await shell.followAdded(),
+    ...shell.followsAdded(),
+  }));
   // Try again on a Mac whose work could not be set up (docs/view.md, "A Mac that runs work").
   handleInvoke("inf:devices:set-up-work", rendererSource, async () => {
     await shell.checkWork();

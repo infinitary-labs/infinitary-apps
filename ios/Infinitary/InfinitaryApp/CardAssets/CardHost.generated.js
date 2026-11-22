@@ -22878,6 +22878,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `arrow, up, previous`;
   }
+  function commandNoticeNotAnsweringRetry() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نائب القبطان يعمل لكنه لا يجيب. انتظره، أو ابدأه هنا لتتصل به من جديد.`;
+      case "de":
+        return `Dein erster Offizier läuft, antwortet aber nicht. Warte auf ihn, oder starte ihn hier, um dich erneut mit ihm zu verbinden.`;
+      case "es":
+        return `Tu primer oficial está en marcha pero no responde. Espéralo, o inícialo aquí para volver a conectarte con él.`;
+      case "fr":
+        return `Votre second tourne mais ne répond pas. Attendez-le, ou démarrez-le ici pour vous y reconnecter.`;
+      case "ja":
+        return `一等航海士は動いていますが応答しません。応答を待つか、ここで開始してもう一度つなぎ直します。`;
+      case "ko":
+        return `일등항해사가 실행 중이지만 응답하지 않아요. 기다리거나, 여기서 시작해 다시 연결해요.`;
+      case "pt-BR":
+        return `Seu imediato está em execução, mas não responde. Espere por ele, ou inicie-o aqui para se conectar a ele de novo.`;
+      case "zh-Hans":
+        return `你的大副正在运行，但没有响应。等它，或者在这里开始以重新连接它。`;
+      case "zh-Hant":
+        return `你的大副正在執行，但沒有回應。等它，或者在這裡開始以重新連接它。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé îš ŕûññîñĝ ƀûţ ñöţ áñšŵéŕîñĝ. Ŵáîţ ƒöŕ îţ, öŕ šţáŕţ îţ ĥéŕé ţö çöññéçţ ţö îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate is running but not answering. Wait for it, or start it here to connect to it again.‬`;
+    }
+    return `Your first mate is running but not answering. Wait for it, or start it here to connect to it again.`;
+  }
+  function commandNoticeStopping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجري إيقاف نائب القبطان. تبدأه هذه النافذة هنا بعد أن يتوقف.`;
+      case "de":
+        return `Dein erster Offizier wird angehalten. Dieses Fenster startet ihn hier, sobald er angehalten hat.`;
+      case "es":
+        return `Tu primer oficial se está deteniendo. Esta ventana lo inicia aquí cuando se haya detenido.`;
+      case "fr":
+        return `Votre second est en cours d’arrêt. Cette fenêtre le démarre ici une fois qu’il s’est arrêté.`;
+      case "ja":
+        return `一等航海士を停止しています。停止したら、このウインドウでここで開始します。`;
+      case "ko":
+        return `일등항해사를 멈추고 있어요. 멈추면 이 창에서 여기서 시작해요.`;
+      case "pt-BR":
+        return `Seu imediato está sendo parado. Esta janela o inicia aqui assim que ele parar.`;
+      case "zh-Hans":
+        return `正在停止你的大副。它停止后，这个窗口会在这里开始它。`;
+      case "zh-Hant":
+        return `正在停止你的大副。它停止後，這個視窗會在這裡開始它。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé îš ƀéîñĝ šţöþþéð. Ţĥîš ŵîñðöŵ šţáŕţš îţ ĥéŕé öñçé îţ ĥáš šţöþþéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate is being stopped. This window starts it here once it has stopped.‬`;
+    }
+    return `Your first mate is being stopped. This window starts it here once it has stopped.`;
+  }
   function commandNoticeWindowCrashed() {
     switch (currentLanguage()) {
       case "ar":
@@ -27045,6 +27099,169 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Working…`;
   }
+  function devicesAddressFormNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function devicesAddressFormOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح النموذج هنا، ثم اكتب عنوانه أو اختره من الحواسيب على هذه الشبكة.`;
+      case "de":
+        return `Öffne hier das Formular, dann gib seine Adresse ein oder wähl ihn aus den Computern in diesem Netzwerk.`;
+      case "es":
+        return `Abre el formulario aquí y luego escribe su dirección o elígela entre las computadoras de esta red.`;
+      case "fr":
+        return `Ouvrez le formulaire ici, puis tapez son adresse ou choisissez-le parmi les ordinateurs de ce réseau.`;
+      case "ja":
+        return `ここでフォームを開き、アドレスを入力するか、このネットワーク上のコンピューターから選んでください。`;
+      case "ko":
+        return `여기에서 양식을 열고 주소를 입력하거나 이 네트워크의 컴퓨터 중에서 선택하세요.`;
+      case "pt-BR":
+        return `Abra o formulário aqui e depois digite o endereço dele ou escolha-o entre os computadores desta rede.`;
+      case "zh-Hans":
+        return `在这里打开表单，然后输入它的地址，或从这个网络上的电脑中选择它。`;
+      case "zh-Hant":
+        return `在這裡打開表單，然後輸入它的位址，或從這個網路上的電腦中選擇它。`;
+      case "en-XA":
+        return `[Öþéñ ţĥé ƒöŕɱ ĥéŕé, ţĥéñ ţýþé îţš áððŕéšš öŕ þîçķ îţ ƒŕöɱ ţĥé çöɱþûţéŕš öñ ţĥîš ñéţŵöŕķ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open the form here, then type its address or pick it from the computers on this network.‬`;
+    }
+    return `Open the form here, then type its address or pick it from the computers on this network.`;
+  }
+  function devicesAddressFormOpenButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح النموذج`;
+      case "de":
+        return `Formular öffnen`;
+      case "es":
+        return `Abrir el formulario`;
+      case "fr":
+        return `Ouvrir le formulaire`;
+      case "ja":
+        return `フォームを開く`;
+      case "ko":
+        return `양식 열기`;
+      case "pt-BR":
+        return `Abrir o formulário`;
+      case "zh-Hans":
+        return `打开表单`;
+      case "zh-Hant":
+        return `打開表單`;
+      case "en-XA":
+        return `[Öþéñ ţĥé ƒöŕɱ ~~~~~]`;
+      case "ar-XB":
+        return `‮Open the form‬`;
+    }
+    return `Open the form`;
+  }
+  function devicesAddressFormSetUp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُعدّه من هذا الحاسوب عبر «تسجيل الدخول عن بُعد»، بمفتاح SSH الخاص بك، وأُبقيه محدّثًا.`;
+      case "de":
+        return `Ich richte ihn von diesem Computer aus über „Entfernte Anmeldung“ mit deinem eigenen SSH-Schlüssel ein und halte ihn aktuell.`;
+      case "es":
+        return `La configuro desde esta computadora con la Sesión remota, con tu propia clave SSH, y la mantengo actualizada.`;
+      case "fr":
+        return `Je le configure depuis cet ordinateur par la Session à distance, avec votre propre clé SSH, et je le tiens à jour.`;
+      case "ja":
+        return `このコンピューターから「リモートログイン」で、あなた自身の SSH キーを使って設定し、最新に保ちます。`;
+      case "ko":
+        return `이 컴퓨터에서 원격 로그인으로, 내 SSH 키를 사용해 설정하고 최신으로 유지할게요.`;
+      case "pt-BR":
+        return `Eu o configuro a partir deste computador pelo Login Remoto, com sua própria chave SSH, e o mantenho atualizado.`;
+      case "zh-Hans":
+        return `我会从这台电脑通过“远程登录”、用你自己的 SSH 密钥设置它，并让它保持最新。`;
+      case "zh-Hant":
+        return `我會從這台電腦透過「遠端登入」、用你自己的 SSH 金鑰設定它，並讓它保持最新。`;
+      case "en-XA":
+        return `[Î šéţ îţ ûþ ƒŕöɱ ţĥîš çöɱþûţéŕ öṽéŕ Ŕéɱöţé Ļöĝîñ, ŵîţĥ ýöûŕ öŵñ ŠŠĤ ķéý, áñð ķééþ îţ ûþðáţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮I set it up from this computer over Remote Login, with your own SSH key, and keep it updated.‬`;
+    }
+    return `I set it up from this computer over Remote Login, with your own SSH key, and keep it updated.`;
+  }
+  function devicesAddressFormTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة حاسوب بعنوانه`;
+      case "de":
+        return `Einen Computer über seine Adresse hinzufügen`;
+      case "es":
+        return `Agregar una computadora por su dirección`;
+      case "fr":
+        return `Ajouter un ordinateur par son adresse`;
+      case "ja":
+        return `コンピューターをアドレスで追加`;
+      case "ko":
+        return `주소로 컴퓨터 추가`;
+      case "pt-BR":
+        return `Adicionar um computador pelo endereço`;
+      case "zh-Hans":
+        return `按地址添加电脑`;
+      case "zh-Hant":
+        return `用位址加入電腦`;
+      case "en-XA":
+        return `[Åðð á çöɱþûţéŕ ƀý îţš áððŕéšš ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add a computer by its address‬`;
+    }
+    return `Add a computer by its address`;
+  }
+  function devicesAddressFormTitleNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة ${device} بعنوانه`;
+      case "de":
+        return `Deinen ${device} über seine Adresse hinzufügen`;
+      case "es":
+        return `Agregar tu ${device} por su dirección`;
+      case "fr":
+        return `Ajouter votre ${device} par son adresse`;
+      case "ja":
+        return `${device} をアドレスで追加`;
+      case "ko":
+        return `주소로 ${device} 추가`;
+      case "pt-BR":
+        return `Adicionar seu ${device} pelo endereço`;
+      case "zh-Hans":
+        return `按地址添加你的 ${device}`;
+      case "zh-Hant":
+        return `用位址加入你的 ${device}`;
+      case "en-XA":
+        return `[Åðð ýöûŕ ${device} ƀý îţš áððŕéšš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add your ‬${device}‮ by its address‬`;
+    }
+    return `Add your ${device} by its address`;
+  }
   function devicesAppCannot(input2) {
     const version2 = input2.version;
     switch (currentLanguage()) {
@@ -28196,6 +28413,466 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Reaching the ${computer} at ${address}…`;
   }
+  function devicesJoinSetUpChip() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإعداد من حاسوب نائب القبطان`;
+      case "de":
+        return `Vom Computer deines ersten Offiziers einrichten`;
+      case "es":
+        return `Configurar desde la computadora de tu primer oficial`;
+      case "fr":
+        return `Configurer depuis l’ordinateur de votre second`;
+      case "ja":
+        return `一等航海士のコンピューターから設定する`;
+      case "ko":
+        return `일등항해사의 컴퓨터에서 설정`;
+      case "pt-BR":
+        return `Configurar pelo computador do seu imediato`;
+      case "zh-Hans":
+        return `从你大副的电脑上设置`;
+      case "zh-Hant":
+        return `從你大副的電腦上設定`;
+      case "en-XA":
+        return `[Šéţ ûþ ƒŕöɱ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set up from your first mate’s computer‬`;
+    }
+    return `Set up from your first mate’s computer`;
+  }
+  function devicesJoinSetUpCompare(input2) {
+    const address = input2.address;
+    switch (currentLanguage()) {
+      case "ar":
+        return `عندما يضيف هذا الحاسوب على ${address}، سيطلب منك حاسوب نائب القبطان مقارنة هذا السطر.`;
+      case "de":
+        return `Wenn er diesen Computer unter ${address} hinzufügt, bittet dich der Computer deines ersten Offiziers, diese Zeile zu vergleichen.`;
+      case "es":
+        return `Cuando agregue esta computadora en ${address}, la computadora de tu primer oficial te pide comparar esta línea.`;
+      case "fr":
+        return `Quand il ajoute cet ordinateur à ${address}, l’ordinateur de votre second vous demande de comparer cette ligne.`;
+      case "ja":
+        return `${address} でこのコンピューターを追加するとき、一等航海士のコンピューターで、この行と照らし合わせるよう求められます。`;
+      case "ko":
+        return `${address}에서 이 컴퓨터를 추가할 때 일등항해사의 컴퓨터에서 이 줄과 비교해 달라고 해요.`;
+      case "pt-BR":
+        return `Quando ele adicionar este computador em ${address}, o computador do seu imediato pede que você compare esta linha.`;
+      case "zh-Hans":
+        return `在 ${address} 添加这台电脑时，你大副的电脑会请你比对这一行。`;
+      case "zh-Hant":
+        return `在 ${address} 加入這台電腦時，你大副的電腦會請你比對這一行。`;
+      case "en-XA":
+        return `[Ŵĥéñ îţ áððš ţĥîš çöɱþûţéŕ áţ ${address}, ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ ášķš ýöû ţö çöɱþáŕé ţĥîš ļîñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮When it adds this computer at ‬${address}‮, your first mate’s computer asks you to compare this line.‬`;
+    }
+    return `When it adds this computer at ${address}, your first mate’s computer asks you to compare this line.`;
+  }
+  function devicesJoinSetUpCopy() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسخ`;
+      case "de":
+        return `Kopieren`;
+      case "es":
+        return `Copiar`;
+      case "fr":
+        return `Copier`;
+      case "ja":
+        return `コピー`;
+      case "ko":
+        return `복사`;
+      case "pt-BR":
+        return `Copiar`;
+      case "zh-Hans":
+        return `拷贝`;
+      case "zh-Hant":
+        return `拷貝`;
+      case "en-XA":
+        return `[Çöþý ~~]`;
+      case "ar-XB":
+        return `‮Copy‬`;
+    }
+    return `Copy`;
+  }
+  function devicesJoinSetUpCopyFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر نسخ العنوان. حدّده وانسخه بنفسك.`;
+      case "de":
+        return `Die Adresse konnte nicht kopiert werden. Markier sie und kopier sie selbst.`;
+      case "es":
+        return `No se pudo copiar la dirección. Selecciónala y cópiala tú.`;
+      case "fr":
+        return `Impossible de copier l’adresse. Sélectionnez-la et copiez-la vous-même.`;
+      case "ja":
+        return `アドレスをコピーできませんでした。選択して自分でコピーしてください。`;
+      case "ko":
+        return `주소를 복사할 수 없어요. 주소를 선택해 직접 복사하세요.`;
+      case "pt-BR":
+        return `Não foi possível copiar o endereço. Selecione e copie você mesmo.`;
+      case "zh-Hans":
+        return `无法复制地址。请选中后自行复制。`;
+      case "zh-Hant":
+        return `無法複製位址。請選取後自行複製。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ çöþý ţĥé áððŕéšš. Šéļéçţ îţ áñð çöþý îţ ýöûŕšéļƒ. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not copy the address. Select it and copy it yourself.‬`;
+    }
+    return `Could not copy the address. Select it and copy it yourself.`;
+  }
+  function devicesJoinSetUpHead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أضف هذا الحاسوب من حاسوب نائب القبطان`;
+      case "de":
+        return `Diesen Computer vom Computer deines ersten Offiziers hinzufügen`;
+      case "es":
+        return `Agrega esta computadora desde la computadora de tu primer oficial`;
+      case "fr":
+        return `Ajoutez cet ordinateur depuis l’ordinateur de votre second`;
+      case "ja":
+        return `一等航海士のコンピューターからこのコンピューターを追加`;
+      case "ko":
+        return `일등항해사의 컴퓨터에서 이 컴퓨터 추가`;
+      case "pt-BR":
+        return `Adicione este computador pelo computador do seu imediato`;
+      case "zh-Hans":
+        return `从你大副的电脑上添加这台电脑`;
+      case "zh-Hant":
+        return `從你大副的電腦上加入這台電腦`;
+      case "en-XA":
+        return `[Åðð ţĥîš çöɱþûţéŕ ƒŕöɱ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add this computer from your first mate’s computer‬`;
+    }
+    return `Add this computer from your first mate’s computer`;
+  }
+  function devicesJoinSetUpKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم إعداد شيء هنا بالفعل، لذا تحتفظ هذه النافذة بنائب القبطان الخاص بها بعد أن يضيف حاسوب نائب القبطان هذا الحاسوب. بعدها انضم باستخدام «لصق رابطه» أو «الانضمام بعنوانه».`;
+      case "de":
+        return `Hier ist schon etwas eingerichtet, daher behält dieses Fenster seinen eigenen ersten Offizier, wenn der Computer deines ersten Offiziers diesen hinzufügt. Verbinde dich dann mit „Link einfügen“ oder „Über die Adresse beitreten“.`;
+      case "es":
+        return `Ya hay algo configurado aquí, así que esta ventana conserva su propio primer oficial cuando la computadora de tu primer oficial agregue esta. Después, únete con Pegar su enlace o Unirse por su dirección.`;
+      case "fr":
+        return `Quelque chose est déjà configuré ici : cette fenêtre garde son propre second une fois que l’ordinateur de votre second a ajouté celui-ci. Rejoignez-le ensuite avec Coller son lien ou Rejoindre par son adresse.`;
+      case "ja":
+        return `このコンピューターではすでに設定が行われているため、一等航海士のコンピューターがこのコンピューターを追加しても、このウインドウは自分の一等航海士のままです。その後は「リンクを貼り付ける」か「アドレスで参加」で参加してください。`;
+      case "ko":
+        return `여기에는 이미 설정된 것이 있어서, 일등항해사의 컴퓨터가 이 컴퓨터를 추가해도 이 창은 자기 일등항해사를 그대로 유지해요. 그다음 ‘링크 붙여넣기’나 ‘주소로 참여’로 참여하세요.`;
+      case "pt-BR":
+        return `Já há algo configurado aqui, então esta janela mantém o próprio imediato quando o computador do seu imediato adicionar este. Depois, entre com Colar o link dele ou Entrar pelo endereço.`;
+      case "zh-Hans":
+        return `这里已经设置过内容，所以你大副的电脑添加这台电脑后，这个窗口仍保留自己的大副。之后请用“粘贴它的链接”或“通过地址加入”加入。`;
+      case "zh-Hant":
+        return `這裡已經設定過內容，所以你大副的電腦加入這台電腦後，這個視窗仍保留自己的大副。之後請用「貼上它的連結」或「用位址加入」加入。`;
+      case "en-XA":
+        return `[Šöɱéţĥîñĝ îš áļŕéáðý šéţ ûþ ĥéŕé, šö ţĥîš ŵîñðöŵ ķééþš îţš öŵñ ƒîŕšţ ɱáţé öñçé ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ áððš ţĥîš öñé. Ţĥéñ ĵöîñ îţ ŵîţĥ Þášţé îţš ļîñķ öŕ Ĵöîñ ƀý îţš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Something is already set up here, so this window keeps its own first mate once your first mate’s computer adds this one. Then join it with Paste its link or Join by its address.‬`;
+    }
+    return `Something is already set up here, so this window keeps its own first mate once your first mate’s computer adds this one. Then join it with Paste its link or Join by its address.`;
+  }
+  function devicesJoinSetUpLocal() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `على الشبكة نفسها فقط:`;
+      case "de":
+        return `Nur im selben Netzwerk:`;
+      case "es":
+        return `Solo en la misma red:`;
+      case "fr":
+        return `Sur le même réseau seulement :`;
+      case "ja":
+        return `同じネットワーク内のみ:`;
+      case "ko":
+        return `같은 네트워크에서만:`;
+      case "pt-BR":
+        return `Só na mesma rede:`;
+      case "zh-Hans":
+        return `仅限同一网络：`;
+      case "zh-Hant":
+        return `僅限同一網路：`;
+      case "en-XA":
+        return `[Öñ ţĥé šáɱé ñéţŵöŕķ öñļý: ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮On the same network only:‬`;
+    }
+    return `On the same network only:`;
+  }
+  function devicesJoinSetUpOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `«تسجيل الدخول عن بُعد» غير مفعّل هنا. فعّله، ثم أضف هذا الحاسوب.`;
+      case "de":
+        return `„Entfernte Anmeldung“ ist hier deaktiviert. Aktiviere sie, dann füg diesen Computer hinzu.`;
+      case "es":
+        return `La Sesión remota está desactivada aquí. Actívala y luego agrega esta computadora.`;
+      case "fr":
+        return `La Session à distance est désactivée ici. Activez-la, puis ajoutez cet ordinateur.`;
+      case "ja":
+        return `ここでは「リモートログイン」がオフです。オンにしてからこのコンピューターを追加してください。`;
+      case "ko":
+        return `여기에서 원격 로그인이 꺼져 있어요. 켠 다음 이 컴퓨터를 추가하세요.`;
+      case "pt-BR":
+        return `O Login Remoto está desativado aqui. Ative-o e depois adicione este computador.`;
+      case "zh-Hans":
+        return `这里未打开“远程登录”。请打开它，然后添加这台电脑。`;
+      case "zh-Hant":
+        return `這裡未開啟「遠端登入」。請開啟它，然後加入這台電腦。`;
+      case "en-XA":
+        return `[Ŕéɱöţé Ļöĝîñ îš öƒƒ ĥéŕé. Ţûŕñ îţ öñ, ţĥéñ áðð ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Remote Login is off here. Turn it on, then add this computer.‬`;
+    }
+    return `Remote Login is off here. Turn it on, then add this computer.`;
+  }
+  function devicesJoinSetUpOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `«تسجيل الدخول عن بُعد» مفعّل هنا.`;
+      case "de":
+        return `„Entfernte Anmeldung“ ist hier aktiviert.`;
+      case "es":
+        return `La Sesión remota está activada aquí.`;
+      case "fr":
+        return `La Session à distance est activée ici.`;
+      case "ja":
+        return `ここでは「リモートログイン」がオンです。`;
+      case "ko":
+        return `여기에서 원격 로그인이 켜져 있어요.`;
+      case "pt-BR":
+        return `O Login Remoto está ativado aqui.`;
+      case "zh-Hans":
+        return `这里已打开“远程登录”。`;
+      case "zh-Hant":
+        return `這裡已開啟「遠端登入」。`;
+      case "en-XA":
+        return `[Ŕéɱöţé Ļöĝîñ îš öñ ĥéŕé. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Remote Login is on here.‬`;
+    }
+    return `Remote Login is on here.`;
+  }
+  function devicesJoinSetUpOpenSharing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح إعدادات المشاركة`;
+      case "de":
+        return `Freigaben-Einstellungen öffnen`;
+      case "es":
+        return `Abrir la configuración de Compartir`;
+      case "fr":
+        return `Ouvrir les réglages de Partage`;
+      case "ja":
+        return `「共有」設定を開く`;
+      case "ko":
+        return `공유 설정 열기`;
+      case "pt-BR":
+        return `Abrir os ajustes de Compartilhamento`;
+      case "zh-Hans":
+        return `打开“共享”设置`;
+      case "zh-Hant":
+        return `打開「共享」設定`;
+      case "en-XA":
+        return `[Öþéñ Šĥáŕîñĝ šéţţîñĝš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Sharing settings‬`;
+    }
+    return `Open Sharing settings`;
+  }
+  function devicesJoinSetUpPrivate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عنوان شبكته الخاصة، مثل عنوان Tailscale، يصل إليه أينما كان كلا الحاسوبين عليها.`;
+      case "de":
+        return `Seine Adresse im privaten Netzwerk, etwa die von Tailscale, erreicht ihn überall, wo beide Computer darin sind.`;
+      case "es":
+        return `Su dirección de red privada, como la de Tailscale, llega a ella dondequiera que ambas computadoras estén en esa red.`;
+      case "fr":
+        return `Son adresse sur le réseau privé, comme celle de Tailscale, le joint partout où les deux ordinateurs y sont.`;
+      case "ja":
+        return `Tailscale などのプライベートネットワークのアドレスなら、両方のコンピューターがそのネットワークにいればどこからでも接続できます。`;
+      case "ko":
+        return `Tailscale 같은 사설 네트워크 주소는 두 컴퓨터가 그 네트워크에 있으면 어디서든 연결돼요.`;
+      case "pt-BR":
+        return `O endereço de rede privada dele, como o do Tailscale, o alcança onde quer que os dois computadores estejam nela.`;
+      case "zh-Hans":
+        return `它的私有网络地址（如 Tailscale 的）在两台电脑都在该网络上时，随处都能连到它。`;
+      case "zh-Hant":
+        return `它的私人網路位址（如 Tailscale 的）在兩台電腦都在該網路上時，隨處都能連到它。`;
+      case "en-XA":
+        return `[Îţš þŕîṽáţé ñéţŵöŕķ áððŕéšš, šûçĥ áš Ţáîļšçáļé’š, ŕéáçĥéš îţ ŵĥéŕéṽéŕ ƀöţĥ çöɱþûţéŕš áŕé öñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its private network address, such as Tailscale’s, reaches it wherever both computers are on it.‬`;
+    }
+    return `Its private network address, such as Tailscale’s, reaches it wherever both computers are on it.`;
+  }
+  function devicesJoinSetUpSshOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `خادم SSH فيه غير مفعّل هنا. فعّله، ثم أضف هذا الحاسوب.`;
+      case "de":
+        return `Sein SSH-Server ist hier deaktiviert. Aktiviere ihn, dann füg diesen Computer hinzu.`;
+      case "es":
+        return `Su servidor SSH está desactivado aquí. Actívalo y luego agrega esta computadora.`;
+      case "fr":
+        return `Son serveur SSH est désactivé ici. Activez-le, puis ajoutez cet ordinateur.`;
+      case "ja":
+        return `ここでは SSH サーバーがオフです。オンにしてからこのコンピューターを追加してください。`;
+      case "ko":
+        return `여기에서 SSH 서버가 꺼져 있어요. 켠 다음 이 컴퓨터를 추가하세요.`;
+      case "pt-BR":
+        return `O servidor SSH dele está desativado aqui. Ative-o e depois adicione este computador.`;
+      case "zh-Hans":
+        return `这里的 SSH 服务器未打开。请打开它，然后添加这台电脑。`;
+      case "zh-Hant":
+        return `這裡的 SSH 伺服器未開啟。請開啟它，然後加入這台電腦。`;
+      case "en-XA":
+        return `[Îţš ŠŠĤ šéŕṽéŕ îš öƒƒ ĥéŕé. Ţûŕñ îţ öñ, ţĥéñ áðð ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its SSH server is off here. Turn it on, then add this computer.‬`;
+    }
+    return `Its SSH server is off here. Turn it on, then add this computer.`;
+  }
+  function devicesJoinSetUpSshOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `خادم SSH فيه مفعّل هنا.`;
+      case "de":
+        return `Sein SSH-Server ist hier aktiviert.`;
+      case "es":
+        return `Su servidor SSH está activado aquí.`;
+      case "fr":
+        return `Son serveur SSH est activé ici.`;
+      case "ja":
+        return `ここでは SSH サーバーがオンです。`;
+      case "ko":
+        return `여기에서 SSH 서버가 켜져 있어요.`;
+      case "pt-BR":
+        return `O servidor SSH dele está ativado aqui.`;
+      case "zh-Hans":
+        return `这里的 SSH 服务器已打开。`;
+      case "zh-Hant":
+        return `這裡的 SSH 伺服器已開啟。`;
+      case "en-XA":
+        return `[Îţš ŠŠĤ šéŕṽéŕ îš öñ ĥéŕé. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its SSH server is on here.‬`;
+    }
+    return `Its SSH server is on here.`;
+  }
+  function devicesJoinSetUpStays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة، لذا تبقى هذه النافذة بجانبه بعد أن يضيف حاسوب نائب القبطان هذا الحاسوب.`;
+      case "de":
+        return `Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde, daher bleibt dieses Fenster bei ihm, wenn der Computer deines ersten Offiziers diesen hinzufügt.`;
+      case "es":
+        return `Aquí se ejecuta un primer oficial iniciado fuera de esta ventana, así que esta ventana se queda junto a él cuando la computadora de tu primer oficial agregue esta.`;
+      case "fr":
+        return `Un second démarré hors de cette fenêtre fonctionne ici : cette fenêtre reste à ses côtés une fois que l’ordinateur de votre second a ajouté celui-ci.`;
+      case "ja":
+        return `このウインドウの外で起動した一等航海士がここで動いているため、一等航海士のコンピューターがこのコンピューターを追加しても、このウインドウはその横に残ります。`;
+      case "ko":
+        return `이 창 밖에서 시작한 일등항해사가 여기서 실행 중이라, 일등항해사의 컴퓨터가 이 컴퓨터를 추가해도 이 창은 그 곁에 그대로 있어요.`;
+      case "pt-BR":
+        return `Um imediato iniciado fora desta janela está rodando aqui, então esta janela fica ao lado dele quando o computador do seu imediato adicionar este.`;
+      case "zh-Hans":
+        return `这里运行着一个在此窗口之外启动的大副，所以你大副的电脑添加这台电脑后，这个窗口仍留在它旁边。`;
+      case "zh-Hant":
+        return `這裡執行著一個在此視窗之外啟動的大副，所以你大副的電腦加入這台電腦後，這個視窗仍留在它旁邊。`;
+      case "en-XA":
+        return `[Å ƒîŕšţ ɱáţé šţáŕţéð öûţšîðé ţĥîš ŵîñðöŵ ŕûñš ĥéŕé, šö ţĥîš ŵîñðöŵ šţáýš ƀéšîðé îţ öñçé ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ áððš ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one.‬`;
+    }
+    return `A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one.`;
+  }
+  function devicesJoinSetUpSub() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هناك، اختر + حاسوب في الإعدادات ← الأجهزة، أو اطلب ذلك من نائب القبطان، واكتب هذا العنوان. بعدها يُبقي هذا الحاسوب محدّثًا ويصل إليه بنفسه.`;
+      case "de":
+        return `Wähl dort in Einstellungen → Geräte + Einen Computer, oder frag deinen ersten Offizier, und gib diese Adresse ein. Er hält diesen Computer dann aktuell und erreicht ihn von selbst.`;
+      case "es":
+        return `Allí, elige + Una computadora en Configuración → Dispositivos, o pídeselo a tu primer oficial, y escribe esta dirección. Después mantiene esta computadora actualizada y llega a ella por sí sola.`;
+      case "fr":
+        return `Là-bas, choisissez + Un ordinateur dans Réglages → Appareils, ou demandez-le à votre second, et tapez cette adresse. Il tient ensuite cet ordinateur à jour et le joint de lui-même.`;
+      case "ja":
+        return `そちらの「設定 → デバイス」で「+ コンピューター」を選ぶか、一等航海士に頼んで、このアドレスを入力してください。その後はこのコンピューターを自動で最新に保ち、自分で接続します。`;
+      case "ko":
+        return `그곳의 설정 → 기기에서 + 컴퓨터를 선택하거나 일등항해사에게 요청한 뒤, 이 주소를 입력하세요. 그다음에는 이 컴퓨터를 알아서 최신으로 유지하고 연결해요.`;
+      case "pt-BR":
+        return `Lá, escolha + Um computador em Ajustes → Dispositivos, ou peça ao seu imediato, e digite este endereço. Depois ele mantém este computador atualizado e se conecta a ele sozinho.`;
+      case "zh-Hans":
+        return `在那里的“设置 → 设备”中选择“+ 一台电脑”，或让你的大副来做，然后输入这个地址。之后它会让这台电脑保持最新，并自己连到它。`;
+      case "zh-Hant":
+        return `在那裡的「設定 → 裝置」中選擇「+ 一台電腦」，或請你的大副來做，然後輸入這個位址。之後它會讓這台電腦保持最新，並自己連到它。`;
+      case "en-XA":
+        return `[Ţĥéŕé, çĥööšé + Å çöɱþûţéŕ îñ Šéţţîñĝš → Ðéṽîçéš, öŕ ášķ ýöûŕ ƒîŕšţ ɱáţé, áñð ţýþé ţĥîš áððŕéšš. Îţ ţĥéñ ķééþš ţĥîš çöɱþûţéŕ ûþðáţéð áñð ŕéáçĥéš îţ ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself.‬`;
+    }
+    return `There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself.`;
+  }
+  function devicesJoinSetUpUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على عنوان هذا الحاسوب بعد. تحقّق من أنه متصل بشبكة؛ سيبحث Infinitary مرة أخرى بعد لحظة.`;
+      case "de":
+        return `Die Adresse dieses Computers wurde noch nicht gefunden. Prüfe, ob er mit einem Netzwerk verbunden ist; Infinitary sucht gleich erneut.`;
+      case "es":
+        return `Todavía no se encontró la dirección de esta computadora. Comprueba que esté conectada a una red; Infinitary vuelve a buscar en un momento.`;
+      case "fr":
+        return `L’adresse de cet ordinateur est encore introuvable. Vérifiez qu’il est connecté à un réseau ; Infinitary cherche à nouveau dans un instant.`;
+      case "ja":
+        return `このコンピューターのアドレスがまだ見つかりません。ネットワークにつながっているか確認してください。Infinitary はすぐにもう一度探します。`;
+      case "ko":
+        return `이 컴퓨터의 주소를 아직 찾지 못했습니다. 네트워크에 연결되어 있는지 확인하세요. Infinitary가 잠시 후 다시 찾습니다.`;
+      case "pt-BR":
+        return `Ainda não foi possível encontrar o endereço deste computador. Verifique se ele está em uma rede; o Infinitary procura de novo em instantes.`;
+      case "zh-Hans":
+        return `还找不到这台电脑的地址。请检查它是否已连接网络；Infinitary 稍后会再找一次。`;
+      case "zh-Hant":
+        return `還找不到這台電腦的位址。請確認它已連上網路；Infinitary 稍後會再找一次。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ ƒîñð ţĥîš çöɱþûţéŕ’š áððŕéšš ýéţ. Çĥéçķ ţĥáţ îţ îš öñ á ñéţŵöŕķ; Îñƒîñîţáŕý ļööķš áĝáîñ îñ á ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.‬`;
+    }
+    return `Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.`;
+  }
+  function devicesJoinSetUpWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `في انتظار أن يضيف حاسوب نائب القبطان هذا الحاسوب. بعدها تفتح هذه النافذة نائب القبطان بنفسها.`;
+      case "de":
+        return `Warte darauf, dass der Computer deines ersten Offiziers diesen hinzufügt. Dieses Fenster öffnet dann von selbst deinen ersten Offizier.`;
+      case "es":
+        return `Esperando a que la computadora de tu primer oficial agregue esta. Después, esta ventana abre a tu primer oficial por sí sola.`;
+      case "fr":
+        return `En attente que l’ordinateur de votre second ajoute celui-ci. Cette fenêtre ouvre ensuite votre second d’elle-même.`;
+      case "ja":
+        return `一等航海士のコンピューターがこのコンピューターを追加するのを待っています。その後、このウインドウが自動で一等航海士を開きます。`;
+      case "ko":
+        return `일등항해사의 컴퓨터가 이 컴퓨터를 추가하기를 기다리고 있어요. 그다음 이 창이 알아서 일등항해사를 열어요.`;
+      case "pt-BR":
+        return `Esperando o computador do seu imediato adicionar este. Depois, esta janela abre o seu imediato sozinha.`;
+      case "zh-Hans":
+        return `正在等待你大副的电脑添加这台电脑。之后这个窗口会自己打开你的大副。`;
+      case "zh-Hant":
+        return `正在等待你大副的電腦加入這台電腦。之後這個視窗會自己打開你的大副。`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ƒöŕ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ ţö áðð ţĥîš öñé. Ţĥîš ŵîñðöŵ ţĥéñ öþéñš ýöûŕ ƒîŕšţ ɱáţé ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself.‬`;
+    }
+    return `Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself.`;
+  }
   function devicesJoinShows(input2) {
     const computer = input2.computer;
     const here = input2.here;
@@ -28224,6 +28901,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${here}‮ shows your first mate. Its cards, tasks and conversation stay on that ‬${computer}‮.‬`;
     }
     return `${here} shows your first mate. Its cards, tasks and conversation stay on that ${computer}.`;
+  }
+  function devicesJoinStaysBeside() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة. أوقفه أولًا للانضمام إلى حاسوب آخر من هذه النافذة.`;
+      case "de":
+        return `Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde. Beende ihn zuerst, um von diesem Fenster aus einem anderen Computer beizutreten.`;
+      case "es":
+        return `Aquí se ejecuta un primer oficial iniciado fuera de esta ventana. Detenlo primero para unirte a otra computadora desde esta ventana.`;
+      case "fr":
+        return `Un second démarré hors de cette fenêtre fonctionne ici. Arrêtez-le d’abord pour rejoindre un autre ordinateur depuis cette fenêtre.`;
+      case "ja":
+        return `このウインドウの外で起動した一等航海士がここで動いています。このウインドウから別のコンピューターに参加するには、先にそれを停止してください。`;
+      case "ko":
+        return `이 창 밖에서 시작한 일등항해사가 여기서 실행 중이에요. 이 창에서 다른 컴퓨터에 참여하려면 먼저 그것을 중지하세요.`;
+      case "pt-BR":
+        return `Um imediato iniciado fora desta janela está rodando aqui. Pare-o primeiro para entrar em outro computador a partir desta janela.`;
+      case "zh-Hans":
+        return `这里运行着一个在此窗口之外启动的大副。要从此窗口加入另一台电脑，请先停止它。`;
+      case "zh-Hant":
+        return `這裡執行著一個在此視窗之外啟動的大副。要從此視窗加入另一台電腦，請先停止它。`;
+      case "en-XA":
+        return `[Å ƒîŕšţ ɱáţé šţáŕţéð öûţšîðé ţĥîš ŵîñðöŵ ŕûñš ĥéŕé. Šţöþ îţ ƒîŕšţ ţö ĵöîñ áñöţĥéŕ çöɱþûţéŕ ƒŕöɱ ţĥîš ŵîñðöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A first mate started outside this window runs here. Stop it first to join another computer from this window.‬`;
+    }
+    return `A first mate started outside this window runs here. Stop it first to join another computer from this window.`;
   }
   function devicesJoinTryAgain() {
     switch (currentLanguage()) {
@@ -28931,6 +29635,141 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Export‬`;
     }
     return `Export`;
+  }
+  function dialogLeaveIt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اتركه كما هو`;
+      case "de":
+        return `So lassen`;
+      case "es":
+        return `Dejarlo así`;
+      case "fr":
+        return `Laisser ainsi`;
+      case "ja":
+        return `そのままにする`;
+      case "ko":
+        return `그대로 두기`;
+      case "pt-BR":
+        return `Deixar assim`;
+      case "zh-Hans":
+        return `保持不变`;
+      case "zh-Hant":
+        return `保持不變`;
+      case "en-XA":
+        return `[Ļéáṽé îţ ~~~]`;
+      case "ar-XB":
+        return `‮Leave it‬`;
+    }
+    return `Leave it`;
+  }
+  function dialogOnceClosedDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استخدم نافذته. إذا لم تظهر أي نافذة، فقد يكون لا يزال ينهي عمله، ويمكنك فتح Infinitary هنا بعد إغلاقه.`;
+      case "de":
+        return `Nutze sein Fenster. Wenn kein Fenster nach vorn kam, beendet es vielleicht noch seine Arbeit, und du kannst Infinitary hier öffnen, sobald es geschlossen ist.`;
+      case "es":
+        return `Usa su ventana. Si no apareció ninguna ventana, puede que aún esté terminando su trabajo, y puedes abrir Infinitary aquí cuando se cierre.`;
+      case "fr":
+        return `Utilisez sa fenêtre. Si aucune fenêtre n’est apparue, il termine peut-être encore son travail, et vous pouvez ouvrir Infinitary ici une fois qu’il sera fermé.`;
+      case "ja":
+        return `そのウインドウを使ってください。ウインドウが前面に出てこない場合は、まだ作業を終えている途中かもしれません。閉じたあとに、ここで Infinitary を開けます。`;
+      case "ko":
+        return `해당 창을 사용하세요. 창이 앞으로 나오지 않았다면 아직 작업을 마무리하는 중일 수 있으며, 닫힌 후 여기에서 Infinitary를 열 수 있습니다.`;
+      case "pt-BR":
+        return `Use a janela dele. Se nenhuma janela apareceu, ele ainda pode estar terminando o trabalho, e você pode abrir o Infinitary aqui quando ele fechar.`;
+      case "zh-Hans":
+        return `请使用它的窗口。如果没有窗口出现，它可能仍在完成工作；它关闭后，你可以在这里打开 Infinitary。`;
+      case "zh-Hant":
+        return `請使用它的視窗。如果沒有視窗出現，它可能仍在完成工作；它關閉後，你可以在這裡開啟 Infinitary。`;
+      case "en-XA":
+        return `[Ûšé îţš ŵîñðöŵ. Îƒ ñö ŵîñðöŵ çáɱé ƒöŕŵáŕð, îţ ɱáý šţîļļ ƀé ƒîñîšĥîñĝ îţš ŵöŕķ, áñð ýöû çáñ öþéñ Îñƒîñîţáŕý ĥéŕé öñçé îţ çļöšéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Use its window. If no window came forward, it may still be finishing its work, and you can open Infinitary here once it closes.‬`;
+    }
+    return `Use its window. If no window came forward, it may still be finishing its work, and you can open Infinitary here once it closes.`;
+  }
+  function dialogOpenInDock() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary مفتوح بالفعل.`;
+      case "de":
+        return `Infinitary ist bereits geöffnet.`;
+      case "es":
+        return `Infinitary ya está abierto.`;
+      case "fr":
+        return `Infinitary est déjà ouvert.`;
+      case "ja":
+        return `Infinitary はすでに開いています。`;
+      case "ko":
+        return `Infinitary가 이미 열려 있습니다.`;
+      case "pt-BR":
+        return `O Infinitary já está aberto.`;
+      case "zh-Hans":
+        return `Infinitary 已经打开。`;
+      case "zh-Hant":
+        return `Infinitary 已經開啟。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš áļŕéáðý öþéñ. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is already open.‬`;
+    }
+    return `Infinitary is already open.`;
+  }
+  function dialogOpenInDockDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `انقر على Infinitary في شريط Dock لإظهار نافذته.`;
+      case "de":
+        return `Klick im Dock auf Infinitary, um sein Fenster zu zeigen.`;
+      case "es":
+        return `Haz clic en Infinitary en el Dock para mostrar su ventana.`;
+      case "fr":
+        return `Cliquez sur Infinitary dans le Dock pour afficher sa fenêtre.`;
+      case "ja":
+        return `Dock の Infinitary をクリックすると、ウインドウが表示されます。`;
+      case "ko":
+        return `Dock에서 Infinitary를 클릭하면 창이 표시됩니다.`;
+      case "pt-BR":
+        return `Clique no Infinitary no Dock para mostrar a janela dele.`;
+      case "zh-Hans":
+        return `点按程序坞中的 Infinitary 以显示它的窗口。`;
+      case "zh-Hant":
+        return `按一下 Dock 中的 Infinitary 以顯示它的視窗。`;
+      case "en-XA":
+        return `[Çļîçķ Îñƒîñîţáŕý îñ ţĥé Ðöçķ ţö šĥöŵ îţš ŵîñðöŵ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Click Infinitary in the Dock to show its window.‬`;
+    }
+    return `Click Infinitary in the Dock to show its window.`;
+  }
+  function dialogOpenOnceClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتحه هنا بعد إغلاقه`;
+      case "de":
+        return `Hier öffnen, sobald es geschlossen ist`;
+      case "es":
+        return `Abrir aquí cuando se cierre`;
+      case "fr":
+        return `Ouvrir ici une fois fermé`;
+      case "ja":
+        return `閉じたらここで開く`;
+      case "ko":
+        return `닫히면 여기에서 열기`;
+      case "pt-BR":
+        return `Abrir aqui quando fechar`;
+      case "zh-Hans":
+        return `关闭后在这里打开`;
+      case "zh-Hant":
+        return `關閉後在這裡開啟`;
+      case "en-XA":
+        return `[Öþéñ ĥéŕé öñçé îţ çļöšéš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open here once it closes‬`;
+    }
+    return `Open here once it closes`;
   }
   function feedAnswered() {
     switch (currentLanguage()) {
@@ -54838,32 +55677,32 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Run a command there`;
   }
-  function settingsDevicesAddByItsAddress() {
+  function settingsDevicesAddByCommandWhen() {
     switch (currentLanguage()) {
       case "ar":
-        return `بعنوانه`;
+        return `يمكنك الكتابة في Terminal هناك.`;
       case "de":
-        return `Über seine Adresse`;
+        return `Du kannst dort im Terminal tippen.`;
       case "es":
-        return `Por su dirección`;
+        return `Puedes escribir en Terminal allí.`;
       case "fr":
-        return `Par son adresse`;
+        return `Vous pouvez y taper dans Terminal.`;
       case "ja":
-        return `アドレスで`;
+        return `そちらの Terminal で入力できる場合。`;
       case "ko":
-        return `주소로`;
+        return `그곳의 Terminal에서 입력할 수 있을 때.`;
       case "pt-BR":
-        return `Pelo endereço`;
+        return `Você pode digitar no Terminal de lá.`;
       case "zh-Hans":
-        return `按地址`;
+        return `你可以在那里的 Terminal 中输入。`;
       case "zh-Hant":
-        return `用位址`;
+        return `你可以在那裡的 Terminal 中輸入。`;
       case "en-XA":
-        return `[Ɓý îţš áððŕéšš ~~~~~]`;
+        return `[Ýöû çáñ ţýþé îñ Ţéŕɱîñáļ ţĥéŕé. ~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮By its address‬`;
+        return `‮You can type in Terminal there.‬`;
     }
-    return `By its address`;
+    return `You can type in Terminal there.`;
   }
   function settingsDevicesAddByLink() {
     switch (currentLanguage()) {
@@ -54892,6 +55731,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Paste a link into Infinitary there`;
   }
+  function settingsDevicesAddByLinkWhen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنت عند ذلك الحاسوب، أو هو حاسوب Windows.`;
+      case "de":
+        return `Du sitzt an diesem Computer, oder es ist ein Windows-PC.`;
+      case "es":
+        return `Estás en esa computadora, o es una PC con Windows.`;
+      case "fr":
+        return `Vous êtes devant cet ordinateur, ou c’est un PC Windows.`;
+      case "ja":
+        return `そのコンピューターの前にいる場合や、Windows PC の場合。`;
+      case "ko":
+        return `그 컴퓨터 앞에 있거나 Windows PC일 때.`;
+      case "pt-BR":
+        return `Você está nesse computador, ou ele é um PC com Windows.`;
+      case "zh-Hans":
+        return `你就在那台电脑前，或它是 Windows 电脑。`;
+      case "zh-Hant":
+        return `你就在那台電腦前，或它是 Windows 電腦。`;
+      case "en-XA":
+        return `[Ýöû’ŕé áţ ţĥáţ çöɱþûţéŕ, öŕ îţ îš á Ŵîñðöŵš ÞÇ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You’re at that computer, or it is a Windows PC.‬`;
+    }
+    return `You’re at that computer, or it is a Windows PC.`;
+  }
   function settingsDevicesAddComputer() {
     switch (currentLanguage()) {
       case "ar":
@@ -54918,33 +55784,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A computer‬`;
     }
     return `A computer`;
-  }
-  function settingsDevicesAddEachWay() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `كل طريقة تضيف النوع نفسه من الحواسيب. اختر الطريقة التي تناسبه.`;
-      case "de":
-        return `Jeder Weg fügt dieselbe Art Computer hinzu. Wähl den, der passt.`;
-      case "es":
-        return `Cada forma agrega el mismo tipo de computadora. Elige la que mejor le vaya.`;
-      case "fr":
-        return `Chaque moyen ajoute le même type d’ordinateur. Choisissez celui qui lui convient.`;
-      case "ja":
-        return `どの方法でも同じ種類のコンピューターとして追加されます。合うものを選んでください。`;
-      case "ko":
-        return `어떤 방법이든 같은 종류의 컴퓨터가 추가돼요. 맞는 방법을 고르세요.`;
-      case "pt-BR":
-        return `Cada forma adiciona o mesmo tipo de computador. Escolha a que combina com ele.`;
-      case "zh-Hans":
-        return `每种方式添加的都是同一类电脑。选择适合它的那种。`;
-      case "zh-Hant":
-        return `每種方式加入的都是同一種電腦。選適合它的那一種。`;
-      case "en-XA":
-        return `[Éáçĥ ŵáý áððš ţĥé šáɱé ķîñð öƒ çöɱþûţéŕ. Þîçķ ţĥé öñé ţĥáţ šûîţš îţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Each way adds the same kind of computer. Pick the one that suits it.‬`;
-    }
-    return `Each way adds the same kind of computer. Pick the one that suits it.`;
   }
   function settingsDevicesAddFailed() {
     switch (currentLanguage()) {
@@ -54973,33 +55812,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Could not add this computer.`;
   }
-  function settingsDevicesAddHow() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `كيف تريد إضافته؟`;
-      case "de":
-        return `Wie möchtest du ihn hinzufügen?`;
-      case "es":
-        return `¿Cómo quieres agregarla?`;
-      case "fr":
-        return `Comment voulez-vous l’ajouter ?`;
-      case "ja":
-        return `どの方法で追加しますか？`;
-      case "ko":
-        return `어떻게 추가할까요?`;
-      case "pt-BR":
-        return `Como você quer adicioná-lo?`;
-      case "zh-Hans":
-        return `你想怎样添加？`;
-      case "zh-Hant":
-        return `你想怎麼加入？`;
-      case "en-XA":
-        return `[Ĥöŵ ðö ýöû ŵáñţ ţö áðð îţ? ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮How do you want to add it?‬`;
-    }
-    return `How do you want to add it?`;
-  }
   function settingsDevicesAddIt() {
     switch (currentLanguage()) {
       case "ar":
@@ -55026,6 +55838,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Add it‬`;
     }
     return `Add it`;
+  }
+  function settingsDevicesAddOtherWays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكنك تفعيل «تسجيل الدخول عن بُعد» هناك؟`;
+      case "de":
+        return `Kannst du dort „Entfernte Anmeldung“ nicht aktivieren?`;
+      case "es":
+        return `¿No puedes activar la Sesión remota allí?`;
+      case "fr":
+        return `Impossible d’y activer la Session à distance ?`;
+      case "ja":
+        return `そちらで「リモートログイン」をオンにできませんか？`;
+      case "ko":
+        return `그곳에서 원격 로그인을 켤 수 없나요?`;
+      case "pt-BR":
+        return `Não dá para ativar o Login Remoto lá?`;
+      case "zh-Hans":
+        return `那里无法打开“远程登录”？`;
+      case "zh-Hant":
+        return `那裡無法開啟「遠端登入」？`;
+      case "en-XA":
+        return `[Çáñ’ţ ţûŕñ öñ Ŕéɱöţé Ļöĝîñ ţĥéŕé? ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Can’t turn on Remote Login there?‬`;
+    }
+    return `Can’t turn on Remote Login there?`;
   }
   function settingsDevicesAddPhone() {
     switch (currentLanguage()) {
@@ -55080,6 +55919,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Running as another user‬`;
     }
     return `Running as another user`;
+  }
+  function settingsDevicesAddWays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أضِفه برابط أو بأمر.`;
+      case "de":
+        return `Füg ihn per Link oder Befehl hinzu.`;
+      case "es":
+        return `Agrégala con un enlace o un comando.`;
+      case "fr":
+        return `Ajoutez-le par un lien ou une commande.`;
+      case "ja":
+        return `リンクかコマンドで追加します。`;
+      case "ko":
+        return `링크나 명령으로 추가해요.`;
+      case "pt-BR":
+        return `Adicione-o por um link ou um comando.`;
+      case "zh-Hans":
+        return `通过链接或命令添加它。`;
+      case "zh-Hant":
+        return `透過連結或指令加入它。`;
+      case "en-XA":
+        return `[Åðð îţ ƀý á ļîñķ öŕ á çöɱɱáñð. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add it by a link or a command.‬`;
+    }
+    return `Add it by a link or a command.`;
   }
   function settingsDevicesAddingDetail(input2) {
     const address = input2.address;
@@ -55219,6 +56085,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮The address you use with SSH for it now. This computer checks it is the same computer first.‬`;
     }
     return `The address you use with SSH for it now. This computer checks it is the same computer first.`;
+  }
+  function settingsDevicesAddressKeeps() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بعدها يُبقيه هذا الحاسوب محدّثًا ويصل إليه بنفسه.`;
+      case "de":
+        return `Dieser Computer hält ihn dann aktuell und erreicht ihn von selbst.`;
+      case "es":
+        return `Después, esta computadora la mantiene actualizada y llega a ella por sí sola.`;
+      case "fr":
+        return `Cet ordinateur le tient ensuite à jour et le joint de lui-même.`;
+      case "ja":
+        return `その後はこのコンピューターが自動で最新に保ち、自分で接続します。`;
+      case "ko":
+        return `그다음에는 이 컴퓨터가 알아서 최신으로 유지하고 연결해요.`;
+      case "pt-BR":
+        return `Depois, este computador o mantém atualizado e se conecta a ele sozinho.`;
+      case "zh-Hans":
+        return `之后这台电脑会让它保持最新，并自己连到它。`;
+      case "zh-Hant":
+        return `之後這台電腦會讓它保持最新，並自己連到它。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ ţĥéñ ķééþš îţ ûþðáţéð áñð ŕéáçĥéš îţ ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer then keeps it updated and reaches it by itself.‬`;
+    }
+    return `This computer then keeps it updated and reaches it by itself.`;
+  }
+  function settingsDevicesAddressKeepsThere(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بعدها يُبقيه ${name} محدّثًا ويصل إليه بنفسه.`;
+      case "de":
+        return `${name} hält ihn dann aktuell und erreicht ihn von selbst.`;
+      case "es":
+        return `Después, ${name} la mantiene actualizada y llega a ella por sí sola.`;
+      case "fr":
+        return `${name} le tient ensuite à jour et le joint de lui-même.`;
+      case "ja":
+        return `その後は ${name} が自動で最新に保ち、自分で接続します。`;
+      case "ko":
+        return `그다음에는 ${name}에서 알아서 최신으로 유지하고 연결해요.`;
+      case "pt-BR":
+        return `Depois, ${name} o mantém atualizado e se conecta a ele sozinho.`;
+      case "zh-Hans":
+        return `之后 ${name} 会让它保持最新，并自己连到它。`;
+      case "zh-Hant":
+        return `之後 ${name} 會讓它保持最新，並自己連到它。`;
+      case "en-XA":
+        return `[${name} ţĥéñ ķééþš îţ ûþðáţéð áñð ŕéáçĥéš îţ ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ then keeps it updated and reaches it by itself.‬`;
+    }
+    return `${name} then keeps it updated and reaches it by itself.`;
   }
   function settingsDevicesAddressLabel() {
     switch (currentLanguage()) {
@@ -94680,6 +95601,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMoveRightWords,
     commandMoveUp,
     commandMoveUpWords,
+    commandNoticeNotAnsweringRetry,
+    commandNoticeStopping,
     commandNoticeWindowCrashed,
     commandNoticeWindowNotAnswering,
     commandNoticeWindowRestarting,
@@ -94824,6 +95747,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateWaitsForModel,
     crewmateWaitsForUpdate,
     crewmateWorking,
+    devicesAddressFormNotNow,
+    devicesAddressFormOpen,
+    devicesAddressFormOpenButton,
+    devicesAddressFormSetUp,
+    devicesAddressFormTitle,
+    devicesAddressFormTitleNamed,
     devicesAppCannot,
     devicesAppCardFailed,
     devicesAppCardGotIt,
@@ -94863,7 +95792,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinPasteSub,
     devicesJoinPickHint,
     devicesJoinReaching,
+    devicesJoinSetUpChip,
+    devicesJoinSetUpCompare,
+    devicesJoinSetUpCopy,
+    devicesJoinSetUpCopyFailed,
+    devicesJoinSetUpHead,
+    devicesJoinSetUpKept,
+    devicesJoinSetUpLocal,
+    devicesJoinSetUpOff,
+    devicesJoinSetUpOn,
+    devicesJoinSetUpOpenSharing,
+    devicesJoinSetUpPrivate,
+    devicesJoinSetUpSshOff,
+    devicesJoinSetUpSshOn,
+    devicesJoinSetUpStays,
+    devicesJoinSetUpSub,
+    devicesJoinSetUpUnread,
+    devicesJoinSetUpWaiting,
     devicesJoinShows,
+    devicesJoinStaysBeside,
     devicesJoinTryAgain,
     devicesJoinYourAccount,
     devicesNearbyPort,
@@ -94890,6 +95837,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     dialogCancel,
     dialogChoose,
     dialogExport,
+    dialogLeaveIt,
+    dialogOnceClosedDetail,
+    dialogOpenInDock,
+    dialogOpenInDockDetail,
+    dialogOpenOnceClosed,
     feedAnswered,
     feedAnsweredWith,
     feedAsksFirst,
@@ -95764,20 +96716,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesAddByAddress,
     settingsDevicesAddByAddressNamed,
     settingsDevicesAddByCommand,
-    settingsDevicesAddByItsAddress,
+    settingsDevicesAddByCommandWhen,
     settingsDevicesAddByLink,
+    settingsDevicesAddByLinkWhen,
     settingsDevicesAddComputer,
-    settingsDevicesAddEachWay,
     settingsDevicesAddFailed,
-    settingsDevicesAddHow,
     settingsDevicesAddIt,
+    settingsDevicesAddOtherWays,
     settingsDevicesAddPhone,
     settingsDevicesAddUser,
+    settingsDevicesAddWays,
     settingsDevicesAddingDetail,
     settingsDevicesAddressAddSay,
     settingsDevicesAddressAddSayAs,
     settingsDevicesAddressChange,
     settingsDevicesAddressChangeSay,
+    settingsDevicesAddressKeeps,
+    settingsDevicesAddressKeepsThere,
     settingsDevicesAddressLabel,
     settingsDevicesAddressOnly,
     settingsDevicesAddressOnlyHere,
@@ -97717,6 +98672,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMoveRightWords": [],
     "commandMoveUp": [],
     "commandMoveUpWords": [],
+    "commandNoticeNotAnsweringRetry": [],
+    "commandNoticeStopping": [],
     "commandNoticeWindowCrashed": [],
     "commandNoticeWindowNotAnswering": [],
     "commandNoticeWindowRestarting": [],
@@ -97861,6 +98818,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateWaitsForModel": ["left"],
     "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
+    "devicesAddressFormNotNow": [],
+    "devicesAddressFormOpen": [],
+    "devicesAddressFormOpenButton": [],
+    "devicesAddressFormSetUp": [],
+    "devicesAddressFormTitle": [],
+    "devicesAddressFormTitleNamed": ["device"],
     "devicesAppCannot": ["version"],
     "devicesAppCardFailed": [],
     "devicesAppCardGotIt": [],
@@ -97900,7 +98863,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinPasteSub": [],
     "devicesJoinPickHint": ["computer"],
     "devicesJoinReaching": ["address", "computer"],
+    "devicesJoinSetUpChip": [],
+    "devicesJoinSetUpCompare": ["address"],
+    "devicesJoinSetUpCopy": [],
+    "devicesJoinSetUpCopyFailed": [],
+    "devicesJoinSetUpHead": [],
+    "devicesJoinSetUpKept": [],
+    "devicesJoinSetUpLocal": [],
+    "devicesJoinSetUpOff": [],
+    "devicesJoinSetUpOn": [],
+    "devicesJoinSetUpOpenSharing": [],
+    "devicesJoinSetUpPrivate": [],
+    "devicesJoinSetUpSshOff": [],
+    "devicesJoinSetUpSshOn": [],
+    "devicesJoinSetUpStays": [],
+    "devicesJoinSetUpSub": [],
+    "devicesJoinSetUpUnread": [],
+    "devicesJoinSetUpWaiting": [],
     "devicesJoinShows": ["computer", "here"],
+    "devicesJoinStaysBeside": [],
     "devicesJoinTryAgain": [],
     "devicesJoinYourAccount": [],
     "devicesNearbyPort": [],
@@ -97927,6 +98908,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "dialogCancel": [],
     "dialogChoose": [],
     "dialogExport": [],
+    "dialogLeaveIt": [],
+    "dialogOnceClosedDetail": [],
+    "dialogOpenInDock": [],
+    "dialogOpenInDockDetail": [],
+    "dialogOpenOnceClosed": [],
     "feedAnswered": [],
     "feedAnsweredWith": ["answer"],
     "feedAsksFirst": [],
@@ -98801,20 +99787,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesAddByAddress": [],
     "settingsDevicesAddByAddressNamed": ["device"],
     "settingsDevicesAddByCommand": [],
-    "settingsDevicesAddByItsAddress": [],
+    "settingsDevicesAddByCommandWhen": [],
     "settingsDevicesAddByLink": [],
+    "settingsDevicesAddByLinkWhen": [],
     "settingsDevicesAddComputer": [],
-    "settingsDevicesAddEachWay": [],
     "settingsDevicesAddFailed": [],
-    "settingsDevicesAddHow": [],
     "settingsDevicesAddIt": [],
+    "settingsDevicesAddOtherWays": [],
     "settingsDevicesAddPhone": [],
     "settingsDevicesAddUser": [],
+    "settingsDevicesAddWays": [],
     "settingsDevicesAddingDetail": ["address"],
     "settingsDevicesAddressAddSay": ["sshOn"],
     "settingsDevicesAddressAddSayAs": ["sshOn", "user"],
     "settingsDevicesAddressChange": [],
     "settingsDevicesAddressChangeSay": [],
+    "settingsDevicesAddressKeeps": [],
+    "settingsDevicesAddressKeepsThere": ["name"],
     "settingsDevicesAddressLabel": [],
     "settingsDevicesAddressOnly": ["place"],
     "settingsDevicesAddressOnlyHere": [],
@@ -100272,6 +101261,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     object({ kind: literal("shortcut"), name: string().max(120) }),
     object({ kind: literal("unreadable"), name: string().max(120) })
   ]);
+  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const HOST_OPS = [
     "restore-account",
     "move-flagship",
@@ -100327,7 +101317,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     integration: _enum(["always", "task", "once", "deny"]).optional()
   });
-  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const signInOnSchema = object({
     deviceId: string().min(1).max(64),
     providerId: string().min(1).max(256)
@@ -100354,6 +101343,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // The address, as the line's own value schema read it (`remoteLoginAddressSchema`);
     // `inf:devices:add` reads it again before anything is reached.
     add: string().min(1).max(255).optional(),
+    // + A computer's address form, for a computer the captain names there
+    // (docs/devices.md, "Asking the first mate").
+    addressForm: literal(true).optional(),
     update: string().min(1).max(64).optional(),
     privateSite: string().min(1).max(253).optional(),
     signInOn: signInOnSchema.optional(),
@@ -111620,7 +112612,11 @@ ${startersHtml()}`;
     "not-answering"
   ]);
   const commandNoticeSchema = strictObject({
-    /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+    /**
+     * `waiting` while its start entry is expected to start it again, or, on
+     * `not-answering`, while Start it here waits for that run to stop;
+     * `stopped` once Start it here is offered.
+     */
     state: _enum(["waiting", "stopped"]),
     ending: commandEndingSchema,
     /**
@@ -111628,7 +112624,14 @@ ${startersHtml()}`;
      * window starts it"): the person never ran a command, so the line speaks
      * of their first mate, and Start it here starts that program again.
      */
-    byWindow: literal(true).optional()
+    byWindow: literal(true).optional(),
+    /**
+     * Set on `not-answering` when the notice names no run that does not
+     * answer: its door named none, or another run holds the folder now.
+     * Start it here then stops nothing, and the app starting again connects
+     * to whichever run is there; the line says so.
+     */
+    retries: literal(true).optional()
   });
   const HERE = {
     this: "this computer"
@@ -111952,7 +112955,13 @@ ${startersHtml()}`;
     name: string().min(1).max(253).optional(),
     firewall: deviceFirewallSchema.optional(),
     /** On a Windows home, its firewall that may keep devices out; absent when none is known to. */
-    windowsFirewall: windowsFirewallSchema.optional()
+    windowsFirewall: windowsFirewallSchema.optional(),
+    /**
+     * False on a home that cannot set a computer up by its address (a Windows
+     * PC): + A computer offers the link and the command instead of the address
+     * form. Absent where it can.
+     */
+    addsByAddress: literal(false).optional()
   });
   strictObject({
     /** The address that answered last, dialed first. */

@@ -695,6 +695,8 @@ describe("device pairing", () => {
   it("admits nobody and changes nothing when its list cannot be read", () => {
     for (const written of ["{not json", JSON.stringify({ version: 2, devices: [] })]) {
       const { pairing, dir } = pairingAt();
+      // The review of INF-5409: an empty list is no device; the first launch reads it so.
+      expect(pairing.mayHoldDevices()).toBe(false);
       const device = createKeyIdentity("Firstmate device");
       const outcome = claimWith(
         pairing,
@@ -709,6 +711,8 @@ describe("device pairing", () => {
       const broken = pairingAt(dir);
       expect(broken.problems).toHaveLength(1);
       expect(broken.pairing.any()).toBe(false);
+      // A list that cannot be read may hold devices, so a first launch never reads it as untouched.
+      expect(broken.pairing.mayHoldDevices()).toBe(true);
       expect(broken.pairing.admit(shown(device))).toBeNull();
       expect(broken.pairing.holds(outcome.grant.deviceId)).toBe(false);
       expect(() => broken.pairing.invite({ kind: "view" })).toThrow("cannot be read");

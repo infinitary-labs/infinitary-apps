@@ -374,6 +374,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
         bindings: [
           forgeHostIntegration("gitlab", {
             signIns: {
+              presentHosts: () => [host],
               view: () => ({
                 signIns: [
                   {

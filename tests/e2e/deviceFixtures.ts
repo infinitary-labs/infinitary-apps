@@ -164,14 +164,13 @@ export async function otherMacOverSsh(
   };
 }
 
-/** + A Mac, by its address, from the keyboard, in Devices: answers it once it joined. */
+/** + A computer opens its address form, from the keyboard, in Devices: answers it once it joined. */
 export async function addByAddress(
   page: Page,
   address: string,
   timeout = 5_000,
 ): Promise<DeviceView> {
   await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-  await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
   // The question takes the caret once it has drawn.
   await typeInto(
     page

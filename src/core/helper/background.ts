@@ -49,8 +49,12 @@ import {
 /** How this app starts itself: its executable, and before `work` the folder an unpackaged run loads. */
 export type Launcher = { executable: string; args: readonly string[] };
 
-/** What one call to the service manager answered: `launchctl`, or `systemctl --user`. */
-export type LaunchctlResult = { ok: boolean; output: string };
+/**
+ * What one call to the service manager answered: `launchctl`, or `systemctl
+ * --user`; `code` is its exit status, absent where it did not exit on its own,
+ * as one that timed out or could not be run.
+ */
+export type LaunchctlResult = { ok: boolean; output: string; code?: number };
 
 /**
  * Asks the service manager; `program` names the one it runs, which a
@@ -300,6 +304,19 @@ export function serviceUnit(options: {
     "WantedBy=default.target",
     "",
   ].join("\n");
+}
+
+/**
+ * The variable this app's own agent and service set to their label, so the
+ * run they start knows it is theirs (`startedByAgent`, src/main/runEnvironment.ts):
+ * a run started by hand carries no such mark, and a window following along
+ * stops only a run its own agent started (docs/view.md, "Following along").
+ */
+export const RUN_AGENT_ENV = "INFINITARY_RUN_AGENT";
+
+/** What an agent or service under `label` sets for its run: `env`, and the mark that names it. */
+export function runAgentEnv(label: string, env: Readonly<Record<string, string>>) {
+  return { ...env, [RUN_AGENT_ENV]: label };
 }
 
 /**
@@ -1008,7 +1025,11 @@ export function systemSystemctl(program: string): Systemctl {
 function runManager(program: string, args: readonly string[]): Promise<LaunchctlResult> {
   return new Promise((resolve) => {
     execFile(program, [...args], { env: hostEnv(), timeout: 15_000 }, (error, stdout, stderr) =>
-      resolve({ ok: !error, output: `${String(stdout)}${String(stderr)}`.trim() }),
+      resolve({
+        ok: !error,
+        output: `${String(stdout)}${String(stderr)}`.trim(),
+        ...(!error ? { code: 0 } : typeof error.code === "number" ? { code: error.code } : {}),
+      }),
     );
   });
 }

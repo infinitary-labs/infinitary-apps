@@ -194,6 +194,28 @@ export class ForgeSignInStore {
     }
   }
 
+  /** Whether a sign-in file is here for a host, readable or not, without reading what it holds. */
+  present(host: string): boolean {
+    return filePresent(join(this.dirFor(host), SIGN_IN_FILE));
+  }
+
+  /**
+   * The hosts with a sign-in file here, readable or not, without reading any
+   * file: null where the folder cannot be listed, so an unreadable store is
+   * never read as none.
+   */
+  presentHosts(): string[] | null {
+    try {
+      if (statSync(this.root, { throwIfNoEntry: false }) === undefined) return [];
+      return readdirSync(this.root, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && isForgeHostName(entry.name))
+        .map((entry) => entry.name)
+        .filter((host) => this.present(host));
+    } catch {
+      return null;
+    }
+  }
+
   /** Write the one file, whole, never readable by anyone else even mid-write. */
   write(host: string, record: ForgeSignInRecord): void {
     mkdirSync(this.root, { recursive: true, mode: 0o700 });
@@ -473,6 +495,16 @@ export class ForgeSignIns {
   isSignedIn(host: string): boolean {
     const record = this.options.store.read(host);
     return record !== undefined && record !== "unreadable";
+  }
+
+  /** Whether a host's sign-in file is here, readable or not, without reading its token. */
+  present(host: string): boolean {
+    return this.options.store.present(host);
+  }
+
+  /** The hosts with a sign-in file here, without reading one; null where that cannot be told. */
+  presentHosts(): string[] | null {
+    return this.options.store.presentHosts();
   }
 
   /** Who the host last said the person is. */
@@ -1276,4 +1308,13 @@ function forgeGitHosts(sources: ForgeHostSources): string[] {
       ...filed,
     ]),
   ];
+}
+
+/** Whether a file is there: true where it cannot be told, so an unreadable record is never read as none. */
+function filePresent(path: string): boolean {
+  try {
+    return statSync(path, { throwIfNoEntry: false }) !== undefined;
+  } catch {
+    return true;
+  }
 }

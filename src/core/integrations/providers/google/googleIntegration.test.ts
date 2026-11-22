@@ -405,6 +405,19 @@ describe("Google as an integration", () => {
     expect(notesRead.refused).toBeUndefined();
   });
 
+  // The review of INF-5409: a first launch reads a sign-in file it cannot read as one set up, from
+  // the file being there alone, never as nothing done here.
+  it("counts a sign-in file it cannot read as a connection set up, though it shows no row", async () => {
+    const fresh = await fixture();
+    expect(fresh.integrations.hasConnections()).toBe(false);
+    const { integrations } = await fixture(undefined, false, async (dir) => {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "google.json"), "{broken");
+    });
+    expect(integrations.view().integrations).toEqual([]);
+    expect(integrations.hasConnections()).toBe(true);
+  });
+
   it("ends a sign-in waiting for the browser when it is cancelled", async () => {
     let opened!: () => void;
     const pageOpen = new Promise<void>((resolve) => {

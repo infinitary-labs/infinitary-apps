@@ -3,5 +3,10 @@
   "dialogAttach": "Attach",
   "dialogCancel": "Cancel",
   "dialogChoose": "Choose",
-  "dialogExport": "Export"
+  "dialogExport": "Export",
+  "dialogLeaveIt": "Leave it",
+  "dialogOnceClosedDetail": "Use its window. If no window came forward, it may still be finishing its work, and you can open Infinitary here once it closes.",
+  "dialogOpenInDock": "Infinitary is already open.",
+  "dialogOpenInDockDetail": "Click Infinitary in the Dock to show its window.",
+  "dialogOpenOnceClosed": "Open here once it closes"
 }

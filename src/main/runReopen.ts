@@ -65,3 +65,57 @@ export function openWindowOnReopen(options: {
     open(bundle, options.args);
   });
 }
+
+/**
+ * What a check's hidden launch says in its output before a word it would show the person, the
+ * word's own message and detail after it: a launch refused the folder's lock shows its words to no
+ * one there (docs/run.md, "Opened while it runs").
+ */
+export const TOLD_THE_PERSON = "[app] told the person:";
+
+/**
+ * How a window launch refused the folder's lock ends, once it read who holds
+ * it (`lockHolderKind`): a window's answer wins, even one that came after the
+ * holder was read, read again before each step, and so does the person's word
+ * to leave a holder that showed nothing open (`left`). A window told only by
+ * what it runs as, on a Mac, is a window from before that answer which may
+ * have closed its last window and opened none at the ask; macOS cannot be
+ * asked to reopen that one process without the person's consent to control
+ * the app, and its open of the bundle may reach another copy or start one, so
+ * the launch sends nothing and tells the person to click Infinitary in the
+ * Dock (`tellDock`) while that holder still holds the folder (`holderAlive`).
+ * The word is taken away once a window answers or that holder lets the folder
+ * go, and how it ended is read afterwards, as before it: an answer ends the
+ * launch; that holder gone with the folder left free starts nothing, so a
+ * window quit stays quit; gone with another program on the folder
+ * (`occupied`) ends nothing either: `follow`, for the launch to watch that
+ * holder as any other. The launch starts again beside a run and on a free
+ * folder, and quits otherwise. The holder's kind, for the launch's log.
+ */
+export async function endRefusedLaunch(options: {
+  found: "run" | "free" | "window" | "left";
+  answered: () => boolean;
+  /** Whether the window told by what it runs as still holds the folder. */
+  holderAlive: () => boolean;
+  /** Whether a program holds the folder now, or a run notes it does. */
+  occupied: () => boolean;
+  platform: string;
+  tellDock: () => Promise<void>;
+  relaunch: () => void;
+  quit: () => void;
+}): Promise<"run" | "free" | "window" | "follow"> {
+  const answeredFirst = options.answered();
+  const kind = answeredFirst || options.found === "left" ? "window" : options.found;
+  if (
+    kind === "window" &&
+    options.found !== "left" &&
+    !answeredFirst &&
+    options.platform === "darwin"
+  ) {
+    if (options.holderAlive()) await options.tellDock();
+    if (!options.answered() && !options.holderAlive() && options.occupied()) return "follow";
+  }
+  if (kind !== "window" && !options.answered()) options.relaunch();
+  options.quit();
+  return kind;
+}

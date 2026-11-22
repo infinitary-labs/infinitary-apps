@@ -1,7 +1,8 @@
 import { homedir, userInfo } from "node:os";
 import { resolve } from "node:path";
 import {
-  type EndedRun,
+  type AgentRunEnd,
+  type RestartOutcome,
   type RunAgentContext,
   type RunManager,
   restartRunAgent,
@@ -11,7 +12,7 @@ import {
   startRunAgent,
   stopRunAgent,
 } from "@core/helper/runAgent";
-import { windowsAccount } from "@core/helper/windowsTask";
+import { type RunInstance, windowsAccount } from "@core/helper/windowsTask";
 import { hostPlatform } from "@core/platform";
 import { runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
@@ -35,14 +36,24 @@ export type CommandStarter = {
   inPlace: () => boolean;
   /**
    * Lets the agent go, which stops its run; with `forget` no login starts it
-   * again, and with `force` a run that does not answer is ended rather than asked.
+   * again, with `force` the run named, by its process and start, that does
+   * not answer is ended rather than asked, and nothing where another runs,
+   * and with `run` a stop asked through the folder is for that process alone,
+   * or with `run` null for none: the agent is let go and no stop is asked.
+   * A force stop answers what it did (`AgentRunEnd`).
    */
-  stop: (options: { forget: boolean; force?: EndedRun }) => Promise<void>;
+  stop: (options: {
+    forget: boolean;
+    force?: RunInstance;
+    run?: RunInstance | null;
+  }) => Promise<AgentRunEnd | undefined>;
   /**
-   * Restart it: ends the run, the process its record names, by force and
-   * starts it again; false where it could not start again.
+   * Restart it: ends the run named, by its process and start, by force and
+   * starts it again (`RestartOutcome`): untouched, ending nothing, where this
+   * app's own agent no longer holds that run, and failed where it ended or
+   * asked something and started no run again.
    */
-  restart: (run?: EndedRun) => Promise<boolean>;
+  restart: (run?: RunInstance) => Promise<RestartOutcome>;
 };
 
 /**
@@ -139,7 +150,7 @@ export function commandStarter(options: {
         return await restartRunAgent(context, run);
       } catch (error) {
         console.warn(`[run] could not restart the command: ${(error as Error).message}`);
-        return false;
+        return "failed";
       }
     },
   };

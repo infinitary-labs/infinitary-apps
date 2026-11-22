@@ -48,7 +48,8 @@ function setup(initialOpen = true) {
       gateOpen: () => open,
       usable: () => usable,
       hasActivity: () =>
-        activity || hasPriorActivity({ tasks, cards: cardStore, repos: { list: () => [] } }),
+        activity ||
+        hasPriorActivity({ tasks, cards: cardStore, repos: { hasProject: () => false } }),
       ...crewFacts(tasks),
       createWelcome: (consume) => {
         cards.addRecordedFirstmateNote(WELCOME_NOTE, consume, {
@@ -535,7 +536,7 @@ describe("the third finished crewmate", () => {
 });
 
 function firstRunRecord(view: ReturnType<FirstRunService["view"]>) {
-  const { gateOpen: _open, ...record } = view;
+  const { gateOpen: _open, untouched: _untouched, ...record } = view;
   return record;
 }
 
@@ -566,5 +567,38 @@ describe("a connection's fresh check", () => {
     expect(closed.gateOpen).toBe(false);
     expect(closed.freshCheck).toBeUndefined();
     db.close();
+  });
+});
+
+// INF-4931's plan, step 1: a home may take this computer over in place only while "nothing has been
+// done here" - a saved sign-in, a project, a card or a turn each count, though the gate is still up.
+describe("an untouched profile", () => {
+  it("is untouched only while the gate is up and nothing was saved or done here", () => {
+    const fixture = setup();
+    let accounts = false;
+    const service = new FirstRunService({
+      settings: fixture.settings,
+      gateOpen: () => true,
+      usable: () => false,
+      hasActivity: () =>
+        hasPriorActivity({
+          tasks: fixture.tasks,
+          cards: fixture.cardStore,
+          repos: { hasProject: () => false },
+        }),
+      hasConnections: () => accounts,
+      ...crewFacts(fixture.tasks),
+      createWelcome: () => {},
+      createFirstCrewmateNote: () => {},
+    });
+    expect(service.view().untouched).toBe(true);
+    // A saved sign-in whose subscription cannot serve leaves the gate up, but it was done here.
+    accounts = true;
+    expect(service.view()).toMatchObject({ gateOpen: true, firstTurnAt: null });
+    expect(service.view().untouched).toBeUndefined();
+    accounts = false;
+    // So does a task on the board.
+    seedTask(fixture.tasks, { id: "first", title: "First work", status: "queued" });
+    expect(service.view().untouched).toBeUndefined();
   });
 });

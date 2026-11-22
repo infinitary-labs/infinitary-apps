@@ -2,6 +2,7 @@ import { readdirSync, realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Spelling } from "@shared/codeNames";
 import { type BuildFlavor, olderUserDataFolders, userDataFolderOf } from "@shared/userDataFolders";
+import { isWordState } from "@shared/wordProfiles";
 import { isProfileRetired, RETIRED_PROFILE_MARKER } from "../storage/retiredProfile";
 import { MOVE_RECORD, readMoveRecord } from "./record";
 import { LEFT_BEHIND } from "./tree";
@@ -60,7 +61,11 @@ export const NOT_SAVED_WORK: ReadonlySet<string> = new Set([
   RETIRED_PROFILE_MARKER,
 ]);
 
-/** Whether `dir` is a folder holding anything of the person's. */
+/**
+ * Whether `dir` is a folder holding anything of the person's: never the profile a launch keeps for
+ * the copy that shows the person a word, nor its record (`isWordState`), which a move carries along
+ * as they are (./move.ts, `commit`) and never deletes.
+ */
 export function holdsSavedWork(dir: string): boolean {
   let names: string[];
   try {
@@ -68,7 +73,9 @@ export function holdsSavedWork(dir: string): boolean {
   } catch {
     return false;
   }
-  return names.some((name) => !NOT_SAVED_WORK.has(name) && !LEFT_BEHIND.has(name));
+  return names.some(
+    (name) => !NOT_SAVED_WORK.has(name) && !LEFT_BEHIND.has(name) && !isWordState(name),
+  );
 }
 
 /**

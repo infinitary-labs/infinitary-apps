@@ -10,7 +10,7 @@ import { answersAt, changed, home, postPair } from "../../../tests/helpers/conne
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { homeSocketUrl, pinnedSocket } from "../devices/dial";
 import type { ViewDeviceContact } from "./connection";
-import { dialLocalDoor, readLocalDoor } from "./localDoor";
+import { dialLocalDoor, localDoorRunOf, readLocalDoor } from "./localDoor";
 
 /**
  * Opens a socket to the local door read from `dir`, as `dialLocalDoor` does,
@@ -46,6 +46,28 @@ describe("the local door", () => {
     return { ...at, door, local };
   }
 
+  // The review of INF-5409: the window beside a command knows which run admitted it, so a welcome
+  // from a run that is being replaced is never taken for the run started again
+  // (docs/connection.md, "The local door"; docs/view.md, "Joining").
+  it("names the run that opened it, and a socket dialed through it reached that run", async () => {
+    const door = join(scratchDir("infinitary-local-door-"), "local-door");
+    const run = { pid: 4242, startedAt: "2026-11-20T08:00:00.000Z" };
+    const at = await home({ localDoor: door, localDoorRun: run });
+    await at.connection.settled();
+    expect(statSync(join(door, LOCAL_DOOR_FILES.run)).mode & 0o777).toBe(0o600);
+    expect(readLocalDoor(door)?.run).toEqual(run);
+    const socket = await dialLocalDoor(door);
+    expect(localDoorRunOf(socket)).toEqual(run);
+    // A socket it did not dial reached no run it knows.
+    const other = await doorSocket(door);
+    expect(localDoorRunOf(other)).toBeNull();
+    for (const each of [socket, other]) {
+      if (each.readyState !== WebSocket.OPEN)
+        await new Promise((resolve) => each.once("open", resolve));
+      each.close();
+    }
+  });
+
   it("opens with nothing paired, in a folder and files only this account can read", async () => {
     const at = await withDoor();
     // Nothing paired: no address for devices, only the door.
@@ -54,8 +76,11 @@ describe("the local door", () => {
     const address = at.connection.localDoor();
     expect(address).toMatch(/^127\.0\.0\.1:\d+$/);
     expect(statSync(at.door).mode & 0o777).toBe(0o700);
-    for (const name of Object.values(LOCAL_DOOR_FILES))
+    for (const name of [LOCAL_DOOR_FILES.address, LOCAL_DOOR_FILES.pin, LOCAL_DOOR_FILES.key])
       expect(statSync(join(at.door, name)).mode & 0o777).toBe(0o600);
+    // A connection no command runs names no run.
+    expect(existsSync(join(at.door, LOCAL_DOOR_FILES.run))).toBe(false);
+    expect(readLocalDoor(at.door)?.run).toBeNull();
     expect(readLocalDoor(at.door)?.address).toBe(address);
     // phase0-guardrails' "accepts no device while nothing is paired": the door has a key of its
     // own, so pairing still writes nothing, not even the home's key, until the first link.

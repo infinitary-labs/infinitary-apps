@@ -654,6 +654,77 @@ describe("the one-time move of a data folder", () => {
     expect(readFileSync(join(world.to, "update-channel.json"), "utf8")).toContain('"alpha"');
   });
 
+  // The review of INF-5409: the profile a refused launch keeps for the copy that shows the person a
+  // word, and its record, are the app's own helper state, never saved work: a fresh folder holding
+  // them still takes the older work without a question, carries them as they are, and copies none
+  // of the older folder's; and the work a killed launch set aside comes back past them.
+  /** Puts a word's profile with a file in it, and its record, into `dir`. */
+  function wordState(dir: string, profile: string, said: string): void {
+    mkdirSync(join(dir, profile, "temp"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(dir, profile, "kept"), said);
+    writeFileSync(join(dir, "word-profile.json"), JSON.stringify({ profile }));
+  }
+
+  it("moves into a folder holding only a word's profile without asking, keeping that profile as it is", async () => {
+    const world = olderFolder();
+    wordState(world.from, "word-profile-Old123", "older");
+    mkdirSync(world.to);
+    wordState(world.to, "word-profile-New456", "newer");
+    // Something of the person's in the older folder that is not word state comes over.
+    writeFileSync(join(world.from, "notes.md"), "mine\n");
+
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "moved" });
+    expect(readMoveRecord(world.to)?.setAside).toBeUndefined();
+    expect(readFileSync(join(world.to, "word-profile-New456", "kept"), "utf8")).toBe("newer");
+    expect(JSON.parse(readFileSync(join(world.to, "word-profile.json"), "utf8"))).toEqual({
+      profile: "word-profile-New456",
+    });
+    expect(existsSync(join(world.to, "word-profile-Old123"))).toBe(false);
+    expect(readFileSync(join(world.to, "notes.md"), "utf8")).toBe("mine\n");
+    // The older folder, the recovery copy, keeps its own as it was.
+    expect(readFileSync(join(world.from, "word-profile-Old123", "kept"), "utf8")).toBe("older");
+  });
+
+  it("asks and sets the app's own work aside whole, word's profile and all, when it also holds work", async () => {
+    const world = olderFolder();
+    mkdirSync(join(world.to, "crewmates", "mine"), { recursive: true });
+    wordState(world.to, "word-profile-New456", "newer");
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+    expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
+    const setAside = readMoveRecord(world.to)?.setAside ?? "";
+    expect(readFileSync(join(setAside, "word-profile-New456", "kept"), "utf8")).toBe("newer");
+    expect(existsSync(join(setAside, "word-profile.json"))).toBe(true);
+    expect(existsSync(join(world.to, "word-profile-New456"))).toBe(false);
+  });
+
+  it("puts the app's own work back past a word's profile made after the kill, keeping both records", async () => {
+    const world = olderFolder();
+    // The work set aside already had a word's profile and its record.
+    wordState(world.to, "word-profile-Set789", "set aside");
+    await killedMidCopy(world);
+    // A refused launch since made a new profile and record in the fresh folder.
+    mkdirSync(world.to, { recursive: true });
+    wordState(world.to, "word-profile-New456", "newer");
+
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+    expect(readFileSync(join(world.to, "crewmates", "mine", "notes.md"), "utf8")).toBe(
+      "my own work\n",
+    );
+    expect(readFileSync(join(world.to, "word-profile-Set789", "kept"), "utf8")).toBe("set aside");
+    expect(readFileSync(join(world.to, "word-profile-New456", "kept"), "utf8")).toBe("newer");
+    // The work's own record stays the record; the newer one is kept beside it, never removed.
+    expect(JSON.parse(readFileSync(join(world.to, "word-profile.json"), "utf8"))).toEqual({
+      profile: "word-profile-Set789",
+    });
+    const carried = readdirSync(world.to).filter((name) =>
+      name.startsWith("word-profile.json.carried-"),
+    );
+    expect(carried).toHaveLength(1);
+    expect(JSON.parse(readFileSync(join(world.to, carried[0] as string), "utf8"))).toEqual({
+      profile: "word-profile-New456",
+    });
+  });
+
   it("resumes a move stopped after its copy was checked, without copying again", async () => {
     const world = olderFolder();
     // Made by a launch that then stopped: its own staged folder, named for it.

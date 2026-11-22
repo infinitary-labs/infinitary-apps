@@ -168,6 +168,25 @@
   background: var(--bg-2);
 }
 
+/* + A computer's two other ways, under its address form after a hairline (design skill DevicesTab). */
+.fm-devices-other-ways {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-devices-other-way {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 8px;
+}
+
+.fm-devices-other-way > .fm-devices-aside-say {
+  margin-top: 0;
+}
+
 .fm-devices-aside-say {
   font-size: var(--text-sm);
   color: var(--fg-2);

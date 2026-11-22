@@ -1,5 +1,5 @@
 ---
-source: 01b32db6f45c0f7c
+source: 714fca51d75af858
 title: Der erste Start
 description: Was Infinitary beim ersten Öffnen zeigt, wie du ein Abo verbindest und wie du dein erstes Projekt hinzufügst.
 ---
@@ -45,7 +45,12 @@ Wenn ein Abo verbunden ist, aber trotzdem nicht antworten kann, steht im Fenster
 ## Wenn dein erster Offizier schon auf einem anderen Computer lebt {#if-your-first-mate-already-lives-on-another-computer}
 
 Unter den Anbieter-Schaltflächen steht eine zweite Gruppe: „Dein erster Offizier ist auf einem anderen Computer“.
-Mit **Link einfügen** oder **Über die Adresse beitreten** steuerst du diesen ersten Offizier von hier aus, statt einen neuen einzurichten.
+Auf einem Mac oder einem x64-Linux-Computer steht **Vom Computer deines ersten Offiziers einrichten** an erster Stelle: Es zeigt die Adresse dieses Computers, die du auf dem Computer eintippst, auf dem dein erster Offizier lebt.
+Sobald jener Computer diesen hinzufügt, öffnet dieses Fenster deinen ersten Offizier von selbst, solange darin noch nichts eingerichtet wurde, etwa eine Anmeldung oder ein Projekt.
+Ein Fenster, in dem du schon etwas eingerichtet hast, behält seinen eigenen ersten Offizier: Steuere dann mit **Link einfügen** oder **Über die Adresse beitreten** stattdessen jenen ersten Offizier von hier aus.
+War Infinitary geschlossen, als jener Computer diesen hinzugefügt hat, öffnet es beim nächsten Start deinen ersten Offizier, egal was darin eingerichtet wurde.
+Ein Fenster neben einem Infinitary, das du selbst im Terminal gestartet hast, behält dessen ersten Offizier und bietet keinen der beiden Wege an; beende zuerst jenes Infinitary, um sie zu nutzen.
+Ein Windows-PC und ein Arm-Linux-Computer zeigen nur die anderen beiden Wege.
 Siehe [Deine anderen Computer](/de/your-other-computers/).
 
 ## Der Hinweis zur Diagnose {#the-diagnostics-notice}

@@ -34,8 +34,13 @@ export type AccessEntry = {
 /** A folder's owner and access list, read from its security descriptor string. */
 export type AccessList = {
   readonly owner: string | null;
-  /** Null when the folder has no list at all, which lets everyone in. */
+  /** Null when the folder has no list at all, which lets everyone in, or none read whole. */
   readonly entries: readonly AccessEntry[] | null;
+  /**
+   * Whether the descriptor was read whole: its owner, and its list to its end or the list's
+   * absence. A reading that is not whole says nothing about the folder, so nothing is set on it.
+   */
+  readonly whole: boolean;
   /** Whether the list is protected from what the parent hands down (`P`). */
   readonly protected: boolean;
 };
@@ -68,30 +73,160 @@ function accountMayHold(account: string, user: string): boolean {
   return number.startsWith("S-1-15-");
 }
 
-/** Owners that keep a folder this account's: itself, Windows, or the administrators. */
+/**
+ * Owners that keep a folder this account's: itself, Windows, or the administrators. An owner that
+ * could not be read is none of them.
+ */
 function ownerKeeps(owner: string | null, user: string): boolean {
-  if (owner === null) return true;
+  if (owner === null) return false;
   const number = accountNumber(owner);
   return number === user || number === "S-1-5-18" || number === "S-1-5-32-544";
 }
 
-/** Reads a security descriptor string's owner (`O:`) and access list (`D:`). */
+/**
+ * A security descriptor string as Windows writes one, taken apart in order: its owner (`O:`), its
+ * group (`G:`), its access list (`D:`) - either `NO_ACCESS_CONTROL`, the one way Windows says a
+ * folder has no list, or its flags and entries - and anything of its audit list (`S:`) after.
+ */
+const DESCRIPTOR =
+  /^O:([^:()]+?)(?:G:([^:()]+?))?D:(?:(NO_ACCESS_CONTROL)|((?:P|AI|AR)*)((?:\([^()]*\))*))(?:S:.*)?$/s;
+
+/**
+ * Reads a security descriptor string's owner (`O:`) and access list (`D:`), taken apart in order
+ * (`DESCRIPTOR`). Only the list's own `NO_ACCESS_CONTROL` says a folder has no list. Anything
+ * else - no owner, an owner or group not in Windows' own form (`knownAccount`), no access list at
+ * all, a list not read to its end (one holding an entry this reading does not take apart, as a
+ * conditional entry with its own brackets, an entry of a kind it does not judge or one whose flags,
+ * rights, object fields or account are missing or not in Windows' own form; `ENTRY_TYPES`,
+ * `ENTRY_FLAGS`), or text out of that order - reads as not whole (`whole`), which every judgment refuses and nothing repairs, never as
+ * the entries it did read nor as a folder with no list.
+ */
 export function readAccessList(sddl: string): AccessList {
-  const owner = /O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
-  const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
-  if (!dacl || /D:NO_ACCESS_CONTROL/.test(sddl)) return { owner, entries: null, protected: false };
-  const flags = dacl[1] ?? "";
-  const entries = [...(dacl[2] ?? "").matchAll(/\(([^)]*)\)/g)].map((match) => {
+  const read = DESCRIPTOR.exec(sddl);
+  if (!read) {
+    const owner = /^O:([^:()]+?)(?=[GDS]:|$)/.exec(sddl)?.[1] ?? null;
+    return { owner, entries: null, protected: false, whole: false };
+  }
+  const owner = read[1] ?? null;
+  const notWhole = { owner, entries: null, protected: false, whole: false };
+  if (!knownAccount(owner ?? "") || (read[2] !== undefined && !knownAccount(read[2])))
+    return notWhole;
+  if (read[3]) return { owner, entries: null, protected: false, whole: true };
+  const flags = read[4] ?? "";
+  const entries: AccessEntry[] = [];
+  for (const match of (read[5] ?? "").matchAll(/\(([^)]*)\)/g)) {
     const fields = (match[1] ?? "").split(";");
-    return {
-      type: fields[0] ?? "",
-      flags: fields[1] ?? "",
-      rights: fields[2] ?? "",
-      account: fields[5] ?? "",
-      text: match[0],
-    };
-  });
-  return { owner, entries, protected: flags.includes("P") };
+    const [type = "", entryFlags = "", rights = "", object = "", inherited = "", account = ""] =
+      fields;
+    const objects = type === "OA" || type === "OD" || type === "ZA";
+    if (
+      fields.length !== 6 ||
+      !ENTRY_TYPES.has(type) ||
+      !ENTRY_FLAGS.test(entryFlags) ||
+      rightsMask(rights) === null ||
+      !(objects ? OBJECT_FIELD : NO_OBJECT).test(object) ||
+      !(objects ? OBJECT_FIELD : NO_OBJECT).test(inherited) ||
+      !knownAccount(account)
+    )
+      return notWhole;
+    entries.push({ type, flags: entryFlags, rights, account, text: match[0] });
+  }
+  return { owner, entries, protected: flags.includes("P"), whole: true };
+}
+
+/**
+ * The kinds of entry an access list holds that this reading judges: allow and deny, their object
+ * forms and their callback forms. An entry of another kind, or one missing a field it needs (its
+ * rights or its account), is an entry this reading did not take apart, so the list is not whole.
+ */
+const ENTRY_TYPES = new Set(["A", "D", "OA", "OD", "XA", "XD", "ZA"]);
+
+/**
+ * What an entry this reading takes apart must say in its other fields, each in the form Windows
+ * writes it, so nothing is judged from a field half read: its flags as the pairs Windows names
+ * (`hasFlag` reads them pair by pair), its rights as one number or the pairs naming rights
+ * (`rightsMask`), its object fields empty, or on the object kinds each empty or one object's
+ * number, and its account, as the list's owner and group, a whole account number within Windows'
+ * own bounds or one of Windows' own two-letter names for accounts (`knownAccount`).
+ */
+const ENTRY_FLAGS = /^(?:CI|OI|NP|IO|ID|SA|FA|TP|CR)*$/;
+const NO_OBJECT = /^$/;
+const OBJECT_FIELD = /^(?:[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})?$/;
+const ACCOUNT_LETTERS = new Set(
+  (
+    "AA AC AN AO AP AS AU BA BG BO BU CA CD CG CN CO CY DA DC DD DG DU EA ED EK ER ES HA HI HO " +
+    "IS IU KA LA LG LS LU LW ME MP MU NO NS NU OW PA PO PS PU RA RC RD RE RM RO RS RU SA SI SO " +
+    "SS SU SY UD WD WR"
+  ).split(" "),
+);
+
+/**
+ * Whether an account is one Windows could write: one of its two-letter names, or an account number
+ * (`S-1-<authority>-<part>...`) of one to fifteen parts, each part a plain number that fits the 32
+ * bits Windows gives it, and its authority as Windows writes its 48 bits: a plain number below
+ * 2^32, and `0x` with twelve hexadecimal digits from 2^32 up.
+ */
+function knownAccount(account: string): boolean {
+  if (ACCOUNT_LETTERS.has(account)) return true;
+  const [s, revision, authority = "", ...parts] = account.split("-");
+  if (s !== "S" || revision !== "1" || parts.length < 1 || parts.length > 15) return false;
+  const part = (text: string) => /^(?:0|[1-9]\d{0,9})$/.test(text) && Number(text) <= 0xffffffff;
+  const wide = /^0[xX][0-9A-Fa-f]{12}$/.test(authority) && Number(authority) > 0xffffffff;
+  return (part(authority) || wide) && parts.every(part);
+}
+
+/**
+ * The rights each of Windows' two-letter names stands for, as the number Windows reads them as, so
+ * a right is judged the same however it is written.
+ */
+const RIGHT_LETTERS: Readonly<Record<string, number>> = {
+  GA: 0x10000000,
+  GR: 0x80000000,
+  GW: 0x40000000,
+  GX: 0x20000000,
+  RC: 0x20000,
+  SD: 0x10000,
+  WD: 0x40000,
+  WO: 0x80000,
+  RP: 0x10,
+  WP: 0x20,
+  CC: 0x1,
+  DC: 0x2,
+  LC: 0x4,
+  SW: 0x8,
+  LO: 0x80,
+  DT: 0x40,
+  CR: 0x100,
+  FA: 0x1f01ff,
+  FR: 0x120089,
+  FW: 0x120116,
+  FX: 0x1200a0,
+  KA: 0xf003f,
+  KR: 0x20019,
+  KW: 0x20006,
+  KX: 0x20019,
+  NR: 0x1,
+  NW: 0x2,
+  NX: 0x4,
+};
+
+/** The rights an entry's rights field gives, as one number; null where it is not in Windows' form. */
+function rightsMask(rights: string): number | null {
+  if (/^0x[0-9A-Fa-f]{1,8}$/.test(rights)) return Number.parseInt(rights, 16);
+  const pairs = rights.match(/../g);
+  if (pairs === null || pairs.join("") !== rights) return null;
+  let mask = 0;
+  for (const pair of pairs) {
+    const right = RIGHT_LETTERS[pair];
+    if (right === undefined) return null;
+    mask |= right;
+  }
+  return mask;
+}
+
+/** Whether an entry's flags hold `flag`, read as the pairs they are, never across two of them. */
+function hasFlag(entry: AccessEntry, flag: string): boolean {
+  return (entry.flags.match(/../g) ?? ([] as string[])).includes(flag);
 }
 
 /** An entry that lets an account in: allow, object allow and the callback forms of them. */
@@ -107,15 +242,40 @@ export function onlyOwnerReaches(list: AccessList, user: string): boolean {
 }
 
 /**
+ * Whether a folder the app made inside its private data folder keeps to this account: read whole,
+ * its own, letting in no other ordinary account, and handing this account's entry down to the
+ * folders (`CI`) and files (`OI`) made in it at every depth (never stopping at the next, `NP`), so
+ * what is made there takes no list Windows would make up for it.
+ */
+export function keepsToOwner(list: AccessList, user: string): boolean {
+  return (
+    list.whole &&
+    onlyOwnerReaches(list, user) &&
+    (list.entries ?? []).some(
+      (entry) =>
+        allows(entry) &&
+        accountNumber(entry.account) === user &&
+        hasFlag(entry, "OI") &&
+        hasFlag(entry, "CI") &&
+        !hasFlag(entry, "NP"),
+    )
+  );
+}
+
+/**
  * The verdict on a folder the app keeps private data in: `owner-only` when its
- * list is its own (protected) and lets in no other ordinary account.
+ * list is its own (protected) and lets in no other ordinary account, `unread`
+ * when its descriptor was not read whole, which no set may replace, and
+ * `other-owner` when another account owns it, whatever its list - a folder
+ * with no list included - so nothing is set or written there.
  */
 export function ownerOnlyVerdict(
   list: AccessList,
   user: string,
-): "owner-only" | "no-list" | "other-owner" | "inherited" | "others" {
-  if (list.entries === null) return "no-list";
+): "owner-only" | "no-list" | "other-owner" | "inherited" | "others" | "unread" {
+  if (!list.whole) return "unread";
   if (!ownerKeeps(list.owner, user)) return "other-owner";
+  if (list.entries === null) return "no-list";
   if (!onlyOwnerReaches(list, user)) return "others";
   if (!list.protected) return "inherited";
   return "owner-only";
@@ -130,7 +290,7 @@ export function ownerOnlyVerdict(
 export function ownerOnlyAccessList(list: AccessList, user: string): string {
   const kept = (list.entries ?? []).filter(
     (entry) =>
-      !entry.flags.includes("ID") &&
+      !hasFlag(entry, "ID") &&
       (!allows(entry) ||
         (accountMayHold(entry.account, user) && accountNumber(entry.account) !== user)),
   );

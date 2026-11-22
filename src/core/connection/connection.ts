@@ -98,7 +98,7 @@ import {
   replayBytes,
   replayOf,
 } from "./journal";
-import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
+import { type LocalDoorRun, type OpenLocalDoor, openLocalDoor } from "./localDoor";
 
 /** The name on the local door's own certificate. */
 const LOCAL_DOOR_NAME = "Infinitary local door";
@@ -384,6 +384,13 @@ export type ConnectionOptions = {
    * is paired.
    */
   localDoor?: string;
+  /**
+   * The run this connection's process is, by its run record (`run.json`):
+   * its process and start, written in the local door's folder so a client
+   * knows which run admitted it (docs/connection.md, "The local door").
+   * Absent where no command runs it.
+   */
+  localDoorRun?: LocalDoorRun;
   /**
    * The captain's own command at the local door (docs/axi-commands.md,
    * "Infinitary from your terminal"): a POST on `COMMAND_PATH` carrying the
@@ -1671,7 +1678,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         const doorIdentity = createKeyIdentity(LOCAL_DOOR_NAME);
         const bound = await bind("127.0.0.1", 0, held, doorIdentity);
         server = bound.server;
-        held.open = openLocalDoor(local, `127.0.0.1:${bound.port}`, doorIdentity.cert);
+        held.open = openLocalDoor(
+          local,
+          `127.0.0.1:${bound.port}`,
+          doorIdentity.cert,
+          options.localDoorRun,
+        );
         localPart = { server, door: held.open };
       } catch (error) {
         server?.close();

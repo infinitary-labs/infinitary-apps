@@ -7,6 +7,7 @@ import {
   type Launchctl,
   type Launcher,
   loadAgent,
+  runAgentEnv,
   wantedBy,
 } from "@core/helper/background";
 import { type SystemdRuntime, systemdRuntime } from "@core/helper/linuxStartup";
@@ -276,7 +277,14 @@ export async function runStartAtBoot(asked: BootAsked, context: BootContext): Pr
   const lingers = await lingering(context);
   try {
     mkdirSync(dirname(wants), { recursive: true });
-    writePrivate(file, bootUnit({ launcher: context.launcher, settings, env: context.env }));
+    writePrivate(
+      file,
+      bootUnit({
+        launcher: context.launcher,
+        settings,
+        env: runAgentEnv(context.label, context.env),
+      }),
+    );
     // What `systemctl --user enable` makes, made here so the service starts
     // at the next login or boot even when this user's systemd cannot be asked now.
     rmSync(wants, { force: true });
@@ -370,7 +378,7 @@ async function macStartAtBoot(asked: BootAsked, context: BootContext): Promise<B
         launcher: context.launcher,
         settings,
         log,
-        env: context.env,
+        env: runAgentEnv(context.label, context.env),
       }),
     );
     rmSync(prepared, { force: true });
@@ -431,7 +439,17 @@ async function windowsStartAtBoot(asked: BootAsked, context: BootContext): Promi
   if (!schtasks) return { code: 1, out: "", error: said(BOOT_WORDS.noTaskScheduler) };
   const file = runTaskFile(context.dataDir);
   if (asked.off) {
-    const was = await removeRunTask(schtasks, { label: context.label, file });
+    let was: boolean;
+    try {
+      was = await removeRunTask(schtasks, { label: context.label, file });
+    } catch (error) {
+      return {
+        code: 1,
+        out: "",
+        // The task's own refusal, which says whether it is still registered.
+        error: said([error instanceof Error ? error.message : String(error)]),
+      };
+    }
     const lines = was ? BOOT_WORDS.windowsOff(context.user) : BOOT_WORDS.wasOff(context.user);
     return { code: 0, out: said(lines), error: "" };
   }
@@ -442,6 +460,7 @@ async function windowsStartAtBoot(asked: BootAsked, context: BootContext): Promi
     account: context.account ?? context.user,
     atLogin: true,
     settings,
+    agent: context.label,
   });
   let registered: boolean;
   try {

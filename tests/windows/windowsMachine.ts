@@ -532,17 +532,21 @@ export async function holdLockAsStandIn(options: {
   readonly window: MessageWindow;
   readonly control: string;
 }): Promise<StandInHolder> {
-  const holder = spawn(powershellPath, ["-NoProfile", "-NonInteractive", "-Command", STAND_IN_HOLDER], {
-    env: {
-      ...process.env,
-      HOLD_LOCK_FILE: options.lockFile,
-      HOLD_CLASS: options.window.className,
-      HOLD_TITLE: options.window.title,
-      HOLD_CONTROL: options.control,
+  const holder = spawn(
+    powershellPath,
+    ["-NoProfile", "-NonInteractive", "-Command", STAND_IN_HOLDER],
+    {
+      env: {
+        ...process.env,
+        HOLD_LOCK_FILE: options.lockFile,
+        HOLD_CLASS: options.window.className,
+        HOLD_TITLE: options.window.title,
+        HOLD_CONTROL: options.control,
+      },
+      stdio: ["ignore", "ignore", "pipe"],
+      windowsHide: true,
     },
-    stdio: ["ignore", "ignore", "pipe"],
-    windowsHide: true,
-  });
+  );
   let said = "";
   holder.stderr?.on("data", (chunk) => {
     said += String(chunk);

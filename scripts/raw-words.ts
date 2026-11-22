@@ -863,7 +863,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/telemetry.ts": 14,
   "src/core/update/activeMark.ts": 1,
   "src/core/update/linuxInstall.ts": 16,
-  "src/core/update/macUpdates.ts": 7,
+  "src/core/update/macUpdates.ts": 4,
   "src/core/update/tapPublication.ts": 90,
   "src/core/update/updateChannels.ts": 8,
   "src/core/update/updateChecker.ts": 3,

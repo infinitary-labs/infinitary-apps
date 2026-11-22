@@ -206,6 +206,12 @@ export type HomeLinkOptions = {
    */
   onCaughtUp?: (catchUp: "replay" | "reload") => void;
   /**
+   * The moment a welcomed connection closes, before the link dials again
+   * and before its state says the home is out of reach: what that
+   * connection started ends with it.
+   */
+  onDropped?: () => void;
+  /**
    * After the last push a replaying welcome sent again is handled, so what
    * the device holds is as current as the home (docs/view.md, "Live,
    * catching up or out of reach").
@@ -949,6 +955,7 @@ export class HomeLink {
 
   /** What one attempt ended in decides what the device says and when it dials again. */
   private settle({ welcomed, refusedStatus, closeCode, older, second }: Ending): void {
+    if (welcomed) this.options.onDropped?.();
     if (older) this.passOver(this.reachedAt);
     if (second) {
       this.passOver(this.reachedAt);

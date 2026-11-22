@@ -15,8 +15,10 @@ import type { HostNotifications } from "@core/host";
 import { hostPlatform } from "@core/platform";
 import type { FreshAuthentication } from "@core/secrets/approvals";
 import { SIGN_IN_RETURN } from "@core/signInReturns";
+import { AppFollowsHome } from "@core/update/appFollowsHome";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { ACTIONS } from "@shared/actions";
+import { APP_FOLLOWS_HOME, APP_UPDATE_LIVE, appUpdateAskSchema } from "@shared/appFollow";
 import {
   type FoldedInto16,
   hasSince16,
@@ -27,6 +29,7 @@ import {
 import { HERE, HOME } from "@shared/deviceNames";
 import { type DeviceFold, splitDialAddress, type ThisMac } from "@shared/devices";
 import { replayedPointing } from "@shared/events";
+import { HOME_UPDATE_STATUS, homeUpdateSchema } from "@shared/homeUpdate";
 import {
   type CoreInvokeChannel,
   type InvokeResponse,
@@ -254,6 +257,17 @@ export type ViewBackendOptions = {
   onSetUpWork?: () => void;
   /** This Mac's own key reminder, which the first mate there may ask this window to switch. */
   keyReminders?: () => WindowKeyReminders | null;
+  /**
+   * Whether nobody uses this app now (docs/view.md, "Following the home's
+   * version"): no window of it in front and none holding words not yet sent.
+   * Absent, someone always does, so the app starts again only when asked.
+   */
+  nobodyHere?: () => boolean;
+  /**
+   * Whether a window of this app holds words not yet sent, which the home's
+   * Update app waits for too. Absent, some always may, so it never starts again.
+   */
+  wordsLeft?: () => boolean;
 };
 
 /** What this Mac's window found of its work half, told to its home (`work-setup.md`). */
@@ -273,6 +287,9 @@ function toldHome(
 
 /** A window that says whether it is in front (`window-front.md`). */
 const WINDOW_FRONT = contractChange("window-front");
+
+/** An app that follows its home's version and tells it each step (`app-follows-home.md`). */
+const APP_FOLLOWS = contractChange(APP_FOLLOWS_HOME);
 
 export class ViewBackend {
   readonly look: ViewLook;
@@ -313,6 +330,8 @@ export class ViewBackend {
   private workFound: WorkSetupReport | null = null;
   /** What the other Mac's list says of this Mac's work: whether it is in reach, and why not. */
   private workThere: { inReach: boolean; workSetup?: DeviceWorkSetup } | null = null;
+  /** This app catching up with the other Mac's version (docs/view.md, "Following the home's version"). */
+  private readonly follows: AppFollowsHome;
 
   constructor(private readonly options: ViewBackendOptions) {
     this.joined = options.joined;
@@ -355,6 +374,20 @@ export class ViewBackend {
             changed: () => this.changed(),
           })
         : null;
+    this.follows = new AppFollowsHome({
+      updates: options.updates,
+      homeVersion: () => this.homeAppVersion(),
+      tell: (report) => {
+        if (this.disposed || !listsChange(this.link.state().homeChanges, APP_FOLLOWS)) return;
+        this.link.invoke("inf:devices:app-follow", [report]).catch((error: unknown) => {
+          console.warn(
+            `[view] could not tell the other Mac how this app catches up: ${String(error)}`,
+          );
+        });
+      },
+      nobodyHere: () => options.nobodyHere?.() ?? false,
+      wordsLeft: () => options.wordsLeft?.() ?? true,
+    });
     const open = options.link ?? ((linkOptions) => new HomeLink(linkOptions));
     this.link = open({
       grant: options.record.grant,
@@ -417,6 +450,12 @@ export class ViewBackend {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
         // The first mate's computer is going to sleep: Take over says so.
         if (channel === HOME_GOODBYE_LIVE) this.taking?.heardGoodbye();
+        // Update app on this app's row there: catch up now, and start again once no words are left unsent.
+        if (channel === APP_UPDATE_LIVE) {
+          const ask = appUpdateAskSchema.safeParse(payload);
+          if (ask.success && ask.data.deviceId === options.record.grant.deviceId)
+            this.follows.askedNow();
+        }
         // Fix it on this Mac's row there.
         if (channel === WORK_SETUP_LIVE) {
           const ask = workSetupAskSchema.safeParse(payload);
@@ -468,6 +507,8 @@ export class ViewBackend {
         // A new connection: the other Mac forgot every watch with the last one.
         this.browsers.again();
         options.onConnected?.();
+        // A home on a newer version has this app follow it.
+        this.follows.connected();
         // Read again whole - at the start too - what the other Mac holds is
         // old news here, as restored cards are there. A replay needs
         // nothing: the missed pushes follow, and a card that became ready
@@ -478,6 +519,8 @@ export class ViewBackend {
           this.notices.startOver();
         }
       },
+      // Catching up with the other Mac's version ends with the connection it read it on.
+      onDropped: () => this.follows.lost(),
       onReplayed: () => {
         if (!this.replaying) return;
         this.replaying = false;
@@ -691,6 +734,7 @@ export class ViewBackend {
     if (this.disposed) return;
     this.disposed = true;
     this.taking?.dispose();
+    this.follows.dispose();
     this.notices.stop();
     this.browsers.clear();
     this.signInReturn?.server?.close();
@@ -717,6 +761,27 @@ export class ViewBackend {
   front(inFront: boolean): void {
     this.inFront = inFront;
     this.sayFront(inFront);
+    if (!inFront) this.follows.noticed();
+  }
+
+  /**
+   * Who uses this app may have changed, such as a window's words sent: a
+   * version waiting for nobody to use it starts now if nobody does.
+   */
+  noticed(): void {
+    this.follows.noticed();
+  }
+
+  /**
+   * The version of Infinitary the other Mac runs, as its own update status
+   * says it (`inf:home-update:status`, asked on every major); null from a
+   * home too old to answer it.
+   */
+  private async homeAppVersion(): Promise<string | null> {
+    const state = this.link.state();
+    if (!homeAnswersUpdate(state.homeVersion, state.homeChanges)) return null;
+    const parsed = homeUpdateSchema.safeParse(await this.link.invoke(HOME_UPDATE_STATUS, []));
+    return parsed.success ? parsed.data.version : null;
   }
 
   /** A first mate from before the request is not told, and its phone pushes as it did. */

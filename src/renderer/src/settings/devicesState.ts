@@ -379,6 +379,12 @@ export type DevicesTabViewProps = {
    * absent where it cannot be asked.
    */
   onFixWork?: (deviceId: string) => void;
+  /**
+   * Update app: the app open on a computer, behind this computer's version,
+   * gets it and starts again on it (docs/devices.md, "Updating the app open
+   * there"); absent where it cannot be asked.
+   */
+  onUpdateApp?: (deviceId: string) => void;
   /** Opens a computer's address question, or closes it with null. */
   onAskChangeAddress: (deviceId: string | null) => void;
   onChangeAddress: (deviceId: string, address: string) => void;

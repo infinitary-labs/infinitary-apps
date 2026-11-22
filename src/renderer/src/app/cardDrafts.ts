@@ -4,6 +4,7 @@ import { changesOff } from "../devices/viewWords";
 import { type DraftBase, type DraftLocal, DraftSync, withDraftAnswers } from "./draftSync";
 import { withoutKey } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
+import { forgetTaken, markTaken } from "./takenDrafts";
 
 // This window's side of each open card's draft, wired to the window API and
 // the shell's store; the rules are ./draftSync.ts's (docs/card-authoring.md,
@@ -77,6 +78,10 @@ export function startCardDrafts(
           waitingWords.set(cardId, { words: parts.words, over: get().replyDrafts[cardId] });
         else waitingWords.delete(cardId);
       }
+      markTaken(cardId, {
+        ...(parts.words !== undefined && !typing ? { words: parts.words } : {}),
+        ...(parts.notes ? { notes: parts.notes } : {}),
+      });
       set((s) => ({
         ...(parts.answers && !filled
           ? {
@@ -142,6 +147,7 @@ export function startCardDrafts(
       if (typingReply(cardId)) continue;
       waitingWords.delete(cardId);
       if (get().replyDrafts[cardId] !== waiting.over) continue;
+      markTaken(cardId, { words: waiting.words });
       set((s) => ({ replyDrafts: { ...s.replyDrafts, [cardId]: waiting.words } }));
     }
   };
@@ -191,6 +197,7 @@ export function startCardDrafts(
         if (!present.has(card.id)) {
           sync.forget(card.id);
           waitingWords.delete(card.id);
+          forgetTaken(card.id);
         }
       const anew: string[] = [];
       const before = new Map(previous.cards.map((card) => [card.id, card.lifecycleId ?? null]));
@@ -205,6 +212,7 @@ export function startCardDrafts(
       for (const cardId of anew) {
         sync.forget(cardId);
         waitingWords.delete(cardId);
+        forgetTaken(cardId);
       }
       if (anew.length > 0)
         set((s) => ({

@@ -7,6 +7,7 @@ import { documentLanguage, followLanguage } from "./app/language";
 import { hydratePreferences } from "./app/preferences";
 import { countPresses } from "./app/presses";
 import { useShellStore } from "./app/store";
+import { followUnsentWords } from "./app/unsentWords";
 import { registerDesignFixtures } from "./design/fixtures";
 import { startPersonalPlugins } from "./personal/personalPlugins";
 import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
@@ -66,6 +67,8 @@ void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer])
   );
   // The ambient music, while its switch is on (docs/ambient-music.md).
   followAmbientMusic();
+  // Words not yet sent hold an app's restart onto its home's version (docs/view.md).
+  followUnsentWords();
   createRoot(container).render(
     <React.StrictMode>
       <LanguageRoot />

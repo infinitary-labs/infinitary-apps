@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { ACTION_NAMES, ACTIONS, type ActionActor, type ActionName } from "@shared/actions";
+import { APP_FOLLOW_ONLY } from "@shared/appFollow";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
 import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
@@ -468,6 +469,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // A Mac's row's Fix it (docs/devices.md, "A Mac that has not finished
     // setting up"): its window, connected now, checks its work half again.
     "inf:devices:fix-work": (deviceId) => ({ asked: services.computers.fixWork(deviceId) }),
+    // The row's Update of an app behind (docs/devices.md, "Updating the app open there").
+    "inf:devices:update-app": (deviceId) => ({ asked: services.computers.updateApp(deviceId) }),
+    // Answered by `Computers.appFollowAsked`, which knows the app whose connection told it.
+    "inf:devices:app-follow": () => {
+      throw new Error(APP_FOLLOW_ONLY);
+    },
     // Answered by `Computers.workSetupAsked`, which knows the Mac whose window told it.
     "inf:devices:work-setup": () => {
       throw new Error(WORK_SETUP_ONLY);
@@ -1641,6 +1648,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return answerPhoneAsk(services, channel, rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (channel === "inf:devices:fold")
       return services.computers.foldAsked(rawArgs, actor) as Promise<InvokeResponse<C>>;
+    if (channel === "inf:devices:app-follow")
+      return services.computers.appFollowAsked(rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (channel === "inf:devices:work-setup")
       return services.computers.workSetupAsked(rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (channel === "inf:view:answer") {

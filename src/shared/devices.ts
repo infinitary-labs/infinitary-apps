@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { appFollowReportSchema } from "./appFollow";
 import { commandNoticeSchema } from "./commandNotice";
 import { COMPUTER, HERE } from "./deviceNames";
 import * as m from "./i18n/messages.generated.ts";
@@ -408,6 +409,12 @@ export const deviceAppVersionSchema = z.strictObject({
   app: z.string().min(1).max(64).optional(),
   than: z.enum(["older", "newer"]).optional(),
   same: z.literal(true).optional(),
+  /**
+   * Where that app stands in catching up with this computer's version, as
+   * it last told it (docs/view.md, "Following the home's version";
+   * `app-follows-home`): absent while it said nothing for this version.
+   */
+  follow: appFollowReportSchema.optional(),
 });
 export type DeviceAppVersion = z.infer<typeof deviceAppVersionSchema>;
 
@@ -420,6 +427,22 @@ export function appBehind(
   version: DeviceAppVersion,
 ): boolean {
   return !isPhone(device) && (version.than === "older" || version.app === undefined);
+}
+
+/**
+ * Whether Settings -> Devices offers Update for the app open on a device
+ * (docs/devices.md, "Updating the app open there"): it is behind this
+ * computer's, it told this computer it follows its version, and it is not
+ * already starting again or unable to install it by itself.
+ */
+export function appUpdateOffered(
+  device: { system?: DeviceSystem | undefined },
+  version: DeviceAppVersion,
+): boolean {
+  const step = version.follow?.step;
+  return (
+    appBehind(device, version) && step !== undefined && step !== "cannot" && step !== "restarting"
+  );
 }
 
 /**

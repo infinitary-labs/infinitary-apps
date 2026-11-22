@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { appFollowReasonSchema } from "./appFollow";
 import { deliverableSchema, workKindSchema } from "./routingPolicy";
 import { taskKindSchema } from "./tasks";
 import { usageWorkKindSchema } from "./usage";
@@ -30,6 +31,8 @@ export const VIEW_OPEN_LISTS: ReadonlyArray<{
   { list: usageWorkKindSchema, unknown: null },
   // Why a Mac's work is not set up: one this view cannot name has not reached the home.
   { list: workSetupReasonSchema, unknown: "not-reached" },
+  // Why an app cannot follow its home's version: one this view cannot name is its installation's.
+  { list: appFollowReasonSchema, unknown: "installation" },
 ];
 
 type Issue = {

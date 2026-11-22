@@ -1,7 +1,10 @@
 import type { Card } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
-import { type DeviceView, deviceLabel, deviceRunsWork } from "@shared/devices";
+import { appBehind, type DeviceView, deviceLabel, deviceRunsWork } from "@shared/devices";
 import {
+  appUpdateCard,
+  appUpdateCardId,
+  appUpdateGap,
   DEVICE_UPDATE_ACTIONS,
   type DeviceUpdateNudgeFacts,
   deviceUpdateActionId,
@@ -87,7 +90,61 @@ export class DeviceUpdateNudge {
   /** Computers being updated by themselves now: their answer decides the card. */
   private readonly updating = new Set<string>();
 
+  /** Each app card as last raised this run, by what it said. */
+  private readonly appsRaised = new Map<string, string>();
+
   constructor(private readonly options: DeviceUpdateNudgeOptions) {}
+
+  /**
+   * The device list changed: the app open on each computer gets its card
+   * when it said it cannot get this computer's version by itself, or that
+   * getting it did not go through (docs/devices.md, "Updating the app open
+   * there"), once per gap and step; it comes down once that app follows by
+   * itself again, runs this computer's version, or goes. Not now holds it
+   * for that gap and step.
+   */
+  appsChanged(devices: readonly DeviceView[]): void {
+    const home = this.options.homeApp();
+    const seen = new Set<string>();
+    for (const device of devices) {
+      const version = device.appVersion;
+      const follow = version?.follow;
+      if (
+        !home ||
+        !version?.app ||
+        !follow ||
+        !appBehind(device, version) ||
+        (follow.step !== "cannot" && follow.step !== "failed")
+      )
+        continue;
+      seen.add(device.id);
+      const id = appUpdateCardId(device.id);
+      const facts = {
+        deviceId: device.id,
+        device: deviceLabel(device),
+        app: version.app,
+        home,
+        follow,
+      };
+      const gap = appUpdateGap(facts);
+      const chosen = this.options.cards.chosenAction(id);
+      if (
+        chosen === deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.notNow, gap) ||
+        chosen === deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.update, gap)
+      )
+        continue;
+      const signature = JSON.stringify([gap, follow.reason, follow.problem]);
+      if (this.appsRaised.get(device.id) === signature) continue;
+      this.appsRaised.set(device.id, signature);
+      this.options.cards.raise({ id, ...appUpdateCard(facts) });
+    }
+    for (const deviceId of [...this.appsRaised.keys()])
+      if (!seen.has(deviceId)) {
+        this.appsRaised.delete(deviceId);
+        const same = devices.find((device) => device.id === deviceId)?.appVersion?.same === true;
+        this.options.cards.withdraw(appUpdateCardId(deviceId), same ? "updated" : "withdrawn");
+      }
+  }
 
   /** A computer connected, or went: its card goes where its version says. */
   refresh(deviceId: string, forced = false): void {

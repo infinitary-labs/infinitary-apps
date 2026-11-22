@@ -77,6 +77,9 @@ export function fakeBridge(answers: Answers = {}): FakeBridge {
           handler(undefined, { token: args[0] });
         return { ok: true };
       }
+      // Every window tells main whether it holds words not yet sent, and main
+      // takes it from any window (docs/view.md, "Following the home's version").
+      if (channel === "inf:update:unsent" && !table.has(channel)) return { ok: true };
       if (!table.has(channel)) {
         unanswered.push(channel);
         throw new Error(`The browser test gave no answer for ${channel}`);

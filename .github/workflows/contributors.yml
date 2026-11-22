@@ -1,16 +1,22 @@
 name: contributors
 
 # An outside contributor's pull request (docs/public-ci.md, "Outside
-# contributors"), on GitHub's own machines only: ci.yml runs its branch check
-# on hosted Ubuntu, and this workflow runs what a task branch of this project
-# requests for itself, since a contributor cannot request a run - the
-# journeys its change can break (scripts/affected-journeys.ts --request) on
-# hosted Ubuntu and, for their tests that need a Mac and each edited journey
-# once, on hosted Mac (journeys.yml), and the Windows installer's build on
-# hosted Windows when the change reaches it (scripts/windows-paths.ts,
-# windows.yml). The fresh Windows 11 check, the signed installer checks,
-# signing and TestFlight need the project's own machines, so they wait for
-# the batch, which runs every check again before the change reaches main.
+# contributors"): the tests the swept batch runs (batch-checks.yml), on
+# GitHub's own machines only, on the pull request's merge commit with main.
+# ci.yml runs its branch check on hosted Ubuntu - the code checks, the
+# release notes check and the critical path - and this workflow runs the
+# batch's full check: verify.yml's code checks, every Linux test group and
+# every Linux journey on hosted Ubuntu, its three Mac lanes with every
+# journey on GitHub's hosted Mac, the Linux startup fixtures, and the Windows
+# installer's build on hosted Windows when the change reaches it
+# (scripts/windows-paths.ts, windows.yml). Each journey file the change edits
+# also runs three rounds and then by itself on hosted Ubuntu, and once on
+# GitHub's Mac (journeys.yml), the proof a task branch requests for its own
+# edited journeys, since a contributor cannot request a run. The fresh Windows 11 check needs
+# the project's own Windows PC, so it waits for the next alpha's release
+# check; the phone check, the signed installer checks, signing and TestFlight
+# run only from main. The owner merges the pull request itself once its
+# checks pass; it joins no batch.
 # A pull request of this project itself starts this file and skips every job.
 # A pull request runs the check files it carries, so the owner's approval of
 # each outside run, not this routing, keeps a contributor off the project's
@@ -28,12 +34,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # What the change reaches, read from the pull request's merge commit
-  # against its base parent. Its name leads with what started it
+  # The journey files the change edits and whether it reaches the Windows
+  # installer, read from the pull request's merge commit against its base
+  # parent. Plain Node, no install. Its name leads with what started it
   # (scripts/ci-job-names.mjs).
   paths:
     if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
-    name: Pull request · Choose the contributor's journeys and Windows build (Linux)
+    name: Pull request · Read the contributor's edited journeys and Windows reach (Linux)
     runs-on: ubuntu-24.04
     outputs:
       base: ${{ steps.read.outputs.base }}
@@ -44,32 +51,47 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
-          cache: pnpm
-      - uses: ./.github/actions/node-headers
-      - uses: ./.github/actions/electron-download
-      - run: pnpm install --frozen-lockfile
-        # Scope Node headers to this install, never to Electron rebuilds.
-        env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - id: read
-        name: Read the change's journeys and Windows reach
+        name: Read the change's edited journeys and Windows reach
         run: |
           base=$(git rev-parse HEAD^1)
           echo "base=$base" >> "$GITHUB_OUTPUT"
-          journeys=$(node scripts/affected-journeys.ts --request --base "$base" | tr '\n' ' ' | sed 's/ *$//')
+          journeys=$(git diff --name-only --diff-filter=d "$base" HEAD -- 'tests/e2e/*.spec.ts' | tr '\n' ' ' | sed 's/ *$//')
           echo "journeys=$journeys" >> "$GITHUB_OUTPUT"
-          echo "Journeys: ${journeys:-none}"
+          echo "Edited journeys: ${journeys:-none}"
           node scripts/windows-paths.ts --base "$base"
 
-  # The chosen journeys, every job on GitHub's hosted machines.
+  # The batch's full check (batch-checks.yml's sweep), every job on GitHub's
+  # hosted machines: hosted Ubuntu for the Linux jobs, the test groups
+  # included, and GitHub's Mac for the three Mac lanes, whatever MAC_QUEUES
+  # and MAC_RUNNER say. It confirms no failed test files, as the batch does:
+  # the owner reads a failure.
+  sweep:
+    needs: paths
+    name: Pull request · Contributor's desktop checks
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/verify.yml
+    with:
+      trigger: Pull request
+      ref: ${{ github.sha }}
+      profile: stable
+      all_journeys: true
+      hosted: true
+      mac_runner: macos-15
+
+  # Each edited journey file three rounds and then by itself (the run-alone
+  # pass) on hosted Ubuntu, and once on GitHub's Mac, with base naming the
+  # change's base parent so scripts/journey-runs.ts counts them as edited.
+  # The sweep runs every journey once; this is the repeat it does not.
   journeys:
     needs: paths
     if: ${{ needs.paths.outputs.journeys != '' }}
-    name: Pull request · Contributor's app journeys
+    name: Pull request · Contributor's edited journeys
     # journeys.yml's request-replacing job asks to cancel runs, and GitHub
     # refuses a call whose grant is short of any called job's ask, even one
     # that skips; an outside pull request's token stays read-only whatever
@@ -86,8 +108,18 @@ jobs:
       base: ${{ needs.paths.outputs.base }}
       mac_once: true
 
+  # The Linux automatic startup fixtures, which the batch runs in a job of
+  # its own; linux-startup.yml names hosted Ubuntu itself.
+  startup:
+    needs: paths
+    name: Pull request · Contributor's Linux startup
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      trigger: Pull request
+      ref: ${{ github.sha }}
+
   # The Windows installer built on GitHub's hosted Windows; the fresh
-  # Windows 11 check needs the PC's clean machine and waits for the batch.
+  # Windows 11 check needs the PC's clean machine and waits for the alpha.
   windows:
     needs: paths
     if: ${{ needs.paths.outputs.windows == 'true' }}

@@ -136,7 +136,7 @@ The check runs on every alpha (`release.yml`'s `windows` job, which an alpha's u
 The shared font notice is a desktop input, not a phone-only file; see [What a pull request runs](testing.md#what-a-pull-request-runs).
 An unreadable change runs the check.
 It also runs on request (`workflow_dispatch`).
-An outside contributor's pull request that reaches Windows-relevant files builds the installer on GitHub's hosted `windows-2025` instead and skips this check, which waits for the batch (`contributors.yml`; `docs/public-ci.md`, "Outside contributors").
+An outside contributor's pull request that reaches Windows-relevant files builds the installer on GitHub's hosted `windows-2025` instead and skips this check, which waits for the next alpha's release check (`contributors.yml`; `docs/public-ci.md`, "Outside contributors").
 
 ## Published on every alpha
 

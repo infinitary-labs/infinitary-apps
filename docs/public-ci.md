@@ -27,7 +27,8 @@ Do not share reusable runner workspaces, dependency stores, caches or deployment
 An outside contributor's pull request runs only on GitHub's hosted machines, whatever the routing variables say (`docs/testing.md`, "An outside contributor's pull request"):
 
 - the branch check and the docs site's check on hosted Ubuntu;
-- the journeys its change can break on hosted Ubuntu, and their tests that need a Mac on hosted macOS;
+- the tests the swept batch runs: the code checks, every Linux test group and journey and the Linux startup fixtures on hosted Ubuntu, and the three Mac lanes with every journey on hosted macOS;
+- each journey file the change edits three rounds and then by itself on hosted Ubuntu, and once on hosted macOS;
 - the Windows installer's build on hosted Windows, when the change reaches it.
 
 Nothing from an outside change runs on the project's own machines, before or after the captain's merge click.

@@ -2,8 +2,9 @@ name: Linux automatic startup
 
 # Called by the batch checks on each batch pull request's version
 # (batch-checks.yml), by main.yml's full check for files no batch built
-# (INF-2441, INF-3052), and by verify.yml's Linux-only request (a change sent
-# back from its batch), never started by a push of its own.
+# (INF-2441, INF-3052), by verify.yml's Linux-only request (a change sent
+# back from its batch), and by contributors.yml on an outside contributor's
+# pull request, never started by a push of its own.
 on:
   workflow_call:
     inputs:

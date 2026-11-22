@@ -828,12 +828,12 @@ The cost is GitHub's per-minute bill for those jobs.
 - `linux-packages.yml`, whose build and checks use hosted Ubuntu unless a publishing release passes `RELEASE_LINUX_PACKAGES_RUNNER`; the Ubuntu 26.04 host check appends `-2604` to that label.
   Rehearsals and an unset variable stay hosted.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` and `contributors.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and opts only the sweep's eight Linux test groups into `LINUX_RUNNER` with `fleet_tests: true`; its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and this project's own pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
-An outside contributor's pull request runs on GitHub's machines whatever the variables say: `ci.yml`'s branch check and the docs site's check name `ubuntu-24.04` first for it, and `contributors.yml` calls `journeys.yml` and `windows.yml` with `hosted: true` (`docs/public-ci.md`, "Outside contributors").
+An outside contributor's pull request runs on GitHub's machines whatever the variables say: `ci.yml`'s branch check and the docs site's check name `ubuntu-24.04` first for it, and `contributors.yml` calls `verify.yml` with `hosted: true` and `mac_runner: macos-15`, `linux-startup.yml`, and `journeys.yml` and `windows.yml` with `hosted: true` (`docs/public-ci.md`, "Outside contributors").
 `tests/release-workflows-runners.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
 
 ## Native phone checks
@@ -1007,12 +1007,18 @@ A push of `main` or of a batch's own branch, `infinitary-batch/<id>`, starts not
 
 A pull request from another person's copy of the project runs on GitHub's own machines only, never on the project's (the captain's choice on INF-5002; `docs/public-ci.md`, "Outside contributors").
 It runs the same branch check on hosted `ubuntu-24.04`, and the docs site's check when it touches the site.
-A contributor cannot request a run, so `contributors.yml` requests for them what a task branch requests for itself ("What a task branch requests"): its `paths` job reads the merge commit against its base parent with `scripts/affected-journeys.ts --request` and `scripts/windows-paths.ts`.
-The chosen journeys run through `journeys.yml` with `hosted: true`, on hosted Ubuntu and, for their tests that need a Mac and each edited journey once (`mac_once`), on hosted `macos-15`.
+An outside change merges as its own pull request and joins no batch (`docs/forge.md`, "Batches of your own"), so `contributors.yml` runs on it the tests the swept batch runs ("The swept batch"), on GitHub's machines (the captain's route on INF-3559).
+Its `sweep` job calls `verify.yml` with the batch's selection and `hosted: true`: the code checks, every Linux test group and every Linux journey on hosted Ubuntu, and the three Mac lanes with every journey on hosted `macos-15`, which `mac_runner` names ahead of `MAC_QUEUES` and `MAC_RUNNER`.
+Its `startup` job runs the Linux startup fixtures, and the branch check runs the critical path and the release notes check.
+Its `paths` job reads the merge commit against its base parent: the journey files it edits, and `scripts/windows-paths.ts`.
+A contributor cannot request a run, so its `journeys` job requests for them what a task branch requests for its own edited journeys ("What a task branch requests"): `journeys.yml` with `hosted: true`, the edited files and the base parent, which runs each three rounds and then by itself on hosted Ubuntu, and once on hosted `macos-15` (`mac_once`).
 When the change reaches the Windows installer, `windows.yml` with `hosted: true` builds it on hosted `windows-2025` and skips the fresh Windows 11 check.
-The fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight need the project's own machines or signing material; an outside change joins no batch and merges as its own pull request, so it first meets them on `main`'s check and the next alpha's release check (`docs/public-ci.md`, "Outside contributors").
+Unlike the batch, it confirms no failed test files again: the owner reads a failed run.
+GitHub's Macs are smaller than the project's, so the Mac lanes run slower there.
+The fresh Windows 11 check needs the project's own Windows PC, so for an outside change it waits for the next alpha's release check; the phone check, the signed installer checks, signing and TestFlight run only from `main`.
+The run shares GitHub's limit on jobs at once with the batch's hosted Linux jobs, so a busy outside run can make a batch wait.
 This project's own pull requests start `contributors.yml` and skip every job.
-`tests/release-workflows-pr-checks.test.ts` holds which jobs an outside pull request starts and that each one it reaches names a hosted machine with every routing variable set.
+`tests/release-workflows-pr-checks.test.ts` holds which jobs an outside pull request starts, that each one it reaches through every call names a hosted machine with every routing variable set, and that its sweep keeps the batch's selection.
 
 ### The weekly audit of the pull request check
 

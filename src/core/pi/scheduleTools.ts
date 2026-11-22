@@ -36,7 +36,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
     name: "schedule_prompt",
     label: "Schedule prompt",
     description:
-      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). Use on_event, not a clock, for announced results. A started task's wait on a time is update_task hold, not a schedule. Put all context in prompt. Runs while app does; missed runs fold. Closing words are its found line. Draft if details open.",
+      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). Use on_event, not a clock, for announced results. A started task's wait on a time is update_task hold, not a schedule. Put all context in prompt. Runs while the app does; missed runs fold.",
     parameters: Type.Object({
       prompt: Type.String(),
       every_minutes: Type.Optional(Type.Number()),

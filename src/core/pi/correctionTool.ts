@@ -23,7 +23,7 @@ export function createCorrectionTool(handle: (request: CorrectionCaseRequest) =>
       reply: Type.Optional(
         Type.String({
           description:
-            "On offer, answer a wording reply on the same ordinary card. On ignore of a chosen instruction, explain why it cannot be saved.",
+            "On offer, answer a wording reply on the same ordinary card.",
         }),
       ),
       answersMessage: Type.Optional(
@@ -35,7 +35,7 @@ export function createCorrectionTool(handle: (request: CorrectionCaseRequest) =>
       explicitSourceId: Type.Optional(
         Type.String({
           description:
-            "On recover, declare latestWrittenSource.sourceId from inspect when those captain words explicitly ask to keep the offered instruction; its writer saves it without another choice.",
+            "On recover, declare latestWrittenSource.sourceId from inspect when those captain words explicitly ask to keep the offered instruction.",
         }),
       ),
     }),

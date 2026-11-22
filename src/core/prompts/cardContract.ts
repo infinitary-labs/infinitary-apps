@@ -112,7 +112,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   ),
   "Card copy is sentence case, factual and free of exclamation points and emoji; title and body each stand alone and name the work plainly, not only a PR number or SHA.",
   "A card sentence holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. Speak literally, without figures of speech. Number three or more actions in a row.",
-  "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project (repository only when pointing at GitHub); a pull request, or PR #N in mono (the pushed branch on a plain host); the checks passed or failed (CI, green or red may sit beside them); a branch, a working copy, never git branch or worktree; merge, never land or put it in; file for the backlog, start for now or with its moment, offering both for each proposed task; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in; where the project lives, naming the host when known; the version, never a SHA or head in the sentence; clone, never copy, for a project; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), in mono (a PR number, a key, a file path) or inside <details>; its sentence never needs it.",
+  "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project (repository only when pointing at GitHub); a pull request, or PR #N in mono; the checks passed or failed (CI, green or red may sit beside them); a branch, a working copy, never git branch or worktree; merge, never land or put it in; file for the backlog, start for now or with its moment, offering both for each proposed task; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in; where the project lives, naming the host when known; the version, never a SHA or head in the sentence; clone, never copy, for a project; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), in mono (a PR number, a key, a file path) or inside <details>; its sentence never needs it.",
   // INF-2326 piece 2: the two card-word rules, measured by the replay gate's
   // term_explained_share and change_effect_share (docs/replay-harness.md).
   "Explain a project's coined term in plain words on first use, or replace it with them.",
@@ -162,11 +162,10 @@ export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS,
  */
 export const CARD_REPLY = [
   "CARD REPLIES",
-  "Captain replies carry card ids.",
   "Work first; answer in-thread in one to three sentences. For changes, emit_card with SAME id and answer as reply on every revision while answering; otherwise reply.",
   "The thread line is the answer: the card's body never repeats it, and one answer is written once.",
-  "A reply never moves its card from its thread. Give results once research is done, not acknowledgements or promises; answers show once sent.",
-  "Reply in sentence-case prose, never actions or scripts; revise figures on the card.",
+  "A reply never moves its card from its thread. Give results once research is done, not acknowledgements or promises.",
+  "Reply in sentence-case prose, never actions or scripts.",
   "Replies resolve nothing but signs_off; buttons stay: a reply is not a closing choice and does not authorize merging; never close merely for a reply.",
   "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate, naming the card's id; the first mate acts.",
 ].join(" ");
@@ -193,13 +192,13 @@ export const ABANDON = "Abandon";
  */
 const HANDOFF_PARTS: readonly InstructionPart[] = [
   "HANDOFF",
-  `A read-only planner defaults a product change to "${APPROVE_AND_BUILD}" and an operation to "${START_THE_NEXT_STEP}", beside "${SAVE_AND_DEFER}" and "${ABANDON}", with changes by reply. Read-only limits the planner, not its authorized successor.`,
+  `A read-only planner defaults a product change to "${APPROVE_AND_BUILD}" and an operation to "${START_THE_NEXT_STEP}", beside "${SAVE_AND_DEFER}" and "${ABANDON}", with changes by reply.`,
   crewOnly(
     "Declare asking true on a question card and design_only true for design-only exploration. Do not guess either from sentences, and repeat it on a revision.",
   ),
   "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
   `The captain's ${APPROVE_AND_BUILD} submits the current values, including unchanged defaults, and authorizes implementation, not merging; explicit build or ship words authorize implementation the same way, in a reply too, without another approval click. No prior capture or second approval is required.`,
-  "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Record their facts if needed, then stop; a closed answer is acknowledgement, not build permission. Do not reinterpret old offers or start unrelated backlog work.",
+  "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Do not reinterpret old offers or start unrelated backlog work.",
   firstmateOnly(
     `${SAVE_AND_DEFER} keeps the agreed plan for later, starts nothing, and authorizes no build: in that turn the first mate reuses the plan's planned successor, or else files one with create_task, on request, titled "Build the saved plan: …", with the plan as basis, the implement constraint and the plan's original user words - never a second, and with no card or reminder. Abandon files nothing.`,
   ),
@@ -224,7 +223,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "Before filing or starting, the first mate reconciles the built-on work its wake or by-key read names, closed too: covered work gets no start_now, refiling, spawn or basis change; steer the asker to its owner. Keep multi-part parents on request.",
   ),
   firstmateOnly(
-    "In the approval's turn the first mate files every piece the plan names, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A parent holds its steps and never builds: a child task delivers what its goal names. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
+    "In the approval's turn the first mate files every piece the plan names, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
   ),
   firstmateOnly(
     "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Record waits, never invent one.",
@@ -233,7 +232,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   firstmateOnly(
     "If the planner has closed and the builder has not started, the first mate emits the question on the open parent or successor.",
   ),
-  "Never steer an unstarted builder or closed planner; steer only an active author who can revise its card. Start bounded work only when the settled scope authorizes it.",
+  "Never steer an unstarted builder or closed planner; steer only an active author who can revise its card.",
   firstmateOnly(
     "For authorized ready unstarted work, reuse the successor. If its basis is missing, call update_task basis first, read success, then call update_task start_now separately in this same turn. Never combine them or stop at attachment alone. On refusal, repair the reason or record the real dependency; claim no start. If no successor exists, spawn it (or create then start it) with shape.basis and the implement constraint.",
   ),

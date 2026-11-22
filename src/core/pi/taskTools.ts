@@ -294,12 +294,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     label: "Update task",
     description: [
       "Edit tasks; only unstarted open work can change project.",
-      "Only captain-requested start_again replaces dropped work, keeping saved work/waits and returning a new key. Routes afresh, not escalation.",
+      "Only captain-requested start_again replaces dropped work, keeping saved work/waits and returning a new key.",
       "Drop with drop true and reason; confirm true also supersedes open children. Use replaced_by for replacement, settle_task for started work.",
       "start_now applies edits first, stops on refusals, and starts queued work on an available model despite allowance waits.",
       "When the user names a model, pass override_model_id (start_now starts it): it keeps its key and links; never drop it to spawn a replacement.",
-      "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them. Policy edits never start/restart work.",
-      "Local Careful = Default; keep request. No silent PR close or fallback without access. Ask only unclear task/scope/consent; refusals name blockers.",
+      "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them.",
+      "Local Careful = Default; keep request. No silent PR close or fallback without access. Refusals name blockers.",
     ].join(" "),
     parameters: Type.Object({
       task: Type.String({ description: "The task id or key" }),
@@ -312,7 +312,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request parks started work: stops the turn, keeps work; only start_now wakes it. News notifies you once. Give a reason for a captain-requested pause or a stall wake’s blocker no steer can change.",
+            "As create_task's start_policy. on-request parks started work: stops the turn, keeps work; only start_now wakes it. Give a reason for a captain-requested pause or a stall blocker no steer can change.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.
@@ -368,7 +368,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
           description:
-            "Captain-only crew/summary speed next request; null inherits Models. First mate/Decisions stay Standard. Ultrafast: 8× allowance/6× credits.",
+            "Captain-only crew/summary speed next request; null inherits Models. Ultrafast: 8× allowance/6× credits.",
         }),
       ),
       override_model_id: Type.Optional(
@@ -411,7 +411,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then eligible answered basis’s current work computer, then room), or project to reset. Name a computer only on captain’s words or reported crew need.",
+            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then eligible answered basis’s current work computer, then room), or project to reset. Name a computer only on captain’s words or crew need.",
         }),
       ),
       direction: Type.Optional(
@@ -752,7 +752,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
       "until `from` closes; on batched pull requests `to` starts at `from`'s merge approval unless",
       "its needs_merge names `from` (add such a wait with update_task blocked_by and needs_merge together), and a cycle is refused as text. related: work neither task is waiting on.",
-      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now (drop, takeover, fresh task): `from`'s waits",
+      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now: `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",
     ].join(" "),
     parameters: Type.Object({
@@ -795,7 +795,7 @@ export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Beyond context: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
   "Filters: project/status/key/id/title/goal/parent.",
   "Key reads: reports, cards, choices, brief, checks, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
-  "Resolution is facts; HANDOFF governs authorization. History grants none.",
+  "Resolution is facts; HANDOFF governs authorization.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
   "card alone reads one card.",
 ].join(" ");

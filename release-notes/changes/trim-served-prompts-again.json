@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-served-prompts-again",
+      "reason": "Internal: the first mate's and crewmates' fixed instructions say the same rules in fewer words, so they fit their measured budgets again after main's newest rules; nothing a person sees changes."
+    }
+  ]
+}

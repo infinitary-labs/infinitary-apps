@@ -280,6 +280,7 @@ export const REPORT_TOOL = crewmateTool({
     ),
     validation: Type.Optional(
       zodParameter<LiveValidationInput>(liveValidationInputSchema, {
+        dropPatterns: true,
         description:
           "Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.",
       }),

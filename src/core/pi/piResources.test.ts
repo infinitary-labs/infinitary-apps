@@ -699,9 +699,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A prompt-budget trim after INF-4425 says the skip rule, the draft button, the fact strip, runbook precedence, and time and language in fewer words.
   // The prompt-budget trim keeps these rules while shortening their wording and examples.
   // INF-5446 (the captain chose to apply synced settings through the preview's own controls) adds inf.stage's apply and the card's unsent draft.
+  // A prompt-budget trim says the draft button, the browser, files and risk words, the strip and the closing reply lines in fewer words.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "c970480fa8093975d710be6384c179863144a731d46ead7d18efac6a42c41191",
+    "1ea457b4e3251b29f03d716ebd5500e70815843600f1b7e0cae5f307fc52a5ec",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
@@ -712,5 +713,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-4517's piece 4 asks careful review on the plan card, the recommended parts ticked, and files each part at it.
   // A later prompt-budget trim says the careful-review rule in fewer words, in both halves.
   // A prompt-budget trim after INF-4425 says the first mate's filing of a plan's pieces in fewer words.
-  expect(hash(HANDOFF)).toBe("c0148ce535084a87c890f8189c0caa8e493298263050f0d0a158f043a70405ab");
+  // A later prompt-budget trim drops three restatements: the planner's read-only limit, the closed-answer line and the bounded-work line.
+  expect(hash(HANDOFF)).toBe("7a27c68a2126f477f2298812c18f0b71cd0a5e59613d67e557542b2b581f66c1");
 });

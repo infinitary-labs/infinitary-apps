@@ -455,6 +455,7 @@ const REQUIRED_ACTIONS_DESCRIPTION =
 const sharedCardParams = {
   required_actions: Type.Optional(
     zodParameter<RequiredAction[]>(requiredActionsSchema, {
+      dropPatterns: true,
       description: REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
@@ -684,7 +685,7 @@ const crewmateCardParams = Type.Object({
 const BROWSER_BUTTON_DESCRIPTION = [
   `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
   "It only opens the view: it never answers or closes the card.",
-  `It needs this task's browser, opened with ${browserCommand("open <url>")}; if it has stopped, the press opens it again at its page. For a page this computer serves, open it with --start '<command>' --within <seconds> so Infinitary starts its server when nothing answers; without one, or when that fails, you are woken once.`,
+  `It needs this task's browser, opened with ${browserCommand("open <url>")}; if it has stopped, the press opens it again at its page. For a page this computer serves, open it with --start '<command>' --within <seconds> so Infinitary starts its server when nothing answers; if none or it fails, you are woken once.`,
 ].join(" ");
 
 /**

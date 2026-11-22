@@ -150,6 +150,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
     "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media and raster exports. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
+      dropPatterns: true,
       description: PREPARE_CHANGE_STORY_DESCRIPTION,
     }),
   }),

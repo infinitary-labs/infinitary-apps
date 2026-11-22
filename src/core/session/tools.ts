@@ -659,16 +659,20 @@ export type StringEnum<V extends string> = TUnsafe<V> & {
  * tool parses its argument with that same zod schema, which refuses a value
  * past one and names it, so the served form leaves them out (INF-2441's
  * fixed-context room). A pattern, a number's bound, an enum, a constant and
- * the required fields stay, since a model writes a value from them. Each is
+ * the required fields stay, since a model writes a value from them, unless the
+ * caller passes `dropPatterns` for a parameter whose tool parses it with the
+ * same zod schema and whose description already names the shape (an id, a
+ * commit, a semantic version). Each is
  * a word every model reads on every request.
  */
-export function zodParameter<T>(schema: z.ZodType, options?: { description?: string }): TUnsafe<T> {
+export function zodParameter<T>(schema: z.ZodType, options?: { description?: string; dropPatterns?: boolean }): TUnsafe<T> {
   const json = z.toJSONSchema(schema, {
     override: ({ jsonSchema }) => {
       delete jsonSchema.minLength;
       delete jsonSchema.maxLength;
       delete jsonSchema.minItems;
       delete jsonSchema.maxItems;
+      if (options?.dropPatterns) delete jsonSchema.pattern;
       if (jsonSchema.additionalProperties === false) delete jsonSchema.additionalProperties;
       if (jsonSchema.type !== "integer") return;
       if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;

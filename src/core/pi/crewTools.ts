@@ -958,7 +958,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       keep: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Ignored files or folders to move too, by working-copy path, as the captain or its crewmate named them",
+            "Ignored files or folders to move too, by working-copy path",
         }),
       ),
       // The description above is the one home of its rule.

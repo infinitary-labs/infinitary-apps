@@ -348,7 +348,7 @@ describe("how a captain's message ends", () => {
     expect(f.ending.closingPlace("first")).toEqual({ kind: "quiet" });
     expect(f.ending.crewmateStep("first")).toBeUndefined();
     f.finish("second");
-    expect(f.ending.closingPlace("second")).toEqual({ kind: "note" });
+    expect(f.ending.closingPlace("second")).toEqual({ kind: "note", answering: true });
   });
 
   it("leaves work no message of the captain's covers to the rule for work the fleet started", () => {

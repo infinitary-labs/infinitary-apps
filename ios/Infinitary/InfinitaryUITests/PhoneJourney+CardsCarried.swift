@@ -9,7 +9,7 @@ extension PhoneJourney {
     /// paragraph and two choices, a note queued on that paragraph with a comment, and a library photo. Completion: the
     /// footer names what goes with the choice, one tap on a choice takes the card away, the first mate's turn reads the
     /// choice with the note's comment and the photo's attached line and carries the photo as an image, the card's record
-    /// keeps the note and the photo by name, and the card opened again as a past card names both under its buttons.
+    /// keeps the note and the photo by name, and the card opened again as a past card names both above its buttons.
     func testCardChoiceCarries() async throws {
         try await launchJoined()
         let fixture = try await home("carried-card")
@@ -67,7 +67,7 @@ extension PhoneJourney {
         XCTAssertEqual(notes.count, 1)
         XCTAssertEqual(notes.first?["comment"] as? String, said)
         XCTAssertEqual((carried["pictures"] as? [String])?.count, 1)
-        // The card opened again as a past card names the note and the photo under its buttons.
+        // The card opened again as a past card names the note and the photo above its buttons.
         _ = try await home("carried-past")
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         let lead = app.staticTexts["past-sent-words"]
@@ -76,8 +76,10 @@ extension PhoneJourney {
         let pictures = app.staticTexts["past-sent-pictures"]
         reveal(pictures)
         XCTAssertEqual(pictures.label, try XCTUnwrap(heard["pictureWords"] as? String))
-        let sentNote = app.buttons.matching(identifier: "thread-note").firstMatch
-        XCTAssertTrue(sentNote.exists, "The past card does not name the note\n\(app.debugDescription)")
+        // The sent notes' own identifier may cover the note's button it draws, so either names the note.
+        let sentNote = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["past-sent-notes", "thread-note"])).firstMatch
+        XCTAssertTrue(sentNote.waitForPresence(timeout: 10), "The past card does not name the note\n\(app.debugDescription)")
+        XCTAssertTrue(sentNote.label.contains(part), "The past card's note does not name its paragraph: \(sentNote.label)")
         XCTAssertTrue(app.staticTexts[said].exists, "The past card does not show the note's comment\n\(app.debugDescription)")
         XCTAssertEqual(app.buttons["card-action-hold"].value as? String, "Chosen")
         picture("1-past-card-names-what-went")

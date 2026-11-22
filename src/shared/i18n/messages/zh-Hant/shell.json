@@ -85,6 +85,7 @@
   "shellUpdateAvailable": "有可用的更新：{version}",
   "shellUpdateInstall": "安裝",
   "shellUpdateInstalled": "你目前是 {version}",
+  "shellUpdateSource": "來自 {branch} 的更新",
   "shellUpdateStable": "穩定版更新",
   "shellVoiceAskingDesktop": "你的桌面環境正在詢問是否允許 Infinitary 使用麥克風。你說的話會在這台電腦上轉成文字，而且絕不會被儲存。",
   "shellVoiceAskingMac": "macOS 正在詢問是否允許 Infinitary 使用麥克風。你說的話會在這台電腦上轉成文字，而且絕不會被儲存。",

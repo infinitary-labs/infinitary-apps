@@ -3713,6 +3713,7 @@
 "shellUpdateAvailable" = "Actualización disponible: %1$@";
 "shellUpdateInstall" = "Instalar";
 "shellUpdateInstalled" = "Tienes la versión %1$@";
+"shellUpdateSource" = "Actualizaciones desde %1$@";
 "shellUpdateStable" = "Actualizaciones estables";
 "shellVoiceAskingDesktop" = "Tu escritorio está preguntando si Infinitary puede usar el micrófono. Lo que dices se convierte en texto en esta computadora y nunca se guarda.";
 "shellVoiceAskingMac" = "macOS está preguntando si Infinitary puede usar el micrófono. Lo que dices se convierte en texto en esta computadora y nunca se guarda.";
@@ -3864,6 +3865,17 @@
 "updateDownloadStopped" = "La descarga se detuvo antes de terminar. Inténtalo de nuevo.";
 "updateDownloadUnreachable" = "Infinitary no pudo acceder a la descarga. Comprueba tu conexión e inténtalo de nuevo.";
 "updateInstallerNoStart" = "El instalador no pudo iniciarse, así que no se instaló nada.";
+"updateSourceAhead" = "Esta copia tiene confirmaciones que %1$@ no tiene, así que no puede avanzar.";
+"updateSourceAlreadyUpdating" = "Esta copia ya se está actualizando.";
+"updateSourceBuildFailed" = "%2$@ no se pudo compilar, así que esta copia volvió a %1$@.";
+"updateSourceDetached" = "Esta copia no está en ninguna rama, así que no puede actualizarse sola.";
+"updateSourceEdited" = "Esta copia tiene cambios sin confirmar. Confírmalos o guárdalos aparte y vuelve a comprobarlo.";
+"updateSourceInstallFailed" = "Los paquetes de %2$@ no se instalaron, así que esta copia volvió a %1$@.";
+"updateSourceNoUpstream" = "La rama %1$@ no sigue ninguna rama del lugar donde vive el proyecto, así que esta copia no puede actualizarse sola.";
+"updateSourceNotAsked" = "Infinitary no pudo entregar la actualización, así que no cambió nada.";
+"updateSourceNotMoved" = "Esta copia no pudo avanzar hasta %2$@, así que se quedó en %1$@.";
+"updateSourceNothingToTake" = "Ahora no hay ninguna actualización que esta copia pueda tomar.";
+"updateSourceUpToDate" = "Al día con %1$@.";
 "updateWindowsChannelNotPutBack" = "Infinitary no pudo restaurar el canal de actualizaciones que seguía antes; revisa el canal en Configuración → General.";
 "updateWindowsInstallFailed" = "El instalador se detuvo antes de terminar, así que se conservó esta copia.";
 "updateWindowsNoCopy" = "Infinitary no pudo volver a abrirse después de actualizarse. Descarga el instalador desde %1$@ y ejecútalo; tus tareas y ajustes se conservan.";

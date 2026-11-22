@@ -27,6 +27,7 @@ import {
   UnsupportedSavedDataError,
 } from "@core/storage/savedDataCompatibility";
 import { keepRecordBeforeSourceRun } from "@core/storage/sourceRunCopy";
+import { DEV_STARTER_SETTING, markStarted } from "@core/update/devStarter";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
 import { configureWindowsGit, findWindowsGit } from "@core/windowsGit";
@@ -148,6 +149,19 @@ import { type WorkContext, workContext } from "./workContext";
  */
 
 const isDev = !app.isPackaged;
+// A run `pnpm dev`'s starter started (docs/alpha.md, "Updates from source"):
+// its main process runs, so the build it started works, and as the daily app
+// it keeps working when its window closes, like the installed app.
+const devStarterDir = isDev ? settingFrom(process.env, DEV_STARTER_SETTING)?.trim() : undefined;
+if (devStarterDir) {
+  try {
+    markStarted(devStarterDir);
+  } catch {
+    // The starter then reads this start as one that failed, which only matters after an update.
+  }
+}
+/** A run from source that quits with its last window: every one but the starter's. */
+const quitsWithWindow = isDev && !devStarterDir;
 const isRelease = !isDev && packagedFlavor(readPackageJsonAt(app.getAppPath())) === "release";
 // Windows files the app's windows and notifications under the identity its
 // Start menu entry carries (./windowsStartup.ts).
@@ -1511,7 +1525,8 @@ export async function startApp(
       });
       // The window again, from the top bar's icon or a second launch, where
       // closing it kept Firstmate working (design skill readme, "Linux
-      // desktop conventions"). A development run quits instead, as on a Mac.
+      // desktop conventions"). A development run quits instead, unless
+      // `pnpm dev`'s starter started it as the daily app.
       reopen = () => {
         const shown = appWindows()[0];
         if (shown) {
@@ -1522,7 +1537,7 @@ export async function startApp(
         }
         followFront(createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow));
       };
-      if (desktop.closeToIcon && !isDev) showTrayIcon(reopen);
+      if (desktop.closeToIcon && !quitsWithWindow) showTrayIcon(reopen);
 
       deferCoreDisposal(app, () => shell.dispose());
     });
@@ -1538,7 +1553,7 @@ export async function startApp(
     app.on("window-all-closed", () => {
       // A run's only windows are hidden pages: the last of them closing is no reason to quit.
       if (windowless) return;
-      if (isDev || !keepsWorkingClosed) {
+      if (quitsWithWindow || !keepsWorkingClosed) {
         app.quit();
       }
     });
@@ -1548,7 +1563,7 @@ export async function startApp(
       created.once("closed", () => {
         if (windowless) return;
         if (appWindows().length > 0 || BrowserWindow.getAllWindows().length === 0) return;
-        if (isDev || !keepsWorkingClosed) app.quit();
+        if (quitsWithWindow || !keepsWorkingClosed) app.quit();
       });
     });
   }

@@ -182,7 +182,11 @@ export function UpdatePanel({
         zIndex: 20,
       }}
     >
-      <MicroLabel>{CHANNEL_LABEL[status.channel]()}</MicroLabel>
+      <MicroLabel>
+        {status.source
+          ? m.shellUpdateSource({ branch: status.source.branch })
+          : CHANNEL_LABEL[status.channel]()}
+      </MicroLabel>
       {step && <UpdateStepText step={step} strong {...(onAction ? { onAction } : {})} />}
       {status.askedFrom && (
         <div data-update-asked-from style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>

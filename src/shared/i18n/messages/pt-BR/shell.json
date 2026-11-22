@@ -89,6 +89,7 @@
   "shellUpdateAvailable": "Atualização disponível: {version}",
   "shellUpdateInstall": "Instalar",
   "shellUpdateInstalled": "Você tem a {version}",
+  "shellUpdateSource": "Atualizações do {branch}",
   "shellUpdateStable": "Atualizações estáveis",
   "shellVoiceAskingDesktop": "Seu desktop está perguntando se o Infinitary pode usar o microfone. O que você diz vira texto neste computador e nunca é armazenado.",
   "shellVoiceAskingMac": "O macOS está perguntando se o Infinitary pode usar o microfone. O que você diz vira texto neste computador e nunca é armazenado.",

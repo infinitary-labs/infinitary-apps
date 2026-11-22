@@ -785,7 +785,7 @@ The host makes each page (`src/main/host/taskBrowser.ts`, behind `HostTaskBrowse
   The crewmate never sends a protocol command or runs script of its own in the page.
 
 These windows are not the app's.
-`appWindows()` (`src/main/windows.ts`) leaves them out of every app push, reload, focus, notification click and dock activation, and a development run still quits when its last own window closes.
+`appWindows()` (`src/main/windows.ts`) leaves them out of every app push, reload, focus, notification click and dock activation, and a development run that `pnpm dev`'s starter did not start still quits when its last own window closes.
 
 ## Installed browser engines
 

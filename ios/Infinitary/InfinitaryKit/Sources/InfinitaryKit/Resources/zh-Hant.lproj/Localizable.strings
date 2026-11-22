@@ -3713,6 +3713,7 @@
 "shellUpdateAvailable" = "有可用的更新：%1$@";
 "shellUpdateInstall" = "安裝";
 "shellUpdateInstalled" = "你目前是 %1$@";
+"shellUpdateSource" = "來自 %1$@ 的更新";
 "shellUpdateStable" = "穩定版更新";
 "shellVoiceAskingDesktop" = "你的桌面環境正在詢問是否允許 Infinitary 使用麥克風。你說的話會在這台電腦上轉成文字，而且絕不會被儲存。";
 "shellVoiceAskingMac" = "macOS 正在詢問是否允許 Infinitary 使用麥克風。你說的話會在這台電腦上轉成文字，而且絕不會被儲存。";
@@ -3864,6 +3865,17 @@
 "updateDownloadStopped" = "下載在完成前中斷。請再試一次。";
 "updateDownloadUnreachable" = "Infinitary 無法連線到下載位址。請檢查網路連線後再試一次。";
 "updateInstallerNoStart" = "安裝程式無法啟動，因此未安裝任何內容。";
+"updateSourceAhead" = "這份副本有 %1$@ 沒有的提交，因此無法往前移。";
+"updateSourceAlreadyUpdating" = "這份副本正在更新。";
+"updateSourceBuildFailed" = "%2$@ 無法建置，因此這份副本已回到 %1$@。";
+"updateSourceDetached" = "這份副本不在任何分支上，因此無法自行更新。";
+"updateSourceEdited" = "這份副本有尚未提交的修改。請先提交或暫存這些修改，再檢查一次。";
+"updateSourceInstallFailed" = "%2$@ 的套件無法安裝，因此這份副本已回到 %1$@。";
+"updateSourceNoUpstream" = "分支 %1$@ 沒有追蹤專案所在之處的分支，因此這份副本無法自行更新。";
+"updateSourceNotAsked" = "Infinitary 無法交出這次更新，因此沒有任何變更。";
+"updateSourceNotMoved" = "這份副本無法往前移到 %2$@，因此仍停在 %1$@。";
+"updateSourceNothingToTake" = "這份副本現在沒有可以採用的更新。";
+"updateSourceUpToDate" = "已與 %1$@ 同步。";
 "updateWindowsChannelNotPutBack" = "Infinitary 無法還原先前使用的更新通道，請在 設定 → 一般 中檢查通道。";
 "updateWindowsInstallFailed" = "安裝程式在完成前停止，因此保留了這份副本。";
 "updateWindowsNoCopy" = "Infinitary 更新後無法再次開啟。請從 %1$@ 下載安裝程式並執行；你的任務和設定都會保留。";

@@ -280,6 +280,23 @@ PATH='${bin}':"$PATH"`,
       else process.env[olderCap] = saved.older;
     }
   });
+
+  // INF-5635's approved plan, piece 2: only the app pnpm dev's starter started
+  // asks that starter to update the copy; an app a crewmate's test starts never does.
+  it("does not hand a child the starter folder of the app pnpm dev started", () => {
+    const names = ["INFINITARY_DEV_STARTER", "FM3000_DEV_STARTER"];
+    const saved = names.map((name) => process.env[name]);
+    for (const name of names) process.env[name] = "/tmp/infinitary-dev-starter";
+    try {
+      const env = hostEnv();
+      for (const name of names) expect(env[name]).toBeUndefined();
+    } finally {
+      names.forEach((name, i) => {
+        if (saved[i] === undefined) delete process.env[name];
+        else process.env[name] = saved[i];
+      });
+    }
+  });
 });
 
 /**

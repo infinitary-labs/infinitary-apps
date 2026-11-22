@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
+import { settingFrom } from "@shared/envSettings";
 import type { KnownForgeHost } from "@shared/forge";
 import { englishOf, saidLine } from "@shared/i18n/said";
 import { speakChoice } from "@shared/i18n/start";
@@ -155,6 +156,7 @@ import { TaskService } from "./tasks/taskService";
 import { TaskTimeline } from "./tasks/taskTimeline";
 import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
+import { DEV_STARTER_SETTING, readStarterSession } from "./update/devStarter";
 import { createInstalledUpdateChecker } from "./update/updateChecker";
 import { WindowsInFront } from "./windowsInFront";
 import { adoptBundledGit } from "./workspace/bundledGit";
@@ -771,12 +773,16 @@ export async function createServices(
     },
   });
   const sourceComputer = await ownComputerName({ packaged: host.app.packaged, env: process.env });
+  // A clean copy `pnpm dev`'s starter started names its commit (docs/alpha.md, "Updates from source").
+  const starterDir = host.app.packaged ? undefined : settingFrom(process.env, DEV_STARTER_SETTING);
+  const starter = starterDir ? readStarterSession(starterDir.trim()) : null;
   const sourceLocation = {
     isPackaged: host.app.packaged,
     resourcesPath: host.app.resourcesDir,
     appPath: host.app.appDir,
     version: host.app.version,
     computer: sourceComputer,
+    ...(starter && !starter.edited ? { sourceCommit: starter.commit } : {}),
   };
   const source = () => readSelfSource(sourceLocation);
   const selfSourceDir = resolveSelfSourceDir({

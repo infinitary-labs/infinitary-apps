@@ -95,6 +95,7 @@
   "shellUpdateAvailable": "يتوفر تحديث: {version}",
   "shellUpdateInstall": "تثبيت",
   "shellUpdateInstalled": "لديك {version}",
+  "shellUpdateSource": "التحديثات من {branch}",
   "shellUpdateStable": "التحديثات المستقرة",
   "shellVoiceAskingDesktop": "يسأل سطح المكتب هل يمكن لـ Infinitary استخدام الميكروفون. يتحول ما تقوله إلى نص على هذا الحاسوب ولا يُخزَّن أبدًا.",
   "shellVoiceAskingMac": "يسأل macOS هل يمكن لـ Infinitary استخدام الميكروفون. يتحول ما تقوله إلى نص على هذا الحاسوب ولا يُخزَّن أبدًا.",

@@ -85,6 +85,7 @@
   "shellUpdateAvailable": "업데이트 가능: {version}",
   "shellUpdateInstall": "설치",
   "shellUpdateInstalled": "현재 {version}",
+  "shellUpdateSource": "{branch}의 업데이트",
   "shellUpdateStable": "안정 버전 업데이트",
   "shellVoiceAskingDesktop": "데스크톱이 Infinitary의 마이크 사용을 허용할지 묻고 있어요. 말한 내용은 이 컴퓨터에서 텍스트로 바뀌며 저장되지 않아요.",
   "shellVoiceAskingMac": "macOS가 Infinitary의 마이크 사용을 허용할지 묻고 있어요. 말한 내용은 이 컴퓨터에서 텍스트로 바뀌며 저장되지 않아요.",

@@ -12,7 +12,7 @@
   },
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/dev.ts",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "node scripts/checks-mode.ts typecheck && node scripts/typecheck.ts --pretty",

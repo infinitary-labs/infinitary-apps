@@ -26,7 +26,17 @@ export type SelfSourceLocation = {
   resourcesPath: string;
   /** Electron `app.getAppPath()`: the repo root when unpackaged. */
   appPath: string;
+  /**
+   * An unpackaged run's commit, when `pnpm dev`'s starter read the copy
+   * clean at this start (docs/alpha.md, "Updates from source"); an edited
+   * copy, or a run the starter did not start, names none.
+   */
+  sourceCommit?: string | null;
 };
+
+/** The commit a build names: an installed build's index's, or a clean source run's. */
+const commitOf = (location: SelfSourceLocation, indexed: string | null): string | null =>
+  location.isPackaged ? indexed : (location.sourceCommit ?? null);
 
 export function resolveSelfSourceDir(location: SelfSourceLocation): string {
   if (location.isPackaged) {
@@ -53,7 +63,8 @@ export function readSelfSource(
   const facts: SelfSourceFacts = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    // A clean starter run names its commit even when its index is missing.
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
     root,
     index,
@@ -81,7 +92,7 @@ export function readSelfSource(
     return {
       ...facts,
       version: location.isPackaged ? map.version : location.version,
-      commit: location.isPackaged ? map.commit : null,
+      commit: commitOf(location, map.commit),
       availability: "available",
     };
   } catch (error) {
@@ -93,9 +104,10 @@ export function readSelfSource(
  * The build's identity alone, as `readSelfSource` reads it from the source
  * index, without checking every indexed file is there: the freeze recorder
  * tags its records with it at each start, where that walk read thousands
- * of files. A development build is its version with no commit, as
- * `readSelfSource` says of it either way; an installed build takes its
- * index's commit once both copies of the index agree with its version.
+ * of files. A development build is its version with no commit, or with a
+ * clean starter run's commit, as `readSelfSource` says of it either way; an
+ * installed build takes its index's commit once both copies of the index
+ * agree with its version.
  */
 export function readSelfSourceIdentity(
   location: SelfSourceLocation & { computer: string; version: string },
@@ -103,7 +115,7 @@ export function readSelfSourceIdentity(
   const identity: SourceIdentity = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
   };
   if (!location.isPackaged) return identity;
@@ -132,7 +144,8 @@ export async function readSelfSourceAsync(
   const facts: SelfSourceFacts = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    // A clean starter run names its commit even when its index is missing.
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
     root,
     index,
@@ -159,7 +172,7 @@ export async function readSelfSourceAsync(
     return {
       ...facts,
       version: location.isPackaged ? map.version : location.version,
-      commit: location.isPackaged ? map.commit : null,
+      commit: commitOf(location, map.commit),
       availability: "available",
     };
   } catch (error) {

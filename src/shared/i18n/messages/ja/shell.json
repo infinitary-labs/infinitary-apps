@@ -85,6 +85,7 @@
   "shellUpdateAvailable": "アップデートがあります：{version}",
   "shellUpdateInstall": "インストール",
   "shellUpdateInstalled": "現在のバージョンは {version} です",
+  "shellUpdateSource": "{branch} からのアップデート",
   "shellUpdateStable": "安定版のアップデート",
   "shellVoiceAskingDesktop": "デスクトップが、Infinitary にマイクの使用を許可するか確認しています。話した内容はこのコンピューター上で文字になり、保存されることはありません。",
   "shellVoiceAskingMac": "macOS が、Infinitary にマイクの使用を許可するか確認しています。話した内容はこのコンピューター上で文字になり、保存されることはありません。",

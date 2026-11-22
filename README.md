@@ -58,6 +58,15 @@ data, and again before a version that changes how it is saved, it keeps a copy i
 the folder's `before-source-run`, and says in the terminal how to go back. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR`
 to an empty folder.
 
+A dev run is a daily app: closing its window keeps it running, and when the branch
+your copy follows, `main` for a clone, has newer commits, the app offers Update and
+restart. It saves the crew's work, then `pnpm dev` moves the copy forward, runs
+`pnpm install` when the packages changed and starts the app again; a commit that does
+not install or build goes back to the one before. A copy with edits that are not
+committed, or with commits of its own, is never moved. Run it from a clone of your own,
+not the project folder Infinitary manages, which it brings up to date after each merge
+(`docs/alpha.md`, "Updates from source").
+
 That's it - no hidden step to fetch the Electron binary. `pnpm install`'s postinstall
 downloads it for you (see `scripts/ensure-electron-installed.mjs` and the note on
 Electron's dropped `postinstall` in `docs/architecture.md`).

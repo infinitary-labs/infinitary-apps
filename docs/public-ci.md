@@ -55,6 +55,13 @@ The fork guard on the project's own runners refuses a job whose pull request com
 Routing is not the guard: a pull request runs the check files it carries, so it can send itself to the project's own machines by editing them.
 The guards are GitHub's approval of each outside run and the fork guard on the project's own runners.
 Set the destination's fork run approval to "Require approval for all external contributors"; the first-time contributor options stop asking once a person has one change merged.
+Approve a run only when the change leaves the check files alone, and read any change to them before approving.
+The check files are what decide which checks run, where they run and what installs: `.github/`, `scripts/`, every `package.json` and `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/`, `packaging/` and the `electron-builder*.yml` files.
+`check-file-flag.yml` marks such a pull request before anyone approves a run: it labels it `edits checks` and names its check files in one comment, and removes the label once a later version edits none (`scripts/check-file-flag.mjs`).
+It also labels a pull request whose changed files GitHub lists only in part, since GitHub lists at most 3,000, and says so in that comment.
+It marks and never fails or blocks a pull request, and leaves the project's own pull requests alone.
+Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script, never the pull request's code, uses no secret beyond its own token, holds only issue writes, and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
+Started by hand with a pull request number, it reads any pull request of the project, its own included, so the flag can be proved before an outside copy exists.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
 
 ### The contributor agreement check
@@ -71,7 +78,7 @@ The record is a locked issue of the project titled "Contributor License Agreemen
 The Actions token comments on a locked issue with its issue write access, and no one outside the project's collaborators can.
 Without the issue the check fails on every outside pull request and names what is missing.
 
-It is the one job an outside pull request starts that writes, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
+It writes on an outside pull request, as the check-file flag does, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
 It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue and status writes, and runs on GitHub's hosted Ubuntu.
 `tests/contributor-agreement.test.ts` holds each of these.
 

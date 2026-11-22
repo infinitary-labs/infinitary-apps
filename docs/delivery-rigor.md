@@ -468,6 +468,8 @@ The captain's merge click on a merge card is an approval of that change, and a r
   A click on a merge card approves the pull request that card was shown for, even after another one became current.
   A rule-skipping review remains a one-shot click and mints no kept approval.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
+  One other route mints it in the captain's name: on a project that merges in batches of the person's own, the first mate's merge while the captain's words recorded as an override pass `asks-first` at the task's current version, and the crewmate's merge card is up with its offer at that version (`SettleService.mergeOnCaptainWords`, INF-6091's audit, finding 2).
+  It mints from that card's offer outside any card resolution, and the app takes the card down unanswered (`CardService.takeDown`), so it reads as taken down by the app, not as a click.
 - **A card behind its change (INF-4031).**
   One reading, `CardActions.mergeBehind`, says whether an open merge card shows less than its change: a newer version pushed past its offer, another pull request now the task's current change, an offer an earlier version of the app saved without recording where its change lives, or only a newer story revision at the same version.
   The click and the card read it the same way.

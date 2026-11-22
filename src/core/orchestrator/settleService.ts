@@ -1229,8 +1229,8 @@ export class SettleService {
    * version the open merge card shows, as his click on it would, so the
    * change goes in line instead of being refused for want of a click. The
    * approval is minted in his name from that card's offer, only when the
-   * offer is at the task's current version, and the card comes down as a
-   * click would take it. An approval already standing runs as it is.
+   * offer is at the task's current version, and the app takes the card
+   * down unanswered. An approval already standing runs as it is.
    * Undefined leaves the first mate's merge to the ordinary settle.
    */
   private async mergeOnCaptainWords(

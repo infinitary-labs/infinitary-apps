@@ -41,13 +41,12 @@ extension PhoneJourney {
         // Done is read from one snapshot of its frame: asking a closing Done whether it is hittable fails the test itself.
         let keyboard = app.keyboards.firstMatch
         let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
-        var lastReading: [Bool]?
-        let settled = NSPredicate { _, _ in
+        var steady = PhoneSteadyReading<[Bool]>()
+        let settled = NSPredicate { [app] _, _ in
             let up = keyboard.exists
             let shown = up ? (try? done.snapshot()).map { !$0.frame.isEmpty && app.frame.contains($0.frame) } : nil
             let reading = [up, shown ?? false]
-            defer { lastReading = reading }
-            return (!reading[0] || reading[1]) && lastReading == reading
+            return steady.read(reading) && (!reading[0] || reading[1])
         }
         XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed, app.debugDescription)
         if keyboard.exists { tapOnPhone(done) }

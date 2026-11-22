@@ -392,9 +392,9 @@ export const clientFrameSchema = z.union([
       failedUpdate: z.literal(true).optional(),
       /**
        * The build it runs (`source-builds`; docs/devices.md, "Matching the
-       * home's build"): a release's commit, or a run from source's commit,
-       * whether it was edited and its lockfile's digest. Absent from a
-       * device too old to say it, which the home compares by version alone.
+       * home's build"): a release's commit, or that it runs from source
+       * (`source: true`) with the commit it names. Absent from a device too
+       * old to say it, which the home compares by version alone.
        */
       build: buildIdentitySchema.optional(),
       /** The last push it saw on an earlier connection; absent on a first one. */

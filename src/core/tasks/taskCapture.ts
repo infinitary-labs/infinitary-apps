@@ -278,13 +278,22 @@ export class TaskCapture {
   askCoverage(
     askIds: readonly string[],
     before?: number,
-  ): { work: TaskCoverageFields[]; acted: Set<string>; joined: Map<string, number> } {
+  ): {
+    work: TaskCoverageFields[];
+    acted: Set<string>;
+    joined: Map<string, number>;
+    tied: Set<string>;
+    requests: { taskId: string; requestId: string }[];
+  } {
     const attributions = this.writer.events.askAttributions(askIds);
-    const attached = [...new Set(attributions.map((entry) => entry.taskId))];
-    const authored = new Set(
-      attributions.filter((entry) => entry.via?.startsWith("tool:")).map((entry) => entry.taskId),
+    const worked = attributions.filter((entry) => !entry.tie);
+    const attached = [...new Set(worked.map((entry) => entry.taskId))];
+    const acted = new Set(
+      worked.filter((entry) => entry.via?.startsWith("tool:")).map((entry) => entry.taskId),
     );
-    const acted = new Set(attached.filter((taskId) => authored.has(taskId)));
+    const requests = attributions.flatMap((entry) =>
+      entry.requests.map((requestId) => ({ taskId: entry.taskId, requestId })),
+    );
     const found = new Map<string, TaskCoverageFields>();
     const queue = [...attached];
     const seeds = new Set(attached);
@@ -305,7 +314,18 @@ export class TaskCapture {
     }
     // Only the work reached: a link to work left out names nothing covered.
     for (const id of [...joined.keys()]) if (!found.has(id) || seeds.has(id)) joined.delete(id);
-    return { work: [...found.values()], acted, joined };
+    // A task the messages are only tied to - a question asked there, a
+    // refused change - is about them, so its cards can answer them, but it
+    // is not their work and the work after it is not walked.
+    const tied = new Set<string>();
+    for (const entry of attributions) {
+      if (!entry.tie || found.has(entry.taskId) || tied.has(entry.taskId)) continue;
+      const record = this.writer.store.coverageFields(entry.taskId);
+      if (!record) continue;
+      found.set(entry.taskId, record);
+      tied.add(entry.taskId);
+    }
+    return { work: [...found.values()], acted, joined, tied, requests };
   }
 
   /**
@@ -357,9 +377,11 @@ export class TaskCapture {
    * before the task was filed is left out unless it attached to the task
    * itself (`askCoverage`'s rule, from the other side). Reached through a
    * merge that started it, the task counts as filed when that merge linked
-   * it, as `askCoverage`'s `joined` says (INF-3846 piece 4).
+   * it, as `askCoverage`'s `joined` says (INF-3846 piece 4). A message
+   * only tied to a task (`attachAsk`'s `tie`) is above that task alone,
+   * never the work after it, and with `ties` false not even that.
    */
-  asksAbove(id: string): AskRecord[] {
+  asksAbove(id: string, ties = true): AskRecord[] {
     const seen = new Set<string>();
     const asks = new Map<string, AskRecord>();
     const target = this.writer.store.get(id);
@@ -373,7 +395,11 @@ export class TaskCapture {
       seen.add(current);
       const record = this.writer.store.get(current);
       if (!record) continue;
-      for (const ref of this.writer.events.refsOf(current, "ask")) {
+      const refs =
+        ties && current === id
+          ? this.writer.events.refsOf(current, "ask")
+          : this.writer.events.workAskRefs(current);
+      for (const ref of refs) {
         const ask = this.writer.asks.get(ref);
         if (!ask || asks.has(ask.id)) continue;
         const later = current !== id && ask.answeredAt !== null && filedAt > ask.answeredAt;
@@ -623,24 +649,40 @@ export class TaskCapture {
    * Attach an ask to a task: the first attachment fills the ask's columns,
    * every attachment writes an `ask` event on the task (one ask may be about
    * several tasks), in one transaction. Idempotent per (ask, task).
+   *
+   * With `tie`, the message is about the task without making it the
+   * message's work (docs/task-capture.md "How a message ends"): a question
+   * the first mate asked there, or a change the task refused. A later
+   * attachment without `tie` makes it work.
    */
-  attachAsk(askId: string, taskId: string, via: AskAttachedVia, starts?: boolean): boolean {
+  attachAsk(
+    askId: string,
+    taskId: string,
+    via: AskAttachedVia,
+    starts?: boolean,
+    tie?: boolean,
+  ): boolean {
     const at = this.writer.now();
     const run = this.writer.write((): boolean => {
       const ask = this.writer.asks.get(askId);
       if (!ask) throw new Error(`Unknown ask "${askId}".`);
       this.writer.mustGet(taskId);
-      const already = this.writer.events
-        .listFor(taskId)
-        .some((event) => event.kind === "ask" && event.ref === askId);
-      if (already) return false;
-      const first = this.writer.asks.attach(askId, taskId, via, at);
+      const already = this.writer.events.askEvent(taskId, askId);
+      // A steer to a task the message is tied to - "carry on" after its
+      // answer - passes guidance on and leaves the tie as it is.
+      if (already?.data?.tie === true && via === "tool:steer_crewmate") return false;
+      // Whether this is the message's first attachment as work: a tie
+      // before it - a question asked, a change refused - joins nothing.
+      const firstWork =
+        !tie &&
+        (!already || already.data?.tie === true) &&
+        !this.writer.events.askAttributions([askId]).some((entry) => !entry.tie);
       // A message first attached to work an earlier message's work includes
       // joins that earlier message while it has not ended (docs/task-capture.md
       // "How a message ends"); a later attachment, such as a message named on
       // other work, never moves it.
-      if (first && ask.followed && ask.continues === null) {
-        const earlier = this.asksAbove(taskId).find(
+      if (firstWork && ask.followed && ask.continues === null) {
+        const earlier = this.asksAbove(taskId, false).find(
           (other) =>
             other.id !== askId &&
             other.followed &&
@@ -650,6 +692,12 @@ export class TaskCapture {
         );
         if (earlier) this.writer.asks.setContinues(askId, earlier.continues ?? earlier.id);
       }
+      if (already) {
+        // A tie becomes work once an action for the message takes effect there.
+        if (!tie && already.data?.tie === true) this.writer.events.clearAskTie(already.id);
+        return false;
+      }
+      const first = this.writer.asks.attach(askId, taskId, via, at);
       this.writer.patch(taskId, { updatedAt: at });
       this.writer.addEvent({
         taskId,
@@ -665,6 +713,7 @@ export class TaskCapture {
           // the caller knows: the line under its cards reads the message
           // that did (`taskOrigin.ts`, `startedBy`).
           ...(starts === undefined ? {} : { starts }),
+          ...(tie ? { tie: true } : {}),
           ...(ask.images.length > 0 ? { images: ask.images.length } : {}),
         },
         ref: askId,
@@ -673,6 +722,28 @@ export class TaskCapture {
       return true;
     });
     return run();
+  }
+
+  /**
+   * A response request the first mate asked of a task for a message: saved
+   * on the message's `ask` event there, tying the message to the task first
+   * when nothing has yet. While the request is open the message waits for it.
+   */
+  tieRequest(askId: string, taskId: string, requestId: string): void {
+    const run = this.writer.write(() => {
+      if (!this.writer.events.askEvent(taskId, askId))
+        this.attachAsk(askId, taskId, "tool:steer_crewmate", undefined, true);
+      const event = this.writer.events.askEvent(taskId, askId);
+      if (event) this.writer.events.addAskRequest(event.id, requestId);
+    });
+    run();
+  }
+
+  /** The messages a response request on a task was asked for. */
+  requestAsks(taskId: string, requestId: string): AskRecord[] {
+    return this.writer.events
+      .requestAsks(taskId, requestId)
+      .flatMap((id) => this.writer.asks.get(id) ?? []);
   }
 
   /**

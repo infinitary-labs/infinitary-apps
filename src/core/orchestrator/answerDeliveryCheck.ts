@@ -1,5 +1,5 @@
 import { type Card, onStage } from "@shared/cards";
-import { askReceipt } from "../storage/askStore";
+import { type AskRecord, askReceipt } from "../storage/askStore";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import {
@@ -66,18 +66,30 @@ export type DeliveryTurnEnd = {
  *
  * Which messages a turn has read is typed state, never the words: the asks
  * still open (the live one, and every steer it took in), plus the saved
- * messages a parked row or the retry wake carried back.
+ * messages a parked row, the retry wake or the answer to a request asked
+ * for them carried back.
  */
 export class AnswerDeliveryCheck {
   private adopted = new Set<string>();
   private about = new Map<string, string>();
   private retryAsk: string | undefined;
+  /** The running turn reads an answer a captain's message waits on. */
+  private answerTurn = false;
 
   constructor(private readonly host: AnswerDeliveryHost) {}
 
   /** The running turn is the one output-only retry: it may only show an answer. */
   get outputOnly(): boolean {
     return this.retryAsk !== undefined;
+  }
+
+  /**
+   * The running turn is served alone - the one retry, or an answer a
+   * captain's message waits on - so a new message of his waits on the lane
+   * for a turn of its own instead of riding in as a steer.
+   */
+  get servedAlone(): boolean {
+    return this.outputOnly || this.answerTurn;
   }
 
   /** A message was a reply under one of Firstmate's own cards. */
@@ -88,7 +100,8 @@ export class AnswerDeliveryCheck {
   /**
    * A drained batch carries saved messages back: parked captain words name
    * theirs, the answer-missing wake names the one it retries (and is judged
-   * as retrying from here on).
+   * as retrying from here on), and a requested-response wake brings back
+   * each message its request was asked for.
    */
   adopt(rows: readonly InboxRow[], aboutOf: (row: InboxRow) => string | undefined): void {
     for (const row of rows) {
@@ -103,8 +116,36 @@ export class AnswerDeliveryCheck {
         if (this.host.tasks.capture.getAsk(facts.askId)?.delivery !== "retrying") {
           this.host.tasks.capture.setAskDelivery(facts.askId, "retrying");
         }
+      } else if (facts?.kind === "requested-response") {
+        // The answer to a request asked for a captain's message: the turn
+        // that reads it reads that message too, so its follow-up stays the
+        // message's and the message is judged when it ends - its card, or
+        // the one retry (docs/task-capture.md "How a message ends").
+        for (const ask of this.waitingOn(row)) {
+          this.answerTurn = true;
+          if (ask.delivery === "covered") this.host.tasks.capture.setAskDelivery(ask.id, "pending");
+          this.adopted.add(ask.id);
+        }
       }
     }
+  }
+
+  /**
+   * The captain's messages still waiting on the answer a requested-response
+   * wake carries. Such a wake is served in a turn of its own, as the one
+   * retry is, so the turn that reads it reads only those messages.
+   */
+  waitingOn(row: InboxRow): AskRecord[] {
+    const facts = row.facts;
+    if (facts?.kind !== "requested-response") return [];
+    return this.host.tasks.capture
+      .requestAsks(facts.taskId, facts.requestId)
+      .filter(
+        (ask) =>
+          ask.followed &&
+          ask.answeredAt === null &&
+          (ask.delivery === "covered" || JUDGEABLE_DELIVERY.includes(ask.delivery)),
+      );
   }
 
   /** The saved messages a drained batch carried back to the running turn. */
@@ -189,6 +230,7 @@ export class AnswerDeliveryCheck {
     this.adopted.clear();
     this.about.clear();
     this.retryAsk = undefined;
+    this.answerTurn = false;
   }
 
   private hold(id: string): void {

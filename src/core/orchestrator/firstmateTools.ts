@@ -106,8 +106,8 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
   const settled = async (
     taskId: string,
     closingSentence: string | undefined,
-    close: () => Promise<{ text: string; refusal?: SettleRefusal }>,
-  ): Promise<{ text: string; refusal?: SettleRefusal }> => {
+    close: () => Promise<{ text: string; ok?: boolean; refusal?: SettleRefusal }>,
+  ): Promise<{ text: string; ok?: boolean; refusal?: SettleRefusal }> => {
     const result = closingSentence
       ? await supervisor.settling.closing.withClosingSentence(
           host.options.tasks.resolve(taskId)?.id ?? taskId,
@@ -125,6 +125,16 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     }
     return result;
   };
+  /** The captain's message an expected answer is asked for: the action's own. */
+  const askFor = (response?: import("@shared/crewResponses").AskedResponsePolicy) =>
+    (response?.mode ?? "expected") === "expected" ? host.asks.current()?.id : undefined;
+  /**
+   * A steer that asks for an answer ties its message to the task, so the
+   * message waits for that answer and not for the task's close; one that
+   * only passes guidance on makes the task the message's work, as before.
+   */
+  const steerTie = (response?: import("@shared/crewResponses").AskedResponsePolicy) =>
+    askFor(response) ? ("tie" as const) : undefined;
   /** A first mate steer's source, read from this turn as it stands. */
   const steerSource = (response?: import("@shared/crewResponses").AskedResponsePolicy) => ({
     via: "tool" as const,
@@ -134,6 +144,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       sourceSession: host.sessionFile(),
       ...(response?.card ? { card: response.card } : {}),
       ...(response?.cancel ? { cancel: response.cancel } : {}),
+      ...(askFor(response) ? { ask: askFor(response) } : {}),
     },
     // In a turn that carries the captain's own words, the steer is his
     // guidance: it holds a kept merge until its crewmate declares it (FI3-662).
@@ -193,7 +204,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // The ask is about the task the captain named, whatever the tool then
     // says about it - a refused settle is still about that task.
     steerCrewmate: async (taskId, message, response) => {
-      host.asks.attach(taskId, "steer_crewmate");
+      host.asks.attach(taskId, "steer_crewmate", undefined, steerTie(response));
       // The answer waits for the message's record, never its delivery (INF-3060).
       const delivery = await supervisor.steer.steerCrewmate(taskId, message, "firstmate", {
         ...steerSource(response),
@@ -207,12 +218,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // The hand-over's checks answer now; its copy and the steer after it go
     // on behind the answer, read from this turn as it stands (INF-3060).
     steerAfterFiles: async (fromTask, taskId, message, response) => {
-      host.asks.attach(taskId, "steer_crewmate");
+      host.asks.attach(taskId, "steer_crewmate", undefined, steerTie(response));
       await supervisor.steer.steerAfterFiles(fromTask, taskId, message, steerSource(response));
       steered(taskId);
     },
     interruptCrewmate: async (taskId, mode, closingSentence) => {
-      host.asks.attach(taskId, "interrupt_crewmate");
+      // About the task even when refused; its work once it takes effect.
+      host.asks.attach(taskId, "interrupt_crewmate", undefined, "tie");
       await supervisor.sessions.interruptCrewmate(
         taskId,
         mode,
@@ -223,6 +235,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         },
         closingSentence,
       );
+      host.asks.attach(taskId, "interrupt_crewmate");
       host.turn.delivered = true;
       host.noteDelivery({
         outcome: "action",
@@ -254,13 +267,17 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // carries the captain's own words.
     isCaptainTurn: () => host.turn.origin === "captain-turn",
     settleTask: async (taskId, mode, confirm, proceedWithOpen, closingSentence) => {
-      host.asks.attach(taskId, "settle_task");
-      const settle = (): Promise<{ text: string; refusal?: SettleRefusal }> =>
+      // About the task even when refused; its work once it takes effect.
+      host.asks.attach(taskId, "settle_task", undefined, "tie");
+      const settle = (): Promise<{ text: string; ok: boolean; refusal?: SettleRefusal }> =>
         supervisor.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
-      return settled(taskId, closingSentence, settle);
+      const { ok, ...result } = await settled(taskId, closingSentence, settle);
+      if (ok) host.asks.attach(taskId, "settle_task");
+      return result;
     },
     closeDone: async (taskId, input) => {
-      host.asks.attach(taskId, "settle_task");
+      // About the task even when refused; its work once the close takes effect.
+      host.asks.attach(taskId, "settle_task", undefined, "tie");
       const record = host.options.tasks.resolve(taskId);
       if (!record) return { text: `Not closed: there is no task "${taskId}".` };
       // The captain's own words, checked as an override's are: this turn's,
@@ -288,7 +305,9 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           ...(captainWords ? { captainWords } : {}),
           ...(input.dropWaiting?.length ? { dropWaiting: input.dropWaiting } : {}),
         });
-      return settled(record.id, input.closingSentence, close);
+      const { ok, ...result } = await settled(record.id, input.closingSentence, close);
+      if (ok) host.asks.attach(record.id, "settle_task");
+      return result;
     },
   };
   const scheduler = host.options.scheduler;
@@ -565,10 +584,12 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           [
             createFlagMissedEscalationTool({
               flag: (input) => {
-                // The ask is about the task whose outcome was the miss.
-                host.asks.attach(input.taskId, "flag_missed_escalation");
+                // The ask is about the task whose outcome was the miss; its
+                // work once the flag goes through.
+                host.asks.attach(input.taskId, "flag_missed_escalation", undefined, "tie");
                 const result = flagMissedEscalation(input);
                 if (result.status === "flagged") {
+                  host.asks.attach(input.taskId, "flag_missed_escalation");
                   host.noteDelivery({
                     outcome: "action",
                     kind: "record",
@@ -602,11 +623,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
             createFlagDuplicateTool({
               flag: (input) => {
                 const card = supervisor.cards.snapshot().find((open) => open.id === input.cardId);
-                if (card?.taskId && host.options.tasks.get(card.taskId)) {
-                  host.asks.attach(card.taskId, "flag_duplicate");
-                }
+                const about =
+                  card?.taskId && host.options.tasks.get(card.taskId) ? card.taskId : undefined;
+                // About the card's task; its work once the flag goes through.
+                if (about) host.asks.attach(about, "flag_duplicate", undefined, "tie");
                 const result = flagDuplicate(input);
                 if (result.status === "flagged") {
+                  if (about) host.asks.attach(about, "flag_duplicate");
                   host.noteDelivery({
                     outcome: "action",
                     kind: "record",

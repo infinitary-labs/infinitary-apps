@@ -945,7 +945,7 @@ export class SettleService {
     confirm?: boolean,
     proceedWithOpen?: boolean,
     actor: "captain" | "firstmate" = "firstmate",
-  ): Promise<{ text: string; refusal?: SettleRefusal }> {
+  ): Promise<{ text: string; ok: boolean; refusal?: SettleRefusal }> {
     const result = await this.settleTaskGuarded(
       taskId,
       mode,
@@ -964,6 +964,7 @@ export class SettleService {
         afterMerge.length || firstmateSteps.length
           ? `${result.text} ${afterMergeWords(afterMerge, firstmateSteps)}`
           : result.text,
+      ok: result.ok,
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }

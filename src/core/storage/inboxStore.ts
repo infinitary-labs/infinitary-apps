@@ -1125,6 +1125,27 @@ export class InboxStore {
     ).map(responseRequestOf);
   }
 
+  /**
+   * Whether a request still waits for its answer: `pending` while open, or
+   * `unread` once answered with the wake carrying that answer still waiting
+   * on the first mate's lane; `undefined` once it waits no longer.
+   */
+  requestOpen(id: string): "pending" | "unread" | undefined {
+    const request = this.responseRequest(id);
+    if (!request) return undefined;
+    if (request.state === "pending") return "pending";
+    if (request.state !== "answered") return undefined;
+    const unread =
+      this.db
+        .prepare(
+          // i18n-exempt: SQL, never shown to a person
+          `SELECT 1 FROM crew_responses AS responses JOIN inbox ON inbox.id = responses.wake_id
+         WHERE responses.request_id = ? AND inbox.delivered_at IS NULL LIMIT 1`,
+        )
+        .get(id) !== undefined;
+    return unread ? "unread" : undefined;
+  }
+
   /** Cancellation is a sender declaration, never inferred from closing work. */
   cancelResponse(id: string): void {
     const request = this.responseRequest(id);

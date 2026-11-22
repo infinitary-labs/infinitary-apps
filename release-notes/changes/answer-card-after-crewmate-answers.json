@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "answer-card-after-crewmate-answers",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your question gets its answer card once the crewmate answers",
+      "body": "When the first mate asks a crewmate something for your message, Infinitary now expects the answer card as soon as the crewmate answers, even while that crewmate's task keeps running. Before, the card could wait until the whole task closed, or never come unless you asked again. A change the app refused also no longer holds your message's card until that task ends.",
+      "noPicture": "Nothing on screen looks different: the change is when your answer card comes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1726,34 +1726,50 @@ describe("the core, driven with no Electron in the process", () => {
   });
 
   it("pushes an event to every attached sink and stops when one detaches", async () => {
-    const events: string[] = [];
-    const cardPushes: Card[][] = [];
-    const detach = core.events.subscribe((channel, payload) => {
-      if (channel === "inf:event") events.push((payload as { type: string }).type);
-      if (channel === "inf:cards") cardPushes.push(payload as Card[]);
-    });
+    const cardId = "card-core-test";
+    const hasCard = (cards: Card[]) => cards.some((card) => card.id === cardId);
+    const attach = () => {
+      const events: FmEvent[] = [];
+      const cardPushes: Card[][] = [];
+      const detach = core.events.subscribe((channel, payload) => {
+        if (channel === "inf:event") events.push(payload as FmEvent);
+        if (channel === "inf:cards") cardPushes.push(payload as Card[]);
+      });
+      return { events, cardPushes, detach };
+    };
+    const leaving = attach();
+    const staying = attach();
+    try {
+      const { broadcastEvent, supervisor } = core.services;
+      const event: FmEvent = { type: "firstmate_emote", emote: "nod" };
+      supervisor.cards.hostCards.addSystemNoteCard(cardId, "Core test", "A note body.");
+      broadcastEvent(event);
+      await waitFor(() => staying.cardPushes.some(hasCard));
+      expect(leaving.cardPushes.some(hasCard)).toBe(true);
+      expect(leaving.events).toContain(event);
+      expect(staying.events).toContain(event);
+      // The fake shell's Notification Center gets the card through the same broadcast.
+      expect(shell.notified.at(-1)?.body.split("\n")[0]).toBe("Core test");
 
-    core.services.supervisor.cards.hostCards.addSystemNoteCard(
-      "card-core-test",
-      "Core test",
-      "A note body.",
-    );
-    // Card broadcasts coalesce on a short timer, so wait for the push.
-    await waitFor(() => cardPushes.length > 0);
-    expect(cardPushes.at(-1)?.some((card) => card.id === "card-core-test")).toBe(true);
-    // The notifier rides the same broadcast seam, so the fake shell's
-    // Notification Center got the card too: the card's own title names it under the ask line.
-    expect(shell.notified.at(-1)?.body.split("\n")[0]).toBe("Core test");
-
-    detach();
-    const before = cardPushes.length;
-    core.services.supervisor.pressNote("card-core-test");
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    expect(cardPushes.length).toBe(before);
-    expect(events).toEqual([]);
-    // The still-attached client is what the dispatcher answers from.
-    const cards = await core.dispatch("inf:cards:list", []);
-    expect(cards.some((card) => card.id === "card-core-test")).toBe(false);
+      // A shared core can push unrelated events before detach. Count only new deliveries.
+      leaving.detach();
+      const beforeEvents = leaving.events.length;
+      const beforeCards = leaving.cardPushes.length;
+      const cardStart = staying.cardPushes.length;
+      const afterDetach: FmEvent = { type: "firstmate_emote", emote: "tuck" };
+      supervisor.pressNote(cardId);
+      broadcastEvent(afterDetach);
+      await waitFor(() => staying.cardPushes.slice(cardStart).some((cards) => !hasCard(cards)));
+      expect(staying.events).toContain(afterDetach);
+      expect(leaving.cardPushes).toHaveLength(beforeCards);
+      expect(leaving.events).toHaveLength(beforeEvents);
+      expect((await core.dispatch("inf:cards:list", [])).some((card) => card.id === cardId)).toBe(
+        false,
+      );
+    } finally {
+      leaving.detach();
+      staying.detach();
+    }
   });
 
   it("reads the quota snapshot the sensor produced without any provider HTTP", async () => {

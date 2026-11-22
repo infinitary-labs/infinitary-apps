@@ -665,7 +665,10 @@ export type StringEnum<V extends string> = TUnsafe<V> & {
  * commit, a semantic version). Each is
  * a word every model reads on every request.
  */
-export function zodParameter<T>(schema: z.ZodType, options?: { description?: string; dropPatterns?: boolean }): TUnsafe<T> {
+export function zodParameter<T>(
+  schema: z.ZodType,
+  options?: { description?: string; dropPatterns?: boolean },
+): TUnsafe<T> {
   const json = z.toJSONSchema(schema, {
     override: ({ jsonSchema }) => {
       delete jsonSchema.minLength;

@@ -642,10 +642,13 @@ export function createCrewTools(delegate: CrewDelegate) {
         ),
       ),
       placement_requirements: Type.Optional(
-        Type.Object({}, {
-          additionalProperties: true,
-          description: "As create_task's placement_requirements.",
-        }),
+        Type.Object(
+          {},
+          {
+            additionalProperties: true,
+            description: "As create_task's placement_requirements.",
+          },
+        ),
       ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(
@@ -957,8 +960,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       cancel: Type.Optional(Type.Boolean()),
       keep: Type.Optional(
         Type.Array(Type.String(), {
-          description:
-            "Ignored files or folders to move too, by working-copy path",
+          description: "Ignored files or folders to move too, by working-copy path",
         }),
       ),
       // The description above is the one home of its rule.

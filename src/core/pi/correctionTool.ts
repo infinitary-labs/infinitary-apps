@@ -22,8 +22,7 @@ export function createCorrectionTool(handle: (request: CorrectionCaseRequest) =>
       affectedTaskIds: Type.Optional(Type.Array(Type.String())),
       reply: Type.Optional(
         Type.String({
-          description:
-            "On offer, answer a wording reply on the same ordinary card.",
+          description: "On offer, answer a wording reply on the same ordinary card.",
         }),
       ),
       answersMessage: Type.Optional(

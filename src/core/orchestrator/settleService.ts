@@ -194,56 +194,72 @@ export class SettleService {
         if (ready.head !== initialStory.head)
           return `another commit came after the merge card. ${softHoldWords("story", "firstmate")}`;
       }
-      if (actor !== "captain" && !overridePasses(record.delivery, "decisions", at)) {
-        // The first mate's own cards never hold its own merge (INF-242's
-        // question 9): a crewmate's question, a write request or a
-        // validation question still does.
-        const cards = [...this.host.cards.values()].filter((card) =>
-          asksAbout(card, taskId, this.host.tasks),
-        );
-        const decisions = cards.filter((card) => card.actions.length);
-        // Nor does the task's story note: the merge card of work that merges
-        // on its own, held off the stack until this merge has a result
-        // (INF-2533, INF-2744). A wait or gate on the captain reading it waits on the
-        // merge itself, like one on a merge offer (INF-2761).
-        const passed = new Set(
-          cards
-            .filter(
-              (card) =>
-                isStoryNote(card) ||
-                (card.actions.length > 0 &&
-                  (isRoutineMergeCard(card) || card.author === "firstmate")),
-            )
-            .map((card) => card.id),
-        );
-        const gateIsPassed =
-          record.gate?.kind === "captain" && record.gate.ref && passed.has(record.gate.ref);
-        const wait = record.delivery?.captainWait;
-        const waitIsPassed = wait?.cardId && passed.has(wait.cardId);
-        // A report's check-back schedules another look, not a decision.
-        // Keep scheduled continuations and allowance gates as real holds.
-        const reminder =
-          record.gate?.kind === "at-time" &&
-          record.delivery?.checkBack !== undefined &&
-          record.gate.until === record.delivery.checkBack.until;
-        const question = decisions.find((card) => !passed.has(card.id));
-        const heldGate = record.gate && !gateIsPassed && !reminder ? record.gate : undefined;
-        const reason = question
-          ? `the open question "${question.title}" needs an answer`
-          : wait && !waitIsPassed
-            ? `the crewmate is waiting on the captain: ${wait.reason}`
-            : heldGate
-              ? heldGate.kind === "at-time"
-                ? "the task is waiting for its scheduled continuation"
-                : heldGate.kind === "quota-reset"
-                  ? "the task is waiting for your plan's allowance"
-                  : "the task is parked on the captain"
-              : undefined;
-        if (reason) return `${reason}. ${softHoldWords("decisions", "firstmate")}`;
+      if (actor !== "captain") {
+        const decisions = this.decisionsHold(record, taskId, at);
+        if (decisions) return decisions;
       }
       lease.sent();
       return undefined;
     };
+  }
+
+  /**
+   * The decisions hold on a merge the captain did not click: an open
+   * question, write request or validation question about the task, a
+   * recorded wait on the captain, or a gate on the task, unless his words
+   * recorded as an override pass `decisions` at version `at`. Undefined
+   * lets the merge through.
+   */
+  private decisionsHold(
+    record: TaskRecord,
+    taskId: string,
+    at: string | undefined,
+  ): string | undefined {
+    if (overridePasses(record.delivery, "decisions", at)) return undefined;
+    // The first mate's own cards never hold its own merge (INF-242's
+    // question 9): a crewmate's question, a write request or a
+    // validation question still does.
+    const cards = [...this.host.cards.values()].filter((card) =>
+      asksAbout(card, taskId, this.host.tasks),
+    );
+    const decisions = cards.filter((card) => card.actions.length);
+    // Nor does the task's story note: the merge card of work that merges
+    // on its own, held off the stack until this merge has a result
+    // (INF-2533, INF-2744). A wait or gate on the captain reading it waits on the
+    // merge itself, like one on a merge offer (INF-2761).
+    const passed = new Set(
+      cards
+        .filter(
+          (card) =>
+            isStoryNote(card) ||
+            (card.actions.length > 0 && (isRoutineMergeCard(card) || card.author === "firstmate")),
+        )
+        .map((card) => card.id),
+    );
+    const gateIsPassed =
+      record.gate?.kind === "captain" && record.gate.ref && passed.has(record.gate.ref);
+    const wait = record.delivery?.captainWait;
+    const waitIsPassed = wait?.cardId && passed.has(wait.cardId);
+    // A report's check-back schedules another look, not a decision.
+    // Keep scheduled continuations and allowance gates as real holds.
+    const reminder =
+      record.gate?.kind === "at-time" &&
+      record.delivery?.checkBack !== undefined &&
+      record.gate.until === record.delivery.checkBack.until;
+    const question = decisions.find((card) => !passed.has(card.id));
+    const heldGate = record.gate && !gateIsPassed && !reminder ? record.gate : undefined;
+    const reason = question
+      ? `the open question "${question.title}" needs an answer`
+      : wait && !waitIsPassed
+        ? `the crewmate is waiting on the captain: ${wait.reason}`
+        : heldGate
+          ? heldGate.kind === "at-time"
+            ? "the task is waiting for its scheduled continuation"
+            : heldGate.kind === "quota-reset"
+              ? "the task is waiting for your plan's allowance"
+              : "the task is parked on the captain"
+          : undefined;
+    return reason ? `${reason}. ${softHoldWords("decisions", "firstmate")}` : undefined;
   }
 
   /**
@@ -1252,6 +1268,11 @@ export class SettleService {
           )
         : undefined;
       if (!open || !card?.offerId || offer?.headSha !== head) return undefined;
+      // His words approve only what they pass: an open question or a wait
+      // on him still holds the merge unless they pass the decisions too.
+      const decisions = this.decisionsHold(record, taskId, head);
+      if (decisions)
+        return { ok: false, text: `Cannot merge yet: ${decisions}`, stop: "questions" };
       const minted = this.approvals.authorizeMerge(
         taskId,
         {

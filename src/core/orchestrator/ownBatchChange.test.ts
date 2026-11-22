@@ -518,6 +518,51 @@ describe("the merge of a change that joins a batch", () => {
       expect(at.open()).toBeUndefined();
     });
 
+    // Intent: the captain's answer on the review, "Hold it until open questions are
+    // answered or your words cover them": words that pass only asking first leave the
+    // decisions hold standing, as on every other first mate merge.
+    it("holds while a crewmate question is open, unless the words pass the decisions too", async () => {
+      const { at, kept } = await merging();
+      kept.stack.put({
+        id: "card-question",
+        taskId: TASK,
+        author: "crewmate",
+        priority: 1,
+        title: "Which zone reads first?",
+        meta: TASK,
+        body: "<p>Which zone reads first?</p>",
+        actions: [
+          { id: "local", label: "The local zone", default: true },
+          { id: "utc", label: "UTC" },
+        ],
+        status: "ready",
+        createdAt: 1_200,
+      });
+      const held = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(held.ok).toBe(false);
+      expect(held.text).toContain('the open question "Which zone reads first?" needs an answer');
+      expect(held.text).toContain(softHoldWords("decisions", "firstmate"));
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toBeUndefined();
+      expect(kept.cards().map((card) => card.id)).toContain(CARD);
+      expect(at.line()).toEqual([]);
+
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        override: {
+          words: "merge, the zone question can wait",
+          holds: ["asks-first", "decisions"],
+          until: "version",
+          head: HEAD,
+          at: 1_300,
+        },
+      });
+      const outcome = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(outcome.text).toContain("Approved and in line");
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        approvedHead: HEAD,
+      });
+    });
+
     it("approves nothing without the captain's recorded words: the merge is still his click", async () => {
       const { at, kept } = await merging(HEAD, false);
       const outcome = await kept.settle.settleTaskDetailed(TASK, "merge-pr");

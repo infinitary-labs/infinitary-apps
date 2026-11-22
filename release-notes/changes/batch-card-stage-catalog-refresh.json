@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-card-stage-catalog-refresh",
+      "reason": "Regenerates the first-run cards’ bundled stage from the already approved source changes. Adds no behavior beyond those changes."
+    }
+  ]
+}

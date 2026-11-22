@@ -243,12 +243,19 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     );
     expect(h.browsers.takeControl).not.toHaveBeenCalled();
 
-    // The captain's click takes the card's own browser and opens its view.
+    // The captain's click takes the card's own browser and opens its view; the card stays
+    // docked beside the page, which the effect says so the field keeps what waits in it.
     expect(h.supervisor.cardActions.act(card?.id ?? "", "sign-in")).toEqual({
       effect: {
         kind: "open",
         target: "browser",
-        browser: { taskId: h.taskId, session: "run-1", generation: 2, cardId: card?.id },
+        browser: {
+          taskId: h.taskId,
+          session: "run-1",
+          generation: 2,
+          cardId: card?.id,
+          docked: true,
+        },
       },
     });
     expect(h.browsers.takeControl).toHaveBeenCalledWith(h.taskId, {

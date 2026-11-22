@@ -114,6 +114,32 @@ export function settleAnnotation(): boolean {
   return true;
 }
 
+/** Whether the press landing now closed an open note editor (`markPressQueued`). */
+let queuedByPress = false;
+
+/**
+ * The press that closes an open note editor only queues its note (INF-3786): a card button it
+ * lands on asks this and sends nothing, so the note waits in the field with the rest.
+ */
+export function pressQueuedNote(): boolean {
+  return queuedByPress;
+}
+
+/** A press outside the open editor just settled it; it holds until that press's click has run. */
+export function markPressQueued(): void {
+  queuedByPress = true;
+  const release = () => {
+    document.removeEventListener("pointerup", release, true);
+    document.removeEventListener("pointercancel", release, true);
+    // The press's click runs right after its pointerup, before this.
+    setTimeout(() => {
+      queuedByPress = false;
+    }, 0);
+  };
+  document.addEventListener("pointerup", release, true);
+  document.addEventListener("pointercancel", release, true);
+}
+
 /** Escape consumes only this card's Annotate offer or empty pick, without discarding a comment. */
 export function dismissEmptyAnnotation(cardId: string | undefined): boolean {
   const { annotationPick: pick, annotationOffer: offer, pointAtCard } = useShellStore.getState();

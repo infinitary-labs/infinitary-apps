@@ -1,6 +1,6 @@
 import { cardAnswerLines, replyWithSettings } from "@shared/cardAnswerLines";
 import { cardPictureFiles } from "@shared/cardPictures";
-import { cardAnswersSchema, cardMessageText } from "@shared/cards";
+import { cardAnswersSchema, cardMessageText, choiceCarriedRecordSchema } from "@shared/cards";
 import { type ContributionRoute, contributesUpstream } from "@shared/contributions";
 import { softHoldWords } from "@shared/holds";
 import { deliveryForRecord, opensPullRequest, ownsBatches, type RepoView } from "@shared/repos";
@@ -19,6 +19,7 @@ import { resultSchemaRefusal } from "../tasks/taskResult";
 import type { TaskService } from "../tasks/taskService";
 import { branchNameRefusal } from "../workspace/taskBranches";
 import { keptRefFor } from "../workspace/workspaceService";
+import { carriedLines } from "./captainWakes";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import {
@@ -476,6 +477,18 @@ export function sourceFacts(
     : undefined;
   const latest = submitted?.success ? submitted.data : resolution?.answers;
   const answers = latest ? cardAnswerLines(latest) : undefined;
+  // What the captain's field sent with the closing choice (`choice-attachments.md`):
+  // its notes and files as words here, its pictures among the brief's own.
+  const closing = card
+    ? options.cardStore
+        .observations(card.id)
+        .filter((event) => event.kind === "action" && event.actor === "captain")
+        .at(-1)
+    : undefined;
+  const carriedRecord = choiceCarriedRecordSchema.safeParse(
+    (closing?.payload as { carried?: unknown } | undefined)?.carried,
+  );
+  const carried = carriedRecord.success ? carriedLines(carriedRecord.data) : [];
   const result = options.tasks.latestResult(basis.id);
   const rawBody = offer?.body ?? card?.body;
   const cardBody = rawBody ? cardPictureFiles(rawBody, options.paths.crewmatesDir) : undefined;
@@ -497,6 +510,7 @@ export function sourceFacts(
     ...(thread.length > 0 ? { thread } : {}),
     ...(choice ? { choice } : {}),
     ...(answers ? { answers } : {}),
+    ...(carried.length > 0 ? { carried } : {}),
   };
 }
 

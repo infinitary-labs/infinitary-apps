@@ -307,6 +307,54 @@
       <string>· über %1$ld Aufgaben</string>
     </dict>
   </dict>
+  <key>cardCarriedNotes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Notiz</string>
+      <key>other</key>
+      <string>%1$ld Notizen</string>
+    </dict>
+  </dict>
+  <key>cardCarriedPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Bild</string>
+      <key>other</key>
+      <string>%1$ld Bilder</string>
+    </dict>
+  </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ wird mit deiner Wahl gesendet</string>
+      <key>other</key>
+      <string>%2$@ werden mit deiner Wahl gesendet</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -449,6 +497,22 @@
       <string>%1$ld Notiz senden</string>
       <key>other</key>
       <string>%1$ld Notizen senden</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Bild: %2$@</string>
+      <key>other</key>
+      <string>Bilder: %2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

@@ -82,6 +82,7 @@ import {
   cardPushFor,
   legacyCardSnapshot,
   lookFor,
+  pastCardFor,
   THREAD_CHANNELS,
   threadLinesFor,
 } from "./cardCompatibility";
@@ -1236,13 +1237,14 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           actor,
           client.role === "view" ? viewerOf(client) : undefined,
         );
-        const value = lookFor(
+        const looked = lookFor(
           channel,
           channel.startsWith("inf:cards")
             ? withoutUnreadActions(answered, client.actionReads)
             : answered,
           client.unreadLook,
         );
+        const value = pastCardFor(channel, looked, client.changes);
         reply({
           ok: true,
           value:

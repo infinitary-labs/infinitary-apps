@@ -7,6 +7,7 @@ import type {
   CardMessage,
   CardPressInput,
   CardSubmission,
+  TurnImage,
 } from "@shared/cards";
 import {
   anythingElseOf,
@@ -20,6 +21,7 @@ import {
   TURN_IMAGES_MAX,
   withAnythingElse,
 } from "@shared/cards";
+import { homeTakesChoiceAttachments } from "@shared/choiceCarried";
 import {
   type ComposerNotice,
   composeTurnText,
@@ -178,7 +180,77 @@ export function leaveCard(
     : window.infinitary.cards.minimize(cardId, true);
 }
 
+/** What waits in a card's field besides its words: its queued notes, pasted files and pictures. */
+type FieldHeld = { notes: CardNote[]; pastes: PastedText[]; images: ImageAttachment[] };
+
 export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
+  /**
+   * Whether this window's home takes a press that carries the field (`choice-attachments.md`):
+   * an older home reads the value strictly and refuses it, so against one nothing but the
+   * words goes and the rest stays in the field, as before. Only a view asks.
+   */
+  const homeCarries = async (): Promise<boolean> => {
+    if (!isView(get().thisMac)) return true;
+    try {
+      return homeTakesChoiceAttachments(true, (await window.infinitary.app.healthcheck()).changes);
+    } catch {
+      return false;
+    }
+  };
+  const heldIn = (cardId: string): FieldHeld | undefined => {
+    const s = get();
+    const held = {
+      notes: s.replyNotes[cardId] ?? [],
+      pastes: s.replyPastes[cardId] ?? [],
+      images: s.replyImages[cardId] ?? [],
+    };
+    return held.notes.length + held.pastes.length + held.images.length > 0 ? held : undefined;
+  };
+  /**
+   * Whether what waits can go with a press now (`choice-attachments.md`): a file still
+   * being read, or pictures past a message's, keep it and the press, and the field says why.
+   */
+  const heldCanGo = (cardId: string, held: FieldHeld): boolean => {
+    const notice = isPreparing(cardId)
+      ? ("files-preparing" as const)
+      : markedPictureCount(cardId, held.notes) + held.images.length > TURN_IMAGES_MAX
+        ? ("pictures-max" as const)
+        : undefined;
+    if (notice) set((s) => ({ replyNotices: { ...s.replyNotices, [cardId]: notice } }));
+    return notice === undefined;
+  };
+  /** The field empties as the press goes, and gets back exactly what it held on a refusal. */
+  const takeHeld = (cardId: string) =>
+    set((s) => ({
+      replyNotes: withoutKey(s.replyNotes, cardId),
+      replyPastes: withoutKey(s.replyPastes, cardId),
+      replyImages: withoutKey(s.replyImages, cardId),
+      replyNotices: withoutKey(s.replyNotices, cardId),
+    }));
+  const restoreHeld = (cardId: string, held: FieldHeld) =>
+    set((s) => ({
+      replyNotes: { ...s.replyNotes, [cardId]: held.notes },
+      replyPastes: { ...s.replyPastes, [cardId]: held.pastes },
+      replyImages: { ...s.replyImages, [cardId]: held.images },
+    }));
+  /** The value's part beside the answers: marked pictures drawn now, before the queue clears. */
+  const carriedOf = async (marked: Promise<TurnImage[]>, held: FieldHeld) => {
+    const drawn = await marked;
+    const images = [
+      ...held.images.map((image) => ({
+        mimeType: image.mimeType,
+        data: image.data,
+        ...(image.name ? { name: image.name } : {}),
+      })),
+      ...drawn,
+    ];
+    const files = held.pastes.map(({ text, name }) => ({ text, ...(name ? { name } : {}) }));
+    return {
+      ...(held.notes.length ? { notes: held.notes } : {}),
+      ...(files.length ? { files } : {}),
+      ...(images.length ? { images } : {}),
+    };
+  };
   /**
    * Keep on an ask card: reads its masked fields now and sends them with the
    * button's one-time pass. Infinitary withdraws the card once everything is
@@ -286,12 +358,22 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         await bringSecrets(cardId, actionId);
         return;
       }
+      // A footer press carries what waits in the card's field (`choice-attachments.md`). A
+      // request's open-browser click that docks the card answers nothing, so what it took comes
+      // back below; one whose browser is gone answers the card, and it goes with that answer.
+      let held = source === "chrome" && collect ? heldIn(cardId) : undefined;
+      if (held && !heldCanGo(cardId, held)) return;
       const request = { actionId };
       const submission = submissionFor(mounted, input);
       set((s) => ({
         pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
+      // The guard is up before the home is asked, so a second click waits.
+      if (held && !(await homeCarries())) held = undefined;
+      const marked = held ? markedPictures(cardId, held.notes) : undefined;
+      if (held) takeHeld(cardId);
+      let sentHeld = false;
       try {
         // A Choose folder button (docs/fleet.md, "A folder that is not
         // there"): on the first mate's own computer the pick is added before
@@ -332,17 +414,22 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
           // The words in the card's one field ride whichever button this is,
           // never holding one up (INF-680, INF-924).
           const answers = withAnythingElse(asked?.answers ?? [], get().replyDrafts[cardId] ?? "");
-          if (asked || answers.length > 0) {
+          // Its notes, files and pictures go in the same request.
+          const carried = held && marked ? await carriedOf(marked, held) : undefined;
+          if (asked || answers.length > 0 || carried) {
             if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
               throw new Error(CARD_ANSWERS_TOO_LONG);
             }
             sentAnswers = answers;
-            sent = { answers: sentAnswers };
+            sent = { answers: sentAnswers, ...carried };
           }
         }
         if (folderButton) {
           const pick = await pickProjectFolder();
-          if (pick.kind === "cancelled") return;
+          if (pick.kind === "cancelled") {
+            if (held) restoreHeld(cardId, held);
+            return;
+          }
           if (pick.kind === "refused") throw new Error(pick.text);
         }
         const { effect, refusal } = await window.infinitary.cards.act(
@@ -353,6 +440,13 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
           submission,
         );
         if (refusal) throw new Error(refusal);
+        if (held) {
+          sentHeld = true;
+          // A docked request answered nothing: the field keeps what it held for Return
+          // control's reply. Otherwise the press left with its marked pictures.
+          if (effect?.kind === "open" && effect.browser?.docked) restoreHeld(cardId, held);
+          else forgetMarked(cardId, []);
+        }
         // A request's open-browser click answers nothing: the card stays,
         // docked beside the page, and the core's own list takes it down if it
         // was answered after all (docs/task-browser.md, "The request beside
@@ -433,6 +527,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
           });
         }
       } catch (caught) {
+        if (held && !sentHeld) restoreHeld(cardId, held);
         if (source === "frame") throw caught;
         if (get().pendingCardActions[cardId] === request) {
           const message = caught instanceof Error ? caught.message : String(caught);
@@ -459,8 +554,13 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       const card = get().cards.find((entry) => entry.id === cardId);
       // An ended card's minus is Close, like its button: words in the field go
       // with it, through the same press, rather than be lost.
-      if (card?.ended && withAnythingElse([], get().replyDrafts[cardId] ?? "").length > 0) {
-        void get().pressNote(cardId, mounted);
+      const words = withAnythingElse([], get().replyDrafts[cardId] ?? "").length > 0;
+      if (card?.ended && (words || heldIn(cardId))) {
+        // Only a home that takes the field's notes, files and pictures gets them as a press.
+        void (async () =>
+          words || (await homeCarries())
+            ? get().pressNote(cardId, mounted)
+            : leaveCard(card, cardId, mounted))().catch(() => {});
         return;
       }
       void leaveCard(card, cardId, mounted).catch(() => {});
@@ -473,11 +573,17 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         }));
         return;
       }
+      // What else waits in the field goes too, as the reply under the note, to a home that takes it.
+      let held = heldIn(cardId);
+      if (held && !heldCanGo(cardId, held)) return;
       const request = { actionId: NOTE_DONE_ACTION_ID };
       set((s) => ({
         pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
+      if (held && !(await homeCarries())) held = undefined;
+      const marked = held ? markedPictures(cardId, held.notes) : undefined;
+      if (held) takeHeld(cardId);
       try {
         // The words in the card's one field ride the note's own button as they
         // ride any choice (INF-924), and leave the field once the press went.
@@ -485,10 +591,13 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
           throw new Error(CARD_ANSWERS_TOO_LONG);
         }
-        const words = answers.length > 0 ? { answers } : undefined;
+        const carried = held && marked ? await carriedOf(marked, held) : undefined;
+        const words = answers.length > 0 || carried ? { answers, ...carried } : undefined;
         await window.infinitary.cards.noteDone(cardId, submissionFor(mounted, input), words);
-        if (words) set((s) => ({ replyDrafts: withoutKey(s.replyDrafts, cardId) }));
+        if (held) forgetMarked(cardId, []);
+        if (answers.length > 0) set((s) => ({ replyDrafts: withoutKey(s.replyDrafts, cardId) }));
       } catch (caught) {
+        if (held) restoreHeld(cardId, held);
         const message = caught instanceof Error ? caught.message : String(caught);
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: message } }));
       } finally {

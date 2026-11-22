@@ -16,6 +16,7 @@ import {
   queuedNotesWords,
   sendNotesLabel,
 } from "../../src/shared/cardNotes";
+import { carriedWithChoiceWords } from "../../src/shared/choiceCarried";
 import {
   ANNOTATION_COMMENT,
   ANNOTATION_RANGE,
@@ -29,7 +30,7 @@ import { type Rect, within } from "./layout";
 import { readInMain } from "./mainProcess";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { encodeInBrowser, WIDE_PICTURE, WORKING_COPY_PICTURES } from "./pictureFixtures";
-import { promptInput } from "./prompt";
+import { pastePictures, promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import { readSavedData } from "./savedData";
 import {
@@ -522,6 +523,104 @@ test("the crewmate receives marks made by pointer and by keys, one marked pictur
       .click();
     await expect(viewer.locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
     await expect(marks).toHaveAttribute("data-picture-marks", "3");
+  } finally {
+    await a.close();
+  }
+});
+
+/**
+ * Intent: INF-5608's approved plan, piece 1, from the captain's "attachments and queued
+ * annotations cannot be sent along with an action button click ... can we allow sending these
+ * queued stuff along with an action button click?". A queued text note, a marked picture and a
+ * pasted picture wait in the card's field, the button stays lit, and one press by key sends them
+ * all: the crewmate reads every note's place and gets both pictures in the same turn.
+ */
+test("a button pressed by key carries the queued notes, the marked picture and a pasted one", async () => {
+  const a = await launchApp({ withMockProvider: true, scenarios: [cardPictures] });
+  try {
+    const { page, app } = a;
+    await encodeInBrowser(page, WORKING_COPY_PICTURES);
+    const prompt = promptInput(page);
+    await prompt.fill(`${SPAWN_PROMPT_MARKER} ${CARD_PICTURES_PROMPT_MARKER}`);
+    await pressKey(prompt, "Enter");
+    await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
+    const title = PICTURE_CARD_TITLES.mixed;
+    await showCard(page, title);
+    const frame = cardBody(page, title);
+    const body = frame.locator("body");
+    const viewer = page.locator("[data-picture-viewer]");
+    const shown = viewer.locator("[data-picture-image]");
+    const pointAt = viewer.locator("[data-viewer-point-at]");
+    const pop = page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
+    const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+    const reads = () =>
+      (a.mockProvider?.requestBodies() ?? []).filter((request) =>
+        providerMessages(request)
+          .findLast((message) => message.role === "user")
+          ?.text.includes(`${POINTED_AT}:`),
+      );
+
+    // A box marked on the wide picture.
+    await clickInBody(frame.getByRole("img", { name: WIDE_PICTURE.alt }));
+    await expect(viewer).toBeVisible();
+    await expect.poll(() => shown.evaluate((image: HTMLImageElement) => image.complete)).toBe(true);
+    await pointAt.click();
+    const drawn = await drawnAt(shown);
+    await page.mouse.move(drawn.x + drawn.width * 0.2, drawn.y + drawn.height * 0.25);
+    await page.mouse.down();
+    await page.mouse.move(drawn.x + drawn.width * 0.4, drawn.y + drawn.height * 0.75, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await expect(pop).toBeVisible();
+    await typeInto(comment, BOX_COMMENT);
+    await pressKey(comment, "Enter");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toHaveCount(0);
+
+    // A note on the card's first words, by keys.
+    await runFromSearch(app, page, "cards.point-at");
+    await pressKey(body, "ArrowDown");
+    await pressKey(body, "Enter");
+    await expect(pop).toBeVisible();
+    await typeInto(comment, KEYS_COMMENT);
+    await pressKey(comment, "Enter");
+    await expect(page.getByText(queuedNotesWords(2), { exact: true })).toBeVisible();
+
+    // A pasted picture joins them; Got it stays lit, and the line names all three.
+    const { field } = cardReply(page);
+    await pastePictures(field, [{ name: "settings-now.png" }]);
+    await expect(page.locator("[data-card-carried]")).toHaveText(
+      carriedWithChoiceWords({ pictures: 1, files: 0, notes: 2 }) ?? "",
+    );
+    const gotIt = page.getByRole("button", { name: new RegExp(`^${NOTE_GOT_IT_LABEL}`) });
+    await expect(gotIt).not.toHaveAttribute("aria-disabled", "true");
+    expect(reads()).toHaveLength(0);
+
+    // One press by key sends them, and the field empties.
+    await focusOn(field);
+    await pressWindowKey(app, "1", ["meta"]);
+    await expect(shownCard(page, title)).toHaveCount(0);
+    await expect.poll(() => reads().length).toBeGreaterThan(0);
+    const request = reads()[0] ?? "";
+    const served =
+      providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+    const sent = readSavedData(
+      a.userDataDir,
+      (db) =>
+        db
+          .prepare(
+            "SELECT m.notes_json, m.text FROM card_messages m JOIN cards c ON c.id=m.card_id WHERE c.title=? AND m.who='captain' ORDER BY m.id",
+          )
+          .all(title) as { notes_json: string; text: string }[],
+    );
+    expect(sent).toHaveLength(1);
+    const notes = JSON.parse(sent[0]?.notes_json ?? "[]") as CardNote[];
+    expect(notes.map((note) => note.comment)).toEqual([BOX_COMMENT, KEYS_COMMENT]);
+    for (const line of pointedAtLines(notes)) expect(served).toContain(line);
+    expect(sent[0]?.text).toContain("settings-now.png");
+    // The marked copy of the wide picture and the pasted picture, in the same turn.
+    expect(newestPictures(request)).toHaveLength(2);
   } finally {
     await a.close();
   }

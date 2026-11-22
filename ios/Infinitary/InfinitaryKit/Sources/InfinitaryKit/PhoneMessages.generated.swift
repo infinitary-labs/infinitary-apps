@@ -346,6 +346,9 @@ public enum PhoneMessages {
     public static func `cardBrowserUnansweredStarting`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredStarting", [`site`]) }
     public static func `cardBrowserUnansweredWorking`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredWorking", [`site`]) }
     public static func `cardBrowserWord`() -> String { PhoneWords.format("cardBrowserWord", []) }
+    public static func `cardCarriedNotes`(`count`: Int) -> String { PhoneWords.format("cardCarriedNotes", [`count`]) }
+    public static func `cardCarriedPictures`(`count`: Int) -> String { PhoneWords.format("cardCarriedPictures", [`count`]) }
+    public static func `cardCarriedWithChoice`(`count`: Int, `items`: String) -> String { PhoneWords.format("cardCarriedWithChoice", [`count`, `items`]) }
     public static func `cardConsentFrom`() -> String { PhoneWords.format("cardConsentFrom", []) }
     public static func `cardConsentFullDetails`() -> String { PhoneWords.format("cardConsentFullDetails", []) }
     public static func `cardConsentGuidanceOnly`() -> String { PhoneWords.format("cardConsentGuidanceOnly", []) }
@@ -439,6 +442,7 @@ public enum PhoneMessages {
     public static func `cardNoteUnavailable`() -> String { PhoneWords.format("cardNoteUnavailable", []) }
     public static func `cardPastMark`() -> String { PhoneWords.format("cardPastMark", []) }
     public static func `cardPastMeta`() -> String { PhoneWords.format("cardPastMeta", []) }
+    public static func `cardPastPictures`(`count`: Int, `names`: String) -> String { PhoneWords.format("cardPastPictures", [`count`, `names`]) }
     public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
     public static func `cardPastUnreadable`() -> String { PhoneWords.format("cardPastUnreadable", []) }
     public static func `cardQuickAnswer`() -> String { PhoneWords.format("cardQuickAnswer", []) }
@@ -4321,6 +4325,9 @@ extension PhoneWords {
         "cardBrowserUnansweredStarting": ["site"],
         "cardBrowserUnansweredWorking": ["site"],
         "cardBrowserWord": [],
+        "cardCarriedNotes": ["count"],
+        "cardCarriedPictures": ["count"],
+        "cardCarriedWithChoice": ["count", "items"],
         "cardConsentFrom": [],
         "cardConsentFullDetails": [],
         "cardConsentGuidanceOnly": [],
@@ -4414,6 +4421,7 @@ extension PhoneWords {
         "cardNoteUnavailable": [],
         "cardPastMark": [],
         "cardPastMeta": [],
+        "cardPastPictures": ["count", "names"],
         "cardPastSentLead": [],
         "cardPastUnreadable": [],
         "cardQuickAnswer": [],
@@ -7972,6 +7980,9 @@ extension PhoneWords {
         "cardAnswersDefaults": "count",
         "cardAnswersToAnswer": "count",
         "cardAskedThrough": "count",
+        "cardCarriedNotes": "count",
+        "cardCarriedPictures": "count",
+        "cardCarriedWithChoice": "count",
         "cardConsentRunbookPanels": "count",
         "cardConsentRunbookPanelsThrough": "count",
         "cardConsentShowsPanels": "count",
@@ -7981,6 +7992,7 @@ extension PhoneWords {
         "cardFilesMore": "count",
         "cardNoteQueued": "count",
         "cardNoteSend": "count",
+        "cardPastPictures": "count",
         "cardRecordFoldMessages": "count",
         "cardRevisedPartsNew": "count",
         "cardRevisedPartsRemoved": "count",

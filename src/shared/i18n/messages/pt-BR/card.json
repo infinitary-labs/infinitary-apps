@@ -72,6 +72,24 @@
   "cardBrowserUnansweredStarting": "Nada responde em {site}, então o Infinitary está iniciando-o de novo. A página aparece aqui assim que responder.",
   "cardBrowserUnansweredWorking": "Nada responde em {site}, e o tripulante está trabalhando agora. A página aparece aqui assim que responder.",
   "cardBrowserWord": "Navegador",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} nota",
+    "many": "{count} notas",
+    "other": "{count} notas"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} imagem",
+    "many": "{count} imagens",
+    "other": "{count} imagens"
+  },
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "one": "{items} vai com sua escolha",
+    "many": "{items} vão com sua escolha",
+    "other": "{items} vão com sua escolha"
+  },
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Todos os detalhes",
   "cardConsentGuidanceOnly": "Fornece orientações, partes HTML e imagens, e não executa nada.",
@@ -210,6 +228,12 @@
   "cardNoteUnavailable": "Esta parte não pode ser mostrada nesta visualização",
   "cardPastMark": "Anterior",
   "cardPastMeta": "cartão anterior",
+  "cardPastPictures": {
+    "plural": "count",
+    "one": "Imagem: {names}",
+    "many": "Imagens: {names}",
+    "other": "Imagens: {names}"
+  },
   "cardPastSentLead": "Enviado com a sua escolha:",
   "cardPastUnreadable": "Não foi possível ler este cartão",
   "cardQuickAnswer": "Resposta rápida",

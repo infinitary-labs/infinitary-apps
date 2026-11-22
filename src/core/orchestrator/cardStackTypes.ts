@@ -1,4 +1,10 @@
-import type { Card, CardMessage, CardThread, TaskFactsPart } from "@shared/cards";
+import type {
+  Card,
+  CardMessage,
+  CardThread,
+  ChoiceCarriedRecord,
+  TaskFactsPart,
+} from "@shared/cards";
 import type { CrewResponse } from "@shared/crewResponses";
 import type { FmEvent } from "@shared/events";
 import type { CardStore } from "../storage/cardStore";
@@ -34,7 +40,13 @@ export type CardServiceHost = {
   /** A card placed, revised or gone on a task: the ladder's captain gate follows. */
   syncCaptainGate(taskId: string, now: number): void;
   /** An answer task closes on its card's resolution (Task B); whether it did. */
-  closeAnsweredTask(card: Card, action: string, by: CardActor): boolean;
+  closeAnsweredTask(
+    card: Card,
+    action: string,
+    by: CardActor,
+    /** What else the captain's choice carried, for the first mate's closing notice. */
+    carried?: ChoiceCarriedRecord,
+  ): boolean;
   /** The fact strip a settle card carries (an HTML fragment), as much of it as the card takes. */
   settleFacts(taskId: string, part: TaskFactsPart): string | undefined;
   /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */

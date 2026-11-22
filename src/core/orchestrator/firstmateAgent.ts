@@ -1530,7 +1530,8 @@ export class FirstmateAgent {
     const retry = choice ? undefined : pending.find((row) => row.facts?.kind === "answer-missing");
     const batch = choice ? [choice] : retry ? [retry] : pending;
     if (batch.length === 0) return;
-    const batchImages = choice ? undefined : served.images;
+    // A choice's turn carries only that choice's own pictures (`choice-attachments.md`).
+    const batchImages = choice ? this.withPictures([choice]).images : served.images;
     const classified = classifyInboxBatch(batch);
     this.beginOriginTurn(classified.origin, classified.canCreate);
     this.turn.appWake =

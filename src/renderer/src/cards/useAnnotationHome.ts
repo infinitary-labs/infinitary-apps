@@ -1,3 +1,4 @@
+import { homeTakesChoiceAttachments } from "@shared/choiceCarried";
 import { hasSince16 } from "@shared/contractFeatures";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
@@ -44,4 +45,27 @@ export function usePlacesHome(): boolean {
     };
   }, [view]);
   return !view || available;
+}
+
+/**
+ * A button's press carries the field's pictures, files and notes only to a home that reads them
+ * (`choice-attachments.md`); against an older home the buttons wait until they went as a reply.
+ */
+export function useChoiceAttachmentsHome(): boolean {
+  const view = useShellStore((s) => s.thisMac?.role === "view");
+  const [changes, setChanges] = useState<readonly string[] | null>(null);
+  useEffect(() => {
+    if (!view) return;
+    let live = true;
+    void window.infinitary.app
+      .healthcheck()
+      .then((home) => {
+        if (live) setChanges(home.changes ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [view]);
+  return homeTakesChoiceAttachments(view, changes);
 }

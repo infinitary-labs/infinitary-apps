@@ -84,6 +84,33 @@
   "cardBrowserUnansweredStarting": "لا شيء يستجيب على {site}، لذا يعيد Infinitary تشغيله الآن. ستظهر الصفحة هنا حين يستجيب.",
   "cardBrowserUnansweredWorking": "لا شيء يستجيب على {site}، وفرد الطاقم يعمل الآن. ستظهر الصفحة هنا حين يستجيب.",
   "cardBrowserWord": "المتصفح",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "zero": "{count} ملاحظة",
+    "one": "ملاحظة واحدة",
+    "two": "ملاحظتان",
+    "few": "{count} ملاحظات",
+    "many": "{count} ملاحظةً",
+    "other": "{count} ملاحظة"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "zero": "{count} صورة",
+    "one": "صورة واحدة",
+    "two": "صورتان",
+    "few": "{count} صور",
+    "many": "{count} صورةً",
+    "other": "{count} صورة"
+  },
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "zero": "{items} تُرسل مع اختيارك",
+    "one": "{items} تُرسل مع اختيارك",
+    "two": "{items} تُرسلان مع اختيارك",
+    "few": "{items} تُرسل مع اختيارك",
+    "many": "{items} تُرسل مع اختيارك",
+    "other": "{items} تُرسل مع اختيارك"
+  },
   "cardConsentFrom": "من",
   "cardConsentFullDetails": "كل التفاصيل",
   "cardConsentGuidanceOnly": "يقدّم إرشادات وأجزاء HTML وصورًا، ولا يشغّل شيئًا.",
@@ -249,6 +276,15 @@
   "cardNoteUnavailable": "لا يمكن عرض هذا الجزء في هذه الواجهة",
   "cardPastMark": "سابقة",
   "cardPastMeta": "بطاقة سابقة",
+  "cardPastPictures": {
+    "plural": "count",
+    "zero": "الصور: {names}",
+    "one": "الصورة: {names}",
+    "two": "الصورتان: {names}",
+    "few": "الصور: {names}",
+    "many": "الصور: {names}",
+    "other": "الصور: {names}"
+  },
   "cardPastSentLead": "أُرسل مع اختيارك:",
   "cardPastUnreadable": "تعذّرت قراءة هذه البطاقة",
   "cardQuickAnswer": "إجابة سريعة",

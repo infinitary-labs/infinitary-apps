@@ -1,5 +1,10 @@
 import type { AttachmentRef } from "@shared/attachments";
-import type { CardAnswer, CardDecisionContext } from "@shared/cards";
+import {
+  type CardAnswer,
+  type CardDecisionContext,
+  type ChoiceCarriedRecord,
+  choiceCarriedRecordSchema,
+} from "@shared/cards";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
 import { savedTaskTitle } from "@shared/taskTitle";
@@ -424,13 +429,23 @@ export class TaskCapture {
       .flatMap((event) => this.writer.asks.get(event.ref as string)?.messageFiles ?? []);
   }
 
-  /** The captain's pictures, in message order, each copy once. */
+  /**
+   * The captain's pictures, in message order, each copy once: each message's,
+   * and those a choice on the task's card carried (`choice-attachments.md`).
+   */
   pictures(id: string): AttachmentRef[] {
     const seen = new Set<string>();
     return this.writer.events
       .listFor(id)
-      .filter((event) => event.kind === "ask" && event.ref)
-      .flatMap((event) => this.writer.asks.get(event.ref as string)?.attachments ?? [])
+      .flatMap((event) => {
+        if (event.kind === "card_resolved") {
+          const carried = choiceCarriedRecordSchema.safeParse(event.data?.carried);
+          return carried.success ? (carried.data.pictures ?? []) : [];
+        }
+        return event.kind === "ask" && event.ref
+          ? (this.writer.asks.get(event.ref)?.attachments ?? [])
+          : [];
+      })
       .filter((ref) => {
         if (seen.has(ref.id)) return false;
         seen.add(ref.id);
@@ -1037,6 +1052,8 @@ export class TaskCapture {
        * explicit alias the unified timeline folds this event into.
        */
       observation?: string;
+      /** What else the card's field sent with the choice (`choice-attachments.md`). */
+      carried?: ChoiceCarriedRecord;
     },
   ): void {
     const at = this.writer.now();
@@ -1054,6 +1071,7 @@ export class TaskCapture {
           action: input.action,
           ...(input.answers ? { answers: input.answers } : {}),
           ...(input.observation ? { observation: input.observation } : {}),
+          ...(input.carried ? { carried: input.carried } : {}),
         },
         ref: input.cardId,
         feed: false,

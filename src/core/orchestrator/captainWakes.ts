@@ -10,9 +10,10 @@ import { type CardNote, pointedAtLines } from "@shared/cardNotes";
  * kind's words, are in `wakes.ts`.
  */
 
+import { attachmentWords } from "@shared/attachments";
 import { cardAnswerLines, REPLY_SETTINGS_HEAD } from "@shared/cardAnswerLines";
 import { DECLINE_ACTION_ID, NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
-import type { CardAnswer, CardEffect } from "@shared/cards";
+import type { CardAnswer, CardEffect, ChoiceCarriedRecord } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import type { ProjectSetupOutcome } from "@shared/projectSetup";
 import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
@@ -26,6 +27,7 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
+import { CARRIED_OUT_WORDS, CARRIED_WITH_CHOICE_LEAD } from "../prompts/choiceCarried";
 import { pageUnansweredWords } from "../prompts/pageUnanswered";
 import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 
@@ -50,6 +52,11 @@ export type CaptainFacts =
       /** The captain's choice closed an answer task; the payload is the wake. */
       kind: "answer-closed";
       handoff: AnswerTaskClosedPayload;
+      /**
+       * What else the captain's closing choice carried (`choice-attachments.md`):
+       * its notes and files in words, and its pictures, which ride the turn.
+       */
+      carried?: ChoiceCarriedRecord;
     }
   | {
       /** The captain chose on a card with no effect: the choice returns to its author. */
@@ -72,6 +79,13 @@ export type CaptainFacts =
       browserGone?: "stopped" | "quit";
       /** The choice came from the captain's own command, `infinitary-axi` (INF-3898 piece 2). */
       through?: Through;
+      /**
+       * The app already carried out the choice - a merge, a discard, an app
+       * card's own button - and its author hears nothing of what the card's
+       * field sent with it, so the first mate is told once, with it
+       * (`choice-attachments.md`).
+       */
+      carriedOut?: true;
     }
   | {
       /**
@@ -277,7 +291,38 @@ export type AnswerTaskClosedPayload = {
  * as JSON, and the answers to the body's own questions a footer click
  * carried (inline decisions, contract 4.22).
  */
-export type WakeChoice = { id: string; label: string; value?: string; answers?: CardAnswer[] };
+export type WakeChoice = {
+  id: string;
+  label: string;
+  value?: string;
+  answers?: CardAnswer[];
+  /**
+   * What else the card's field sent with the choice (`choice-attachments.md`):
+   * its notes and files, and on a first mate's choice its pictures, which ride
+   * the turn. A crewmate's pictures ride its steer instead.
+   */
+  carried?: ChoiceCarriedRecord;
+};
+
+/**
+ * What the card's field sent with a choice besides its words, as its reader
+ * reads it: the files as a reply carries them, each note with where it
+ * points, and the pictures by name. Served to a model, so English.
+ */
+export function carriedText(carried: ChoiceCarriedRecord | undefined): string {
+  const lines = carriedLines(carried);
+  return lines.length ? `\n${CARRIED_WITH_CHOICE_LEAD}\n${lines.join("\n")}` : "";
+}
+
+/** `carriedText`'s lines without their lead, as a builder's brief lists them. */
+export function carriedLines(carried: ChoiceCarriedRecord | undefined): string[] {
+  if (!carried) return [];
+  return [
+    ...(carried.files ? [carried.files] : []),
+    ...pointedAtLines(carried.notes ?? []),
+    ...(carried.pictures?.length ? [`[attached: ${attachmentWords(carried.pictures)}]`] : []),
+  ];
+}
 
 /** How the wake for a browser the captain returned opens; a scripted stand-in recognizes it by it. */
 export const BROWSER_RETURNED_OPENING = "The captain returned control of this task's browser";
@@ -470,7 +515,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
         arguments: { key: facts.handoff.task.key || facts.handoff.task.id },
       },
       next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
-    })}`,
+    })}${carriedText(facts.carried)}`,
   "card-choice": (facts) => {
     // The app's Decline (INF-3108) is the captain's no to every choice.
     const declined = facts.choice.id === DECLINE_ACTION_ID ? ` ${DECLINE_WORDS}` : "";
@@ -478,10 +523,10 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
       const about = `card "${facts.card.title}"${facts.card.id ? ` (${facts.card.id})` : ""}${facts.card.taskId ? ` on task ${facts.card.taskId}` : ""}`;
       return facts.source === "frame"
         ? `[fm-op] a script chose "${facts.choice.label}" (${facts.choice.id}) on ${about}.${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`
-        : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${valueText(facts.choice)}${answersText(facts.choice)}`;
+        : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${facts.carriedOut ? ` ${CARRIED_OUT_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice)}${carriedText(facts.choice.carried)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
-    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
+    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}${carriedText(facts.choice.carried)}`;
   },
   "card-closed": (facts) =>
     facts.duplicateOf

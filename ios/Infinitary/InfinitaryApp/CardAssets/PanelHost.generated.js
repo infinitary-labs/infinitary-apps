@@ -13319,6 +13319,289 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Browser`;
   }
+  function cardCarriedNotes(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} ملاحظة`;
+          case "one":
+            return `ملاحظة واحدة`;
+          case "two":
+            return `ملاحظتان`;
+          case "few":
+            return `${count} ملاحظات`;
+          case "many":
+            return `${count} ملاحظةً`;
+          default:
+            return `${count} ملاحظة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Notiz`;
+          default:
+            return `${count} Notizen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} nota`;
+          case "many":
+            return `${count} de notas`;
+          default:
+            return `${count} notas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} note`;
+          case "many":
+            return `${count} notes`;
+          default:
+            return `${count} notes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `メモ${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `메모 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} nota`;
+          case "many":
+            return `${count} notas`;
+          default:
+            return `${count} notas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 条批注`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 則筆記`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ñöţé ~~]`;
+          default:
+            return `[${count} ñöţéš ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ note‬`;
+          default:
+            return `${count}‮ notes‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} note`;
+      default:
+        return `${count} notes`;
+    }
+  }
+  function cardCarriedPictures(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} صورة`;
+          case "one":
+            return `صورة واحدة`;
+          case "two":
+            return `صورتان`;
+          case "few":
+            return `${count} صور`;
+          case "many":
+            return `${count} صورةً`;
+          default:
+            return `${count} صورة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Bild`;
+          default:
+            return `${count} Bilder`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} imagen`;
+          case "many":
+            return `${count} de imágenes`;
+          default:
+            return `${count} imágenes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} image`;
+          case "many":
+            return `${count} images`;
+          default:
+            return `${count} images`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `画像${count}枚`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `사진 ${count}장`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} imagem`;
+          case "many":
+            return `${count} imagens`;
+          default:
+            return `${count} imagens`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 张图片`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 張圖片`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} þîçţûŕé ~~~]`;
+          default:
+            return `[${count} þîçţûŕéš ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ picture‬`;
+          default:
+            return `${count}‮ pictures‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} picture`;
+      default:
+        return `${count} pictures`;
+    }
+  }
+  function cardCarriedWithChoice(input2) {
+    formatNumber(input2.count);
+    const items = input2.items;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${items} تُرسل مع اختيارك`;
+          case "one":
+            return `${items} تُرسل مع اختيارك`;
+          case "two":
+            return `${items} تُرسلان مع اختيارك`;
+          case "few":
+            return `${items} تُرسل مع اختيارك`;
+          case "many":
+            return `${items} تُرسل مع اختيارك`;
+          default:
+            return `${items} تُرسل مع اختيارك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} wird mit deiner Wahl gesendet`;
+          default:
+            return `${items} werden mit deiner Wahl gesendet`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} va con tu elección`;
+          case "many":
+            return `${items} van con tu elección`;
+          default:
+            return `${items} van con tu elección`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} part avec votre choix`;
+          case "many":
+            return `${items} partent avec votre choix`;
+          default:
+            return `${items} partent avec votre choix`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `選択と一緒に送るもの：${items}`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `선택과 함께 보낼 항목: ${items}`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${items} vai com sua escolha`;
+          case "many":
+            return `${items} vão com sua escolha`;
+          default:
+            return `${items} vão com sua escolha`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `将随你的选择一起发送：${items}`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `將隨你的選擇一起送出：${items}`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${items} ĝöéš ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~~]`;
+          default:
+            return `[${items} ĝö ŵîţĥ ýöûŕ çĥöîçé ~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${items}‮ goes with your choice‬`;
+          default:
+            return `${items}‮ go with your choice‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${items} goes with your choice`;
+      default:
+        return `${items} go with your choice`;
+    }
+  }
   function cardConsentFrom() {
     switch (currentLanguage()) {
       case "ar":
@@ -16466,6 +16749,101 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮past card‬`;
     }
     return `past card`;
+  }
+  function cardPastPictures(input2) {
+    formatNumber(input2.count);
+    const names = input2.names;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `الصور: ${names}`;
+          case "one":
+            return `الصورة: ${names}`;
+          case "two":
+            return `الصورتان: ${names}`;
+          case "few":
+            return `الصور: ${names}`;
+          case "many":
+            return `الصور: ${names}`;
+          default:
+            return `الصور: ${names}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Bild: ${names}`;
+          default:
+            return `Bilder: ${names}`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagen: ${names}`;
+          case "many":
+            return `Imágenes: ${names}`;
+          default:
+            return `Imágenes: ${names}`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Image : ${names}`;
+          case "many":
+            return `Images : ${names}`;
+          default:
+            return `Images : ${names}`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `画像：${names}`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `사진: ${names}`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Imagem: ${names}`;
+          case "many":
+            return `Imagens: ${names}`;
+          default:
+            return `Imagens: ${names}`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `图片：${names}`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `圖片：${names}`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Þîçţûŕé: ${names} ~~~]`;
+          default:
+            return `[Þîçţûŕéš: ${names} ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Picture: ‬${names}`;
+          default:
+            return `‮Pictures: ‬${names}`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Picture: ${names}`;
+      default:
+        return `Pictures: ${names}`;
+    }
   }
   function cardPastSentLead() {
     switch (currentLanguage()) {
@@ -90476,6 +90854,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserUnansweredStarting,
     cardBrowserUnansweredWorking,
     cardBrowserWord,
+    cardCarriedNotes,
+    cardCarriedPictures,
+    cardCarriedWithChoice,
     cardConsentFrom,
     cardConsentFullDetails,
     cardConsentGuidanceOnly,
@@ -90569,6 +90950,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteUnavailable,
     cardPastMark,
     cardPastMeta,
+    cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
@@ -93383,6 +93765,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserUnansweredStarting": ["site"],
     "cardBrowserUnansweredWorking": ["site"],
     "cardBrowserWord": [],
+    "cardCarriedNotes": ["count"],
+    "cardCarriedPictures": ["count"],
+    "cardCarriedWithChoice": ["count", "items"],
     "cardConsentFrom": [],
     "cardConsentFullDetails": [],
     "cardConsentGuidanceOnly": [],
@@ -93476,6 +93861,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteUnavailable": [],
     "cardPastMark": [],
     "cardPastMeta": [],
+    "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
@@ -97851,6 +98237,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uses: string().max(1e3).optional()
   });
   const afterMergeShownListSchema = array(afterMergeShownSchema);
+  function isHigh(code) {
+    return code >= 55296 && code <= 56319;
+  }
+  function isLow(code) {
+    return code >= 56320 && code <= 57343;
+  }
+  function cutText(text, max) {
+    if (text.length <= max) return text;
+    const end = Math.max(0, max);
+    if (end > 0 && isHigh(text.charCodeAt(end - 1)) && isLow(text.charCodeAt(end))) {
+      return text.slice(0, end - 1);
+    }
+    return text.slice(0, end);
+  }
+  const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  const attachmentRefSchema = strictObject({
+    id: string().min(1).max(64),
+    kind: _enum(["image"]),
+    name: string().max(120),
+    mimeType: _enum(IMAGE_TYPES),
+    bytes: number().int().nonnegative(),
+    sha256: string().length(64),
+    /** The copy's path relative to the attachments folder: `<message id>/<file>`. */
+    file: string().min(1).max(200)
+  });
+  discriminatedUnion("kind", [
+    object({ kind: literal("regular"), path: string().min(1).max(4096) }),
+    object({ kind: literal("no-path") }),
+    /** A folder, with its path: the main message box offers it as a project (docs/composer.md, "Files"). */
+    object({ kind: literal("folder"), path: string().min(1).max(4096).optional() }),
+    object({ kind: literal("shortcut") }),
+    object({ kind: literal("other") })
+  ]);
+  discriminatedUnion("kind", [
+    object({
+      kind: literal("image"),
+      name: string().max(120),
+      mimeType: _enum(IMAGE_TYPES),
+      data: _instanceof(Uint8Array)
+    }),
+    object({
+      kind: literal("text"),
+      name: string().max(120),
+      data: _instanceof(Uint8Array)
+    }),
+    /** An unsupported format: only its path comes back, for the composer to type. */
+    object({
+      kind: literal("unsupported"),
+      name: string().max(120),
+      path: string().min(1).max(4096)
+    }),
+    object({ kind: literal("too-big"), name: string().max(120), image: boolean() }),
+    object({ kind: literal("folder"), name: string().max(120) }),
+    object({ kind: literal("shortcut"), name: string().max(120) }),
+    object({ kind: literal("unreadable"), name: string().max(120) })
+  ]);
   const HOST_OPS = [
     "restore-account",
     "move-flagship",
@@ -98385,7 +98827,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     skipped: literal(true).optional()
   });
   const cardAnswersSchema = array(cardAnswerSchema).max(CARD_MAX_ANSWERS);
-  strictObject({ answers: cardAnswersSchema });
   const CARD_QUESTION_LABEL_MAX = 500;
   const CARD_QUESTIONS_MAX_BYTES = 64 * 1024;
   const CARD_QUESTION_KINDS = ["single", "multiple", "text", "opaque"];
@@ -98780,6 +99221,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       by: _enum(["captain", "firstmate", "crewmate", "host", "frame"]).optional()
     }),
     answers: cardAnswersSchema,
+    /**
+     * What the card's field sent with the closing choice besides its words
+     * (`choice-attachments`): the notes as a sent reply draws them, and the
+     * pictures by name. Absent when it sent nothing else.
+     */
+    carried: strictObject({
+      notes: cardNotesSchema.optional(),
+      pictures: array(string().max(120)).optional()
+    }).optional(),
     messages: array(cardMessageSchema)
   });
   strictObject({
@@ -98788,6 +99238,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The file's display name, when the picture came from a file; text, never markup. */
     name: string().max(120).optional()
   });
+  const TURN_IMAGES_MAX = 4;
   function mergeEffectOf(action) {
     const effect = action.effect;
     if (effect?.kind === "merge") return effect;
@@ -98813,7 +99264,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       taskId: string(),
       session: string(),
       generation: number().int().positive(),
-      cardId: string()
+      cardId: string(),
+      /**
+       * The card stays up unanswered, docked beside the page, so what the
+       * press carried from its field goes back there (`choice-attachments`).
+       */
+      docked: literal(true).optional()
     }).optional(),
     restoreAccountId: string().optional(),
     /**
@@ -98914,6 +99370,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     lifecycle: _enum(["started", "reopened", "legacy-initial-snapshot"]).optional(),
     predecessor: string().optional()
   });
+  const choiceCarriedRecordSchema = strictObject({
+    notes: cardNotesSchema.optional(),
+    files: string().max(64 * 1024).optional(),
+    pictures: array(attachmentRefSchema).max(TURN_IMAGES_MAX).optional()
+  });
   const cardActionPayloadSchema = strictObject({
     actionId: string(),
     /** Last thread message already present at this interaction, not a later reply. */
@@ -98936,7 +99397,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** Who minted the interaction id: the shell at the gesture, or the host for a click that sent none. */
     interactionSource: _enum(["shell", "host"]),
     /** What pressed the button, as the shell said; absent when it did not say or could not tell. */
-    input: cardPressInputSchema.optional()
+    input: cardPressInputSchema.optional(),
+    /** What else the card's field sent with the choice (`choice-attachments.md`): its notes, files and pictures. */
+    carried: choiceCarriedRecordSchema.optional()
   });
   strictObject({
     messageId: number().int(),
@@ -103684,62 +104147,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     usingDefaults: boolean()
   });
   const intelligenceBucketSchema = slotSchema;
-  function isHigh(code) {
-    return code >= 55296 && code <= 56319;
-  }
-  function isLow(code) {
-    return code >= 56320 && code <= 57343;
-  }
-  function cutText(text, max) {
-    if (text.length <= max) return text;
-    const end = Math.max(0, max);
-    if (end > 0 && isHigh(text.charCodeAt(end - 1)) && isLow(text.charCodeAt(end))) {
-      return text.slice(0, end - 1);
-    }
-    return text.slice(0, end);
-  }
-  const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
-  strictObject({
-    id: string().min(1).max(64),
-    kind: _enum(["image"]),
-    name: string().max(120),
-    mimeType: _enum(IMAGE_TYPES),
-    bytes: number().int().nonnegative(),
-    sha256: string().length(64),
-    /** The copy's path relative to the attachments folder: `<message id>/<file>`. */
-    file: string().min(1).max(200)
-  });
-  discriminatedUnion("kind", [
-    object({ kind: literal("regular"), path: string().min(1).max(4096) }),
-    object({ kind: literal("no-path") }),
-    /** A folder, with its path: the main message box offers it as a project (docs/composer.md, "Files"). */
-    object({ kind: literal("folder"), path: string().min(1).max(4096).optional() }),
-    object({ kind: literal("shortcut") }),
-    object({ kind: literal("other") })
-  ]);
-  discriminatedUnion("kind", [
-    object({
-      kind: literal("image"),
-      name: string().max(120),
-      mimeType: _enum(IMAGE_TYPES),
-      data: _instanceof(Uint8Array)
-    }),
-    object({
-      kind: literal("text"),
-      name: string().max(120),
-      data: _instanceof(Uint8Array)
-    }),
-    /** An unsupported format: only its path comes back, for the composer to type. */
-    object({
-      kind: literal("unsupported"),
-      name: string().max(120),
-      path: string().min(1).max(4096)
-    }),
-    object({ kind: literal("too-big"), name: string().max(120), image: boolean() }),
-    object({ kind: literal("folder"), name: string().max(120) }),
-    object({ kind: literal("shortcut"), name: string().max(120) }),
-    object({ kind: literal("unreadable"), name: string().max(120) })
-  ]);
   const remoteLoginAddressSchema = string().trim().min(1).max(255).regex(
     /^(?:(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\]-]{0,190}|ssh:\/\/(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,190}|\[[A-Za-z0-9:.%]{2,64}\]):[1-9][0-9]{0,4})$/
   );

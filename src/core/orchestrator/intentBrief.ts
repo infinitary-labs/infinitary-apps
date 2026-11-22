@@ -13,6 +13,7 @@ import {
   type WorkKind,
 } from "@shared/routingPolicy";
 import { RIGOR_WORDS } from "@shared/vocabulary";
+import { BRIEF_CARRIED_LEAD } from "../prompts/choiceCarried";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 
@@ -883,6 +884,12 @@ export type BasisBriefFacts = {
    * each, as `cardAnswerLines` words them (contract 4.22).
    */
   answers?: string[];
+  /**
+   * What the captain sent with that closing choice from the card's field -
+   * its files, each note with where it points, and its pictures by name -
+   * one line each (`choice-attachments.md`); the pictures ride the brief.
+   */
+  carried?: string[];
 };
 
 /** A source's code in another repository, as the record names it. */
@@ -1037,6 +1044,9 @@ export function basisSectionParts(
       "The captain's latest submitted settings/answers (supersede earlier values):",
       ...facts.answers,
     );
+  }
+  if (facts.carried && facts.carried.length > 0) {
+    lines.push("", BRIEF_CARRIED_LEAD, ...facts.carried);
   }
   if (!facts.userWords && !facts.outcome && !facts.card && !facts.cardFile) {
     lines.push("", `Read it with the tasks query, key ${facts.key}.`);

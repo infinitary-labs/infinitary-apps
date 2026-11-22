@@ -473,6 +473,14 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "window",
     `The window of a ${COMPUTER.one} sets up its own work half there; device-fix-work asks it from the first mate's computer`,
   ],
+  "inf:devices:open-sharing": [
+    "window",
+    `Opens the Sharing settings on the ${COMPUTER.one} whose window asked, to turn on Remote Login there`,
+  ],
+  "inf:devices:follow-added": [
+    "window",
+    `The window at a ${COMPUTER.one}'s first launch follows the first mate that added it, switching only itself`,
+  ],
   "inf:devices:take-over": [
     "destructive",
     `A ${COMPUTER.one} that keeps a copy becomes the first mate's computer, confirmed with Touch ID or the password`,

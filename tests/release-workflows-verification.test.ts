@@ -144,6 +144,8 @@ describe("the signed channel workflow", () => {
       "release",
       "update",
       "signed-installer",
+      "watch",
+      "stop",
       "upload",
       "publish",
     ]);

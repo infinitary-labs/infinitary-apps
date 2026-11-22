@@ -103,7 +103,8 @@ jobs:
     # The update check builds four installers and uploads about a gigabyte.
     timeout-minutes: ${{ inputs.update_check && 90 || 45 }}
     # Each job's own group, which a merge batch's stop enters to cancel it
-    # once the code checks failed (scripts/batch-stop.mjs); nothing else
+    # once the batch stops, and an alpha cut's stop once one of the cut's
+    # jobs failed (release.yml's stop, scripts/batch-stop.mjs); nothing else
     # enters it.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-windows-build', github.run_id, github.run_attempt) }}
@@ -327,9 +328,10 @@ jobs:
     # "The checks").
     runs-on: ${{ vars.WINDOWS_CLEAN_RUNNER || 'shell-pc-win11' }}
     timeout-minutes: 60
-    # The batch stop's group for this job, as the build's. A batch runs one
-    # round, which keeps the plain name; a later round of a request has its
-    # own group, so side-by-side rounds never queue behind each other.
+    # The batch's and the cut's stop's group for this job, as the build's. A
+    # batch and an alpha run one round, which keeps the plain name; a later
+    # round of a request has its own group, so side-by-side rounds never
+    # queue behind each other.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-windows-check{2}', github.run_id, github.run_attempt, matrix.round > 1 && format('-round-{0}', matrix.round) || '') }}
     # Windows PowerShell 5.1, the one Windows ships: a fresh Windows 11

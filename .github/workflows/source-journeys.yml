@@ -90,7 +90,8 @@ jobs:
     # The name leads with the caller's trigger (scripts/ci-job-names.mjs); a
     # desktop lane runs one test at a time, so it reads as a serial group.
     # Each group's own, which a merge batch's stop enters to cancel it once
-    # the code checks failed (scripts/batch-stop.mjs). The suite and the
+    # the batch stops, and an alpha cut's stop once one of the cut's jobs
+    # failed (release.yml's stop, scripts/batch-stop.mjs). The suite and the
     # artifact suffix keep two calls in one run apart.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-journeys-{2}-{3}-{4}-{5}', github.run_id, github.run_attempt, inputs.suite, inputs.artifact-suffix, matrix.lane, matrix.shard) }}

@@ -50,6 +50,11 @@ jobs:
     # (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 45
+    # The cut's stop enters this job's own group with cancel-in-progress once
+    # one of the cut's jobs failed (release.yml's `stop`, scripts/batch-stop.mjs);
+    # nothing else enters it.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-mac-update', github.run_id, github.run_attempt) }}
     steps:
       # A refused checkout waits until GitHub takes the job's token again,
       # then runs once more (docs/testing.md, "GitHub refusing a job's token").

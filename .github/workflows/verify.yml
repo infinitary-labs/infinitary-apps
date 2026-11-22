@@ -275,7 +275,8 @@ jobs:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     # Each job's own group, which a merge batch's stop enters to cancel it
-    # once the code checks failed (scripts/batch-stop.mjs); nothing else
+    # once the batch stops, and an alpha cut's stop once one of the cut's
+    # jobs failed (release.yml's stop, scripts/batch-stop.mjs); nothing else
     # enters it.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-verify-lane-{2}', github.run_id, github.run_attempt, matrix.lane) }}
@@ -736,7 +737,7 @@ jobs:
   linux-tests:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse && !inputs.mac_only && inputs.part != 'journeys' }}
-    # Each group's own, for a merge batch's stop, as the lanes above.
+    # Each group's own, for a merge batch's or an alpha cut's stop, as the lanes above.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-verify-tests-{2}-{3}', github.run_id, github.run_attempt, matrix.tests, matrix.shard) }}
     name: ${{ format(matrix.shards > 1 && '{0} · {1} (Linux; group {2}/{3})' || '{0} · {1} (Linux)', inputs.trigger || 'Manual request', matrix.tests, matrix.shard, matrix.shards) }}

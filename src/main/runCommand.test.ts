@@ -171,15 +171,16 @@ describe("a window opened beside a run", () => {
     expect(keepsStarterBesideGrant(holding(runs(byHand)), true)).toBe(false);
     // With no grant waiting, the window keeps its starter as it always has.
     expect(keepsStarterBesideGrant(holding(runs(byHand)), false)).toBe(true);
-    // The review of INF-5409: with no command running, a grant waiting leaves the starter too,
-    // so a home that keeps its own first mate still starts it in the background.
+    // With no command running, a grant waiting leaves no starter: the window opens as that home's
+    // view, as it always has (the captain's choice on INF-4930). A grant the window kept its own
+    // first mate beside is no grant here (`grantFollowed`), so that window keeps its starter.
     expect(
       keepsStarterBesideGrant(
         holding(runs(byHand), () => false),
         true,
       ),
-    ).toBe(true);
-    expect(keepsStarterBesideGrant(holding(scratchDir("infinitary-run-none-")), true)).toBe(true);
+    ).toBe(false);
+    expect(keepsStarterBesideGrant(holding(scratchDir("infinitary-run-none-")), true)).toBe(false);
     // The review of INF-5409: the window opens beside a command and keeps its starter from one
     // reading, so a note that changes after it, either way, never splits the two.
     const owned = runs(byAgent);
@@ -190,7 +191,7 @@ describe("a window opened beside a run", () => {
     const none = holding(empty);
     markRunning(empty, 4242, new Date("2026-10-25T17:00:00Z"), undefined, false);
     symlinkSync(`${hostname()}-4242`, join(empty, "SingletonLock"));
-    expect([none.running, keepsStarterBesideGrant(none, true)]).toEqual([false, true]);
+    expect([none.running, keepsStarterBesideGrant(none, true)]).toEqual([false, false]);
     // The review of INF-5409: on Windows, whose lock names no holder, an agent's run that ended
     // without taking its note away, its number taken since by another program while a window holds
     // the folder, is told by the birth its note keeps (stood in by a reading that says which birth

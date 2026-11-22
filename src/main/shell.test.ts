@@ -993,14 +993,9 @@ describe("a Mac that controls another and runs its work", () => {
     new JoinedHome(dataDir).join(grant, Date.UTC(2026, 9, 3, 14, 6));
     const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
     const mini = shell(joinedDir, { dataDir });
-    // Its own first mate reads, at its first launch, that nothing was done here.
-    mini.own.dispatch.mockImplementation((async (channel: string) =>
-      channel === "inf:app:first-run"
-        ? { gateOpen: true, firstTurnAt: null, untouched: true }
-        : { ownCore: channel }) as never);
     await mini.shell.start();
-    // Startup finished the switch: the empty first mate it asked stopped, and the window is a view.
-    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    // It opens straight as the home's view: no first mate of its own starts here.
+    expect(mini.startCore).not.toHaveBeenCalled();
     expect(mini.shell.thisMac().role).toBe("view");
     await mini.until(() => mini.view().contact === "in-reach");
     expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
@@ -1109,14 +1104,11 @@ describe("a Mac that controls another and runs its work", () => {
     expect(mini.own.dispose).toHaveBeenCalledTimes(1);
     expect(mini.restartWindows).toHaveBeenCalled();
     expect(mini.relaunch).not.toHaveBeenCalled();
-    // A computer that was not open when the home added it opens as that home's view once its
-    // own first mate says nothing was done here, before its startup ends.
+    // A computer that was not open when the home added it opens as that home's view at once.
     const fresh = shell(undefined, { dataDir });
-    fresh.own.dispatch.mockImplementation((async (channel: string) =>
-      channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
     await fresh.shell.start();
     expect(fresh.shell.thisMac().role).toBe("view");
-    expect(fresh.own.dispose).toHaveBeenCalledTimes(1);
+    expect(fresh.startCore).not.toHaveBeenCalled();
   });
 
   it("does not follow along once something was done here, after a restart too", async () => {
@@ -1160,11 +1152,12 @@ describe("a Mac that controls another and runs its work", () => {
     ).toEqual([]);
   });
 
-  // The review of INF-5409: a grant that arrived while the window was closed, with no first-launch
-  // poll to refuse it, opens the window only once its own first mate says nothing was done here.
-  it("opens over a grant that waited while it was closed only where nothing was done here", async () => {
+  // The captain's choice on INF-4930: a grant that arrived while the window was closed opens it as
+  // that home's view, as it always has, whatever was done here; only a window that kept its own
+  // first mate beside that grant while it was open stays itself.
+  it("opens over a grant that waited while it was closed unless it kept its own first mate beside it", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    for (const untouched of [false, true]) {
+    for (const note of ["none", "broken", "kept"] as const) {
       const dataDir = workDir();
       const grant = await claimLink(await pro.link("mac"), {
         kind: "mac",
@@ -1173,36 +1166,25 @@ describe("a Mac that controls another and runs its work", () => {
       });
       new JoinedHome(dataDir).join(grant, Date.now());
       const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
-      // A note of an earlier refusal that cannot be read refuses nothing by itself.
       mkdirSync(joinedDir, { recursive: true });
-      writeFileSync(join(joinedDir, "kept-own.json"), "{broken");
-      // Its own first mate keeps a record here already: something may have been done.
+      // A note that cannot be read keeps nothing by itself.
+      if (note === "broken") writeFileSync(join(joinedDir, "kept-own.json"), "{broken");
+      if (note === "kept") new JoinedHome(joinedDir).keepOwn(grant.deviceId);
       const mini = shell(joinedDir, { dataDir });
-      mini.own.dispatch.mockImplementation((async (channel: string) =>
-        channel === "inf:app:first-run"
-          ? { gateOpen: true, firstTurnAt: null, ...(untouched ? { untouched: true } : {}) }
-          : { ownCore: channel }) as never);
       await mini.shell.start();
-      expect(mini.startCore).toHaveBeenCalledTimes(1);
-      if (untouched) {
-        // Nothing was done here: it follows along, and its own first mate stops.
-        await mini.until(() => mini.shell.thisMac().role === "view");
-        expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
-        expect(mini.own.dispose).toHaveBeenCalledTimes(1);
-      } else {
-        // Configured here: it stays its own first mate, with the grant left unused, and a
-        // restart keeps it so without asking again.
+      if (note === "kept") {
         expect(mini.shell.thisMac().role).toBe("home");
         expect(mini.joined.read()).toBeNull();
-        expect(mini.own.dispose).not.toHaveBeenCalled();
-        await mini.shell.dispose();
-        const again = shell(joinedDir, { dataDir });
-        await again.shell.start();
-        expect(again.shell.thisMac().role).toBe("home");
-        expect(
-          again.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
-        ).toEqual([]);
+        expect(mini.startCore).toHaveBeenCalledTimes(1);
+      } else {
+        expect(mini.shell.thisMac().role).toBe("view");
+        expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
+        expect(mini.startCore).not.toHaveBeenCalled();
       }
+      // It never asks a first mate whether anything was done here at its start.
+      expect(
+        mini.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+      ).toEqual([]);
     }
   });
 
@@ -1243,15 +1225,17 @@ describe("a Mac that controls another and runs its work", () => {
       name: "Mac mini",
       user: sam,
     });
-    new JoinedHome(dataDir).join(grant, Date.now());
     const mini = shell(undefined, { dataDir });
     mini.own.dispatch.mockImplementation((async (channel: string) =>
       channel === "inf:app:first-run"
         ? { gateOpen: true, firstTurnAt: null, untouched: true }
         : { ownCore: channel }) as never);
-    mini.closeConnection.mockRejectedValueOnce(new Error("the connection did not close"));
     await mini.shell.start();
-    expect(mini.shell.thisMac().role).toBe("view");
+    // Added while its first launch is up, it follows along.
+    new JoinedHome(dataDir).join(grant, Date.now());
+    mini.closeConnection.mockRejectedValueOnce(new Error("the connection did not close"));
+    expect(await mini.shell.followAdded()).toBe(true);
+    await mini.until(() => mini.shell.thisMac().role === "view");
     expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
     // Its SSH connections and core still stop after the connection failed to close.
     expect(mini.own.stopSsh).toHaveBeenCalledTimes(1);

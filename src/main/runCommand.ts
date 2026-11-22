@@ -334,8 +334,10 @@ export function commandHolding(
 /**
  * Whether a window reopened on this folder keeps its starter while a grant
  * waits in the work folder (docs/view.md, "Following along"): with no grant
- * or no command running it always does, so a home that keeps its own first
- * mate still runs it in the background; beside a running command, only when
+ * it always does; with a grant and no command running it does not, so the
+ * window opens as that home's view as it always has (`Shell.start`), and a
+ * grant this window kept its own first mate beside counts as none
+ * (`JoinedHome.keepOwn`); beside a running command, only when
  * this app's own agent started it, so following along stops that command
  * and never one the person started by hand. Read from the one reading of the
  * records (`commandHolding`) the window also opens beside a command by, so
@@ -349,7 +351,7 @@ export function keepsStarterBesideGrant(
   holding: { running: boolean; owned: OwnedRun | null; known: boolean },
   grant: boolean,
 ): boolean {
-  return !grant || !holding.running || !holding.known || holding.owned !== null;
+  return !grant || (holding.running && (!holding.known || holding.owned !== null));
 }
 
 /**

@@ -284,23 +284,18 @@ export class Shell {
       await this.becomeBeside(this.options.beside);
       return;
     }
-    const joined = this.options.joined.read();
+    // A grant the work keeps opens the window as that home's view, as it
+    // always has for a computer added by a command or its address, unless this
+    // window kept its own first mate when that grant came (`waitingGrant`).
+    // A first mate started by a command never opens it: only a window does.
+    const joined =
+      this.options.joined.read() ?? (this.options.headless ? null : this.openFromWork());
     if (joined) {
       this.followWork(joined);
       this.becomeView();
       return;
     }
     await this.becomeHome();
-    // A grant that waited while it was closed opens the window only where
-    // nothing was done here, as this computer's own first mate reads it at its
-    // first launch; the switch finishes before startup reads this app's role,
-    // and a switch that could not open the view fails the start.
-    if (this.options.headless || !this.waitingGrant()) return;
-    const followed = await this.followAdded().catch((error: unknown) => {
-      console.warn(`[shell] could not follow the computer that added this one: ${String(error)}`);
-      return false;
-    });
-    if (followed) await this.switching;
   }
 
   /** The running core, while this app holds Firstmate itself. */

@@ -686,13 +686,13 @@ export async function startApp(
   // Start it here. A Mac's login agent `start-at-boot` writes is the window's
   // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
-  // A grant an address add left in the work folder keeps the window's
-  // starter: with no command running it starts one as ever, and beside the
-  // command this app's own agent started it keeps that agent, so the window
-  // opens beside the command and follows along, stopping it only where
-  // nothing was done here. A home that keeps its own first mate goes on
-  // running it in the background. A command the person started by hand
-  // keeps running, with no starter beside it (docs/view.md, "Following along").
+  // A grant an address add left in the work folder takes the window's
+  // starter away while no command runs, so the window opens as that home's
+  // view as it always has; beside the command this app's own agent started it
+  // keeps that agent, so the window opens beside the command and follows
+  // along. A grant the window kept its own first mate beside counts as none.
+  // A command the person started by hand keeps running, with no starter
+  // beside it (docs/view.md, "Following along").
   const starterOptions = {
     work,
     flavor: work.place.flavor,

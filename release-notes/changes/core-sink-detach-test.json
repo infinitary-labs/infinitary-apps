@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "core-sink-detach-test",
+      "reason": "Makes the core integration test verify event and card delivery before and after a client detaches without relying on background work staying quiet. No app behavior changes."
+    }
+  ]
+}

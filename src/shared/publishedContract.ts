@@ -435,7 +435,9 @@ export function publishedContract() {
             channel,
             {
               effect: declared.effect,
+              // i18n-exempt: descriptions in the published contract, never shown
               request: received(`The ${channel} order`, declared.request),
+              // i18n-exempt: descriptions in the published contract, never shown
               response: sent(`The ${channel} answer`, declared.response),
             },
           ];

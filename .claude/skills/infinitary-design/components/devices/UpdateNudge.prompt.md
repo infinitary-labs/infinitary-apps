@@ -37,8 +37,11 @@ The first mate's offer to update the same computer never makes a second card.
 When this computer runs Infinitary from its code and a Mac that runs work runs another build, the app matches it by itself once the person has said yes for that Mac; before that it asks once.
 Meta: the computer's name.
 Title: "Run this computer's code on Mac mini?".
-First paragraph: "This computer runs Infinitary from its code at commit 1a2b3c4, and Mac mini runs another build. Match has Mac mini get that committed code, build it and start from it. Changes not committed stay on this computer."
-Second paragraph: "You are asked once for Mac mini. After that, it matches this computer by itself whenever this computer runs other code."
+First paragraph: "This computer runs Infinitary from its code at commit 1a2b3c4, and Mac mini runs another build.
+Match has Mac mini get that committed code, build it and start from it.
+Changes not committed stay on this computer."
+Second paragraph: "You are asked once for Mac mini.
+After that, it matches this computer by itself whenever this computer runs other code."
 After a match that did not go through, a third paragraph: "The last match did not go through." and why.
 Buttons: Match it (default), which opens Settings → Devices with the match running, and Not now, which holds the card away for that commit.
 

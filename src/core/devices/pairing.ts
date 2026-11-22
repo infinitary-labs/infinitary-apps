@@ -1033,6 +1033,7 @@ export class DevicePairing implements PairedDevices {
     try {
       this.saveSourceAllowed();
     } catch (error) {
+      // i18n-exempt: a log line, never shown
       this.onProblem(`could not keep which computers run source: ${(error as Error).message}`);
     }
     return true;
@@ -1720,6 +1721,7 @@ export class DevicePairing implements PairedDevices {
         );
     } catch {
       // Unread, every computer is asked again before it runs source.
+      // i18n-exempt: a log line, never shown
       this.onProblem("Which computers may run this computer's source cannot be read.");
     }
     try {

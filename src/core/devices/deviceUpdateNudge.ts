@@ -251,6 +251,7 @@ export class DeviceUpdateNudge {
     const deviceId = device.id;
     const id = deviceUpdateCardId(deviceId);
     if (this.options.failedHere?.(deviceId)) {
+      // i18n-exempt: why it forgot the card, for the log, never shown
       this.forget(deviceId, "this build did not start there");
       return;
     }

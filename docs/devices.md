@@ -1203,12 +1203,14 @@ The row says "Runs another build than this computer, which runs its code at comm
 
 Match on a source home (`Computers.matchSource`) sends a committed source archive that a Mac builds and runs; edits not committed stay on the home.
 It refuses before anything is asked there when that computer is out of reach, is not a Mac ("Only a Mac builds Infinitary from code, and Mac mini is not a Mac."), or speaks no `source-builds` change ("Install the newest Infinitary release there, then choose Match again."), each with "It keeps the version it runs."
-Otherwise its crew pauses as for an update, the home asks the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`), with the commit, and follows `fm:firstmate:update-progress` as it runs: "Mac mini is getting this computer's code.", "… is installing what this computer's code needs." and "… is building this computer's code." (`fetching`, `installing`, `building`).
+Otherwise its crew pauses as for an update, the home asks the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`), with the commit, and follows `fm:firstmate:update-progress` as it runs: "Mac mini is getting this computer's code.", "… is installing what this computer's code needs." and "… is building this computer's code."
+(`fetching`, `installing`, `building`).
 A step that fails answers which (`tools`, `fetch`, `install`, `build`, `keep` or `system`) and changes nothing there; the feed says it in two warning lines, the second "It keeps the version it runs."
 A build that does not reach the home in time goes back as a release update does (below, "A copy that does not start"), and the home keeps that commit on `failed-updates.json`, so Match does not build it there again until the home runs other code.
 
 The captain is asked once per computer before it first runs the home's code.
-The captain's own Match is that yes, and so is Match it on the card "Run this computer's code on Mac mini?" (`sourceMatchCard`, `src/shared/deviceUpdateNudge.ts`), which the update by itself raises for a computer not yet allowed, with Not now beside it; its answers carry the commit in their action ids (`source:<commit>`).
+The captain's own Match is that yes, and so is Match it on the card "Run this computer's code on Mac mini?"
+(`sourceMatchCard`, `src/shared/deviceUpdateNudge.ts`), which the update by itself raises for a computer not yet allowed, with Not now beside it; its answers carry the commit in their action ids (`source:<commit>`).
 The yes is kept on pairing's `source-builds.json` (`DevicePairing.noteSourceAllowed`), goes when that computer is removed, and from then on the update by itself matches that computer whenever the home runs another commit, with no card.
 
 `/infinitary-source` (`FETCH_SOURCE_PATH`) answers `{ commit }` from a computer that runs work, already on the list and proven by its key in TLS, as `/firstmate` admits it, with `git archive --format=tar.gz` of that commit from the home's starter folder (`homeSourceOf`): `malformed` for a body it does not read, `unknown` for a key the list does not hold or a view, and `none` for another commit than the one the home runs, or a home that does not run source.

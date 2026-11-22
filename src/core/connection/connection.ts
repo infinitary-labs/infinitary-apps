@@ -1,7 +1,7 @@
 import { constants as cryptoConstants } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
-import type { Duplex, Readable } from "node:stream";
+import type { Duplex } from "node:stream";
 import type { BuildIdentity } from "@shared/buildIdentity";
 import {
   channelIn,
@@ -28,7 +28,6 @@ import {
   FETCH_SOURCE_PATH,
   type FetchAppRefusal,
   fetchAppRequestSchema,
-  fetchSourceRequestSchema,
   invokeArgs,
   PAIR_BODY_MAX_BYTES,
   PAIR_PATH,
@@ -54,7 +53,6 @@ import {
   type DeviceSystem,
   deviceMayBe,
   deviceNameSchema,
-  deviceRunsWork,
 } from "@shared/devices";
 import { type FmEvent, isStreamedEvent } from "@shared/events";
 import { HOME_MOVE_START_HERE, HOME_MOVED_LIVE } from "@shared/homeMove";
@@ -93,6 +91,7 @@ import {
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import { heldAsks, type LiveToViewArgs } from "./heldAsks";
+import { answerSource, type HomeSource } from "./homeSource";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -435,11 +434,7 @@ export type ConnectionOptions = {
   source?: () => HomeSource | null;
 };
 
-/** What a home run from source sends of itself (`ConnectionOptions.source`). */
-export type HomeSource = {
-  commit: string;
-  archive: () => { stream: Readable; ended: Promise<void>; stop: () => void };
-};
+export type { HomeSource } from "./homeSource";
 
 export type RunningDeviceVersion = { deviceId: string; role: DeviceRole; version: string | null };
 
@@ -659,13 +654,6 @@ const FETCH_APP_REASONS: Record<FetchAppRefusal, string> = {
   used: "This link was used already.",
   expired: "This link has expired.",
   none: `This copy of Infinitary cannot send itself to another ${COMPUTER.one}.`,
-};
-
-/** What each refusal at `FETCH_SOURCE_PATH` says. */
-const FETCH_SOURCE_REASONS: Partial<Record<FetchAppRefusal, string>> = {
-  malformed: "The request for this home's source is not one it reads.",
-  unknown: `Only a ${COMPUTER.one} this home lists to run work gets its source.`,
-  none: "This home does not run that commit from source.",
 };
 
 /**
@@ -1598,64 +1586,15 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     // at the commit it runs, with its own key (docs/devices.md, "Matching
     // the home's build"): one gzipped tar made as it is sent, counted as an
     // update's copy is. Never the uncommitted edits, nor another commit.
-    const fetchSource = async (request: IncomingMessage, response: ServerResponse) => {
-      const refuseWith = (status: number) => {
-        request.resume();
-        response.writeHead(status, { Connection: "close" }).end();
-      };
-      const refused = (why: "malformed" | "unknown" | "none") =>
-        answerJson(response, FETCH_APP_REFUSAL_STATUS[why], {
-          refused: why,
-          reason: FETCH_SOURCE_REASONS[why] as string,
-        });
-      if (request.headers.origin !== undefined) return refuseWith(403);
-      if (request.method !== "POST") {
-        response.setHeader("Allow", "POST");
-        return refuseWith(405);
-      }
-      if (!/^application\/json(;|$)/i.test(request.headers["content-type"] ?? ""))
-        return refuseWith(415);
-      if (Number(request.headers["content-length"] ?? 0) > PAIR_BODY_MAX_BYTES)
-        return refuseWith(413);
-      const text = await readBody(request);
-      if (text === undefined) return void response.destroy();
-      if (text === null) return refuseWith(413);
-      let body: unknown;
-      try {
-        body = JSON.parse(text);
-      } catch {
-        body = undefined;
-      }
-      const want = fetchSourceRequestSchema.safeParse(body).data;
-      if (!want) return refused("malformed");
-      let device: PairedDevice | null = null;
-      try {
-        device = await devices.admit(request);
-      } catch {
-        device = null;
-      }
-      if (!device || !deviceRunsWork(device.kind)) return refused("unknown");
-      const source = options.source?.() ?? null;
-      if (!source || source.commit !== want.commit) return refused("none");
-      if (response.destroyed) return;
-      const { stream, ended, stop } = source.archive();
-      ended.catch((error: unknown) => {
-        onProblem(
-          `could not send this home's source: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        // An archive that fails part way cuts the answer short, so the computer never builds half a tree.
-        response.destroy();
+    const fetchSource = (request: IncomingMessage, response: ServerResponse) =>
+      answerSource(request, response, {
+        admit: (asked) => devices.admit(asked),
+        readBody,
+        answerJson,
+        source: options.source,
+        tellSent,
+        onProblem,
       });
-      response.writeHead(200, {
-        "Content-Type": FETCH_APP_TYPES.bundle,
-        "Cache-Control": "no-store",
-        Connection: "close",
-      });
-      const deviceId = device.id;
-      stream.on("data", (piece: Buffer) => tellSent(deviceId, piece.length));
-      stream.pipe(response);
-      response.once("close", stop);
-    };
     // A device's upgrade proves it by pairing; one on the local door's own
     // listener by the door's key alone, and nothing else is answered there.
     const upgrade = async (

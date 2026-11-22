@@ -13036,6 +13036,17 @@ ${events}` : prompt;
     pressed: literal(true).optional()
   });
   strictObject({ deviceId: string().min(1).max(64) });
+  object({
+    /** The commit the build was made from: a release's source index's, or a source run's. */
+    commit: string().regex(/^[a-f0-9]{40,64}$/).optional(),
+    /** Present for a run from source: absent for an installed release. */
+    source: object({
+      /** Tracked files differed from `commit` when it started. */
+      edited: boolean(),
+      /** The SHA-256 of `pnpm-lock.yaml`, in hex, when it was read. */
+      lockDigest: string().regex(/^[a-f0-9]{64}$/).optional()
+    }).optional()
+  });
   const commandEndingSchema = _enum([
     "quit",
     "signal",
@@ -13148,7 +13159,13 @@ ${events}` : prompt;
     than: _enum(["older", "newer"]).optional(),
     takesWork: boolean(),
     updateBy: deviceUpdateBySchema,
-    downloads: literal(true).optional()
+    downloads: literal(true).optional(),
+    /**
+     * This computer runs source at a commit, and Match builds that commit there
+     * (docs/devices.md, "Matching the home's build"); absent when Match brings
+     * it to this computer's installed version.
+     */
+    source: strictObject({ commit: string().regex(/^[a-f0-9]{40,64}$/) }).optional()
   });
   const deviceAppVersionSchema = strictObject({
     app: string().min(1).max(64).optional(),

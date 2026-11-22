@@ -231,6 +231,7 @@ async function getSource(
   } catch (error) {
     child.kill();
     await unpacked;
+    // i18n-exempt: a log line, never shown
     options.log?.(`could not get the home's source: ${String(error)}`);
     return false;
   }
@@ -258,17 +259,18 @@ export async function buildSourceHere(options: SourceBuildOptions): Promise<Sour
   const installed = readInstalled(dataDir);
   const background = options.background;
   if (!background || !("launchctl" in background.context) || !installed.service)
-    return {
-      failed: "keep",
-      detail: "No background runs work here to start the build.",
-    };
+    // No background runs work here to start the build.
+    return { failed: "keep" };
   const tools = options.tools === undefined ? ownTools() : options.tools;
   if (!tools) return { failed: "tools" };
   const dir = sourceBuildDir(dataDir, commit);
   if (readBuildFile(dir)?.commit !== commit) {
     const built = await build(options, tools, dir);
     if (built) return built;
-  } else log?.(`the build of ${commit} kept here is used again`);
+  } else {
+    // i18n-exempt: a log line, never shown
+    log?.(`the build of ${commit} kept here is used again`);
+  }
   return keepSource(options, background, installed.service, dir);
 }
 
@@ -287,6 +289,7 @@ async function build(
   mkdirSync(partial, { mode: 0o700 });
   const failed = (step: SourceBuildStep, detail?: string): SourceBuilt => {
     rmSync(partial, { recursive: true, force: true });
+    // i18n-exempt: a log line, never shown
     log?.(`could not build ${commit} here: ${step}${detail ? `\n${detail}` : ""}`);
     return { failed: step, ...(detail ? { detail: detail.trim().slice(-TAIL_CHARS) } : {}) };
   };
@@ -323,11 +326,12 @@ async function build(
     });
     if (step.code !== 0) return failed("build", step.tail);
   }
-  if (!existsSync(join(partial, "out", "main"))) return failed("build", "The build wrote no app.");
+  // The build wrote no app, or its packages hold no Electron to start it with.
+  if (!existsSync(join(partial, "out", "main"))) return failed("build");
   try {
     electronOf(partial);
   } catch {
-    return failed("install", "Its packages hold no Electron to start it with.");
+    return failed("install");
   }
   const lockDigest = lockDigestOf(partial);
   writePrivate(
@@ -366,6 +370,7 @@ function keepSource(
     });
   } catch (error) {
     if (watch) putBack(pairs, previous);
+    // i18n-exempt: a log line, never shown
     log?.(`could not move the background to the build: ${String(error)}`);
     return { failed: "keep", detail: String(error) };
   }
@@ -376,6 +381,7 @@ function keepSource(
     beginTrial(dataDir, dir, previous);
   } catch (error) {
     rmSync(previous, { recursive: true, force: true });
+    // i18n-exempt: a log line, never shown
     log?.(`could not keep the previous copy on trial: ${String(error)}`);
     return { restarts: true, afterRun: reload };
   }

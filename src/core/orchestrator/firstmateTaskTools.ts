@@ -10,6 +10,7 @@ import { TaskService } from "../tasks/taskService";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
 import { captainWordsIn } from "./captainOverrides";
+import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { startedReply } from "./replyLine";
@@ -527,6 +528,14 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     startNow: async (input) => {
       const record = resolve(input.task);
       host.asks.attach(record.id, "update_task", true, "tie");
+      // INF-6091 finding 1: the first mate's own open card still asks.
+      const held = cardHeldStartRefusal(record, {
+        open: supervisor.cards.values(),
+        tasks,
+        captainWords: host.turn.asked.length > 0,
+        captainPressedStart: supervisor.hostOps.pendingStarts.has(record.id),
+      });
+      if (held) return held;
       const text = await supervisor.starts.startQueuedNow(record.id);
       // A refusal comes back as text; a start now running behind the
       // answer (INF-3060), or a task a crewmate now holds, took effect.

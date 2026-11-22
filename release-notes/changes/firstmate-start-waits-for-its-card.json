@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-start-waits-for-its-card",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Firstmate waits for your answer before starting work its card asks about",
+      "body": "When Firstmate asks on a card whether to start a task, it can no longer start that task before you answer. The task starts when you choose on the card or tell Firstmate to go ahead, so choosing to leave it in the backlog never finds a crewmate already working on it.",
+      "noPicture": "Nothing on screen changes; the fix stops a start that came before your answer.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

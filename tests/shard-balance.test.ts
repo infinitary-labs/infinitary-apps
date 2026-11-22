@@ -51,16 +51,23 @@ describe("timingsFromReports", () => {
   it("keeps each file's longest measured time, by path from the repository root", () => {
     const root = fileURLToPath(new URL("..", import.meta.url));
     const result = timingsFromReports([
-      { testResults: [{ name: `${root}src/a.test.ts`, startTime: 1000, endTime: 3500 }] },
-      { testResults: [{ name: `${root}src/a.test.ts`, startTime: 0, endTime: 9000 }] },
+      {
+        testResults: [
+          { name: `${root}tests/shard-balance.test.ts`, startTime: 1000, endTime: 3500 },
+        ],
+      },
+      {
+        testResults: [{ name: `${root}tests/shard-balance.test.ts`, startTime: 0, endTime: 9000 }],
+      },
     ]);
-    expect(result).toEqual({ "src/a.test.ts": 9 });
+    expect(result).toEqual({ "tests/shard-balance.test.ts": 9 });
   });
 
-  // INF-5493: main's Linux test groups check out the repository at a path
-  // of their own, so a report downloaded from one names each file by that
-  // path; the record names it from this repository's root, and drops a file
-  // the repository no longer has.
+  // INF-5493: main's Linux test groups check out the repository in a folder
+  // nested inside the machine's own checkout, so a report downloaded from one
+  // names each file by that path, on this computer or under the branch
+  // check's own checkout alike; the record names it from this repository's
+  // root, and drops a file the repository no longer has.
   it("names a downloaded report's files from the repository root", () => {
     const checkout =
       "/home/runner/work/infinitary-apps/infinitary-apps/Application Support/firstmate";

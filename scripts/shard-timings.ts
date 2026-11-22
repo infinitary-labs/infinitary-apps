@@ -16,7 +16,7 @@
 // commit the result.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REACH_TIMINGS_FILE, SHARD_TIMINGS_FILE, type ShardTimings } from "./shard-balance.ts";
 
@@ -27,14 +27,14 @@ type VitestReport = {
 const root = fileURLToPath(new URL("..", import.meta.url));
 
 /**
- * A reported file's path from the repository root: under this checkout, its
- * relative path; from another checkout, the longest end of its path that names
- * a file here. A file this checkout no longer has names nothing.
+ * A reported file's path from the repository root: the longest end of its
+ * path that names a file here, whichever checkout ran it. main's test groups
+ * run from a checkout nested inside the machine's own, so a path under this
+ * root is not yet its path from it. A file this repository no longer has
+ * names nothing.
  */
 export function repositoryPath(name: string, base = root): string | undefined {
-  const path = relative(base, name);
-  if (!path.startsWith("..")) return path;
-  const parts = name.split("/");
+  const parts = name.split(/[\\/]/);
   for (let start = 1; start < parts.length; start++) {
     const candidate = parts.slice(start).join("/");
     if (existsSync(join(base, candidate))) return candidate;

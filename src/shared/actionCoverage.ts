@@ -473,6 +473,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "destructive",
     `A ${COMPUTER.one} that keeps a copy becomes the first mate's computer, confirmed with Touch ID or the password`,
   ],
+  "inf:update:unsent": [
+    "window",
+    "A window telling its own app whether it holds words not yet sent, which holds that app's restart onto a newer version; nothing is set",
+  ],
   "inf:cards:save-file": [
     "window",
     "Saves a card's file into Downloads on the computer whose window asked",

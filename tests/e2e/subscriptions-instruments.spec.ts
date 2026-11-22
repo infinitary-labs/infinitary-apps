@@ -582,9 +582,10 @@ test("the captain picks the account Firstmate answers on, apart from crew work's
   await page.locator('[data-menu-item="pause"]').click();
   await expect(personal).toHaveAttribute("data-paused", "true", { timeout: 10_000 });
   await expect(picker).toHaveCount(0);
-  await personal.getByRole("button", { name: "Personal actions" }).click();
+  // Paused is a switch, so the menu stays open for the second press.
   await page.locator('[data-menu-item="pause"]').click();
   await expect(personal).not.toHaveAttribute("data-paused", "true", { timeout: 10_000 });
+  await page.keyboard.press("Escape");
   await expect(picker).toHaveValue(ID.codexWork);
 
   await page.evaluate((model) => window.infinitary.settings.setFirstmateModel(model), modelBefore);

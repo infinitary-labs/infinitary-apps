@@ -934,6 +934,11 @@ export async function startApp(
           console.warn(
             `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${found === "left" ? "a holder the person left open" : kind === "free" ? "nothing now" : `a ${kind}`}`,
           );
+          // One app writes a data folder: pnpm dev says in its terminal why it ended.
+          if (sourceOnOwnData && kind === "window")
+            console.warn(
+              `[data folder] Infinitary is already open on ${dataDir}; quit it to run this copy on your saved data.`,
+            );
           break;
         }
         rmSync(answer, { force: true });

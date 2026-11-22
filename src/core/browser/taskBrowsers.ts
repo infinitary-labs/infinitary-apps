@@ -295,7 +295,11 @@ function sameSize(a: HostBrowserViewport, b: HostBrowserViewport): boolean {
   return a.width === b.width && a.height === b.height;
 }
 
-/** Whether a browser's crewmate opened a loopback origin at this host and port. */
+/**
+ * Whether a browser's crewmate opened a loopback origin at this host and
+ * port, or a page's own move reached it: the guard asks this for any page's
+ * socket, since it never knows which page asked.
+ */
 function reachesOrigin(browser: Browser, host: string, port: number): boolean {
   // A name the address parser refuses is no origin anyone opened.
   return ["http:", "https:"].some((scheme) => {

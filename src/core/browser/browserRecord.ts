@@ -75,7 +75,8 @@ export type Browser = {
   /**
    * Origins on this Mac a page's own top-level move reached, such as a
    * sign-in's return to a program (docs/task-browser.md, "Where a page may
-   * go"): only a page at one of them reaches it again.
+   * go"): only a page at one of them reaches it again, except a live socket
+   * in an engine that sends loopback to the guard, which passes from any page.
    */
   reached: Set<string>;
   /** What it keeps to tell its crewmate at the head of the next answer. */

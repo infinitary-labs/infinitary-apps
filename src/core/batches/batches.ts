@@ -74,6 +74,7 @@ import {
   pruned,
   release,
   reopened,
+  repaired,
   reworded,
   type Standing,
   sendBack,
@@ -183,6 +184,8 @@ export const BATCH_WORDS = {
     `This change merged as part of ${label}${link ? ` (${link})` : ""}, so this pull request is closed.`,
   ended:
     "That batch is no longer held or waiting at that version, so nothing was done; Settings shows it as it is now.",
+  // i18n-exempt: a refusal served to the first mate's tool, never shown to a person
+  noRepairHeld: "No batch of this project is held, so there is no repair to record.",
   notMember: (task: string) => `${task} is not in the held batch, so nothing was sent back.`,
   namedTwice: (task: string) =>
     `${task} is named more than once, so nothing was sent back: name each change once, with one reason.`,
@@ -454,9 +457,29 @@ export class Batches {
         refused = "No batch of this project is held, so there is nothing to fix.";
         return record;
       }
-      return declared(record, taskId);
+      // The task that declared the fix is the hold's repair (`OpenBatch.repair`).
+      return repaired(declared(record, taskId), taskId);
     });
     if (!refused) void this.pass(repoId);
+    return refused;
+  }
+
+  /**
+   * The task repairing the project's held batch (`OpenBatch.repair`): the
+   * one the first mate started with the `repairs_batch` mark, or one whose
+   * batch declaration answered the hold. It stays recorded while that task
+   * is open and the batch is, and the Batches panel and Settings name it.
+   * Refused in words when no batch of this project is held.
+   */
+  async markRepair(repoId: string, taskId: string): Promise<string | undefined> {
+    let refused: string | undefined;
+    await this.write(repoId, (record) => {
+      if (!record.open?.hold) {
+        refused = BATCH_WORDS.noRepairHeld;
+        return record;
+      }
+      return repaired(record, taskId);
+    });
     return refused;
   }
 
@@ -474,6 +497,8 @@ export class Batches {
     head: string,
     /** The repair's own task, when it declares its change the fix in the same answer. */
     fix?: string,
+    /** The task that declared it, recorded as the hold's repair (`OpenBatch.repair`). */
+    by?: string,
   ): Promise<BatchPassedRefusal | undefined> {
     let refused: BatchPassedRefusal | undefined;
     await this.write(repoId, (record) => {
@@ -483,7 +508,8 @@ export class Batches {
       else if (open.hold.reason !== "checks") refused = "not-checks";
       else if (open.awaits !== undefined) refused = "sent-back";
       if (refused || !open?.hold) return record;
-      const next = { ...record, open: { ...open, passed: { head, checks: open.hold.checks } } };
+      const passed = { ...record, open: { ...open, passed: { head, checks: open.hold.checks } } };
+      const next = by ? repaired(passed, by) : passed;
       return fix ? declared(next, fix) : next;
     });
     if (!refused) void this.pass(repoId);
@@ -506,8 +532,14 @@ export class Batches {
    * the batch stays held at its version, combining nothing, until the fix is
    * approved and joins with the rest and every change waiting in line.
    */
-  async answer(repoId: string, answer: BatchAnswer, fix?: string): Promise<string | undefined> {
-    const refused = await this.answered(repoId, answer, fix);
+  async answer(
+    repoId: string,
+    answer: BatchAnswer,
+    fix?: string,
+    /** A repair's own task, when its declaration sent changes back: recorded as the hold's repair. */
+    by?: string,
+  ): Promise<string | undefined> {
+    const refused = await this.answered(repoId, answer, fix, by);
     return refused === undefined || typeof refused === "string" ? refused : englishOf(refused);
   }
 
@@ -526,6 +558,7 @@ export class Batches {
     repoId: string,
     answer: BatchAnswer,
     fix?: string,
+    by?: string,
   ): Promise<string | Said | undefined> {
     const refused = await this.serial(repoId, async (): Promise<string | Said | undefined> => {
       const repo = this.options.repos.get(repoId);
@@ -569,7 +602,8 @@ export class Batches {
         (change, at) => answer.changes.findIndex((each) => each.taskId === change.taskId) !== at,
       );
       if (twice) return BATCH_WORDS.namedTwice(twice.taskId);
-      let next = record;
+      // The repair whose declaration this is stays the batch's repair through the combine.
+      let next = by ? repaired(record, by) : record;
       const sent: { member: BatchMember; entry: BatchSendBack; earlier: BatchSendBack[] }[] = [];
       for (const change of answer.changes) {
         const member = open.members.find((entry) => entry.taskId === change.taskId) as BatchMember;

@@ -1,11 +1,17 @@
-import type { PanelBatchRepo, PanelBatchTask, PanelProps } from "@infinitary/contracts";
+import type { PanelBatchRepo, PanelBatchTask, PanelProps, PanelTaskRow } from "@infinitary/contracts";
 import { Disclosure, focusWithRing, Row, StatusDot, useMinute } from "@infinitary/ui";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 import * as m from "./messages.generated";
 import styles from "./panel.css";
 import {
+  answersInSettings,
   batchTitle,
   clock,
+  crewHolds,
+  type HoldState,
+  holdOf,
+  holdSentence,
+  namesRepair,
   showsAny,
   stateOf,
   stateShort,
@@ -23,13 +29,26 @@ import {
  * ended in the last day - and puts itself on the rail only while one of
  * those holds anything in the project the window is focused on.
  *
- * It only points: a member's chip or a left-out row opens its task as a
- * Tasks row does, and resting on it peeks; the open batch, the waiting row
- * and a Last day row put up the details card; Answer in Settings opens the
- * held batch in Settings → Projects. Nothing here merges, tries again or
- * sends back. Its rows and chips are one Tab stop with the arrows inside,
+ * A held batch says who has its next step (docs/forge.md, "A held batch"):
+ * its repair, named by key with its latest report line, a rule, the captain,
+ * or no one. Open in Settings shows only while Settings holds the captain's
+ * next step: a setting, a rule or no repair.
+ *
+ * It only points: a member's chip, the repair's key or a left-out row opens
+ * its task as a Tasks row does, and resting on a chip peeks; the open batch,
+ * the waiting row and a Last day row put up the details card; Open in
+ * Settings opens the held batch in Settings → Projects. Nothing here merges,
+ * tries again or sends back. Its rows and chips are one Tab stop with the arrows inside,
  * the Last day toggle a second, Enter acts, and F6 brings focus here (`asks.onFocus`).
  */
+
+/** A roving stop's props on a button. */
+type Stop = {
+  "data-batches-stop": string;
+  tabIndex: number;
+  onFocus: () => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
+};
 
 /** The chips an open batch shows before "+N more" puts up the card. */
 const CHIPS_SHOWN = 6;
@@ -40,7 +59,14 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
   const rootRef = useRef<HTMLDivElement>(null);
   const now = useMinute();
 
+  const [rows, setRows] = useState<PanelTaskRow[] | null>(null);
+
   useEffect(() => reads.subscribe("batches.list", (value) => setRepos(value.repos)), [reads]);
+  // The board says whether a held batch's repair waits on a card of the captain's.
+  useEffect(
+    () => reads.subscribe("tasks.board", { closed: false }, (value) => setRows(value.tasks)),
+    [reads],
+  );
 
   const focused = view.focusedProjectId;
   const shown = (repos ?? []).filter(
@@ -60,10 +86,19 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
     const open = shown.flatMap((repo) => (repo.open ? [repo.open] : []));
     const held = open.find((batch) => batch.hold);
     const lead = held ?? open[0];
+    const leadHold = lead ? holdOf(lead, rows) : null;
     const waiting = shown.reduce((sum, repo) => sum + repo.line.length, 0);
     const leftOut = shown.reduce((sum, repo) => sum + repo.leftOut.length, 0);
     rail.summarize([
-      ...(lead ? [{ text: stateShort(lead, now), ...(held ? { strong: true } : {}) }] : []),
+      // Bright while the next step is not the crew's, as every panel marks what needs you.
+      ...(lead
+        ? [
+            {
+              text: stateShort(lead, now, leadHold),
+              ...(leadHold && !crewHolds(leadHold) ? { strong: true } : {}),
+            },
+          ]
+        : []),
       ...(waiting > 0 ? [{ text: m.batchesPanelWaitingCount({ count: waiting }) }] : []),
       ...(leftOut > 0 ? [{ text: m.batchesPanelLeftOutCount({ count: leftOut }) }] : []),
     ]);
@@ -100,7 +135,9 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
     const id = repo.repoId;
     if (repo.open) {
       stops.push(`open:${id}`);
-      if (repo.open.hold) stops.push(`answer:${id}`);
+      const hold = holdOf(repo.open, rows);
+      if (hold && repo.open.repair && namesRepair(hold)) stops.push(`repair:${id}`);
+      if (answersInSettings(hold)) stops.push(`answer:${id}`);
       for (const member of repo.open.members.slice(0, CHIPS_SHOWN))
         stops.push(`chip:${id}:${member.taskId}`);
       if (repo.open.members.length > CHIPS_SHOWN) stops.push(`more:${id}`);
@@ -160,21 +197,35 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
           aria-label={repo.name}
         >
           {several && <h3 className="fm-batches-panel-heading">{repo.name}</h3>}
-          {repo.open && (
-            <div className="fm-batches-panel-open" data-batches-open={repo.open.number ?? ""}>
+          {repo.open && (() => {
+            const open = repo.open;
+            const hold = holdOf(open, rows);
+            const short = stateShort(open, now, hold);
+            const title = batchTitle(open.number, open.members.length);
+            return (
+            <div className="fm-batches-panel-open" data-batches-open={open.number ?? ""}>
               <div data-batches-stop={`open:${repo.repoId}`}>
                 <Row
-                  title={batchTitle(repo.open.number, repo.open.members.length)}
-                  tone={toneOf(repo.open)}
-                  toneLabel={stateShort(repo.open, now)}
-                  trailing={stateShort(repo.open, now)}
-                  ariaLabel={`${batchTitle(repo.open.number, repo.open.members.length)} · ${stateShort(repo.open, now)}`}
+                  title={title}
+                  tone={toneOf(open, hold)}
+                  toneLabel={short}
+                  trailing={short}
+                  ariaLabel={`${title} · ${short}`}
                   onClick={details}
                   {...rowStop(`open:${repo.repoId}`)}
                 />
               </div>
-              <OpenDetail open={repo.open} />
-              {repo.open.hold && (
+              {hold && (
+                <HoldLine
+                  open={open}
+                  hold={hold}
+                  report={rows?.find((task) => task.id === open.repair?.taskId)?.outcomeSummary ?? null}
+                  stop={stops.includes(`repair:${repo.repoId}`) ? stopProps(`repair:${repo.repoId}`) : null}
+                  onOpen={openTask}
+                />
+              )}
+              <OpenDetail open={open} hold={hold} />
+              {answersInSettings(hold) && (
                 <button
                   type="button"
                   className="fm-batches-panel-answer"
@@ -183,11 +234,11 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
                     void point.openSettings("projects", `batch:${repo.repoId}`).catch(() => false)
                   }
                 >
-                  {m.batchesPanelAnswer()}
+                  {m.batchesPanelOpenSettings()}
                 </button>
               )}
               <ul className="fm-batches-panel-chips" aria-label={m.batchesPanelMembersLabel()}>
-                {repo.open.members.slice(0, CHIPS_SHOWN).map((member) => (
+                {open.members.slice(0, CHIPS_SHOWN).map((member) => (
                   <li key={member.taskId}>
                     <Chip
                       task={member}
@@ -197,7 +248,7 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
                     />
                   </li>
                 ))}
-                {repo.open.members.length > CHIPS_SHOWN && (
+                {open.members.length > CHIPS_SHOWN && (
                   <li>
                     <button
                       type="button"
@@ -205,13 +256,14 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
                       {...stopProps(`more:${repo.repoId}`)}
                       onClick={details}
                     >
-                      {m.batchesPanelMore({ count: repo.open.members.length - CHIPS_SHOWN })}
+                      {m.batchesPanelMore({ count: open.members.length - CHIPS_SHOWN })}
                     </button>
                   </li>
                 )}
               </ul>
             </div>
-          )}
+            );
+          })()}
           <ul className="fm-batches-panel-list" aria-label={m.batchesPanelListLabel()}>
             {repo.line.length > 0 && (
               <li data-batches-line="" data-batches-stop={`line:${repo.repoId}`}>
@@ -289,15 +341,82 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
   );
 }
 
-/** Under the open batch's row: its checks as last read, a hold's failed checks, and a declared fix. */
-function OpenDetail({ open }: { open: NonNullable<PanelBatchRepo["open"]> }) {
+/**
+ * Under a held batch's row: who has the hold, its repair's key a button that
+ * opens its task, and the repair's latest report line beneath. The key's
+ * button is a stop of the panel's roving set while the sentence names it.
+ */
+function HoldLine({
+  open,
+  hold,
+  report,
+  stop,
+  onOpen,
+}: {
+  open: NonNullable<PanelBatchRepo["open"]>;
+  hold: HoldState;
+  report: string | null;
+  stop: Stop | null;
+  onOpen: (taskId: string) => void;
+}) {
+  const sentence = holdSentence(open, hold);
+  const repair = open.repair;
+  const key = repair ? taskName(repair) : "";
+  const at = stop && namesRepair(hold) ? sentence.indexOf(key) : -1;
+  const shows = report && crewHolds(hold) && hold !== "passed";
+  return (
+    <>
+      <p
+        className={`fm-batches-panel-who${crewHolds(hold) ? "" : " fm-batches-panel-who-lit"}`}
+        data-batches-who={hold}
+      >
+        {at >= 0 && repair && stop ? (
+          <>
+            {sentence.slice(0, at)}
+            <button
+              type="button"
+              className="fm-batches-panel-chip"
+              data-batches-repair={repair.taskId}
+              title={repair.title}
+              aria-label={m.batchesPanelOpenTask({ key })}
+              {...stop}
+              onClick={() => onOpen(repair.taskId)}
+            >
+              {key}
+            </button>
+            {sentence.slice(at + key.length)}
+          </>
+        ) : (
+          sentence
+        )}
+      </p>
+      {shows && (
+        <p className="fm-batches-panel-report" data-batches-report="">
+          {report}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** A failed check's sentence around its name, which `{first}` puts anywhere in a language. */
+const NAME = "\u0000";
+
+/**
+ * Under the open batch's row: its checks as last read, a hold's failed checks,
+ * and a declared fix. A failed check's name takes one line and shows its end,
+ * which names the job; resting on it shows the whole name. A fix the repair
+ * declared is said by the hold's sentence, so its line is left out.
+ */
+function OpenDetail({ open, hold }: { open: NonNullable<PanelBatchRepo["open"]>; hold: HoldState | null }) {
   const checks = open.checks;
   const total = checks ? checks.passed + checks.failed + checks.running : 0;
   const state = stateOf(open);
-  const failed = m.batchesPanelFailed({
-    count: open.hold?.checks.length ?? 0,
-    first: open.hold?.checks[0] ?? "",
-  });
+  const count = open.hold?.checks.length ?? 0;
+  const first = open.hold?.checks[0] ?? "";
+  const failed = m.batchesPanelFailed({ count, first });
+  const [before = "", after = ""] = m.batchesPanelFailed({ count, first: NAME }).split(NAME);
+  const fixKeys = hold ? open.fixKeys.filter((key) => key !== open.repair?.key) : open.fixKeys;
   return (
     <div className="fm-batches-panel-detail" data-batches-checks="">
       {checks && total > 0 ? (
@@ -321,13 +440,17 @@ function OpenDetail({ open }: { open: NonNullable<PanelBatchRepo["open"]> }) {
         state === "checking" && <span>{m.batchesPanelChecksUnread()}</span>
       )}
       {open.hold?.reason === "checks" && open.hold.checks.length > 0 && (
-        <span className="fm-batches-panel-failed" data-batches-failed="">
+        <span className="fm-batches-panel-failed" data-batches-failed="" title={failed}>
           <StatusDot tone="danger" label={failed} />
-          {failed}
+          {before && <span className="fm-batches-panel-nowrap">{before.trimEnd()}</span>}
+          <span className="fm-batches-panel-cut">
+            <bdi dir="ltr">{first}</bdi>
+          </span>
+          {after && <span className="fm-batches-panel-nowrap">{after.trimStart()}</span>}
         </span>
       )}
-      {open.fixKeys.length > 0 && (
-        <span data-batches-fix="">{m.batchesPanelFix({ keys: open.fixKeys.join(", ") })}</span>
+      {fixKeys.length > 0 && (
+        <span data-batches-fix="">{m.batchesPanelFix({ keys: fixKeys.join(", ") })}</span>
       )}
     </div>
   );
@@ -343,11 +466,7 @@ function Chip({
   task: PanelBatchTask;
   onOpen: (taskId: string) => void;
   onPeek: (taskId: string | null, target?: HTMLElement) => void;
-  "data-batches-stop": string;
-  tabIndex: number;
-  onFocus: () => void;
-  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
-}) {
+} & Stop) {
   return (
     <button
       type="button"

@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "after #{number}",
-  "batchesPanelAnswer": "Answer in Settings",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "one": "Batch #{number} · {count} change",
@@ -57,13 +56,18 @@
     "one": "+{count} more",
     "other": "+{count} more"
   },
+  "batchesPanelNeedsYou": "needs you {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "one": "New batch · {count} change",
     "other": "New batch · {count} changes"
   },
   "batchesPanelNext": "next {time}",
+  "batchesPanelOpenSettings": "Open in Settings",
+  "batchesPanelOpenTask": "Open {key}",
   "batchesPanelOpening": "opening",
+  "batchesPanelRepairing": "repairing {duration}",
+  "batchesPanelRerunPassed": "rerun passed",
   "batchesPanelStateChecking": "Checking since {time}",
   "batchesPanelStateCombining": "Combining the changes again on the newest main branch",
   "batchesPanelStateOpening": "Opening the batch's pull request",
@@ -85,5 +89,16 @@
   "batchesPanelWaitsFix": "Joins the held batch as its fix",
   "batchesPanelWaitsGap": "Joins the next batch at {time}",
   "batchesPanelWaitsNow": "Joins the next batch",
+  "batchesPanelWhoApprove": "{key} made a fix. It waits for your approval.",
+  "batchesPanelWhoCard": "{key} waits for your answer on its card.",
+  "batchesPanelWhoFixing": "{key} is fixing it. Its fix joins this batch and the checks run again.",
+  "batchesPanelWhoNoWay": "Your project's merge settings refuse this way to merge.",
+  "batchesPanelWhoNone": "No repair is working on it yet. Your first mate was told when it held.",
+  "batchesPanelWhoOwn": "{key} is repairing its own change",
+  "batchesPanelWhoPassed": "A rerun passed the failed check. It merges once the other checks pass.",
+  "batchesPanelWhoRefused": "Where your project lives, the merge was refused.",
+  "batchesPanelWhoRepairing": "{key} is repairing it",
+  "batchesPanelWhoRule": "A rule where your project lives holds it, such as a required review.",
+  "batchesPanelWhoSentBack": "{key} sent changes back and is fixing the rest. The batch waits for its fix.",
   "batchesReadWords": "your batches of approved changes"
 }

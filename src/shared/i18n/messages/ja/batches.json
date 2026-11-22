@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "#{number} の後",
-  "batchesPanelAnswer": "設定で回答",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "other": "一括プルリクエスト #{number} · 変更{count}件"
@@ -52,12 +51,17 @@
     "plural": "count",
     "other": "+{count}件"
   },
+  "batchesPanelNeedsYou": "あなたの対応待ち {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "other": "新しい一括プルリクエスト · 変更{count}件"
   },
   "batchesPanelNext": "次は {time}",
+  "batchesPanelOpenSettings": "設定で開く",
+  "batchesPanelOpenTask": "{key} を開く",
   "batchesPanelOpening": "作成中",
+  "batchesPanelRepairing": "修復中 {duration}",
+  "batchesPanelRerunPassed": "再実行で合格",
   "batchesPanelStateChecking": "{time} からチェック中",
   "batchesPanelStateCombining": "最新のメインブランチで変更をまとめ直しています",
   "batchesPanelStateOpening": "一括プルリクエストを作成しています",
@@ -77,5 +81,16 @@
   "batchesPanelWaitsFix": "保留中の一括プルリクエストに修正として入ります",
   "batchesPanelWaitsGap": "{time} に次の一括プルリクエストに入ります",
   "batchesPanelWaitsNow": "次の一括プルリクエストに入ります",
+  "batchesPanelWhoApprove": "{key} が修正を作りました。あなたの承認を待っています。",
+  "batchesPanelWhoCard": "{key} がカードであなたの回答を待っています。",
+  "batchesPanelWhoFixing": "{key} が修正しています。修正はこの一括プルリクエストに加わり、チェックがもう一度実行されます。",
+  "batchesPanelWhoNoWay": "プロジェクトのマージ設定で、このマージ方法が許可されていません。",
+  "batchesPanelWhoNone": "まだ修復は行われていません。保留になったときに一等航海士へ知らせました。",
+  "batchesPanelWhoOwn": "{key} が自分の変更を修復しています",
+  "batchesPanelWhoPassed": "失敗したチェックは再実行で合格しました。ほかのチェックが合格するとマージされます。",
+  "batchesPanelWhoRefused": "プロジェクトの保管先でマージが拒否されました。",
+  "batchesPanelWhoRepairing": "{key} が修復しています",
+  "batchesPanelWhoRule": "プロジェクトの保管先のルール（必須のレビューなど）により保留されています。",
+  "batchesPanelWhoSentBack": "{key} が変更を差し戻し、残りを修正しています。一括プルリクエストはその修正を待っています。",
   "batchesReadWords": "承認済みの変更をまとめた一括プルリクエスト"
 }

@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "بعد #{number}",
-  "batchesPanelAnswer": "الرد في الإعدادات",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "zero": "الدفعة #{number} · التغييرات: {count}",
@@ -77,6 +76,7 @@
     "many": "+{count} أخرى",
     "other": "+{count} أخرى"
   },
+  "batchesPanelNeedsYou": "تحتاجك منذ {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "zero": "دفعة جديدة · التغييرات: {count}",
@@ -87,7 +87,11 @@
     "other": "دفعة جديدة · التغييرات: {count}"
   },
   "batchesPanelNext": "التالية {time}",
+  "batchesPanelOpenSettings": "فتح في الإعدادات",
+  "batchesPanelOpenTask": "فتح {key}",
   "batchesPanelOpening": "قيد الفتح",
+  "batchesPanelRepairing": "قيد الإصلاح منذ {duration}",
+  "batchesPanelRerunPassed": "نجحت إعادة التشغيل",
   "batchesPanelStateChecking": "قيد الفحص منذ {time}",
   "batchesPanelStateCombining": "يُعاد جمع التغييرات على أحدث نسخة من الفرع الرئيسي",
   "batchesPanelStateOpening": "يُفتح طلب السحب الخاص بالدفعة",
@@ -117,5 +121,16 @@
   "batchesPanelWaitsFix": "ينضم إلى الدفعة المعلّقة كإصلاح لها",
   "batchesPanelWaitsGap": "ينضم إلى الدفعة التالية عند {time}",
   "batchesPanelWaitsNow": "ينضم إلى الدفعة التالية",
+  "batchesPanelWhoApprove": "أعدّ {key} تصحيحًا. ينتظر موافقتك.",
+  "batchesPanelWhoCard": "{key} ينتظر إجابتك على بطاقته.",
+  "batchesPanelWhoFixing": "{key} يصلحها. ينضم تصحيحه إلى هذه الدفعة وتعمل الفحوصات مجددًا.",
+  "batchesPanelWhoNoWay": "إعدادات الدمج في مشروعك ترفض طريقة الدمج هذه.",
+  "batchesPanelWhoNone": "لا يعمل أي إصلاح عليها بعد. أُبلغ نائب القبطان حين عُلّقت.",
+  "batchesPanelWhoOwn": "{key} يصلح تغييره",
+  "batchesPanelWhoPassed": "نجح الفحص الفاشل عند إعادة تشغيله. تُدمج الدفعة حالما تنجح الفحوصات الأخرى.",
+  "batchesPanelWhoRefused": "رُفض الدمج حيث يُستضاف مشروعك.",
+  "batchesPanelWhoRepairing": "{key} يصلحها",
+  "batchesPanelWhoRule": "تُبقيها قاعدة حيث يُستضاف مشروعك معلّقة، مثل مراجعة مطلوبة.",
+  "batchesPanelWhoSentBack": "{key} أرجع تغييرات ويصلح الباقي. تنتظر الدفعة تصحيحه.",
   "batchesReadWords": "دفعاتك من التغييرات المعتمدة"
 }

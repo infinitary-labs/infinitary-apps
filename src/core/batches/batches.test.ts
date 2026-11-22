@@ -1157,9 +1157,10 @@ describe("a held batch", () => {
     const held = home.open();
 
     expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
-    // Declared, not yet approved: the batch stays held as it was.
+    // Declared, not yet approved: the batch stays held as it was, its declarer recorded
+    // as the hold's repair, which the Batches panel and Settings name.
     await home.pass();
-    expect(home.open()).toEqual(held);
+    expect(home.open()).toEqual({ ...held, repair: FIX.taskId });
 
     home.approve(FIX);
     await home.pass();

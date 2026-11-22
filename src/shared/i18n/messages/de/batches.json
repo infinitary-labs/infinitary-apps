@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "nach #{number}",
-  "batchesPanelAnswer": "In den Einstellungen antworten",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "one": "Bündel #{number} · {count} Änderung",
@@ -57,13 +56,18 @@
     "one": "+{count} weitere",
     "other": "+{count} weitere"
   },
+  "batchesPanelNeedsYou": "braucht dich seit {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "one": "Neues Bündel · {count} Änderung",
     "other": "Neues Bündel · {count} Änderungen"
   },
   "batchesPanelNext": "nächstes {time}",
+  "batchesPanelOpenSettings": "In den Einstellungen öffnen",
+  "batchesPanelOpenTask": "{key} öffnen",
   "batchesPanelOpening": "wird geöffnet",
+  "batchesPanelRepairing": "wird seit {duration} repariert",
+  "batchesPanelRerunPassed": "Wiederholung bestanden",
   "batchesPanelStateChecking": "Wird seit {time} überprüft",
   "batchesPanelStateCombining": "Die Änderungen werden auf dem neuesten Hauptbranch neu zusammengestellt",
   "batchesPanelStateOpening": "Der Pull Request des Bündels wird geöffnet",
@@ -85,5 +89,16 @@
   "batchesPanelWaitsFix": "Kommt als Korrektur ins angehaltene Bündel",
   "batchesPanelWaitsGap": "Kommt um {time} ins nächste Bündel",
   "batchesPanelWaitsNow": "Kommt ins nächste Bündel",
+  "batchesPanelWhoApprove": "{key} hat eine Korrektur erstellt. Sie wartet auf deine Bestätigung.",
+  "batchesPanelWhoCard": "{key} wartet auf deine Antwort auf seiner Karte.",
+  "batchesPanelWhoFixing": "{key} korrigiert es. Die Korrektur kommt in dieses Bündel, und die Überprüfungen laufen erneut.",
+  "batchesPanelWhoNoWay": "Die Einstellungen deines Projekts erlauben diese Art des Zusammenführens nicht.",
+  "batchesPanelWhoNone": "Noch keine Reparatur arbeitet daran. Dein erster Offizier wurde informiert, als es angehalten wurde.",
+  "batchesPanelWhoOwn": "{key} repariert die eigene Änderung",
+  "batchesPanelWhoPassed": "Die fehlgeschlagene Überprüfung hat bei der Wiederholung bestanden. Das Bündel wird zusammengeführt, sobald die übrigen Überprüfungen bestanden sind.",
+  "batchesPanelWhoRefused": "Dort, wo dein Projekt liegt, wurde das Zusammenführen abgelehnt.",
+  "batchesPanelWhoRepairing": "{key} repariert es",
+  "batchesPanelWhoRule": "Eine Regel dort, wo dein Projekt liegt, hält es an, zum Beispiel ein erforderliches Review.",
+  "batchesPanelWhoSentBack": "{key} hat Änderungen zurückgeschickt und korrigiert den Rest. Das Bündel wartet auf die Korrektur.",
   "batchesReadWords": "deine Bündel freigegebener Änderungen"
 }

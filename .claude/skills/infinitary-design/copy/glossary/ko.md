@@ -126,6 +126,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | release / released | 릴리스 / 릴리스됨 | |
 | remote, origin, upstream | (not used) | 프로젝트가 있는 곳 instead |
 | Remove (a device) | 제거 | |
+| repair (the task repairing a held batch) | 복구 | "{key}이(가) 복구하고 있어요" for the task at work; the change it makes stays 수정. |
 | reply | 답장 | |
 | repo | (not used) | 프로젝트 instead |
 | report | 보고, 보고하다 | |

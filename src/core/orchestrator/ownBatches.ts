@@ -227,6 +227,7 @@ export function createOwnBatches(owners: {
                 ...(earlier.length ? { sentBack: earlier.map((entry) => named(repo, entry)) } : {}),
               };
             }),
+            ...(batch.repair ? { repair: tasks.get(batch.repair)?.key ?? batch.repair } : {}),
           },
         },
         "agent",

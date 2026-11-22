@@ -70427,6 +70427,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Builds in place. Work that passes the checks is written as soon as it is done.`;
   }
+  function settingsProjectsBatchAnswerNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أيّ من الإجابتين ينهي التعليق الآن، ويعيد الإصلاح قراءة الدفعة.`;
+      case "de":
+        return `Beide Antworten beenden das Anhalten sofort, und die Reparatur liest das Bündel neu.`;
+      case "es":
+        return `Cualquiera de las dos respuestas termina la retención ahora, y la reparación vuelve a leer el lote.`;
+      case "fr":
+        return `L’une ou l’autre réponse lève la retenue tout de suite, et la réparation relit le lot.`;
+      case "ja":
+        return `どちらの回答でもすぐに保留が解け、修復は一括プルリクエストを読み直します。`;
+      case "ko":
+        return `어느 답이든 보류가 바로 풀리고, 복구는 일괄 끌어오기 요청을 다시 읽어요.`;
+      case "pt-BR":
+        return `Qualquer uma das respostas encerra a retenção agora, e o reparo lê o lote de novo.`;
+      case "zh-Hans":
+        return `任一回答都会立即解除暂缓，修复会重新读取这批改动。`;
+      case "zh-Hant":
+        return `任一回答都會立即解除暫緩，修復會重新讀取批次。`;
+      case "en-XA":
+        return `[Éîţĥéŕ áñšŵéŕ éñðš ţĥé ĥöļð ñöŵ, áñð ţĥé ŕéþáîŕ ŕéáðš ţĥé ƀáţçĥ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Either answer ends the hold now, and the repair reads the batch again.‬`;
+    }
+    return `Either answer ends the hold now, and the repair reads the batch again.`;
+  }
+  function settingsProjectsBatchAnswerRuleNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تفي أيّ من الإجابتين بالقاعدة. كل منهما تغيّر ما تحمله الدفعة.`;
+      case "de":
+        return `Keine der Antworten erfüllt die Regel. Jede ändert, was das Bündel enthält.`;
+      case "es":
+        return `Ninguna respuesta cumple la regla. Cada una cambia lo que contiene el lote.`;
+      case "fr":
+        return `Aucune des deux réponses ne satisfait la règle. Chacune change ce que contient le lot.`;
+      case "ja":
+        return `どちらの回答もルールを満たしません。どちらも一括プルリクエストの中身を変えます。`;
+      case "ko":
+        return `어느 답도 규칙을 충족하지 않아요. 둘 다 일괄 끌어오기 요청의 내용을 바꿔요.`;
+      case "pt-BR":
+        return `Nenhuma das respostas atende à regra. Cada uma muda o que o lote contém.`;
+      case "zh-Hans":
+        return `两个回答都不满足这条规则。每个都会改变这批改动包含的内容。`;
+      case "zh-Hant":
+        return `兩個回答都不符合這條規則。每個都會改變批次包含的內容。`;
+      case "en-XA":
+        return `[Ñéîţĥéŕ áñšŵéŕ ɱééţš ţĥé ŕûļé. Éáçĥ öñé çĥáñĝéš ŵĥáţ ţĥé ƀáţçĥ ĥöļðš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Neither answer meets the rule. Each one changes what the batch holds.‬`;
+    }
+    return `Neither answer meets the rule. Each one changes what the batch holds.`;
+  }
+  function settingsProjectsBatchAnswerYourself() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أجب بنفسك`;
+      case "de":
+        return `Selbst antworten`;
+      case "es":
+        return `Responder tú mismo`;
+      case "fr":
+        return `Répondre vous-même`;
+      case "ja":
+        return `自分で回答する`;
+      case "ko":
+        return `직접 답하기`;
+      case "pt-BR":
+        return `Responder você mesmo`;
+      case "zh-Hans":
+        return `自己回答`;
+      case "zh-Hant":
+        return `自己回答`;
+      case "en-XA":
+        return `[Åñšŵéŕ îţ ýöûŕšéļƒ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Answer it yourself‬`;
+    }
+    return `Answer it yourself`;
+  }
   function settingsProjectsBatchChanges() {
     switch (currentLanguage()) {
       case "ar":
@@ -71020,6 +71101,500 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Held since ${since}: its checks passed, and a rule where the project lives holds it, such as a required review. It merges by itself once that rule lets it through.`;
   }
+  function settingsProjectsBatchHeldTitleApprove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: تصحيحها ينتظر موافقتك`;
+      case "de":
+        return `Bündel angehalten: Die Korrektur wartet auf deine Bestätigung`;
+      case "es":
+        return `Lote retenido: su corrección espera tu aprobación`;
+      case "fr":
+        return `Lot retenu : son correctif attend votre approbation`;
+      case "ja":
+        return `一括プルリクエストを保留中：修正があなたの承認を待っています`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 수정이 승인을 기다려요`;
+      case "pt-BR":
+        return `Lote retido: a correção aguarda sua aprovação`;
+      case "zh-Hans":
+        return `这批改动已暂缓：它的修正在等你批准`;
+      case "zh-Hant":
+        return `批次已暫緩：它的修正在等你核准`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: îţš ƒîẋ ŵáîţš ƒöŕ ýöûŕ áþþŕöṽáļ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: its fix waits for your approval‬`;
+    }
+    return `Batch held: its fix waits for your approval`;
+  }
+  function settingsProjectsBatchHeldTitleCard() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: إصلاحها ينتظر إجابتك`;
+      case "de":
+        return `Bündel angehalten: Die Reparatur wartet auf deine Antwort`;
+      case "es":
+        return `Lote retenido: su reparación espera tu respuesta`;
+      case "fr":
+        return `Lot retenu : sa réparation attend votre réponse`;
+      case "ja":
+        return `一括プルリクエストを保留中：修復があなたの回答を待っています`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 복구가 답을 기다려요`;
+      case "pt-BR":
+        return `Lote retido: o reparo aguarda sua resposta`;
+      case "zh-Hans":
+        return `这批改动已暂缓：它的修复在等你回答`;
+      case "zh-Hant":
+        return `批次已暫緩：它的修復在等你回答`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: îţš ŕéþáîŕ ŵáîţš ƒöŕ ýöûŕ áñšŵéŕ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: its repair waits for your answer‬`;
+    }
+    return `Batch held: its repair waits for your answer`;
+  }
+  function settingsProjectsBatchHeldTitleNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: لا يعمل عليها أي إصلاح`;
+      case "de":
+        return `Bündel angehalten: Keine Reparatur arbeitet daran`;
+      case "es":
+        return `Lote retenido: ninguna reparación trabaja en él`;
+      case "fr":
+        return `Lot retenu : aucune réparation n’y travaille`;
+      case "ja":
+        return `一括プルリクエストを保留中：修復は行われていません`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 진행 중인 복구가 없어요`;
+      case "pt-BR":
+        return `Lote retido: nenhum reparo está trabalhando nele`;
+      case "zh-Hans":
+        return `这批改动已暂缓：没有修复在处理它`;
+      case "zh-Hant":
+        return `批次已暫緩：沒有修復在處理它`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: ñö ŕéþáîŕ îš ŵöŕķîñĝ öñ îţ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: no repair is working on it‬`;
+    }
+    return `Batch held: no repair is working on it`;
+  }
+  function settingsProjectsBatchHeldTitleOwn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: فرد الطاقم صاحب التغيير يصلحها`;
+      case "de":
+        return `Bündel angehalten: Das eigene Crewmitglied repariert es`;
+      case "es":
+        return `Lote retenido: su propio tripulante lo está reparando`;
+      case "fr":
+        return `Lot retenu : son propre équipier le répare`;
+      case "ja":
+        return `一括プルリクエストを保留中：変更の乗組員が修復しています`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 변경의 선원이 복구하고 있어요`;
+      case "pt-BR":
+        return `Lote retido: o próprio tripulante está reparando`;
+      case "zh-Hans":
+        return `这批改动已暂缓：改动自己的船员正在修复`;
+      case "zh-Hant":
+        return `批次已暫緩：變更自己的船員正在修復`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: îţš öŵñ çŕéŵɱáţé îš ŕéþáîŕîñĝ îţ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: its own crewmate is repairing it‬`;
+    }
+    return `Batch held: its own crewmate is repairing it`;
+  }
+  function settingsProjectsBatchHeldTitlePassed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: نجح الفحص الفاشل عند إعادة تشغيله`;
+      case "de":
+        return `Bündel angehalten: Die fehlgeschlagene Überprüfung hat bei der Wiederholung bestanden`;
+      case "es":
+        return `Lote retenido: la comprobación fallida se superó al repetirla`;
+      case "fr":
+        return `Lot retenu : la vérification en échec a réussi à la relance`;
+      case "ja":
+        return `一括プルリクエストを保留中：失敗したチェックは再実行で合格しました`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 실패한 검사가 다시 실행해서 통과했어요`;
+      case "pt-BR":
+        return `Lote retido: a verificação que falhou passou ao rodar de novo`;
+      case "zh-Hans":
+        return `这批改动已暂缓：未通过的检查重新运行后通过了`;
+      case "zh-Hant":
+        return `批次已暫緩：未通過的檢查重新執行後通過了`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: á ŕéŕûñ þáššéð ţĥé ƒáîļéð çĥéçķ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: a rerun passed the failed check‬`;
+    }
+    return `Batch held: a rerun passed the failed check`;
+  }
+  function settingsProjectsBatchHeldTitleRepairing() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: إصلاح يعمل عليها`;
+      case "de":
+        return `Bündel angehalten: Eine Reparatur arbeitet daran`;
+      case "es":
+        return `Lote retenido: una reparación trabaja en él`;
+      case "fr":
+        return `Lot retenu : une réparation y travaille`;
+      case "ja":
+        return `一括プルリクエストを保留中：修復が進んでいます`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 복구가 진행 중이에요`;
+      case "pt-BR":
+        return `Lote retido: um reparo está trabalhando nele`;
+      case "zh-Hans":
+        return `这批改动已暂缓：正在修复`;
+      case "zh-Hant":
+        return `批次已暫緩：正在修復`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: á ŕéþáîŕ îš ŵöŕķîñĝ öñ îţ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: a repair is working on it‬`;
+    }
+    return `Batch held: a repair is working on it`;
+  }
+  function settingsProjectsBatchHeldTitleRule() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة بسبب قاعدة حيث يُستضاف مشروعك`;
+      case "de":
+        return `Bündel angehalten durch eine Regel dort, wo dein Projekt liegt`;
+      case "es":
+        return `Lote retenido por una regla donde se aloja tu proyecto`;
+      case "fr":
+        return `Lot retenu par une règle là où votre projet est hébergé`;
+      case "ja":
+        return `プロジェクトの保管先のルールにより一括プルリクエストを保留中`;
+      case "ko":
+        return `프로젝트가 있는 곳의 규칙으로 일괄 끌어오기 요청 보류됨`;
+      case "pt-BR":
+        return `Lote retido por uma regra onde seu projeto fica`;
+      case "zh-Hans":
+        return `这批改动因项目托管处的一条规则而暂缓`;
+      case "zh-Hant":
+        return `批次因專案所在處的一條規則而暫緩`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð ƀý á ŕûļé ŵĥéŕé ýöûŕ þŕöĵéçţ ļîṽéš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held by a rule where your project lives‬`;
+    }
+    return `Batch held by a rule where your project lives`;
+  }
+  function settingsProjectsBatchHeldTitleSetting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الدفعة معلّقة: إعداد في المشروع يمنع الدمج`;
+      case "de":
+        return `Bündel angehalten: Eine Projekteinstellung verhindert das Zusammenführen`;
+      case "es":
+        return `Lote retenido: un ajuste del proyecto impide la fusión`;
+      case "fr":
+        return `Lot retenu : un réglage du projet bloque la fusion`;
+      case "ja":
+        return `一括プルリクエストを保留中：プロジェクトの設定がマージを止めています`;
+      case "ko":
+        return `일괄 끌어오기 요청 보류됨: 프로젝트 설정이 병합을 막아요`;
+      case "pt-BR":
+        return `Lote retido: um ajuste do projeto impede a mesclagem`;
+      case "zh-Hans":
+        return `这批改动已暂缓：项目的一项设置阻止了合并`;
+      case "zh-Hant":
+        return `批次已暫緩：專案的一項設定擋下了合併`;
+      case "en-XA":
+        return `[Ɓáţçĥ ĥéļð: á þŕöĵéçţ šéţţîñĝ ƀļöçķš ţĥé ɱéŕĝé ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Batch held: a project setting blocks the merge‬`;
+    }
+    return `Batch held: a project setting blocks the merge`;
+  }
+  function settingsProjectsBatchHeldWhoApprove(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّ ${key} تصحيحًا. ينضم إلى هذه الدفعة حالما توافق عليه، وتعمل الفحوصات مجددًا.`;
+      case "de":
+        return `${key} hat eine Korrektur erstellt. Sie kommt in dieses Bündel, sobald du sie bestätigst, und die Überprüfungen laufen erneut.`;
+      case "es":
+        return `${key} hizo una corrección. Se une a este lote en cuanto la apruebes, y las comprobaciones se ejecutan de nuevo.`;
+      case "fr":
+        return `${key} a préparé un correctif. Il rejoint ce lot dès que vous l’approuvez, et les vérifications s’exécutent à nouveau.`;
+      case "ja":
+        return `${key} が修正を作りました。あなたが承認するとこの一括プルリクエストに加わり、チェックがもう一度実行されます。`;
+      case "ko":
+        return `${key}이(가) 수정을 만들었어요. 승인하면 이 일괄 끌어오기 요청에 들어가고 검사가 다시 실행돼요.`;
+      case "pt-BR":
+        return `${key} fez uma correção. Ela entra neste lote assim que você aprovar, e as verificações rodam de novo.`;
+      case "zh-Hans":
+        return `${key} 做了一个修正。你批准后它会加入这批改动，检查会重新运行。`;
+      case "zh-Hant":
+        return `${key} 做了一個修正。你核准後它會加入這個批次，檢查會重新執行。`;
+      case "en-XA":
+        return `[${key} ɱáðé á ƒîẋ. Îţ ĵöîñš ţĥîš ƀáţçĥ öñçé ýöû áþþŕöṽé îţ, áñð ţĥé çĥéçķš ŕûñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ made a fix. It joins this batch once you approve it, and the checks run again.‬`;
+    }
+    return `${key} made a fix. It joins this batch once you approve it, and the checks run again.`;
+  }
+  function settingsProjectsBatchHeldWhoCard(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} ينتظر إجابتك على بطاقته.`;
+      case "de":
+        return `${key} wartet auf deine Antwort auf seiner Karte.`;
+      case "es":
+        return `${key} espera tu respuesta en su tarjeta.`;
+      case "fr":
+        return `${key} attend votre réponse sur sa carte.`;
+      case "ja":
+        return `${key} がカードであなたの回答を待っています。`;
+      case "ko":
+        return `${key}이(가) 카드에서 답을 기다려요.`;
+      case "pt-BR":
+        return `${key} aguarda sua resposta no cartão.`;
+      case "zh-Hans":
+        return `${key} 在它的卡片上等你回答。`;
+      case "zh-Hant":
+        return `${key} 在它的卡片上等你回答。`;
+      case "en-XA":
+        return `[${key} ŵáîţš ƒöŕ ýöûŕ áñšŵéŕ öñ îţš çáŕð. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ waits for your answer on its card.‬`;
+    }
+    return `${key} waits for your answer on its card.`;
+  }
+  function settingsProjectsBatchHeldWhoFixing(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} يصلحها: ينضم تصحيحه إلى هذه الدفعة وتعمل الفحوصات مجددًا. لا شيء مطلوب منك.`;
+      case "de":
+        return `${key} korrigiert es: Die Korrektur kommt in dieses Bündel, und die Überprüfungen laufen erneut. Von dir wird nichts gebraucht.`;
+      case "es":
+        return `${key} lo está corrigiendo: su corrección se une a este lote y las comprobaciones se ejecutan de nuevo. No se necesita nada de ti.`;
+      case "fr":
+        return `${key} le corrige : son correctif rejoint ce lot et les vérifications s’exécutent à nouveau. Rien n’est attendu de vous.`;
+      case "ja":
+        return `${key} が修正しています。修正はこの一括プルリクエストに加わり、チェックがもう一度実行されます。あなたの対応は不要です。`;
+      case "ko":
+        return `${key}이(가) 수정하고 있어요. 수정이 이 일괄 끌어오기 요청에 들어가고 검사가 다시 실행돼요. 할 일은 없어요.`;
+      case "pt-BR":
+        return `${key} está corrigindo: a correção entra neste lote e as verificações rodam de novo. Nada é preciso de você.`;
+      case "zh-Hans":
+        return `${key} 正在修正：修正会加入这批改动，检查会重新运行。无需你做什么。`;
+      case "zh-Hant":
+        return `${key} 正在修正：修正會加入這個批次，檢查會重新執行。不需要你做什麼。`;
+      case "en-XA":
+        return `[${key} îš ƒîẋîñĝ îţ: îţš ƒîẋ ĵöîñš ţĥîš ƀáţçĥ áñð ţĥé çĥéçķš ŕûñ áĝáîñ. Ñöţĥîñĝ îš ñééðéð ƒŕöɱ ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is fixing it: its fix joins this batch and the checks run again. Nothing is needed from you.‬`;
+    }
+    return `${key} is fixing it: its fix joins this batch and the checks run again. Nothing is needed from you.`;
+  }
+  function settingsProjectsBatchHeldWhoNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يعمل أي إصلاح عليها بعد. أُبلغ نائب القبطان حين عُلّقت. أجب هنا، أو اطلب من نائب القبطان إصلاحًا.`;
+      case "de":
+        return `Noch keine Reparatur arbeitet daran. Dein erster Offizier wurde informiert, als es angehalten wurde. Antworte hier oder bitte deinen ersten Offizier um eine Reparatur.`;
+      case "es":
+        return `Ninguna reparación trabaja en él todavía. Se avisó a tu primer oficial cuando quedó retenido. Responde aquí o pide una reparación a tu primer oficial.`;
+      case "fr":
+        return `Aucune réparation n’y travaille encore. Votre second a été prévenu quand il a été retenu. Répondez ici, ou demandez une réparation à votre second.`;
+      case "ja":
+        return `まだ修復は行われていません。保留になったときに一等航海士へ知らせました。ここで回答するか、一等航海士に修復を頼んでください。`;
+      case "ko":
+        return `아직 복구가 진행되고 있지 않아요. 보류됐을 때 일등항해사에게 알렸어요. 여기서 답하거나 일등항해사에게 복구를 요청하세요.`;
+      case "pt-BR":
+        return `Nenhum reparo está trabalhando nele ainda. Seu imediato foi avisado quando ele ficou retido. Responda aqui ou peça um reparo ao seu imediato.`;
+      case "zh-Hans":
+        return `还没有修复在处理它。暂缓时已告诉你的大副。你可以在这里回答，或请大副安排修复。`;
+      case "zh-Hant":
+        return `還沒有修復在處理它。暫緩時已告訴你的大副。你可以在這裡回答，或請大副安排修復。`;
+      case "en-XA":
+        return `[Ñö ŕéþáîŕ îš ŵöŕķîñĝ öñ îţ ýéţ. Ýöûŕ ƒîŕšţ ɱáţé ŵáš ţöļð ŵĥéñ îţ ĥéļð. Åñšŵéŕ îţ ĥéŕé, öŕ ášķ ýöûŕ ƒîŕšţ ɱáţé ƒöŕ á ŕéþáîŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No repair is working on it yet. Your first mate was told when it held. Answer it here, or ask your first mate for a repair.‬`;
+    }
+    return `No repair is working on it yet. Your first mate was told when it held. Answer it here, or ask your first mate for a repair.`;
+  }
+  function settingsProjectsBatchHeldWhoOwn(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} يصلح تغييره وسيتولى التعليق بنفسه. لا شيء مطلوب منك.`;
+      case "de":
+        return `${key} repariert die eigene Änderung und beantwortet das Anhalten selbst. Von dir wird nichts gebraucht.`;
+      case "es":
+        return `${key} está reparando su propio cambio y resolverá la retención por sí mismo. No se necesita nada de ti.`;
+      case "fr":
+        return `${key} répare sa propre modification et lèvera la retenue lui-même. Rien n’est attendu de vous.`;
+      case "ja":
+        return `${key} が自分の変更を修復しており、保留への対応も行います。あなたの対応は不要です。`;
+      case "ko":
+        return `${key}이(가) 자기 변경을 복구하고 있고 보류도 직접 해결해요. 할 일은 없어요.`;
+      case "pt-BR":
+        return `${key} está reparando a própria alteração e resolve a retenção sozinho. Nada é preciso de você.`;
+      case "zh-Hans":
+        return `${key} 正在修复自己的改动，并会自行处理暂缓。无需你做什么。`;
+      case "zh-Hant":
+        return `${key} 正在修復自己的變更，並會自行處理暫緩。不需要你做什麼。`;
+      case "en-XA":
+        return `[${key} îš ŕéþáîŕîñĝ îţš öŵñ çĥáñĝé áñð áñšŵéŕš ţĥé ĥöļð îţšéļƒ. Ñöţĥîñĝ îš ñééðéð ƒŕöɱ ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is repairing its own change and answers the hold itself. Nothing is needed from you.‬`;
+    }
+    return `${key} is repairing its own change and answers the hold itself. Nothing is needed from you.`;
+  }
+  function settingsProjectsBatchHeldWhoPassed(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعاد ${key} تشغيل الفحص الفاشل فنجح. تُدمج الدفعة حالما تنجح الفحوصات الأخرى.`;
+      case "de":
+        return `${key} hat die fehlgeschlagene Überprüfung wiederholt, und sie hat bestanden. Das Bündel wird zusammengeführt, sobald die übrigen Überprüfungen bestanden sind.`;
+      case "es":
+        return `${key} repitió la comprobación fallida y se superó. El lote se fusiona en cuanto se superen las demás comprobaciones.`;
+      case "fr":
+        return `${key} a relancé la vérification en échec, et elle a réussi. Le lot sera fusionné dès que les autres vérifications auront réussi.`;
+      case "ja":
+        return `${key} が失敗したチェックを再実行し、合格しました。ほかのチェックが合格するとマージされます。`;
+      case "ko":
+        return `${key}이(가) 실패한 검사를 다시 실행했고 통과했어요. 다른 검사가 통과하면 병합돼요.`;
+      case "pt-BR":
+        return `${key} rodou de novo a verificação que falhou, e ela passou. O lote é mesclado assim que as outras verificações passarem.`;
+      case "zh-Hans":
+        return `${key} 重新运行了未通过的检查，结果通过了。其他检查通过后，这批改动就会合并。`;
+      case "zh-Hant":
+        return `${key} 重新執行了未通過的檢查，結果通過了。其他檢查通過後，批次就會合併。`;
+      case "en-XA":
+        return `[${key} ŕáñ ţĥé ƒáîļéð çĥéçķ áĝáîñ áñð îţ þáššéð. Ţĥé ƀáţçĥ ɱéŕĝéš öñçé ţĥé öţĥéŕ çĥéçķš þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ ran the failed check again and it passed. The batch merges once the other checks pass.‬`;
+    }
+    return `${key} ran the failed check again and it passed. The batch merges once the other checks pass.`;
+  }
+  function settingsProjectsBatchHeldWhoPassedUnnamed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نجح الفحص الفاشل عند إعادة تشغيله. تُدمج الدفعة حالما تنجح الفحوصات الأخرى.`;
+      case "de":
+        return `Die fehlgeschlagene Überprüfung hat bei der Wiederholung bestanden. Das Bündel wird zusammengeführt, sobald die übrigen Überprüfungen bestanden sind.`;
+      case "es":
+        return `La comprobación fallida se superó al repetirla. El lote se fusiona en cuanto se superen las demás comprobaciones.`;
+      case "fr":
+        return `La vérification en échec a réussi à la relance. Le lot sera fusionné dès que les autres vérifications auront réussi.`;
+      case "ja":
+        return `失敗したチェックは再実行で合格しました。ほかのチェックが合格するとマージされます。`;
+      case "ko":
+        return `실패한 검사가 다시 실행해서 통과했어요. 다른 검사가 통과하면 병합돼요.`;
+      case "pt-BR":
+        return `A verificação que falhou passou ao rodar de novo. O lote é mesclado assim que as outras verificações passarem.`;
+      case "zh-Hans":
+        return `未通过的检查重新运行后通过了。其他检查通过后，这批改动就会合并。`;
+      case "zh-Hant":
+        return `未通過的檢查重新執行後通過了。其他檢查通過後，批次就會合併。`;
+      case "en-XA":
+        return `[Å ŕéŕûñ þáššéð ţĥé ƒáîļéð çĥéçķ. Ţĥé ƀáţçĥ ɱéŕĝéš öñçé ţĥé öţĥéŕ çĥéçķš þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A rerun passed the failed check. The batch merges once the other checks pass.‬`;
+    }
+    return `A rerun passed the failed check. The batch merges once the other checks pass.`;
+  }
+  function settingsProjectsBatchHeldWhoRepairing(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} يصلحها وسيتولى التعليق بنفسه. لا شيء مطلوب منك.`;
+      case "de":
+        return `${key} repariert es und beantwortet das Anhalten selbst. Von dir wird nichts gebraucht.`;
+      case "es":
+        return `${key} lo está reparando y resolverá la retención por sí mismo. No se necesita nada de ti.`;
+      case "fr":
+        return `${key} le répare et lèvera la retenue lui-même. Rien n’est attendu de vous.`;
+      case "ja":
+        return `${key} が修復しており、保留への対応も行います。あなたの対応は不要です。`;
+      case "ko":
+        return `${key}이(가) 복구하고 있고 보류도 직접 해결해요. 할 일은 없어요.`;
+      case "pt-BR":
+        return `${key} está reparando e resolve a retenção sozinho. Nada é preciso de você.`;
+      case "zh-Hans":
+        return `${key} 正在修复，并会自行处理暂缓。无需你做什么。`;
+      case "zh-Hant":
+        return `${key} 正在修復，並會自行處理暫緩。不需要你做什麼。`;
+      case "en-XA":
+        return `[${key} îš ŕéþáîŕîñĝ îţ áñð áñšŵéŕš ţĥé ĥöļð îţšéļƒ. Ñöţĥîñĝ îš ñééðéð ƒŕöɱ ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is repairing it and answers the hold itself. Nothing is needed from you.‬`;
+    }
+    return `${key} is repairing it and answers the hold itself. Nothing is needed from you.`;
+  }
+  function settingsProjectsBatchHeldWhoSentBack(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} أرجع تغييرات ويصلح الباقي، والدفعة تنتظر تصحيحه. لا شيء مطلوب منك.`;
+      case "de":
+        return `${key} hat Änderungen zurückgeschickt und korrigiert den Rest, und das Bündel wartet auf die Korrektur. Von dir wird nichts gebraucht.`;
+      case "es":
+        return `${key} devolvió cambios y está corrigiendo el resto, y el lote espera su corrección. No se necesita nada de ti.`;
+      case "fr":
+        return `${key} a renvoyé des modifications et corrige le reste, et le lot attend son correctif. Rien n’est attendu de vous.`;
+      case "ja":
+        return `${key} が変更を差し戻して残りを修正しており、一括プルリクエストはその修正を待っています。あなたの対応は不要です。`;
+      case "ko":
+        return `${key}이(가) 변경을 돌려보내고 나머지를 수정하고 있으며, 일괄 끌어오기 요청은 그 수정을 기다려요. 할 일은 없어요.`;
+      case "pt-BR":
+        return `${key} devolveu alterações e está corrigindo o resto, e o lote aguarda a correção. Nada é preciso de você.`;
+      case "zh-Hans":
+        return `${key} 退回了一些改动，正在修正其余部分，这批改动在等它的修正。无需你做什么。`;
+      case "zh-Hant":
+        return `${key} 退回了一些變更，正在修正其餘部分，批次在等它的修正。不需要你做什麼。`;
+      case "en-XA":
+        return `[${key} šéñţ çĥáñĝéš ƀáçķ áñð îš ƒîẋîñĝ ţĥé ŕéšţ, áñð ţĥé ƀáţçĥ ŵáîţš ƒöŕ îţš ƒîẋ. Ñöţĥîñĝ îš ñééðéð ƒŕöɱ ýöû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ sent changes back and is fixing the rest, and the batch waits for its fix. Nothing is needed from you.‬`;
+    }
+    return `${key} sent changes back and is fixing the rest, and the batch waits for its fix. Nothing is needed from you.`;
+  }
+  function settingsProjectsBatchLatestReport(input2) {
+    const report = input2.report;
+    switch (currentLanguage()) {
+      case "ar":
+        return `آخر تقرير منه: ${report}`;
+      case "de":
+        return `Letzter Bericht: ${report}`;
+      case "es":
+        return `Su último informe: ${report}`;
+      case "fr":
+        return `Son dernier rapport : ${report}`;
+      case "ja":
+        return `最新の報告：${report}`;
+      case "ko":
+        return `최근 보고: ${report}`;
+      case "pt-BR":
+        return `Último relatório: ${report}`;
+      case "zh-Hans":
+        return `它的最新报告：${report}`;
+      case "zh-Hant":
+        return `它的最新報告：${report}`;
+      case "en-XA":
+        return `[Îţš ļáţéšţ ŕéþöŕţ: ${report} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its latest report: ‬${report}`;
+    }
+    return `Its latest report: ${report}`;
+  }
   function settingsProjectsBatchNeedsChange() {
     switch (currentLanguage()) {
       case "ar":
@@ -71128,6 +71703,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Open ‬${label}`;
     }
     return `Open ${label}`;
+  }
+  function settingsProjectsBatchOpenTask(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح ${key}`;
+      case "de":
+        return `${key} öffnen`;
+      case "es":
+        return `Abrir ${key}`;
+      case "fr":
+        return `Ouvrir ${key}`;
+      case "ja":
+        return `${key} を開く`;
+      case "ko":
+        return `${key} 열기`;
+      case "pt-BR":
+        return `Abrir ${key}`;
+      case "zh-Hans":
+        return `打开 ${key}`;
+      case "zh-Hant":
+        return `開啟 ${key}`;
+      case "en-XA":
+        return `[Öþéñ ${key} ~~]`;
+      case "ar-XB":
+        return `‮Open ‬${key}`;
+    }
+    return `Open ${key}`;
   }
   function settingsProjectsBatchOwn() {
     switch (currentLanguage()) {
@@ -96489,6 +97092,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsAutonomyOff,
     settingsProjectsAutonomyOn,
     settingsProjectsAutonomyPersonal,
+    settingsProjectsBatchAnswerNote,
+    settingsProjectsBatchAnswerRuleNote,
+    settingsProjectsBatchAnswerYourself,
     settingsProjectsBatchChanges,
     settingsProjectsBatchGap,
     settingsProjectsBatchGapDescription,
@@ -96501,10 +97107,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchHeldNoWay,
     settingsProjectsBatchHeldRefused,
     settingsProjectsBatchHeldRules,
+    settingsProjectsBatchHeldTitleApprove,
+    settingsProjectsBatchHeldTitleCard,
+    settingsProjectsBatchHeldTitleNone,
+    settingsProjectsBatchHeldTitleOwn,
+    settingsProjectsBatchHeldTitlePassed,
+    settingsProjectsBatchHeldTitleRepairing,
+    settingsProjectsBatchHeldTitleRule,
+    settingsProjectsBatchHeldTitleSetting,
+    settingsProjectsBatchHeldWhoApprove,
+    settingsProjectsBatchHeldWhoCard,
+    settingsProjectsBatchHeldWhoFixing,
+    settingsProjectsBatchHeldWhoNone,
+    settingsProjectsBatchHeldWhoOwn,
+    settingsProjectsBatchHeldWhoPassed,
+    settingsProjectsBatchHeldWhoPassedUnnamed,
+    settingsProjectsBatchHeldWhoRepairing,
+    settingsProjectsBatchHeldWhoSentBack,
+    settingsProjectsBatchLatestReport,
     settingsProjectsBatchNeedsChange,
     settingsProjectsBatchNeedsReason,
     settingsProjectsBatchNoHost,
     settingsProjectsBatchOpen,
+    settingsProjectsBatchOpenTask,
     settingsProjectsBatchOwn,
     settingsProjectsBatchReason,
     settingsProjectsBatchReasonPlaceholder,
@@ -99526,6 +100151,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsAutonomyOff": [],
     "settingsProjectsAutonomyOn": [],
     "settingsProjectsAutonomyPersonal": [],
+    "settingsProjectsBatchAnswerNote": [],
+    "settingsProjectsBatchAnswerRuleNote": [],
+    "settingsProjectsBatchAnswerYourself": [],
     "settingsProjectsBatchChanges": [],
     "settingsProjectsBatchGap": [],
     "settingsProjectsBatchGapDescription": [],
@@ -99538,10 +100166,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchHeldNoWay": ["since"],
     "settingsProjectsBatchHeldRefused": ["detail", "since"],
     "settingsProjectsBatchHeldRules": ["since"],
+    "settingsProjectsBatchHeldTitleApprove": [],
+    "settingsProjectsBatchHeldTitleCard": [],
+    "settingsProjectsBatchHeldTitleNone": [],
+    "settingsProjectsBatchHeldTitleOwn": [],
+    "settingsProjectsBatchHeldTitlePassed": [],
+    "settingsProjectsBatchHeldTitleRepairing": [],
+    "settingsProjectsBatchHeldTitleRule": [],
+    "settingsProjectsBatchHeldTitleSetting": [],
+    "settingsProjectsBatchHeldWhoApprove": ["key"],
+    "settingsProjectsBatchHeldWhoCard": ["key"],
+    "settingsProjectsBatchHeldWhoFixing": ["key"],
+    "settingsProjectsBatchHeldWhoNone": [],
+    "settingsProjectsBatchHeldWhoOwn": ["key"],
+    "settingsProjectsBatchHeldWhoPassed": ["key"],
+    "settingsProjectsBatchHeldWhoPassedUnnamed": [],
+    "settingsProjectsBatchHeldWhoRepairing": ["key"],
+    "settingsProjectsBatchHeldWhoSentBack": ["key"],
+    "settingsProjectsBatchLatestReport": ["report"],
     "settingsProjectsBatchNeedsChange": [],
     "settingsProjectsBatchNeedsReason": [],
     "settingsProjectsBatchNoHost": [],
     "settingsProjectsBatchOpen": ["label"],
+    "settingsProjectsBatchOpenTask": ["key"],
     "settingsProjectsBatchOwn": [],
     "settingsProjectsBatchReason": ["title"],
     "settingsProjectsBatchReasonPlaceholder": [],
@@ -108412,7 +109059,15 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     passed: object({ head: string(), checks: array(string()) }).optional(),
     /** How many times it was held, counted at each fresh hold; absent before its first. */
-    holds: number().int().positive().optional()
+    holds: number().int().positive().optional(),
+    /**
+     * The task repairing its hold, by id (docs/forge.md, "A held batch"): the
+     * one task the first mate started with the `repairs_batch` mark, or the
+     * last task whose `check_change` batch declaration answered the hold. Kept
+     * while that task is open and the batch is, through a combine on the same
+     * pull request, so a later hold names it; the app judges nothing from it.
+     */
+    repair: string().optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -108586,7 +109241,18 @@ ${FRAME_KEYBOARD_SCRIPT}
           /** The declared fixes for its hold, by key. */
           fixKeys: array(string()),
           /** Its checks as last read at its version; null before the first reading. */
-          checks: batchChecksReadingSchema.nullable()
+          checks: batchChecksReadingSchema.nullable(),
+          /**
+           * The task repairing its hold (`OpenBatch.repair`), or a held batch of
+           * one's own change, whose crewmate repairs it; null with neither.
+           * `own` marks that change's own crewmate, `fixing` a repair that
+           * declared its change the hold's fix.
+           */
+          repair: batchTaskSchema.extend({ own: boolean(), fixing: boolean() }).nullable(),
+          /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
+          awaitsFix: boolean(),
+          /** Its repair declared that a rerun passed the failed checks at its version. */
+          passed: boolean()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({

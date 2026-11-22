@@ -191,6 +191,13 @@ export type FirstmateAgentOptions = {
    */
   flagDuplicate?: (input: { cardId: string; duplicateOf: string; note: string }) => DuplicateResult;
   /**
+   * Records a task the first mate started with spawn_crewmate's
+   * `repairs_batch` as the repair of its project's held batch
+   * (docs/forge.md, "A held batch"); answers why not in words, or nothing.
+   * Absent = nothing is recorded.
+   */
+  markBatchRepair?: (taskId: string) => Promise<string | undefined>;
+  /**
    * Talk-to-personalize Step 1: the preferences writer and the personal
    * surfaces behind the `personalize` tool and the context block's "your
    * surfaces" section. Absent = no personalize tool in this build.

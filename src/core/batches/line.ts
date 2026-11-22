@@ -454,6 +454,8 @@ export function combined(
         ...(previous?.url !== undefined ? { url: previous.url } : {}),
         // The holds it had before its repair combined it again stay counted.
         ...(previous?.holds !== undefined ? { holds: previous.holds } : {}),
+        // Its repair stays its repair while the same pull request carries it.
+        ...(previous?.repair !== undefined ? { repair: previous.repair } : {}),
         members: result.members,
         since: previous?.since ?? batch.at,
       }
@@ -656,8 +658,20 @@ export function clashesEnded(
 }
 
 /**
+ * The record with `taskId` recorded as the repair of its held batch
+ * (`OpenBatch.repair`); the same record when no batch is held or that task
+ * is recorded already.
+ */
+export function repaired(record: BatchRecord, taskId: string): BatchRecord {
+  const open = record.open;
+  if (!open?.hold || open.repair === taskId) return record;
+  return { ...record, open: { ...open, repair: taskId } };
+}
+
+/**
  * Drop what only closed tasks still hold: a merged receipt once read, a
- * left-out note, a send-back, and a declared fix. A held batch that waited
+ * left-out note, a send-back, a declared fix, and the repair of the open
+ * batch (`OpenBatch.repair`). A held batch that waited
  * for a repair whose task closed stays held with no owner of the wait
  * (`awaits` empty), until another repair's fix is approved or Try again.
  */
@@ -668,21 +682,29 @@ export function pruned(record: BatchRecord, live: (taskId: string) => boolean): 
   const fixes = record.fixes?.filter(live);
   const open = record.open;
   const orphaned = Boolean(open?.awaits) && !live(open?.awaits as string);
+  const unrepaired = open?.repair !== undefined && !live(open.repair);
   if (
     receipts.length === record.receipts.length &&
     leftOut.length === record.leftOut.length &&
     sentBack?.length === record.sentBack?.length &&
     fixes?.length === record.fixes?.length &&
-    !orphaned
+    !orphaned &&
+    !unrepaired
   )
     return record;
   const { sentBack: _sentBack, ...rest } = record;
+  let kept = open;
+  if (kept && orphaned) kept = { ...kept, awaits: "" };
+  if (kept && unrepaired) {
+    const { repair: _repair, ...without } = kept;
+    kept = without;
+  }
   const next = {
     ...rest,
     receipts,
     leftOut,
     ...(sentBack?.length ? { sentBack } : {}),
-    ...(open && orphaned ? { open: { ...open, awaits: "" } } : {}),
+    ...(kept && kept !== open ? { open: kept } : {}),
   };
   return fixes?.length === record.fixes?.length
     ? next

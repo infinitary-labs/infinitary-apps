@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "après #{number}",
-  "batchesPanelAnswer": "Répondre dans Réglages",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "one": "Lot #{number} · {count} modification",
@@ -62,6 +61,7 @@
     "many": "+{count} de plus",
     "other": "+{count} de plus"
   },
+  "batchesPanelNeedsYou": "vous attend depuis {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "one": "Nouveau lot · {count} modification",
@@ -69,7 +69,11 @@
     "other": "Nouveau lot · {count} modifications"
   },
   "batchesPanelNext": "prochain à {time}",
+  "batchesPanelOpenSettings": "Ouvrir dans Réglages",
+  "batchesPanelOpenTask": "Ouvrir {key}",
   "batchesPanelOpening": "ouverture",
+  "batchesPanelRepairing": "en réparation depuis {duration}",
+  "batchesPanelRerunPassed": "relance réussie",
   "batchesPanelStateChecking": "En vérification depuis {time}",
   "batchesPanelStateCombining": "Nouveau regroupement des modifications sur la branche principale la plus récente",
   "batchesPanelStateOpening": "Ouverture de la demande de tirage du lot",
@@ -93,5 +97,16 @@
   "batchesPanelWaitsFix": "Rejoint le lot retenu comme correctif",
   "batchesPanelWaitsGap": "Rejoint le prochain lot à {time}",
   "batchesPanelWaitsNow": "Rejoint le prochain lot",
+  "batchesPanelWhoApprove": "{key} a préparé un correctif. Il attend votre approbation.",
+  "batchesPanelWhoCard": "{key} attend votre réponse sur sa carte.",
+  "batchesPanelWhoFixing": "{key} le corrige. Son correctif rejoint ce lot et les vérifications s’exécutent à nouveau.",
+  "batchesPanelWhoNoWay": "Les réglages de fusion de votre projet refusent ce mode de fusion.",
+  "batchesPanelWhoNone": "Aucune réparation n’y travaille encore. Votre second a été prévenu quand il a été retenu.",
+  "batchesPanelWhoOwn": "{key} répare sa propre modification",
+  "batchesPanelWhoPassed": "La vérification en échec a réussi à la relance. Le lot sera fusionné dès que les autres vérifications auront réussi.",
+  "batchesPanelWhoRefused": "La fusion a été refusée là où votre projet est hébergé.",
+  "batchesPanelWhoRepairing": "{key} le répare",
+  "batchesPanelWhoRule": "Une règle le retient là où votre projet est hébergé, par exemple une revue requise.",
+  "batchesPanelWhoSentBack": "{key} a renvoyé des modifications et corrige le reste. Le lot attend son correctif.",
   "batchesReadWords": "vos lots de modifications approuvées"
 }

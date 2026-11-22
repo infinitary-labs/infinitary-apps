@@ -25,7 +25,7 @@ The strip of tabs is one Tab stop, the chosen tab: ← and → move between tabs
 Choosing a tab changes only what is inside the panel; the Project box above stays.
 
 Inside the panel sit the chosen repository's settings, each group under its uppercase micro label:
-- **Changes**: Where changes go with its notes, Target project, the held batch panel, When a batch starts on a batched project, Require pull request checks, Ask before merging, and Rigor with its warning for Careful on a project that merges locally.
+- **Changes**: Where changes go with its notes, Target project, the held batch panel (it says who has the hold, tinted only while the next step is not the crew's, with Try again and Send back folded under Answer it yourself while a repair or a rule has it), When a batch starts on a batched project, Require pull request checks, Ask before merging, and Rigor with its warning for Careful on a project that merges locally.
 - **Tasks**: Runs on (`components/devices/RunsOn.prompt.md`) and Cost limit (`CostLimit.prompt.md`); the label shows only when one of them does.
 - **Details**: Scope, Folder, Where it lives and Save details, plus the repository's own Name in a project of several.
   Then the Move row (`MoveRepository.prompt.md`) and the Remove row, whose titles name their repository (`RemoveProject.prompt.md`).

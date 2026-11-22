@@ -164,6 +164,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
   const delegate: CrewDelegate = {
     escalationEligible: (taskId) => supervisor.escalationEligible(taskId),
     premiumCanServe: () => premiumCanServe(host.options),
+    ...(host.options.markBatchRepair ? { markBatchRepair: host.options.markBatchRepair } : {}),
     commission: async (input) => {
       // The message's pictures ride the brief, which goes out before the
       // message attaches to the new task below.

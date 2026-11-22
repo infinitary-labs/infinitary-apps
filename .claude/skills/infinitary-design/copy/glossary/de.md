@@ -123,6 +123,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | record (a Usage record) | Eintrag | Kept apart from a task's Protokoll. |
 | relay (Infinitary's push relay) | Relay von Infinitary | Neuter ("das Relay"); it passes sealed notifications and notes it cannot read; a sealed note is "versiegelte Nachricht". |
 | Remove (a device) | Entfernen | |
+| repair (the task repairing a held batch) | Reparatur | Feminine ("die Reparatur"); "{key} repariert es" for the task at work; the change it makes stays Korrektur. |
 | report | Bericht, berichten | |
 | repository (one of a project's) | Repository | Neuter, plural Repositorys; "Ein Repository hinzufügen", "2 Repositorys". Names one of a project's repositories; what work belongs to stays Projekt. |
 | review | Review | Neuter ("das Review"), so it does not collide with "Überprüfungen". |

@@ -405,6 +405,7 @@ export class CheckChangeTool {
         repoId,
         passed,
         batch.fix === true ? record.id : undefined,
+        record.id,
       );
       if (refused) return BATCH_DECLARATION_WORDS.passed[refused];
       return BATCH_DECLARATION_WORDS.passedRecorded(batch.fix === true);
@@ -439,6 +440,7 @@ export class CheckChangeTool {
       repoId,
       { action: "send-back", head: open.hold.head, changes },
       batch.fix === true ? record.id : undefined,
+      record.id,
     );
     if (refused) return `Batch declaration refused: ${refused}`;
     const sent = changes.length === 1 ? "one change" : `${changes.length} changes`;

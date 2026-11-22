@@ -12689,7 +12689,15 @@ ${events}` : prompt;
      */
     passed: object({ head: string(), checks: array(string()) }).optional(),
     /** How many times it was held, counted at each fresh hold; absent before its first. */
-    holds: number().int().positive().optional()
+    holds: number().int().positive().optional(),
+    /**
+     * The task repairing its hold, by id (docs/forge.md, "A held batch"): the
+     * one task the first mate started with the `repairs_batch` mark, or the
+     * last task whose `check_change` batch declaration answered the hold. Kept
+     * while that task is open and the batch is, through a combine on the same
+     * pull request, so a later hold names it; the app judges nothing from it.
+     */
+    repair: string().optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -12863,7 +12871,18 @@ ${events}` : prompt;
           /** The declared fixes for its hold, by key. */
           fixKeys: array(string()),
           /** Its checks as last read at its version; null before the first reading. */
-          checks: batchChecksReadingSchema.nullable()
+          checks: batchChecksReadingSchema.nullable(),
+          /**
+           * The task repairing its hold (`OpenBatch.repair`), or a held batch of
+           * one's own change, whose crewmate repairs it; null with neither.
+           * `own` marks that change's own crewmate, `fixing` a repair that
+           * declared its change the hold's fix.
+           */
+          repair: batchTaskSchema.extend({ own: boolean(), fixing: boolean() }).nullable(),
+          /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
+          awaitsFix: boolean(),
+          /** Its repair declared that a rerun passed the failed checks at its version. */
+          passed: boolean()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({

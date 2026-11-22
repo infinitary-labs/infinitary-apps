@@ -30,7 +30,7 @@ const CASES: WordsCases<OwnBatchWakeKind> = {
         },
       },
       words:
-        '[fm-op] a batch of the captain\'s approved changes is held in project "meter" (repo_id p-7a21): #31 (https://github.com/acme/meter/pull/31) at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 failed unit-tests. It carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch\'s fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: Settings shows it with Try again and Send back with a reason.',
+        '[fm-op] a batch of the captain\'s approved changes is held in project "meter" (repo_id p-7a21): #31 (https://github.com/acme/meter/pull/31) at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 failed unit-tests. It carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first and repairs_batch true in its shape, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch\'s fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: the Batches panel and Settings show who is repairing it, and Settings keeps Try again and Send back with a reason.',
     },
     {
       // INF-5097 piece 1: a held batch's repair hears each member's earlier send-backs.
@@ -69,7 +69,29 @@ const CASES: WordsCases<OwnBatchWakeKind> = {
         },
       },
       words:
-        '[fm-op] a batch of the captain\'s approved changes is held in project "meter" (repo_id p-7a21): #33 (https://github.com/acme/meter/pull/33) at 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e failed unit-tests. It carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Earlier send-backs from batches: MTR-12 was sent back twice: at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 in #31: "Its new parser fails the date tests the batch ran" (never ran there: journeys); at 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c in #32: "Its repair still fails the leap-year date test". Put them in the repair\'s brief, with the checks that never ran there. Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch\'s fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: Settings shows it with Try again and Send back with a reason.',
+        '[fm-op] a batch of the captain\'s approved changes is held in project "meter" (repo_id p-7a21): #33 (https://github.com/acme/meter/pull/33) at 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e failed unit-tests. It carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Earlier send-backs from batches: MTR-12 was sent back twice: at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 in #31: "Its new parser fails the date tests the batch ran" (never ran there: journeys); at 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c in #32: "Its repair still fails the leap-year date test". Put them in the repair\'s brief, with the checks that never ran there. Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first and repairs_batch true in its shape, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch\'s fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: the Batches panel and Settings show who is repairing it, and Settings keeps Try again and Send back with a reason.',
+    },
+    {
+      // The captain's ask that a held batch show who repairs it: a batch whose repair is
+      // recorded tells the first mate to steer that task rather than start another.
+      name: "a held batch whose repair is recorded",
+      wake: {
+        facts: {
+          kind: "batch-held",
+          project: { id: "p-7a21", name: "meter" },
+          change: "#34",
+          url: "https://github.com/acme/meter/pull/34",
+          head: "3b8f6d2c05f0c2a9e41b7d3c8a6e2f9b0d4c1a7e",
+          checks: ["unit-tests"],
+          members: [
+            { task: "MTR-12", title: "fix(meter): read the reset date" },
+            { task: "MTR-14", title: "feat(meter): show the weekly window" },
+          ],
+          repair: "MTR-19",
+        },
+      },
+      words:
+        '[fm-op] a batch of the captain\'s approved changes is held in project "meter" (repo_id p-7a21): #34 (https://github.com/acme/meter/pull/34) at 3b8f6d2c05f0c2a9e41b7d3c8a6e2f9b0d4c1a7e failed unit-tests. It carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Changes approved meanwhile wait in line behind it. MTR-19 is recorded as this batch\'s repair and is still open: steer it with this pull request and version, and start no other task. Put up no card about the hold: the Batches panel and Settings show who is repairing it, and Settings keeps Try again and Send back with a reason.',
     },
   ],
   "batch-sent-back": [

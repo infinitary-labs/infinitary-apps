@@ -51,9 +51,10 @@ describe("inMemoryWorkers", () => {
 describe("integrationWorkers", () => {
   // INF-5632, the bug a PC's Linux place found: four integration workers there
   // ran the quick check's programs and the phone's generated-file checks
-  // beside Vitest's own 1.4 GiB process, 278 MiB stayed free, and the kernel
-  // ended Vitest's process in the branch check's last reach run. The place's
-  // own readings stand in for the computer.
+  // beside Vitest's own 1.4 GiB process with as little as 278 MiB free, and a
+  // SIGKILL, most likely the kernel's out-of-memory killer, ended Vitest's
+  // process in a branch check's reach run. The place's own readings stand in
+  // for the computer.
   it("starts no more workers than a 2-core, 8 GB place's memory holds beside Vitest's own process", () => {
     const workers = integrationWorkers({ platform: "linux", ...PC_PLACE });
     expect((workers + 1) * TEST_PROCESS_MEMORY_BYTES).toBeLessThanOrEqual(PC_PLACE.memoryBytes);

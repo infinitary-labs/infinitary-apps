@@ -31,7 +31,9 @@ export function jobMemory(): number {
  * what each file it ran leaves behind (`isolate: false`), so it grows with the
  * files it runs: three workers running a third of those cohorts on a Mac
  * peaked at 6.5 GiB together with Vitest's own process, the largest worker at
- * 2.3 GiB and Vitest's process at 1.4 GiB, so four shares hold them.
+ * 2.3 GiB and Vitest's process at 1.4 GiB, so four shares hold them. An
+ * integration worker's share holds the programs its file starts as well
+ * (`integrationWorkers`).
  */
 export const TEST_PROCESS_MEMORY_BYTES = 2 * 1024 ** 3;
 
@@ -55,8 +57,9 @@ export function inMemoryWorkers({ cores, memoryBytes }: { cores: number; memoryB
  * always one. An integration worker's share holds the programs its file
  * starts as well as the worker: the file that runs the quick check held 2.3 GB
  * with its programs. INF-5632: four on a Linux place with 2 cores and 8 GB
- * with no swap left 278 MiB free beside Vitest's own 1.4 GiB, and the kernel
- * ended Vitest's process for memory in the branch check's last reach run.
+ * with no swap left as little as 278 MiB free beside Vitest's own 1.4 GiB, and
+ * a SIGKILL ended Vitest's process alone in a branch check's reach run there,
+ * most likely the kernel's out-of-memory killer.
  */
 export function integrationWorkers({
   platform,

@@ -822,7 +822,8 @@ test("a sign-in that returns to a program on this computer reaches it on the fir
   const SIGNED_IN = "Program signed in";
   // The program on this computer the sign-in returns to: it says it is
   // signed in only when its return brings the code, loads a part of its
-  // own, and records each visit.
+  // own, and records each visit. Its empty icon keeps a browser from asking
+  // it for one, so its visits are only what its page asks for.
   const visits: string[] = [];
   const program = createServer((request, response) => {
     visits.push(request.url ?? "");
@@ -834,7 +835,7 @@ test("a sign-in that returns to a program on this computer reaches it on the fir
     const said = request.url === `/auth/callback?code=${CODE}` ? SIGNED_IN : "Program waiting";
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.end(
-      `<!doctype html><title>Program</title><style>body { font: 28px sans-serif; margin: 32px; }</style><link rel="stylesheet" href="/part.css"><p id="said">${said}</p>`,
+      `<!doctype html><title>Program</title><link rel="icon" href="data:,"><style>body { font: 28px sans-serif; margin: 32px; }</style><link rel="stylesheet" href="/part.css"><p id="said">${said}</p>`,
     );
   });
   await new Promise<void>((resolve) => program.listen(0, "127.0.0.1", resolve));

@@ -103,10 +103,6 @@ export function ProjectPage({
   runsOnError: string | null;
   actions: ProjectPageActions;
 }) {
-  const back = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    back.current?.focus();
-  }, []);
   const several = entry.kind === "several";
   const members = several ? entry.repos : [entry.repo];
   const project: GroupProject | null = entry.project;
@@ -115,7 +111,6 @@ export function ProjectPage({
   return (
     <div data-project-page={project?.key ?? chosen.id}>
       <Button
-        ref={back}
         variant="ghost"
         size="sm"
         data-project-back=""

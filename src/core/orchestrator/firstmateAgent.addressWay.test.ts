@@ -32,6 +32,9 @@ describe("FirstmateAgent: the way to add a computer", () => {
           contribution: { enabled: false },
         },
         "inf:shell:preferences": { panels: { enabled: false } },
+        // General's lines include ending a secret read and stopping a copy, which list theirs.
+        "inf:secrets:view": { reads: [] },
+        "inf:standby:list": { standbys: [] },
       };
       agent.bindAppDispatch(async (channel) => (nothingYet[channel] ?? {}) as never);
       await agent.converse("add my mini");

@@ -1113,6 +1113,58 @@ describe("matching a computer to this Mac's source", () => {
     expect(asked).toEqual([]);
   });
 
+  it("builds this Mac's commit on a Mac added by its address, without going over Remote Login", async () => {
+    const overRemoteLogin: string[] = [];
+    const home = homeAt(
+      "192.168.65.2",
+      { contract: PROTOCOL_VERSION, build: { commit: HOME, source: { edited: true } } },
+      {
+        updateOverRemoteLogin: async (deviceId) => {
+          overRemoteLogin.push(deviceId);
+          throw new Error("went over Remote Login");
+        },
+      },
+    );
+    const { connection, computers, deviceId, pairing } = home;
+    // As the list keeps a Mac added by its address.
+    const list = pairing.list.bind(pairing);
+    pairing.list = () =>
+      list().map((device) =>
+        device.id === deviceId ? { ...device, remoteLogin: "sam@mini.local" } : device,
+      );
+    connection.tell({ deviceId, contact: "in-reach" });
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    const asked: string[] = [];
+    connection.link.ask = async (_deviceId, channel) => {
+      asked.push(channel);
+      return channel === WORK_SOURCE_ORDER
+        ? { failed: "build" }
+        : { received: 0, state: "building" };
+    };
+    await computers.update(deviceId).catch(() => undefined);
+    expect(asked).toContain(WORK_SOURCE_ORDER);
+    expect(overRemoteLogin).toEqual([]);
+  });
+
+  it("refuses a computer that is not a Mac, sending it nothing and keeping no yes", async () => {
+    const { connection, computers, deviceId, pairing } = sourceHome();
+    pairing.noteSystem(deviceId, { system: "linux" });
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    const asked: string[] = [];
+    connection.link.ask = async (_deviceId, channel) => {
+      asked.push(channel);
+      return {};
+    };
+    const refused = await computers.update(deviceId).catch((error: unknown) => error);
+    expect((refused as RemoteLoginRefusedError).lines).toEqual([
+      m.devicesSourceNotMac({ device: "Mac mini" }),
+      m.devicesSourceKeepsVersion(),
+    ]);
+    expect(asked).toEqual([]);
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(false);
+  });
+
   it("keeps the captain's Match as that computer's yes to running source, and only then", () => {
     const { connection, computers, deviceId } = sourceHome();
     connection.tellVersion(deviceId, hello({ commit: HOME, source: { edited: false } }));

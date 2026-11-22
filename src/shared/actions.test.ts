@@ -11,7 +11,8 @@ import {
   uncoveredSettings,
 } from "./actionCoverage";
 import { ACTION_NAMES, ACTIONS, actionRefusal } from "./actions";
-import { deviceUpdateBody } from "./deviceUpdateNudge";
+import { deviceUpdateBody, sourceMatchCard } from "./deviceUpdateNudge";
+import * as m from "./i18n/messages.generated.ts";
 import {
   CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
@@ -449,6 +450,33 @@ it("offers counted downloads for another Mac and the local copy for another user
     other: { app: "0.0.1", than: "older", takesWork: true, updateBy: "remote-login" },
   });
   expect(nudge).toContain(remoteLoginWords.updateLocalCopyOffer());
+});
+
+// INF-5635's plan, piece 3: Match sends a Mac the home's commit to build, asking once first;
+// the first mate's offer words it as the app's own card does, and refuses a computer that is not a Mac.
+it("words a source target as the app's own card, and refuses it for a computer that is not a Mac", () => {
+  const commit = "c".repeat(40);
+  const device = {
+    id: "mini",
+    kind: "work" as const,
+    name: "Mac mini",
+    pairedAt: 1,
+    system: "macos" as const,
+    inReach: true,
+    otherVersion: { app: "0.0.1", takesWork: true, updateBy: "connection", source: { commit } },
+  } as const;
+  const makeOffer = ACTIONS["device-update"].offer;
+  if (!makeOffer) throw new Error("No update offer.");
+  const offer = makeOffer({ deviceId: device.id }, [device], { platform: "darwin" });
+  const card = sourceMatchCard({ deviceId: device.id, device: "Mac mini", commit });
+  expect(offer.title).toBe(card.title);
+  for (const paragraph of offer.paragraphs.slice(0, 3))
+    expect(card.body).toContain(`<p>${paragraph}</p>`);
+  expect(offer.label).toBe(card.actions[0]?.label);
+  expect(offer.arrival).toEqual({ update: device.id });
+  expect(() =>
+    makeOffer({ deviceId: device.id }, [{ ...device, system: "linux" }], { platform: "darwin" }),
+  ).toThrow(m.devicesSourceNotMac({ device: "Mac mini" }));
 });
 
 // INF-322 direction B: a Mac a command added downloads over its own connection, or is sent this computer's copy.

@@ -114,19 +114,19 @@ describe("matching a computer to this computer's source", () => {
     },
   });
 
-  function sourceHome(allowed: boolean) {
+  function sourceHome(allowed: boolean, device: DeviceView = mini) {
     const raised = new Map<string, { title: string; body: string; actions: unknown[] }>();
     const chosen = new Map<string, string>();
     const updates: string[] = [];
     // A match that went through brings it to this computer's commit.
-    let listed: DeviceView = mini;
+    let listed: DeviceView = device;
     const nudge = new DeviceUpdateNudge({
       devices: () => [listed],
       homeApp: () => undefined,
       sourceAllowed: () => allowed,
       update: async (deviceId) => {
         updates.push(deviceId);
-        const { otherVersion: _matched, ...matched } = mini;
+        const { otherVersion: _matched, ...matched } = device;
         listed = matched;
         return listed;
       },
@@ -164,6 +164,16 @@ describe("matching a computer to this computer's source", () => {
     h.chosen.set(deviceUpdateCardId("mac-mini"), `not-now@source:${COMMIT}`);
     h.nudge.refresh("mac-mini");
     expect(h.raised.size).toBe(0);
+  });
+
+  it("neither asks nor matches a computer that is not a Mac, which cannot build source", async () => {
+    for (const allowed of [false, true]) {
+      const h = sourceHome(allowed, { ...mini, system: "linux" });
+      h.nudge.refresh("mac-mini");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(h.raised.size).toBe(0);
+      expect(h.updates).toEqual([]);
+    }
   });
 
   it("matches a computer the captain allowed by itself, with no card", async () => {

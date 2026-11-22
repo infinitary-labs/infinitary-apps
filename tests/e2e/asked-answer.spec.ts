@@ -361,13 +361,20 @@ test("an answer is read in a turn of its own, and carry on keeps its message tie
     // The turn that reads the answer is held at its carry-on steer.
     await expect.poll(() => answersTo(app, question).length, { timeout: 60_000 }).toBe(1);
     await expect.poll(() => provider.heldThreadAnswers(), { timeout: 60_000 }).toBe(1);
-    // The captain writes while the answer's turn runs.
+    // The captain writes while the answer's turn runs, and the words wait on
+    // the lane: the message is saved before they are, so the turn is let go
+    // only once they are parked.
     await say(page, SHOW_THE_METER);
-    await expect
-      .poll(() => tasks.capture.listAsks().some((ask) => ask.text === SHOW_THE_METER), {
-        timeout: 30_000,
-      })
-      .toBe(true);
+    const parked = () => {
+      const shown = tasks.capture.listAsks().find((ask) => ask.text === SHOW_THE_METER);
+      return (
+        shown !== undefined &&
+        inbox
+          .allFor(FIRSTMATE_RECIPIENT)
+          .some((row) => row.facts?.kind === "captain-turn" && row.facts.askId === shown.id)
+      );
+    };
+    await expect.poll(parked, { timeout: 30_000 }).toBe(true);
     provider.releaseThreadAnswer();
     await expect.poll(() => retriesFor(app, words).length, { timeout: 60_000 }).toBe(1);
     await expect.poll(() => cardTitles(page), { timeout: 60_000 }).toContain(METER_CARD_TITLE);

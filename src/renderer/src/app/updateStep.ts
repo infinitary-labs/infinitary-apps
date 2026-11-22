@@ -80,6 +80,13 @@ export type UpdateStepPresses = {
 
 const releasesPage: UpdateStepButton = { action: "release", label: UPDATE_WORDS.releasesPage };
 
+/**
+ * A copy run from source has no releases page: the way on after a failed
+ * check is another check, and its offered commit is a link only where the
+ * project's host has a page comparing two commits (docs/alpha.md, "Updates from source").
+ */
+const fromSource = (status: UpdateStatus): boolean => status.source !== undefined;
+
 /** The step for this status, or null before the first status arrives. */
 export function updateStep(
   status: UpdateStatus | null,
@@ -154,7 +161,7 @@ export function updateStep(
       line: UPDATE_PROBLEMS.checkFailed,
       problem: true,
       primary: { action: "check", label: UPDATE_WORDS.retry, disabled: pressed.busy },
-      secondary: releasesPage,
+      ...(fromSource(status) ? {} : { secondary: releasesPage }),
     };
   const found = status.notice ?? null;
   return {
@@ -191,10 +198,13 @@ function offeredStep(
   const found = checkFailed
     ? `${UPDATE_PROBLEMS.checkFailed} ${stillAvailable(status, version)}`
     : [available(status, version), read.checked].filter(Boolean).join(" ");
-  const offer = { version, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
+  // The version in the line opens its page; a source commit's only where that page exists.
+  const linked = fromSource(status) && !status.releaseUrl ? {} : { version };
+  const offer = { ...linked, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
   if (problem !== null)
     // The app installs it here and the failure can pass on a retry; with no
-    // way to install it here, the releases page is the way on.
+    // way to install it here, the releases page is the way on, or for a copy
+    // run from source another check.
     return install
       ? {
           state: "retry",
@@ -208,7 +218,12 @@ function offeredStep(
           },
           secondary: check,
         }
-      : { state: "blocked", line: problem, problem: true, primary: releasesPage };
+      : {
+          state: "blocked",
+          line: problem,
+          problem: true,
+          primary: fromSource(status) ? check : releasesPage,
+        };
   if (install)
     return {
       state: "available",
@@ -221,7 +236,7 @@ function offeredStep(
             : UPDATE_STEP_WORDS.replaces)
       }`,
       problem: checkFailed,
-      version,
+      ...linked,
       primary: {
         action: "install",
         label: installLabel,
@@ -244,7 +259,7 @@ function offeredStep(
     state: "available",
     line: held ? `${found} ${SOURCE_HELD[held](status.source?.branch ?? "")}` : found,
     problem: checkFailed,
-    version,
+    ...linked,
     primary: check,
   };
 }

@@ -277,4 +277,35 @@ describe("the update ladder", () => {
       `${m.updateSourceAvailable({ branch: "main", count: 1, commit: "5d6e7f8" })} Checked just now. ${m.updateSourceAhead({ branch: "main" })}`,
     );
   });
+
+  // INF-5635's approved plan, piece 2, review finding f-source-release-link: a copy run
+  // from source has no releases page, so no control offers one, and its offered commit
+  // opens only a page comparing the two commits where the project's host has one.
+  it("gives a source copy only controls that do something", () => {
+    const source: UpdateStatus = {
+      ...OFFERED,
+      currentVersion: "1a2b3c4",
+      latestVersion: "5d6e7f8",
+      releaseUrl: null,
+      channelChoice: undefined,
+      source: { branch: "main", behind: 1 },
+    };
+    expect(step(source)?.version).toBeUndefined();
+    expect(
+      step({ ...source, releaseUrl: "https://github.com/o/p/compare/1a2b3c4...5d6e7f8" })?.version,
+    ).toBe("5d6e7f8");
+    const upToDate = { ...source, updateAvailable: false, source: { branch: "main", behind: 0 } };
+    expect(reads({ ...upToDate, phase: "error", problem: UPDATE_PROBLEMS.checkFailed })).toEqual([
+      UPDATE_PROBLEMS.checkFailed,
+      null,
+      UPDATE_WORDS.retry,
+    ]);
+    const wentBack = m.updateSourceBuildFailed({ from: "1a2b3c4", to: "5d6e7f8" });
+    const held = { ...source, install: undefined, problem: wentBack };
+    expect(step({ ...held, source: { branch: "main", behind: 1, held: "edited" } })).toMatchObject({
+      state: "blocked",
+      line: wentBack,
+      primary: { action: "check", label: UPDATE_WORDS.check },
+    });
+  });
 });

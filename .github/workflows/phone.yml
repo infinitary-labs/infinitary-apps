@@ -236,10 +236,10 @@ jobs:
     # included, ends its gate near 19.5 minutes on a phone Mac with one simulator and sooner on one with two, and setup
     # and evidence upload add up to about 3, so it is stopped at 25. INF-6039's plan, part 1: in a check of several jobs,
     # job 1 builds the app (2.4 to 3.8 minutes measured, stopped at 12) and uploads it before its gate, whose own build
-    # it then skips, so job 1 of a full 14 minutes on a one-simulator Mac can reach its 25 before its gate's 21. A call keeps its limit for setup,
+    # it then skips, so job 1 gets the build step's 12 minutes more, 37, and its gate's 21 still ends inside it. A call keeps its limit for setup,
     # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
     # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
-    timeout-minutes: ${{ matrix.passes && 25 || 345 }}
+    timeout-minutes: ${{ matrix.passes && (matrix.key == 'job-1' && strategy.job-total > 1 && 37 || 25) || 345 }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -370,7 +370,7 @@ jobs:
         name: Read and recover on iPhone and iPad
         # A dealt job's gate is stopped at 21 minutes, inside its job's 25, so an over-long gate fails the job and its
         # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes. Job 1 of a check of several
-        # jobs spends its build and upload steps' minutes of those 25 before its gate starts (INF-6039's plan, part 1).
+        # jobs runs its build and upload steps before its gate, so its job keeps 12 minutes more, 37 (INF-6039's plan, part 1).
         timeout-minutes: ${{ matrix.passes && 21 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |

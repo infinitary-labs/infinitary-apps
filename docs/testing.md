@@ -884,6 +884,7 @@ Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
 A dealt job is stopped at 25 minutes and its gate step at 21, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run.
+The first job of a check dealt into several jobs is stopped at 37 minutes instead, its build step's 12 more, since it builds and uploads the app before its gate.
 The recorded part times come from a full gate that ran two simulators at once.
 A phone Mac with one simulator runs a job's parts one after another at up to 1.08 of their recorded minutes, and its gate step also builds the app for up to 3.1 minutes and starts the first part about a minute late.
 So a gate of 14 recorded minutes ends near 19.5 minutes there, inside its 21, and sooner on a phone Mac with two simulators.

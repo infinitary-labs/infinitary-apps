@@ -4,7 +4,7 @@
       "id": "bitbucket-data-center",
       "kind": "feature",
       "title": "Sign in to your own Bitbucket Data Center server",
-      "body": "The Bitbucket form in Settings → Integrations now takes the address of your own Bitbucket Data Center server, version 8.19 or newer, with an HTTP access token you make on it; the form names the permissions it needs. Add project lists the repositories you can read there, and a crewmate's work is offered as a pull request. Your click merges it only at the version you approved: if someone pushes in the meantime, nothing is merged and the task says so. Batched pull requests, forks and your crew's own reach to the server come later.",
+      "body": "The Bitbucket form in Settings → Integrations now takes the address of your own Bitbucket Data Center server, version 8.19 or newer, with an HTTP access token you make on it; the form names the permissions it needs. Add project lists the repositories you can read there, and a crewmate's work is offered as a pull request. Your click merges it only at the version you approved: if someone pushes in the meantime, nothing is merged and the task says so.",
       "area": "projects",
       "picture": {
         "dark": "bitbucket-data-center-dark.webp",

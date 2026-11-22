@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-catch-up-log",
+      "reason": "The home now writes one line to its own log for each phone that comes back, saying how it caught up, why, the bytes sent and their weight, the route and the time to acknowledge it; nothing a person sees in the app changes."
+    }
+  ]
+}

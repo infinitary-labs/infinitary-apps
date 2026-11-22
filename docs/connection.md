@@ -129,6 +129,24 @@ Each is weighed by the newest answer to it the home wrote to any device in this 
 While any of them has not been answered in this run, the device replays, as before the weighing.
 A computer's window reads more than those on a reload, such as each thread it had read, so the weighing can choose a reload slightly heavier than the replay for it.
 
+### The catch-up log
+
+The home logs one line for each phone that comes back (`src/core/connection/catchUpLog.ts`), so a slow catch-up can be told apart from the home's own work.
+It starts at the phone's hello and says:
+
+- whether the phone was sent the updates it missed or read everything again;
+- why: no place held (a first connection), the home restarted (another epoch, a restart or a pause in listening), kept updates too short (a place older than the journal keeps), a place ahead of the home, missed updates heavier or lighter than a reload, or a reload not weighed yet in this run;
+- the bytes the home wrote for the catch-up: the welcome and the replay, or the welcome and its answers to the reads in `RELOAD_READS`, each read's first answer after the welcome;
+- how many updates it missed and what they weigh as a replay sends them, or that they are no longer kept, and the reload weight they were measured against, or that it is not weighed yet;
+- the route its socket came from: the same network as one of this computer's own, a private network service's shared range, this computer itself (a relay here, say) or another route, never the address;
+- the time from its hello until the phone acknowledged every byte of the catch-up (`Outbox.whenAnswered`), or until it went before acknowledging it all;
+- the app version its hello said.
+
+A replay's catch-up is written with the welcome; a reload's once the home has answered each read in `RELOAD_READS`, which the phone asks first on a reload, the board last (`initialReads`, `ReadOnlySession.swift`).
+The outbox names the catch-up's last byte with a ping once it is written, so the acknowledgment never waits for the heartbeat.
+A computer's window and the local door's clients log nothing.
+The line goes to the home's console as `[connection] phone catch-up: ...`; `onCatchUp` hears it instead where the connection is started with one.
+
 ## Requests
 
 A device asks with `invoke` (`id`, `channel`, `args`) and gets one `result` per `id`, either `ok: true` with the answer or `ok: false` with the reason, in whatever order the answers finish.

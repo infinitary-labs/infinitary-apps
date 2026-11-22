@@ -22,6 +22,7 @@ export function framedCodeOf(view: PersonalExtensionView): FramedPanelContent | 
     reads: view.reads,
     sql: view.sql,
     moves: view.moves,
+    ...(view.actions?.length ? { actions: view.actions } : {}),
     decides: view.ownPresence,
     // Its `invoke` always reaches the core, which answers for a panel with
     // no background work, or one whose work the app stopped, in its words.

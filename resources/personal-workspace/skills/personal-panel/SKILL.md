@@ -31,7 +31,7 @@ An extension is one directory `<id>/` (kebab-case: `open-prs`, `tokyo-clock`) ho
   server actions, `reads` for the app's own data the manifest declared, the current
   `theme`, `cards` for its cards on the stack, `asks` for its header buttons' presses,
   `point` and `view` for the captain's tasks, `keys` for its own commands' keys, `tasks`
-  when it asks for moves, and `rail`.
+  when it asks for moves, `settings` when it names settings in `actions`, and `rail`.
 - `cards/<view>.tsx` (optional, any number) - card views: each default-exports a component
   the host renders as one of the extension's cards on the main card stack (below). A view
   gets the same `PanelProps` plus `card`, the card it draws, and no `rail`.
@@ -41,7 +41,7 @@ An extension is one directory `<id>/` (kebab-case: `open-prs`, `tokyo-clock`) ho
   `manifest.json` says `"api": 2`. A service outside the captain's projects (GitHub, a
   calendar) is reached through its integrations, never fetched (below).
 - `manifest.json` (optional) - `api`, `title`, `placement`, `order`, `size`, `presence`,
-  `cards`, `header`, `commands`, `reads`, `integrations`, `moves`, `origin`; see `PersonalManifest`. A panel
+  `cards`, `header`, `commands`, `reads`, `integrations`, `moves`, `actions`, `origin`; see `PersonalManifest`. A panel
   with a `server.ts` sets `"api": 2`.
 - a `.css` file (optional) - a stylesheet of its own, imported as text (below).
 - local helper files, used only by this extension.
@@ -159,6 +159,12 @@ which it allows now and why not, and a never-started `drop-task` sends the keys 
 row's `tasks.detail` `dropEffects` as its review. Opening, showing, aiming and moving count
 only from the captain's own click or key in the panel or its card; otherwise they do nothing
 and answer `false` (a move answers why). Merge and discard are never moves.
+With `"actions": ["theme", "window-size"]` in `manifest.json` it gets
+`settings.change(action, value)`, which changes one of those settings the way the first
+mate's `app_change` does, with the same value (`PanelChangeSetting` lists the settings a panel
+may name). It counts only while the captain's own click or key is in the panel, as a move
+does, and answers `{ ok: true }` or `{ ok: false, text }` in the app's words; the feed names
+the panel. A panel drawn on another computer's window or the phone gets no `settings`.
 Any panel, whatever it reads, may start the captain's next message: `point.draft(words)`
 puts one line at the head of the message field for him to finish, from his own click or key,
 and sends nothing. Any panel may also open Settings from his own click or key:
@@ -244,7 +250,8 @@ A small, calm column docked on a side rail. It shows what IS. It is display
 and pointing: it renders data, and a click at most brings something forward.
 Every write still happens by talking to the first mate - except that a panel which
 asks for moves may queue, start or drop one of his tasks on his own click,
-and then it says in the row what the move will do before he makes it.
+and then it says in the row what the move will do before he makes it, and one that
+names settings in `actions` may change one of them on each of his own clicks.
 
 **Its title is host chrome.** The host draws the title from `manifest.json`,
 with the collapse control, the "yours" mark, and a quiet dot while a task on

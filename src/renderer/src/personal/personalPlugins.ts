@@ -89,6 +89,7 @@ function keyOf(view: PersonalExtensionView): string {
     view.reads,
     view.sql,
     view.moves,
+    view.actions,
     view.ownPresence,
     view.cardViews,
     view.cards,

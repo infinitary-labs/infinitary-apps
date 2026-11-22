@@ -3,6 +3,7 @@ import { inLanguage } from "@shared/i18n/current";
 import { formatList } from "@shared/i18n/format";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { said, saidMark } from "@shared/i18n/said";
+import { isPanelChange, type PanelChangeName } from "@shared/panelChanges";
 import {
   type ConsentSummary,
   consentSummary,
@@ -14,8 +15,8 @@ import { READ_WORDS, viewWords } from "@shared/vocabulary";
  * The consent cards' bodies (`pluginInstaller.ts`, A2a): a runbook's add
  * card and a panel's own card say what is added in the same labeled rows
  * (`dl.inf-grants`), one quiet line of what holds for every panel, and the
- * exact names, each integration's rule and reason, the moves fine print and
- * what a panel keeps under Full details. Every word is a catalog message
+ * exact names, each integration's rule and reason, the moves and settings
+ * fine print and what a panel keeps under Full details. Every word is a catalog message
  * placed with `saidMark`, so each reader words it in its own language.
  */
 
@@ -93,7 +94,7 @@ export function runbookConsentBody(input: {
 }
 
 /**
- * A panel's own card: the rows of what it reads, uses and moves, the quiet
+ * A panel's own card: the rows of what it reads, uses, moves and changes, the quiet
  * line and Full details. An update keeps its opening sentence above the rows.
  */
 export function panelConsentBody(input: {
@@ -122,6 +123,17 @@ export function panelConsentBody(input: {
       : []),
     ...(summary.moves
       ? [row(said("cardConsentMoves"), saidMark(said("cardConsentMovesValue"), "dd"))]
+      : []),
+    // Each setting it may change, one value each, named in the captain's language.
+    ...(changesOf(summary).length > 0
+      ? [
+          row(
+            said("cardConsentChanges"),
+            changesOf(summary)
+              .map((name) => saidMark(said(panelChangeLabel(name)), "dd"))
+              .join(""),
+          ),
+        ]
       : []),
   ];
   const note = through
@@ -154,7 +166,7 @@ function row(label: Parameters<typeof saidMark>[0], value: string): string {
   return `${saidMark(label, "dt")}${value}`;
 }
 
-/** One line per permission under a panel's name on a runbook's card: what it reads, uses and moves. */
+/** One line per permission under a panel's name on a runbook's card: what it reads, uses, moves and changes. */
 function permissionLines(summary: ConsentSummary): string[] {
   const reads = readList(summary);
   return [
@@ -165,6 +177,9 @@ function permissionLines(summary: ConsentSummary): string[] {
       saidMark(said("cardConsentUsesLine", { integration: use.integration, names: namesOf(use) })),
     ),
     ...(summary.moves ? [saidMark(said("cardConsentMovesLine"))] : []),
+    ...changesOf(summary).map((name) =>
+      saidMark(said("cardConsentChangesLine", { setting: { m: panelChangeLabel(name) } })),
+    ),
   ];
 }
 
@@ -185,7 +200,7 @@ function useNames(use: ConsentSummary["integrations"][number]): string {
   return `${use.integration}: ${namesOf(use)}`;
 }
 
-/** The exact names, each integration's rule and reason, the moves fine print and what it keeps. */
+/** The exact names, each integration's rule and reason, the moves and settings fine print and what it keeps. */
 function detailRows(summary: ConsentSummary): string {
   const names = [...summary.reads, ...summary.views];
   const rows = [
@@ -230,6 +245,14 @@ function detailRows(summary: ConsentSummary): string {
     ...(summary.moves
       ? [row(said("cardConsentMoves"), saidMark(said("cardConsentMovesDetail"), "dd"))]
       : []),
+    ...(changesOf(summary).length > 0
+      ? [
+          row(
+            said("cardConsentChanges"),
+            `<dd>${codes(changesOf(summary))} ${saidMark(said("cardConsentChangesDetail"))}</dd>`,
+          ),
+        ]
+      : []),
     row(
       said("cardConsentKeeps"),
       saidMark(
@@ -261,4 +284,19 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** The settings a panel may change, in the order it names them, each one the host allows. */
+function changesOf(summary: ConsentSummary): PanelChangeName[] {
+  return summary.actions.filter(isPanelChange);
+}
+
+/**
+ * A setting's label message, `panelChange` and its catalog name in
+ * PascalCase: `theme` is `panelChangeTheme`. Each is a message with no
+ * blanks, like the one its type names; `pluginInstaller.test.ts` holds every
+ * allowed name to its message.
+ */
+export function panelChangeLabel(name: PanelChangeName): "panelChangeTheme" {
+  return `panelChange${name.replace(/(^|-)([a-z])/g, (_, __, letter: string) => letter.toUpperCase())}` as "panelChangeTheme";
 }

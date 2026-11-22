@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACTION_NAMES, ACTIONS } from "@shared/actions";
 import { SCHEDULE_DETAILS } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
 import { feedLineFrom } from "@shared/feed";
+import { englishOf, said } from "@shared/i18n/said";
 import { type KeymapSnapshot, keymapSnapshot } from "@shared/keymap";
 import { PANEL_SETTING_NAMES } from "@shared/panelSettingNames";
 import { remoteLoginWords } from "@shared/remoteLogin";
@@ -1662,6 +1663,104 @@ describe("the core, driven with no Electron in the process", () => {
     } finally {
       for (const spy of [lastSaid, placeOf, setAccount, signOut, signOutForge, readAllowance])
         spy.mockRestore();
+    }
+  });
+
+  // Intent: the approved plan's "a core request that re-reads the grant and
+  // reuses the first mate's request builder, run as the captain with the
+  // panel named on the feed". Fixture: the look panel (tests/fixtures/panel-settings/look),
+  // saved into the workspace as a crewmate saves one.
+  it("runs a panel's change of a setting it was granted as the captain, naming the panel, and re-reads the grant each time", async () => {
+    const folder = join(core.paths.personalWorkspaceDir, "look");
+    cpSync(join(process.cwd(), "tests", "fixtures", "panel-settings", "look"), folder, {
+      recursive: true,
+    });
+    const granted = async () =>
+      (await core.dispatch("inf:plugins:personal:list", [])).extensions.find(
+        (extension) => extension.id === "look",
+      )?.actions;
+    const before = await core.dispatch("inf:settings:appearance:get", []);
+    const lines: FmEvent[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:event" && (payload as FmEvent).type === "personalized")
+        lines.push(payload as FmEvent);
+    });
+    try {
+      await expect.poll(granted, { timeout: 30_000 }).toEqual(["theme", "window-size"]);
+      const other = before.theme === "dark" ? "light" : "dark";
+      expect(
+        await core.dispatch("inf:plugins:settings:change", ["look", "theme", { theme: other }]),
+      ).toEqual({ ok: true });
+      // The same request the first mate's theme change builds: the rest of the look kept.
+      expect(await core.dispatch("inf:settings:appearance:get", [])).toEqual({
+        ...before,
+        theme: other,
+      });
+      const line = lines.at(-1);
+      expect(line).toMatchObject({ type: "personalized", actor: "captain", panel: "Look" });
+      expect(feedLineFrom(line as FmEvent)?.text).toBe(
+        englishOf(
+          said("feedCaptainSetInPanel", {
+            text: ACTIONS.theme.done({ theme: other }),
+            panel: "Look",
+          }),
+        ),
+      );
+
+      // A setting the panel was not granted, and one no panel may have, change nothing.
+      const notGranted = await core.dispatch("inf:plugins:settings:change", [
+        "look",
+        "crew-model-names",
+        { show: true },
+      ]);
+      expect(notGranted).toEqual({
+        ok: false,
+        text: englishOf(said("panelChangeNotGranted", { setting: "crew-model-names" })),
+      });
+      expect((await core.dispatch("inf:plugins:settings:change", ["look", "purge", {}])).ok).toBe(
+        false,
+      );
+      // A value its line refuses answers the line's own words.
+      const malformed = await core.dispatch("inf:plugins:settings:change", [
+        "look",
+        "theme",
+        { theme: "purple" },
+      ]);
+      expect(malformed.ok).toBe(false);
+      expect((await core.dispatch("inf:settings:appearance:get", [])).theme).toBe(other);
+
+      // Granted project settings still never move where a project's code
+      // lives or is pushed: its folder, its git address, or upstream or fork.
+      const at = join(folder, "manifest.json");
+      const manifest = JSON.parse(readFileSync(at, "utf8"));
+      const project = ["theme", "window-size", "project-settings"];
+      writeFileSync(at, JSON.stringify({ ...manifest, actions: project }));
+      await expect.poll(granted, { timeout: 30_000 }).toEqual(project);
+      const repo = (await core.dispatch("inf:repos:list", []))[0];
+      const elsewhere = join(core.paths.personalWorkspaceDir, "elsewhere");
+      for (const changes of [
+        { origin: elsewhere },
+        { path: elsewhere },
+        { contributionDestination: "fork" },
+      ]) {
+        const value = { repoId: repo?.id ?? "no-project", changes };
+        expect(
+          await core.dispatch("inf:plugins:settings:change", ["look", "project-settings", value]),
+        ).toEqual({ ok: false, text: englishOf(said("panelChangeOrigin")) });
+      }
+      expect((await core.dispatch("inf:repos:list", []))[0]).toEqual(repo);
+
+      // The grant taken out of the manifest: the next change is refused.
+      writeFileSync(at, JSON.stringify({ ...manifest, actions: ["window-size"] }));
+      await expect.poll(granted, { timeout: 30_000 }).toEqual(["window-size"]);
+      expect(
+        (await core.dispatch("inf:plugins:settings:change", ["look", "theme", before])).ok,
+      ).toBe(false);
+      expect((await core.dispatch("inf:settings:appearance:get", [])).theme).toBe(other);
+    } finally {
+      detach();
+      rmSync(folder, { recursive: true, force: true });
+      await core.dispatch("inf:settings:appearance:set", [before]);
     }
   });
 

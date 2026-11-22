@@ -165,6 +165,12 @@ export const panelFrameConfigSchema = z.strictObject({
    */
   moves: z.boolean().optional(),
   /**
+   * The captain agreed it may change named settings (`actions`): the
+   * runtime hands it `settings`, whose one action the host declared for this
+   * mount alone; the window and the core check each change.
+   */
+  settings: z.boolean().optional(),
+  /**
    * The panel may have background work of its own (`server.ts`, the
    * captain's own panels only): the runtime hands it an `invoke` that asks
    * the host's `server.invoke` action, which the host declared for this

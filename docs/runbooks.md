@@ -69,8 +69,8 @@ A panel of your own or an added one keeps its id; a runbook's panel with a taken
 A runbook's panel the core will not serve, such as one with background code or one nobody agreed to, is answered refused with that reason too.
 The first mate's surfaces name each runbook's panel by its runbook and list the ones left off, a view of another Mac lists them among its refused panels too, and a list past its bound (`PERSONAL_REFUSED_MAX`, `PANEL_MOUNTS_MAX`) leaves out refused runbook panels, never a drawn one.
 A personal runbook's panel is served what its manifest asks, as your own panels are.
-An added runbook's panels are agreed on its own add card: under Shows panels the card names each panel with one line for what it reads, each integration it uses and whether it moves tasks, and Add it records those grants on the runbook's record (`plugins.panels_json`).
-The exact names it reads, each integration's rule and reason, the moves fine print and what each panel keeps sit under the card's Full details, as on a panel's own card.
+An added runbook's panels are agreed on its own add card: under Shows panels the card names each panel with one line for what it reads, each integration it uses, whether it moves tasks and each setting it may change, and Add it records those grants on the runbook's record (`plugins.panels_json`).
+The exact names it reads, each integration's rule and reason, the moves and settings fine print and what each panel keeps sit under the card's Full details, as on a panel's own card.
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.
 Settings → Runbooks names a runbook's panels under its switch.
 An added runbook is read only under its record's id: files changed to name another runbook are listed as not available, never served under that one's agreement.

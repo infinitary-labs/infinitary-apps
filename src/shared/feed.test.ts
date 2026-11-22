@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { runsOnDoneSaid } from "./actions";
 import { changesFeed, feedLineFrom, feedRelativeAge } from "./feed";
+import { englishOf, said } from "./i18n/said";
+import type { RepoView } from "./repos";
 
 /**
  * A line's English as Activity saved it, without the fact it keeps beside
@@ -78,6 +81,50 @@ describe("catalog action actor trail", () => {
     expect(english(feedLineFrom(withdrawn))).toBeNull();
     expect(changesFeed(withdrawn)).toBe(true);
     expect(changesFeed({ type: "past_card_shown", cardId: "card-1" })).toBe(false);
+  });
+});
+
+// Intent: the approved plan's "run as the captain with the panel named on
+// the feed" (docs/ui-plugins.md, "Changing settings"): a project's change
+// made in a panel leads with who and the panel, even where the line is the
+// change's own words.
+describe("a project's change made in a panel", () => {
+  const inPanel = (text: string) =>
+    englishOf(said("feedCaptainSetInPanel", { text, panel: "Look" }));
+
+  it("names the panel before a project setting's own description", () => {
+    const event = {
+      type: "repo_configured" as const,
+      repoId: "site",
+      name: "site",
+      delivery: "direct-pr" as const,
+      autonomy: false,
+      rigor: null,
+      actor: "captain" as const,
+      description: "site · cost limit $5",
+    };
+    expect(feedLineFrom({ ...event, panel: "Look" })?.text).toBe(inPanel(event.description));
+    expect(feedLineFrom(event)?.text).toBe(event.description);
+  });
+
+  it("names the panel before where a project runs, worded as its fact", () => {
+    const fact = runsOnDoneSaid({
+      repo: { name: "site", runsOn: "mini" } as RepoView,
+      where: "mini",
+    });
+    const event = {
+      type: "repo_runs_on" as const,
+      repoId: "site",
+      name: "site",
+      runsOn: "mini",
+      text: englishOf(fact),
+      said: fact,
+      actor: "captain" as const,
+    };
+    const line = feedLineFrom({ ...event, panel: "Look" });
+    expect(line?.text).toBe(inPanel(englishOf(fact)));
+    expect(line?.said).toMatchObject({ m: "feedCaptainSetInPanel", a: { panel: "Look" } });
+    expect(feedLineFrom(event)?.text).toBe(englishOf(fact));
   });
 });
 

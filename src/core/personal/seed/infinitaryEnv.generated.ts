@@ -1382,6 +1382,83 @@ declare module "@infinitary/contracts" {
     pin: (taskId: string, pinned: boolean) => Promise<PanelMoveResult>;
   };
 
+  /**
+   * An app setting a panel may change (\`manifest.json\` \`"actions"\`): a line of
+   * the app's action catalog, the same one the first mate changes it through.
+   */
+  export type PanelChangeSetting =
+    | "account-pause"
+    | "account-prefer"
+    | "account-rename"
+    | "ambient-away"
+    | "ambient-music"
+    | "ambient-own-style"
+    | "automation-edit"
+    | "automation-pause-all"
+    | "automation-state"
+    | "card-size"
+    | "copy-stop"
+    | "cost-limit"
+    | "crew-model-names"
+    | "crew-reasoning"
+    | "crew-slots"
+    | "crew-slots-reset"
+    | "crew-speed"
+    | "decision-model"
+    | "decision-use-off"
+    | "device-fix-work"
+    | "device-keep"
+    | "device-try-again"
+    | "dictation"
+    | "firstmate-account"
+    | "firstmate-model"
+    | "font"
+    | "home-move-cancel"
+    | "inbox-link"
+    | "integration-check"
+    | "integration-settings"
+    | "kept-job-check"
+    | "language"
+    | "model-pins"
+    | "notifications"
+    | "panel"
+    | "panel-collapse"
+    | "personal-resources"
+    | "private-site-remove"
+    | "project-batch-answer"
+    | "project-move"
+    | "project-name"
+    | "project-runs-on"
+    | "project-settings"
+    | "projects-folder"
+    | "refresh-usage"
+    | "release-page"
+    | "runbook"
+    | "runbook-copy"
+    | "show-in-dock"
+    | "show-whats-new"
+    | "start-at-login"
+    | "theme"
+    | "update-channel"
+    | "update-check"
+    | "usage-unit"
+    | "voice-model"
+    | "window-size"
+    | "window-wash";
+
+  /**
+   * The settings a panel that names them (\`manifest.json\` \`"actions"\`) changes,
+   * and for one from elsewhere that the captain agreed to. A change counts only
+   * while their own click or key is in this panel or card, as a task move does;
+   * it runs as theirs, through the same checks as Settings, and
+   * Activity names the panel it came from. \`value\` is what the setting's
+   * catalog line takes, such as \`{ theme: "light" }\` for \`theme\`; a refusal
+   * comes back as the app's words, with nothing changed.
+   */
+  export type PanelSettingChanges = {
+    change: (action: PanelChangeSetting, value: Record<string, unknown>) => Promise<PanelMoveResult>;
+  };
+
   // --- the panel on its rail --------------------------------------------------------
 
   /**
@@ -1519,6 +1596,8 @@ declare module "@infinitary/contracts" {
     keys: PanelKeys;
     /** Set only for a panel whose manifest asks for \`moves\`, and one from elsewhere the captain agreed to. */
     tasks?: PanelTasks;
+    /** Set only for a panel whose manifest names \`actions\`, and one from elsewhere the captain agreed to. */
+    settings?: PanelSettingChanges;
     /** Set only in the panel itself, never in a card view: the panel on its rail. */
     rail?: PanelRail;
     /**
@@ -1724,6 +1803,12 @@ declare module "@infinitary/contracts" {
      * click or key in it. A panel from elsewhere asks them once, when they add it.
      */
     moves?: true;
+    /**
+     * The app settings it changes (\`PanelProps.settings\`), each only on their
+     * click or key in it, as a move is. A panel from elsewhere
+     * asks them once, when they add it, and its approval card names each one.
+     */
+    actions?: PanelChangeSetting[];
     /**
      * The views of the app's own record this extension may query, by their
      * exact versioned names (\`v_usage_v1\`), through \`PanelProps.reads\`

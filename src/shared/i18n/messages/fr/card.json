@@ -90,6 +90,9 @@
     "many": "{items} partent avec votre choix",
     "other": "{items} partent avec votre choix"
   },
+  "cardConsentChanges": "Modifie",
+  "cardConsentChangesDetail": "Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.",
+  "cardConsentChangesLine": "Peut modifier un réglage quand vous cliquez : {setting}",
   "cardConsentFrom": "De",
   "cardConsentFullDetails": "Tous les détails",
   "cardConsentGuidanceOnly": "Elle fournit des consignes, des parties HTML et des images, et n’exécute rien.",

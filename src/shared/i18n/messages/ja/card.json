@@ -76,6 +76,9 @@
     "plural": "count",
     "other": "選択と一緒に送るもの：{items}"
   },
+  "cardConsentChanges": "変更",
+  "cardConsentChangesDetail": "これらの設定は、パネル内でクリックかキーを押したときだけ変更します。何かを削除することはありません。",
+  "cardConsentChangesLine": "クリックしたときに設定を変更できます: {setting}",
   "cardConsentFrom": "提供元",
   "cardConsentFullDetails": "詳細",
   "cardConsentGuidanceOnly": "ガイダンス、HTML パーツ、画像を提供し、何も実行しません。",

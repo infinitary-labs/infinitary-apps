@@ -1558,6 +1558,8 @@ export async function startApp(
             // computer that names its system gets (docs/devices.md).
             app: () => core.services.appBundle(),
             build: (system, chip, kind) => core.services.farBuild(system, chip, kind),
+            // What a computer matched to this run from source builds (docs/devices.md, "Matching the home's build").
+            source: () => core.services.homeSource(),
             ...(standInContract ? { protocolVersion: standInContract } : {}),
             ...(Number.isInteger(standInViewFloor) ? { viewFloor: standInViewFloor } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),

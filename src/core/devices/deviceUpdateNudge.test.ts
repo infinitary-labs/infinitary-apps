@@ -1,6 +1,7 @@
 import type { AppFollowReport } from "@shared/appFollow";
 import { type DeviceView, deviceViewSchema } from "@shared/devices";
-import { appUpdateCardId } from "@shared/deviceUpdateNudge";
+import { appUpdateCardId, deviceUpdateCardId } from "@shared/deviceUpdateNudge";
+import * as m from "@shared/i18n/messages.generated";
 import { describe, expect, it } from "vitest";
 import { DeviceUpdateNudge } from "./deviceUpdateNudge";
 
@@ -92,5 +93,118 @@ describe("the card for an app that cannot follow this computer's version by itse
     h.chosen.set(ID, "not-now@app:0.8.4>0.8.3:cannot");
     h.nudge.appsChanged([cannot]);
     expect(h.raised.size).toBe(0);
+  });
+});
+
+// INF-5635's plan, piece 3: "ask once per computer before it first runs source, then follow by
+// itself".
+describe("matching a computer to this computer's source", () => {
+  const COMMIT = "c".repeat(40);
+  const mini = deviceViewSchema.parse({
+    id: "mac-mini",
+    kind: "work",
+    name: "Mac mini",
+    pairedAt: 0,
+    system: "macos",
+    inReach: true,
+    otherVersion: {
+      app: "0.8.6-alpha.16",
+      takesWork: true,
+      updateBy: "connection",
+      source: { commit: COMMIT },
+    },
+  });
+
+  function sourceHome(allowed: boolean, device: DeviceView = mini, refusal?: string) {
+    const raised = new Map<string, { title: string; body: string; actions: unknown[] }>();
+    const chosen = new Map<string, string>();
+    const updates: string[] = [];
+    // A match that went through brings it to this computer's commit.
+    let listed: DeviceView = device;
+    const nudge = new DeviceUpdateNudge({
+      devices: () => [listed],
+      homeApp: () => undefined,
+      sourceAllowed: () => allowed,
+      update: async (deviceId) => {
+        updates.push(deviceId);
+        if (refusal) throw new Error(refusal);
+        const { otherVersion: _matched, ...matched } = device;
+        listed = matched;
+        return listed;
+      },
+      broadcastEvent: () => {},
+      cards: {
+        raise: (card) => {
+          raised.set(card.id, card as never);
+        },
+        withdraw: (id) => {
+          raised.delete(id);
+        },
+        has: (id) => raised.has(id),
+        chosenAction: (id) => chosen.get(id),
+      },
+    });
+    return { nudge, raised, chosen, updates };
+  }
+
+  it("asks once on a card before a computer first runs source, and Not now holds it for that commit", () => {
+    const h = sourceHome(false);
+    h.nudge.refresh("mac-mini");
+    expect(h.updates).toEqual([]);
+    const card = h.raised.get(deviceUpdateCardId("mac-mini"));
+    expect(card?.title).toBe("Run this computer's code on Mac mini?");
+    expect(card?.body).toContain("cccccc");
+    expect(card?.actions).toEqual([
+      expect.objectContaining({
+        id: `update@source:${COMMIT}`,
+        label: "Match it",
+        effect: { kind: "open", target: "devices", update: "mac-mini" },
+      }),
+      expect.objectContaining({ id: `not-now@source:${COMMIT}`, label: "Not now" }),
+    ]);
+    h.raised.clear();
+    h.chosen.set(deviceUpdateCardId("mac-mini"), `not-now@source:${COMMIT}`);
+    h.nudge.refresh("mac-mini");
+    expect(h.raised.size).toBe(0);
+  });
+
+  it("neither asks nor matches a computer that is not a Mac, which cannot build source", async () => {
+    for (const allowed of [false, true]) {
+      const h = sourceHome(allowed, { ...mini, system: "linux" });
+      h.nudge.refresh("mac-mini");
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(h.raised.size).toBe(0);
+      expect(h.updates).toEqual([]);
+    }
+  });
+
+  it("matches a computer the captain allowed by itself, with no card", async () => {
+    const h = sourceHome(true);
+    h.nudge.refresh("mac-mini");
+    await new Promise((resolve) => setImmediate(resolve));
+    h.nudge.refresh("mac-mini");
+    expect(h.updates).toEqual(["mac-mini"]);
+    expect(h.raised.size).toBe(0);
+  });
+
+  // INF-5646's proof: a failed build raised the card that asks for the yes the captain already gave.
+  it("offers an allowed computer's match again after it did not go through, without asking once more", async () => {
+    const why = m.devicesSourceKeepsVersion();
+    const h = sourceHome(true, mini, why);
+    h.nudge.refresh("mac-mini");
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.updates).toEqual(["mac-mini"]);
+    const card = h.raised.get(deviceUpdateCardId("mac-mini"));
+    expect(card?.title).toBe(m.devicesSourceCardAgainTitle({ device: "Mac mini" }));
+    expect(card?.body).toContain(m.devicesSourceCardRefused({ why }));
+    expect(card?.body).not.toContain(m.devicesSourceCardOnce({ device: "Mac mini" }));
+    expect(card?.body).not.toContain(m.devicesSourceCardKeychain({ device: "Mac mini" }));
+    expect(card?.actions).toEqual([
+      expect.objectContaining({
+        id: `update@source:${COMMIT}`,
+        label: m.devicesSourceCardMatchAgain(),
+      }),
+      expect.objectContaining({ id: `not-now@source:${COMMIT}` }),
+    ]);
   });
 });

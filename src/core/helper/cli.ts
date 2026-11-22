@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { homedir, hostname, userInfo } from "node:os";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
+import type { BuildIdentity } from "@shared/buildIdentity";
 import { runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { PROTOCOL_VERSION } from "@shared/ipc";
@@ -48,6 +49,7 @@ import { moveWork } from "./moveWork";
 import type { HelperPlace } from "./place";
 import { finishRemoval, helperStatus, startHelper, workLog } from "./run";
 import { startRunAgent, userUnitsDir } from "./runAgent";
+import { runsSourceBuild } from "./sourceBuild";
 import { helperWords } from "./words";
 
 /**
@@ -61,6 +63,10 @@ export type CliContext = {
   source?: import("../selfSource/resolve").SelfSourceReader;
   /** The app's own version. */
   version: string;
+  /** Which build it runs (`buildIdentityOf`), which its hello tells the home. */
+  build?: BuildIdentity;
+  /** The folder its app was loaded from: a build of its home's source in its work folder runs from there. */
+  appDir?: string;
   /** Where its data lives, and whether it runs from a packaged app. */
   place: HelperPlace;
   /** The app's own git helper, which every git it starts answers a host's sign-in with. */
@@ -505,6 +511,10 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         packaged: place.packaged,
         ...(findHome ? { findHome } : {}),
         appVersion: context.version,
+        ...(context.build ? { build: context.build } : {}),
+        ...(context.appDir && runsSourceBuild(dataDir, context.appDir, place.packaged)
+          ? { sourceRun: context.appDir }
+          : {}),
         ...(context.source ? { source: context.source } : {}),
         ...(verifier ? { verifier } : {}),
         background: inBackground ? { context: inBackground, env: context.backgroundEnv } : null,

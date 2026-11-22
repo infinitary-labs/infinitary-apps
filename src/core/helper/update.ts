@@ -110,6 +110,13 @@ export type UpdateHereOptions = {
   signal?: AbortSignal;
   /** How long a new copy has to reach the home before its watcher goes back; the update's wait unless a test says. */
   trialSeconds?: number;
+  /**
+   * This run is a build of its home's source kept in the work folder
+   * (`runsSourceBuild`, ./sourceBuild.ts): its agent starts that build, so a
+   * release from the home is kept as a first copy is and the agent moves
+   * back to it, with the copy kept here set aside on trial.
+   */
+  fromSource?: boolean;
 };
 
 /**
@@ -188,6 +195,8 @@ type FirstCopy = {
   context: BackgroundContext;
   env: Readonly<Record<string, string>>;
   service: NonNullable<ReturnType<typeof readInstalled>["service"]>;
+  /** The copy kept here that the agent does not start now: a source build's run replaces it. */
+  replaces?: string;
 };
 
 /**
@@ -199,8 +208,15 @@ function keepsFirst(
   installed: ReturnType<typeof readInstalled>,
 ): FirstCopy | null {
   const { background } = options;
-  if (installed.app || !installed.service || !background) return null;
-  if (!("launchctl" in background.context) || !separateMac(options.dataDir)) return null;
+  if (!installed.service || !background || !("launchctl" in background.context)) return null;
+  if (options.fromSource)
+    return {
+      dataDir: options.dataDir,
+      ...background,
+      service: installed.service,
+      ...(installed.app ? { replaces: installed.app } : {}),
+    };
+  if (installed.app || !separateMac(options.dataDir)) return null;
   return { dataDir: options.dataDir, ...background, service: installed.service };
 }
 
@@ -224,8 +240,14 @@ function keepFirst(
     throw new Error("The home sent another app than the one that runs here, so nothing changed.");
   const watch = trialWatchOf(context, service);
   const previous = setAsidePath(dataDir);
+  // A source build's run replaces the copy kept at the same path: it is set aside whole and put back.
+  const replaced = first.replaces && basename(first.replaces) === basename(bundle);
   const pairs = watch
-    ? setAside(previous, [{ path: service.file }, { path: join(dataDir, "installed.json") }])
+    ? setAside(previous, [
+        { path: service.file },
+        { path: join(dataDir, "installed.json") },
+        ...(replaced ? [{ path: first.replaces as string, move: true }] : []),
+      ])
     : [];
   let kept: string | null = null;
   try {
@@ -243,7 +265,12 @@ function keepFirst(
   const reload = () => reloadInBackground(context, service);
   if (!watch) return reload;
   if (!openTrial(dataDir, kept, previous, options.log)) return reload;
-  const restore = { restore: pairs, remove: [kept], commands: watch.reload(service) };
+  const restore = {
+    restore: pairs,
+    // The copy put back at the same path takes the new one's place.
+    remove: replaced ? [] : [kept],
+    commands: watch.reload(service),
+  };
   return async () => {
     await watchTrial(dataDir, watch, { seconds: options.trialSeconds, restore });
     await reload();

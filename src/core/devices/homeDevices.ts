@@ -1,5 +1,6 @@
 import { userInfo } from "node:os";
 import { join } from "node:path";
+import type { BuildIdentity } from "@shared/buildIdentity";
 import { CONNECTION_PORT } from "@shared/connection";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
@@ -159,6 +160,8 @@ export async function startHomeDevices(options: {
   protectedIds: DeviceSignInsOptions["protectedIds"];
   /** The board's presentation refresh, set up with the crew. */
   scheduleWorkPresentation: () => void;
+  /** This run's build when `pnpm dev`'s starter started it (`starterBuild`); absent otherwise. */
+  homeBuild?: BuildIdentity;
 }): Promise<HomeDevices> {
   const { host, paths, standIns, tasks, emit, broadcastEvent } = options;
   const packaged = host.app.packaged;
@@ -618,6 +621,8 @@ export async function startHomeDevices(options: {
         home: {
           ...(host.app.sourceOnOwnData ? {} : { app: host.app.version }),
           contract: PROTOCOL_VERSION,
+          // A run `pnpm dev`'s starter started is matched by its commit (docs/devices.md, "Matching the home's build").
+          ...(options.homeBuild ? { build: options.homeBuild } : {}),
         },
         updateOverRemoteLogin: (deviceId, update) => remoteLogin.update(deviceId, update),
         // Whether this computer has a Firstmate for that computer's system, and
@@ -722,6 +727,7 @@ export async function startHomeDevices(options: {
         devices: () => list.list(),
         homeApp: () => (host.app.sourceOnOwnData ? undefined : host.app.version),
         failedHere: (deviceId) => list.failedHere(deviceId),
+        sourceAllowed: (deviceId) => list.sourceAllowed(deviceId),
         update: (deviceId) => list.update(deviceId),
         cards: {
           raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),

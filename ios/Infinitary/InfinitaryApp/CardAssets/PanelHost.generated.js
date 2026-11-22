@@ -29583,6 +29583,702 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} is out of reach`;
   }
+  function devicesSourceBuilding(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يبني ${device} شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} baut den Code dieses Computers.`;
+      case "es":
+        return `${device} está compilando el código de este ordenador.`;
+      case "fr":
+        return `${device} compile le code de cet ordinateur.`;
+      case "ja":
+        return `${device} がこのコンピュータのコードをビルドしています。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 빌드하는 중이에요.`;
+      case "pt-BR":
+        return `${device} está fazendo o build do código deste computador.`;
+      case "zh-Hans":
+        return `${device} 正在构建这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 正在建置這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} îš ƀûîļðîñĝ ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ is building this computer's code.‬`;
+    }
+    return `${device} is building this computer's code.`;
+  }
+  function devicesSourceCardAgainTitle(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تريد مطابقة ${device} مرة أخرى؟`;
+      case "de":
+        return `${device} noch einmal angleichen?`;
+      case "es":
+        return `¿Igualar ${device} otra vez?`;
+      case "fr":
+        return `Aligner ${device} à nouveau ?`;
+      case "ja":
+        return `${device} をもう一度合わせますか?`;
+      case "ko":
+        return `${device}을(를) 다시 맞출까요?`;
+      case "pt-BR":
+        return `Igualar ${device} de novo?`;
+      case "zh-Hans":
+        return `要再次对齐 ${device} 吗？`;
+      case "zh-Hant":
+        return `要再次對齊 ${device} 嗎？`;
+      case "en-XA":
+        return `[Ṁáţçĥ ${device} áĝáîñ? ~~~~~]`;
+      case "ar-XB":
+        return `‮Match ‬${device}‮ again?‬`;
+    }
+    return `Match ${device} again?`;
+  }
+  function devicesSourceCardBody(input2) {
+    const commit = input2.commit;
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.`;
+      case "de":
+        return `Dieser Computer führt Infinitary aus seinem Code beim Commit ${commit} aus, und ${device} führt einen anderen Build aus. Angleichen lässt ${device} diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.`;
+      case "es":
+        return `Este ordenador usa Infinitary desde su código en el commit ${commit}, y ${device} usa otra compilación. Igualar hace que ${device} obtenga ese código confirmado, lo compile y se inicie con él. Los cambios sin confirmar se quedan en este ordenador.`;
+      case "fr":
+        return `Cet ordinateur exécute Infinitary à partir de son code au commit ${commit}, et ${device} exécute une autre compilation. Aligner fait récupérer ce code commité par ${device}, qui le compile et démarre avec. Les changements non commités restent sur cet ordinateur.`;
+      case "ja":
+        return `このコンピュータはコミット ${commit} のコードから Infinitary を実行していて、${device} は別のビルドを実行しています。「合わせる」を選ぶと、${device} がそのコミット済みのコードを取得してビルドし、そこから起動します。コミットしていない変更はこのコンピュータに残ります。`;
+      case "ko":
+        return `이 컴퓨터는 커밋 ${commit}의 코드로 Infinitary를 실행하고, ${device}은(는) 다른 빌드를 실행해요. 맞추기를 선택하면 ${device}에서 커밋된 그 코드를 받아 빌드한 뒤 그걸로 시작해요. 커밋하지 않은 변경 사항은 이 컴퓨터에 남아요.`;
+      case "pt-BR":
+        return `Este computador roda o Infinitary a partir do código no commit ${commit}, e ${device} roda outro build. Igualar faz ${device} obter esse código commitado, fazer o build e iniciar com ele. Mudanças sem commit ficam neste computador.`;
+      case "zh-Hans":
+        return `这台电脑从提交 ${commit} 的代码运行 Infinitary，而 ${device} 运行的是另一个构建。“对齐”会让 ${device} 获取这份已提交的代码，构建后从中启动。未提交的更改留在这台电脑上。`;
+      case "zh-Hant":
+        return `這台電腦從提交 ${commit} 的程式碼執行 Infinitary，而 ${device} 執行的是另一個建置。「對齊」會讓 ${device} 取得這份已提交的程式碼，建置後從中啟動。未提交的變更留在這台電腦上。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ ŕûñš Îñƒîñîţáŕý ƒŕöɱ îţš çöðé áţ çöɱɱîţ ${commit}, áñð ${device} ŕûñš áñöţĥéŕ ƀûîļð. Ṁáţçĥ ĥáš ${device} ĝéţ ţĥáţ çöɱɱîţţéð çöðé, ƀûîļð îţ áñð šţáŕţ ƒŕöɱ îţ. Çĥáñĝéš ñöţ çöɱɱîţţéð šţáý öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer runs Infinitary from its code at commit ‬${commit}‮, and ‬${device}‮ runs another build. Match has ‬${device}‮ get that committed code, build it and start from it. Changes not committed stay on this computer.‬`;
+    }
+    return `This computer runs Infinitary from its code at commit ${commit}, and ${device} runs another build. Match has ${device} get that committed code, build it and start from it. Changes not committed stay on this computer.`;
+  }
+  function devicesSourceCardKeychain(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `في المرة الأولى، قد يطلب ${device} كلمة سر Mac مرة واحدة، حتى يقرأ هذا البناء كلمات السر المحفوظة هناك.`;
+      case "de":
+        return `Beim ersten Mal fragt ${device} eventuell einmal nach dem Mac-Passwort, damit dieser Build die dort gespeicherten Passwörter lesen kann.`;
+      case "es":
+        return `La primera vez, ${device} puede pedir una vez la contraseña del Mac para que esta compilación lea las contraseñas guardadas allí.`;
+      case "fr":
+        return `La première fois, ${device} peut demander une fois le mot de passe du Mac, pour que cette compilation lise les mots de passe enregistrés là-bas.`;
+      case "ja":
+        return `初回は、このビルドがそこに保存されたパスワードを読めるように、${device} が Mac のパスワードを一度求めることがあります。`;
+      case "ko":
+        return `처음에는 이 빌드가 그곳에 저장된 암호를 읽을 수 있도록 ${device}에서 Mac 암호를 한 번 물어볼 수 있어요.`;
+      case "pt-BR":
+        return `Na primeira vez, ${device} pode pedir uma vez a senha do Mac, para que este build leia as senhas salvas lá.`;
+      case "zh-Hans":
+        return `第一次时，${device} 可能会询问一次 Mac 密码，以便这个构建读取那里保存的密码。`;
+      case "zh-Hant":
+        return `第一次時，${device} 可能會詢問一次 Mac 密碼，讓這個建置讀取那裡儲存的密碼。`;
+      case "en-XA":
+        return `[Ţĥé ƒîŕšţ ţîɱé, ${device} ɱáý ášķ öñçé ƒöŕ îţš Ṁáç þáššŵöŕð, šö ţĥîš ƀûîļð çáñ ŕéáð ţĥé þáššŵöŕðš šáṽéð ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The first time, ‬${device}‮ may ask once for its Mac password, so this build can read the passwords saved there.‬`;
+    }
+    return `The first time, ${device} may ask once for its Mac password, so this build can read the passwords saved there.`;
+  }
+  function devicesSourceCardMatch() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابِقه`;
+      case "de":
+        return `Angleichen`;
+      case "es":
+        return `Igualarlo`;
+      case "fr":
+        return `L’aligner`;
+      case "ja":
+        return `合わせる`;
+      case "ko":
+        return `맞추기`;
+      case "pt-BR":
+        return `Igualar`;
+      case "zh-Hans":
+        return `对齐`;
+      case "zh-Hant":
+        return `對齊`;
+      case "en-XA":
+        return `[Ṁáţçĥ îţ ~~~]`;
+      case "ar-XB":
+        return `‮Match it‬`;
+    }
+    return `Match it`;
+  }
+  function devicesSourceCardMatchAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طابِقه مرة أخرى`;
+      case "de":
+        return `Noch einmal angleichen`;
+      case "es":
+        return `Igualar otra vez`;
+      case "fr":
+        return `Aligner à nouveau`;
+      case "ja":
+        return `もう一度合わせる`;
+      case "ko":
+        return `다시 맞추기`;
+      case "pt-BR":
+        return `Igualar de novo`;
+      case "zh-Hans":
+        return `再次对齐`;
+      case "zh-Hant":
+        return `再次對齊`;
+      case "en-XA":
+        return `[Ṁáţçĥ áĝáîñ ~~~~]`;
+      case "ar-XB":
+        return `‮Match again‬`;
+    }
+    return `Match again`;
+  }
+  function devicesSourceCardOnce(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.`;
+      case "de":
+        return `Du wirst für ${device} nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.`;
+      case "es":
+        return `Se te pregunta una sola vez por ${device}. Después, se iguala solo cada vez que este ordenador use otro código.`;
+      case "fr":
+        return `On vous le demande une seule fois pour ${device}. Ensuite, il s’aligne de lui-même chaque fois que cet ordinateur exécute un autre code.`;
+      case "ja":
+        return `${device} について確認するのはこの一度だけです。以後は、このコンピュータが別のコードを実行するたびに自動で合わせます。`;
+      case "ko":
+        return `${device}에 대해서는 한 번만 물어봐요. 그 뒤로는 이 컴퓨터가 다른 코드를 실행할 때마다 알아서 맞춰요.`;
+      case "pt-BR":
+        return `Você só recebe esta pergunta uma vez para ${device}. Depois, ele se iguala sozinho sempre que este computador rodar outro código.`;
+      case "zh-Hans":
+        return `关于 ${device} 只问你这一次。之后，每当这台电脑运行其他代码，它都会自动对齐。`;
+      case "zh-Hant":
+        return `關於 ${device} 只問你這一次。之後，每當這台電腦執行其他程式碼，它都會自動對齊。`;
+      case "en-XA":
+        return `[Ýöû áŕé ášķéð öñçé ƒöŕ ${device}. Åƒţéŕ ţĥáţ, îţ ɱáţçĥéš ţĥîš çöɱþûţéŕ ƀý îţšéļƒ ŵĥéñéṽéŕ ţĥîš çöɱþûţéŕ ŕûñš öţĥéŕ çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You are asked once for ‬${device}‮. After that, it matches this computer by itself whenever this computer runs other code.‬`;
+    }
+    return `You are asked once for ${device}. After that, it matches this computer by itself whenever this computer runs other code.`;
+  }
+  function devicesSourceCardRefused(input2) {
+    const why = input2.why;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تكتمل آخر مطابقة. ${why}`;
+      case "de":
+        return `Das letzte Angleichen hat nicht geklappt. ${why}`;
+      case "es":
+        return `La última igualación no se completó. ${why}`;
+      case "fr":
+        return `Le dernier alignement n’a pas abouti. ${why}`;
+      case "ja":
+        return `前回の「合わせる」は完了しませんでした。${why}`;
+      case "ko":
+        return `지난번 맞추기가 완료되지 않았어요. ${why}`;
+      case "pt-BR":
+        return `A última igualação não deu certo. ${why}`;
+      case "zh-Hans":
+        return `上一次对齐没有完成。${why}`;
+      case "zh-Hant":
+        return `上一次對齊沒有完成。${why}`;
+      case "en-XA":
+        return `[Ţĥé ļášţ ɱáţçĥ ðîð ñöţ ĝö ţĥŕöûĝĥ. ${why} ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The last match did not go through. ‬${why}`;
+    }
+    return `The last match did not go through. ${why}`;
+  }
+  function devicesSourceCardTitle(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تريد تشغيل شيفرة هذا الكمبيوتر على ${device}؟`;
+      case "de":
+        return `Den Code dieses Computers auf ${device} ausführen?`;
+      case "es":
+        return `¿Usar el código de este ordenador en ${device}?`;
+      case "fr":
+        return `Exécuter le code de cet ordinateur sur ${device} ?`;
+      case "ja":
+        return `このコンピュータのコードを ${device} で実行しますか?`;
+      case "ko":
+        return `이 컴퓨터의 코드를 ${device}에서 실행할까요?`;
+      case "pt-BR":
+        return `Rodar o código deste computador em ${device}?`;
+      case "zh-Hans":
+        return `要在 ${device} 上运行这台电脑的代码吗？`;
+      case "zh-Hant":
+        return `要在 ${device} 上執行這台電腦的程式碼嗎？`;
+      case "en-XA":
+        return `[Ŕûñ ţĥîš çöɱþûţéŕ'š çöðé öñ ${device}? ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Run this computer's code on ‬${device}‮?‬`;
+    }
+    return `Run this computer's code on ${device}?`;
+  }
+  function devicesSourceFailedBuild(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على ${device} بناء شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} konnte den Code dieses Computers nicht bauen.`;
+      case "es":
+        return `${device} no pudo compilar el código de este ordenador.`;
+      case "fr":
+        return `${device} n’a pas pu compiler le code de cet ordinateur.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードをビルドできませんでした。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 빌드하지 못했어요.`;
+      case "pt-BR":
+        return `${device} não conseguiu fazer o build do código deste computador.`;
+      case "zh-Hans":
+        return `${device} 无法构建这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 無法建置這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} çöûļð ñöţ ƀûîļð ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ could not build this computer's code.‬`;
+    }
+    return `${device} could not build this computer's code.`;
+  }
+  function devicesSourceFailedFetch(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على ${device} جلب شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} konnte den Code dieses Computers nicht holen.`;
+      case "es":
+        return `${device} no pudo obtener el código de este ordenador.`;
+      case "fr":
+        return `${device} n’a pas pu récupérer le code de cet ordinateur.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードを取得できませんでした。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 받지 못했어요.`;
+      case "pt-BR":
+        return `${device} não conseguiu obter o código deste computador.`;
+      case "zh-Hans":
+        return `${device} 无法获取这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 無法取得這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} çöûļð ñöţ ĝéţ ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ could not get this computer's code.‬`;
+    }
+    return `${device} could not get this computer's code.`;
+  }
+  function devicesSourceFailedHere(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الكمبيوتر، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الكمبيوتر شيفرة أخرى.`;
+      case "de":
+        return `${device} konnte seinen Build des Codes dieses Computers nicht starten. Angleichen baut ihn dort erst wieder, wenn dieser Computer anderen Code ausführt.`;
+      case "es":
+        return `${device} no pudo iniciar su compilación del código de este ordenador, así que Igualar no la vuelve a compilar allí hasta que este ordenador use otro código.`;
+      case "fr":
+        return `${device} n’a pas pu démarrer sa compilation du code de cet ordinateur : Aligner ne la recompile pas là-bas tant que cet ordinateur n’exécute pas un autre code.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードからのビルドを起動できませんでした。このコンピュータが別のコードを実行するまで、「合わせる」はそこで再びビルドしません。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드로 만든 빌드를 시작하지 못했어요. 이 컴퓨터가 다른 코드를 실행할 때까지 맞추기는 그곳에서 다시 빌드하지 않아요.`;
+      case "pt-BR":
+        return `${device} não conseguiu iniciar o build do código deste computador, então Igualar não o faz de novo lá até este computador rodar outro código.`;
+      case "zh-Hans":
+        return `${device} 无法启动用这台电脑的代码构建的版本，所以在这台电脑运行其他代码之前，“对齐”不会在那里再次构建。`;
+      case "zh-Hant":
+        return `${device} 無法啟動用這台電腦的程式碼建置的版本，所以在這台電腦執行其他程式碼之前，「對齊」不會在那裡再次建置。`;
+      case "en-XA":
+        return `[${device} çöûļð ñöţ šţáŕţ îţš ƀûîļð öƒ ţĥîš çöɱþûţéŕ'š çöðé, šö Ṁáţçĥ ðöéš ñöţ ƀûîļð îţ ţĥéŕé áĝáîñ ûñţîļ ţĥîš çöɱþûţéŕ ŕûñš öţĥéŕ çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ could not start its build of this computer's code, so Match does not build it there again until this computer runs other code.‬`;
+    }
+    return `${device} could not start its build of this computer's code, so Match does not build it there again until this computer runs other code.`;
+  }
+  function devicesSourceFailedInstall(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} konnte nicht installieren, was der Code dieses Computers braucht.`;
+      case "es":
+        return `${device} no pudo instalar lo que necesita el código de este ordenador.`;
+      case "fr":
+        return `${device} n’a pas pu installer ce dont le code de cet ordinateur a besoin.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードに必要なものをインストールできませんでした。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드에 필요한 것을 설치하지 못했어요.`;
+      case "pt-BR":
+        return `${device} não conseguiu instalar o que o código deste computador precisa.`;
+      case "zh-Hans":
+        return `${device} 无法安装这台电脑的代码所需的内容。`;
+      case "zh-Hant":
+        return `${device} 無法安裝這台電腦的程式碼所需的內容。`;
+      case "en-XA":
+        return `[${device} çöûļð ñöţ îñšţáļļ ŵĥáţ ţĥîš çöɱþûţéŕ'š çöðé ñééðš. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ could not install what this computer's code needs.‬`;
+    }
+    return `${device} could not install what this computer's code needs.`;
+  }
+  function devicesSourceFailedKeep(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بنى ${device} شيفرة هذا الكمبيوتر لكنه لم يتمكن من التشغيل منها.`;
+      case "de":
+        return `${device} hat den Code dieses Computers gebaut, konnte aber nicht damit starten.`;
+      case "es":
+        return `${device} compiló el código de este ordenador, pero no pudo iniciarse con él.`;
+      case "fr":
+        return `${device} a compilé le code de cet ordinateur mais n’a pas pu démarrer avec.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードをビルドしましたが、そこから起動できませんでした。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 빌드했지만 그걸로 시작하지 못했어요.`;
+      case "pt-BR":
+        return `${device} fez o build do código deste computador, mas não conseguiu iniciar com ele.`;
+      case "zh-Hans":
+        return `${device} 已构建这台电脑的代码，但无法从中启动。`;
+      case "zh-Hant":
+        return `${device} 已建置這台電腦的程式碼，但無法從中啟動。`;
+      case "en-XA":
+        return `[${device} ƀûîļţ ţĥîš çöɱþûţéŕ'š çöðé ƀûţ çöûļð ñöţ šţáŕţ ƒŕöɱ îţ. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ built this computer's code but could not start from it.‬`;
+    }
+    return `${device} built this computer's code but could not start from it.`;
+  }
+  function devicesSourceFailedTools(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} braucht Node und pnpm, um den Code dieses Computers zu bauen.`;
+      case "es":
+        return `${device} necesita Node y pnpm para compilar el código de este ordenador.`;
+      case "fr":
+        return `${device} a besoin de Node et de pnpm pour compiler le code de cet ordinateur.`;
+      case "ja":
+        return `${device} でこのコンピュータのコードをビルドするには Node と pnpm が必要です。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 빌드하려면 Node와 pnpm이 필요해요.`;
+      case "pt-BR":
+        return `${device} precisa de Node e pnpm para fazer o build do código deste computador.`;
+      case "zh-Hans":
+        return `${device} 需要 Node 和 pnpm 才能构建这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 需要 Node 和 pnpm 才能建置這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} ñééðš Ñöðé áñð þñþɱ ţö ƀûîļð ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ needs Node and pnpm to build this computer's code.‬`;
+    }
+    return `${device} needs Node and pnpm to build this computer's code.`;
+  }
+  function devicesSourceFetching(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجلب ${device} شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} holt den Code dieses Computers.`;
+      case "es":
+        return `${device} está obteniendo el código de este ordenador.`;
+      case "fr":
+        return `${device} récupère le code de cet ordinateur.`;
+      case "ja":
+        return `${device} がこのコンピュータのコードを取得しています。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드를 받는 중이에요.`;
+      case "pt-BR":
+        return `${device} está obtendo o código deste computador.`;
+      case "zh-Hans":
+        return `${device} 正在获取这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 正在取得這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} îš ĝéţţîñĝ ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ is getting this computer's code.‬`;
+    }
+    return `${device} is getting this computer's code.`;
+  }
+  function devicesSourceInstalling(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يثبّت ${device} ما تحتاجه شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} installiert, was der Code dieses Computers braucht.`;
+      case "es":
+        return `${device} está instalando lo que necesita el código de este ordenador.`;
+      case "fr":
+        return `${device} installe ce dont le code de cet ordinateur a besoin.`;
+      case "ja":
+        return `${device} がこのコンピュータのコードに必要なものをインストールしています。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드에 필요한 것을 설치하는 중이에요.`;
+      case "pt-BR":
+        return `${device} está instalando o que o código deste computador precisa.`;
+      case "zh-Hans":
+        return `${device} 正在安装这台电脑的代码所需的内容。`;
+      case "zh-Hant":
+        return `${device} 正在安裝這台電腦的程式碼所需的內容。`;
+      case "en-XA":
+        return `[${device} îš îñšţáļļîñĝ ŵĥáţ ţĥîš çöɱþûţéŕ'š çöðé ñééðš. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ is installing what this computer's code needs.‬`;
+    }
+    return `${device} is installing what this computer's code needs.`;
+  }
+  function devicesSourceKeepsVersion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتفظ بالإصدار الذي يشغّله.`;
+      case "de":
+        return `Er behält die Version, die er ausführt.`;
+      case "es":
+        return `Conserva la versión que usa.`;
+      case "fr":
+        return `Il garde la version qu’il exécute.`;
+      case "ja":
+        return `現在のバージョンのまま動き続けます。`;
+      case "ko":
+        return `지금 실행 중인 버전을 유지해요.`;
+      case "pt-BR":
+        return `Ele mantém a versão que roda.`;
+      case "zh-Hans":
+        return `它保留当前运行的版本。`;
+      case "zh-Hant":
+        return `它保留目前執行的版本。`;
+      case "en-XA":
+        return `[Îţ ķééþš ţĥé ṽéŕšîöñ îţ ŕûñš. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It keeps the version it runs.‬`;
+    }
+    return `It keeps the version it runs.`;
+  }
+  function devicesSourceNoWorkUntilMatched() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقبل عملًا جديدًا حتى تتم مطابقته.`;
+      case "de":
+        return `Er nimmt keine neue Arbeit an, bis er angeglichen ist.`;
+      case "es":
+        return `No acepta trabajo nuevo hasta que se iguale.`;
+      case "fr":
+        return `Il ne prend aucun nouveau travail tant qu’il n’est pas aligné.`;
+      case "ja":
+        return `合わせるまで新しい作業を受け付けません。`;
+      case "ko":
+        return `맞출 때까지 새 작업을 받지 않아요.`;
+      case "pt-BR":
+        return `Ele não aceita trabalho novo até ser igualado.`;
+      case "zh-Hans":
+        return `在对齐之前，它不接受新工作。`;
+      case "zh-Hant":
+        return `在對齊之前，它不接受新工作。`;
+      case "en-XA":
+        return `[Îţ ţáķéš ñö ñéŵ ŵöŕķ ûñţîļ îţ îš ɱáţçĥéð. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It takes no new work until it is matched.‬`;
+    }
+    return `It takes no new work until it is matched.`;
+  }
+  function devicesSourceNotMac(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يبني Infinitary من الشيفرة إلا جهاز Mac، و${device} ليس جهاز Mac.`;
+      case "de":
+        return `Nur ein Mac baut Infinitary aus Code, und ${device} ist kein Mac.`;
+      case "es":
+        return `Solo un Mac compila Infinitary desde el código, y ${device} no es un Mac.`;
+      case "fr":
+        return `Seul un Mac compile Infinitary à partir du code, et ${device} n’est pas un Mac.`;
+      case "ja":
+        return `コードから Infinitary をビルドできるのは Mac だけで、${device} は Mac ではありません。`;
+      case "ko":
+        return `코드로 Infinitary를 빌드하는 건 Mac뿐인데, ${device}은(는) Mac이 아니에요.`;
+      case "pt-BR":
+        return `Só um Mac faz o build do Infinitary a partir do código, e ${device} não é um Mac.`;
+      case "zh-Hans":
+        return `只有 Mac 能从代码构建 Infinitary，而 ${device} 不是 Mac。`;
+      case "zh-Hant":
+        return `只有 Mac 能從程式碼建置 Infinitary，而 ${device} 不是 Mac。`;
+      case "en-XA":
+        return `[Öñļý á Ṁáç ƀûîļðš Îñƒîñîţáŕý ƒŕöɱ çöðé, áñð ${device} îš ñöţ á Ṁáç. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only a Mac builds Infinitary from code, and ‬${device}‮ is not a Mac.‬`;
+    }
+    return `Only a Mac builds Infinitary from code, and ${device} is not a Mac.`;
+  }
+  function devicesSourceOtherBuild(input2) {
+    const commit = input2.commit;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشغّل بناءً غير بناء هذا الكمبيوتر، الذي يشغّل شيفرته عند الالتزام ${commit}.`;
+      case "de":
+        return `Führt einen anderen Build aus als dieser Computer, der seinen Code beim Commit ${commit} ausführt.`;
+      case "es":
+        return `Usa otra compilación distinta de la de este ordenador, que usa su código en el commit ${commit}.`;
+      case "fr":
+        return `Exécute une autre compilation que cet ordinateur, qui exécute son code au commit ${commit}.`;
+      case "ja":
+        return `このコンピュータとは別のビルドを実行しています。このコンピュータはコミット ${commit} のコードを実行しています。`;
+      case "ko":
+        return `이 컴퓨터와 다른 빌드를 실행하고 있어요. 이 컴퓨터는 커밋 ${commit}의 코드를 실행해요.`;
+      case "pt-BR":
+        return `Roda outro build diferente deste computador, que roda o código no commit ${commit}.`;
+      case "zh-Hans":
+        return `运行的构建与这台电脑不同，这台电脑运行的是提交 ${commit} 的代码。`;
+      case "zh-Hant":
+        return `執行的建置與這台電腦不同，這台電腦執行的是提交 ${commit} 的程式碼。`;
+      case "en-XA":
+        return `[Ŕûñš áñöţĥéŕ ƀûîļð ţĥáñ ţĥîš çöɱþûţéŕ, ŵĥîçĥ ŕûñš îţš çöðé áţ çöɱɱîţ ${commit}. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Runs another build than this computer, which runs its code at commit ‬${commit}‮.‬`;
+    }
+    return `Runs another build than this computer, which runs its code at commit ${commit}.`;
+  }
+  function devicesSourceSeenLine(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يشغّل ${device} بناءً غير شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} führt einen anderen Build aus als den Code dieses Computers.`;
+      case "es":
+        return `${device} usa otra compilación distinta del código de este ordenador.`;
+      case "fr":
+        return `${device} exécute une autre compilation que le code de cet ordinateur.`;
+      case "ja":
+        return `${device} はこのコンピュータのコードとは別のビルドを実行しています。`;
+      case "ko":
+        return `${device}은(는) 이 컴퓨터의 코드와 다른 빌드를 실행하고 있어요.`;
+      case "pt-BR":
+        return `${device} roda outro build diferente do código deste computador.`;
+      case "zh-Hans":
+        return `${device} 运行的构建与这台电脑的代码不同。`;
+      case "zh-Hant":
+        return `${device} 執行的建置與這台電腦的程式碼不同。`;
+      case "en-XA":
+        return `[${device} ŕûñš áñöţĥéŕ ƀûîļð ţĥáñ ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ runs another build than this computer's code.‬`;
+    }
+    return `${device} runs another build than this computer's code.`;
+  }
+  function devicesSourceTooOld(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الكمبيوتر.`;
+      case "de":
+        return `${device} hat ein zu altes Infinitary, um den Code dieses Computers zu bauen.`;
+      case "es":
+        return `${device} tiene un Infinitary demasiado antiguo para compilar el código de este ordenador.`;
+      case "fr":
+        return `${device} a un Infinitary trop ancien pour compiler le code de cet ordinateur.`;
+      case "ja":
+        return `${device} の Infinitary は古すぎて、このコンピュータのコードをビルドできません。`;
+      case "ko":
+        return `${device}의 Infinitary가 너무 오래되어 이 컴퓨터의 코드를 빌드할 수 없어요.`;
+      case "pt-BR":
+        return `${device} tem um Infinitary antigo demais para fazer o build do código deste computador.`;
+      case "zh-Hans":
+        return `${device} 上的 Infinitary 太旧，无法构建这台电脑的代码。`;
+      case "zh-Hant":
+        return `${device} 上的 Infinitary 太舊，無法建置這台電腦的程式碼。`;
+      case "en-XA":
+        return `[${device} ŕûñš áñ Îñƒîñîţáŕý ţöö öļð ţö ƀûîļð ţĥîš çöɱþûţéŕ'š çöðé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ runs an Infinitary too old to build this computer's code.‬`;
+    }
+    return `${device} runs an Infinitary too old to build this computer's code.`;
+  }
+  function devicesSourceTooOldNext() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثبّت أحدث إصدار من Infinitary هناك، ثم اختر «مطابقة» مرة أخرى.`;
+      case "de":
+        return `Installiere dort das neueste Infinitary-Release und wähle dann erneut Angleichen.`;
+      case "es":
+        return `Instala allí la versión más reciente de Infinitary y vuelve a elegir Igualar.`;
+      case "fr":
+        return `Installez la dernière version d’Infinitary là-bas, puis choisissez à nouveau Aligner.`;
+      case "ja":
+        return `そちらに最新の Infinitary リリースをインストールしてから、もう一度「合わせる」を選んでください。`;
+      case "ko":
+        return `그곳에 최신 Infinitary 릴리스를 설치한 다음 맞추기를 다시 선택하세요.`;
+      case "pt-BR":
+        return `Instale lá a versão mais recente do Infinitary e escolha Igualar de novo.`;
+      case "zh-Hans":
+        return `请在那台电脑上安装最新的 Infinitary 版本，然后再次选择“对齐”。`;
+      case "zh-Hant":
+        return `請在那台電腦上安裝最新的 Infinitary 版本，然後再次選擇「對齊」。`;
+      case "en-XA":
+        return `[Îñšţáļļ ţĥé ñéŵéšţ Îñƒîñîţáŕý ŕéļéášé ţĥéŕé, ţĥéñ çĥööšé Ṁáţçĥ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Install the newest Infinitary release there, then choose Match again.‬`;
+    }
+    return `Install the newest Infinitary release there, then choose Match again.`;
+  }
+  function devicesSourceWentBack(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الكمبيوتر لم يصل إلى هذا الكمبيوتر في الوقت المحدد.`;
+      case "de":
+        return `${device} ist zur vorherigen Kopie zurückgekehrt, weil sein Build des Codes dieses Computers diesen Computer nicht rechtzeitig erreicht hat.`;
+      case "es":
+        return `${device} volvió a la copia que usaba antes, porque su compilación del código de este ordenador no llegó a tiempo a este ordenador.`;
+      case "fr":
+        return `${device} est revenu à la copie qu’il utilisait avant, car sa compilation du code de cet ordinateur n’a pas joint cet ordinateur à temps.`;
+      case "ja":
+        return `${device} は以前のコピーに戻りました。このコンピュータのコードからのビルドが時間内にこのコンピュータに届かなかったためです。`;
+      case "ko":
+        return `${device}에서 이 컴퓨터의 코드로 만든 빌드가 제때 이 컴퓨터에 연결되지 않아, 이전에 쓰던 사본으로 돌아갔어요.`;
+      case "pt-BR":
+        return `${device} voltou para a cópia que usava antes, porque o build do código deste computador não chegou a este computador a tempo.`;
+      case "zh-Hans":
+        return `${device} 已回到之前运行的副本，因为它用这台电脑的代码构建的版本没有及时连上这台电脑。`;
+      case "zh-Hant":
+        return `${device} 已回到先前執行的副本，因為它用這台電腦的程式碼建置的版本沒有及時連上這台電腦。`;
+      case "en-XA":
+        return `[${device} ŵéñţ ƀáçķ ţö ţĥé çöþý îţ ŕáñ ƀéƒöŕé, ƀéçáûšé îţš ƀûîļð öƒ ţĥîš çöɱþûţéŕ'š çöðé ðîð ñöţ ŕéáçĥ ţĥîš çöɱþûţéŕ îñ ţîɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ went back to the copy it ran before, because its build of this computer's code did not reach this computer in time.‬`;
+    }
+    return `${device} went back to the copy it ran before, because its build of this computer's code did not reach this computer in time.`;
+  }
   function devicesUpdateApp() {
     switch (currentLanguage()) {
       case "ar":
@@ -58543,6 +59239,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Window connected · work not ready`;
   }
+  function settingsDevicesMatch() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مطابقة`;
+      case "de":
+        return `Angleichen`;
+      case "es":
+        return `Igualar`;
+      case "fr":
+        return `Aligner`;
+      case "ja":
+        return `合わせる`;
+      case "ko":
+        return `맞추기`;
+      case "pt-BR":
+        return `Igualar`;
+      case "zh-Hans":
+        return `对齐`;
+      case "zh-Hant":
+        return `對齊`;
+      case "en-XA":
+        return `[Ṁáţçĥ ~~]`;
+      case "ar-XB":
+        return `‮Match‬`;
+    }
+    return `Match`;
+  }
+  function settingsDevicesMatchNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مطابقة ${device} مع هذا الكمبيوتر`;
+      case "de":
+        return `${device} an diesen Computer angleichen`;
+      case "es":
+        return `Igualar ${device} con este ordenador`;
+      case "fr":
+        return `Aligner ${device} sur cet ordinateur`;
+      case "ja":
+        return `${device} をこのコンピュータに合わせる`;
+      case "ko":
+        return `${device}을(를) 이 컴퓨터에 맞추기`;
+      case "pt-BR":
+        return `Igualar ${device} a este computador`;
+      case "zh-Hans":
+        return `让 ${device} 与这台电脑对齐`;
+      case "zh-Hant":
+        return `讓 ${device} 與這台電腦對齊`;
+      case "en-XA":
+        return `[Ṁáţçĥ ${device} ţö ţĥîš çöɱþûţéŕ ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Match ‬${device}‮ to this computer‬`;
+    }
+    return `Match ${device} to this computer`;
+  }
   function settingsDevicesMoveCancel() {
     switch (currentLanguage()) {
       case "ar":
@@ -62326,89 +63077,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Could not update Infinitary there.‬`;
     }
     return `Could not update Infinitary there.`;
-  }
-  function settingsDevicesUpdateNamed(input2) {
-    const device = input2.device;
-    switch (currentLanguage()) {
-      case "ar":
-        return `تحديث ${device}`;
-      case "de":
-        return `${device} aktualisieren`;
-      case "es":
-        return `Actualizar ${device}`;
-      case "fr":
-        return `Mettre à jour ${device}`;
-      case "ja":
-        return `${device} を更新`;
-      case "ko":
-        return `${device} 업데이트`;
-      case "pt-BR":
-        return `Atualizar ${device}`;
-      case "zh-Hans":
-        return `更新 ${device}`;
-      case "zh-Hant":
-        return `更新 ${device}`;
-      case "en-XA":
-        return `[Ûþðáţé ${device} ~~~]`;
-      case "ar-XB":
-        return `‮Update ‬${device}`;
-    }
-    return `Update ${device}`;
-  }
-  function settingsDevicesUpdateOlder() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `تثبيت الإصدار الأقدم`;
-      case "de":
-        return `Ältere Version installieren`;
-      case "es":
-        return `Instalar versión anterior`;
-      case "fr":
-        return `Installer la version antérieure`;
-      case "ja":
-        return `古いバージョンをインストール`;
-      case "ko":
-        return `이전 버전 설치`;
-      case "pt-BR":
-        return `Instalar versão anterior`;
-      case "zh-Hans":
-        return `安装旧版本`;
-      case "zh-Hant":
-        return `安裝舊版本`;
-      case "en-XA":
-        return `[Îñšţáļļ öļðéŕ ṽéŕšîöñ ~~~~~~~]`;
-      case "ar-XB":
-        return `‮Install older version‬`;
-    }
-    return `Install older version`;
-  }
-  function settingsDevicesUpdateOlderNamed(input2) {
-    const device = input2.device;
-    switch (currentLanguage()) {
-      case "ar":
-        return `تثبيت الإصدار الأقدم على ${device}`;
-      case "de":
-        return `Ältere Version auf ${device} installieren`;
-      case "es":
-        return `Instalar la versión anterior en ${device}`;
-      case "fr":
-        return `Installer la version antérieure sur ${device}`;
-      case "ja":
-        return `${device} に古いバージョンをインストール`;
-      case "ko":
-        return `${device}에 이전 버전 설치`;
-      case "pt-BR":
-        return `Instalar a versão anterior em ${device}`;
-      case "zh-Hans":
-        return `在 ${device} 上安装旧版本`;
-      case "zh-Hant":
-        return `在 ${device} 上安裝舊版本`;
-      case "en-XA":
-        return `[Îñšţáļļ ţĥé öļðéŕ ṽéŕšîöñ öñ ${device} ~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Install the older version on ‬${device}`;
-    }
-    return `Install the older version on ${device}`;
   }
   function settingsDevicesVersionMark(input2) {
     const version2 = input2.version;
@@ -96623,6 +97291,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesRemoteLineReadOnly,
     devicesRemoteLineReadingAgain,
     devicesRemoteOutOfReach,
+    devicesSourceBuilding,
+    devicesSourceCardAgainTitle,
+    devicesSourceCardBody,
+    devicesSourceCardKeychain,
+    devicesSourceCardMatch,
+    devicesSourceCardMatchAgain,
+    devicesSourceCardOnce,
+    devicesSourceCardRefused,
+    devicesSourceCardTitle,
+    devicesSourceFailedBuild,
+    devicesSourceFailedFetch,
+    devicesSourceFailedHere,
+    devicesSourceFailedInstall,
+    devicesSourceFailedKeep,
+    devicesSourceFailedTools,
+    devicesSourceFetching,
+    devicesSourceInstalling,
+    devicesSourceKeepsVersion,
+    devicesSourceNoWorkUntilMatched,
+    devicesSourceNotMac,
+    devicesSourceOtherBuild,
+    devicesSourceSeenLine,
+    devicesSourceTooOld,
+    devicesSourceTooOldNext,
+    devicesSourceWentBack,
     devicesUpdateApp,
     devicesUpdateAppNamed,
     devicesWorkCopyGone,
@@ -97604,6 +98297,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesMapUpdating,
     settingsDevicesMapWaitingForWork,
     settingsDevicesMapWorkNotReady,
+    settingsDevicesMatch,
+    settingsDevicesMatchNamed,
     settingsDevicesMoveCancel,
     settingsDevicesMoveChecking,
     settingsDevicesMoveCouldNot,
@@ -97727,9 +98422,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesTryAgainNamed,
     settingsDevicesUpdate,
     settingsDevicesUpdateFailed,
-    settingsDevicesUpdateNamed,
-    settingsDevicesUpdateOlder,
-    settingsDevicesUpdateOlderNamed,
     settingsDevicesVersionMark,
     settingsDevicesWayCount,
     settingsDevicesWaysCopyCommand,
@@ -99716,6 +100408,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesRemoteLineReadOnly": [],
     "devicesRemoteLineReadingAgain": [],
     "devicesRemoteOutOfReach": ["name"],
+    "devicesSourceBuilding": ["device"],
+    "devicesSourceCardAgainTitle": ["device"],
+    "devicesSourceCardBody": ["commit", "device"],
+    "devicesSourceCardKeychain": ["device"],
+    "devicesSourceCardMatch": [],
+    "devicesSourceCardMatchAgain": [],
+    "devicesSourceCardOnce": ["device"],
+    "devicesSourceCardRefused": ["why"],
+    "devicesSourceCardTitle": ["device"],
+    "devicesSourceFailedBuild": ["device"],
+    "devicesSourceFailedFetch": ["device"],
+    "devicesSourceFailedHere": ["device"],
+    "devicesSourceFailedInstall": ["device"],
+    "devicesSourceFailedKeep": ["device"],
+    "devicesSourceFailedTools": ["device"],
+    "devicesSourceFetching": ["device"],
+    "devicesSourceInstalling": ["device"],
+    "devicesSourceKeepsVersion": [],
+    "devicesSourceNoWorkUntilMatched": [],
+    "devicesSourceNotMac": ["device"],
+    "devicesSourceOtherBuild": ["commit"],
+    "devicesSourceSeenLine": ["device"],
+    "devicesSourceTooOld": ["device"],
+    "devicesSourceTooOldNext": [],
+    "devicesSourceWentBack": ["device"],
     "devicesUpdateApp": [],
     "devicesUpdateAppNamed": ["device"],
     "devicesWorkCopyGone": ["device"],
@@ -100697,6 +101414,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesMapUpdating": [],
     "settingsDevicesMapWaitingForWork": [],
     "settingsDevicesMapWorkNotReady": [],
+    "settingsDevicesMatch": [],
+    "settingsDevicesMatchNamed": ["device"],
     "settingsDevicesMoveCancel": [],
     "settingsDevicesMoveChecking": ["device"],
     "settingsDevicesMoveCouldNot": ["device"],
@@ -100820,9 +101539,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesTryAgainNamed": ["device"],
     "settingsDevicesUpdate": [],
     "settingsDevicesUpdateFailed": [],
-    "settingsDevicesUpdateNamed": ["device"],
-    "settingsDevicesUpdateOlder": [],
-    "settingsDevicesUpdateOlderNamed": ["device"],
     "settingsDevicesVersionMark": ["version"],
     "settingsDevicesWayCount": ["count"],
     "settingsDevicesWaysCopyCommand": [],
@@ -109044,6 +109760,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     pressed: literal(true).optional()
   });
   strictObject({ deviceId: string().min(1).max(64) });
+  const buildIdentitySchema = object({
+    /** The commit the build was made from: a release's source index's, or a source run's. */
+    commit: string().regex(/^[a-f0-9]{40,64}$/).optional(),
+    /** True for a run from source: absent for an installed release. */
+    source: literal(true).optional()
+  });
   const commandEndingSchema = _enum([
     "quit",
     "signal",
@@ -109211,7 +109933,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     than: _enum(["older", "newer"]).optional(),
     takesWork: boolean(),
     updateBy: deviceUpdateBySchema,
-    downloads: literal(true).optional()
+    downloads: literal(true).optional(),
+    /**
+     * This computer runs source at a commit, and Match builds that commit there
+     * (docs/devices.md, "Matching the home's build"); absent when Match brings
+     * it to this computer's installed version.
+     */
+    source: strictObject({ commit: string().regex(/^[a-f0-9]{40,64}$/) }).optional()
   });
   const deviceAppVersionSchema = strictObject({
     app: string().min(1).max(64).optional(),
@@ -113699,6 +114427,9 @@ ${FRAME_KEYBOARD_SCRIPT}
     })
   ]);
   strictObject({
+    commit: string().regex(/^[a-f0-9]{40,64}$/)
+  });
+  strictObject({
     /** The code of the link a command carries; absent from a computer already on the list. */
     code: string().regex(KEY_TEXT_PATTERN).optional(),
     /**
@@ -113825,6 +114556,13 @@ ${FRAME_KEYBOARD_SCRIPT}
          * sent. Said until the home has heard it.
          */
         failedUpdate: literal(true).optional(),
+        /**
+         * The build it runs (`source-builds`; docs/devices.md, "Matching the
+         * home's build"): a release's commit, or that it runs from source
+         * (`source: true`) with the commit it names. Absent from a device too
+         * old to say it, which the home compares by version alone.
+         */
+        build: buildIdentitySchema.optional(),
         /** The last push it saw on an earlier connection; absent on a first one. */
         cursor: connectionCursorSchema.optional(),
         /**

@@ -366,9 +366,12 @@ test("a computer on another version of Firstmate: the app brings an older one to
     run({ appVersion: thisVersion });
     await expect(row).not.toHaveAttribute("data-other-version", /.+/);
     await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
-    // Its Update button, named as the row names it (`Update ${deviceLabel}`),
+    // Its Match button, named as the row names it (`settingsDevicesMatchNamed`),
     // is gone on the same version; it comes back below for one too old.
-    const update = row.getByRole("button", { name: `Update ${deviceLabel(builder)}`, exact: true });
+    const update = row.getByRole("button", {
+      name: m.settingsDevicesMatchNamed({ device: deviceLabel(builder) }),
+      exact: true,
+    });
     await expect(update).toHaveCount(0);
     const devices = await page.evaluate(() => window.infinitary.devices.list());
     expect(devices.find((device) => device.id === deviceId)?.otherVersion).toBeUndefined();

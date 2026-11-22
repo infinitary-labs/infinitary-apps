@@ -57,6 +57,9 @@ import {
 import {
   DOWNLOAD_ORDER_CHANNELS,
   downloadOrders,
+  SOURCE_BUILDS_CHANGE,
+  SOURCE_ORDER_CHANNELS,
+  sourceOrders,
   UPDATE_ORDER_CHANNELS,
   updateOrders,
   WORK_ORDER_CHANNELS,
@@ -414,6 +417,27 @@ export function publishedContract() {
             {
               effect: declared.effect,
               request: received(`The ${channel} order`, declared.request),
+              response: sent(`The ${channel} answer`, declared.response),
+            },
+          ];
+        }),
+      ),
+    },
+    // The order a home run from source asks a Mac that runs work to build
+    // its commit (`src/shared/work.ts`), of a computer that lists the
+    // `source-builds` change.
+    sourceOrders: {
+      change: SOURCE_BUILDS_CHANGE,
+      requests: Object.fromEntries(
+        SOURCE_ORDER_CHANNELS.map((channel) => {
+          const declared = sourceOrders[channel];
+          return [
+            channel,
+            {
+              effect: declared.effect,
+              // i18n-exempt: descriptions in the published contract, never shown
+              request: received(`The ${channel} order`, declared.request),
+              // i18n-exempt: descriptions in the published contract, never shown
               response: sent(`The ${channel} answer`, declared.response),
             },
           ];

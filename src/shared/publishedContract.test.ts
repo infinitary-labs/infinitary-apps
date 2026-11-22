@@ -29,6 +29,7 @@ import { SIGN_IN_ORDER_CHANNELS } from "./signIns";
 import {
   DOWNLOAD_ORDER_CHANNELS,
   downloadOrders,
+  SOURCE_ORDER_CHANNELS,
   UPDATE_ORDER_CHANNELS,
   WORK_ORDER_CHANNELS,
   WORK_PROGRESS_ORDER,
@@ -83,6 +84,7 @@ const shapes: [string, unknown][] = [
   ...pairsOf("signInOrders.requests", published.signInOrders.requests),
   ...pairsOf("updateOrders.requests", published.updateOrders.requests),
   ...pairsOf("downloadOrders.requests", published.downloadOrders.requests),
+  ...pairsOf("sourceOrders.requests", published.sourceOrders.requests),
   ...pairsOf("browserOrders.requests", published.browserOrders.requests),
   ...pairsOf("resourceOrders.requests", published.resourceOrders.requests),
   ["connection.clientFrame", published.connection.clientFrame],
@@ -140,6 +142,7 @@ describe("the published contract", () => {
     expect(published.updateOrders.since).toBe(WORK_UPDATE_SINCE);
     expect(Object.keys(published.downloadOrders.requests)).toEqual(DOWNLOAD_ORDER_CHANNELS);
     expect(published.downloadOrders.since).toBe(WORK_DOWNLOAD_SINCE);
+    expect(Object.keys(published.sourceOrders.requests)).toEqual(SOURCE_ORDER_CHANNELS);
   });
 
   describe("gives a standard validator a schema for every shape, on its own", () => {
@@ -151,6 +154,7 @@ describe("the published contract", () => {
           2 * SIGN_IN_ORDER_CHANNELS.length +
           2 * UPDATE_ORDER_CHANNELS.length +
           2 * DOWNLOAD_ORDER_CHANNELS.length +
+          2 * SOURCE_ORDER_CHANNELS.length +
           2 * BROWSER_ORDER_CHANNELS.length +
           2 * Object.keys(resourceOrders).length +
           5,

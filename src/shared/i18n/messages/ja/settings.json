@@ -396,6 +396,8 @@
   "settingsDevicesMapUpdating": "更新中",
   "settingsDevicesMapWaitingForWork": "作業からの応答待ち",
   "settingsDevicesMapWorkNotReady": "ウインドウ接続済み・作業の準備中",
+  "settingsDevicesMatch": "合わせる",
+  "settingsDevicesMatchNamed": "{device} をこのコンピュータに合わせる",
   "settingsDevicesMoveCancel": "移動をキャンセル",
   "settingsDevicesMoveChecking": "{device} を確認しています…",
   "settingsDevicesMoveCouldNot": "{device} を確認できませんでした。少ししてからもう一度お試しください。",
@@ -537,9 +539,6 @@
   "settingsDevicesTryAgainNamed": "{device} への接続を再試行",
   "settingsDevicesUpdate": "更新",
   "settingsDevicesUpdateFailed": "そちらの Infinitary を更新できませんでした。",
-  "settingsDevicesUpdateNamed": "{device} を更新",
-  "settingsDevicesUpdateOlder": "古いバージョンをインストール",
-  "settingsDevicesUpdateOlderNamed": "{device} に古いバージョンをインストール",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

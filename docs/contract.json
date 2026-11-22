@@ -119,6 +119,19 @@
                   "type": "boolean",
                   "const": true
                 },
+                "build": {
+                  "type": "object",
+                  "properties": {
+                    "commit": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{40,64}$"
+                    },
+                    "source": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                },
                 "cursor": {
                   "type": "object",
                   "properties": {
@@ -6084,6 +6097,18 @@
                 "downloads": {
                   "type": "boolean",
                   "const": true
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "commit": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{40,64}$"
+                    }
+                  },
+                  "required": [
+                    "commit"
+                  ]
                 }
               },
               "required": [
@@ -6551,6 +6576,18 @@
                   "downloads": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "commit": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{40,64}$"
+                      }
+                    },
+                    "required": [
+                      "commit"
+                    ]
                   }
                 },
                 "required": [
@@ -7081,6 +7118,18 @@
                   "downloads": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "commit": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{40,64}$"
+                      }
+                    },
+                    "required": [
+                      "commit"
+                    ]
                   }
                 },
                 "required": [
@@ -8171,6 +8220,18 @@
               "downloads": {
                 "type": "boolean",
                 "const": true
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "commit": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40,64}$"
+                  }
+                },
+                "required": [
+                  "commit"
+                ]
               }
             },
             "required": [
@@ -8603,6 +8664,18 @@
               "downloads": {
                 "type": "boolean",
                 "const": true
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "commit": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40,64}$"
+                  }
+                },
+                "required": [
+                  "commit"
+                ]
               }
             },
             "required": [
@@ -8994,6 +9067,18 @@
               "downloads": {
                 "type": "boolean",
                 "const": true
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "commit": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40,64}$"
+                  }
+                },
+                "required": [
+                  "commit"
+                ]
               }
             },
             "required": [
@@ -9627,6 +9712,18 @@
                   "downloads": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "commit": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{40,64}$"
+                      }
+                    },
+                    "required": [
+                      "commit"
+                    ]
                   }
                 },
                 "required": [
@@ -99248,6 +99345,18 @@
                 "downloads": {
                   "type": "boolean",
                   "const": true
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "commit": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{40,64}$"
+                    }
+                  },
+                  "required": [
+                    "commit"
+                  ]
                 }
               },
               "required": [
@@ -113342,6 +113451,83 @@
           "required": [
             "received",
             "state"
+          ]
+        }
+      }
+    }
+  },
+  "sourceOrders": {
+    "change": "source-builds",
+    "requests": {
+      "inf:source:build": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "commit": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{40,64}$"
+                }
+              },
+              "required": [
+                "commit"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "restarts": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "restarts"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "failed": {
+                  "type": "string",
+                  "enum": [
+                    "system",
+                    "tools",
+                    "fetch",
+                    "install",
+                    "build",
+                    "keep"
+                  ]
+                },
+                "detail": {
+                  "type": "string",
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "failed"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "updating": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "updating"
+              ]
+            }
           ]
         }
       }

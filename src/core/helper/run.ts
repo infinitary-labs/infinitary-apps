@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, rmSync } from "node:fs";
 import { homedir, type NetworkInterfaceInfo } from "node:os";
 import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
+import type { BuildIdentity } from "@shared/buildIdentity";
 import { CONNECTION_PORT } from "@shared/connection";
 import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
@@ -34,12 +35,15 @@ import {
 import {
   downloadOrders,
   placedTaskFolders,
+  sourceOrders,
   type UpdateProgress,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
   WORK_PROGRESS_ORDER,
+  WORK_SOURCE_ORDER,
   WORK_UPDATE_ORDER,
   type WorkDownloadAnswer,
+  type WorkSourceAnswer,
   type WorkUpdateAnswer,
   worktreesDirOf,
 } from "@shared/work";
@@ -87,6 +91,7 @@ import { FolderBusyError, folderHolder, lockFolder } from "./lock";
 import { PlacedTasks } from "./placedTasks";
 import { homeDialOptions } from "./route";
 import type { HeldSignIns } from "./signIns";
+import { buildSourceHere, type SourceBuilt } from "./sourceBuild";
 import { type DownloadedHere, downloadHere, type UpdatedHere, updateHere } from "./update";
 import { endTrial, forgetWentBack, readWentBack } from "./updateTrial";
 import { helperWords, homeLabel } from "./words";
@@ -185,6 +190,24 @@ export type StartHelperOptions = {
   changes?: readonly string[];
   /** The version of Firstmate it runs, which its hello tells the home; unsaid when absent. */
   appVersion?: string;
+  /** Which build it runs (`buildIdentityOf`, ./sourceBuild.ts), which its hello tells the home; unsaid when absent. */
+  build?: BuildIdentity;
+  /**
+   * The folder of the home's source build this run started from, kept in
+   * the work folder (`runsSourceBuild`): an update to a release moves the
+   * background back to the installed copy. Absent for any other run.
+   */
+  sourceRun?: string;
+  /**
+   * Builds the home's source here when the home asks (`buildSourceHere`),
+   * unless a test stands in its own.
+   */
+  sourceBuild?: (
+    grant: DeviceGrant,
+    commit: string,
+    signal: AbortSignal,
+    onStep: (step: "fetching" | "installing" | "building") => void,
+  ) => Promise<SourceBuilt>;
   /**
    * Opens the WebSocket to the home: by default where the grant dials now,
    * read again on every dial (`homeDialOptions`), then every other address
@@ -611,6 +634,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   // so the background starts it again from what is kept. One order at a
   // time; one that failed changed nothing, and the home may ask again.
   let updating: Promise<UpdatedHere> | undefined;
+  /** A build of the home's source runs (`sourceBuild`): no update starts beside it. */
+  let building = false;
   const stopUpdating = new AbortController();
   let afterUpdate: (() => Promise<void>) | undefined;
   const update = async (args: unknown): Promise<WorkUpdateAnswer> => {
@@ -623,6 +648,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     if (downloaded) return downloaded;
     // A run that stopped while that download ran starts no update.
     if (stopped) throw new Error("This computer is stopping.");
+    if (building) throw new Error("This computer is building its home's source.");
     progress = { received: 0, state: "updating" };
     updating ??= (
       options.update ??
@@ -640,6 +666,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           log,
           signal: stopUpdating.signal,
           ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
+          ...(options.sourceRun ? { fromSource: true } : {}),
         }))
     )(dialing, stopUpdating.signal);
     let answer: WorkUpdateAnswer;
@@ -677,7 +704,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   let downloaded: WorkUpdateAnswer | undefined;
   const download = async (args: unknown): Promise<WorkDownloadAnswer> => {
     const [published] = downloadOrders[WORK_DOWNLOAD_ORDER].request.parse(args);
-    if (updating || downloading) return { updating: true };
+    if (updating || downloading || building) return { updating: true };
     const stopping = new AbortController();
     downloading = stopping;
     progress = { received: 0, state: "downloading" };
@@ -699,6 +726,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         ...(options.verifier ? { verifier: options.verifier } : {}),
         ...(options.downloadIdleSeconds ? { idleSeconds: options.downloadIdleSeconds } : {}),
         ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
+        ...(options.sourceRun ? { fromSource: true } : {}),
       });
       fetching = getting.catch(() => undefined);
       got = await getting;
@@ -726,6 +754,59 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     return answer;
   };
 
+  // Built from the home's source (docs/helper.md, "Building the home's
+  // source"): the home names its commit, and this Mac gets that tree, installs
+  // and builds it, and moves its background to the build, saying each step
+  // to the home's progress order. One that failed changes nothing here and
+  // answers the step; one asked while an update or a build runs answers that
+  // it is updating already.
+  const sourceBuild = async (args: unknown): Promise<WorkSourceAnswer> => {
+    const [{ commit }] = sourceOrders[WORK_SOURCE_ORDER].request.parse(args);
+    if (updating || downloading || building) return { updating: true };
+    const stopping = new AbortController();
+    const stop = () => stopping.abort();
+    stopUpdating.signal.addEventListener("abort", stop, { once: true });
+    building = true;
+    progress = { received: 0, state: "fetching" };
+    let built: SourceBuilt;
+    try {
+      built = await (
+        options.sourceBuild ??
+        ((grant, commit, signal, onStep) =>
+          buildSourceHere({
+            dataDir,
+            grant,
+            commit,
+            background: options.background ?? null,
+            onStep,
+            log,
+            signal,
+            ...(options.now ? { now: options.now } : {}),
+            ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
+            ...(options.sourceRun ? { running: options.sourceRun } : {}),
+          }))
+      )(dialing, commit, stopping.signal, (state) => {
+        progress = { received: 0, state };
+      });
+    } catch (error) {
+      built = { failed: "build", detail: String(error) };
+    } finally {
+      stopUpdating.signal.removeEventListener("abort", stop);
+    }
+    if ("failed" in built) {
+      building = false;
+      progress = { received: 0, state: "idle" };
+      return built;
+    }
+    const { afterRun, restarts } = built;
+    afterUpdate = afterRun;
+    // Kept true: this run ends now, and starts no other update.
+    say(helperWords.updated(place, name, restarts));
+    // The answer is written before the connection closes.
+    setImmediate(() => void end("updated"));
+    return { restarts };
+  };
+
   const automaticStartup = readAutomaticStartup(dataDir);
   const findHome = options.findHome;
   // On the home's own Mac the home is always at loopback (`homeDialOptions`):
@@ -739,6 +820,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
     ...(options.changes ? { changes: options.changes } : {}),
     ...(options.appVersion ? { appVersion: options.appVersion } : {}),
+    ...(options.build ? { build: options.build } : {}),
     // A copy an update brought that did not reach the home, which this one
     // went back from, said until the home has heard it.
     failedUpdate: () => readWentBack(dataDir),
@@ -806,6 +888,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       if (stopped) throw new Error("This computer is stopping.");
       if (channel === WORK_UPDATE_ORDER) return update(args);
       if (channel === WORK_DOWNLOAD_ORDER) return download(args);
+      if (channel === WORK_SOURCE_ORDER) return sourceBuild(args);
       if (channel === WORK_PROGRESS_ORDER) {
         downloadOrders[WORK_PROGRESS_ORDER].request.parse(args);
         return progress;

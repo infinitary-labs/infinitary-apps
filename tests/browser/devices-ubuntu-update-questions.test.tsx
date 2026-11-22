@@ -1,4 +1,5 @@
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -51,10 +52,20 @@ test("an earlier update's password question and the Ubuntu worker's each stay wi
 
   // An ordinary Remote Login update of the Studio starts first and is still waiting.
   await selectDevice(studio.id);
-  await userEvent.click(button(await shown('[data-device-row="studio"]'), "Update Mac Studio"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="studio"]'),
+      m.settingsDevicesMatchNamed({ device: "Mac Studio" }),
+    ),
+  );
   await expect.poll(() => bridge.requests("inf:devices:update")).toEqual([[studio.id, {}]]);
   await selectDevice(worker.id);
-  await userEvent.click(button(await shown('[data-device-row="mini"]'), "Update Ubuntu worker"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="mini"]'),
+      m.settingsDevicesMatchNamed({ device: "Ubuntu worker" }),
+    ),
+  );
   await expect.poll(() => bridge.requests("inf:devices:update")).toHaveLength(2);
 
   // The worker's address was refused on its own: its form opens prefilled, saying why.

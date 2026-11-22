@@ -2,6 +2,7 @@ import { constants as cryptoConstants } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
 import type { Duplex } from "node:stream";
+import type { BuildIdentity } from "@shared/buildIdentity";
 import {
   channelIn,
   FIRST_SPELLING,
@@ -24,6 +25,7 @@ import {
   FETCH_APP_REFUSAL_STATUS,
   FETCH_APP_SHA256_HEADER,
   FETCH_APP_TYPES,
+  FETCH_SOURCE_PATH,
   type FetchAppRefusal,
   fetchAppRequestSchema,
   invokeArgs,
@@ -89,6 +91,7 @@ import {
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import { heldAsks, type LiveToViewArgs } from "./heldAsks";
+import { answerSource, type HomeSource } from "./homeSource";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -314,6 +317,8 @@ export type WorkDeviceVersion = {
    * (docs/helper.md, "A copy that does not start").
    */
   failedUpdate?: true;
+  /** Which build it runs, when its hello said (docs/devices.md, "Matching the home's build"). */
+  build?: BuildIdentity;
 };
 
 export type ConnectionOptions = {
@@ -420,7 +425,16 @@ export type ConnectionOptions = {
     chip: DeviceChip | undefined,
     kind?: "deb",
   ) => Promise<FarBuild | null>;
+  /**
+   * The committed source this home runs, for a computer it asks to build it
+   * at `FETCH_SOURCE_PATH` (docs/devices.md, "Matching the home's build"):
+   * its commit and a gzipped tar of that commit's tree made as it is sent;
+   * null when this home runs no source with a commit.
+   */
+  source?: () => HomeSource | null;
 };
+
+export type { HomeSource } from "./homeSource";
 
 export type RunningDeviceVersion = { deviceId: string; role: DeviceRole; version: string | null };
 
@@ -434,8 +448,8 @@ export type HomeConnection = {
   /**
    * Asks a connected computer that runs work one order (src/shared/work.ts)
    * and resolves with its answer, or rejects with its refusal. With
-   * `anyVersion` - the update and download orders alone, whose shapes never
-   * change - it reaches one that takes no work too. Refused at
+   * `anyVersion` - the update, download and source orders alone, whose shapes
+   * never change - it reaches one that takes no work too. Refused at
    * once with `DeviceOutOfReachError` when the device is not connected or
    * its welcome said it takes no work, and with it too when the connection
    * goes before the answer; never asked again here.
@@ -1156,6 +1170,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           takesWork: client.takesWork,
           ...(hello.changes?.length ? { changes: hello.changes } : {}),
           ...(hello.failedUpdate ? { failedUpdate: hello.failedUpdate } : {}),
+          ...(hello.build ? { build: hello.build } : {}),
         });
       if (client.takesWork) tellWork({ deviceId: client.device.id, contact: "in-reach" });
       if (role === "view") tellView({ deviceId: client.device.id, contact: "in-reach" });
@@ -1567,6 +1582,19 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       stream.pipe(response);
       response.once("close", stop);
     };
+    // A computer this home asks to build its source gets the committed tree
+    // at the commit it runs, with its own key (docs/devices.md, "Matching
+    // the home's build"): one gzipped tar made as it is sent, counted as an
+    // update's copy is. Never the uncommitted edits, nor another commit.
+    const fetchSource = (request: IncomingMessage, response: ServerResponse) =>
+      answerSource(request, response, {
+        admit: (asked) => devices.admit(asked),
+        readBody,
+        answerJson,
+        source: options.source,
+        tellSent,
+        onProblem,
+      });
     // A device's upgrade proves it by pairing; one on the local door's own
     // listener by the door's key alone, and nothing else is answered there.
     const upgrade = async (
@@ -1650,6 +1678,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         if (door && path === COMMAND_PATH && options.command) command(request, response, door);
         else if (!door && path === PAIR_PATH) void pair(request, response);
         else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
+        else if (!door && path === FETCH_SOURCE_PATH) void fetchSource(request, response);
         else
           response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();
       });

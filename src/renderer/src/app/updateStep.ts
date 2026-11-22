@@ -80,6 +80,13 @@ export type UpdateStepPresses = {
 
 const releasesPage: UpdateStepButton = { action: "release", label: UPDATE_WORDS.releasesPage };
 
+/**
+ * A copy run from source has no releases page: the way on after a failed
+ * check is another check, and its offered commit is a link only where the
+ * project's host has a page comparing two commits (docs/alpha.md, "Updates from source").
+ */
+const fromSource = (status: UpdateStatus): boolean => status.source !== undefined;
+
 /** The step for this status, or null before the first status arrives. */
 export function updateStep(
   status: UpdateStatus | null,
@@ -154,7 +161,7 @@ export function updateStep(
       line: UPDATE_PROBLEMS.checkFailed,
       problem: true,
       primary: { action: "check", label: UPDATE_WORDS.retry, disabled: pressed.busy },
-      secondary: releasesPage,
+      ...(fromSource(status) ? {} : { secondary: releasesPage }),
     };
   const found = status.notice ?? null;
   return {
@@ -189,16 +196,19 @@ function offeredStep(
     disabled: pressed.busy,
   };
   const found = checkFailed
-    ? `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable(version)}`
-    : [UPDATE_NOTICES.available(version), read.checked].filter(Boolean).join(" ");
-  const offer = { version, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
+    ? `${UPDATE_PROBLEMS.checkFailed} ${stillAvailable(status, version)}`
+    : [available(status, version), read.checked].filter(Boolean).join(" ");
+  // The version in the line opens its page; a source commit's only where that page exists.
+  const linked = fromSource(status) && !status.releaseUrl ? {} : { version };
+  const offer = { ...linked, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
   if (problem !== null)
     // The app installs it here and the failure can pass on a retry; with no
-    // way to install it here, the releases page is the way on.
+    // way to install it here, the releases page is the way on, or for a copy
+    // run from source another check.
     return install
       ? {
           state: "retry",
-          line: `${problem} ${UPDATE_NOTICES.stillAvailable(version)}`,
+          line: `${problem} ${stillAvailable(status, version)}`,
           problem: true,
           ...offer,
           primary: {
@@ -208,7 +218,12 @@ function offeredStep(
           },
           secondary: check,
         }
-      : { state: "blocked", line: problem, problem: true, primary: releasesPage };
+      : {
+          state: "blocked",
+          line: problem,
+          problem: true,
+          primary: fromSource(status) ? check : releasesPage,
+        };
   if (install)
     return {
       state: "available",
@@ -221,7 +236,7 @@ function offeredStep(
             : UPDATE_STEP_WORDS.replaces)
       }`,
       problem: checkFailed,
-      version,
+      ...linked,
       primary: {
         action: "install",
         label: installLabel,
@@ -238,5 +253,38 @@ function offeredStep(
       primary: { action: "copy", label: UPDATE_WORDS.copy },
       secondary: check,
     };
-  return { state: "available", line: found, problem: checkFailed, version, primary: check };
+  // A copy run from source says why it cannot move forward to what it found.
+  const held = status.source?.held;
+  return {
+    state: "available",
+    line: held ? `${found} ${SOURCE_HELD[held](status.source?.branch ?? "")}` : found,
+    problem: checkFailed,
+    ...linked,
+    primary: check,
+  };
+}
+
+/**
+ * Why a copy run from source cannot move forward to the newer commits it
+ * found (docs/alpha.md, "Updates from source").
+ */
+const SOURCE_HELD = {
+  edited: () => m.updateSourceEdited(),
+  ahead: (branch: string) => m.updateSourceAhead({ branch }),
+} as const;
+
+/** What a read found, as a release or, for a copy run from source, as newer commits. */
+function available(status: UpdateStatus, version: string): string {
+  const source = status.source;
+  return source
+    ? m.updateSourceAvailable({ branch: source.branch, count: source.behind, commit: version })
+    : UPDATE_NOTICES.available(version);
+}
+
+/** After a failed check or update: what the last read found still waits. */
+function stillAvailable(status: UpdateStatus, version: string): string {
+  const source = status.source;
+  return source
+    ? m.updateSourceStillAvailable({ branch: source.branch, count: source.behind, commit: version })
+    : UPDATE_NOTICES.stillAvailable(version);
 }

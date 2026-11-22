@@ -1,0 +1,2 @@
+The update status gains the optional `source`: for a copy run from source by `pnpm dev`'s starter, the branch it follows where the project lives, how many commits that branch has that the copy lacks, and why the copy cannot move forward to them when it cannot (`src/shared/update.ts`).
+A side without this change never sends it, and a window without it reads such a status as an ordinary one, naming short commits as its versions.

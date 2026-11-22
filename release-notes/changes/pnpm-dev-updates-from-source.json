@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pnpm-dev-updates-from-source",
+      "reason": "How the project itself is developed: pnpm dev keeps the app running when its window closes and updates the copy from where the project lives. An installed app behaves as before."
+    }
+  ]
+}

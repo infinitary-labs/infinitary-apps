@@ -1,5 +1,7 @@
 import { delimiter, win32 } from "node:path";
+import { SETTING_PREFIXES } from "../shared/envSettings";
 import { hostPlatform } from "./platform";
+import { DEV_STARTER_SETTING } from "./update/devStarter";
 import { installerDirs, type LoginShellMiss, readLoginShellPath } from "./userBin";
 import { windowsGit } from "./windowsGit";
 
@@ -370,6 +372,9 @@ export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   delete inherited[SHELL_STARTED_ENV];
   delete inherited[SHELL_ID_ENV];
   delete inherited.FM3000_SHELL_CAP_MS; // the older name still reads as this limit
+  // `pnpm dev`'s starter folder names this app's own starter: an app a child
+  // starts, such as a crewmate's test run, never reads its session or asks it to update.
+  for (const prefix of SETTING_PREFIXES) delete inherited[`${prefix}${DEV_STARTER_SETTING}`];
   for (const name of REPOSITORY_GIT_VARIABLES) delete inherited[name];
   return {
     ...inherited,

@@ -6,6 +6,27 @@
   "updateDownloadStopped": "The download stopped before it finished. Try again.",
   "updateDownloadUnreachable": "Infinitary could not reach the download. Check your connection and try again.",
   "updateInstallerNoStart": "The installer could not start, so nothing was installed.",
+  "updateSourceAhead": "This copy has commits that {branch} does not have, so it cannot move forward.",
+  "updateSourceAlreadyUpdating": "This copy is already updating.",
+  "updateSourceAvailable": {
+    "plural": "count",
+    "one": "{branch} has {count} newer commit, up to {commit}.",
+    "other": "{branch} has {count} newer commits, up to {commit}."
+  },
+  "updateSourceBuildFailed": "{to} did not build, so this copy went back to {from}.",
+  "updateSourceDetached": "This copy is not on a branch, so it cannot update itself.",
+  "updateSourceEdited": "This copy has edits that are not committed. Commit them or set them aside, then check again.",
+  "updateSourceInstallFailed": "The packages for {to} did not install, so this copy went back to {from}.",
+  "updateSourceNoUpstream": "Branch {branch} does not follow a branch where the project lives, so this copy cannot update itself.",
+  "updateSourceNotAsked": "Infinitary could not hand the update over, so nothing changed.",
+  "updateSourceNotMoved": "This copy could not move forward to {to}, so it stayed on {from}.",
+  "updateSourceNothingToTake": "There is no update this copy can take now.",
+  "updateSourceStillAvailable": {
+    "plural": "count",
+    "one": "{branch} still has {count} newer commit, up to {commit}.",
+    "other": "{branch} still has {count} newer commits, up to {commit}."
+  },
+  "updateSourceUpToDate": "Up to date with {branch}.",
   "updateWindowsChannelNotPutBack": "Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
   "updateWindowsInstallFailed": "The installer stopped before it finished, so this copy was kept.",
   "updateWindowsNoCopy": "Infinitary could not open again after its update. Download the installer from {page} and run it; your tasks and settings are kept.",

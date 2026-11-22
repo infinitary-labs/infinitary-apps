@@ -577,7 +577,9 @@
         "!tests/browser-fresh-home.test.ts",
         "!tests/bundled-packages.test.ts",
         "!tests/compile-cache.test.ts",
-        "!tests/frame-lib.test.ts"
+        "!tests/frame-lib.test.ts",
+        "!tests/dev-starter.test.ts",
+        "!src/core/update/sourceUpdates.test.ts"
       ],
       "plugins": ["./tests/lint/unit-cohort.grit"]
     }

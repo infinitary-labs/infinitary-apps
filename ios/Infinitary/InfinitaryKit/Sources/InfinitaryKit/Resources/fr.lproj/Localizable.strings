@@ -3713,6 +3713,7 @@
 "shellUpdateAvailable" = "Mise à jour disponible : %1$@";
 "shellUpdateInstall" = "Installer";
 "shellUpdateInstalled" = "Version installée : %1$@";
+"shellUpdateSource" = "Mises à jour depuis %1$@";
 "shellUpdateStable" = "Mises à jour stables";
 "shellVoiceAskingDesktop" = "Votre bureau demande si Infinitary peut utiliser le micro. Ce que vous dites devient du texte sur cet ordinateur et n’est jamais conservé.";
 "shellVoiceAskingMac" = "macOS demande si Infinitary peut utiliser le micro. Ce que vous dites devient du texte sur cet ordinateur et n’est jamais conservé.";
@@ -3864,6 +3865,17 @@
 "updateDownloadStopped" = "Le téléchargement s’est arrêté avant la fin. Réessayez.";
 "updateDownloadUnreachable" = "Infinitary n’a pas pu accéder au téléchargement. Vérifiez votre connexion et réessayez.";
 "updateInstallerNoStart" = "Le programme d’installation n’a pas pu démarrer ; rien n’a donc été installé.";
+"updateSourceAhead" = "Cette copie a des commits que %1$@ n’a pas ; elle ne peut donc pas avancer.";
+"updateSourceAlreadyUpdating" = "Cette copie est déjà en cours de mise à jour.";
+"updateSourceBuildFailed" = "%2$@ n’a pas pu être compilé ; cette copie est donc revenue à %1$@.";
+"updateSourceDetached" = "Cette copie n’est sur aucune branche ; elle ne peut donc pas se mettre à jour seule.";
+"updateSourceEdited" = "Cette copie a des modifications non validées. Validez-les ou mettez-les de côté, puis vérifiez à nouveau.";
+"updateSourceInstallFailed" = "Les paquets de %2$@ n’ont pas pu être installés ; cette copie est donc revenue à %1$@.";
+"updateSourceNoUpstream" = "La branche %1$@ ne suit aucune branche de l’endroit où vit le projet ; cette copie ne peut donc pas se mettre à jour seule.";
+"updateSourceNotAsked" = "Infinitary n’a pas pu transmettre la mise à jour ; rien n’a changé.";
+"updateSourceNotMoved" = "Cette copie n’a pas pu avancer jusqu’à %2$@ ; elle est donc restée sur %1$@.";
+"updateSourceNothingToTake" = "Aucune mise à jour ne peut être prise par cette copie pour l’instant.";
+"updateSourceUpToDate" = "À jour avec %1$@.";
 "updateWindowsChannelNotPutBack" = "Infinitary n’a pas pu rétablir le canal de mise à jour suivi auparavant ; vérifiez le canal dans Réglages → Général.";
 "updateWindowsInstallFailed" = "Le programme d’installation s’est arrêté avant la fin ; cette copie a donc été conservée.";
 "updateWindowsNoCopy" = "Infinitary n’a pas pu se rouvrir après sa mise à jour. Téléchargez le programme d’installation depuis %1$@ et lancez-le ; vos tâches et réglages sont conservés.";

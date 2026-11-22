@@ -319,6 +319,7 @@ describe("the gateway on a Bitbucket Data Center repository, through crewmate to
             loginOf: () => "jane.doe",
             checkNow: async () => {},
             signOut: () => {},
+            presentHosts: () => [HOST],
           },
           gateway: (host) => ({
             read: (task, input) => service.read(task, input, { host }),

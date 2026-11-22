@@ -1,5 +1,5 @@
 ---
-source: 797265acca38baf9
+source: 5a44a232aea453c9
 title: Dépannage
 description: Les problèmes courants dans Infinitary, les mots que l’app affiche pour chacun et ce qu’il faut faire.
 ---
@@ -26,6 +26,7 @@ Le travail reprend de lui-même une fois l’allocation renouvelée.
 Pour reprendre plus tôt :
 
 - Appuyez sur **Revérifier l’allocation** si vous avez changé quelque chose du côté de votre fournisseur.
+- Si la revérification ne trouve aucun changement, la carte propose aussi de réessayer votre fournisseur, par exemple **Try Claude again** : vos mots partent une fois, et si l’allocation est toujours épuisée, le second se met de nouveau en pause.
 - Appuyez sur **Passer à** un autre fournisseur, quand la carte en propose un.
 - Demandez à votre second de passer le travail sur un autre modèle.
 

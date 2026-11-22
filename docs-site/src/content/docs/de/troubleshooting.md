@@ -1,5 +1,5 @@
 ---
-source: 797265acca38baf9
+source: 5a44a232aea453c9
 title: Fehlerbehebung
 description: Häufige Probleme in Infinitary, die Worte, die die App für jedes zeigt, und was du tun kannst.
 ---
@@ -26,6 +26,7 @@ Die Arbeit geht von selbst weiter, sobald es zurückgesetzt ist.
 Um früher weiterzumachen:
 
 - Drück **Kontingent erneut prüfen**, wenn du auf der Seite deines Anbieters etwas geändert hast.
+- Findet die erneute Prüfung keine Änderung, bietet die Karte auch an, es bei deinem Anbieter noch einmal zu versuchen, etwa mit **Try Claude again**: Deine Worte gehen einmal raus, und ist das Kontingent noch aufgebraucht, pausiert der erste Offizier wieder.
 - Drück **Wechseln zu** einem anderen Anbieter, wenn die Karte einen anbietet.
 - Bitte deinen ersten Offizier, die Arbeit auf ein anderes Modell zu verlegen.
 

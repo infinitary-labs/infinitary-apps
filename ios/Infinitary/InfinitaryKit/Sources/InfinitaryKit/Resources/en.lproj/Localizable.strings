@@ -455,6 +455,7 @@
 "cardSinceSeenSaw" = "Since the card you saw · %1$@";
 "cardSoundUnplayable" = "This sound could not be played.";
 "cardSoundWord" = "Sound";
+"cardSpentTryOnce" = "If your first mate reaches %1$@ on another sign-in, such as a token your own setup passes, trying again sends your messages once; if the allowance is still used up, it pauses again.";
 "cardTabStripLabel" = "Task card";
 "cardThreadAddFiles" = "Add files to this reply";
 "cardThreadCard" = "card";

@@ -1,5 +1,5 @@
 ---
-source: 797265acca38baf9
+source: 5a44a232aea453c9
 title: Solución de problemas
 description: Problemas comunes en Infinitary, las palabras que muestra la app para cada uno y qué hacer.
 ---
@@ -26,6 +26,7 @@ El trabajo sigue solo cuando se renueva.
 Para seguir antes:
 
 - Presiona **Volver a consultar la asignación** si cambiaste algo del lado de tu proveedor.
+- Si la consulta no encuentra ningún cambio, la tarjeta también ofrece intentarlo de nuevo con tu proveedor, como **Try Claude again**: tus palabras se envían una vez y, si la asignación sigue agotada, el primer oficial se vuelve a pausar.
 - Presiona **Pasar a** otro proveedor, cuando la tarjeta ofrezca uno.
 - Pide a tu primer oficial que pase el trabajo a otro modelo.
 

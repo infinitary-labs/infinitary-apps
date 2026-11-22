@@ -1,5 +1,5 @@
 ---
-source: 797265acca38baf9
+source: 5a44a232aea453c9
 title: Solução de problemas
 description: Problemas comuns no Infinitary, as palavras que o app mostra para cada um e o que fazer.
 ---
@@ -26,6 +26,7 @@ O trabalho continua sozinho assim que ela renova.
 Para continuar antes:
 
 - Pressione **Verificar a franquia de novo** se você mudou algo do lado do seu provedor.
+- Se a verificação não encontrar mudança, o cartão também oferece tentar seu provedor de novo, como **Try Claude again**: suas palavras vão uma vez e, se a franquia ainda estiver esgotada, o imediato pausa de novo.
 - Pressione **Mudar para** outro provedor, quando o cartão oferecer um.
 - Peça ao seu imediato para passar o trabalho para outro modelo.
 

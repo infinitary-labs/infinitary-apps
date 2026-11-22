@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "spent-allowance-try-again",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate comes back after a used-up allowance when Claude answers again",
+      "body": "When your first mate pauses on a used-up allowance and checking it again shows no change, the paused card now offers to try once more. If your first mate reaches the provider another way, such as a token your own setup passes, your waiting messages go through and it stays back; if the allowance is still used up, it pauses again.",
+      "noPicture": "This adds one button to the existing paused card, shown only after a recheck finds a used-up allowance unchanged.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

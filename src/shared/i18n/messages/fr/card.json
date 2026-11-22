@@ -283,6 +283,7 @@
   "cardSinceSeenSaw": "Depuis la carte que vous avez vue · {when}",
   "cardSoundUnplayable": "Ce son n’a pas pu être lu.",
   "cardSoundWord": "Son",
+  "cardSpentTryOnce": "Si votre second atteint {provider} avec une autre connexion, comme un jeton que votre propre configuration transmet, réessayer envoie vos messages une fois ; si l’allocation est toujours épuisée, il se remet en pause.",
   "cardTabStripLabel": "Carte de la tâche",
   "cardThreadAddFiles": "Ajouter des fichiers à cette réponse",
   "cardThreadCard": "carte",

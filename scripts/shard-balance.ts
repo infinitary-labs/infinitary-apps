@@ -7,7 +7,10 @@
 //   node scripts/shard-balance.ts <index>/<count> [file ...]   prints a group's files
 //
 // The times are tests/helpers/shardTimings.json, written by
-// scripts/shard-timings.ts from a vitest JSON report.
+// scripts/shard-timings.ts from a vitest JSON report. The branch check's
+// reader step splits a wide change's tests into parts the same way
+// (scripts/unit-repeats.ts, reachParts), weighing its integration and browser
+// files by tests/helpers/reachTimings.json as well.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -20,6 +23,15 @@ export const SHARD_TIMINGS_FILE = fileURLToPath(
   new URL("../tests/helpers/shardTimings.json", import.meta.url),
 );
 
+/**
+ * The measured times of the integration and browser files, which the unit
+ * groups' record leaves out so those groups keep vitest's own split; only the
+ * branch check's reader step weighs its parts by them (INF-5493).
+ */
+export const REACH_TIMINGS_FILE = fileURLToPath(
+  new URL("../tests/helpers/reachTimings.json", import.meta.url),
+);
+
 export function readShardTimings(file = SHARD_TIMINGS_FILE): ShardTimings {
   return JSON.parse(readFileSync(file, "utf8")) as ShardTimings;
 }
@@ -30,13 +42,23 @@ function median(values: number[]): number {
 }
 
 /**
+ * Each file's measured seconds. A file with no measured time (a new one)
+ * weighs the median of the measured ones among `files`, so a new file counts
+ * like a typical one.
+ */
+export function fileWeights(files: readonly string[], timings: ShardTimings): Map<string, number> {
+  const measured = new Map(Object.entries(timings));
+  const unknownWeight = median(files.flatMap((file) => measured.get(file) ?? []));
+  return new Map(files.map((file) => [file, measured.get(file) ?? unknownWeight]));
+}
+
+/**
  * Every file lands in exactly one of `count` groups: the longest first into
- * the group with the least time so far. A file with no measured time (a new
- * one) weighs the median of the measured ones, so a new file spreads like a
- * typical one. A group whose job does other work first starts with that
- * work's measured seconds (`headStarts`, by group), so it takes fewer files.
- * The same files and times always give the same groups, since every group's
- * machine computes the split alone.
+ * the group with the least time so far, each file weighed by `fileWeights`,
+ * so a new file spreads like a typical one. A group whose job does other work
+ * first starts with that work's measured seconds (`headStarts`, by group), so
+ * it takes fewer files. The same files and times always give the same groups,
+ * since every group's machine computes the split alone.
  */
 export function balanceShards(
   files: readonly string[],
@@ -44,10 +66,9 @@ export function balanceShards(
   timings: ShardTimings,
   headStarts: readonly number[] = [],
 ): string[][] {
-  const measured = new Map(Object.entries(timings));
-  const unknownWeight = median(files.flatMap((file) => measured.get(file) ?? []));
+  const weights = fileWeights(files, timings);
   const weighted = files
-    .map((file) => ({ file, weight: measured.get(file) ?? unknownWeight }))
+    .map((file) => ({ file, weight: weights.get(file) ?? 0 }))
     .toSorted((a, b) => b.weight - a.weight || (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
   const groups = Array.from({ length: count }, (_, index) => ({
     total: headStarts[index] ?? 0,

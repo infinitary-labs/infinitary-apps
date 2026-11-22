@@ -6,6 +6,13 @@ import { fileURLToPath } from "node:url";
 import { changedPaths, PROBE_FILES } from "./affected-probes.ts";
 import { MAC_UNIT_FILES } from "./mac-unit-tests.ts";
 import { prRuns } from "./pr-paths.ts";
+import {
+  balanceShards,
+  fileWeights,
+  REACH_TIMINGS_FILE,
+  readShardTimings,
+  type ShardTimings,
+} from "./shard-balance.ts";
 import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
 
 /**
@@ -18,8 +25,10 @@ import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
  * build check runs each edited file once more on Linux (`--reach`). Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
- *   node scripts/unit-repeats.ts --reach [--base <ref>] [--run]   (the pull request's build check:
- *     edited test files and their unedited direct readers, once, on Linux)
+ *   node scripts/unit-repeats.ts --reach [--base <ref>] [--part <index>[/<count>]] [--run]   (the branch check:
+ *     edited test files and their unedited direct readers, once, on Linux; a wide selection in parts)
+ *   node scripts/unit-repeats.ts --reach [--base <ref>] --later-parts   (the code checks job: the parts after
+ *     the first, as the job matrix that runs them)
  *
  * The existing changed-path reader owns selection. Fresh rounds stop at the
  * first failure or interruption, without retries. An unreadable base fails.
@@ -153,6 +162,67 @@ export function reachRuns(files: readonly string[], most = REACH_RUN_FILES): str
   const count = Math.ceil(files.length / most);
   const size = Math.ceil(files.length / count);
   return Array.from({ length: count }, (_, run) => files.slice(run * size, (run + 1) * size));
+}
+
+/**
+ * The most measured seconds of tests one part of the reader step holds (INF-5493): a measured second is one the file
+ * took in main's Linux test groups (tests/helpers/shardTimings.json and reachTimings.json, scripts/shard-timings.ts).
+ * The step once ran every selected file on one machine, so its time grew with the selection and with that machine's
+ * pace: a change to the shared orchestrator and forge files selected 334 files holding 2,579 measured seconds, which
+ * one push's run ran in 19m44s on a hosted machine, about 0.46 of a second per measured second, and the next push's
+ * run reached the step's 30-minute limit with three files left, more than 0.7. A part of at most 900 measured seconds
+ * takes about 7 minutes at the usual pace and about 12 at the slowest pace seen, which leaves room inside the limit
+ * for a machine twice as slow again.
+ */
+export const REACH_PART_SECONDS = 900;
+
+/** The seconds each test file took in main's Linux test groups: the unit groups' record and the integration and browser one. */
+export function reachTimings(): ShardTimings {
+  return { ...readShardTimings(), ...readShardTimings(REACH_TIMINGS_FILE) };
+}
+
+/**
+ * The selection split into the fewest parts of at most `most` measured seconds, each part on a machine of its own,
+ * side by side (ci.yml's reached-tests runs the first, reached-tests-parts the others), so a wider change takes more
+ * machines instead of a longer step. The parts are balanced by measured time (scripts/shard-balance.ts), and every
+ * machine computes the same parts from the same version.
+ */
+export function reachParts(
+  files: readonly string[],
+  timings: ShardTimings,
+  most = REACH_PART_SECONDS,
+): string[][] {
+  const total = [...fileWeights(files, timings).values()].reduce((sum, seconds) => sum + seconds, 0);
+  const count = Math.max(1, Math.min(files.length, Math.ceil(total / most)));
+  return balanceShards(files, count, timings).map((part) => part.toSorted());
+}
+
+/**
+ * The files of the part `--part <index>[/<count>]` names. The count, when given, is the one the code checks job
+ * counted for the matrix that starts the later parts: a machine that counts otherwise fails rather than leave a part
+ * unrun.
+ */
+export function reachPart(parts: readonly string[][], spec: string): string[] {
+  const match = /^([1-9]\d*)(?:\/([1-9]\d*))?$/.exec(spec);
+  if (!match) throw new Error(`Invalid reader step part: ${spec}`);
+  const index = Number(match[1]);
+  const count = match[2] === undefined ? parts.length : Number(match[2]);
+  if (count !== parts.length || index > count)
+    throw new Error(
+      `This version's selection runs as ${parts.length} parts, so part ${spec} would leave a part unrun or run one twice.`,
+    );
+  return [...(parts[index - 1] ?? [])];
+}
+
+/** The code checks job's output that starts the parts after the first: a matrix entry for each, or nothing for one part. */
+export function laterParts(parts: readonly string[][]): string {
+  if (parts.length < 2) return "";
+  return JSON.stringify(
+    Array.from({ length: parts.length - 1 }, (_, index) => ({
+      part: index + 2,
+      parts: parts.length,
+    })),
+  );
 }
 
 /**
@@ -348,6 +418,28 @@ function main(): void {
   }
   if (args.includes("--reach")) {
     const { run, elsewhere } = selectLinuxReach(changed);
+    const timings = reachTimings();
+    const parts = reachParts(run, timings);
+    const seconds = (files: readonly string[]) =>
+      Math.round([...fileWeights(files, timings).values()].reduce((sum, took) => sum + took, 0));
+    if (args.includes("--later-parts")) {
+      const later = laterParts(parts);
+      console.log(
+        later
+          ? `The ${run.length} selected files hold about ${seconds(run)} measured seconds, so they run as ${parts.length} parts; the code checks start parts 2 to ${parts.length}: ${later}`
+          : `The ${run.length} selected files hold about ${seconds(run)} measured seconds, one part.`,
+      );
+      if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `later=${later}\n`);
+      return;
+    }
+    let mine: string[];
+    try {
+      mine = args.includes("--part") ? reachPart(parts, value("--part", "")) : run;
+    } catch (error) {
+      console.error((error as Error).message);
+      process.exitCode = 1;
+      return;
+    }
     const lines = [
       `Edited test files, unedited direct importers and literal path readers since ${base}, one round in CI:`,
       ...run.map((file) => `- \`${file}\``),
@@ -358,10 +450,21 @@ function main(): void {
         "Test files this round leaves to another run:",
         ...elsewhere.map(({ file, where }) => `- \`${file}\` (${where})`),
       );
+    if (parts.length > 1)
+      lines.push(
+        "",
+        `These files hold about ${seconds(run)} measured seconds, more than the ${REACH_PART_SECONDS} one part holds, so they run as ${parts.length} parts on as many machines side by side.`,
+        ...(mine === run
+          ? []
+          : [
+              `This step runs part ${value("--part", "")}, about ${seconds(mine)} measured seconds:`,
+              ...mine.map((file) => `- \`${file}\``),
+            ]),
+      );
     report(lines);
     if (!args.includes("--run")) return;
     process.exitCode = runLinuxReach(
-      run,
+      mine,
       (command) => spawnSync("pnpm", command, { cwd: ROOT, stdio: "inherit" }).status,
       report,
     );

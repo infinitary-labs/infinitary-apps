@@ -4,9 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { PROBE_FILES } from "../scripts/affected-probes.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
+  REACH_PART_SECONDS,
   REACH_RUN_FILES,
   REPEATS,
   reachArgs,
+  reachPart,
+  reachParts,
+  reachTimings,
   repetitionArgs,
   runLinuxReach,
   runLocalUnits,
@@ -449,5 +453,46 @@ describe("the pull request's direct-reader round", () => {
     const run = vi.fn((_args: string[], _file: string) => 0);
     expect(runLinuxReach([], run, () => {}, root)).toBe(0);
     expect(run).not.toHaveBeenCalled();
+  });
+
+  // INF-5493: a change to the shared orchestrator and forge files reached 334
+  // files, which one machine ran in about 20 minutes and, on a slower one,
+  // not inside the step's 30, so a wide selection runs as parts on a machine
+  // each. The fixture is the committed records: every file they measured, as
+  // a change that reaches them all selects them, with its measured seconds.
+  describe("a selection holding more measured time than one part", () => {
+    const timings = reachTimings();
+    const files = Object.keys(timings).toSorted();
+    const seconds = (part: readonly string[]) =>
+      part.reduce((sum, file) => sum + (timings[file] ?? 0), 0);
+
+    it("runs as the fewest parts of at most REACH_PART_SECONDS, give or take one file, each file in exactly one", () => {
+      const parts = reachParts(files, timings);
+      expect(parts.length).toBeGreaterThan(1);
+      expect(parts).toHaveLength(Math.ceil(seconds(files) / REACH_PART_SECONDS));
+      const longest = Math.max(...Object.values(timings));
+      for (const part of parts)
+        expect(seconds(part)).toBeLessThanOrEqual(REACH_PART_SECONDS + longest);
+      expect(parts.flat().toSorted()).toEqual(files);
+    });
+
+    it("splits identically on every machine, whatever order it lists the files", () => {
+      expect(reachParts(files.toReversed(), timings)).toEqual(reachParts(files, timings));
+    });
+
+    it("keeps a selection that fits one part whole", () => {
+      const { run } = selectLinuxReach(["src/shared/actions.ts"]);
+      expect(run.length).toBeGreaterThan(0);
+      expect(reachParts(run, timings)).toEqual([run]);
+    });
+
+    it("runs the part a machine names, and fails a machine that counts the parts otherwise", () => {
+      const parts = reachParts(files, timings);
+      const count = parts.length;
+      expect(reachPart(parts, "1")).toEqual(parts[0]);
+      expect(reachPart(parts, `${count}/${count}`)).toEqual(parts[count - 1]);
+      for (const unrun of [`2/${count + 1}`, `${count + 1}`, "0", "two"])
+        expect(() => reachPart(parts, unrun), unrun).toThrow();
+    });
   });
 });

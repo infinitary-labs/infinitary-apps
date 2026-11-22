@@ -153,13 +153,21 @@ export function PeekSummary() {
   // scroll at its next frame, after the scroll itself: a frame whose key the
   // keyboard brought into view can report that key, already in its new
   // place, first.
-  const measured = useRef<{ peek: NonNullable<TaskPeek>; scrolls: ScrollPlaces } | null>(null);
+  // Where the holder itself stood then, too.
+  const measured = useRef<{
+    peek: NonNullable<TaskPeek>;
+    scrolls: ScrollPlaces;
+    left: number;
+    top: number;
+  } | null>(null);
   useLayoutEffect(() => {
     if (!pointed) {
       measured.current = null;
       return;
     }
-    measured.current = { peek: pointed, scrolls: scrollPlaces(holderOf(pointed)) };
+    const holder = holderOf(pointed);
+    const { left, top } = holder.getBoundingClientRect();
+    measured.current = { peek: pointed, scrolls: scrollPlaces(holder), left, top };
   }, [pointed]);
   useEffect(() => {
     if (!resting) return;
@@ -176,10 +184,13 @@ export function PeekSummary() {
       letGo();
     };
     // A scroll carries the task away only if what scrolled has moved since
-    // the task's box was measured. The holder's own place is no witness:
-    // the stage easing into place moves it with nothing scrolled, and a
-    // scroll heard late would read that move as its own. A holder's own
-    // scroll moves what is inside it, never the holder.
+    // the task's box was measured, and the holder moved with it. Neither
+    // alone is a witness: the stage easing into place moves the holder with
+    // nothing scrolled, and a scroll heard late would read that move as its
+    // own; a scroller that grows upward at its end has its scroll pulled
+    // back by as much, so the holder stays under the pointer though the
+    // scroll changed. A holder's own scroll moves what is inside it, never
+    // the holder.
     const onScroll = (event: Event) => {
       const at = taskPeek.get();
       const holder = at && holderOf(at);
@@ -192,6 +203,8 @@ export function PeekSummary() {
       if (from?.peek === at && scroller instanceof Element) {
         const was = from.scrolls.get(scroller);
         if (was?.left === scroller.scrollLeft && was.top === scroller.scrollTop) return;
+        const { left, top } = holder.getBoundingClientRect();
+        if (left === from.left && top === from.top) return;
       }
       letGo();
     };

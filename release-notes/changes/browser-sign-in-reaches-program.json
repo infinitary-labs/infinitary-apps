@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "crewmates",
       "title": "A sign-in for a program on your computer finishes on the first try",
-      "body": "When you sign in for a program on your computer in a crewmate's browser and the sign-in ends on that program's own address, the browser now opens it, so the program gets your sign-in the first time. A website still cannot reach programs on your computer behind your back, and if the browser does refuse a page, it says why and your crewmate learns what to do.",
+      "body": "When you sign in for a program on your computer in a crewmate's browser and the sign-in ends on that program's own address, the browser now opens it, so the program gets your sign-in the first time. If the browser does refuse a page, it says why and your crewmate learns what to do.",
       "picture": {
         "dark": "browser-sign-in-reaches-program-dark.webp",
         "light": "browser-sign-in-reaches-program-light.webp",

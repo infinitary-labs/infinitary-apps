@@ -46,7 +46,7 @@ import {
 } from "./settleWords";
 import type { TaskClose, TaskClosing } from "./taskClose";
 import type { TaskDrop } from "./taskDrop";
-import { taskContributesUpstream } from "./workShape";
+import { mergesInOwnBatch, taskContributesUpstream } from "./workShape";
 
 /**
  * The feed line for a settle the captain clicked. An outcome with no raw
@@ -946,13 +946,13 @@ export class SettleService {
     proceedWithOpen?: boolean,
     actor: "captain" | "firstmate" = "firstmate",
   ): Promise<{ text: string; ok: boolean; refusal?: SettleRefusal }> {
-    const result = await this.settleTaskGuarded(
-      taskId,
-      mode,
-      confirm,
-      actor,
-      proceedWithOpen ?? false,
-    );
+    const approved =
+      mode === "merge-pr" && actor === "firstmate"
+        ? await this.mergeOnCaptainWords(taskId, proceedWithOpen ?? false)
+        : undefined;
+    const result =
+      approved ??
+      (await this.settleTaskGuarded(taskId, mode, confirm, actor, proceedWithOpen ?? false));
     this.recordRefusal(taskId, mode, result);
     // The first mate's own merge hears what it filed in its tool result, as
     // the captain's click's wake says it (INF-2796).
@@ -1222,6 +1222,70 @@ export class SettleService {
     await this.reportCardSettle(taskId, "discard");
   }
 
+  /**
+   * The first mate's merge on a project that merges in batches of the
+   * person's own, while the captain's words recorded as an override pass
+   * asking first (INF-6091's audit, finding 2): those words approve the
+   * version the open merge card shows, as his click on it would, so the
+   * change goes in line instead of being refused for want of a click. The
+   * approval is minted in his name from that card's offer, only when the
+   * offer is at the task's current version, and the card comes down as a
+   * click would take it. An approval already standing runs as it is.
+   * Undefined leaves the first mate's merge to the ordinary settle.
+   */
+  private async mergeOnCaptainWords(
+    taskId: string,
+    proceedWithOpen: boolean,
+  ): Promise<SettleOutcome | undefined> {
+    const record = this.host.tasks.get(taskId);
+    if (!record || TaskService.isClosed(record) || this.locks.holder(taskId)) return undefined;
+    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
+    if (!mergesInOwnBatch(record, repo)) return undefined;
+    const head = record.delivery?.headSha;
+    if (!head || !overridePasses(record.delivery, "asks-first", head)) return undefined;
+    if (!standingAuthorization(record.delivery)) {
+      const open = this.host.cards.openMergeAction(taskId, { review: undefined });
+      const card = open && !open.held ? this.host.cards.get(open.cardId) : undefined;
+      const offer = card?.offerId
+        ? record.delivery?.completionOffers?.find(
+            (item) => item.cardId === card.id && item.offerId === card.offerId,
+          )
+        : undefined;
+      if (!open || !card?.offerId || offer?.headSha !== head) return undefined;
+      const minted = this.approvals.authorizeMerge(
+        taskId,
+        {
+          cardId: card.id,
+          ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
+          offerId: card.offerId,
+          actionId: open.actionId,
+        },
+        proceedWithOpen,
+        undefined,
+        { after: open.after },
+      );
+      if (minted !== "standing") return undefined;
+      this.host.cards.takeDown(card.id, "approved-by-captain-words");
+    }
+    const { result, kept } = await this.attemptApproved(
+      taskId,
+      "merge-pr",
+      undefined,
+      "captain",
+      proceedWithOpen,
+    );
+    if (kept)
+      this.settleLine(
+        taskId,
+        keptFeedSaid(
+          kept.wait,
+          placeOf(this.host.repos, this.host.tasks.get(taskId), ""),
+          currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
+        ),
+      );
+    return result;
+  }
+
   /** Every detached settle is awaited here; refusal text is an outcome too, and it answers the outcome. */
   async reportCardSettle(
     taskId: string,
@@ -1240,6 +1304,34 @@ export class SettleService {
         mode === "merge-pr" && number !== undefined ? changeName(record, number) : undefined;
       this.settleLine(taskId, settlingSaid(mode, change, waitsForTurn));
     }
+    const { result, kept, authorization } = await this.attemptApproved(
+      taskId,
+      mode,
+      confirm,
+      actor,
+      proceedWithOpen,
+      after,
+    );
+    // Only the captain's own click leaves them with no card to read (INF-2913).
+    const clicked = actor === "captain" && authorization?.issuer !== "autonomy";
+    this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait, clicked);
+    return result;
+  }
+
+  /**
+   * One attempt under the task's standing merge approval, when one stands
+   * (FI3-304): it merges only the head that approval covers, and a refusal
+   * that is not a verdict on the approved work keeps the approval for the
+   * host to run once the gates pass.
+   */
+  private async attemptApproved(
+    taskId: string,
+    mode: "merge-pr" | "land" | "discard",
+    confirm: boolean | undefined,
+    actor: MergeActor,
+    proceedWithOpen?: boolean,
+    after?: "close" | "continue",
+  ) {
     // The click's own approval, minted with its card resolution (FI3-304):
     // this attempt merges only the head that approval covers.
     const authorization =
@@ -1279,10 +1371,7 @@ export class SettleService {
         text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait), result.skip)}`,
       };
     }
-    // Only the captain's own click leaves them with no card to read (INF-2913).
-    const clicked = actor === "captain" && authorization?.issuer !== "autonomy";
-    this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait, clicked);
-    return result;
+    return { result, kept, authorization };
   }
 
   /**

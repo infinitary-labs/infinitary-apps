@@ -58,6 +58,8 @@ export type SettleCards = {
   snapshot(): Card[];
   put(next: Card): void;
   reviseBody(id: string, body: string): void;
+  /** A card comes down with the resolution it records, as an answered one does. */
+  takeDown(id: string, resolution: string): void;
   hostCards: {
     raiseHostCard(
       card: Omit<Card, "author" | "priority" | "status" | "createdAt">,

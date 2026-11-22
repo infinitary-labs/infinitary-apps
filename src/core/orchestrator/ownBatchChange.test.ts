@@ -254,10 +254,12 @@ function keptMerge(at: ReturnType<typeof home>) {
     broadcastCrewCounts: () => {},
     broadcastEvent: () => {},
   };
-  const { kept } = createSettleOwners(host);
+  const { kept, settle } = createSettleOwners(host);
   return {
     runMergeAuthorization: (taskId: string) => kept.runMergeAuthorization(taskId),
     cards: () => cards.snapshot(),
+    stack: cards,
+    settle,
   };
 }
 
@@ -419,6 +421,111 @@ describe("the merge of a change that joins a batch", () => {
     });
     expect(at.line()).toEqual([]);
     expect(at.open()).toBeUndefined();
+  });
+
+  // Intent: INF-6091's audit, finding 2, the captain's pick "Start a task now to build it":
+  // on a batch project, the captain's words recorded as passing asking first approve the
+  // version his merge card shows, instead of a refusal and a second merge card. The first
+  // mate's merge runs through the real settle owners and card stack.
+  describe("on the captain's words recorded as passing asking first", () => {
+    const CARD = "card-merge-meter";
+    /** The crewmate's merge card at `shown`, its offer kept, and the captain's recorded words. */
+    const merging = async (shown = HEAD, words = true) => {
+      const at = home();
+      const kept = keptMerge(at);
+      await at.confirmed();
+      at.tasks.delivery.recordChangeEvidence(TASK, { headSha: HEAD });
+      kept.stack.put({
+        id: CARD,
+        taskId: TASK,
+        author: "crewmate",
+        priority: 1,
+        title: "The parser reads time zones",
+        meta: TASK,
+        body: "<p>The parser reads time zones.</p>",
+        actions: [
+          {
+            id: "merge",
+            label: "Merge in the next batch",
+            default: true,
+            effect: { kind: "merge", after: "close" },
+          },
+        ],
+        status: "ready",
+        createdAt: 1_000,
+      });
+      // The stack stamps the card's offer as it goes up.
+      const offerId = kept.stack.get(CARD)?.offerId ?? "";
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        completionOffers: [
+          {
+            cardId: CARD,
+            offerId,
+            headSha: shown,
+            presentationRevision: 1,
+            destination: {
+              repoId: REPO,
+              origin: "https://github.com/acme/meter.git",
+              branch: BRANCH,
+            },
+            at: 1_000,
+          },
+        ],
+        ...(words
+          ? {
+              override: {
+                words: "merge",
+                holds: ["asks-first"],
+                until: "version",
+                head: HEAD,
+                at: 1_100,
+              },
+            }
+          : {}),
+      });
+      return { at, kept, offerId };
+    };
+
+    it("approves the version the merge card shows, puts it in line and takes the card down", async () => {
+      const { at, kept, offerId } = await merging();
+      expect(offerId).not.toBe("");
+      const outcome = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(outcome.ok).toBe(false);
+      expect(outcome.text).toContain("Approved and in line");
+      expect(outcome.text).not.toContain(BATCH_MERGE_WORDS.needsCard);
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        issuer: "captain",
+        approvedHead: HEAD,
+        card: { id: CARD, offerId },
+      });
+      expect(kept.cards().map((card) => card.id)).not.toContain(CARD);
+      await at.pass();
+      expect(at.open()?.members.map((member) => [member.taskId, member.head])).toEqual([
+        [TASK, HEAD],
+      ]);
+      expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
+    });
+
+    it("approves nothing when the merge card shows another version, and the card stays up", async () => {
+      const { at, kept } = await merging("c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7");
+      const outcome = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(outcome).toMatchObject({ ok: false, text: BATCH_MERGE_WORDS.needsCard });
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toBeUndefined();
+      expect(kept.cards().map((card) => card.id)).toContain(CARD);
+      await at.pass();
+      expect(at.line()).toEqual([]);
+      expect(at.open()).toBeUndefined();
+    });
+
+    it("approves nothing without the captain's recorded words: the merge is still his click", async () => {
+      const { at, kept } = await merging(HEAD, false);
+      const outcome = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(outcome.refusal).toMatchObject({ refused: "autonomy-off" });
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toBeUndefined();
+      expect(kept.cards().map((card) => card.id)).toContain(CARD);
+      expect(at.line()).toEqual([]);
+    });
   });
 
   it("puts the approved version in line with its story's title and commit words, and sends no merge", async () => {

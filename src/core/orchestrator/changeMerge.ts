@@ -272,7 +272,7 @@ export function atDispatch(
 /** What a merge says of a change that joins this person's batch. */
 export const BATCH_MERGE_WORDS = {
   needsCard:
-    "Cannot merge yet: this project merges approved changes together, as one batch pull request. A change joins the batch from its merge card: its crewmate puts the card up, and the captain's click on it, or the task's autonomy, approves that version.",
+    "Cannot merge yet: this project merges approved changes together, as one batch pull request. A change joins the batch from its merge card at its current version: its crewmate puts the card up, and the captain's click on it, his own words recorded as passing asking first while it is up at that version, or the task's autonomy approves that version.",
 } as const;
 
 /** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */

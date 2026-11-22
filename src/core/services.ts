@@ -1254,6 +1254,8 @@ export async function createServices(
   // The boot sweep (R1): overdue parked decisions return, and time gates
   // that passed while the app was closed dispatch once, now.
   void supervisor.watch.sweepGates(ticker.now());
+  // A hold that waited for this Mac's app update ends once it is installed (INF-5578).
+  supervisor.holdRules.appRan(null, host.app.version);
   // Fleet hygiene (interaction P0, WI-7): closed rows still holding a
   // worktree, and worktree directories no record explains, retire it with
   // their unlanded work saved first; leftover task branches are reported

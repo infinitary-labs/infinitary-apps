@@ -829,9 +829,10 @@ The line disappears when work starts, and changes no readiness or dispatch decis
 
 Desktop kanban tiles replace their generic status reason with grouped standing wait names and the earliest recorded event, never a finish estimate.
 The Tasks list and board list rows retain their existing presentation.
-The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528).
+The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
+A lone dependency whose line goes further or ends in a hold names where it stops in the blocker explanation, as its tile does, keeping when the wait was recorded (`waitStopsOf`, INF-5578).
 Only recorded events carry clock times: next read, check-back, reset or start time.
 Past events say was due, not resumed; Backlog still requires Start.
 Older homes without the optional projection retain the previous presentation.

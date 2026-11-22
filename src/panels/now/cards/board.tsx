@@ -21,7 +21,9 @@ import {
   taskStatusOf,
   taskWaitSummary,
   useMinute,
+  waitChainWords,
   waitRecordedTime,
+  waitStopsOf,
 } from "@infinitary/ui";
 import {
   type CSSProperties,
@@ -1613,6 +1615,10 @@ function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
   const now = useMinute();
   const wait = taskWaitSummary(task.waits ?? [], now);
   if (!wait) return null;
+  // A lone task wait names where its line stops and until when (INF-5578 finding 4),
+  // only when that says more than the task it waits on: a further task, a time or an update.
+  const stops = waitStopsOf(task);
+  const chain = stops ? waitChainWords(stops.line, now) : undefined;
   return (
     <span className="fm-board-wait" data-board-wait="" id={`wait-${task.id}`}>
       <span className="fm-board-wait-head">
@@ -1623,7 +1629,9 @@ function KanbanWait({ task, word }: { task: PanelTaskRow; word: string }) {
         </span>
         <span className="fm-board-wait-names">{` · ${wait.names}`}</span>
       </span>
-      <span className="fm-board-wait-event">{wait.event}</span>
+      <span className="fm-board-wait-event" data-board-wait-chain={chain ? "" : undefined}>
+        {chain ?? wait.event}
+      </span>
     </span>
   );
 }

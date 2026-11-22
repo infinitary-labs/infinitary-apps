@@ -89,6 +89,7 @@ Blank Find asks for nothing earlier, and Earlier matches goes away.
 
 A tile keeps the shared status mark, task key, dim word, project and two-line title.
 Its existing two-line status area holds the lifecycle word, grouped wait names and the earliest recorded event; full recorded-since dates stay on the task card.
+When its one wait is another task whose line goes further, or ends in a hold, the second line names where it stops instead of the event, as `Waiting on INF-12 · INF-9 waits until 12:00 PM`, and wraps rather than widening the column (INF-5578).
 Without the optional structured waits it keeps the previous reason and recorded-since presentation.
 Pressing Start, or dragging a tile to Working, shows it in Queued at once, labeled Starting, and moves it to Working when its crewmate begins.
 A Starting tile in Queued refuses Back to backlog and Start now with "It is starting.".
@@ -190,9 +191,10 @@ Its waiting section reads Cards waiting for you; a taskless card has only Show t
 ## Recorded waits
 
 Desktop kanban tiles replace their generic status reason with grouped standing wait names and the earliest recorded event, never a finish estimate.
+A tile whose one wait is a task whose line goes further or ends in a hold shows where that line stops in place of the event (`TaskView.waitChain`).
 The Tasks list and board list rows retain their existing presentation.
-Kanban columns keep their existing minimum and expand to the recorded event’s intrinsic width, using horizontal scrolling rather than clipping the time or shrinking text.
-The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528).
+Kanban columns keep their existing minimum and expand to the recorded event’s intrinsic width, using horizontal scrolling rather than clipping the time or shrinking text; where a line stops wraps instead, so a long key never widens the column.
+The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
 Only recorded events carry clock times: next read, check-back, reset or start time.

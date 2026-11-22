@@ -3709,6 +3709,12 @@
 "taskTabCards" = "البطاقات";
 "taskTabCrewmate" = "فرد الطاقم";
 "taskTabInfo" = "معلومات";
+"taskWaitChainUntil" = "بانتظار %2$@ · %1$@ ينتظر حتى %3$@";
+"taskWaitChainUpdate" = "بانتظار %2$@ · %1$@ ينتظر تحديث التطبيق";
+"taskWaitChainVia" = "بانتظار %2$@ · الذي ينتظر %1$@";
+"taskWaitOn" = "بانتظار %1$@";
+"taskWaitOnUntil" = "بانتظار %1$@ · الذي ينتظر حتى %2$@";
+"taskWaitOnUpdate" = "بانتظار %1$@ · الذي ينتظر تحديث التطبيق";
 "trayOpen" = "فتح Infinitary";
 "trayQuit" = "إنهاء Infinitary";
 "uiButtonPending" = "جارٍ العمل...";

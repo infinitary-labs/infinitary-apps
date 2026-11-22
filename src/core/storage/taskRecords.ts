@@ -86,6 +86,7 @@ type Row = {
   gate_until: number | null;
   gate_reason: string | null;
   gate_cause?: TaskGate["cause"] | null;
+  gate_update_json?: string | null;
   status: TaskStatus;
   activity: TaskActivity | null;
   closed_reason: TaskClosedReason | null;
@@ -268,6 +269,11 @@ const TRIMMED_SQL = `'${[
   ...Array.from({ length: 11 }, (_, n) => String.fromCharCode(0x2000 + n)),
 ].join("")}'`;
 
+/** The app update an `at-time` hold also ends on, as its column keeps it (`TaskGate.update`). */
+function updateJson(gate: TaskGate | null | undefined): string | null {
+  return gate?.update ? JSON.stringify(gate.update) : null;
+}
+
 function parseJson<T>(text: string | null): T | null {
   if (!text) return null;
   try {
@@ -306,6 +312,9 @@ function fromRow(row: Row): TaskRecord {
           ...(row.gate_until !== null ? { until: row.gate_until } : {}),
           ...(row.gate_reason ? { reason: row.gate_reason } : {}),
           ...(row.gate_cause ? { cause: row.gate_cause } : {}),
+          ...(row.gate_update_json
+            ? { update: parseJson<NonNullable<TaskGate["update"]>>(row.gate_update_json)! }
+            : {}),
         }
       : null,
     status: row.status,
@@ -645,6 +654,9 @@ export class TaskStore {
         // before its column keeps the row unpinned.
         ...(this.columns().has("pinned_at") ? { pinned_at: record.pinnedAt ?? null } : {}),
         ...(this.columns().has("gate_cause") ? { gate_cause: record.gate?.cause ?? null } : {}),
+        ...(this.columns().has("gate_update_json")
+          ? { gate_update_json: updateJson(record.gate) }
+          : {}),
       };
       const fields = Object.keys(values);
       this.db
@@ -821,6 +833,10 @@ export class TaskStore {
       if (this.columns().has("gate_cause")) {
         sets.push("gate_cause = ?");
         values.push(gate?.cause ?? null);
+      }
+      if (this.columns().has("gate_update_json")) {
+        sets.push("gate_update_json = ?");
+        values.push(updateJson(gate));
       }
     }
     if ("delivery" in patch) {

@@ -20,9 +20,11 @@ import "./summary.css";
  * with its checks as one state and its time (INF-2528, the captain's
  * direction B: "the preview should remain concise and only the most
  * critical information. more details should be shown in the task card").
- * The status keeps its short reason, never a wait's wording or times, and
- * Blocked by names keys only; reasoning, check counts and every wait's
- * times are the task card's. Key, title, state, model, level and change come from the board
+ * The status keeps its short reason, the Tasks row's, except that a lone
+ * wait names where its line stops and that task's hold, with its time
+ * (INF-5578; the captain kept it, since the Tasks row shows no reason);
+ * Blocked by names keys only, and reasoning, check counts and every
+ * wait's recorded times are the task card's. Key, title, state, model, level and change come from the board
  * and paint at once; once the record answers, the whole projection is the
  * record's, the same one its task record shows, and it stays live while
  * the summary is open. Read-only: the record a click opens has the full

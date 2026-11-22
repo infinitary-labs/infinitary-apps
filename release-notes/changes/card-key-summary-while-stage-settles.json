@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-key-summary-while-stage-settles",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A task's summary opens when the keyboard reaches its key while the card is still settling",
+      "body": "When you move onto a task key in a card with the keyboard just as the card is still easing into place, the task's summary now opens beside the key. Before, on a busy computer, it could stay closed until you moved off the key and back.",
+      "noPicture": "This changes when the existing summary opens, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

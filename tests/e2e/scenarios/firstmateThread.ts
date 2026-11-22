@@ -8,13 +8,13 @@ import { answering, providerToolCalls } from "../providerRequest";
 /**
  * Cards as threads, phase 2: a Firstmate-authored card. The captain's
  * reply is a captain TURN about that card (not a crewmate steer). The
- * Firstmate revises under the same id, or resends its latest version of
- * the card unchanged with its answer as `reply` - it has no reply tool, and
- * its closing words alone leave the captain's question open. Either answer
- * names the captain's message (the captain's "Only a line that says it
- * answers it"). Under a card it never wrote it has no version to resend,
- * so its answer is its closing words. The captain's two replies are the
- * crewmate thread's, in the shared stand-in.
+ * Firstmate revises under the same id, or answers under it with its body
+ * left out, which writes `reply` alone and keeps the card as it is
+ * (INF-6128) - it has no reply tool, and its closing words alone leave the
+ * captain's question open. Either answer names the captain's message (the
+ * captain's "Only a line that says it answers it"). Under a card it never
+ * wrote in this conversation, its answer is its closing words. The
+ * captain's two replies are the crewmate thread's, in the shared stand-in.
  */
 export const FM_THREAD_PROMPT_MARKER = "keep a firstmate thread open";
 export const FM_THREAD_CARD_REVISED_TITLE = "Lead with the caption, not the chips";
@@ -76,9 +76,10 @@ export const firstmateThread: Scenario =
       };
     }
     if (latestUserTail.includes("about: card") && latestUserTail.includes(THREAD_PROSE_REPLY)) {
-      // Nothing on the card changes: its own latest emit of this card, read
-      // from the conversation as a real model reads it, goes again with the
-      // answer, keeping what that emit declared (holds_place among it).
+      // Nothing on the card changes: under the id and title of its own
+      // latest emit of this card, read from the conversation as a real model
+      // reads it, the answer leaves the body out, so the card keeps what that
+      // emit declared (holds_place among it).
       const about = latestUserTail.match(/about: card (card-[\w-]+)/)?.[1];
       const latest = providerToolCalls(body).findLast(
         (call) =>
@@ -88,20 +89,12 @@ export const firstmateThread: Scenario =
       );
       if (!latest) return { text: FM_THREAD_PROSE_ANSWER };
       // The conversation's own emit_card, whose arguments the tool's schema took.
-      const {
-        reply: _reply,
-        answers_message: _named,
-        ...card
-      } = latest.args as ScriptedArgs<"emit_card">;
+      const { id, title } = latest.args as ScriptedArgs<"emit_card">;
       return {
         calls: [
           {
             name: "emit_card",
-            args: {
-              ...card,
-              reply: FM_THREAD_PROSE_ANSWER,
-              ...answering(latestUserTail),
-            },
+            args: { id, title, reply: FM_THREAD_PROSE_ANSWER, ...answering(latestUserTail) },
           },
         ],
       };

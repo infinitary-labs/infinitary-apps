@@ -366,6 +366,14 @@ const ACTIONS_UNTIL =
 export const CARD_PARAMS = {
   title: "Short sentence-case title",
   body: "Raw HTML fragment",
+  /**
+   * The first mate's body, which `CARD_MECHANICS` already says is a raw
+   * HTML fragment, so its row says only what leaving it out does: a reply
+   * alone, the card kept as it is (INF-6128: with a body required, a
+   * placeholder sent beside an answer replaced the card's own). The id it
+   * writes under is the about line's; the refusal names it when missing.
+   */
+  firstmateBody: "Leave it out to write only reply; the card stays as it is.",
   id: "Stable kebab-case id",
   holds_place:
     "Leave unset unless the card needs continuous attention. True brings the card forward when it arrives. Choices close at once.",

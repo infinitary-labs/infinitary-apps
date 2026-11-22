@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -22,8 +22,8 @@ Sie zeigt den Namen der Verbindung, als wer sie angemeldet ist oder was sie ausf
 
 Das Menü am Ende einer Zeile enthält:
 
+- **Pausiert**: Solange der Schalter an ist, erreicht sie niemand.
 - **Jetzt prüfen**: Es prüft, ob die Verbindung noch funktioniert.
-- **Pausieren**: Niemand erreicht sie, bis du sie **Fortsetzen** lässt.
 - **Abmelden und entfernen**, bei einem MCP-Server **Entfernen**.
 
 Die Schaltflächen unter der Liste verbinden etwas Neues, zum Beispiel **GitHub**, **Google** oder **MCP-Server**.

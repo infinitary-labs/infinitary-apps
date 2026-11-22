@@ -44,6 +44,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   The three components are design-skill rules first (`components/core/StatusDot`, `RowMenu`, `components/quota/QuotaMicroMeter`); layout that inline styles cannot express (row grid, hover, the 640px container query, reduced motion via the shared zeroed duration tokens in `design/tokens/effects.css`) is `settings/subscriptions.css`.
   `tests/e2e/subscriptions-instruments.spec.ts` runs the review's eleven-account every-state dataset; how the rows fit is judged by eye and by pictures (`docs/testing.md`, "The e2e assertion contract").
   A `RowMenu` swallows its own Escape so the shell's Escape-closes-Settings listener does not fire.
+  An account row's menu (`accountMenu`) lists its on/off settings first as switches that keep one name and leave the menu open when picked (Prefer for crew work, Keep going on credits, Use saved resets on their own, Paused; design skill `RowMenu`, "Settings"), then a line and its actions (Use a saved reset, Rename, Model slots, Reset model slots), then a line and Disconnect; a computer that runs work's account keeps the same order.
 
 ## Allowance forecasts
 
@@ -55,13 +56,13 @@ A reading that says what the provider does past the allowance adds one line unde
 An unknown fact, a row that is not a reading and a provider Infinitary reads no credits for say nothing.
 A Codex reading that says the account holds saved resets adds one more line under the meters, such as "1 saved reset · use it on chatgpt.com" (`savedResetsLine`, `docs/quota.md` "Saved resets"); none held, or an unknown count, says nothing.
 A Claude or Codex row's menu holds "Keep going on credits", the account's switch (`docs/quota.md`, "Keep going on credits"), with "Only after every included allowance" under it; while the provider says its credits are off the item is dim and says so, such as "Extra usage is off on claude.ai".
-While the switch is on the item reads "Stop spending credits" and the credits line ends "keeps going on credits" in place of where to change it, so the line stays one line.
+Its switch shows whether it is on, and while it is on the credits line ends "keeps going on credits" in place of where to change it, so the line stays one line.
 The item is reached like every menu item, by Tab to the row's menu and the arrows inside it; it is a setting chosen now and then, so it adds no command.
 While a saved reset applies now, a Codex row's menu also holds "Use a saved reset", with "Codex signs in and uses the one that expires first" under it (`savedResetItem`, `docs/codex-client.md`).
 Choosing it runs the use on the row: Codex's sign-in, when it needs one, shows its link and asks for the address the browser ended on under the row as a sign-in does; a refusal stays under the row, and the feed says what the use came to.
 On a computer that runs work's own account the item is dim, with a note to update Infinitary there first, until that computer lists the `use-saved-reset` change.
 It is reached the same way and is chosen rarely, so it adds no command either; a card's Use a saved reset opens this tab and starts it on the account's row.
-Every Codex row's menu also holds "Use saved resets on their own", the account's switch (`autoResetsItem`, `docs/quota.md` "Saved resets on their own"), with "Only when work waits and no account has room" under it; while it is on the item reads "Stop using saved resets on their own".
+Every Codex row's menu also holds "Use saved resets on their own", the account's switch (`autoResetsItem`, `docs/quota.md` "Saved resets on their own"), with "Only when work waits and no account has room" under it.
 Turning it on while Codex is not signed in to the account shows Codex's sign-in under the row first, as Use a saved reset does, and uses nothing.
 On a computer that runs work's own account the item is dim, with a note to update Infinitary there first, until that computer lists the `auto-saved-resets` change; it is a setting chosen now and then, so it adds no command.
 An unknown runway has no verdict, while an already empty scope still reports empty now.

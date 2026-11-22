@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -22,8 +22,8 @@ description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓
 
 每一列最後的選單有：
 
+- **已暫停**：開關打開時，誰都無法使用它。
 - **立即檢查**：檢查連線是否仍然正常。
-- **暫停**：在你按下 **繼續** 之前，誰都無法使用它。
 - **登出並移除**，MCP 伺服器則是 **移除**。
 
 清單下方的按鈕可以連結新的東西，例如 **GitHub**、**Google** 或 **MCP 伺服器**。

@@ -1,5 +1,5 @@
 ---
-source: 2070be28c53de438
+source: 418540bc652d78a6
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -22,8 +22,8 @@ Ouvrez une ligne pour voir ses actions, et ce qu’elle peut signaler à vos aut
 
 Le menu au bout d’une ligne propose :
 
+- **En pause** : tant que son interrupteur est activé, personne n’y accède.
 - **Vérifier maintenant**, qui vérifie que la connexion fonctionne toujours.
-- **Mettre en pause** : personne n’y accède tant que vous ne la reprenez pas avec **Reprendre**.
 - **Se déconnecter et retirer**, ou **Retirer** pour un serveur MCP.
 
 Les boutons sous la liste connectent quelque chose de nouveau, comme **GitHub**, **Google** ou **Serveur MCP**.

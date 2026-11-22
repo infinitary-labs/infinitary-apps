@@ -16,6 +16,7 @@ import {
   SUBSCRIPTIONS_WORDS,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
@@ -623,7 +624,7 @@ test.describe("the real quota sensor, end to end", () => {
     const menu = app.page.getByRole("menu");
     await expect(menu).toBeVisible();
     await expect(menu.getByRole("menuitem", { name: "Rename", exact: true })).toHaveCount(0);
-    const pause = menu.getByRole("menuitem", { name: "Pause", exact: true });
+    const pause = menu.getByRole("menuitemcheckbox", { name: m.settingsMenuPaused(), exact: true });
     await expect(pause).toBeVisible();
     await regionShot(menu, test.info().outputPath("claude-menu-current-identity.png"));
     await pressKey(pause, "Escape");

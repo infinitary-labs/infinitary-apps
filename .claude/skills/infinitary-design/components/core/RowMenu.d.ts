@@ -11,6 +11,8 @@ export type RowMenuItem =
       detail?: string;
       /** Listed but dim: it cannot run now, and its detail says why. */
       disabled?: boolean;
+      /** An on/off setting: a small switch at its end in this state; a pick flips it and the menu stays open. */
+      checked?: boolean;
     }
   | { separator: true };
 export interface RowMenuProps {

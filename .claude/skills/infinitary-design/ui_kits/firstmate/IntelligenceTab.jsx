@@ -62,9 +62,10 @@ function AccountRow({a,first,firstmate,onMenu,onSignIn,renaming,onRename,onCance
   const [draft,setDraft]=React.useState(a.label);
   const dot=dotFor(a);
   const items=[
-    {id:"prefer",label:a.pinned?"Stop preferring for crew work":"Prefer for crew work",trailing:<span style={{color:"var(--accent)",fontFamily:"var(--font-mono)"}}>✱</span>,onSelect:()=>onMenu("prefer")},
+    {id:"prefer",label:"Prefer for crew work",checked:!!a.pinned,trailing:<span style={{color:"var(--accent)",fontFamily:"var(--font-mono)"}}>✱</span>,onSelect:()=>onMenu("prefer")},
+    {id:"pause",label:"Paused",checked:!a.enabled,onSelect:()=>onMenu("pause")},
+    {separator:true},
     {id:"rename",label:"Rename",onSelect:()=>onMenu("rename")},
-    {id:"pause",label:a.enabled?"Pause":"Resume",onSelect:()=>onMenu("pause")},
     {id:"models",label:"Model slots",onSelect:()=>onMenu("models")},
     {separator:true},
     {id:"disconnect",label:"Disconnect",tone:"danger",onSelect:()=>onMenu("disconnect")}

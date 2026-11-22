@@ -2823,10 +2823,8 @@
 "settingsIntegrationsAs" = "%1$@ として";
 "settingsIntegrationsCheckNow" = "今すぐ確認";
 "settingsIntegrationsCopying" = "コピー中...";
-"settingsIntegrationsPause" = "一時停止";
 "settingsIntegrationsPauseDetail" = "再開するまで誰もアクセスできません";
 "settingsIntegrationsPaused" = "一時停止中";
-"settingsIntegrationsResume" = "再開";
 "settingsIntegrationsRowCollapsed" = "%1$@、折りたたみ";
 "settingsIntegrationsRowExpanded" = "%1$@、展開";
 "settingsIntegrationsRuleNote" = "「確認する」か「常に許可」を選択";
@@ -2960,6 +2958,7 @@
 "settingsLocalSeatModelLabel" = "ローカルモデル";
 "settingsLocalSeatRun" = "一等航海士をローカルモデルで動かす";
 "settingsLocalSeatSaveFailed" = "ローカルモデルの設定を保存できませんでした。もう一度お試しください。";
+"settingsMenuPaused" = "一時停止中";
 "settingsModelsAutomaticChoice" = "Infinitary はタスクごとにモデルを選びます。タスクにモデルを指定するか、先に試すモデルを固定できます。";
 "settingsModelsDormantPins" = "これらの固定はアップデート前に無効でした。復元するまで Infinitary はこれらを試しません。プロジェクトの実行先を再び Infinitary に任せるには、「プロジェクト」→「実行先」で「自動」を選択します。";
 "settingsModelsHeading" = "モデル";
@@ -3309,13 +3308,9 @@
 "settingsSubscriptionsMenuKeepGoingOffClaude" = "%1$@ で追加使用量がオフです";
 "settingsSubscriptionsMenuKeepGoingOffCodex" = "%1$@ にクレジットがありません";
 "settingsSubscriptionsMenuModelSlots" = "モデルのレベル";
-"settingsSubscriptionsMenuPause" = "一時停止";
 "settingsSubscriptionsMenuPrefer" = "乗組員の作業で優先";
 "settingsSubscriptionsMenuRename" = "名前を変更";
 "settingsSubscriptionsMenuResetSlots" = "モデルのレベルをリセット";
-"settingsSubscriptionsMenuResume" = "再開";
-"settingsSubscriptionsMenuStopKeepingGoing" = "クレジットの使用をやめる";
-"settingsSubscriptionsMenuStopPreferring" = "乗組員の作業での優先をやめる";
 "settingsSubscriptionsMenuStopUsingResets" = "保存済みのリセットの自動使用をやめる";
 "settingsSubscriptionsMenuUseReset" = "保存済みのリセットを使う";
 "settingsSubscriptionsMenuUseResetDetail" = "Codex がサインインし、期限が最も近いものを使います";

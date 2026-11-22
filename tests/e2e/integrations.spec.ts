@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import * as m from "../../src/shared/i18n/messages.generated";
 import {
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_MCP_WORDS,
@@ -84,8 +85,13 @@ test("Open Integrations reaches the GitHub row, its actions and its menu by keys
 
   // The row's menu pauses it.
   await pressKey(row.getByRole("button", { name: "GitHub actions" }), "Enter");
-  await pressKey(page.getByRole("menuitem", { name: "Pause" }), "Enter");
+  const paused = page.getByRole("menuitemcheckbox", {
+    name: new RegExp(`^${m.settingsMenuPaused()}`),
+  });
+  await expect(paused).toHaveAttribute("aria-checked", "false");
+  await pressKey(paused, "Enter");
   await expect(row).toContainText("paused");
+  await expect(paused).toHaveAttribute("aria-checked", "true");
   await expect.poll(async () => (await view()).integrations[0]?.paused).toBe(true);
 });
 

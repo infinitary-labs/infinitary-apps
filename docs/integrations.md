@@ -277,7 +277,7 @@ Each signed-in GitLab host (`gitlab`) and GitHub Enterprise host (`github-enterp
 The public GitLab row is named GitLab; self-hosted rows use their address, with the existing server-name fallback for an address too long for a row.
 Both kinds are always addable and reserve no signed-out identity; the ordinary integration name repair keeps their names distinct from other connections.
 Ids are derived from the host with a hash so addresses that differ only in punctuation, or exceed the id shape, remain distinct.
-Each row has `read` and `write`, action switches, Check now, Pause or Resume, and Sign out and remove, using the same gateway and captain approval as GitHub.
+Each row has `read` and `write`, action switches, the Paused switch, Check now, and Sign out and remove, using the same gateway and captain approval as GitHub.
 A task reaches the named host through the gateway's account route with no project, so even a write to its own project asks; a kept ask records that host and is sent through it rather than the task's current project.
 The first mate reads and writes as its seat, under the same rules; the existing integration relay gives crewmates on other computers the same rows without transferring a sign-in.
 GitLab paths are relative to `/api/v4`; Enterprise paths are relative to its REST API.
@@ -292,7 +292,7 @@ These kinds declare no Automation events, and their sign-ins stay with the proje
 
 The signed-in bitbucket.org host is the `bitbucket` integration, one row named Bitbucket over `ForgeSignIns` and its per-host file and health, like GitLab's public row (`docs/forge.md`, "Bitbucket sign-in and projects").
 The Bitbucket chip opens the key form for an Atlassian API token, naming the scopes to tick.
-The row shows its account and health, with `read` and `write`, action switches, Check now, Pause or Resume, and Sign out and remove, using the same gateway and captain approval as GitLab's row.
+The row shows its account and health, with `read` and `write`, action switches, the Paused switch, Check now, and Sign out and remove, using the same gateway and captain approval as GitLab's row.
 Its paths are relative to `/2.0`, its page size is `pagelen`, and Allow for the rest of this task covers one kind of request to one repository (`/repositories/{workspace}/{repo}`, without case).
 A task reaches bitbucket.org through the gateway's account route with no project, so even a write to its own repository asks; its own project's calls go through `github_read` and `github_write` (`docs/forge.md`, "On Bitbucket").
 Bitbucket's runs are not events an Automation rule looks at.

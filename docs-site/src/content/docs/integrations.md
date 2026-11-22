@@ -21,8 +21,8 @@ Open a row to see its actions, and what it can tell your automations.
 
 The menu at the end of a row has:
 
+- **Paused**: while its switch is on, nobody reaches it.
 - **Check now**, which checks that the connection still works.
-- **Pause**: nobody reaches it until you **Resume** it.
 - **Sign out and remove**, or **Remove** for an MCP server.
 
 The buttons under the list connect something new, such as **GitHub**, **Google** or **MCP server**.

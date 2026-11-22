@@ -494,6 +494,24 @@ export class TaskEventStore {
     return row?.at ?? undefined;
   }
 
+  /**
+   * What the `linked` line of the `type` link from `fromId` to `toId` saved
+   * under `filed`: whether the write that linked it filed `fromId` too
+   * (`TaskGraph.linkMergeStep`), or undefined for a line that saved neither.
+   * The line sits on `toId` and names `fromId` as its ref.
+   */
+  linkFiled(toId: string, fromId: string, type: string): boolean | undefined {
+    const row = prepared(
+      this.db,
+      // i18n-exempt: SQL, never shown to a person
+      `SELECT json_type(data_json, '$.filed') AS filed FROM task_events
+       WHERE task_id = ? AND kind = 'linked' AND ref = ?
+       AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.type') END = ?
+       ORDER BY at DESC, id DESC LIMIT 1`,
+    ).get(toId, fromId, type) as { filed: string | null } | undefined;
+    return row?.filed === "true" ? true : row?.filed === "false" ? false : undefined;
+  }
+
   /** When a task's newest event of `kind` naming any ref but `ref` happened, if it has one. */
   latestAtOtherRef(taskId: string, kind: TaskEventKind, ref: string): number | undefined {
     const row = this.db

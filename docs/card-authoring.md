@@ -1304,6 +1304,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
      With no origin saved on that change itself, its cards, and those of its parts, read "From" the task it came from, such as the task whose report it was filed after.
      An answer step of a sequence carries the same mark and still reads the captain's message it answers.
      A step the app filed when a merge card that listed it merged carries the mark too, and its walk goes on to the merged task's origin, since the captain's merge click started it (`filedAtMerge` in `src/core/tasks/taskOrigin.ts`, INF-4574).
+     The merge's link says whether it filed the task or set one that already existed to start (`TaskGraph.mergesThatFiled`, INF-5647), so an existing task keeps its own line even when the merge linked it in the millisecond it was filed.
      A message whose only effect on a task was a merge or other settle, an interruption, or a sweep across several tasks it did not file or start is never quoted.
 - **What the app saves.**
   Each `ask` event says whether its message filed or started the task (`starts`): `spawn_crewmate`, `create_task`, a start through `update_task`, a card or operation the first mate filed for it, and the host's fallback question.

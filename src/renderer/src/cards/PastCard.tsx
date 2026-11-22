@@ -1,5 +1,6 @@
+import { markNumbers, placeKey } from "@shared/cardNotes";
 import { anythingElseOf, type CardWidth, isPlayableBody, type PastCard } from "@shared/cards";
-import { formatDateTime } from "@shared/i18n/format";
+import { formatDateTime, formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { wordedCardText } from "@shared/i18n/said";
 import { pastCardEndingWords } from "@shared/pastCard";
@@ -13,6 +14,7 @@ import { ResponseCard } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../design/cards/riskRadar";
 import { useCutWords } from "../design/core/overflowTitle";
+import { NoteAnchor } from "./AnnotationControls";
 import { afterMergeStrip } from "./afterMergeStrip";
 import { MessageList } from "./CardThread";
 import { pastReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
@@ -140,6 +142,7 @@ export function PastCardColumn({
   const asideRef = useRef<HTMLDivElement>(null);
   const risk = past.risk;
   const sentWords = anythingElseOf(past.answers);
+  const carried = past.carried;
   const bodyRef = useCardReadingPlace(pastReadingPlaceId(past.id));
   // A card the app wrote itself is titled in the window's language (docs/i18n.md).
   const shownTitle = wordedTitle(past.title, past.body);
@@ -213,23 +216,58 @@ export function PastCardColumn({
           </div>
         </>
       }
-      // What the card's field sent with the choice, as one quiet line under
-      // the buttons (INF-924); nothing when it sent nothing.
+      // What the card's field sent with the choice under the buttons (INF-924): its words in one
+      // quiet line, its notes as a sent reply draws them and its pictures by name
+      // (`choice-attachments`); nothing when it sent nothing.
       footer={
-        sentWords !== undefined ? (
-          <p
-            data-past-card-words=""
-            style={{
-              margin: 0,
-              fontSize: "var(--text-sm)",
-              lineHeight: "var(--leading-body)",
-              color: "var(--fg-3)",
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {m.cardPastSentLead()} {sentWords}
-          </p>
+        sentWords !== undefined || carried ? (
+          <div data-past-card-sent="" style={{ minWidth: 0 }}>
+            <p
+              data-past-card-words=""
+              style={{
+                margin: 0,
+                fontSize: "var(--text-sm)",
+                lineHeight: "var(--leading-body)",
+                color: "var(--fg-3)",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {sentWords !== undefined
+                ? `${m.cardPastSentLead()} ${sentWords}`
+                : m.cardPastSentLead()}
+            </p>
+            {carried?.notes?.map((note, at) => (
+              <div
+                key={JSON.stringify([note.key, note.start, note.span, placeKey(note.place)])}
+                className="inf-sent-note"
+                data-past-card-note=""
+              >
+                <NoteAnchor
+                  cardId={past.id}
+                  note={note}
+                  mark={markNumbers(carried.notes ?? [])[at]}
+                />
+                <span>{note.comment || m.cardThreadNoComment()}</span>
+              </div>
+            ))}
+            {carried?.pictures?.length ? (
+              <p
+                data-past-card-pictures=""
+                style={{
+                  margin: 0,
+                  fontSize: "var(--text-sm)",
+                  color: "var(--fg-3)",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {m.cardPastPictures({
+                  count: carried.pictures.length,
+                  names: formatList(carried.pictures),
+                })}
+              </p>
+            ) : null}
+          </div>
         ) : undefined
       }
       actions={

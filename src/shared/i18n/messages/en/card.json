@@ -68,6 +68,21 @@
   "cardBrowserUnansweredStarting": "Nothing answers at {site}, so Infinitary is starting it again. The page shows here once it answers.",
   "cardBrowserUnansweredWorking": "Nothing answers at {site}, and its crewmate is working now. The page shows here once it answers.",
   "cardBrowserWord": "Browser",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} note",
+    "other": "{count} notes"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} picture",
+    "other": "{count} pictures"
+  },
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "one": "{items} goes with your choice",
+    "other": "{items} go with your choice"
+  },
   "cardConsentFrom": "From",
   "cardConsentFullDetails": "Full details",
   "cardConsentGuidanceOnly": "It supplies guidance, HTML parts and pictures, and runs nothing.",
@@ -197,6 +212,11 @@
   "cardNoteUnavailable": "This part cannot be shown in this view",
   "cardPastMark": "Past",
   "cardPastMeta": "past card",
+  "cardPastPictures": {
+    "plural": "count",
+    "one": "Picture: {names}",
+    "other": "Pictures: {names}"
+  },
   "cardPastSentLead": "Sent with your choice:",
   "cardPastUnreadable": "This card could not be read",
   "cardQuickAnswer": "Quick answer",

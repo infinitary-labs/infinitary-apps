@@ -26,7 +26,9 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { initOverflowDir } from "../overflow";
 import { crewmateCardPicturesDir } from "../paths";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { TaskEvent } from "../storage/taskEventStore";
@@ -930,12 +932,30 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(reviewer.promptCalls).toHaveLength(3);
       // The click goes to the builder with the review history, and no
       // first mate turn sits between.
+      // What waits in the card's field goes with the click, in the same hand-off (INF-5608);
+      // its file's words spill to the overflow folder as a reply's do.
+      initOverflowDir(scratchDir("review-overflow-"));
       const beforeChoice = ops.length;
-      supervisor.cardActions.act(findingCard?.id ?? "", "keep");
+      supervisor.cardActions.act(findingCard?.id ?? "", "keep", "chrome", {
+        answers: [],
+        notes: [
+          {
+            start: 0,
+            key: "p:0",
+            kind: "paragraph",
+            excerpt: "Keep the Later copy?",
+            comment: "Later reads fine on the empty meter",
+            line: 1,
+          },
+        ],
+        files: [{ name: "meter.log", text: "meter: first reading at launch" }],
+      });
       await tick();
       expect(ops.slice(beforeChoice)).toEqual([]);
       const decision = builder.promptCalls.at(-1) ?? "";
       expect(decision).toContain('The captain chose "Keep the copy" on "Review of the meter fix".');
+      expect(decision).toContain("Later reads fine on the empty meter");
+      expect(decision).toContain("meter: first reading at launch");
       expect(decision).toContain(
         `- The captain chose "keep" on card "Review of the meter fix" (${findingCard?.id}).`,
       );

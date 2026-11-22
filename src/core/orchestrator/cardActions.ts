@@ -11,9 +11,9 @@ import {
   type Card,
   type CardAnswer,
   type CardThread,
+  type ChoiceCarriedRecord,
   cardAnswersBytes,
   cardAnswersSchema,
-  cardChromeValueSchema,
   cardMessageText,
   cardSubmissionSchema,
   cardTakesReplies,
@@ -25,6 +25,7 @@ import {
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus, failedBatch } from "@shared/checkSnapshot";
+import { type ChoiceCarried, cardChromeValueSchema } from "@shared/choiceCarried";
 import { HERE } from "@shared/deviceNames";
 import { hasChangeRequests, sameRequestLink } from "@shared/forge";
 import { changePageUrl } from "@shared/forgeKinds";
@@ -61,7 +62,7 @@ import { currentChange } from "../storage/changeProjection";
 import { checklistApprovesNothing, StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
-import type { CardActionUndone, WakeChoice } from "./captainWakes";
+import { type CardActionUndone, carriedText, type WakeChoice } from "./captainWakes";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
@@ -400,7 +401,9 @@ export class CardActions {
       }
       valueJson = json;
     }
-    const answers = source === "chrome" ? chromeAnswers(value) : undefined;
+    // A body script's own choice carries nothing from the card's field.
+    const chrome = source === "chrome" ? chromeValue(value) : undefined;
+    const answers = chrome?.answers;
     const decisionTaskId = card.taskId ?? associated?.id;
     if (source === "frame" && (chosen.effect || chosen.care)) {
       throw new Error("This action is available only from the card controls.");
@@ -646,6 +649,10 @@ export class CardActions {
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
     // INF-4446: the captain's yes to a check, kept with their other yeses.
     let checkYes = false;
+    // What else the field sent goes on the choice's record, its pictures
+    // copied once for every reader (`choice-attachments.md`).
+    const kept = chrome?.carried ? keepCarried(chrome.carried) : undefined;
+    if (kept) evidence.carried = kept.record;
     let closedAnswer: ReturnType<CardService["resolve"]>;
     try {
       closedAnswer = this.core.cards.resolve(
@@ -748,6 +755,13 @@ export class CardActions {
       label: chosen.label,
       ...(valueJson !== undefined ? { value: valueJson } : {}),
       ...(answers ? { answers } : {}),
+      ...(kept ? { carried: kept.record } : {}),
+    };
+    // Where no author hears the choice - the app carried it out, or nobody
+    // reads it - the first mate is told once, with what went with it. An
+    // answer task's own close carries it on the first mate's closing notice.
+    const tellFirstmate = () => {
+      if (kept && !closedAnswer) this.carriedOut(card, choice, decisionTaskId);
     };
     // Review carefully (INF-562): the captain's care lands on the record
     // first, so its notice waits on the crewmate's lane ahead of the choice
@@ -767,6 +781,7 @@ export class CardActions {
     // pull request it names and whatever it declared follows. Only this
     // chrome click runs it; the declaration granted nothing.
     if (merge) {
+      tellFirstmate();
       if (!card.taskId || source !== "chrome" || queued) return {};
       // A merge sent earlier whose outcome was never read back came along
       // with this approval of its pull request: the click reads it back
@@ -794,6 +809,7 @@ export class CardActions {
       );
       return {};
     }
+    if (effect) tellFirstmate();
     switch (effect?.kind) {
       case "settle": {
         // Host-owned teardown: the host runs it instead of steering the
@@ -839,8 +855,9 @@ export class CardActions {
       }
       case "open":
         if (effect.target === "browser") {
-          // Only a crewmate still there can hear that the card's browser was gone.
-          const told = closedAnswer ? undefined : choice;
+          // Only a crewmate still there can hear that the card's browser was
+          // gone; what else went with the choice went to the first mate.
+          const told = closedAnswer ? undefined : withoutCarried(choice);
           return effect.savedSignIn
             ? this.grantSavedSignInFromCard(card, told)
             : this.openBrowserFromCard(card, told);
@@ -873,7 +890,16 @@ export class CardActions {
       // author can answer on the same card, without completing the action.
       this.core.cards.presentRequiredAction(card.taskId);
       const output = anythingElseOf(answers);
-      this.replyToCard(card.id, output ? `${chosen.label}\n\n${output}` : chosen.label);
+      const carried = chrome?.carried;
+      this.replyToCard(
+        card.id,
+        output ? `${chosen.label}\n\n${output}` : chosen.label,
+        carried?.images,
+        undefined,
+        undefined,
+        carried?.files,
+        carried?.notes,
+      );
       return {};
     }
     if (cardId.startsWith(FIRSTMATE_CARD_PREFIX)) {
@@ -900,15 +926,38 @@ export class CardActions {
     } else if (card.taskId && !closedAnswer && card.author === "crewmate" && card.reviewTaskId) {
       // A reviewer's Review finding card (INF-4338's direction D): the
       // choice is the builder's to act on, with no first mate turn between.
-      this.reviewChoice(card, card.taskId, source, choice);
+      this.reviewChoice(card, card.taskId, source, choice, kept);
     } else if (card.taskId && !closedAnswer && card.author !== "host") {
       // The action round-trip: a declared choice on a crewmate's card
       // reaches its still-running session as a steering message. A host
       // card's choice with no effect only closes that card. The minus
       // instead keeps it pending.
-      this.steerChoice(card.taskId, card, source, choice);
-    }
+      this.steerChoice(card.taskId, card, source, choice, undefined, kept);
+    } else tellFirstmate();
     return {};
+  }
+
+  /**
+   * A choice whose author hears nothing of what the card's field sent with
+   * it (`choice-attachments.md`): a merge, a discard or an app card's own
+   * button the app carried out, or a card nobody reads. The first mate is
+   * told once, on a turn of its own, with the pictures in it.
+   */
+  private carriedOut(card: Card, choice: WakeChoice, taskId: string | undefined): void {
+    const wake: TypedWake = {
+      facts: {
+        kind: "card-choice",
+        to: "firstmate",
+        source: "chrome",
+        card: { id: card.id, title: card.title, ...(taskId ? { taskId } : {}) },
+        choice,
+        carriedOut: true,
+        ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
+      },
+    };
+    const hooks = this.core.hooks();
+    if (hooks.notifyCaptainChoice) hooks.notifyCaptainChoice(wake, taskId);
+    else hooks.notifyOp(wake, "agent", taskId);
   }
 
   /**
@@ -1066,6 +1115,7 @@ export class CardActions {
     source: "chrome" | "frame",
     choice: WakeChoice,
     browserGone?: "stopped" | "quit",
+    kept?: KeptCarried,
   ): void {
     void this.core.steer
       .steerCrewmate(
@@ -1076,13 +1126,14 @@ export class CardActions {
             to: "crewmate",
             source,
             card: { title: card.title, id: card.id },
+            // Its pictures ride the steer, kept on the lane row by reference.
             choice,
             ...(source === "chrome" ? this.captainFrom() : {}),
             ...(browserGone ? { browserGone } : {}),
           },
         },
         source === "chrome" ? "captain" : "firstmate",
-        { via: "card", cardId: card.id },
+        { via: "card", cardId: card.id, ...keptPictures(kept) },
       )
       .catch((caught: unknown) => {
         const message = caught instanceof Error ? caught.message : String(caught);
@@ -1104,6 +1155,7 @@ export class CardActions {
     reviewId: string,
     source: "chrome" | "frame",
     choice: WakeChoice,
+    kept?: KeptCarried,
   ): void {
     const review = this.core.options.tasks.get(reviewId);
     const builder = review?.parentId ? this.core.options.tasks.get(review.parentId) : undefined;
@@ -1116,7 +1168,7 @@ export class CardActions {
         // After the review closed, no reviewer reads the answer: the builder
         // delivers a chosen change as a new version.
         stage: review && TaskService.isClosed(review) ? "decided" : "decision",
-        excerpt: `The captain chose "${choice.label}" on "${card.title}".`,
+        excerpt: `The captain chose "${choice.label}" on "${card.title}".${carriedText(choice.carried)}`,
         history: reviewHistory(this.core.options.tasks, builder),
       },
       once: `review-decision:${card.id}:${card.offerId ?? card.lifecycleId ?? ""}`,
@@ -1125,6 +1177,7 @@ export class CardActions {
       .steerCrewmate(builder.id, wake, source === "chrome" ? "captain" : "firstmate", {
         via: "card",
         cardId: card.id,
+        ...keptPictures(kept),
       })
       .catch((caught: unknown) => {
         const message = caught instanceof Error ? caught.message : String(caught);
@@ -1235,7 +1288,7 @@ export class CardActions {
       effect: {
         kind: "open",
         target: "browser",
-        browser: { taskId, ...handle, cardId: card.id },
+        browser: { taskId, ...handle, cardId: card.id, docked: true },
       },
     };
   }
@@ -1765,16 +1818,39 @@ export class CardActions {
    * press's value as the `anything_else` answer, before the press, so a value
    * that does not parse refuses the press rather than drop them.
    */
-  notePressWords(value: unknown): string | undefined {
-    return anythingElseOf(chromeAnswers(value));
+  notePress(value: unknown): NotePress | undefined {
+    const { answers, carried } = chromeValue(value);
+    const words = anythingElseOf(answers);
+    return words !== undefined || carried ? { words: words ?? "", carried } : undefined;
   }
 
-  /** The words a note's press carried, sent after that press closed the note. */
-  replyWithNotePress(card: Card, words: string, closesTask: boolean): void {
-    this.replyToCard(card.id, words, undefined, undefined, undefined, undefined, undefined, {
-      card,
-      closesTask,
-    });
+  /** An ended card's Close: what its field held goes as the reply it already sends. */
+  replyWithEndedClose(cardId: string, press: NotePress): void {
+    const { words, carried } = press;
+    this.replyToCard(
+      cardId,
+      words,
+      carried?.images,
+      undefined,
+      undefined,
+      carried?.files,
+      carried?.notes,
+    );
+  }
+
+  /** What a note's press carried, sent after that press closed the note. */
+  replyWithNotePress(card: Card, press: NotePress, closesTask: boolean): void {
+    const { words, carried } = press;
+    this.replyToCard(
+      card.id,
+      words,
+      carried?.images,
+      undefined,
+      undefined,
+      carried?.files,
+      carried?.notes,
+      { card, closesTask },
+    );
   }
 
   /**
@@ -1838,14 +1914,63 @@ export class CardActions {
  * names answers and does not parse, or weighs more than the value bound,
  * refuses the click rather than dropping the captain's picks unsaid.
  */
-function chromeAnswers(value: unknown): CardAnswer[] | undefined {
-  if (typeof value !== "object" || value === null || !("answers" in value)) return undefined;
+function chromeValue(value: unknown): { answers?: CardAnswer[]; carried?: ChoiceCarried } {
+  if (typeof value !== "object" || value === null || !("answers" in value)) return {};
   const parsed = cardChromeValueSchema.safeParse(value);
   if (!parsed.success) throw new Error("The card's answers could not be read.");
-  if (cardAnswersBytes(parsed.data.answers) > CARD_ANSWERS_MAX_BYTES) {
+  const { answers, notes, files, images } = parsed.data;
+  if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
     throw new Error(CARD_ANSWERS_BOUND_REFUSAL);
   }
-  return parsed.data.answers.length > 0 ? parsed.data.answers : undefined;
+  // What else the card's field sent with the choice (`choice-attachments.md`).
+  const carried: ChoiceCarried = {
+    ...(notes?.length ? { notes } : {}),
+    ...(files?.length ? { files } : {}),
+    ...(images?.length ? { images } : {}),
+  };
+  return {
+    ...(answers.length > 0 ? { answers } : {}),
+    ...(Object.keys(carried).length > 0 ? { carried } : {}),
+  };
+}
+
+/** What a note's own press carried: the field's words, and what else waited in it. */
+export type NotePress = { words: string; carried?: ChoiceCarried };
+
+/**
+ * What a choice carried, as every reader gets it: the record keeps the notes,
+ * the files as `withPastedFiles` gives them to a reader and the message's own
+ * copies of the pictures; `images` are the pictures themselves for a live turn.
+ */
+type KeptCarried = { record: ChoiceCarriedRecord; images?: ChoiceCarried["images"] };
+
+function keepCarried(carried: ChoiceCarried): KeptCarried {
+  const files = carried.files?.length ? withPastedFiles("", carried.files) : "";
+  const pictures = carried.images?.length ? keepImages(randomUUID(), carried.images) : undefined;
+  return {
+    record: {
+      ...(carried.notes?.length ? { notes: carried.notes } : {}),
+      ...(files ? { files } : {}),
+      ...(pictures?.length ? { pictures } : {}),
+    },
+    ...(carried.images?.length ? { images: carried.images } : {}),
+  };
+}
+
+/** The pictures a crewmate's steer carries live, and the lane row's copies of them. */
+function keptPictures(kept: KeptCarried | undefined): {
+  images?: TurnImage[];
+  attachments?: ChoiceCarriedRecord["pictures"];
+} {
+  return kept?.images?.length && kept.record.pictures?.length
+    ? { images: kept.images, attachments: kept.record.pictures }
+    : {};
+}
+
+/** A choice without anything the field sent besides its words. */
+function withoutCarried(choice: WakeChoice): WakeChoice {
+  const { carried: _carried, ...plain } = choice;
+  return plain;
 }
 
 /** The gesture's own id the shell minted at a click, when it sent a well-formed one. */

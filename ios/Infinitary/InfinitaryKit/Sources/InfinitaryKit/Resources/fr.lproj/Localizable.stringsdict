@@ -345,6 +345,60 @@
       <string>· via %1$ld tâches</string>
     </dict>
   </dict>
+  <key>cardCarriedNotes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld note</string>
+      <key>many</key>
+      <string>%1$ld notes</string>
+      <key>other</key>
+      <string>%1$ld notes</string>
+    </dict>
+  </dict>
+  <key>cardCarriedPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld image</string>
+      <key>many</key>
+      <string>%1$ld images</string>
+      <key>other</key>
+      <string>%1$ld images</string>
+    </dict>
+  </dict>
+  <key>cardCarriedWithChoice</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$@ part avec votre choix</string>
+      <key>many</key>
+      <string>%2$@ partent avec votre choix</string>
+      <key>other</key>
+      <string>%2$@ partent avec votre choix</string>
+    </dict>
+  </dict>
   <key>cardConsentRunbookPanels</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -505,6 +559,24 @@
       <string>Envoyer %1$ld notes</string>
       <key>other</key>
       <string>Envoyer %1$ld notes</string>
+    </dict>
+  </dict>
+  <key>cardPastPictures</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Image : %2$@</string>
+      <key>many</key>
+      <string>Images : %2$@</string>
+      <key>other</key>
+      <string>Images : %2$@</string>
     </dict>
   </dict>
   <key>cardRecordFoldMessages</key>

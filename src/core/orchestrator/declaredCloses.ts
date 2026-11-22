@@ -1,4 +1,4 @@
-import type { Card } from "@shared/cards";
+import type { Card, ChoiceCarriedRecord } from "@shared/cards";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
@@ -32,7 +32,12 @@ export class DeclaredCloses {
    * closes the answer task `done/answered` without a `card-closed` steer.
    * Interrupt, cancel and `update_task drop` keep their own closes.
    */
-  closeAnsweredTask(card: Card, action: string, by: "captain" | "firstmate" | "crewmate"): boolean {
+  closeAnsweredTask(
+    card: Card,
+    action: string,
+    by: "captain" | "firstmate" | "crewmate",
+    carried?: ChoiceCarriedRecord,
+  ): boolean {
     const record = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
     if (!taskResultResponse(card, record, action, by) || !record || !card.taskId) return false;
     const choice = card.actions.find((entry) => entry.id === action);
@@ -55,6 +60,7 @@ export class DeclaredCloses {
         actor: "captain",
         text,
         ...(handoff ? { answerHandoff: handoff } : {}),
+        ...(handoff && carried ? { answerCarried: carried } : {}),
       })
       .catch(() => {});
     return true;

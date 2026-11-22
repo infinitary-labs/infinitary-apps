@@ -6,17 +6,18 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
+import { attachmentWords } from "../../src/shared/attachments";
 import { cardAnswerLines, REPLY_SETTINGS_HEAD } from "../../src/shared/cardAnswerLines";
 import { ANSWER_DONE_LABEL, NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import {
   ANYTHING_ELSE_ANSWER,
   CARD_CHAT_LABEL,
-  CARD_FILES_FIRST,
   CARD_REPLY_HINT,
   type Card,
   type CardAnswer,
   PAST_CARD_WORDS_LEAD,
 } from "../../src/shared/cards";
+import { carriedWithChoiceWords } from "../../src/shared/choiceCarried";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { AS_BUILT_WORDS, DEFAULT_WORDS } from "../../src/shared/plugins/bridge";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -160,6 +161,9 @@ const skippedAnswer = (name: string, value: string, label: string): CardAnswer =
 
 /** The write-in card's skippable account question, skipped: Work account its Default. */
 const ACCOUNT_SKIPPED = skippedAnswer("account", "work", "Work account");
+
+/** The footer's line while one picture waits in the card's field (`choice-attachments.md`). */
+const PICTURE_GOES = carriedWithChoiceWords({ pictures: 1, files: 0, notes: 0 }) ?? "";
 
 /** How the author reads a question skipped: the Default it sent. */
 function skippedLine(answer: CardAnswer): string {
@@ -1358,17 +1362,15 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
 
     await putAwayAndRestore(page, INLINE_QUESTIONS_TITLE);
 
-    // A picture goes only as a reply: the choices wait, and a press sends nothing.
+    // A picture goes with whichever choice is pressed (INF-5608): the choices stay lit,
+    // and one line names what goes with them.
     await pastePictures(field, [{ name: "theme.png" }]);
-    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveText(CARD_FILES_FIRST);
-    const notNow = page.getByRole("button", { name: "Not now", exact: true });
-    await expect(notNow).toHaveAttribute("aria-disabled", "true");
-    // A dimmed choice still takes the pointer, so force past Playwright's own wait for an enabled button.
-    await notNow.click({ force: true });
-    await expect(shownCard(page, INLINE_QUESTIONS_TITLE)).toBeVisible();
-    expect((await steers()).slice(steersBefore)).toHaveLength(0);
-    await cardReply(page).row.getByRole("button", { name: "Remove theme.png" }).click();
+    await expect(shownEntry(page).locator("[data-card-carried]")).toHaveText(PICTURE_GOES);
     await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveCount(0);
+    const notNow = page.getByRole("button", { name: "Not now", exact: true });
+    await expect(notNow).not.toHaveAttribute("aria-disabled", "true");
+    await cardReply(page).row.getByRole("button", { name: "Remove theme.png" }).click();
+    await expect(shownEntry(page).locator("[data-card-carried]")).toHaveCount(0);
 
     // Chat sends the field's words as the reply itself, never as an answer
     // beside it; the revision the reply asked for comes up with the field empty.
@@ -1392,8 +1394,10 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
     await expect(cardReply(page).field).toHaveValue("");
 
     // ⌘2 from inside the field presses the button that is not the default,
-    // and the words go with it.
+    // and the words and the picture go with it.
     await cardReply(page).field.fill(COMMENT);
+    await pastePictures(cardReply(page).field, [{ name: "theme.png" }]);
+    await expect(shownEntry(page).locator("[data-card-carried]")).toHaveText(PICTURE_GOES);
     await focusOn(cardReply(page).field);
     await pressWindowKey(app, "2", ["meta"]);
     await expectNoCard(page, INLINE_QUESTIONS_REVISED_TITLE);
@@ -1403,6 +1407,7 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
       choiceWords(INLINE_QUESTIONS_REVISED_TITLE, { id: "later", label: "Not now" }),
     );
     expect(chosen).toContain(commentLine);
+    expect(chosen).toContain(`[attached: ${attachmentWords([{ name: "theme.png" }])}]`);
     const resolved = (
       await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)
     ).events.findLast((event) => event.kind === "card_resolved");
@@ -1413,12 +1418,16 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
       ]),
     });
 
-    // The past card shows what went with the choice as one quiet line.
+    // The past card shows what went with the choice: the words as one quiet line, and the
+    // picture by name (INF-5608's plan, item 11).
     await page.evaluate((id) => window.infinitary.cards.showPast(id), card?.id as string);
     const past = page.locator(`[data-past-card="${card?.id}"]`);
     await expect(past).toBeVisible();
     await expect(shownEntry(page).locator("[data-past-card-words]")).toHaveText(
       `${PAST_CARD_WORDS_LEAD} ${COMMENT}`,
+    );
+    await expect(shownEntry(page).locator("[data-past-card-pictures]")).toHaveText(
+      m.cardPastPictures({ count: 1, names: "theme.png" }),
     );
     await expect(shownEntry(page).getByRole("textbox")).toHaveCount(0);
   } finally {
@@ -1439,8 +1448,8 @@ const ANSWER_NOTE_TITLE = "Recent changes and the next build";
  * Got it on any other note, INF-2794) is a button other than Chat, so the
  * words left in the card's one field go with it (INF-924): to the note's
  * author as their reply, a crewmate's included, and to the first mate when
- * Done closes the task. A picture in the field holds the button, as it holds
- * any choice, until it goes as a reply.
+ * Done closes the task. A picture in the field goes with the button too, as
+ * the reply under the note (INF-5608).
  */
 test("a note's Done and Got it take the words left in the card's field with them", async () => {
   const userDataDir = scratchDir("infinitary-note-words-");
@@ -1499,19 +1508,20 @@ test("a note's Done and Got it take the words left in the card's field with them
     // captain's reply under it.
     await showCard(page, NOTE_TITLE);
     await expect(noteDone(page)).toHaveAttribute("data-note-done", "got-it");
-    // A picture goes only as a reply: the note's button waits, as any choice does.
+    // A picture goes with the note's button as with any choice (INF-5608): it stays
+    // lit, and the picture goes as the reply under the note.
     await pastePictures(cardReply(page).field, [{ name: "chart.png" }]);
-    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveText(CARD_FILES_FIRST);
-    // It stays pressable, so a press that queues an open note lands, and its press is held.
-    await noteDone(page).click();
-    await expect(shownCard(page, NOTE_TITLE)).toBeVisible();
-    await cardReply(page).row.getByRole("button", { name: "Remove chart.png" }).click();
+    await expect(shownEntry(page).locator("[data-card-carried]")).toHaveText(
+      carriedWithChoiceWords({ pictures: 1, files: 0, notes: 0 }) ?? "",
+    );
     await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveCount(0);
     await cardReply(page).field.fill(NOTE_WORDS);
     await focusOn(cardReply(page).field);
     await pressWindowKey(app, "1", ["meta"]);
     await expectNoCard(page, NOTE_TITLE);
-    expect(await captainLines("card-fm-filed")).toEqual([NOTE_WORDS]);
+    expect(await captainLines("card-fm-filed")).toEqual([
+      `${NOTE_WORDS}\n[attached ${attachmentWords([{ name: "chart.png" }])}]`,
+    ]);
     await expect.poll(() => firstmateHeard(NOTE_WORDS), { timeout: 30_000 }).toBe(true);
 
     // Done on the answer task's note closes the task, and the words go to the

@@ -68,6 +68,21 @@
   "cardBrowserUnansweredStarting": "Unter {site} antwortet nichts, deshalb startet Infinitary es neu. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserUnansweredWorking": "Unter {site} antwortet nichts, und das Crewmitglied arbeitet gerade. Die Seite erscheint hier, sobald es antwortet.",
   "cardBrowserWord": "Browser",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "one": "{count} Notiz",
+    "other": "{count} Notizen"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "one": "{count} Bild",
+    "other": "{count} Bilder"
+  },
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "one": "{items} wird mit deiner Wahl gesendet",
+    "other": "{items} werden mit deiner Wahl gesendet"
+  },
   "cardConsentFrom": "Von",
   "cardConsentFullDetails": "Alle Details",
   "cardConsentGuidanceOnly": "Er liefert Anleitungen, HTML-Teile und Bilder und führt nichts aus.",
@@ -197,6 +212,11 @@
   "cardNoteUnavailable": "Dieser Teil kann in dieser Ansicht nicht angezeigt werden",
   "cardPastMark": "Früher",
   "cardPastMeta": "frühere Karte",
+  "cardPastPictures": {
+    "plural": "count",
+    "one": "Bild: {names}",
+    "other": "Bilder: {names}"
+  },
   "cardPastSentLead": "Mit deiner Wahl gesendet:",
   "cardPastUnreadable": "Diese Karte konnte nicht gelesen werden",
   "cardQuickAnswer": "Schnelle Antwort",

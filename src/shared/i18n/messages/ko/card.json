@@ -64,6 +64,18 @@
   "cardBrowserUnansweredStarting": "{site}에서 응답이 없어 Infinitary가 다시 시작하고 있어요. 응답하면 페이지가 여기에 표시돼요.",
   "cardBrowserUnansweredWorking": "{site}에서 응답이 없고, 선원은 지금 작업 중이에요. 응답하면 페이지가 여기에 표시돼요.",
   "cardBrowserWord": "브라우저",
+  "cardCarriedNotes": {
+    "plural": "count",
+    "other": "메모 {count}개"
+  },
+  "cardCarriedPictures": {
+    "plural": "count",
+    "other": "사진 {count}장"
+  },
+  "cardCarriedWithChoice": {
+    "plural": "count",
+    "other": "선택과 함께 보낼 항목: {items}"
+  },
   "cardConsentFrom": "제공",
   "cardConsentFullDetails": "자세히",
   "cardConsentGuidanceOnly": "안내, HTML 조각, 그림을 제공하고 아무것도 실행하지 않아요.",
@@ -184,6 +196,10 @@
   "cardNoteUnavailable": "이 보기에서는 이 부분을 보여 줄 수 없어요",
   "cardPastMark": "지난 카드",
   "cardPastMeta": "지난 카드",
+  "cardPastPictures": {
+    "plural": "count",
+    "other": "사진: {names}"
+  },
   "cardPastSentLead": "선택과 함께 보냄:",
   "cardPastUnreadable": "이 카드를 읽을 수 없었어요",
   "cardQuickAnswer": "빠른 답변",

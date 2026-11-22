@@ -6,7 +6,9 @@ import {
   cardMessageSchema,
   cardSchema,
   cardThreadSchema,
+  pastCardSchema,
 } from "@shared/cards";
+import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import { OWN_SPELLING } from "@shared/codeNames";
 import { THROUGH_THE_COMMAND } from "@shared/through";
 import { describe, expect, it } from "vitest";
@@ -17,7 +19,7 @@ import {
   ANNOTATION_DRAWING_CAPTION,
   ANNOTATION_WORDS,
 } from "../../../tests/fixtures/cardAnnotations";
-import { cardPushFor, legacyCardSnapshot, threadLinesFor } from "./cardCompatibility";
+import { cardPushFor, legacyCardSnapshot, pastCardFor, threadLinesFor } from "./cardCompatibility";
 
 /** Intent: the approved desktop annotation must not break strict older desktop readers or leave phone replies blank. */
 function thread() {
@@ -186,5 +188,49 @@ describe("live reads compatibility", () => {
     expect(sent(false)[0]).not.toHaveProperty("reads");
     expect(sent(false)[0]).not.toHaveProperty("sql");
     expect(sent(true)).toEqual([card]);
+  });
+});
+
+/**
+ * INF-5608's plan, item 11: a past card names what its closing choice carried, and a reader
+ * whose hello does not list `choice-attachments` reads past cards strictly, so it gets the
+ * card without that field.
+ */
+describe("what a past card's closing choice carried", () => {
+  const past = pastCardSchema.parse({
+    id: "layout-card",
+    author: "crewmate",
+    title: "Which layout should the settings page use",
+    meta: "crewmate",
+    body: "<p>Keep the current layout, or move to two columns.</p>",
+    actions: [{ id: "two", label: "Two columns", default: true }],
+    ending: { how: "chose", at: 1, actionId: "two", label: "Two columns", by: "captain" },
+    answers: [],
+    carried: {
+      notes: [
+        {
+          start: 0,
+          key: "p:0",
+          kind: "paragraph",
+          excerpt: "Keep the current layout",
+          comment: "Use the wider column here",
+          line: 1,
+        },
+      ],
+      pictures: ["screen.png"],
+    },
+    messages: [],
+  });
+
+  it("reaches a reader that lists the change whole", () => {
+    expect(pastCardFor("inf:cards:past", past, [CHOICE_ATTACHMENTS])).toEqual(past);
+  });
+
+  it("leaves the carried items out for an older reader, on each reply that holds a past card", () => {
+    const { carried: _carried, ...older } = past;
+    for (const channel of ["inf:cards:show", "inf:cards:past", "inf:cards:show-past"]) {
+      expect(pastCardFor(channel, past, [])).toEqual(older);
+    }
+    expect(pastCardFor("inf:cards:past", null, undefined)).toBeNull();
   });
 });

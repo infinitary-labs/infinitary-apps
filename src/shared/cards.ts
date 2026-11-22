@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { afterMergeShownListSchema } from "./afterMerge.ts";
+import { attachmentRefSchema } from "./attachments.ts";
 import {
   cardEffectSchema,
   deviceMakeSchema,
@@ -644,13 +645,6 @@ export function anythingElseOf(answers: readonly CardAnswer[] | undefined): stri
   return answers?.find((answer) => answer.name === ANYTHING_ELSE_ANSWER)?.written;
 }
 
-/**
- * What a footer click carries as `inf:cards:act`'s value: the answers, in one
- * envelope. A frame click's value stays the body's own.
- */
-export const cardChromeValueSchema = z.strictObject({ answers: cardAnswersSchema });
-export type CardChromeValue = z.infer<typeof cardChromeValueSchema>;
-
 /** Every agent-facing card read retains annotations, including a note-only reply. */
 export function cardMessageText(message: Pick<CardMessage, "text" | "notes">): string {
   return [message.text, ...pointedAtLines(message.notes ?? [])].filter(Boolean).join("\n");
@@ -1247,6 +1241,17 @@ export const pastCardSchema = z.strictObject({
     by: z.enum(["captain", "firstmate", "crewmate", "host", "frame"]).optional(),
   }),
   answers: cardAnswersSchema,
+  /**
+   * What the card's field sent with the closing choice besides its words
+   * (`choice-attachments`): the notes as a sent reply draws them, and the
+   * pictures by name. Absent when it sent nothing else.
+   */
+  carried: z
+    .strictObject({
+      notes: cardNotesSchema.optional(),
+      pictures: z.array(z.string().max(120)).optional(),
+    })
+    .optional(),
   messages: z.array(cardMessageSchema),
 });
 export type PastCard = z.infer<typeof pastCardSchema>;
@@ -1397,6 +1402,11 @@ export const shellEffectSchema = z.object({
       session: z.string(),
       generation: z.number().int().positive(),
       cardId: z.string(),
+      /**
+       * The card stays up unanswered, docked beside the page, so what the
+       * press carried from its field goes back there (`choice-attachments`).
+       */
+      docked: z.literal(true).optional(),
     })
     .optional(),
   restoreAccountId: z.string().optional(),
@@ -1604,6 +1614,22 @@ export const cardAvailabilityPayloadSchema = z.strictObject({
 });
 
 /**
+ * What the card's field sent with a choice besides its words, as the record
+ * keeps it (`choice-attachments.md`): the queued notes, the pasted files as
+ * the author read them (`withPastedFiles`), and the message's own copies of
+ * its pictures, marked ones included.
+ */
+export const choiceCarriedRecordSchema = z.strictObject({
+  notes: cardNotesSchema.optional(),
+  files: z
+    .string()
+    .max(64 * 1024)
+    .optional(),
+  pictures: z.array(attachmentRefSchema).max(TURN_IMAGES_MAX).optional(),
+});
+export type ChoiceCarriedRecord = z.infer<typeof choiceCarriedRecordSchema>;
+
+/**
  * One interaction with an offer's actions - closing or not - as the host
  * admitted it: the action's id and, when the offer declared it, its label
  * and effect; the committed answers; the question definitions the body
@@ -1634,6 +1660,8 @@ export const cardActionPayloadSchema = z.strictObject({
   interactionSource: z.enum(["shell", "host"]),
   /** What pressed the button, as the shell said; absent when it did not say or could not tell. */
   input: cardPressInputSchema.optional(),
+  /** What else the card's field sent with the choice (`choice-attachments.md`): its notes, files and pictures. */
+  carried: choiceCarriedRecordSchema.optional(),
 });
 
 /**

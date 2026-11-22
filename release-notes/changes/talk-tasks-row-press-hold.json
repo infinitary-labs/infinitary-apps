@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "talk-tasks-row-press-hold",
+      "reason": "Test-only repair: the talk-tasks journey holds each task row's long press three seconds instead of 1.2, so a busy simulator whose app stops its main thread right after touch-down still opens the row's menu instead of reading the press as a tap; app behavior and assertions are unchanged."
+    }
+  ]
+}

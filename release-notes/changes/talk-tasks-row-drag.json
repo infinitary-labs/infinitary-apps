@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "talk-tasks-row-drag",
+      "reason": "Internal: the iPhone and iPad talk-tasks journey opens a task row's actions with a slow drag instead of a short swipe, so a busy simulator's system gesture gate no longer cancels it; no app behavior changes."
+    }
+  ]
+}

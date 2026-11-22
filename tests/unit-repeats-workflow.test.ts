@@ -3,13 +3,17 @@ import { loadYamlFile, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 type Job = { if?: string; strategy?: { matrix?: { shard?: number[] } } };
 const jobs = loadYamlFile(".github/workflows/ci.yml").jobs as Record<string, Job>;
-// A request runs the sweeps only when it sets ci.yml's `sweep` input.
+// A request runs the sweeps only when it sets ci.yml's `sweep` input. The
+// code checks count one part of the tests a change reaches, so the later
+// parts' job starts nothing (release-workflows-pr-checks.test.ts holds a
+// wider change's, INF-5493).
+const needs = { "code-checks": { outputs: { "reach-parts": "" } } };
 const selected = (event: string, sweep = event !== "pull_request") =>
   Object.entries(jobs)
     .filter(
       ([, job]) =>
         job.if === undefined ||
-        workflowValue(job.if, { github: { event_name: event }, inputs: { sweep } }) === true,
+        workflowValue(job.if, { github: { event_name: event }, inputs: { sweep }, needs }) === true,
     )
     .map(([name]) => name)
     .sort();

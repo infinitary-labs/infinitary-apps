@@ -18,7 +18,8 @@ Requested runs (`ci.yml`) run the same projects on separate machines, and so doe
 The full check's `linux-tests` job splits them across eight machines with vitest's own `--shard`: `pure`, `unit` and `unit-isolated` in three groups, `integration` in two, `probe` in two and `browser` in one, each a machine of its own (INF-2646).
 The three unit groups are balanced by measured time, not by file name: `tests/helpers/timeBalancedSequencer.ts` replaces vitest's path-hash split with a longest-first packing of `tests/helpers/shardTimings.json`, the seconds each unit file took (`scripts/shard-balance.ts`, INF-2674).
 A file missing from the record weighs a typical file; a run with no measured file (integration, probe, browser) keeps vitest's own split.
-Each Linux test group uploads `vitest-timing-*` with its files' times (`INFINITARY_TEST_TIMING_FILE`); `node scripts/shard-timings.ts <report>...` rebuilds the record from them, and a pull request that moves or adds many unit files refreshes it.
+Each Linux test group uploads `vitest-timing-*` with its files' times (`INFINITARY_TEST_TIMING_FILE`); `node scripts/shard-timings.ts <report>...` rebuilds the record from the unit groups' reports, and a pull request that moves or adds many unit files refreshes it.
+`node scripts/shard-timings.ts --reach <report>...` rebuilds `tests/helpers/reachTimings.json` from the integration and browser groups' reports: the branch check weighs the parts of a wide change's tests by both records (`docs/testing.md`, "Notes"), while the integration and browser groups keep vitest's own split (INF-5493).
 `tests/release-workflows-pr-checks.test.ts` holds both layouts to every project, each in one job or in shards of one count that cover it, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
 
 | Project | Files | Rule |

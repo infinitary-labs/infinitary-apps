@@ -27,6 +27,12 @@ vi.setConfig({ testTimeout: 10_000 });
 /** The branch check's three jobs, in ci.yml's order. */
 const BRANCH_CHECK = ["code-checks", "reached-tests", "build"];
 
+/**
+ * INF-5493: the job that runs the parts past the first of a wide change's
+ * tests, once the code checks counted them, a machine per part.
+ */
+const PARTS = "reached-tests-parts";
+
 /** The pull request's checks and main's sweep jobs (ci.yml). */
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
@@ -70,8 +76,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     // INF-5577's review, the captain's pick "Split the branch check into
     // three jobs that run side by side": the branch check is three jobs,
-    // whose steps together are the one gate a change passes.
-    const gate = BRANCH_CHECK.flatMap((id) => ci.jobs[id]?.steps ?? []);
+    // whose steps together are the one gate a change passes, with the later
+    // parts of a wide change's tests in a fourth (INF-5493).
+    const gate = [...BRANCH_CHECK, PARTS].flatMap((id) => ci.jobs[id]?.steps ?? []);
     // INF-2414 (captain: "why can't we catch release note problems before
     // merge?"): the pull request's notes step (docs/release-notes.md, "The
     // release check").
@@ -98,10 +105,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const [paths] = pathSteps;
     // INF-3759's plan, piece 2: the step that says where the change starts,
     // which the notes, paths, reader and critical-path steps all read.
-    // Each of the three jobs finds it alike, so each skips alike on a batch's
-    // version.
+    // Each job finds it alike, so each skips alike on a batch's version.
     const bases = gate.filter((step) => step.name === "Find the change's base");
-    expect(bases).toHaveLength(BRANCH_CHECK.length);
+    expect(bases).toHaveLength(BRANCH_CHECK.length + 1);
     const [base] = bases;
     expect(base?.uses).toBe("./.github/actions/change-base");
     for (const other of bases) {
@@ -111,20 +117,41 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // INF-2441 (captain's choice: "Run the tests that read each changed file
     // inside the pull request's build check"): the pull request's round of
     // the unit, integration and browser tests that read a changed file
-    // (docs/testing.md).
-    const reach = gate.find((step) =>
-      step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
+    // (docs/testing.md). INF-5493: reached-tests runs its first part, and
+    // reached-tests-parts each later part the code checks counted.
+    const [reach, later, ...others] = gate.filter(
+      (step) =>
+        step.run?.startsWith("node scripts/unit-repeats.ts --reach ") &&
+        step.run.endsWith(" --run"),
     );
-    expect(reach).toBeDefined();
-    const testTools = gate.find((step) => step.uses === "./.github/actions/linux-test-tools");
-    expect(testTools).toBeDefined();
-    expect(testTools?.if).toBe(reach?.if);
-    expect(gate.indexOf(testTools!)).toBeLessThan(gate.indexOf(reach!));
+    expect(others).toEqual([]);
+    expect(reach?.run).toBe(
+      'node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --part 1 --run',
+    );
+    expect(later?.run).toBe(
+      'node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --part "$PART" --run',
+    );
+    const count = gate.find((step) => step.id === "reach-parts");
+    expect(count?.run).toBe(
+      'node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --later-parts',
+    );
+    expect(ci.jobs["code-checks"]?.steps).toContain(count);
+    const testTools = gate.filter((step) => step.uses === "./.github/actions/linux-test-tools");
+    expect(testTools).toHaveLength(2);
+    for (const [tools, reader] of [
+      [testTools[0], reach],
+      [testTools[1], later],
+    ]) {
+      expect(tools?.if).toBe(reader?.if);
+      expect(gate.indexOf(tools ?? {})).toBeLessThan(gate.indexOf(reader ?? {}));
+      expect(gate.indexOf(tools ?? {})).toBeGreaterThan(-1);
+    }
     // INF-2505, gated by INF-2915's plan: the browser project in the build
-    // check, after installing the Chromium it draws in.
-    const chromium = gate.find((step) => step.uses === "./.github/actions/browser-chromium");
+    // check, after installing the Chromium it draws in, which a later part's
+    // browser files draw in too.
+    const chromium = gate.filter((step) => step.uses === "./.github/actions/browser-chromium");
     const browser = gate.find((step) => step.run === "pnpm test --project browser");
-    expect(chromium).toBeDefined();
+    expect(chromium).toHaveLength(2);
     expect(browser).toBeDefined();
     // INF-2915's plan: the build skips on a light version, and the critical
     // path runs inside the build check on the app it built.
@@ -143,9 +170,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       notes,
       phoneFlag,
       ...pathSteps,
+      count,
       reach,
-      testTools,
-      chromium,
+      later,
+      ...testTools,
+      ...chromium,
       browser,
       adherence,
       build,
@@ -166,11 +195,16 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     // Each job sets up and installs on its own; the code checks job alone
     // runs the typecheck and the lint.
-    expect(setup).toHaveLength(5 * BRANCH_CHECK.length + 2);
+    expect(setup).toHaveLength(5 * (BRANCH_CHECK.length + 1) + 2);
     gated.push(...setup);
     for (const [id, job] of Object.entries(ci.jobs)) {
-      expect(job.needs, id).toBeUndefined();
-      const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+      // INF-5493: the later parts alone wait, for the code checks' count of
+      // them, which says whether they start: the wide machines below.
+      expect(job.needs, id).toBe(id === PARTS ? "code-checks" : undefined);
+      const expression = (id === PARTS ? "true" : (job.if ?? "true")).replace(
+        /^\$\{\{\s*|\s*\}\}$/g,
+        "",
+      );
       const ast = new Parser(new Lexer(expression).lex().tokens, ["github", "inputs"], []).parse();
       const eligible = new Evaluator(
         ast,
@@ -187,7 +221,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       );
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
       // A request reaches no change's tests; its sweep runs them all.
-      const runs = fullSweep ? !change : id !== "reached-tests" || change;
+      const runs = fullSweep ? !change : id === PARTS || id !== "reached-tests" || change;
       expect(eligible.evaluate().coerceString(), id).toBe(String(runs));
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
@@ -249,7 +283,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         "pnpm build",
         "pnpm check",
         "pnpm typecheck",
-        ...(change ? [reach?.run, criticalPath?.run, skips?.run] : ["pnpm lint:adherence"]),
+        ...(change
+          ? [count?.run, reach?.run, criticalPath?.run, skips?.run]
+          : ["pnpm lint:adherence"]),
       ].toSorted(),
     );
     // The browser project runs once: in a change's gate, and in a requested
@@ -274,6 +310,21 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
             ["build", "Manual request · Build (Linux)"],
           ],
     );
+    // INF-5493: a change whose tests the code checks counted as three parts
+    // starts two more machines, after the three, each finding the change's
+    // base, installing and running the part its matrix names. A change of
+    // one part, and a request, start none.
+    const wide = ciJobs(eventName, undefined, undefined, undefined, 3);
+    expect(wide.filter(({ id }) => id !== PARTS)).toEqual(machines);
+    expect(wide.filter(({ id }) => id === PARTS).map(({ name, runs }) => [name, runs])).toEqual(
+      trigger
+        ? [2, 3].map((part) => [
+            `${trigger} · Tests a change reaches (Linux; part ${part}/3)`,
+            [install, later?.run?.replace('"$PART"', `${part}/3`)],
+          ])
+        : [],
+    );
+    expect(machines.map(({ id }) => id)).not.toContain(PARTS);
   });
 
   // The captain's ask on a held batch's repair: "cut whatever is redundant
@@ -285,7 +336,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   // request never name a batch version, so they run as before.
   it("runs only the base step on a branch built on a batch's version", () => {
     const held = "c".repeat(40);
-    for (const id of BRANCH_CHECK) {
+    for (const id of [...BRANCH_CHECK, PARTS]) {
       const steps = loadCi().jobs[id]?.steps ?? [];
       const ran = steps.filter(
         (step) =>
@@ -304,8 +355,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         id,
       ).toEqual(["actions/checkout", "Find the change's base"]);
     }
-    // The base step is the shared action, so no job runs a script of its own.
-    expect(ciJobs("push", false, undefined, held).map(({ id, runs }) => [id, runs])).toEqual(
+    // The base step is the shared action, so no job runs a script of its own,
+    // and the code checks count no parts there, so however wide the change,
+    // no later part starts (INF-5493).
+    expect(ciJobs("push", false, undefined, held, 3).map(({ id, runs }) => [id, runs])).toEqual(
       BRANCH_CHECK.map((id) => [id, []]),
     );
     // The batch's own run reads the notes and the phone contract flag from

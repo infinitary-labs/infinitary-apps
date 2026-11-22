@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reach-tests-in-timed-parts",
+      "reason": "The branch check runs a wide change's reached tests as parts of bounded measured time on separate machines, so the step ends inside its limit on a slow machine; nothing in the app changes."
+    }
+  ]
+}

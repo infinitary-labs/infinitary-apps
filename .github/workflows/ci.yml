@@ -13,7 +13,9 @@ name: ci
 # - the build and the one critical-path journey (INF-2507).
 # Before the split these were one job's steps (INF-2915's plan, the captain's
 # direction B); the check runs the same steps, so the longest of the three
-# sets its time instead of their sum.
+# sets its time instead of their sum. A change whose tests hold more measured
+# time than one part takes runs the parts past the first in a fourth job, one
+# machine per part, once the code checks have counted them (INF-5493).
 # A version whose every path is a test, docs, the docs site, a release note or
 # the phone app
 # skips the build and the critical path (scripts/pr-paths.ts). The swept
@@ -96,12 +98,17 @@ jobs:
   # Each of the three skips a batch pull request: the exact pull requests
   # whose checks batch-pull-request.yml starts, a batch branch of this
   # repository itself into the default branch, which the swept batch checks
-  # whole. Each starts on its own, with no `needs`, so none waits for another.
+  # whole. Each starts on its own, with no `needs`, so none waits for another;
+  # only reached-tests-parts waits, for the code checks' count of its parts.
   code-checks:
     if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'infinitary-batch/') && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == github.event.repository.default_branch) }}
     name: ${{ github.event_name == 'pull_request' && 'Pull request · Code checks (Linux)' || github.event_name == 'push' && 'Branch push · Code checks (Linux)' || 'Manual request · Code checks (Linux)' }}
     # An outside contributor's pull request takes hosted Ubuntu before any variable.
     runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    outputs:
+      # The parts of the tests a change reaches past the first, which
+      # reached-tests-parts runs; empty when they take one part.
+      reach-parts: ${{ steps.reach-parts.outputs.later }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -157,6 +164,17 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # How many parts the tests this change reaches take, each at most 900
+      # measured seconds (scripts/unit-repeats.ts, REACH_PART_SECONDS), so a
+      # wide change's reader step ends inside its limit on a slow machine as
+      # on a quick one (INF-5493). reached-tests runs the first part at once;
+      # this step names the others, which reached-tests-parts starts when
+      # this job ends. A few seconds, before the typecheck, so a typecheck
+      # or lint failure still lets every part run.
+      - name: Count the parts of the tests a change reaches
+        id: reach-parts
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
+        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --later-parts
       - run: pnpm typecheck
         if: ${{ steps.base.outputs.batch == '' }}
       - run: pnpm check
@@ -228,9 +246,11 @@ jobs:
       # did not run fails it. A selection wider than 100 files runs as
       # several Vitest runs one after another, each with fresh workers, so an
       # in-memory worker's memory stays inside this runner's (INF-4163).
+      # A selection holding more measured time than one part runs here only
+      # its first part, and reached-tests-parts runs the others (INF-5493).
       - name: Unit, integration and browser tests that read a changed file
         if: ${{ steps.base.outputs.batch == '' }}
-        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run
+        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --part 1 --run
         timeout-minutes: 30
       # The browser layer (docs/testing.md, "The browser layer"): every
       # browser file, about three minutes, when the version touches the
@@ -240,6 +260,67 @@ jobs:
       - name: Browser tests
         if: ${{ steps.paths.outputs.browser == 'true' }}
         run: pnpm test --project browser
+        timeout-minutes: 30
+
+  # The parts past the first of the tests a change reaches, one machine per
+  # part, when the code checks counted more than one (INF-5493): a change to
+  # the shared orchestrator and forge files reached 334 files, which one
+  # machine ran in about 20 minutes and, on a slower one, not inside the
+  # step's 30. Each part finds the change's base and its selection as
+  # reached-tests does and runs the part the matrix names, failing if it
+  # counts the parts otherwise. It skips with the code checks, on a request,
+  # on a branch built on a batch's version and on a change whose tests take
+  # one part, which is most.
+  reached-tests-parts:
+    needs: code-checks
+    if: ${{ !cancelled() && needs.code-checks.outputs.reach-parts != '' }}
+    name: ${{ format('{0} · Tests a change reaches (Linux; part {1}/{2})', github.event_name == 'pull_request' && 'Pull request' || 'Branch push', matrix.part, matrix.parts) }}
+    # An outside contributor's pull request takes hosted Ubuntu before any variable.
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    strategy:
+      # Every part runs, so one push shows each failing reader.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.code-checks.outputs.reach-parts) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          # As the code checks fetch, for the reader step.
+          fetch-depth: ${{ github.event_name != 'push' && 2 || 0 }}
+      # The code checks' step, which says why.
+      - name: Find the change's base
+        id: base
+        uses: ./.github/actions/change-base
+        with:
+          from: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
+      - uses: ./.github/actions/pnpm
+        if: ${{ steps.base.outputs.batch == '' }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: ${{ steps.base.outputs.batch == '' }}
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+        if: ${{ steps.base.outputs.batch == '' }}
+      - uses: ./.github/actions/electron-download
+        if: ${{ steps.base.outputs.batch == '' }}
+      - run: pnpm install --frozen-lockfile
+        if: ${{ steps.base.outputs.batch == '' }}
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # As reached-tests installs them, for the browser and integration
+      # files a part runs.
+      - uses: ./.github/actions/browser-chromium
+        if: ${{ steps.base.outputs.batch == '' }}
+      - uses: ./.github/actions/linux-test-tools
+        if: ${{ steps.base.outputs.batch == '' }}
+      # reached-tests's step, on this machine's part.
+      - name: Unit, integration and browser tests that read a changed file
+        if: ${{ steps.base.outputs.batch == '' }}
+        env:
+          PART: ${{ matrix.part }}/${{ matrix.parts }}
+        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --part "$PART" --run
         timeout-minutes: 30
 
   # The build and the critical path. A request builds; a change builds only

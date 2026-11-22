@@ -468,8 +468,14 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     journeys: ["source-journeys.yml:source-desktop"],
     // The branch check's three jobs (INF-5577's review): its build job runs
     // the critical path, which needs a desktop, so this kind names a queue
-    // of desktop-ready Linux places.
-    typecheck: ["ci.yml:code-checks", "ci.yml:reached-tests", "ci.yml:build"],
+    // of desktop-ready Linux places. A wide change's later parts run beside
+    // them (INF-5493).
+    typecheck: [
+      "ci.yml:code-checks",
+      "ci.yml:reached-tests",
+      "ci.yml:reached-tests-parts",
+      "ci.yml:build",
+    ],
   };
   const queued = new Set<string>();
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };

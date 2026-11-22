@@ -56,4 +56,22 @@ describe("timingsFromReports", () => {
     ]);
     expect(result).toEqual({ "src/a.test.ts": 9 });
   });
+
+  // INF-5493: main's Linux test groups check out the repository at a path
+  // of their own, so a report downloaded from one names each file by that
+  // path; the record names it from this repository's root, and drops a file
+  // the repository no longer has.
+  it("names a downloaded report's files from the repository root", () => {
+    const checkout =
+      "/home/runner/work/infinitary-apps/infinitary-apps/Application Support/firstmate";
+    const result = timingsFromReports([
+      {
+        testResults: [
+          { name: `${checkout}/tests/shard-balance.test.ts`, startTime: 0, endTime: 1500 },
+          { name: `${checkout}/tests/no-longer-here.test.ts`, startTime: 0, endTime: 1500 },
+        ],
+      },
+    ]);
+    expect(result).toEqual({ "tests/shard-balance.test.ts": 1.5 });
+  });
 });

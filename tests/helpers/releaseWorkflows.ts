@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { compileFunction, constants } from "node:vm";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { expect } from "vitest";
+import { laterParts } from "../../scripts/unit-repeats.ts";
 import { hostEnv } from "../../src/core/hostEnv";
 import { scratchDir } from "./scratchDirs";
 
@@ -197,6 +198,9 @@ export function ciJobs(
   // The batch version the base step of a pushed branch built on one names,
   // as a held batch's repair is; empty for every other branch.
   batch = "",
+  // How many parts the tests a change reaches take (scripts/unit-repeats.ts,
+  // reachParts), which the code checks count for reached-tests-parts.
+  parts = 1,
 ): { id: string; name: string; runs: string[] }[] {
   const ci = loadCi();
   const repository = "infinitary-labs/infinitary-apps";
@@ -221,17 +225,33 @@ export function ciJobs(
       : { base: { outputs: {} }, paths: { outputs: {} }, "critical-path": { outcome: "skipped" } };
   // A request asks for the sweep through ci.yml's `sweep` input.
   const inputs = { sweep };
+  // The code checks' count of the parts, when its step runs, in the output
+  // its own script writes.
+  const count = ci.jobs["code-checks"]?.steps.find((step) => step.id === "reach-parts");
+  const counted =
+    count?.if === undefined || workflowValue(count.if, { github, steps }) === true
+      ? laterParts(Array.from({ length: parts }, () => []))
+      : "";
+  const needs = { "code-checks": { outputs: { "reach-parts": counted } } };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {
-    if (job.if !== undefined && workflowValue(job.if, { github, inputs }) !== true) return [];
-    const matrix = Object.entries(job.strategy?.matrix ?? {});
+    if (job.if !== undefined && workflowValue(job.if, { github, inputs, needs }) !== true)
+      return [];
+    const { include, ...axes } = (job.strategy?.matrix ?? {}) as Record<string, unknown[]> & {
+      include?: unknown;
+    };
+    const matrix = Object.entries(axes);
     if (matrix.some(([, values]) => !Array.isArray(values))) {
       throw new Error(`${id}: only a matrix of plain lists is read here`);
     }
-    const entries = matrix.reduce<Record<string, unknown>[]>(
-      (combos, [key, values]) =>
-        combos.flatMap((combo) => values.map((value) => ({ ...combo, [key]: value }))),
-      [{}],
-    );
+    // A matrix the code checks counted lists its entries in the JSON their step wrote.
+    const entries =
+      typeof include === "string"
+        ? (workflowValue(include, { needs }) as Record<string, unknown>[])
+        : matrix.reduce<Record<string, unknown>[]>(
+            (combos, [key, values]) =>
+              combos.flatMap((combo) => values.map((value) => ({ ...combo, [key]: value }))),
+            [{}],
+          );
     return entries.map((entry, index) => {
       const contexts = {
         matrix: entry,

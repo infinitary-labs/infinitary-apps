@@ -37,8 +37,9 @@ export function openCardAskingAbout(
 
 /**
  * Why the first mate's start of a task waits for the captain (the soft hold
- * `card-question`), or undefined. It holds `update_task start_now`, and a
- * `start_policy` of when-ready, which would let the ready sweep start it.
+ * `card-question`), or undefined. It holds `update_task start_now`, a
+ * `start_policy` of when-ready, and the removal of when-ready work's last
+ * wait, either of which would let the ready sweep start it.
  * Only a start not yet made - queued work, or started work in the backlog -
  * waits, and only while its own open decision asks about it and the turn
  * carries no words the captain typed: a click on another card is not their
@@ -56,7 +57,7 @@ export function cardHeldStartRefusal(
     captainWords: boolean;
     captainPressedStart: boolean;
     /** The edit held, when it is not start_now itself. */
-    edit?: "when-ready";
+    edit?: "when-ready" | "wait-removal";
   },
 ): string | undefined {
   if (facts.captainWords || facts.captainPressedStart) return undefined;
@@ -68,7 +69,12 @@ export function cardHeldStartRefusal(
   if (!card) return undefined;
   const handle = `${record.key || record.id} "${record.title}"`;
   // i18n-exempt: the first mate's tool answer, served only to a model
-  const what = facts.edit === "when-ready" ? "Not set to start when ready" : "Not started";
+  const what =
+    facts.edit === "when-ready"
+      ? "Not set to start when ready"
+      : facts.edit === "wait-removal"
+        ? "Wait not removed"
+        : "Not started";
   // i18n-exempt: the first mate's tool answer, served only to a model
   return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${softHoldWords("card-question", "firstmate")}`;
 }

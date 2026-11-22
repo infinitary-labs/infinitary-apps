@@ -101,6 +101,34 @@ describe("FirstmateAgent start held by its own open card", () => {
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
   });
 
+  // The review's second finding: removing the last wait lets the ready sweep start it.
+  it("refuses removing the last wait of when-ready work from a wake while the card waits", async () => {
+    const f = await cardUp();
+    await f.agent.converse("let the key fix wait for the alpha cut work");
+    await f.tools.get("update_task")?.execute("wait", {
+      task: f.task.key,
+      start_policy: "when-ready",
+      blocked_by: ["origin"],
+    });
+    f.session.emitTurnEnd("It waits.");
+    f.session.resolveNextPrompt();
+    await tick();
+    await reportWake(f);
+    const text = (
+      await f.tools.get("link_tasks")?.execute("unwait", {
+        from: "origin",
+        to: f.task.key,
+        type: "blocks",
+        remove: true,
+      })
+    )?.content[0]?.text;
+    expect(text).toContain(`Wait not removed: your open card "${decision.title}"`);
+    await tick();
+    expect(f.tasks.graph.blockers(f.task.id).map((row) => row.id)).toEqual(["origin"]);
+    expect(f.tasks.get(f.task.id)?.status).toBe("open");
+    expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
+  });
+
   // The captain's pick on the review: "Only your typed words, or your answer on that card".
   it("keeps the hold when the turn carries only a click on another card", async () => {
     const f = await cardUp();

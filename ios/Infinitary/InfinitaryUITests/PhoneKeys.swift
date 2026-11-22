@@ -66,6 +66,25 @@ let englishPhone = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
     app.typeKey(canonicalKey == "\r" ? "\n" : canonicalKey == "\t" ? "\t" : key, modifierFlags: modifiers)
 }
 
+/// INF-6074: on a starved simulator the system's keyboard can take back the caret a key put in a text field. The
+/// field's keyboard comes up, the keyboard arbiter's connection fails, and UIKit resigns the field, all while XCTest
+/// waits for the app to go idle after the key. The test home reads those lines from the app's own log since `since`,
+/// the runner's time before it asked for the key, on the simulator's clock in milliseconds; the proof is their lines
+/// when they show it, and nil otherwise, so a caller recovers only on that proof and never presses the key twice.
+@MainActor func phoneCaretTakenBack(since: Double) -> [String]? {
+    do {
+        let reply = try askPhoneHome("caret-outcome", since: since)
+        _ = waitForPhonePredicate(NSPredicate { _, _ in reply.value != nil }, object: nil, timeout: 40)
+        let outcome = try reply.answer()
+        print("Caret outcome: \(outcome)")
+        guard outcome["outcome"] as? String == "taken-back" else { return nil }
+        return outcome["proof"] as? [String]
+    } catch {
+        XCTFail("The caret's outcome was not read: \(error)")
+        return nil
+    }
+}
+
 /// INF-1477 (the captain's choice "Allow a proven second tap"): XCTest gives each synthesized tap a virtual touch
 /// screen of its own. A starved simulator's backboardd can attach that screen as an accessory, or as a bad usage pair,
 /// and ignore its touches, and XCTest then confirms the tap after five seconds with no error. Every tap a phone journey

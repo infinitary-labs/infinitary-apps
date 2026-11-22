@@ -1,6 +1,7 @@
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ACTION_NAMES, ACTIONS } from "@shared/actions";
 import { CARD_PICTURE_HOST } from "@shared/cardPictures";
 import { APP_FRAME_SCHEME } from "@shared/csp";
 import {
@@ -174,6 +175,9 @@ async function bootAndRead<T>(
         if (entry.surface !== "core" || entry.effect !== "read") continue;
         // A read that needs arguments has no fresh-home answer; a test gives its own.
         if (!entry.request.safeParse([]).success) continue;
+        // A read an act runs (Check for updates) is a press with a trail of
+        // its own, never a reading the window takes unasked.
+        if (ACTION_NAMES.some((name) => ACTIONS[name].change === channel)) continue;
         try {
           answers.plain[channel] = await core.dispatch(channel as CoreInvokeChannel, [] as never);
         } catch {

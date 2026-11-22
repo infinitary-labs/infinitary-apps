@@ -8,6 +8,7 @@ import { type CostLimit, formatUsd } from "@shared/costLimit";
 import type { DeviceView } from "@shared/devices";
 import { deviceRunsWork } from "@shared/devices";
 import { cardWordsMark, englishOf, said, saidMark } from "@shared/i18n/said";
+import type { CoreInvokeChannel } from "@shared/ipc";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, type PlacementRequirements } from "@shared/placement";
 import {
   opensPullRequest,
@@ -113,11 +114,11 @@ export class ProjectChanges {
       actor.evidence?.trim()
     ) {
       const args = await actionRequest(dispatch, action, value);
-      await dispatch(line.change!, args, actor);
+      await dispatch(line.change as CoreInvokeChannel, args, actor);
       return {
         text: JSON.stringify({
           action,
-          current: actionValue(action, await dispatch(line.current!, [])),
+          current: actionValue(action, await dispatch(line.current as CoreInvokeChannel, [])),
         }),
       };
     }
@@ -174,7 +175,7 @@ export class ProjectChanges {
           throw new Error("The project changed since this card was written. Ask for a new card.");
         const args = await actionRequest(dispatch, offer.action, offer.value);
         // A one-project change rechecks its row in dispatch.
-        await dispatch(ACTIONS[offer.action].change!, args, {
+        await dispatch(ACTIONS[offer.action].change as CoreInvokeChannel, args, {
           kind: "captain",
           projectBefore: offer.before,
         });
@@ -298,7 +299,7 @@ export class ProjectChanges {
     return this.dispatch;
   }
   private async current(action: ActionName, value: Record<string, unknown>): Promise<unknown> {
-    const current = await this.ready()(ACTIONS[action].current!, []);
+    const current = await this.ready()(ACTIONS[action].current as CoreInvokeChannel, []);
     const repo = (current as RepoView[]).find((r) => r.id === value.repoId);
     if (!repo) throw new Error("That project is no longer here.");
     if (repo.kind === "personal") throw new Error("The personal workspace's settings stay fixed.");

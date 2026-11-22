@@ -11,19 +11,27 @@ Presentation preferences (theme, size, wash, default card size, rails and panels
 
 ## When to use it, and when not
 
-Add a catalog line when a new feature has a setting either actor may change; claim each field of a shared request object with `fields`, or name it in `ACTION_FIELD_EXCEPTIONS` with a reason.
+Add a catalog line when a new feature has a setting or an act either actor may run; claim each field of a claimed request object with `fields`, or name it in `ACTION_FIELD_EXCEPTIONS` with its ground.
 Do not add a private IPC setter, a panel-only write path, or a first mate tool that writes one setting: that is the parallel system the catalog replaced, and the parity check refuses it.
 Do not keep a presentation preference in `localStorage` or the shell store alone: presentation preferences live in the core (`src/shared/preferences.ts`), never in `localStorage` or the shell store alone.
-Conversation, card clicks, sign-in interaction and a crewmate's own work are not settings; they stay outside the table as named `ACTION_EXCEPTIONS` in `src/shared/actionCoverage.ts`.
+Conversation, card clicks, sign-in interaction and a crewmate's own work are not settings; they stay outside the table as named `ACTION_EXCEPTIONS` in `src/shared/actionCoverage.ts` (see "What stays outside the catalog").
 Task, card and panel-removal abilities keep their own execution paths ([tasks.md](tasks.md), [cards-and-consent.md](cards-and-consent.md), [panels.md](panels.md)).
 Panels and plugins gain no change ability through the catalog.
 A panel reads a line only through its panel value (`PANEL_SETTINGS`, `src/shared/panelSettings.ts`, served as `settings.current`, [live-reads.md](live-reads.md)); a new line names its panel value or a ground for having none, or the catalog does not compile.
 Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/keyboard.ts`, `docs/keyboard.md`) with their own resolver and handlers, not this dispatcher; a key that changes a setting makes the same catalog change as the control it mirrors (the size keys make the `window-size` change the Size picker makes).
 
+## What stays outside the catalog
+
+Every changing core request is a catalog line or an excuse in `ACTION_EXCEPTIONS`, and every changing request the window's own program answers (`surface: "host"`) is a catalog line, such as the key reminder's switch, or an excuse in `HOST_ACTION_EXCEPTIONS`.
+Each excuse, and each field excuse in `ACTION_FIELD_EXCEPTIONS`, names its ground from the closed set `EXCEPTION_GROUNDS`, then why in words.
+The grounds are a credential (a sign-in, key, secret value or joining link), the captain's consent the app holds for their own click, an act that cannot be undone or ends running work (`destructive`), another computer's own report or act, a recorded captain ruling, a request only the crew or a panel's own code sends (`crew-only`), the window's own program on the computer the captain is at (`window`), and a report, view stamp or conversation nobody chooses (`not-a-setting`).
+The captain's click alone is no ground: a control with none of these is a catalog line.
+
 ## Owner and entry points
 
 - The catalog: `ACTIONS`, `ActionTier`, `ActionLine`, `actionRefusal` and `actionActors` in [`src/shared/actions.ts`](../src/shared/actions.ts).
-- Coverage and exceptions: `ACTION_EXCEPTIONS`, `ACTION_FIELD_EXCEPTIONS` and `uncoveredSettings` in [`src/shared/actionCoverage.ts`](../src/shared/actionCoverage.ts).
+- The appearance lines, the panel line and the one-off acts: [`src/shared/appearanceActions.ts`](../src/shared/appearanceActions.ts), [`src/shared/panelActions.ts`](../src/shared/panelActions.ts) and [`src/shared/settingsActs.ts`](../src/shared/settingsActs.ts), spread into `ACTIONS`.
+- Coverage and exceptions: `EXCEPTION_GROUNDS`, `ACTION_EXCEPTIONS`, `ACTION_FIELD_EXCEPTIONS`, `HOST_ACTION_EXCEPTIONS`, `unaccountedChanges`, `groundlessExcuses` and `uncoveredSettings` in [`src/shared/actionCoverage.ts`](../src/shared/actionCoverage.ts).
 - The one dispatcher: `createCoreDispatcher` in [`src/core/dispatcher.ts`](../src/core/dispatcher.ts), whose catalog change (`createCatalogDispatch` in [`src/core/dispatcher/catalogDispatch.ts`](../src/core/dispatcher/catalogDispatch.ts)) enforces actor permissions independently of any tool and writes the trail (`SETTLE_MS`).
 - The first mate's tools: `app_state` and `app_change` in `createAppTools` ([`src/core/pi/appTools.ts`](../src/core/pi/appTools.ts)), with `handoverOffer` for hand-over cards.
 - Presentation preferences: the schemas in [`src/shared/preferences.ts`](../src/shared/preferences.ts), and `ShellPreferencesService` ([`src/core/preferences/shellPreferences.ts`](../src/core/preferences/shellPreferences.ts)) as the one writer over appearance/layout/panels, pushing the whole value as `inf:shell:preferences`.
@@ -31,12 +39,16 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 
 ## Operations and lifecycle
 
-- Read: `app_state` returns each line's current value from its `current` channel, or with `read` one named read that `area: "reads"` lists (`APP_READS` in [`src/core/pi/appReads.ts`](../src/core/pi/appReads.ts)), on demand, through the read catalog's own entry where it has one ([live-reads.md](live-reads.md)).
+- Read: `app_state` returns each line's current value from its `current` channel, trimmed by its `readValue` to what the action needs: never an install ID, a sign-in code, a login, an address or what a server runs.
+  With `read` it returns one named read that `area: "reads"` lists (`APP_READS` in [`src/core/pi/appReads.ts`](../src/core/pi/appReads.ts)), on demand, through the read catalog's own entry where it has one ([live-reads.md](live-reads.md)).
 - Execute: the dispatcher checks the actor, parses the request, reads the value before, runs the handler and, for an applied change, writes one attributed feed line and one operation (never a card).
 - Unchanged values and refusals leave no success trail; acts rather than values (`alwaysTrail`) always leave one.
+- Acts: a line whose request does something besides set a value, such as Check for updates or Stop keeping a copy, writes its trail from the request and the handler's answer (`trailOf`), or none when the act found nothing to do; `app_change` answers what the handler said (`answers`) beside the value read after.
+- A line that runs only part of its request's acts names the others in `refuses`, and the dispatcher refuses them for the first mate: turning a decision model use on, any secret action but ending a read, starting to keep a copy.
 - Settle: a run of the captain's own steps on one setting is one feed line and one operation, rewritten in place until `SETTLE_MS` (10 seconds) pass, another line enters Activity, or another setting changes; a run that returns to its start is withdrawn (`TaskService.archive.withdrawOperation`).
 - Each first mate change stays its own line and operation, so the answer check finds one action per captain message (`docs/task-capture.md`).
 - Propose: a `proposes` line (such as `project-setup`) changes nothing; the host puts up its own card from typed facts, and only that card's button runs the change.
+- A window's own setting: a line on a window's own request (`WINDOW_CHANNELS`, its look, layout, update and key reminder) is marked `window: true` in `app_state`, and `app_change`'s `computer` names the Mac that controls this one whose window it changes; the core asks that window, which sets only the fields the request sets (`sets`, for a line that owns several) and only while each still reads as the first mate read it or already as asked, answering as its own Settings would (`ViewWindows`, docs/view.md, "What the first mate asks of a window"), and the trail reads the window's own before and after values and names the computer.
 - Hand over: a `hands` line the first mate asks for becomes a host-written card (`HandoverOffer`) whose button opens the relevant Settings section; it never submits credentials.
 - A hand-over card opens the exact place: its open effect names the Settings `section` and the `item` that section shows on arrival, a project in Projects, a computer in Devices, a page in Secrets, `inbox` in Integrations or `kept:<id>` in Automation, the same `item` a panel's `point.openSettings` passes.
 - Only a card's own arrival carries an act the captain's click starts, such as `phone` (make a phone's link) or a computer's GitHub sign-in; an `item` only chooses and shows, so every control there stays the captain's.
@@ -83,7 +95,8 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 - The window Size picker, the size keys, the View menu and command search, all making the `window-size` change.
 - Theme, wash and panel arrangement from Settings → Appearance or the first mate (`theme`, `panel`).
 - Settings → Automation's edit, pause and delete (`automation-edit`, `automation-state`, `automation-pause-all`, `automation-delete`).
-- Settings → Automation's Remove for good on a job kept running (`kept-job-remove`).
+- Settings → Automation's Remove for good and Check on a job kept running (`kept-job-remove`, `kept-job-check`).
+- Settings' undo and repair buttons, run by the first mate when asked: Keep it, Cancel a move, Stop keeping a copy, Fix it, Try again, Retry and Ask again on a panel, End now on a read of secrets, Remove on a private site, and turning a decision model use off.
 - The first mate's `project-setup` proposal card and its hand-over cards.
 - The first mate's `show-task` and `show-settings`, beside a panel's `point.openRecord` and `point.openSettings`.
 
@@ -91,6 +104,9 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 
 - [`src/shared/actions.test.ts`](../src/shared/actions.test.ts): action permissions, channel parity and per-field claims.
 - [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch, refusals and settled runs.
+- [`src/core/core.settingsParity.test.ts`](../src/core/core.settingsParity.test.ts): the first mate's Settings acts and their refusals in the whole core, and a window's own setting changed at the named computer's window.
+- [`src/core/viewWindows.test.ts`](../src/core/viewWindows.test.ts) and [`src/shared/windowAnswer.test.ts`](../src/shared/windowAnswer.test.ts): an ask answered only by the window asked, and how a window answers.
+- [`tests/e2e/paired-window-settings.spec.ts`](../tests/e2e/paired-window-settings.spec.ts): the first mate changes a paired Mac's usage unit and key reminder at its window, and its own computer's key reminder at its own, in two apps.
 - [`src/core/preferences/shellPreferences.test.ts`](../src/core/preferences/shellPreferences.test.ts): the one presentation writer.
 - [`tests/e2e/activity-runs.spec.ts`](../tests/e2e/activity-runs.spec.ts): a run of steps is one Activity line.
 

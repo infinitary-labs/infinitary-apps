@@ -1096,6 +1096,7 @@ export async function startApp(
         return programAtStart !== null && now !== null && now !== programAtStart;
       };
       const shell: Shell = new Shell({
+        keyReminders: () => keyReminders,
         keySystem: desktop.keys,
         joined: new JoinedHome(join(dataDir, "joined")),
         // Beside a run: its local door, its pictures, and this window's own look.

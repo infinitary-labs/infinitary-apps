@@ -164,6 +164,24 @@ A proof log a merge card names is asked of the other Mac the same way (`inf:card
 A card's file for the captain saves into this Mac's Downloads: the window's own process asks the other Mac for it a piece of 1 MB at a time (`inf:cards:file`, a `views` read of the card's file answering that piece as base64 with the whole file's size and sha256) and saves it here once it arrives whole (`docs/card-authoring.md`, "Files for the captain").
 A card's demo recording plays in this app's picture viewer a range at a time (a GIF demo is asked whole, in the same pieces, each time Play is pressed): each range is asked of the other Mac at most one piece of 1 MB at a time (`inf:cards:media`, a `views` read of a minted recording name, an offset and a length, answering that piece as base64 and the whole file's size), never kept, since the player asks again for what it needs.
 
+## What the first mate asks of a window
+
+A window's own settings are its computer's, so the first mate changes them at the window the captain names, never at its own computer's in their place (the captain's pick on the Settings parity review).
+`app_state` marks those lines `window: true`: a window's look and layout, its update check and channel, and its key reminder (`WINDOW_CHANNELS`, `src/shared/windowAsks.ts`).
+`app_change` takes the Mac by its name or id in `computer`, from the computers that control this one; left out, it means this computer.
+The core sends one live frame (`inf:view:ask`, `ViewWindows`, `src/core/viewWindows.ts`) to one connection of that Mac, the newest that lists the `window-asks` contract change, so the ask's id reaches no other connection and the change runs once.
+The window answers as its own Settings would, through the same `ViewBackend.dispatch` and the same key reminder store (`answerWindowAsk`, `src/shared/windowAnswer.ts`), by `inf:view:answer`.
+The first mate builds a change to the look or the layout from one reading of the window's value, and the ask carries every field this request sets, each with its value in that reading (`changes`), one it sets to the value read included; a line that owns several fields names those a value sets (`ActionLine.sets`), so music played with no volume named leaves the window's volume alone.
+The window reads its own value again: a field that reads as the first mate read it, or already as the change asks, is fine; one its own Settings moved to another value since makes it change nothing and say so (`changedThere`); otherwise it sets only those fields over its value as it is then, so its own edit to any other field stays.
+It answers its value after the change and its value just before (`before`).
+The core hears the answer only from the window it asked, as the captain at that computer, and uses it only once both values match the contract.
+It runs the catalog line's checks, trail and operation as for any change, reading the window's own before and after values rather than the first mate's reading, so an edit made there since is no line of the first mate's, and the trail names the computer ("usage shown in usd on Studio"); Check for updates there is a line of its own too.
+A window's changes wait only on that window's other changes, never on this computer's Settings writes.
+The key reminder only a window's own program keeps, so the first mate's computer asks its own window for it through the local door (`LocalWindow`, and the window beside a command), and a reminder no window answers reads as unknown in `app_state`.
+When no such window is connected, nothing is sent and nothing changes, and the first mate is told so.
+When a window was asked but did not answer within thirty seconds (`WINDOW_ANSWER_WAIT_MS`), or answered what the contract does not admit, the change may or may not have been made there, and the first mate is told to look before asking again.
+The connection holds each ask's id for the window it went to until that window answers, the same thirty seconds run out or that window leaves, whichever comes first (`heldAsks`, `src/core/connection/heldAsks.ts`); an answer after that reaches nothing.
+
 ## The first mate's own words
 
 The first mate's core writes its own computer as this computer (`HERE`, `src/shared/deviceNames.ts`), which on a computer that controls it would name the computer the captain is at.
@@ -434,6 +452,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 
 ## Tests
 
+- `src/core/viewWindows.test.ts` and `src/shared/windowAnswer.test.ts`: an ask answered only by the window asked, a window not connected or silent, and a window answering its own ask; `src/core/core.settingsParity.test.ts`: a window's own setting changed at the named Mac's window and not at the first mate's computer, and the key reminder asked of this computer's window.
 - `src/main/shell.test.ts`, "names that Mac where its own refusals and feed lines say this computer", and `src/main/shell.localWindow.test.ts`, "shows its first mate's own refusals and feed lines as its core wrote them": a view names the first mate's computer in each refusal shape, a refused request, a line it marked, a task's record and its own cards, in every answer and push they ride, and leaves the captain's and a crewmate's words; the first mate's own window shows each as written.
 - `src/main/view/namedHere.test.ts`: what naming changes - a line's fact and its places, a record's own lines with the pull request they link, its timeline readings and problem, a host card's title, body and change bar, and the brief and a crewmate's words left as written.
   `src/core/tasks/taskFeed.test.ts`, "the first mate's own words on the feed", and `src/core/tasks/recordActivity.test.ts`, "marks the lines in the first mate's computer's own words": which lines the core marks.

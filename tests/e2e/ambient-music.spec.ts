@@ -6,6 +6,7 @@ import { pointsAlong, windowDragAt } from "./dragRegions";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { atRest } from "./layout";
+import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine } from "./rails";
 import { readSavedData } from "./savedData";
@@ -89,6 +90,29 @@ test("ambient music can be paused from the toolbar and stays paused after reopen
     await pressKey(appearance(reopened), "Escape");
     await expect(sound(reopened)).toHaveCount(0);
     await expect.poll(() => player(reopened)).toBe("off");
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-5347: the first mate, asked to play the music, plays it even after the
+// pause key paused it, and the saved pause goes, as the Settings switch does.
+test("the first mate plays ambient music the pause key paused", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  try {
+    const { app, page, userDataDir } = launched;
+    await runFromSearch(app, page, "ambient.toggle");
+    await expect.poll(() => player(page)).toBe("playing");
+    await pressWindowKey(app, "P", ["alt", "meta"]);
+    await expect.poll(() => player(page)).toBe("paused");
+    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: true, paused: true });
+
+    await askFirstmate(
+      page,
+      APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action: "ambient-music", value: { on: true } }),
+    );
+    await expect.poll(() => player(page)).toBe("playing");
+    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: true, paused: false });
   } finally {
     await launched.close();
   }

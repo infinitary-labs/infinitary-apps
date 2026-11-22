@@ -109,7 +109,8 @@ export function createActionTrail(
       settle(name, value, step);
       return;
     }
-    const text = ACTIONS[name].done(value);
+    // A change asked of another computer's window names that computer.
+    const text = `${ACTIONS[name].done(value)}${actor.kind === "firstmate" && actor.window ? ` on ${actor.window.name}` : ""}`;
     const row = services.tasks.capture.fileOperation({
       id: randomUUID().slice(0, 8),
       title:

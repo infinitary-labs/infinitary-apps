@@ -836,9 +836,10 @@ Every panel's place is one saved arrangement ("Preferences by talking"), and the
   A row drags as a header does, and the keyboard moves it.
   Reset to defaults asks once more on the same button, then puts every panel where it asks to be in its declared order (`defaultArrangement`), clears the placements and More picks saved before the arrangement, and keeps each panel's collapse and visibility.
   On a Mac that controls another, the tab arranges that Mac's own layout and writes nothing to the first mate's computer (`docs/view.md`, "Settings on a view").
-- **The first mate's `panel` action** moves one panel to a slot's middle, or just above or below another ("Preferences by talking").
+- **The first mate's `panel` action** moves one panel to a slot's middle, or just above or below another, makes one a full rail's More pick, which moves it to its slot's edge, or, with `reset` alone, does what Reset to defaults does (`resetLayout`) ("Preferences by talking").
+  A reset is the one first mate change that may move several panels at once, and only while it keeps every panel's visibility and collapse.
 
-A move names one panel on the Activity feed, with where it now sits ("Tokyo moved to the right rail, top, above Tasks"); a change that moves several at once is one line.
+A move names one panel on the Activity feed, with where it now sits ("Tokyo moved to the right rail, top, above Tasks"); a change that moves several at once is one line, and so is a More pick or a reset that moved nothing on screen.
 Two neighbours that trade places read the same either way, so the window's write names the panel the captain moved (`LayoutMove`, the optional second part of `inf:settings:layout:set`), and the first mate's `panel` action names its own.
 Settings' tabs run down a column on its left (the design skill's `components/core/SettingsTabs.prompt.md`), since the tabs no longer fit one row.
 

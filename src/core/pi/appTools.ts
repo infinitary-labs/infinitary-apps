@@ -13,10 +13,14 @@ import {
   isProjectChange,
   OWN_WORDS_ACTIONS,
 } from "@shared/actions";
+import type { CoreInvokeChannel } from "@shared/ipc";
 import type { KeymapSnapshot } from "@shared/keymap";
+import { knownPanels } from "@shared/panelArrangement";
 import type { Layout } from "@shared/preferences";
 import { runbookGatesOf } from "@shared/surfaces";
+import { isWindowChannel, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import { Type } from "typebox";
+import { LOCAL_CLIENT } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
 import { boundTool, stringEnum } from "../session/tools";
@@ -63,9 +67,45 @@ export async function handoverOffer(
   // A value the line does not read is refused, never offered as something
   // else: an address that is not one never becomes a card for a link.
   const value = line.value.parse(raw ?? {}) as Record<string, unknown>;
-  const current = line.current ? await dispatch(line.current, []) : null;
+  const current = line.current ? await dispatch(line.current as CoreInvokeChannel, []) : null;
   const also = line.offerReads ? await dispatch(line.offerReads, []) : undefined;
   return line.offer(value, current, { platform, ...(also === undefined ? {} : { also }) });
+}
+
+/**
+ * The window a line's own requests go to (docs/view.md, "What the first mate
+ * asks of a window"): the named Mac's that controls this one, for a window's
+ * own request, or this computer's window for a key reminder, which only a
+ * window keeps. Undefined means the core answers itself.
+ */
+export async function windowOf(
+  dispatch: CoreDispatch,
+  line: ActionLine,
+  computer: string | undefined,
+): Promise<{ deviceId: string; name: string } | undefined> {
+  if (computer !== undefined) {
+    if (!line.change || !isWindowChannel(line.change))
+      throw new Error(
+        "computer names a window only for a window's own setting; this one is the first mate's computer's.",
+      );
+    const macs = (await dispatch("inf:devices:list", [])).filter(
+      (device) => device.kind === "mac" || device.kind === "view",
+    );
+    const wanted = computer.trim().toLowerCase();
+    const byId = macs.find((device) => device.id === computer);
+    const byName = macs.filter((device) => device.name.toLowerCase() === wanted);
+    if (!byId && byName.length > 1)
+      throw new Error(`More than one Mac is named ${computer}; name it by its id.`);
+    const found = byId ?? byName[0];
+    if (!found)
+      throw new Error(
+        `No Mac that controls this one is named ${computer}. Leave computer out for this computer${macs.length ? `, or name one of ${macs.map((device) => device.name).join(", ")}` : ""}.`,
+      );
+    return { deviceId: found.id, name: found.name };
+  }
+  return line.change && WINDOW_ONLY_CHANNELS.has(line.change)
+    ? { deviceId: LOCAL_CLIENT, name: "this computer" }
+    : undefined;
 }
 
 /** Each request preserves unrelated values on the existing whole-value channels. */
@@ -77,7 +117,9 @@ export async function actionRequest(
 ): Promise<unknown[]> {
   const line: ActionLine = ACTIONS[action];
   const value = line.value.parse(raw) as Record<string, unknown>;
-  let current: unknown = line.current ? await dispatch(line.current, []) : null;
+  let current: unknown = line.current
+    ? await dispatch(line.current as CoreInvokeChannel, [])
+    : null;
   if (action === "panel") {
     const personal = await dispatch("inf:plugins:personal:list", []);
     const { held: knowledge } = await dispatch("inf:knowledge:enabled", []);
@@ -99,13 +141,15 @@ export async function actionRequest(
         );
       return found;
     };
-    const surface = find(value.surface as string);
+    // A reset names no surface: every panel goes back where it asks to be.
+    const surface = value.surface === undefined ? undefined : find(value.surface as string);
     // "Put Rolling alpha above Mac CI": the panel it goes next to.
     const next = (value.above ?? value.below) as string | undefined;
     current = {
       layout: current,
       surface,
       surfaces,
+      known: knownPanels(personal),
       ...(next !== undefined ? { neighbour: find(next) } : {}),
     };
   }
@@ -120,6 +164,26 @@ export async function actionRequest(
 export function actionValue(action: ActionName, current: unknown): Record<string, unknown> {
   return ACTIONS[action].readValue(current);
 }
+/**
+ * A line's current value for app_state: this computer's, or, for a key
+ * reminder, this computer's window's; one no window answers now reads null.
+ */
+async function stateOf(
+  delegate: AppToolsDelegate,
+  line: ActionLine,
+  name: ActionName,
+): Promise<unknown> {
+  const window = await windowOf(delegate.dispatch, line, undefined);
+  if (!window) return delegate.dispatch(line.current as CoreInvokeChannel, []);
+  return delegate
+    .dispatch(line.current as CoreInvokeChannel, [], {
+      ...delegate.actor(),
+      action: name,
+      window,
+    })
+    .catch(() => null);
+}
+
 export function createAppTools(delegate: AppToolsDelegate) {
   return [
     boundTool({
@@ -167,9 +231,11 @@ export function createAppTools(delegate: AppToolsDelegate) {
                   }),
                 line: line.line,
                 valueSchema: line.value.toJSONSchema(),
+                // A window's own setting: app_change's computer names which window.
+                ...(line.change && isWindowChannel(line.change) ? { window: true } : {}),
                 current: actionValue(
                   name,
-                  line.current ? await delegate.dispatch(line.current, []) : null,
+                  line.current ? await stateOf(delegate, line, name) : null,
                 ),
               };
             },
@@ -187,6 +253,13 @@ export function createAppTools(delegate: AppToolsDelegate) {
         value: Type.Object({}, { additionalProperties: true }),
         evidence: Type.String({ minLength: 1 }),
         on_words: Type.Optional(Type.Boolean()),
+        computer: Type.Optional(
+          Type.String({
+            minLength: 1,
+            description:
+              "For a window's own setting (window true in app_state): the Mac, by name or id, that controls this one and whose window the captain means, usually where they are. Omit it for this computer.",
+          }),
+        ),
       }),
       run: async (params) => {
         try {
@@ -201,13 +274,22 @@ export function createAppTools(delegate: AppToolsDelegate) {
                 : ACTIONS[action].line,
             };
           const named = (params.value as { surface?: unknown } | undefined)?.surface;
+          const window = await windowOf(
+            delegate.dispatch,
+            ACTIONS[action],
+            params.computer as string | undefined,
+          );
           const actor = {
             ...delegate.actor(),
             action,
             evidence: params.evidence as string,
             projectWords: params.on_words === true,
             ...(action === "panel" && typeof named === "string" ? { target: named } : {}),
+            ...(window ? { window } : {}),
           };
+          // A window's own request, and the reads around it, go to that window.
+          const asked: CoreDispatch = ((channel: CoreInvokeChannel, args: unknown) =>
+            delegate.dispatch(channel, args, actor)) as CoreDispatch;
           if (isProjectChange(action) && delegate.changeProject)
             return { text: await delegate.changeProject(action, params.value, actor) };
           const refusal = actionRefusal(ACTIONS[action], actor);
@@ -232,15 +314,43 @@ export function createAppTools(delegate: AppToolsDelegate) {
           }
           const line = ACTIONS[action];
           if (!line.change || !line.current) return { text: line.line };
+          // A window's request is built from one reading of its value, which
+          // the change carries so the window changes only what it changes.
+          const read = window ? await asked(line.current as CoreInvokeChannel, []) : undefined;
+          const reading: CoreDispatch = window
+            ? (((channel: CoreInvokeChannel, args: unknown) =>
+                channel === line.current
+                  ? Promise.resolve(read)
+                  : asked(channel, args)) as CoreDispatch)
+            : asked;
           const args = await actionRequest(
-            delegate.dispatch,
+            reading,
             action,
             params.value,
             params.evidence as string,
           );
-          await delegate.dispatch(line.change, args, actor);
-          const result = await delegate.dispatch(line.current, []);
-          return { text: JSON.stringify({ action, current: actionValue(action, result) }) };
+          const answer = window
+            ? await delegate.dispatch(line.change as CoreInvokeChannel, args, {
+                ...actor,
+                window: {
+                  ...window,
+                  read,
+                  ...(line.sets
+                    ? { sets: line.sets(line.value.parse(params.value) as Record<string, unknown>) }
+                    : {}),
+                },
+              })
+            : await asked(line.change as CoreInvokeChannel, args);
+          // A window answers its whole value with the change, checked as it
+          // arrives, so a change it made is never lost to a read after it.
+          const result = window ? answer : await asked(line.current as CoreInvokeChannel, []);
+          return {
+            text: JSON.stringify({
+              action,
+              ...(line.answers ? { answer: line.answers(answer) } : {}),
+              current: actionValue(action, result),
+            }),
+          };
         } catch (error) {
           if (error instanceof SignInRequiredError)
             return { text: renderSignInRefusal(error.refusal) };

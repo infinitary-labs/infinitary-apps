@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-settings-parity",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Your first mate can change more of Settings for you",
+      "body": "Ask your first mate to play music you paused, set how cards open, pick the language or Usage's unit, put your panels back, check for updates, switch the update channel, turn a decision model use off, check a kept job, or stop keeping a copy on another computer. On a Mac that controls another, it changes that Mac's own look, panels, updates and key reminders. Each change leaves a line in Activity. Signing in, consent and deleting things stay with you, and what it reads about Settings leaves out your Diagnostics install ID, sign-in codes and account names.",
+      "noPicture": "This changes what the first mate can do when asked, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

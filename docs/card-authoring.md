@@ -969,6 +969,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   A body script's own choice carries nothing from the field.
   A note's own button and every choice stay pressable while a note editor is open, and the press that closes that editor only queues its note (`pressQueuedNote`).
   A view asks its home's healthcheck: against a home that does not list `choice-attachments` the buttons stay off while a file, picture or note waits, with "Send the file as a reply first" (`CARD_FILES_FIRST`) or "Send the notes as a reply first" at the row's left and on each button, as before, and any press there (an ended card's Close among them) sends only its words.
+  The phone reads the same change from its computer's welcome and carries its photos and queued notes the same way, or waits with the same words, and its past card names what went (`docs/ios.md`, "Cards on the phone").
 - **The name.**
   `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.

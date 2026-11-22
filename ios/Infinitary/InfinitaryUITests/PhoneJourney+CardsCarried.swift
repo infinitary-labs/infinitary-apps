@@ -1,0 +1,81 @@
+import XCTest
+
+/// The cards-carried part (scripts/phone-test-plan.ts): its test and the steps only it takes.
+extension PhoneJourney {
+    /// INF-5608, the captain: "right now, in a card thread, attachments and queued annotations cannot be sent along with
+    /// an action button click. it seems they can only be sent as a pure reply. can we allow sending these queued stuff
+    /// along with an action button click?", its approved plan's piece 2 for the phone, and INF-5487: a choice on the
+    /// phone dropped the photos and notes in its field. Data: a first mate card on the disposable test home with a
+    /// paragraph and two choices, a note queued on that paragraph with a comment, and a library photo. Completion: the
+    /// footer names what goes with the choice, one tap on a choice takes the card away, the first mate's turn reads the
+    /// choice with the note's comment and the photo's attached line and carries the photo as an image, the card's record
+    /// keeps the note and the photo by name, and the card opened again as a past card names both under its buttons.
+    func testCardChoiceCarries() async throws {
+        try await launchJoined()
+        let fixture = try await home("carried-card")
+        let title = try XCTUnwrap(fixture["title"] as? String)
+        let part = try XCTUnwrap(fixture["part"] as? String)
+        showCard(title)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        // A note on the paragraph, with a comment.
+        let paragraph = app.webViews.staticTexts[part].firstMatch
+        XCTAssertTrue(paragraph.waitForPresence(timeout: 20), app.debugDescription)
+        let point = app.buttons["point-at"]
+        XCTAssertTrue(point.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(point); tapOnPhone(point)
+        reveal(paragraph); tapOnPhone(paragraph)
+        let editor = app.descendants(matching: .any).matching(identifier: "note-editor").firstMatch
+        XCTAssertTrue(editor.waitForPresence(timeout: 10), "Point at did not open the note editor\n\(app.debugDescription)")
+        let comment = keyboardInput("note-comment")
+        XCTAssertTrue(comment.waitForPresence(timeout: 10), app.debugDescription)
+        focusForPhoneTyping(comment, in: app, overWebContent: true)
+        let said = "Check the buoy against the survey first."
+        comment.typeText(said)
+        tapOnPhone(app.buttons["note-queue"])
+        XCTAssertTrue(editor.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["queued-notes-count"].waitForPresence(timeout: 10), app.debugDescription)
+        try await dismissKeyboardForProbe()
+        // A library photo in the card's field.
+        addPhoneCardPhoto(app: app)
+        // The footer names what goes with whichever choice is pressed, in the Mac's words, and the choices stay lit.
+        let line = app.staticTexts["carried-line"]
+        XCTAssertTrue(line.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(line.label, try XCTUnwrap(fixture["line"] as? String))
+        XCTAssertFalse(app.staticTexts["carried-hold"].exists, app.debugDescription)
+        let hold = app.buttons["card-action-hold"]
+        reveal(hold)
+        waitUntilEnabled(hold)
+        try await appearances("0-photo-and-note-go-with-the-choice", showing: line)
+        tapOnPhone(hold)
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+        // The first mate's turn read the choice with the note and the photo; the record kept both with the choice.
+        let heard = try await home("carried-heard")
+        XCTAssertEqual(heard["chosen"] as? String, "hold")
+        let turn = try XCTUnwrap(heard["turn"] as? String, "No first mate turn read the choice: \(heard)")
+        XCTAssertTrue(turn.contains(said), "The turn does not read the note's comment: \(turn)")
+        XCTAssertTrue(turn.contains("[attached: 1 picture"), "The turn does not name the photo: \(turn)")
+        XCTAssertEqual(heard["turnImage"] as? Bool, true, "The photo did not ride the turn as an image")
+        let carried = try XCTUnwrap(heard["carried"] as? [String: Any], "The card kept nothing with the choice: \(heard)")
+        let notes = try XCTUnwrap(carried["notes"] as? [[String: Any]])
+        XCTAssertEqual(notes.count, 1)
+        XCTAssertEqual(notes.first?["comment"] as? String, said)
+        XCTAssertEqual((carried["pictures"] as? [String])?.count, 1)
+        // The card opened again as a past card names the note and the photo under its buttons.
+        _ = try await home("carried-past")
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        let lead = app.staticTexts["past-sent-words"]
+        XCTAssertTrue(lead.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(lead.label, try XCTUnwrap(fixture["sentLead"] as? String))
+        let pictures = app.staticTexts["past-sent-pictures"]
+        reveal(pictures)
+        XCTAssertEqual(pictures.label, try XCTUnwrap(heard["pictureWords"] as? String))
+        let sentNote = app.buttons.matching(identifier: "thread-note").firstMatch
+        XCTAssertTrue(sentNote.exists, "The past card does not name the note\n\(app.debugDescription)")
+        XCTAssertTrue(app.staticTexts[said].exists, "The past card does not show the note's comment\n\(app.debugDescription)")
+        XCTAssertEqual(app.buttons["card-action-hold"].value as? String, "Chosen")
+        picture("1-past-card-names-what-went")
+        reveal(app.buttons["put-aside-card"]); tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+    }
+}

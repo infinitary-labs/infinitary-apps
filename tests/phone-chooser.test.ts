@@ -668,13 +668,15 @@ describe("declaration-aware phone selection", () => {
       line.startsWith("enum PhonePhotoOutcome"),
     )!;
     expect(live([{ path, old: outcome, next: `${outcome} ` }])).toEqual(
-      named("testComposeAndSend", "testCharacterAndPastChoices"),
+      named("testCardChoiceCarries", "testComposeAndSend", "testCharacterAndPastChoices"),
     );
     const picker = files[path]!.split("\n").find((line) =>
       line.includes("func pickPhoneJourneyPhoto("),
     )!;
-    // Rest calls recoverPhonePhoto directly; only composing calls the picker helper.
-    expect(live([{ path, old: picker, next: `${picker} ` }])).toEqual(named("testComposeAndSend"));
+    // Rest calls recoverPhonePhoto directly; only composing and a card's field (INF-5608) call the picker helper.
+    expect(live([{ path, old: picker, next: `${picker} ` }])).toEqual(
+      named("testCardChoiceCarries", "testComposeAndSend"),
+    );
     // A declaration every journey test reaches selects every part that runs UI test code; the weak-link part
     // runs only its app-hosted class (INF-2989).
     expect(

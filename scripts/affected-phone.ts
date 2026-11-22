@@ -58,6 +58,8 @@ const INPUTS = [
   "tests/helpers/phonePushRelay.ts",
   // INF-5265: the homes part's second computer, which the test home starts in a process of its own.
   "tests/helpers/phoneSecondHome.ts", "tests/helpers/phoneSecondHomeProcess.ts",
+  // INF-5608's plan, piece 2: the cards-carried part's card and what reached the computer from its choice.
+  "tests/helpers/phoneCarried.ts",
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser or scripts/phone-test-home.ts, so they are not inputs. The chooser runs before the

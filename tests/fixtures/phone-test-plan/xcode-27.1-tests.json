@@ -47,6 +47,7 @@
   "InfinitaryUITests/PhoneJourney/testActivityAndCatchUp",
   "InfinitaryUITests/PhoneJourney/testAwayLeaveAndRemoved",
   "InfinitaryUITests/PhoneJourney/testCardBodyFieldKeyboard",
+  "InfinitaryUITests/PhoneJourney/testCardChoiceCarries",
   "InfinitaryUITests/PhoneJourney/testCardDiagramCover",
   "InfinitaryUITests/PhoneJourney/testCardDrafts",
   "InfinitaryUITests/PhoneJourney/testCardForm",

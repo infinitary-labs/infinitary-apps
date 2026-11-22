@@ -65,6 +65,7 @@ import { claimedPort } from "./claimedPort";
 import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
+import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneChord,
@@ -338,6 +339,7 @@ export async function startPhoneHome(
     place: "",
     notes: "",
     field: "",
+    carried: "",
   };
   // The captain's question on the flip card, which the first mate's revision answers by its id.
   let flipQuestion: number | undefined;
@@ -1935,6 +1937,34 @@ export async function startPhoneHome(
           result = { lead, title, part, words };
           break;
         }
+        // INF-5608's plan, piece 2: a card whose choice carries the field's photo and note, behind no other card.
+        case "POST carried-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const raised = raiseCarriedCard(core);
+          cardIDs.carried = raised.id;
+          turnsBeforeRelease = firstmateTurnsEnded;
+          result = raised;
+          break;
+        }
+        // The first mate's turn that read the phone's choice has ended, and what the card kept with it.
+        case "POST carried-heard":
+          await until(
+            () =>
+              !firstmateBusy &&
+              firstmateTurnsEnded > turnsBeforeRelease &&
+              provider.requestBodies().some((body) => body.includes(`(${cardIDs.carried})`)),
+          );
+          result = await carriedHeard(core, cardIDs.carried, provider.requestBodies());
+          break;
+        case "POST carried-past":
+          result = await showCarriedPast(core, cardIDs.carried);
+          break;
         // The notes card's thread as the computer keeps it, each captain line with its notes.
         case "GET note-thread":
           result = { messages: core.services.supervisor.cards.thread(cardIDs.notes).messages };

@@ -402,10 +402,13 @@ export class Computers {
   }
 
   /**
-   * Update (docs/devices.md, "Updating"): brings Firstmate on a computer that
-   * runs work to this Mac's version - over Remote Login for one added by its
-   * address or one explicitly supplied. Otherwise try the connection first,
-   * with an opt-in package fallback if no copy changed. Answers it on the list
+   * Match (docs/devices.md, "Updating" and "Matching the home's build"):
+   * brings Firstmate on a computer that runs work to this Mac's build. A
+   * home run from source has that computer build its commit over the
+   * connection, whichever way it was added, unless the order names an
+   * address. Otherwise it goes over Remote Login for one added by its
+   * address or one explicitly supplied, else over the connection first, with
+   * an opt-in package fallback if no copy changed. Answers it on the list
    * once it is back, or rejects with the refusal's two lines, which the feed
    * said too.
    */

@@ -517,7 +517,7 @@ How this Mac reaches each computer it set up over Remote Login is kept in `devic
 `address` is the address it was added at, which rides its entry as `remoteLogin`.
 `connection` is how it reaches this Mac: `ssh` when it reaches this Mac only through this Mac's own SSH connection to `address` (below, "Through the home's SSH"), as every Mac added by its address does, and `network` when it dials this Mac's address itself.
 `cleanups` holds what this Mac has yet to remove on a computer it took off the list (below, "Removing it there"): `{ "<id>": { "address", "name", "at" } }`, bound to that computer's id.
-A computer found again over Remote Login keeps the address that found it, whichever way it was added first, so Update and Remove reach it there.
+A computer found again over Remote Login keeps the address that found it, whichever way it was added first, so Match and Remove reach it there; on a home run from source, Match builds its commit over the connection instead ("Matching the home's build").
 Settings -> Devices names it by it ("a computer · sam@mini.local").
 A file that cannot be read leaves every computer on the list and none reached over SSH, and is never written over, so nothing in it is lost; moving it away starts it over.
 

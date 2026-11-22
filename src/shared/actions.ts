@@ -18,6 +18,7 @@ import type { DeviceMake } from "./deviceArrival";
 import { addressFormOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
 import {
+  buildsSourceThere,
   type DeviceView,
   deviceNameSchema,
   deviceRunsWork,
@@ -777,6 +778,11 @@ const actionLines = {
       const label = deviceWords.label(device);
       if (!deviceRunsWork(device.kind))
         throw new Error(`${label} controls the first mate, and runs no work to update.`);
+      // A computer that cannot build source is refused as Match refuses it, before any other words.
+      if (device.otherVersion?.source && !buildsSourceThere(device.system))
+        throw new Error(
+          [m.devicesSourceNotMac({ device: label }), m.devicesSourceKeepsVersion()].join(" "),
+        );
       if (installedThere(device)) throw new Error(installItThereWords(label));
       const cardId = `app-device-update-${cardSlug(device.id)}`;
       const title = `Update Infinitary on ${label}`;

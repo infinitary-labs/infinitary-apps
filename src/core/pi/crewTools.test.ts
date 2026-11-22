@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { BATCH_WORDS } from "../batches/batches";
 import type { LaneHold } from "../orchestrator/crewRuntime";
 import {
   type CrewDelegate,
@@ -184,6 +185,39 @@ describe("crew tools", () => {
     expect(text.endsWith(reviewAssignedWords(review))).toBe(true);
     expect(reviewAssignedWords(review)).toContain("0123456");
     expect(reviewAssignedWords(review)).toContain("edits not yet committed");
+  });
+
+  // Intent: the captain's ask that the Batches panel show who repairs a held batch: the first
+  // mate marks the repair it starts, the host records it, and the answer says so or why not.
+  it("records a task started with repairs_batch as its project's batch repair, and answers why not", async () => {
+    const markBatchRepair = vi.fn(async (): Promise<string | undefined> => undefined);
+    const { delegate, byName } = toolset({ markBatchRepair });
+    const spawn = (shape: Record<string, unknown>) =>
+      byName.get("spawn_crewmate")?.execute("t1", {
+        title: "Repair the held batch",
+        goal: "Batch #31 merges or its changes at fault are sent back",
+        user_words: "fix the batch",
+        repo_id: "r1",
+        shape,
+      });
+    const recorded = await spawn({ repairs_batch: true });
+    expect(markBatchRepair).toHaveBeenCalledWith("ab12cd34");
+    expect(recorded?.content[0]?.text).toContain(
+      "It is recorded as the repair of its project's held batch.",
+    );
+    // The mark is the host's, not part of the task's shape.
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.not.objectContaining({ shape: expect.anything() }),
+    );
+
+    markBatchRepair.mockResolvedValueOnce(BATCH_WORDS.noRepairHeld);
+    const refused = await spawn({ repairs_batch: true });
+    expect(refused?.content[0]?.text).toContain(
+      `Not recorded as a batch repair: ${BATCH_WORDS.noRepairHeld}`,
+    );
+    markBatchRepair.mockClear();
+    await spawn({});
+    expect(markBatchRepair).not.toHaveBeenCalled();
   });
 
   it("carries the first mate's declaration that the work is on the project's folder (INF-567)", async () => {
@@ -842,6 +876,7 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
       "in_folder",
       "skipped_plan_because",
       "review_of",
+      "repairs_batch",
     ]);
     expect(Object.keys(properties.start_after?.properties ?? {})).toEqual([
       "after_task",

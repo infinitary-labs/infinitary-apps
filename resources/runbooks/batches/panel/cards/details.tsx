@@ -1,17 +1,29 @@
-import type { PanelBatchRepo, PanelBatchTask, PanelProps } from "@infinitary/contracts";
+import type { PanelBatchRepo, PanelBatchTask, PanelProps, PanelTaskRow } from "@infinitary/contracts";
 import { Button, focusWithRing, StatusDot, useMinute } from "@infinitary/ui";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 import * as m from "../messages.generated";
 import styles from "../panel.css";
-import { batchTitle, clock, showsAny, stateFull, taskName, toneOf, took, waitFull } from "../words";
+import {
+  batchTitle,
+  clock,
+  holdOf,
+  holdSentence,
+  showsAny,
+  stateFull,
+  taskName,
+  toneOf,
+  took,
+  waitFull,
+} from "../words";
 
 /**
  * The Batches panel's details card (docs/forge.md, "The Batches panel"): the
  * panel's groups in full words - the open batch with its state, checks and
  * every member, each change waiting and why, each change left out and why -
  * and a table of the batches that ended in the last day. Like the panel it
- * only points: a task opens its task, Answer in Settings opens the held
- * batch in Settings → Projects. The tasks are one Tab stop with the arrows
+ * only points: a task opens its task, Open in Settings opens the held
+ * batch in Settings → Projects, which it offers for every hold, even while a
+ * repair has it. The tasks are one Tab stop with the arrows
  * inside, and Enter opens one.
  */
 export default function BatchesDetails({ reads, point, view }: PanelProps) {
@@ -20,7 +32,13 @@ export default function BatchesDetails({ reads, point, view }: PanelProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   useMinute();
 
+  const [rows, setRows] = useState<PanelTaskRow[] | null>(null);
+
   useEffect(() => reads.subscribe("batches.list", (value) => setRepos(value.repos)), [reads]);
+  useEffect(
+    () => reads.subscribe("tasks.board", { closed: false }, (value) => setRows(value.tasks)),
+    [reads],
+  );
 
   const focused = view.focusedProjectId;
   const shown = (repos ?? []).filter(
@@ -89,10 +107,14 @@ export default function BatchesDetails({ reads, point, view }: PanelProps) {
           {repo.open && (
             <div className="fm-batches-details-group" data-batches-details-open="">
               <h3>
-                <StatusDot tone={toneOf(repo.open)} label={stateFull(repo.open)} />{" "}
+                <StatusDot tone={toneOf(repo.open, holdOf(repo.open, rows))} label={stateFull(repo.open)} />{" "}
                 {batchTitle(repo.open.number, repo.open.members.length)}
               </h3>
               <p>{stateFull(repo.open)}</p>
+              {(() => {
+                const hold = holdOf(repo.open, rows);
+                return hold ? <p data-batches-details-who={hold}>{holdSentence(repo.open, hold)}</p> : null;
+              })()}
               {repo.open.checks && (
                 <p className="fm-batches-details-mono">
                   {m.batchesPanelChecksFull({
@@ -116,7 +138,7 @@ export default function BatchesDetails({ reads, point, view }: PanelProps) {
                     void point.openSettings("projects", `batch:${repo.repoId}`).catch(() => false)
                   }
                 >
-                  {m.batchesPanelAnswer()}
+                  {m.batchesPanelOpenSettings()}
                 </Button>
               )}
               <ul className="fm-batches-details-tasks" aria-label={m.batchesPanelMembersLabel()}>

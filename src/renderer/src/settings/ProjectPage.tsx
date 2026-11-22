@@ -608,7 +608,13 @@ function RepositorySettings({
         )}
       {squashOnly && <BatchNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
       {ownBatch && <BatchNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
-      {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
+      {held?.hold && (
+        <BatchHoldPanel
+          repo={repo}
+          batch={{ ...held, hold: held.hold }}
+          fixes={repo.batch?.fixes}
+        />
+      )}
       {waiting && repo.batch?.open && (
         <BatchWaitPanel repo={repo} batch={repo.batch.open} wait={waiting} />
       )}

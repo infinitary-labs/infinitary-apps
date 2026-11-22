@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "排在 #{number} 之后",
-  "batchesPanelAnswer": "在设置中回答",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "other": "第 #{number} 批 · {count} 个改动"
@@ -52,12 +51,17 @@
     "plural": "count",
     "other": "+{count} 个"
   },
+  "batchesPanelNeedsYou": "需要你 {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "other": "新一批 · {count} 个改动"
   },
   "batchesPanelNext": "下一批 {time}",
+  "batchesPanelOpenSettings": "在设置中打开",
+  "batchesPanelOpenTask": "打开 {key}",
   "batchesPanelOpening": "创建中",
+  "batchesPanelRepairing": "修复中 {duration}",
+  "batchesPanelRerunPassed": "重新运行已通过",
   "batchesPanelStateChecking": "自 {time} 起检查中",
   "batchesPanelStateCombining": "正在最新的主分支上重新合成这些改动",
   "batchesPanelStateOpening": "正在创建这批改动的拉取请求",
@@ -77,5 +81,16 @@
   "batchesPanelWaitsFix": "作为修复加入暂缓的这批改动",
   "batchesPanelWaitsGap": "{time} 加入下一批改动",
   "batchesPanelWaitsNow": "加入下一批改动",
+  "batchesPanelWhoApprove": "{key} 做了一个修正，正在等你批准。",
+  "batchesPanelWhoCard": "{key} 在它的卡片上等你回答。",
+  "batchesPanelWhoFixing": "{key} 正在修正。修正会加入这批改动，检查会重新运行。",
+  "batchesPanelWhoNoWay": "项目的合并设置不允许这种合并方式。",
+  "batchesPanelWhoNone": "还没有修复在处理它。暂缓时已告诉你的大副。",
+  "batchesPanelWhoOwn": "{key} 正在修复自己的改动",
+  "batchesPanelWhoPassed": "未通过的检查重新运行后通过了。其他检查通过后就会合并。",
+  "batchesPanelWhoRefused": "项目托管处拒绝了合并。",
+  "batchesPanelWhoRepairing": "{key} 正在修复",
+  "batchesPanelWhoRule": "项目托管处的一条规则暂缓了它，例如必需的审查。",
+  "batchesPanelWhoSentBack": "{key} 退回了一些改动，正在修正其余部分。这批改动在等它的修正。",
   "batchesReadWords": "你已批准改动的批量拉取请求"
 }

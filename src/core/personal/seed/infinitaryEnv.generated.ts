@@ -557,6 +557,16 @@ declare module "@infinitary/contracts" {
       /** The declared fixes for its hold, by key. */
       fixKeys: string[];
       checks: PanelBatchChecks | null;
+      /**
+       * The task repairing its hold: the one recorded as its repair, or a held
+       * batch of one's own change (\`own\`); \`fixing\` when it declared its change
+       * the hold's fix. Null with neither, or while it is not held.
+       */
+      repair: (PanelBatchTask & { own: boolean; fixing: boolean }) | null;
+      /** It waits for its repair's fix after changes were sent back. */
+      awaitsFix: boolean;
+      /** Its repair declared that a rerun passed the failed checks at its version. */
+      passed: boolean;
     } | null;
     leftOut: (PanelBatchTask & { reason: string; aheadKey: string | null })[];
     /** The batches that ended in the last day, oldest first. */

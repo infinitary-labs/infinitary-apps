@@ -9,6 +9,7 @@ A project that merges approved changes together combines the captain's approved 
 When the batch's checks fail, the batch holds: nothing in it merges, and changes approved meanwhile wait in line behind it.
 Your brief names the batch's pull request and the version that failed.
 The app runs no check again and files no issue, label or claim: this task is the repair.
+The Batches panel and Settings name this task as the batch's repair and show your latest report's first sentence beside it, so make that sentence say, for the captain, what you found and what happens next, such as "The date parser change breaks two journeys; a fix is on its way."
 
 ## Account for every failure first
 

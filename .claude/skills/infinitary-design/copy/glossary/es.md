@@ -117,6 +117,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
 | relay (Infinitary's push relay) | relé de Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "nota sellada". |
 | Remove (a device) | Quitar | |
+| repair (the task repairing a held batch) | reparación | "{key} lo está reparando" for the task at work; the change it makes stays corrección. |
 | repo (never said) | proyecto | The app's noun for what work belongs to stays proyecto. |
 | report | informar, informe | "Informó: …". |
 | repository (one of a project's) | repositorio | "Agregar un repositorio", "2 repositorios". Names one of a project's repositories, or the thing on GitHub. |

@@ -24,6 +24,7 @@ import {
   pruned,
   release,
   reopened,
+  repaired,
   reworded,
   standing,
   withdraw,
@@ -366,6 +367,42 @@ describe("a held batch", () => {
     const held = hold(openBatch(), failed).record;
     expect(release(held).open?.hold).toBeUndefined();
     expect(release(openBatch())).toEqual(openBatch());
+  });
+});
+
+// Intent: the captain's ask that the Batches panel make a held batch's actual state clear
+// without implying the captain must answer it: the app records which task repairs the hold.
+describe("a held batch's repair", () => {
+  const failed = {
+    at: 6_000,
+    head: EXPORT_COMMIT,
+    reason: "checks" as const,
+    checks: ["unit-tests"],
+  };
+
+  it("is recorded only while the batch is held", () => {
+    const held = hold(openBatch(), failed).record;
+    expect(repaired(held, "t-repair").open?.repair).toBe("t-repair");
+    expect(repaired(openBatch(), "t-repair")).toEqual(openBatch());
+    expect(repaired(EMPTY_BATCH_RECORD, "t-repair")).toBe(EMPTY_BATCH_RECORD);
+  });
+
+  it("stays the repair while its repair combines the same batch again", () => {
+    const held = repaired(hold(openBatch(), failed).record, "t-repair");
+    const again = combined(
+      release(held),
+      combineOf([member(PARSER, PARSER_COMMIT), member(EXPORT, LEGEND_COMMIT)]),
+      { branch: "infinitary-batch/7c41", at: 7_000 },
+    );
+    expect(again.open?.repair).toBe("t-repair");
+  });
+
+  it("is dropped once its task closes, and the batch stays held", () => {
+    const held = repaired(hold(openBatch(), failed).record, "t-repair");
+    expect(pruned(held, () => true)).toBe(held);
+    const closed = pruned(held, (taskId) => taskId !== "t-repair");
+    expect(closed.open?.repair).toBeUndefined();
+    expect(closed.open?.hold).toEqual(held.open?.hold);
   });
 });
 

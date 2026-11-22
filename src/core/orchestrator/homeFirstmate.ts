@@ -1,5 +1,6 @@
 import type { FmEvent } from "@shared/events";
 import { runbookGatesOf } from "@shared/surfaces";
+import type { Batches } from "../batches/batches";
 import type { CoreServices } from "../coreServices";
 import type { startCorrections } from "../decisions/startCorrections";
 import type { Computers } from "../devices/computers";
@@ -83,6 +84,7 @@ export function startHomeFirstmate({
   repos,
   supervisor,
   tasks,
+  batches,
   knowledge,
   scheduler,
   selfSourceDir,
@@ -136,6 +138,8 @@ export function startHomeFirstmate({
   repos: RepoRegistry;
   supervisor: CrewSupervisor;
   tasks: TaskService;
+  /** The batch record's one writer, which records a held batch's repair. */
+  batches: Pick<Batches, "markRepair">;
   knowledge: KnowledgeService;
   scheduler: Scheduler;
   selfSourceDir: string;
@@ -267,6 +271,13 @@ export function startHomeFirstmate({
     supervisionLog: (limit) => ledger.recent(limit),
     flagMissedEscalation: (input) => ledger.flagMissedEscalation(input),
     flagDuplicate: (input) => supervisor.flagDuplicate(input),
+    markBatchRepair: (taskId) => {
+      const repoId = tasks.get(taskId)?.repoId;
+      return repoId
+        ? batches.markRepair(repoId, taskId)
+        : // i18n-exempt: an answer served to the first mate's tool, never shown to a person
+          Promise.resolve("this task has no project, so it repairs no batch.");
+    },
     // Talk-to-personalize Step 1: the preferences writer and the personal
     // surfaces behind `personalize` and the "your surfaces" section.
     personalize: {

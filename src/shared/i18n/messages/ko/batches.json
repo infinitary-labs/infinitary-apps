@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "#{number} 다음",
-  "batchesPanelAnswer": "설정에서 답하기",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "other": "일괄 끌어오기 요청 #{number} · 변경 {count}개"
@@ -52,12 +51,17 @@
     "plural": "count",
     "other": "+{count}개 더"
   },
+  "batchesPanelNeedsYou": "내 차례 {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "other": "새 일괄 끌어오기 요청 · 변경 {count}개"
   },
   "batchesPanelNext": "다음 {time}",
+  "batchesPanelOpenSettings": "설정에서 열기",
+  "batchesPanelOpenTask": "{key} 열기",
   "batchesPanelOpening": "여는 중",
+  "batchesPanelRepairing": "복구 중 {duration}",
+  "batchesPanelRerunPassed": "다시 실행해서 통과",
   "batchesPanelStateChecking": "{time}부터 검사 중",
   "batchesPanelStateCombining": "최신 기본 분기에서 변경을 다시 묶고 있어요",
   "batchesPanelStateOpening": "일괄 끌어오기 요청을 여는 중이에요",
@@ -77,5 +81,16 @@
   "batchesPanelWaitsFix": "보류된 일괄 끌어오기 요청에 수정으로 들어가요",
   "batchesPanelWaitsGap": "{time}에 다음 일괄 끌어오기 요청에 들어가요",
   "batchesPanelWaitsNow": "다음 일괄 끌어오기 요청에 들어가요",
+  "batchesPanelWhoApprove": "{key}이(가) 수정을 만들었어요. 승인을 기다려요.",
+  "batchesPanelWhoCard": "{key}이(가) 카드에서 답을 기다려요.",
+  "batchesPanelWhoFixing": "{key}이(가) 수정하고 있어요. 수정이 이 일괄 끌어오기 요청에 들어가고 검사가 다시 실행돼요.",
+  "batchesPanelWhoNoWay": "프로젝트의 병합 설정이 이 병합 방식을 거부해요.",
+  "batchesPanelWhoNone": "아직 복구가 진행되고 있지 않아요. 보류됐을 때 일등항해사에게 알렸어요.",
+  "batchesPanelWhoOwn": "{key}이(가) 자기 변경을 복구하고 있어요",
+  "batchesPanelWhoPassed": "실패한 검사가 다시 실행해서 통과했어요. 다른 검사가 통과하면 병합돼요.",
+  "batchesPanelWhoRefused": "프로젝트가 있는 곳에서 병합이 거부됐어요.",
+  "batchesPanelWhoRepairing": "{key}이(가) 복구하고 있어요",
+  "batchesPanelWhoRule": "필수 검토 같은 프로젝트가 있는 곳의 규칙이 막고 있어요.",
+  "batchesPanelWhoSentBack": "{key}이(가) 변경을 돌려보내고 나머지를 수정하고 있어요. 일괄 끌어오기 요청은 그 수정을 기다려요.",
   "batchesReadWords": "승인된 변경을 묶은 일괄 끌어오기 요청"
 }

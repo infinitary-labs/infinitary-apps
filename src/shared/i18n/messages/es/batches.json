@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "tras el #{number}",
-  "batchesPanelAnswer": "Responder en Configuración",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "one": "Lote #{number} · {count} cambio",
@@ -62,6 +61,7 @@
     "many": "+{count} más",
     "other": "+{count} más"
   },
+  "batchesPanelNeedsYou": "te necesita {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "one": "Lote nuevo · {count} cambio",
@@ -69,7 +69,11 @@
     "other": "Lote nuevo · {count} cambios"
   },
   "batchesPanelNext": "próximo: {time}",
+  "batchesPanelOpenSettings": "Abrir en Configuración",
+  "batchesPanelOpenTask": "Abrir {key}",
   "batchesPanelOpening": "abriendo",
+  "batchesPanelRepairing": "reparando {duration}",
+  "batchesPanelRerunPassed": "repetición superada",
   "batchesPanelStateChecking": "Comprobando desde las {time}",
   "batchesPanelStateCombining": "Combinando los cambios de nuevo sobre la rama principal más reciente",
   "batchesPanelStateOpening": "Abriendo la solicitud de incorporación de cambios del lote",
@@ -93,5 +97,16 @@
   "batchesPanelWaitsFix": "Entra en el lote retenido como su corrección",
   "batchesPanelWaitsGap": "Entra en el próximo lote a las {time}",
   "batchesPanelWaitsNow": "Entra en el próximo lote",
+  "batchesPanelWhoApprove": "{key} hizo una corrección. Espera tu aprobación.",
+  "batchesPanelWhoCard": "{key} espera tu respuesta en su tarjeta.",
+  "batchesPanelWhoFixing": "{key} lo está corrigiendo. Su corrección se une a este lote y las comprobaciones se ejecutan de nuevo.",
+  "batchesPanelWhoNoWay": "Los ajustes de fusión de tu proyecto rechazan esta forma de fusionar.",
+  "batchesPanelWhoNone": "Ninguna reparación trabaja en él todavía. Se avisó a tu primer oficial cuando quedó retenido.",
+  "batchesPanelWhoOwn": "{key} está reparando su propio cambio",
+  "batchesPanelWhoPassed": "La comprobación fallida se superó al repetirla. El lote se fusiona en cuanto se superen las demás comprobaciones.",
+  "batchesPanelWhoRefused": "Donde se aloja tu proyecto, se rechazó la fusión.",
+  "batchesPanelWhoRepairing": "{key} lo está reparando",
+  "batchesPanelWhoRule": "Lo retiene una regla donde se aloja tu proyecto, como una revisión obligatoria.",
+  "batchesPanelWhoSentBack": "{key} devolvió cambios y está corrigiendo el resto. El lote espera su corrección.",
   "batchesReadWords": "tus lotes de cambios aprobados"
 }

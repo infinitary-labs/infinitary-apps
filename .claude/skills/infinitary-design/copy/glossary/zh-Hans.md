@@ -122,6 +122,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
 | relay (Infinitary's push relay) | Infinitary 的中转服务 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
 | Remove (a device) | 移除 | |
+| repair (the task repairing a held batch) | 修复 | “{key} 正在修复” for the task at work; the change it makes stays 修正. |
 | report | 汇报 | |
 | repository (one of a project's) | 仓库 | GitHub's own Simplified Chinese word; 「添加仓库」「2 个仓库」. Names one of a project's repositories; what work belongs to stays 项目. |
 | review (the reviewer's pass) | 审查 | |

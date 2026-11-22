@@ -7,6 +7,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
+import { BATCH_HOLD_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import type { BatchRecord } from "../../src/shared/batches";
 import { panelCommandId } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -30,7 +31,7 @@ import { focusOn, pressKey, pressKeyTakingFrame, runFromSearch } from "./windowK
  *   project's held batch with its failed check and members, the change
  *   waiting and the change left out, and a closed Last day; by keys alone
  *   the arrows move through it, Enter on a member opens its task, Enter on
- *   Answer in Settings opens the held batch in Settings → Projects, and
+ *   Open in Settings opens the held batch in Settings → Projects, and
  *   command search's Show your batches puts up the details card with the
  *   batch that merged in the last day.
  * - Data: a batched project whose saved record holds an open batch held on
@@ -69,13 +70,22 @@ const HEADS: Record<Change, string> = {
   axis: "4444444444444444444444444444444444444444",
 };
 
+/** The latest report line of the held batch's repair, as the board keeps it. */
+const REPAIR_REPORT = "The parser change breaks the date tests; a fix is on its branch.";
+
 /** The panel on its rail. */
 function batchesPanel(page: Page) {
   return page.locator(`[data-side-panel="${PANEL}"]`);
 }
 
-test("the Batches panel shows a held batch, its line and its last day, and points from each by keys", async () => {
-  test.setTimeout(3 * 60_000);
+/**
+ * A batched project whose saved record holds batch #31 of two changes held on
+ * a failed check, a change in line, a change left out and a batch that merged
+ * two hours ago, each change's task seeded, and with `repair` a task recorded
+ * as the hold's repair; launched against a disposable GitHub serving the
+ * batch's pull request and its failed check.
+ */
+async function launchHeld({ repair }: { repair: boolean }) {
   const userDataDir = scratchDir("infinitary-batch-panel-");
   const { repoDir } = seedRepo(userDataDir);
   const github = await startGitHubStub();
@@ -97,7 +107,7 @@ test("the Batches panel shows a held batch, its line and its last day, and point
   seedHostedOrigins(db, userDataDir);
   const tasks = new TaskService({ db, strict: true });
   const now = Date.now();
-  const keys = {} as Record<Change, string>;
+  const keys = {} as Record<Change, string> & { repair?: string };
   for (const id of Object.keys(CHANGES) as Change[]) {
     keys[id] = seedTask(tasks, {
       id: `t-${id}`,
@@ -135,6 +145,17 @@ test("the Batches panel shows a held batch, its line and its last day, and point
         },
       });
   }
+  if (repair)
+    keys.repair = seedTask(tasks, {
+      id: "t-repair",
+      title: "Repair the held batch",
+      repoId: REPO,
+      repoDir,
+      branch: "inf/repair",
+      status: "idle",
+      startPolicy: "on-request",
+      outcome: REPAIR_REPORT,
+    }).key;
   const change = (id: Change) => ({
     taskId: `t-${id}`,
     branch: `inf/${id}`,
@@ -158,6 +179,7 @@ test("the Batches panel shows a held batch, its line and its last day, and point
       ],
       hold: { reason: "checks", head: HEAD, checks: ["unit-tests"], at: now - 4 * 60_000 },
       holds: 1,
+      ...(repair ? { repair: "t-repair" } : {}),
     },
     held: [HEAD],
     receipts: [],
@@ -189,6 +211,12 @@ test("the Batches panel shows a held batch, its line and its last day, and point
     withMockProvider: true,
     env: { ...github.env, ...SHORT_TICK },
   });
+  return { launched, github, keys };
+}
+
+test("the Batches panel shows a held batch, its line and its last day, and points from each by keys", async () => {
+  test.setTimeout(3 * 60_000);
+  const { launched, github, keys } = await launchHeld({ repair: false });
   const { app, page } = launched;
   try {
     const panel = batchesPanel(page);
@@ -205,11 +233,18 @@ test("the Batches panel shows a held batch, its line and its last day, and point
       await expect(body.locator("[data-batches-open]")).toContainText(
         words.batchesPanelBatchTitle({ number: "31", count: 2 }),
       );
-      // Held, not checking; how many minutes depends on when the launch finished.
-      await expect(body.locator("[data-batches-open]")).toContainText(
-        words.batchesPanelHeld({ duration: "" }).trim(),
-      );
+      // Held, not checking; how many minutes depends on when the launch finished. The row's
+      // trailing datum keeps only the minutes, so its name carries the held state.
+      await expect(
+        body.getByRole("button", {
+          name: `${words.batchesPanelBatchTitle({ number: "31", count: 2 })} · ${words.batchesPanelHeld({ duration: "" }).trim()}`,
+        }),
+      ).toBeVisible();
       await expect(body.locator("[data-batches-failed]")).toContainText("unit-tests");
+      // No repair is recorded, so the panel says no one has the hold yet.
+      await expect(body.locator('[data-batches-who="none"]')).toHaveText(
+        words.batchesPanelWhoNone(),
+      );
       await expect(body.locator("[data-batches-member]")).toHaveText([keys.parser, keys.export]);
       await expect(body.locator("[data-batches-line]")).toContainText(
         words.batchesPanelWaiting({ count: 1 }),
@@ -236,7 +271,7 @@ test("the Batches panel shows a held batch, its line and its last day, and point
       await expect(recordCard(page)).toHaveAttribute("data-task-record", "t-parser");
     });
 
-    await test.step("Enter on Answer in Settings opens the held batch in Settings → Projects", async () => {
+    await test.step("Enter on Open in Settings opens the held batch in Settings → Projects", async () => {
       const answer = body.locator('[data-batches-stop="answer:repo-meterlab"]');
       await pressKeyTakingFrame(answer, "Enter");
       const projects = settingsSection(page, "projects");
@@ -245,6 +280,10 @@ test("the Batches panel shows a held batch, its line and its last day, and point
       await expect
         .poll(() => held.evaluate((node) => node.contains(node.ownerDocument.activeElement)))
         .toBe(true);
+      // With no repair at work, Try again and Send back lead, unfolded.
+      await expect(held).toHaveAttribute("data-batch-hold-state", "none");
+      await expect(held.locator("[data-batch-hold-answers]")).toHaveCount(0);
+      await expect(held.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain })).toBeVisible();
       await leaveSettings(page);
     });
 
@@ -258,6 +297,75 @@ test("the Batches panel shows a held batch, its line and its last day, and point
         words.batchesPanelMergedNumber({ number: "30" }),
       );
       await expect(card.locator("[data-batches-details-line]")).toContainText(keys.legend);
+    });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+// The captain's ask that the panel make a held batch's actual state clear "and don't
+// mislead users into thinking they have to answer the hold": while a repair works on it,
+// the panel names that repair and offers no answer, and Settings folds the answers away.
+test("a held batch whose repair is working names it and asks nothing of the captain", async () => {
+  test.setTimeout(3 * 60_000);
+  const { launched, github, keys } = await launchHeld({ repair: true });
+  const { page } = launched;
+  try {
+    const panel = batchesPanel(page);
+    await expect(panel).toBeAttached({ timeout: 30_000 });
+    const body = panelBody(page, PANEL);
+    if ((await panel.getAttribute("data-side-panel-collapsed")) !== null)
+      await panel.getByRole("button", { name: `Expand ${batchesManifest.title}` }).click();
+    const repairKey = keys.repair as string;
+
+    await test.step("the panel says the repair is working, with its latest report, and no answer", async () => {
+      await expect(body.locator("[data-batches-open]")).toContainText(
+        words.batchesPanelRepairing({ duration: "" }).trim(),
+      );
+      await expect(body.locator('[data-batches-who="repairing"]')).toHaveText(
+        words.batchesPanelWhoRepairing({ key: repairKey }),
+      );
+      await expect(body.locator("[data-batches-report]")).toHaveText(REPAIR_REPORT);
+      await expect(body.locator('[data-batches-stop="answer:repo-meterlab"]')).toHaveCount(0);
+    });
+
+    await test.step("the arrows reach the repair's key, and Enter opens its task", async () => {
+      const first = body.locator('[data-batches-stop="open:repo-meterlab"] button');
+      await focusOn(first);
+      await pressKey(first, "ArrowDown");
+      const repair = body.locator('[data-batches-repair="t-repair"]');
+      await expect(repair).toBeFocused();
+      await pressKey(repair, "Enter");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", "t-repair");
+    });
+
+    await test.step("Settings names the repair and folds Try again and Send back away", async () => {
+      await runFromSearch(launched.app, page, panelCommandId(PANEL, "open"));
+      const card = shownPanelCardBody(page, PANEL, "details");
+      await expect(card.locator('[data-batches-details-who="repairing"]')).toHaveText(
+        words.batchesPanelWhoRepairing({ key: repairKey }),
+      );
+      await pressKeyTakingFrame(
+        card.getByRole("button", { name: words.batchesPanelOpenSettings() }),
+        "Enter",
+      );
+      const held = settingsSection(page, "projects").locator(`[data-batch-hold="${REPO}"]`);
+      await expect(held).toBeVisible();
+      await expect(held).toHaveAttribute("data-batch-hold-state", "repairing");
+      await expect(held).toContainText(BATCH_HOLD_WORDS.heldTitle("repairing"));
+      await expect(held.locator("[data-batch-hold-who]")).toHaveText(
+        BATCH_HOLD_WORDS.who("repairing", repairKey) as string,
+      );
+      await expect(held.locator("[data-batch-hold-report]")).toHaveText(
+        BATCH_HOLD_WORDS.latestReport(REPAIR_REPORT),
+      );
+      const answers = held.locator("[data-batch-hold-answers]");
+      await expect(answers).not.toHaveAttribute("open", "");
+      await expect(held.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain })).toBeHidden();
+      await pressKey(answers.locator("summary"), "Enter");
+      await expect(held.getByRole("button", { name: BATCH_HOLD_WORDS.tryAgain })).toBeVisible();
+      await leaveSettings(page);
     });
   } finally {
     await launched.close();

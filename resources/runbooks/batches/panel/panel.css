@@ -204,3 +204,57 @@
   color: var(--fg-3);
   font-weight: 500;
 }
+
+/* Under a held batch's row: who has the hold, bright while it is not the
+   crew's, and its repair's latest report line, at most two lines. */
+.fm-batches-panel-who {
+  margin: 0;
+  padding-block: 2px;
+  padding-inline: 20px 6px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.fm-batches-panel-who-lit {
+  color: var(--fg-1);
+}
+
+.fm-batches-panel-who .fm-batches-panel-chip {
+  color: var(--fg-1);
+}
+
+.fm-batches-panel-report {
+  display: -webkit-box;
+  margin: 0;
+  padding-block: 0 3px;
+  padding-inline: 20px 6px;
+  overflow: hidden;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* A failed check's name on one line, cut at its start so its end, which
+   names the job, shows. */
+.fm-batches-panel-failed {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+
+.fm-batches-panel-nowrap {
+  flex: none;
+  white-space: nowrap;
+}
+
+.fm-batches-panel-cut {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  direction: rtl;
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -262,6 +262,11 @@ export type CrewDelegate = {
     keep?: string[],
     leaveBehind?: boolean,
   ): Promise<{ ok: boolean; text: string }>;
+  /**
+   * Records a task started with `repairs_batch` as the repair of its
+   * project's held batch; answers why not in words, or nothing.
+   */
+  markBatchRepair?(taskId: string): Promise<string | undefined>;
   /** Whether the named lineage has a higher rung left; unknown tasks defer to the card rule. */
   escalationEligible?(taskId: string): boolean;
   /** Whether a premium-slot model is available and has not exhausted measured quota. */
@@ -402,6 +407,8 @@ const SHAPE_FIELD_RULES = {
     "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
     "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
+  repairs_batch:
+    "True only on the one task you start to repair a project's held batch: the host records it as that batch's repair, which the captain sees working on the hold.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -443,6 +450,7 @@ const SHAPE_FIELDS = {
   in_folder: "boolean",
   skipped_plan_because: "string",
   review_of: "string",
+  repairs_batch: "boolean",
 } as const;
 
 /** The waits spawn_crewmate carries in `start_after`, with the type each holds. */
@@ -629,6 +637,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             in_folder: Type.Optional(Type.Boolean()),
             skipped_plan_because: Type.Optional(Type.String()),
             review_of: Type.Optional(Type.String()),
+            repairs_batch: Type.Optional(Type.Boolean()),
           },
           { description: SHAPE_GROUP_DESCRIPTION },
         ),
@@ -687,8 +696,9 @@ export function createCrewTools(delegate: CrewDelegate) {
         return { text: renderHold(hold) };
       }
       const startAfter = startAfterFrom(params.start_after ?? {});
+      const { repairs_batch: repairsBatch, ...shapeRest } = shapeParams;
       const shape = shapeAskFrom({
-        ...shapeParams,
+        ...shapeRest,
         ...(params.placement_requirements
           ? { placement_requirements: params.placement_requirements }
           : {}),
@@ -719,7 +729,8 @@ export function createCrewTools(delegate: CrewDelegate) {
       });
       const queued = crewmate === "queued";
       const fromCard = params.from_card?.trim();
-      const line = fromCard ? (delegate.startedFrom?.(fromCard, taskId, queued) ?? "") : "";
+      const started = fromCard ? (delegate.startedFrom?.(fromCard, taskId, queued) ?? "") : "";
+      const line = `${started}${repairsBatch ? await batchRepairLine(delegate, taskId) : ""}`;
       // A named model routes only when it can serve, so which model took
       // the task is told once it runs, never the named one on its own
       // (FI3-444).
@@ -1057,6 +1068,16 @@ function shapeAskFrom(params: {
     ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
   };
   return Object.keys(ask).length > 0 ? ask : undefined;
+}
+
+/** What a spawn marked `repairs_batch` answers of its mark: recorded, or why not. */
+async function batchRepairLine(delegate: CrewDelegate, taskId: string): Promise<string> {
+  const refused = delegate.markBatchRepair
+    ? await delegate.markBatchRepair(taskId)
+    : "this app records no batch repair here.";
+  return refused
+    ? ` Not recorded as a batch repair: ${refused}`
+    : " It is recorded as the repair of its project's held batch.";
 }
 
 /** Translate the spawn's start_after group into one gate; at most one may be set. */

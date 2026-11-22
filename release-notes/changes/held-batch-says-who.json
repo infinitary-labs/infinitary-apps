@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "held-batch-says-who",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A held batch says who is working on it",
+      "body": "When a batch of your approved changes is held, the Batches panel and Settings now say who has the next step: the crewmate repairing it, with its latest report, a rule where your project lives, you, or no one yet. While a repair is working on it, nothing asks you to answer. Try again and Send back stay in Settings under Answer it yourself.",
+      "picture": {
+        "dark": "held-batch-says-who-dark.webp",
+        "light": "held-batch-says-who-light.webp",
+        "alt": "The Batches panel showing a held batch whose repair is working on it, with the repair's key, its latest report and the failed check on one line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

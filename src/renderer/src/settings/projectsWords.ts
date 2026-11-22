@@ -1,3 +1,4 @@
+import type { BatchHoldState } from "@shared/batches";
 import { formatDate, formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
@@ -123,6 +124,69 @@ export const BATCH_HOLD_WORDS = {
     return m.settingsProjectsBatchRetried();
   },
   sentBack: (changes: number) => m.settingsProjectsBatchSentBack({ count: changes }),
+  /** The box's title: held, and who has its next step (`batchHoldState`). */
+  heldTitle: (state: BatchHoldState) => {
+    switch (state) {
+      case "repairing":
+      case "fixing":
+      case "sent-back":
+        return m.settingsProjectsBatchHeldTitleRepairing();
+      case "own":
+        return m.settingsProjectsBatchHeldTitleOwn();
+      case "passed":
+        return m.settingsProjectsBatchHeldTitlePassed();
+      case "approve":
+        return m.settingsProjectsBatchHeldTitleApprove();
+      case "card":
+        return m.settingsProjectsBatchHeldTitleCard();
+      case "setting":
+        return m.settingsProjectsBatchHeldTitleSetting();
+      case "rule":
+        return m.settingsProjectsBatchHeldTitleRule();
+      case "none":
+        return m.settingsProjectsBatchHeldTitleNone();
+    }
+  },
+  /**
+   * Who has the hold and what is asked of the captain, naming the repair by
+   * key; null where the summary already says it (a setting, a rule) or while
+   * the board has not named the repair yet.
+   */
+  who: (state: BatchHoldState, key: string | null): string | null => {
+    if (state === "none") return m.settingsProjectsBatchHeldWhoNone();
+    if (state === "passed")
+      return key
+        ? m.settingsProjectsBatchHeldWhoPassed({ key })
+        : m.settingsProjectsBatchHeldWhoPassedUnnamed();
+    if (!key) return null;
+    switch (state) {
+      case "repairing":
+        return m.settingsProjectsBatchHeldWhoRepairing({ key });
+      case "own":
+        return m.settingsProjectsBatchHeldWhoOwn({ key });
+      case "fixing":
+        return m.settingsProjectsBatchHeldWhoFixing({ key });
+      case "sent-back":
+        return m.settingsProjectsBatchHeldWhoSentBack({ key });
+      case "approve":
+        return m.settingsProjectsBatchHeldWhoApprove({ key });
+      case "card":
+        return m.settingsProjectsBatchHeldWhoCard({ key });
+      default:
+        return null;
+    }
+  },
+  latestReport: (report: string) => m.settingsProjectsBatchLatestReport({ report }),
+  openTask: (key: string) => m.settingsProjectsBatchOpenTask({ key }),
+  get answerYourself() {
+    return m.settingsProjectsBatchAnswerYourself();
+  },
+  get answerNote() {
+    return m.settingsProjectsBatchAnswerNote();
+  },
+  get answerRuleNote() {
+    return m.settingsProjectsBatchAnswerRuleNote();
+  },
 };
 
 /** A batch whose merge the host took and still reads as running (`BatchWaitPanel`). */

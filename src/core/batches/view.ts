@@ -1,8 +1,10 @@
-import type {
-  BatchChecksReading,
-  BatchesRepoView,
-  BatchesView,
-  BatchRecord,
+import {
+  type BatchChecksReading,
+  type BatchesRepoView,
+  type BatchesView,
+  type BatchRecord,
+  type BatchRepairView,
+  batchRepairOf,
 } from "@shared/batches";
 import type { RepoView } from "@shared/repos";
 import { finishedWithin, nextBatchAt } from "./line";
@@ -94,6 +96,9 @@ function repoView(
           stale: open.stale === true,
           fixKeys: (record.fixes ?? []).flatMap((taskId) => keyOf(taskId) ?? []),
           checks: reading ?? null,
+          repair: repairView(batchRepairOf(open, record.fixes), taskOf),
+          awaitsFix: Boolean(open.awaits),
+          passed: open.passed?.head === open.head,
         }
       : null,
     leftOut: record.leftOut.map((entry) => ({
@@ -111,4 +116,12 @@ function repoView(
       members: batch.members.map((member) => taskOf(member.taskId, member.title)),
     })),
   };
+}
+
+/** The hold's repair as `batches.list` names it, by its task's key and title. */
+function repairView(
+  repair: ReturnType<typeof batchRepairOf>,
+  taskOf: (taskId: string) => { taskId: string; key: string | null; title: string },
+): BatchRepairView | null {
+  return repair ? { ...taskOf(repair.taskId), own: repair.own, fixing: repair.fixing } : null;
 }

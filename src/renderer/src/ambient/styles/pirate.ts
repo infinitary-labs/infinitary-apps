@@ -1,7 +1,8 @@
 // The pirate styles (docs/ambient-music.md): Quiet cove, Tavern embers and
-// Moonlit deck, each with the sea's soft wash under it. Each layer's level
-// in dB was measured by rendering every style one layer at a time, so
-// every style plays as loud.
+// Moonlit deck, each with the sea's soft wash under it, Tavern embers with
+// soft rain outside and Moonlit deck with a soft night wind (INF-5569).
+// Each layer's level in dB was measured by rendering every style one layer
+// at a time, so every style plays as loud.
 
 import { clamp } from "../composer";
 import type { Style } from "../player";
@@ -207,6 +208,7 @@ export const TAVERN_EMBERS: Style = {
     drift: [[0.2, 3]],
   },
   sea: true,
+  rain: 0.5,
   reverb: 2,
   wet: 0.45,
   buses: {
@@ -332,6 +334,7 @@ export const MOONLIT_DECK: Style = {
     wobble: [0.11, 110],
   },
   sea: true,
+  wind: 0.6,
   reverb: 3,
   wet: 0.7,
   buses: {

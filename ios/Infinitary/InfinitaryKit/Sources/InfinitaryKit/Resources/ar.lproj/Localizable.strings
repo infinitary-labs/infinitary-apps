@@ -3224,7 +3224,7 @@
 "settingsSoundPauseWhenAwayDescription" = "تتوقف الموسيقى مؤقتًا ما دامت شاشتك مطفأة أو مقفلة، حتى لا تُبقي حاسوبك مستيقظًا، ثم تعود عند رجوعك.";
 "settingsSoundStyle" = "النمط";
 "settingsSoundStyleColdSleep" = "نوم بارد";
-"settingsSoundStyleColdSleepDescription" = "بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء.";
+"settingsSoundStyleColdSleepDescription" = "بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء وريح هادئة.";
 "settingsSoundStyleDeepDrift" = "انجراف عميق";
 "settingsSoundStyleDeepDriftDescription" = "بلا طبول: أوتار بطيئة واسعة وبضع نغمات عالية بأصداء طويلة.";
 "settingsSoundStyleFairWinds" = "رياح مواتية";
@@ -3239,13 +3239,13 @@
 "settingsSoundStyleIslandMorning" = "صباح الجزيرة";
 "settingsSoundStyleIslandMorningDescription" = "الأكثر إشراقًا: ماريمبا وباص متمايل وناي فوق أمواج هادئة.";
 "settingsSoundStyleMoonlitDeck" = "سطح تحت القمر";
-"settingsSoundStyleMoonlitDeckDescription" = "متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة.";
+"settingsSoundStyleMoonlitDeckDescription" = "متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة وريح ليلية.";
 "settingsSoundStyleQuietCove" = "خليج هادئ";
 "settingsSoundStyleQuietCoveDescription" = "إيقاع بطيء متمايل مع الكونسرتينا والعود المنقور فوق أمواج هادئة.";
 "settingsSoundStyleStarCruise" = "رحلة النجوم";
 "settingsSoundStyleStarCruiseDescription" = "نمط ناعم متكرر يتردد يمينًا ويسارًا فوق نبض بطيء منخفض.";
 "settingsSoundStyleTavernEmbers" = "جمر الحانة";
-"settingsSoundStyleTavernEmbersDescription" = "فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق أمواج هادئة.";
+"settingsSoundStyleTavernEmbersDescription" = "فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق مطر خفيف وأمواج هادئة.";
 "settingsSoundStyleWayfinderNight" = "ليلة المرشدين";
 "settingsSoundStyleWayfinderNightDescription" = "أصوات تدندن وبيانو إبهام وطبل بطيء فوق أمواج هادئة.";
 "settingsSoundVolume" = "مستوى الصوت";

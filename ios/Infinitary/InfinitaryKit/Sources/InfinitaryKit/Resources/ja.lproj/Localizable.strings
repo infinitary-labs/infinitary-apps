@@ -3224,7 +3224,7 @@
 "settingsSoundPauseWhenAwayDescription" = "画面がオフまたはロックされている間は一時停止するので、音楽のせいでコンピューターがスリープできなくなることはありません。戻ると再び再生します。";
 "settingsSoundStyle" = "スタイル";
 "settingsSoundStyleColdSleep" = "冷凍睡眠";
-"settingsSoundStyleColdSleepDescription" = "ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動の上で鳴ります。";
+"settingsSoundStyleColdSleepDescription" = "ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動、かすかな風の上で鳴ります。";
 "settingsSoundStyleDeepDrift" = "深宇宙の漂流";
 "settingsSoundStyleDeepDriftDescription" = "ドラムなし。ゆっくり広がる和音と、長く響く高い音がときどき鳴ります。";
 "settingsSoundStyleFairWinds" = "順風";
@@ -3239,13 +3239,13 @@
 "settingsSoundStyleIslandMorning" = "島の朝";
 "settingsSoundStyleIslandMorningDescription" = "いちばん明るいスタイル。マリンバ、弾むベース、フルートに、やさしい波の音が重なります。";
 "settingsSoundStyleMoonlitDeck" = "月夜の甲板";
-"settingsSoundStyleMoonlitDeckDescription" = "まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音が重なります。";
+"settingsSoundStyleMoonlitDeckDescription" = "まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音と夜風が重なります。";
 "settingsSoundStyleQuietCove" = "静かな入り江";
 "settingsSoundStyleQuietCoveDescription" = "コンサーティーナと爪弾くリュートの、ゆったり揺れるリズム。やさしい波の音が流れます。";
 "settingsSoundStyleStarCruise" = "星の巡航";
 "settingsSoundStyleStarCruiseDescription" = "やわらかな繰り返しのパターンが、ゆっくりした低い鼓動の上で左右に響きます。";
 "settingsSoundStyleTavernEmbers" = "酒場の残り火";
-"settingsSoundStyleTavernEmbersDescription" = "爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい波の音が流れます。";
+"settingsSoundStyleTavernEmbersDescription" = "爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい雨音と波の音が流れます。";
 "settingsSoundStyleWayfinderNight" = "航海者の夜";
 "settingsSoundStyleWayfinderNightDescription" = "ハミングの声、親指ピアノ、ゆっくりした太鼓に、やさしい波の音が重なります。";
 "settingsSoundVolume" = "音量";

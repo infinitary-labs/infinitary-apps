@@ -3224,7 +3224,7 @@
 "settingsSoundPauseWhenAwayDescription" = "Pausa enquanto sua tela está desligada ou bloqueada, para que a música não mantenha seu computador acordado, e volta a tocar quando você retorna.";
 "settingsSoundStyle" = "Estilo";
 "settingsSoundStyleColdSleep" = "Sono criogênico";
-"settingsSoundStyleColdSleepDescription" = "Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave e um batimento lento.";
+"settingsSoundStyleColdSleepDescription" = "Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave, um batimento lento e um vento suave.";
 "settingsSoundStyleDeepDrift" = "Deriva profunda";
 "settingsSoundStyleDeepDriftDescription" = "Sem bateria: acordes lentos e amplos e algumas notas agudas com ecos longos.";
 "settingsSoundStyleFairWinds" = "Bons ventos";
@@ -3239,13 +3239,13 @@
 "settingsSoundStyleIslandMorning" = "Manhã na ilha";
 "settingsSoundStyleIslandMorningDescription" = "O mais luminoso: uma marimba, um baixo embalado e uma flauta sobre ondas suaves.";
 "settingsSoundStyleMoonlitDeck" = "Convés ao luar";
-"settingsSoundStyleMoonlitDeckDescription" = "Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves.";
+"settingsSoundStyleMoonlitDeckDescription" = "Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves e vento noturno.";
 "settingsSoundStyleQuietCove" = "Enseada tranquila";
 "settingsSoundStyleQuietCoveDescription" = "Um ritmo lento e embalado com concertina e alaúde dedilhado sobre ondas suaves.";
 "settingsSoundStyleStarCruise" = "Cruzeiro estelar";
 "settingsSoundStyleStarCruiseDescription" = "Um padrão suave e repetido que ecoa à esquerda e à direita sobre um pulso grave e lento.";
 "settingsSoundStyleTavernEmbers" = "Brasas da taverna";
-"settingsSoundStyleTavernEmbersDescription" = "Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre ondas suaves.";
+"settingsSoundStyleTavernEmbersDescription" = "Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre chuva suave e ondas.";
 "settingsSoundStyleWayfinderNight" = "Noite dos navegadores";
 "settingsSoundStyleWayfinderNightDescription" = "Vozes cantarolando, uma kalimba e um tambor lento sobre ondas suaves.";
 "settingsSoundVolume" = "Volume";

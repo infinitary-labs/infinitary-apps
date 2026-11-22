@@ -1524,7 +1524,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
 
 Asked to add a computer without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask the captain first on one decision card of its own, with every way as an option - the computer's address, a link, a command, or another user on this computer - and the address recommended, because this computer then keeps the other one updated and reaches it by itself.
 It says a link suits a computer the captain sits at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off.
-On a Windows home its line leaves the address out and recommends a link instead (`ActionLine.lineOn`, `src/shared/actions.ts`).
+On a Windows home its line leaves the address out and recommends a link instead (`ActionLine.lineOn`, `src/shared/actions.ts`; `src/core/orchestrator/firstmateAgent.addressWay.test.ts` holds both recommendations).
 Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and the host files one card for the captain from typed facts, never the first mate's words (`HandoverOffer`, `src/shared/actions.ts`):
 
 | Asked | The card | Its button |

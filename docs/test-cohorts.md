@@ -303,6 +303,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/main/host/linuxSecretCustody.thread.test.ts` | actual native worker identity through libc, with no credential-store access | 5 s default |
 | `src/core/utilityQos.test.ts` | taskpolicy children | 5 s default |
 | `src/core/orchestrator/firstmateAgent.actions.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.addressWay.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.capture.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.context.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.delivery.test.ts` | real git, at the run's own priority | 5 s default |

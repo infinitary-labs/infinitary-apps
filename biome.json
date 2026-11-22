@@ -386,6 +386,7 @@
         "!src/core/orchestrator/reviews.wakes.test.ts",
         "!src/core/orchestrator/crewBrief.test.ts",
         "!src/core/orchestrator/firstmateAgent.actions.test.ts",
+        "!src/core/orchestrator/firstmateAgent.addressWay.test.ts",
         "!src/core/orchestrator/firstmateAgent.capture.test.ts",
         "!src/core/orchestrator/firstmateAgent.context.test.ts",
         "!src/core/orchestrator/firstmateAgent.delivery.test.ts",

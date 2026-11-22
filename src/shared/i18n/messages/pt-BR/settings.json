@@ -412,6 +412,8 @@
   "settingsDevicesMapUpdating": "Atualizando",
   "settingsDevicesMapWaitingForWork": "Aguardando resposta do trabalho",
   "settingsDevicesMapWorkNotReady": "Janela conectada · trabalho indisponível",
+  "settingsDevicesMatch": "Igualar",
+  "settingsDevicesMatchNamed": "Igualar {device} a este computador",
   "settingsDevicesMoveCancel": "Cancelar a mudança",
   "settingsDevicesMoveChecking": "Verificando {device}…",
   "settingsDevicesMoveCouldNot": "Não foi possível verificar {device}. Tente de novo em instantes.",
@@ -565,9 +567,6 @@
   "settingsDevicesTryAgainNamed": "Tentar alcançar {device} de novo",
   "settingsDevicesUpdate": "Atualizar",
   "settingsDevicesUpdateFailed": "Não foi possível atualizar o Infinitary lá.",
-  "settingsDevicesUpdateNamed": "Atualizar {device}",
-  "settingsDevicesUpdateOlder": "Instalar versão anterior",
-  "settingsDevicesUpdateOlderNamed": "Instalar a versão anterior em {device}",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

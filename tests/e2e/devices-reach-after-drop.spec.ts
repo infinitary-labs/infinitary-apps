@@ -6,6 +6,7 @@ import { catalogRefreshesSettled } from "@core/pi/modelRuntime";
 import { expect, type Page, test } from "@playwright/test";
 import { type DeviceView, deviceLabel } from "@shared/devices";
 import { deviceUpdateCardId } from "@shared/deviceUpdateNudge";
+import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import electronPath from "electron";
 import { deviceState } from "../../src/renderer/src/settings/devicesWords";
@@ -138,7 +139,10 @@ test("an update refused while a computer did not answer is not still said once i
     };
     await expect.poll(sshState, { timeout: 60_000 }).toEqual({ state: "connected" });
     await expect.poll(saysConnected).toBe(true);
-    const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
+    const update = row.getByRole("button", {
+      name: m.settingsDevicesMatchNamed({ device: label }),
+      exact: true,
+    });
     await expect(update).toBeVisible();
     const problem = page.locator('[data-settings-error="devices"]');
     await expect(problem).toHaveCount(0);

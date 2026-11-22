@@ -544,3 +544,9 @@ A wake of a removed kind that waited in the inbox when the app updated is served
 A card an earlier build put up while a batched choice waited for a queue workflow comes down at the first start, with its reason.
 The Batched pull requests runbook's switch was saved under `queue` and is read under `batches` (`SettingsStore.getRunbookStates`), so a person who turned it off keeps it off; the saved row is rewritten the next time a switch changes.
 An older build that opens the profile again reads that 0 as a queue version it never offered, so it may offer its queue once more in such a project, and once the row is rewritten it finds its own switch absent, which means on.
+
+## Builds of the home's source
+
+The home's pairing folder keeps `source-builds.json`, the computers the captain allowed to run the home's code (`DevicePairing.noteSourceAllowed`, `docs/devices.md`, "Matching the home's build"); a missing or unreadable file allows none, and a computer's entry goes when it is removed.
+A computer that runs work keeps each build of the home's source in its work folder's `source/<commit>`, with `infinitary-build.json` (version 1: the commit) beside it; its agent may name that build's Electron, which an older app reads as any launcher it did not write.
+No database migration or saved-data format boundary changes.

@@ -1,4 +1,5 @@
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -52,7 +53,12 @@ test("canceling another update's question while the Ubuntu worker's corrected ad
 
   // An ordinary Remote Login update of the Studio asks for its password.
   await selectDevice(studio.id);
-  await userEvent.click(button(await shown('[data-device-row="studio"]'), "Update Mac Studio"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="studio"]'),
+      m.settingsDevicesMatchNamed({ device: "Mac Studio" }),
+    ),
+  );
   studioAnswer.resolve({
     asks: "password",
     address: studioAddress,
@@ -63,7 +69,12 @@ test("canceling another update's question while the Ubuntu worker's corrected ad
 
   // The worker's saved address reaches another account: its form opens prefilled, saying why.
   await selectDevice(worker.id);
-  await userEvent.click(button(await shown('[data-device-row="mini"]'), "Update Ubuntu worker"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="mini"]'),
+      m.settingsDevicesMatchNamed({ device: "Ubuntu worker" }),
+    ),
+  );
   const why = [`Another account answered at ${tried}.`, "Check the address."];
   workerAnswer.resolve({ asks: "package-address", address: tried, lines: why });
   const form = await shown('[data-worker-update="mini"] [data-device-address-question]');

@@ -436,6 +436,8 @@
   "settingsDevicesMapUpdating": "جارٍ التحديث",
   "settingsDevicesMapWaitingForWork": "بانتظار رد العمل",
   "settingsDevicesMapWorkNotReady": "النافذة متصلة · العمل غير جاهز",
+  "settingsDevicesMatch": "مطابقة",
+  "settingsDevicesMatchNamed": "مطابقة {device} مع هذا الكمبيوتر",
   "settingsDevicesMoveCancel": "إلغاء النقل",
   "settingsDevicesMoveChecking": "جارٍ فحص {device}…",
   "settingsDevicesMoveCouldNot": "تعذّر فحص {device}. حاول مجددًا بعد لحظة.",
@@ -607,9 +609,6 @@
   "settingsDevicesTryAgainNamed": "محاولة الوصول إلى {device} مجددًا",
   "settingsDevicesUpdate": "تحديث",
   "settingsDevicesUpdateFailed": "تعذّر تحديث Infinitary هناك.",
-  "settingsDevicesUpdateNamed": "تحديث {device}",
-  "settingsDevicesUpdateOlder": "تثبيت الإصدار الأقدم",
-  "settingsDevicesUpdateOlderNamed": "تثبيت الإصدار الأقدم على {device}",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

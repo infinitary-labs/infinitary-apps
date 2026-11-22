@@ -469,17 +469,10 @@ function computerNotices({
       tone: other.takesWork ? undefined : "warn",
       act:
         !settling && device.removal !== "when-back" && !installedThere(device)
-          ? act(
-              other.than === "newer" ? m.settingsDevicesUpdateOlder() : m.settingsDevicesUpdate(),
-              () => onUpdate(device),
-              {
-                disabled: busy === "link",
-                "aria-label":
-                  other.than === "newer"
-                    ? m.settingsDevicesUpdateOlderNamed({ device: label })
-                    : m.settingsDevicesUpdateNamed({ device: label }),
-              },
-            )
+          ? act(m.settingsDevicesMatch(), () => onUpdate(device), {
+              disabled: busy === "link",
+              "aria-label": m.settingsDevicesMatchNamed({ device: label }),
+            })
           : undefined,
     });
   if (earlier && onAskCarry)

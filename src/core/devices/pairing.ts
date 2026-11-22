@@ -140,6 +140,12 @@ const failedUpdatesFileSchema = z.strictObject({
   version: z.literal(1),
   devices: z.record(z.string(), z.string().min(1).max(64)),
 });
+/** Computers the captain let run this Mac's source, asked once each (docs/devices.md). */
+const SOURCE_ALLOWED_FILE = "source-builds.json";
+const sourceAllowedFileSchema = z.strictObject({
+  version: z.literal(1),
+  devices: z.array(z.string().min(1).max(64)),
+});
 const WHEN_BACK_FILE = "removing.json";
 const whenBackFileSchema = z.strictObject({
   version: z.literal(1),
@@ -409,6 +415,8 @@ export class DevicePairing implements PairedDevices {
   /** When each device was last in reach. */
   private seenAt = new Map<string, number>();
   private failedUpdates = new Map<string, string>();
+  /** The computers allowed to run this Mac's source (`SOURCE_ALLOWED_FILE`). */
+  private sourceAllowedIds = new Set<string>();
   /** That could not be read this run: then no device reads as never in reach. */
   private seenUnreadable = false;
   /** The computers to remove once they are back. */
@@ -876,6 +884,7 @@ export class DevicePairing implements PairedDevices {
     this.updatePeers.delete(deviceId);
     if (this.seenAt.delete(deviceId)) this.saveSeen();
     if (this.failedUpdates.delete(deviceId)) this.saveFailedUpdates();
+    if (this.sourceAllowedIds.delete(deviceId)) this.saveSourceAllowed();
     if (this.packageUpdateAddresses && Object.hasOwn(this.packageUpdateAddresses, deviceId)) {
       const { [deviceId]: _removed, ...remaining } = this.packageUpdateAddresses;
       try {
@@ -1003,6 +1012,25 @@ export class DevicePairing implements PairedDevices {
       this.saveFailedUpdates();
     } catch (error) {
       this.onProblem(`could not keep which version did not start: ${(error as Error).message}`);
+    }
+    return true;
+  }
+
+  /** Whether the captain let this computer run this Mac's source. */
+  sourceAllowed(deviceId: string): boolean {
+    return this.sourceAllowedIds.has(deviceId);
+  }
+
+  /** Keeps the captain's yes to this computer running this Mac's source; true when it was new. */
+  noteSourceAllowed(deviceId: string): boolean {
+    if (this.unreadable || this.sourceAllowedIds.has(deviceId)) return false;
+    if (!this.entries.some((entry) => entry.id === deviceId)) return false;
+    this.sourceAllowedIds.add(deviceId);
+    try {
+      this.saveSourceAllowed();
+    } catch (error) {
+      // i18n-exempt: a log line, never shown
+      this.onProblem(`could not keep which computers run source: ${(error as Error).message}`);
     }
     return true;
   }
@@ -1682,6 +1710,17 @@ export class DevicePairing implements PairedDevices {
       this.onProblem("Which versions did not start on each computer cannot be read.");
     }
     try {
+      const path = join(this.dir, SOURCE_ALLOWED_FILE);
+      if (existsSync(path))
+        this.sourceAllowedIds = new Set(
+          sourceAllowedFileSchema.parse(JSON.parse(readFileSync(path, "utf8"))).devices,
+        );
+    } catch {
+      // Unread, every computer is asked again before it runs source.
+      // i18n-exempt: a log line, never shown
+      this.onProblem("Which computers may run this computer's source cannot be read.");
+    }
+    try {
       const path = join(this.dir, SEEN_FILE);
       if (existsSync(path))
         this.seenAt = new Map(
@@ -1895,6 +1934,10 @@ export class DevicePairing implements PairedDevices {
         `could not keep where a device reached ${HERE.this}: ${(error as Error).message}`,
       );
     }
+  }
+
+  private saveSourceAllowed(): void {
+    this.writeFile(SOURCE_ALLOWED_FILE, { version: 1, devices: [...this.sourceAllowedIds] });
   }
 
   private saveFailedUpdates(): void {

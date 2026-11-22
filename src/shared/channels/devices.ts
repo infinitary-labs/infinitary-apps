@@ -131,10 +131,12 @@ export const deviceChannels = {
     request: z.tuple([z.boolean()]),
     response: nearbyMacsViewSchema,
   },
-  // Updates Firstmate on a computer that runs work to this Mac's version
-  // (docs/devices.md, "Updating"): over Remote Login for one added by its
-  // address or a joined Ubuntu package worker with an update address; otherwise
-  // over the connection. Each step is a feed line.
+  // Devices' Match: brings a computer that runs work to this Mac's build
+  // (docs/devices.md, "Updating" and "Matching the home's build"): this Mac's
+  // commit built there over the connection when this Mac runs from source;
+  // otherwise its version, over Remote Login for one added by its address or
+  // a joined Ubuntu package worker with an update address, else over the
+  // connection. Each step is a feed line.
   "inf:devices:update": {
     effect: "change",
     surface: "core",

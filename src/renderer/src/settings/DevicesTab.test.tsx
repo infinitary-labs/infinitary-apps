@@ -984,8 +984,14 @@ describe("Settings -> Devices", () => {
     // It still takes work: in reach, its tasks on the right.
     expect(html).toContain('data-tone="ok"');
     expect(html).toContain(">1 task<");
-    expect(html).toContain('aria-label="Update Running as Builder"');
-    expect(html).toMatch(/data-notice="version"><span[^>]*>[^<]*<\/span><button[^>]*>Update</);
+    expect(html).toContain(
+      `aria-label="${m.settingsDevicesMatchNamed({ device: "Running as Builder" })}"`,
+    );
+    expect(html).toMatch(
+      new RegExp(
+        `data-notice="version"><span[^>]*>[^<]*</span><button[^>]*>${m.settingsDevicesMatch()}<`,
+      ),
+    );
     expect(acts(html)).toContain("remove");
 
     // Another major takes no new work: still seen, in warn, with no new work on the right.
@@ -1003,7 +1009,7 @@ describe("Settings -> Devices", () => {
     expect(away).not.toContain("out of reach");
 
     expect(deviceState(noWork)).toEqual({ text: "no new work", tone: "warn" });
-    expect(away).toContain(">Update<");
+    expect(away).toContain(`>${m.settingsDevicesMatch()}<`);
 
     // One too old to say its version, or newer than this Mac's.
     expect(deviceWords.otherVersion({ than: "older", takesWork: true, updateBy: "command" })).toBe(
@@ -1022,7 +1028,7 @@ describe("Settings -> Devices", () => {
     const updating = render({ devices: [older], updating: [older.id] });
     expect(updating).toContain("Updating Infinitary on Running as Builder…");
     expect(updating).not.toContain("Has Infinitary");
-    expect(updating).not.toContain(">Update<");
+    expect(updating).not.toContain(`>${m.settingsDevicesMatch()}<`);
     expect(acts(updating)).not.toContain("remove");
     // Connected on another version, it is not out of reach: no way back.
     const byAddress: DeviceView = {
@@ -1032,22 +1038,23 @@ describe("Settings -> Devices", () => {
     };
     expect(wayBack(byAddress)).toBeNull();
     expect(strandedLine(byAddress)).toBeNull();
-    // On this Mac's version there is no Update.
-    expect(render({ devices: [BUILDER] })).not.toContain(">Update<");
+    // On this Mac's version there is no Match.
+    expect(render({ devices: [BUILDER] })).not.toContain(`>${m.settingsDevicesMatch()}<`);
   });
 
-  // INF-5468's plan, piece 2: Update on a computer with a newer Infinitary installs an older one.
-  it("says the Update button on a computer with a newer Infinitary installs the older version", () => {
-    const newer: DeviceView = {
-      ...BUILDER,
-      otherVersion: { app: "0.1.31", than: "newer", takesWork: true, updateBy: "connection" },
-    };
-    const html = render({ devices: [newer] });
-    const label = deviceLabel(newer);
-    expect(html).toContain("Has Infinitary 0.1.31, newer than this computer&#x27;s.");
-    expect(html).toContain(`>${m.settingsDevicesUpdateOlder()}<`);
-    expect(html).toContain(`aria-label="${m.settingsDevicesUpdateOlderNamed({ device: label })}"`);
-    expect(html).not.toContain(`>${m.settingsDevicesUpdate()}<`);
+  // INF-5635's plan, piece 3: one Match brings any computer to this computer's build, older or newer.
+  it("offers one Match button on a computer with another version, older or newer", () => {
+    for (const than of ["older", "newer"] as const) {
+      const other: DeviceView = {
+        ...BUILDER,
+        otherVersion: { app: "0.1.31", than, takesWork: true, updateBy: "connection" },
+      };
+      const html = render({ devices: [other] });
+      const label = deviceLabel(other);
+      expect(html).toContain(`Has Infinitary 0.1.31, ${than} than this computer&#x27;s.`);
+      expect(html).toContain(`>${m.settingsDevicesMatch()}<`);
+      expect(html).toContain(`aria-label="${m.settingsDevicesMatchNamed({ device: label })}"`);
+    }
   });
 
   // INF-5372's plan, piece 1: each copy's version, and any copy behind this computer's marked.
@@ -1175,7 +1182,7 @@ describe("Settings -> Devices", () => {
     expect(html).toContain(
       "Has Infinitary 0.1.20, older than this computer&#x27;s. It takes no new work until it is updated. Install the newer Infinitary on that computer.",
     );
-    expect(html).not.toContain(">Update<");
+    expect(html).not.toContain(`>${m.settingsDevicesMatch()}<`);
     expect(acts(html)).toContain("remove");
   });
 

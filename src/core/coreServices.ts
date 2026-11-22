@@ -7,6 +7,7 @@ import type { SavedResetResult } from "@shared/savedResets";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
 import type { Batches } from "./batches/batches";
+import type { HomeSource } from "./connection/connection";
 import type { DecisionModels } from "./decisions/decisionModel";
 import type { EventScreenOffer } from "./decisions/eventScreenOffer";
 import type { startCorrections } from "./decisions/startCorrections";
@@ -244,6 +245,12 @@ export type CoreServices = {
     chip: DeviceChip | undefined,
     kind?: "deb",
   ) => Promise<FarBuild | null>;
+  /**
+   * The committed source a computer matched to this run from source gets
+   * from it (docs/devices.md, "Matching the home's build"); null when this
+   * run is not one `pnpm dev`'s starter started.
+   */
+  homeSource: () => HomeSource | null;
   /**
    * Adding a Mac by its address over Remote Login, and updating Firstmate
    * there (docs/devices.md, "Adding a computer by its address"): the captain's

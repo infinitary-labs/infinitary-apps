@@ -8,6 +8,7 @@ import { catalogRefreshesSettled } from "@core/pi/modelRuntime";
 import { expect, test } from "@playwright/test";
 import { type DeviceView, deviceLabel, PAIRING_LINK_PREFIX } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { macRelease } from "../helpers/macRelease";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -309,7 +310,10 @@ for (const operation of ["add", "update", "fallback"] as const) {
           const updatingDevice = device;
           const row = await selectDevice(page, device.id);
           const label = deviceLabel(device);
-          const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
+          const update = row.getByRole("button", {
+            name: m.settingsDevicesMatchNamed({ device: label }),
+            exact: true,
+          });
           if (operation === "fallback") release.mode("corrupt");
           await page.evaluate(() => {
             (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents = [];

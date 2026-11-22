@@ -1,4 +1,5 @@
 import { type AppFollowReport, appFollowWhy } from "./appFollow";
+import { shortCommit } from "./buildIdentity";
 import type { CardAction } from "./cards";
 import { HERE } from "./deviceNames";
 import {
@@ -278,5 +279,76 @@ export function appUpdateCard(facts: AppUpdateCardFacts): {
             },
             { id: notNow, label: m.devicesAppCardNotNow(), variant: "ghost" },
           ],
+  };
+}
+
+/**
+ * The card that asks once whether a computer may run this computer's source
+ * (docs/devices.md, "Matching the home's build"; design skill
+ * `components/devices/UpdateNudge`, "Running this computer's code"): this
+ * computer runs from source at a commit, and that computer runs another
+ * build. Match it is the captain's yes for that computer, kept from then on;
+ * after it, the computer is matched by itself whenever this one runs another
+ * commit.
+ */
+export type SourceMatchCardFacts = {
+  deviceId: string;
+  /** The computer, as its row names it. */
+  device: string;
+  /** The commit this computer runs. */
+  commit: string;
+  /** What a refused match said, once one was. */
+  refusal?: readonly string[] | undefined;
+  /**
+   * The captain already let that computer run this computer's source: the
+   * card only comes back after a match that did not go through, and offers
+   * it again without asking for the yes it already has.
+   */
+  allowed?: boolean | undefined;
+};
+
+/** What names a source card's gap: the commit this computer runs. */
+export function sourceMatchGap(facts: Pick<SourceMatchCardFacts, "commit">): string {
+  return `source:${facts.commit}`;
+}
+
+export function sourceMatchCard(facts: SourceMatchCardFacts): {
+  title: string;
+  meta: string;
+  body: string;
+  actions: CardAction[];
+} {
+  const gap = sourceMatchGap(facts);
+  const again = facts.allowed === true;
+  const paragraphs = [
+    m.devicesSourceCardBody({ device: facts.device, commit: shortCommit(facts.commit) }),
+    ...(again
+      ? []
+      : [
+          m.devicesSourceCardOnce({ device: facts.device }),
+          m.devicesSourceCardKeychain({ device: facts.device }),
+        ]),
+  ];
+  if (facts.refusal && facts.refusal.length > 0)
+    paragraphs.push(m.devicesSourceCardRefused({ why: facts.refusal.join(" ") }));
+  return {
+    title: again
+      ? m.devicesSourceCardAgainTitle({ device: facts.device })
+      : m.devicesSourceCardTitle({ device: facts.device }),
+    meta: facts.device,
+    body: paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join("\n"),
+    actions: [
+      {
+        id: deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.update, gap),
+        label: again ? m.devicesSourceCardMatchAgain() : m.devicesSourceCardMatch(),
+        default: true,
+        effect: { kind: "open", target: "devices", update: facts.deviceId },
+      },
+      {
+        id: deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.notNow, gap),
+        label: m.devicesAppCardNotNow(),
+        variant: "ghost",
+      },
+    ],
   };
 }

@@ -13,6 +13,7 @@ import {
 import * as m from "@shared/i18n/messages.generated";
 import { englishOf, type Said, said } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
+import { WORK_PROGRESS_ORDER, WORK_SOURCE_ORDER } from "@shared/work";
 import { WORK_REACH_GRACE_MS, WORK_SETUP_LIVE } from "@shared/workSetup";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
@@ -33,6 +34,7 @@ import { RepoRegistry } from "../workspace/repoRegistry";
 import { Computers, type ComputersOptions, type DeviceUpdateEvent } from "./computers";
 import { createKeyIdentity, type KeyIdentity } from "./identity";
 import { DevicePairing, type DevicePairingOptions } from "./pairing";
+import { RemoteLoginRefusedError } from "./remoteLogin";
 
 /**
  * Settings -> Devices' list while this Mac's network moves (docs/devices.md,
@@ -171,7 +173,7 @@ afterEach(() => {
  */
 function homeAt(
   address: string,
-  home?: { app?: string; contract: string },
+  home?: ComputersOptions["home"],
   more: Partial<ComputersOptions> = {},
 ) {
   const userData = scratchDir("infinitary-computers-");
@@ -1015,5 +1017,172 @@ describe("a computer that joins again under a new key", () => {
     await expect(home.computers.carryOn(again, home.deviceId)).rejects.toThrow(/in reach/);
     home.connection.tell({ deviceId: again, contact: "gone" });
     await expect(home.computers.carryOn(home.deviceId, again)).rejects.toThrow(/out of reach/);
+  });
+});
+
+// INF-5635's plan, piece 3: "Match brings a Mac to the home's commit; a failing build leaves it
+// on its old copy and says why".
+describe("matching a computer to this Mac's source", () => {
+  const HOME = "a".repeat(40);
+  const OTHER = "b".repeat(40);
+  const sourceHome = () => {
+    const home = homeAt("192.168.65.2", {
+      contract: PROTOCOL_VERSION,
+      build: { commit: HOME, source: true },
+    });
+    home.connection.tell({ deviceId: home.deviceId, contact: "in-reach" });
+    return home;
+  };
+  /** The Mac mini's hello: its build, and whether it lists the source builds change. */
+  const hello = (build: WorkDeviceVersion["build"], builds = true): WorkDeviceVersion => ({
+    contract: PROTOCOL_VERSION,
+    app: "0.8.6-alpha.16",
+    takesWork: true,
+    changes: builds ? [...CONTRACT_CHANGES.names] : [],
+    ...(build ? { build } : {}),
+  });
+
+  it("names this Mac's commit on a row running another build, and none once it runs that commit", () => {
+    const { connection, computers, deviceId } = sourceHome();
+    connection.tellVersion(deviceId, hello({ commit: OTHER, source: true }));
+    const row = () => computers.list().find((device) => device.id === deviceId);
+    expect(row()?.otherVersion?.source).toEqual({ commit: HOME });
+    connection.tellVersion(deviceId, hello({ commit: HOME, source: true }));
+    expect(row()?.otherVersion).toBeUndefined();
+  });
+
+  it("asks the computer to build this Mac's commit, says each step, and answers once it runs it", async () => {
+    const { connection, computers, deviceId, lines } = sourceHome();
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    const asked: { channel: string; args: unknown }[] = [];
+    let state = "fetching";
+    connection.link.ask = async (_deviceId, channel, args) => {
+      asked.push({ channel, args });
+      if (channel === WORK_PROGRESS_ORDER) return { received: 0, state };
+      state = "building";
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      // It restarts on the build, and its hello names this Mac's commit.
+      setImmediate(() => connection.tellVersion(deviceId, hello({ commit: HOME, source: true })));
+      return { restarts: true };
+    };
+    const view = await computers.update(deviceId);
+    expect(asked.find((ask) => ask.channel === WORK_SOURCE_ORDER)?.args).toEqual([
+      { commit: HOME },
+    ]);
+    expect("otherVersion" in view && view.otherVersion).toBeFalsy();
+    const said = lines.map((line) => line.text);
+    expect(said).toContain(m.devicesSourceFetching({ device: "Mac mini" }));
+    expect(said.at(-1)).toContain("Mac mini");
+    expect(lines.at(-1)?.stage).toBe("done");
+  });
+
+  it("says the step a build failed at, and that the computer keeps its version", async () => {
+    const { connection, computers, deviceId, lines } = sourceHome();
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    connection.link.ask = async (_deviceId, channel) =>
+      channel === WORK_SOURCE_ORDER
+        ? { failed: "install", detail: "ERR_PNPM_FETCH_404" }
+        : { received: 0, state: "installing" };
+    const refused = await computers.update(deviceId).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(RemoteLoginRefusedError);
+    expect((refused as RemoteLoginRefusedError).lines).toEqual([
+      m.devicesSourceFailedInstall({ device: "Mac mini" }),
+      m.devicesSourceKeepsVersion(),
+    ]);
+    expect(lines.filter((line) => line.stage === "refused").map((line) => line.text)).toEqual([
+      m.devicesSourceFailedInstall({ device: "Mac mini" }),
+      m.devicesSourceKeepsVersion(),
+    ]);
+  });
+
+  it("refuses a computer too old to build source, sending it nothing", async () => {
+    const { connection, computers, deviceId } = sourceHome();
+    connection.tellVersion(deviceId, hello(undefined, false));
+    const asked: string[] = [];
+    connection.link.ask = async (_deviceId, channel) => {
+      asked.push(channel);
+      return {};
+    };
+    const refused = await computers.update(deviceId).catch((error: unknown) => error);
+    expect((refused as RemoteLoginRefusedError).lines).toEqual([
+      m.devicesSourceTooOld({ device: "Mac mini" }),
+      m.devicesSourceTooOldNext(),
+    ]);
+    expect(asked).toEqual([]);
+  });
+
+  it("builds this Mac's commit on a Mac added by its address, without going over Remote Login", async () => {
+    const overRemoteLogin: string[] = [];
+    const home = homeAt(
+      "192.168.65.2",
+      { contract: PROTOCOL_VERSION, build: { commit: HOME, source: true } },
+      {
+        updateOverRemoteLogin: async (deviceId) => {
+          overRemoteLogin.push(deviceId);
+          throw new Error("went over Remote Login");
+        },
+      },
+    );
+    const { connection, computers, deviceId, pairing } = home;
+    // As the list keeps a Mac added by its address.
+    const list = pairing.list.bind(pairing);
+    pairing.list = () =>
+      list().map((device) =>
+        device.id === deviceId ? { ...device, remoteLogin: "sam@mini.local" } : device,
+      );
+    connection.tell({ deviceId, contact: "in-reach" });
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    const asked: string[] = [];
+    connection.link.ask = async (_deviceId, channel) => {
+      asked.push(channel);
+      return channel === WORK_SOURCE_ORDER
+        ? { failed: "build" }
+        : { received: 0, state: "building" };
+    };
+    await computers.update(deviceId).catch(() => undefined);
+    expect(asked).toContain(WORK_SOURCE_ORDER);
+    expect(overRemoteLogin).toEqual([]);
+  });
+
+  // The captain's choice on this change's review: other accounts on this Mac are left out of matching.
+  it("leaves another account on this Mac out of matching by build, comparing it by version alone", () => {
+    const { connection, computers, deviceId, pairing } = sourceHome();
+    const list = pairing.list.bind(pairing);
+    pairing.list = () =>
+      list().map((device) => (device.id === deviceId ? { ...device, onThisMac: true } : device));
+    connection.tellVersion(deviceId, hello({ commit: OTHER, source: true }));
+    const row = () => computers.list().find((device) => device.id === deviceId);
+    expect(row()?.otherVersion).toBeUndefined();
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(false);
+  });
+
+  it("refuses a computer that is not a Mac, sending it nothing and keeping no yes", async () => {
+    const { connection, computers, deviceId, pairing } = sourceHome();
+    pairing.noteSystem(deviceId, { system: "linux" });
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    const asked: string[] = [];
+    connection.link.ask = async (_deviceId, channel) => {
+      asked.push(channel);
+      return {};
+    };
+    const refused = await computers.update(deviceId).catch((error: unknown) => error);
+    expect((refused as RemoteLoginRefusedError).lines).toEqual([
+      m.devicesSourceNotMac({ device: "Mac mini" }),
+      m.devicesSourceKeepsVersion(),
+    ]);
+    expect(asked).toEqual([]);
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(false);
+  });
+
+  it("keeps the captain's Match as that computer's yes to running source, and only then", () => {
+    const { connection, computers, deviceId } = sourceHome();
+    connection.tellVersion(deviceId, hello({ commit: HOME, source: true }));
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(false);
+    connection.tellVersion(deviceId, hello({ commit: OTHER }));
+    computers.allowSource(deviceId);
+    expect(computers.sourceAllowed(deviceId)).toBe(true);
   });
 });

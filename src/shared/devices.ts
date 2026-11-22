@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { appFollowReportSchema } from "./appFollow";
+import { shortCommit } from "./buildIdentity";
 import { commandNoticeSchema } from "./commandNotice";
 import { COMPUTER, HERE } from "./deviceNames";
 import * as m from "./i18n/messages.generated.ts";
@@ -33,6 +34,15 @@ export function deviceControls(kind: DeviceKind): boolean {
 /** Whether a device of this kind may run work: a project may be set to run on it. */
 export function deviceRunsWork(kind: DeviceKind): boolean {
   return kind !== "view";
+}
+
+/**
+ * Whether a computer can build Infinitary from its home's source
+ * (docs/devices.md, "Matching the home's build"): a Mac, or one that never
+ * said its system; never a Linux computer or a Windows PC.
+ */
+export function buildsSourceThere(system: DeviceSystem | undefined): boolean {
+  return system === undefined || system === "macos";
 }
 
 /**
@@ -395,6 +405,12 @@ export const deviceOtherVersionSchema = z.strictObject({
   takesWork: z.boolean(),
   updateBy: deviceUpdateBySchema,
   downloads: z.literal(true).optional(),
+  /**
+   * This computer runs source at a commit, and Match builds that commit there
+   * (docs/devices.md, "Matching the home's build"); absent when Match brings
+   * it to this computer's installed version.
+   */
+  source: z.strictObject({ commit: z.string().regex(/^[a-f0-9]{40,64}$/) }).optional(),
 });
 export type DeviceOtherVersion = z.infer<typeof deviceOtherVersionSchema>;
 
@@ -1333,6 +1349,10 @@ export const deviceWords = {
    * version"): which version it has, and whether it still takes work.
    */
   otherVersion(other: DeviceOtherVersion, itself = false): string {
+    if (other.source) {
+      const has = m.devicesSourceOtherBuild({ commit: shortCommit(other.source.commit) });
+      return other.takesWork ? has : `${has} ${m.devicesSourceNoWorkUntilMatched()}`;
+    }
     const has =
       other.app && other.than
         ? `Has Infinitary ${other.app}, ${other.than} than ${HERE.this}'s.`

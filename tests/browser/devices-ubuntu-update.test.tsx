@@ -1,4 +1,5 @@
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -43,7 +44,10 @@ test("Ubuntu updates from the row and card keep their worker selected through th
     if (source === "row") {
       await selectDevice(worker.id);
       await userEvent.click(
-        button(await shown('[data-device-row="mini"]'), "Update Ubuntu worker"),
+        button(
+          await shown('[data-device-row="mini"]'),
+          m.settingsDevicesMatchNamed({ device: "Ubuntu worker" }),
+        ),
       );
     } else {
       await selectDevice(STUDIO.id);
@@ -100,7 +104,12 @@ test("Ubuntu updates from the row and card keep their worker selected through th
   await expect.poll(() => bridge.requests("inf:devices:list").length).toBeGreaterThan(beforeLookup);
   received = held<UpdateAnswer>();
   await selectDevice(worker.id);
-  await userEvent.click(button(await shown('[data-device-row="mini"]'), "Update Ubuntu worker"));
+  await userEvent.click(
+    button(
+      await shown('[data-device-row="mini"]'),
+      m.settingsDevicesMatchNamed({ device: "Ubuntu worker" }),
+    ),
+  );
   await expect.poll(() => bridge.requests("inf:devices:update")).toHaveLength(4);
   received.resolve({ asks: "package-address", address });
   const pending = await shown('[data-worker-update="mini"] [data-device-address-question]');

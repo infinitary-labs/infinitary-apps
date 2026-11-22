@@ -404,6 +404,8 @@
   "settingsDevicesMapUpdating": "Aktualisierung",
   "settingsDevicesMapWaitingForWork": "Wartet auf Antwort der Arbeit",
   "settingsDevicesMapWorkNotReady": "Fenster verbunden · Arbeit nicht bereit",
+  "settingsDevicesMatch": "Angleichen",
+  "settingsDevicesMatchNamed": "{device} an diesen Computer angleichen",
   "settingsDevicesMoveCancel": "Umzug abbrechen",
   "settingsDevicesMoveChecking": "{device} wird geprüft…",
   "settingsDevicesMoveCouldNot": "{device} konnte nicht geprüft werden. Versuch es gleich noch einmal.",
@@ -551,9 +553,6 @@
   "settingsDevicesTryAgainNamed": "Erneut versuchen, {device} zu erreichen",
   "settingsDevicesUpdate": "Aktualisieren",
   "settingsDevicesUpdateFailed": "Infinitary konnte dort nicht aktualisiert werden.",
-  "settingsDevicesUpdateNamed": "{device} aktualisieren",
-  "settingsDevicesUpdateOlder": "Ältere Version installieren",
-  "settingsDevicesUpdateOlderNamed": "Ältere Version auf {device} installieren",
   "settingsDevicesVersionMark": "Infinitary {version}",
   "settingsDevicesWayCount": {
     "plural": "count",

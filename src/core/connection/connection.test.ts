@@ -2,10 +2,11 @@ import { once } from "node:events";
 import { writeFileSync } from "node:fs";
 import { createServer as createPlainServer, connect as plainConnect, type Socket } from "node:net";
 import { join } from "node:path";
+import { Readable, Writable } from "node:stream";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { ownChannel } from "@shared/codeNames";
-import { CONNECTION_CLOSE, REPLACED_PUSH_CHANNEL } from "@shared/connection";
+import { CONNECTION_CLOSE, FETCH_SOURCE_PATH, REPLACED_PUSH_CHANNEL } from "@shared/connection";
 import {
   homeHearsWhileReading,
   PLACED_WORK_SINCE,
@@ -33,7 +34,13 @@ import {
   postPair,
 } from "../../../tests/helpers/connectionHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { claimLink, dialHome, HomeKeyMismatchError, type PairRefusedError } from "../devices/dial";
+import {
+  claimLink,
+  dialHome,
+  fetchFromHome,
+  HomeKeyMismatchError,
+  type PairRefusedError,
+} from "../devices/dial";
 import { createKeyIdentity } from "../devices/identity";
 import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
@@ -1939,5 +1946,52 @@ describe("pacing and liveness", () => {
     await expect.poll(() => heard.at(-1)?.contact, { timeout: 2_000 }).toBe("gone");
     frozen.ws.resume();
     await frozen.closed;
+  });
+});
+
+// INF-5635's plan, piece 3: Match sends a committed source archive to a computer that runs work,
+// committed code only.
+describe("this home's source, for a computer it asks to build it", () => {
+  const COMMIT = "e".repeat(40);
+  const archive = Buffer.from("the committed tree, packed");
+  const source = () => ({
+    commit: COMMIT,
+    archive: () => {
+      const stream = Readable.from([archive]);
+      return { stream, ended: once(stream, "end").then(() => {}), stop: () => stream.destroy() };
+    },
+  });
+  const fetchSource = (grant: DeviceGrant, commit: string) => {
+    const came: Buffer[] = [];
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        came.push(chunk);
+        done();
+      },
+    });
+    return fetchFromHome(grant, sink, {}, { path: FETCH_SOURCE_PATH, body: { commit } }).then(() =>
+      Buffer.concat(came),
+    );
+  };
+
+  it("sends a computer that runs work the commit this home runs, counted as it is sent", async () => {
+    const at = await home({ source });
+    const sent: number[] = [];
+    at.connection.onAppSent((_deviceId, bytes) => sent.push(bytes));
+    const grant = await at.join("work", "Mac mini");
+    expect(await fetchSource(grant, COMMIT)).toEqual(archive);
+    expect(sent.reduce((total, bytes) => total + bytes, 0)).toBe(archive.length);
+  });
+
+  it("refuses another commit, a home that runs no source, and a device that runs no work", async () => {
+    const at = await home({ source });
+    const grant = await at.join("work", "Mac mini");
+    await expect(fetchSource(grant, "f".repeat(40))).rejects.toMatchObject({ refused: "none" });
+    const view = await at.join("view", "Laptop");
+    await expect(fetchSource(view, COMMIT)).rejects.toMatchObject({ refused: "unknown" });
+    const plain = await home();
+    await expect(fetchSource(await plain.join("work", "Mac mini"), COMMIT)).rejects.toMatchObject({
+      refused: "none",
+    });
   });
 });

@@ -167,22 +167,19 @@ export class TaskCapture {
         },
         // A merge that set an existing task to start links it to that merge
         // after the task was filed (INF-3846 piece 4): that link is not where
-        // its work came from, so its own line stays the one it had.
+        // its work came from, so its own line stays the one it had. The link
+        // says itself whether the merge filed the task, even when both fall
+        // in one millisecond (`TaskGraph.mergesThatFiled`, INF-5647).
         followsUp: (taskId) => {
-          const filedAt = this.writer.store.get(taskId)?.createdAt ?? 0;
+          const filedBy = new Set(this.tasks.graph.mergesThatFiled(taskId));
           return this.writer.links
             .listFrom(taskId, "discovered-from")
-            .filter((link) => link.actor !== "host" || link.createdAt <= filedAt)
+            .filter((link) => link.actor !== "host" || filedBy.has(link.toId))
             .map((link) => link.toId);
         },
         // The app files a merge's step and links it to that merge in one
         // write (`TaskDeliveries.activateAfterMergeSteps`).
-        filedAtMerge: (taskId) => {
-          const filedAt = this.writer.store.get(taskId)?.createdAt;
-          return this.writer.links
-            .listFrom(taskId, "discovered-from")
-            .some((link) => link.actor === "host" && link.createdAt === filedAt);
-        },
+        filedAtMerge: (taskId) => this.tasks.graph.mergesThatFiled(taskId).length > 0,
         events: (taskId) => {
           let read = events.get(taskId);
           if (!read) {

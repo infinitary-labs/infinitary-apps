@@ -715,7 +715,12 @@ describe("after-merge steps that hold the rest's waiters", () => {
   // INF-1659, turning storage on, was filed from another task's report
   // before the secrets settings merged.
   it("covers an existing task a step starts, keeping the line of where its work came from", () => {
-    const { tasks, slice, move } = secrets(() => []);
+    // A frozen clock: the merge links the task in the millisecond it was
+    // filed, which a fast run on any machine can reach (INF-5647).
+    const { tasks, slice, move } = secrets(
+      () => [],
+      () => 5_000,
+    );
     const reporter = seedTask(tasks, {
       id: "inf07830",
       title: "Plan the secret manager",

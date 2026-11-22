@@ -110752,7 +110752,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     origin: string().nullable().optional(),
     /** The batch branch the app owns. */
     branch: string(),
-    /** Its version: the last member's commit. */
+    /** Its version: the last member's commit, or the generated commit on top of it (`generated`). */
     head: string(),
     /** The default branch's commit it was combined onto. */
     base: string(),
@@ -110804,7 +110804,14 @@ ${FRAME_KEYBOARD_SCRIPT}
      * while that task is open and the batch is, through a combine on the same
      * pull request, so a later hold names it; the app judges nothing from it.
      */
-    repair: string().optional()
+    repair: string().optional(),
+    /**
+     * The version the project's own checks added on top of the members'
+     * commits, changing only files the project marks generated, as the app
+     * wrote it again under its own push (docs/forge.md, "A generated commit"):
+     * then `head`. Taken once per combine; the next combine starts without it.
+     */
+    generated: string().optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),

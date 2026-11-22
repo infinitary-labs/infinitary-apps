@@ -51,6 +51,7 @@ import {
   type Combined,
   type CombineInput,
   combine as combineChanges,
+  generatedOnTop,
   LEFT_OUT_WORDS,
   landedCommits,
   pushBatch,
@@ -296,6 +297,7 @@ export type BatchesOptions = {
   combine?: (input: CombineInput) => Promise<Combined>;
   push?: typeof pushBatch;
   landed?: typeof landedCommits;
+  generated?: typeof generatedOnTop;
   /** A new batch branch's name; injectable for a test. */
   branchName?: () => string;
   /**
@@ -824,6 +826,10 @@ export class Batches {
       // over what the host holds now.
       const pushed = await this.pushedHead(forge, open.branch);
       if (pushed === open.head) return record;
+      // The project's own checks may add one commit of generated files on top: it stands
+      // as the batch's version, and the checks run on it (docs/forge.md, "A generated commit").
+      const taken = pushed ? await this.takeGenerated(repo, record, forge, pushed) : undefined;
+      if (taken) return taken;
       return this.recombine(repo, record, "none", pushed);
     }
     if (open.queued === open.head && forge.inHostQueue) {
@@ -1156,6 +1162,7 @@ export class Batches {
             defaultBranch: await forge.defaultBranch(),
             members: open.members,
             ...(mergedSha ? { merged: mergedSha } : {}),
+            ...(open.generated ? { generated: open.generated } : {}),
           });
     if (!this.atBatchAddress(repo, open)) return record;
     const label = this.label(repo, open);
@@ -1302,6 +1309,45 @@ export class Batches {
   private async moved(forge: Forge, open: OpenBatch): Promise<string | undefined> {
     const pushed = await this.pushedHead(forge, open.branch);
     return pushed === open.head ? undefined : pushed;
+  }
+
+  /**
+   * The project's own checks pushed one commit on top of the batch that
+   * changes only files the project marks generated (`generatedOnTop`): the
+   * app writes it again on the batch's version and pushes it over theirs,
+   * so the host starts every check on it, as a push by the checks cannot,
+   * and it stands as the batch's version. Taken once per combine, and never
+   * on a held batch; undefined when `pushed` is no such commit.
+   */
+  private async takeGenerated(
+    repo: RepoView,
+    record: BatchRecord,
+    forge: Forge,
+    pushed: string,
+  ): Promise<BatchRecord | undefined> {
+    const open = record.open as OpenBatch;
+    if (open.generated !== undefined || open.hold) return undefined;
+    const written = await (this.options.generated ?? generatedOnTop)({
+      repoDir: repo.path,
+      branch: open.branch,
+      head: open.head,
+      pushed,
+      at: this.options.now(),
+      ...(repo.origin ? { remote: repo.origin } : {}),
+    });
+    if (!written) return undefined;
+    // The project may have moved during the read: nothing goes to a former address.
+    if (!this.stillAt(repo)) return record;
+    await (this.options.push ?? pushBatch)({
+      repoDir: repo.path,
+      branch: open.branch,
+      ...(repo.origin ? { remote: repo.origin } : {}),
+      head: written,
+      expected: pushed,
+    });
+    if (!this.stillAt(repo)) return record;
+    const { passed: _passed, ...kept } = open;
+    return this.save(repo.id, { ...record, open: { ...kept, head: written, generated: written } });
   }
 
   /** The batch branch's version where the project lives; undefined when it is not there. */

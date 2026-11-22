@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { commitMessage } from "../scripts/batch-regenerate.ts";
 import { newestStables } from "../scripts/docs-site-whats-new.ts";
 import { run } from "../scripts/release-notes";
 import { webpBytes } from "./helpers/images";
@@ -465,6 +466,35 @@ describe("the batch's notes step", () => {
     f.git("rebase", "-q", "infinitary-batch/1");
     const source = f.git("rev-parse", "HEAD");
     expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
+  });
+
+  it("passes the commit the batch's own check regenerated the phone's files in, and nothing that only imitates it", () => {
+    const { f } = released();
+    f.commit("chore: mark the phone's generated files", {
+      ".gitattributes": "ios/**/*.generated.* linguist-generated\n",
+      "ios/Words.generated.swift": "1",
+      "release-notes/changes/attributes.json": {
+        exclusions: [{ id: "attributes", reason: "Tooling only." }],
+      },
+    });
+    f.git("checkout", "-q", "-b", "infinitary-batch/1");
+    f.commit("fix: noted", { "src.txt": "1", "release-notes/changes/noted.json": note("noted") });
+    const message = commitMessage(["ios/Words.generated.swift"]);
+    f.commit(message, { "ios/Words.generated.swift": "2" });
+    expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 1 change(s)");
+    // The words alone pass nothing: one source file beside the generated one is a change of its own.
+    f.git("reset", "-q", "--hard", "HEAD^");
+    f.commit(message, { "ios/Words.generated.swift": "2", "src.txt": "2" });
+    expect(() => f.cli("batch", "--base", "main")).toThrow(
+      /\(1 of 2\):\n\s+[0-9a-f]{12} chore\(phone\)/,
+    );
+    // Nor does a commit that marks its own files generated.
+    f.git("reset", "-q", "--hard", "HEAD^");
+    f.commit(message, {
+      "ios/Words.generated.swift": "2",
+      ".gitattributes": "* linguist-generated\n",
+    });
+    expect(() => f.cli("batch", "--base", "main")).toThrow(/\(1 of 2\)/);
   });
 });
 

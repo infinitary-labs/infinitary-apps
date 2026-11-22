@@ -9,7 +9,7 @@ import {
 } from "@shared/batches";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { combine, LEFT_OUT_WORDS, landedCommits, pushBatch } from "./combine";
+import { combine, generatedOnTop, LEFT_OUT_WORDS, landedCommits, pushBatch } from "./combine";
 import { carried, combined, declared, enqueue, heldVersions, release, withdraw } from "./line";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -1311,6 +1311,212 @@ describe("each member's own commit on the default branch after its batch merged"
     });
 
     expect([...landed.values()]).toEqual([undefined, undefined]);
+  });
+});
+
+// Intent: the captain's pick in the daily velocity review, "Have each batch regenerate the
+// phone's generated files itself, as its own commit, before its checks run": the project's
+// own checks push one commit of generated files on the batch, and the app takes it as the
+// batch's version only when it builds on the batch's version and changes nothing but files
+// the project marks generated; every other commit is combined over, as before.
+describe("a commit of generated files the project's own checks pushed on the batch", () => {
+  const BATCH = "infinitary-batch/7c41";
+  const GENERATED = "chore(phone): regenerate the phone's generated files in the batch";
+
+  /** The project marks its phone files generated, and a batch of one is pushed. */
+  async function batch(at: Host) {
+    write(at.work, ".gitattributes", "ios/**/*.generated.* linguist-generated\n");
+    write(at.work, "ios/App/Words.generated.swift", "let words = 1\n");
+    run(at.work, "add", "-A");
+    run(at.work, "commit", "-m", "chore: mark the phone files generated");
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    const result = await combine({
+      repoDir: at.home,
+      defaultBranch: "main",
+      changes: [change(at, PARSER), change(at, EXPORT)],
+      at: AT,
+    });
+    await pushBatch({ repoDir: at.home, branch: BATCH, head: result.head, expected: null });
+    return result;
+  }
+
+  /** The checks' push: one commit on the batch's branch writing `files`, as their machine's name. */
+  function checksPush(at: Host, files: Record<string, string>, from = `origin/${BATCH}`): string {
+    run(at.work, "fetch", "--quiet", "origin");
+    run(at.work, "checkout", "--quiet", "-B", "regenerated", from);
+    for (const [path, text] of Object.entries(files)) write(at.work, path, text);
+    run(at.work, "add", "-A");
+    run(
+      at.work,
+      "-c",
+      "user.name=github-actions[bot]",
+      "-c",
+      "user.email=github-actions[bot]@users.noreply.github.com",
+      "commit",
+      "-m",
+      GENERATED,
+      "-m",
+      "Batch-regenerated: phone",
+    );
+    run(at.work, "push", "--force", "origin", `HEAD:refs/heads/${BATCH}`);
+    return run(at.work, "rev-parse", "HEAD");
+  }
+
+  it("writes it again on the batch's version with the same files, author and words", async () => {
+    const at = host();
+    const result = await batch(at);
+    const pushed = checksPush(at, { "ios/App/Words.generated.swift": "let words = 2\n" });
+
+    const written = await generatedOnTop({
+      repoDir: at.home,
+      branch: BATCH,
+      head: result.head,
+      pushed,
+      at: AT + 60_000,
+    });
+
+    expect(written).toBeDefined();
+    expect(written).not.toBe(pushed);
+    expect(run(at.home, "rev-parse", `${written}^`)).toBe(result.head);
+    expect(run(at.home, "rev-parse", `${written}^{tree}`)).toBe(
+      run(at.home, "rev-parse", `${pushed}^{tree}`),
+    );
+    expect(run(at.home, "log", "-1", "--format=%an%n%B", written as string)).toBe(
+      `github-actions[bot]\n${GENERATED}\n\nBatch-regenerated: phone`,
+    );
+    // Nothing of the folder at home moved.
+    expect(run(at.home, "status", "--porcelain")).toBe("");
+
+    // The app's push of it over the checks' commit lands on the branch.
+    await pushBatch({ repoDir: at.home, branch: BATCH, head: written as string, expected: pushed });
+    expect(run(at.bare, "rev-parse", BATCH)).toBe(written);
+  });
+
+  it("answers nothing for a commit that changes a file the project does not mark generated", async () => {
+    const at = host();
+    const result = await batch(at);
+    const pushed = checksPush(at, {
+      "ios/App/Words.generated.swift": "let words = 2\n",
+      "src/parser.ts": "export const parse = () => null;\n",
+    });
+
+    expect(
+      await generatedOnTop({ repoDir: at.home, branch: BATCH, head: result.head, pushed, at: AT }),
+    ).toBeUndefined();
+  });
+
+  it("answers nothing for a commit that marks a file generated in the same commit", async () => {
+    const at = host();
+    const result = await batch(at);
+    const pushed = checksPush(at, {
+      ".gitattributes": "* linguist-generated\n",
+      "src/parser.ts": "export const parse = () => null;\n",
+    });
+
+    expect(
+      await generatedOnTop({ repoDir: at.home, branch: BATCH, head: result.head, pushed, at: AT }),
+    ).toBeUndefined();
+  });
+
+  it("answers nothing for generated files that do not build on the batch's own version", async () => {
+    const at = host();
+    const result = await batch(at);
+    // Built on the change before the last, not on the batch's version.
+    const pushed = checksPush(
+      at,
+      { "ios/App/Words.generated.swift": "let words = 2\n" },
+      `origin/${BATCH}~1`,
+    );
+
+    expect(
+      await generatedOnTop({ repoDir: at.home, branch: BATCH, head: result.head, pushed, at: AT }),
+    ).toBeUndefined();
+  });
+
+  it("answers nothing when the branch is no longer at the version just read", async () => {
+    const at = host();
+    const result = await batch(at);
+    const pushed = checksPush(at, { "ios/App/Words.generated.swift": "let words = 2\n" });
+    checksPush(at, { "ios/App/Words.generated.swift": "let words = 3\n" });
+
+    expect(
+      await generatedOnTop({ repoDir: at.home, branch: BATCH, head: result.head, pushed, at: AT }),
+    ).toBeUndefined();
+  });
+
+  it("names each member's own commit after a rebase merge that kept the generated commit on top", async () => {
+    const at = host();
+    const result = await batch(at);
+    const pushed = checksPush(at, { "ios/App/Words.generated.swift": "let words = 2\n" });
+    const written = (await generatedOnTop({
+      repoDir: at.home,
+      branch: BATCH,
+      head: result.head,
+      pushed,
+      at: AT,
+    })) as string;
+    await pushBatch({ repoDir: at.home, branch: BATCH, head: written, expected: pushed });
+    // The default branch moved, so the host's rebase merge writes new commits.
+    run(at.work, "fetch", "--quiet", "origin");
+    run(at.work, "checkout", "--quiet", "-B", "main", "origin/main");
+    write(at.work, "README.md", "# Meter\n");
+    run(at.work, "add", "-A");
+    run(at.work, "commit", "-m", "docs: add a readme");
+    run(at.work, "checkout", "--quiet", "-B", "rebased", `origin/${BATCH}`);
+    run(at.work, "rebase", "--quiet", "main");
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    const tip = run(at.work, "rev-parse", "HEAD");
+
+    const landed = await landedCommits({
+      repoDir: at.home,
+      defaultBranch: "main",
+      members: result.members,
+      merged: tip,
+      generated: written,
+    });
+
+    expect(landed.get("task-export")).toBe(run(at.work, "rev-parse", "HEAD~1"));
+    expect(landed.get("task-parser")).toBe(run(at.work, "rev-parse", "HEAD~2"));
+  });
+
+  it("names a batch of one's squash commit, which folded the generated commit in", async () => {
+    const at = host();
+    write(at.work, ".gitattributes", "ios/**/*.generated.* linguist-generated\n");
+    run(at.work, "add", "-A");
+    run(at.work, "commit", "-m", "chore: mark the phone files generated");
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    const result = await combine({
+      repoDir: at.home,
+      defaultBranch: "main",
+      changes: [change(at, PARSER)],
+      at: AT,
+    });
+    await pushBatch({ repoDir: at.home, branch: BATCH, head: result.head, expected: null });
+    const pushed = checksPush(at, { "ios/App/Words.generated.swift": "let words = 2\n" });
+    const written = (await generatedOnTop({
+      repoDir: at.home,
+      branch: BATCH,
+      head: result.head,
+      pushed,
+      at: AT,
+    })) as string;
+    await pushBatch({ repoDir: at.home, branch: BATCH, head: written, expected: pushed });
+    run(at.work, "fetch", "--quiet", "origin");
+    run(at.work, "checkout", "--quiet", "-B", "main", "origin/main");
+    run(at.work, "merge", "--squash", "--quiet", written);
+    run(at.work, "commit", "--quiet", "-m", PARSER.title);
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    const tip = run(at.work, "rev-parse", "HEAD");
+
+    const landed = await landedCommits({
+      repoDir: at.home,
+      defaultBranch: "main",
+      members: result.members,
+      merged: tip,
+      generated: written,
+    });
+
+    expect([...landed]).toEqual([["task-parser", tip]]);
   });
 });
 

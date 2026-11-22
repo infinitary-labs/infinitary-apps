@@ -14,6 +14,19 @@ struct PhoneCardHeld {
         if !notes.isEmpty { value["notes"] = .array(notes) }
     }
 
+    /// A press's value: its answers, with them beside.
+    func value(answers: [PhoneJSON]) -> [String: PhoneJSON] {
+        var value: [String: PhoneJSON] = ["answers": .array(answers)]
+        add(to: &value)
+        return value
+    }
+
+    /// The field's words as a press's anything-else answer.
+    static func written(_ words: String) -> PhoneJSON {
+        .object(["name": .string(PhoneCardWords.anythingElse), "values": .array([]), "changed": .bool(true),
+                 "written": .string(words)])
+    }
+
     /// The field lets go of what the press took as it goes.
     @MainActor func take(from photos: Binding<[PhonePhoto]>, _ notes: Binding<[PhoneJSON]>) {
         guard !isEmpty else { return }
@@ -52,12 +65,17 @@ struct PhoneCarryLine: View {
     }
 }
 
-/// What else a past card's closing choice carried from its field, as the Mac's past card shows it: its notes as a sent
-/// reply draws them, and its pictures by name.
+/// What went with a past card's closing choice from its field, as the Mac's past card shows it: the lead with its words,
+/// its notes as a sent reply draws them, and its pictures by name.
 struct PhonePastCarried: View {
+    let words: String?
     let carried: PhoneJSON
 
     var body: some View {
+        if words != nil || carried != .null {
+            Text(words.map { "\(PhoneCardWords.sentWithChoice) \($0)" } ?? PhoneCardWords.sentWithChoice)
+                .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("past-sent-words")
+        }
         if !carried["notes"].list.isEmpty {
             PhoneThreadNotes(notes: carried["notes"].list, onReveal: nil).accessibilityIdentifier("past-sent-notes")
         }

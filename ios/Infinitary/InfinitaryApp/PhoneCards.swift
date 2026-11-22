@@ -741,11 +741,8 @@ private struct PhoneCardPane: View {
         reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty || !notes.isEmpty)
     }
     private var takesReply: Bool { card.takesReplies && !card.isPast }
-    /// INF-5608 piece 2: what the card's buttons do with the photos and queued notes in its field - carry them to a
-    /// computer that takes them (`choice-attachments`), or wait, with the Mac's words, until they go as a reply.
-    private var carry: PhoneChoiceCarry {
-        .reading(photos: photos.count, notes: notes.count, homeTakes: session.homeTakesChoiceAttachments)
-    }
+    /// INF-5608 piece 2: whether the card's buttons carry the field's photos and notes, or wait (`PhoneChoiceCarry`).
+    private var carry: PhoneChoiceCarry { .reading(photos: photos.count, notes: notes.count, homeTakes: session.homeTakesChoiceAttachments) }
     /// INF-3296's phone piece: the card's reply takes notes on its body, by the home's own say.
     private var takesNotes: Bool { takesReply && session.cardNotes && host.failure == nil }
     /// The task the card is about, which leads its head as its door to the task's record.
@@ -1357,12 +1354,7 @@ private struct PhoneCardPane: View {
                     }
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in replyHeight = height; followCaret() }
             }
-            if card.isPast, sentWords != nil || card.value["carried"] != .null {
-                Text(sentWords.map { "\(PhoneCardWords.sentWithChoice) \($0)" } ?? PhoneCardWords.sentWithChoice)
-                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                    .accessibilityIdentifier("past-sent-words")
-                PhonePastCarried(carried: card.value["carried"])
-            }
+            if card.isPast { PhonePastCarried(words: sentWords, carried: card.value["carried"]) }
             if pick == nil, !card.isPast, let ask = PhoneSecretAsk.of(card) {
                 secretFields(ask).modifier(PhoneFaceOnly(angle: turnAngle))
             }
@@ -1715,13 +1707,11 @@ private struct PhoneCardPane: View {
             // INF-5608 piece 2: the field's photos and queued notes go in the same press to a computer that takes them.
             // A choice that opens a page on the computer leaves them in the field, as the Mac's docked request does.
             let held = carry.holds || action["effect"]["kind"].text == "open" ? PhoneCardHeld() : PhoneCardHeld(photos: photos, notes: notes)
-            var value: [String: PhoneJSON] = ["answers": .array(answers)]
-            held.add(to: &value)
             // INF-2553: the card leaves at the tap with its words; a refusal brings it back to its place with them.
             if replyWords == words { reply = "" }
             held.take(from: $photos, $notes)
             let sent = await send(.choose(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .act,
-                [.string(card.id), action["id"], .string("chrome"), .object(value),
+                [.string(card.id), action["id"], .string("chrome"), .object(held.value(answers: answers)),
                  card.submission(reading: reading, fresh: snapshot.fresh)],
                 restore: held.restoring(words: words, $reply, $photos, $notes))
             if sent { host.chosen = true; onSent() }
@@ -1776,11 +1766,7 @@ private struct PhoneCardPane: View {
             let held = carry.holds ? PhoneCardHeld() : PhoneCardHeld(photos: photos, notes: notes)
             var args: [PhoneJSON] = [.string(card.id), card.submission()]
             if !words.isEmpty || !held.isEmpty {
-                var value: [String: PhoneJSON] = ["answers": .array(words.isEmpty ? [] : [.object([
-                    "name": .string(PhoneCardWords.anythingElse), "values": .array([]), "changed": .bool(true),
-                    "written": .string(words)])])]
-                held.add(to: &value)
-                args.append(.object(value))
+                args.append(.object(held.value(answers: words.isEmpty ? [] : [PhoneCardHeld.written(words)])))
             }
             if replyWords == words { reply = "" }
             held.take(from: $photos, $notes)

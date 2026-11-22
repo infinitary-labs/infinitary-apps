@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { setCurrentLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import * as m from "@shared/i18n/messages.generated";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askPersonWord,
@@ -16,7 +16,17 @@ import {
   wordLauncher,
   wordProfilePrivate,
 } from "./personWord";
-import { claimWordProfile, readReply, replyLine, WORD_BUTTONS } from "./personWordArg";
+import {
+  claimWordProfile,
+  endWithRequesterGone,
+  HELD_LINE,
+  readReply,
+  replyLine,
+  requesterOf,
+  saidHeld,
+  WORD_BUTTONS,
+  WORD_REQUESTER_ARG,
+} from "./personWordArg";
 
 /**
  * The review of INF-5409: a window launch refused the folder's lock never sees Electron become
@@ -88,6 +98,39 @@ describe("a refused launch's word to the person", () => {
     // A copy that failed or was ended says nothing the person chose.
     expect(readReply("once-closed", replyLine(OPEN_ONCE_CLOSED), 1, null)).toBe("unshown");
     expect(readReply("once-closed", replyLine(OPEN_ONCE_CLOSED), null, "SIGKILL")).toBe("unshown");
+    // Electron on Windows writes an empty line of its own to a copy's output, as a copy there that
+    // wrote nothing said "\r\n" (the Windows check of INF-4930): a press beside it still counts,
+    // and it alone is no press.
+    expect(readReply("once-closed", `\r\n${replyLine(0)}`, 0, null)).toBe(0);
+    expect(readReply("once-closed", `${replyLine(OPEN_ONCE_CLOSED)}\r\n`, 0, null)).toBe(
+      OPEN_ONCE_CLOSED,
+    );
+    expect(readReply("once-closed", "\r\n", 0, null)).toBe("unshown");
+    expect(saidHeld(`\r\n${HELD_LINE}`, 0, null)).toBe(true);
+  });
+
+  it("ends the copy on Windows once the launch that asked, named by its process number, is gone", () => {
+    vi.useFakeTimers();
+    try {
+      expect(requesterOf(["app", `${WORD_REQUESTER_ARG}=4242`])).toBe(4242);
+      for (const arg of [`${WORD_REQUESTER_ARG}=`, `${WORD_REQUESTER_ARG}=-1`, "other"])
+        expect(requesterOf(["app", arg])).toBe(null);
+      let running = true;
+      let ended = 0;
+      endWithRequesterGone(
+        4242,
+        () => ended++,
+        (pid) => pid === 4242 && running,
+      );
+      vi.advanceTimersByTime(5_000);
+      expect(ended).toBe(0);
+      running = false;
+      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(5_000);
+      expect(ended).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("starts the copy as the launch was started, an AppImage only through the file it runs from", () => {

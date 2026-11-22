@@ -17,7 +17,7 @@ import { isWordProfileName, WORD_RECORDS } from "@shared/wordProfiles";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { askPersonWord } from "./personWord";
-import { PERSON_WORD_ARG, WORD_TEMP_DIR } from "./personWordArg";
+import { PERSON_WORD_ARG, WORD_REQUESTER_ARG, WORD_TEMP_DIR } from "./personWordArg";
 
 /**
  * The review of INF-5409: a refused window launch hears the person's answer from a copy of the
@@ -522,7 +522,7 @@ describe("a refused launch's copy that shows a word", () => {
     }
   });
 
-  it("names the word, the profile kept in the data folder and temporary files there to the copy", async () => {
+  it("names the word, the launch that asked, the profile kept in the data folder and temporary files there to the copy", async () => {
     const marks = scratchDir("person-word-marks-");
     const file = join(scratchDir("person-word-copy-"), "args.mjs");
     writeFileSync(
@@ -550,7 +550,9 @@ describe("a refused launch's copy that shows a word", () => {
     }
     const args: string[] = JSON.parse(readFileSync(join(marks, "args"), "utf8"));
     expect(args[0]).toBe(`${PERSON_WORD_ARG}=once-closed`);
-    const profile = args[1]?.slice("--user-data-dir=".length) ?? "";
+    // The launch that asked, which a copy on Windows looks for to end with it (`endWithRequesterGone`).
+    expect(args[1]).toBe(`${WORD_REQUESTER_ARG}=${process.pid}`);
+    const profile = args[2]?.slice("--user-data-dir=".length) ?? "";
     expect(profile).toBe(recorded(dataDir));
     // Its temporary files go in that profile, never where this launch's own go, by every setting
     // that names them and as the copy itself finds its temporary folder.

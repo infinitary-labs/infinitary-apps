@@ -30,6 +30,7 @@ import type { MessageBoxOptions } from "electron";
 import {
   claimWordProfile,
   endWithRequester,
+  endWithRequesterGone,
   endWithRequesterOffMain,
   HELD_LINE,
   PERSON_WORD_ARG,
@@ -37,7 +38,9 @@ import {
   type PersonWord,
   readReply,
   replyLine,
+  requesterOf,
   saidHeld,
+  WORD_REQUESTER_ARG,
   WORD_TEMP_DIR,
 } from "./personWordArg";
 
@@ -138,7 +141,10 @@ export async function showPersonWord(word: PersonWord): Promise<void> {
     process.stdout.write(HELD_LINE, () => app.exit(0));
     return;
   }
-  endWithRequester(process.stdin, () => app.exit(0));
+  // Electron on Windows gives the copy no input, which reads as ended at once.
+  const requester = requesterOf(process.argv);
+  if (hostPlatform() !== "win32") endWithRequester(process.stdin, () => app.exit(0));
+  else if (requester !== null) endWithRequesterGone(requester, () => app.exit(0));
   if (hostPlatform() === "darwin") endWithRequesterOffMain();
   await app.whenReady();
   const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
@@ -403,7 +409,12 @@ function showThrough(
     try {
       copy = spawn(
         launcher.execPath,
-        [...launcher.args, `${PERSON_WORD_ARG}=${word}`, `--user-data-dir=${profile}`],
+        [
+          ...launcher.args,
+          `${PERSON_WORD_ARG}=${word}`,
+          `${WORD_REQUESTER_ARG}=${process.pid}`,
+          `--user-data-dir=${profile}`,
+        ],
         // Temporary files of its own, apart from the folder a later holder clears at its start:
         // named by every setting that chooses it, as a Mac or Linux takes `TMPDIR` first.
         {

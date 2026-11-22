@@ -37,9 +37,20 @@ export function replyLine(reply: PersonReply): string {
  */
 export const HELD_LINE = "held\n";
 
+/**
+ * What the copy wrote, less the empty lines Electron on Windows writes to a program's output of its
+ * own (a copy that wrote nothing said one): only its own line is left, still whole only with its end.
+ */
+function ownWords(said: string): string {
+  return said
+    .replace(/\r\n/g, "\n")
+    .replace(/^\n+/, "")
+    .replace(/\n\n+$/, "\n");
+}
+
 /** Whether a copy that ended on its own with success said only that its profile was held. */
 export function saidHeld(said: string, code: number | null, signal: string | null): boolean {
-  return code === 0 && signal === null && said === HELD_LINE;
+  return code === 0 && signal === null && ownWords(said) === HELD_LINE;
 }
 
 /**
@@ -55,9 +66,51 @@ export function readReply(
   signal: string | null,
 ): PersonReply {
   if (code !== 0 || signal !== null) return "unshown";
+  const own = ownWords(said);
   for (let button = 0; button < WORD_BUTTONS[word]; button++)
-    if (said === replyLine(button)) return button;
+    if (own === replyLine(button)) return button;
   return "unshown";
+}
+
+/** What names the launch that asked for the word, by its process number (`requesterOf`). */
+export const WORD_REQUESTER_ARG = "--infinitary-word-requester";
+
+/** The process number of the launch that asked for the word, or null where none is named. */
+export function requesterOf(argv: readonly string[]): number | null {
+  const named = argv.find((arg) => arg.startsWith(`${WORD_REQUESTER_ARG}=`));
+  const pid = Number(named?.slice(WORD_REQUESTER_ARG.length + 1));
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+}
+
+/** Whether a process still runs, by its number. */
+function stillRuns(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // One that runs as someone else still runs.
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/**
+ * Ends the copy with the launch that asked for it, on Windows, where Electron gives a program no
+ * input to read, so its end never reaches `endWithRequester`: the copy looks every half second for
+ * that launch, by the process number it was started with (`requesterOf`), and ends once it is gone.
+ * Windows may give that number to another program later, which would keep the copy only until the
+ * launch's own end of it (`askPersonWord`) or the person's press.
+ */
+export function endWithRequesterGone(
+  pid: number,
+  end: () => void,
+  runs: (pid: number) => boolean = stillRuns,
+): () => void {
+  const look = setInterval(() => {
+    if (runs(pid)) return;
+    clearInterval(look);
+    end();
+  }, 500);
+  return () => clearInterval(look);
 }
 
 /**

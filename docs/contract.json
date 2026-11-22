@@ -46661,6 +46661,14 @@
                     "type": "boolean",
                     "const": true
                   },
+                  "blocked": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "private",
+                      "insecure"
+                    ]
+                  },
                   "session": {
                     "type": "string"
                   },
@@ -84844,6 +84852,14 @@
                             "type": "boolean",
                             "const": true
                           },
+                          "blocked": {
+                            "type": "string",
+                            "enum": [
+                              "local",
+                              "private",
+                              "insecure"
+                            ]
+                          },
                           "session": {
                             "type": "string"
                           },
@@ -108902,6 +108918,14 @@
                           "starting": {
                             "type": "boolean",
                             "const": true
+                          },
+                          "blocked": {
+                            "type": "string",
+                            "enum": [
+                              "local",
+                              "private",
+                              "insecure"
+                            ]
                           },
                           "session": {
                             "type": "string"

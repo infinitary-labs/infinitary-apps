@@ -9,6 +9,7 @@ import {
   TASK_BROWSER_PAGE,
   TASK_BROWSER_PAGES_MAX,
   type TaskBrowserAskAnswer,
+  type TaskBrowserBlock,
   type TaskBrowserCommandResult,
   type TaskBrowserFact,
   type TaskBrowserHandle,
@@ -22,14 +23,12 @@ import {
 import {
   FORM_RESEND,
   type HostBrowserAsk,
-  type HostBrowserFrame,
   type HostBrowserPage,
   type HostBrowserViewport,
   type HostFileChooser,
   type HostLoadOutcome,
   type HostPageEvents,
   type HostPopup,
-  type HostTaskBrowser,
 } from "../host";
 import { hideKeys } from "../keyFormats";
 import {
@@ -51,37 +50,43 @@ import {
   titleOf,
 } from "./browserRecord";
 import { browserCommand } from "./commandWords";
+import { type ConnectionGuardHandle, startConnectionGuard } from "./connectionGuard";
+import { type BrowserAnswer, CrewmateCommands, refused } from "./crewmateCommands";
 import {
-  type ConnectionGuardHandle,
-  type ConnectionGuardOptions,
-  type GuardLookup,
-  startConnectionGuard,
-} from "./connectionGuard";
-import {
-  type BrowserActInput,
-  type BrowserAnswer,
-  type BrowserCaptureInput,
-  type BrowserCloseInput,
-  type BrowserInspectInput,
-  type BrowserNavigateInput,
-  CrewmateCommands,
-  refused,
-} from "./crewmateCommands";
-import { checkOpenable, decideRequest, originKey } from "./destinations";
+  checkOpenable,
+  decidePageRequest,
+  decideRequest,
+  originKey,
+  pageBlock,
+} from "./destinations";
 import { PageDiagnostics } from "./diagnostics";
 import { saveDownload } from "./evidenceFiles";
-import type { KeptPages } from "./keptPages";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
-import { type AnswerProbe, type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
-import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { type AnswerTarget, answerTarget, probeLoopback } from "./pageAnswers";
+import { blockedPageWords, clip, PageNotices, refusalWords } from "./pageNotices";
 import { startAfterOpen, startBeforeOpen, startMissing } from "./pageStartSteps";
-import type { PageStart, PageStarts } from "./pageStarts";
+import type { PageStart } from "./pageStarts";
 import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
-import { SavedSignInGrants, type SignInStore } from "./savedSignInGrants";
+import { SavedSignInGrants } from "./savedSignInGrants";
+import type {
+  BrowserFrameSink,
+  CrewmateBrowser,
+  ProjectPage,
+  TaskBrowsersOptions,
+} from "./taskBrowserOptions";
 import { signInSite } from "./webSignIns";
+
+export type {
+  BrowserFrameSink,
+  BrowserReturned,
+  CrewmateBrowser,
+  PageUnanswered,
+  ProjectPage,
+  TaskBrowsersOptions,
+} from "./taskBrowserOptions";
 
 /**
  * Each task's own browser (docs/task-browser.md): the one owner of every
@@ -157,122 +162,9 @@ export const FORM_RESEND_CAPTAIN_WORDS =
 /** The page's place as the crewmate names it, from 1. */
 const PAGE_WORDS = ["", "first", "second"];
 
-/**
- * One task's browser, as its crewmate's command reaches it
- * (`src/core/axi/browserCommands.ts`, through the task's channel).
- */
-export type CrewmateBrowser = {
-  navigate: (input: BrowserNavigateInput) => Promise<BrowserAnswer>;
-  inspect: (input: BrowserInspectInput) => Promise<BrowserAnswer>;
-  act: (input: BrowserActInput) => Promise<BrowserAnswer>;
-  capture: (input: BrowserCaptureInput) => Promise<BrowserAnswer>;
-  close: (input?: BrowserCloseInput) => Promise<BrowserAnswer>;
-  /** Every page the browser holds, or that no browser is open; reads nothing on a page. */
-  pages: () => Promise<BrowserAnswer>;
-};
-
-export type TaskBrowsersOptions = {
-  host: HostTaskBrowser;
-  /** Where a task's pictures go: its evidence folder, outside the working copy. */
-  evidenceDir: (taskId: string) => string;
-  /**
-   * The task's working copy: the only folder its crewmate may attach a file
-   * from when a page asks for one (docs/task-browser.md, "A page that asks
-   * for a file"). With none, it attaches nothing.
-   */
-  workingCopy?: (taskId: string) => string | undefined;
-  /** One line on the task's own timeline. */
-  note?: (taskId: string, text: string) => void;
-  /** A task's browser changed for the captain: it opened, moved, acted or stopped. */
-  onChange?: (taskId: string) => void;
-  /**
-   * The captain returned a task's browser: its crewmate's one wake, named
-   * by `once` so the inbox queues it once (docs/task-browser.md, "Taking
-   * control").
-   */
-  onReturned?: (taskId: string, returned: BrowserReturned) => void;
-  max?: number;
-  idleMs?: number;
-  /** Runs `fn` after `ms` and answers its cancel; injected so a test drives the clock. */
-  timer?: (ms: number, fn: () => void) => () => void;
-  /** This run's name; a fresh one when absent. */
-  session?: string;
-  /** Starts a browser's connection guard; the real one on loopback when absent. */
-  guard?: (options: ConnectionGuardOptions) => Promise<ConnectionGuardHandle>;
-  /** How a guard resolves a name; the system's resolver when absent. */
-  lookup?: GuardLookup;
-  /** The signed-in sites this computer keeps; with none, nothing is kept or offered. */
-  signIns?: SignInStore;
-  /**
-   * The captain's private sites list (docs/task-browser.md, "Private
-   * sites"): the home's own, or the one it lends a computer that runs work,
-   * read as a task's browser opens and at each of its crewmate's opens.
-   * With none, no private site is reached.
-   */
-  privateSites?: (taskId: string) => readonly string[] | Promise<readonly string[]>;
-  /** The time, injected so a test drives which cookies are still alive. */
-  now?: () => number;
-  /** Serves a project folder for a page the captain opens; the real loopback server when absent. */
-  serve?: (folder: string) => Promise<ProjectServer>;
-  /**
-   * Where each task's stopped page is kept, so a restart reads it as a
-   * stopped browser Open again can start (docs/task-browser.md, "After a
-   * restart"); with none, a restart forgets it.
-   */
-  kept?: KeptPages;
-  /** Tries a loopback port, as this computer; the real connection attempt when absent. */
-  probe?: AnswerProbe;
-  /**
-   * Nothing answers at the loopback address the captain opened a task's
-   * page on, and he waits there (docs/task-browser.md, "When nothing
-   * answers"): its crewmate's one wake for that outage, named by `once`.
-   * Told at each check while the outage lasts; the inbox queues it once.
-   */
-  onUnanswered?: (taskId: string, unanswered: PageUnanswered) => void;
-  /**
-   * The start commands crewmates saved with their pages, which the host
-   * runs when nothing answers there (docs/task-browser.md, "Starting a page
-   * again"); with none, `--start` is refused and only the crewmate is woken.
-   */
-  starts?: Pick<
-    PageStarts,
-    "keep" | "kept" | "starting" | "run" | "stopWithBrowser" | "turn" | "forget" | "stopAll"
-  >;
-};
-
-/** Nothing answers at a task's page: what its crewmate's one wake for that outage says. */
-export type PageUnanswered = {
-  /** The page's host and port. */
-  site: string;
-  /** The page's address, bare of its query and fragment. */
-  url: string;
-  /** This outage's own name: the run, the task and how many outages it has had. */
-  once: string;
-  /** The saved start the host ran and how it failed: its exit code, or that its wait ran out. */
-  start?: { command: string; exit?: number | null; ranOut?: true; log: string };
-};
-
-/**
- * A page from a task's project the captain opens in its browser
- * (docs/task-browser.md, "A page from the project"): the project folder and
- * the HTML file's path inside it.
- */
-export type ProjectPage = { folder: string; path: string };
-
-/** The captain handed a task's browser back: what its crewmate's one wake says. */
-export type BrowserReturned = {
-  /** The page's host and port, as the captain read it. */
-  site: string;
-  /** What the crewmate said it would do once control came back, when it asked. */
-  after?: string;
-  /** The captain let it use the signed-in site, rather than signing in. */
-  saved?: true;
-  /** This return's own name: the run, the browser and how many returns it has had. */
-  once: string;
-};
-
-/** A watcher's sink: one picture of the page each time it changes. */
-export type BrowserFrameSink = (frame: HostBrowserFrame) => void;
+/** How the crewmate's first look after the captain returned its browser opens. */
+export const RETURNED_NOTICE =
+  "The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.";
 
 const defaultTimer = (ms: number, fn: () => void): (() => void) => {
   const handle = setTimeout(fn, ms);
@@ -284,12 +176,18 @@ function sameSize(a: HostBrowserViewport, b: HostBrowserViewport): boolean {
   return a.width === b.width && a.height === b.height;
 }
 
-/** Whether a browser's crewmate opened a loopback origin at this host and port. */
+/**
+ * Whether a browser's crewmate opened a loopback origin at this host and
+ * port, or a page's own move reached it: the guard asks this for any page's
+ * socket, since it never knows which page asked.
+ */
 function reachesOrigin(browser: Browser, host: string, port: number): boolean {
   // A name the address parser refuses is no origin anyone opened.
   return ["http:", "https:"].some((scheme) => {
     const url = URL.parse(`${scheme}//${host}:${port}`);
-    return url !== null && browser.origins.has(originKey(url));
+    return (
+      url !== null && (browser.origins.has(originKey(url)) || browser.reached.has(originKey(url)))
+    );
   });
 }
 
@@ -446,12 +344,12 @@ export class TaskBrowsers {
       state: "open",
       site: siteOf(url),
       url,
-      title: browser.current.page.title().trim(),
+      title: this.viewTitle(browser, browser.current),
       ...(many
         ? {
             pages: browser.pages.map((entry) => ({
               site: siteOf(addressOf(browser, entry)),
-              title: entry.page.title().trim(),
+              title: this.viewTitle(browser, entry),
             })),
             page: browser.pages.indexOf(browser.current) + 1,
           }
@@ -487,9 +385,36 @@ export class TaskBrowsers {
             ...(this.options.starts?.starting(taskId) ? { starting: true as const } : {}),
           }
         : {}),
+      ...this.blockOf(browser),
       session: this.session,
       generation: browser.generation,
     };
+  }
+
+  /** The page's own address, when the browser refuses it, as the fact carries it. */
+  private blockOf(browser: Browser): { blocked?: TaskBrowserBlock } {
+    const block = this.pageBlockOf(browser);
+    return block ? { blocked: block.kind } : {};
+  }
+
+  /** Why the current page's own address is refused, so it shows the browser's refusal; nothing otherwise. */
+  private pageBlockOf(browser: Browser, entry = browser.current): ReturnType<typeof pageBlock> {
+    return pageBlock(
+      addressOf(browser, entry),
+      new Set([...browser.origins, ...browser.reached]),
+      (host) => listsPrivateSite(this.sites, host),
+    );
+  }
+
+  /**
+   * A page's title as the captain's view reads it. The browser's refusal of
+   * an address has no title of its own and takes that address, whose query
+   * may carry a sign-in's code: it reads as the refused host and port.
+   */
+  private viewTitle(browser: Browser, entry: PageEntry): string {
+    const title = entry.page.title().trim();
+    const block = this.pageBlockOf(browser, entry);
+    return block && title && entry.page.url().includes(title) ? block.host : title;
   }
 
   /**
@@ -785,12 +710,14 @@ export class TaskBrowsers {
         return { ok: false, text: "This browser stopped before control went back." };
       }
       const after = browser.request?.after;
+      // A page left on an address the browser refuses, such as a sign-in's
+      // return to a program on this computer, says why in the first look.
+      const block = this.pageBlockOf(browser);
       browser.control = "crewmate";
       browser.request = undefined;
       browser.returns += 1;
       this.handBack(taskId, browser, {
-        notice:
-          "The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.",
+        notice: `${RETURNED_NOTICE}${block ? `\n${blockedPageWords(block)}` : ""}`,
         note: "you returned control of its browser",
         returned: {
           site: siteOf(addressOf(browser, browser.current)),
@@ -1277,6 +1204,7 @@ export class TaskBrowsers {
       generation: (this.generations.get(taskId) ?? 0) + 1,
       booksFrom: (this.books.get(taskId) ?? 0) + 1,
       origins: new Set(),
+      reached: new Set(),
       // While the captain holds the page, what it says is his and is kept for nobody.
       notices: new PageNotices(() => browser.control === "captain"),
       // His own from the start, before anything hears it opened.
@@ -1384,8 +1312,8 @@ export class TaskBrowsers {
           password: guard.password,
         },
         ...(kept ? { kept: true as const } : {}),
-        allow: ({ url, topLevel }) => {
-          const decision = decideRequest(url, browser.origins, (host) =>
+        allow: (request) => {
+          const decision = decidePageRequest(request, browser.origins, browser.reached, (host) =>
             listsPrivateSite(this.sites, host),
           );
           if (!decision.allowed) {
@@ -1393,7 +1321,10 @@ export class TaskBrowsers {
             return false;
           }
           // A page of the kept profile goes only to the sites its task may use there.
-          if (kept && topLevel && !this.grants.keptMayOpen(taskId, browser, url)) return false;
+          if (kept && request.topLevel && !this.grants.keptMayOpen(taskId, browser, request.url)) {
+            return false;
+          }
+          if ("reach" in decision) browser.reached.add(decision.reach);
           return true;
         },
         // A site's every picture may fail its certificate: it is said once.
@@ -1507,6 +1438,10 @@ export class TaskBrowsers {
         if (!entry.loading && browser.control !== "captain") entry.moved = url;
         // A sign-in page the captain passes through in the kept profile is the task's to open too.
         if (browser.kept && browser.control === "captain") this.grants.passedThrough(browser, url);
+        if (live()) this.options.onChange?.(taskId);
+      },
+      onLoadFailed: () => {
+        // The captain's view reads the page's address again, and says why it is blocked.
         if (live()) this.options.onChange?.(taskId);
       },
       onConsole: (level, text) => {

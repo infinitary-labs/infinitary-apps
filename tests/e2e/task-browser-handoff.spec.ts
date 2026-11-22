@@ -40,12 +40,17 @@ import {
   MOCK_HANDOFF_REASON,
   MOCK_HANDOFF_RETURNED_REPORT,
   MOCK_HANDOFF_THREAD_ANSWERS,
+  MOCK_LOCAL_RETURN_ASKED_REPORT,
+  MOCK_LOCAL_RETURN_CARD_TITLE,
+  MOCK_LOCAL_RETURN_REPORT,
+  MOCK_LOCAL_RETURN_SAID,
   MOCK_SIGNED_IN_PICTURE,
   MOCK_SIGNED_IN_PICTURE_REASON,
   MOCK_TAKE_REFUSED_REPORT,
   MOCK_TAKE_RETURNED_REPORT,
   TASK_BROWSER_HANDOFF_MARKER,
   TASK_BROWSER_HANDOFF_READY_WORDS,
+  TASK_BROWSER_LOCAL_RETURN_MARKER,
   TASK_BROWSER_TAKE_MARKER,
   taskBrowserJourneys,
 } from "./scenarios/taskBrowserJourneys";
@@ -796,5 +801,127 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
   } finally {
     await stopTaskBrowsers(page);
     await closeSite(account);
+  }
+});
+
+// INF-5578's audit, finding 2: a sign-in the captain made ended on a
+// program's address on this computer the crewmate never opened, the page
+// read only the browser's own "is blocked", and the captain signed in three
+// times. The captain then chose ("yeah we should do that") to let a page's
+// own move open a local address, while a website's hidden requests to this
+// computer stay refused.
+test("a sign-in that returns to a program on this computer reaches it on the first try, and a website's hidden request does not", async () => {
+  // One journey across two crewmate turns and the captain's own sign-in.
+  test.setTimeout(180_000);
+  const { page, app } = launched;
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  const shoot = async (target: Locator, name: string): Promise<void> => {
+    if (evidence) await target.screenshot({ path: join(evidence, name) });
+  };
+  const CODE = "sign-in-code-7f3a91";
+  const SIGNED_IN = "Program signed in";
+  // The program on this computer the sign-in returns to: it says it is
+  // signed in only when its return brings the code, loads a part of its
+  // own, and records each visit. Its empty icon keeps a browser from asking
+  // it for one, so its visits are only what its page asks for.
+  const visits: string[] = [];
+  const program = createServer((request, response) => {
+    visits.push(request.url ?? "");
+    if (request.url === "/part.css") {
+      response.writeHead(200, { "content-type": "text/css" });
+      response.end("#said { font-weight: bold; }");
+      return;
+    }
+    const said = request.url === `/auth/callback?code=${CODE}` ? SIGNED_IN : "Program waiting";
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(
+      `<!doctype html><title>Program</title><link rel="icon" href="data:,"><style>body { font: 28px sans-serif; margin: 32px; }</style><link rel="stylesheet" href="/part.css"><p id="said">${said}</p>`,
+    );
+  });
+  await new Promise<void>((resolve) => program.listen(0, "127.0.0.1", resolve));
+  const programSite = `127.0.0.1:${(program.address() as AddressInfo).port}`;
+  // The site's sign-in, whose Sign in redirects to the program with the code,
+  // as a real one does; its page also asks the program for something behind
+  // the page's back, as a hostile website could, and records each load.
+  const accountLoads: string[] = [];
+  const account = createServer((request, response) => {
+    accountLoads.push(request.url ?? "");
+    if (request.url === "/authorize") {
+      response.writeHead(302, { location: `http://${programSite}/auth/callback?code=${CODE}` });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(
+      `<!doctype html><title>Sign in</title><style>body { background: rgb(40, 90, 160); color: white; font: 18px sans-serif; } a { color: white; }</style><h1>Sign in</h1><img alt="" src="http://${programSite}/hidden.png"><p><a id="sign-in" href="/authorize">Sign in and return to the program</a></p>`,
+    );
+  });
+  await new Promise<void>((resolve) => account.listen(0, "127.0.0.1", resolve));
+  const accountUrl = `http://127.0.0.1:${(account.address() as AddressInfo).port}/`;
+  const title = `${TASK_BROWSER_LOCAL_RETURN_MARKER}${accountUrl}`;
+  const detail = async (): Promise<TaskDetail> =>
+    page.evaluate(async (wanted) => {
+      const row = (await window.infinitary.tasks.board()).tasks.find(
+        (task) => task.title === wanted,
+      );
+      return (row ? await window.infinitary.tasks.detail(row.id) : null) as TaskDetail;
+    }, title);
+  try {
+    await resizeWindow(app, page, { width: 1280, height: 900 });
+    await stopTaskBrowsers(page);
+    const task = await test.step("its crewmate asks the captain to sign in", async () => {
+      await promptInput(page).fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+      await promptInput(page).press("Enter");
+      await expect
+        .poll(async () => (await detail().catch(() => null))?.outcome ?? "", { timeout: 60_000 })
+        .toContain(MOCK_LOCAL_RETURN_ASKED_REPORT);
+      return detail();
+    });
+
+    await test.step("the sign-in returns to the program, which signs in with the code", async () => {
+      await showCard(page, MOCK_LOCAL_RETURN_CARD_TITLE);
+      await shownCard(page, MOCK_LOCAL_RETURN_CARD_TITLE)
+        .getByRole("button", { name: MOCK_HANDOFF_ACTION })
+        .click();
+      await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
+      await clickOnPage(app, page, task.id, accountUrl, "sign-in");
+      await expect
+        .poll(async () => (await detail()).browser, { timeout: 30_000 })
+        .toMatchObject({ state: "open", site: programSite, control: "captain", title: "Program" });
+      expect((await detail()).browser).not.toHaveProperty("blocked");
+      await expect(view(page, task.id).locator('[data-browser-notice="blocked"]')).toHaveCount(0);
+      // The program's page loaded its own part; the sign-in page's hidden request never reached it.
+      await expect.poll(() => visits).toEqual([`/auth/callback?code=${CODE}`, "/part.css"]);
+      await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(1);
+      await shoot(view(page, task.id), "view-program-reached-held-dark.png");
+      if (evidence) {
+        await setThemeViaSettings(page, "light");
+        await shoot(view(page, task.id), "view-program-reached-held-light.png");
+        await setThemeViaSettings(page, "dark");
+      }
+    });
+
+    await test.step("Return control: the crewmate's first look reads the signed-in program", async () => {
+      await view(page, task.id)
+        .locator("[data-browser-chrome]")
+        .getByRole("button", { name: RETURN_CONTROL_LABEL })
+        .click();
+      await expect
+        .poll(async () => (await detail()).outcome ?? "", { timeout: 60_000 })
+        .toContain(MOCK_LOCAL_RETURN_REPORT);
+      expect((await detail()).outcome).toContain(`${MOCK_LOCAL_RETURN_SAID} "${SIGNED_IN}"`);
+      // The crewmate opened the sign-in page again after the program was
+      // reached, so its hidden request was asked when only the program's own
+      // page may reach the program.
+      expect(accountLoads.filter((load) => load === "/")).toHaveLength(2);
+      // One sign-in: the program was reached once, with the code.
+      expect(visits.filter((visit) => visit.startsWith("/auth/callback"))).toEqual([
+        `/auth/callback?code=${CODE}`,
+      ]);
+      expect(visits).not.toContain("/hidden.png");
+    });
+  } finally {
+    await closeSite(account);
+    await closeSite(program);
   }
 });

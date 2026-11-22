@@ -135,6 +135,64 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     }
   });
 
+  // INF-5578's audit, finding 2: a sign-in the captain made ended on a
+  // program's address on this computer the crewmate never opened, and
+  // neither the captain nor the crewmate was told why the page was blocked.
+  it("names a page resting on a refused address, to the captain's view and in the crewmate's first look", async () => {
+    const { browsers, browser, page, handle } = await opened();
+    expect(browsers.fact("t1")).not.toHaveProperty("blocked");
+    expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });
+    // A page that rests on a program's address no move reached, as a kept
+    // profile's refused page does, shows the engine's own refusal there.
+    const callback = "http://localhost:1455/auth/callback?code=secret-sign-in-code";
+    page.current = callback;
+    // The refusal has no title of its own: the engine gives its address.
+    page.pageTitle = callback.replace("http://", "");
+    // Its tab reads the refused host and port, never the code its title carries.
+    expect(browsers.fact("t1")).toMatchObject({ title: "localhost:1455" });
+    expect(browsers.fact("t1")).toMatchObject({
+      state: "open",
+      site: "localhost:1455",
+      control: "captain",
+      blocked: "local",
+    });
+    expect(await browsers.returnControl("t1", handle)).toEqual({ ok: true });
+    const look = (await browser.inspect({})).text;
+    expect(look).toContain(
+      `The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.\nThis page is the browser's own refusal of localhost:1455, another server on ${HERE.this} that this task has not opened`,
+    );
+    expect(look).toContain("infinitary-browser-axi open http://localhost:1455/");
+    // Its host and port alone: the rest of the address may carry the sign-in's code.
+    const told = look.split("\n").find((line) => line.startsWith("This page is the browser's"));
+    expect(told).not.toContain("auth/callback");
+    // Nor does the code reach it through the address the page took as its title.
+    expect(look).not.toContain("secret-sign-in-code");
+    expect(look).toContain("localhost:1455/auth/callback");
+    // Opening the program lets the task's pages reach it, and the page that moved on is not blocked.
+    await browser.navigate({ url: "http://localhost:1455/" });
+    expect(browsers.fact("t1")).not.toHaveProperty("blocked");
+    expect(page.opened.allow({ url: callback, topLevel: true })).toBe(true);
+  });
+
+  // The captain's "yeah we should do that" to letting a page's own move open
+  // a local address, while a website's hidden requests to it stay refused.
+  it("lets a sign-in's return reach a program on this computer and keeps other pages off it", async () => {
+    const { browsers, page, handle } = await opened();
+    expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });
+    const callback = "http://localhost:1455/auth/callback?code=secret-sign-in-code";
+    const site = "https://auth.example.com/authorize";
+    // A website's hidden request to the program, before or after, is refused.
+    const hidden = { url: "http://localhost:1455/token", topLevel: false, page: site };
+    expect(page.opened.allow(hidden)).toBe(false);
+    // The sign-in's redirect is the page's own move, and its page loads its parts.
+    expect(page.opened.allow({ url: callback, topLevel: true, page: site })).toBe(true);
+    page.current = callback;
+    const part = { url: "http://localhost:1455/app.js", topLevel: false, page: callback };
+    expect(page.opened.allow(part)).toBe(true);
+    expect(browsers.fact("t1")).not.toHaveProperty("blocked");
+    expect(page.opened.allow(hidden)).toBe(false);
+  });
+
   it("returns once a load he started finishes, forgets every ref and wakes the crewmate once", async () => {
     const { browsers, browser, page, notes, returned, handle } = await opened();
     expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });

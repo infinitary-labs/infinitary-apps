@@ -12652,6 +12652,118 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Back to the card`;
   }
+  function cardBrowserBlockedInsecure(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حظر Infinitary ‏${site}: متصفحات المهام تفتح المواقع عبر https فقط.`;
+      case "de":
+        return `Infinitary hat ${site} blockiert: Aufgabenbrowser öffnen Websites nur über https.`;
+      case "es":
+        return `Infinitary bloqueó ${site}: los navegadores de tareas abren sitios web solo por https.`;
+      case "fr":
+        return `Infinitary a bloqué ${site} : les navigateurs de tâche n’ouvrent les sites web qu’en https.`;
+      case "ja":
+        return `Infinitary が ${site} をブロックしました。タスクのブラウザーは https のウェブサイトだけを開きます。`;
+      case "ko":
+        return `Infinitary가 ${site}을(를) 차단했어요. 작업 브라우저는 https 웹사이트만 열어요.`;
+      case "pt-BR":
+        return `O Infinitary bloqueou ${site}: navegadores de tarefa abrem sites só por https.`;
+      case "zh-Hans":
+        return `Infinitary 已阻止 ${site}：任务浏览器只通过 https 打开网站。`;
+      case "zh-Hant":
+        return `Infinitary 已封鎖 ${site}：任務瀏覽器只透過 https 開啟網站。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ƀļöçķéð ${site}: ţášķ ƀŕöŵšéŕš öþéñ ŵéƀšîţéš öṽéŕ ĥţţþš öñļý. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary blocked ‬${site}‮: task browsers open websites over https only.‬`;
+    }
+    return `Infinitary blocked ${site}: task browsers open websites over https only.`;
+  }
+  function cardBrowserBlockedLocal(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حظر Infinitary ‏${site}، وهو برنامج على حاسوب المتصفح لم يفتحه فرد الطاقم بعد.`;
+      case "de":
+        return `Infinitary hat ${site} blockiert, ein Programm auf dem Computer des Browsers, das das Crewmitglied noch nicht geöffnet hat.`;
+      case "es":
+        return `Infinitary bloqueó ${site}, un programa en la computadora del navegador que el tripulante aún no ha abierto.`;
+      case "fr":
+        return `Infinitary a bloqué ${site}, un programme sur l’ordinateur du navigateur que l’équipier n’a pas encore ouvert.`;
+      case "ja":
+        return `Infinitary が ${site} をブロックしました。ブラウザーのコンピューター上の、乗組員がまだ開いていないプログラムです。`;
+      case "ko":
+        return `Infinitary가 브라우저 컴퓨터에서 선원이 아직 열지 않은 프로그램인 ${site}을(를) 차단했어요.`;
+      case "pt-BR":
+        return `O Infinitary bloqueou ${site}, um programa no computador do navegador que o tripulante ainda não abriu.`;
+      case "zh-Hans":
+        return `Infinitary 已阻止 ${site}，它是浏览器所在电脑上船员还没有打开的程序。`;
+      case "zh-Hant":
+        return `Infinitary 已封鎖 ${site}，它是瀏覽器所在電腦上船員還沒開啟的程式。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ƀļöçķéð ${site}, á þŕöĝŕáɱ öñ ţĥé ƀŕöŵšéŕ'š çöɱþûţéŕ ţĥáţ ţĥé çŕéŵɱáţé ĥáš ñöţ öþéñéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary blocked ‬${site}‮, a program on the browser's computer that the crewmate has not opened.‬`;
+    }
+    return `Infinitary blocked ${site}, a program on the browser's computer that the crewmate has not opened.`;
+  }
+  function cardBrowserBlockedLocalHeld(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حظر Infinitary ‏${site}، وهو برنامج على حاسوب المتصفح. أعد التحكم، وسيتمكن فرد الطاقم من السماح للصفحة بالوصول إليه.`;
+      case "de":
+        return `Infinitary hat ${site} blockiert, ein Programm auf dem Computer des Browsers. Gib die Kontrolle zurück, dann kann das Crewmitglied die Seite dorthin lassen.`;
+      case "es":
+        return `Infinitary bloqueó ${site}, un programa en la computadora del navegador. Devuelve el control y el tripulante podrá dejar que la página llegue a él.`;
+      case "fr":
+        return `Infinitary a bloqué ${site}, un programme sur l’ordinateur du navigateur. Rendez le contrôle, et l’équipier pourra laisser la page l’atteindre.`;
+      case "ja":
+        return `Infinitary が ${site} をブロックしました。ブラウザーのコンピューター上のプログラムです。操作を返すと、乗組員がページからそこへ届くようにできます。`;
+      case "ko":
+        return `Infinitary가 브라우저 컴퓨터의 프로그램인 ${site}을(를) 차단했어요. 제어를 돌려주면 선원이 페이지가 거기에 닿게 할 수 있어요.`;
+      case "pt-BR":
+        return `O Infinitary bloqueou ${site}, um programa no computador do navegador. Devolva o controle e o tripulante poderá deixar a página chegar a ele.`;
+      case "zh-Hans":
+        return `Infinitary 已阻止 ${site}，它是浏览器所在电脑上的一个程序。交还控制后，船员可以让页面访问它。`;
+      case "zh-Hant":
+        return `Infinitary 已封鎖 ${site}，它是瀏覽器所在電腦上的程式。交還控制後，船員可以讓頁面連到它。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ƀļöçķéð ${site}, á þŕöĝŕáɱ öñ ţĥé ƀŕöŵšéŕ'š çöɱþûţéŕ. Ŕéţûŕñ çöñţŕöļ, áñð ţĥé çŕéŵɱáţé çáñ ļéţ ţĥé þáĝé ŕéáçĥ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary blocked ‬${site}‮, a program on the browser's computer. Return control, and the crewmate can let the page reach it.‬`;
+    }
+    return `Infinitary blocked ${site}, a program on the browser's computer. Return control, and the crewmate can let the page reach it.`;
+  }
+  function cardBrowserBlockedPrivate(input2) {
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `حظر Infinitary ‏${site}، وهو عنوان على شبكة خاصة. لا يصل متصفح المهمة إلى موقع خاص إلا باسمه، بعد أن تسمح بهذا الاسم في الإعدادات.`;
+      case "de":
+        return `Infinitary hat ${site} blockiert, eine Adresse in einem privaten Netzwerk. Ein Aufgabenbrowser erreicht eine private Seite nur über ihren Namen, wenn du diesen Namen in den Einstellungen erlaubst.`;
+      case "es":
+        return `Infinitary bloqueó ${site}, una dirección de una red privada. Un navegador de tarea llega a un sitio privado solo por su nombre, cuando permites ese nombre en Ajustes.`;
+      case "fr":
+        return `Infinitary a bloqué ${site}, une adresse sur un réseau privé. Un navigateur de tâche n’atteint un site privé que par son nom, une fois que vous autorisez ce nom dans les Réglages.`;
+      case "ja":
+        return `Infinitary がプライベートネットワーク上のアドレス ${site} をブロックしました。タスクのブラウザーは、プライベートなサイトに名前でだけ届きます。その名前を設定で許可してください。`;
+      case "ko":
+        return `Infinitary가 사설 네트워크의 주소 ${site}을(를) 차단했어요. 작업 브라우저는 사설 사이트에 이름으로만 닿아요. 설정에서 그 이름을 허용하면 돼요.`;
+      case "pt-BR":
+        return `O Infinitary bloqueou ${site}, um endereço em uma rede privada. Um navegador de tarefa só chega a um site privado pelo nome, depois que você permite esse nome nos Ajustes.`;
+      case "zh-Hans":
+        return `Infinitary 已阻止私有网络上的地址 ${site}。任务浏览器只能通过名称访问私有站点，需在设置中允许该名称。`;
+      case "zh-Hant":
+        return `Infinitary 已封鎖私人網路上的位址 ${site}。任務瀏覽器只能透過名稱連到私人網站，需在設定中允許該名稱。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ƀļöçķéð ${site}, áñ áððŕéšš öñ á þŕîṽáţé ñéţŵöŕķ. Å ţášķ ƀŕöŵšéŕ ŕéáçĥéš á þŕîṽáţé šîţé öñļý ƀý îţš ñáɱé, öñçé ýöû áļļöŵ ţĥáţ ñáɱé îñ Šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary blocked ‬${site}‮, an address on a private network. A task browser reaches a private site only by its name, once you allow that name in Settings.‬`;
+    }
+    return `Infinitary blocked ${site}, an address on a private network. A task browser reaches a private site only by its name, once you allow that name in Settings.`;
+  }
   function cardBrowserCopyAddress() {
     switch (currentLanguage()) {
       case "ar":
@@ -93716,6 +93828,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserActualSize,
     cardBrowserBack,
     cardBrowserBackToCard,
+    cardBrowserBlockedInsecure,
+    cardBrowserBlockedLocal,
+    cardBrowserBlockedLocalHeld,
+    cardBrowserBlockedPrivate,
     cardBrowserCopyAddress,
     cardBrowserFit,
     cardBrowserForward,
@@ -96735,6 +96851,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserActualSize": [],
     "cardBrowserBack": [],
     "cardBrowserBackToCard": [],
+    "cardBrowserBlockedInsecure": ["site"],
+    "cardBrowserBlockedLocal": ["site"],
+    "cardBrowserBlockedLocalHeld": ["site"],
+    "cardBrowserBlockedPrivate": ["site"],
     "cardBrowserCopyAddress": [],
     "cardBrowserFit": [],
     "cardBrowserForward": [],
@@ -115821,6 +115941,7 @@ ${startersHtml()}`;
     where: _enum(["engine", "away"])
   });
   const TASK_BROWSER_ASK_ANSWERS = ["allow", "not-now", "show"];
+  const TASK_BROWSER_BLOCKS = ["local", "private", "insecure"];
   const taskBrowserFactSchema = discriminatedUnion("state", [
     object({
       state: literal("open"),
@@ -115891,6 +116012,14 @@ ${startersHtml()}`;
        * (docs/task-browser.md, "Starting a page again").
        */
       starting: literal(true).optional(),
+      /**
+       * The page is on an address its browser refuses, so it shows the
+       * browser's own refusal (docs/task-browser.md, "A page on a refused
+       * address"): another server on the browser's computer, a private
+       * network, or a website over plain http. Read off the page's address as
+       * it is now, so it goes once the page moves on.
+       */
+      blocked: _enum(TASK_BROWSER_BLOCKS).optional(),
       ...browserIdentity
     }),
     object({

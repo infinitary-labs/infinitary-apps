@@ -238,6 +238,7 @@ async function opening(
   guards.push(guard);
   const events = (sink: string[]) => ({
     onNavigated: (url: string) => sink.push(url),
+    onLoadFailed: () => undefined,
     onDialog: (kind: string, message: string) => recorded.dialogs.push(`${kind}: ${message}`),
     onFileChooser: () => {
       recorded.choosers += 1;

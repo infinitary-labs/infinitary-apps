@@ -26,7 +26,15 @@ const GIT_ENV = {
 };
 
 const run = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV }).trim();
+  execFileSync("git", args, { cwd, encoding: "utf8", env: GIT_ENV, stdio: "pipe" }).trim();
+/** HEAD, or null in a folder git cannot read. */
+const git = (cwd: string, args: string[]) => {
+  try {
+    return run(cwd, ...args);
+  } catch {
+    return null;
+  }
+};
 
 /** A copy on its first commit, with main's next commit already fetched, as the app's check leaves it. */
 function copyBehind(nextChangesPackages: boolean) {
@@ -53,12 +61,13 @@ type App = (session: string, seen: StarterSession) => number;
 async function starter(
   copy: string,
   apps: App[],
-  steps: { install?: number[]; prepare?: number[] } = {},
+  steps: { install?: number[]; prepare?: number[]; stopAt?: "install" } = {},
 ) {
   const session = scratchDir("infinitary-dev-session-");
   const seen: StarterSession[] = [];
   const ran: string[] = [];
   const said: string[] = [];
+  let stopping = false;
   const install = [...(steps.install ?? [])];
   const prepare = [...(steps.prepare ?? [])];
   const deps: DevStarterDeps = {
@@ -68,13 +77,24 @@ async function starter(
       (await promisify(execFile)("git", ["-C", copy, ...args], { env: GIT_ENV })).stdout,
     install: async () => {
       ran.push("install");
+      // Ctrl-C reaches pnpm install too, which ends as failed.
+      if (steps.stopAt === "install" && !stopping) {
+        stopping = true;
+        return 1;
+      }
       return install.shift() ?? 0;
     },
     prepare: async () => {
       ran.push("prepare");
       return prepare.shift() ?? 0;
     },
-    start: async () => {
+    start: async (updates) => {
+      if (!updates) {
+        ran.push("start without updates");
+        return (
+          apps.shift()?.(session, { root: copy, commit: "", edited: false, lockDigest: "" }) ?? 0
+        );
+      }
       const read = readStarterSession(session);
       if (!read) throw new Error("the app started without a session to read");
       seen.push(read);
@@ -84,10 +104,10 @@ async function starter(
       return app(session, read);
     },
     say: (line) => said.push(line),
-    stopping: () => false,
+    stopping: () => stopping,
   };
   const code = await runDevStarter(deps);
-  return { code, seen, ran, said, head: run(copy, "rev-parse", "HEAD") };
+  return { code, seen, ran, said, head: git(copy, ["rev-parse", "HEAD"]) };
 }
 
 /** An app that reaches its main process and asks for an update to `to`. */
@@ -174,6 +194,20 @@ describe("pnpm dev's starter", () => {
       edited: true,
       last: { outcome: "went-back", from, to, step: "move" },
     });
+  });
+
+  it("starts nothing again when the person stops it during an update", async () => {
+    const { copy, from, to } = copyBehind(true);
+    const ended = await starter(copy, [asksUpdate(to)], { stopAt: "install" });
+    // It still leaves the copy on the commit it ran, with that commit's packages.
+    expect(ended).toMatchObject({ ran: ["start", "install", "install", "prepare"], head: from });
+  });
+
+  it("starts the app once, without updates, in a folder git cannot read", async () => {
+    const folder = scratchDir("infinitary-dev-archive-");
+    const ended = await starter(folder, [() => 4]);
+    expect(ended).toMatchObject({ code: 4, ran: ["start without updates"], head: null });
+    expect(ended.said.join("\n")).toContain("Git cannot read this copy");
   });
 
   it("starts an app that crashes after it started again on the new commit, without going back", async () => {

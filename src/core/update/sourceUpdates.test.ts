@@ -157,6 +157,46 @@ describe("a copy run from source", () => {
     expect(status).toMatchObject({ phase: "error", problem: UPDATE_PROBLEMS.checkFailed });
   });
 
+  it("fetches on Check for updates even while a quiet read that does not fetch is under way", async () => {
+    const { copy, advance } = project();
+    let hold: Promise<void> | undefined;
+    let held = false;
+    const updates = createSourceUpdateChecker({
+      starterDir: scratchDir("infinitary-starter-"),
+      session: {
+        root: copy,
+        commit: run(copy, "rev-parse", "HEAD"),
+        edited: false,
+        lockDigest: "",
+      },
+      channel: () => "alpha",
+      saving: createUpdateSaving(undefined),
+      end: () => undefined,
+      openExternal: () => undefined,
+      git: async (args) => {
+        if (hold && args[0] === "rev-parse" && args[1] === "HEAD") {
+          held = true;
+          await hold;
+        }
+        return run(copy, ...args);
+      },
+    });
+    expect((await updates.checkNow()).source?.behind).toBe(0);
+    let letGo = () => undefined as void;
+    hold = new Promise<void>((resolve) => {
+      letGo = resolve;
+    });
+    // Fetched just now, so the quiet read reads the copy alone.
+    const quiet = updates.getStatus();
+    await vi.waitFor(() => expect(held).toBe(true));
+    hold = undefined;
+    const to = advance("two\n");
+    const pressed = updates.checkNow();
+    letGo();
+    expect((await quiet).source?.behind).toBe(0);
+    expect(await pressed).toMatchObject({ latestVersion: to.slice(0, 7), source: { behind: 1 } });
+  });
+
   it("saves the crew's work, then asks the starter for the newest commit and ends", async () => {
     const { copy, advance } = project();
     const from = run(copy, "rev-parse", "HEAD");

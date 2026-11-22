@@ -35,7 +35,7 @@ export type SelfSourceLocation = {
 };
 
 /** The commit a build names: an installed build's index's, or a clean source run's. */
-const commitOf = (location: SelfSourceLocation, indexed: string): string | null =>
+const commitOf = (location: SelfSourceLocation, indexed: string | null): string | null =>
   location.isPackaged ? indexed : (location.sourceCommit ?? null);
 
 export function resolveSelfSourceDir(location: SelfSourceLocation): string {
@@ -63,7 +63,8 @@ export function readSelfSource(
   const facts: SelfSourceFacts = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    // A clean starter run names its commit even when its index is missing.
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
     root,
     index,
@@ -114,10 +115,10 @@ export function readSelfSourceIdentity(
   const identity: SourceIdentity = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
   };
-  if (!location.isPackaged) return { ...identity, commit: location.sourceCommit ?? null };
+  if (!location.isPackaged) return identity;
   try {
     const read = (path: string) => sourceMapSchema.parse(JSON.parse(readFileSync(path, "utf8")));
     const map = read(join(resolveSelfSourceDir(location), "self-map.json"));
@@ -143,7 +144,8 @@ export async function readSelfSourceAsync(
   const facts: SelfSourceFacts = {
     computer: location.computer,
     version: location.version,
-    commit: null,
+    // A clean starter run names its commit even when its index is missing.
+    commit: commitOf(location, null),
     mutable: !location.isPackaged,
     root,
     index,

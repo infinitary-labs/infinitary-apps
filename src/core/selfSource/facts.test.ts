@@ -136,6 +136,14 @@ describe("each computer's installed source", () => {
     };
     expect(readSelfSource(started)).toMatchObject({ mutable: true, commit });
     expect(readSelfSourceIdentity(started)).toEqual(sourceIdentity(readSelfSource(started)));
+    // Only a build writes the development index, so a copy without one still names it.
+    const unindexed = { ...started, appPath: scratchDir("source-starter-unindexed-") };
+    expect(readSelfSource(unindexed)).toMatchObject({
+      availability: "unavailable",
+      mutable: true,
+      commit,
+    });
+    expect(readSelfSourceIdentity(unindexed)).toEqual(sourceIdentity(readSelfSource(unindexed)));
   });
 
   it.each(["pi", "claude"] as const)(

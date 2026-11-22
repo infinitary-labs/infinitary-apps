@@ -37,8 +37,11 @@ export type DevStarterDeps = {
   install: () => Promise<number>;
   /** The generated files a start needs (`predev`); its exit code. */
   prepare: () => Promise<number>;
-  /** Runs the app until it ends; its exit code. */
-  start: () => Promise<number>;
+  /**
+   * Runs the app until it ends; its exit code. `updates` false starts it
+   * without naming the starter's folder, so it has no update mode.
+   */
+  start: (updates: boolean) => Promise<number>;
   /** A line for the person at the terminal. */
   say: (line: string) => void;
   /** True once the person stopped the starter, so nothing starts again. */
@@ -59,7 +62,9 @@ async function lockDigest(root: string): Promise<string> {
 
 /** Tracked files that differ from the commit; untracked files never block a forward move. */
 async function edited(deps: DevStarterDeps): Promise<boolean> {
-  return (await deps.git(["status", "--porcelain", "--untracked-files=no"])).trim() !== "";
+  // Without git's optional index lock, so a commit the person makes meanwhile never fails on it.
+  const status = await deps.git(["--no-optional-locks", "status", "--porcelain", "--untracked-files=no"]);
+  return status.trim() !== "";
 }
 
 async function packagesChanged(deps: DevStarterDeps, from: string, to: string): Promise<boolean> {
@@ -132,8 +137,19 @@ export async function runDevStarter(deps: DevStarterDeps): Promise<number> {
   let last: StarterOutcome | undefined;
   // An update that moved the copy, until its first start reaches the app's main process.
   let unproven: { from: string; to: string; reinstall: boolean } | undefined;
-  for (;;) {
-    const commit = (await deps.git(["rev-parse", "HEAD"])).trim();
+  let code = 0;
+  for (let first = true; ; first = false) {
+    // A stop during an update starts nothing again.
+    if (!first && deps.stopping()) return code;
+    let commit: string;
+    try {
+      commit = (await deps.git(["rev-parse", "HEAD"])).trim();
+    } catch (error) {
+      // A copy git cannot read, such as a downloaded archive, runs as before, without updates.
+      if (!first) throw error;
+      deps.say(`Git cannot read this copy, so it starts without updates: ${String(error)}`);
+      return deps.start(false);
+    }
     writeStarterSession(deps.session, {
       root: deps.root,
       commit,
@@ -144,7 +160,7 @@ export async function runDevStarter(deps: DevStarterDeps): Promise<number> {
     // Nothing left from an earlier start counts for this one.
     takeStarted(deps.session);
     takeSourceUpdate(deps.session);
-    const code = await deps.start();
+    code = await deps.start(true);
     const started = takeStarted(deps.session);
     const request = takeSourceUpdate(deps.session);
     if (deps.stopping()) return code;

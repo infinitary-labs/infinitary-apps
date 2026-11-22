@@ -23,17 +23,25 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const session = mkdtempSync(join(tmpdir(), "infinitary-dev-"));
 const extra = process.argv.slice(2);
 
-/** pnpm itself, as the running pnpm named it, or the one on the PATH. */
-const pnpm: [string, string[]] = process.env.npm_execpath
-  ? [process.execPath, [process.env.npm_execpath]]
-  : ["pnpm", []];
+/**
+ * pnpm itself, as the running pnpm named it: its script through Node, or a
+ * standalone pnpm directly. Without that name, the pnpm on the search path,
+ * through the shell on Windows, where it is a .cmd file.
+ */
+const execPath = process.env.npm_execpath;
+const pnpm: [string, string[]] = !execPath
+  ? ["pnpm", []]
+  : /\.[cm]?js$/.test(execPath)
+    ? [process.execPath, [execPath]]
+    : [execPath, []];
+const viaShell = !execPath && process.platform === "win32";
 
 let stopping = false;
 let child: ReturnType<typeof spawn> | undefined;
 
 function run(file: string, args: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
   return new Promise((done) => {
-    const started = spawn(file, args, { cwd: root, env, stdio: "inherit" });
+    const started = spawn(file, args, { cwd: root, env, stdio: "inherit", shell: viaShell && file === "pnpm" });
     child = started;
     started.once("error", (error) => {
       console.error(String(error));
@@ -72,11 +80,11 @@ try {
       ).stdout,
     install: () => run(pnpm[0], [...pnpm[1], "install", "--frozen-lockfile"]),
     prepare: () => run(pnpm[0], [...pnpm[1], "run", "predev"]),
-    start: () =>
+    start: (updates) =>
       run(
         process.execPath,
         [join(root, "node_modules/electron-vite/bin/electron-vite.js"), "dev", ...extra],
-        { ...process.env, [DEV_STARTER_VARIABLE]: session },
+        updates ? { ...process.env, [DEV_STARTER_VARIABLE]: session } : process.env,
       ),
     say: (line) => console.log(`[pnpm dev] ${line}`),
     stopping: () => stopping,

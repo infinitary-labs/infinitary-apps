@@ -205,7 +205,9 @@ The starter makes a private folder for each run and names it to the app in `INFI
 Before each start it writes the session there: the copy's commit, whether a tracked file differs from it, the lockfile's digest and how its last update ended.
 The app marks the folder once its main process runs, and an app the starter started keeps running when its last window closes, as the installed app does.
 
-The app's update check (`src/core/update/sourceUpdates.ts`) reads the branch the copy is on and the branch it follows where the project lives, fetching that branch alone at most every 4 hours or when the person presses Check for updates.
+Daily `pnpm dev` runs from a clone of the person's own, never from the project's folder the app manages: after each merge the app fast-forwards that folder (`docs/task-record.md`), which would move the code under the running app, and the app would then read itself up to date and never offer Update and restart.
+
+The app's update check (`src/core/update/sourceUpdates.ts`) reads the branch the copy is on and the branch it follows where the project lives, fetching that branch alone every 4 hours or when the person presses Check for updates; a quiet fetch that fails tries again at the next status read instead of waiting 4 hours.
 Its versions are short commits, the status names the branch and how many newer commits it has, and a GitHub project's newer commits open on its page comparing the two.
 It offers Update and restart only when that branch has newer commits, no tracked file is edited and the copy has no commit of its own; otherwise it says why.
 A copy on no branch, or on one that follows none, says it cannot update itself.

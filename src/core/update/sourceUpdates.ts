@@ -98,7 +98,7 @@ export function createSourceUpdateChecker(options: SourceUpdateOptions): UpdateC
   let fetchedAt: number | undefined;
   let checkedAt: number | undefined;
   let installing = false;
-  let reading: Promise<SourceRead> | undefined;
+  let reading: { fetch: boolean; read: Promise<SourceRead> } | undefined;
 
   const quiet = async (args: string[]): Promise<string | null> => {
     try {
@@ -133,7 +133,11 @@ export function createSourceUpdateChecker(options: SourceUpdateOptions): UpdateC
       .trim()
       .split(/\s+/)
       .map(Number);
-    const edited = (await git(["status", "--porcelain", "--untracked-files=no"])).trim() !== "";
+    // Without git's optional index lock, so a commit the person makes meanwhile never fails on it.
+    const edited =
+      (
+        await git(["--no-optional-locks", "status", "--porcelain", "--untracked-files=no"])
+      ).trim() !== "";
     const remoteUrl = (await quiet(["remote", "get-url", remote])) ?? "";
     return {
       kind: "following",
@@ -147,14 +151,26 @@ export function createSourceUpdateChecker(options: SourceUpdateOptions): UpdateC
     };
   }
 
-  /** One read at a time: a pressed check joins the quiet one. */
+  /**
+   * One read at a time: a read joins the one under way when that one fetches
+   * or it need not, and a fetch waits for a read that does not fetch, then fetches.
+   */
   function read(fetch: boolean): Promise<SourceRead> {
-    if (reading) return reading;
-    const next = readCopy(fetch).finally(() => {
-      reading = undefined;
-    });
-    reading = next;
-    return next;
+    const under = reading;
+    if (under && (under.fetch || !fetch)) return under.read;
+    if (under)
+      return under.read.then(
+        () => read(fetch),
+        () => read(fetch),
+      );
+    const own = {
+      fetch,
+      read: readCopy(fetch).finally(() => {
+        if (reading === own) reading = undefined;
+      }),
+    };
+    reading = own;
+    return own.read;
   }
 
   const offers = (copy: SourceRead): boolean =>

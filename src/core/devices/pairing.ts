@@ -140,11 +140,7 @@ const failedUpdatesFileSchema = z.strictObject({
   version: z.literal(1),
   devices: z.record(z.string(), z.string().min(1).max(64)),
 });
-/**
- * The computers the captain let run this Mac's source (docs/devices.md,
- * "Matching the home's build"): asked once per computer, the first time it
- * would build it; from then on each is matched by itself.
- */
+/** Computers the captain let run this Mac's source, asked once each (docs/devices.md). */
 const SOURCE_ALLOWED_FILE = "source-builds.json";
 const sourceAllowedFileSchema = z.strictObject({
   version: z.literal(1),

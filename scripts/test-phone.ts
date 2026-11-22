@@ -532,8 +532,9 @@ let hingeHelper: Promise<string> | undefined;
 const everyPart = async () => {
   const xcode = await run("xcodebuild", ["-version"]);
   phoneXcode(xcode);
-  // INF-2125 piece 3: the simulators the first lanes use start while Xcode builds, so their first parts
-  // begin as the build ends; a lane past --simulators starts its own when a place frees.
+  // INF-2125 piece 3: the simulators the first lanes use start, and wait for their wallpaper prewarm, while Xcode
+  // builds, so their first parts begin as the build ends, or as a lane's prewarm finishes when that comes later; a
+  // lane past --simulators starts its own when a place frees.
   const starting = new Map(lanePlan.lanes.slice(0, simulators)
     .map(({ device, number }) => [`${device} ${number}`, startSimulator(device)] as const));
   // A start that fails is heard by its lane's open, and every start settles before the gate's cleanup.

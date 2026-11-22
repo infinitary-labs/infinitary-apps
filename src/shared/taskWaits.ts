@@ -114,8 +114,8 @@ export function recordAttentionWaits(task: {
 
 /**
  * Only the task card calls this; the shared list status, and the hover
- * preview's, are deliberately unchanged (INF-2528: the preview keeps its
- * short reason, never a wait's wording or times).
+ * preview's, keep their short reason (INF-2528), except that a lone wait
+ * names where its line stops and that task's hold (INF-5578, `taskStatusOf`).
  */
 export function taskWaitStatus(
   task: TaskStatusInput & { waits?: readonly TaskWait[]; hold?: unknown },

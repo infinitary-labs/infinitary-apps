@@ -1090,10 +1090,12 @@ Every close the first mate makes of started work carries its one sentence: `sett
 The sentence is a fact of the close (`closingSentence` in its timeline data).
 Where it goes is one rule, at most one closing note for each of the captain's messages (`TaskClosing.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"), after the one exception above: merged work whose story note carries the merge line takes the sentence on that line alone.
 
-- The card that answers the message, once the captain accepted it, takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge), and a decision they chose on comes back to the stack only when the work was dropped after they accepted it (INF-1533).
-  A note they closed never comes back: the close stays on the task's record and in Activity (INF-2718, the captain's pick "Refuse re-showing a closed note" after DOP-201's note came back with its "dropped" line).
+A card speaks only for its own task (INF-6115): the sentence is written only on a card of the task that closed, and a card the captain already chose on or closed never comes back to the stack (the captain's pick "Its own note").
+- A card of the task that is up and answers the message takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge).
+- A decision of the task the captain already chose on stays down; when the work is dropped after all by someone else, the drop goes up on the task's own closing note.
+  A note they closed never comes back and nothing goes up beside it: the close stays on the task's record and in Activity (INF-2718, the captain's pick "Refuse re-showing a closed note" after DOP-201's note came back with its "dropped" line).
 - While other work of the message runs, or took the work over, nothing goes up (INF-1437).
-- An answering card that is up takes the sentence the same way.
+- When the message's answer is a card of other work, that card keeps its words: a drop, merge or release goes up as the task's own note, not marked as the answer, and a finish puts up nothing.
 - Otherwise the sentence goes up as the first mate's own note, marked as the answer and titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge.
 
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.

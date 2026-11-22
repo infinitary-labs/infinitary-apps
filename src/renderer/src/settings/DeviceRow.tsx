@@ -155,7 +155,10 @@ export function DeviceRow({
       tone: follow.step === "cannot" || follow.step === "failed" ? "warn" : undefined,
       hook: { "data-device-app-follow": follow.step },
       act:
-        onUpdateApp && device.appVersion && appUpdateOffered(device, device.appVersion) ? (
+        !settling &&
+        onUpdateApp &&
+        device.appVersion &&
+        appUpdateOffered(device, device.appVersion) ? (
           <Button
             variant="secondary"
             size="sm"

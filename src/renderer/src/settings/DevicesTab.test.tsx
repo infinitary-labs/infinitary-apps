@@ -1122,6 +1122,25 @@ describe("Settings -> Devices", () => {
     });
     expect(said(failed)).toContain("Its app could not update to Infinitary 0.8.4 by itself.");
     expect(failed).toContain("data-device-update-app");
+    // A computer that runs work settling, here being removed, says the step but offers no
+    // Update app, as every strip hides its button then.
+    const removing = render({
+      devices: [
+        {
+          ...AIR,
+          kind: "work",
+          removal: "cleaning-up",
+          appVersion: {
+            app: "0.8.3",
+            than: "older",
+            follow: { version: "0.8.4", step: "waiting" },
+          },
+        },
+      ],
+      onUpdateApp: noop,
+    });
+    expect(removing).toContain('data-device-app-follow="waiting"');
+    expect(removing).not.toContain("data-device-update-app");
     // An app from before says no step, and the row offers nothing new.
     const before = render({
       devices: [{ ...AIR, appVersion: { app: "0.8.3", than: "older" } }],

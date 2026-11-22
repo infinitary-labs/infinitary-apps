@@ -3221,7 +3221,7 @@
 "settingsSoundPauseWhenAwayDescription" = "Se met en pause tant que votre écran est éteint ou verrouillé, pour que la musique ne garde pas votre ordinateur éveillé, et reprend à votre retour.";
 "settingsSoundStyle" = "Style";
 "settingsSoundStyleColdSleep" = "Sommeil cryogénique";
-"settingsSoundStyleColdSleepDescription" = "Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave et un battement de cœur lent.";
+"settingsSoundStyleColdSleepDescription" = "Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave, un battement de cœur lent et un vent léger.";
 "settingsSoundStyleDeepDrift" = "Dérive profonde";
 "settingsSoundStyleDeepDriftDescription" = "Sans batterie : de lents accords amples et quelques notes aiguës aux longs échos.";
 "settingsSoundStyleFairWinds" = "Bon vent";
@@ -3236,13 +3236,13 @@
 "settingsSoundStyleIslandMorning" = "Matin sur l’île";
 "settingsSoundStyleIslandMorningDescription" = "Le plus lumineux : un marimba, une basse chantante et une flûte sur des vagues douces.";
 "settingsSoundStyleMoonlitDeck" = "Pont sous la lune";
-"settingsSoundStyleMoonlitDeckDescription" = "Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces.";
+"settingsSoundStyleMoonlitDeckDescription" = "Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces et un vent de nuit.";
 "settingsSoundStyleQuietCove" = "Crique paisible";
 "settingsSoundStyleQuietCoveDescription" = "Un rythme lent et berçant avec un concertina et un luth pincé sur des vagues douces.";
 "settingsSoundStyleStarCruise" = "Croisière stellaire";
 "settingsSoundStyleStarCruiseDescription" = "Un motif doux et répété qui résonne à gauche et à droite sur une pulsation lente et grave.";
 "settingsSoundStyleTavernEmbers" = "Braises de taverne";
-"settingsSoundStyleTavernEmbersDescription" = "Une valse paisible en mineur avec des cordes pincées et un accordéon sur des vagues douces.";
+"settingsSoundStyleTavernEmbersDescription" = "Une valse paisible en mineur avec des cordes pincées et un accordéon sur une pluie douce et des vagues.";
 "settingsSoundStyleWayfinderNight" = "Nuit des navigateurs";
 "settingsSoundStyleWayfinderNightDescription" = "Des voix fredonnées, un piano à pouces et un tambour lent sur des vagues douces.";
 "settingsSoundVolume" = "Volume";

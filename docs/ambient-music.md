@@ -29,10 +29,10 @@ The picker lists them under the four kinds of journey they come from (`src/rende
 | --- | --- | --- |
 | Space | Star cruise | A soft repeating pattern echoing left and right over a slow low pulse; the default |
 | Space | Deep drift | No drums: slow wide chords and high pings with long echoes |
-| Space | Cold sleep | Mostly piano: a felt piano in a vast, cold room over a low drone; a slow heartbeat and a broken chord as the crew works, a high answer with three or more |
+| Space | Cold sleep | Mostly piano: a felt piano in a vast, cold room over a low drone and soft wind; a slow heartbeat and a broken chord as the crew works, a high answer with three or more |
 | Pirate | Quiet cove | A slow rocking rhythm: concertina, plucked lute, a whistle tune |
-| Pirate | Tavern embers | A quiet minor-key waltz: plucked strings, accordion, a fiddle tune |
-| Pirate | Moonlit deck | A low drone, a music box tune, a slow harp, a distant whistle |
+| Pirate | Tavern embers | A quiet minor-key waltz: plucked strings, accordion, a fiddle tune, soft rain outside |
+| Pirate | Moonlit deck | A low drone, a music box tune, a slow harp, a distant whistle, a night wind |
 | Nautical | Harbor dawn | Soft brass chords, a harp, a ship's bell struck in pairs, a distant bugle |
 | Nautical | Fair winds | A shanty rhythm on guitar; a whistle calls and a concertina answers |
 | Island | Wayfinder night | Humming voices, a thumb piano, a slow two-beat drum, a falling flute |
@@ -41,6 +41,7 @@ The picker lists them under the four kinds of journey they come from (`src/rende
 Picking another style while it plays fades the old one out and starts the new one from its first bar.
 Every style was rendered one layer at a time and each layer's level set in dB, so all ten play as loud as each other.
 The pirate, nautical and island styles play soft waves under the music, at 40% of the wave level the prototypes allowed.
+Three add soft rain or wind where it fits the scene, the captain's choice for INF-5569: Tavern embers rain at 50%, outside the one indoor scene, and Cold sleep and Moonlit deck wind at 60%.
 
 ## How it plays
 
@@ -73,7 +74,7 @@ Two moments get a cue in the style's own instruments, heard from the character's
 - A card landing unseen, the notice pulse's moment, plays the waiting chime on the next beat, at most once every two bars: three notes up the home chord, then a held note on the notice pulse's own curve (`noticeFrame`), spreading from the center to both sides.
 - A task merging, the celebrate emote's moment, plays a rising run of sparks on the next beat and steers the next chords through the style's cadence home.
 
-The shipped styles' only noise is the sea styles' waves: a dark wash, cut well below the treble.
+The shipped styles' only noise is the sea styles' waves, a dark wash cut well below the treble, and the soft rain or wind of the three styles that bring it.
 They have no crackle or hiss, and every drum, tick and rim is made of tones alone.
 A person's own style may also bring soft rain or wind, the captain's choice for INF-5541 ("Your own styles" below); nothing else plays noise.
 Loudness is one fixed gain and a gentle compressor, never a step that lifts quiet parts.
@@ -88,7 +89,7 @@ No code judges the person's words; the line is the whole of that teaching.
 
 A style is settings, never code: `ownStyleSchema` in `src/shared/ambientOwn.ts` holds every value to a range, and `ownStyleFaults` checks what a range cannot, such as a part playing a voice the style never defines, a step past the bar, a preset its instrument lacks, or more than 96 notes a bar.
 A faulty style is refused with each fault in words the first mate can act on, and nothing is saved.
-A style may start from a shipped one (`like`) and change only what the words name, such as its tempo, key or the loudness of a layer; or it writes every field: its chords and which may follow which, its hands' range, its pad, its room, its voices from the app's own instruments and their named presets, its three crew levels, its cue, and its parts.
+A style may start from a shipped one (`like`) and change only what the words name, such as its tempo, key or the loudness of a layer, keeping its waves, rain and wind unless the words change them; or it writes every field: its chords and which may follow which, its hands' range, its pad, its room, its voices from the app's own instruments and their named presets, its three crew levels, its cue, and its parts.
 Each part kind is one fixed way of writing a bar's notes (`src/renderer/src/ambient/own.ts`): a held note, steps on the grid, a pattern over the chord, a strum, random pings, or a tune of repeating motifs, each with a condition on the crew level, a layer, the bar or chance.
 Every style keeps the waiting chime and the merge sparks, so a style that defines its own voices must define `chime` and `spark` on the cue bus.
 

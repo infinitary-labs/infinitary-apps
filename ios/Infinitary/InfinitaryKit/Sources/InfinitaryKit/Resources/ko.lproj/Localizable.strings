@@ -3223,7 +3223,7 @@
 "settingsSoundPauseWhenAwayDescription" = "화면이 꺼지거나 잠겨 있는 동안 일시 정지해, 음악 때문에 컴퓨터가 잠자기에 들지 못하는 일이 없어요. 돌아오면 다시 재생해요.";
 "settingsSoundStyle" = "스타일";
 "settingsSoundStyleColdSleep" = "냉동 수면";
-"settingsSoundStyleColdSleepDescription" = "피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동 위에서 흐릅니다.";
+"settingsSoundStyleColdSleepDescription" = "피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동, 잔잔한 바람 위에서 흐릅니다.";
 "settingsSoundStyleDeepDrift" = "깊은 표류";
 "settingsSoundStyleDeepDriftDescription" = "드럼 없이 느리고 넓은 화음과 긴 메아리가 남는 높은 음이 가끔 울립니다.";
 "settingsSoundStyleFairWinds" = "순풍";
@@ -3238,13 +3238,13 @@
 "settingsSoundStyleIslandMorning" = "섬의 아침";
 "settingsSoundStyleIslandMorningDescription" = "가장 밝은 스타일: 마림바, 경쾌한 베이스, 플루트에 잔잔한 파도 소리가 흐릅니다.";
 "settingsSoundStyleMoonlitDeck" = "달빛 갑판";
-"settingsSoundStyleMoonlitDeckDescription" = "드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리가 흐릅니다.";
+"settingsSoundStyleMoonlitDeckDescription" = "드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리와 밤바람이 흐릅니다.";
 "settingsSoundStyleQuietCove" = "고요한 만";
 "settingsSoundStyleQuietCoveDescription" = "콘서티나와 뜯는 류트가 느리게 흔들리는 리듬을 만들고, 잔잔한 파도 소리가 흐릅니다.";
 "settingsSoundStyleStarCruise" = "별빛 항해";
 "settingsSoundStyleStarCruiseDescription" = "부드럽게 반복되는 패턴이 느리고 낮은 맥박 위에서 좌우로 울립니다.";
 "settingsSoundStyleTavernEmbers" = "선술집의 불씨";
-"settingsSoundStyleTavernEmbersDescription" = "뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 파도 소리가 흐릅니다.";
+"settingsSoundStyleTavernEmbersDescription" = "뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 빗소리와 파도 소리가 흐릅니다.";
 "settingsSoundStyleWayfinderNight" = "길잡이의 밤";
 "settingsSoundStyleWayfinderNightDescription" = "허밍하는 목소리, 엄지 피아노, 느린 북소리에 잔잔한 파도 소리가 흐릅니다.";
 "settingsSoundVolume" = "음량";

@@ -3221,7 +3221,7 @@
 "settingsSoundPauseWhenAwayDescription" = "螢幕關閉或鎖定時暫停，以免音樂讓你的電腦無法睡眠；你回來後繼續播放。";
 "settingsSoundStyle" = "風格";
 "settingsSoundStyleColdSleep" = "冷凍休眠";
-"settingsSoundStyleColdSleepDescription" = "以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音和緩慢的心跳。";
+"settingsSoundStyleColdSleepDescription" = "以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音、緩慢的心跳和輕柔的風聲。";
 "settingsSoundStyleDeepDrift" = "深空漂流";
 "settingsSoundStyleDeepDriftDescription" = "沒有鼓：緩慢寬廣的和弦，偶爾幾聲帶長回聲的高音。";
 "settingsSoundStyleFairWinds" = "順風";
@@ -3236,13 +3236,13 @@
 "settingsSoundStyleIslandMorning" = "海島清晨";
 "settingsSoundStyleIslandMorningDescription" = "最明亮的一種：馬林巴、輕快的貝斯和長笛，伴著輕柔的海浪聲。";
 "settingsSoundStyleMoonlitDeck" = "月下甲板";
-"settingsSoundStyleMoonlitDeckDescription" = "稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲。";
+"settingsSoundStyleMoonlitDeckDescription" = "稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲和夜風。";
 "settingsSoundStyleQuietCove" = "靜謐海灣";
 "settingsSoundStyleQuietCoveDescription" = "手風琴和撥弦魯特琴奏出緩緩搖晃的節奏，伴著輕柔的海浪聲。";
 "settingsSoundStyleStarCruise" = "星際巡航";
 "settingsSoundStyleStarCruiseDescription" = "柔和的重複音型在緩慢低沉的脈動上左右迴響。";
 "settingsSoundStyleTavernEmbers" = "酒館餘燼";
-"settingsSoundStyleTavernEmbersDescription" = "撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的海浪聲。";
+"settingsSoundStyleTavernEmbersDescription" = "撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的雨聲和海浪聲。";
 "settingsSoundStyleWayfinderNight" = "領航之夜";
 "settingsSoundStyleWayfinderNightDescription" = "哼唱的人聲、拇指琴和緩慢的鼓點，伴著輕柔的海浪聲。";
 "settingsSoundVolume" = "音量";

@@ -3221,7 +3221,7 @@
 "settingsSoundPauseWhenAwayDescription" = "Pauses while your screen is off or locked, so the music doesn’t keep your computer awake, and plays again when you’re back.";
 "settingsSoundStyle" = "Style";
 "settingsSoundStyleColdSleep" = "Cold sleep";
-"settingsSoundStyleColdSleepDescription" = "Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat.";
+"settingsSoundStyleColdSleepDescription" = "Mostly piano: a soft felt piano in a vast, cold room over a low drone, a slow heartbeat and soft wind.";
 "settingsSoundStyleDeepDrift" = "Deep drift";
 "settingsSoundStyleDeepDriftDescription" = "No drums: slow, wide chords and a few high pings with long echoes.";
 "settingsSoundStyleFairWinds" = "Fair winds";
@@ -3236,13 +3236,13 @@
 "settingsSoundStyleIslandMorning" = "Island morning";
 "settingsSoundStyleIslandMorningDescription" = "The brightest one: a marimba, a lilting bass and a flute over soft waves.";
 "settingsSoundStyleMoonlitDeck" = "Moonlit deck";
-"settingsSoundStyleMoonlitDeckDescription" = "Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves.";
+"settingsSoundStyleMoonlitDeckDescription" = "Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves and a night wind.";
 "settingsSoundStyleQuietCove" = "Quiet cove";
 "settingsSoundStyleQuietCoveDescription" = "A slow rocking rhythm with a concertina and a plucked lute over soft waves.";
 "settingsSoundStyleStarCruise" = "Star cruise";
 "settingsSoundStyleStarCruiseDescription" = "A soft repeating pattern that echoes left and right over a slow, low pulse.";
 "settingsSoundStyleTavernEmbers" = "Tavern embers";
-"settingsSoundStyleTavernEmbersDescription" = "A quiet minor-key waltz with plucked strings and an accordion over soft waves.";
+"settingsSoundStyleTavernEmbersDescription" = "A quiet minor-key waltz with plucked strings and an accordion over soft rain and waves.";
 "settingsSoundStyleWayfinderNight" = "Wayfinder night";
 "settingsSoundStyleWayfinderNightDescription" = "Humming voices, a thumb piano and a slow drum over soft waves.";
 "settingsSoundVolume" = "Volume";

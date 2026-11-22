@@ -36,10 +36,17 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["note-queue"])
         XCTAssertTrue(editor.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["queued-notes-count"].waitForPresence(timeout: 10), app.debugDescription)
-        // The keyboard may close with the editor or stay up with its Done button; put it down only when it stayed.
+        // The keyboard may close with the editor or stay up with its Done button; put it down only when it stayed. As it
+        // starts to close, Done can still read for a moment, so the state settles only when two readings in a row agree.
         let keyboard = app.keyboards.firstMatch
         let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
-        let settled = NSPredicate { _, _ in !keyboard.exists || done.exists }
+        var lastReading: [Bool]?
+        let settled = NSPredicate { _, _ in
+            let up = keyboard.exists
+            let reading = [up, up && done.exists && done.isHittable]
+            defer { lastReading = reading }
+            return (!reading[0] || reading[1]) && lastReading == reading
+        }
         XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed, app.debugDescription)
         if keyboard.exists { tapOnPhone(done) }
         XCTAssertTrue(keyboard.waitForAbsence(timeout: 10), app.debugDescription)

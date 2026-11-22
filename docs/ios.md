@@ -1249,6 +1249,8 @@ For Return, the driver checks the router's carriage-return registration but supp
 Every tap a native journey sends, on an element or a point, goes through `tapOnPhone`, the one way a journey sends a tap again besides the photo pick below (INF-1477, the captain's "Allow a proven second tap").
 The tap check (`scripts/phone-taps.ts`, in `pnpm check`) refuses a plain XCTest `.tap()` anywhere in the UI tests but inside `tapOnPhone` itself (INF-2485).
 A swipe, a drag or a key is sent once, as before.
+SpringBoard decides whether each touch is a system gesture before the app's own gestures may act on it, and XCTest takes its virtual touch screen away about a tenth of a second after the lift; a touch SpringBoard has not handed over by then is cancelled for the app, so a plain swipe, a fifth of a second long, can do nothing on a busy simulator.
+The talk-tasks part therefore opens a task row's actions with a slow drag that rests before the lift, which is still touching when SpringBoard decides and opens the row by its distance (INF-6073).
 On the open Duo the fold part's Tab, Return and Escape go through the test home instead ("The Duo's hinge"), and each must come back with backboardd naming Infinitary's process as its keyboard-focus destination before the journey reads what the app did with it.
 A key-command registration, typed text or a key with no destination does not prove delivery.
 As for crew browsing's unmodified keys, BackBoard publishes no registration to wait for, so the journey reads Show panels' own selection before each press that expects a command and its result on screen after.

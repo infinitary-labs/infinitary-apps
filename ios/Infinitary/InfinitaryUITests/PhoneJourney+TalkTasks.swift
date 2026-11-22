@@ -20,6 +20,19 @@ extension PhoneJourney {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
     }
 
+    /// INF-6073: a task row's left swipe, as a slow drag that keeps touching for two seconds or more. Every touch first
+    /// waits on SpringBoard, which decides whether it is a system gesture before the app's own gestures may act, and
+    /// XCTest takes its virtual touch screen away about a tenth of a second after the lift. A plain swipe lasts a fifth
+    /// of a second, so on a busy simulator SpringBoard can still be deciding when that screen goes; backboardd then
+    /// cancels the touch for the app and the row's swipe never acts (phone run 44991488174, where SpringBoard took the
+    /// touch 0.35 s late). This drag is still moving long after SpringBoard decides, and it rests before the lift, so
+    /// the row opens by its distance, as a finger that slows at the end opens it.
+    private func dragRowOpen(_ row: XCUIElement) {
+        let from = row.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
+        let to = row.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        from.press(forDuration: 0.05, thenDragTo: to, withVelocity: XCUIGestureVelocity(rawValue: 150), thenHoldForDuration: 0.3)
+    }
+
     /// INF-2928 piece 3, the captain's "Every move the Mac allows on that row": a swipe on a Backlog row shows the Mac's
     /// row Start, dim with the Mac's reason when it cannot start; a long press shows the row's moves under its summary,
     /// a move that cannot run stays dim, and Drop task asks in the record's words before the Mac drops it. One press on
@@ -31,7 +44,7 @@ extension PhoneJourney {
         let row = app.buttons["task-\(id)"]
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         waitForSteadyTarget(row)
-        row.swipeLeft()
+        dragRowOpen(row)
         let waiting = app.buttons["row-start-\(id)"]
         XCTAssertTrue(waiting.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(waiting.isEnabled, "A Start that cannot run stays dim")
@@ -72,7 +85,7 @@ extension PhoneJourney {
         let work = app.buttons["task-phone-work"]
         XCTAssertTrue(work.waitForPresence(timeout: 10))
         waitForSteadyTarget(work)
-        work.swipeLeft()
+        dragRowOpen(work)
         let start = app.buttons["row-start-phone-work"]
         XCTAssertTrue(start.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(start.isEnabled)

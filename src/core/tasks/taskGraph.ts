@@ -350,6 +350,11 @@ export class TaskGraph {
     return this.writer.store.listChildren(id);
   }
 
+  /** A program's filed parts and its open ones, as two counts (`TaskStore.programPartCounts`). */
+  programPartCounts(programId: string): { parts: number; open: number } {
+    return this.writer.store.programPartCounts(programId);
+  }
+
   /** Children not yet closed - the ones the parent close rule names. */
   openChildren(id: string): TaskRecord[] {
     return this.writer.store.listLiveChildren(id);

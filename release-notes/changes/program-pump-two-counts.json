@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "program-pump-two-counts",
+      "kind": "fix",
+      "title": "Infinitary no longer pauses while a large program waits to start its next parts",
+      "body": "While a program with hundreds of parts had more waiting than it could run at once, Infinitary could pause for a tenth of a second or more each time anything changed. Starting a program's next part now takes a few milliseconds however many parts it has filed.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes; the window stops pausing, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

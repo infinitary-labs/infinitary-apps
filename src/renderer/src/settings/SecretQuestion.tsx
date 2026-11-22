@@ -1,4 +1,5 @@
 import type { SecretsView } from "@shared/secrets";
+import { useLayoutEffect, useRef } from "react";
 import { Button } from "../design";
 
 type Question = NonNullable<SecretsView["question"]>;
@@ -20,10 +21,20 @@ export function SecretQuestion({
   question: Question;
   /** Nothing sits above it in its row, so the row's own divider is enough: no line or space of its own. */
   first?: boolean;
-  /** The confirm answer is on its way; both buttons wait. */
+  /** A Secrets request is still in flight; both buttons wait. */
   answering: boolean;
   onAnswer: (pass: string, confirmed: boolean) => void;
 }) {
+  const keep = useRef<HTMLButtonElement>(null);
+  const focusedPass = useRef<string | null>(null);
+  const keepPass = question.keep.pass;
+  useLayoutEffect(() => {
+    // A change notification can draw the question before the request that opened it finishes.
+    // Focus the safe answer once per question, after the DOM enables it.
+    if (answering || focusedPass.current === keepPass || !keep.current) return;
+    keep.current.focus();
+    focusedPass.current = keepPass;
+  }, [answering, keepPass]);
   return (
     <div
       data-secret-question={question.about.kind}
@@ -55,9 +66,9 @@ export function SecretQuestion({
         <Button
           variant="secondary"
           size="sm"
-          autoFocus
+          ref={keep}
           disabled={answering}
-          onClick={() => onAnswer(question.keep.pass, false)}
+          onClick={() => onAnswer(keepPass, false)}
         >
           {question.keep.label}
         </Button>

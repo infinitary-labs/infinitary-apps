@@ -266,8 +266,10 @@ test("a Mac added by its address over Remote Login: the copy joins through the h
   joinedHome.join(unheard, joined.joinedAt);
   if (joined.name) joinedHome.name(joined.name);
 
-  // Updated: the connection lets go, this Mac's Firstmate goes there again, its agent
-  // starts the new copy, and the connection is made again to that copy.
+  // Updated: the connection lets go, this Mac's Firstmate goes there again and replaces the
+  // copy, and the connection is made again to the new copy. The service manager here is a
+  // stand-in, so the journey starts the new copy where its agent would: it proves the copy's
+  // transfer and replacement and the return to reach, not an agent starting it unattended.
   markCopy(bundle, "the home's newer version");
   said.splice(0);
   await remote.update(device.id);

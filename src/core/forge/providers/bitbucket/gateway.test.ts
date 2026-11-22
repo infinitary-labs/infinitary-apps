@@ -325,6 +325,7 @@ describe("the gateway on a Bitbucket Cloud repository, through crewmate tools", 
             loginOf: () => "field-lead",
             checkNow: async () => {},
             signOut: () => {},
+            presentHosts: () => ["bitbucket.org"],
           },
           gateway: (host) => ({
             read: (task, input) => service.read(task, input, { host }),

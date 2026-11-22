@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { runIdentity } from "@core/helper/runAgent";
 import type { z } from "zod";
 import {
   lockHolder,
-  processAlive,
   RUN_LAST_STOP,
   RUN_MARKER,
   type RunMarker,
@@ -80,8 +80,20 @@ export type RunStatus = {
   problems: string[];
 };
 
-/** Read-only: no core, lock acquisition, migration, Keychain query, or file creation. */
-export function readRunStatus(dataDir: string, alive = processAlive): RunStatus {
+/**
+ * Read-only: no core, lock acquisition, migration, Keychain query, or file
+ * creation. The note's run is read by the birth it keeps on Windows
+ * (`runIdentity`), as the window's startup reads it (`commandHolding`), so a
+ * program that took the number of a run that ended is not that run, and one
+ * whose birth cannot be read is not known to be it; a folder whose lock
+ * another process holds while its note names no run seen to be live is
+ * unknown, never stopped or that run, so no window joins as if nothing ran
+ * nor as its owner.
+ */
+export function readRunStatus(
+  dataDir: string,
+  alive: (pid: number, birth?: string) => boolean | null = runIdentity,
+): RunStatus {
   // Stop precedes marker: a concurrent clean stop writes history before removing the marker.
   let stop = readRecord(join(dataDir, RUN_LAST_STOP), RunStopSchema);
   const marker = readRecord(join(dataDir, RUN_MARKER), RunMarkerSchema);
@@ -91,16 +103,34 @@ export function readRunStatus(dataDir: string, alive = processAlive): RunStatus 
     problems.push(STATUS_WORDS.unreadable);
   let running: boolean | null = marker.kind === "unreadable" ? null : false;
   const run = marker.kind === "read" ? marker.value : null;
+  // Whether the noted run's exit is not known: its birth cannot be read while the lock is held, so
+  // it may be the one holding it. A lock nobody holds is the run gone, read or not.
+  let unread = false;
   if (run) {
-    running = alive(run.pid) && (holder === undefined || holder === run.pid);
+    const holds = alive(run.pid, run.birth);
+    unread = holds === null && holder !== null;
+    running = unread ? null : holds === true && (holder === undefined || holder === run.pid);
     // Pick up a stop written while the marker was being read.
     if (!running) stop = readRecord(join(dataDir, RUN_LAST_STOP), RunStopSchema);
-  } else if (holder !== null && (holder === undefined || alive(holder))) {
-    running = null;
-    problems.push(STATUS_WORDS.otherProcess);
+  }
+  if (!running && marker.kind !== "unreadable") {
+    if (
+      holder !== null &&
+      (holder === undefined || (holder !== run?.pid && alive(holder) !== false))
+    ) {
+      running = null;
+      problems.push(STATUS_WORDS.otherProcess);
+    }
   }
   let lastStop: RunStatus["lastStop"] = stop.kind === "read" ? stop.value : null;
-  if (run && !running && (lastStop?.pid !== run.pid || lastStop.startedAt !== run.startedAt)) {
+  // A run gone without its stop written ended unrecorded; one whose exit is not known keeps the
+  // stop written before it, never one made up for it.
+  if (
+    run &&
+    !running &&
+    !unread &&
+    (lastStop?.pid !== run.pid || lastStop.startedAt !== run.startedAt)
+  ) {
     lastStop = {
       pid: run.pid,
       startedAt: run.startedAt,

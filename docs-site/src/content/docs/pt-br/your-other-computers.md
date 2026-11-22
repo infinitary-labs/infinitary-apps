@@ -1,5 +1,5 @@
 ---
-source: d29b96f163790a41
+source: bed187b080af2f4a
 title: Seus outros computadores
 description: Adicione seus outros computadores para controlar seu imediato de qualquer um deles, deixar que eles rodem o trabalho dos seus projetos e manter uma cópia que possa assumir.
 ---
@@ -27,22 +27,34 @@ Enquanto ele estiver em repouso ou fora de alcance:
 
 1. No computador onde seu imediato mora, abra Ajustes → **Dispositivos**.
 2. Pressione **+ Um computador**.
-3. Escolha um de três jeitos.
-   Cada jeito adiciona o mesmo tipo de computador.
+3. Digite o endereço do outro computador e pressione **Adicionar**.
 
-**Colar um link no Infinitary de lá.**
+Adicionar um computador pelo endereço é o jeito de começar: este computador depois mantém o outro atualizado e chega até ele sozinho, sem precisar ir até lá depois da configuração.
+Digite o endereço que você usa com SSH para o outro computador, como `you@mini.local`.
+O Login Remoto precisa estar ativado lá; no Linux, o servidor SSH dele.
+Os computadores da mesma rede aparecem em **Nesta rede**, para você escolher um.
+Você também pode pedir ao seu imediato para adicionar um computador, e ele recomenda o endereço.
+
+Em um Mac novo ou em um computador Linux x64 novo, a primeira abertura do Infinitary mostra o endereço a digitar: escolha **Configurar pelo computador do seu imediato**.
+Ela mostra primeiro o endereço deste computador na rede privada, como o do Tailscale, e depois o endereço dele na rede local, cada um com **Copiar**.
+Assim que o computador onde seu imediato mora adicioná-lo, essa janela abre seu imediato sozinha, desde que nada tenha sido configurado nela ainda.
+Uma janela em que você já fez login, adicionou um projeto ou conversou com o imediato dela mantém o próprio imediato, e o mesmo vale para uma janela ao lado de um Infinitary que você mesmo iniciou pelo Terminal.
+Se o Infinitary estava fechado naquele computador quando ele foi adicionado, ele abre seu imediato na próxima vez que iniciar, seja o que for que tenha sido configurado nele.
+Um PC com Windows e um computador Linux Arm entram com **Colar o link dele**.
+
+Abaixo do endereço, **Não dá para ativar o Login Remoto lá?** oferece outros dois jeitos.
+Cada um adiciona o mesmo tipo de computador.
+
+**Colar um link no Infinitary de lá**, quando você está naquele computador, ou quando ele é um PC com Windows.
 Copie o link e abra o Infinitary no outro computador pela primeira vez.
 Em **Seu imediato está em outro computador**, escolha **Colar o link dele**, cole-o e pressione **Continuar**.
 O Infinitary pergunta uma vez se você quer controlar seu imediato de lá; pressione **Controlar daqui**.
 
-**Rodar um comando lá.**
+**Executar um comando lá**, quando você consegue digitar no Terminal de lá, mas o Login Remoto está desativado.
 Copie o comando e rode-o uma vez no Terminal do outro computador, como o usuário que deve rodar o trabalho dele.
 Ele baixa o Infinitary deste computador, então os dois precisam estar na mesma rede.
 
-**Pelo endereço.**
-Digite o endereço que você usa com SSH para o outro computador, como `you@mini.local`.
-O Login Remoto precisa estar ativado lá; no Linux, o servidor SSH dele.
-Os computadores da mesma rede aparecem em **Nesta rede**, para você escolher um.
+Quando seu imediato mora em um PC com Windows, **+ Um computador** oferece só o link e o comando.
 
 Um link ou comando funciona uma vez, por dez minutos, e você pode pressionar **Parar** antes disso.
 Você também pode entrar a partir do outro computador: na primeira abertura dele, escolha **Entrar pelo endereço** e digite o endereço do computador onde seu imediato mora.

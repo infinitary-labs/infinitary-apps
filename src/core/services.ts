@@ -179,11 +179,13 @@ export async function createServices(
   host: HostCapabilities,
   emit: CoreEventSink,
   // `paused`: a home stopped mid-move starts no timer, recovery or quota reading (docs/devices.md, "The stop").
-  options: { computerLanguage?: string; paused?: boolean } = {},
+  // `accepted`: told once the saved data is accepted, before anything starts; it may throw to start nothing.
+  options: { computerLanguage?: string; paused?: boolean; accepted?: () => void } = {},
 ): Promise<CoreServices> {
   const paths = appPathsFor(host.app.userDataDir);
   // Refuse before account warming, shell probes, counters or any service writes.
   assertSavedDataCompatible(paths.userData);
+  options.accepted?.();
   // A message-length cap that truncates spills its full text here (2026-09-04
   // captain decision) rather than just dropping it - wire the app-scoped dir
   // before anything can call capWithOverflow.
@@ -1651,6 +1653,7 @@ export async function createServices(
     tasks,
     cards: cardStore,
     repos,
+    hasConnections: () => integrations.hasConnections() || devices.mayHoldDevices(),
     supervisor,
     sharing,
     now: ticker.now,

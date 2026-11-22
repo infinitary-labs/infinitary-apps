@@ -650,6 +650,8 @@ public enum PhoneMessages {
     public static func `commandMoveRightWords`() -> String { PhoneWords.format("commandMoveRightWords", []) }
     public static func `commandMoveUp`() -> String { PhoneWords.format("commandMoveUp", []) }
     public static func `commandMoveUpWords`() -> String { PhoneWords.format("commandMoveUpWords", []) }
+    public static func `commandNoticeNotAnsweringRetry`() -> String { PhoneWords.format("commandNoticeNotAnsweringRetry", []) }
+    public static func `commandNoticeStopping`() -> String { PhoneWords.format("commandNoticeStopping", []) }
     public static func `commandNoticeWindowCrashed`() -> String { PhoneWords.format("commandNoticeWindowCrashed", []) }
     public static func `commandNoticeWindowNotAnswering`() -> String { PhoneWords.format("commandNoticeWindowNotAnswering", []) }
     public static func `commandNoticeWindowRestarting`() -> String { PhoneWords.format("commandNoticeWindowRestarting", []) }
@@ -794,6 +796,12 @@ public enum PhoneMessages {
     public static func `crewmateWaitsForModel`(`left`: String) -> String { PhoneWords.format("crewmateWaitsForModel", [`left`]) }
     public static func `crewmateWaitsForUpdate`(`computer`: String, `left`: String) -> String { PhoneWords.format("crewmateWaitsForUpdate", [`computer`, `left`]) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
+    public static func `devicesAddressFormNotNow`() -> String { PhoneWords.format("devicesAddressFormNotNow", []) }
+    public static func `devicesAddressFormOpen`() -> String { PhoneWords.format("devicesAddressFormOpen", []) }
+    public static func `devicesAddressFormOpenButton`() -> String { PhoneWords.format("devicesAddressFormOpenButton", []) }
+    public static func `devicesAddressFormSetUp`() -> String { PhoneWords.format("devicesAddressFormSetUp", []) }
+    public static func `devicesAddressFormTitle`() -> String { PhoneWords.format("devicesAddressFormTitle", []) }
+    public static func `devicesAddressFormTitleNamed`(`device`: String) -> String { PhoneWords.format("devicesAddressFormTitleNamed", [`device`]) }
     public static func `devicesAppCannot`(`version`: String) -> String { PhoneWords.format("devicesAppCannot", [`version`]) }
     public static func `devicesAppCardFailed`() -> String { PhoneWords.format("devicesAppCardFailed", []) }
     public static func `devicesAppCardGotIt`() -> String { PhoneWords.format("devicesAppCardGotIt", []) }
@@ -833,7 +841,25 @@ public enum PhoneMessages {
     public static func `devicesJoinPasteSub`() -> String { PhoneWords.format("devicesJoinPasteSub", []) }
     public static func `devicesJoinPickHint`(`computer`: String) -> String { PhoneWords.format("devicesJoinPickHint", [`computer`]) }
     public static func `devicesJoinReaching`(`address`: String, `computer`: String) -> String { PhoneWords.format("devicesJoinReaching", [`address`, `computer`]) }
+    public static func `devicesJoinSetUpChip`() -> String { PhoneWords.format("devicesJoinSetUpChip", []) }
+    public static func `devicesJoinSetUpCompare`(`address`: String) -> String { PhoneWords.format("devicesJoinSetUpCompare", [`address`]) }
+    public static func `devicesJoinSetUpCopy`() -> String { PhoneWords.format("devicesJoinSetUpCopy", []) }
+    public static func `devicesJoinSetUpCopyFailed`() -> String { PhoneWords.format("devicesJoinSetUpCopyFailed", []) }
+    public static func `devicesJoinSetUpHead`() -> String { PhoneWords.format("devicesJoinSetUpHead", []) }
+    public static func `devicesJoinSetUpKept`() -> String { PhoneWords.format("devicesJoinSetUpKept", []) }
+    public static func `devicesJoinSetUpLocal`() -> String { PhoneWords.format("devicesJoinSetUpLocal", []) }
+    public static func `devicesJoinSetUpOff`() -> String { PhoneWords.format("devicesJoinSetUpOff", []) }
+    public static func `devicesJoinSetUpOn`() -> String { PhoneWords.format("devicesJoinSetUpOn", []) }
+    public static func `devicesJoinSetUpOpenSharing`() -> String { PhoneWords.format("devicesJoinSetUpOpenSharing", []) }
+    public static func `devicesJoinSetUpPrivate`() -> String { PhoneWords.format("devicesJoinSetUpPrivate", []) }
+    public static func `devicesJoinSetUpSshOff`() -> String { PhoneWords.format("devicesJoinSetUpSshOff", []) }
+    public static func `devicesJoinSetUpSshOn`() -> String { PhoneWords.format("devicesJoinSetUpSshOn", []) }
+    public static func `devicesJoinSetUpStays`() -> String { PhoneWords.format("devicesJoinSetUpStays", []) }
+    public static func `devicesJoinSetUpSub`() -> String { PhoneWords.format("devicesJoinSetUpSub", []) }
+    public static func `devicesJoinSetUpUnread`() -> String { PhoneWords.format("devicesJoinSetUpUnread", []) }
+    public static func `devicesJoinSetUpWaiting`() -> String { PhoneWords.format("devicesJoinSetUpWaiting", []) }
     public static func `devicesJoinShows`(`computer`: String, `here`: String) -> String { PhoneWords.format("devicesJoinShows", [`computer`, `here`]) }
+    public static func `devicesJoinStaysBeside`() -> String { PhoneWords.format("devicesJoinStaysBeside", []) }
     public static func `devicesJoinTryAgain`() -> String { PhoneWords.format("devicesJoinTryAgain", []) }
     public static func `devicesJoinYourAccount`() -> String { PhoneWords.format("devicesJoinYourAccount", []) }
     public static func `devicesNearbyPort`() -> String { PhoneWords.format("devicesNearbyPort", []) }
@@ -860,6 +886,11 @@ public enum PhoneMessages {
     public static func `dialogCancel`() -> String { PhoneWords.format("dialogCancel", []) }
     public static func `dialogChoose`() -> String { PhoneWords.format("dialogChoose", []) }
     public static func `dialogExport`() -> String { PhoneWords.format("dialogExport", []) }
+    public static func `dialogLeaveIt`() -> String { PhoneWords.format("dialogLeaveIt", []) }
+    public static func `dialogOnceClosedDetail`() -> String { PhoneWords.format("dialogOnceClosedDetail", []) }
+    public static func `dialogOpenInDock`() -> String { PhoneWords.format("dialogOpenInDock", []) }
+    public static func `dialogOpenInDockDetail`() -> String { PhoneWords.format("dialogOpenInDockDetail", []) }
+    public static func `dialogOpenOnceClosed`() -> String { PhoneWords.format("dialogOpenOnceClosed", []) }
     public static func `feedAnswered`() -> String { PhoneWords.format("feedAnswered", []) }
     public static func `feedAnsweredWith`(`answer`: String) -> String { PhoneWords.format("feedAnsweredWith", [`answer`]) }
     public static func `feedAsksFirst`() -> String { PhoneWords.format("feedAsksFirst", []) }
@@ -2736,20 +2767,23 @@ public enum PhoneMessages {
     public static func `settingsDevicesAddByAddress`() -> String { PhoneWords.format("settingsDevicesAddByAddress", []) }
     public static func `settingsDevicesAddByAddressNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesAddByAddressNamed", [`device`]) }
     public static func `settingsDevicesAddByCommand`() -> String { PhoneWords.format("settingsDevicesAddByCommand", []) }
-    public static func `settingsDevicesAddByItsAddress`() -> String { PhoneWords.format("settingsDevicesAddByItsAddress", []) }
+    public static func `settingsDevicesAddByCommandWhen`() -> String { PhoneWords.format("settingsDevicesAddByCommandWhen", []) }
     public static func `settingsDevicesAddByLink`() -> String { PhoneWords.format("settingsDevicesAddByLink", []) }
+    public static func `settingsDevicesAddByLinkWhen`() -> String { PhoneWords.format("settingsDevicesAddByLinkWhen", []) }
     public static func `settingsDevicesAddComputer`() -> String { PhoneWords.format("settingsDevicesAddComputer", []) }
-    public static func `settingsDevicesAddEachWay`() -> String { PhoneWords.format("settingsDevicesAddEachWay", []) }
     public static func `settingsDevicesAddFailed`() -> String { PhoneWords.format("settingsDevicesAddFailed", []) }
-    public static func `settingsDevicesAddHow`() -> String { PhoneWords.format("settingsDevicesAddHow", []) }
     public static func `settingsDevicesAddIt`() -> String { PhoneWords.format("settingsDevicesAddIt", []) }
+    public static func `settingsDevicesAddOtherWays`() -> String { PhoneWords.format("settingsDevicesAddOtherWays", []) }
     public static func `settingsDevicesAddPhone`() -> String { PhoneWords.format("settingsDevicesAddPhone", []) }
     public static func `settingsDevicesAddUser`() -> String { PhoneWords.format("settingsDevicesAddUser", []) }
+    public static func `settingsDevicesAddWays`() -> String { PhoneWords.format("settingsDevicesAddWays", []) }
     public static func `settingsDevicesAddingDetail`(`address`: String) -> String { PhoneWords.format("settingsDevicesAddingDetail", [`address`]) }
     public static func `settingsDevicesAddressAddSay`(`sshOn`: String) -> String { PhoneWords.format("settingsDevicesAddressAddSay", [`sshOn`]) }
     public static func `settingsDevicesAddressAddSayAs`(`sshOn`: String, `user`: String) -> String { PhoneWords.format("settingsDevicesAddressAddSayAs", [`sshOn`, `user`]) }
     public static func `settingsDevicesAddressChange`() -> String { PhoneWords.format("settingsDevicesAddressChange", []) }
     public static func `settingsDevicesAddressChangeSay`() -> String { PhoneWords.format("settingsDevicesAddressChangeSay", []) }
+    public static func `settingsDevicesAddressKeeps`() -> String { PhoneWords.format("settingsDevicesAddressKeeps", []) }
+    public static func `settingsDevicesAddressKeepsThere`(`name`: String) -> String { PhoneWords.format("settingsDevicesAddressKeepsThere", [`name`]) }
     public static func `settingsDevicesAddressLabel`() -> String { PhoneWords.format("settingsDevicesAddressLabel", []) }
     public static func `settingsDevicesAddressOnly`(`place`: String) -> String { PhoneWords.format("settingsDevicesAddressOnly", [`place`]) }
     public static func `settingsDevicesAddressOnlyHere`() -> String { PhoneWords.format("settingsDevicesAddressOnlyHere", []) }
@@ -4755,6 +4789,8 @@ extension PhoneWords {
         "commandMoveRightWords": [],
         "commandMoveUp": [],
         "commandMoveUpWords": [],
+        "commandNoticeNotAnsweringRetry": [],
+        "commandNoticeStopping": [],
         "commandNoticeWindowCrashed": [],
         "commandNoticeWindowNotAnswering": [],
         "commandNoticeWindowRestarting": [],
@@ -4899,6 +4935,12 @@ extension PhoneWords {
         "crewmateWaitsForModel": ["left"],
         "crewmateWaitsForUpdate": ["computer", "left"],
         "crewmateWorking": [],
+        "devicesAddressFormNotNow": [],
+        "devicesAddressFormOpen": [],
+        "devicesAddressFormOpenButton": [],
+        "devicesAddressFormSetUp": [],
+        "devicesAddressFormTitle": [],
+        "devicesAddressFormTitleNamed": ["device"],
         "devicesAppCannot": ["version"],
         "devicesAppCardFailed": [],
         "devicesAppCardGotIt": [],
@@ -4938,7 +4980,25 @@ extension PhoneWords {
         "devicesJoinPasteSub": [],
         "devicesJoinPickHint": ["computer"],
         "devicesJoinReaching": ["address", "computer"],
+        "devicesJoinSetUpChip": [],
+        "devicesJoinSetUpCompare": ["address"],
+        "devicesJoinSetUpCopy": [],
+        "devicesJoinSetUpCopyFailed": [],
+        "devicesJoinSetUpHead": [],
+        "devicesJoinSetUpKept": [],
+        "devicesJoinSetUpLocal": [],
+        "devicesJoinSetUpOff": [],
+        "devicesJoinSetUpOn": [],
+        "devicesJoinSetUpOpenSharing": [],
+        "devicesJoinSetUpPrivate": [],
+        "devicesJoinSetUpSshOff": [],
+        "devicesJoinSetUpSshOn": [],
+        "devicesJoinSetUpStays": [],
+        "devicesJoinSetUpSub": [],
+        "devicesJoinSetUpUnread": [],
+        "devicesJoinSetUpWaiting": [],
         "devicesJoinShows": ["computer", "here"],
+        "devicesJoinStaysBeside": [],
         "devicesJoinTryAgain": [],
         "devicesJoinYourAccount": [],
         "devicesNearbyPort": [],
@@ -4965,6 +5025,11 @@ extension PhoneWords {
         "dialogCancel": [],
         "dialogChoose": [],
         "dialogExport": [],
+        "dialogLeaveIt": [],
+        "dialogOnceClosedDetail": [],
+        "dialogOpenInDock": [],
+        "dialogOpenInDockDetail": [],
+        "dialogOpenOnceClosed": [],
         "feedAnswered": [],
         "feedAnsweredWith": ["answer"],
         "feedAsksFirst": [],
@@ -6841,20 +6906,23 @@ extension PhoneWords {
         "settingsDevicesAddByAddress": [],
         "settingsDevicesAddByAddressNamed": ["device"],
         "settingsDevicesAddByCommand": [],
-        "settingsDevicesAddByItsAddress": [],
+        "settingsDevicesAddByCommandWhen": [],
         "settingsDevicesAddByLink": [],
+        "settingsDevicesAddByLinkWhen": [],
         "settingsDevicesAddComputer": [],
-        "settingsDevicesAddEachWay": [],
         "settingsDevicesAddFailed": [],
-        "settingsDevicesAddHow": [],
         "settingsDevicesAddIt": [],
+        "settingsDevicesAddOtherWays": [],
         "settingsDevicesAddPhone": [],
         "settingsDevicesAddUser": [],
+        "settingsDevicesAddWays": [],
         "settingsDevicesAddingDetail": ["address"],
         "settingsDevicesAddressAddSay": ["sshOn"],
         "settingsDevicesAddressAddSayAs": ["sshOn", "user"],
         "settingsDevicesAddressChange": [],
         "settingsDevicesAddressChangeSay": [],
+        "settingsDevicesAddressKeeps": [],
+        "settingsDevicesAddressKeepsThere": ["name"],
         "settingsDevicesAddressLabel": [],
         "settingsDevicesAddressOnly": ["place"],
         "settingsDevicesAddressOnlyHere": [],

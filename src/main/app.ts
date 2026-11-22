@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -5,6 +7,7 @@ import { isatty } from "node:tty";
 import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
+import type { LocalDoorRun } from "@core/connection/localDoor";
 import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
@@ -13,13 +16,16 @@ import type { MoveDeps } from "@core/folderMove/move";
 import { olderRunAgent, type TakeOverDeps } from "@core/folderMove/takeOver";
 import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
+import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
 import { handBackgroundOver } from "@core/helper/moveWork";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
+import { type RunPipes, watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { appPathsFor } from "@core/paths";
+import { ownWindowsBirth } from "@core/placed/windowsProcesses";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import { clearPrivateTemp, keepDataFolderPrivate } from "@core/storage/ownerOnly";
 import {
@@ -59,6 +65,7 @@ import { installAppMenu, nameAppMenu, resetAllKeysAfterAsking } from "./appMenu"
 import {
   betweenStops,
   entryWaitMs,
+  LET_GO_JOB_ARG,
   noteStartedHere,
   START_HERE_ARG,
   startedHere,
@@ -86,12 +93,24 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
+import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
+  answerLaunch,
+  bringWindowForward,
+  clearWindowAnswers,
+  commandHolding,
+  commandPipe,
+  commandPipeHeld,
   followInstalledProgram,
+  holdCommandPipe,
+  holderIsWindow,
+  keepsStarterBesideGrant,
   lockHolder,
+  lockHolderKind,
   markRunning,
+  ownedRunOf,
   processAlive,
   programIdentity,
   RUN_SETTINGS_EXIT,
@@ -101,11 +120,20 @@ import {
   runningByCommand,
   runOptions,
   stopRunningCommand,
+  windowAnswerAsked,
+  windowAnswerAsker,
+  windowAnswerFile,
   windowProfileDir,
+  writeWindowAnswer,
 } from "./runCommand";
-import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
+import {
+  type RunEnvironment,
+  readKeychainLock,
+  runEnvironment,
+  startedByAgent,
+} from "./runEnvironment";
 import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
-import { bundleOf, openNewCopy, openWindowOnReopen } from "./runReopen";
+import { bundleOf, endRefusedLaunch, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -119,6 +147,7 @@ import {
 } from "./security/rendererSource";
 import { Shell } from "./shell";
 import { ownStartEntry } from "./startAtBootContext";
+import { personTeller } from "./tellPerson";
 import { showTrayIcon } from "./trayIcon";
 import {
   chooseUserDataDir,
@@ -132,7 +161,14 @@ import { handleVoiceModelProtocol } from "./voice/voiceProtocol";
 import { followWindowState } from "./windowControls";
 import { mainWindowMaterial, windowMaterialOptions } from "./windowMaterial";
 import { followWindowSize } from "./windowSize";
-import { appWindows, confirmationWindow, mainWindowOpen, markMainWindow } from "./windows";
+import {
+  appWindows,
+  confirmationWindow,
+  mainWindowOpen,
+  markMainWindow,
+  openMainWindows,
+  personWindows,
+} from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
 import { windowsStdin } from "./windowsStdin";
@@ -434,16 +470,23 @@ function createMainWindow(
 }
 
 /** The app started as `<app> run` (./runCommand.ts): the words after `run`. */
-export type RunStart = { args: readonly string[] };
+/** A run's words after `run`, and the mark its agent gave it (`takeRunAgentMark`), already taken. */
+export type RunStart = { args: readonly string[]; agentMark?: string };
 
 /** The signals that stop a run: Ctrl-C, its starter stopping it, its terminal closing. */
 const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+/** What a run asked to stop as its core accepted its saved data throws there, so the core starts nothing; never shown. */
+// i18n-exempt: the reason a start ends on a stop asked before it, read by no person
+const RUN_START_STOPPED = "stop asked before start";
 
 /** How often a run reads whether the installed app was updated. */
 const PROGRAM_READ_EVERY_MS = 60_000;
 
 /** Records why an owned run ended and removes its live marker. */
 let leaveRun: (end?: RunEnd) => void = () => {};
+
+/** This run as its record names it, for its local door to name it too; none without a command. */
+let ownRun: LocalDoorRun | undefined;
 
 /**
  * Ends a run that cannot go on: its lines reach whoever reads its output
@@ -562,6 +605,16 @@ export async function startApp(
   const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
   // pnpm dev on the person's own data folder: a run from source with nothing isolating it.
   const sourceOnOwnData = !app.isPackaged && userDataChoice.kind === "flavor";
+  // An isolated run is started from outside, which starts it again; only a person's app starts
+  // itself again. A development one notes the words it would start with in the file
+  // `INFINITARY_RELAUNCH_NOTE` names, so a journey starts what it asked for
+  // (tests/e2e/window-starts-run.spec.ts).
+  const relaunchNote =
+    isDev && isolatedUserDataDir ? settingFrom(process.env, "RELAUNCH_NOTE") : undefined;
+  const relaunchWith = (args: string[], execPath?: string) => {
+    if (!isolatedUserDataDir) app.relaunch({ args, ...(execPath ? { execPath } : {}) });
+    else if (relaunchNote) writeFileSync(relaunchNote, JSON.stringify(args));
+  };
   // The e2e that launches from source without an isolated dir still keeps
   // its window hidden (captain directive: e2e runs are windowless).
   const hideWindow =
@@ -649,24 +702,44 @@ export async function startApp(
   // Start it here. A Mac's login agent `start-at-boot` writes is the window's
   // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
+  // A grant an address add left in the work folder takes the window's
+  // starter away while no command runs, so the window opens as that home's
+  // view as it always has; beside the command this app's own agent started it
+  // keeps that agent, so the window opens beside the command and follows
+  // along. A grant the window kept its own first mate beside counts as none.
+  // A command the person started by hand keeps running, with no starter
+  // beside it (docs/view.md, "Following along").
+  const starterOptions = {
+    work,
+    flavor: work.place.flavor,
+    dataDir,
+    isolated: Boolean(isolatedUserDataDir),
+    switched: userDataChoice.kind === "switch",
+    packaged: app.isPackaged,
+  };
+  // Start it here over a run that its own agent started again since (the job's own start after a
+  // force stop, or one that came in its place): the window opens beside that run as its own, with its
+  // starter, and neither starts nor stops it; over a run started by hand, or none, it has no starter.
+  // One reading decides both whether a command holds the folder and whether it is the agent's own,
+  // so the window never opens beside an owned run with no starter, nor keeps a starter for none.
+  // The same reading decides whether a grant waiting keeps the starter (`keepsStarterBesideGrant`).
+  const holding = commandHolding(dataDir);
+  // A command holds the folder that is not known to be the noted run, as where Windows cannot read
+  // its birth: it may be a window's lock beside a stale note. The window keeps its starter, opens
+  // beside nothing yet and asks whoever holds the lock to answer (`lockHolderKind`), starting again
+  // once a run is known to hold it.
+  const unknownHolder = holding.running && !holding.known;
   const starter =
     windowless ||
     move ||
-    startsHere ||
+    (startsHere && holding.owned === null && !unknownHolder) ||
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
-    windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())
+    !keepsStarterBesideGrant(holding, grantFollowed(work.place.dataDir, joinedHere))
       ? null
-      : commandStarter({
-          work,
-          flavor: work.place.flavor,
-          dataDir,
-          isolated: Boolean(isolatedUserDataDir),
-          switched: userDataChoice.kind === "switch",
-          packaged: app.isPackaged,
-        });
-  let besideRun = !windowless && runningByCommand(dataDir);
+      : commandStarter(starterOptions);
+  let besideRun = !windowless && holding.running && holding.known;
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:
@@ -686,7 +759,8 @@ export async function startApp(
     !starter ||
     besideRun ||
     Boolean(await findWindowsGit(process.env));
-  if (!besideRun && starter && !heldByWindow && gitForRun) {
+  // Start it here never starts the command: its starter only keeps the run it opens beside.
+  if (!besideRun && starter && !startsHere && !heldByWindow && gitForRun) {
     startedAt = Date.now();
     besideRun = await starter.start();
     if (!besideRun) {
@@ -701,12 +775,192 @@ export async function startApp(
       startedHere: startedHere(dataDir),
     });
   if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
+  // A window launch on the folder's own lock that opens beside no run asks a window that holds the
+  // lock to answer, which a run never does (`lockHolderKind`), so a refused launch knows a window is
+  // there before it quits: a run may hold the lock before it notes itself, or with a note this
+  // launch cannot tell, and ignores a second launch. Never during a folder move, whose lock is a
+  // throwaway profile's.
+  const answerAsk = !windowless && !move && !besideRun ? randomBytes(8).toString("hex") : null;
+  const lockAsk = answerAsk ? { windowAnswers: answerAsk, asker: process.pid } : undefined;
+  /** The live program the folder's lock names, by its link: null for none, undefined unnamed. */
+  const lockHolderNow = () => {
+    const pid = lockHolder(dataDir);
+    return typeof pid === "number" && !processAlive(pid) ? null : pid;
+  };
+  // The holder this launch's own ask reaches, read just before it, so a holder that takes the
+  // lock after is asked too (`lockHolderKind`).
+  const askedHolder = answerAsk ? lockHolderNow() : undefined;
+  const onWindows = hostPlatform() === "win32";
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
-  if (!app.requestSingleInstanceLock()) {
+  if (!app.requestSingleInstanceLock(lockAsk)) {
     if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
-    else {
+    // A run took the folder after this window read it, as the agent's job starting its run again
+    // after Start it here's force stop: a run ignores a second launch, so this window starts again
+    // and opens beside it, never quitting with no window and never starting or stopping that run.
+    // A run notes that it holds the folder in the same step as it takes the lock, and one that
+    // ends before then lets the lock go, which this window then starts again on as well; a window
+    // that holds the lock answers and focuses itself, and this launch quits, as it does once the
+    // holder its ask reached shows it is no command by what it runs as (`holderIsWindow`): a window
+    // from before that answer, which brought its window forward at the ask as every version does.
+    // A holder that shows nothing yet, as one with no command's pipe on Windows, is waited for,
+    // never taken for a window, and never asked again unless it changes; one that still shows
+    // nothing read again has the person asked once whether to open here when it closes. An answer wins over a
+    // run's note and a lock taken, so a window the person quit after it answered stays quit. An ordinary launch waits the same way, for a run known to hold
+    // the folder or a window, and starts again beside such a run.
+    else if (answerAsk) {
+      // On a Mac this launch never opens a window of its own while it waits: no Dock icon and no
+      // menu bar, so the one Infinitary in the Dock is the holder the person may be told to click,
+      // and a word it shows comes from its copy, which shows no Dock icon either (`askPersonWord`).
+      if (hostPlatform() === "darwin") app.setActivationPolicy("prohibited");
+      const answer = join(dataDir, windowAnswerFile(answerAsk));
+      // A word to the person, shown through a copy of this program (`personTeller`).
+      const tellPerson = personTeller({ hideWindow, dataDir, privacy });
+      void (async () => {
+        // A holder never shown to be a command that let the lock go, or one that still shows
+        // nothing on a second read, as an older window on a Windows PC that answers nothing and
+        // holds no pipe, is never taken for a window, but the person is asked once whether to open
+        // here when it closes, so a window they then quit on purpose stays quit. A question not
+        // shown keeps the launch's own way: it opens here once the folder is free.
+        let shownWhy = new AbortController();
+        let openOnceClosed: Promise<boolean> | null = null;
+        let leftIt: () => void = () => {};
+        const left = new Promise<"left">((resolve) => {
+          leftIt = () => resolve("left");
+        });
+        const askOnceClosed = async () => {
+          const why = shownWhy;
+          // Only the person's Open here opens: their Leave it, and a question that could not be
+          // shown, leave the holder open; one not shown on purpose keeps the launch's own way.
+          const reply = await tellPerson("once-closed", why.signal);
+          const open = reply === OPEN_ONCE_CLOSED || reply === null;
+          if (!open && !why.signal.aborted) leftIt();
+          return open;
+        };
+        // The window a launch told by what it runs as, the one the person is told of.
+        let classified: number | null | undefined;
+        // One watch of the folder from the refusal to the launch's end: each holder seen is asked
+        // once and told apart by what it shows (`lockHolderKind`), through the question and after
+        // the window the person was told of quit, so a window that takes over is always one asked.
+        let asked = askedHolder;
+        let found: "run" | "free" | "window" | "left";
+        for (;;) {
+          // The watch ends with the person's word to leave the holder: no read or ask after it.
+          const watching = new AbortController();
+          const raced = await Promise.race([
+            left,
+            lockHolderKind({
+              signal: watching.signal,
+              running: () => runningByCommand(dataDir),
+              answered: () => existsSync(answer),
+              holder: lockHolderNow,
+              asked,
+              windowHolder: (holder) =>
+                holderIsWindow(
+                  holder,
+                  onWindows ? { commandPipe: () => commandPipeHeld(commandPipe(dataDir)) } : {},
+                ),
+              lockFree: () => app.requestSingleInstanceLock(lockAsk),
+              // A pipe is read again each second, so a command's pipe gone is seen and its next holder asked.
+              readEveryMs: onWindows ? 1_000 : STOPPED_RUN_WAIT_MS,
+              onUnknown: () => {
+                openOnceClosed ??= askOnceClosed();
+              },
+              onWindow: (holder) => {
+                classified = holder;
+              },
+            }),
+          ]);
+          watching.abort();
+          // Only the person's word stops the watch, and that word came first.
+          const read = raced === "stopped" ? "left" : raced;
+          // The lock this launch took to read it free is let go before anything waits, so the
+          // person's answer holds nothing and the launch started again reads the folder afresh.
+          if (read === "free") app.releaseSingleInstanceLock();
+          found = read;
+          if (read === "free" && openOnceClosed !== null) {
+            // A lock let go while the question is up waits for the person's answer, since a window
+            // quit on purpose and a command that ended look the same. The folder is watched
+            // meanwhile without taking it: a window's answer or a run found ends the question, and
+            // a holder seen taking the folder is watched again from the top, asked once there.
+            // Open here acts on the folder as it is then: free, it starts the launch again, which
+            // reads it afresh; held, the holder is watched as any other.
+            const asking: Promise<boolean> = openOnceClosed;
+            let settled = false;
+            const watched = (async (): Promise<"run" | "window" | "held" | null> => {
+              while (!settled) {
+                if (existsSync(answer)) return "window";
+                if (runningByCommand(dataDir)) return "run";
+                if (lockHolderNow() !== null) return "held";
+                await new Promise((resolve) => setTimeout(resolve, 250));
+              }
+              return null;
+            })();
+            const next = await Promise.race([
+              asking.then((open) => (open ? ("open" as const) : ("left" as const))),
+              watched,
+            ]);
+            settled = true;
+            if (next === "left" || next === "run" || next === "window") found = next;
+            else if (next === "held" || (next === "open" && lockHolderNow() !== null)) {
+              asked = null;
+              continue;
+            }
+          }
+          // What was found ends the question, whatever the person did not answer.
+          shownWhy.abort();
+          // A window told only by what it runs as is one from before the answer: on a Mac it may
+          // have closed its last window and opened none at the ask, so the person is told to click
+          // it in the Dock unless a window's answer confirms it (`endRefusedLaunch`). One that quit
+          // first or meanwhile while another took the folder leaves that other to be watched as any
+          // holder.
+          const kind = await endRefusedLaunch({
+            found,
+            answered: () => existsSync(answer),
+            holderAlive: () => typeof classified === "number" && lockHolderNow() === classified,
+            occupied: () => runningByCommand(dataDir) || lockHolderNow() !== null,
+            platform: hostPlatform(),
+            tellDock: async () => {
+              // Taken away once a window answers or the holder asked to reopen lets the folder go,
+              // and never shown once either came first.
+              const withdrawn = new AbortController();
+              const stale = () => existsSync(answer) || lockHolderNow() !== classified;
+              const watch = setInterval(() => {
+                if (stale()) withdrawn.abort();
+              }, 250);
+              try {
+                await tellPerson("dock", withdrawn.signal, () => !stale());
+              } finally {
+                clearInterval(watch);
+              }
+            },
+            relaunch: () => relaunchWith(process.argv.slice(1)),
+            quit: () => app.quit(),
+          });
+          if (kind === "follow") {
+            asked = classified;
+            classified = undefined;
+            openOnceClosed = null;
+            shownWhy = new AbortController();
+            continue;
+          }
+          console.warn(
+            `[app] ${startsHere ? "Start it here" : "the launch"} found the folder held by ${found === "left" ? "a holder the person left open" : kind === "free" ? "nothing now" : `a ${kind}`}`,
+          );
+          // One app writes a data folder: pnpm dev says in its terminal why it ended.
+          if (sourceOnOwnData && kind === "window")
+            console.warn(
+              `[data folder] Infinitary is already open on ${dataDir}; quit it to run this copy on your saved data.`,
+            );
+          break;
+        }
+        rmSync(answer, { force: true });
+      })().catch((error: unknown) => {
+        console.warn(`[app] the refused launch could not finish: ${(error as Error).message}`);
+        app.quit();
+      });
+    } else {
       // One app writes a data folder: pnpm dev says in its terminal why it ended.
       if (sourceOnOwnData)
         console.warn(
@@ -715,12 +969,53 @@ export async function startApp(
       app.quit();
     }
   } else {
+    // On a Windows PC, whose lock names no holder, a command holds a pipe of its own from once it
+    // holds the lock until it ends, so a window launch refused the lock tells it from a window
+    // (`commandPipe`); a command refused the lock holds none, so it is never taken for the holder.
+    // Never during a folder move, nor on a folder it would refuse.
+    if (windowless && !move && onWindows && !dataFolderRefusal(dataDir, privacy))
+      holdCommandPipe(commandPipe(dataDir));
     // The launch that holds the folder clears what earlier ones left in its
-    // own temporary folder; a window beside a run leaves it to the run.
-    if (privacy?.temp && !besideRun) await clearPrivateTemp(privacy.temp);
+    // own temporary folder; a window beside a run leaves it to the run, and
+    // a run clears it once it noted that it holds the folder (below), in the
+    // same step as it took the lock.
+    if (privacy?.temp && !besideRun && !windowless) await clearPrivateTemp(privacy.temp);
+    // What a launch on an accepted folder recovers once it is known to open its own first mate there
+    // (`recover`, below).
+    const recoveries: (() => void)[] = [];
+    // The stop and force stop a run reads once its folder and saved data are accepted, before its
+    // first mate finishes starting (`read`, below).
+    const readers: (() => void)[] = [];
+    // Start it here over a run that did not answer ended that run alone and asked its service
+    // manager nothing, so its job may start the run again (`stopRunAgent`'s force). Now that this
+    // window holds the folder, whatever that job runs is a start the folder refuses, so the job is
+    // let go and stops starting one; the agent stays in place for the next login.
+    // Only after a force stop of the agent's own run, and only on the folder's own lock: never during
+    // a folder move, whose lock is a throwaway profile's. A job that refuses to let go is reported;
+    // the window goes on as this computer's first mate either way.
+    // Only once the folder was accepted, saved data included, which a refused launch opens nothing
+    // on (`recover`, below).
+    if (
+      startsHere &&
+      process.argv.includes(LET_GO_JOB_ARG) &&
+      !besideRun &&
+      !move &&
+      app.getPath("userData") === dataDir
+    )
+      recoveries.push(() =>
+        commandStarter(starterOptions)
+          ?.stop({ forget: false, run: null })
+          .catch((error: unknown) => {
+            console.warn(
+              `[app] the background job did not stop starting its run: ${(error as Error).message}`,
+            );
+          }),
+      );
     // A run notes that it holds the folder, for a window opened beside it,
     // and stops cleanly on a signal (below).
     let stopRun: () => void = () => {};
+    // Whether the run was asked to stop, which then alone ends it (`stopRun`, below).
+    let stopping = false;
     // 0 for a stop; an update ends the run with a code its starter starts again on.
     let runExitCode = 0;
     let runEnd: RunEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] };
@@ -754,7 +1049,22 @@ export async function startApp(
       // note is written now and takes the reading when it arrives, never
       // waited for here. Elsewhere there is no Keychain to read, and the
       // reading goes in at once, so a run that ends right away keeps it.
+      // A development run may hold its note back while a file it names is there, so a journey sees
+      // a run that holds the lock and has not noted it yet (tests/e2e/window-starts-run.spec.ts).
+      const noteHold = isDev ? settingFrom(process.env, "RUN_NOTE_HOLD") : undefined;
+      while (noteHold && existsSync(noteHold))
+        await new Promise((resolve) => setTimeout(resolve, 100));
       const runStartedAt = new Date();
+      ownRun = { pid: process.pid, startedAt: runStartedAt.toISOString() };
+      const byAgent = startedByAgent({
+        mark: run?.agentMark,
+        word: options.agent,
+        label: runLabelOf(work.place.flavor),
+      });
+      // Restart it is offered over this run only while a force stop can end it (`watchRunForce`):
+      // on Windows only with the birth a wake goes through, without which a frozen run stays frozen.
+      const birth = byAgent && hostPlatform() === "win32" ? ownWindowsBirth() : null;
+      let noteRecovers: (can: boolean, pipes?: RunPipes) => void = () => {};
       const finish = markRunning(
         app.getPath("userData"),
         process.pid,
@@ -767,6 +1077,13 @@ export async function startApp(
                 await app.whenReady();
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
+        byAgent,
+        birth,
+        byAgent && (hostPlatform() !== "win32" || birth !== null)
+          ? (note) => {
+              noteRecovers = note;
+            }
+          : undefined,
       );
       leaveRun = (end) => {
         try {
@@ -775,6 +1092,8 @@ export async function startApp(
           process.stderr.write("[infinitary] Could not record why the command stopped.\n");
         }
       };
+      // Noted first, so a launch refused the lock meanwhile reads a run here (`lockHolderKind`).
+      if (privacy?.temp) await clearPrivateTemp(privacy.temp);
       // A settings file names where programs are, so no shell is asked
       // before the core starts (./runSettings.ts); one it cannot use ends
       // the run, kept as its last stop for status to read.
@@ -790,29 +1109,67 @@ export async function startApp(
       // listens itself (Pi's sign-in store, through signal-exit) would
       // otherwise take the signal and end the process before the core
       // stops, as it would in the work mode (./work.ts).
-      let stopping = false;
       stopRun = () => {
         if (stopping) return;
         stopping = true;
         app.quit();
       };
-      for (const signal of STOP_SIGNALS)
-        process.on(signal, () => {
-          if (stopping) return;
-          runEnd = {
-            reason: "signal",
-            exitCode: 0,
-            lines: [`Infinitary stopped after ${signal}.`],
-          };
-          stopRun();
-        });
+      const onStopSignal = (signal: (typeof STOP_SIGNALS)[number]) => () => {
+        if (stopping) return;
+        runEnd = {
+          reason: "signal",
+          exitCode: 0,
+          lines: [`Infinitary stopped after ${signal}.`],
+        };
+        stopRun();
+      };
+      const stopListeners = STOP_SIGNALS.map((signal) => [signal, onStopSignal(signal)] as const);
+      for (const [signal, listener] of stopListeners) process.on(signal, listener);
+      // Once ready, Electron puts its own handler for these signals in the system's place, which
+      // quits as a quit does: a run on a Mac never heard its stop as a stop, and one asked while its
+      // first mate started ended as if it controlled another computer. Node asks the system for a
+      // signal again only when its first listener comes, so every listener (signal-exit's too) is
+      // taken off and put back, in its order, after Electron's: the signal comes here again.
+      void app.whenReady().then(() => {
+        for (const [signal] of stopListeners) {
+          // Raw, so a listener added once stays one that runs once.
+          const listeners = process.rawListeners(signal) as (() => void)[];
+          process.removeAllListeners(signal);
+          for (const listener of listeners) process.on(signal, listener);
+        }
+      });
       // Windows ends a program another one signals with no clean stop, so a
-      // stop is asked through the data folder there (docs/run.md, "On Windows").
-      if (hostPlatform() === "win32")
-        watchRunStop(app.getPath("userData"), runStartedAt, () => {
-          if (stopping) return;
-          runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
-          stopRun();
+      // stop is asked through the data folder there (docs/run.md, "On Windows");
+      // everywhere, a stop for this run alone is asked so, by its process and
+      // start, since a signal's process number may have passed to another.
+      // A stop asked of another run by its process leaves this one going.
+      readers.push(() =>
+        watchRunStop(
+          app.getPath("userData"),
+          runStartedAt,
+          () => {
+            if (stopping) return;
+            runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
+            stopRun();
+          },
+          undefined,
+          { pid: process.pid, startedAt: runStartedAt.toISOString() },
+          hostPlatform() === "win32",
+        ),
+      );
+      // Restart it and Start it here end a run that does not answer by asking it to end itself, by
+      // its process and start, on a thread a stuck first mate does not hold up (`endRunByForce`).
+      // Only a run this app's own agent started is ever asked so; one started by hand reads nothing,
+      // and nor does a run on a folder it refuses, which ends below with nothing started on it.
+      let stopForceWatch = () => {};
+      if (byAgent)
+        readers.push(() => {
+          stopForceWatch = watchRunForce(
+            app.getPath("userData"),
+            runStartedAt.toISOString(),
+            undefined,
+            (can, pipes) => noteRecovers(can, pipes),
+          );
         });
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
@@ -820,19 +1177,42 @@ export async function startApp(
         if (ended) return;
         ended = true;
         event.preventDefault();
+        stopForceWatch();
         leaveRun(runEnd);
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }
-    app.on("second-instance", () => {
+    // A Start it here launch refused the lock asks whether a window holds it (`lockHolderKind`).
+    const asked = new Set<string>();
+    // The answers this window wrote, with the launch that asked: as it quits, it takes away those
+    // whose launch is gone, as one that told this window from what it runs as before the answer
+    // came, and leaves one whose launch is still there to read it (`clearWindowAnswers`).
+    const answers = new Map<string, number | null>();
+    if (!windowless) app.on("will-quit", () => clearWindowAnswers(answers));
+    app.on("second-instance", (_event, _argv, _cwd, additionalData) => {
       if (windowless) return;
-      const win = appWindows()[0];
-      if (win) {
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      } else if (desktop.closeToIcon) {
-        reopen();
-      }
+      const asker = windowAnswerAsker(additionalData);
+      // A development window may stand in for one from before windows answered a launch: it brings
+      // itself forward and answers nothing (tests/e2e/window-starts-run.spec.ts).
+      const answersNoLaunch = isDev && settingFrom(process.env, "ANSWERS_NO_LAUNCH") === "1";
+      answerLaunch(answersNoLaunch ? null : windowAnswerAsked(additionalData), {
+        asked,
+        // A window the person uses, a refusal shown in its place included, never a hidden helper such
+        // as a panel's capture; with none, where closing the last window left the app working, as on
+        // a Mac, a second launch opens it again.
+        bringForward: () => bringWindowForward(personWindows(), keepsWorkingClosed ? reopen : null),
+        shown: () => personWindows().length > 0,
+        whenMade: (then) => app.once("browser-window-created", () => setImmediate(then)),
+        answer: (word) => {
+          try {
+            return writeWindowAnswer(app.getPath("userData"), word, asker, answers);
+          } catch (error) {
+            console.warn(`[app] could not answer a launch: ${(error as Error).message}`);
+            return false;
+          }
+        },
+        later: (then) => setTimeout(then, 1_000),
+      });
     });
 
     // No window may ever attach a <webview> or open a child window
@@ -1152,7 +1532,8 @@ export async function startApp(
                 programReplaced,
                 ...(starter ? { starter } : {}),
                 ...(startedAt === undefined ? {} : { startedAt }),
-                stopCommand: () => stopRunningCommand(dataDir),
+                ownedRun: ownedRunOf,
+                stopCommand: (only) => stopRunningCommand(dataDir, undefined, undefined, only),
               },
             }
           : {}),
@@ -1181,6 +1562,8 @@ export async function startApp(
         // nothing here starts it again, at login or after (docs/devices.md,
         // "Moving the first mate"). One whose move failed, or that the
         // captain started here again, ends for its starter to start again.
+        // A run never opens a grant waiting in the work folder; the window beside it does.
+        ...(windowless ? { headless: true } : {}),
         ...(windowless
           ? {
               endRun: (how: "moved" | "restart") => {
@@ -1203,11 +1586,48 @@ export async function startApp(
         // Started by a command, a page the core would open goes to each
         // computer that controls it (docs/run.md, "Control from another computer").
         startCore: async (hooks) => {
+          // A development run's hold: while the file a setting names is there, marked reached beside
+          // it once held, and marked stopping once a stop was taken while it holds.
+          const devHold = async (setting: string) => {
+            const hold = windowless && isDev ? settingFrom(process.env, setting) : undefined;
+            if (!hold || !existsSync(hold)) return;
+            writeFileSync(`${hold}.reached`, "");
+            let toldStopping = false;
+            while (existsSync(hold)) {
+              if (stopping && !toldStopping) {
+                toldStopping = true;
+                writeFileSync(`${hold}.stopping`, "");
+              }
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+          };
+          // A development run may hold its core's start back while a file it names is there, so a
+          // journey stops it while its first mate starts (tests/e2e/run-command.spec.ts); it marks
+          // the hold reached beside that file, its stops already listened for.
+          await devHold("RUN_START_HOLD");
           const core = await startCore(voiceHost, {
             startedByCommand: windowless,
+            // A run reads the stops asked of it once its saved data is accepted, before its first
+            // mate starts; one a stop already reached starts nothing.
+            ...(windowless
+              ? {
+                  accepted: () => {
+                    // A stop the first reader found sets nothing more up, a force watch included.
+                    for (const read of readers.splice(0)) {
+                      if (stopping) break;
+                      read();
+                    }
+                    if (stopping) throw new Error(RUN_START_STOPPED);
+                  },
+                }
+              : {}),
             computerLanguage: systemLanguage,
             ...(hooks?.onHomeMoved ? { onHomeMoved: hooks.onHomeMoved } : {}),
           });
+          // A development run may hold its started core back from the startup that disposes it
+          // while a file it names is there, so a journey stops it after its saved data was
+          // accepted (tests/e2e/run-command.spec.ts), marked reached as the start's hold is.
+          await devHold("RUN_STARTED_HOLD");
           capabilities.started?.(core);
           return core;
         },
@@ -1224,6 +1644,8 @@ export async function startApp(
             events: core.events,
             devices: core.services.devices,
             localDoor: core.paths.localDoorDir,
+            // The window beside this run knows by it which run admitted it (docs/view.md, "Joining").
+            ...(ownRun ? { localDoorRun: ownRun } : {}),
             // Where devices find this computer: every address a link may carry.
             address: () => core.services.devices.listenHosts(),
             port: core.services.devices.port,
@@ -1264,18 +1686,14 @@ export async function startApp(
           for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
         },
         relaunch: (how) => {
-          // An isolated run is started from outside, which starts it again;
-          // only a person's app starts itself again.
-          if (!isolatedUserDataDir) {
-            // Start it here is asked for one start: no later one carries it on.
-            const args = process.argv.slice(1).filter((arg) => arg !== START_HERE_ARG);
-            if (how?.startHere) args.push(START_HERE_ARG);
-            app.relaunch({
-              args,
-              // A window following a replaced AppImage starts from the new file.
-              ...(besideRun && process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : {}),
-            });
-          }
+          // Start it here is asked for one start: no later one carries it on.
+          const args = process.argv
+            .slice(1)
+            .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
+          if (how?.startHere) args.push(START_HERE_ARG);
+          if (how?.startHere && how.letGoJob) args.push(LET_GO_JOB_ARG);
+          // A window following a replaced AppImage starts from the new file.
+          relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined);
           app.quit();
         },
         // A page the first mate would open for this view opens here, where
@@ -1336,6 +1754,13 @@ export async function startApp(
         else await showDataRefusal(hideWindow, refusal);
         return;
       }
+      // A run quits cleanly from here on: its core's disposal waits for a start still going on
+      // (`Shell.dispose`), so a stop asked while it starts ends it once its first mate stops as a
+      // quit stops it. It reads a stop or force stop asked of it as soon as its core accepted its
+      // saved data (`accepted`, above), not only once its first mate started; one that controls
+      // another computer reads none, and ends below. Once a stop was asked, the stop alone ends
+      // the run, with its own reason, after that disposal.
+      if (windowless) deferCoreDisposal(app, () => shell.dispose());
       // Before a run from source first opens the person's own record, and
       // before any run whose build would migrate it past what the installed
       // app opens, it keeps a copy to go back to
@@ -1359,6 +1784,7 @@ export async function startApp(
       try {
         await shell.start();
       } catch (error) {
+        if (windowless && stopping) return;
         if (!(error instanceof UnsupportedSavedDataError)) throw error;
         if (windowless) {
           endRun(1, RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: error.message }));
@@ -1367,12 +1793,17 @@ export async function startApp(
         await showSavedDataRefusal(hideWindow);
         return;
       }
+      if (windowless && stopping) return;
       // A run is this computer's own first mate: an app that controls one
       // elsewhere has nothing to run with no window.
       if (windowless && !shell.core()) {
         endRun(1, RUN_WORDS.controls);
         return;
       }
+      // Only now, this computer's own first mate started on the accepted folder, does Start it here
+      // let the job go: a refused launch ends above, and a window that opened as a view of another
+      // computer started nothing here, with the folder's job as it was.
+      if (shell.core()) for (const recover of recoveries.splice(0)) recover();
       // The language the captain chose in Settings → Appearance, or the
       // computer's own: the menus, the tray, the dialogs and the crew follow
       // each change (docs/i18n.md, "The language choice"), and a window
@@ -1422,7 +1853,6 @@ export async function startApp(
       powerMonitor.on("resume", () => shell.resumed());
       powerMonitor.on("suspend", () => shell.suspended());
       if (windowless) {
-        deferCoreDisposal(app, () => shell.dispose());
         // Both a run and the app a person updates are this one installed
         // program: once it is replaced, the run stops its crew as a quit does
         // and ends, so its starter starts the new version.
@@ -1519,7 +1949,8 @@ export async function startApp(
       followFront(win);
       if (win.isFocused()) shell.windowFront(true);
       app.on("activate", () => {
-        if (appWindows().length === 0) {
+        // A panel's hidden capture is no window the person can use.
+        if (openMainWindows().length === 0) {
           followFront(createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow));
         }
       });
@@ -1528,7 +1959,7 @@ export async function startApp(
       // desktop conventions"). A development run quits instead, unless
       // `pnpm dev`'s starter started it as the daily app.
       reopen = () => {
-        const shown = appWindows()[0];
+        const shown = openMainWindows()[0];
         if (shown) {
           if (shown.isMinimized()) shown.restore();
           shown.show();
@@ -1567,4 +1998,13 @@ export async function startApp(
       });
     });
   }
+}
+
+/**
+ * Whether this computer's work keeps a grant its window would follow: one
+ * neither left nor kept beside its own first mate (`JoinedHome.keepOwn`).
+ */
+function grantFollowed(workDir: string, joined: JoinedHome): boolean {
+  const found = windowFromWork(workDir, joined.leftDeviceId());
+  return Boolean(found && found.grant.deviceId !== joined.keptOwnDeviceId());
 }

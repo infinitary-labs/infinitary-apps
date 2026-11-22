@@ -1,5 +1,5 @@
 ---
-source: d29b96f163790a41
+source: bed187b080af2f4a
 title: Tus otras computadoras
 description: Agrega tus otras computadoras para controlar a tu primer oficial desde cualquiera de ellas, dejar que hagan el trabajo de tus proyectos y guardar una copia que pueda tomar el relevo.
 ---
@@ -27,22 +27,34 @@ Mientras está en reposo o fuera de alcance:
 
 1. En la computadora donde vive tu primer oficial, abre Configuración → **Dispositivos**.
 2. Presiona **+ Una computadora**.
-3. Elige una de tres formas.
-   Cada forma agrega el mismo tipo de computadora.
+3. Escribe la dirección de la otra computadora y presiona **Agregar**.
 
-**Pega un enlace en Infinitary ahí.**
+Agregar una computadora por su dirección es la forma de empezar: esta computadora mantiene actualizada a la otra y la alcanza por sí sola, sin que tengas que ir allí después de configurarla.
+Escribe la dirección que usas con SSH para la otra computadora, como `you@mini.local`.
+Sesión remota debe estar activada ahí; en Linux, su servidor SSH.
+Las computadoras de la misma red aparecen en **En esta red**, para que puedas elegir una.
+También puedes pedirle a tu primer oficial que agregue una computadora, y te recomienda la dirección.
+
+En una Mac nueva o una computadora Linux x64 nueva, el primer inicio de Infinitary muestra la dirección que hay que escribir: elige **Configurar desde la computadora de tu primer oficial**.
+Muestra primero la dirección de esta computadora en la red privada, como la de Tailscale, y luego su dirección en la red local, cada una con **Copiar**.
+Cuando la computadora donde vive tu primer oficial la agrega, esa ventana abre a tu primer oficial por sí sola, siempre que todavía no se haya configurado nada en ella.
+Una ventana en la que ya iniciaste sesión, agregaste un proyecto o hablaste con su primer oficial conserva su propio primer oficial, y lo mismo pasa con una ventana junto a un Infinitary que iniciaste tú mismo desde Terminal.
+Si Infinitary estaba cerrado en esa computadora cuando se agregó, abre a tu primer oficial la próxima vez que se inicie, sin importar lo que se haya configurado en él.
+Una PC con Windows y una computadora Linux Arm se unen con **Pegar su enlace** en su lugar.
+
+Debajo de la dirección, **¿No puedes activar la Sesión remota allí?** ofrece otras dos formas.
+Cada una agrega el mismo tipo de computadora.
+
+**Pegar un enlace en Infinitary allí**, cuando estás en esa computadora o es una PC con Windows.
 Copia el enlace y luego abre Infinitary por primera vez en la otra computadora.
 En **Tu primer oficial está en otra computadora**, elige **Pegar su enlace**, pégalo y presiona **Continuar**.
 Infinitary pregunta una vez si quieres controlar a tu primer oficial desde ahí; presiona **Controlarlo desde aquí**.
 
-**Ejecuta un comando ahí.**
+**Ejecutar un comando allí**, cuando puedes escribir en Terminal ahí pero Sesión remota está desactivada.
 Copia el comando y ejecútalo una vez en Terminal en la otra computadora, como el usuario que debe hacer su trabajo.
 Obtiene Infinitary desde esta computadora, así que ambas necesitan la misma red.
 
-**Por su dirección.**
-Escribe la dirección que usas con SSH para la otra computadora, como `you@mini.local`.
-Sesión remota debe estar activada ahí; en Linux, su servidor SSH.
-Las computadoras de la misma red aparecen en **En esta red**, para que puedas elegir una.
+Cuando tu primer oficial vive en una PC con Windows, **+ Una computadora** ofrece solo el enlace y el comando.
 
 Un enlace o un comando funciona una vez, durante diez minutos, y puedes presionar **Detenerlo** antes.
 También puedes unirte desde la otra computadora: en su primer inicio, elige **Unirse por su dirección** y escribe la dirección de la computadora donde vive tu primer oficial.

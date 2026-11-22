@@ -103,6 +103,8 @@
   "commandMoveRightWords": "سهم, يمين, التالي",
   "commandMoveUp": "التحرك لأعلى",
   "commandMoveUpWords": "سهم, أعلى, السابق",
+  "commandNoticeNotAnsweringRetry": "نائب القبطان يعمل لكنه لا يجيب. انتظره، أو ابدأه هنا لتتصل به من جديد.",
+  "commandNoticeStopping": "يجري إيقاف نائب القبطان. تبدأه هذه النافذة هنا بعد أن يتوقف.",
   "commandNoticeWindowCrashed": "توقف نائب القبطان دون أن يذكر السبب ولم يبدأ من جديد. ابدأه هنا ليبدأ من جديد.",
   "commandNoticeWindowNotAnswering": "نائب القبطان يعمل لكنه لا يجيب. أعد تشغيله لإيقافه وبدئه من جديد، أو انتظره.",
   "commandNoticeWindowRestarting": "توقف نائب القبطان ويبدأ من جديد. هذه النافذة تنتظره.",

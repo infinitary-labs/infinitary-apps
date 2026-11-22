@@ -101,7 +101,7 @@ Its status reads "out of reach", with no time since, because it never was in rea
 The strip's button is a small secondary "Add it by its address".
 It turns the row into one question in place, Change address's shape: "Where to reach Mac mini" over "The address you use with SSH for it, as sam.
 Remote Login must be on there.", a mono `Input` with the placeholder "sam@mini.local", a small primary "Add it" and a ghost "Cancel".
-Add it there is + A computer's "By its address": the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", and Mac mini stays the same computer on the list, reached over this computer's own SSH from then on (`AddAMac.prompt.md`, "Finding this computer again").
+Add it there is + A computer's address form: the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", and Mac mini stays the same computer on the list, reached over this computer's own SSH from then on (`AddAMac.prompt.md`, "Finding this computer again").
 Once its work reaches this computer, by either way, the line and the button go for good.
 A private network's address, such as Tailscale's, is not the local network, and another user on this computer looks for it on this computer itself, so neither takes the line.
 A computer whose command named an address this computer no longer has takes "Bringing a computer back" instead: the old address is the first thing to mend.
@@ -159,23 +159,26 @@ Do not offer enabling work after logout, removing and re-adding, or updating as 
 The row does not show the macOS local-network permission explanation for known unavailable or unknown startup.
 A genuinely changed home address still keeps its existing route guidance; it does not supply automatic startup.
 
-**+ A computer** opens an aside under the foot: "How do you want to add it?" over "Each way adds the same kind of computer.
-Pick the one that suits it.", with three small secondary Buttons and a ghost "Cancel":
-- "Paste a link into Infinitary there": the link panel below, for a computer the person sits at (`JoinAnotherMac.prompt.md`).
-- "Run a command there": the command panel below, for a computer with no screen.
-- "By its address": "The other computer's address" over "The one you use with SSH.
-  Remote Login must be on there.", a mono `Input` with the placeholder "you@mini.local", beside it a narrow mono `Input` labelled "Port" with the placeholder "Port 22", a small primary "Add it" and a ghost "Cancel" (`AddAMac.prompt.md`).
+**+ A computer** opens its address form under the foot at once, with the caret in the address field (captain's pick on INF-4926: the address is the default way to add a computer, because a computer added by its address never needs a visit after setup).
+The form is "The other computer's address" over "The one you use with SSH.
+Remote Login must be on there." and "This computer then keeps it updated and reaches it by itself.", a mono `Input` with the placeholder "you@mini.local", beside it a narrow mono `Input` labelled "Port" with the placeholder "Port 22", a small primary "Add it" and a ghost "Cancel" (`AddAMac.prompt.md`).
+Under the computers on this network, after a `--line-1` hairline, the question line "Can’t turn on Remote Login there?" leads the two other ways, each a small secondary Button with its `--text-sm --fg-2` line beside it, both reached with Tab:
+- "Paste a link into Infinitary there", "You’re at that computer, or it is a Windows PC.": the link panel below (`JoinAnotherMac.prompt.md`).
+- "Run a command there", "You can type in Terminal there.": the command panel below.
+  Each closes the form and opens its panel as it always did.
   The port stays empty for SSH's usual one; another port joins the address as SSH writes it, `ssh://you@mini.local:2222`, and that is the address the row names and later updates reach.
   On a Linux home, where the other computer is as likely Linux, the line under the label reads "The one you use with SSH.
   Its SSH server, or Remote Login on a Mac, must be on.", and the same in place of "Remote Login must be on there." on a row's own address question.
-  Under them, the computers on this network with Remote Login on, under the micro label `ON THIS NETWORK`, each filling in the field when picked (`AddAMac.prompt.md`, "Nearby").
+  Under the fields, the computers on this network with Remote Login on, under the micro label `ON THIS NETWORK`, each filling in the field when picked (`AddAMac.prompt.md`, "Nearby").
   While it works, its row stands at the end of the list: the address as its name until the computer says its own, the mono line "a computer · sam@mini.local", an `idle` dot, and the summary "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving, and "Starting Infinitary on Mac mini…" (`AddAMac.prompt.md`, "By its address").
   After the password typed once (`AddAMac.prompt.md`, "The password, once"), the summary reads "Letting Infinitary's own key in on sam@mini.local…" until "Preparing Infinitary for Mac mini…".
-  A refusal keeps the address in the field and shows its two lines in that aside, in `--warn`, with a small primary "Try again" and the ghost "Cancel".
+  A refusal keeps the address in the field and shows its two lines in the form, in `--warn`, with a small primary "Try again" and the ghost "Cancel".
   Try again runs the same add.
-  Cancel closes the aside and changes nothing.
-  Success still closes the aside.
-  The field, Try again and Cancel are reached with Tab.
+  Cancel closes the form and changes nothing.
+  Success still closes the form.
+  The field, Try again, Cancel and the two other ways are reached with Tab.
+  A Windows home adds no computer by its address: there + A computer opens the two other ways alone, as before, with no address form and no computers on this network.
+  Until the home says whether it adds by its address, the two other ways show alone the same way, the link focused; on a home that does, the address form then takes their place with the caret in its field.
   A computer whose user runs another first mate's work asks once in an aside of the same shape, with a danger "Leave it and add" and a focused ghost "Cancel" (`AddAMac.prompt.md`, "Another first mate's Mac").
 
 **+ Running as another user** opens the command panel for a user on this computer at once.

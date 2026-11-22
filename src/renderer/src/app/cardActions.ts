@@ -17,7 +17,6 @@ import {
   CARD_REPLY_MAX_CHARS,
   cardAnswersBytes,
   cardQuestionsBytes,
-  deviceArrival,
   TURN_IMAGES_MAX,
   withAnythingElse,
 } from "@shared/cards";
@@ -28,6 +27,7 @@ import {
   type PastedText,
   pasteRefusal,
 } from "@shared/composer";
+import { deviceArrival } from "@shared/deviceArrival";
 import { openedSection } from "@shared/integrations";
 import type { FrameAnswers, FrameBox } from "@shared/plugins/bridge";
 import { isPreparing } from "../attachments/intake";

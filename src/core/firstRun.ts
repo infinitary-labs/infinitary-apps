@@ -21,6 +21,12 @@ export type FirstRunOptions = {
   usable: () => boolean;
   /** Prior use (`hasPriorActivity`): asks, tasks, cards (including resolved), or user projects. */
   hasActivity: () => boolean;
+  /**
+   * Any saved sign-in or connection, working or not: a model account, a
+   * project host's sign-in or another integration, or a paired device
+   * (docs/view.md, "Following along"). Read without any credential's value.
+   */
+  hasConnections?: () => boolean;
   /** The profile has had a crewmate (a task on the board), so its colors need no teaching. */
   hasCrewHistory: () => boolean;
   /** A task of the captain's has closed done (`TaskService.hasFinishedTask`). */
@@ -48,15 +54,17 @@ export type FirstRunStep = "gate_shown" | "signed_in" | "first_turn";
  * ready - or a host card's gate row, whose card already counts.
  */
 export function hasPriorActivity(sources: {
-  tasks: Pick<TaskService, "list"> & { capture: Pick<TaskService["capture"], "listAsks"> };
+  tasks: Pick<TaskService, "hasKind"> & { capture: Pick<TaskService["capture"], "latestAskId"> };
   cards: Pick<CardStore, "hasHistory">;
-  repos: Pick<RepoRegistry, "list">;
+  repos: Pick<RepoRegistry, "hasProject">;
 }): boolean {
+  // Existence reads only: a window beside this first launch asks often, and
+  // composing every task or ask to say "none" would cost a long record dearly.
   return (
-    sources.tasks.list().some((task) => task.kind !== "operation") ||
-    sources.tasks.capture.listAsks().length > 0 ||
+    (["work", "question", "decision"] as const).some((kind) => sources.tasks.hasKind(kind)) ||
+    sources.tasks.capture.latestAskId() !== undefined ||
     sources.cards.hasHistory() ||
-    sources.repos.list().some((repo) => repo.kind !== "personal")
+    sources.repos.hasProject()
   );
 }
 
@@ -186,10 +194,21 @@ export class FirstRunService {
       console.warn("[first-run] introduction could not be committed:", error);
     }
     const freshCheck = open ? this.options.freshCheck?.() : undefined;
+    const record = this.options.settings.getFirstRun();
+    // Nothing done here yet: no turn, no saved sign-in or connection, and no
+    // ask, task, card or project. Only then may a home that added this
+    // computer take it over in place (docs/view.md, "A Mac that runs work").
+    const untouched =
+      open &&
+      record.firstTurnAt === null &&
+      !freshCheck &&
+      !this.options.hasConnections?.() &&
+      !this.options.hasActivity();
     return {
-      ...this.options.settings.getFirstRun(),
+      ...record,
       gateOpen: open,
       ...(freshCheck ? { freshCheck } : {}),
+      ...(untouched ? { untouched: true as const } : {}),
     };
   }
 

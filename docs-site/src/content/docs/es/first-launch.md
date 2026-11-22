@@ -1,5 +1,5 @@
 ---
-source: 01b32db6f45c0f7c
+source: 714fca51d75af858
 title: Primer inicio
 description: Lo que Infinitary muestra la primera vez que lo abres, cómo conectar una suscripción y cómo agregar tu primer proyecto.
 ---
@@ -45,7 +45,12 @@ Si una suscripción está conectada pero aún no puede responder, la ventana dic
 ## Si tu primer oficial ya vive en otra computadora {#if-your-first-mate-already-lives-on-another-computer}
 
 Debajo de los botones de los proveedores, un segundo grupo dice «Tu primer oficial está en otra computadora».
-Usa **Pegar su enlace** o **Unirse por su dirección** para controlar ese primer oficial desde aquí en lugar de configurar uno nuevo.
+En una Mac o una computadora Linux x64, **Configurar desde la computadora de tu primer oficial** aparece primero: muestra la dirección de esta computadora para escribirla en la computadora donde vive tu primer oficial.
+Cuando esa computadora agrega esta, esta ventana abre a tu primer oficial por sí sola, siempre que todavía no se haya configurado nada en ella, como un inicio de sesión o un proyecto.
+Una ventana en la que ya configuraste algo conserva su propio primer oficial: en ese caso, usa **Pegar su enlace** o **Unirse por su dirección** para controlar ese primer oficial desde aquí.
+Si Infinitary estaba cerrado cuando esa computadora agregó esta, abre a tu primer oficial la próxima vez que se inicie, sin importar lo que se haya configurado en él.
+Una ventana junto a un Infinitary que iniciaste tú mismo desde Terminal conserva el primer oficial de ese Infinitary y no ofrece ninguna de las dos formas; detén primero ese Infinitary para usarlas.
+Una PC con Windows y una computadora Linux Arm muestran solo las otras dos formas.
 Consulta [Tus otras computadoras](/es/your-other-computers/).
 
 ## El aviso de Diagnósticos {#the-diagnostics-notice}

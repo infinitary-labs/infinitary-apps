@@ -3,6 +3,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { TurnImage } from "@shared/cards";
 import { deviceUpdateCardOfOffer } from "@shared/deviceUpdateNudge";
 import type { HostReplyEmote } from "@shared/emotes";
+import { cardWordsMark, saidMark } from "@shared/i18n/said";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
@@ -721,7 +722,10 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         const card: EmittedCard = {
           id: supervisor.cards.offerCardId(offer.cardId),
           title: offer.title,
-          body: offer.paragraphs.map((text) => `<p>${escapeCardText(text)}</p>`).join("\n"),
+          // Catalog words keep their facts, so each view words the card in its own language.
+          body: offer.said
+            ? `${cardWordsMark([offer.said.title, offer.said.label, offer.said.decline])}${offer.said.paragraphs.map((fact) => saidMark(fact, "p")).join("\n")}`
+            : offer.paragraphs.map((text) => `<p>${escapeCardText(text)}</p>`).join("\n"),
           actions: [
             {
               id: "open",

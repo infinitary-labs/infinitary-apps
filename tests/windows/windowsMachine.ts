@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -229,6 +230,31 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
   );
 }
 
+/**
+ * Whether the process shows a window a person can see: Windows names a
+ * process's main window only while one of its top-level windows is visible.
+ */
+export function showsWindow(pid: number): boolean {
+  return ps<boolean>(
+    `$p = Get-Process -Id ([int]$env:SHOWN_PID) -ErrorAction SilentlyContinue
+    [bool]($p -and $p.MainWindowHandle -ne [IntPtr]::Zero)`,
+    { SHOWN_PID: String(pid) },
+  );
+}
+
+/**
+ * Closes the process's visible window as a person's click on its close
+ * button does: Windows sends that window the same close message. False
+ * when it shows none.
+ */
+export function closeShownWindow(pid: number): boolean {
+  return ps<boolean>(
+    `$p = Get-Process -Id ([int]$env:CLOSE_PID) -ErrorAction SilentlyContinue
+    [bool]($p -and $p.CloseMainWindow())`,
+    { CLOSE_PID: String(pid) },
+  );
+}
+
 /** A picture of the whole screen, for the check's evidence. */
 /**
  * The words of every window `pid` shows, as Windows' accessibility tree
@@ -354,4 +380,248 @@ export function typeInConsole(pid: number, words: string): boolean {
 /** The words the console the process owns shows, line by line. */
 export function consoleText(pid: number): string {
   return ps<string>(`${CONSOLE_PARTS}\n[ConsoleParts]::Screen()`, { CONSOLE_PID: String(pid) });
+}
+
+/** A message-only window a process owns: Windows' class name and its title. */
+export type MessageWindow = { readonly className: string; readonly title: string };
+
+/**
+ * The message-only windows the process owns. Electron's own single-instance
+ * lock on Windows is one of them, titled by the data folder it holds: a
+ * launch finds it by that class and title and asks it through Windows' own
+ * messages.
+ */
+export function messageWindows(pid: number): MessageWindow[] {
+  return psList<MessageWindow>(
+    `
+    Add-Type -TypeDefinition @'
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using System.Text;
+    public class MessageWindowRead { public string className { get; set; } public string title { get; set; } }
+    public static class MessageWindows {
+      [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindowExW(IntPtr parent, IntPtr after, string cls, string title);
+      [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
+      [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassNameW(IntPtr window, StringBuilder into, int length);
+      [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int InternalGetWindowText(IntPtr window, StringBuilder into, int length);
+      public static MessageWindowRead[] Of(uint pid) {
+        var found = new List<MessageWindowRead>();
+        IntPtr window = IntPtr.Zero;
+        while ((window = FindWindowExW(new IntPtr(-3), window, null, null)) != IntPtr.Zero) {
+          uint owner;
+          GetWindowThreadProcessId(window, out owner);
+          if (owner != pid) continue;
+          var cls = new StringBuilder(256);
+          GetClassNameW(window, cls, cls.Capacity);
+          var title = new StringBuilder(1024);
+          InternalGetWindowText(window, title, title.Capacity);
+          found.Add(new MessageWindowRead { className = cls.ToString(), title = title.ToString() });
+        }
+        return found.ToArray();
+      }
+    }
+'@
+    [MessageWindows]::Of([uint32]$env:OWNER_PID)`,
+    { OWNER_PID: String(pid) },
+  );
+}
+
+/**
+ * A program that holds a data folder's single-instance lock as an app from
+ * before windows answered a launch would, and nothing else: the folder's
+ * lock file, held as Electron holds it, and a message-only window of the lock
+ * window's own class and title that takes every launch's ask as received and
+ * answers nothing in the folder. It counts the asks it takes, so a check
+ * reads how often a launch asked it, and lets the lock go when told.
+ */
+export type StandInHolder = {
+  /** How many launches' asks it has taken. */
+  readonly asks: () => number;
+  /** Lets the lock go and ends, as that app quitting does. */
+  readonly letGo: () => Promise<void>;
+  /**
+   * Lets the lock file go, then its window and ends once a launch asks after that, so a launch
+   * watching the folder has seen it free before anything else takes it.
+   */
+  readonly letGoSeen: () => Promise<void>;
+  /** Ends it however it stands, for a check's cleanup. */
+  readonly end: () => void;
+};
+
+const STAND_IN_HOLDER = `
+  $ErrorActionPreference = 'Stop'
+  Add-Type -TypeDefinition @'
+  using System;
+  using System.IO;
+  using System.Runtime.InteropServices;
+  using System.Threading;
+  public static class StandInHolder {
+    delegate IntPtr Proc(IntPtr window, uint message, IntPtr w, IntPtr l);
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct WindowClass { public uint size; public uint style; public Proc proc; public int classExtra; public int windowExtra; public IntPtr instance; public IntPtr icon; public IntPtr cursor; public IntPtr background; public string menu; public string name; public IntPtr smallIcon; }
+    [StructLayout(LayoutKind.Sequential)]
+    struct Message { public IntPtr window; public uint message; public IntPtr w; public IntPtr l; public uint time; public int x; public int y; }
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern ushort RegisterClassExW(ref WindowClass c);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr CreateWindowExW(uint extra, string cls, string title, uint style, int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+    [DllImport("user32.dll")] static extern IntPtr DefWindowProcW(IntPtr window, uint message, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] static extern bool PeekMessageW(out Message m, IntPtr window, uint first, uint last, uint remove);
+    [DllImport("user32.dll")] static extern bool TranslateMessage(ref Message m);
+    [DllImport("user32.dll")] static extern IntPtr DispatchMessageW(ref Message m);
+    [DllImport("user32.dll")] static extern bool DestroyWindow(IntPtr window);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr CreateFileW(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr GetModuleHandleW(string name);
+    static int asks;
+    static string control;
+    static Proc kept;
+    static IntPtr Take(IntPtr window, uint message, IntPtr w, IntPtr l) {
+      // WM_COPYDATA, a launch's ask: taken as received, answered nowhere else.
+      if (message == 0x004A) {
+        asks++;
+        File.WriteAllText(Path.Combine(control, "asks"), asks.ToString());
+        return new IntPtr(1);
+      }
+      return DefWindowProcW(window, message, w, l);
+    }
+    public static void Hold(string lockFile, string cls, string title, string controlDir) {
+      control = controlDir;
+      kept = Take;
+      var c = new WindowClass();
+      c.size = (uint)Marshal.SizeOf(typeof(WindowClass));
+      c.proc = kept;
+      c.instance = GetModuleHandleW(null);
+      c.name = cls;
+      if (RegisterClassExW(ref c) == 0) throw new Exception("could not register the class: " + Marshal.GetLastWin32Error());
+      // As Electron holds it: written by this program alone, read by others, gone once let go.
+      IntPtr file = CreateFileW(lockFile, 0x40000000, 1, IntPtr.Zero, 2, 0x80 | 0x04000000, IntPtr.Zero);
+      if (file == new IntPtr(-1)) throw new Exception("could not hold the lock file: " + Marshal.GetLastWin32Error());
+      IntPtr window = CreateWindowExW(0, cls, title, 0, 0, 0, 0, 0, new IntPtr(-3), IntPtr.Zero, c.instance, IntPtr.Zero);
+      if (window == IntPtr.Zero) throw new Exception("could not make the window: " + Marshal.GetLastWin32Error());
+      File.WriteAllText(Path.Combine(control, "holding"), "");
+      Message m;
+      bool fileHeld = true;
+      int asksAtRelease = 0;
+      for (;;) {
+        while (PeekMessageW(out m, IntPtr.Zero, 0, 0, 1)) { TranslateMessage(ref m); DispatchMessageW(ref m); }
+        if (File.Exists(Path.Combine(control, "let-go"))) break;
+        // The lock file first, the window once a launch asks after that: a launch watching the
+        // folder has then seen it let go.
+        if (fileHeld && File.Exists(Path.Combine(control, "let-go-seen"))) {
+          CloseHandle(file);
+          fileHeld = false;
+          asksAtRelease = asks;
+        }
+        if (!fileHeld && asks > asksAtRelease) break;
+        Thread.Sleep(20);
+      }
+      DestroyWindow(window);
+      if (fileHeld) CloseHandle(file);
+    }
+  }
+'@
+  [StandInHolder]::Hold($env:HOLD_LOCK_FILE, $env:HOLD_CLASS, $env:HOLD_TITLE, $env:HOLD_CONTROL)`;
+
+/**
+ * Starts a stand-in holder (`StandInHolder`) of the lock window given, read
+ * from the app's own (`messageWindows`), on the data folder's lock file, and
+ * answers once it holds both. `control` is an empty folder of the check's.
+ */
+export async function holdLockAsStandIn(options: {
+  readonly lockFile: string;
+  readonly window: MessageWindow;
+  readonly control: string;
+}): Promise<StandInHolder> {
+  const holder = spawn(
+    powershellPath,
+    ["-NoProfile", "-NonInteractive", "-Command", STAND_IN_HOLDER],
+    {
+      env: {
+        ...process.env,
+        HOLD_LOCK_FILE: options.lockFile,
+        HOLD_CLASS: options.window.className,
+        HOLD_TITLE: options.window.title,
+        HOLD_CONTROL: options.control,
+      },
+      stdio: ["ignore", "ignore", "pipe"],
+      windowsHide: true,
+    },
+  );
+  let said = "";
+  holder.stderr?.on("data", (chunk) => {
+    said += String(chunk);
+  });
+  const ended = new Promise<number | null>((resolve) => holder.once("exit", resolve));
+  const holding = join(options.control, "holding");
+  for (;;) {
+    if (existsSync(holding)) break;
+    const code = await Promise.race([
+      ended,
+      new Promise<"waiting">((resolve) => setTimeout(() => resolve("waiting"), 100)),
+    ]);
+    if (code !== "waiting") throw new Error(`the stand-in holder ended (${code}): ${said}`);
+  }
+  const asksFile = join(options.control, "asks");
+  const letGo = async (file: string) => {
+    writeFileSync(join(options.control, file), "");
+    const code = await ended;
+    if (code !== 0) throw new Error(`the stand-in holder ended (${code}): ${said}`);
+  };
+  return {
+    asks: () => (existsSync(asksFile) ? Number(readFileSync(asksFile, "utf8")) : 0),
+    letGo: () => letGo("let-go"),
+    letGoSeen: () => letGo("let-go-seen"),
+    end: () => {
+      if (holder.exitCode === null) holder.kill();
+    },
+  };
+}
+
+/** Each Infinitary.exe the process started itself, with its command line. */
+export function childApps(
+  parentPid: number,
+): { readonly pid: number; readonly commandLine: string }[] {
+  return psList(
+    `Get-CimInstance Win32_Process -Filter "Name = 'Infinitary.exe'" |
+      Where-Object { [int]$_.ParentProcessId -eq [int]$env:PARENT_PID } |
+      ForEach-Object { [pscustomobject]@{ pid = [int]$_.ProcessId; commandLine = [string]$_.CommandLine } }`,
+    { PARENT_PID: String(parentPid) },
+  );
+}
+
+/**
+ * Presses Ctrl+Q in the process's visible window as a person's keyboard
+ * does, once that window is in front: false while it shows none or Windows
+ * keeps another in front.
+ */
+export function pressQuitKey(pid: number): boolean {
+  return ps<boolean>(
+    `
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -TypeDefinition @'
+    using System;
+    using System.Runtime.InteropServices;
+    public static class Front {
+      [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
+      [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+      [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window, int how);
+      [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+    }
+'@
+    $p = Get-Process -Id ([int]$env:QUIT_PID) -ErrorAction SilentlyContinue
+    if (-not $p -or $p.MainWindowHandle -eq [IntPtr]::Zero) { $false } else {
+      $window = $p.MainWindowHandle
+      [void][Front]::ShowWindow($window, 9)
+      # Windows lets a program bring another window to the front just after a key press of its own.
+      [Front]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+      [Front]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+      [void][Front]::SetForegroundWindow($window)
+      Start-Sleep -Milliseconds 300
+      if ([Front]::GetForegroundWindow() -ne $window) { $false } else {
+        [System.Windows.Forms.SendKeys]::SendWait('^q')
+        $true
+      }
+    }`,
+    { QUIT_PID: String(pid) },
+  );
 }

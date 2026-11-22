@@ -310,6 +310,12 @@ export type DevicePairingOptions = {
    * devices out; none on a Mac.
    */
   firewall?: () => Promise<HomeFirewall | null>;
+  /**
+   * False on a home that cannot set a computer up by its address (a Windows
+   * PC, whose own ssh keeps no control connection): Devices and the first
+   * mate offer the link and the command there instead.
+   */
+  addsByAddress?: false;
 };
 
 /** How long a look at the firewall holds before the next read looks again. */
@@ -397,6 +403,7 @@ export class DevicePairing implements PairedDevices {
   private readonly lookAtFirewall: (() => Promise<HomeFirewall | null>) | null;
   /** What the last look at this home's firewall found, and when it looked. */
   private firewallSeen: { firewall: HomeFirewall | null; at: number } | null = null;
+  private readonly addsByAddress: boolean;
   private firewallLooking: Promise<void> | null = null;
   private entries: Entry[] = [];
   /** When each device was last in reach. */
@@ -468,6 +475,7 @@ export class DevicePairing implements PairedDevices {
     this.port = options.port ?? CONNECTION_PORT;
     this.ownUid = options.ownUid ?? process.getuid?.();
     this.ownSid = options.ownSid ?? (() => null);
+    this.addsByAddress = options.addsByAddress ?? true;
     this.joinsFromAnotherMac = options.joinsFromAnotherMac ?? false;
     this.leaveWithWork = options.leaveWithWork ?? (() => false);
     this.lookAtFirewall = options.firewall ?? null;
@@ -512,6 +520,16 @@ export class DevicePairing implements PairedDevices {
     } finally {
       this.projection = undefined;
     }
+  }
+
+  /**
+   * Whether the list may hold a device: one is paired, or the list cannot be
+   * read, so it is never read as empty. Reads no device's view.
+   */
+  mayHoldDevices(): boolean {
+    if (this.unreadable) return true;
+    const own = this.ownReturning()?.deviceId;
+    return this.entries.some((entry) => entry.id !== own);
   }
 
   /** The devices on the list, oldest first, never with their secrets. */
@@ -639,6 +657,7 @@ export class DevicePairing implements PairedDevices {
           ? { windowsFirewall: firewall }
           : { firewall }
         : {}),
+      ...(this.addsByAddress ? {} : { addsByAddress: false as const }),
     };
   }
 

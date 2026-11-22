@@ -3,7 +3,6 @@ import { afterMergeShownListSchema } from "./afterMerge.ts";
 import { attachmentRefSchema } from "./attachments.ts";
 import {
   cardEffectSchema,
-  deviceMakeSchema,
   forgeSignInOnSchema,
   type MergeEffect,
   type RequestWriteEffect,
@@ -16,6 +15,7 @@ import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
 import { cardLiveReadsShape } from "./cardReads.ts";
 import { cardWidthSchema } from "./cardWidth.ts";
+import { deviceMakeSchema } from "./deviceArrival.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { servedNumber } from "./i18n/format.ts";
 import * as m from "./i18n/messages.generated.ts";

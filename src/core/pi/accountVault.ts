@@ -258,6 +258,8 @@ export class AccountVault {
   private readonly sweeping = new Set<Promise<void>>();
   /** A Claude sign-in that has passed the account check and not settled. */
   private claudeLoginInFlight = false;
+  /** The registry file is there but could not be read (`mayHoldAccounts`). */
+  private registryUnread = false;
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -1601,7 +1603,16 @@ export class AccountVault {
     return join(this.paths.accountsDir, "registry.json");
   }
 
+  /**
+   * Whether an account may be saved here: one is, or the registry file is
+   * there but could not be read, so it is never read as having none.
+   */
+  mayHoldAccounts(): boolean {
+    return this.registryUnread || this.liveAccounts().length > 0;
+  }
+
   private loadRegistry(): Registry {
+    this.registryUnread = false;
     try {
       const raw = JSON.parse(readFileSync(this.registryPath(), "utf8")) as Partial<Registry>;
       if (raw && typeof raw === "object" && Array.isArray(raw.accounts)) {
@@ -1611,13 +1622,18 @@ export class AccountVault {
           pins: raw.pins && typeof raw.pins === "object" ? raw.pins : {},
         };
       }
-    } catch {
-      // Missing or unreadable: start empty (never crash on leftovers).
+    } catch (error) {
+      // Missing or unreadable: start empty (never crash on leftovers), but
+      // note a file that is there, so it is never read as no accounts.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") this.registryUnread = true;
+      return { version: REGISTRY_VERSION, accounts: [], pins: {} };
     }
+    this.registryUnread = true;
     return { version: REGISTRY_VERSION, accounts: [], pins: {} };
   }
 
   private saveRegistry(): void {
+    this.registryUnread = false;
     writeFileSync(this.registryPath(), `${JSON.stringify(this.registry, null, 2)}\n`, {
       mode: 0o600,
     });

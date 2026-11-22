@@ -568,6 +568,38 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
       });
   });
 
+  // The review of INF-4930: a home that adds this computer takes it over in place only while
+  // nothing was saved here, so a paired device counts as a model account does, read with no secret.
+  it("calls a first launch untouched until a device is paired here", async () => {
+    const booted = await boot(true);
+    expect(await booted.dispatch("inf:app:first-run", [])).toMatchObject({
+      gateOpen: true,
+      untouched: true,
+    });
+    const key = createKeyIdentity("Phone");
+    const held = booted.services.devices.claim(
+      {
+        code: parsePairingLink(booted.services.devices.invite({ kind: "work" }).link).code,
+        kind: "work",
+        name: "Mac mini",
+        user: { name: "sam", uid: (process.getuid?.() ?? 0) + 1 },
+      },
+      {
+        headers: {},
+        socket: {
+          remoteAddress: "192.168.4.30",
+          localAddress: "192.168.4.48",
+          localPort: CONNECTION_PORT,
+          getPeerX509Certificate: () => new X509Certificate(key.cert),
+        },
+      } as unknown as IncomingMessage,
+    );
+    if (!held.ok) throw new Error(held.reason);
+    const after = await booted.dispatch("inf:app:first-run", []);
+    expect(after.gateOpen).toBe(true);
+    expect(after.untouched).toBeUndefined();
+  }, 60_000);
+
   it("a packaged build cannot enable it: the same environment seats nothing, the Settings control is absent, and the write is refused", async () => {
     const booted = await boot(true);
     const feed = await booted.dispatch("inf:feed:recent", []);

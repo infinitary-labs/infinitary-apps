@@ -270,10 +270,17 @@ describe("ipc contract", () => {
       "inf:cards:saved-files",
       // The card a click on its notification asked this window to open (docs/view.md, "Notifications").
       "inf:cards:take-notified",
+      // Following along once this computer's first mate's computer added it, at the first
+      // launch (docs/view.md, "Following along").
+      "inf:devices:follow-added",
       "inf:devices:join",
       "inf:devices:join-at",
       "inf:devices:join-held",
       "inf:devices:leave",
+      // Sharing settings and what this computer reads of itself for Set up from your first
+      // mate's computer (docs/view.md, "Set up from your first mate's computer").
+      "inf:devices:open-sharing",
+      "inf:devices:set-up-here",
       // Try again on a Mac whose work could not be set up (docs/view.md, "A Mac that runs work").
       "inf:devices:set-up-work",
       // Take over from the copy this Mac keeps (docs/devices.md, "Taking over").

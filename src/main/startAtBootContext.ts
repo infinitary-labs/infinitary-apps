@@ -3,7 +3,7 @@ import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import { systemSystemctl } from "@core/helper/background";
 import { appLauncher } from "@core/helper/launcher";
-import { type Schtasks, windowsAccount } from "@core/helper/windowsTask";
+import { powerShellTaskLookup, type Schtasks, windowsAccount } from "@core/helper/windowsTask";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
 import { findOnPath } from "@core/userBin";
@@ -53,8 +53,10 @@ export function carriedRunEnv(env: NodeJS.ProcessEnv): Record<string, string> {
  */
 export function windowsSchtasks(env: NodeJS.ProcessEnv, packaged: boolean): Schtasks {
   const standIn = packaged ? undefined : settingFrom(env, "SCHTASKS")?.trim();
-  return systemSystemctl(
-    standIn || join(env.SystemRoot?.trim() || "C:\\Windows", "System32", "schtasks.exe"),
+  if (standIn) return systemSystemctl(standIn);
+  return Object.assign(
+    systemSystemctl(join(env.SystemRoot?.trim() || "C:\\Windows", "System32", "schtasks.exe")),
+    { lookup: (label: string) => powerShellTaskLookup(env, label) },
   );
 }
 

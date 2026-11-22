@@ -828,6 +828,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       bindings: [
         forgeHostIntegration("github-enterprise", {
           signIns: {
+            presentHosts: () => [host],
             view: () => ({
               signIns: [
                 {

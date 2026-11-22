@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { writePrivate } from "../devices/identity";
+import { windowsRunHolds } from "../placed/windowsProcesses";
+import { hostPlatformProfile } from "../platform";
 import {
   bootPlist,
   bootUnit,
@@ -8,13 +10,17 @@ import {
   type Launcher,
   launchctlOf,
   loadAgent,
+  runAgentEnv,
   type ServiceManager,
   systemctlOf,
   wantedBy,
 } from "./background";
 import { linuxStartup } from "./linuxStartup";
-import { processAlive, STOPPED_RUN_WAIT_MS } from "./lock";
+import { holderAlive, processAlive } from "./lock";
+import { endRunByForce, type RunPipes, runPipeSeen, samePipes, wakeRun } from "./runForce";
 import {
+  RUN_RECORD_FILE,
+  type RunInstance,
   readRunTask,
   registerRunTask,
   removeRunTask,
@@ -67,8 +73,30 @@ export type RunAgentContext = {
   launcher: Launcher;
   /** What the run carries of the window's environment: a development run's stand-ins alone. */
   env: Readonly<Record<string, string>>;
-  /** How a Windows run's process is read and ended by force: the system's own unless a test stands in. */
-  processes?: { alive: (pid: number) => boolean; end: (pid: number) => void };
+  /**
+   * Whether a process runs, the system's own unless a test stands in, how
+   * long a force stop waits for its run to end (`endRunByForce`), and how a
+   * suspended run is let go on to read it.
+   */
+  processes?: {
+    /**
+     * Whether a program runs under `pid`; with `birth`, the run's recorded
+     * Windows birth, whether that same program still does, null where that
+     * cannot be told (`runIdentity`).
+     */
+    alive: (pid: number, birth?: string) => boolean | null;
+    forceWaitMs?: number;
+    /**
+     * Lets a suspended run go on to read its force stop (`wakeRun`), on a Mac
+     * or Linux only through the pipes found as `seen`.
+     */
+    wake?: (run: RunInstance, birth?: string, seen?: RunPipes | null) => void;
+    /**
+     * On a Mac or Linux, the run's own pipe in the folder of force stops: whether it is there
+     * (`runPipeThere`) and whether a program holds it.
+     */
+    pipe?: { there: (run: RunInstance) => boolean; held: (run: RunInstance) => boolean };
+  };
 } & RunManager;
 
 /** Where this user's own systemd reads their services. */
@@ -143,7 +171,7 @@ function writeMacAgent(context: RunAgentContext, file: string, from = file): voi
       launcher: context.launcher,
       settings: kept.settings,
       log: kept.log ?? join(context.dataDir, RUN_AGENT_LOG),
-      env: context.env,
+      env: runAgentEnv(context.label, context.env),
     }),
   );
 }
@@ -157,7 +185,13 @@ function registerWindowsTask(
   return registerRunTask(context.schtasks, {
     label: context.label,
     file: runTaskFile(context.dataDir),
-    xml: runTaskXml({ launcher: context.launcher, account: context.account, atLogin, settings }),
+    xml: runTaskXml({
+      launcher: context.launcher,
+      account: context.account,
+      atLogin,
+      settings,
+      agent: context.label,
+    }),
   });
 }
 
@@ -178,7 +212,11 @@ function ensureUnit(context: RunAgentContext): void {
   const file = unitFile(context);
   const was = existsSync(file) ? readFileSync(file, "utf8") : null;
   const settings = was === null ? undefined : unitSettings(was);
-  const text = bootUnit({ launcher: context.launcher, env: context.env, settings });
+  const text = bootUnit({
+    launcher: context.launcher,
+    env: runAgentEnv(context.label, context.env),
+    settings,
+  });
   if (was === text) return;
   mkdirSync(dirname(file), { recursive: true });
   writePrivate(file, text);
@@ -274,18 +312,31 @@ export function forgetRunAgentFiles(
  * Lets the agent go, which stops its run: for a window that runs its first
  * mate itself after all, so the agent never starts the run beside it, and,
  * with `forget`, for a window that joined a first mate on another computer,
- * so no login starts a run here again.
+ * so no login starts a run here again. With `run`, a stop asked through the
+ * folder is for that run alone, so a run started by hand there stays. On a
+ * Mac or Linux the agent's job is ended whichever run it holds. With
+ * `force`, Start it here over a run that does not answer: only the run
+ * named ends, by its own hand (`endAgentRun`), and the service manager is
+ * asked nothing, so a run its job starts again meanwhile keeps going; the
+ * window that starts here lets the job go once it holds the folder itself
+ * (`retireBesideOwnRun`). Letting it
+ * go for good (`forget`), a job the service manager would not end, or a task
+ * Task Scheduler would not take away, rejects, so the joining window says so,
+ * unless the service manager or Task Scheduler says it holds no such job, or the job is stopped,
+ * which is let go quietly; any other stop answers as it always has. A
+ * force stop answers what it did (`endAgentRun`), and only `ended` lets the
+ * window starting here retire the job.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
-  options: { forget: boolean; force?: EndedRun },
-): Promise<void> {
+  options: { forget: boolean; force?: RunInstance; run?: RunInstance | null },
+): Promise<AgentRunEnd | undefined> {
+  if (options.force) return await endAgentRun(context, options.force);
   if ("schtasks" in context) {
     // Task Scheduler's own end of a task ends its program with no clean stop,
-    // so the run is asked to stop itself, as a signal asks it elsewhere; one
-    // that does not answer never reads that ask, so `force` ends it.
-    if (options.force) await endWindowsRun(context, options.force.pid);
-    else requestRunStop(context.dataDir);
+    // so the run is asked to stop itself, as a signal asks it elsewhere. A
+    // null `run` names no run: the task is taken away and no stop is asked.
+    if (options.run !== null) requestRunStop(context.dataDir, new Date(), options.run);
     if (options.forget)
       await removeRunTask(context.schtasks, {
         label: context.label,
@@ -293,12 +344,26 @@ export async function stopRunAgent(
       });
     return;
   }
+  // A stop that forgets the agent, or one that names no run and only lets the job go, is a job the
+  // caller needs stopped: a refusal is reported to it. An ordinary stop of a run leaves the job to
+  // its own rules.
+  const checked = options.forget || options.run === null;
   if ("launchctl" in context) {
     if (options.forget) {
       rmSync(loginAgentFile(context), { force: true });
       rmSync(sessionAgentFile(context), { force: true });
     }
-    await launchctlOf(context)(["bootout", `gui/${context.uid}/${context.label}`]);
+    const launchctl = launchctlOf(context);
+    const service = `gui/${context.uid}/${context.label}`;
+    const out = await launchctl(["bootout", service]);
+    // Only a job launchd says it does not hold is let go quietly; one it still
+    // holds may start its run again, and one it cannot say about may too.
+    if (
+      checked &&
+      !out.ok &&
+      (await launchctl(["print", service])).code !== LAUNCHD_NO_SUCH_SERVICE
+    )
+      throw new Error(`launchd did not stop the agent: ${out.output}`);
     return;
   }
   const systemctl = systemctlOf(context);
@@ -307,76 +372,188 @@ export async function stopRunAgent(
     rmSync(unitFile(context), { force: true });
     await systemctl(["daemon-reload"]);
   }
-  await systemctl(["stop", context.label]);
+  const out = await systemctl(["stop", context.label]);
+  if (checked && !out.ok) {
+    // As background.ts reads a service's state: by its ActiveState, which says
+    // a unit waiting to start again is activating, never by is-active's status.
+    const state = await systemctl(["show", "--property=ActiveState", "--value", context.label]);
+    if (!state.ok || !SYSTEMD_STOPPED.has(state.output.trim()))
+      throw new Error(`systemd did not stop the agent: ${out.output}`);
+  }
 }
+
+/** launchctl's exit status for a service its domain does not hold (`launchctl print`). */
+const LAUNCHD_NO_SUCH_SERVICE = 113;
+/**
+ * The ActiveState of a unit that is not running and will not start again on
+ * its own: inactive, which a unit systemd does not hold reads too, or failed
+ * (systemd.unit(5)); activating, its wait to start again included, and
+ * deactivating say it may still run.
+ */
+const SYSTEMD_STOPPED: ReadonlySet<string> = new Set(["inactive", "failed"]);
+
+/**
+ * What Restart it did: started a run again; did nothing at all, where the
+ * run named is not one this app's own agent started that still runs, or its
+ * program cannot be shown to be that run; or ended or asked something and
+ * did not start a run again, so the run named may or may not still run.
+ */
+export type RestartOutcome = "restarted" | "untouched" | "failed";
 
 /**
  * Restart it, on the notice over a window whose command runs and does not
- * answer (docs/run.md, "When the command does not answer"): the run is
- * ended by force, since one that does not answer may never act on a polite
- * stop, and the agent starts it again at once, keeping its place for the
- * next login. On a Mac launchd's own kickstart ends the run and starts it
- * again; on Linux systemd ends it with SIGKILL and starts the unit; on
- * Windows the run is ended by force and the task runs again once its
- * process is gone (`endWindowsRun`). An agent its service manager no longer holds is
- * set up and started anew. True once a run was started again.
+ * answer (docs/run.md, "When the command does not answer"): the run named
+ * ends itself by force (`endAgentRun`), since one that does not answer may
+ * never act on a polite stop, and once no program runs under its number the
+ * agent is asked to start its run, as it would at login: launchd's
+ * `kickstart` without `-k`, systemd's `start` or Task Scheduler's `/Run`,
+ * each of which starts nothing where the job already runs, so a run started
+ * again in the named one's place is never ended.
  */
 export async function restartRunAgent(
   context: RunAgentContext,
-  run: EndedRun = {},
-): Promise<boolean> {
+  run?: RunInstance,
+): Promise<RestartOutcome> {
+  if (!run) return "untouched";
+  const ended = await endAgentRun(context, run);
+  if (ended === "untouched") return "untouched";
+  // Withdrawn, the run named still runs and its stop never acts: no run is started again. A stop
+  // it claimed was waited for until it ended, so a run its end leaves no job to start is started
+  // here; one gone on its own is started again as well.
+  if (ended === "withdrawn") return "failed";
   if ("schtasks" in context) {
-    // The task runs no second copy beside one still going, so a run that has not gone yet is not restarted.
-    if (!(await endWindowsRun(context, run.pid))) return false;
-    if (await startRunTask(context.schtasks, context.label)) return true;
-    return (await startRunAgent(context)) === "running";
+    if (await startRunTask(context.schtasks, context.label)) return "restarted";
+    return (await startRunAgent(context)) === "running" ? "restarted" : "failed";
   }
   if ("launchctl" in context) {
-    const launchctl = launchctlOf(context);
-    const restarted = await launchctl(["kickstart", "-k", `gui/${context.uid}/${context.label}`]);
-    if (restarted.ok) return true;
-    return (await startRunAgent(context)) === "running";
+    const started = await launchctlOf(context)([
+      "kickstart",
+      `gui/${context.uid}/${context.label}`,
+    ]);
+    return started.ok ? "restarted" : "failed";
   }
-  const systemctl = systemctlOf(context);
-  await systemctl(["kill", "--signal=SIGKILL", context.label]);
-  if ((await systemctl(["start", context.label])).ok) return true;
-  return (await startRunAgent(context)) === "running";
+  return (await systemctlOf(context)(["start", context.label])).ok ? "restarted" : "failed";
 }
 
-/** How often a Windows run that was ended is read until its process is gone. */
-const ENDED_RUN_READ_MS = 100;
-
 /**
- * The run to end by force, by the process its own record names (the run's
- * `run.json`, which the window reads as the command's status); none where
- * no run is recorded.
+ * Whether the run on this data folder is still `run`, by its own record: the
+ * same process and start, a process that still runs, and a record written
+ * since this computer last started; with whether this app's own agent
+ * started it, whether its helper was up to be ended by force (`recovers`), with the pipes it
+ * said it holds then on a Mac or Linux (`pipes`), and on Windows its process's own birth, as the
+ * run wrote. Null for any other run, a process number
+ * reused included, and while none is recorded or its record cannot be read.
  */
-export type EndedRun = { pid?: number };
-
-/**
- * Ends a Windows run by force: Task Scheduler's own end, which first asks
- * the program to close and returns before it has, then the run's recorded
- * process ended at once. Waits until that process is gone, for as long as
- * a command waits for a stopped run to let its folder go, since the task
- * runs no second copy beside one still going. True once it is gone.
- */
-async function endWindowsRun(
-  context: RunAgentContext & TaskScheduler,
-  pid: number | undefined,
-): Promise<boolean> {
-  const alive = context.processes?.alive ?? processAlive;
-  const end = context.processes?.end ?? ((pid: number) => process.kill(pid));
-  await context.schtasks(["/End", "/TN", context.label]);
-  if (pid === undefined || !alive(pid)) return true;
+function recordedRun(
+  context: RunAgentContext,
+  run: RunInstance,
+): { agent: boolean; recovers: boolean; pipes?: RunPipes; birth?: string } | null {
+  const path = join(context.dataDir, RUN_RECORD_FILE);
+  let record: {
+    pid?: unknown;
+    startedAt?: unknown;
+    agent?: unknown;
+    recovers?: unknown;
+    pipes?: unknown;
+    birth?: unknown;
+  } | null;
   try {
-    end(pid);
+    record = JSON.parse(readFileSync(path, "utf8"));
   } catch {
-    // Gone already, or not this account's to end: the wait below says which.
+    return null;
   }
-  const until = Date.now() + STOPPED_RUN_WAIT_MS;
-  while (alive(pid)) {
-    if (Date.now() >= until) return false;
-    await new Promise((resolve) => setTimeout(resolve, ENDED_RUN_READ_MS));
-  }
-  return true;
+  if (record?.pid !== run.pid || record.startedAt !== run.startedAt) return null;
+  const alive = context.processes?.alive;
+  if (!holderAlive(path, run.pid, alive ? (pid) => alive(pid) !== false : processAlive))
+    return null;
+  return {
+    agent: record.agent === true,
+    recovers: record.recovers === true,
+    ...(pipesOf(record.pipes) ? { pipes: pipesOf(record.pipes) as RunPipes } : {}),
+    ...(typeof record.birth === "string" ? { birth: record.birth } : {}),
+  };
 }
+
+/** The run's pipes as its record keeps them, or none where the record keeps no such reading. */
+function pipesOf(value: unknown): RunPipes | undefined {
+  const seen = (pipe: unknown) => {
+    const { ino, dev } = (pipe ?? {}) as { ino?: unknown; dev?: unknown };
+    return typeof ino === "number" && typeof dev === "number" ? { ino, dev } : null;
+  };
+  const { wake, life } = (value ?? {}) as { wake?: unknown; life?: unknown };
+  const [w, l] = [seen(wake), seen(life)];
+  return w && l ? { wake: w, life: l } : undefined;
+}
+
+/**
+ * Ends `run` by force where it is the run this app's own agent started and
+ * its record says a force stop can end it, read as the stop is asked
+ * (`recordedRun`): the run is asked to end itself, by
+ * its process and start (`endRunByForce`), which no other program reads, so
+ * a program that took its number and a run its job started again both keep
+ * going, and nothing is asked of the service manager. Untouched for any
+ * other run, a run already gone at the press included - a number another
+ * program holds by then, as its birth shows on Windows and its pipe on a Mac
+ * or Linux - and where the stop could not be asked; otherwise as
+ * `endRunByForce` answers (`AgentRunEnd`).
+ */
+async function endAgentRun(context: RunAgentContext, run: RunInstance): Promise<AgentRunEnd> {
+  // Its pipes are found before its record is read, and are its own only as the files its record
+  // says it holds (below).
+  const piped = context.processes?.pipe?.there(run) ?? runPipeSeen(context.dataDir, run);
+  const recorded = recordedRun(context, run);
+  // Read as the stop is asked, never from the notice the window drew: a run whose reading or helper
+  // stopped since says no longer that a force stop can end it, and is asked nothing.
+  if (!recorded?.agent || !recorded.recovers) return "untouched";
+  // On a Mac or Linux only the pipes the run said it holds as it said a force stop can end it are
+  // its own: pipes found at their names that are other files, as where something took their place
+  // before the press, are no run's to ask, wake or read, whatever the note still says.
+  if (
+    typeof piped === "object" &&
+    piped !== null &&
+    !(recorded.pipes && samePipes(piped, recorded.pipes))
+  )
+    return "untouched";
+  const wake =
+    context.processes?.wake ??
+    ((named, birth, seen) => wakeRun(context.dataDir, named, birth, seen));
+  const alive = context.processes?.alive ?? runIdentity;
+  // Asked only of a run its number is seen to be: one whose birth cannot be read is asked nothing.
+  if (alive(run.pid, recorded.birth) !== true) return "untouched";
+  // A run already gone at the press, as a program under its number that is not it, is asked
+  // nothing (`unasked`), so the stop's own wait tells only the named run's end as an exit.
+  const ended = await endRunByForce(
+    context.dataDir,
+    run,
+    (pid) => alive(pid, recorded.birth) !== false,
+    context.processes?.forceWaitMs,
+    () => wake(run, recorded.birth, typeof piped === "object" ? piped : null),
+    piped,
+    context.processes?.pipe ? () => context.processes?.pipe?.held(run) ?? false : undefined,
+  );
+  return ended === "unasked" ? "untouched" : ended;
+}
+
+/**
+ * Whether the run under `pid` is the one its record names: false once no
+ * program holds the number or, on Windows with the birth its record keeps,
+ * another program does; null where Windows cannot open it or read its birth.
+ * A record without a birth, from an earlier version, and a Mac or Linux run
+ * are read by their number alone. Only true lets a reader treat the run as
+ * its own - to join beside it, stop it or ask it to end - while a wait for its
+ * end reads null as still running.
+ */
+export function runIdentity(pid: number, birth?: string): boolean | null {
+  if (!processAlive(pid)) return false;
+  if (!birth || !hostPlatformProfile().windows) return true;
+  return windowsRunHolds(pid, birth);
+}
+
+/**
+ * What a force stop of the agent's own run did, as `endRunByForce` answers:
+ * `ended` by its stop, `gone` on its own with its stop never acted on,
+ * `withdrawn` where it still runs and its stop never acts; `untouched`
+ * where nothing was asked of it. A stop it claimed is waited for until one
+ * of these is known.
+ */
+export type AgentRunEnd = "ended" | "gone" | "untouched" | "withdrawn";

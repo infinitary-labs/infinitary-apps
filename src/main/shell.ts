@@ -37,6 +37,7 @@ import type { WorkSetupReport } from "@shared/workSetup";
 import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
+import { type OwnedRun, sameRun } from "./runCommand";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
@@ -108,6 +109,13 @@ export type ShellOptions = {
    * for a move that failed after it stopped. Absent, the app starts again.
    */
   endRun?: (how: "moved" | "restart") => void;
+  /**
+   * A first mate started by a command with no window: it never opens a grant
+   * waiting in the work folder, which only a window opens, following along
+   * beside it, so the command and the window never both take it (docs/view.md,
+   * "Following along").
+   */
+  headless?: boolean;
   /** Serves a started core to paired devices, and to this computer's window through the local door. */
   startConnection: (core: Core) => HomeConnection;
   /**
@@ -147,7 +155,7 @@ export type ShellOptions = {
    * started the command the window stood beside (docs/run.md, "When the
    * command stops").
    */
-  relaunch: (how?: { startHere?: boolean }) => void;
+  relaunch: (how?: { startHere?: boolean; letGoJob?: boolean }) => void;
   /** This Mac's own installed app's update checker, which a view answers its update notice from. */
   updates: UpdateChecker;
   /**
@@ -276,11 +284,18 @@ export class Shell {
       await this.becomeBeside(this.options.beside);
       return;
     }
-    const joined = this.options.joined.read() ?? this.openFromWork();
+    // A grant the work keeps opens the window as that home's view, as it
+    // always has for a computer added by a command or its address, unless this
+    // window kept its own first mate when that grant came (`waitingGrant`).
+    // A first mate started by a command never opens it: only a window does.
+    const joined =
+      this.options.joined.read() ?? (this.options.headless ? null : this.openFromWork());
     if (joined) {
       this.followWork(joined);
       this.becomeView();
-    } else await this.becomeHome();
+      return;
+    }
+    await this.becomeHome();
   }
 
   /** The running core, while this app holds Firstmate itself. */
@@ -317,6 +332,8 @@ export class Shell {
    * again as this computer's own first mate. False when nothing offers it.
    */
   startHere(): boolean {
+    // A join under way stops no command it did not name, so none starts meanwhile.
+    if (this.switching) return false;
     return this.mode?.kind === "beside" ? this.mode.beside.startHere() : false;
   }
 
@@ -327,6 +344,7 @@ export class Shell {
    * when nothing offers it.
    */
   restartCommand(): boolean {
+    if (this.switching) return false;
     return this.mode?.kind === "beside" ? this.mode.beside.restartCommand() : false;
   }
 
@@ -367,7 +385,9 @@ export class Shell {
    * is refused.
    */
   async join(text: string): Promise<JoinOutcome> {
-    if (!this.joinable() || this.switching) return { ok: false, refused: "other" };
+    // Beside a command, the run this window's starter owns now: only it stops.
+    const target = this.joinTarget();
+    if (!target || this.switching) return { ok: false, refused: "other" };
     let kind: string;
     try {
       kind = parsePairingLink(text).kind;
@@ -388,12 +408,9 @@ export class Shell {
     const joinedAt = this.now();
     this.options.joined.join(grant, joinedAt);
     // Its work is set up as the window starts over as the other Mac's (`checkWork`).
-    void this.switchTo(async () => {
-      // Answer the window first; the switch starts it over.
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      await this.stopHome();
-      this.becomeView();
-    });
+    void this.switchToView(target.owned).catch((error: unknown) =>
+      console.warn(`[shell] could not open as the computer joined: ${String(error)}`),
+    );
     return { ok: true };
   }
 
@@ -426,14 +443,38 @@ export class Shell {
   }
 
   /**
-   * Whether this app may join another computer: as this computer's own
-   * first mate, or beside a command this window starts, whose first mate
-   * stops for good (docs/run.md, "Joining another computer").
+   * What joining would stop here, read once so the check, the stop and the
+   * window's answer name the same run (docs/run.md, "Joining another
+   * computer"): this app's own first mate (no `owned`), or beside a command
+   * this window starts, the run its own agent started, or `owned: null`
+   * while none runs, which stops no run however one starts meanwhile
+   * (`BesideWindow.joinState`). "starting" while a command this window
+   * started or restarted has not welcomed it, "outside" beside one the
+   * records say runs that it does not own, and "unknown" while they cannot
+   * be read, where joining is refused, as it is in a view.
+   */
+  private joinState(): { owned?: OwnedRun | null } | "starting" | "outside" | "unknown" | "view" {
+    const mode = this.mode;
+    if (mode?.kind === "home") return {};
+    if (mode?.kind === "beside") return mode.beside.joinState();
+    return "view";
+  }
+
+  /** The join target, or null where joining is refused (`joinState`). */
+  private joinTarget(): { owned?: OwnedRun | null } | null {
+    const state = this.joinState();
+    return typeof state === "object" ? state : null;
+  }
+
+  /**
+   * Whether this app's first mate answers Join by its address and following
+   * along here: as this computer's own, or beside the run its own agent
+   * started; never while no command runs, which has no first mate to ask,
+   * nor beside one started by hand, which joining would stop.
    */
   private joinable(): boolean {
-    return (
-      this.mode?.kind === "home" || (this.mode?.kind === "beside" && this.mode.beside.startsCommand)
-    );
+    const target = this.joinTarget();
+    return target !== null && target.owned !== null;
   }
 
   /**
@@ -475,6 +516,69 @@ export class Shell {
     this.held = null;
     if (choice === "forget" || !held) return { ok: false, refused: "other" };
     return this.join(linkDialingFirst(held.link, held.host));
+  }
+
+  /**
+   * Following along at first launch (docs/view.md, "A Mac that runs work"):
+   * while this computer's first launch is still up and nothing has been
+   * done here, a home that added it by its address left its grant in the
+   * work folder, and the window opens it now with no relaunch, stopping the
+   * empty first mate beside it as `join` does. False when nothing changed.
+   */
+  async followAdded(): Promise<boolean> {
+    // Beside a command, only the run this window's starter owns stops by itself.
+    const target = this.joinTarget();
+    // While no command runs there is no first mate to ask whether anything was done here.
+    if (!target || target.owned === null || this.switching || !this.options.work) return false;
+    // Only a grant waiting asks the first mate anything: most polls find none.
+    const waiting = this.waitingGrant();
+    if (!waiting) return false;
+    const firstRun = await this.dispatch("inf:app:first-run", []).catch(() => null);
+    // Only a profile with nothing done here: no turn, sign-in, connection,
+    // ask, task, card or project (`FirstRunView.untouched`). A profile with
+    // something done keeps its own first mate, after a restart too.
+    if (firstRun && firstRun.untouched !== true)
+      this.options.joined.keepOwn(waiting.grant.deviceId);
+    if (firstRun?.untouched !== true) return false;
+    // Asked again after the wait: a join, a switch or another run may have started meanwhile.
+    const again = this.joinTarget();
+    if (
+      !again ||
+      again.owned === null ||
+      this.switching ||
+      ((target.owned || again.owned) && !sameRun(again.owned, target.owned))
+    )
+      return false;
+    const joined = this.openFromWork();
+    if (!joined) return false;
+    this.followWork(joined);
+    void this.switchToView(target.owned).catch((error: unknown) =>
+      console.warn(`[shell] could not open as the computer joined: ${String(error)}`),
+    );
+    return true;
+  }
+
+  /**
+   * What this window does once its first mate's computer adds it: `follows`
+   * when it would follow along (`followAdded`), able to join with this
+   * computer's work; `joins` when Join by its address works here: as its
+   * own first mate, or beside a command its starter owns, never one started
+   * by hand (`joinable`); `pastes` when Paste its link works, which a
+   * window that starts the command also may while none runs; and `outside`
+   * only beside a command this window does not own, never while one it
+   * started is still starting. The window promises only these.
+   */
+  followsAdded(): { follows: boolean; joins: boolean; pastes: boolean; outside: boolean } {
+    // One reading for all four, so they never describe two different commands.
+    const state = this.joinState();
+    const target = typeof state === "object" ? state : null;
+    const joins = target !== null && target.owned !== null;
+    return {
+      follows: joins && Boolean(this.options.work),
+      joins,
+      pastes: target !== null,
+      outside: state === "outside",
+    };
   }
 
   /**
@@ -606,6 +710,8 @@ export class Shell {
 
   /** Stops whatever this app is running, for a quit. */
   async dispose(): Promise<void> {
+    // A start still going on finishes first, so its first mate is stopped too.
+    await this.homing;
     await this.switching;
     const mode = this.mode;
     this.mode = null;
@@ -614,10 +720,7 @@ export class Shell {
     if (mode?.kind === "home") {
       mode.detach();
       mode.window?.close();
-      // Devices hear the home quit through its SSH connections, which go after.
-      await mode.connection.close();
-      await mode.stopSsh();
-      await mode.core.dispose();
+      await closeHome(mode);
     }
   }
 
@@ -787,12 +890,23 @@ export class Shell {
    * device this app last left or was removed as.
    */
   private openFromWork(): Joined | null {
-    const work = this.options.work;
-    if (!work) return null;
-    const found = windowFromWork(work.dataDir, this.options.joined.leftDeviceId());
+    const found = this.waitingGrant();
     if (!found) return null;
     this.options.joined.join(found.grant, found.joinedAt, found.name);
     return this.options.joined.read();
+  }
+
+  /**
+   * The grant this computer's work keeps for its window (`windowFromWork`),
+   * unless this window kept its own first mate when that grant came: a
+   * profile with something done stays itself, a restart included.
+   */
+  private waitingGrant(): Joined | null {
+    const work = this.options.work;
+    if (!work) return null;
+    const found = windowFromWork(work.dataDir, this.options.joined.leftDeviceId());
+    if (!found || found.grant.deviceId === this.options.joined.keptOwnDeviceId()) return null;
+    return found;
   }
 
   /**
@@ -1032,20 +1146,35 @@ export class Shell {
     end("moved");
   }
 
-  private async stopHome(): Promise<void> {
+  private async stopHome(only?: OwnedRun | null): Promise<void> {
     const mode = this.mode;
     if (mode?.kind === "beside") {
       this.mode = null;
-      await mode.beside.leave();
+      await mode.beside.leave(only);
       return;
     }
     if (mode?.kind !== "home") return;
     this.mode = null;
     mode.detach();
     mode.window?.close();
-    await mode.connection.close();
-    await mode.stopSsh();
-    await mode.core.dispose();
+    await closeHome(mode);
+  }
+
+  /**
+   * Opens the home whose grant was just kept, stopping this computer's own
+   * first mate, or beside a command only the run `owned` (none for null). The grant is kept
+   * already, so a first mate that does not stop cleanly still leaves the
+   * window that home's view, the role a restart would give it.
+   */
+  private switchToView(owned?: OwnedRun | null): Promise<void> {
+    return this.switchTo(async () => {
+      // Answer the window first; the switch starts it over.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await this.stopHome(owned).catch((error: unknown) =>
+        console.warn(`[shell] the first mate here did not stop cleanly: ${String(error)}`),
+      );
+      this.becomeView();
+    });
   }
 
   /** One switch at a time; every window starts over once it is done. */
@@ -1078,4 +1207,29 @@ function joinRefusal(error: unknown): Exclude<JoinOutcome, { ok: true }>["refuse
     }
   }
   return "unreachable";
+}
+
+/**
+ * Closes a home in order - its connection, then its SSH connections, through
+ * which devices hear it quit, then its core - running every step even when an
+ * earlier one fails, and rejecting with the first failure once all have run.
+ */
+async function closeHome(mode: {
+  connection: { close: () => Promise<void> };
+  stopSsh: () => Promise<void>;
+  core: { dispose: () => Promise<void> };
+}): Promise<void> {
+  let failed: { error: unknown } | undefined;
+  for (const step of [
+    () => mode.connection.close(),
+    () => mode.stopSsh(),
+    () => mode.core.dispose(),
+  ]) {
+    try {
+      await step();
+    } catch (error) {
+      failed ??= { error };
+    }
+  }
+  if (failed) throw failed.error;
 }

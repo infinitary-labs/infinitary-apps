@@ -1,7 +1,7 @@
 import { formatDate, formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { workSetupWords } from "@shared/workSetupWords";
-import type { DeviceMake } from "../../../shared/cards";
+import type { DeviceMake } from "../../../shared/deviceArrival";
 import { aDevice, chipWords } from "../../../shared/deviceNames";
 import {
   automaticStartupOf,

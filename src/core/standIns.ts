@@ -52,6 +52,10 @@ export type StandIns = {
   joinsFromAnotherMac: boolean;
   /** This Mac's network name, instead of asking the network. */
   networkName?: string;
+  /** The account set up from your first mate's computer names here, instead of this run's own. */
+  user?: string;
+  /** The loopback port of the throwaway SSH server every one of this computer's addresses answers with. */
+  ownSshPort?: number;
   /** The tap a computer of another system gets its Infinitary from. */
   publishedTap?: string;
   /** The program that stands in for the captain's own SSH. */
@@ -98,6 +102,7 @@ export function readStandIns(
   const taskDeltaRows = count(env, "TASK_DELTA_ROWS");
   const homeMoveOfferMs = count(env, "HOME_MOVE_OFFER_MS");
   const loopbackPort = count(env, "CONNECTION_LOOPBACK_PORT");
+  const ownSshPort = count(env, "STAND_IN_OWN_SSH_PORT");
   const addresses = (settingFrom(env, "STAND_IN_ADDRESSES")?.trim() ?? "")
     .split(",")
     .map((entry) => entry.trim())
@@ -123,6 +128,8 @@ export function readStandIns(
     ...(addresses.length > 0 ? { addresses } : {}),
     joinsFromAnotherMac: settingFrom(env, "JOINS_FROM_ANOTHER_MAC") === "1",
     networkName: text(env, "STAND_IN_NETWORK_NAME"),
+    user: text(env, "STAND_IN_USER"),
+    ...(ownSshPort > 0 && ownSshPort < 65_536 ? { ownSshPort } : {}),
     publishedTap: text(env, "PUBLISHED_TAP"),
     ssh: text(env, "SSH"),
     dnsSd: text(env, "DNS_SD"),

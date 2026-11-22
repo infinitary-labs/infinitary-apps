@@ -22,6 +22,12 @@ export const AMBIENT_OWN_STYLES = contractChange("ambient-own-styles");
 export const SETTINGS_CURRENT = contractChange("settings-current");
 const SETTINGS_READ = "settings.current";
 
+/** Where devices find a home says when it cannot add a computer by its address (`device-adds-by-address.md`). */
+export const DEVICE_ADDS_BY_ADDRESS = contractChange("device-adds-by-address");
+
+/** The answers and push of where devices find a home, which an older desktop reads strictly. */
+const ADDRESS_CHANNELS = new Set(["inf:devices:addresses", "inf:devices:address:set"]);
+
 /** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
 export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
 
@@ -127,11 +133,14 @@ export function threadLinesFor(
  * language (`language-choice`) and the fonts (`font-choice`) when it is
  * older than major 16, and the ambient music (`ambient-music`) - is left out
  * of the look it is pushed or answered when its hello does not list that
- * name; a view keeps its own look and never needs the home's.
+ * name; a view keeps its own look and never needs the home's. Where
+ * devices find a home is read as strictly, so a Windows home's
+ * `addsByAddress` (`device-adds-by-address`) is left out the same way.
  */
 export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
   if (unread.length === 0 || !value || typeof value !== "object") return value;
-  if (channel === "inf:settings:appearance:get") return without(value, unread);
+  if (channel === "inf:settings:appearance:get" || ADDRESS_CHANNELS.has(channel))
+    return without(value, unread);
   if (channel === "inf:plugins:personal:list" || channel === "inf:plugins:personal") {
     return unread.includes(SETTINGS_READ) ? panelsWithoutSettingsRead(value) : value;
   }
@@ -248,7 +257,9 @@ export function cardPushFor(
 function lookPushFor(entry: JournalEntry, spelling: Spelling, unread: readonly string[]): string {
   const spelled = pushFrameIn(entry, spelling);
   const looks =
-    entry.channel === "inf:shell:preferences" || entry.channel === "inf:plugins:personal";
+    entry.channel === "inf:shell:preferences" ||
+    entry.channel === "inf:plugins:personal" ||
+    ADDRESS_CHANNELS.has(entry.channel);
   if (unread.length === 0 || !looks) return spelled;
   const frame = JSON.parse(spelled);
   return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, unread) });

@@ -59,6 +59,12 @@ export type CoreOptions = {
    * moment its settings open, before any boot work words a turn.
    */
   computerLanguage?: string;
+  /**
+   * Called once the saved data is accepted, before any service starts
+   * (`createServices`): a command reads the stops asked of it from here, and
+   * one already stopping throws, so the core starts nothing.
+   */
+  accepted?: () => void;
 };
 
 export async function startCore(given: HostCapabilities, options: CoreOptions = {}): Promise<Core> {
@@ -117,6 +123,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   const services = await createServices(host, events.emit, {
     ...(options.computerLanguage ? { computerLanguage: options.computerLanguage } : {}),
     ...(paused ? { paused } : {}),
+    ...(options.accepted ? { accepted: options.accepted } : {}),
   });
   let standbys: Standbys | undefined;
   const homeMove = options.onHomeMoved

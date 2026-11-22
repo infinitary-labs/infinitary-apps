@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { forgeSignInStateSchema } from "@shared/forges";
 import { z } from "zod";
@@ -53,6 +53,11 @@ export class GoogleSignInStore {
     }
   }
 
+  /** Whether a sign-in file is here, readable or not, without reading what it holds. */
+  present(): boolean {
+    return filePresent(join(this.root, GOOGLE_FILE));
+  }
+
   /** Write the one file whole, never readable by anyone else even mid-write. */
   write(record: GoogleSignInRecord): void {
     mkdirSync(this.root, { recursive: true, mode: 0o700 });
@@ -64,5 +69,14 @@ export class GoogleSignInStore {
 
   remove(): void {
     rmSync(join(this.root, GOOGLE_FILE), { force: true });
+  }
+}
+
+/** Whether a file is there: true where it cannot be told, so an unreadable record is never read as none. */
+function filePresent(path: string): boolean {
+  try {
+    return statSync(path, { throwIfNoEntry: false }) !== undefined;
+  } catch {
+    return true;
   }
 }

@@ -1,7 +1,8 @@
 import type { BrowserViewer } from "@core/browser/browserViews";
 import { contractChange, listsChange } from "@core/connection/contractChanges";
-import { HomeOutOfReachError } from "@core/devices/homeLink";
+import { type HomeLinkConnection, HomeOutOfReachError } from "@core/devices/homeLink";
 import type { JoinedHome } from "@core/devices/joinedHome";
+import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
 import type { HostNotifications, HostPresence } from "@core/host";
 import { AskedInstall } from "@core/update/homeUpdate";
 import type { UpdateChecker } from "@core/update/updateChecker";
@@ -28,6 +29,7 @@ import type { UpdateStatus } from "@shared/update";
 import type { WindowKeyReminders } from "@shared/windowAnswer";
 import { commandNotice, entryWaitMs, type JoinedRun, runEnd, type StartEntry } from "./besideRun";
 import type { CommandStarter } from "./commandStarter";
+import { type OwnedRun, sameRun } from "./runCommand";
 import type { RunStatus } from "./runStatus";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { answerOwnApp, OWN_APP } from "./view/viewBackend";
@@ -75,6 +77,14 @@ export type BesideOptions = {
   status: () => Pick<RunStatus, "running" | "run" | "lastStop">;
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
+  /**
+   * The command running now when it is the starter's own, read from the same
+   * reading of the records as whether one runs: one this app's own agent
+   * started, as the run's own note says (`ownedRunOf`, ./runCommand.ts);
+   * null for any other. Joining and following along stop only that run,
+   * never one the person started by hand.
+   */
+  ownedRun?: (status: Pick<RunStatus, "running" | "run" | "lastStop">) => OwnedRun | null;
   /** The entry's own wait before it starts the command again; a test stands in a shorter one. */
   restartWaitMs?: number;
   /** This program's own Dock icon and login item. */
@@ -97,10 +107,15 @@ export type BesideOptions = {
   starter?: CommandStarter;
   /** When this window started the command it opened beside, while that one has not welcomed it yet. */
   startedAt?: number;
-  /** Stops the command's first mate and its crew cleanly, as a signal does; false when none runs. */
-  stopCommand?: () => boolean;
+  /**
+   * Stops the command's first mate and its crew cleanly, as a signal does;
+   * with `only`, just that run. False when none runs, or another one does.
+   */
+  stopCommand?: (only?: OwnedRun) => boolean;
   /** How long a running command gets to answer before the window says it does not; a test stands in a shorter one. */
   answerWaitMs?: number;
+  /** How long Start it here waits for a run it asked to stop to let the folder go; a test stands in a shorter one. */
+  stopWaitMs?: number;
 };
 
 export type BesideWindowOptions = {
@@ -114,7 +129,7 @@ export type BesideWindowOptions = {
   keyReminders?: () => WindowKeyReminders | null;
   openPage?: (url: string) => Promise<void>;
   /** Starts the app again; `startHere` as this computer's own first mate, whatever start entry is in place. */
-  relaunch: (how?: { startHere?: boolean }) => void;
+  relaunch: (how?: { startHere?: boolean; letGoJob?: boolean }) => void;
   /** The window reads everything again, as a view does after a gap. */
   readAgain: () => void;
   /** The link came back after a drop, replayed or not: the window asks its one-time reads again. */
@@ -145,9 +160,15 @@ export class BesideWindow {
   private stoppedAt: number | null = null;
   /** Since when a command that runs has not answered this window; null once it answers or ends. */
   private unansweredSince: number | null = null;
-  /** The process of the command that count is for: a command started again is counted anew. */
-  private unansweredOf: number | null = null;
+  /**
+   * The run that count is for, by its process and start: a command started
+   * again is counted anew, and the notice that it does not answer, with
+   * Restart it and Start it here, acts on this run alone.
+   */
+  private unansweredRun: OwnedRun | null = null;
   private shown: CommandNotice | null = null;
+  /** The notice asked for last, which `shown` stands in for while Restart it's starter has not answered. */
+  private wanted: CommandNotice | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   /** What the window takes from its first mate on a welcome, while it is being read; true once answered. */
   private reading: Promise<boolean> | null = null;
@@ -162,8 +183,34 @@ export class BesideWindow {
   private answering: Promise<void> | null = null;
   private welcomed = false;
   private closed = false;
+  /** Start it here is stopping a command that does not answer: nothing else is sent until the app starts again. */
+  private recovering = false;
+  /** Whether the notice Start it here is stopping a run under was the window's own. */
+  private recoveringByWindow = false;
+  /** The app was to start again on its own while a recovery could still act: it does once that settled. */
+  private relaunchDeferred = false;
+  /** Reads the records again while they say nothing of whose run a silent one is (`notAnswering`). */
+  private ownerTimer: ReturnType<typeof setInterval> | null = null;
   /** When this window last started the command, until that one welcomes it. */
   private startedAt: number | null;
+  /**
+   * Restart it under way, until its own replacement is known or the run it
+   * replaces is known to survive (`settleRestart`): the run its notice
+   * names; the window's start time before the press; and whether its
+   * starter has answered, and refused.
+   */
+  private restart: {
+    from: OwnedRun | null;
+    startedBefore: number | null;
+    settled: boolean;
+    refused: boolean;
+  } | null = null;
+  /**
+   * The connection of the newest welcome, with the run its local door
+   * named: a start or Restart it ends only once the run it started welcomed
+   * the window on the connection open now (`welcomedBy`).
+   */
+  private welcomedOn: HomeLinkConnection | null = null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
   /** Restart it ended a command that did not answer: the window waits under its notice for the one started again. */
@@ -178,6 +225,32 @@ export class BesideWindow {
   /** Whether this window starts the command itself, so leaving it lets nothing start it again. */
   get startsCommand(): boolean {
     return this.options.beside.starter !== undefined;
+  }
+
+  /**
+   * What a join beside this command would stop, from one reading of the
+   * command's records (docs/view.md, "Following along"): `{ owned: null }`
+   * while this window starts the command and the records say none runs,
+   * which stops no run; `{ owned }` while the run its own agent started runs
+   * (`BesideOptions.ownedRun`); "starting" while a command this window
+   * started or restarted has not welcomed it yet, whose run may still open
+   * this computer's first mate, however long it takes; "outside" only while
+   * the records say a command runs that this window does not own or does not
+   * start; and "unknown" while they cannot be read.
+   */
+  joinState(): { owned: OwnedRun | null } | "starting" | "outside" | "unknown" {
+    const status = this.options.beside.status();
+    if (!this.startsCommand) return status.running === true ? "outside" : "unknown";
+    // Start it here is stopping a silent command: no join is offered until the app starts again.
+    if (this.recovering) return "starting";
+    // The same reading settles Restart it, or a start, and names what a join stops.
+    this.settleRestart(status);
+    this.settleStart(status);
+    if (this.startedAt !== null) return "starting";
+    if (status.running === false) return { owned: null };
+    if (status.running !== true) return "unknown";
+    const owned = this.options.beside.ownedRun?.(status) ?? null;
+    return owned ? { owned } : "outside";
   }
 
   constructor(private readonly options: BesideWindowOptions) {
@@ -213,7 +286,7 @@ export class BesideWindow {
       },
       // A door that no longer takes its key: starting again reads the door anew.
       onLost: () => {
-        if (!this.closed) options.relaunch();
+        this.relaunchOnItsOwn();
       },
       onWelcome: () => this.back(),
       onBack: () => options.linkBack(),
@@ -333,10 +406,16 @@ export class BesideWindow {
    * or its records cannot be read.
    */
   startHere(): boolean {
-    if (this.shown?.state !== "stopped") return false;
-    // A command that runs and does not answer is stopped first, never run beside.
+    if (this.shown?.state !== "stopped" || this.restart?.settled === false || this.recovering)
+      return false;
+    // A command that runs and does not answer is stopped first, never run beside, and nothing else
+    // - a second press, Restart it or a join - is sent while it is being stopped.
     if (this.shown.ending === "not-answering") {
-      void this.stopUnanswered();
+      const byWindow = this.shown.byWindow === true;
+      this.recovering = true;
+      this.recoveringByWindow = byWindow;
+      this.show(this.wanted);
+      void this.stopUnanswered(byWindow);
       return true;
     }
     if (this.options.beside.status().running !== false) return false;
@@ -361,27 +440,97 @@ export class BesideWindow {
    * starts it again, and the window waits under its notice for the new one
    * to welcome it. Should that one not answer either, the notice offers
    * Restart it again once its wait is over. False where nothing offers it:
-   * no notice that the command is not answering, or no starter to restart
-   * it with.
+   * no notice that the command is not answering, no starter to restart it
+   * with, or a silent run the starter's own agent did not start, which it
+   * cannot end (`notAnswering`).
    */
   restartCommand(): boolean {
     const { starter } = this.options.beside;
-    if (this.shown?.ending !== "not-answering" || !starter) return false;
+    // One restart at a time: the next waits until its starter answered.
+    if (
+      this.shown?.ending !== "not-answering" ||
+      this.shown.byWindow !== true ||
+      !starter ||
+      this.restart?.settled === false ||
+      this.recovering
+    )
+      return false;
     const since = this.unansweredSince;
+    // The run this restart replaces: the one its notice says does not answer, by its process and
+    // start. Its starter ends that one alone, and a welcome from it, reconnecting, is not the one
+    // started again.
+    const outgoing = this.unansweredRun;
+    const restart = {
+      from: outgoing,
+      startedBefore: this.startedAt,
+      settled: false,
+      refused: false,
+    };
+    this.restart = restart;
     this.restarting = true;
     this.startedAt = this.options.now();
-    // The wait counts from the press, even while the command ending still runs.
+    // The wait counts from the press, even while the command ending still runs. While a connection
+    // is still open, it counts for the run behind that connection, never for a folder holder
+    // nothing has contacted.
     this.unansweredSince = null;
-    this.countUnanswered();
+    const open = this.window.connection();
+    if (open) {
+      this.unansweredSince = this.options.now();
+      this.unansweredRun = open.run;
+    } else this.countUnanswered();
     this.show(this.restartingNotice());
     // The window hears the stopped command go, and dials the one started again.
     this.away();
-    void starter.restart(this.recordedRun()).then((restarted) => {
-      if (restarted || this.closed) return;
-      // The command was not restarted: it is still the one that has not answered since then.
-      this.restarting = false;
-      if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
-      this.show(this.notAnswering());
+    void starter.restart(outgoing ?? undefined).then((outcome) => {
+      // A force stop the run claimed is waited for until it ended or was declined, so the starter
+      // answers only once nothing it asked may still act: until then the window keeps waiting under
+      // its notice, its buttons away, through every reading of the records.
+      restart.settled = true;
+      restart.refused = outcome !== "restarted";
+      if (this.closed || this.restart !== restart) return;
+      if (this.relaunchAfterRecovery()) return;
+      const status = this.options.beside.status();
+      // Nothing was ended or started: the run named is not one its agent started that still runs,
+      // or its program could not be shown to be that run. The window stands as before the press.
+      if (outcome === "untouched") {
+        this.restart = null;
+        this.restarting = false;
+        this.startedAt = restart.startedBefore;
+        this.settleStart(status);
+        // While the window is still connected, only that connection's answers count: no reading of
+        // the records times a run there, which has not been asked anything.
+        if (this.window.inReach()) this.stopReading();
+        else this.away();
+        // A first mate that answered or welcomed meanwhile keeps its answer, or its own wait for one.
+        if (this.wanted?.ending !== "restart") {
+          this.show(this.wanted);
+          return;
+        }
+        // Still the one that has not answered: its notice again, naming that run while it holds the
+        // folder, or while records that cannot be read say nothing of who does; the notice offers
+        // Restart it again only once they read again and name that same run (`ownerLater`). A run
+        // there since is named by nobody's silence, so that notice ends nothing.
+        this.unansweredRun =
+          status.running === null || sameRun(outgoing, joinedRun(status)) ? outgoing : null;
+        this.unansweredSince = since;
+        this.show(this.notAnswering(status));
+        return;
+      }
+      if (outcome === "failed") {
+        this.restarting = false;
+        // The command was not restarted, and nothing welcomed or answered this window meanwhile:
+        // it is still the one that has not answered since then. One that answered meanwhile, on
+        // its first connection or a new one, keeps its own answer, or its wait for one.
+        if (this.wanted?.ending === "restart") {
+          this.unansweredRun = outgoing;
+          if (sameRun(outgoing, joinedRun(status))) this.unansweredSince = since;
+          this.wanted = this.notAnswering(status);
+        }
+      }
+      // The notice asked for while the starter had not answered shows now: none for a first mate
+      // that answered meanwhile, Restart it again for one that welcomed and has not.
+      this.settleRestart(status);
+      if (this.restart === restart) this.redraw(status);
     });
     return true;
   }
@@ -478,14 +627,25 @@ export class BesideWindow {
 
   /**
    * The window joins a first mate on another computer: it closes, and the
-   * command's first mate stops with nothing set to start it again.
+   * command's first mate stops with nothing set to start it again; with
+   * `only`, the window stops just that run, the one it joined or followed
+   * along from, by a stop asked through the folder that names its process
+   * and start, never a signal, so a run started by hand in its place keeps
+   * going. Separately, the agent is let go for good: on a Mac or Linux its
+   * launchd job or user service ends whichever run it holds, one it started
+   * again during the join included, since it only ever runs the agent's own
+   * runs. With `only` null, no run ran when the window joined: the agent is
+   * let go and no stop is asked, so a run started by hand meanwhile keeps
+   * going.
    */
-  async leave(): Promise<void> {
+  async leave(only?: OwnedRun | null): Promise<void> {
     this.close();
-    await this.options.beside.starter?.stop({ forget: true }).catch((error: unknown) => {
-      console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
-    });
-    this.options.beside.stopCommand?.();
+    await this.options.beside.starter
+      ?.stop({ forget: true, ...(only === undefined ? {} : { run: only }) })
+      .catch((error: unknown) => {
+        console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
+      });
+    if (only !== null) this.options.beside.stopCommand?.(only);
   }
 
   close(): void {
@@ -493,6 +653,7 @@ export class BesideWindow {
     // A window closed before its first welcome lets what waited go; its closed link refuses it.
     this.letHeldGo();
     this.stopReading();
+    this.stopOwnerLater();
     this.notices.stop();
     this.window.close();
   }
@@ -603,7 +764,9 @@ export class BesideWindow {
    */
   private async firstAnswers(reading: Promise<boolean>): Promise<void> {
     const since = this.options.now();
-    const of = this.options.beside.status().run?.pid;
+    // The wait is this connection's: whoever welcomed it is the one that has not answered, however
+    // its records read meanwhile.
+    const on = this.window.connection();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const answered = await Promise.race([
       // Asks refused as the link dropped were never answered: the wait runs on.
@@ -615,14 +778,32 @@ export class BesideWindow {
     clearTimeout(timer);
     // A later welcome waits for its own answers.
     if (answered || this.closed || this.reading !== reading) return;
-    // Out of reach, or with another command running since this welcome,
-    // read() counts for the command that runs now.
-    if (!this.window.inReach() || this.options.beside.status().run?.pid !== of) return;
+    // Out of reach, or on another connection since this welcome, read() or that connection's own
+    // welcome counts for the command that runs now.
+    if (!this.window.inReach() || !on || this.window.connection()?.welcome !== on.welcome) return;
+    // The silence is the run behind this connection's, as its door named it. A door that named
+    // none, as an earlier version's, says whose it is to nobody: no run is named silent from it,
+    // and whichever run holds the folder is read, and counted, on its own wait.
+    const status = this.options.beside.status();
+    if (!on.run) {
+      // Its notice names no run, so it offers no Restart it, and its Start it here ends nothing:
+      // the app starting again finds the folder held and joins whichever run holds it again.
+      console.warn(
+        "[shell] a first mate whose door named no run welcomed the window, and has not answered it",
+      );
+      this.unansweredSince = since;
+      this.unansweredRun = null;
+      this.show(this.notAnswering(status));
+      return;
+    }
+    // Where another run holds the folder now, this one is leaving, and the one there gets a wait
+    // of its own.
+    if (status.running === true && !sameRun(on.run, joinedRun(status))) return;
     console.warn("[shell] the command's first mate welcomed the window and has not answered it");
     // Counted from the welcome, so every later reading agrees it has not answered.
     this.unansweredSince = since;
-    this.unansweredOf = of ?? null;
-    this.show(this.notAnswering());
+    this.unansweredRun = on.run;
+    this.show(this.notAnswering(status));
   }
 
   /** The notice while Restart it waits for the command it started again. */
@@ -630,19 +811,75 @@ export class BesideWindow {
     return { state: "waiting", ending: "restart", byWindow: true };
   }
 
-  /** The notice for a command that runs and has not answered in time. */
-  private notAnswering(): CommandNotice {
+  /**
+   * The notice for a command that runs and has not answered in time. It is
+   * the window's own (`byWindow`), offering Restart it and a Start it here
+   * that ends the run by force, only where the silent run is the one the
+   * starter's own agent started, as the same reading of the records says,
+   * and that run's note says a force stop can end it (`recovers`): the
+   * starter's service manager can end and start again only that run, and
+   * a run frozen before its own reading of force stops ran could never act
+   * on one. Any other, started by hand or behind a door that named no run,
+   * is stopped as Stop stops one, or not at all.
+   */
+  private notAnswering(
+    status: Pick<RunStatus, "running" | "run" | "lastStop"> = this.options.beside.status(),
+  ): CommandNotice {
+    const { starter } = this.options.beside;
+    const own = starter !== undefined && this.recoverable(status, this.unansweredRun);
+    // Records that cannot be read say nothing of whose run it is, an owned run whose reading of
+    // force stops is not running yet cannot be ended so, and one whose reading or helper stopped
+    // since no longer can: they are read again while the notice stands.
+    if (starter && this.unansweredRun !== null) this.ownerLater();
     return {
       state: "stopped",
       ending: "not-answering",
-      ...(this.options.beside.starter ? { byWindow: true as const } : {}),
+      ...(own ? { byWindow: true as const } : {}),
+      // Naming no run, its Start it here stops nothing: the app starting again joins whichever does.
+      ...(this.unansweredRun === null ? { retries: true as const } : {}),
     };
   }
 
-  /** The running command by the process its own record names, for its starter to end by force. */
-  private recordedRun(): { pid?: number } {
-    const pid = this.options.beside.status().run?.pid;
-    return pid === undefined ? {} : { pid };
+  /** Whether `run` is the starter's own agent's, by this reading, and its note says a force stop can end it. */
+  private recoverable(
+    status: Pick<RunStatus, "running" | "run" | "lastStop">,
+    run: OwnedRun | null,
+  ): boolean {
+    return (
+      run !== null &&
+      sameRun(this.options.beside.ownedRun?.(status) ?? null, run) &&
+      status.run?.recovers === true
+    );
+  }
+
+  /**
+   * While the notice that a run does not answer stands, the records are
+   * read again once a second, so it says what they say of that same run:
+   * Restart it once they say the starter's own agent started it and a force
+   * stop can end it, and no longer once its reading or helper stopped, as
+   * after records that could not be read or a reading not yet running. Never
+   * for another run, which gets a wait of its own.
+   */
+  private ownerLater(): void {
+    if (this.ownerTimer || this.closed) return;
+    const target = this.unansweredRun;
+    this.ownerTimer = setInterval(() => {
+      const still =
+        !this.closed &&
+        this.wanted?.ending === "not-answering" &&
+        sameRun(this.unansweredRun, target);
+      if (!still) {
+        this.stopOwnerLater();
+        return;
+      }
+      this.show(this.notAnswering(this.options.beside.status()));
+    }, BESIDE_RUN_READ_MS);
+    this.ownerTimer.unref?.();
+  }
+
+  private stopOwnerLater(): void {
+    if (this.ownerTimer) clearInterval(this.ownerTimer);
+    this.ownerTimer = null;
   }
 
   private answerWaitMs(): number {
@@ -651,22 +888,96 @@ export class BesideWindow {
 
   /**
    * Start it here over a command that does not answer: the command is
-   * stopped first, ended by force through the starter this window started
-   * it with (it never acts on a polite stop), or as Stop stops one, and the
-   * app starts again as this computer's own first
-   * mate. The agent stays in place, so a later launch starts the command
-   * again as before; a command that cannot be stopped is joined again.
+   * stopped first, asked to end itself by force through the starter this
+   * window started it with where the notice is the window's own (it never
+   * acts on a polite stop), otherwise asked to stop as Stop asks one, and
+   * once it let the folder go the app starts again as this computer's own
+   * first mate. The agent stays in place, so a later launch starts the
+   * command again as before. A command that did not let the folder go in
+   * time is never joined in its own place: the notice offers Start it here
+   * again. Only the run its notice names is stopped, by its process and
+   * start: another that holds the folder since, started by hand or again,
+   * keeps going, and the app starting again joins it.
    */
-  private async stopUnanswered(): Promise<void> {
+  private async stopUnanswered(byWindow: boolean): Promise<void> {
     const { starter, stopCommand } = this.options.beside;
-    if (starter)
-      await starter.stop({ forget: false, force: this.recordedRun() }).catch((error: unknown) => {
+    const target = this.unansweredRun;
+    // Ended by force through its own agent's starter, whose job may start the run again: the window
+    // starting here lets that job go once it holds the folder, and only where that stop ended the
+    // run. One that was gone already, or a stop withdrawn, leaves the job as it is.
+    let forced = false;
+    if (target && starter && byWindow) {
+      const ended = await starter.stop({ forget: false, force: target }).catch((error: unknown) => {
         console.warn(
           `[shell] could not stop the command that does not answer: ${(error as Error).message}`,
         );
+        return undefined;
       });
-    else stopCommand?.();
-    if (!this.closed) this.options.relaunch({ startHere: true });
+      // A run gone on its own, with its stop never acted on, is not one this stop ended. A stop the
+      // run claimed is waited for until it ended or was declined, its buttons away meanwhile.
+      forced = ended === "ended";
+    }
+    // A stop asked through the folder is read by its run within a second: the app starts again
+    // only once that run let the folder go, so it is never joined again in its own place.
+    else if (target && stopCommand?.(target)) await this.released(target);
+    if (this.closed) return;
+    // The run named still holds the folder, or the records cannot say it let it go: the window
+    // never joins it again in place of starting here, and its notice offers Start it here again.
+    if (target && !this.letGo(this.options.beside.status(), target)) {
+      this.recovering = false;
+      if (this.relaunchAfterRecovery()) return;
+      this.show(this.wanted);
+      return;
+    }
+    this.options.relaunch({ startHere: true, ...(forced ? { letGoJob: true } : {}) });
+  }
+
+  /** Whether Restart it or Start it here sent a stop or start that can still act. */
+  private recoveryPending(): boolean {
+    return this.restart?.settled === false || this.recovering;
+  }
+
+  /**
+   * Starts the app again on its own - a door that no longer takes the key,
+   * the command back on a replaced program - but never while a recovery
+   * this window sent can still act: the stop would outlive the window that
+   * waits on it, and on Windows the start it defers to the run's end would
+   * be lost. It starts again once that recovery settled
+   * (`relaunchAfterRecovery`). True when it started again now.
+   */
+  private relaunchOnItsOwn(): boolean {
+    if (this.closed) return false;
+    if (this.recoveryPending()) {
+      this.relaunchDeferred = true;
+      return false;
+    }
+    this.options.relaunch();
+    return true;
+  }
+
+  /** The start again `relaunchOnItsOwn` put off, once no recovery can act any more. True when it started again. */
+  private relaunchAfterRecovery(): boolean {
+    if (!this.relaunchDeferred || this.closed || this.recoveryPending()) return false;
+    this.relaunchDeferred = false;
+    this.options.relaunch();
+    return true;
+  }
+
+  /** Whether `run` let the folder go, by a reading of the records that says so: another, or none, holds it. */
+  private letGo(status: Pick<RunStatus, "running" | "run">, run: OwnedRun): boolean {
+    return (
+      status.running === false || (status.running === true && !sameRun(joinedRun(status), run))
+    );
+  }
+
+  /** Waits, as long as a command waits for a stopped run, until `run` let the folder go. */
+  private async released(run: OwnedRun): Promise<void> {
+    const waitMs = this.options.beside.stopWaitMs ?? STOPPED_RUN_WAIT_MS;
+    const readings = Math.ceil(waitMs / BESIDE_RUN_READ_MS);
+    for (let read = 0; read < readings && !this.closed; read++) {
+      if (this.letGo(this.options.beside.status(), run)) return;
+      await new Promise((resolve) => setTimeout(resolve, BESIDE_RUN_READ_MS));
+    }
   }
 
   /** The first mate welcomes the window: the notice goes, and the window takes what is the first mate's. */
@@ -675,27 +986,34 @@ export class BesideWindow {
     this.stopReading();
     this.stoppedAt = null;
     this.unansweredSince = null;
-    this.startedAt = null;
+    // A start, or Restart it, ends only on a welcome from the run it started, through the door that
+    // run opened: never the run replaced, or one started by hand meanwhile.
+    this.welcomedOn = this.window.connection();
+    const status = this.options.beside.status();
+    this.settleRestart(status);
+    this.settleStart(status);
     this.restarting = false;
     const under = this.shown !== null || this.startsOver;
     this.startsOver = false;
     this.show(null);
-    // The command came back on a new copy of the program: this window follows it.
-    if (this.options.beside.programReplaced()) {
-      this.options.relaunch();
-      return;
-    }
+    // The command came back on a new copy of the program: this window follows it, once a recovery
+    // it sent can no longer act.
+    if (this.options.beside.programReplaced() && this.relaunchOnItsOwn()) return;
     // A window that stood under the notice starts over, on the command that came back.
     if (under) this.options.restartWindows();
     this.joined = joinedRun(this.options.beside.status()) ?? this.joined;
     const reading = this.readTheirs().then((answered) => {
       // Only a first mate that answered is back; asks refused as its link dropped say nothing.
       if (!answered || this.reading !== reading) return answered;
-      // A later drop of this same command is counted anew.
+      // A later drop of this same command is counted anew, and one that answered is read no more.
       this.reading = null;
       this.unansweredSince = null;
-      // A first mate that answered after its notice went up: the window starts over on it.
-      if (this.shown?.ending === "not-answering" && this.window.inReach()) {
+      if (this.window.inReach() && !this.moved) this.stopReading();
+      // A first mate that answered after its notice went up, or after Restart it was pressed over
+      // it, on this same connection: the window stops counting it and starts over on it.
+      const under = this.wanted?.ending === "not-answering" || this.wanted?.ending === "restart";
+      if (under && this.window.inReach()) {
+        this.stopReading();
         this.show(null);
         this.options.restartWindows();
       }
@@ -743,6 +1061,69 @@ export class BesideWindow {
     return true;
   }
 
+  /**
+   * Restart it's wait ends, from one reading of the records, once its
+   * starter answered and either the records name a run this app's own agent
+   * started that is not the one replaced, which welcomed this window on the
+   * connection open now, through the local door that named that same run,
+   * or the starter refused and the run replaced, by its process and start,
+   * still runs. A welcome from the replaced run, however late it is handled,
+   * came through that run's door, which named it. Read at each
+   * welcome, at the starter's answer and at each join reading, so records
+   * unreadable at any of them are read again once they recover, with no
+   * further welcome.
+   */
+  private settleRestart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
+    const restart = this.restart;
+    if (!restart?.settled || status.running !== true) return;
+    // Refused: the run replaced still runs, or none was named and none ended, and joins again as
+    // before the press: a start of it
+    // still waiting ends once that same run welcomed the window (`settleStart`).
+    if (restart.refused && (restart.from === null || sameRun(status.run, restart.from))) {
+      this.restart = null;
+      this.startedAt = restart.startedBefore;
+      this.settleStart(status);
+      this.redraw(status);
+      return;
+    }
+    const owned = this.options.beside.ownedRun?.(status) ?? null;
+    if (!owned || sameRun(owned, restart.from) || !this.welcomedBy(owned)) return;
+    this.restart = null;
+    this.startedAt = null;
+    this.redraw(status);
+  }
+
+  /**
+   * A start this window asked, Start it here or the window's own, ends once
+   * the run its own agent started welcomed the window on the connection open
+   * now, from one reading of the records: a run started by hand that
+   * welcomes and leaves meanwhile ends nothing. Read at each welcome and each
+   * join reading, so records unreadable at the welcome are read again once
+   * they recover.
+   */
+  private settleStart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
+    if (this.startedAt === null || this.restart) return;
+    const owned = this.options.beside.ownedRun?.(status) ?? null;
+    if (owned && this.welcomedBy(owned)) this.startedAt = null;
+  }
+
+  /**
+   * Whether `run` welcomed this window on the connection open now: the
+   * newest welcome came through the local door that run opened, which named
+   * it, and no other connection opened since. Only that run's door admits
+   * the key the window dialed with.
+   */
+  private welcomedBy(run: OwnedRun): boolean {
+    const on = this.window.connection();
+    const welcomed = this.welcomedOn;
+    return Boolean(
+      welcomed &&
+        on?.welcome === welcomed.welcome &&
+        sameRun(welcomed.run, run) &&
+        sameRun(on.run, run),
+    );
+  }
+
   /** The first mate is out of reach: read whether its command still runs, until it is back. */
   private away(): void {
     if (this.closed || this.timer) return;
@@ -757,10 +1138,31 @@ export class BesideWindow {
    * after an update, a crash or Restart it, gets a wait of its own.
    */
   private countUnanswered(status: Pick<RunStatus, "run"> = this.options.beside.status()): void {
-    const of = status.run?.pid ?? null;
-    if (this.unansweredSince !== null && this.unansweredOf === of) return;
+    const of = joinedRun(status);
+    const same = of === null ? this.unansweredRun === null : sameRun(of, this.unansweredRun);
+    if (this.unansweredSince !== null && same) return;
     this.unansweredSince = this.options.now();
-    this.unansweredOf = of;
+    this.unansweredRun = of;
+  }
+
+  /**
+   * Shows the notice asked for meanwhile, unless it says a run that no
+   * longer holds the folder does not answer: the run there now is read, and
+   * counted, on its own.
+   */
+  private redraw(status: Pick<RunStatus, "running" | "run">): void {
+    const wanted = this.wanted;
+    const left =
+      wanted?.ending === "not-answering" &&
+      status.running === true &&
+      !sameRun(this.unansweredRun, joinedRun(status));
+    if (!left) {
+      this.show(wanted);
+      return;
+    }
+    this.unansweredSince = null;
+    this.show(this.restart ? this.restartingNotice() : null);
+    if (!this.window.inReach()) this.away();
   }
 
   private stopReading(): void {
@@ -775,6 +1177,10 @@ export class BesideWindow {
     const status = beside.status();
     if (this.moved && status.running === false) {
       this.stopReading();
+      if (this.recoveryPending()) {
+        this.relaunchDeferred = true;
+        return;
+      }
       this.closed = true;
       this.options.relaunch();
       return;
@@ -792,14 +1198,24 @@ export class BesideWindow {
           : { ending: "crashed", exitCode: null, of: null, at: started };
     if (!end) {
       this.stoppedAt = null;
-      // A command that runs and has stayed out of reach past its wait is not answering.
-      if (status.running === true) this.countUnanswered(status);
-      else this.unansweredSince = null;
+      // A command that runs and has stayed out of reach past its wait is not answering. While a
+      // connection to a run is still open, a reading of the records times no other run there,
+      // which nothing has dialed: only the run behind that connection is counted, and only while
+      // it still holds the folder; a holder it has not contacted gets its own wait once it does.
+      const open = this.window.connection();
+      if (status.running === true) {
+        if (!open) this.countUnanswered(status);
+      } else this.unansweredSince = null;
       const since = this.unansweredSince;
       const silent =
-        status.running === true && since !== null && now() - since >= this.answerWaitMs();
+        status.running === true &&
+        since !== null &&
+        now() - since >= this.answerWaitMs() &&
+        (!open || (sameRun(this.unansweredRun, open.run) && sameRun(open.run, joinedRun(status))));
       if (silent) this.restarting = false;
-      this.show(silent ? this.notAnswering() : this.restarting ? this.restartingNotice() : null);
+      this.show(
+        silent ? this.notAnswering(status) : this.restarting ? this.restartingNotice() : null,
+      );
       return;
     }
     this.stoppedAt ??= now();
@@ -816,12 +1232,28 @@ export class BesideWindow {
     this.show(notice && beside.starter ? { ...notice, byWindow: true } : notice);
   }
 
-  private show(notice: CommandNotice | null): void {
+  private show(shown: CommandNotice | null): void {
+    // While Restart it's starter has not answered, or Start it here is stopping a silent run, the
+    // stop may still end the run it names: whatever is asked for meanwhile, a welcome's or a late
+    // answer's no notice included, is kept for when it settles, and the waiting notice stays, with
+    // nothing that offers what it would refuse.
+    const notice =
+      this.restart?.settled === false
+        ? this.restartingNotice()
+        : this.recovering
+          ? {
+              state: "waiting" as const,
+              ending: "not-answering" as const,
+              ...(this.recoveringByWindow ? { byWindow: true as const } : {}),
+            }
+          : shown;
+    this.wanted = shown;
     const was = this.shown;
     if (
       was?.state === notice?.state &&
       was?.ending === notice?.ending &&
-      was?.byWindow === notice?.byWindow
+      was?.byWindow === notice?.byWindow &&
+      was?.retries === notice?.retries
     )
       return;
     this.shown = notice;

@@ -50,6 +50,8 @@ export type GithubIntegrationOptions = {
     loginOf: (host: string) => string | null;
     checkNow: (host: string) => Promise<void>;
     signOut: (host: string) => void;
+    /** Whether the host's sign-in file is here, without reading its token. */
+    present?: (host: string) => boolean;
   };
   gateway: GithubIntegrationGateway;
   now?: () => number;
@@ -196,6 +198,7 @@ export function githubIntegration(
           ) => lookForRuns(readForLook, event, cursor, filter, (options.now ?? Date.now)()),
         }
       : {}),
+    ...(options.signIns.present ? { saved: () => options.signIns.present?.(host) ?? false } : {}),
     check: () => options.signIns.checkNow(host),
     remove: () => options.signIns.signOut(host),
     call: async (_id, action, input, caller) => {

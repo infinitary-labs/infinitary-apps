@@ -102,9 +102,8 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
     // The link went on the other Mac's input, never in its words.
     expect(readFileSync(record, "utf8")).toContain(STAND_IN_RECORD.link);
 
-    // + A Mac, by its address: an address nothing answers at says so, here and in the feed.
+    // + A computer’s address form: an address nothing answers at says so, here and in the feed.
     await page.locator('[data-device-add="mac"]').click();
-    await page.getByRole("button", { name: "By its address", exact: true }).click();
     await page.getByLabel(`The other ${COMPUTER.one}'s address`).fill("sam@no-such-mac.invalid");
     await page.getByRole("button", { name: "Add it", exact: true }).click();
     const refusedAddress = "sam@no-such-mac.invalid";
@@ -213,7 +212,6 @@ test("a Mac whose user runs another Firstmate's work: Add it asks once, Cancel c
     const [found] = remoteLoginWords.leaveQuestion({ address: sshd.address, name: "Mac mini" });
     const addByAddress = async () => {
       await page.locator('[data-device-add="mac"]').click();
-      await page.getByRole("button", { name: "By its address", exact: true }).click();
       await page.getByLabel(`The other ${COMPUTER.one}'s address`).fill(sshd.address);
       await page.keyboard.press("Enter");
     };
@@ -300,7 +298,6 @@ test("the first reach shows the check line and sends nothing until this is the M
     const { page } = app;
     await openDevices(page);
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-    await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     const question = page.locator("[data-device-address-question]");
     await typeInto(question.getByLabel(`The other ${COMPUTER.one}'s address`), sshd.address);
     await page.keyboard.press("Enter");
@@ -409,7 +406,7 @@ test("adding a Mac by its address says how far the copy has gone: preparing it, 
   }
 });
 
-test("By its address lists Macs nearby but this one, and adds one picked and edited by keys", async () => {
+test("+ A computer’s address form lists Macs nearby but this one, and adds one picked and edited by keys", async () => {
   test.skip(!SSH_SERVER_AVAILABLE, "needs the Mac's own SSH server and client");
   test.setTimeout(120_000);
   process.env.PI_OFFLINE = "1";
@@ -444,7 +441,6 @@ test("By its address lists Macs nearby but this one, and adds one picked and edi
     const user = userInfo().username;
     await openDevices(page);
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-    await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     const question = page.locator("[data-device-address-question]");
     const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     const nearby = question.locator("[data-device-nearby-mac]");
@@ -489,7 +485,6 @@ test("By its address lists Macs nearby but this one, and adds one picked and edi
 
     // Open again, the Mac just added is marked.
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-    await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     await expect(nearby.locator("[data-device-nearby-on-list]")).toHaveText(nearbyMacsWords.onList);
     // Closed, it stops looking: no run of dns-sd is left.
     await pressKey(question.getByRole("button", { name: "Cancel", exact: true }), "Enter");
@@ -504,7 +499,7 @@ test("By its address lists Macs nearby but this one, and adds one picked and edi
   }
 });
 
-test("By its address says when macOS has not allowed the local network, and still takes a typed address", async () => {
+test("+ A computer’s address form says when macOS has not allowed the local network, and still takes a typed address", async () => {
   const app = await launchApp({
     withMockProvider: true,
     env: { INFINITARY_DNS_SD: standInDnsSd([], { denied: true }) },
@@ -513,7 +508,6 @@ test("By its address says when macOS has not allowed the local network, and stil
     const { page } = app;
     await openDevices(page);
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-    await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     const question = page.locator("[data-device-address-question]");
     const [notAllowed, allowIt] = nearbyMacsWords.notAllowed;
     await expect(question.locator("[data-device-nearby-not-allowed]")).toContainText(notAllowed);
@@ -559,7 +553,6 @@ test("a Mac that did not let your SSH key in asks for that user's password once,
     const { page } = app;
     await openDevices(page);
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
-    await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
     await typeInto(
       page
         .locator("[data-device-address-question]")

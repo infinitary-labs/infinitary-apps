@@ -496,6 +496,8 @@
 "closedReleased" = "%1$@ veröffentlicht";
 "commandAllowanceRecheck" = "Kontingent erneut prüfen";
 "commandAllowanceRecheckWords" = "Kontingent, aktualisieren, Nutzung, Limit, Konto, wechseln";
+"commandAmbientStyle" = "Ambient-Musik auswählen";
+"commandAmbientStyleWords" = "Musik, Stil, Lofi, Klang, Ambiente, wählen, ändern";
 "commandAmbientToggle" = "Ambient-Musik abspielen oder pausieren";
 "commandAmbientToggleWords" = "Musik, Lofi, Ton, Klang, stoppen";
 "commandAutomationPauseAll" = "Alle Automatisierungen pausieren";
@@ -3529,6 +3531,7 @@
 "shellAmbientPause" = "Hintergrundmusik pausieren";
 "shellAmbientPlay" = "Hintergrundmusik abspielen";
 "shellAmbientQuiet" = "Leise, während du sprichst";
+"shellAmbientStyleNamed" = "Stil: %1$@";
 "shellCardFoldPanels" = "Panels einklappen";
 "shellCardMateAnswering" = "Dein erster Offizier antwortet auf dieser Karte";
 "shellCardNotesFirst" = "Sende die Notizen zuerst als Antwort";

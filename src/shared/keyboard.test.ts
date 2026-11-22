@@ -114,6 +114,7 @@ describe("the command catalog", () => {
       "settings.secrets",
       "secrets.move", // INF-4718 piece 2: starts the ask to move secrets in, chosen by name.
       "automation.pause-all",
+      "ambient.style", // INF-5610's plan: Choose ambient music is chosen by name.
       "usage.unit",
       "allowance.recheck",
       "devices.try-again",
@@ -218,6 +219,7 @@ describe("the command catalog", () => {
       "secrets.move",
       "automation.pause-all",
       "ambient.toggle",
+      "ambient.style",
       "usage.unit",
       "allowance.recheck",
       "devices.try-again",

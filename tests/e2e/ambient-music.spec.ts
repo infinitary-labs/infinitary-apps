@@ -39,7 +39,8 @@ function savedSound(userDataDir: string) {
 
 const settings = (page: Page) =>
   page.getByRole("button", { name: m.shellTopBarSettings(), exact: true });
-const sound = (page: Page) => page.locator("[data-ambient-control] button");
+// The sound button itself, never the style name in its rest pill.
+const sound = (page: Page) => page.locator("[data-ambient-control] > button");
 const appearance = (page: Page) =>
   page.getByRole("tab", { name: m.panelSettingsAppearance(), exact: true });
 
@@ -119,6 +120,8 @@ test("the toolbar volume track shares its value with Settings", async () => {
     await pressKey(sound(page), "ArrowRight");
     await expect(slider).toHaveValue(String(DEFAULT_AMBIENT_VOLUME + 5));
     await pressKey(sound(page), "Tab");
+    await expect(page.locator("[data-ambient-style-name]")).toBeFocused();
+    await pressKey(page.locator("[data-ambient-style-name]"), "Tab");
     await expect(slider).toBeFocused();
     await pressKey(slider, "Escape");
     await expect(sound(page)).toBeFocused();
@@ -281,6 +284,94 @@ test("the first mate writes the person's own style, and Settings lists and remov
     await pressKey(describe, "Enter");
     await expect(promptInput(page)).toBeFocused();
     await expect(promptInput(page)).toHaveValue(m.settingsSoundOwnDraft());
+  } finally {
+    await close();
+  }
+});
+
+// INF-5610's approved plan, the captain's "Name in the pill": the sound
+// button's rest pill names the playing style, and a rest on the name drops
+// the list Settings' picker shows, own styles under Yours. A pick plays at
+// once, resumes a pause and leaves the list open; the list is reached by
+// keys and by Choose ambient music, and the pointer's way into it never
+// crosses a drag point.
+// Data: a fresh profile and the plan's own lofi style, saved by the first
+// mate. Completion: the player's playing style and the saved style row.
+// Prerequisites: Electron and the built renderer; no network.
+test("the sound button's list picks the ambient music by pointer and keys", async () => {
+  const { app, page, close, userDataDir } = await launchApp({
+    withMockProvider: true,
+    scenarios: [ambientOwn],
+  });
+  const own = "own-late-shift";
+  const name = page.locator("[data-ambient-style-name]");
+  const list = page.getByRole("menu", { name: m.settingsSoundStyle() });
+  const option = (style: string) => page.locator(`[data-ambient-style-option="${style}"]`);
+  try {
+    await page.mouse.move(12, 100);
+    await askFirstmate(page, AMBIENT_OWN_PROMPT);
+    await expect.poll(() => playingStyle(page), { timeout: 60_000 }).toBe(own);
+
+    await sound(page).hover();
+    await expect(name).toHaveAccessibleName(m.shellAmbientStyleNamed({ name: LOFI_STYLE.name }));
+    await name.hover();
+    await expect(list).toBeVisible();
+    await expect(list.getByRole("group", { name: m.settingsSoundStyleGroupYours() })).toContainText(
+      LOFI_STYLE.name,
+    );
+    await atRest(list);
+    const from = await name.boundingBox();
+    const into = await option("star-cruise").boundingBox();
+    if (!from || !into) throw new Error("The style list is not drawn");
+    const way = pointsAlong(
+      { x: from.x + from.width / 2, y: from.y + from.height / 2 },
+      { x: from.x + from.width / 2, y: into.y + into.height / 2 },
+      9,
+    );
+    expect(await windowDragAt(page, way)).toEqual(way.map(() => false));
+    await option("harbor-dawn").click();
+    await expect.poll(() => playingStyle(page)).toBe("harbor-dawn");
+    await expect.poll(() => savedStyle(userDataDir)).toBe("harbor-dawn");
+    await expect(name).toHaveAccessibleName(
+      m.shellAmbientStyleNamed({ name: m.settingsSoundStyleHarborDawn() }),
+    );
+    await expect(option("harbor-dawn")).toHaveAttribute("aria-checked", "true");
+
+    await sound(page).click();
+    await expect.poll(() => player(page)).toBe("paused");
+    await name.hover();
+    await option(own).click();
+    await expect.poll(() => player(page)).toBe("playing");
+    await expect.poll(() => playingStyle(page)).toBe(own);
+    await page.mouse.move(12, 100);
+    await expect(list).toHaveCount(0);
+
+    await focusOn(sound(page), { focusVisible: true });
+    await pressKey(sound(page), "Tab");
+    await expect(name).toBeFocused();
+    await pressKey(name, "ArrowDown");
+    await expect(option(own)).toBeFocused();
+    await pressKey(option(own), "Home");
+    await expect(option("star-cruise")).toBeFocused();
+    await pressKey(option("star-cruise"), "ArrowDown");
+    await expect(option("deep-drift")).toBeFocused();
+    await pressKey(option("deep-drift"), "Enter");
+    await expect.poll(() => playingStyle(page)).toBe("deep-drift");
+    await expect(list).toBeVisible();
+    await pressKey(option("deep-drift"), "Escape");
+    await expect(list).toHaveCount(0);
+    await expect(name).toBeFocused();
+    await pressKey(name, "Escape");
+    await expect(sound(page)).toBeFocused();
+
+    await focusOn(settings(page), { focusVisible: true });
+    await runFromSearch(app, page, "ambient.style");
+    await expect(option("deep-drift")).toBeFocused();
+    await settings(page).click();
+    await appearance(page).click();
+    await expect(
+      settingRow(page, "ambient-style").getByRole("combobox", { name: m.settingsSoundStyle() }),
+    ).toHaveValue("deep-drift");
   } finally {
     await close();
   }

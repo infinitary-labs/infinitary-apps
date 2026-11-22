@@ -2,6 +2,7 @@
   "shellAmbientPause": "إيقاف الموسيقى المحيطية مؤقتًا",
   "shellAmbientPlay": "تشغيل الموسيقى المحيطية",
   "shellAmbientQuiet": "هدوء أثناء حديثك",
+  "shellAmbientStyleNamed": "النمط: {name}",
   "shellCardFoldPanels": "طي اللوحات",
   "shellCardMateAnswering": "نائب القبطان يجيب في هذه البطاقة",
   "shellCardNotesFirst": "أرسل الملاحظات كرد أولًا",

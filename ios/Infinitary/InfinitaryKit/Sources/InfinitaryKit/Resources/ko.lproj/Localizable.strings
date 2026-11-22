@@ -496,6 +496,8 @@
 "closedReleased" = "%1$@ 릴리스됨";
 "commandAllowanceRecheck" = "사용 한도 다시 확인";
 "commandAllowanceRecheckWords" = "한도, 새로 고침, 사용량, 제한, 계정, 전환";
+"commandAmbientStyle" = "앰비언트 음악 고르기";
+"commandAmbientStyleWords" = "음악, 스타일, 로파이, 소리, 분위기, 고르기, 바꾸기";
 "commandAmbientToggle" = "앰비언트 음악 재생 또는 일시 정지";
 "commandAmbientToggleWords" = "음악, lofi, 사운드, 배경음, 정지";
 "commandAutomationPauseAll" = "모든 자동화 일시 정지";
@@ -3531,6 +3533,7 @@
 "shellAmbientPause" = "배경 음악 일시 정지";
 "shellAmbientPlay" = "배경 음악 재생";
 "shellAmbientQuiet" = "말하는 동안 음소거";
+"shellAmbientStyleNamed" = "스타일: %1$@";
 "shellCardFoldPanels" = "패널 접기";
 "shellCardMateAnswering" = "일등항해사가 이 카드에서 답하는 중이에요";
 "shellCardNotesFirst" = "먼저 메모를 답장으로 보내세요";

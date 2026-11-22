@@ -1,5 +1,5 @@
 ---
-source: bf8e88fb9d4b4300
+source: ae7178f2ee99eec5
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -90,7 +90,8 @@ Está desactivada hasta que la activas, y **Volumen** define qué tan fuerte sue
 
 Mientras está activada, un botón de sonido aparece justo antes de **Configuración**, en la parte superior de la ventana.
 Presiónalo para pausar o reanudar.
-La búsqueda de comandos también tiene **Reproducir o pausar la música ambiental**.
+Deja el puntero sobre él y muestra el nombre de la música que suena; déjalo sobre el nombre, o presiónalo, para elegir otro estilo de la lista que aparece debajo.
+La búsqueda de comandos también tiene **Reproducir o pausar la música ambiental** y **Elegir la música ambiental**.
 
 ## Manuales {#runbooks}
 

@@ -1,6 +1,8 @@
 {
   "commandAllowanceRecheck": "Volver a consultar la asignación",
   "commandAllowanceRecheckWords": "asignación, actualizar, uso, límite, cuenta, cambiar",
+  "commandAmbientStyle": "Elegir la música ambiental",
+  "commandAmbientStyleWords": "música, estilo, lofi, sonido, ambiente, elegir, cambiar",
   "commandAmbientToggle": "Reproducir o pausar la música ambiental",
   "commandAmbientToggleWords": "música, lofi, sonido, ambiente, detener",
   "commandAutomationPauseAll": "Pausar todas las automatizaciones",

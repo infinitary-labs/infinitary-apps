@@ -13,8 +13,15 @@ The style is `ambientStyle`, kept in its own row, `ambient-style`, for the same 
 A Mac controlling another keeps its own, as it keeps the rest of its look (`docs/view.md`), and a view from before the change is never sent them (`src/shared/contract-changes/ambient-music.md`, `ambient-style.md`).
 While enabled, a 32 px sound button appears 6 px before Settings on the main screen.
 Press it to pause or resume; the pause survives a restart, and turning the switch off removes the button and clears the pause.
-Rest the pointer on it or Tab to it for the shared volume slider, and use the left and right arrows to change volume by 5 percentage points.
-The top bar drags the window, and on a Mac a pointer over a drag point leaves the page, so the open slider and the gap before it are marked `-webkit-app-region: no-drag` at the button's full height; once the slider closes, that strip drags the window again (`tests/e2e/dragRegions.ts` reads the regions by Electron's rule).
+Rest the pointer on it or Tab to it for its rest pill: the playing style's name, then the shared volume slider; the left and right arrows change the volume by 5 percentage points from the button and the slider.
+The name is the captain's choice for INF-5610 ("Name in the pill").
+Rest on it for half a second, press it, or press ↓ on it, and the style list drops under the pill: the same names and groups as Settings' Style picker, your own styles under Yours, both read from one list (`src/renderer/src/ambient/styleList.ts`).
+A pick plays at once, as a pick in Settings does, and a pick while paused also resumes; the list stays open, so another style is one more pick.
+The list's foot shows the line of the style under the pointer or focus, the chosen one's otherwise, and its last row is Describe your own, which starts the ask in the message box as Settings' button does; Remove stays in Settings, so no pick in the list deletes a style.
+By keys, Tab goes from the button to the name, the slider and Settings, and the open list is one Tab stop on the chosen style; ↑, ↓, Home and End move in it, Enter and Space play, and Esc closes the list, then the pill, giving focus back to where each opened.
+The list's height stops 8 px short of the window's foot and scrolls inside.
+The top bar drags the window, and on a Mac a pointer over a drag point leaves the page, so the open pill, the gap before it and the list are marked `-webkit-app-region: no-drag` at the button's full height; once the pill closes, that strip drags the window again (`tests/e2e/dragRegions.ts` reads the regions by Electron's rule).
+Choose ambient music (`ambient.style`), with no default key, opens the pill and the list on the chosen style from command search, turning the music on first if it was off.
 Play or pause ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, Ctrl+Alt+P on Linux and Windows, which the button's label shows; command search lists it too.
 It turns the switch on if it was off, and otherwise pauses or resumes without turning the switch off.
 The separate `ambient-paused` row leaves the enable and volume row readable by older builds.

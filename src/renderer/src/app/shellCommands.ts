@@ -5,6 +5,7 @@ import {
   type ShellCommandId,
   type WindowCommandId,
 } from "@shared/keyboard";
+import { openStyleList } from "../ambient/styleList";
 import { openCardFind, stepCardFind, useCardFind } from "../cards/cardFind";
 import { cardTaskOf } from "../cards/cardTask";
 import { askQuestionStep } from "../cards/questionEvent";
@@ -413,6 +414,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     void window.infinitary.devices.tryAgain().catch(() => {});
   },
   "ambient.toggle": () => useShellStore.getState().toggleAmbientPlayback(),
+  "ambient.style": () => openStyleList(),
   // The other unit, saved by the core, seen in Usage.
   "usage.unit": () => {
     const s = useShellStore.getState();

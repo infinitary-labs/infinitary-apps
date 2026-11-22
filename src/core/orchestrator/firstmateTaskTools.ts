@@ -38,7 +38,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
   const cardHold = (taskId: string) => ({
     open: supervisor.cards,
     tasks,
-    captainWords: host.turn.asked.length > 0,
+    captainWords: host.turn.typed,
     captainPressedStart: supervisor.hostOps.pendingStarts.has(taskId),
   });
   /**

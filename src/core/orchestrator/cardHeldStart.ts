@@ -41,15 +41,18 @@ export function openCardAskingAbout(
  * `start_policy` of when-ready, which would let the ready sweep start it.
  * Only a start not yet made - queued work, or started work in the backlog -
  * waits, and only while its own open decision asks about it and the turn
- * carries none of the captain's words. The captain's choice on that card,
- * their own words, their Start on the task, or the first mate's withdrawal
- * of the card each lift it; the first mate then starts it again.
+ * carries no words the captain typed: a click on another card is not their
+ * answer to this one (the captain's pick on INF-6121's review). The
+ * captain's choice on that card, which takes it off the stack, their typed
+ * words, their Start on the task, or the first mate's withdrawal of the card
+ * each lift it; the first mate then starts it again.
  */
 export function cardHeldStartRefusal(
   record: TaskRecord,
   facts: {
     open: OpenCards;
     tasks: Pick<TaskService, "get" | "graph">;
+    /** The turn carries words the captain typed (`FirstmateTurn.typed`). */
     captainWords: boolean;
     captainPressedStart: boolean;
     /** The edit held, when it is not start_now itself. */
@@ -64,7 +67,8 @@ export function cardHeldStartRefusal(
   const card = openCardAskingAbout(record.id, facts.open, facts.tasks);
   if (!card) return undefined;
   const handle = `${record.key || record.id} "${record.title}"`;
+  // i18n-exempt: the first mate's tool answer, served only to a model
   const what = facts.edit === "when-ready" ? "Not set to start when ready" : "Not started";
   // i18n-exempt: the first mate's tool answer, served only to a model
-  return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words of theirs arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${softHoldWords("card-question", "firstmate")}`;
+  return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${softHoldWords("card-question", "firstmate")}`;
 }

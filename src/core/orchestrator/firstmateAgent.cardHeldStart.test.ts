@@ -101,6 +101,29 @@ describe("FirstmateAgent start held by its own open card", () => {
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
   });
 
+  // The captain's pick on the review: "Only your typed words, or your answer on that card".
+  it("keeps the hold when the turn carries only a click on another card", async () => {
+    const f = await cardUp();
+    await f.agent.converse("anything else waiting on me?");
+    await f.tools.get("emit_card")?.execute("other", {
+      title: "Your panel layout has two options",
+      body: "<p>The panel can sit on the left or the right.</p>",
+      actions: [
+        { id: "left", label: "Keep it on the left", default: true },
+        { id: "right", label: "Move it to the right" },
+      ],
+    });
+    const other = f.supervisor.cards.snapshot().find((shown) => shown.id !== f.card.id);
+    if (!other) throw new Error("No second card.");
+    f.session.emitTurnEnd("Asked.");
+    f.session.resolveNextPrompt();
+    await tick();
+    f.supervisor.cardActions.act(other.id, "left");
+    await drained(f.session, 3);
+    expect(await startNow(f)).toContain(`Not started: your open card "${decision.title}"`);
+    expect(f.tasks.get(f.task.id)?.status).toBe("open");
+  });
+
   it("starts once the captain chooses on the card", async () => {
     const f = await cardUp();
     f.supervisor.cardActions.act(f.card.id, "start-fix");

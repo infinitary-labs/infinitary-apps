@@ -1133,6 +1133,24 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
       },
       [kept, forgotten],
     );
+    // Reproduce the batch failure order: deliver the controller's real change
+    // notification and allow its view read, but hold the initiating IPC reply.
+    await app.evaluate(() => {
+      const fixture = (globalThis as SecretsJourneyGlobal).secretsJourney;
+      const settings = fixture.core.services.secrets;
+      const action = settings.action.bind(settings);
+      const pending = new Promise<void>((resolve) => {
+        fixture.finishForgetReply = () => {
+          settings.action = action;
+          resolve();
+        };
+      });
+      settings.action = async (input) => {
+        const view = await action(input);
+        if (input.kind === "forget") await pending;
+        return view;
+      };
+    });
     await runFromSearch(app, page, "settings.secrets");
     const row = section.getByRole("listitem").filter({ hasText: forgotten.label });
     await pressKey(row.locator("summary"), "Enter");
@@ -1146,6 +1164,12 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     await pressKey(forget, "Enter");
     await expect(row).toContainText(title);
     for (const line of SECRET_QUESTION_WORDS.forgetLines) await expect(row).toContainText(line);
+    await expect(keep).toBeDisabled();
+    await expect(row.locator('button[aria-busy="true"]')).toBeDisabled();
+    await app.evaluate(() =>
+      (globalThis as SecretsJourneyGlobal).secretsJourney.finishForgetReply?.(),
+    );
+    await expect(keep).toBeEnabled();
     await expect(keep).toBeFocused();
     await expect(row.getByRole("button", { name: SECRETS_WORDS.replace, exact: true })).toHaveCount(
       0,
@@ -1156,7 +1180,7 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     await regionShot(row, test.info().outputPath("forget-question.png"));
 
     // Keep secret changes nothing and returns focus to Forget.
-    await pressKey(keep, "Enter");
+    await page.keyboard.press("Enter");
     await expect(forget).toBeFocused();
     await expect(row).not.toContainText(title);
     expect(await entries()).toEqual([kept.ref, forgotten.ref].sort());
@@ -1176,7 +1200,13 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     await expect(section).toBeVisible();
     expect(await secretCards()).toBe(0);
   } finally {
-    await launched.close();
+    try {
+      await app.evaluate(() =>
+        (globalThis as SecretsJourneyGlobal).secretsJourney.finishForgetReply?.(),
+      );
+    } finally {
+      await launched.close();
+    }
   }
 });
 

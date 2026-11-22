@@ -92,16 +92,7 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
-import {
-  askPersonWord,
-  OPEN_ONCE_CLOSED,
-  oneWordAtATime,
-  type PersonReply,
-  type PersonWord,
-  personWordBox,
-  wordLauncher,
-  wordProfilePrivate,
-} from "./personWord";
+import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
@@ -141,13 +132,7 @@ import {
   startedByAgent,
 } from "./runEnvironment";
 import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
-import {
-  bundleOf,
-  endRefusedLaunch,
-  openNewCopy,
-  openWindowOnReopen,
-  TOLD_THE_PERSON,
-} from "./runReopen";
+import { bundleOf, endRefusedLaunch, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
@@ -161,6 +146,7 @@ import {
 } from "./security/rendererSource";
 import { Shell } from "./shell";
 import { ownStartEntry } from "./startAtBootContext";
+import { personTeller } from "./tellPerson";
 import { showTrayIcon } from "./trayIcon";
 import {
   chooseUserDataDir,
@@ -813,54 +799,8 @@ export async function startApp(
       // and a word it shows comes from its copy, which shows no Dock icon either (`askPersonWord`).
       if (hostPlatform() === "darwin") app.setActivationPolicy("prohibited");
       const answer = join(dataDir, windowAnswerFile(answerAsk));
-      // A word to the person (`askPersonWord`): Electron never becomes ready in this launch, refused
-      // the lock before it was, so a copy of this program shows the word, and is ended when the word
-      // is taken away. A word taken away or no longer wanted (`wanted`) is never shown. A check's
-      // hidden launch shows none and says its words in its output instead, as a launch does whose
-      // copy could not show it or that made none, its profile having nowhere private to go, so a
-      // launch from a terminal still tells: null for the first.
-      const sayInOutput = (word: PersonWord) => {
-        const box = personWordBox(word, app.getPreferredSystemLanguages(), app.isPackaged);
-        console.warn(`${TOLD_THE_PERSON} ${box.message} ${box.detail ?? ""}`.trimEnd());
-      };
-      // One word at a time (`oneWordAtATime`): a word taken away answers only once its copy has
-      // ended and let the profile go (`askPersonWord`), so the next word waits for that, then asks
-      // again whether it is still wanted, and takes the profile itself rather than finding it held
-      // and showing nothing. Two launches refused at once each ask their own question, the second
-      // through the next recorded profile; a second Dock word is said in that launch's output.
-      const inTurn = oneWordAtATime();
-      const tellPerson = (
-        word: PersonWord,
-        signal?: AbortSignal,
-        wanted: () => boolean = () => true,
-      ): Promise<PersonReply | null> => inTurn(() => tellPersonNow(word, signal, wanted));
-      const tellPersonNow = async (
-        word: PersonWord,
-        signal: AbortSignal | undefined,
-        wanted: () => boolean,
-      ): Promise<PersonReply | null> => {
-        if (signal?.aborted || !wanted()) return null;
-        if (hideWindow) {
-          sayInOutput(word);
-          return null;
-        }
-        const reply = await askPersonWord(word, {
-          launcher: wordLauncher({
-            packaged: app.isPackaged,
-            platform: hostPlatform(),
-            execPath: process.execPath,
-            appPath: app.getAppPath(),
-            resourcesDir: process.resourcesPath,
-            env: process.env,
-          }),
-          // Kept in the data folder, away from the temporary folder its holder clears; on Windows
-          // only where the data folder was kept private.
-          dataDir: wordProfilePrivate(hostPlatform(), privacy) ? dataDir : null,
-          signal,
-        });
-        if (reply === "unshown" && !signal?.aborted) sayInOutput(word);
-        return reply;
-      };
+      // A word to the person, shown through a copy of this program (`personTeller`).
+      const tellPerson = personTeller({ hideWindow, dataDir, privacy });
       void (async () => {
         // A holder never shown to be a command that let the lock go, or one that still shows
         // nothing on a second read, as an older window on a Windows PC that answers nothing and

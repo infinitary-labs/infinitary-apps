@@ -159,7 +159,6 @@ describe("forming a batch", () => {
       PARSER.title,
       EXPORT.title,
     ]);
-    // The description lists the changes, then carries each one's story.
     expect(pull.body).toContain(`- ${PARSER.title}\n- ${EXPORT.title}`);
     expect(pull.body).toContain("<!-- story of t-parser -->");
     expect(pull.body).toContain("<!-- story of t-export -->");
@@ -181,7 +180,6 @@ describe("forming a batch", () => {
   // the captain's ruling that no naming form lives in the app: the active runbook gives it.
   it("titles a batch of several in the form the active naming runbook gives a name the app writes, and plainly with none on", async () => {
     const team = setup();
-    // A team that names work by its area in capitals and brackets.
     team.nameBy({
       pattern: "^\\[[A-Z][A-Z0-9-]*\\] \\S.+$",
       message: 'Start with the area in capitals and brackets, such as "[DOCS] Explain the export".',
@@ -230,7 +228,6 @@ describe("forming a batch", () => {
     expect(home.place(EXPORT)).toEqual({ state: "waiting", place: "line" });
     expect(home.place(LEGEND)).toEqual({ state: "waiting", place: "line" });
 
-    // The batch ahead merges, and the two that waited go up as one pull request.
     home.host.report([passed("build")]);
     home.host.ready("clean");
     await home.pass();
@@ -282,7 +279,6 @@ describe("forming a batch", () => {
     ]);
     expect(home.heard.settled).toEqual([["t-export"]]);
 
-    // Passes while the batch ahead is checked say nothing more.
     await home.pass();
     expect(home.heard.settled).toEqual([["t-export"]]);
 
@@ -309,7 +305,6 @@ describe("forming a batch", () => {
     await home.pass();
     expect(home.members()).toEqual(["t-parser", "t-legend"]);
 
-    // The parser change's approval ends, so it leaves the batch.
     home.approvals.delete("t-parser");
     await home.batches.withdraw(REPO, "t-parser");
     await home.pass();
@@ -357,13 +352,11 @@ describe("a story that could not be added", () => {
       BATCH_WORDS.noStory("meter", "#31", [EXPORT.title]),
     ]);
 
-    // Still missing on the passes after: nothing is rewritten, and it is not said again.
     await home.pass();
     await home.pass();
     expect(home.host.rewrites).toEqual([]);
     expect(home.heard.notes).toHaveLength(2);
 
-    // The story can be written: the next pass adds it, and the passes after write nothing.
     home.unwritable.clear();
     await home.pass();
     expect(pull.body).toContain("<!-- story of t-export -->");
@@ -493,7 +486,6 @@ describe("merging a batch of several", () => {
         body: `- ${PARSER.title}\n- ${EXPORT.title}`,
       },
     ]);
-    // Each change is its own commit on the default branch, and its receipt names that commit.
     expect(home.host.main.map((commit) => commit.title)).toEqual([PARSER.title, EXPORT.title]);
     expect(home.place(PARSER)).toMatchObject({
       state: "merged",
@@ -511,7 +503,6 @@ describe("merging a batch of several", () => {
     expect(home.heard.settled).toEqual([["t-parser", "t-export"]]);
     expect(home.heard.notes).toContainEqual(BATCH_WORDS.merged("meter", "#31", 2));
 
-    // The change approved meanwhile is the next batch, on a branch of its own.
     expect(home.open()).toMatchObject({ number: 32, branch: "infinitary-batch/8be04a67" });
     expect(home.members()).toEqual(["t-legend"]);
     expect(home.open().base).toBe(home.host.branches.get("main"));
@@ -693,7 +684,6 @@ describe("merging a batch of several", () => {
       BATCH_WORDS.refused("meter", "#31", "Commits must have verified signatures."),
     );
 
-    // The host reading it as blocked and then as mergeable again leaves the refusal standing.
     home.host.ready("blocked");
     await home.pass();
     home.host.ready("clean");
@@ -802,7 +792,6 @@ describe("a batch on a branch with GitHub's merge queue", () => {
     expect(home.place(PARSER)).not.toMatchObject({ state: "merged" });
     expect(home.heard.settled).toEqual([]);
 
-    // Later passes, and the app starting again, read the queue and send nothing.
     const reads = home.host.queueReads;
     await home.pass();
     await home.restart();
@@ -846,7 +835,6 @@ describe("a batch on a branch with GitHub's merge queue", () => {
     expect(home.host.merges).toHaveLength(1);
     expect(home.heard.notes).toHaveLength(told);
 
-    // Try again makes a new version, which goes to the queue once its checks pass.
     expect(await home.batches.answer(REPO, { action: "try-again", head })).toBeUndefined();
     home.host.report([passed("build")]);
     await home.pass();
@@ -1022,7 +1010,6 @@ describe("a held batch", () => {
     expect(home.heard.notes).toContainEqual(
       BATCH_WORDS.sentBack("meter", PARSER.title, "its date test fails on the batch's version"),
     );
-    // The rest of the batch and the change that waited go on as one batch, on the same pull request.
     expect(home.members()).toEqual(["t-legend", "t-axis"]);
     expect(home.record().line).toEqual([]);
     expect(home.open().hold).toBeUndefined();
@@ -1088,7 +1075,6 @@ describe("a held batch", () => {
     expect(home.host.rewrites).toEqual([]);
     expect(pull.title).toBe("chore: merge 3 approved changes");
 
-    // The next pass reads the pull request again and rewrites it once.
     await home.pass();
     expect(home.host.rewrites).toEqual([{ number: 31, title: "chore: merge 2 approved changes" }]);
     expect(pull.body).toContain(`- ${PARSER.title}\n- ${EXPORT.title}`);
@@ -1334,7 +1320,6 @@ describe("a held batch", () => {
     expect(home.place(FIX)).toEqual({ state: "waiting", place: "line" });
     expect(home.record().line).toMatchObject([{ taskId: FIX.taskId, fix: true }]);
 
-    // The app closes and opens again: the declaration and the mark are on the saved record.
     await home.restart();
     expect(home.record().fixes).toEqual([FIX.taskId]);
     expect(home.record().line).toMatchObject([{ taskId: FIX.taskId, fix: true }]);
@@ -1385,7 +1370,6 @@ describe("a held batch", () => {
     expect(home.open().members[0]).toMatchObject({ head: replaced.head, fix: true });
     expect(home.heard.combinedOn.at(-1)).toEqual([held.head]);
 
-    // The batch merges with the fix: the declaration and the versions that held are forgotten.
     home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
     home.host.ready("clean");
     await home.pass();
@@ -1879,7 +1863,6 @@ describe("after a restart", () => {
     });
     expect(home.host.branches.has("infinitary-batch/3fa9c1d2")).toBe(false);
     expect(home.heard.settled).toEqual([["t-parser", "t-export"]]);
-    // The app sent no merge of its own.
     expect(home.host.merges).toEqual([]);
   });
 

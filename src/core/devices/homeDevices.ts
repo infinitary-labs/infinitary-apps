@@ -605,8 +605,12 @@ export async function startHomeDevices(options: {
         resumeTasks: (deviceId) => supervisor.updates.resumeAfterUpdate(deviceId),
         removeThere: (device) => remoteLogin.removeThere(device),
         // Update: a computer's version against this Mac's, over Remote Login or
-        // the connection (docs/devices.md, "Updating").
-        home: { app: host.app.version, contract: PROTOCOL_VERSION },
+        // the connection (docs/devices.md, "Updating"). A run from source on
+        // the person's own data names no release, so only contracts compare.
+        home: {
+          ...(host.app.sourceOnOwnData ? {} : { app: host.app.version }),
+          contract: PROTOCOL_VERSION,
+        },
         updateOverRemoteLogin: (deviceId, update) => remoteLogin.update(deviceId, update),
         // Whether this computer has a Firstmate for that computer's system, and
         // that one got and checked before it is asked to update.
@@ -707,7 +711,7 @@ export async function startHomeDevices(options: {
       // (docs/devices.md, "Updating by itself").
       const nudge = new DeviceUpdateNudge({
         devices: () => list.list(),
-        homeApp: () => host.app.version,
+        homeApp: () => (host.app.sourceOnOwnData ? undefined : host.app.version),
         failedHere: (deviceId) => list.failedHere(deviceId),
         update: (deviceId) => list.update(deviceId),
         cards: {

@@ -165,6 +165,7 @@ A saved-data refusal still happens before any of this writes, and a profile open
 The captain's FI3-608 choices, as revised on FI3-706 and FI3-1164: the **Briefing** design; an existing profile that came from a version with no recorded history gets every change the catalog records for people, once; a first installation gets no note, so its welcome is its only card.
 `ReleaseNotesService` (`src/core/releaseNotes/startup.ts`) runs where `recordLaunch` used to, before the window's first card snapshot, with no network, sign-in or model.
 A packaged build reads its own `release-notes.json`; a dev or end-to-end run reads one only from `INFINITARY_RELEASE_NOTES_DIR` (a folder holding `release-notes.json`, ignored by a packaged build) and otherwise just records its version.
+A run from source on the person's own data records nothing, since its package.json version names no release (`HostAppInfo.sourceOnOwnData`, `docs/saved-data-compatibility.md`, "A run from source").
 
 - **What it lists** (`select.ts`).
   For a forward upgrade, `entries(current) - entries(previous)` from the releases' exact membership, once per id: skipped releases are in, an unrelated branch's entries are not, and a promoted stable repeats nothing its alpha had.

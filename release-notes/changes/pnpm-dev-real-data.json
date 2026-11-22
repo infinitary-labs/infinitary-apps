@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pnpm-dev-real-data",
+      "reason": "How the project itself is developed: pnpm dev draws its panels again and opens the person's own saved data, keeping a copy of the record first. An installed app behaves as before."
+    }
+  ]
+}

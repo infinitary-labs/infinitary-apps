@@ -21,7 +21,7 @@ import { readSavedData } from "./savedData";
  * built app as `<app> run` finds Firstmate 3000's folder held by an older
  * copy's run, asks it to save and stop, brings the saved work over, and
  * starts fully from its own folder with no window and no question. Data: a
- * hermetic HOME (`runEnv`) whose Firstmate 3000 development folder holds a
+ * hermetic HOME (`runEnv`) whose Firstmate 3000 folder holds a
  * freshly made record with one task, and a stand-in older run - Node,
  * started under the older Linux program's name - that holds the folder by
  * Chromium's lock and saves and exits on the ordinary stop. The run has no
@@ -87,8 +87,9 @@ test("a run takes over from an older copy's run, brings the saved work over, and
   // Electron's app data on Linux follows XDG_CONFIG_HOME, which runEnv points into its throwaway HOME.
   const appData = env.XDG_CONFIG_HOME;
   if (!appData) throw new Error("runEnv should name XDG_CONFIG_HOME inside its HOME.");
-  const from = join(appData, userDataFolderOf("fm", "dev"));
-  const to = join(appData, userDataFolderOf("inf", "dev"));
+  // A run from source with nothing isolating it opens the person's own folders, the release's.
+  const from = join(appData, userDataFolderOf("fm", "release"));
+  const to = join(appData, userDataFolderOf("inf", "release"));
   const db = openDatabase(from);
   seedTask(new TaskService({ db, strict: true }), {
     id: "older-task",

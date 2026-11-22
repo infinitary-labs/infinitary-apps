@@ -27,8 +27,9 @@ export type HostSecrets = NonNullable<HostCapabilities["secrets"]>;
 /**
  * The name each flavor's custody items carry: the Keychain service on macOS,
  * the Secret Service item's store attribute on Linux, the start of each
- * Credential Manager item's name on Windows. One per flavor, so a
- * development run never reads the release's root. Renaming one loses every
+ * Credential Manager item's name on Windows. One per flavor, so the local
+ * dev bundle never reads the release's root; `pnpm dev` on the person's own
+ * data is the release flavor and reads it, as the installed app does. Renaming one loses every
  * secret that flavor kept: its sealed files then sit beside no root.
  */
 export const SECRETS_CUSTODY_NAMES: Readonly<Record<BuildFlavor, string>> = {

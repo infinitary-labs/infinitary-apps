@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { chooseUserDataDir, folderSpellingFor, type UserDataInput } from "./userDataDir";
+import {
+  chooseUserDataDir,
+  folderSpellingFor,
+  runFlavor,
+  sourceRunIsolated,
+  type UserDataInput,
+} from "./userDataDir";
 
 const appData = "/Users/someone/Library/Application Support";
 
@@ -21,11 +27,12 @@ const devBundlePackageJson = () =>
   JSON.stringify({ name: "infinitary", version: "0.1.1", infinitaryBuildFlavor: "dev" });
 
 describe("chooseUserDataDir", () => {
-  it("opens the dev folder on an unpackaged run", () => {
+  // The captain's ask on INF-5635's plan: pnpm dev opens the person's own saved data.
+  it("opens the person's own folder, the release's, on an unpackaged run", () => {
     expect(chooseUserDataDir(input())).toEqual({
       kind: "flavor",
-      flavor: "dev",
-      dir: `${appData}/infinitary-dev`,
+      flavor: "release",
+      dir: `${appData}/infinitary`,
     });
   });
 
@@ -94,12 +101,12 @@ describe("chooseUserDataDir", () => {
     ).toEqual({ kind: "switch" });
   });
 
-  it("opens Firstmate 3000's dev folder when a development run stands in its spelling", () => {
+  it("opens Firstmate 3000's own folder when a run from source stands in its spelling", () => {
     const spelling = folderSpellingFor({ packaged: false, env: { FM3000_FOLDER_SPELLING: "fm" } });
     expect(chooseUserDataDir(input({ spelling }))).toEqual({
       kind: "flavor",
-      flavor: "dev",
-      dir: `${appData}/firstmate-3000-dev`,
+      flavor: "release",
+      dir: `${appData}/firstmate-3000`,
     });
   });
 
@@ -110,5 +117,62 @@ describe("chooseUserDataDir", () => {
     expect(folderSpellingFor({ packaged: false, env: { FM3000_FOLDER_SPELLING: "x" } })).toBe(
       "inf",
     );
+  });
+});
+
+describe("runFlavor", () => {
+  const unreadable = () => {
+    throw new Error("an unpackaged run never reads the app's package.json");
+  };
+
+  // The work folder and the background's label follow the same flavor as the
+  // window's folder, so pnpm dev's work is the installed app's, and a test's
+  // isolated run never takes the installed app's background label.
+  it("gives a run from source the release's folders unless something isolates it", () => {
+    expect(runFlavor({ packaged: false, readAppPackageJson: unreadable, isolated: false })).toBe(
+      "release",
+    );
+    expect(runFlavor({ packaged: false, readAppPackageJson: unreadable, isolated: true })).toBe(
+      "dev",
+    );
+  });
+
+  it("keeps a packaged build's own flavor, isolated or not", () => {
+    for (const isolated of [false, true]) {
+      expect(
+        runFlavor({ packaged: true, readAppPackageJson: devBundlePackageJson, isolated }),
+      ).toBe("dev");
+      expect(runFlavor({ packaged: true, readAppPackageJson: releasePackageJson, isolated })).toBe(
+        "release",
+      );
+    }
+  });
+});
+
+// The review of piece 1 (F3): every name a run derives from its flavor - its
+// run label, its standby lock, the folder it looks for on another computer -
+// reads one isolation rule, so pnpm dev on the person's data never names the
+// development folders while a test's isolated run never names the installed app's.
+describe("sourceRunIsolated", () => {
+  it("reads a plain pnpm dev as not isolated", () => {
+    expect(sourceRunIsolated({ env: {}, hasUserDataDirSwitch: false })).toBe(false);
+  });
+
+  it("reads a named data folder, work folder, switch or test folder as isolated", () => {
+    for (const env of [
+      { INFINITARY_USER_DATA_DIR: "/tmp/scratch" },
+      { INFINITARY_HELPER_DATA_DIR: "/tmp/work" },
+    ])
+      expect(sourceRunIsolated({ env, hasUserDataDirSwitch: false })).toBe(true);
+    expect(sourceRunIsolated({ env: {}, hasUserDataDirSwitch: true })).toBe(true);
+    expect(
+      sourceRunIsolated({ env: {}, hasUserDataDirSwitch: false, isolatedUserData: "/tmp/scratch" }),
+    ).toBe(true);
+  });
+
+  it("reads a blank setting as not set", () => {
+    expect(
+      sourceRunIsolated({ env: { INFINITARY_USER_DATA_DIR: "  " }, hasUserDataDirSwitch: false }),
+    ).toBe(false);
   });
 });

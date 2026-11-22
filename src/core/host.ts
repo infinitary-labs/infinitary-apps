@@ -44,11 +44,21 @@ export type HostAppInfo = {
   /** The packaged resources root the self-source bundle sits under. */
   readonly resourcesDir: string;
   /**
-   * The build's flavor (src/shared/userDataFolders.ts), which names the data
-   * folder its copy keeps on a Mac it adds; absent, a packaged build is the
-   * release and every other run the development flavor.
+   * The flavor of this run's folders (src/shared/userDataFolders.ts), which
+   * names the data folder its copy keeps on a computer it adds: a packaged
+   * build's own, and a run from source on the person's own data the
+   * release's; absent, a packaged build is the release and every other run
+   * the development flavor.
    */
   readonly flavor?: BuildFlavor;
+  /**
+   * A run from source on the person's own data folder, as `pnpm dev` opens
+   * it (src/main/userDataDir.ts `runFlavor`): its `version` is the source's
+   * package.json version, which names no published release, so nothing
+   * compares it with another computer's version or records it as the
+   * version that last opened the record.
+   */
+  readonly sourceOnOwnData?: boolean;
 };
 
 /** Native notification display. The core decides WHEN; the host decides HOW. */

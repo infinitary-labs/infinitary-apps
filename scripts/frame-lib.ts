@@ -66,6 +66,11 @@ export async function buildFrameLib(root: string, outDir: string): Promise<Recor
     logLevel: "warn",
     publicDir: false,
     plugins: [react()],
+    // electron-vite dev sets NODE_ENV=development before this build, and
+    // Vite then compiles JSX to React's development-only `jsxDEV`, which the
+    // production React below leaves undefined: every panel threw. The lib's
+    // JSX is production JSX whatever started the build.
+    esbuild: { jsxDev: false },
     resolve: {
       alias: {
         "@shared": resolve(root, "src/shared"),

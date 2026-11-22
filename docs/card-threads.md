@@ -215,7 +215,7 @@ The app reads only that typed state, never the words of the answer.
 A crewmate gains one output for that answer: `reply(card_id, text)` (`crewmateTaskTools.ts`, Claude twin in `claudeTaskTools.ts`), beside `report` / `emit_card` / `note_progress` / `file_followup`.
 Its description carries call mechanics only.
 The first mate's tool count is unchanged at 24
-- there is no first mate `reply` tool; it answers through an `emit_card` reply naming the message, and its closing words are a line that answers nothing.
+- there is no first mate `reply` tool; it answers through an `emit_card` reply naming the message, with its `body` left out when the card stays as it is, and its closing words are a line that answers nothing.
 
 ## First mate card threads (phase 2)
 
@@ -226,6 +226,9 @@ The about line replaces the maybe-hint:
 `about: card <id> (<presentation>) "<title>" - the captain replied in its thread as message <n>; answer it with an emit_card reply on this id naming answers_message <n>, since your closing words alone leave it open`
 
 The first mate answers through the same `CARD_REPLY` shape: `emit_card` under the same id with `reply` and `answers_message` (on a revision the host writes "revised:", then the answer).
+Its `body` is optional: left out, the call writes `reply` alone through `CardService.replyAs` and the card stays as it is (`onReplyAlone`, `firstmateTools.ts`).
+A required body made the first mate resend a card only to answer under it, and a placeholder body sent beside the answer replaced the card's own (INF-6128).
+A call with no body and no `reply` or no `id` is refused naming the fix, and nothing is shown.
 Its closing words land as prose (`recordFirstmateThreadAnswer`) only while the reply still waits and it wrote no line there since the captain's, and they leave the question open.
 A parked idle turn keeps the card on its inbox ref (`captain-turn:card:<id>`); a mid-turn reply rides the existing steer with the about line in context, and since v4.14 the turn's closing words land under it too, because the card now waits for an answer across restarts.
 Closing words written into a card's replies count as the action the answer-delivery check looks for (`docs/task-capture.md`); a reply the turn answered with nothing is retried once, under the same card.
@@ -421,7 +424,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   Only a card's own author withdraws it, so `closeCard` refuses a first mate withdrawal of someone else's card; the captain puts cards away through minus and ends work through explicit controls.
   The shell is one CONTAINER for the pair (one surface, border, radius, shadow; a single hairline between columns; thread `clamp(0.4*stage,288,360)`, card `min(560, stage-32-thread)`), the card's one field sits above its buttons until the first message (INF-924), and below a 400px card the docked rails FOLD - `html[data-rails-folded]` zeroes their width while they keep their panels, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular.
   `threadGeometry.test.ts` reproduces the captain's R3.1 table at 960/1200/1440/1728; `tests/e2e/card-threads.spec.ts` is the binding flow.
-  Phase 2 (`PROTOCOL_VERSION` 1.19.0; contract stays 4.2): a captain reply on the first mate's own card is a captain TURN with the card as its about line (`converseAboutCard`, `TurnPayload.aboutCardId`) - the first mate answers through the same `CARD_REPLY` shape (revise same id, or resend it unchanged, with a `reply` naming the captain's message; its closing words via `recordFirstmateThreadAnswer` are a line that leaves the question open; no first mate `reply` tool, count stays 24); images ride `inf:cards:reply` / `steer(text, images)` where the transport can carry them (Pi native, Claude Agent SDK user-message image blocks) and degrade with `ATTACHMENTS_DROPPED_NOTE` where they cannot (the durable inbox); Observe's session detail lists open threads (`CardService.observeThreads`, `[data-observe-threads]`).
+  Phase 2 (`PROTOCOL_VERSION` 1.19.0; contract stays 4.2): a captain reply on the first mate's own card is a captain TURN with the card as its about line (`converseAboutCard`, `TurnPayload.aboutCardId`) - the first mate answers through the same `CARD_REPLY` shape (revise same id, or leave its body out, with a `reply` naming the captain's message; its closing words via `recordFirstmateThreadAnswer` are a line that leaves the question open; no first mate `reply` tool, count stays 24); images ride `inf:cards:reply` / `steer(text, images)` where the transport can carry them (Pi native, Claude Agent SDK user-message image blocks) and degrade with `ATTACHMENTS_DROPPED_NOTE` where they cannot (the durable inbox); Observe's session detail lists open threads (`CardService.observeThreads`, `[data-observe-threads]`).
 
 ## Current settings on replies
 

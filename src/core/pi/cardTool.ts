@@ -312,6 +312,26 @@ type CardWriteResult = string | CardMutation | ShownWithLine | undefined;
 
 export type OnCardEmitted = (card: EmittedCard) => CardWriteResult | Promise<CardWriteResult>;
 
+/**
+ * The first mate's emit_card with its body left out (INF-6128): one line
+ * on the thread of the card its id names, which stays as it is. Nothing
+ * else the call passed is written.
+ */
+export type ReplyAlone = {
+  /** The id as the call passed it; the host resolves it as a revision's id. */
+  cardId: string;
+  text: string;
+  answersMessage?: number;
+  operationId?: string;
+};
+
+export type OnReplyAlone = (reply: ReplyAlone) => CardMutation | Promise<CardMutation>;
+
+/** The refusal of a first mate emit_card that gives no body and is no reply alone. */
+// i18n-exempt: a refusal served only to the first mate's model
+export const REPLY_ALONE_REFUSAL =
+  "Card refused: give body. Leave it out only to write reply alone, with id naming the card whose thread it writes on. Nothing was shown.";
+
 /** A card as the tool reads it from the call, before any action is checked for words. */
 type DeclaredCard = Omit<EmittedCard, "actions"> & { actions: DeclaredAction[] };
 
@@ -510,8 +530,9 @@ const firstmateCardParams = {
   // (tests/firstmate-fixed-context.test.ts), and its descriptor already says
   // what body and id are (`CARD_MECHANICS`: a raw HTML fragment; reuse an open
   // card's id to revise it in place) and when to pass task_id
-  // (`FIRSTMATE_CARD_ADDENDUM`), so the three are served bare to it.
-  body: Type.String(),
+  // (`FIRSTMATE_CARD_ADDENDUM`), so id and task_id are served bare to it, and
+  // body says only what leaving it out does: a reply alone (INF-6128).
+  body: Type.Optional(Type.String({ description: CARD_PARAMS.firstmateBody })),
   id: Type.Optional(Type.String()),
   task_id: Type.Optional(Type.String()),
   review_task_id: Type.Optional(Type.String({ description: CARD_PARAMS.review_task_id })),
@@ -905,6 +926,8 @@ async function emitCard(
   options: {
     onCard: (card: DeclaredCard) => CardWriteResult | Promise<CardWriteResult>;
     firstmate?: boolean;
+    /** The first mate's reply alone: absent, a call without body is refused. */
+    onReplyAlone?: OnReplyAlone;
     pictures?: CardPictureRoot;
     /** Where a crewmate's card files are kept; absent, a card naming files is refused. */
     files?: CardFileRoot;
@@ -962,6 +985,22 @@ async function emitCard(
       return [cardMutationText(shown), dropped].filter(Boolean).join(" ");
     const said = `Card shown from presentation ${params.presentation}${shown ? ` (${shown})` : ""}`;
     return dropped ? `${said}. ${dropped}` : said;
+  }
+  // The first mate answers in a thread without sending the card again
+  // (INF-6128): with a body required, the placeholder it sent beside its
+  // answer replaced the card's own body. Left out, only the line is written.
+  if (options.firstmate && params.body === undefined && params.body_file === undefined) {
+    const text = params.reply?.trim();
+    const cardId = params.id?.trim();
+    if (!text || !cardId || !options.onReplyAlone) throw new Error(REPLY_ALONE_REFUSAL);
+    return cardMutationText(
+      await options.onReplyAlone({
+        cardId,
+        text,
+        ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
+        ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
+      }),
+    );
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
     // INF-961: a merge card given neither may have meant its saved story.
@@ -1191,7 +1230,13 @@ export const EMIT_CARD_TOOL: CrewmateTool<
 export function createEmitCardTool(
   onCard: OnCardEmitted,
   lint?: CardLint,
-  options: { role?: EmitCardRole; pictures?: CardPictureRoot; cardBodiesDir?: string } = {},
+  options: {
+    role?: EmitCardRole;
+    pictures?: CardPictureRoot;
+    cardBodiesDir?: string;
+    /** The first mate's reply alone, which writes a line and no card, so no lint reads it. */
+    onReplyAlone?: OnReplyAlone;
+  } = {},
 ) {
   const firstmate = options.role === "firstmate";
   return boundTool({
@@ -1215,6 +1260,7 @@ export function createEmitCardTool(
         },
         firstmate,
         cardBodiesDir: options.cardBodiesDir,
+        ...(firstmate && options.onReplyAlone ? { onReplyAlone: options.onReplyAlone } : {}),
         ...(options.pictures ? { pictures: options.pictures } : {}),
       });
       return { text };

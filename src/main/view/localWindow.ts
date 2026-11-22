@@ -4,6 +4,8 @@ import { dialLocalDoor } from "@core/connection/localDoor";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { DeviceGrant } from "@shared/devices";
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
+import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "@shared/windowAnswer";
+import { WINDOW_ASK_LIVE, WINDOW_ASK_WORDS, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
 
 /**
@@ -43,6 +45,8 @@ export type LocalWindowOptions = {
    * it dialed through at once changes no contact, and is still a new one.
    */
   onWelcome?: () => void;
+  /** This computer's key reminder, which the first mate may ask this window to switch. */
+  keyReminders?: () => WindowKeyReminders | null;
   /** Opens the link; tests stand in their own. */
   link?: (options: HomeLinkOptions) => Link;
 };
@@ -103,6 +107,18 @@ export class LocalWindow {
         options.broadcast(channel as PushChannel, payload, replayed),
       onLive: (channel, payload) => {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
+        // The key reminder the first mate asked to switch: the rest of this
+        // computer's look the first mate changes itself.
+        if (channel === WINDOW_ASK_LIVE)
+          void answerWindowAsk(
+            payload,
+            LOCAL_CLIENT,
+            async (asked, args) => {
+              if (!WINDOW_ONLY_CHANNELS.has(asked)) throw new Error(WINDOW_ASK_WORDS.notAsked);
+              return answerKeyReminders(options.keyReminders?.(), asked, args);
+            },
+            (id, answer) => this.link.invoke("inf:view:answer", [id, answer]),
+          );
         // A streamed reply piece or a tool's start or end, outside the numbering.
         if (channel === "inf:event") options.broadcast("inf:event", payload, false);
         // The computers' live readings, outside the numbering.

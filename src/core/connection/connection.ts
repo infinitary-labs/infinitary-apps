@@ -87,6 +87,7 @@ import {
 } from "./cardCompatibility";
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
+import { heldAsks, type LiveToViewArgs } from "./heldAsks";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -505,10 +506,11 @@ export type HomeConnection = {
    */
   routes(): Promise<void>;
   /**
-   * A live frame to each welcomed window of one Mac (`role` view), such as
-   * its Devices row's Fix it (`work-setup`); false when none is connected.
+   * A live frame to each welcomed window of one Mac (`role` view), such as its
+   * Devices row's Fix it (`work-setup`), or only those listing `change`, or with
+   * `one` only the newest; false when none is connected.
    */
-  liveToView(deviceId: string, channel: string, payload: unknown): boolean;
+  liveToView(...args: LiveToViewArgs): boolean;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -681,6 +683,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   let nextAsk = 1;
   /** Why changes wait while the first mate moves to another computer; null otherwise. */
   let moving: string | null = null;
+  const windowAsked = heldAsks<Client>();
   const workListeners = new Set<(contact: WorkDeviceContact) => void>();
   const sentListeners = new Set<(deviceId: string, bytes: number) => void>();
   const tellSent = (deviceId: string, bytes: number) => {
@@ -1220,6 +1223,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         });
         return;
       }
+      if (windowAsked.stray(channel, frame.args, client))
+        return reply({ ok: true, value: { ok: true } });
       try {
         // A paired view is the captain at another Mac: the same actor the
         // desktop adapter stamps, with the contract's reach as the limit, so
@@ -1333,6 +1338,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
+        windowAsked.left(client);
         const heard = client.gone;
         client.gone = [];
         client.pictures.clear();
@@ -1896,14 +1902,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     },
     moved: (payload) => liveToAll(HOME_MOVED_LIVE, payload),
     goodbye: () => liveToAll(HOME_GOODBYE_LIVE, {}),
-    liveToView: (deviceId, channel, payload) => {
-      const windows = [...(run?.clients ?? [])].filter(
-        (client) =>
-          client.welcomed &&
-          !client.closing &&
-          client.role === "view" &&
-          client.device.id === deviceId,
-      );
+    liveToView: (...args) => {
+      const [, channel, payload] = args;
+      const windows = windowAsked.sendTo(run?.clients, args);
       for (const client of windows)
         client.out.send(
           JSON.stringify({ t: "live", channel: channelIn(channel, client.spelling), payload }),

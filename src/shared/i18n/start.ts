@@ -18,8 +18,8 @@ export function computerLanguage(preferred: readonly string[], override?: string
  * Whether the app speaks the computer's own language while the captain chose
  * none (docs/i18n.md, "The default language"). Not yet: English stays the
  * default until every word a person reads is in the catalog, the raw-words
- * ledger empty (`scripts/raw-words.ts`), and only a choice in Settings
- * switches the language meanwhile.
+ * ledger empty (`scripts/raw-words.ts`), and only the captain's choice,
+ * made in Settings or asked of the first mate, switches the language meanwhile.
  */
 export const FOLLOWS_COMPUTER = false;
 
@@ -34,7 +34,8 @@ export function defaultLanguage(computer: string): string {
 
 /**
  * The language the app speaks (docs/i18n.md, "The language choice"): the
- * one the captain chose in Settings → Appearance when the catalog has it,
+ * one the captain chose, in Settings → Appearance or through the first mate's
+ * `language` action, when the catalog has it,
  * and otherwise the default (`defaultLanguage`). A choice the catalog
  * lacks, such as one a newer build saved, falls back to the default.
  */

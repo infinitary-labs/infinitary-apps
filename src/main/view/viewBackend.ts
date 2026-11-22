@@ -43,6 +43,8 @@ import { panelSettingsNow } from "@shared/panelSettings";
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { HOME_GOODBYE_LIVE } from "@shared/standby";
+import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "@shared/windowAnswer";
+import { WINDOW_ASK_LIVE, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import {
   type DeviceWorkSetup,
   deviceWorkSetupSchema,
@@ -250,6 +252,8 @@ export type ViewBackendOptions = {
   onConnected?: () => void;
   /** The other Mac's Fix it on this Mac's row: check the work half again. */
   onSetUpWork?: () => void;
+  /** This Mac's own key reminder, which the first mate there may ask this window to switch. */
+  keyReminders?: () => WindowKeyReminders | null;
 };
 
 /** What this Mac's window found of its work half, told to its home (`work-setup.md`). */
@@ -419,6 +423,17 @@ export class ViewBackend {
           if (ask.success && ask.data.deviceId === options.record.grant.deviceId)
             options.onSetUpWork?.();
         }
+        // A Settings change the first mate there asked of this Mac's own window.
+        if (channel === WINDOW_ASK_LIVE)
+          void answerWindowAsk(
+            payload,
+            options.record.grant.deviceId,
+            (asked, args) =>
+              WINDOW_ONLY_CHANNELS.has(asked)
+                ? Promise.resolve(answerKeyReminders(options.keyReminders?.(), asked, args))
+                : this.dispatch(asked as CoreInvokeChannel, [...args]),
+            (id, answer) => this.link.invoke("inf:view:answer", [id, answer]),
+          );
         // A streamed reply piece or a tool's start or end, outside the numbering.
         if (channel === "inf:event") options.broadcast("inf:event", payload);
         // The computers' live readings, outside the numbering.

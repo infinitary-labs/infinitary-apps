@@ -27,6 +27,8 @@ export const PANEL_UNREADABLE = {
   read: "a panel reads it through a read of its own (quota.snapshot, automation.list or automation.kept)",
   unchecked: "how the crew's models are chosen: not yet checked field by field for a panel",
   own: "a person's own ambient styles, in their own words: read by the first mate and Settings, not yet offered to a panel",
+  later:
+    "a Settings line the first mate gained beside settings.current: not yet checked field by field for a panel",
 } as const;
 export type PanelUnreadable = keyof typeof PANEL_UNREADABLE;
 
@@ -148,6 +150,25 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "automation-delete": { unreadable: "read" },
   "kept-job-remove": { unreadable: "read" },
   "kept-job-forget": { unreadable: "read" },
+  "ambient-away": { unreadable: "later" },
+  "card-size": { unreadable: "later" },
+  language: { unreadable: "later" },
+  "usage-unit": { unreadable: "later" },
+  "key-reminders": { unreadable: "later" },
+  "update-channel": { unreadable: "home" },
+  "update-check": { unreadable: "act" },
+  "inbox-link": { unreadable: "act" },
+  "panel-retry": { unreadable: "act" },
+  "panel-ask-again": { unreadable: "act" },
+  "home-move-cancel": { unreadable: "act" },
+  "copy-stop": { unreadable: "names" },
+  "device-keep": { unreadable: "names" },
+  "device-fix-work": { unreadable: "names" },
+  "device-try-again": { unreadable: "names" },
+  "private-site-remove": { unreadable: "names" },
+  "secret-end-read": { unreadable: "names" },
+  "kept-job-check": { unreadable: "read" },
+  "decision-use-off": { unreadable: "unchecked" },
 };
 
 /** The panel value of each named line from its `current` answer, by that answer's channel. */

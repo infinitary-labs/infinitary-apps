@@ -608,6 +608,7 @@ describe("ipc contract", () => {
       "inf:tasks:search",
       "inf:usage:summary",
       "inf:usage:tasks",
+      "inf:view:answer",
       "inf:window:front",
     ]);
   });

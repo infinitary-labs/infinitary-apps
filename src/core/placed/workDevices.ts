@@ -201,8 +201,14 @@ export class WorkDevices {
    * Sends each connected window of one Mac a live frame, such as its row's
    * Fix it (`work-setup`); false when none is connected to hear it.
    */
-  liveToView(deviceId: string, channel: string, payload: unknown): boolean {
-    return this.link?.liveToView?.(deviceId, channel, payload) ?? false;
+  liveToView(
+    deviceId: string,
+    channel: string,
+    payload: unknown,
+    change?: string,
+    one?: boolean,
+  ): boolean {
+    return this.link?.liveToView?.(deviceId, channel, payload, change, one) ?? false;
   }
 
   /** The Mac that controls this Firstmate is connected now: Firstmate is open on it. */

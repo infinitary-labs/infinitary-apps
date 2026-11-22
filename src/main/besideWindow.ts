@@ -25,6 +25,7 @@ import {
 } from "@shared/ownWindow";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import type { UpdateStatus } from "@shared/update";
+import type { WindowKeyReminders } from "@shared/windowAnswer";
 import { commandNotice, entryWaitMs, type JoinedRun, runEnd, type StartEntry } from "./besideRun";
 import type { CommandStarter } from "./commandStarter";
 import type { RunStatus } from "./runStatus";
@@ -109,6 +110,8 @@ export type BesideWindowOptions = {
   notifications: HostNotifications;
   /** This program's own update checker. */
   updates: UpdateChecker;
+  /** This computer's key reminder, which the first mate asks of this window (`src/shared/windowAnswer.ts`). */
+  keyReminders?: () => WindowKeyReminders | null;
   openPage?: (url: string) => Promise<void>;
   /** Starts the app again; `startHere` as this computer's own first mate, whatever start entry is in place. */
   relaunch: (how?: { startHere?: boolean }) => void;
@@ -202,6 +205,7 @@ export class BesideWindow {
     );
     this.window = new LocalWindow({
       door: beside.door,
+      ...(options.keyReminders ? { keyReminders: options.keyReminders } : {}),
       broadcast: (channel, payload, replayed) => this.heard(channel, payload, replayed),
       onReload: () => {
         this.notices.startOver();

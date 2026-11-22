@@ -16,22 +16,34 @@ import {
   DEFAULT_AMBIENT_STYLE,
   DEFAULT_AMBIENT_VOLUME,
 } from "./preferences";
-import { ambientMusicValue, ambientOwnStylesValue } from "./settingValues";
+import { ambientMusicValue, ambientOwnStylesValue, ambientPausedValue } from "./settingValues";
 
 /** The ambient music's lines in the app action catalog (docs/ambient-music.md). */
 export const ambientLines = {
   "ambient-music": {
-    fields: ["ambientMusic", "ambientVolume", "ambientStyle"],
+    fields: ["ambientMusic", "ambientPaused", "ambientVolume", "ambientStyle"],
+    // Playing or stopping sets the pause too; a volume or style only when named.
+    sets: (v) => [
+      "ambientMusic",
+      "ambientPaused",
+      ...(v.volume === undefined ? [] : ["ambientVolume"]),
+      ...(v.style === undefined ? [] : ["ambientStyle"]),
+    ],
     area: "appearance",
     tier: "asked",
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
-    value: z.strictObject({
-      on: z.boolean(),
-      volume: ambientVolumeSchema.optional(),
-      style: ambientStyleSchema.optional(),
-    }),
-    line: `Play or stop the ambient music when asked, optionally at a volume of 0-100 percent and in one of its styles (${AMBIENT_STYLES.join(", ")}; ${DEFAULT_AMBIENT_STYLE} is the default) or one of the person's own by its id (ambient-own-style): calm music made on the computer that follows the crew.`,
+    value: z
+      .strictObject({
+        on: z.boolean(),
+        paused: z.boolean().optional(),
+        volume: ambientVolumeSchema.optional(),
+        style: ambientStyleSchema.optional(),
+      })
+      // i18n-exempt: served to the first mate, a model, never shown
+      .refine((v) => v.on || v.paused !== true, { message: "Only music that is on can pause." }),
+    line: `Play, pause or stop the ambient music when asked, optionally at a volume of 0-100 percent and in one of its styles (${AMBIENT_STYLES.join(", ")}; ${DEFAULT_AMBIENT_STYLE} is the default) or one of the person's own by its id (ambient-own-style): calm music made on the computer that follows the crew. on true plays it, even when it was paused; paused true with on true pauses it, as its sound button does.`,
+    // As the Settings switch: turning it on or off takes any pause away (INF-5347).
     toRequest: (v, current) => {
       const look = current as Appearance;
       const style = v.style as string | undefined;
@@ -43,15 +55,16 @@ export const ambientLines = {
         {
           ...look,
           ambientMusic: v.on,
+          ambientPaused: v.paused === true,
           ambientVolume:
             (v.volume as number | undefined) ?? look.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
           ...(style === undefined ? {} : { ambientStyle: style }),
         },
       ];
     },
-    readValue: ambientMusicValue,
+    readValue: (current) => ({ ...ambientMusicValue(current), ...ambientPausedValue(current) }),
     done: (v) =>
-      `ambient music ${v.on ? "on" : "off"}, volume ${v.volume}%${v.style ? `, style ${v.style}` : ""}`,
+      `ambient music ${v.on ? (v.paused ? "paused" : "on") : "off"}, volume ${v.volume}%${v.style ? `, style ${v.style}` : ""}`,
   },
   // A person's own ambient styles (docs/ambient-music.md, "Your own styles").
   // The style is settings the app checks here, never code; the window

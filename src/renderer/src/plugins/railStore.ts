@@ -1,11 +1,11 @@
 import {
   type ArrangedPanel,
   arrangePanels,
-  defaultArrangement,
   movePanel,
   type PanelMove,
   type PanelStep,
   pickToEdge,
+  resetLayout,
   stepPanel,
 } from "@shared/panelArrangement";
 import type { RailSide, RailY } from "@shared/plugins/manifest";
@@ -174,14 +174,9 @@ export const railStore = {
     arrange(next, panelId);
     return true;
   },
-  /**
-   * Reset to defaults: every panel back where it asks to be, in its own
-   * order. Shown, hidden and collapsed stay as they are; the places saved
-   * before the arrangement existed go too, so an older build agrees.
-   */
+  /** Reset to defaults (`resetLayout`). */
   resetArrangement(known: readonly ArrangedPanel[]): void {
-    const { morePick: _pick, panelOrder: _order, ...rest } = current();
-    layout = { ...rest, placements: {}, arrangement: defaultArrangement(known) };
+    layout = resetLayout(current(), known);
     persist(layout);
     notify();
   },

@@ -103,7 +103,7 @@ const FORGE_PLACES: Record<
       return repositoryScope(method, "repositories", `${first}/${second}`);
     },
   },
-  // `/rest/{api}/{version}/projects/{KEY}/repos/{slug}`, or `/users/{name}` for `~name`.
+  // `/rest/{api}/{version}/projects/{KEY}/repos/{slug}`, or `/users/{slug}` for `~slug`, a person's own project keyed by their user slug.
   "bitbucket-data-center": {
     of: ([rest, api, version, root, owner, repos, slug], method) => {
       if (rest !== "rest" || !api || !version || repos !== "repos" || !owner || !slug)

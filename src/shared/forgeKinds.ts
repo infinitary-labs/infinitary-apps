@@ -225,7 +225,7 @@ export const CHANGE_REQUEST_HOSTS: Readonly<Record<ChangeRequestKind, ChangeRequ
 
 /**
  * A Bitbucket Data Center repository's page: `projects/<KEY>/repos/<slug>`,
- * or `users/<name>/repos/<slug>` for a person's own repository (`~name`).
+ * or `users/<user slug>/repos/<slug>` for a person's own repository (`~<user slug>`).
  * An HTTPS clone address names the project under `scm/` in lower case, so
  * that segment is dropped and the key is written as Data Center keeps it,
  * in capitals.

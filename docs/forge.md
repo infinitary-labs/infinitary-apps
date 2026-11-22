@@ -39,7 +39,7 @@ GitLab resolves absent or lower listed roles through effective membership, inclu
 Bitbucket reads the person's effective permission on the repository (`/user/workspaces/<workspace>/permissions/repositories`): `admin` or `write` may push, `admin` owns it, and a workspace that lists none, or refuses the read, means no access (`providers/bitbucket/contributions.ts`).
 Bitbucket names a repository by a UUID, never a number, so its project identity's number is the UUID's first 52 bits (`bitbucketRepositoryNumber`).
 Bitbucket Data Center reads whether the server lists the repository among those the person may write to (`/rest/api/latest/repos?permission=REPO_WRITE`), and a fork's owner among those they administer (`REPO_ADMIN`); a list longer than ten pages reads as not known (`providers/bitbucket/dataCenterContributions.ts`).
-Its fork is a repository forked from the project in the person's own project, found by that personal project's owner, since its key `~<slug>` differs from `~<name>` for a name such as `jane@example.com`; a new fork goes there (`POST` to the repository with no project named).
+Its fork is a repository forked from the project in the person's own project, found by that personal project's owner, since its key `~<user slug>` differs from `~<name>` for a name such as `jane@example.com`; a new fork goes there (`POST` to the repository with no project named).
 Its project identity names the repository by its HTTPS clone address, `scm/<key>/<slug>`, so only a project read over HTTPS is offered a fork.
 Its fork is a repository whose parent is the project, in a workspace the person administers (`/forks?role=admin`); a new fork goes to the person's own workspace, or the only one they administer, and with several to choose from nothing is sent and the refusal asks the person to make the fork on Bitbucket.
 A project the sign-in cannot push to uses an existing verified owned fork, or asks on an app-authored project-change card before creating one.
@@ -373,7 +373,7 @@ Evidence: `providers/bitbucket/bitbucketForge.test.ts` holds the opening, the st
 ## Bitbucket Data Center
 
 A Bitbucket Data Center server is kind `bitbucket` at its own address, as a GitLab server is kind `gitlab`: any address but bitbucket.org is one.
-Its row in `src/shared/forgeKinds.ts` carries the facts that differ on a server (`ServerFacts`, read through `serverFactsAt`): a project's page is `projects/<KEY>/repos/<slug>`, or `users/<name>/repos/<slug>` for a person's own project, a branch's compare page is `compare/commits?sourceBranch=refs/heads/<branch>&targetBranch=refs/heads/<base>`, the crew's gateway speaks the server's own REST API (`api: "bitbucket-data-center"`, read through `apiDialectAt`), and the server takes batches.
+Its row in `src/shared/forgeKinds.ts` carries the facts that differ on a server (`ServerFacts`, read through `serverFactsAt`): a project's page is `projects/<KEY>/repos/<slug>`, or `users/<user slug>/repos/<slug>` for a person's own project, a branch's compare page is `compare/commits?sourceBranch=refs/heads/<branch>&targetBranch=refs/heads/<base>`, the crew's gateway speaks the server's own REST API (`api: "bitbucket-data-center"`, read through `apiDialectAt`), and the server takes batches.
 A project's address over HTTPS is `https://<server>/scm/<key>/<slug>.git`, which the app reads as the owner `scm/<key>`; over SSH the owner is `<key>`; both are the project `<KEY>` (`dataCenterProjectKey`).
 A server with a context path or on another port is not offered.
 
@@ -746,7 +746,7 @@ The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/
 `DataCenterForge.api` sends the same requests to the server with the person's HTTP access token, under the server's own policy (`providers/bitbucket/dataCenterApi.ts`), with the caps above.
 
 - **Its paths** are the part after the server's address and start with `/rest/`, as each of its REST APIs does: `/rest/api/latest/...`, `/rest/build-status/latest/...`, `/rest/branch-utils/latest/...`.
-  A repository is `/rest/<api>/<version>/projects/<KEY>/repos/<slug>/...`, or `/users/<name>/repos/<slug>/...` for a person's own project, which is the project `~<name>`.
+  A repository is `/rest/<api>/<version>/projects/<KEY>/repos/<slug>/...`, or `/users/<user slug>/repos/<slug>/...` for a person's own project, which is the project `~<user slug>`; a user's slug differs from their name for a name such as `jane@example.com`.
   A page's size is `limit`, from 1 to 100, and its place `start`; the answer's `nextPageStart` becomes `nextPath`.
 - **Reads** reach whatever the token may read: there is no read list.
 - **Writes** go at once only under the task's own repository, the project key and slug compared without case, in any of the server's REST APIs; any other repository, project or the account asks like any other write.

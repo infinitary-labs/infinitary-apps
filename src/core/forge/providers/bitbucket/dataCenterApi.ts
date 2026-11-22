@@ -12,7 +12,7 @@ import { dataCenterProjectKey } from "./dataCenterProjects";
  * the task's own repository,
  * `/rest/{api}/{version}/projects/{KEY}/repos/{slug}/...`, goes at once;
  * any other waits on the captain's click. A person's own project is
- * `/projects/~{name}` or `/users/{name}`. No write deletes the repository
+ * `/projects/~{user slug}` or `/users/{user slug}`. No write deletes the repository
  * itself. The server names a page's size `limit` and its place `start`,
  * and the next page's place sits in the answer's `nextPageStart`.
  */

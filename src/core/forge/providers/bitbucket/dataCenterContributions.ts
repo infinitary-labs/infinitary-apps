@@ -31,7 +31,7 @@ export function dataCenterPathOf(fullName: string): string {
  * "Contributing through an owned fork"). Whether the sign-in may push is
  * whether the server lists the repository among those the person may write
  * to; a fork is a repository forked from this one in the person's own
- * project (`~name`), where a new fork goes too. A project read over SSH
+ * project (`~<user slug>`), where a new fork goes too. A project read over SSH
  * names no `scm/` owner, and a fork's address is its HTTPS clone address,
  * so only a project read over HTTPS is offered a fork.
  */

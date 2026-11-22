@@ -31,7 +31,7 @@ import { readInMain } from "./mainProcess";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { encodeInBrowser, WIDE_PICTURE, WORKING_COPY_PICTURES } from "./pictureFixtures";
 import { pastePictures, promptInput } from "./prompt";
-import { providerMessages } from "./providerRequest";
+import { isTaskRequest, providerMessages } from "./providerRequest";
 import { readSavedData } from "./savedData";
 import {
   ANNOTATION_ACK,
@@ -341,6 +341,19 @@ for (const author of ["crewmate", "firstmate"] as const) {
   });
 }
 
+function latestUserText(request: string): string {
+  return providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+}
+
+/** The first mate's thread digest can quote the marker before the card author reads the reply. */
+function authorAnnotationRequests(requests: string[]): string[] {
+  return requests.filter(
+    (request) =>
+      isTaskRequest(request, CARD_PICTURES_PROMPT_MARKER) &&
+      latestUserText(request).includes(`${POINTED_AT}:`),
+  );
+}
+
 /** Where the viewer draws its picture once it has stopped moving: two reads in a row agree. */
 async function drawnAt(picture: Locator) {
   let last = "";
@@ -387,12 +400,7 @@ test("the crewmate receives marks made by pointer and by keys, one marked pictur
     const pointAt = viewer.locator("[data-viewer-point-at]");
     const pop = page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
     const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
-    const reads = () =>
-      (a.mockProvider?.requestBodies() ?? []).filter((body) =>
-        providerMessages(body)
-          .findLast((message) => message.role === "user")
-          ?.text.includes(`${POINTED_AT}:`),
-      );
+    const reads = () => authorAnnotationRequests(a.mockProvider?.requestBodies() ?? []);
 
     // By pointer: a box dragged on the wide picture, then a line drawn on it.
     await clickInBody(frame.getByRole("img", { name: WIDE_PICTURE.alt }));
@@ -463,8 +471,7 @@ test("the crewmate receives marks made by pointer and by keys, one marked pictur
     await pressKey(send, "Enter");
     await expect.poll(() => reads().length).toBeGreaterThan(0);
     const request = reads()[0] ?? "";
-    const served =
-      providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+    const served = latestUserText(request);
 
     const sent = readSavedData(
       a.userDataDir,
@@ -553,12 +560,7 @@ test("a button pressed by key carries the queued notes, the marked picture and a
     const pointAt = viewer.locator("[data-viewer-point-at]");
     const pop = page.getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) });
     const comment = pop.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
-    const reads = () =>
-      (a.mockProvider?.requestBodies() ?? []).filter((request) =>
-        providerMessages(request)
-          .findLast((message) => message.role === "user")
-          ?.text.includes(`${POINTED_AT}:`),
-      );
+    const reads = () => authorAnnotationRequests(a.mockProvider?.requestBodies() ?? []);
 
     // A box marked on the wide picture.
     await clickInBody(frame.getByRole("img", { name: WIDE_PICTURE.alt }));
@@ -603,8 +605,7 @@ test("a button pressed by key carries the queued notes, the marked picture and a
     await expect(shownCard(page, title)).toHaveCount(0);
     await expect.poll(() => reads().length).toBeGreaterThan(0);
     const request = reads()[0] ?? "";
-    const served =
-      providerMessages(request).findLast((message) => message.role === "user")?.text ?? "";
+    const served = latestUserText(request);
     const sent = readSavedData(
       a.userDataDir,
       (db) =>

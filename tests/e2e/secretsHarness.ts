@@ -48,6 +48,8 @@ export type SecretsJourney = {
   readProbe?: { deliveries: number; credentialMatched: boolean };
   /** A test may hold the actual view response, without replacing its contents. */
   finishViewRead?: () => void;
+  /** Release the original Forget reply after its change notification has reached Settings. */
+  finishForgetReply?: () => void;
 };
 export type SecretsJourneyGlobal = typeof globalThis & { secretsJourney: SecretsJourney };
 

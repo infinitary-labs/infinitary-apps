@@ -211,7 +211,8 @@ Remove only proposes a change, and native confirmation covers the exact proposed
 ### Asking in place
 
 Forget on a secret's row, Remove on a saved decision, Stop approvals on an approving device and Delete history ask on the row they are about, never on a card, so the window stays on Settings.
-The row's buttons turn into the question: its title, its sentences, Keep (focused, so Enter never confirms) and the danger answer, as Remove project asks in Settings → Projects (`SecretQuestion.tsx`).
+The row's buttons turn into the question: its title, its sentences, Keep and the danger answer, as Remove project asks in Settings → Projects (`SecretQuestion.tsx`).
+Keep takes focus once the answers are ready, even if a change notification shows the question before the request finishes, so Enter never confirms by default.
 The controller still makes a one-time pass for each answer, as it does for a card, and carries the open question on the view (`question`, `secretQuestionSchema`): what it is about, its words and both passes.
 The page answers with the `answer` action on the home-only `inf:secrets:action`, naming the pass; the controller spends it once and runs that answer, checking the secret's exact version and revision, or the authority revision, as the card did.
 A pass the controller did not make, one already spent, one from before a restore, Start over or restart, and a card's offer sent as an answer do nothing; a question's pass sent as card chrome does nothing either.

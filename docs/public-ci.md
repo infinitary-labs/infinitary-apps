@@ -107,6 +107,6 @@ Do not change signing keys or publish a release just to test a workflow change.
 
 ## Repository security controls
 
-Enable dependency graph and Dependabot alerts, secret scanning and push protection on the destination, and read back each control before visibility changes.
+Enable dependency graph and Dependabot alerts, secret scanning and push protection on the destination, and read back each control around the visibility change: dependency graph and Dependabot alerts before it, and secret scanning and push protection right after it, since GitHub refuses those two while the project is private (`docs/launch-day.md`).
 A scan is not credential clearance; review findings privately and rotate any exposed credential through its owner.
 Apply any settings changes only with the repository owner's approval.

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   innerScreenLit,
-  litScreenWide,
+  innerScreenWide,
   phonePoseFault,
   pressPhoneKey,
   setPhoneHinge,
@@ -17,8 +17,6 @@ import { scratchDir } from "./helpers/scratchDirs";
 // on iOS 27.1 under Xcode 27.1, closed and then open after the helper's sweep; only the output file's path is renamed.
 const CLOSED = "tests/fixtures/phone-hinge/duo-displays-closed.json";
 const OPEN = "tests/fixtures/phone-hinge/duo-displays-open.json";
-// INF-4539: the same reading on the open Duo once the helper turned it onto its side (`turn landscape-left`).
-const SIDE = "tests/fixtures/phone-hinge/duo-displays-open-side.json";
 
 describe("the Duo's pose", () => {
   it("reads which screen is lit from devicectl's displays", () => {
@@ -102,51 +100,56 @@ describe("moving the Duo's hinge", () => {
 
 describe("turning the open Duo", () => {
   // INF-4539 (the captain's "Yes, start it once INF-4330 merges" for a check that turns the open Duo): the gate turns
-  // it once and reads the inner screen back, wide like a book and tall on its side.
-  it("reads the inner screen's shape from its panel and its turn", () => {
-    expect(litScreenWide(readFileSync(OPEN, "utf8"))).toBe(true);
-    expect(litScreenWide(readFileSync(SIDE, "utf8"))).toBe(false);
-    expect(litScreenWide(readFileSync(CLOSED, "utf8"))).toBe(false);
+  // it once and reads the inner screen back, wide like a book and tall on its side. INF-6069: it reads the turn from
+  // SpringBoard through `phone-hinge orientation`, which printed these words on a simulated iPhone Duo on iOS 27.1
+  // under Xcode 27.1, open like a book and then turned onto each side.
+  it("reads the inner screen's shape from the turn SpringBoard holds", () => {
+    expect(innerScreenWide("landscapeLeft")).toBe(true);
+    expect(innerScreenWide("portrait")).toBe(false);
+    expect(innerScreenWide("portraitUpsideDown")).toBe(false);
   });
-  // A Duo whose screens read `screens` in turn and whose hinge reads `angle`; every command is kept.
-  function duo(screens: string[], angle = 180) {
-    const reading = join(scratchDir("phone-turn-"), "displays.json");
+  // A Duo whose SpringBoard answers `orientations` in turn, keeping the last, and whose hinge reads `angle`; every
+  // command is kept.
+  function duo(orientations: string[], angle = 180) {
     const commands: string[] = [];
     const run = async (command: string, args: string[]) => {
       commands.push([command, ...args].join(" "));
-      if (args[0] === "devicectl") copyFileSync(screens.shift() ?? screens.at(-1) ?? OPEN, reading);
-      return args.at(-1) === "angle" ? `${angle}\n` : "";
+      if (args.at(-1) === "angle") return `${angle}\n`;
+      if (args.at(-1) === "orientation")
+        return `${(orientations.length > 1 ? orientations.shift() : orientations[0]) ?? ""}\n`;
+      return "";
     };
     return {
       run,
-      reading,
       commands,
       turns: () => commands.filter((each) => each.includes(" turn ")),
     };
   }
   it("turns the open Duo onto its side once and waits for its screen to stand tall", async () => {
-    const open = duo([OPEN, SIDE]);
-    await turnPhone({
-      run: open.run,
-      simulator: "duo-1",
-      helper: "/h",
-      to: "side-left",
-      reading: open.reading,
-    });
+    const open = duo(["landscapeLeft", "portrait"]);
+    await turnPhone({ run: open.run, simulator: "duo-1", helper: "/h", to: "side-left" });
+    expect(open.turns()).toEqual(["xcrun simctl spawn duo-1 /h turn landscape-left"]);
+  });
+  // INF-6069: in phone run 44987427933 SpringBoard and backboardd turned the open Duo onto its side, and for the whole
+  // settle time devicectl still read its inner screen at the book pose's quarter turn: the display information daemon
+  // answers from a cache that refreshes only when a notification arrives, and the one refresh after the turn kept the
+  // old turn. The gate reads SpringBoard, so a turn it holds is read as taken whatever devicectl answers.
+  it("reads a turn SpringBoard holds while devicectl still reads the screen as it was", async () => {
+    const open = duo(["portrait"]);
+    const run = async (command: string, args: string[]) => {
+      const output = args.at(-1);
+      if (args[0] === "devicectl" && output) copyFileSync(OPEN, output);
+      return open.run(command, args);
+    };
+    await turnPhone({ run, simulator: "duo-1", helper: "/h", to: "side-left", settle: 0 });
     expect(open.turns()).toEqual(["xcrun simctl spawn duo-1 /h turn landscape-left"]);
   });
   // INF-5183: the simulated Duo dropped a turn that was the first pose event SpringBoard heard after the hinge closed
   // and reopened: it took the event and kept its inner screen wide. The gate states the hinge's angle once more
   // first, where it already stands, so that event is never the turn.
   it("states the hinge's angle where it stands before the turn, so the turn follows a pose event", async () => {
-    const open = duo([SIDE]);
-    await turnPhone({
-      run: open.run,
-      simulator: "duo-1",
-      helper: "/h",
-      to: "side-left",
-      reading: open.reading,
-    });
+    const open = duo(["portrait"]);
+    await turnPhone({ run: open.run, simulator: "duo-1", helper: "/h", to: "side-left" });
     expect(open.commands.slice(0, 3)).toEqual([
       "xcrun simctl spawn duo-1 /h angle",
       "xcrun simctl spawn duo-1 /h sweep 180 180 0",
@@ -155,47 +158,37 @@ describe("turning the open Duo", () => {
     expect(open.commands.filter((each) => each.includes(" sweep "))).toHaveLength(1);
   });
   it("fails before it turns a Duo whose hinge cannot be read", async () => {
-    const unread = duo([OPEN], Number.NaN);
+    const unread = duo(["landscapeLeft"], Number.NaN);
     await expect(
-      turnPhone({
-        run: unread.run,
-        simulator: "duo-1",
-        helper: "/h",
-        to: "side-left",
-        reading: unread.reading,
-        settle: 0,
-      }),
+      turnPhone({ run: unread.run, simulator: "duo-1", helper: "/h", to: "side-left", settle: 0 }),
     ).rejects.toThrow("The Duo's hinge angle could not be read: NaN");
     expect(unread.turns()).toEqual([]);
   });
   it("fails, naming the turn and what the screen shows, and never turns it a second time", async () => {
-    const stuck = duo([OPEN]);
+    const stuck = duo(["landscapeLeft"]);
     await expect(
-      turnPhone({
-        run: stuck.run,
-        simulator: "duo-1",
-        helper: "/h",
-        to: "side-right",
-        reading: stuck.reading,
-        settle: 0,
-      }),
+      turnPhone({ run: stuck.run, simulator: "duo-1", helper: "/h", to: "side-right", settle: 0 }),
     ).rejects.toThrow(
-      "duo: it was turned side-right once, and 0 seconds later its inner screen shows wide",
+      "duo: it was turned side-right once, and 0 seconds later its inner screen shows wide: SpringBoard holds landscapeLeft",
     );
     expect(stuck.turns()).toEqual(["xcrun simctl spawn duo-1 /h turn landscape-right"]);
   });
-  it("refuses to turn a closed Duo", async () => {
-    const closed = duo([CLOSED], 0);
+  // INF-4241 piece 8: a failure of the helper names itself and the phone check fails the part, so an answer that names
+  // no turn is a failure that says what the helper printed, never a guess at the screen's shape.
+  it("fails, naming what SpringBoard said, when it answers no turn", async () => {
+    const unread = duo([""]);
     await expect(
-      turnPhone({
-        run: closed.run,
-        simulator: "duo-1",
-        helper: "/h",
-        to: "book",
-        reading: closed.reading,
-        settle: 0,
-      }),
-    ).rejects.toThrow("only the open Duo turns");
+      turnPhone({ run: unread.run, simulator: "duo-1", helper: "/h", to: "book", settle: 0 }),
+    ).rejects.toThrow("The Duo's turn could not be read from SpringBoard: ");
+  });
+  it("refuses to turn a closed Duo, before anything turns it", async () => {
+    const closed = duo(["portrait"], 0);
+    await expect(
+      turnPhone({ run: closed.run, simulator: "duo-1", helper: "/h", to: "book", settle: 0 }),
+    ).rejects.toThrow(
+      "duo: it was asked to turn book with its hinge at 0 degrees; only the open Duo turns",
+    );
+    expect(closed.turns()).toEqual([]);
   });
 });
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-duo-turn-from-springboard",
+      "reason": "Internal: the phone check reads a turn of the simulated foldable iPhone back from SpringBoard instead of from a cached display reading that could keep showing the screen as it stood before the turn, and refuses to turn the foldable unless its hinge is open; the app itself is unchanged."
+    }
+  ]
+}

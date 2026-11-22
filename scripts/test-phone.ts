@@ -318,7 +318,7 @@ const recording = {
     // INF-4539: the fold part turns the open Duo between its book pose and its side, once each time.
     turn: async (to: PhoneTurn): Promise<{ turn: PhoneTurn }> => {
       if (!simulator) throw new Error("No owned simulator exists");
-      await turnPhone({ run, simulator, helper: values["hinge-helper"]!, to, reading: join(root, "displays.json") });
+      await turnPhone({ run, simulator, helper: values["hinge-helper"]!, to });
       return { turn: to };
     },
     // INF-5183: the fold part presses a key on the open Duo once, as an attached keyboard does, and the answer names

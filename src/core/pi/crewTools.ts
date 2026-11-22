@@ -384,8 +384,8 @@ const SHAPE_FIELD_RULES = {
   ongoing:
     "True for work continuing across turns until explicitly finished; routine personal-workspace turns commit without waking the first mate.",
   intelligence:
-    "Intelligence: low, medium or high; premium needs the captain's premium ask. Tell the captain task difficulty: high Hard, medium Normal, low Simple, premium Premium.",
-  kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
+    "Intelligence: low, medium or high; premium needs the captain's premium ask. Tell the captain difficulty: high Hard, medium Normal, low Simple, premium Premium.",
+  kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts what you omit; review is host-owned.",
   delivery_ask:
     "Only when the user asked in words for this task to ship as a pull request or stay local. The repository default is unchanged.",
   basis: BASIS_DESCRIPTION,
@@ -406,9 +406,9 @@ const SHAPE_FIELD_RULES = {
   skipped_plan_because:
     "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
-    "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
+    "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer: omit runs_on_ask.",
   repairs_batch:
-    "True only on the one task you start to repair a project's held batch: the host records it as that batch's repair, which the captain sees working on the hold.",
+    "True only on the one task you start to repair a project's held batch: the host records it as that batch's repair, which the captain sees.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -578,8 +578,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "Lessons and the user's own panels on the rails use personal_ui true: the",
       "host binds the personal workspace itself (no repo_id) and the crewmate builds in place,",
       "so name an existing surface's id in the goal for a change.",
-      "Before security, codesign or any Keychain command against real keychains or a project's own signing material,",
-      "ask for consent on a card; never put a secret in a command line; prefer stand-ins under a scratch HOME.",
+      "Before security, codesign or any Keychain command against real keychains or a project's own signing material, ask for consent on a card; never put a secret in a command line; prefer stand-ins under a scratch HOME.",
       "Returns the task id immediately;",
       "the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     ].join(" "),
@@ -642,10 +641,12 @@ export function createCrewTools(delegate: CrewDelegate) {
           { description: SHAPE_GROUP_DESCRIPTION },
         ),
       ),
-      placement_requirements: Type.Optional({
-        ...PLACEMENT_REQUIREMENTS_PARAM,
-        description: "As create_task's placement_requirements.",
-      }),
+      placement_requirements: Type.Optional(
+        Type.Object({}, {
+          additionalProperties: true,
+          description: "As create_task's placement_requirements.",
+        }),
+      ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(
         Type.String({
@@ -863,8 +864,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "merge-pr rechecks and merges the task's current pull request (fast-forwards on plain Git), or closes it as merged " +
-      "if already merged and no question or other pull request is open; on Bitbucket it only closes an already-merged one, and a new merge goes through the merge card's approval, even with autonomy on. land merges locally, never for direct-PR. " +
+      "merge-pr rechecks and merges the task's current pull request, or closes it as merged " +
+      "if already merged and no question or other pull request is open; on Bitbucket it only closes an already-merged one, and a new merge needs the merge card's approval, even with autonomy on. land merges locally, never for direct-PR. " +
       "discard removes unwanted work unmerged; never discard results. done closes it and names why: answered " +
       "(an answer reported or handed on), finished (verified work with nothing to merge), released (you independently " +
       "verified its delivery through an external release; evidence names it), carried_on (carried_by) or merged (delivered_in: any pull request in its project, or a commit on main). " +
@@ -942,7 +943,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Move task",
     description:
       "Moves started work to another work computer or this Mac at a safe pause: " +
-      "its crewmate's turn and commands finish first; no new turn starts meanwhile. It keeps " +
+      "its crewmate's turn and commands finish first. It keeps " +
       "its key, branch, uncommitted work, files and record, and continues in a new conversation " +
       "there on the same model. Only on the captain's ask, never to balance load. cancel stops a " +
       "move before crossing starts. Git-ignored files stay with the old copy unless keep names them. " +

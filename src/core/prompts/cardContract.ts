@@ -73,7 +73,7 @@ function renderInstructions(parts: readonly InstructionPart[], reader?: Instruct
 
 const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "CARD AUTHORING",
-  "A decision asks each question in its finding or section, never a closing list; a choice among sections follows their comparison. Give each question a short, stable control name and option values; put its words in the options' <fieldset><legend> or a <label> bound to a lone field. Mark required questions and bind a <label> to each option so the pick reads in words. Radio, checkbox and select answers arrive unpicked: check and select nothing. Open selects on <option value=\"\">Choose</option>; mark recommended inputs or options data-inf-recommended, tagging them without picking them. An optional question may be skipped, sending its data-inf-recommended option, tagged Default: leave it optional only when you would act on that option unasked, and mark one. Outside previews, end each radio group, select and group of two or more checkboxes with a Something else row marked data-inf-write-in: an input with the question's name or the select's last <option>. The app opens a text field when picked. If options are the only possible answers, mark the <fieldset> or <select> data-inf-options-only instead. A written-in answer is the captain's words: follow it like a reply; ask only if it cannot be followed. Text fields keep prefilled text. A pick sends nothing: the clicked footer button carries every named field, the default after required answers, others whatever is picked. Never call inf.action from a control.",
+  "A decision asks each question in its finding or section, never a closing list; a choice among sections follows their comparison. Give each question a short, stable control name and option values; put its words in the options' <fieldset><legend> or a <label> bound to a lone field, bind a <label> to each option, and mark required questions. Radio, checkbox and select answers arrive unpicked: check and select nothing. Open selects on <option value=\"\">Choose</option>; mark recommended inputs or options data-inf-recommended, tagging them without picking them. An optional question may be skipped, sending its data-inf-recommended option, tagged Default: leave it optional only when you would act on that option unasked, and mark one. Outside previews, end each radio group, select and group of two or more checkboxes with a Something else row marked data-inf-write-in: an input with the question's name or the select's last <option>. The app opens a text field when picked. If options are the only possible answers, mark the <fieldset> or <select> data-inf-options-only instead. A written-in answer is the captain's words: follow it like a reply; ask only if it cannot be followed. Text fields keep prefilled text. A pick sends nothing: the clicked footer button carries every named field, the default after required answers, others whatever is picked. Never call inf.action from a control.",
   // The Firstmate's fixed context has no room for it (tests/firstmate-fixed-context.test.ts):
   // it reads the field's answer by the written-in rule above, and the lint names the reserved name.
   crewOnly(
@@ -94,7 +94,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "An inline <script> (no src) may add behavior, including inf.action(id, value) for a declared action, and loads nothing.",
   ),
-  'A <button data-inf-draft="words"> starts the captain\'s message with its words, one line, on their press, sending nothing.',
+  'A <button data-inf-draft="words"> starts the captain\'s message with its words on their press.',
   crewOnly(
     "A figure plays only when a press shows what one still drawing cannot hold - the same thing in two places or more states than panels would fit - and a figure with one value the reader would vary takes one control that redraws it. Every other figure stays still, a timeline, a chart, numbered steps and a flow among them; a cursor or highlight sweeping a drawing that already shows every state adds nothing. Previews are exempt: they draw something that does not exist yet. Motion runs on the captain's press or drag, one pass, never on arrival and never in a loop; a moving figure's script sits inside its <figure>; the resting markup is the whole explanation without the script, its labels in the markup where the size check reads them, and when the duration tokens (--dur-med, --dur-slow) read zero every move is a cut.",
   ),
@@ -104,19 +104,19 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   'Draw figures as inline <svg> with a viewBox, width="100%" at full width, in <figure> with an aria-label. Use design-system theme tokens (--fg-1..3, --bg-0..3, --line-1..2, --accent, --ok, --warn, --danger, --idle; --accent, --ok, --warn and --danger also have -dim fills) for light and dark. Use --accent for the lit or current element, one accent per figure, not per card; use ok/warn/danger for real state. Literal colors are fine where a token says no more. Draw whatever figure the explanation calls for.',
   "A full-width drawing is 750 units wide, one per pixel. Use app label sizes: unsized for 12.5px, 14px for the important one, 11px mono for micro labels; never exceed body text except for a display number. SVG type, including foreignObject, scales below 11px in narrow cards; text elements do not wrap, so shorten labels or use foreignObject for flowing text.",
   crewOnly(
-    'A working-copy picture is an <img> whose src is its working-copy-relative path - a PNG, JPEG or WebP - and whose alt says what it proves, beside the sentence it illustrates; the host keeps a copy and shows it fitted and whole, never cropped. Pictures in one <figure class="inf-pictures"> are a group: the first large, the rest thumbnails, a <figcaption> as caption. A card holds up to 64 MB of pictures; never encode one into the body or name one by URL.',
+    'A working-copy picture is an <img> whose src is its working-copy-relative path - a PNG, JPEG or WebP - and whose alt says what it proves, beside the sentence it illustrates; the host shows it fitted and whole. Pictures in one <figure class="inf-pictures"> are a group: the first large, the rest thumbnails, a <figcaption> as caption. A card holds up to 64 MB of pictures; never encode one into the body or name one by URL.',
   ),
   "Prose uses theme tokens, --font-mono and inf-mono, inf-muted, inf-row, inf-grid and inf-panel classes; <details> takes a <summary>, <mark> holds the one thing to notice, <kbd> a key.",
   crewOnly(
-    "A preview or drawing of a project's screens takes that project's own look from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style>, classes, CSS lengths and colors, and data-* hooks for its script, and restyles every element it draws, since the app stylesheet dresses what it leaves bare. It loads a font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its working-copy path or absolute evidence-folder path, which the host checks, keeps and serves like a picture; nothing else loads.",
+    "A preview or drawing of a project's screens takes that project's own look from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style>, classes, CSS lengths and colors, and data-* hooks for its script, and restyles every element it draws. It loads a font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its working-copy path or absolute evidence-folder path, which the host checks, keeps and serves like a picture; nothing else loads.",
   ),
   "Card copy is sentence case, factual and free of exclamation points and emoji; title and body each stand alone and name the work plainly, not only a PR number or SHA.",
   "A card sentence holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. Speak literally, without figures of speech. Number three or more actions in a row.",
-  "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project (repository only when pointing at GitHub); a pull request, or PR #N in mono (the pushed branch on a plain host); the checks passed or failed (CI, green or red may sit beside them); a branch, a working copy, never git branch or worktree; merge, never land or put it in; file for the backlog, start for now or with its moment (starts once INF-12 merges), offering both for each proposed task; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in (OAuth app or token one click deeper); where the project lives, naming the host when known (remote or origin one click deeper); the version, never a SHA or head in the sentence; clone, never copy, for a project; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), as the thing itself in mono (a PR number, a key, a file path), or inside <details>; the sentence around it never needs it to be understood.",
+  "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project (repository only when pointing at GitHub); a pull request, or PR #N in mono (the pushed branch on a plain host); the checks passed or failed (CI, green or red may sit beside them); a branch, a working copy, never git branch or worktree; merge, never land or put it in; file for the backlog, start for now or with its moment, offering both for each proposed task; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in; where the project lives, naming the host when known; the version, never a SHA or head in the sentence; clone, never copy, for a project; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), in mono (a PR number, a key, a file path) or inside <details>; its sentence never needs it.",
   // INF-2326 piece 2: the two card-word rules, measured by the replay gate's
   // term_explained_share and change_effect_share (docs/replay-harness.md).
   "Explain a project's coined term in plain words on first use, or replace it with them.",
-  "A card about a change says near its start whether people using the project will notice it or it changes only how the project is built, checked or documented.",
+  "A card about a change says near its start whether people will notice it or it changes only how the project is built, checked or documented.",
   'A pull request a body names by its number is a link to its page: <a class="inf-mono" href="its page">PR #N</a>. A task\'s pull request page is the change on its tasks row; a number whose page no tool answer gave you stays plain mono.',
   "A runbook's card voice, length, layout, opening and button names override core author guidance; fixed card shape, consent and host effects always hold.",
   // INF-3674, the captain's answer: "Your language for anything written to
@@ -126,9 +126,9 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
     "A change story is the exception: it is read where the project lives, so it carries no clock time or time zone.",
   ),
   crewOnly(
-    "Commits, pull requests, change stories, code, comments and documents keep the project's own language, the one its existing commits and documents use.",
+    "Commits, pull requests, change stories, code, comments and documents keep the project's own language.",
   ),
-  "On a card with a merge or settle effect the host adds a strip after the body - project, crewmate's model, care level, pull request, checks and any hold it placed - which the body never repeats.",
+  "On a card with a merge or settle effect the host adds a strip after the body - project, model, care level, pull request, checks and any hold - which the body never repeats.",
 ];
 
 /** Full authoring contract, unchanged for both crewmate runtimes. */
@@ -165,7 +165,7 @@ export const CARD_REPLY = [
   "Captain replies carry card ids.",
   "Work first; answer in-thread in one to three sentences. For changes, emit_card with SAME id and answer as reply on every revision while answering; otherwise reply.",
   "The thread line is the answer: the card's body never repeats it, and one answer is written once.",
-  "A reply never moves its card from its thread. Give results once research is done, before other work, not acknowledgements or promises; answers show once sent.",
+  "A reply never moves its card from its thread. Give results once research is done, not acknowledgements or promises; answers show once sent.",
   "Reply in sentence-case prose, never actions or scripts; revise figures on the card.",
   "Replies resolve nothing but signs_off; buttons stay: a reply is not a closing choice and does not authorize merging; never close merely for a reply.",
   "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate, naming the card's id; the first mate acts.",
@@ -224,10 +224,10 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "Before filing or starting, the first mate reconciles the built-on work its wake or by-key read names, closed too: covered work gets no start_now, refiling, spawn or basis change; steer the asker to its owner. Keep multi-part parents on request.",
   ),
   firstmateOnly(
-    "In the approval's turn the first mate files every piece the plan names, the last included, each in its named project; a piece whose steps come later, such as a plan per part, is filed on request now, blocked by the existing steps, and each later step joins its blockers when filed. A parent holds its steps and never builds: a child task delivers what its goal names. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
+    "In the approval's turn the first mate files every piece the plan names, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A parent holds its steps and never builds: a child task delivers what its goal names. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
   ),
   firstmateOnly(
-    "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Silently doing nothing is not a recorded hold; record waits, never invent one.",
+    "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Record waits, never invent one.",
   ),
   "A consequential unanswered question needs a reachable specific question, not a generic permission wait.",
   firstmateOnly(
@@ -235,7 +235,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   ),
   "Never steer an unstarted builder or closed planner; steer only an active author who can revise its card. Start bounded work only when the settled scope authorizes it.",
   firstmateOnly(
-    "For authorized ready unstarted work, reuse the successor. If its basis is missing, call update_task basis first, read success, then call update_task start_now separately in this same turn. Never combine basis and start_now or stop at attachment alone. On refusal, repair the concrete reason or record the real dependency; do not claim a start. If no successor exists, spawn it (or create then start it) with shape.basis and the implement constraint.",
+    "For authorized ready unstarted work, reuse the successor. If its basis is missing, call update_task basis first, read success, then call update_task start_now separately in this same turn. Never combine them or stop at attachment alone. On refusal, repair the reason or record the real dependency; claim no start. If no successor exists, spawn it (or create then start it) with shape.basis and the implement constraint.",
   ),
   crewOnly(
     "After an answer authorizes a build, report without a new captain wait: a bare authorization needs no card update.",
@@ -325,7 +325,7 @@ export const CLAUDE_TOOL_DESCRIPTION_CAP = 2_048;
 const RISK_PARAM = [
   `Required on your own change's merge card, allowed on one naming a reviewed pull request, nowhere else: your assessment of the change's risk, drawn as a radar on the card and kept on the task.`,
   `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason.`,
-  "The app adds no measurements; the body never repeats the assessment, and a revision of the card replaces it.",
+  "The app adds no measurements; the body never repeats the assessment.",
   ...RISK_DIMENSIONS.map((dimension) => {
     const { label, ask, levels } = RISK_WORDS[dimension];
     return `${dimension} (${label}, ${ask}): low ${levels.low}; medium ${levels.medium}; high ${levels.high}.`;
@@ -368,7 +368,7 @@ export const CARD_PARAMS = {
   body: "Raw HTML fragment",
   id: "Stable kebab-case id",
   holds_place:
-    "Leave unset unless the card needs continuous attention. True brings the card forward when it arrives. Choices close at once.",
+    "Leave unset unless the card needs continuous attention: true brings it forward on arrival. Choices close at once.",
   reply: "Your short answer in this card's thread, saying what changed where.",
   interim: "True when reply is a progress note; the captain's reply still waits.",
   width:
@@ -389,7 +389,7 @@ export const CARD_PARAMS = {
    * same reads a custom panel's manifest names, through the same bridge.
    * Top-level parameters, so a Claude crewmate reads them whole.
    */
-  reads: `Optional: live app data this card's own script may read while the card is open, as a custom panel's manifest names it. inf.subscribe(read, args, onValue, onError?) answers only a read listed here, one of ${PANEL_READ_NAMES.join(", ")}. Write each value the script fills as static markup too, so a view that mounts the card without reads still shows it. Name only what the body draws. A revision passes the list again; a closed card stops updating and keeps what it last drew.`,
+  reads: `Optional: live app data this card's own script may read while the card is open, as a custom panel's manifest names it. inf.subscribe(read, args, onValue, onError?) answers only a read listed here, one of ${PANEL_READ_NAMES.join(", ")}. Write each value the script fills as static markup too, so a view that mounts the card without reads still shows it. Name only what the body draws. A revision passes the list again; a closed card keeps what it last drew.`,
   sql: `Optional: views of the app's record this card's script may query, from ${SQL_VIEWS.join(", ")}, through inf.subscribe("sql", { sql, params }, onValue). Passed again on each revision, as reads.`,
 } as const;
 

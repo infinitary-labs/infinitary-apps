@@ -33,7 +33,7 @@ export function createInstallPluginTool(delegate: InstallPluginDelegate) {
     label: "Add a panel or runbook",
     description: [
       `Add a panel or runbook on the captain's word: from npm (a package, optionally @version), a git address (optionally #tag, branch or commit), or a folder on ${HERE.this} (a full path).`,
-      "The host fetches, pins and checks it; only the captain's consent card adds it. Say nothing more.",
+      "The host fetches, pins and checks it; only the captain's consent card adds it.",
       "Runbooks carry guidance, HTML parts and pictures, not scripts. A declared replacement turns the named built-in off.",
       "A panel inside stays inert: add its folder separately for consent. Unchanged-grant panel updates need no new card; runbook updates always ask.",
       "Remove an added runbook with action remove and its id as spec. Acts only on the captain's own turn.",

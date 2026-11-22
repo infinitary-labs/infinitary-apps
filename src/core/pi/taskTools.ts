@@ -404,7 +404,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         }),
       ),
       placement_requirements: Type.Optional(
-        Type.Union([PLACEMENT_REQUIREMENTS_PARAM, Type.Null()], {
+        Type.Union([Type.Object({}, { additionalProperties: true }), Type.Null()], {
           description: "As create_task's placement_requirements; null resets.",
         }),
       ),
@@ -490,7 +490,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ],
           {
             description:
-              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} when it waits for an Infinitary update on its computer, ending once that version, or any newer one, is installed. No reminders except unanswered captain replies; notify once at deadline if held. Any turn ends it sooner; on_event and on_update do too, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
+              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update, or a newer one, on its computer. No reminders except unanswered captain replies; notify once at deadline if held. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
           },
         ),
       ),
@@ -752,8 +752,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
       "until `from` closes; on batched pull requests `to` starts at `from`'s merge approval unless",
       "its needs_merge names `from` (add such a wait with update_task blocked_by and needs_merge together), and a cycle is refused as text. related: work neither task is waiting on.",
-      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now;",
-      "link every move of work to another task (drop, takeover, fresh task): `from`'s waits",
+      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now (drop, takeover, fresh task): `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",
     ].join(" "),
     parameters: Type.Object({

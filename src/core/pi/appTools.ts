@@ -247,7 +247,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
     boundTool({
       name: "app_change",
       label: "Change app setting",
-      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: their message, card choice or a schedule they set, never your own, except a judgment action's, which gives your reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings, project-runs-on and project-move, on_words true declares the exact change their words named; omit it to propose with its source as evidence, applied only on the app’s card, once. Hands offer a card (project-setup at any wake); yours explain.`,
+      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask (their message, card choice or schedule), never your own, except a judgment action's reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings, project-runs-on and project-move, on_words true declares the exact change their words named; omit it to propose with its source as evidence, applied only on the app’s card, once. Hands offer a card (project-setup at any wake); yours explain.`,
       parameters: Type.Object({
         action: stringEnum(ACTION_NAMES),
         value: Type.Object({}, { additionalProperties: true }),

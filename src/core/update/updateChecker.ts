@@ -657,7 +657,7 @@ export function createInstalledUpdateChecker(
         await options.openExternal(releaseSource.releasesUrl);
       },
       install: async () => ({ ok: false, problem: cannotUpdate }),
-      // Neither a Windows copy nor an unconfirmed one replaces itself; its own words say why.
+      // A copy whose installation is unconfirmed does not replace itself; its own words say why.
       follow: async () => cannotFollow("installation", cannotUpdate),
     };
   }

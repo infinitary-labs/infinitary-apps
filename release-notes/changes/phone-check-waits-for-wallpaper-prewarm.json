@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "phone-check-waits-for-wallpaper-prewarm",
-      "reason": "The phone check starts no part on a simulator until the simulator's wallpaper prewarm after its boot has finished, so that system task no longer runs inside a part and starves the take-over part's Face ID prompt; nothing in the app changes."
+      "reason": "The phone check starts no part on a simulator until the simulator's wallpaper prewarm after its boot has finished, so that system task no longer runs inside a part and starves the take-over part's Face ID prompt, and its dealt jobs' time limits rise about 2 minutes to hold that wait; nothing in the app changes."
     }
   ]
 }

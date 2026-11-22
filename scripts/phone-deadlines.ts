@@ -22,18 +22,22 @@ export const PHONE_PART_BUDGET_FLOOR_MS = 3 * 60_000;
  * times come from a full gate that ran two simulators at once. A job may land on a phone Mac with one simulator, which
  * runs its parts one after another at up to 1.08 of their recorded minutes (a job of twelve short iPhone parts, run
  * 44868118991; a job of six long ones ran at 0.69). Its gate step also builds the app for up to 3.1 minutes, starts
- * the first part about a minute late and cleans up, so a job of 14 recorded minutes ends near 19.5 minutes there,
- * inside the gate step's 21-minute limit in phone.yml, and sooner on a phone Mac with two simulators. The first job's
- * package tests add about a minute, which its Mac part, counted here though it runs beside the simulators, covers.
+ * the first part about a minute late and cleans up. INF-6058: it also starts no part until the simulator's wallpaper
+ * prewarm has finished, which on the phone Macs came 1.1 and 2.0 minutes after the build ended (runs 44868828667 and
+ * 44965884426). So a job of 14 recorded minutes ends near 21.5 minutes there, inside the gate step's 23-minute limit
+ * in phone.yml, and sooner on a phone Mac with two simulators. The first job's package tests add about a minute,
+ * which its Mac part, counted here though it runs beside the simulators, covers.
  * INF-6039's plan, part 1: in a request dealt into several jobs, the first job builds the app in a step of its own
  * before its gate and uploads it for the others, and its gate and theirs skip the build when they take it; the first
- * job's build and upload then come before its gate, so that job's limit in phone.yml is 12 minutes longer, 37, the
- * build step's own limit, and its gate's 21 still ends inside it. */
+ * job's build and upload then come before its gate, so that job's limit in phone.yml is 12 minutes longer, 39, the
+ * build step's own limit, and its gate's 23 still ends inside it. */
 export const PHONE_JOB_BUDGET_MS = 14 * 60_000;
 /** INF-5546: what each device past a job's first adds on a phone Mac with one simulator, which starts a device only
  * after the last one's parts end: deleting that simulator and starting the next took 40 to 72 seconds, and the new
- * device's first part ran about a minute past its recorded time (runs 44868118991 and 44868828667). */
-export const PHONE_DEVICE_START_MS = 2 * 60_000;
+ * device's first part ran about a minute past its recorded time (runs 44868118991 and 44868828667). INF-6058 adds a
+ * minute for the new simulator's wallpaper prewarm, which its first part now waits for: that simulator boots with no
+ * build beside it, and an idle simulator's prewarm finished 41 to 64 seconds after its boot began. */
+export const PHONE_DEVICE_START_MS = 3 * 60_000;
 
 export const phoneMinutes = (ms: number): string => (ms / 60_000).toFixed(1);
 

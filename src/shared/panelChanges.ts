@@ -93,6 +93,10 @@ export const PANEL_CHANGES = {
   "account-prefer": true,
   "account-keep-going": ["consent", "Keep going on credits spends money past the plan"],
   "account-use-reset": ["consent", "Spends one of an account's saved resets"],
+  "account-use-saved-resets": [
+    "consent",
+    "Lets work spend an account's saved resets with no click",
+  ],
   "account-disconnect": ["credential", "Forgets an account's sign-in"],
   "projects-folder": true,
   "project-batch-answer": true,
@@ -105,6 +109,7 @@ export const PANEL_CHANGES = {
   "window-size": true,
   "crew-model-names": true,
   "ambient-music": true,
+  "ambient-own-style": true,
   "ambient-away": true,
   "card-size": true,
   language: true,

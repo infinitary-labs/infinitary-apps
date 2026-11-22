@@ -1301,6 +1301,7 @@
 "panelChangeAccountRename" = "アカウントの名前";
 "panelChangeAmbientAway" = "不在中の音楽";
 "panelChangeAmbientMusic" = "環境音楽";
+"panelChangeAmbientOwnStyle" = "自分の環境音楽スタイル";
 "panelChangeAutomationEdit" = "自動化を作成・変更";
 "panelChangeAutomationPauseAll" = "すべての自動化を一時停止";
 "panelChangeAutomationState" = "自動化の一時停止と再開";

@@ -1392,6 +1392,7 @@ declare module "@infinitary/contracts" {
     | "account-rename"
     | "ambient-away"
     | "ambient-music"
+    | "ambient-own-style"
     | "automation-edit"
     | "automation-pause-all"
     | "automation-state"

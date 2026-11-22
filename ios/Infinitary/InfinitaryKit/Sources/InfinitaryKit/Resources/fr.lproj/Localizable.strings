@@ -1301,6 +1301,7 @@
 "panelChangeAccountRename" = "Le nom d’un compte";
 "panelChangeAmbientAway" = "Musique pendant votre absence";
 "panelChangeAmbientMusic" = "Musique d’ambiance";
+"panelChangeAmbientOwnStyle" = "Vos propres styles de musique d’ambiance";
 "panelChangeAutomationEdit" = "Écrire ou modifier une automatisation";
 "panelChangeAutomationPauseAll" = "Mettre en pause toutes les automatisations";
 "panelChangeAutomationState" = "Mettre en pause ou reprendre une automatisation";

@@ -1301,6 +1301,7 @@
 "panelChangeAccountRename" = "帳號的名稱";
 "panelChangeAmbientAway" = "離開時的音樂";
 "panelChangeAmbientMusic" = "環境音樂";
+"panelChangeAmbientOwnStyle" = "你自己的環境音樂風格";
 "panelChangeAutomationEdit" = "撰寫或修改自動化";
 "panelChangeAutomationPauseAll" = "暫停所有自動化";
 "panelChangeAutomationState" = "暫停或恢復自動化";

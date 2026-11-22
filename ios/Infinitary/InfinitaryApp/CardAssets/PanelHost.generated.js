@@ -5058,6 +5058,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "account-prefer": true,
     "account-keep-going": ["consent", "Keep going on credits spends money past the plan"],
     "account-use-reset": ["consent", "Spends one of an account's saved resets"],
+    "account-use-saved-resets": [
+      "consent",
+      "Lets work spend an account's saved resets with no click"
+    ],
     "account-disconnect": ["credential", "Forgets an account's sign-in"],
     "projects-folder": true,
     "project-batch-answer": true,
@@ -5070,6 +5074,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "window-size": true,
     "crew-model-names": true,
     "ambient-music": true,
+    "ambient-own-style": true,
     "ambient-away": true,
     "card-size": true,
     language: true,
@@ -33872,6 +33877,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Ambient music‬`;
     }
     return `Ambient music`;
+  }
+  function panelChangeAmbientOwnStyle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنماطك الخاصة من الموسيقى المحيطة`;
+      case "de":
+        return `Deine eigenen Hintergrundmusik-Stile`;
+      case "es":
+        return `Tus propios estilos de música ambiental`;
+      case "fr":
+        return `Vos propres styles de musique d’ambiance`;
+      case "ja":
+        return `自分の環境音楽スタイル`;
+      case "ko":
+        return `나만의 배경 음악 스타일`;
+      case "pt-BR":
+        return `Seus próprios estilos de música ambiente`;
+      case "zh-Hans":
+        return `你自己的环境音乐风格`;
+      case "zh-Hant":
+        return `你自己的環境音樂風格`;
+      case "en-XA":
+        return `[Ýöûŕ öŵñ áɱƀîéñţ šţýļéš ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your own ambient styles‬`;
+    }
+    return `Your own ambient styles`;
   }
   function panelChangeAutomationEdit() {
     switch (currentLanguage()) {
@@ -93356,6 +93388,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeAccountRename,
     panelChangeAmbientAway,
     panelChangeAmbientMusic,
+    panelChangeAmbientOwnStyle,
     panelChangeAutomationEdit,
     panelChangeAutomationPauseAll,
     panelChangeAutomationState,
@@ -96330,6 +96363,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeAccountRename": [],
     "panelChangeAmbientAway": [],
     "panelChangeAmbientMusic": [],
+    "panelChangeAmbientOwnStyle": [],
     "panelChangeAutomationEdit": [],
     "panelChangeAutomationPauseAll": [],
     "panelChangeAutomationState": [],

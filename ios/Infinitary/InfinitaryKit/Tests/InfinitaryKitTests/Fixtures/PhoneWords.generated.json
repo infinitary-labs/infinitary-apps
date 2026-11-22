@@ -1063,6 +1063,7 @@
   {"said":{"m":"panelChangeAccountRename"},"words":"An account's name"},
   {"said":{"m":"panelChangeAmbientAway"},"words":"Music while you're away"},
   {"said":{"m":"panelChangeAmbientMusic"},"words":"Ambient music"},
+  {"said":{"m":"panelChangeAmbientOwnStyle"},"words":"Your own ambient styles"},
   {"said":{"m":"panelChangeAutomationEdit"},"words":"Write or change an automation"},
   {"said":{"m":"panelChangeAutomationPauseAll"},"words":"Pause every automation"},
   {"said":{"m":"panelChangeAutomationState"},"words":"Pause or resume an automation"},

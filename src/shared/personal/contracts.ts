@@ -1383,6 +1383,7 @@ export type PanelChangeSetting =
   | "account-rename"
   | "ambient-away"
   | "ambient-music"
+  | "ambient-own-style"
   | "automation-edit"
   | "automation-pause-all"
   | "automation-state"

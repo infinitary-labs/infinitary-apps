@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-settings-journey-feedback",
+      "reason": "Only the panel settings journey and its fixture change; settings behavior is unchanged."
+    }
+  ]
+}

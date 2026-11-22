@@ -46,7 +46,7 @@ async function changesOnlyOnHisClick(page: Page): Promise<void> {
   await test.step("a click in it changes the theme as the captain, and Activity names the panel", async () => {
     // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
     await look.locator("[data-look-light]").click();
-    await expect(look.locator("[data-look-said]")).toHaveText("changed");
+    await expect(look.locator('[data-look-said="light"]')).toHaveText("changed");
     await expect.poll(async () => (await appearance(page)).theme).toBe("light");
     const named = englishOf(said("feedCaptainSetInPanel", { text: "", panel: "Look" }));
     await expect
@@ -54,22 +54,36 @@ async function changesOnlyOnHisClick(page: Page): Promise<void> {
       .toBe(true);
   });
 
-  await test.step("each later click in it changes the setting it names", async () => {
+  await test.step("a later click changes the theme back", async () => {
     // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
     await look.locator("[data-look-dark]").click();
+    await expect(look.locator('[data-look-said="dark"]')).toHaveText("changed");
     await expect.poll(async () => (await appearance(page)).theme).toBe("dark");
-    const before = await appearance(page);
-    // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
-    await look.locator("[data-look-larger]").click();
-    await expect.poll(() => appearance(page)).toEqual({ ...before, size: 110 });
   });
 
   await test.step("a setting its manifest does not name is refused in the app's words", async () => {
+    const before = await appearance(page);
+    // Hiding the names must be a real change if it ever gets through.
+    expect(before.showCrewModelNames ?? true).toBe(true);
     // e2e-frame-actions: native -- This journey proves the core refuses a setting the panel was not granted.
     await look.locator("[data-look-unlisted]").click();
-    await expect(look.locator("[data-look-said]")).toHaveText(
-      englishOf(said("panelChangeNotGranted", { setting: "crew-model-names" })),
-    );
+    const feedback = look.locator('[data-look-said="unlisted"]');
+    // Missing feedback means the press never reached the handler, not that the change succeeded.
+    await expect(feedback).toBeVisible();
+    await expect
+      .soft(feedback)
+      .toHaveText(englishOf(said("panelChangeNotGranted", { setting: "crew-model-names" })));
+    expect(await appearance(page)).toEqual(before);
+  });
+
+  // Save the zoom change for last: the core can report the saved size before Chromium
+  // has redrawn the window for native hit testing at that scale.
+  await test.step("a click changes the window size and nothing else", async () => {
+    const before = await appearance(page);
+    // e2e-frame-actions: native -- This journey proves a real pointer grants permission to change a setting.
+    await look.locator("[data-look-larger]").click();
+    await expect(look.locator('[data-look-said="larger"]')).toHaveText("changed");
+    await expect.poll(() => appearance(page)).toEqual({ ...before, size: 110 });
   });
 }
 

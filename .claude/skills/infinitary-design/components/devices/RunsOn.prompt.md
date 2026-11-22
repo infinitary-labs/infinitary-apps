@@ -41,7 +41,7 @@ The task's record shows it read-only in Details (`../cards/TaskRecord.prompt.md`
 A card from a task that runs elsewhere is the same card.
 Its head names where it runs right after its meta line, "Fix the footer · on Mac mini", however long the task's title: the title gives way, the place never does (`../cards/ResponseCard.prompt.md`).
 The facts strip at its foot names no computer, since the head already does.
-The crewmate's summary and its Tasks row carry the same fact, "website · on Mac mini", and its task record names the computer in Details' Runs on.
+The crewmate's summary carries the same fact, "website · on Mac mini", and its task record names the computer in Details' Runs on; its Tasks row names no computer.
 Pull requests are still opened, checked and merged from this computer.
 
 **Out of reach and waiting.**
@@ -67,8 +67,8 @@ Feed lines, never cards:
   After a restart: "Builder is not logged in since this computer restarted. api's next task waits for it." and "Log in as Builder once, then switch back."
   Then: "Running as Builder is back. api's next task started as Builder."
 
-While its device is out of reach a task's Tasks mark keeps its shape in `warn`, its mono line ends "out of reach" (those words alone in the narrow panel, which hides the project name), its status reason reads "Mac mini is out of reach" on its summary and its record; for a computer connected on an older Infinitary both read "takes no new work" and "Mac mini takes no new work" instead, and the first mate neither nudges it nor calls it stuck (`../now/NowPanel.prompt.md`).
-A device that is connected while the app is still catching up with a task - after either side restarted - is in reach, never out of reach: the task's mark stays as it was, its mono line ends "catching up" in `--fg-3`, and its status reason, which the row's summary shows, reads "Catching up with Mac mini since 12:57 PM"; its crewmate stays on the orbit.
+While its device is out of reach a task's Tasks mark keeps its shape in `warn`, its Tasks row ends "out of reach", naming no computer, its status reason reads "Mac mini is out of reach" on its summary and its record; for a computer connected on an older Infinitary both read "takes no new work" and "Mac mini takes no new work" instead, and the first mate neither nudges it nor calls it stuck (`../now/NowPanel.prompt.md`).
+A device that is connected while the app is still catching up with a task - after either side restarted - is in reach, never out of reach: the task's mark stays as it was, its Tasks row ends "catching up" in `--fg-3`, and its status reason, which the row's summary shows, reads "Catching up with Mac mini since 12:57 PM"; its crewmate stays on the orbit.
 Never the words away, offline, disconnected, assigned, placed, helper or runner (`copy/Vocabulary.prompt.md`).
 
 **Automatic explanations.**

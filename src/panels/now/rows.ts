@@ -147,29 +147,18 @@ export function newFilingCount(rows: readonly NowRow[]): number {
   return rows.filter((row) => row.task.filingNew).length;
 }
 
-/** The trailing chrome: the project's display name, never the task key. */
+/** The project's display name, for a row's label. */
 export function projectNameOf(board: Pick<PanelTaskBoard, "projects">, task: PanelTaskRow): string {
   return board.projects.find((project) => project.id === task.projectId)?.name ?? "";
 }
 
 /**
- * What a row says after its title (the design skill's RunsOn): the
- * project's name - left out where only one project could be meant - then,
- * for a task another computer runs, where ("on Mac mini"); and whether that
- * computer is out of reach, connecting, or connected and still catching up
- * with the task, which the row says last.
+ * What a row says after its title about its computer: nothing while it can
+ * take work; otherwise why not - out of reach, connecting, taking no new
+ * work, or connected and still catching up with the task. The row names
+ * neither its project nor its computer: the summary and the record do.
  */
-export function trailingOf(
-  board: PanelTaskBoard,
-  task: PanelTaskRow,
-  singleProject = hasSingleRegisteredRepoProject(board),
-): RowTrailing {
-  return rowTrailing(task, singleProject ? "" : projectNameOf(board, task));
-}
-
 export type RowTrailing = {
-  name: string;
-  place: string;
   /** The row says its reach word: out of reach, connecting or catching up. */
   outOfReach: boolean;
   connecting: boolean;
@@ -178,18 +167,12 @@ export type RowTrailing = {
   reach: string;
 };
 
-/**
- * The trailing chrome from the project's name the row shows ("" where only
- * one project could be meant): what a row's paint reads, so a row takes the
- * name as a value and paints again only when it or the task changed.
- */
-export function rowTrailing(task: PanelTaskRow, name: string): RowTrailing {
+/** The words a row ends with: what a row's paint reads, so a row paints again only when the task changed. */
+export function rowTrailing(task: PanelTaskRow): RowTrailing {
   const connecting = task.place?.reach === "connecting";
   // Connected and catching up is in reach: the row says catching up, never out of reach.
   const catchingUp = task.place?.reach === "in-reach" && task.place.catchingUpSince !== undefined;
   return {
-    name,
-    place: task.place?.where ?? "",
     // The row says why its computer cannot take work now: out of reach, connecting or catching up.
     outOfReach: catchingUp || (task.place?.reach !== undefined && task.place.reach !== "in-reach"),
     connecting,

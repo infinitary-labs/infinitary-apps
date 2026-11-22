@@ -20,7 +20,6 @@ import {
   rowsOf,
   rowTrailing,
   summaryOf,
-  trailingOf,
   wordOf,
 } from "./rows";
 
@@ -688,7 +687,7 @@ describe("what the collapsed panel says it holds", () => {
 describe("what a row says after its title about its computer", () => {
   it("says connecting while its computer's connection is being made, out of reach otherwise", () => {
     const place = { name: "Mac mini", where: "on Mac mini" };
-    const reach = (task: PanelTaskRow) => trailingOf(board(), task, true);
+    const reach = rowTrailing;
     expect(reach(task({ place: { ...place, reach: "out-of-reach" } }))).toMatchObject({
       outOfReach: true,
       connecting: false,
@@ -705,17 +704,16 @@ describe("what a row says after its title about its computer", () => {
   // INF-1810 finding 7: connected and catching up is not out of reach.
   it("says catching up, in the quiet color, while its connected computer is catching up", () => {
     const place = { name: "Mac mini", where: "on Mac mini", reach: "in-reach" as const };
-    const catching = rowTrailing(task({ place: { ...place, catchingUpSince: 1_000 } }), "");
+    const catching = rowTrailing(task({ place: { ...place, catchingUpSince: 1_000 } }));
+    // The row names no computer: it says only why its computer cannot take work now.
     expect(catching).toEqual({
-      name: "",
-      place: "on Mac mini",
       outOfReach: true,
       connecting: false,
       catchingUp: true,
       reach: "catching up",
     });
-    // Caught up: the row says only where it runs.
-    const caught = rowTrailing(task({ place }), "");
+    // Caught up: the row says nothing about its computer.
+    const caught = rowTrailing(task({ place }));
     expect(caught).toMatchObject({ outOfReach: false });
     expect(caught).not.toHaveProperty("catchingUp");
   });

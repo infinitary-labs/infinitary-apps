@@ -662,7 +662,7 @@ On a home on major 16 or later, or one that lists `board-without-closed`, the ph
 Rows follow the Mac's order: priority, then oldest first, with Done newest closed first and a part indented under its parent in the same group, up to three levels.
 Each row shows the Mac's status mark (`PhoneTaskMark`), the key, the title and the Mac's one dim word: starting, could not start, checks, waiting, blocked, held or found on another task.
 A title takes up to two lines on an iPhone, which has no pointer to show the rest, and one on an iPad, as on the Mac.
-After the title a row names its project only when more than one project with a repository could be meant, then where the task runs and, when that computer cannot take work, out of reach or connecting.
+After the title a row names neither its project nor where the task runs, as on the Mac; only when that computer cannot take work does it end with out of reach, takes no new work or connecting, kept whole beside a long title, while its spoken label still names the project and the computer.
 Only a Queued row shows the home’s dated `queueWait` line below its title, without rewording it or deciding readiness on the phone.
 The row words come from `src/panels/now/words.ts` through the generated `PhoneTaskRowWords`, and `PhoneTaskListTests` replays the desktop panel's own reading of one board, recorded by `scripts/generate-phone-scene.ts`.
 A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows; a card with no task gets its own row titled by the card.

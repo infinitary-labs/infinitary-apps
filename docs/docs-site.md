@@ -106,7 +106,7 @@ It also opens the home page with the system asking for dark and then for light, 
 
 `--origin <address>` opens the pages at that address instead of serving `dist/`, and fails on anything the site's security policy blocks.
 
-`.github/workflows/docs-site.yml` runs the build, the check, the publish checks' tests (`pnpm --dir docs-site test`) and a publish rehearsal on each pushed task branch and pull request that touches `docs-site/`, the token and font files it reads, the app icon, the What's new script or the workflow itself, with the full history the What's new page reads.
+`.github/workflows/docs-site.yml` runs the build, the check, the publish checks' tests (`pnpm --dir docs-site test`) and a publish rehearsal on each pushed task branch and pull request that touches `docs-site/`, the token and font files it reads, the app icon, the What's new script, the language list, the release-notes ledger or the workflow itself (a catalog message edit starts nothing: the site reads only the catalog's folder names, and a new language adds its words file under `docs-site/`), with the full history the What's new page reads.
 It holds no secret and publishes nothing.
 
 The app's own checks leave the site alone: `docs-site/` is one of `scripts/pr-paths.ts`'s light paths, so a change to the site alone skips the app's build and the critical path, and it is in `main.yml`'s `paths-ignore`, so it starts no desktop release check.

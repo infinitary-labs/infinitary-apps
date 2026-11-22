@@ -420,10 +420,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "batch-checks.yml:confirm-later",
     "batch-checks.yml:passed",
     "verify.yml:linux-tests-confirm",
-    // The batch's watch of its code checks, its stops after a failed one and
-    // the one job that then names the failure: a reading and echoes, each
-    // on a hosted machine.
-    "batch-checks.yml:watch",
+    // The batch's stops after a failed code check and the one job that then
+    // names the failure: echoes, each on a hosted machine.
     "batch-checks.yml:stop",
     "batch-checks.yml:stopped",
     // The batch's reading of its Windows-relevant files (INF-4243's pick:
@@ -452,6 +450,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "agent-memory.yml:agent-memory",
       // The docs site's check builds and browses the site, nothing that needs a desktop.
       "docs-site.yml:build-and-check",
+      // The batch's watch polls its run for about 40 minutes; only this project's own batch reaches it.
+      "batch-checks.yml:watch",
     ],
     light_gate: ["journeys.yml:replace-older-request"],
     ci: [

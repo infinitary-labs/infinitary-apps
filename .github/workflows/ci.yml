@@ -126,21 +126,9 @@ jobs:
       - name: Find the change's base
         id: base
         if: ${{ github.event_name != 'workflow_dispatch' }}
-        env:
-          FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
-        run: |
-          left=$(git merge-base "$FROM" HEAD)
-          base=$left
-          for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
-            if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
-              base=$batch
-            fi
-          done
-          echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
-          if [ "$base" != "$left" ]; then
-            echo "batch=$base" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Checked in the batch::This branch is built on the batch version $base, so the batch's own run checks it with every change beside it once it joins, and this check skips its other steps."
-          fi
+        uses: ./.github/actions/change-base
+        with:
+          from: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
       - uses: ./.github/actions/pnpm
         if: ${{ steps.base.outputs.batch == '' }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -194,21 +182,9 @@ jobs:
       # The code checks' step, which says why.
       - name: Find the change's base
         id: base
-        env:
-          FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
-        run: |
-          left=$(git merge-base "$FROM" HEAD)
-          base=$left
-          for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
-            if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
-              base=$batch
-            fi
-          done
-          echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
-          if [ "$base" != "$left" ]; then
-            echo "batch=$base" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Checked in the batch::This branch is built on the batch version $base, so the batch's own run checks it with every change beside it once it joins, and this check skips its other steps."
-          fi
+        uses: ./.github/actions/change-base
+        with:
+          from: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
       - uses: ./.github/actions/pnpm
         if: ${{ steps.base.outputs.batch == '' }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -282,21 +258,9 @@ jobs:
       - name: Find the change's base
         id: base
         if: ${{ github.event_name != 'workflow_dispatch' }}
-        env:
-          FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
-        run: |
-          left=$(git merge-base "$FROM" HEAD)
-          base=$left
-          for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
-            if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
-              base=$batch
-            fi
-          done
-          echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
-          if [ "$base" != "$left" ]; then
-            echo "batch=$base" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Checked in the batch::This branch is built on the batch version $base, so the batch's own run checks it with every change beside it once it joins, and this check skips its other steps."
-          fi
+        uses: ./.github/actions/change-base
+        with:
+          from: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
       - uses: ./.github/actions/pnpm
         if: ${{ steps.base.outputs.batch == '' }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batches-answer-keeps-keyboard-focus",
+      "kind": "fix",
+      "title": "Answer in Settings keeps the keyboard on the held batch",
+      "body": "When you open a held batch from the Batches panel, the first button in the batch takes focus instead of the Projects back button.",
+      "area": "projects",
+      "noPicture": "The fix is where the keyboard goes as Settings opens, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

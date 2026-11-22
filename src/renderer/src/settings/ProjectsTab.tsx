@@ -142,6 +142,8 @@ export function ProjectsTab() {
   const [notice, setNotice] = useState<string | null>(null);
   const focusLine = useRef<string | null>(null);
   const focusHold = useRef<string | null>(null);
+  const pagePanel = useRef<HTMLDivElement>(null);
+  const previousBack = useRef<HTMLButtonElement | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const pending = useRef(new Map<string, RepoPolicyPatch>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -154,8 +156,15 @@ export function ProjectsTab() {
 
   useEffect(() => {
     const refresh = () => {
-      void window.infinitary.repos.list().then(setRepos);
-      void window.infinitary.projects.list().then(setProjects, () => undefined);
+      // Open arrivals against both lists together. A repository-only result can
+      // open a provisional page whose key changes when its project arrives.
+      void Promise.all([
+        window.infinitary.repos.list(),
+        window.infinitary.projects.list().catch(() => undefined),
+      ]).then(([nextRepos, nextProjects]) => {
+        setRepos(nextRepos);
+        if (nextProjects) setProjects(nextProjects);
+      });
     };
     refresh();
     const off = window.infinitary.events.on((event) => {
@@ -211,7 +220,8 @@ export function ProjectsTab() {
     );
   };
 
-  const open = (next: OpenPage | null) => {
+  const open = (next: OpenPage | null, heldBatch: string | null = null) => {
+    focusHold.current = heldBatch;
     setPage(next);
     setAdding(false);
     setNotice(null);
@@ -292,19 +302,26 @@ export function ProjectsTab() {
     if (!target && projects.length === 0) return;
     useShellStore.getState().clearSettingsItem();
     if (!target) return;
-    focusHold.current = heldBatch;
-    open({ project: target.entry.project?.id ?? null, repo: target.chosen.id });
+    open({ project: target.entry.project?.id ?? null, repo: target.chosen.id }, heldBatch);
   });
-  // The held batch a panel named, once its page shows it: its first answer takes the keyboard.
+  // A held-batch arrival takes precedence over the page's default Back target.
+  // A render of the same page must not move focus after that handoff.
   useEffect(() => {
+    const panel = pagePanel.current;
+    const back = panel?.querySelector<HTMLButtonElement>("[data-project-back]") ?? null;
+    const entered = back !== previousBack.current;
+    previousBack.current = back;
     const id = focusHold.current;
-    if (!id || !shown) return;
-    const button = document.querySelector<HTMLButtonElement>(
-      `[data-batch-hold="${CSS.escape(id)}"] button`,
-    );
-    if (!button) return;
-    focusHold.current = null;
-    button.focus();
+    const answer =
+      id && id === shown?.chosen.id
+        ? panel?.querySelector<HTMLButtonElement>(`[data-batch-hold="${CSS.escape(id)}"] button`)
+        : null;
+    if (answer) {
+      focusHold.current = null;
+      answer.focus();
+    } else if (entered) {
+      back?.focus();
+    }
   });
   // A page whose project is gone (its last repository removed) gives way to the list.
   useEffect(() => {
@@ -339,6 +356,7 @@ export function ProjectsTab() {
     const actions: ProjectPageActions = {
       onBack: back,
       onChoose: (repoId) => {
+        focusHold.current = null;
         setPage((current) => (current ? { ...current, repo: repoId } : current));
         setNotice(null);
         setRunsOnError(null);
@@ -380,7 +398,7 @@ export function ProjectsTab() {
     };
     return (
       // biome-ignore lint/a11y/noStaticElementInteractions: Escape from anywhere on the page goes back to the list.
-      <div onKeyDown={onKeyDown}>
+      <div ref={pagePanel} onKeyDown={onKeyDown}>
         <ProjectPage
           key={shown.entry.project?.id ?? shown.chosen.id}
           entry={shown.entry}

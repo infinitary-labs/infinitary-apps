@@ -426,6 +426,10 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "batch-checks.yml:watch",
     "batch-checks.yml:stop",
     "batch-checks.yml:stopped",
+    // A cut's watch for its first failed job and its stops after one
+    // (INF-6038's plan): the same reading and echoes as the batch's.
+    "release.yml:watch",
+    "release.yml:stop",
     // The batch's reading of its Windows-relevant files (INF-4243's pick:
     // "On each combined batch that touches Windows-relevant files").
     "batch-checks.yml:windows-paths",

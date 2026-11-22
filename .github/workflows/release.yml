@@ -767,6 +767,12 @@ jobs:
     # publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_sign || fromJSON(vars.MAC_QUEUES || '{}').sign || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 90
+    # The cut's stop enters this job's own group with cancel-in-progress once
+    # another job of the cut failed (`stop` below). The cancel stops the step
+    # that runs, and the always-run steps after it still run, so the signing
+    # keychain is removed whenever the job ends.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-sign', github.run_id, github.run_attempt) }}
     # It runs before the checks pass, so its token only reads: it can find
     # what the record already holds, never write a tag, a release or an
     # asset. The upload job records once every check passed.
@@ -934,6 +940,9 @@ jobs:
         env:
           MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
           MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
+          # The removal step below names the same path, so it removes the
+          # keychain even when this step stopped before it said where.
+          KEYCHAIN_PATH: ${{ runner.temp }}/infinitary-signing.keychain-db
         run: |
           set -euo pipefail
           : "${MAC_DEVELOPER_ID_CERT_P12:?Missing MAC_DEVELOPER_ID_CERT_P12 secret}"
@@ -956,7 +965,6 @@ jobs:
           # and so does putting this file first. Those edits hold the same
           # search-list.lock as local signing, so a journeys check signing
           # beside this job cannot lose its own list edit.
-          KEYCHAIN_PATH="$RUNNER_TEMP/infinitary-signing.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)-$(uuidgen)"
           node scripts/with-search-list-lock.mjs -- security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -1355,11 +1363,16 @@ jobs:
             echo "sha256 of the zip: \`${SHA256:-none}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Runs after a failure or a cancel too, the cut's stop included. It
+      # names the keychain's path itself rather than the restore step's
+      # output, which a restore stopped or failed after creating the
+      # keychain never wrote; a keychain never created leaves nothing to
+      # remove, and the command's refusal is ignored.
       - name: Remove the signing keychain
         if: always()
         continue-on-error: true
         env:
-          KEYCHAIN_PATH: ${{ steps.developer_id_cert.outputs.keychain_path }}
+          KEYCHAIN_PATH: ${{ runner.temp }}/infinitary-signing.keychain-db
         run: node scripts/with-search-list-lock.mjs -- security delete-keychain "$KEYCHAIN_PATH" || true
 
   # The update check (INF-1900; docs/alpha.md, "The update check"): once
@@ -1400,6 +1413,140 @@ jobs:
     # A called workflow reads its job environment's credentials only when its
     # caller hands its secrets on; this project keeps none outside environments.
     secrets: inherit
+
+  # The cut stops at its first failed job, a rehearsal's too (INF-6038's
+  # approved plan; docs/alpha.md, "Failed alpha checks"): a failed job holds
+  # the upload and publication anyway, so the parts still running - the
+  # journeys, the signing, the Linux packages, the Windows installer and the
+  # signed installer check - could never publish. The watch reads this run
+  # every half minute with the cut's rule (scripts/batch-stop.mjs) until the
+  # upload job is listed or nothing else runs. On a failed or timed-out job
+  # it says which, the stop jobs cancel every job still queued or running,
+  # and the watch then fails itself naming that job, so the cut's red lines
+  # are the failed job and this one, and GitHub's Re-run failed jobs re-runs
+  # the watch beside the jobs it re-runs. A watch that cannot read the run,
+  # or its own script, passes and leaves the cut to run on: only a stop
+  # fails it. The cut confirms or re-runs no failed job before it stops (the
+  # captain's direction to fix a flaky test's cause rather than rely on
+  # re-runs).
+  watch:
+    needs: resolve
+    if: ${{ needs.resolve.outputs.skip != 'true' }}
+    name: ${{ format('{0} · Watch for a stop', needs.resolve.outputs.trigger) }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      stop: ${{ steps.watch.outputs.stop }}
+      failed: ${{ steps.watch.outputs.failed }}
+    steps:
+      # The workflow's own script, as the release's own tooling: a stable
+      # builds an older alpha's commit, which may predate it. It reads the
+      # script through GitHub's API rather than a checkout, so a refusal it
+      # cannot wait out leaves the cut unwatched rather than failed: it asks
+      # every 15 seconds for up to 10 minutes, as a checkout waits for the
+      # job's token. Within the job's own limit, so a cut that outlasts it
+      # ends the watch, never fails the cut.
+      - id: watch
+        continue-on-error: true
+        timeout-minutes: 330
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {writeFileSync} = require('node:fs');
+            const {join} = require('node:path');
+            const {pathToFileURL} = require('node:url');
+            let source = null;
+            for (const started = Date.now(); source === null; ) {
+              try {
+                const {data} = await github.rest.repos.getContent({...context.repo, path: 'scripts/batch-stop.mjs', ref: context.sha, mediaType: {format: 'raw'}});
+                source = typeof data === 'string' ? data : Buffer.from(data).toString('utf8');
+              } catch (error) {
+                if (Date.now() - started >= 600_000) {
+                  core.warning(`The watch could not read its script, so this cut runs on unwatched: ${error.message}`);
+                  return;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 15_000));
+              }
+            }
+            const file = join(process.env.RUNNER_TEMP, 'batch-stop.mjs');
+            writeFileSync(file, source);
+            const {watch, cut} = await import(pathToFileURL(file).href);
+            await watch({github, context, core, rule: cut});
+      - name: Name the failed job
+        if: ${{ steps.watch.outputs.stop == 'failed' }}
+        env:
+          FAILED: ${{ steps.watch.outputs.failed }}
+        run: |
+          echo "::error title=Stopped the cut::Stopped the cut after ${FAILED:-a job} failed. Its own error lines say why; the cut stopped its other jobs, which show as cancelled."
+          exit 1
+
+  # After a failed job: each job of the cut that can still be running enters
+  # its own concurrency group with cancel-in-progress, which cancels it,
+  # queued or running: verify.yml's lanes and test groups,
+  # source-journeys.yml's journey groups, the signing job, linux-packages.yml's
+  # build and install checks, windows.yml's build and check,
+  # mac-installer.yml's build and installed check and mac-update.yml's update.
+  # The resolve, phone and notes jobs end before any of these start, the
+  # verification request ends in seconds, and the upload and publication
+  # never start after a failure, so none has a stop. Each stop passes, so
+  # the stops add no red line of their own.
+  stop:
+    needs: [resolve, watch]
+    if: ${{ !cancelled() && needs.watch.outputs.stop == 'failed' }}
+    name: ${{ format('{0} · Stop the cut ({1})', needs.resolve.outputs.trigger, matrix.job) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - verify-lane-linux-checks
+          - verify-lane-mac
+          - verify-lane-parallel
+          - verify-lane-desktop
+          - verify-tests-Unit tests-1
+          - verify-tests-Unit tests-2
+          - verify-tests-Unit tests-3
+          - verify-tests-Integration tests-1
+          - verify-tests-Integration tests-2
+          - verify-tests-Environment checks-1
+          - verify-tests-Environment checks-2
+          - verify-tests-Browser tests-1
+          - journeys-full-source-parallel-1
+          - journeys-full-source-parallel-2
+          - journeys-full-source-parallel-3
+          - journeys-full-source-parallel-4
+          - journeys-full-source-parallel-5
+          - journeys-full-source-parallel-6
+          - journeys-full-source-desktop-1
+          - journeys-full-source-desktop-2
+          - journeys-full-source-desktop-3
+          - sign
+          - linux-packages-build
+          - linux-packages-check-ubuntu-host-ubuntu-24.04
+          - linux-packages-check-ubuntu-host-ubuntu-26.04
+          - linux-packages-check-ubuntu-ubuntu:24.04
+          - linux-packages-check-ubuntu-ubuntu:26.04
+          - linux-packages-check-fedora-fedora:latest
+          - linux-packages-check-arch-archlinux:latest
+          - linux-packages-check-appimage-fedora:latest
+          - linux-packages-check-nix-ubuntu-24.04
+          - windows-build
+          - windows-check
+          - mac-installer-build
+          - mac-installer-installed
+          - mac-update
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.job) }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - env:
+          JOB: ${{ matrix.job }}
+          FAILED: ${{ needs.watch.outputs.failed }}
+        run: echo "::notice::${FAILED:-A job} failed, so this cut stopped its $JOB job."
 
   # The uploads (INF-2498's plan, piece 2), once every check passed (INF-2074's
   # sign-early: the signing job ran beside them and wrote nothing), on a

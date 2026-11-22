@@ -347,10 +347,15 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Locally, run only affected spec files (with `--no-deps` for renderer/application specs).
 - **Failed alpha checks.**
   Nothing is recorded or published: the signing job may have finished, but its signed files stay only in the run's handoff artifact, which expires after seven days.
-  Automatic journey retries stay zero.
+  The cut stops at its first failed job, a rehearsal's too (INF-6038's approved plan): its `watch` job, `<trigger> · Watch for a stop`, reads the run every half minute (`scripts/batch-stop.mjs`, the cut's rule), and once any job before the upload failed or timed out, its `stop` jobs enter the concurrency group of every job that can still be running - the verify lanes, test groups and journey groups, the signing job, the Linux package build and install checks, the Windows build and check, the signed installer build and installed check, and the update check - with cancel-in-progress, the merge batch's stop ("The swept batch" in `docs/testing.md`).
+  Each cancelled job shows as cancelled, each stop passes, and the watch then fails itself, `Stopped the cut after <job> failed`, so the cut's red lines are the failed job and the watch, and the Mac and Windows machines are free about two minutes after the failure.
+  The signing job's always-run steps still run after a cancel, so its throwaway keychain is removed by the same path the restore step creates it at.
+  A watch that cannot read the run passes and leaves the cut to run on; the upload and the publication are never stopped, since neither starts after a failure.
+  Automatic journey retries stay zero, and the cut confirms nothing before it stops.
   When a test fails, the release crewmate gets it fixed on main; its next rolling run that passes starts the next alpha automatically.
   Until the swept batch runs, an untagged journey first fails here, in the run named "Alpha from main run N", since main runs only the tagged ones (INF-2480).
   Only when the failing journey passes alone on the same commit may the failed checks be manually re-run once, keeping the alpha's version; if they still fail, diagnose rather than retry again.
+  GitHub's Re-run failed jobs re-runs the failed watch and the jobs its stops cancelled beside the failed job, so the re-run is watched again.
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
   The source release is the record: its tag must name the source commit.
@@ -464,6 +469,7 @@ A failed, cancelled or incomplete main run cuts nothing; main's waiting-version 
    Phone availability, Linux package installation, signing, notarization, actual signed update and public-download checks still run.
    Every journey runs on Linux and the Mac in `verify.yml`'s journeys part, and the update check and publication wait for it, unless the swept batch's run already holds every journey for these files.
    Only the reused `verify.yml` coverage is skipped, and the summary names it inherited, not passed here.
+   A failed job stops the rest of the cut about two minutes later ("Failed alpha checks" above), so main's next check, which waits for a running cut, starts soon after.
    The source tag `v<version>` names the exact checked commit.
 
 ### An alpha with nothing new to build

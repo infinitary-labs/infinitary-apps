@@ -1,9 +1,11 @@
 import type { MergeWay, MergeWays } from "@shared/batches";
-import { forgePlace } from "@shared/forge";
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
+import { branchComparePage, forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { PresentationDestination } from "@shared/presentationDestination";
 import type { NamingRule } from "@shared/runbooks";
 import { requireNamed } from "../../../workspace/naming";
+import type { ForgeApi } from "../../api";
 import {
   checkTimes,
   type Forge,
@@ -11,15 +13,29 @@ import {
   type ForgeCheck,
   type ForgeCheckState,
   type ForgeChecks,
+  type ForgeComment,
   ForgeError,
   type ForgeLocation,
   type ForgePull,
+  type ForgePullComment,
   type ForgeReadiness,
   ForgeWriteError,
   isFullCommitId,
   type MergeAnswer,
 } from "../../forge";
+import {
+  DATA_CENTER_DEFAULT_PAGE_LENGTH,
+  DATA_CENTER_PAGE_PARAM,
+  nextDataCenterPagePath,
+  parseDataCenterApiRequest,
+} from "./dataCenterApi";
 import { DataCenterClient, type DataCenterOptions, DataCenterRefusal } from "./dataCenterClient";
+import {
+  type DataCenterCommentJson,
+  ownDataCenterComments,
+  readDataCenterPullComments,
+} from "./dataCenterComments";
+import { DataCenterContributions, dataCenterPathOf } from "./dataCenterContributions";
 import {
   DataCenterProjects,
   type DataCenterRepository,
@@ -41,8 +57,15 @@ import {
  * the version it read, so a push that lands in between makes the server
  * refuse the merge and nothing goes in.
  *
- * Piece by piece, as GitHub and GitLab have them: the crew's gateway,
- * comments, forks and batches are not offered on Data Center yet.
+ * The crew reaches the server's REST API through the gateway (`api`, its
+ * policy in `./dataCenterApi.ts`), and the comment and main-failure wakes
+ * read through `pullComments` and `branchChecks`. A batch's stories past
+ * its description go in the app's own comments (`ownComments`). A person
+ * who cannot push contributes from their fork (`contributions`,
+ * `location.source`): the pull request opens on this repository from the
+ * fork, its branch is read in the fork, and this forge refuses a fork's
+ * merge, which is the maintainers'. Data Center runs no checks of its own,
+ * so it offers no run logs, runs or release files (`workflows` is absent).
  */
 export type DataCenterForgeOptions = DataCenterOptions & {
   /** The active naming runbook's rule, read at each merge; null when none is on. */
@@ -103,8 +126,15 @@ export class DataCenterForge implements Forge {
   readonly hasChecks = true;
   /** A Data Center repository is always `project/slug`: nothing nests. */
   readonly nestedNamespace = false;
+  /** The gateway's raw call under Data Center's policy for this repository. */
+  readonly api: ForgeApi;
+  readonly noRunsWords =
+    // i18n-exempt: served to the crewmate in a tool's answer
+    "Bitbucket Data Center keeps no runs, logs or release files of its own: its checks are build statuses another service posts, and each one's link names where to read it.";
   private readonly client: DataCenterClient;
   private readonly projects: DataCenterProjects;
+  /** The signed-in user's name, read once for this forge. */
+  private viewer: Promise<string | null> | undefined;
 
   constructor(
     readonly location: ForgeLocation,
@@ -116,6 +146,28 @@ export class DataCenterForge implements Forge {
     this.place = forgePlace({ kind: "bitbucket", host: this.host }) ?? this.host;
     this.client = new DataCenterClient(this.host, options);
     this.projects = new DataCenterProjects(this.host, options);
+    const project =
+      location.owner && location.name ? { owner: location.owner, name: location.name } : null;
+    this.api = {
+      place: this.place,
+      defaultPerPage: DATA_CENTER_DEFAULT_PAGE_LENGTH,
+      pageParam: DATA_CENTER_PAGE_PARAM,
+      route: (method, raw, bodyBytes) => parseDataCenterApiRequest(method, raw, project, bodyBytes),
+      nextPath: (link) => nextDataCenterPagePath(link, options.serverUrl, project),
+      call: (method, path, body) => this.client.call(method, path, body),
+    };
+  }
+
+  /**
+   * The person's fork of this repository, read and made with the same
+   * sign-in; offered for a project read over HTTPS, whose address names its
+   * project under `scm/`, as a fork's address does.
+   */
+  get contributions(): DataCenterContributions | undefined {
+    const { owner, name } = this.location;
+    return owner && name && /^scm\//i.test(owner)
+      ? new DataCenterContributions(this.host, owner, name, this.client)
+      : undefined;
   }
 
   listProjects(): Promise<ForgeProject[]> {
@@ -184,13 +236,18 @@ export class DataCenterForge implements Forge {
       slug: this.slug(),
       project: { key: this.projectKey() },
     };
+    // A contribution's branch is in the person's fork.
+    const source = this.sourceRepository();
     const opened = await this.client.write(
       "POST",
       `${this.repositoryPath()}/pull-requests`,
       {
         title: input.title,
         description: input.body,
-        fromRef: { id: `refs/heads/${input.branch}`, repository },
+        fromRef: {
+          id: `refs/heads/${input.branch}`,
+          repository: source ? { slug: source.slug, project: { key: source.key } } : repository,
+        },
         toRef: { id: `refs/heads/${target}`, repository },
         ...(input.draft ? { draft: true } : {}),
       },
@@ -200,9 +257,105 @@ export class DataCenterForge implements Forge {
     return this.changeOf(opened.body as PullRequestJson | null);
   }
 
+  /** The main branch's head and the build statuses on it, for the main-failure wake. */
+  async branchChecks(): Promise<{ sha: string; checks: ForgeChecks }> {
+    const branch = await this.defaultBranch();
+    const sha = await this.headOf(this.repositoryPath(), branch);
+    return { sha, checks: await this.checks({ branch, headSha: sha, url: null }) };
+  }
+
+  /** The pull request's comments changed since `since`, for the comment wake. */
+  async pullComments(
+    number: number,
+    since?: string,
+    seen?: ReadonlySet<number>,
+  ): Promise<ForgePullComment[]> {
+    return readDataCenterPullComments(
+      (path) => this.read(path),
+      this.repositoryPath(),
+      `/rest/api/latest/projects/${encodeURIComponent(this.projectKey())}`,
+      number,
+      () => this.viewerName(),
+      since,
+      seen,
+    );
+  }
+
+  /** The files one commit changes, against its first parent, for a batch's line comments. */
+  async commitFiles(sha: string): Promise<string[]> {
+    const listed = await this.client.list<{
+      path?: { toString?: unknown } | null;
+      srcPath?: { toString?: unknown } | null;
+    }>(`${this.repositoryPath()}/commits/${encodeURIComponent(sha)}/changes`, 10);
+    if (!listed.complete) throw unreadableError(this.place, `every file commit ${sha} changes`);
+    const files = new Set<string>();
+    for (const change of listed.values)
+      for (const path of [change.path?.toString, change.srcPath?.toString])
+        if (typeof path === "string" && path) files.add(path);
+    return [...files];
+  }
+
+  /**
+   * The signed-in user's comments on the pull request that open with
+   * `marker`, oldest first: the app's own comments that carry a batch's
+   * stories past its description.
+   */
+  async ownComments(number: number, marker: string): Promise<ForgeComment[]> {
+    const { comments, complete } = await ownDataCenterComments(
+      (path) => this.read(path),
+      this.pullRequestPath(number),
+      () => this.viewerName(),
+      marker,
+    );
+    if (!complete) throw unreadableError(this.place, `every comment on pull request #${number}`);
+    return comments;
+  }
+
+  /** Post a comment, or replace one's words at the version read: Data Center refuses an older one. */
+  async writeComment(number: number, body: string, id?: number): Promise<void> {
+    const path = `${this.pullRequestPath(number)}/comments`;
+    if (id === undefined) {
+      await this.client.request("POST", path, { text: body });
+      return;
+    }
+    const comment = await this.read<DataCenterCommentJson | null>(`${path}/${id}`);
+    await this.client.request("PUT", `${path}/${id}`, {
+      text: body,
+      version: comment?.version ?? 0,
+    });
+  }
+
+  async deleteComment(number: number, id: number): Promise<void> {
+    const path = `${this.pullRequestPath(number)}/comments/${id}`;
+    try {
+      const comment = await this.read<DataCenterCommentJson | null>(path);
+      await this.client.request("DELETE", `${path}?version=${comment?.version ?? 0}`);
+    } catch (caught) {
+      if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
+    }
+  }
+
+  async branchPage(branch: string): Promise<string | null> {
+    const { owner, name, source } = this.location;
+    if (source || !owner || !name) return null;
+    return branchComparePage({
+      kind: "bitbucket",
+      host: this.host,
+      owner,
+      name,
+      base: await this.defaultBranch(),
+      branch,
+    });
+  }
+
+  /** The branch's head, read in the person's fork for a contribution. */
   async branchHead(branch: string): Promise<string> {
+    return this.headOf(this.sourcePath(), branch);
+  }
+
+  private async headOf(repositoryPath: string, branch: string): Promise<string> {
     const listed = await this.read<{ values?: RefJson[] } | null>(
-      `${this.repositoryPath()}/branches?filterText=${encodeURIComponent(branch)}&boostMatches=true&limit=25`,
+      `${repositoryPath}/branches?filterText=${encodeURIComponent(branch)}&boostMatches=true&limit=25`,
     );
     const found = listed?.values?.find((ref) => ref.id === `refs/heads/${branch}`);
     if (!found)
@@ -255,15 +408,25 @@ export class DataCenterForge implements Forge {
     );
   }
 
+  /**
+   * The open pull request from the branch onto this repository: a
+   * contribution's is listed in the person's fork, as the requests going
+   * out of it.
+   */
   async changeFor(branch: string): Promise<ForgeChange | null> {
     const listed = await this.read<{ values?: PullRequestJson[] } | null>(
-      `${this.repositoryPath()}/pull-requests?state=OPEN&direction=OUTGOING&at=${encodeURIComponent(`refs/heads/${branch}`)}&limit=50`,
+      `${this.sourcePath()}/pull-requests?state=OPEN&direction=OUTGOING&at=${encodeURIComponent(`refs/heads/${branch}`)}&limit=50`,
     );
     if (!Array.isArray(listed?.values)) throw unreadableError(this.place, "its pull requests");
+    const source = this.sourceRepository();
     // Another repository's pull request from a branch of the same name is not this branch's.
     const open = listed.values.find(
       (request) =>
-        request.fromRef?.id === `refs/heads/${branch}` && this.isThisRepository(request.fromRef),
+        request.fromRef?.id === `refs/heads/${branch}` &&
+        (source
+          ? this.isRepository(request.fromRef, source.key, source.slug) &&
+            this.isRepository(request.toRef, this.projectKey(), this.slug(), false)
+          : this.isRepository(request.fromRef, this.projectKey(), this.slug())),
     );
     return open ? this.changeOf(open) : null;
   }
@@ -337,6 +500,8 @@ export class DataCenterForge implements Forge {
     way: MergeWay | undefined,
     beforeSend?: () => void,
   ): Promise<MergeAnswer | undefined> {
+    // A contribution's merge is the maintainers'.
+    if (this.location.source) throw new ForgeError("permission", CONTRIBUTION_MERGE_REFUSAL);
     const id = numbered(change, this.place);
     // The merge is read from the repository's strategies right before the call, never assumed.
     if (!way)
@@ -598,16 +763,52 @@ export class DataCenterForge implements Forge {
     return request;
   }
 
-  private isThisRepository(ref: RefJson | undefined): boolean {
+  /** Whether a ref is in the repository `key/slug`; a ref naming none is when `unnamed`. */
+  private isRepository(
+    ref: RefJson | undefined,
+    key: string,
+    slug: string,
+    unnamed = true,
+  ): boolean {
     const repository = ref?.repository;
-    if (!repository) return true;
-    const key = repository.project?.key;
+    if (!repository) return unnamed;
+    const named = repository.project?.key;
     return (
-      typeof key === "string" &&
+      typeof named === "string" &&
       typeof repository.slug === "string" &&
-      key.toLowerCase() === this.projectKey().toLowerCase() &&
-      repository.slug.toLowerCase() === this.slug()
+      named.toLowerCase() === key.toLowerCase() &&
+      repository.slug.toLowerCase() === slug.toLowerCase()
     );
+  }
+
+  /** The person's fork a contribution's branch is in, by its project key and slug. */
+  private sourceRepository(): { key: string; slug: string } | undefined {
+    const source = this.location.source;
+    if (!source) return undefined;
+    const cut = source.fullName.lastIndexOf("/");
+    return {
+      key: dataCenterProjectKey(source.fullName.slice(0, cut)),
+      slug: source.fullName.slice(cut + 1).toLowerCase(),
+    };
+  }
+
+  /** The repository a branch is read in: the person's fork for a contribution. */
+  private sourcePath(): string {
+    return this.location.source
+      ? dataCenterPathOf(this.location.source.fullName)
+      : this.repositoryPath();
+  }
+
+  /** The signed-in user's name: the header an answer names it in, else the server's own page. */
+  private viewerName(): Promise<string | null> {
+    this.viewer ??= (async () =>
+      (await this.client.request("GET", "/rest/api/latest/application-properties")).user ??
+      (await this.client.signedInUser()))();
+    // A failed reading is read again next time.
+    this.viewer.catch(() => {
+      this.viewer = undefined;
+    });
+    return this.viewer;
   }
 
   private async read<T>(path: string): Promise<T> {

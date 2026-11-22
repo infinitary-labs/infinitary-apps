@@ -7,7 +7,7 @@ export type DataCenterRepository = {
   id?: unknown;
   slug?: unknown;
   public?: unknown;
-  project?: { key?: unknown } | null;
+  project?: { key?: unknown; type?: unknown; owner?: { name?: unknown } | null } | null;
   links?: { clone?: { href?: unknown; name?: unknown }[]; self?: { href?: unknown }[] };
 };
 

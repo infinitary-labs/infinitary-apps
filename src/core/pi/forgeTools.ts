@@ -473,6 +473,7 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
     "jobId reads run/version, steps and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues. Lines over 2,000 characters are clipped.",
     "GitHub runId is an Actions run; on GitLab runId is the pipeline and jobId the job; on Bitbucket runId is the pipeline's build number and jobId the step's place from 1.",
     "Find a version's run with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (use untouched main for a baseline), on GitLab GET /projects/{id}/pipelines?sha=<full commit id>, or on Bitbucket GET /repositories/{workspace}/{repo_slug}/pipelines?sort=-created_on, matching target.commit.hash.",
+    "Bitbucket Data Center has no runs or logs of its own: its checks are build statuses another service posts, whose link names where to read them.",
     "Read failed logs before diagnosing check_change; missing or expired evidence is not proof of cause.",
   ].join(" "),
   parameters: Type.Object({
@@ -518,7 +519,7 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
 });
 
 const GITHUB_GATEWAY_RULES =
-  "Use this connection for your GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page (pagelen on Bitbucket) at 100, calls per task at 200. nextPath, when given, is the next page's path.";
+  "Use this connection for your GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page (pagelen on Bitbucket, limit on Bitbucket Data Center) at 100, calls per task at 200. nextPath, when given, is the next page's path.";
 
 const GITHUB_READ_SCOPE =
   "Reads reach what the sign-in can read: repositories (/repos/{owner}/{repo}/..., issues, pull requests, contents and Actions), account, organizations, notifications and search. Tasks without a project API (local, plain Git or no project) use the github.com sign-in.";
@@ -527,10 +528,10 @@ const GITLAB_READ_SCOPE =
   "GitLab API after /api/v4: /projects/{id}/..., with id the number or URL-encoded path (group%2Fname).";
 
 const BITBUCKET_READ_SCOPE =
-  "Bitbucket API after /2.0: /repositories/{workspace}/{repo_slug}/..., with page size pagelen.";
+  "Bitbucket API after /2.0: /repositories/{workspace}/{repo_slug}/..., with page size pagelen. Bitbucket Data Center: the path after the server's address, /rest/api/latest/projects/{KEY}/repos/{slug}/..., and build statuses under /rest/build-status/latest/commits/{commit}.";
 
 const GITHUB_WRITE_SCOPE =
-  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket. A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes - another project, account, organization or task without a project API (using the github.com sign-in) - are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
+  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes - another project, account, organization or task without a project API (using the github.com sign-in) - are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
 
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
@@ -567,7 +568,7 @@ export const GITHUB_WRITE_TOOL = crewmateTool({
     file: Type.Optional(
       Type.String({
         description:
-          "A regular file in your working copy, relative to it, never a link. With file set, POST sends that file and body stays out. On GitHub, path is the release's upload_url, or /repos/{owner}/{repo}/releases/{id}/assets, accepted only on GitHub's upload address, with the file's type and a 2 GB cap. On GitLab, path is /projects/{id}/releases/{tag}: the file is put in the package registry and linked on that release. On Bitbucket, path is /repositories/{workspace}/{repo_slug}/downloads: the file goes to the repository's Downloads. Your own project sends at once; any other waits for the captain's click.",
+          "A regular file in your working copy, relative to it, never a link. With file set, POST sends that file and body stays out. On GitHub, path is the release's upload_url, or /repos/{owner}/{repo}/releases/{id}/assets, accepted only on GitHub's upload address, with the file's type and a 2 GB cap. On GitLab, path is /projects/{id}/releases/{tag}: the file is put in the package registry and linked on that release. On Bitbucket, path is /repositories/{workspace}/{repo_slug}/downloads: the file goes to the repository's Downloads. Bitbucket Data Center takes no release file. Your own project sends at once; any other waits for the captain's click.",
       }),
     ),
   }),

@@ -1,5 +1,5 @@
 import type { IntegrationScope } from "@shared/writeAsk";
-import type { RawApiKind } from "../forge/api";
+import type { ApiDialect } from "../forge/api";
 
 /**
  * What one Allow for the rest of this task covers for each kind
@@ -44,12 +44,13 @@ function bare(path: string): string {
 /**
  * A REST call through a forge's sign-in (GitHub, GitHub Enterprise, GitLab
  * or Bitbucket): the method plus the repository (`/repos/{owner}/{repo}`,
- * or Bitbucket's `/repositories/{workspace}/{repo}`, in lower case) or the
- * GitLab project (`/projects/{id}`). A path outside one,
+ * Bitbucket's `/repositories/{workspace}/{repo}`, or Bitbucket Data
+ * Center's `/projects/{KEY}/repos/{slug}` under any of its APIs, in lower
+ * case) or the GitLab project (`/projects/{id}`). A path outside one,
  * or one with a segment that could leave it, is its own place, exactly as
  * written without its query.
  */
-export function forgeScope(kind: RawApiKind): (input: unknown) => IntegrationScope {
+export function forgeScope(kind: ApiDialect): (input: unknown) => IntegrationScope {
   const place = FORGE_PLACES[kind];
   return (input) => {
     const { method = "GET", path } = input as { method?: string; path: string };
@@ -69,7 +70,7 @@ function repositoryScope(method: string, root: string, repository: string): Inte
 
 /** Each kind's own place in a REST path: a repository, or a project by its id. */
 const FORGE_PLACES: Record<
-  RawApiKind,
+  ApiDialect,
   {
     /** The one segment that may hold an escaped slash. */
     encodedAt?: number;
@@ -100,6 +101,19 @@ const FORGE_PLACES: Record<
     of: ([root, first, second], method) => {
       if (root !== "repositories" || !first || !second) return undefined;
       return repositoryScope(method, "repositories", `${first}/${second}`);
+    },
+  },
+  // `/rest/{api}/{version}/projects/{KEY}/repos/{slug}`, or `/users/{slug}` for `~slug`, a person's own project keyed by their user slug.
+  "bitbucket-data-center": {
+    of: ([rest, api, version, root, owner, repos, slug], method) => {
+      if (rest !== "rest" || !api || !version || repos !== "repos" || !owner || !slug)
+        return undefined;
+      if (root !== "projects" && root !== "users") return undefined;
+      return repositoryScope(
+        method,
+        "projects",
+        `${root === "users" ? `~${owner}` : owner}/${slug}`,
+      );
     },
   },
 };

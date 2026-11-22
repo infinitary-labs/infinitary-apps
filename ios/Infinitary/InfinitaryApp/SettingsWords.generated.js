@@ -12964,10 +12964,14 @@ ${events}` : prompt;
         "write:pipeline:bitbucket"
       ],
       batches: true,
-      // Bitbucket Data Center on the person's own server: its own pages, and no
-      // batches until its batch pull request is built (`docs/forge.md`,
-      // "Bitbucket Data Center").
-      server: { projectPage: bitbucketServerProjectPage, batches: false }
+      // Bitbucket Data Center on the person's own server: its own pages and
+      // its own REST API (`docs/forge.md`, "Bitbucket Data Center").
+      server: {
+        projectPage: bitbucketServerProjectPage,
+        comparePage: (base, branch) => `compare/commits?sourceBranch=${encodeURIComponent(`refs/heads/${branch}`)}&targetBranch=${encodeURIComponent(`refs/heads/${base}`)}`,
+        batches: true,
+        api: "bitbucket-data-center"
+      }
     }
   };
   function bitbucketServerProjectPage(owner, name) {

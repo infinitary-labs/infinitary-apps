@@ -1,5 +1,5 @@
 ---
-source: a2f4b38f0b300f73
+source: 2070be28c53de438
 title: 連携
 description: GitHub、GitLab、Bitbucket、Google、MCP サーバーを接続して一等航海士と乗組員がアクセスできるようにし、それぞれがあなたに確認せずにできることを選びます。
 ---
@@ -41,7 +41,7 @@ Infinitary がこのサインインを使ってプロジェクトをクローン
 - **GitHub Enterprise**：あなた自身のサーバーでキーを作成し、ここに貼り付けます。
 - **Bitbucket**：bitbucket.org 用に、Atlassian アカウントで API トークンを作成し、ここに貼り付けます。
   自分の Bitbucket Data Center サーバー（バージョン 8.19 以降）の場合は、そのアドレスを入力し、そのサーバーで作成した HTTP アクセストークンを Project read と Repository write の権限付きで貼り付けます。
-  Data Center の行には、まだ操作がありません。
+  Data Center の行にも同じ読み取りと書き込みの操作があり、サーバー自身のパスを使います。**このタスクの間は許可** は 1 つのリポジトリに適用されます。
 
 各行には 2 つの操作があります。読み取る操作と、**GitHub で何かを変更** のように何かを変更する操作です。
 一等航海士と乗組員は、タスク自体の作業以外で、そこで調べものをしたり何かをしたりするときにこれらを使います。

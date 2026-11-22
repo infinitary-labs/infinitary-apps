@@ -151,7 +151,11 @@ async function main() {
   const xcode = await run("xcodebuild", ["-version"]);
   phoneXcode(xcode);
   const identity = await readPhoneBuildIdentity(run, xcode);
-  if (!identity.clean) throw new Error(`This checkout of ${identity.commit} has changes, so its build is not shared`);
+  // A checkout with changes shares nothing, and every job of the check, this one included, builds for itself.
+  if (!identity.clean) {
+    console.log(`::notice::This checkout of ${identity.commit} has changes, so no build is shared; each job builds the app itself.`);
+    return;
+  }
   const derivedData = join(scratch, "DerivedData");
   const packageCache = process.env.INFINITARY_PHONE_PACKAGE_CACHE || join(scratch, "swift-packages");
   mkdirSync(values.evidence, { recursive: true });

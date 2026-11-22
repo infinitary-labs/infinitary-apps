@@ -389,7 +389,7 @@ export class CrewSupervisor {
         queueMicrotask(() => this.hooks.pokeInbox?.());
       },
     });
-    this.askEnding = askEndingOf(options.tasks, this.cards);
+    this.askEnding = askEndingOf(options.tasks, this.cards, (id) => options.inbox.requestOpen(id));
     this.placement = new TaskPlacement(options, {
       now: this.now,
       cards: this.cards,

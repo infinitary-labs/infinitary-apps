@@ -803,7 +803,7 @@ export class FirstmateContext {
       for (const chain of chains) {
         const state = ending.state(chain);
         const newest = chain.members.at(-1) ?? chain.root;
-        const live = ending.ownWork(chain).filter((task) => !TaskService.isClosed(task));
+        const live = ending.listedWork(chain).filter((task) => !TaskService.isClosed(task));
         rows.push({
           at: newest.at,
           row: {

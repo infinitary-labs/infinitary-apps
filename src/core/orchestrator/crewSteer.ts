@@ -506,6 +506,9 @@ export class CrewSteer {
           },
           durable,
         );
+        // A request asked for a captain's message ties that message to it.
+        if (response.ask)
+          this.core.options.tasks.capture.tieRequest(response.ask, taskId, requested.request.id);
         durable = requested.body;
         message = renderWake(durable);
         return requested.inboxId;

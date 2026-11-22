@@ -432,6 +432,13 @@ export type Scenario = {
    * for their own.
    */
   readonly answersReplyCheck?: true;
+  /**
+   * True for a scenario that answers the first mate's own wakes - the
+   * answer-delivery retry and a crewmate's saved answer to its request -
+   * before the stand-in's handling of them. Such a scenario is asked first
+   * on every first mate request, with the request as it was served.
+   */
+  readonly answersFirst?: true;
 };
 
 export type MockProviderServer = {
@@ -474,8 +481,8 @@ export type MockProviderServer = {
    * acknowledgement (THREAD_ACK_REPLY), or a journey scenario's.
    */
   heldThreadAnswers: () => number;
-  /** Let every held step go on, its calls sent as they were scripted. */
-  releaseThreadAnswer: () => void;
+  /** Let the held steps go on, oldest first (every one, or `count`), their calls sent as scripted. */
+  releaseThreadAnswer: (count?: number) => void;
   /**
    * Script the Firstmate's answer to one input the spec knows ahead: when a
    * Firstmate turn's newest served input holds exactly this segment - kind,
@@ -503,6 +510,10 @@ export async function startMockProvider(
   const replyCheckScenarios = (options.scenarios ?? []).flatMap((start, index) => {
     const answer = scenarios[index];
     return start.answersReplyCheck && answer ? [answer] : [];
+  });
+  const firstScenarios = (options.scenarios ?? []).flatMap((start, index) => {
+    const answer = scenarios[index];
+    return start.answersFirst && answer ? [answer] : [];
   });
   let requestCount = 0;
   let failFirstmate = false;
@@ -922,6 +933,26 @@ export async function startMockProvider(
           return;
         }
 
+        // A scenario that answers the first mate's own wakes is asked first,
+        // with the request as served: the saved-answer notices left in.
+        if (isFirstmate && firstScenarios.length > 0) {
+          const rawUser = Math.max(
+            rawBody.lastIndexOf('"role":"user"'),
+            rawBody.lastIndexOf('"role": "user"'),
+          );
+          const served = {
+            ...scenarioRequest,
+            body: rawBody,
+            latestUserTail: rawUser >= 0 ? rawBody.slice(rawUser) : rawBody,
+          };
+          for (const scenario of firstScenarios) {
+            const answer = scenario(served);
+            if (!answer) continue;
+            send(answer);
+            return;
+          }
+        }
+
         // The mock Firstmate: spawn on the commission marker, settle on
         // land/discard/finish, one answer card on the answer marker, a
         // short close-out after tool results, plain chat text otherwise.
@@ -1284,8 +1315,8 @@ export async function startMockProvider(
     cardFetchProbeHits: () => cardFetchProbeHits,
     heldRequests: () => held.size,
     heldThreadAnswers: () => heldThreadAnswers.length,
-    releaseThreadAnswer: () => {
-      for (const answer of heldThreadAnswers.splice(0)) answer();
+    releaseThreadAnswer: (count) => {
+      for (const answer of heldThreadAnswers.splice(0, count ?? heldThreadAnswers.length)) answer();
     },
     releaseHeldCrew: () => {
       for (const [res, opened] of held) {

@@ -150,6 +150,8 @@ it("retains the work graph and current task facts without composing coverage rec
       work: [],
       acted: new Set(),
       joined: new Map(),
+      tied: new Set(),
+      requests: [],
     });
   } finally {
     db.close();

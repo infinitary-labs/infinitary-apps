@@ -27,7 +27,7 @@ import { phoneRecording } from "./phone-recording.ts";
 import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from "./phone-build.ts";
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { PHONE_BOOT_BUDGET_MS, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
+import { PHONE_BOOT_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePartNames, devicePhotos, endPhoneGate, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -436,6 +436,11 @@ const sharedCaches = new Map<string, Promise<void>>();
 const bootSimulator = (device: PhoneDevice, owned: string) => phoneSimulatorBooted({ device, simulator: owned,
   boot: (stop, heard) => run("xcrun", ["simctl", "bootstatus", owned, "-b"], false, heard, stop, {},
     PHONE_BOOT_BUDGET_MS + PHONE_COMMAND_BUDGET_MS) });
+// INF-6058: no part starts on a simulator until the wallpaper prewarm its scheduler runs minutes after each boot has
+// finished; the log stream of it lasts as long as the wait may.
+const prewarmFinished = (device: PhoneDevice, owned: string, booting: Date) => phonePrewarmFinished({ device, simulator: owned,
+  booting, run: (args, heard, stop) => run("xcrun", args, false, heard, stop, {},
+    heard ? PHONE_PREWARM_BUDGET_MS + PHONE_COMMAND_BUDGET_MS : PHONE_COMMAND_BUDGET_MS) });
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
@@ -456,6 +461,11 @@ const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
     throw error;
   });
   console.log(`${device}: started simulator ${owned} in ${((Date.now() - booted.getTime()) / 60_000).toFixed(1)} minutes`);
+  // The first lanes' wait runs beside the build, as their boot does.
+  await prewarmFinished(device, owned, booted).catch((error: Error) => {
+    console.log(`::error::${error.message}`);
+    throw error;
+  });
   return { device, owned, booted };
 };
 // INF-5387 piece 1: a simulator whose delete failed or passed its deadline is not tried again at the gate's end; the next
@@ -490,6 +500,8 @@ const readyForPart = async (lane: Lane, name: string) => {
     lane.photos?.restarted();
     await bootSimulator(device, owned);
     lane.photos?.watched().catch(() => {});
+    // The boot runs the wallpaper prewarm again.
+    await prewarmFinished(device, owned, lane.booted);
   }
   const apps = await installedApps(owned);
   for (const bundle of [phoneBundle, runnerBundle]) if (apps[bundle]) await run("xcrun", ["simctl", "uninstall", owned, bundle]);

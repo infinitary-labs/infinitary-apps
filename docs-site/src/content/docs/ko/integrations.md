@@ -1,5 +1,5 @@
 ---
-source: a2f4b38f0b300f73
+source: 2070be28c53de438
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -41,7 +41,7 @@ Infinitary가 이 로그인으로 프로젝트를 복제하고 변경을 제안�
 - **GitHub Enterprise**: 선장님의 서버에서 키를 만들어 여기에 붙여 넣어요.
 - **Bitbucket**: Atlassian 계정에서 API 토큰을 만들어 bitbucket.org용으로 여기에 붙여 넣어요.
   선장님의 Bitbucket Data Center 서버(버전 8.19 이상)는 그 주소를 입력하고, 그 서버에서 만든 HTTP 액세스 토큰을 Project read 및 Repository write 권한과 함께 붙여 넣어요.
-  Data Center 줄에는 아직 동작이 없어요.
+  Data Center 줄에도 같은 읽기와 쓰기 동작이 있고, 서버 자체의 경로를 써요. **이 작업이 끝날 때까지 허용**은 저장소 하나에 적용돼요.
 
 줄마다 동작이 두 개 있어요: 읽는 동작 하나와, **GitHub에서 무언가 변경**처럼 무언가를 바꾸는 동작 하나예요.
 일등항해사와 선원들은 작업 자체의 일을 넘어 그곳에서 무언가를 찾아보거나 행동할 때 이 동작들을 써요.

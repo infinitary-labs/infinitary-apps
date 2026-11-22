@@ -108164,6 +108164,27 @@ ${startersHtml()}`;
     }).optional()
   });
   const machineLoginOutcomeSchema = _enum(["signed-out", "kept", "not-signed-out"]);
+  const appFollowStepSchema = _enum(["getting", "waiting", "restarting", "cannot", "failed"]);
+  const appFollowReasonSchema = _enum([
+    "package-manager",
+    "own-window",
+    "installation",
+    "unpublished"
+  ]);
+  const appFollowReportSchema = strictObject({
+    version: string().min(1).max(64),
+    step: appFollowStepSchema,
+    percent: number().min(0).max(100).optional(),
+    reason: appFollowReasonSchema.optional(),
+    /** The app's own words for what stopped it, said after the home's. */
+    problem: string().min(1).max(400).optional(),
+    /**
+     * On `waiting`: the row's Update was pressed, so it waits only for the
+     * words typed there to be sent, not for nobody to use the app.
+     */
+    pressed: literal(true).optional()
+  });
+  strictObject({ deviceId: string().min(1).max(64) });
   const commandEndingSchema = _enum([
     "quit",
     "signal",
@@ -108277,7 +108298,13 @@ ${startersHtml()}`;
   const deviceAppVersionSchema = strictObject({
     app: string().min(1).max(64).optional(),
     than: _enum(["older", "newer"]).optional(),
-    same: literal(true).optional()
+    same: literal(true).optional(),
+    /**
+     * Where that app stands in catching up with this computer's version, as
+     * it last told it (docs/view.md, "Following the home's version";
+     * `app-follows-home`): absent while it said nothing for this version.
+     */
+    follow: appFollowReportSchema.optional()
   });
   const sshStopReasonSchema = _enum([
     "host-unknown",

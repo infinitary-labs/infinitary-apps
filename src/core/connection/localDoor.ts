@@ -33,7 +33,6 @@ import { keyPin } from "../devices/identity";
 /** The run a door belongs to, as its run record names it: its process and when it started. */
 export type LocalDoorRun = { readonly pid: number; readonly startedAt: string };
 
-/** Where a local client finds the door, read from its folder. */
 export type LocalDoorAddress = {
   /** `127.0.0.1:port`. */
   readonly address: string;
@@ -70,12 +69,10 @@ function digestOf(key: string): Buffer {
   return createHash("sha256").update(key).digest();
 }
 
-/** The pin of a PEM certificate's key. */
 export function pinOfCertificate(cert: string): string {
   return keyPin(new X509Certificate(cert).publicKey);
 }
 
-/** The door as the connection holds it: whether a request carries its key, and how to close it. */
 export type OpenLocalDoor = {
   readonly address: string;
   /** Whether the upgrade request carries this door's key. */

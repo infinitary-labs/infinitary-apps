@@ -153,7 +153,6 @@ export type TreeSurvey = {
    * folder included; the folders that hold units are in none.
    */
   unitEntries: Map<string, number>;
-  /** The files of each unit. */
   unitFiles: Map<string, number>;
   /** Sockets and pipes: live endpoints, never copied. Relative paths. */
   skipped: string[];

@@ -40,7 +40,6 @@ export const linkInTab = (page: Page) =>
 
 export const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) + 1000 };
 
-/** Settings -> Devices, opened from the window's own Settings. */
 export async function openDevices(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: "Devices", exact: true }).click();

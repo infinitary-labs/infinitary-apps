@@ -107,7 +107,6 @@ function jobOutputs(workflow: Workflow, scenario: Scenario, run: Record<string, 
 /** One job a run shows: its full name, its definition and what its expressions read. */
 export type RunJob = { name: string; job: Job; contexts: Record<string, unknown> };
 
-/** The full name of every job a run of `file` shows in `scenario`. */
 export function runJobNames(file: string, scenario: Scenario, called = false): string[] {
   return runJobs(file, scenario, called).map((each) => each.name);
 }

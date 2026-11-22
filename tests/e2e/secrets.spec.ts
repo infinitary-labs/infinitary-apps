@@ -213,7 +213,6 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
     const body = cardBody(page, title);
     await expect(body.locator("body")).toContainText(REASON);
     await expect(body.locator("body")).not.toContainText(TOKEN);
-    // The card shows what was checked, in words, and asks the person to fill in nothing.
     const checked = body.locator("details");
     await expect(checked.locator("summary")).toHaveText(SECRET_APPROVAL_CARD_WORDS.checked);
     // A line is found by its exact name: the Not checked line mentions the program too.
@@ -284,7 +283,6 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       expect(text, file).not.toContain(Buffer.from(TOKEN).toString("base64"));
     }
     await runFromSearch(app, page, "settings.secrets");
-    // The row says which task used the secret, by the task's own title.
     await expect(
       section.getByRole("listitem").filter({ hasText: LABEL }).locator("summary"),
     ).toContainText(USING_TASK.title);
@@ -498,7 +496,6 @@ test("saved decisions are made on the approval card and removed from Settings", 
       });
     }, entry);
 
-    // Always allow this: the shown run goes now, under one confirmation, and is saved.
     const first = await run("deploy-1");
     expect(first.state).toBe("waiting");
     await expect(shownCard(page, title)).toBeVisible();
@@ -514,8 +511,6 @@ test("saved decisions are made on the approval card and removed from Settings", 
     const other = await run("deploy-other", ["/bin/sh", script, "--production"]);
     expect(other.state).toBe("waiting");
     await expect(shownCard(page, title)).toBeVisible();
-    // Always allow this with a failed confirmation runs nothing and saves nothing;
-    // the same card comes back.
     await confirming(false);
     await answer(title, SECRETS_WORDS.always);
     await expect.poll(() => state(other.request)).toEqual({ state: "waiting", confirmations: 2 });
@@ -524,8 +519,6 @@ test("saved decisions are made on the approval card and removed from Settings", 
     await expect(cardBody(page, title).getByRole("status")).toBeVisible();
     await confirming(true);
     expect(await saved()).toBe(1);
-    // Don't allow only refuses: no other card comes up, nothing is saved, and
-    // the next such run asks again.
     await answer(title, SECRETS_WORDS.deny);
     await expect.poll(() => state(other.request)).toEqual({ state: "denied", confirmations: 2 });
     await expect(shownCard(page, title)).toHaveCount(0);
@@ -575,8 +568,6 @@ test("saved decisions are made on the approval card and removed from Settings", 
       name: SECRETS_WORDS.remove,
       exact: true,
     });
-    // Keep it, focused when the question opens, leaves the decision saved, and the same run
-    // still needs no card.
     const keepIt = decisions().getByRole("button", {
       name: SAVED_DECISION_WORDS.keep,
       exact: true,
@@ -909,7 +900,6 @@ test("a paired phone's switch in Devices enrolls its key only through the code c
     phone = await connectClient(grant, { system: { system: "ios", chip: "arm64" } });
     const asked = async () =>
       (await phone?.invoke("inf:secrets:approvals", [{ device: PHONE.device }]))?.asked;
-    // Settings opens from command search; Devices is its tab.
     const toDevices = async () => {
       await runFromSearch(app, page, "settings.secrets");
       await page.getByRole("tab", { name: "Devices", exact: true }).click();
@@ -947,7 +937,6 @@ test("a paired phone's switch in Devices enrolls its key only through the code c
       "Enter",
     );
     await expect(enrollment).toHaveCount(0);
-    // Confirmed, the home asks the phone no more.
     await expect.poll(asked).toBe(false);
 
     await toDevices();
@@ -977,7 +966,6 @@ test("a paired phone's switch in Devices enrolls its key only through the code c
     await expect(approves).toHaveAttribute("aria-checked", "true");
     await expect(row).toContainText(SECRET_DEVICE_WORDS.on(approvalCode(key)));
 
-    // Settings -> Secrets' own Stop approvals asks the same on its row, and confirming turns the switch off.
     await runFromSearch(app, page, "settings.secrets");
     await secretsArea(page, "phone");
     const stop = devices.getByRole("button", { name: SECRETS_WORDS.stopApprovals, exact: true });
@@ -1159,7 +1147,6 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     const keep = row.getByRole("button", { name: SECRET_QUESTION_WORDS.keepSecret, exact: true });
     const confirm = row.getByRole("button", { name: SECRET_QUESTION_WORDS.forget, exact: true });
 
-    // Forget asks on the row: the question replaces Replace and Forget, Keep secret has focus.
     await focusOn(forget);
     await pressKey(forget, "Enter");
     await expect(row).toContainText(title);
@@ -1179,13 +1166,11 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     expect(await secretCards()).toBe(0);
     await regionShot(row, test.info().outputPath("forget-question.png"));
 
-    // Keep secret changes nothing and returns focus to Forget.
     await page.keyboard.press("Enter");
     await expect(forget).toBeFocused();
     await expect(row).not.toContainText(title);
     expect(await entries()).toEqual([kept.ref, forgotten.ref].sort());
 
-    // Tab reaches Forget secret from Keep secret; Enter forgets, and focus moves to the next secret.
     await pressKey(forget, "Enter");
     await expect(keep).toBeFocused();
     await pressKey(keep, "Tab");
@@ -1317,7 +1302,6 @@ test("Move from another tool starts the ask in the message box, from Secrets and
     await expect.poll(caret).toBe(draft.length);
     await typeInto(input, "Automic Vault");
     await expect(input).toHaveValue(`${draft}Automic Vault`);
-    // From command search the same ask starts again, keeping the words typed after it.
     await runFromSearch(app, page, "secrets.move");
     await expect(input).toBeFocused();
     await expect(input).toHaveValue(`${draft}Automic Vault`);

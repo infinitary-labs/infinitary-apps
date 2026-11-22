@@ -92,7 +92,6 @@ describe("the window beside a command's first mate", () => {
     expect(await at.shell.dispatch("inf:settings:appearance:set", [dark])).toEqual(dark);
     expect(command.there.look.appearance.theme).toBe("dark");
     expect(at.shell.preferences.get().appearance.theme).toBe("dark");
-    // A change the first mate makes itself reaches the window, and its windows hear the look.
     command.there.look = {
       ...command.there.look,
       appearance: { ...command.there.look.appearance, size: 150 },
@@ -102,7 +101,6 @@ describe("the window beside a command's first mate", () => {
     expect(at.pushes.findLast((push) => push.channel === "inf:shell:preferences")?.payload).toEqual(
       at.shell.preferences.get(),
     );
-    // Keys changed here are installed here and kept by the first mate.
     const keys: SavedKeymap = {
       ...presetKeymap("emacs"),
       keys: { "settings.open": [{ key: "KeyE", meta: true }] },
@@ -127,7 +125,6 @@ describe("the window beside a command's first mate", () => {
         caughtUp: 1,
       });
     expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
-    // The late welcome still gives it the first mate's look and its dictation switch.
     await expect.poll(() => at.shell.preferences.get().appearance.theme).toBe("light");
     await expect.poll(() => at.shell.dictationEnabled()).toBe(true);
   });
@@ -220,7 +217,6 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => command.there.answers.at(-1))
       .toEqual(["ask-2", { kind: "choose-files", paths: ["/home/kai/report.pdf"] }]);
-    // None of it is the window's own pages' to hear.
     expect(
       at.pushes.filter(
         (push) => push.channel === "inf:own-window:ask" || push.channel === "inf:presence:dock",
@@ -391,7 +387,6 @@ describe("the window beside a command's first mate", () => {
     expect(at.relaunch).not.toHaveBeenCalled();
   });
 
-  // The third launch state: the window opened while the command is between two stops.
   it("opened between two commands, waits under the notice and joins the one the entry starts", async () => {
     const command = commandRun();
     const at = besideShell(command.doorDir, {
@@ -399,7 +394,6 @@ describe("the window beside a command's first mate", () => {
       entry: "linux-unit",
       readyMs: 60_000,
     });
-    // It draws at once, under its notice, and starts no first mate.
     await at.start();
     expect(at.startCore).not.toHaveBeenCalled();
     expect(at.shell.thisMac()).toEqual({
@@ -410,7 +404,6 @@ describe("the window beside a command's first mate", () => {
     });
     at.command.records = { running: true, run: JOINED, lastStop: at.command.records.lastStop };
     await command.open().settled();
-    // The command the entry started welcomes it: the notice goes and the window reads everything.
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })
       .toEqual({ role: "home", left: null, byCommand: true, caughtUp: 1 });
@@ -428,7 +421,6 @@ describe("the window beside a command's first mate", () => {
     expect(await at.shell.dispatch("inf:update:install", [])).toEqual({
       run: "inf:update:install",
     });
-    // The command ended for its update and came back on the new program.
     at.command.programReplaced = true;
     await command.stop();
     await command.open().settled();
@@ -504,7 +496,6 @@ describe("the window beside a command's first mate", () => {
         // The captain's answer on the review: the notice speaks of the program this window started.
         command: { state: "stopped", ending: "quit", byWindow: true },
       });
-    // Under the notice there is nothing to stop.
     expect(at.shell.stopCommand()).toBe(false);
     at.starter.start.mockResolvedValueOnce(false);
     expect(at.shell.startHere()).toBe(true);
@@ -554,7 +545,6 @@ describe("the window beside a command's first mate", () => {
     const command = silentRun();
     await command.open().settled();
     const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
-    // The window draws at once, and says so once the command's wait is over.
     await at.shell.start();
     await expect
       .poll(() => at.shell.thisMac())
@@ -819,7 +809,6 @@ describe("the window beside a command's first mate", () => {
         byCommand: true,
         command: { state: "stopped", ending: "not-answering" },
       });
-    // A command that answers after all takes the notice down.
     await command.open().settled();
     await expect
       .poll(() => at.shell.thisMac(), { timeout: 5_000 })

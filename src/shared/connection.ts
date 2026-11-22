@@ -51,7 +51,6 @@ export const CONNECTION_PATH = "/connection";
 /** Where a device uses its link, once, to join (docs/devices.md, "Joining"). */
 export const PAIR_PATH = "/pair";
 
-/** The largest body `/pair` reads. */
 export const PAIR_BODY_MAX_BYTES = 4 * 1024;
 
 /**
@@ -267,7 +266,6 @@ export const CONNECTION_PORT = 47_623;
  * this account can. The key travels in this header on the upgrade.
  */
 export const LOCAL_DOOR_FOLDER = "local-door";
-/** The local door's three files, in its folder. */
 export const LOCAL_DOOR_FILES = { address: "address", pin: "pin", key: "key", run: "run" } as const;
 /** The header the local door's key travels in on the WebSocket upgrade. */
 export const LOCAL_DOOR_KEY_HEADER = "x-infinitary-local-key";

@@ -73,7 +73,6 @@ export function removalEntries(): RemovalEntry[] {
     }`);
 }
 
-/** The removal entry's uninstaller, the program its command runs. */
 export function uninstallerOf(entry: RemovalEntry): string {
   return /^"([^"]+)"/.exec(entry.UninstallString)?.[1] ?? entry.UninstallString;
 }
@@ -159,7 +158,6 @@ export function runTask(name: string): RunTask | null {
   );
 }
 
-/** Which of these process numbers still run. */
 export function stillRunning(pids: readonly number[]): number[] {
   return psList<number>(
     `$env:CHECK_PIDS -split ' ' | Where-Object { Get-Process -Id ([int]$_) -ErrorAction SilentlyContinue } | ForEach-Object { [int]$_ }`,
@@ -255,7 +253,6 @@ export function closeShownWindow(pid: number): boolean {
   );
 }
 
-/** A picture of the whole screen, for the check's evidence. */
 /**
  * The words of every window `pid` shows, as Windows' accessibility tree
  * reads them: each part's name, its text and its buttons' labels alike.

@@ -1165,7 +1165,7 @@ test("Forget asks on the secret's own row and the window stays on Settings", asy
     await expect(row).toContainText(title);
     for (const line of SECRET_QUESTION_WORDS.forgetLines) await expect(row).toContainText(line);
     await expect(keep).toBeDisabled();
-    await expect(row.getByRole("button", { busy: true })).toBeDisabled();
+    await expect(row.locator('button[aria-busy="true"]')).toBeDisabled();
     await app.evaluate(() =>
       (globalThis as SecretsJourneyGlobal).secretsJourney.finishForgetReply?.(),
     );

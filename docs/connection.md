@@ -48,6 +48,8 @@ The pairing seam is `any()`, `subscribe(listener)`, `identity()` (the home's TLS
 Pairing decides how a device proves itself; the connection never reads a secret from an address.
 A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), and a frame from a device no longer held is dropped and the device closed.
 
+Beside `/connection` and `/pair`, the listener answers two plain requests from a computer that runs work, admitted by the same seam: `/firstmate`, this app (`docs/devices.md`, "Getting Infinitary by its own key"), and `/infinitary-source`, the committed tree of the commit a home run from source runs (`FETCH_SOURCE_PATH`, `docs/devices.md`, "Matching the home's build").
+
 A device has a `kind`, set at the home (`docs/devices.md`, "The shape"), and each of its connections is a `view` or its `work`, as its hello says within what its kind may be: a `view` is Infinitary open on another Mac showing this one, and is sent every push, with pictures of the task browsers it watches as unnumbered `live` frames ("Live pushes" below); a `work` connection is a computer's work (`docs/helper.md`), sent no push, which asks only the work requests and is asked the home's orders (below).
 A `mac` may hold one of each at once; a `view` device is only ever a view, and a `work` device only ever its work.
 

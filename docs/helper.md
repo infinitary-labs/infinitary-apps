@@ -472,6 +472,24 @@ A copy under the other name whose work moves into the other spelling's data fold
 A route whose background starts only at the next login, or not at all, keeps no trial either: the new copy could not reach the home within the wait, so the trial and what was set aside go and the new copy stays.
 A Windows PC keeps no trial, since a newer Infinitary reaches it only by an install there.
 
+### Building the home's source
+
+A home run from source at a commit asks a Mac that runs work for it to run the same commit with the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`; `buildSourceHere`, `src/core/helper/sourceBuild.ts`; `docs/devices.md`, "Matching the home's build").
+A run whose hello lists the `source-builds` change answers it:
+
+1. It refuses at once, changing nothing, on a computer that is not a Mac (`system`), with no background whose agent launchd can start (`keep`), or without this user's own Node and pnpm on the search path the app reads for its children (`tools`).
+2. It gets the home's committed tree at that commit from `/infinitary-source` with its own key (`fetchFromHome`, `src/core/devices/dial.ts`) and unpacks it with the Mac's own tar into `source/.<commit>.partial` in its work folder (`fetching`).
+3. It runs `pnpm install --frozen-lockfile` there (`installing`), then `node scripts/prepare-local-codesign.mjs` and electron-vite's build (`building`), each through `hostEnv()` with a thirty-minute limit.
+   A step that fails takes the partial folder away, changes nothing else, and answers which step with the last of what it printed (`fetch`, `install`, `build`).
+4. It writes what it built beside it (`infinitary-build.json`: the commit and its lockfile's digest) and renames the folder to `source/<commit>`; a build of that commit kept there already is used again without building.
+5. It rewrites its agent to start that build's own Electron (`node_modules/electron/dist/`, as `path.txt` names it) with the build's folder, and takes away every other build but the one this run started from.
+   That is on trial as an update's copy is (above, "A copy that does not start"): the agent's file and `installed.json` are set aside first, and a build that does not reach the home in the update's wait has them put back, the build taken away and launchd read the agent anew, so the copy before it starts again and its hello says `failedUpdate`.
+6. It answers `{ restarts }`, and its run ends as `updated`, as the update order's does.
+
+The run it starts reads `infinitary-build.json` and says that commit in its hello (`buildIdentityOf`), so the home sees it matched.
+While it runs, `fm:firstmate:update-progress` says `fetching`, `installing` or `building`; one source build or update runs at a time, and the order asked while either runs answers `{ updating }`.
+A run started from a build in `source/` that its home brings back to a release keeps the home's copy as a Mac's first copy (above, "Updated by its home"), in place of the installed app its agent named before, and sets that app aside on trial; the builds left in `source/` go at the next source build.
+
 ### Saved by a newer Infinitary
 
 The grant (`home.json`) may be one a newer Infinitary saved, with a later version number or fields this version does not know (`JoinedHome.savedByNewer`).

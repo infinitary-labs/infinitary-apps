@@ -3,6 +3,7 @@ import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { inspect } from "node:util";
 import { runCli } from "@core/helper/cli";
+import { buildIdentityOf } from "@core/helper/sourceBuild";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { helperWords } from "@core/helper/words";
 import type { HostKeychain } from "@core/host";
@@ -12,7 +13,7 @@ import { configureWindowsGit, findWindowsGit } from "@core/windowsGit";
 import { settingFrom } from "@shared/envSettings";
 import { app } from "electron";
 import { hostPlatform } from "../core/platform";
-import { readSelfSourceAsync } from "../core/selfSource/resolve";
+import { readSelfSourceAsync, readSelfSourceIdentity } from "../core/selfSource/resolve";
 import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { nativeStandbyLock } from "./host/nativeSecrets";
@@ -222,6 +223,21 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
 
   void runCli(args, {
     version: app.getVersion(),
+    // Which build this is, which its hello tells its home (docs/devices.md, "Matching the home's build").
+    build: buildIdentityOf({
+      packaged: app.isPackaged,
+      appDir: app.getAppPath(),
+      releaseCommit: app.isPackaged
+        ? readSelfSourceIdentity({
+            isPackaged: true,
+            resourcesPath: process.resourcesPath,
+            appPath: app.getAppPath(),
+            version: app.getVersion(),
+            computer: hostname(),
+          }).commit
+        : null,
+    }),
+    appDir: app.getAppPath(),
     source: () =>
       readSelfSourceAsync({
         isPackaged: app.isPackaged,

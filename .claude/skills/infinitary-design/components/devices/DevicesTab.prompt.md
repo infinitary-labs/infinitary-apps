@@ -53,7 +53,7 @@ Every device's row has the same shape, a head, plain facts, and strips:
 - The facts, inset under the name: the mono line that says what the device is and where, ending "Infinitary 0.8.4" when every copy on it runs this computer's version; the summary; any version line that is only a fact; where its copy stands; and the phone's approvals.
 - One strip per thing that needs the captain, each a `--text-sm` sentence with its one small secondary button on the right, over a 1px `--line-1` rule.
   A strip in `--warn` says something is wrong; the rest read `--fg-1`.
-  The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Update" or "Install older version"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; an app behind this computer's, with no button; and the step that app is at as it follows this computer's version, with "Update app".
+  The strips stand in this order, and a row shows only those that apply: a removal waiting, with "Keep it"; a stopped SSH connection, with "Try again"; the old address, with "Make a command"; work not set up, with "Fix it"; held on the local network, with "Add it by its address"; automatic startup, with no button; another version, with "Match"; an earlier entry, with "Carry its tasks on here"; tasks waiting on a computer out of reach, "Its 2 tasks wait until it is back.", with "Move its tasks to…"; an app behind this computer's, with no button; and the step that app is at as it follows this computer's version, with "Update app".
 
 The ⋯ holds the rare actions, in this order: "Change address", "Move your first mate here", "Keep a copy here" or "Ready to take over", then a separator and "Remove" in the danger tone.
 Each item stands only where the rules below offer it; a phone's ⋯ holds Remove alone, and a row with nothing to offer has no ⋯.
@@ -318,15 +318,16 @@ One too old to say its version reads "Has an older Infinitary than this computer
 (or "a newer").
 While it still takes work its dot stays `ok`, and its status is its tasks or "idle".
 One that takes no new work adds "It takes no new work until it is updated." and the strip turns `--warn`; its dot is `warn`, and its status "no new work" in `--warn`.
-The strip's button is a small secondary "Update"; on a computer with a newer Infinitary than this one it reads "Install older version", since it would take that computer back to this computer's version.
-On Update from the row or the card, try the connection update first, then the saved address or current connection’s candidate if the worker needs a package update.
+The strip's button is a small secondary "Match", older or newer, since it brings that computer to whatever this computer runs; its accessible name is "Match Mac mini to this computer".
+When this computer runs Infinitary from its code, the strip reads "Runs another build than this computer, which runs its code at commit 1a2b3c4.", and Match has that Mac get the committed code, build it and start from it, the row following each step: "Mac mini is getting this computer's code.", "Mac mini is installing what this computer's code needs.", "Mac mini is building this computer's code."
+On Match from the row or the card, try the connection update first, then the saved address or current connection’s candidate if the worker needs a package update.
 The app's update by itself tries only the connection, and raises the card as soon as the worker comes back unchanged from that update without being sent a copy.
 Show any address, confirmation or approval question in an inset directly under that worker’s row.
-Keep that worker selected while the request is in progress or has an unanswered question, including when Update came from a card.
+Keep that worker selected while the request is in progress or has an unanswered question, including when Match came from a card.
 Answering the last question or canceling the update question releases selection.
 Adding a computer is still an aside under the Add controls.
 The app updates it by itself as it connects, and raises a card for it when it cannot (`UpdateNudge.prompt.md`), so the row is not the only place it is said.
-It brings the computer to this computer's version (`AddAMac.prompt.md`, "Updating any other computer"): over Remote Login for a computer added by its address, or for a joined Ubuntu package worker using a verified update address after the person's own Update, and otherwise over your network.
+It brings the computer to this computer's version (`AddAMac.prompt.md`, "Updating any other computer"): over Remote Login for a computer added by its address, or for a joined Ubuntu package worker using a verified update address after the person's own Match, and otherwise over your network.
 A computer whose version of Infinitary is too old to update from here makes the command for it instead: the command panel for another computer, or for running as another user, which run there once finds this computer again on this computer's version.
 Out of reach, a row says nothing of its version: this computer cannot tell it.
 Connected on another version, a row is in reach, so it never shows the old-address line or its way back ("Bringing a computer back").

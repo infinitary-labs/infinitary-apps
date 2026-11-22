@@ -1882,6 +1882,10 @@ export const UPDATE_PROGRESS_STATES = [
   "updating",
   "failed",
   "mismatch",
+  // A source build's steps (`sourceOrders`), which a home before them reads as under way.
+  "fetching",
+  "installing",
+  "building",
 ] as const;
 export type UpdateProgressState = (typeof UPDATE_PROGRESS_STATES)[number];
 
@@ -1944,3 +1948,52 @@ export const WORK_PROGRESS_ORDER = "fm:firstmate:update-progress" satisfies Down
 export type WorkDownloadAnswer = z.infer<
   (typeof downloadOrders)[typeof WORK_DOWNLOAD_ORDER]["response"]
 >;
+
+/**
+ * The step a source build stopped at on a computer (`sourceOrders`), with
+ * nothing there changed: `system`, it is no Mac; `tools`, it found no Node
+ * or pnpm to build with; `fetch`, the source did not arrive whole; `install`
+ * and `build`, its packages did not install or it did not build; `keep`, its
+ * background could not be moved to the build.
+ */
+export const SOURCE_BUILD_STEPS = ["system", "tools", "fetch", "install", "build", "keep"] as const;
+export type SourceBuildStep = (typeof SOURCE_BUILD_STEPS)[number];
+
+/**
+ * The order a home run from source asks a Mac that runs work for it, once
+ * that computer lists `source-builds` (docs/devices.md, "Sending source";
+ * docs/helper.md, "Building the home's source"): get the home's committed
+ * source at `commit` from `FETCH_SOURCE_PATH` with its own key, install its
+ * packages, build it, and have its background run Electron from that folder
+ * on trial, as an update keeps a copy. It answers `restarts` as the update
+ * order does, and its run ends; or `failed` with the step it stopped at and
+ * the last lines that step printed, with nothing there changed. One asked
+ * while an update or another build runs there answers `updating`. While it
+ * runs, the progress order says `fetching`, `installing` or `building`.
+ */
+/** The contract change that brings `build` in the hello and the source order. */
+export const SOURCE_BUILDS_CHANGE = "source-builds";
+
+export const sourceOrders = {
+  "inf:source:build": {
+    effect: "change",
+    request: z.tuple([z.object({ commit: z.string().regex(/^[a-f0-9]{40,64}$/) })]),
+    response: z.union([
+      z.object({ restarts: z.boolean() }),
+      z.object({
+        failed: z.enum(SOURCE_BUILD_STEPS),
+        detail: z.string().max(4000).optional(),
+      }),
+      z.object({ updating: z.literal(true) }),
+    ]),
+  },
+} as const satisfies Record<
+  `inf:${string}`,
+  { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
+>;
+
+export type SourceOrderChannel = keyof typeof sourceOrders;
+export const SOURCE_ORDER_CHANNELS = Object.keys(sourceOrders) as SourceOrderChannel[];
+/** The source build order's channel. */
+export const WORK_SOURCE_ORDER = "inf:source:build" satisfies SourceOrderChannel;
+export type WorkSourceAnswer = z.infer<(typeof sourceOrders)[typeof WORK_SOURCE_ORDER]["response"]>;

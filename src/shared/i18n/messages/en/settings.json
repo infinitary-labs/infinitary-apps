@@ -404,6 +404,8 @@
   "settingsDevicesMapUpdating": "Updating",
   "settingsDevicesMapWaitingForWork": "Waiting for work to answer",
   "settingsDevicesMapWorkNotReady": "Window connected · work not ready",
+  "settingsDevicesMatch": "Match",
+  "settingsDevicesMatchNamed": "Match {device} to this computer",
   "settingsDevicesMoveCancel": "Cancel the move",
   "settingsDevicesMoveChecking": "Checking {device}…",
   "settingsDevicesMoveCouldNot": "Could not check {device}. Try again in a moment.",

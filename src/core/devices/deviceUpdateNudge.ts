@@ -16,8 +16,11 @@ import {
   deviceUpdateSeenLine,
   deviceUpdatesItself,
   deviceUpdateTitle,
+  sourceMatchCard,
+  sourceMatchGap,
 } from "@shared/deviceUpdateNudge";
 import type { FmEvent } from "@shared/events";
+import * as m from "@shared/i18n/messages.generated";
 import type {
   PackageUpdateAddressQuestion,
   RemoteLoginConfirmQuestion,
@@ -62,6 +65,12 @@ export type DeviceUpdateNudgeOptions = {
    * computer (`Computers.failedHere`): no card asks to send it again.
    */
   failedHere?: (deviceId: string) => boolean;
+  /**
+   * Whether the captain let that computer run this computer's source
+   * (`Computers.sourceAllowed`): one allowed is matched by itself, and one
+   * not yet is asked once on its card.
+   */
+  sourceAllowed?: (deviceId: string) => boolean;
   /**
    * Update, as the captain's click asks it (`Computers.update`): it answers
    * the computer on the list once it is back, a question asked there (a
@@ -169,6 +178,11 @@ export class DeviceUpdateNudge {
       this.raised.delete(deviceId);
       return;
     }
+    // This computer runs source: that one is matched to its commit, asked once.
+    if (other.source) {
+      this.refreshSource(device, other.source.commit, forced);
+      return;
+    }
     // A computer on a newer Firstmate is this computer's to update.
     if (other.than !== "older") {
       this.forget(deviceId, "the computer is not behind");
@@ -224,6 +238,48 @@ export class DeviceUpdateNudge {
     });
     if (first)
       this.options.broadcastEvent({ type: "firstmate_note", text: deviceUpdateSeenLine(facts) });
+  }
+
+  /**
+   * A computer on another build than this computer's source (docs/devices.md,
+   * "Matching the home's build"): one the captain let run source is matched
+   * by itself once per commit; any other gets the card that asks once, which
+   * stays down after Not now for that commit. A commit that did not start
+   * there is never sent again.
+   */
+  private refreshSource(device: DeviceView, commit: string, forced: boolean): void {
+    const deviceId = device.id;
+    const id = deviceUpdateCardId(deviceId);
+    if (this.options.failedHere?.(deviceId)) {
+      this.forget(deviceId, "this build did not start there");
+      return;
+    }
+    if (this.updating.has(deviceId)) return;
+    const facts = {
+      deviceId,
+      device: deviceLabel(device),
+      commit,
+      refusal: this.refusals.get(deviceId),
+    };
+    const gap = sourceMatchGap(facts);
+    const chosen = this.options.cards.chosenAction(id);
+    const notNow = chosen === deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.notNow, gap);
+    if (this.options.sourceAllowed?.(deviceId) && this.tried.get(deviceId) !== gap && !notNow) {
+      this.updateItself(deviceId, gap);
+      return;
+    }
+    const signature = JSON.stringify([gap, facts.refusal ?? []]);
+    if (!forced && (this.raised.get(deviceId) === signature || this.remembered(id, gap, deviceId)))
+      return;
+    const first = this.gaps.get(deviceId) !== gap;
+    this.raised.set(deviceId, signature);
+    this.gaps.set(deviceId, gap);
+    this.options.cards.raise({ id, ...sourceMatchCard(facts) });
+    if (first)
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: m.devicesSourceSeenLine({ device: facts.device }),
+      });
   }
 
   /** An update's step: a refusal puts the card up again once, with what it said. */

@@ -50,6 +50,7 @@ import { startCorrections } from "./decisions/startCorrections";
 import { CaptainPlaces } from "./devices/captainPlaces";
 import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
+import { homeSourceOf, starterBuild } from "./devices/sourceArchive";
 import { createEventSeam } from "./eventSeam";
 import type { CoreEventSink } from "./events";
 import { homeCardFileReads } from "./files/cardFileReads";
@@ -640,6 +641,9 @@ export async function createServices(
       }),
     ),
   };
+  // A clean copy `pnpm dev`'s starter started names its commit (docs/alpha.md, "Updates from source").
+  const starterDir = host.app.packaged ? undefined : settingFrom(process.env, DEV_STARTER_SETTING);
+  const starter = starterDir ? readStarterSession(starterDir.trim()) : null;
   // The home's devices (docs/devices.md): pairing, the computers that run
   // work and their load, Remote Login, Macs nearby, the phone's door, the
   // privacy watch and each computer's own sign-ins.
@@ -654,6 +658,8 @@ export async function createServices(
     protectedIds: (providerId) => slots.protectedIds(providerId),
     // Late-bound: the board's presentation refresh is set up with the crew below.
     scheduleWorkPresentation: () => scheduleWorkPresentation(),
+    // The build this Mac runs, which each computer is matched to (docs/devices.md, "Matching the home's build").
+    ...(starter ? { homeBuild: starterBuild(starter) } : {}),
   });
   const {
     work: workDevices,
@@ -775,9 +781,6 @@ export async function createServices(
     },
   });
   const sourceComputer = await ownComputerName({ packaged: host.app.packaged, env: process.env });
-  // A clean copy `pnpm dev`'s starter started names its commit (docs/alpha.md, "Updates from source").
-  const starterDir = host.app.packaged ? undefined : settingFrom(process.env, DEV_STARTER_SETTING);
-  const starter = starterDir ? readStarterSession(starterDir.trim()) : null;
   const sourceLocation = {
     isPackaged: host.app.packaged,
     resourcesPath: host.app.resourcesDir,
@@ -1822,6 +1825,8 @@ export async function createServices(
     inviteDevice: homeDevices.inviteDevice,
     appBundle: () => homeDevices.appBundle,
     farBuild: homeDevices.farBuild,
+    // The committed source a computer matched to this run from source builds.
+    homeSource: () => (starter ? homeSourceOf(starter) : null),
     remoteLogin,
     nearbyMacs: homeDevices.nearbyMacs,
     homeAnnouncement: homeDevices.homeAnnouncement,

@@ -1,3 +1,4 @@
+import type { BuildIdentity } from "@shared/buildIdentity";
 import {
   channelIn,
   FIRST_SPELLING,
@@ -173,6 +174,11 @@ export type HomeLinkOptions = {
    * Unsaid when it answers false.
    */
   failedUpdate?: () => boolean;
+  /**
+   * Which build of Infinitary the device runs (docs/devices.md, "Matching
+   * the home's build"), said in its hello beside its version. Unsaid when absent.
+   */
+  build?: BuildIdentity;
   /**
    * Opens the WebSocket; `dialHome` unless a test stands in its own. It is
    * told the grant's addresses as they stand, and tells `reached` the
@@ -566,6 +572,7 @@ export class HomeLink {
             protocolVersion: this.protocolVersion,
             ...(this.options.appVersion ? { appVersion: this.options.appVersion } : {}),
             ...failedUpdateOf(this.options.failedUpdate),
+            ...(this.options.build ? { build: this.options.build } : {}),
             ...(this.cursor ? { cursor: this.cursor } : {}),
             ...(this.options.nameOnly ? { nameOnly: true } : {}),
             ...(this.options.automaticStartup

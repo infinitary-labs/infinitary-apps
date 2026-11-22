@@ -1,7 +1,8 @@
 import { constants as cryptoConstants } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
-import type { Duplex } from "node:stream";
+import type { Duplex, Readable } from "node:stream";
+import type { BuildIdentity } from "@shared/buildIdentity";
 import {
   channelIn,
   FIRST_SPELLING,
@@ -24,8 +25,10 @@ import {
   FETCH_APP_REFUSAL_STATUS,
   FETCH_APP_SHA256_HEADER,
   FETCH_APP_TYPES,
+  FETCH_SOURCE_PATH,
   type FetchAppRefusal,
   fetchAppRequestSchema,
+  fetchSourceRequestSchema,
   invokeArgs,
   PAIR_BODY_MAX_BYTES,
   PAIR_PATH,
@@ -51,6 +54,7 @@ import {
   type DeviceSystem,
   deviceMayBe,
   deviceNameSchema,
+  deviceRunsWork,
 } from "@shared/devices";
 import { type FmEvent, isStreamedEvent } from "@shared/events";
 import { HOME_MOVE_START_HERE, HOME_MOVED_LIVE } from "@shared/homeMove";
@@ -314,6 +318,8 @@ export type WorkDeviceVersion = {
    * (docs/helper.md, "A copy that does not start").
    */
   failedUpdate?: true;
+  /** Which build it runs, when its hello said (docs/devices.md, "Matching the home's build"). */
+  build?: BuildIdentity;
 };
 
 export type ConnectionOptions = {
@@ -420,6 +426,19 @@ export type ConnectionOptions = {
     chip: DeviceChip | undefined,
     kind?: "deb",
   ) => Promise<FarBuild | null>;
+  /**
+   * The committed source this home runs, for a computer it asks to build it
+   * at `FETCH_SOURCE_PATH` (docs/devices.md, "Matching the home's build"):
+   * its commit and a gzipped tar of that commit's tree made as it is sent;
+   * null when this home runs no source with a commit.
+   */
+  source?: () => HomeSource | null;
+};
+
+/** What a home run from source sends of itself (`ConnectionOptions.source`). */
+export type HomeSource = {
+  commit: string;
+  archive: () => { stream: Readable; ended: Promise<void>; stop: () => void };
 };
 
 export type RunningDeviceVersion = { deviceId: string; role: DeviceRole; version: string | null };
@@ -640,6 +659,13 @@ const FETCH_APP_REASONS: Record<FetchAppRefusal, string> = {
   used: "This link was used already.",
   expired: "This link has expired.",
   none: `This copy of Infinitary cannot send itself to another ${COMPUTER.one}.`,
+};
+
+/** What each refusal at `FETCH_SOURCE_PATH` says. */
+const FETCH_SOURCE_REASONS: Partial<Record<FetchAppRefusal, string>> = {
+  malformed: "The request for this home's source is not one it reads.",
+  unknown: `Only a ${COMPUTER.one} this home lists to run work gets its source.`,
+  none: "This home does not run that commit from source.",
 };
 
 /**
@@ -1156,6 +1182,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           takesWork: client.takesWork,
           ...(hello.changes?.length ? { changes: hello.changes } : {}),
           ...(hello.failedUpdate ? { failedUpdate: hello.failedUpdate } : {}),
+          ...(hello.build ? { build: hello.build } : {}),
         });
       if (client.takesWork) tellWork({ deviceId: client.device.id, contact: "in-reach" });
       if (role === "view") tellView({ deviceId: client.device.id, contact: "in-reach" });
@@ -1567,6 +1594,68 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       stream.pipe(response);
       response.once("close", stop);
     };
+    // A computer this home asks to build its source gets the committed tree
+    // at the commit it runs, with its own key (docs/devices.md, "Matching
+    // the home's build"): one gzipped tar made as it is sent, counted as an
+    // update's copy is. Never the uncommitted edits, nor another commit.
+    const fetchSource = async (request: IncomingMessage, response: ServerResponse) => {
+      const refuseWith = (status: number) => {
+        request.resume();
+        response.writeHead(status, { Connection: "close" }).end();
+      };
+      const refused = (why: "malformed" | "unknown" | "none") =>
+        answerJson(response, FETCH_APP_REFUSAL_STATUS[why], {
+          refused: why,
+          reason: FETCH_SOURCE_REASONS[why] as string,
+        });
+      if (request.headers.origin !== undefined) return refuseWith(403);
+      if (request.method !== "POST") {
+        response.setHeader("Allow", "POST");
+        return refuseWith(405);
+      }
+      if (!/^application\/json(;|$)/i.test(request.headers["content-type"] ?? ""))
+        return refuseWith(415);
+      if (Number(request.headers["content-length"] ?? 0) > PAIR_BODY_MAX_BYTES)
+        return refuseWith(413);
+      const text = await readBody(request);
+      if (text === undefined) return void response.destroy();
+      if (text === null) return refuseWith(413);
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = undefined;
+      }
+      const want = fetchSourceRequestSchema.safeParse(body).data;
+      if (!want) return refused("malformed");
+      let device: PairedDevice | null = null;
+      try {
+        device = await devices.admit(request);
+      } catch {
+        device = null;
+      }
+      if (!device || !deviceRunsWork(device.kind)) return refused("unknown");
+      const source = options.source?.() ?? null;
+      if (!source || source.commit !== want.commit) return refused("none");
+      if (response.destroyed) return;
+      const { stream, ended, stop } = source.archive();
+      ended.catch((error: unknown) => {
+        onProblem(
+          `could not send this home's source: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        // An archive that fails part way cuts the answer short, so the computer never builds half a tree.
+        response.destroy();
+      });
+      response.writeHead(200, {
+        "Content-Type": FETCH_APP_TYPES.bundle,
+        "Cache-Control": "no-store",
+        Connection: "close",
+      });
+      const deviceId = device.id;
+      stream.on("data", (piece: Buffer) => tellSent(deviceId, piece.length));
+      stream.pipe(response);
+      response.once("close", stop);
+    };
     // A device's upgrade proves it by pairing; one on the local door's own
     // listener by the door's key alone, and nothing else is answered there.
     const upgrade = async (
@@ -1650,6 +1739,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         if (door && path === COMMAND_PATH && options.command) command(request, response, door);
         else if (!door && path === PAIR_PATH) void pair(request, response);
         else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
+        else if (!door && path === FETCH_SOURCE_PATH) void fetchSource(request, response);
         else
           response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();
       });

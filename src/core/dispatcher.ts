@@ -498,7 +498,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:devices:link-at": (address, options) => services.remoteLogin.linkAt(address, options),
     "inf:devices:update": (deviceId, options) =>
       refusalAsAnswer(
-        () => services.computers.update(deviceId, options),
+        () => {
+          // The captain's Match is their yes to that computer running this
+          // Mac's source, asked once per computer (docs/devices.md, "Matching the home's build").
+          services.computers.allowSource(deviceId);
+          return services.computers.update(deviceId, options);
+        },
         options?.address !== undefined || options?.packageFallback === true,
       ),
     // Macs nearby while "By its address" is open (docs/devices.md, "Macs nearby").

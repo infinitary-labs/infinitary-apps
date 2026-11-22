@@ -616,9 +616,26 @@ export async function fetchFirstmate(
   options: DialOptions = {},
   want?: { system: DeviceSystem; chip: DeviceChip },
 ): Promise<void> {
+  await fetchFromHome(grant, sink, options, {
+    path: FETCH_APP_PATH,
+    body: want ? { system: want.system, chip: want.chip } : {},
+  });
+}
+
+/**
+ * Asks the home for something it sends a computer on its list, by the key
+ * that computer shows, as `fetchFirstmate` asks for its app: `ask` names the
+ * path and the body. The home's source (`FETCH_SOURCE_PATH`) is asked this way.
+ */
+export async function fetchFromHome(
+  grant: DeviceGrant,
+  sink: Writable | ((contentType: string) => Writable),
+  options: DialOptions,
+  ask: { path: string; body: Record<string, unknown> },
+): Promise<void> {
   const socket = await pinnedSocket(targetOf(grant, options.target), grant.homeKey, grant, options);
   const { host, port } = addressOf(grant.at);
-  const body = JSON.stringify(want ? { system: want.system, chip: want.chip } : {});
+  const body = JSON.stringify(ask.body);
   // What lets the copy go when the run stops, removed once the request settles.
   const stopping: { stop?: () => void } = {};
   try {
@@ -628,7 +645,7 @@ export async function fetchFirstmate(
           host,
           port,
           method: "POST",
-          path: FETCH_APP_PATH,
+          path: ask.path,
           headers: {
             "content-type": "application/json",
             "content-length": Buffer.byteLength(body),

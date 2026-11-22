@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ActionActor } from "@shared/actions";
 import { APP_FOLLOW_ONLY, APP_UPDATE_LIVE, type AppFollowReport } from "@shared/appFollow";
+import { type BuildIdentity, compareBuilds, sourceCommitOf } from "@shared/buildIdentity";
 import { takesDownload, takesUpdate } from "@shared/contractFeatures";
 import { HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
@@ -41,12 +42,17 @@ import { compareSemver } from "@shared/semver";
 import { devicePlace } from "@shared/signIns";
 import {
   downloadOrders,
+  SOURCE_BUILDS_CHANGE,
+  type SourceBuildStep,
+  sourceOrders,
   UPDATE_RETURN_MS,
   type UpdateDownload,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
   WORK_PROGRESS_ORDER,
+  WORK_SOURCE_ORDER,
   WORK_UPDATE_ORDER,
+  type WorkSourceAnswer,
   type WorkUpdateAnswer,
 } from "@shared/work";
 import {
@@ -149,7 +155,7 @@ export type ComputersOptions = {
    * This Mac's own versions - of Firstmate, when it is known, and of the
    * contract it speaks - which a computer's are measured against.
    */
-  home?: { app?: string; contract: string };
+  home?: { app?: string; contract: string; build?: BuildIdentity };
   /** Updates Firstmate on a computer added by its address, over Remote Login (`RemoteLogin.update`). */
   updateOverRemoteLogin?: (
     deviceId: string,
@@ -209,6 +215,18 @@ function schedule(ms: number, run: () => void): () => void {
 
 /** A count is said at most this often (docs/devices.md, "How far the copy has gone"). */
 const COUNT_EVERY_MS = 1_000;
+
+/** What the feed says of each step a build of this Mac's source failed at, there. */
+const SOURCE_FAILED_WORDS: Record<SourceBuildStep, (device: string) => string> = {
+  system: (device) => m.devicesSourceNotMac({ device }),
+  tools: (device) => m.devicesSourceFailedTools({ device }),
+  fetch: (device) => m.devicesSourceFailedFetch({ device }),
+  install: (device) => m.devicesSourceFailedInstall({ device }),
+  build: (device) => m.devicesSourceFailedBuild({ device }),
+  keep: (device) => m.devicesSourceFailedKeep({ device }),
+};
+/** A commit as a copy that did not start is kept: a version is never this. */
+const COMMIT = /^[a-f0-9]{40,64}$/;
 
 export class Computers {
   /** Removals under way, with the projects each computer ran when it began. */
@@ -407,7 +425,11 @@ export class Computers {
     // No home sends a Windows PC a build: a newer Infinitary is installed there.
     if (installedThere(device)) throw new Error(installItThereWords(deviceLabel(device)));
     if (this.failedHere(deviceId))
-      throw new Error(remoteLoginWords.failedHere(device, this.options.home?.app ?? "").join(" "));
+      throw new Error(
+        sourceCommitOf(this.options.home?.build)
+          ? m.devicesSourceFailedHere({ device: deviceLabel(device) })
+          : remoteLoginWords.failedHere(device, this.options.home?.app ?? "").join(" "),
+      );
     if (this.updating.has(deviceId))
       throw new Error(`${deviceLabel(device)} is being updated already.`);
     if (device.remoteLogin || options?.address) {
@@ -446,6 +468,10 @@ export class Computers {
         if (paused) this.options.resumeTasks?.(deviceId);
       }
     }
+    // This Mac's commit, built there from its source (docs/devices.md, "Matching the home's build").
+    const version = this.options.work.version(deviceId);
+    const other = version ? this.otherVersion(device, version) : undefined;
+    if (other?.source) return this.matchSource(device, other.source.commit);
     // A Linux worker of its own may be a package that restarts unchanged.
     const packageWorker = device.system === "linux" && !(device.onThisMac && device.user);
     const fallback = options?.packageFallback === true && packageWorker;
@@ -477,7 +503,32 @@ export class Computers {
    */
   failedHere(deviceId: string): boolean {
     const failed = this.options.pairing.failedUpdate(deviceId);
-    return failed !== undefined && failed === this.options.home?.app;
+    return failed !== undefined && failed === this.homeTarget();
+  }
+
+  /**
+   * The captain's own Match (docs/devices.md, "Matching the home's build"):
+   * a computer it builds this Mac's source on may run source from now on,
+   * and is matched by itself after (`DeviceUpdateNudge`).
+   */
+  allowSource(deviceId: string): void {
+    const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
+    const version = this.options.work.version(deviceId);
+    if (!device || !version || !this.otherVersion(device, version)?.source) return;
+    this.options.pairing.noteSourceAllowed(deviceId);
+  }
+
+  /** Whether the captain let this computer run this Mac's source. */
+  sourceAllowed(deviceId: string): boolean {
+    return this.options.pairing.sourceAllowed(deviceId);
+  }
+
+  /**
+   * What a computer is brought to, which a copy that did not start there is
+   * kept as: this Mac's commit when it runs source with one, else its version.
+   */
+  private homeTarget(): string | undefined {
+    return sourceCommitOf(this.options.home?.build) ?? this.options.home?.app;
   }
 
   /** Something the list reads changed outside it, such as an SSH connection's state: pushed when it shows. */
@@ -900,6 +951,141 @@ export class Computers {
   }
 
   /**
+   * Match to this Mac's source (docs/devices.md, "Matching the home's
+   * build"): a Mac that runs work and lists `source-builds` is asked to
+   * build this Mac's commit (`inf:source:build`). It gets the committed
+   * tree from here with its own key, installs and builds it, and its
+   * background starts the build on trial. Each step it is on is said in the
+   * feed, as the count of a copy is; a step that failed changed nothing
+   * there and is said with its own words. Answers it on the list once it
+   * runs this Mac's commit, or rejects with the refusal's two lines.
+   */
+  private async matchSource(device: DeviceView, commit: string): Promise<DeviceView> {
+    const { work } = this.options;
+    const label = deviceLabel(device);
+    const say = (
+      stage: DeviceUpdateEvent["stage"],
+      text: string,
+      tone: "info" | "warn" = "info",
+      extra: Pick<DeviceUpdateEvent, "copy" | "run"> = {},
+    ) =>
+      this.options.emitUpdate?.({
+        type: "device_update",
+        deviceId: device.id,
+        name: label,
+        stage,
+        text,
+        tone,
+        ...extra,
+      });
+    const refused = (refusal: RemoteLoginRefusal, lines: readonly [string, string]): never => {
+      for (const line of lines) say("refused", line, "warn");
+      throw new RemoteLoginRefusedError(refusal, lines, lines.join(" "));
+    };
+    const version = work.version(device.id);
+    if (!version)
+      return refused(
+        "out-of-reach",
+        remoteLoginWords.refused("out-of-reach", { address: label, name: label, doing: "update" }),
+      );
+    if (device.system !== undefined && device.system !== "macos")
+      return refused("other-system", [
+        m.devicesSourceNotMac({ device: label }),
+        m.devicesSourceKeepsVersion(),
+      ]);
+    if (!version.changes?.includes(SOURCE_BUILDS_CHANGE))
+      return refused("not-updatable", [
+        m.devicesSourceTooOld({ device: label }),
+        m.devicesSourceTooOldNext(),
+      ]);
+    this.updating.add(device.id);
+    // Listening before it is asked, so its return is never missed.
+    const back = this.backOnThisVersion(device);
+    const run = { id: `source-${randomUUID()}` };
+    let said: string | undefined;
+    const step = (state: string) => {
+      const text =
+        state === "fetching"
+          ? m.devicesSourceFetching({ device: label })
+          : state === "installing"
+            ? m.devicesSourceInstalling({ device: label })
+            : state === "building"
+              ? m.devicesSourceBuilding({ device: label })
+              : undefined;
+      if (!text || text === said) return;
+      said = text;
+      say("updating", text, "info", { copy: { state: "preparing" }, run });
+    };
+    let asking: NodeJS.Timeout | undefined;
+    let settled = false;
+    try {
+      say("updating", remoteLoginWords.updating(device));
+      // Its crew pauses before anything there stops, and carries on after.
+      await this.options.pauseTasks?.(device.id);
+      step("fetching");
+      const everyMs = this.options.countEveryMs ?? COUNT_EVERY_MS;
+      const ask = async () => {
+        try {
+          const progress = downloadOrders[WORK_PROGRESS_ORDER].response.parse(
+            await work.ask(device.id, WORK_PROGRESS_ORDER, [], { anyVersion: true }),
+          );
+          if (!settled) step(progress.state);
+        } catch {
+          // Its own answer, or its return, decides.
+        }
+        if (!settled) asking = setTimeout(ask, everyMs);
+      };
+      asking = setTimeout(ask, everyMs);
+      back.arm();
+      let answer: WorkSourceAnswer;
+      try {
+        answer = sourceOrders[WORK_SOURCE_ORDER].response.parse(
+          await work.ask(device.id, WORK_SOURCE_ORDER, [{ commit }], { anyVersion: true }),
+        );
+      } catch (caught) {
+        console.warn(`[devices] could not build ${label}'s source:`, caught);
+        // A connection that dropped while it built is followed by its return.
+        if (caught instanceof DeviceOutOfReachError) answer = { updating: true };
+        else
+          return refused(
+            "failed",
+            remoteLoginWords.refused("failed", { address: label, name: label, doing: "update" }),
+          );
+      } finally {
+        settled = true;
+        clearTimeout(asking);
+      }
+      if ("failed" in answer) {
+        const lines: [string, string] = [
+          SOURCE_FAILED_WORDS[answer.failed](label),
+          m.devicesSourceKeepsVersion(),
+        ];
+        for (const line of lines) say("refused", line, "warn");
+        throw new RemoteLoginRefusedError(
+          "failed",
+          lines,
+          [...lines, answer.detail ?? ""].join("\n").trim(),
+        );
+      }
+      if ("restarts" in answer && !answer.restarts) {
+        say("done", remoteLoginWords.updatedByHand(device));
+        return this.viewOf(device.id) ?? device;
+      }
+      say("updating", remoteLoginWords.starting(label), "info", { copy: { state: "starting" } });
+      if (await back.came()) say("done", remoteLoginWords.updated(device, "running"));
+      else if (work.version(device.id)) say("done", this.updateNotConfirmed(device), "warn");
+      else for (const line of remoteLoginWords.notBack(device)) say("done", line, "warn");
+      return this.viewOf(device.id) ?? device;
+    } finally {
+      settled = true;
+      clearTimeout(asking);
+      back.cancel();
+      this.updating.delete(device.id);
+      this.options.resumeTasks?.(device.id);
+    }
+  }
+
+  /**
    * Asks a Mac to download this Mac's published version itself and keep it
    * (docs/devices.md, "Downloading over the connection"), asking how far it
    * got once every count's interval and saying each count as one run of feed
@@ -1145,11 +1331,14 @@ export class Computers {
     version: WorkDeviceVersion,
   ): DeviceOtherVersion | undefined {
     const home = this.options.home ?? { contract: PROTOCOL_VERSION };
-    const apps = version.app !== undefined && home.app !== undefined;
-    if (apps ? version.app === home.app : version.contract === home.contract) return undefined;
-    const order = apps
-      ? compareSemver(version.app as string, home.app as string)
-      : compareSemver(version.contract, home.contract);
+    const match = compareBuilds(home, {
+      contract: version.contract,
+      app: version.app,
+      build: version.build,
+    });
+    if (match.same) return undefined;
+    const homeCommit = sourceCommitOf(home.build);
+    const source = match.target === "source" && homeCommit;
     const updateBy = device.remoteLogin
       ? "remote-login"
       : takesUpdate(version.contract)
@@ -1157,10 +1346,11 @@ export class Computers {
         : "command";
     return {
       ...(version.app !== undefined ? { app: version.app } : {}),
-      ...(order ? { than: order < 0 ? ("older" as const) : ("newer" as const) } : {}),
+      ...(match.than ? { than: match.than } : {}),
       takesWork: version.takesWork && !this.options.work.lacksTurnChange(device.id),
       updateBy,
-      ...(updateBy === "connection" && downloadsThere(device, version.contract)
+      ...(source ? { source: { commit: homeCommit } } : {}),
+      ...(!source && updateBy === "connection" && downloadsThere(device, version.contract)
         ? { downloads: true as const }
         : {}),
     };
@@ -1176,14 +1366,24 @@ export class Computers {
   private heardVersion(deviceId: string, version: WorkDeviceVersion): void {
     const { pairing } = this.options;
     const kept = pairing.failedUpdate(deviceId);
-    if (kept && version.app && (compareSemver(version.app, kept) ?? -1) >= 0)
+    // A commit kept is forgotten once that computer runs it, or this Mac runs another.
+    if (kept && COMMIT.test(kept)) {
+      if (sourceCommitOf(version.build) === kept || kept !== this.homeTarget())
+        pairing.noteFailedUpdate(deviceId, null);
+    } else if (kept && version.app && (compareSemver(version.app, kept) ?? -1) >= 0)
       pairing.noteFailedUpdate(deviceId, null);
-    const failed = version.failedUpdate ? this.options.home?.app : undefined;
-    if (!failed || (version.app && (compareSemver(version.app, failed) ?? -1) >= 0)) return;
+    const failed = version.failedUpdate ? this.homeTarget() : undefined;
+    if (!failed) return;
+    if (COMMIT.test(failed)) {
+      if (sourceCommitOf(version.build) === failed) return;
+    } else if (version.app && (compareSemver(version.app, failed) ?? -1) >= 0) return;
     if (!pairing.noteFailedUpdate(deviceId, failed)) return;
     const device = pairing.list().find((entry) => entry.id === deviceId);
     if (!device) return;
-    for (const line of remoteLoginWords.wentBack(device, failed))
+    const lines = COMMIT.test(failed)
+      ? [m.devicesSourceWentBack({ device: deviceLabel(device) })]
+      : remoteLoginWords.wentBack(device, failed);
+    for (const line of lines)
       this.options.emitUpdate?.({
         type: "device_update",
         deviceId,

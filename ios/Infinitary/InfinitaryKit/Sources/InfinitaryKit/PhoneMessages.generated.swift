@@ -877,6 +877,28 @@ public enum PhoneMessages {
     public static func `devicesRemoteLineReadOnly`() -> String { PhoneWords.format("devicesRemoteLineReadOnly", []) }
     public static func `devicesRemoteLineReadingAgain`() -> String { PhoneWords.format("devicesRemoteLineReadingAgain", []) }
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
+    public static func `devicesSourceBuilding`(`device`: String) -> String { PhoneWords.format("devicesSourceBuilding", [`device`]) }
+    public static func `devicesSourceCardBody`(`commit`: String, `device`: String) -> String { PhoneWords.format("devicesSourceCardBody", [`commit`, `device`]) }
+    public static func `devicesSourceCardMatch`() -> String { PhoneWords.format("devicesSourceCardMatch", []) }
+    public static func `devicesSourceCardOnce`(`device`: String) -> String { PhoneWords.format("devicesSourceCardOnce", [`device`]) }
+    public static func `devicesSourceCardRefused`(`why`: String) -> String { PhoneWords.format("devicesSourceCardRefused", [`why`]) }
+    public static func `devicesSourceCardTitle`(`device`: String) -> String { PhoneWords.format("devicesSourceCardTitle", [`device`]) }
+    public static func `devicesSourceFailedBuild`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedBuild", [`device`]) }
+    public static func `devicesSourceFailedFetch`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedFetch", [`device`]) }
+    public static func `devicesSourceFailedHere`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedHere", [`device`]) }
+    public static func `devicesSourceFailedInstall`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedInstall", [`device`]) }
+    public static func `devicesSourceFailedKeep`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedKeep", [`device`]) }
+    public static func `devicesSourceFailedTools`(`device`: String) -> String { PhoneWords.format("devicesSourceFailedTools", [`device`]) }
+    public static func `devicesSourceFetching`(`device`: String) -> String { PhoneWords.format("devicesSourceFetching", [`device`]) }
+    public static func `devicesSourceInstalling`(`device`: String) -> String { PhoneWords.format("devicesSourceInstalling", [`device`]) }
+    public static func `devicesSourceKeepsVersion`() -> String { PhoneWords.format("devicesSourceKeepsVersion", []) }
+    public static func `devicesSourceNoWorkUntilMatched`() -> String { PhoneWords.format("devicesSourceNoWorkUntilMatched", []) }
+    public static func `devicesSourceNotMac`(`device`: String) -> String { PhoneWords.format("devicesSourceNotMac", [`device`]) }
+    public static func `devicesSourceOtherBuild`(`commit`: String) -> String { PhoneWords.format("devicesSourceOtherBuild", [`commit`]) }
+    public static func `devicesSourceSeenLine`(`device`: String) -> String { PhoneWords.format("devicesSourceSeenLine", [`device`]) }
+    public static func `devicesSourceTooOld`(`device`: String) -> String { PhoneWords.format("devicesSourceTooOld", [`device`]) }
+    public static func `devicesSourceTooOldNext`() -> String { PhoneWords.format("devicesSourceTooOldNext", []) }
+    public static func `devicesSourceWentBack`(`device`: String) -> String { PhoneWords.format("devicesSourceWentBack", [`device`]) }
     public static func `devicesUpdateApp`() -> String { PhoneWords.format("devicesUpdateApp", []) }
     public static func `devicesUpdateAppNamed`(`device`: String) -> String { PhoneWords.format("devicesUpdateAppNamed", [`device`]) }
     public static func `devicesWorkCopyGone`(`device`: String) -> String { PhoneWords.format("devicesWorkCopyGone", [`device`]) }
@@ -2860,6 +2882,8 @@ public enum PhoneMessages {
     public static func `settingsDevicesMapUpdating`() -> String { PhoneWords.format("settingsDevicesMapUpdating", []) }
     public static func `settingsDevicesMapWaitingForWork`() -> String { PhoneWords.format("settingsDevicesMapWaitingForWork", []) }
     public static func `settingsDevicesMapWorkNotReady`() -> String { PhoneWords.format("settingsDevicesMapWorkNotReady", []) }
+    public static func `settingsDevicesMatch`() -> String { PhoneWords.format("settingsDevicesMatch", []) }
+    public static func `settingsDevicesMatchNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesMatchNamed", [`device`]) }
     public static func `settingsDevicesMoveCancel`() -> String { PhoneWords.format("settingsDevicesMoveCancel", []) }
     public static func `settingsDevicesMoveChecking`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveChecking", [`device`]) }
     public static func `settingsDevicesMoveCouldNot`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveCouldNot", [`device`]) }
@@ -5016,6 +5040,28 @@ extension PhoneWords {
         "devicesRemoteLineReadOnly": [],
         "devicesRemoteLineReadingAgain": [],
         "devicesRemoteOutOfReach": ["name"],
+        "devicesSourceBuilding": ["device"],
+        "devicesSourceCardBody": ["commit", "device"],
+        "devicesSourceCardMatch": [],
+        "devicesSourceCardOnce": ["device"],
+        "devicesSourceCardRefused": ["why"],
+        "devicesSourceCardTitle": ["device"],
+        "devicesSourceFailedBuild": ["device"],
+        "devicesSourceFailedFetch": ["device"],
+        "devicesSourceFailedHere": ["device"],
+        "devicesSourceFailedInstall": ["device"],
+        "devicesSourceFailedKeep": ["device"],
+        "devicesSourceFailedTools": ["device"],
+        "devicesSourceFetching": ["device"],
+        "devicesSourceInstalling": ["device"],
+        "devicesSourceKeepsVersion": [],
+        "devicesSourceNoWorkUntilMatched": [],
+        "devicesSourceNotMac": ["device"],
+        "devicesSourceOtherBuild": ["commit"],
+        "devicesSourceSeenLine": ["device"],
+        "devicesSourceTooOld": ["device"],
+        "devicesSourceTooOldNext": [],
+        "devicesSourceWentBack": ["device"],
         "devicesUpdateApp": [],
         "devicesUpdateAppNamed": ["device"],
         "devicesWorkCopyGone": ["device"],
@@ -6999,6 +7045,8 @@ extension PhoneWords {
         "settingsDevicesMapUpdating": [],
         "settingsDevicesMapWaitingForWork": [],
         "settingsDevicesMapWorkNotReady": [],
+        "settingsDevicesMatch": [],
+        "settingsDevicesMatchNamed": ["device"],
         "settingsDevicesMoveCancel": [],
         "settingsDevicesMoveChecking": ["device"],
         "settingsDevicesMoveCouldNot": ["device"],

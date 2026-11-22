@@ -33,6 +33,15 @@ Not now holds the card away until a version changes, and nothing updates that co
 Once per gap, one feed line; it comes down by itself when the computer runs this computer's version.
 The first mate's offer to update the same computer never makes a second card.
 
+**Running this computer's code.**
+When this computer runs Infinitary from its code and a Mac that runs work runs another build, the app matches it by itself once the person has said yes for that Mac; before that it asks once.
+Meta: the computer's name.
+Title: "Run this computer's code on Mac mini?".
+First paragraph: "This computer runs Infinitary from its code at commit 1a2b3c4, and Mac mini runs another build. Match has Mac mini get that committed code, build it and start from it. Changes not committed stay on this computer."
+Second paragraph: "You are asked once for Mac mini. After that, it matches this computer by itself whenever this computer runs other code."
+After a match that did not go through, a third paragraph: "The last match did not go through." and why.
+Buttons: Match it (default), which opens Settings → Devices with the match running, and Not now, which holds the card away for that commit.
+
 **The app open on another computer.**
 That app updates itself to this computer's version while nobody uses it there, with no card (`DevicesTab.prompt.md`, "Each copy's version").
 A card of its own goes up only when the app said it cannot do it by itself, or tried and it did not go through.

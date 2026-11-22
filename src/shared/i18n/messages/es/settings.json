@@ -412,6 +412,8 @@
   "settingsDevicesMapUpdating": "Actualizando",
   "settingsDevicesMapWaitingForWork": "Esperando respuesta del trabajo",
   "settingsDevicesMapWorkNotReady": "Ventana conectada · trabajo no disponible",
+  "settingsDevicesMatch": "Igualar",
+  "settingsDevicesMatchNamed": "Igualar {device} con este ordenador",
   "settingsDevicesMoveCancel": "Cancelar la mudanza",
   "settingsDevicesMoveChecking": "Comprobando {device}…",
   "settingsDevicesMoveCouldNot": "No se pudo comprobar {device}. Vuelve a intentarlo en un momento.",

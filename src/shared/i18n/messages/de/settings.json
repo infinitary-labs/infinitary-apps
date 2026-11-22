@@ -404,6 +404,8 @@
   "settingsDevicesMapUpdating": "Aktualisierung",
   "settingsDevicesMapWaitingForWork": "Wartet auf Antwort der Arbeit",
   "settingsDevicesMapWorkNotReady": "Fenster verbunden · Arbeit nicht bereit",
+  "settingsDevicesMatch": "Angleichen",
+  "settingsDevicesMatchNamed": "{device} an diesen Computer angleichen",
   "settingsDevicesMoveCancel": "Umzug abbrechen",
   "settingsDevicesMoveChecking": "{device} wird geprüft…",
   "settingsDevicesMoveCouldNot": "{device} konnte nicht geprüft werden. Versuch es gleich noch einmal.",

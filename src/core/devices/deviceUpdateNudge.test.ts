@@ -1,6 +1,6 @@
 import type { AppFollowReport } from "@shared/appFollow";
 import { type DeviceView, deviceViewSchema } from "@shared/devices";
-import { appUpdateCardId } from "@shared/deviceUpdateNudge";
+import { appUpdateCardId, deviceUpdateCardId } from "@shared/deviceUpdateNudge";
 import { describe, expect, it } from "vitest";
 import { DeviceUpdateNudge } from "./deviceUpdateNudge";
 
@@ -91,6 +91,87 @@ describe("the card for an app that cannot follow this computer's version by itse
 
     h.chosen.set(ID, "not-now@app:0.8.4>0.8.3:cannot");
     h.nudge.appsChanged([cannot]);
+    expect(h.raised.size).toBe(0);
+  });
+});
+
+// INF-5635's plan, piece 3: "ask once per computer before it first runs source, then follow by
+// itself".
+describe("matching a computer to this computer's source", () => {
+  const COMMIT = "c".repeat(40);
+  const mini = deviceViewSchema.parse({
+    id: "mac-mini",
+    kind: "work",
+    name: "Mac mini",
+    pairedAt: 0,
+    system: "macos",
+    inReach: true,
+    otherVersion: {
+      app: "0.8.6-alpha.16",
+      takesWork: true,
+      updateBy: "connection",
+      source: { commit: COMMIT },
+    },
+  });
+
+  function sourceHome(allowed: boolean) {
+    const raised = new Map<string, { title: string; body: string; actions: unknown[] }>();
+    const chosen = new Map<string, string>();
+    const updates: string[] = [];
+    // A match that went through brings it to this computer's commit.
+    let listed: DeviceView = mini;
+    const nudge = new DeviceUpdateNudge({
+      devices: () => [listed],
+      homeApp: () => undefined,
+      sourceAllowed: () => allowed,
+      update: async (deviceId) => {
+        updates.push(deviceId);
+        const { otherVersion: _matched, ...matched } = mini;
+        listed = matched;
+        return listed;
+      },
+      broadcastEvent: () => {},
+      cards: {
+        raise: (card) => {
+          raised.set(card.id, card as never);
+        },
+        withdraw: (id) => {
+          raised.delete(id);
+        },
+        has: (id) => raised.has(id),
+        chosenAction: (id) => chosen.get(id),
+      },
+    });
+    return { nudge, raised, chosen, updates };
+  }
+
+  it("asks once on a card before a computer first runs source, and Not now holds it for that commit", () => {
+    const h = sourceHome(false);
+    h.nudge.refresh("mac-mini");
+    expect(h.updates).toEqual([]);
+    const card = h.raised.get(deviceUpdateCardId("mac-mini"));
+    expect(card?.title).toBe("Run this computer's code on Mac mini?");
+    expect(card?.body).toContain("cccccc");
+    expect(card?.actions).toEqual([
+      expect.objectContaining({
+        id: `update@source:${COMMIT}`,
+        label: "Match it",
+        effect: { kind: "open", target: "devices", update: "mac-mini" },
+      }),
+      expect.objectContaining({ id: `not-now@source:${COMMIT}`, label: "Not now" }),
+    ]);
+    h.raised.clear();
+    h.chosen.set(deviceUpdateCardId("mac-mini"), `not-now@source:${COMMIT}`);
+    h.nudge.refresh("mac-mini");
+    expect(h.raised.size).toBe(0);
+  });
+
+  it("matches a computer the captain allowed by itself, with no card", async () => {
+    const h = sourceHome(true);
+    h.nudge.refresh("mac-mini");
+    await new Promise((resolve) => setImmediate(resolve));
+    h.nudge.refresh("mac-mini");
+    expect(h.updates).toEqual(["mac-mini"]);
     expect(h.raised.size).toBe(0);
   });
 });

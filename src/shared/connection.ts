@@ -14,6 +14,7 @@ import {
 
 export type { FoundTools } from "./devices";
 
+import { buildIdentitySchema } from "./buildIdentity";
 import type { ContractAccess } from "./contractFeatures";
 import { phoneStandbysSchema } from "./standbyPhone";
 
@@ -67,6 +68,22 @@ export const PAIR_BODY_MAX_BYTES = 4 * 1024;
  * from a home that cannot send itself.
  */
 export const FETCH_APP_PATH = "/firstmate";
+
+/**
+ * Where a computer that runs work, already on the home's list, gets the
+ * home's source (`source-builds`; docs/devices.md, "Sending source"): a home
+ * run from source answers a gzipped tar of the committed tree at the commit
+ * the body names, which must be the one it runs, never its uncommitted
+ * edits. The computer proves itself by the key it shows in TLS, as for
+ * `FETCH_APP_PATH`, and sends `{ commit }`. A home that runs no source, or
+ * another commit, answers 404 `none`.
+ */
+export const FETCH_SOURCE_PATH = "/infinitary-source";
+
+/** What a computer sends to `FETCH_SOURCE_PATH`: the commit it was asked to build. */
+export const fetchSourceRequestSchema = z.strictObject({
+  commit: z.string().regex(/^[a-f0-9]{40,64}$/),
+});
 
 /** What a command, or a computer being updated, sends to `FETCH_APP_PATH`. */
 export const fetchAppRequestSchema = z.strictObject({
@@ -373,6 +390,13 @@ export const clientFrameSchema = z.union([
        * sent. Said until the home has heard it.
        */
       failedUpdate: z.literal(true).optional(),
+      /**
+       * The build it runs (`source-builds`; docs/devices.md, "Matching the
+       * home's build"): a release's commit, or a run from source's commit,
+       * whether it was edited and its lockfile's digest. Absent from a
+       * device too old to say it, which the home compares by version alone.
+       */
+      build: buildIdentitySchema.optional(),
       /** The last push it saw on an earlier connection; absent on a first one. */
       cursor: connectionCursorSchema.optional(),
       /**

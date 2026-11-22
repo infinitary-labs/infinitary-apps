@@ -396,6 +396,8 @@
   "settingsDevicesMapUpdating": "正在更新",
   "settingsDevicesMapWaitingForWork": "正在等待工作端响应",
   "settingsDevicesMapWorkNotReady": "窗口已连接 · 工作未就绪",
+  "settingsDevicesMatch": "对齐",
+  "settingsDevicesMatchNamed": "让 {device} 与这台电脑对齐",
   "settingsDevicesMoveCancel": "取消搬移",
   "settingsDevicesMoveChecking": "正在检查 {device}…",
   "settingsDevicesMoveCouldNot": "无法检查 {device}。请稍后再试。",

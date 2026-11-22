@@ -1189,6 +1189,32 @@ While this Mac's version is that one (`Computers.failedHere`), Update refuses be
 It can be updated once a newer version is here."), and neither the update by itself nor the update card is for it (`DeviceUpdateNudge`'s `failedHere`, which reads the note `Computers` keeps first, since it hears each version before the card does).
 The note goes once that computer runs that version or a newer one, and when it is removed.
 
+### Matching the home's build
+
+Every copy that runs work also says which build it runs in its hello (`build`, `buildIdentitySchema`, `src/shared/buildIdentity.ts`): an installed release names the commit its source index names, and a run from source names its commit, whether tracked files were edited from it, and its lockfile's digest.
+The home says its own from its starter (`starterBuild`, `src/core/devices/sourceArchive.ts`), and `compareBuilds` measures each computer against it, the one comparison the row, the update by itself and the card read:
+
+- **Two releases** compare by version, as above.
+- **A home run from source that names its commit** is matched by commit, whatever the other runs: a computer on another commit, or on a release, carries `otherVersion.source` with that commit, and Match builds it there.
+  A home run from source that names none, one its starter did not start, compares contracts alone, since its package version names no release.
+- **A home on a release** brings a computer that runs source back to that release, as the update over the connection does.
+
+The row says "Runs another build than this computer, which runs its code at commit 1a2b3c4." and offers one Match, which replaces Update and Install older version for every computer, installed copies too: it brings that computer to whatever the home runs, older or newer.
+
+Match on a source home (`Computers.matchSource`) sends a committed source archive that a Mac builds and runs; edits not committed stay on the home.
+It refuses before anything is asked there when that computer is out of reach, is not a Mac ("Only a Mac builds Infinitary from code, and Mac mini is not a Mac."), or speaks no `source-builds` change ("Install the newest Infinitary release there, then choose Match again."), each with "It keeps the version it runs."
+Otherwise its crew pauses as for an update, the home asks the source order, `inf:source:build` (`sourceOrders`, `src/shared/work.ts`), with the commit, and follows `fm:firstmate:update-progress` as it runs: "Mac mini is getting this computer's code.", "… is installing what this computer's code needs." and "… is building this computer's code." (`fetching`, `installing`, `building`).
+A step that fails answers which (`tools`, `fetch`, `install`, `build`, `keep` or `system`) and changes nothing there; the feed says it in two warning lines, the second "It keeps the version it runs."
+A build that does not reach the home in time goes back as a release update does (below, "A copy that does not start"), and the home keeps that commit on `failed-updates.json`, so Match does not build it there again until the home runs other code.
+
+The captain is asked once per computer before it first runs the home's code.
+The captain's own Match is that yes, and so is Match it on the card "Run this computer's code on Mac mini?" (`sourceMatchCard`, `src/shared/deviceUpdateNudge.ts`), which the update by itself raises for a computer not yet allowed, with Not now beside it; its answers carry the commit in their action ids (`source:<commit>`).
+The yes is kept on pairing's `source-builds.json` (`DevicePairing.noteSourceAllowed`), goes when that computer is removed, and from then on the update by itself matches that computer whenever the home runs another commit, with no card.
+
+`/infinitary-source` (`FETCH_SOURCE_PATH`) answers `{ commit }` from a computer that runs work, already on the list and proven by its key in TLS, as `/firstmate` admits it, with `git archive --format=tar.gz` of that commit from the home's starter folder (`homeSourceOf`): `malformed` for a body it does not read, `unknown` for a key the list does not hold or a view, and `none` for another commit than the one the home runs, or a home that does not run source.
+An archive that fails part way cuts the answer short, so the computer never builds half a tree.
+How the computer builds and starts it is in `docs/helper.md`, "Building the home's source".
+
 ### Downloading over the connection
 
 A Mac a command added - a Mac elsewhere that keeps its own copy - on a contract from `WORK_DOWNLOAD_SINCE` on, whatever its major (`takesDownload`), downloads this Mac's published version itself before it is sent anything; its entry's `otherVersion` says so with `downloads`.

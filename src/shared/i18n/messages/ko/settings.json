@@ -396,6 +396,8 @@
   "settingsDevicesMapUpdating": "업데이트 중",
   "settingsDevicesMapWaitingForWork": "작업 응답 대기 중",
   "settingsDevicesMapWorkNotReady": "창 연결됨 · 작업 준비 안 됨",
+  "settingsDevicesMatch": "맞추기",
+  "settingsDevicesMatchNamed": "{device}을(를) 이 컴퓨터에 맞추기",
   "settingsDevicesMoveCancel": "옮기기 취소",
   "settingsDevicesMoveChecking": "{device} 확인 중…",
   "settingsDevicesMoveCouldNot": "{device}을(를) 확인하지 못했어요. 잠시 후 다시 시도하세요.",

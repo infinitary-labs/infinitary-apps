@@ -21,5 +21,11 @@
   "taskTabActivity": "활동",
   "taskTabCards": "카드",
   "taskTabCrewmate": "선원",
-  "taskTabInfo": "정보"
+  "taskTabInfo": "정보",
+  "taskWaitChainUntil": "{on} 기다리는 중 · {end}은(는) {time}까지 대기",
+  "taskWaitChainUpdate": "{on} 기다리는 중 · {end}은(는) 앱 업데이트 대기",
+  "taskWaitChainVia": "{on} 기다리는 중 · 그 작업은 {end} 대기",
+  "taskWaitOn": "{on} 기다리는 중",
+  "taskWaitOnUntil": "{on} 기다리는 중 · {time}까지 대기",
+  "taskWaitOnUpdate": "{on} 기다리는 중 · 앱 업데이트 대기"
 }

@@ -3709,6 +3709,12 @@
 "taskTabCards" = "カード";
 "taskTabCrewmate" = "乗組員";
 "taskTabInfo" = "情報";
+"taskWaitChainUntil" = "%2$@ 待ち · %1$@ は %3$@ まで待機";
+"taskWaitChainUpdate" = "%2$@ 待ち · %1$@ はアプリのアップデート待ち";
+"taskWaitChainVia" = "%2$@ 待ち · その先は %1$@ 待ち";
+"taskWaitOn" = "%1$@ 待ち";
+"taskWaitOnUntil" = "%1$@ 待ち · %2$@ まで待機";
+"taskWaitOnUpdate" = "%1$@ 待ち · アプリのアップデート待ち";
 "trayOpen" = "Infinitary を開く";
 "trayQuit" = "Infinitary を終了";
 "uiButtonPending" = "処理中...";

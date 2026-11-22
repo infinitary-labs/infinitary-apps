@@ -1,5 +1,5 @@
 import type { TaskDetail } from "./tasks";
-import { recordAttentionWaits, taskWaitText } from "./taskWaits";
+import { recordAttentionWaits, taskWaitText, waitStopsOf } from "./taskWaits";
 import { AT_PROVIDER_WORDS } from "./workPosture";
 
 /**
@@ -35,6 +35,7 @@ type AttentionDetail = Pick<
   | "outcomeSummary"
   | "children"
   | "waits"
+  | "waitChain"
 >;
 
 /** What the record says under "Stuck at its provider". */
@@ -97,7 +98,13 @@ export function recordAttentionOf(task: AttentionDetail, now: number): RecordAtt
   }
   const waits = recordAttentionWaits(task);
   if (waits.length) {
-    const words = waits.map((wait) => taskWaitText(wait, now)).join("; ");
+    // A lone task wait names where its line stops, as its tile does (INF-5578).
+    const stops = waitStopsOf(task);
+    const words = waits
+      .map((wait) =>
+        taskWaitText(wait, now, true, undefined, stops?.wait === wait ? stops.line : undefined),
+      )
+      .join("; ");
     if (danger) guidance = `${guidance} ${words}`;
     else {
       title = words;

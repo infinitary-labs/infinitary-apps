@@ -151,8 +151,10 @@ Keep rows otherwise minimal.
 ### Naming a wait (INF-38)
 
 A started crewmate idle on other work names it as its reason: `Idle · Waiting on INF-12`, or `Idle · Waiting on 2 tasks` for several, so no one key stands for the others.
+When it waits on one task, the reason also says where that wait stops (INF-5578): following each task's own lone wait to the last one, it names that task and its hold, as `Idle · Waiting on INF-12 · INF-9 waits until Nov 21, 12:00 PM`, `Idle · Waiting on INF-12 · INF-9 waits for an app update`, or `Idle · Waiting on INF-12 · which waits on INF-9`; the one task's own hold reads `Idle · Waiting on INF-9 · it waits until …`.
+A review that has answered, whose change is still open, waits on that change the same way, `Idle · Waiting on INF-12`, rather than reading as no continuing work; one that has not answered yet keeps its own reason.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
-A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; list rows and older homes keep their previous presentation.
+A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; when its one wait's line goes further or ends in a hold, it names where that line stops instead of the event, wrapping in the column; list rows and older homes keep their previous presentation.
 The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its unknown end time and its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
@@ -167,7 +169,7 @@ Starting is a still open ring, cyan on the arc and neutral on the rest, with no 
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.
 Tooltips and accessible labels say the status followed by its reason.
-The summary shows the status's own short reason, the Tasks row's, and never a wait's wording or any time (INF-2528); the record shows a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in its existing Checks or hold fields; posture phrases never become extra statuses.
+The summary shows the status's own short reason, the Tasks row's, and never a wait's recorded time (INF-2528), except that a lone wait names where its line stops and that task's hold, its time included (INF-5578, kept by the captain since the Tasks row shows no reason); the record shows a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in its existing Checks or hold fields; posture phrases never become extra statuses.
 Closed lifecycle wins over old activity; a reachable ready decision wins over activity on live work; evidenced continuing work wins over interruption, otherwise interruption wins over idle.
 Unknown or paused posture stays Idle with an honest reason, never Working.
 Stage geometry and color remain unchanged.
@@ -283,7 +285,7 @@ Click or Enter brings back that task’s minimized cards with keyboard focus at 
 
 ## Recorded wait details
 
-Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528).
+Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528), its status naming where a lone wait's line stops (INF-5578).
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.

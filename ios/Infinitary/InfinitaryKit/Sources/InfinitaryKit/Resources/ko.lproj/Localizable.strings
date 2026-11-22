@@ -3711,6 +3711,12 @@
 "taskTabCards" = "카드";
 "taskTabCrewmate" = "선원";
 "taskTabInfo" = "정보";
+"taskWaitChainUntil" = "%2$@ 기다리는 중 · %1$@은(는) %3$@까지 대기";
+"taskWaitChainUpdate" = "%2$@ 기다리는 중 · %1$@은(는) 앱 업데이트 대기";
+"taskWaitChainVia" = "%2$@ 기다리는 중 · 그 작업은 %1$@ 대기";
+"taskWaitOn" = "%1$@ 기다리는 중";
+"taskWaitOnUntil" = "%1$@ 기다리는 중 · %2$@까지 대기";
+"taskWaitOnUpdate" = "%1$@ 기다리는 중 · 앱 업데이트 대기";
 "trayOpen" = "Infinitary 열기";
 "trayQuit" = "Infinitary 종료";
 "uiButtonPending" = "처리 중...";

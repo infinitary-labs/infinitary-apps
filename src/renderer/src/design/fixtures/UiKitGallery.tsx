@@ -90,6 +90,8 @@ export const HELPER_EXPORTS: readonly string[] = [
   "taskStatusLabel",
   "taskStatusOf",
   "taskWaitSummary",
+  "waitChainWords",
+  "waitStopsOf",
   "waitRecordedTime",
   "useInPlaceReveal",
   "useMinute",

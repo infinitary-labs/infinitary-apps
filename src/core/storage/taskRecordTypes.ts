@@ -61,7 +61,17 @@ export type TaskGate = {
    * wait for allowance.
    */
   cause?: LevelWaitCause;
+  /**
+   * An `at-time` hold that ends sooner once the app is updated on a
+   * computer (INF-5578 finding 4): the computer (`device`, null for this
+   * Mac), the version it ran when held (`from`, when known), and the
+   * version the hold waits for (`version`, when the first mate named one).
+   * It ends at that version or later, or at any newer one than `from`.
+   */
+  update?: AppUpdateWait;
 };
+
+export type AppUpdateWait = { device: string | null; from?: string; version?: string };
 
 export type PendingSettleIntent = {
   mode: "merge-pr" | "land";

@@ -1503,6 +1503,13 @@ export const MIGRATIONS: readonly Migration[] = [
   // the runbook is added again and its card asks. `PluginRecords` is the only
   // writer; no published view reads it. Dropping the column reverses it.
   (db) => addColumn(db, "plugins", "panels_json", "TEXT"),
+  // INF-5578 finding 4 (docs/report-sort.md, "Holding a started task until
+  // a time"): the app update a started task's hold also ends on - the
+  // computer, the version it ran when held, and the version named - as JSON
+  // (`TaskGate.update`). Null on every existing row, whose hold ends as
+  // before. `TaskService` is the only writer; no published view reads it.
+  // Dropping the column reverses it.
+  (db) => addColumn(db, "tasks", "gate_update_json", "TEXT"),
 ];
 
 /**

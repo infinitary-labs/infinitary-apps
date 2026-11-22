@@ -21,5 +21,11 @@
   "taskTabActivity": "Aktivität",
   "taskTabCards": "Karten",
   "taskTabCrewmate": "Crewmitglied",
-  "taskTabInfo": "Info"
+  "taskTabInfo": "Info",
+  "taskWaitChainUntil": "Wartet auf {on} · {end} wartet bis {time}",
+  "taskWaitChainUpdate": "Wartet auf {on} · {end} wartet auf ein App-Update",
+  "taskWaitChainVia": "Wartet auf {on} · das auf {end} wartet",
+  "taskWaitOn": "Wartet auf {on}",
+  "taskWaitOnUntil": "Wartet auf {on} · das wartet bis {time}",
+  "taskWaitOnUpdate": "Wartet auf {on} · das wartet auf ein App-Update"
 }

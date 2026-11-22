@@ -110,6 +110,7 @@ export type TaskToolsDelegate = {
       until: number;
       reason: string;
       onEvent?: { integration: string; event: string; filter?: Record<string, string> };
+      onUpdate?: { version?: string };
     } | null;
   }): Promise<string>;
   /** Pin a task to the top of Tasks, or unpin it, on the captain's words (INF-3127). */
@@ -483,12 +484,13 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
                   filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
                 }),
               ),
+              on_update: Type.Optional(Type.Object({ version: Type.Optional(Type.String()) })),
             }),
             Type.Null(),
           ],
           {
             description:
-              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation. No reminders except unanswered captain replies; notify once at deadline if held. Any turn ends it sooner; on_event does too, via a one-shot automatic rule telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
+              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} when it waits for an Infinitary update on its computer, ending once that version, or any newer one, is installed. No reminders except unanswered captain replies; notify once at deadline if held. Any turn ends it sooner; on_event and on_update do too, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
           },
         ),
       ),
@@ -580,6 +582,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         if (!Number.isFinite(until))
           return { text: "hold.until takes an ISO time, such as 2026-11-20T09:00:00-08:00." };
         const onEvent = params.hold.on_event;
+        const onUpdate = params.hold.on_update;
         return {
           text: await delegate.hold({
             task: params.task,
@@ -594,6 +597,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
                       ...(onEvent.filter ? { filter: onEvent.filter } : {}),
                     },
                   }
+                : {}),
+              ...(onUpdate
+                ? { onUpdate: onUpdate.version ? { version: onUpdate.version } : {} }
                 : {}),
             },
           }),

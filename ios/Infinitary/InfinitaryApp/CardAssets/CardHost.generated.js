@@ -86909,6 +86909,179 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Info`;
   }
+  function taskWaitChainUntil(input2) {
+    const end = input2.end;
+    const on = input2.on;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on} · ${end} ينتظر حتى ${time2}`;
+      case "de":
+        return `Wartet auf ${on} · ${end} wartet bis ${time2}`;
+      case "es":
+        return `Esperando a ${on} · ${end} espera hasta ${time2}`;
+      case "fr":
+        return `Attend ${on} · ${end} attend jusqu’à ${time2}`;
+      case "ja":
+        return `${on} 待ち · ${end} は ${time2} まで待機`;
+      case "ko":
+        return `${on} 기다리는 중 · ${end}은(는) ${time2}까지 대기`;
+      case "pt-BR":
+        return `Aguardando ${on} · ${end} aguarda até ${time2}`;
+      case "zh-Hans":
+        return `正在等待 ${on} · ${end} 等到 ${time2}`;
+      case "zh-Hant":
+        return `正在等待 ${on} · ${end} 等到 ${time2}`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} · ${end} ŵáîţš ûñţîļ ${time2} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}‮ · ‬${end}‮ waits until ‬${time2}`;
+    }
+    return `Waiting on ${on} · ${end} waits until ${time2}`;
+  }
+  function taskWaitChainUpdate(input2) {
+    const end = input2.end;
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on} · ${end} ينتظر تحديث التطبيق`;
+      case "de":
+        return `Wartet auf ${on} · ${end} wartet auf ein App-Update`;
+      case "es":
+        return `Esperando a ${on} · ${end} espera una actualización de la app`;
+      case "fr":
+        return `Attend ${on} · ${end} attend une mise à jour de l’app`;
+      case "ja":
+        return `${on} 待ち · ${end} はアプリのアップデート待ち`;
+      case "ko":
+        return `${on} 기다리는 중 · ${end}은(는) 앱 업데이트 대기`;
+      case "pt-BR":
+        return `Aguardando ${on} · ${end} aguarda uma atualização do app`;
+      case "zh-Hans":
+        return `正在等待 ${on} · ${end} 在等待应用更新`;
+      case "zh-Hant":
+        return `正在等待 ${on} · ${end} 在等待應用程式更新`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} · ${end} ŵáîţš ƒöŕ áñ áþþ ûþðáţé ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}‮ · ‬${end}‮ waits for an app update‬`;
+    }
+    return `Waiting on ${on} · ${end} waits for an app update`;
+  }
+  function taskWaitChainVia(input2) {
+    const end = input2.end;
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on} · الذي ينتظر ${end}`;
+      case "de":
+        return `Wartet auf ${on} · das auf ${end} wartet`;
+      case "es":
+        return `Esperando a ${on} · que espera a ${end}`;
+      case "fr":
+        return `Attend ${on} · qui attend ${end}`;
+      case "ja":
+        return `${on} 待ち · その先は ${end} 待ち`;
+      case "ko":
+        return `${on} 기다리는 중 · 그 작업은 ${end} 대기`;
+      case "pt-BR":
+        return `Aguardando ${on} · que aguarda ${end}`;
+      case "zh-Hans":
+        return `正在等待 ${on} · 它在等待 ${end}`;
+      case "zh-Hant":
+        return `正在等待 ${on} · 它在等待 ${end}`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} · ŵĥîçĥ ŵáîţš öñ ${end} ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}‮ · which waits on ‬${end}`;
+    }
+    return `Waiting on ${on} · which waits on ${end}`;
+  }
+  function taskWaitOn(input2) {
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on}`;
+      case "de":
+        return `Wartet auf ${on}`;
+      case "es":
+        return `Esperando a ${on}`;
+      case "fr":
+        return `Attend ${on}`;
+      case "ja":
+        return `${on} 待ち`;
+      case "ko":
+        return `${on} 기다리는 중`;
+      case "pt-BR":
+        return `Aguardando ${on}`;
+      case "zh-Hans":
+        return `正在等待 ${on}`;
+      case "zh-Hant":
+        return `正在等待 ${on}`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} ~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}`;
+    }
+    return `Waiting on ${on}`;
+  }
+  function taskWaitOnUntil(input2) {
+    const on = input2.on;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on} · الذي ينتظر حتى ${time2}`;
+      case "de":
+        return `Wartet auf ${on} · das wartet bis ${time2}`;
+      case "es":
+        return `Esperando a ${on} · espera hasta ${time2}`;
+      case "fr":
+        return `Attend ${on} · qui attend jusqu’à ${time2}`;
+      case "ja":
+        return `${on} 待ち · ${time2} まで待機`;
+      case "ko":
+        return `${on} 기다리는 중 · ${time2}까지 대기`;
+      case "pt-BR":
+        return `Aguardando ${on} · que aguarda até ${time2}`;
+      case "zh-Hans":
+        return `正在等待 ${on} · 它等到 ${time2}`;
+      case "zh-Hant":
+        return `正在等待 ${on} · 它等到 ${time2}`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} · îţ ŵáîţš ûñţîļ ${time2} ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}‮ · it waits until ‬${time2}`;
+    }
+    return `Waiting on ${on} · it waits until ${time2}`;
+  }
+  function taskWaitOnUpdate(input2) {
+    const on = input2.on;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار ${on} · الذي ينتظر تحديث التطبيق`;
+      case "de":
+        return `Wartet auf ${on} · das wartet auf ein App-Update`;
+      case "es":
+        return `Esperando a ${on} · espera una actualización de la app`;
+      case "fr":
+        return `Attend ${on} · qui attend une mise à jour de l’app`;
+      case "ja":
+        return `${on} 待ち · アプリのアップデート待ち`;
+      case "ko":
+        return `${on} 기다리는 중 · 앱 업데이트 대기`;
+      case "pt-BR":
+        return `Aguardando ${on} · que aguarda uma atualização do app`;
+      case "zh-Hans":
+        return `正在等待 ${on} · 它在等待应用更新`;
+      case "zh-Hant":
+        return `正在等待 ${on} · 它在等待應用程式更新`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ${on} · îţ ŵáîţš ƒöŕ áñ áþþ ûþðáţé ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on ‬${on}‮ · it waits for an app update‬`;
+    }
+    return `Waiting on ${on} · it waits for an app update`;
+  }
   function trayOpen() {
     switch (currentLanguage()) {
       case "ar":
@@ -94979,6 +95152,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskTabCards,
     taskTabCrewmate,
     taskTabInfo,
+    taskWaitChainUntil,
+    taskWaitChainUpdate,
+    taskWaitChainVia,
+    taskWaitOn,
+    taskWaitOnUntil,
+    taskWaitOnUpdate,
     trayOpen,
     trayQuit,
     uiButtonPending,
@@ -97952,6 +98131,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskTabCards": [],
     "taskTabCrewmate": [],
     "taskTabInfo": [],
+    "taskWaitChainUntil": ["end", "on", "time"],
+    "taskWaitChainUpdate": ["end", "on"],
+    "taskWaitChainVia": ["end", "on"],
+    "taskWaitOn": ["on"],
+    "taskWaitOnUntil": ["on", "time"],
+    "taskWaitOnUpdate": ["on"],
     "trayOpen": [],
     "trayQuit": [],
     "uiButtonPending": [],
@@ -114644,6 +114829,119 @@ ${startersHtml()}`;
     storage: array(originStorageSchema),
     session: array(originStorageSchema).optional()
   });
+  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
+  const words = {
+    backlog: "Backlog",
+    queued: "Queued",
+    starting: "Starting",
+    working: "Working",
+    idle: "Idle",
+    interrupted: "Interrupted",
+    waiting: "Waiting on you",
+    done: "Done",
+    dropped: "Dropped"
+  };
+  function taskStatusOf(task, now = Date.now()) {
+    const reading = (mark, reason2) => ({
+      mark,
+      word: words[mark],
+      reason: reason2 === words[mark] ? "" : reason2
+    });
+    const connecting = task.place?.reach === "connecting";
+    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
+    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
+    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+    const awayReading = (mark, reason2) => ({
+      ...reading(mark, reason2 ?? awayWords),
+      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
+    });
+    if (task.status === "done") {
+      return reading(
+        "done",
+        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
+      );
+    }
+    if (task.status === "dropped") {
+      return reading(
+        "dropped",
+        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
+      );
+    }
+    if (task.requiredAction)
+      return reading(
+        "waiting",
+        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
+      );
+    if (task.answerNoteId)
+      return {
+        ...reading(
+          "waiting",
+          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
+        ),
+        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
+      };
+    if (task.waitingCardId) {
+      return reading(
+        "waiting",
+        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
+      );
+    }
+    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
+      return reading("starting", "");
+    }
+    if (task.status === "active" && task.backlogSince !== void 0) {
+      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
+    }
+    if (task.startNotice && (task.status === "open" || task.status === "active")) {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      return reading(mark, "Could not start");
+    }
+    if (task.status === "open") {
+      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      if (task.queueWait) return reading(mark, task.queueWait.line);
+      const parts = task.children.total;
+      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
+      if (away) return awayReading(mark, holds);
+      return reading(
+        mark,
+        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
+      );
+    }
+    const waits = task.blockedBy ?? [];
+    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
+    const chain = task.status === "active" && task.waitChain && (dependency ? waits.length === 1 && waits[0] === task.waitChain.on : task.workPosture?.reason === "inactive" && !task.workPosture.atProvider) ? task.waitChain : void 0;
+    const reason = chain ? waitChainWords(chain, now) : dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
+    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
+      if (away) return awayReading("working", null);
+      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
+      if (wait === "checks" && task.workPosture?.batch)
+        return { ...reading("working", reason), wait: "batch" };
+      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
+    }
+    if (task.activity === "interrupted") return reading("interrupted", reason);
+    if (away) return awayReading("idle", null);
+    if (!dependency) return reading("idle", reason);
+    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
+    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
+  }
+  function dependencyWaitWords(blockedBy) {
+    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
+  }
+  function waitChainWords(chain, now = Date.now()) {
+    const { on, end } = chain;
+    if (chain.update) return end ? taskWaitChainUpdate({ on, end }) : taskWaitOnUpdate({ on });
+    if (chain.until !== void 0) {
+      const time2 = waitRecordedTime(chain.until, now);
+      return end ? taskWaitChainUntil({ on, end, time: time2 }) : taskWaitOnUntil({ on, time: time2 });
+    }
+    return end ? taskWaitChainVia({ on, end }) : taskWaitOn({ on });
+  }
+  function waitRecordedTime(at, now) {
+    const date2 = new Date(at);
+    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
+    if (date2.toDateString() === new Date(now).toDateString()) return time2;
+    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
+  }
   const taskWaitSchema = object({
     id: string(),
     kind: _enum(["dependency", "checks", "run", "job", "allowance", "start", "decision", "backlog"]),
@@ -115033,6 +115331,20 @@ ${startersHtml()}`;
      * home. A recorded wait's time, never when the crewmate stopped working.
      */
     blockedSince: record(string(), number()).optional(),
+    /**
+     * Where a started task's wait on other work stops (INF-5578 finding 4):
+     * the one task it waits on (`on`) - a lone wait in `blockedBy`, or the
+     * change a review waits for - and, following each task's own lone wait,
+     * the last task in that line (`end`, absent when it is `on` itself), with
+     * that task's hold: when it ends (`until`), and whether it waits for an
+     * app update (`update`). Absent with no lone wait, and on an older home.
+     */
+    waitChain: object({
+      on: string(),
+      end: string().optional(),
+      until: number().optional(),
+      update: literal(true).optional()
+    }).optional(),
     /** Keys of the tasks waiting on this one. */
     blocks: array(string()),
     /**
@@ -116774,109 +117086,6 @@ ${startersHtml()}`;
   }
   function viewsOf(grant) {
     return (grant?.sql ?? []).join(",");
-  }
-  const STARTED_BACKLOG_REASON = "Started · its work waits for your Start";
-  const words = {
-    backlog: "Backlog",
-    queued: "Queued",
-    starting: "Starting",
-    working: "Working",
-    idle: "Idle",
-    interrupted: "Interrupted",
-    waiting: "Waiting on you",
-    done: "Done",
-    dropped: "Dropped"
-  };
-  function taskStatusOf(task, now = Date.now()) {
-    const reading = (mark, reason2) => ({
-      mark,
-      word: words[mark],
-      reason: reason2 === words[mark] ? "" : reason2
-    });
-    const connecting = task.place?.reach === "connecting";
-    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
-    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
-    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
-    const awayReading = (mark, reason2) => ({
-      ...reading(mark, reason2 ?? awayWords),
-      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
-    });
-    if (task.status === "done") {
-      return reading(
-        "done",
-        task.requiredAction?.result ?? (task.closedReason === "answered" ? "Answered" : "")
-      );
-    }
-    if (task.status === "dropped") {
-      return reading(
-        "dropped",
-        task.requiredAction?.result ?? (task.closedReason === "failed" ? "Failed" : "")
-      );
-    }
-    if (task.requiredAction)
-      return reading(
-        "waiting",
-        task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : ""
-      );
-    if (task.answerNoteId)
-      return {
-        ...reading(
-          "waiting",
-          task.answerSince !== void 0 ? answerWaitWords(task.answerSince, now) : "Answer ready"
-        ),
-        ...task.answerSince !== void 0 ? { since: task.answerSince } : {}
-      };
-    if (task.waitingCardId) {
-      return reading(
-        "waiting",
-        task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready"
-      );
-    }
-    if (task.startAttempt?.phase === "preparing" || task.startAttempt?.phase === "checking" || task.status === "active" && task.activity === "starting") {
-      return reading("starting", "");
-    }
-    if (task.status === "active" && task.backlogSince !== void 0) {
-      return { ...reading("backlog", STARTED_BACKLOG_REASON), since: task.backlogSince };
-    }
-    if (task.startNotice && (task.status === "open" || task.status === "active")) {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      return reading(mark, "Could not start");
-    }
-    if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
-      if (task.queueWait) return reading(mark, task.queueWait.line);
-      const parts = task.children.total;
-      const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
-      if (away) return awayReading(mark, holds);
-      return reading(
-        mark,
-        holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready")
-      );
-    }
-    const waits = task.blockedBy ?? [];
-    const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
-    const reason = dependency ? dependencyWaitWords(waits) : task.workPosture ? workPostureLabel(task.workPosture) : task.activity === "running" || task.activity === "starting" ? "Working" : task.activity === "interrupted" ? "Work was interrupted" : "No continuing work";
-    if (task.workPosture?.state === "active" || !task.workPosture && (task.activity === "running" || task.activity === "starting")) {
-      if (away) return awayReading("working", null);
-      const wait = task.workPosture?.state === "active" ? task.workPosture.reason : void 0;
-      if (wait === "checks" && task.workPosture?.batch)
-        return { ...reading("working", reason), wait: "batch" };
-      return wait === "checks" || wait === "job" ? { ...reading("working", reason), wait } : reading("working", reason);
-    }
-    if (task.activity === "interrupted") return reading("interrupted", reason);
-    if (away) return awayReading("idle", null);
-    if (!dependency) return reading("idle", reason);
-    const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : void 0;
-    return { ...reading("idle", reason), waitsOn: waits, ...since === void 0 ? {} : { since } };
-  }
-  function dependencyWaitWords(blockedBy) {
-    return blockedBy.length === 1 ? `Waiting on ${blockedBy[0]}` : `Waiting on ${blockedBy.length} tasks`;
-  }
-  function waitRecordedTime(at, now) {
-    const date2 = new Date(at);
-    const time2 = formatTime(date2, { hour: "numeric", minute: "2-digit" });
-    if (date2.toDateString() === new Date(now).toDateString()) return time2;
-    return `${formatDate(date2, { month: "short", day: "numeric" })}, ${time2}`;
   }
   function recordBarOf(task) {
     if (task.status === "done") return null;

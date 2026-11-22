@@ -21,5 +21,11 @@
   "taskTabActivity": "动态",
   "taskTabCards": "卡片",
   "taskTabCrewmate": "船员",
-  "taskTabInfo": "信息"
+  "taskTabInfo": "信息",
+  "taskWaitChainUntil": "正在等待 {on} · {end} 等到 {time}",
+  "taskWaitChainUpdate": "正在等待 {on} · {end} 在等待应用更新",
+  "taskWaitChainVia": "正在等待 {on} · 它在等待 {end}",
+  "taskWaitOn": "正在等待 {on}",
+  "taskWaitOnUntil": "正在等待 {on} · 它等到 {time}",
+  "taskWaitOnUpdate": "正在等待 {on} · 它在等待应用更新"
 }

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "wait-chain",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A waiting task says where its wait ends",
+      "body": "A task waiting on other work now names the last task in that line and what it waits for: a time, or an app update. When a task waits for an Infinitary update, it carries on once that update is installed on its computer, instead of at the time it was given.",
+      "picture": {
+        "dark": "wait-chain-dark.webp",
+        "light": "wait-chain-light.webp",
+        "alt": "Two task board tiles: one waiting on another task that waits for an app update, and one whose wait runs through that task to the one waiting for the update"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

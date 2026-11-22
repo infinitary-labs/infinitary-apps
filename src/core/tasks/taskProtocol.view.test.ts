@@ -650,6 +650,67 @@ describe("the task protocol (task-system P3)", () => {
     expect(view()?.blockedSince?.[key("owner")]).toBe(linkedAt - 5_000);
   });
 
+  // INF-5578 finding 4: a passed review read "No continuing work" for a day
+  // while its change waited on another task held for an app update, and no
+  // row said where the wait stopped. The row's view names that task and its hold.
+  it("names where a started task's wait stops: the last task in its line and that task's hold", () => {
+    const { tasks, protocol, clock } = taskProtocolFixture({
+      workPosture: () => ({ state: "idle", reason: "inactive" }),
+    });
+    seedTask(tasks, { id: "docs", title: "Docs site languages", status: "idle" });
+    seedTask(tasks, { id: "landing", title: "Landing page, 10 languages", status: "idle" });
+    seedTask(tasks, {
+      id: "review",
+      title: "Review of the landing page",
+      status: "completed",
+      parentId: "landing",
+      shape: { kind: "review", kind_source: "host:review", basis: "landing" },
+    });
+    tasks.graph.link("docs", "landing", "blocks", "crewmate");
+    const key = (id: string) => tasks.get(id)?.key ?? "";
+    const chain = (id: string) => protocol.board().tasks.find((task) => task.id === id)?.waitChain;
+    // A review that has not answered yet waits on nothing: it is stalled, not held by its change.
+    expect(chain("review")).toBeUndefined();
+    const review = tasks.get("review");
+    seedDelivery(tasks, "review", { headSha: "b".repeat(40) });
+    // A verdict from an earlier round, for another version, answers nothing yet.
+    seedDelivery(tasks, "landing", {
+      reviewVerdict: "pass",
+      reviewSha: "a".repeat(40),
+      reviewedAt: (review?.createdAt ?? 0) + 1,
+    });
+    expect(chain("review")).toBeUndefined();
+    seedDelivery(tasks, "landing", { reviewSha: "b".repeat(40) });
+    // Its change, and the task that change waits on, which nothing holds.
+    expect(chain("review")).toEqual({ on: key("landing"), end: key("docs") });
+    // A read of a few rows, as the review's record card makes, names the same end as the board.
+    expect(protocol.byKeys([key("review")])[0]?.waitChain).toEqual({
+      on: key("landing"),
+      end: key("docs"),
+    });
+    expect(chain("landing")).toEqual({ on: key("docs") });
+    expect(chain("docs")).toBeUndefined();
+
+    const until = clock() + 23 * 60 * 60_000;
+    expect(tasks.turns.hold("docs", { until, reason: "an app update" }).ok).toBe(true);
+    expect(chain("review")).toEqual({ on: key("landing"), end: key("docs"), until });
+    expect(chain("landing")).toEqual({ on: key("docs"), until });
+    tasks.turns.hold("docs", {
+      until,
+      reason: "an app update",
+      update: { device: null, from: "1.2.0" },
+    });
+    expect(chain("review")).toEqual({ on: key("landing"), end: key("docs"), update: true });
+
+    // A second wait at any step stops the line there: no one task stands for both.
+    seedTask(tasks, { id: "api", title: "API change", status: "idle" });
+    tasks.graph.link("api", "landing", "blocks", "crewmate");
+    expect(chain("review")).toEqual({ on: key("landing") });
+    // A review whose change merged waits on nothing.
+    tasks.close("landing", { status: "done", reason: "merged", actor: "captain" });
+    expect(chain("review")).toBeUndefined();
+  });
+
   it("derives flags, blockers, children, the waiting card and repo facts on read", () => {
     const { tasks, protocol, cards } = taskProtocolFixture();
     tasks.create({ id: "a", title: "A", prompt: "p", repoId: "r1" });

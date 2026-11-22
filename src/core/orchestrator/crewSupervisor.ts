@@ -646,6 +646,8 @@ export class CrewSupervisor {
     this.holdRules = new HoldRules({
       tasks: options.tasks,
       endHold: (taskId, ruleId, events) => this.ladder.endHoldOnEvent(taskId, ruleId, events),
+      endUpdateHold: (taskId, installed) =>
+        this.ladder.endHoldOnEvent(taskId, undefined, installed),
     });
     this.ladder = new IdleLadder({
       now: this.now,

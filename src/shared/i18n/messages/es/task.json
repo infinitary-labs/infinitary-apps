@@ -21,5 +21,11 @@
   "taskTabActivity": "Actividad",
   "taskTabCards": "Tarjetas",
   "taskTabCrewmate": "Tripulante",
-  "taskTabInfo": "Info"
+  "taskTabInfo": "Info",
+  "taskWaitChainUntil": "Esperando a {on} · {end} espera hasta {time}",
+  "taskWaitChainUpdate": "Esperando a {on} · {end} espera una actualización de la app",
+  "taskWaitChainVia": "Esperando a {on} · que espera a {end}",
+  "taskWaitOn": "Esperando a {on}",
+  "taskWaitOnUntil": "Esperando a {on} · espera hasta {time}",
+  "taskWaitOnUpdate": "Esperando a {on} · espera una actualización de la app"
 }

@@ -21,5 +21,11 @@
   "taskTabActivity": "Activité",
   "taskTabCards": "Cartes",
   "taskTabCrewmate": "Équipier",
-  "taskTabInfo": "Infos"
+  "taskTabInfo": "Infos",
+  "taskWaitChainUntil": "Attend {on} · {end} attend jusqu’à {time}",
+  "taskWaitChainUpdate": "Attend {on} · {end} attend une mise à jour de l’app",
+  "taskWaitChainVia": "Attend {on} · qui attend {end}",
+  "taskWaitOn": "Attend {on}",
+  "taskWaitOnUntil": "Attend {on} · qui attend jusqu’à {time}",
+  "taskWaitOnUpdate": "Attend {on} · qui attend une mise à jour de l’app"
 }

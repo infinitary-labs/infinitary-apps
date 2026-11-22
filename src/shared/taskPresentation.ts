@@ -1,5 +1,6 @@
 import { answerWaitWords } from "./cardLeave.ts";
 import { formatDate, formatTime } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 import type { TaskView } from "./tasks";
 import { workPostureLabel } from "./workPosture";
 
@@ -67,6 +68,7 @@ export type TaskStatusInput = Pick<
       TaskView,
       | "blockedBy"
       | "blockedSince"
+      | "waitChain"
       | "waitingCardMerges"
       | "queueWait"
       | "backlogSince"
@@ -200,15 +202,26 @@ export function taskStatusOf(task: TaskStatusInput, now = Date.now()): TaskStatu
   }
   const waits = task.blockedBy ?? [];
   const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
-  const reason = dependency
-    ? dependencyWaitWords(waits)
-    : task.workPosture
-      ? workPostureLabel(task.workPosture)
-      : task.activity === "running" || task.activity === "starting"
-        ? "Working"
-        : task.activity === "interrupted"
-          ? "Work was interrupted"
-          : "No continuing work";
+  // Where its wait stops, on a row that waits on work or reads as doing nothing (INF-5578 finding 4).
+  const chain =
+    task.status === "active" &&
+    task.waitChain &&
+    (dependency
+      ? waits.length === 1 && waits[0] === task.waitChain.on
+      : task.workPosture?.reason === "inactive" && !task.workPosture.atProvider)
+      ? task.waitChain
+      : undefined;
+  const reason = chain
+    ? waitChainWords(chain, now)
+    : dependency
+      ? dependencyWaitWords(waits)
+      : task.workPosture
+        ? workPostureLabel(task.workPosture)
+        : task.activity === "running" || task.activity === "starting"
+          ? "Working"
+          : task.activity === "interrupted"
+            ? "Work was interrupted"
+            : "No continuing work";
   if (
     task.workPosture?.state === "active" ||
     (!task.workPosture && (task.activity === "running" || task.activity === "starting"))
@@ -237,6 +250,24 @@ export function dependencyWaitWords(blockedBy: readonly string[]): string {
   return blockedBy.length === 1
     ? `Waiting on ${blockedBy[0]}`
     : `Waiting on ${blockedBy.length} tasks`;
+}
+
+/**
+ * Where a started task's wait stops (INF-5578 finding 4): the task it waits
+ * on, the last task in that line when it is another, and that task's hold -
+ * the app update it waits for, or when it ends.
+ */
+export function waitChainWords(
+  chain: NonNullable<TaskView["waitChain"]>,
+  now = Date.now(),
+): string {
+  const { on, end } = chain;
+  if (chain.update) return end ? m.taskWaitChainUpdate({ on, end }) : m.taskWaitOnUpdate({ on });
+  if (chain.until !== undefined) {
+    const time = waitRecordedTime(chain.until, now);
+    return end ? m.taskWaitChainUntil({ on, end, time }) : m.taskWaitOnUntil({ on, time });
+  }
+  return end ? m.taskWaitChainVia({ on, end }) : m.taskWaitOn({ on });
 }
 
 /**

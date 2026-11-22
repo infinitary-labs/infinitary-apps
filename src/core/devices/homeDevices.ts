@@ -135,7 +135,13 @@ export type HomeDevices = {
 export type DevicesCrew = {
   supervisor: Pick<
     CrewSupervisor,
-    "sessions" | "updates" | "cards" | "placement" | "moves" | "observeRequiredActionDevice"
+    | "sessions"
+    | "updates"
+    | "cards"
+    | "placement"
+    | "moves"
+    | "observeRequiredActionDevice"
+    | "holdRules"
   >;
   placed: Pick<PlacedSessions, "bringHome">;
   repos: RepoRegistry;
@@ -723,8 +729,13 @@ export async function startHomeDevices(options: {
         broadcastEvent,
       });
       updateNudge = nudge;
+      // Every version a computer reports reaches this listener, one the
+      // connection welcomed before it attached too (`WorkDevices.attach`
+      // replays it), since the connection attaches only after the crew.
       workDevices.onVersion((deviceId, version) => {
         if (version) supervisor.observeRequiredActionDevice(deviceId, version);
+        // A hold waiting for this computer's app update ends once it is installed (INF-5578).
+        if (version?.app) supervisor.holdRules.appRan(deviceId, version.app);
         nudge.refresh(deviceId);
       });
       devices.subscribe(() => {

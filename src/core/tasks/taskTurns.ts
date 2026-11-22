@@ -12,7 +12,7 @@ import { redactObserveText } from "../observe/redact";
 import { capWithOverflow, MESSAGE_EXCERPT_LIMIT } from "../overflow";
 import { withoutOutsideWords } from "../storage/outsideDataScrub";
 import type { TaskEventActor } from "../storage/taskEventStore";
-import type { TaskActivity, TaskRecord } from "../storage/taskRecords";
+import type { AppUpdateWait, TaskActivity, TaskRecord } from "../storage/taskRecords";
 import { conversationOf, type TaskSession } from "../storage/taskSessionStore";
 import type { TaskService } from "./taskService";
 import type { TaskWriter } from "./taskWriter";
@@ -420,11 +420,12 @@ export class TaskTurns {
    * steer. `null` lifts it. Refused, with nothing written, for a task that
    * is not started, sits in the backlog, has a turn running, or waits on
    * the captain or an allowance, and for a time already past. `ref` names
-   * the Automation rule that ends it sooner on an event (`HoldRules`).
+   * the Automation rule that ends it sooner on an event (`HoldRules`), and
+   * `update` the app update that ends it sooner (`HoldRules.appRan`).
    */
   hold(
     id: string,
-    hold: { until: number; reason: string; ref?: string } | null,
+    hold: { until: number; reason: string; ref?: string; update?: AppUpdateWait } | null,
   ): { ok: true; text: string } | { ok: false; text: string } {
     const run = this.writer.write(() => {
       const record = this.writer.mustGet(id);
@@ -453,6 +454,7 @@ export class TaskTurns {
         until: hold.until,
         reason,
         ...(hold.ref ? { ref: hold.ref } : {}),
+        ...(hold.update ? { update: hold.update } : {}),
       };
       this.writer.patch(id, {
         gate,

@@ -3709,6 +3709,12 @@
 "taskTabCards" = "Karten";
 "taskTabCrewmate" = "Crewmitglied";
 "taskTabInfo" = "Info";
+"taskWaitChainUntil" = "Wartet auf %2$@ · %1$@ wartet bis %3$@";
+"taskWaitChainUpdate" = "Wartet auf %2$@ · %1$@ wartet auf ein App-Update";
+"taskWaitChainVia" = "Wartet auf %2$@ · das auf %1$@ wartet";
+"taskWaitOn" = "Wartet auf %1$@";
+"taskWaitOnUntil" = "Wartet auf %1$@ · das wartet bis %2$@";
+"taskWaitOnUpdate" = "Wartet auf %1$@ · das wartet auf ein App-Update";
 "trayOpen" = "Infinitary öffnen";
 "trayQuit" = "Infinitary beenden";
 "uiButtonPending" = "Wird ausgeführt ...";

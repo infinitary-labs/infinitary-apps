@@ -30,6 +30,22 @@ import { lookOnClose, TASK_CLOSED_EVENT, TASK_EVENTS_ID, withTaskEvents } from "
 
 fakeCrewTimersEachTest();
 
+/** The first mate's real update_task over this harness's supervisor and record. */
+function firstmateUpdateTask(harness: { supervisor: CrewSupervisor; tasks: TaskService }) {
+  const delegate = firstmateTaskTools({
+    options: { supervisor: harness.supervisor, tasks: harness.tasks },
+    turn: { replyFacts: {}, origin: "captain-turn" },
+    asks: { attach: () => {} },
+    noteDelivery: () => {},
+  } as unknown as FirstmateTaskToolsHost);
+  const tool = piToolsOf(createTaskTools(delegate)).find(
+    (entry) => entry.name === "update_task",
+  ) as unknown as {
+    execute(id: string, params: unknown): Promise<{ content: { text: string }[] }>;
+  };
+  return async (params: unknown) => (await tool.execute("hold", params)).content[0]?.text;
+}
+
 describe("a hold an event ends sooner (INF-5145 part 2)", () => {
   const { clock, hostClock, stopped } = idleLadderHarness();
   const reason = "the Windows run installing the alpha";
@@ -73,22 +89,6 @@ describe("a hold an event ends sooner (INF-5145 part 2)", () => {
       await settle();
     };
     return { ...harness, run, scheduler, notify, update, onEvent, until, waiting, closeRun };
-  }
-
-  /** The first mate's real update_task over this harness's supervisor and record. */
-  function firstmateUpdateTask(harness: { supervisor: CrewSupervisor; tasks: TaskService }) {
-    const delegate = firstmateTaskTools({
-      options: { supervisor: harness.supervisor, tasks: harness.tasks },
-      turn: { replyFacts: {}, origin: "captain-turn" },
-      asks: { attach: () => {} },
-      noteDelivery: () => {},
-    } as unknown as FirstmateTaskToolsHost);
-    const tool = piToolsOf(createTaskTools(delegate)).find(
-      (entry) => entry.name === "update_task",
-    ) as unknown as {
-      execute(id: string, params: unknown): Promise<{ content: { text: string }[] }>;
-    };
-    return async (params: unknown) => (await tool.execute("hold", params)).content[0]?.text;
   }
 
   it("the event ends the hold once, on its own, telling the crewmate what arrived", async () => {
@@ -222,5 +222,97 @@ describe("a hold an event ends sooner (INF-5145 part 2)", () => {
     ).toContain("Held");
     expect(h.scheduler.rules()).toEqual([]);
     expect(h.tasks.get(h.taskId)?.gate).toEqual({ kind: "at-time", until: h.until, reason });
+  });
+});
+
+// INF-5578 finding 4: three tasks stood still for hours after the app update
+// their hold waited for was installed, since nothing but its time, an outside
+// event or a turn could end it. A hold names the update, and its install ends it.
+describe("a hold an app update ends (INF-5578 finding 4)", () => {
+  const { clock, stopped } = idleLadderHarness();
+  const reason = "an app build carrying the story fix, installed where stories are prepared";
+
+  async function heldForUpdate() {
+    const harness = await stopped();
+    const update = firstmateUpdateTask(harness);
+    const until = new Date(harness.idleSince + minutes(23 * 60)).toISOString();
+    return { ...harness, update, until };
+  }
+
+  it("ends once, with one steer, when its computer runs a newer app, and not before", async () => {
+    const h = await heldForUpdate();
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.6");
+    const text = await h.update({
+      task: h.taskId,
+      hold: { until: h.until, reason, on_update: {} },
+    });
+    expect(text).toContain("Held");
+    expect(text).toContain("newer than 0.8.5-alpha.6");
+    expect(h.tasks.get(h.taskId)?.gate).toMatchObject({
+      kind: "at-time",
+      reason,
+      update: { device: null, from: "0.8.5-alpha.6" },
+    });
+
+    const prompts = h.crewmate.promptCalls.length;
+    // The same version again, or another computer's update, ends nothing.
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.6");
+    h.supervisor.holdRules.appRan("mac-mini", "0.8.5-alpha.7");
+    await h.at(minutes(60));
+    await h.supervisor.watch.sweepGates(clock.now);
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts);
+    expect(h.tasks.get(h.taskId)?.gate?.update).toBeDefined();
+
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.7");
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(h.crewmate.promptCalls.at(-1)).toContain(
+      `The event this task was waiting for came (${reason}):`,
+    );
+    expect(h.crewmate.promptCalls.at(-1)).toContain("Infinitary 0.8.5-alpha.7 is installed");
+    expect(h.tasks.get(h.taskId)?.gate).toBeNull();
+    await endTurn(h.crewmate, h.taskId, "The refusal is gone; showing the merge card.");
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.8");
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+  });
+
+  it("waits for the version it names, past any earlier update", async () => {
+    const h = await heldForUpdate();
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.6");
+    await h.update({
+      task: h.taskId,
+      hold: { until: h.until, reason, on_update: { version: "0.8.5-alpha.8" } },
+    });
+    const prompts = h.crewmate.promptCalls.length;
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.7");
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts);
+    h.supervisor.holdRules.appRan(null, "0.8.5");
+    await settle();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(h.tasks.get(h.taskId)?.gate).toBeNull();
+  });
+
+  it("refuses a hold no update could end, and writes nothing", async () => {
+    const h = await heldForUpdate();
+    expect(
+      await h.update({ task: h.taskId, hold: { until: h.until, reason, on_update: {} } }),
+    ).toContain("is not known now");
+    h.supervisor.holdRules.appRan(null, "0.8.5-alpha.7");
+    expect(
+      await h.update({
+        task: h.taskId,
+        hold: { until: h.until, reason, on_update: { version: "0.8.5-alpha.7" } },
+      }),
+    ).toContain("already runs 0.8.5-alpha.7");
+    expect(
+      await h.update({
+        task: h.taskId,
+        hold: { until: h.until, reason, on_update: { version: "the next alpha" } },
+      }),
+    ).toContain("is not one");
+    expect(h.tasks.get(h.taskId)?.gate).toBeNull();
   });
 });

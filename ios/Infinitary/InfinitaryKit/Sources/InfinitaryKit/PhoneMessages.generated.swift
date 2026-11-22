@@ -239,7 +239,6 @@ public enum PhoneMessages {
     public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
     public static func `automationWaitsForPlaceholder`() -> String { PhoneWords.format("automationWaitsForPlaceholder", []) }
     public static func `batchesPanelAfter`(`number`: String) -> String { PhoneWords.format("batchesPanelAfter", [`number`]) }
-    public static func `batchesPanelAnswer`() -> String { PhoneWords.format("batchesPanelAnswer", []) }
     public static func `batchesPanelBatchTitle`(`count`: Int, `number`: String) -> String { PhoneWords.format("batchesPanelBatchTitle", [`count`, `number`]) }
     public static func `batchesPanelChecking`(`duration`: String) -> String { PhoneWords.format("batchesPanelChecking", [`duration`]) }
     public static func `batchesPanelChecksFull`(`failed`: String, `passed`: String, `running`: String, `time`: String) -> String { PhoneWords.format("batchesPanelChecksFull", [`failed`, `passed`, `running`, `time`]) }
@@ -276,9 +275,14 @@ public enum PhoneMessages {
     public static func `batchesPanelMergedNumber`(`number`: String) -> String { PhoneWords.format("batchesPanelMergedNumber", [`number`]) }
     public static func `batchesPanelMinutes`(`count`: Int) -> String { PhoneWords.format("batchesPanelMinutes", [`count`]) }
     public static func `batchesPanelMore`(`count`: Int) -> String { PhoneWords.format("batchesPanelMore", [`count`]) }
+    public static func `batchesPanelNeedsYou`(`duration`: String) -> String { PhoneWords.format("batchesPanelNeedsYou", [`duration`]) }
     public static func `batchesPanelNewBatchTitle`(`count`: Int) -> String { PhoneWords.format("batchesPanelNewBatchTitle", [`count`]) }
     public static func `batchesPanelNext`(`time`: String) -> String { PhoneWords.format("batchesPanelNext", [`time`]) }
+    public static func `batchesPanelOpenSettings`() -> String { PhoneWords.format("batchesPanelOpenSettings", []) }
+    public static func `batchesPanelOpenTask`(`key`: String) -> String { PhoneWords.format("batchesPanelOpenTask", [`key`]) }
     public static func `batchesPanelOpening`() -> String { PhoneWords.format("batchesPanelOpening", []) }
+    public static func `batchesPanelRepairing`(`duration`: String) -> String { PhoneWords.format("batchesPanelRepairing", [`duration`]) }
+    public static func `batchesPanelRerunPassed`() -> String { PhoneWords.format("batchesPanelRerunPassed", []) }
     public static func `batchesPanelStateChecking`(`time`: String) -> String { PhoneWords.format("batchesPanelStateChecking", [`time`]) }
     public static func `batchesPanelStateCombining`() -> String { PhoneWords.format("batchesPanelStateCombining", []) }
     public static func `batchesPanelStateOpening`() -> String { PhoneWords.format("batchesPanelStateOpening", []) }
@@ -292,6 +296,17 @@ public enum PhoneMessages {
     public static func `batchesPanelWaitsFix`() -> String { PhoneWords.format("batchesPanelWaitsFix", []) }
     public static func `batchesPanelWaitsGap`(`time`: String) -> String { PhoneWords.format("batchesPanelWaitsGap", [`time`]) }
     public static func `batchesPanelWaitsNow`() -> String { PhoneWords.format("batchesPanelWaitsNow", []) }
+    public static func `batchesPanelWhoApprove`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoApprove", [`key`]) }
+    public static func `batchesPanelWhoCard`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoCard", [`key`]) }
+    public static func `batchesPanelWhoFixing`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoFixing", [`key`]) }
+    public static func `batchesPanelWhoNoWay`() -> String { PhoneWords.format("batchesPanelWhoNoWay", []) }
+    public static func `batchesPanelWhoNone`() -> String { PhoneWords.format("batchesPanelWhoNone", []) }
+    public static func `batchesPanelWhoOwn`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoOwn", [`key`]) }
+    public static func `batchesPanelWhoPassed`() -> String { PhoneWords.format("batchesPanelWhoPassed", []) }
+    public static func `batchesPanelWhoRefused`() -> String { PhoneWords.format("batchesPanelWhoRefused", []) }
+    public static func `batchesPanelWhoRepairing`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoRepairing", [`key`]) }
+    public static func `batchesPanelWhoRule`() -> String { PhoneWords.format("batchesPanelWhoRule", []) }
+    public static func `batchesPanelWhoSentBack`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoSentBack", [`key`]) }
     public static func `batchesReadWords`() -> String { PhoneWords.format("batchesReadWords", []) }
     public static func `cardAfterMergeDoerCrewmate`() -> String { PhoneWords.format("cardAfterMergeDoerCrewmate", []) }
     public static func `cardAfterMergeDoerFirstmate`() -> String { PhoneWords.format("cardAfterMergeDoerFirstmate", []) }
@@ -3303,6 +3318,9 @@ public enum PhoneMessages {
     public static func `settingsProjectsAutonomyOff`() -> String { PhoneWords.format("settingsProjectsAutonomyOff", []) }
     public static func `settingsProjectsAutonomyOn`() -> String { PhoneWords.format("settingsProjectsAutonomyOn", []) }
     public static func `settingsProjectsAutonomyPersonal`() -> String { PhoneWords.format("settingsProjectsAutonomyPersonal", []) }
+    public static func `settingsProjectsBatchAnswerNote`() -> String { PhoneWords.format("settingsProjectsBatchAnswerNote", []) }
+    public static func `settingsProjectsBatchAnswerRuleNote`() -> String { PhoneWords.format("settingsProjectsBatchAnswerRuleNote", []) }
+    public static func `settingsProjectsBatchAnswerYourself`() -> String { PhoneWords.format("settingsProjectsBatchAnswerYourself", []) }
     public static func `settingsProjectsBatchChanges`() -> String { PhoneWords.format("settingsProjectsBatchChanges", []) }
     public static func `settingsProjectsBatchGap`() -> String { PhoneWords.format("settingsProjectsBatchGap", []) }
     public static func `settingsProjectsBatchGapDescription`() -> String { PhoneWords.format("settingsProjectsBatchGapDescription", []) }
@@ -3315,10 +3333,29 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchHeldNoWay`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldNoWay", [`since`]) }
     public static func `settingsProjectsBatchHeldRefused`(`detail`: String, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldRefused", [`detail`, `since`]) }
     public static func `settingsProjectsBatchHeldRules`(`since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldRules", [`since`]) }
+    public static func `settingsProjectsBatchHeldTitleApprove`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleApprove", []) }
+    public static func `settingsProjectsBatchHeldTitleCard`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleCard", []) }
+    public static func `settingsProjectsBatchHeldTitleNone`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleNone", []) }
+    public static func `settingsProjectsBatchHeldTitleOwn`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleOwn", []) }
+    public static func `settingsProjectsBatchHeldTitlePassed`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitlePassed", []) }
+    public static func `settingsProjectsBatchHeldTitleRepairing`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleRepairing", []) }
+    public static func `settingsProjectsBatchHeldTitleRule`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleRule", []) }
+    public static func `settingsProjectsBatchHeldTitleSetting`() -> String { PhoneWords.format("settingsProjectsBatchHeldTitleSetting", []) }
+    public static func `settingsProjectsBatchHeldWhoApprove`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoApprove", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoCard`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoCard", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoFixing`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoFixing", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoNone`() -> String { PhoneWords.format("settingsProjectsBatchHeldWhoNone", []) }
+    public static func `settingsProjectsBatchHeldWhoOwn`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoOwn", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoPassed`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoPassed", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoPassedUnnamed`() -> String { PhoneWords.format("settingsProjectsBatchHeldWhoPassedUnnamed", []) }
+    public static func `settingsProjectsBatchHeldWhoRepairing`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoRepairing", [`key`]) }
+    public static func `settingsProjectsBatchHeldWhoSentBack`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldWhoSentBack", [`key`]) }
+    public static func `settingsProjectsBatchLatestReport`(`report`: String) -> String { PhoneWords.format("settingsProjectsBatchLatestReport", [`report`]) }
     public static func `settingsProjectsBatchNeedsChange`() -> String { PhoneWords.format("settingsProjectsBatchNeedsChange", []) }
     public static func `settingsProjectsBatchNeedsReason`() -> String { PhoneWords.format("settingsProjectsBatchNeedsReason", []) }
     public static func `settingsProjectsBatchNoHost`() -> String { PhoneWords.format("settingsProjectsBatchNoHost", []) }
     public static func `settingsProjectsBatchOpen`(`label`: String) -> String { PhoneWords.format("settingsProjectsBatchOpen", [`label`]) }
+    public static func `settingsProjectsBatchOpenTask`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchOpenTask", [`key`]) }
     public static func `settingsProjectsBatchOwn`() -> String { PhoneWords.format("settingsProjectsBatchOwn", []) }
     public static func `settingsProjectsBatchReason`(`title`: String) -> String { PhoneWords.format("settingsProjectsBatchReason", [`title`]) }
     public static func `settingsProjectsBatchReasonPlaceholder`() -> String { PhoneWords.format("settingsProjectsBatchReasonPlaceholder", []) }
@@ -4378,7 +4415,6 @@ extension PhoneWords {
         "automationWaitsForNote": [],
         "automationWaitsForPlaceholder": [],
         "batchesPanelAfter": ["number"],
-        "batchesPanelAnswer": [],
         "batchesPanelBatchTitle": ["count", "number"],
         "batchesPanelChecking": ["duration"],
         "batchesPanelChecksFull": ["failed", "passed", "running", "time"],
@@ -4415,9 +4451,14 @@ extension PhoneWords {
         "batchesPanelMergedNumber": ["number"],
         "batchesPanelMinutes": ["count"],
         "batchesPanelMore": ["count"],
+        "batchesPanelNeedsYou": ["duration"],
         "batchesPanelNewBatchTitle": ["count"],
         "batchesPanelNext": ["time"],
+        "batchesPanelOpenSettings": [],
+        "batchesPanelOpenTask": ["key"],
         "batchesPanelOpening": [],
+        "batchesPanelRepairing": ["duration"],
+        "batchesPanelRerunPassed": [],
         "batchesPanelStateChecking": ["time"],
         "batchesPanelStateCombining": [],
         "batchesPanelStateOpening": [],
@@ -4431,6 +4472,17 @@ extension PhoneWords {
         "batchesPanelWaitsFix": [],
         "batchesPanelWaitsGap": ["time"],
         "batchesPanelWaitsNow": [],
+        "batchesPanelWhoApprove": ["key"],
+        "batchesPanelWhoCard": ["key"],
+        "batchesPanelWhoFixing": ["key"],
+        "batchesPanelWhoNoWay": [],
+        "batchesPanelWhoNone": [],
+        "batchesPanelWhoOwn": ["key"],
+        "batchesPanelWhoPassed": [],
+        "batchesPanelWhoRefused": [],
+        "batchesPanelWhoRepairing": ["key"],
+        "batchesPanelWhoRule": [],
+        "batchesPanelWhoSentBack": ["key"],
         "batchesReadWords": [],
         "cardAfterMergeDoerCrewmate": [],
         "cardAfterMergeDoerFirstmate": [],
@@ -7442,6 +7494,9 @@ extension PhoneWords {
         "settingsProjectsAutonomyOff": [],
         "settingsProjectsAutonomyOn": [],
         "settingsProjectsAutonomyPersonal": [],
+        "settingsProjectsBatchAnswerNote": [],
+        "settingsProjectsBatchAnswerRuleNote": [],
+        "settingsProjectsBatchAnswerYourself": [],
         "settingsProjectsBatchChanges": [],
         "settingsProjectsBatchGap": [],
         "settingsProjectsBatchGapDescription": [],
@@ -7454,10 +7509,29 @@ extension PhoneWords {
         "settingsProjectsBatchHeldNoWay": ["since"],
         "settingsProjectsBatchHeldRefused": ["detail", "since"],
         "settingsProjectsBatchHeldRules": ["since"],
+        "settingsProjectsBatchHeldTitleApprove": [],
+        "settingsProjectsBatchHeldTitleCard": [],
+        "settingsProjectsBatchHeldTitleNone": [],
+        "settingsProjectsBatchHeldTitleOwn": [],
+        "settingsProjectsBatchHeldTitlePassed": [],
+        "settingsProjectsBatchHeldTitleRepairing": [],
+        "settingsProjectsBatchHeldTitleRule": [],
+        "settingsProjectsBatchHeldTitleSetting": [],
+        "settingsProjectsBatchHeldWhoApprove": ["key"],
+        "settingsProjectsBatchHeldWhoCard": ["key"],
+        "settingsProjectsBatchHeldWhoFixing": ["key"],
+        "settingsProjectsBatchHeldWhoNone": [],
+        "settingsProjectsBatchHeldWhoOwn": ["key"],
+        "settingsProjectsBatchHeldWhoPassed": ["key"],
+        "settingsProjectsBatchHeldWhoPassedUnnamed": [],
+        "settingsProjectsBatchHeldWhoRepairing": ["key"],
+        "settingsProjectsBatchHeldWhoSentBack": ["key"],
+        "settingsProjectsBatchLatestReport": ["report"],
         "settingsProjectsBatchNeedsChange": [],
         "settingsProjectsBatchNeedsReason": [],
         "settingsProjectsBatchNoHost": [],
         "settingsProjectsBatchOpen": ["label"],
+        "settingsProjectsBatchOpenTask": ["key"],
         "settingsProjectsBatchOwn": [],
         "settingsProjectsBatchReason": ["title"],
         "settingsProjectsBatchReasonPlaceholder": [],

@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "排在 #{number} 之後",
-  "batchesPanelAnswer": "在設定中回答",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "other": "批次 #{number} · {count} 項變更"
@@ -52,12 +51,17 @@
     "plural": "count",
     "other": "+{count} 項"
   },
+  "batchesPanelNeedsYou": "需要你 {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "other": "新批次 · {count} 項變更"
   },
   "batchesPanelNext": "下一批次 {time}",
+  "batchesPanelOpenSettings": "在設定中開啟",
+  "batchesPanelOpenTask": "開啟 {key}",
   "batchesPanelOpening": "開啟中",
+  "batchesPanelRepairing": "修復中 {duration}",
+  "batchesPanelRerunPassed": "重新執行已通過",
   "batchesPanelStateChecking": "從 {time} 起檢查中",
   "batchesPanelStateCombining": "正在最新的主分支上重新合成這些變更",
   "batchesPanelStateOpening": "正在開啟這個批次的 pull request",
@@ -77,5 +81,16 @@
   "batchesPanelWaitsFix": "作為修正加入暫緩的批次",
   "batchesPanelWaitsGap": "{time} 加入下一個批次",
   "batchesPanelWaitsNow": "加入下一個批次",
+  "batchesPanelWhoApprove": "{key} 做了一個修正，正在等你核准。",
+  "batchesPanelWhoCard": "{key} 在它的卡片上等你回答。",
+  "batchesPanelWhoFixing": "{key} 正在修正。修正會加入這個批次，檢查會重新執行。",
+  "batchesPanelWhoNoWay": "專案的合併設定不允許這種合併方式。",
+  "batchesPanelWhoNone": "還沒有修復在處理它。暫緩時已告訴你的大副。",
+  "batchesPanelWhoOwn": "{key} 正在修復自己的變更",
+  "batchesPanelWhoPassed": "未通過的檢查重新執行後通過了。其他檢查通過後就會合併。",
+  "batchesPanelWhoRefused": "專案所在處拒絕了合併。",
+  "batchesPanelWhoRepairing": "{key} 正在修復",
+  "batchesPanelWhoRule": "專案所在處有一條規則擋下它，例如必要的審查。",
+  "batchesPanelWhoSentBack": "{key} 退回了一些變更，正在修正其餘部分。批次在等它的修正。",
   "batchesReadWords": "你已核准變更的批次"
 }

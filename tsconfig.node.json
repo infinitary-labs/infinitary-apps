@@ -39,6 +39,8 @@
     "tests/**/*.ts",
     // A built-in runbook panel's compiled words; its journey reads the words it expects there.
     "resources/runbooks/*/panel/messages.generated.ts",
+    // The Batches panel's own copy of the held-batch rule; a unit test holds it equal to the shared one.
+    "resources/runbooks/batches/panel/words.ts",
     // The card geometry is pure arithmetic the e2e specs read their layout
     // constants from (docs/testing.md, the e2e assertion contract). The crew
     // plane constants are pure too; the orbit e2e reads its capacity here.

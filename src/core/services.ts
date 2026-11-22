@@ -1381,6 +1381,7 @@ export async function createServices(
     repos,
     supervisor,
     tasks,
+    batches,
     knowledge,
     scheduler,
     selfSourceDir,

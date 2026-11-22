@@ -26,6 +26,7 @@ const TASKS: Record<string, { key: string; title: string }> = {
   "t-parser": { key: "MTR-12", title: "Read dates with a time zone" },
   "t-export": { key: "MTR-14", title: "Add a CSV export" },
   "t-legend": { key: "MTR-15", title: "Keep the legend inside the chart" },
+  "t-repair": { key: "MTR-19", title: "Repair the held batch" },
 };
 const HEAD = "1111111111111111111111111111111111111111";
 
@@ -134,6 +135,46 @@ describe("batches.list", () => {
         members: [{ taskId: "t-export", key: "MTR-14", title: "feat(export): add a CSV export" }],
       },
     ]);
+  });
+
+  // Intent: the captain's ask that a held batch's actual state be clear: `batches.list` names
+  // the hold's repair, whether it waits for that repair's fix, and whether a rerun passed.
+  it("names a held batch's repair, or a batch of one's own change, with its fix and a passed rerun", () => {
+    const open = RECORD.open as NonNullable<BatchRecord["open"]>;
+    const one = (record: BatchRecord) =>
+      batchesView(sources([{ ...METER, batch: record }])).repos[0]?.open;
+    // A held batch of one: its own change's crewmate repairs it.
+    expect(one(RECORD)).toMatchObject({
+      repair: { taskId: "t-parser", key: "MTR-12", own: true, fixing: false },
+      awaitsFix: false,
+      passed: false,
+    });
+    // A recorded repair that declared the fix, after it sent changes back.
+    expect(
+      one({
+        ...RECORD,
+        fixes: ["t-repair"],
+        open: { ...open, repair: "t-repair", awaits: "t-repair" },
+      }),
+    ).toMatchObject({
+      repair: {
+        taskId: "t-repair",
+        key: "MTR-19",
+        title: "Repair the held batch",
+        own: false,
+        fixing: true,
+      },
+      awaitsFix: true,
+    });
+    expect(
+      one({
+        ...RECORD,
+        open: { ...open, repair: "t-repair", passed: { head: HEAD, checks: ["lint"] } },
+      }),
+    ).toMatchObject({ passed: true });
+    // No hold, no repair.
+    const { hold: _hold, ...checking } = open;
+    expect(one({ ...RECORD, open: { ...checking, repair: "t-repair" } })?.repair).toBeNull();
   });
 
   it("lists a batched project with nothing yet, leaves out one delivered otherwise, and keeps one whose record still holds a batch", () => {

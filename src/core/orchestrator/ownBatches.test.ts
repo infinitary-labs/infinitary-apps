@@ -258,6 +258,31 @@ describe("the batches of a person's own, wired to the task record", () => {
     expect(at.heard.steered).toEqual([]);
   });
 
+  // Intent: the captain's ask that a held batch show who repairs it: once a repair is
+  // recorded, a later hold of the same batch names that repair by its task's key, so the
+  // first mate steers it rather than starting another.
+  it("names the recorded repair by its task's key when the same batch holds again", async () => {
+    const at = home();
+    at.approve(PARSER);
+    at.approve(EXPORT);
+    await at.pass();
+    at.forge.report([{ name: "unit-tests", state: "failure" }]);
+    await at.pass();
+    // The repair is an open task of the project's: here the export change's own task.
+    expect(await at.batches().markRepair(REPO, EXPORT.id)).toBeUndefined();
+    const head = at.record().open?.head as string;
+    expect(await at.batches().answer(REPO, { action: "try-again", head })).toBeUndefined();
+    await at.pass();
+    at.forge.report([{ name: "unit-tests", state: "failure" }]);
+    await at.pass();
+    expect(at.heard.told).toHaveLength(2);
+    expect(at.heard.told.at(-1)?.wake.facts).toMatchObject({
+      kind: "batch-held",
+      repair: at.tasks.get(EXPORT.id)?.key,
+    });
+    expect(at.tasks.get(EXPORT.id)?.key).toMatch(/^[A-Z]+-\d+$/);
+  });
+
   it("wakes the one change's own task when a batch of one fails, and tells the first mate nothing", async () => {
     const at = home();
     at.approve(PARSER);

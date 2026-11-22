@@ -124,6 +124,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |
 | relay (Infinitary's push relay) | Infinitary 的中繼服務 | It passes sealed notifications and notes it cannot read; a sealed note is 封好的信. |
 | Remove (a device) | 移除 | Standard. |
+| repair (the task repairing a held batch) | 修復 | 「{key} 正在修復」 for the task at work; the change it makes stays 修正. |
 | repo (never said) | 專案 | The app's noun for what work belongs to stays 專案. |
 | report | 回報 | Taiwan's everyday word for reporting back. |
 | repository (one of a project's) | 存放庫 | GitHub's own Traditional Chinese word; 「加入存放庫」「2 個存放庫」. Names one of a project's repositories, or the thing on GitHub. |

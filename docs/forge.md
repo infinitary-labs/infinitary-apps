@@ -1177,6 +1177,10 @@ A batch of one that fails wakes its own crewmate through the failed-check wake l
 At a version the captain's approval still covers, that wake and a merge card's refusal give the repair's route alone, a new version declared with `conflictRepair` (`coveredNextStep`, `docs/delivery-rigor.md` "No second card for an approved version").
 A batch of several reaches the first mate once for each held version, as the `batch-held` wake (`BATCH_HELD_OPENING`, `src/core/orchestrator/noticeWakes.ts`).
 The first mate starts one repair task with the `batch-repair` skill and no card, unless a task already repairs that batch (`resources/runbooks/batches/skills/batch-repair`).
+It marks that task with `repairs_batch` in `spawn_crewmate`'s shape, and the app records it as the hold's repair (`OpenBatch.repair`, `Batches.markRepair`); a task whose `batch` declaration answers the hold is recorded the same way, which covers a missed mark (`repaired`, `src/core/batches/line.ts`).
+The app never guesses a repair from a title or from which task watches the batch's checks.
+A held batch of one is repaired by that change's own crewmate (`batchRepairOf`, `src/shared/batches.ts`).
+The repair stays recorded through every combine of the same batch and is dropped once its task closes (`pruned`); a later hold of the batch names it in its `batch-held` wake, so the first mate steers it instead of starting another.
 The repair accounts for every failed test against every change in the batch, then answers once with `check_change`'s `batch`.
 Once it has found the cause, it fixes forward by default and chooses by what the fix touches, not by which change caused the failure.
 It fixes forward when the code under test, the code that makes the project do what a change says, is right and the fix is small: changes that meet badly, or one change that left tests, test data, a generated file, a check list, a pinned version or a comment out of date.
@@ -1216,7 +1220,16 @@ At that version the failed checks the hold named read as passed, any other check
 A fix declared beside it, or approved meanwhile, goes to the next batch, so the flaky test stays on the default branch until then (the captain's pick in the daily velocity review: "Merge a held batch once its version passes, even on a rerun, and send a test-only fix declared meanwhile to the next batch").
 The declaration is refused for another version, for a batch held for something other than its checks, and beside a send-back or while the batch waits for a fix after one, since its version still carries the changes sent back.
 A combine at a new version drops it.
-Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): why it holds and since when, a button that opens its pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
+Each held batch says who has its next step, in one rule the Batches panel and Settings share (`batchHoldState`, `src/shared/batches.ts`; the panel keeps a copy, `holdState` in its `words.ts`, since a panel imports only its own files, and `src/shared/batches.test.ts` holds the two equal):
+
+- the crew, while its repair works on it, fixes it, waits for its fix after a send-back, or declared that a rerun passed;
+- the captain, while the repair's task waits on a card of theirs (a fix waiting for approval when that card merges), or while a setting where the project lives refuses the merge;
+- a rule where the project lives, such as a required review;
+- no one, while no repair is recorded or the recorded one closed.
+
+Only the captain's and no one's ask anything of the captain.
+Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): a title and a sentence saying who has it, naming the repair by key, the repair's latest report line while it works (`outcomeSummary`), why it holds and since when, a button that opens the repair's task, one that opens the pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
+Try again and Send back lead only while a setting refuses the merge or no repair is working on it; otherwise they fold under Answer it yourself, and the box takes the plain background of the other boxes while the crew has the hold, and a warning tint otherwise.
 Try again combines the batch again at a new version with every change waiting in line, so its checks run again.
 A batch waiting on a merge its host still reads as running shows in the same place (`BatchWaitPanel`): since when, a button that opens its pull request, and Try again, which closes that pull request and combines its changes on a new one, with nothing to send back since nothing failed.
 The first mate sends the same answers through `app_change`'s `project-batch-answer`: Try again on its own judgment, and a send-back only on the captain's own words; it reads held batches only, so a merge still running is answered in Settings.
@@ -1272,18 +1285,19 @@ The record keeps each batch that merged or closed as `BatchRecord.finished` - it
 An older entry stays saved until the next batch ends, which drops it.
 `batches.list` is read again on each change to a batch record (`repo_batch`), each new checks reading (`batch_checks`), a project set up, configured or removed, and once a minute, so a batch leaves Last day a day after it ended.
 
-Collapsed, the panel's header says the open batch's state and how long it has held it ("held 4m", "checking 49m") and how many changes wait and are left out.
+Collapsed, the panel's header says the open batch's state and how long it has held it ("checking 49m"; for a hold, who has it: "repairing 5m", "rerun passed", "needs you 5m" or "held 5m") and how many changes wait and are left out.
+Its first words are bright unless the crew has the hold, as every panel marks what needs the captain.
 Open, it shows:
 
-- the open batch: a dot for its state, its number and size, its checks as a bar with how many passed, the failed checks by name, the declared fix's key, its members as task chips (six, then "+N more"), and Answer in Settings while it holds;
+- the open batch: a dot for its state, its number and size, its state and how long beside them (for a hold, only how long, since the line below says who has it), for a hold a sentence saying who has it ("A held batch") with the repair's key as a button and its latest report line, its checks as a bar with how many passed, the failed checks by name on one line that shows the name's end, the declared fix's key unless the sentence names it, its members as task chips (six, then "+N more"), and Open in Settings while Settings holds the captain's next step: a setting, a rule or no repair;
 - one row for the changes waiting, and why;
 - a row for each change left out, with why;
 - Last day, closed until opened, with each batch that ended.
 
-A chip opens its task, and Answer in Settings opens the held batch in Settings → Projects with focus on it.
+A chip and the repair's key open their task, and Open in Settings opens the held batch in Settings → Projects with focus on it; the details card offers Open in Settings for every hold.
 Its rows and chips are one Tab stop, inside which the arrows, Home and End move; the Last day toggle is a second Tab stop, and F6 reaches the panel as any panel.
 Its header button and the command Show your batches put up its wide details card (`cards/details.tsx`), the same groups in full words - the state with its time, the checks counts and when they were read, each change and why it waits or was left out - and a table of the last day's batches: batch, changes, formed, ended, how long it took and times held.
-The panel has no link to the batch's pull request, since a panel's frame opens no links; Answer in Settings reaches the button that opens it.
+The panel has no link to the batch's pull request, since a panel's frame opens no links; Open in Settings reaches the button that opens it.
 
 Evidence: `src/core/batches/view.test.ts`, `line.test.ts` ("a batch that ended"), `batches.test.ts` ("the open batch's checks reading"), and the journey `tests/e2e/batch-panel.spec.ts`, which walks the panel and its details card by keys on a disposable GitHub.
 

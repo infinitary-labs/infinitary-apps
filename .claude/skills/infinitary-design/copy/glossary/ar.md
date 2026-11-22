@@ -133,6 +133,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | relay (Infinitary's push relay) | مرحّل Infinitary | It passes sealed notifications and notes it cannot read; a sealed note is "رسالة مختومة". |
 | release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
 | Remove (a device) | إزالة | |
+| repair (the task repairing a held batch) | الإصلاح | "{key} يصلحها" for the task at work; a fix it makes stays تصحيح. |
 | repo (never said) | مشروع | The app's noun for what work belongs to stays مشروع. |
 | report | تقرير | |
 | repository (one of a project's) | مستودع | Plural مستودعات; "إضافة مستودع", "{count} مستودعات". Names one of a project's repositories, or the thing on GitHub. |

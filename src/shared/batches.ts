@@ -132,6 +132,14 @@ export const openBatchSchema = z.object({
   passed: z.object({ head: z.string(), checks: z.array(z.string()) }).optional(),
   /** How many times it was held, counted at each fresh hold; absent before its first. */
   holds: z.number().int().positive().optional(),
+  /**
+   * The task repairing its hold, by id (docs/forge.md, "A held batch"): the
+   * one task the first mate started with the `repairs_batch` mark, or the
+   * last task whose `check_change` batch declaration answered the hold. Kept
+   * while that task is open and the batch is, through a combine on the same
+   * pull request, so a later hold names it; the app judges nothing from it.
+   */
+  repair: z.string().optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
 
@@ -520,6 +528,17 @@ export const batchesViewSchema = z.object({
           fixKeys: z.array(z.string()),
           /** Its checks as last read at its version; null before the first reading. */
           checks: batchChecksReadingSchema.nullable(),
+          /**
+           * The task repairing its hold (`OpenBatch.repair`), or a held batch of
+           * one's own change, whose crewmate repairs it; null with neither.
+           * `own` marks that change's own crewmate, `fixing` a repair that
+           * declared its change the hold's fix.
+           */
+          repair: batchTaskSchema.extend({ own: z.boolean(), fixing: z.boolean() }).nullable(),
+          /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
+          awaitsFix: z.boolean(),
+          /** Its repair declared that a rerun passed the failed checks at its version. */
+          passed: z.boolean(),
         })
         .nullable(),
       leftOut: z.array(
@@ -540,3 +559,86 @@ export const batchesViewSchema = z.object({
 });
 export type BatchesView = z.infer<typeof batchesViewSchema>;
 export type BatchesRepoView = BatchesView["repos"][number];
+/** The task repairing an open batch's hold, as `batches.list` gives it. */
+export type BatchRepairView = NonNullable<NonNullable<BatchesRepoView["open"]>["repair"]>;
+
+/**
+ * Who has a held batch's next step (docs/forge.md, "A held batch"), by the
+ * facts the app holds: the crew while a recorded repair, or a batch of
+ * one's own crewmate, works on it or a rerun passed; the captain while that
+ * repair's task waits on a card of theirs, or a setting where the project
+ * lives refuses the merge; a rule there; or no one while no repair is
+ * recorded. Each state draws its own words in the Batches panel and
+ * Settings, and only the captain's and no one's offer the by-hand answers
+ * first. The Batches panel keeps a copy (`holdState` in its `words.ts`),
+ * since a panel imports only its own files; a test holds the two equal.
+ */
+export type BatchHoldState =
+  | "repairing"
+  | "own"
+  | "fixing"
+  | "sent-back"
+  | "passed"
+  | "approve"
+  | "card"
+  | "setting"
+  | "rule"
+  | "none";
+
+/** The facts `batchHoldState` reads. */
+export type BatchHoldFacts = {
+  reason: BatchHold["reason"];
+  /** The hold's repair (`batchRepairOf`), or null. */
+  repair: { own: boolean; fixing: boolean } | null;
+  /** It waits for that repair's fix after changes were sent back. */
+  awaitsFix: boolean;
+  /** Its repair declared that a rerun passed at its version. */
+  passed: boolean;
+  /**
+   * The repair's task as the board lists it, or null when the board does
+   * not list it yet: its status, the card it waits on and whether that card
+   * merges, which for a repair is its fix waiting for approval.
+   */
+  task: { status: string; waitingCardId: string | null; waitingCardMerges?: boolean } | null;
+};
+
+/** Who has a held batch's next step, and which words say it. */
+export function batchHoldState(facts: BatchHoldFacts): BatchHoldState {
+  if (facts.reason === "merge-way") return "setting";
+  if (facts.reason === "rules") return "rule";
+  if (facts.passed) return "passed";
+  const { repair, task } = facts;
+  if (!repair || task?.status === "done" || task?.status === "dropped") return "none";
+  if (task?.waitingCardId) return task.waitingCardMerges ? "approve" : "card";
+  if (facts.awaitsFix) return "sent-back";
+  if (repair.fixing) return "fixing";
+  return repair.own ? "own" : "repairing";
+}
+
+/** Whether the crew has a held batch's next step: nothing is asked of the captain. */
+export function crewHolds(state: BatchHoldState): boolean {
+  return (
+    state === "repairing" ||
+    state === "own" ||
+    state === "fixing" ||
+    state === "sent-back" ||
+    state === "passed"
+  );
+}
+
+/**
+ * The task repairing an open batch's hold: the one recorded as its repair
+ * (`OpenBatch.repair`), or, for a batch of one held on its checks, that
+ * change's own crewmate (`own`); `fixing` when it declared its change the
+ * hold's fix. Undefined with neither, or while the batch is not held.
+ */
+export function batchRepairOf(
+  open: OpenBatch,
+  fixes: readonly string[] | undefined,
+): { taskId: string; own: boolean; fixing: boolean } | undefined {
+  if (!open.hold) return undefined;
+  const only = open.members.length === 1 ? open.members[0]?.taskId : undefined;
+  const taskId = open.repair ?? (open.hold.reason === "checks" ? only : undefined);
+  if (!taskId) return undefined;
+  return { taskId, own: taskId === only, fixing: (fixes ?? []).includes(taskId) };
+}

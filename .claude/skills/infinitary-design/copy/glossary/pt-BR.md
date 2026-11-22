@@ -117,6 +117,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Remote Login (macOS's own name) | Login Remoto | macOS's own Brazilian Portuguese name in Sharing. |
 | remote, origin (avoided) | onde o projeto fica | |
 | Remove / Leave (a device) | Remover / Sair | |
+| repair (the task repairing a held batch) | reparo | "{key} está reparando" for the task at work; the change it makes stays correção. |
 | repo (avoided) | projeto | |
 | report | relatório, relatar | The verb in feed lines: "Relatou: ...". |
 | repository (one of a project's) | repositório | "Adicionar um repositório", "2 repositórios". Names one of a project's repositories; what work belongs to stays projeto. |

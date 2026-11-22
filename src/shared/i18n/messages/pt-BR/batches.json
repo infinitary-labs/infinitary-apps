@@ -1,6 +1,5 @@
 {
   "batchesPanelAfter": "após #{number}",
-  "batchesPanelAnswer": "Responder em Ajustes",
   "batchesPanelBatchTitle": {
     "plural": "count",
     "one": "Lote #{number} · {count} alteração",
@@ -62,6 +61,7 @@
     "many": "+{count} a mais",
     "other": "+{count} a mais"
   },
+  "batchesPanelNeedsYou": "precisa de você há {duration}",
   "batchesPanelNewBatchTitle": {
     "plural": "count",
     "one": "Novo lote · {count} alteração",
@@ -69,7 +69,11 @@
     "other": "Novo lote · {count} alterações"
   },
   "batchesPanelNext": "próximo às {time}",
+  "batchesPanelOpenSettings": "Abrir em Ajustes",
+  "batchesPanelOpenTask": "Abrir {key}",
   "batchesPanelOpening": "abrindo",
+  "batchesPanelRepairing": "em reparo há {duration}",
+  "batchesPanelRerunPassed": "passou ao rodar de novo",
   "batchesPanelStateChecking": "Verificando desde as {time}",
   "batchesPanelStateCombining": "Combinando as alterações de novo sobre o branch principal mais recente",
   "batchesPanelStateOpening": "Abrindo a solicitação de pull do lote",
@@ -93,5 +97,16 @@
   "batchesPanelWaitsFix": "Entra no lote retido como sua correção",
   "batchesPanelWaitsGap": "Entra no próximo lote às {time}",
   "batchesPanelWaitsNow": "Entra no próximo lote",
+  "batchesPanelWhoApprove": "{key} fez uma correção. Ela aguarda sua aprovação.",
+  "batchesPanelWhoCard": "{key} aguarda sua resposta no cartão.",
+  "batchesPanelWhoFixing": "{key} está corrigindo. A correção entra neste lote e as verificações rodam de novo.",
+  "batchesPanelWhoNoWay": "Os ajustes de mesclagem do seu projeto recusam esta forma de mesclar.",
+  "batchesPanelWhoNone": "Nenhum reparo está trabalhando nele ainda. Seu imediato foi avisado quando ele ficou retido.",
+  "batchesPanelWhoOwn": "{key} está reparando a própria alteração",
+  "batchesPanelWhoPassed": "A verificação que falhou passou ao rodar de novo. O lote é mesclado assim que as outras verificações passarem.",
+  "batchesPanelWhoRefused": "Onde seu projeto fica, a mesclagem foi recusada.",
+  "batchesPanelWhoRepairing": "{key} está reparando",
+  "batchesPanelWhoRule": "Uma regra onde seu projeto fica o retém, como uma revisão obrigatória.",
+  "batchesPanelWhoSentBack": "{key} devolveu alterações e está corrigindo o resto. O lote aguarda a correção.",
   "batchesReadWords": "seus lotes de alterações aprovadas"
 }

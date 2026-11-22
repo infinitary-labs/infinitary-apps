@@ -118,6 +118,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | released (closed through an outside process) | publiée | "Publiée en dehors de cette tâche". |
 | remote, origin (never said) | là où le projet est hébergé | |
 | Remove (a device) | Retirer | |
+| repair (the task repairing a held batch) | réparation | "{key} le répare" for the task at work; the change it makes stays correctif. |
 | repo (never said) | projet | The app's noun for what work belongs to stays projet. |
 | report | rapport | "font leur rapport", "Rapport : …". |
 | repository (one of a project's) | dépôt | "Ajouter un dépôt", "2 dépôts". Names one of a project's repositories, or the thing on GitHub. |

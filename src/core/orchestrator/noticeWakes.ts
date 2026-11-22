@@ -168,6 +168,11 @@ export type NoticeFacts =
        * send-backs from batches, oldest first (INF-5097 piece 1).
        */
       members: { task: string; title: string; sentBack?: SentBackFacts[] }[];
+      /**
+       * The open task recorded as the batch's repair, by key, when an earlier
+       * hold of the same batch already has one (`OpenBatch.repair`).
+       */
+      repair?: string;
     }
   | {
       /**
@@ -454,7 +459,8 @@ function renderBatchHeld(facts: Extract<WakeFacts, { kind: "batch-held" }>): str
   const earlier = history.length
     ? ` Earlier send-backs from batches: ${history.join(". ")}. Put them in the repair's brief, with the checks that never ran there.`
     : "";
-  return `${BATCH_HELD_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.change}${facts.url ? ` (${facts.url})` : ""} at ${facts.head} failed ${facts.checks.length ? facts.checks.join(", ") : "its checks"}. It carries, in order: ${members}.${earlier} Changes approved meanwhile wait in line behind it. Start one task in that project now, with no card first, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch's fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing. Put up no card about the hold: Settings shows it with Try again and Send back with a reason.`;
+  // i18n-exempt: a wake served to the first mate, never shown to a person
+  return `${BATCH_HELD_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.change}${facts.url ? ` (${facts.url})` : ""} at ${facts.head} failed ${facts.checks.length ? facts.checks.join(", ") : "its checks"}. It carries, in order: ${members}.${earlier} Changes approved meanwhile wait in line behind it. ${facts.repair ? `${facts.repair} is recorded as this batch's repair and is still open: steer it with this pull request and version, and start no other task.` : `Start one task in that project now, with no card first and repairs_batch true in its shape, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch's fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing.`} Put up no card about the hold: the Batches panel and Settings show who is repairing it, and Settings keeps Try again and Send back with a reason.`;
 }
 
 /** How the seat-moved wake opens when the captain moved the seat. */

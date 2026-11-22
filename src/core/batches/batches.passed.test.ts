@@ -88,8 +88,12 @@ describe("a held batch whose version passes on a rerun", () => {
   it("merges a held version its repair declared passed on a rerun, and sends the fix declared with it to the next batch", async () => {
     const home = await heldBatch();
     const held = home.open();
-    expect(await home.batches.declarePassed(REPO, held.head, FIX.taskId)).toBeUndefined();
+    expect(
+      await home.batches.declarePassed(REPO, held.head, FIX.taskId, FIX.taskId),
+    ).toBeUndefined();
     expect(home.record().fixes).toEqual([FIX.taskId]);
+    // The task that declared it is recorded as the hold's repair, which the Batches panel names.
+    expect(home.open().repair).toBe(FIX.taskId);
     // The host still reads the failed jobs; a check still running is waited for.
     home.host.report([passed("build"), failed("unit-tests"), failed("lint"), running("journeys")]);
     home.host.ready("clean");

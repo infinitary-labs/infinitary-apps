@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-find-task-caret-recovery",
+      "reason": "Test-only repair: when the iPhone tasks journey's Find a task key opens the search but a starved simulator's keyboard arbiter then takes the caret back and the empty search closes, the journey reopens the search by pulling the list down and puts the caret back once, only on the app's own log proving it; app behavior is unchanged and the key is never pressed twice."
+    }
+  ]
+}

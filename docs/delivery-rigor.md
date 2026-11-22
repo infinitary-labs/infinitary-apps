@@ -62,7 +62,7 @@ The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
 A test file, helper or stand-in a change edits is brought to the six words in the same pull request; a bad pattern is removed by deriving a pin from its source or moving a stand-in to its owner, never deleting on sight.
 A pattern seen elsewhere is named in the report for the first mate to file, not fixed in passing and never copied; deleting a test still asks for the captain's approval.
-This project adds five rulings, including ask-first weakening, skipping or deletion (`docs/testing.md`, "This project's rulings on tests").
+This project adds six rulings, including ask-first weakening, skipping or deletion (`docs/testing.md`, "This project's rulings on tests").
 A new end-to-end journey follows the passage like any other test, with no ask, and its review still names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
 The passage decides the rest.
 The brief's `tests-required` constraint asks for tests of the task's stated intent, in the passage's sense (`src/core/orchestrator/intentBrief.ts`).

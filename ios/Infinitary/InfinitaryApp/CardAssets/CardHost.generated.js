@@ -73427,29 +73427,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleColdSleepDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء.`;
+        return `بيانو في الغالب: بيانو ناعم مكتوم في غرفة واسعة باردة فوق نغمة منخفضة ممتدة ونبض قلب بطيء وريح هادئة.`;
       case "de":
-        return `Vor allem Klavier: ein sanftes Filzklavier in einem weiten, kalten Raum über einem tiefen Bordun und einem langsamen Herzschlag.`;
+        return `Vor allem Klavier: ein sanftes Filzklavier in einem weiten, kalten Raum über einem tiefen Bordun, einem langsamen Herzschlag und leisem Wind.`;
       case "es":
-        return `Sobre todo piano: un piano suave con fieltro en una sala enorme y fría, sobre un bordón grave y un latido lento.`;
+        return `Sobre todo piano: un piano suave con fieltro en una sala enorme y fría, sobre un bordón grave, un latido lento y un viento suave.`;
       case "fr":
-        return `Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave et un battement de cœur lent.`;
+        return `Surtout du piano : un piano feutré et doux dans une vaste salle froide, sur un bourdon grave, un battement de cœur lent et un vent léger.`;
       case "ja":
-        return `ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動の上で鳴ります。`;
+        return `ピアノが中心。広く冷たい部屋に響くやわらかなフェルトピアノが、低い持続音とゆっくりした鼓動、かすかな風の上で鳴ります。`;
       case "ko":
-        return `피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동 위에서 흐릅니다.`;
+        return `피아노가 중심입니다. 넓고 차가운 방에 울리는 부드러운 펠트 피아노가 낮은 지속음과 느린 심장 박동, 잔잔한 바람 위에서 흐릅니다.`;
       case "pt-BR":
-        return `Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave e um batimento lento.`;
+        return `Principalmente piano: um piano suave com feltro em uma sala enorme e fria, sobre um bordão grave, um batimento lento e um vento suave.`;
       case "zh-Hans":
-        return `以钢琴为主：空旷寒冷的房间里，柔和的毛毡钢琴伴着低沉的持续音和缓慢的心跳。`;
+        return `以钢琴为主：空旷寒冷的房间里，柔和的毛毡钢琴伴着低沉的持续音、缓慢的心跳和轻柔的风声。`;
       case "zh-Hant":
-        return `以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音和緩慢的心跳。`;
+        return `以鋼琴為主：空曠寒冷的房間裡，柔和的毛氈鋼琴伴著低沉的持續音、緩慢的心跳和輕柔的風聲。`;
       case "en-XA":
-        return `[Ṁöšţļý þîáñö: á šöƒţ ƒéļţ þîáñö îñ á ṽášţ, çöļð ŕööɱ öṽéŕ á ļöŵ ðŕöñé áñð á šļöŵ ĥéáŕţƀéáţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ṁöšţļý þîáñö: á šöƒţ ƒéļţ þîáñö îñ á ṽášţ, çöļð ŕööɱ öṽéŕ á ļöŵ ðŕöñé, á šļöŵ ĥéáŕţƀéáţ áñð šöƒţ ŵîñð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat.‬`;
+        return `‮Mostly piano: a soft felt piano in a vast, cold room over a low drone, a slow heartbeat and soft wind.‬`;
     }
-    return `Mostly piano: a soft felt piano in a vast, cold room over a low drone and a slow heartbeat.`;
+    return `Mostly piano: a soft felt piano in a vast, cold room over a low drone, a slow heartbeat and soft wind.`;
   }
   function settingsSoundStyleDeepDrift() {
     switch (currentLanguage()) {
@@ -73832,29 +73832,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleMoonlitDeckDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة.`;
+        return `متفرق وغامض قليلًا: نغمة منخفضة ممتدة وصندوق موسيقى وقيثارة بطيئة فوق أمواج هادئة وريح ليلية.`;
       case "de":
-        return `Spärlich und ein wenig geheimnisvoll: ein tiefer Bordun, eine Spieluhr und eine langsame Harfe über sanften Wellen.`;
+        return `Spärlich und ein wenig geheimnisvoll: ein tiefer Bordun, eine Spieluhr und eine langsame Harfe über sanften Wellen und Nachtwind.`;
       case "es":
-        return `Escaso y algo misterioso: un bordón grave, una caja de música y un arpa lenta sobre olas suaves.`;
+        return `Escaso y algo misterioso: un bordón grave, una caja de música y un arpa lenta sobre olas suaves y viento nocturno.`;
       case "fr":
-        return `Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces.`;
+        return `Épuré et un peu mystérieux : un bourdon grave, une boîte à musique et une harpe lente sur des vagues douces et un vent de nuit.`;
       case "ja":
-        return `まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音が重なります。`;
+        return `まばらで少し神秘的。低い持続音、オルゴール、ゆっくりしたハープに、やさしい波の音と夜風が重なります。`;
       case "ko":
-        return `드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리가 흐릅니다.`;
+        return `드문드문 조금 신비롭게: 낮은 지속음, 오르골, 느린 하프에 잔잔한 파도 소리와 밤바람이 흐릅니다.`;
       case "pt-BR":
-        return `Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves.`;
+        return `Esparso e um pouco misterioso: um bordão grave, uma caixinha de música e uma harpa lenta sobre ondas suaves e vento noturno.`;
       case "zh-Hans":
-        return `稀疏而略带神秘：低沉的持续音、八音盒和缓慢的竖琴，伴着轻柔的海浪声。`;
+        return `稀疏而略带神秘：低沉的持续音、八音盒和缓慢的竖琴，伴着轻柔的海浪声和夜风。`;
       case "zh-Hant":
-        return `稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲。`;
+        return `稀疏而略帶神秘：低沉的持續音、音樂盒和緩慢的豎琴，伴著輕柔的海浪聲和夜風。`;
       case "en-XA":
-        return `[Šþáŕšé áñð á ļîţţļé ɱýšţéŕîöûš: á ļöŵ ðŕöñé, á ɱûšîç ƀöẋ áñð á šļöŵ ĥáŕþ öṽéŕ šöƒţ ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Šþáŕšé áñð á ļîţţļé ɱýšţéŕîöûš: á ļöŵ ðŕöñé, á ɱûšîç ƀöẋ áñð á šļöŵ ĥáŕþ öṽéŕ šöƒţ ŵáṽéš áñð á ñîĝĥţ ŵîñð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves.‬`;
+        return `‮Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves and a night wind.‬`;
     }
-    return `Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves.`;
+    return `Sparse and a little mysterious: a low drone, a music box and a slow harp over soft waves and a night wind.`;
   }
   function settingsSoundStyleQuietCove() {
     switch (currentLanguage()) {
@@ -73994,29 +73994,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSoundStyleTavernEmbersDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق أمواج هادئة.`;
+        return `فالس هادئ في مقام صغير مع أوتار منقورة وأكورديون فوق مطر خفيف وأمواج هادئة.`;
       case "de":
-        return `Ein leiser Walzer in Moll mit gezupften Saiten und Akkordeon über sanften Wellen.`;
+        return `Ein leiser Walzer in Moll mit gezupften Saiten und Akkordeon über leisem Regen und sanften Wellen.`;
       case "es":
-        return `Un vals tranquilo en tono menor con cuerdas punteadas y acordeón sobre olas suaves.`;
+        return `Un vals tranquilo en tono menor con cuerdas punteadas y acordeón sobre lluvia suave y olas.`;
       case "fr":
-        return `Une valse paisible en mineur avec des cordes pincées et un accordéon sur des vagues douces.`;
+        return `Une valse paisible en mineur avec des cordes pincées et un accordéon sur une pluie douce et des vagues.`;
       case "ja":
-        return `爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい波の音が流れます。`;
+        return `爪弾く弦とアコーディオンの、静かな短調のワルツ。やさしい雨音と波の音が流れます。`;
       case "ko":
-        return `뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 파도 소리가 흐릅니다.`;
+        return `뜯는 현악기와 아코디언이 연주하는 조용한 단조 왈츠에 잔잔한 빗소리와 파도 소리가 흐릅니다.`;
       case "pt-BR":
-        return `Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre ondas suaves.`;
+        return `Uma valsa tranquila em tom menor com cordas dedilhadas e acordeão sobre chuva suave e ondas.`;
       case "zh-Hans":
-        return `拨弦乐器和手风琴奏出安静的小调华尔兹，伴着轻柔的海浪声。`;
+        return `拨弦乐器和手风琴奏出安静的小调华尔兹，伴着轻柔的雨声和海浪声。`;
       case "zh-Hant":
-        return `撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的海浪聲。`;
+        return `撥弦樂器和手風琴奏出安靜的小調華爾滋，伴著輕柔的雨聲和海浪聲。`;
       case "en-XA":
-        return `[Å ǫûîéţ ɱîñöŕ-ķéý ŵáļţž ŵîţĥ þļûçķéð šţŕîñĝš áñð áñ áççöŕðîöñ öṽéŕ šöƒţ ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Å ǫûîéţ ɱîñöŕ-ķéý ŵáļţž ŵîţĥ þļûçķéð šţŕîñĝš áñð áñ áççöŕðîöñ öṽéŕ šöƒţ ŕáîñ áñð ŵáṽéš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮A quiet minor-key waltz with plucked strings and an accordion over soft waves.‬`;
+        return `‮A quiet minor-key waltz with plucked strings and an accordion over soft rain and waves.‬`;
     }
-    return `A quiet minor-key waltz with plucked strings and an accordion over soft waves.`;
+    return `A quiet minor-key waltz with plucked strings and an accordion over soft rain and waves.`;
   }
   function settingsSoundStyleWayfinderNight() {
     switch (currentLanguage()) {

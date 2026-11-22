@@ -1,8 +1,8 @@
 // The ambient music's player (docs/ambient-music.md): turns a style's bars
 // into sound with Web Audio. No recorded samples: every note is an
 // oscillator, and the only noise is the reverb's tail and, under a sea
-// style, the soft wash of waves, or, under a person's own style that asks
-// for them, soft rain and wind.
+// style, the soft wash of waves, or, under a style that asks for them,
+// soft rain and wind.
 //
 // It takes any audio context, so the same code plays live in the window
 // (./ambient.ts) and renders offline for a check.
@@ -55,8 +55,8 @@ const GLOW_STRETCH = 1.6;
 /** How loud a sea style's wash of waves plays: the captain's soft waves, 40% of the wash's own level. */
 const WAVES = 0.4 * 0.3;
 /**
- * How loud a person's own style's rain plays at its fullest, before the
- * style's own amount: about -32.5 LUFS alone, 2 dB above the sea's waves
+ * How loud a style's rain plays at its fullest, before the style's own
+ * amount: about -32.5 LUFS alone, 2 dB above the sea's waves
  * (-34.5), so it stays a wash under the music.
  */
 const RAIN = 0.16;
@@ -124,7 +124,7 @@ export type Sound = {
   tilt?: number;
   /** A sea style plays a soft wash of waves under the music. */
   sea?: boolean;
-  /** A person's own style may play soft rain and wind under the music, each 0..1. */
+  /** A style may play soft rain and wind under the music, each 0..1. */
   rain?: number;
   wind?: number;
   voices: Record<string, Voice>;

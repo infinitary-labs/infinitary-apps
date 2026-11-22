@@ -2,8 +2,9 @@
 // futuristic in the way recent science-fiction film scores are - a cold
 // felt piano in a very large room, over a low synth drone, with glass and a
 // slow pulse around it. The captain kept it from four prototypes (INF-4749)
-// and set its tone darker. No melody, chord walk or sound is taken from any
-// film: it is written here from the shipped kit.
+// and set its tone darker, and soft wind moves through its room (INF-5569).
+// No melody, chord walk or sound is taken from any film: it is written
+// here from the shipped kit.
 
 import type { BarContext } from "../composer";
 import type { PianoPreset } from "../instruments";
@@ -83,6 +84,7 @@ export const COLD_SLEEP: Style = {
   cadence: ["VII", "i"],
   keys: { lo: 55, hi: 76, c: [60, 66], start: [59, 64, 67, 71] },
   pad: { timbre: PADS.ice, anchors: [40, 52, 59], amp: 0.03, glide: 0.8, drift: [[0.11, 5]] },
+  wind: 0.6,
   reverb: 4.2,
   wet: 0.85,
   buses: {

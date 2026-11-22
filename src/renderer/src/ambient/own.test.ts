@@ -152,3 +152,31 @@ describe("what a person's style can start from and play", () => {
       );
   });
 });
+
+// INF-5569's approved answer: soft rain or wind only where it improves a
+// shipped style - Tavern embers rain at 50%, Cold sleep wind at 60%, and
+// Moonlit deck wind at 60% (the captain's own amount) - and a person's
+// own style started from one of them keeps it.
+describe("rain and wind in the shipped styles", () => {
+  it("plays rain in Tavern embers alone, and wind in Cold sleep and Moonlit deck alone", () => {
+    const heard = Object.fromEntries(
+      AMBIENT_STYLES.filter((id) => STYLES[id].rain || STYLES[id].wind).map((id) => [
+        id,
+        { rain: STYLES[id].rain ?? 0, wind: STYLES[id].wind ?? 0 },
+      ]),
+    );
+    expect(heard).toEqual({
+      "cold-sleep": { rain: 0, wind: 0.6 },
+      "tavern-embers": { rain: 0.5, wind: 0 },
+      "moonlit-deck": { rain: 0, wind: 0.6 },
+    });
+    expect(STYLES["tavern-embers"].sea).toBe(true);
+  });
+
+  it("keeps a shipped style's rain or wind in a person's style started from it, unless the style sets its own", () => {
+    const warm = styleFromOwn(ownStyleSchema.parse(warmSleep));
+    expect(warm.wind).toBe(STYLES["cold-sleep"].wind);
+    const still = styleFromOwn(ownStyleSchema.parse({ ...warmSleep, wind: 0 }));
+    expect(still.wind).toBe(0);
+  });
+});

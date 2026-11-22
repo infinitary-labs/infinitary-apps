@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "ambient-rain-wind",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Soft rain and wind in three ambient music styles",
+      "body": "Tavern embers now plays soft rain outside alongside its waves, and Cold sleep and Moonlit deck play a soft wind under the music. The rain and wind stay quiet, heard mostly between notes. The other styles sound as before.",
+      "noPicture": "This changes what three music styles sound like; the only visible change is a few words in their descriptions.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

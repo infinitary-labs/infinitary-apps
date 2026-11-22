@@ -226,19 +226,18 @@ export function ringPoint(ring: MoonRing, theta: number): { x: number; y: number
 
 export type NodePlace = { x: number; y: number; z: number; ring: number };
 
-/** A program's parts where they circle, and the rings they circle on, as scaled to fit. */
+/** A program's parts where they circle, and the rings they circle on. */
 export type ProgramPlaces = { places: Map<string, NodePlace>; rings: MoonRing[] };
 
 /**
  * Where each running part circles at `seconds` (scene px, y down): in the
  * order filed, evenly round its ring, the first ring turning one way and the
- * second the other. The whole is scaled about the mark when a part would
- * leave `half` (a square half-size).
+ * second the other. The rings keep their full size wherever the mark sits:
+ * a part may pass beyond the stage's edge or over another computer's crew.
  */
 export function layoutProgram(
   parts: readonly ProgramPart[],
   root: { x: number; y: number },
-  half: number,
   gap: number = CONSTELLATION.crewGapPx,
   seconds = 0,
 ): ProgramPlaces {
@@ -255,27 +254,5 @@ export function layoutProgram(
       placed.set(part.id, { x: root.x + at.x, y: root.y + at.y, z: at.z, ring: j });
     }
   }
-  let fit = 1;
-  for (const place of placed.values()) {
-    for (const [p, r] of [
-      [place.x, root.x],
-      [place.y, root.y],
-    ] as const) {
-      const d = p - r;
-      if (Math.abs(p) <= half || d === 0) continue;
-      fit = Math.min(fit, (Math.sign(d) * half - r) / d);
-    }
-  }
-  if (fit < 1) {
-    fit = Math.max(0, fit);
-    for (const place of placed.values()) {
-      place.x = root.x + (place.x - root.x) * fit;
-      place.y = root.y + (place.y - root.y) * fit;
-      place.z *= fit;
-    }
-  }
-  return {
-    places: placed,
-    rings: fit < 1 ? rings.map((ring) => ({ ...ring, radius: ring.radius * fit })) : rings,
-  };
+  return { places: placed, rings };
 }

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crew-unbounded",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates keep their full size near the edge of the stage",
+      "body": "A task's parts circling its mark no longer shrink into a small knot as the mark nears the side of the stage, and a crewmate circling the one it waits on or reviews keeps its full circle. Crewmates may now pass the window's edge or another computer's crew, on your computer, iPhone and iPad.",
+      "picture": {
+        "dark": "crew-unbounded-dark.webp",
+        "light": "crew-unbounded-light.webp",
+        "alt": "The first mate with a task's forty parts circling its mark at full size on two wide rings beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

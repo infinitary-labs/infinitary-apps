@@ -15,7 +15,7 @@ import {
 } from "./crewSignal";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
 import { CROWDED_PLANES, planeRadius } from "./orbitalPlanes";
-import { SCENE_HALF_PX, SCENE_REACH_PX } from "./satellites";
+import { satelliteOffset, satellitePhase } from "./satellites";
 
 /** INF-1375, approved A: read actual rendered centers back on their main orbit. */
 function visibleSeats(frame: OrbitFrame, offMain: string[] = []) {
@@ -587,9 +587,10 @@ describe("crew orbit wiring", () => {
       model.setReview(reviewer, null);
       visibleSeats(model.update(0, true));
     });
-    // Captain's INF-1532 choice A: near the scene's edge a waiter's circle shrinks
-    // instead of throwing the waiter back to its main orbit for part of each loop.
-    it("keeps every reviewer circling its builder, wherever the builder sits on a crowded orbit", () => {
+    // The captain's ask (INF-5726): no box holds a crewmate in. A companion keeps
+    // its full circle wherever its blocker sits, even where the circle passes
+    // the formation's square.
+    it("keeps every reviewer on its full circle round its builder, wherever the builder sits on a crowded orbit", () => {
       for (let builder = 0; builder < CROWDED_PLANES[0].capacity; builder++) {
         const { model } = fixture(CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0));
         const reviewerId = `crew-${CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0) - 1}`;
@@ -600,19 +601,21 @@ describe("crew orbit wiring", () => {
         if (!reviewer || !blocker) throw new Error("Missing reviewer or builder");
         visibleSeats(frame, [reviewerId]);
         expect(model.update(0, true)).toEqual(frame);
-        expect(Math.hypot(reviewer.x - blocker.x, reviewer.y - blocker.y)).toBeLessThanOrEqual(
-          DEPENDENCY_VISUAL.radiusPx + 1e-6,
+        const plane = blocker.plane ?? 0;
+        const offset = satelliteOffset(
+          plane,
+          orbitAngle(blocker, plane),
+          satellitePhase(0, 1, 0, true),
         );
-        expect(Math.max(Math.abs(reviewer.x), Math.abs(reviewer.y))).toBeLessThanOrEqual(
-          SCENE_REACH_PX + 1e-6,
-        );
+        expect(reviewer.x - blocker.x).toBeCloseTo(offset[0], 3);
+        expect(reviewer.y - blocker.y).toBeCloseTo(offset[1], 3);
         expect(frame.links).toEqual([
           { fromId: reviewerId, toId: `crew-${builder}`, kind: "review" },
         ]);
       }
     });
     for (const count of [19, 24])
-      it(`keeps a waiter on its shrinking circle, inside the scene, through a whole loop of its blocker (${count} crew)`, () => {
+      it(`keeps a waiter on its full circle through a whole loop of its blocker (${count} crew)`, () => {
         const { model, rows } = fixture(count);
         applyCrewDependencies(
           model,
@@ -627,27 +630,25 @@ describe("crew orbit wiring", () => {
           ),
           0,
         );
-        // Let the waiter glide onto its circle, then follow every frame of one loop.
+        // Let the waiter glide onto its circle, then follow one loop of its blocker
+        // in settled frames, where the waiter sits exactly on its circle's seat.
         const start = 4000;
         let frame = run(model, 0, start);
         const plane = frame.crew.find((c) => c.id === "crew-0")?.plane ?? 0;
         const loopMs = (360 / Math.abs(CROWDED_PLANES[plane]?.speedDegPerSec ?? 1)) * 1000;
-        let worstGap = 0,
-          worstEdge = 0;
         for (let t = start; t <= start + loopMs; t += 16) {
-          frame = model.update(t);
+          frame = model.update(t, true);
           const waiter = frame.crew.find((c) => c.id === "crew-1"),
             blocker = frame.crew.find((c) => c.id === "crew-0");
           if (!waiter || !blocker) throw new Error("Missing waiter or blocker");
-          worstGap = Math.max(worstGap, Math.hypot(waiter.x - blocker.x, waiter.y - blocker.y));
-          // The glyph, not only its center, stays inside the scene.
-          worstEdge = Math.max(
-            worstEdge,
-            Math.max(Math.abs(waiter.x), Math.abs(waiter.y)) + waiter.size / 2,
+          const offset = satelliteOffset(
+            plane,
+            orbitAngle(blocker, plane),
+            satellitePhase(0, 1, t, true),
           );
+          expect(waiter.x - blocker.x, `${t} ms`).toBeCloseTo(offset[0], 3);
+          expect(waiter.y - blocker.y, `${t} ms`).toBeCloseTo(offset[1], 3);
         }
-        expect(worstGap).toBeLessThanOrEqual(DEPENDENCY_VISUAL.radiusPx + 1);
-        expect(worstEdge).toBeLessThanOrEqual(SCENE_HALF_PX);
       });
 
     it("counts a visible program ring but not the parts circling it, and seats a released part again", () => {
@@ -1038,3 +1039,12 @@ describe("the token flicker", () => {
     expect(drain()).toEqual([]);
   });
 });
+
+/** Where on its orbit a crewmate drawn at (x, y) on main plane `plane` sits, read back from `projectPlane`. */
+function orbitAngle(at: { x: number; y: number }, plane: number): number {
+  const p = CROWDED_PLANES[plane];
+  if (!p) throw new Error("Unknown orbital plane");
+  const u = at.x * Math.cos(p.node) + at.y * Math.sin(p.node);
+  const v = -at.x * Math.sin(p.node) + at.y * Math.cos(p.node);
+  return Math.atan2(v / Math.cos((p.inclination * Math.PI) / 180), u);
+}

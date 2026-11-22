@@ -24,7 +24,6 @@ import type {
 } from "./orbit";
 import { planePhase, planeRadius } from "./orbitalPlanes";
 import { easeIn, type Point, type SceneSlot } from "./orbitPaths";
-import { SCENE_REACH_PX } from "./satellites";
 
 /** A landing brightens what it lands on for this long: a steer its crewmate, a result its mark. */
 export const FLASH_MS = 360;
@@ -123,7 +122,6 @@ export function layoutPrograms(
     const { places, rings } = layoutProgram(
       program.parts,
       root,
-      SCENE_REACH_PX,
       CONSTELLATION.crewGapPx / share,
       seconds,
     );

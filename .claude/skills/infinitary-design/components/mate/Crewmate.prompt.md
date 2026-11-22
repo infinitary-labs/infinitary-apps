@@ -103,8 +103,8 @@ Waiting on another crewmate (captain's FI3-1680 choice): an idle dependency wait
 The circle is 64 scene pixels out, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 Its plane is spanned by the blocker's radial spoke and the main plane's normal, so the two planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions take that circle.
-Near the scene's edge the circle shrinks just enough to stay inside the scene, and regrows as the blocker moves away, so a waiter never drops back to its slot for part of a loop (captain's INF-1532 choice A).
-A chain, a second blocker, a larger group, or a blocker that is itself past the scene's edge stays on its own slot instead.
+The circle keeps its full size wherever the blocker sits, even past the window's edge or over another computer's crew; no box holds a crewmate in (captain, INF-5726).
+A chain, a second blocker, or a larger group stays on its own slot instead.
 Only another crewmate waiting on the waiter makes a chain; queued work waiting on it has no crewmate and never keeps it on its slot (INF-38).
 No caption for a wait is drawn beneath the crewmate (captain, INF-38: "the center animation should be kept as clean as possible"); the tile and the summary name it, and the Tasks row says `waiting` (`../now/NowPanel.prompt.md`, "Naming a wait").
 Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).
@@ -124,7 +124,7 @@ Row inspection does not pause the stage; pointing at the glyph still does.
 A task split into parts (captain's INF-5365 choice, moons): the parent is a small hollow ring on the first orbit, travelling with it, and only its running parts draw, each as its crewmate circling the ring on a tilted moon ring (INF-1037); a finished, unstarted or dropped part draws nothing.
 Up to ten parts share one ring of at least 40 px, tilted 40 degrees and turning 26 degrees a second, evenly spaced in the order filed; more take a second ring at least 26 px further out, tilted 22 degrees and turning the other way.
 The ring line is faint, the quiet color at 0.3 in front of the mark and 0.13 behind it, 1 px; parts in front draw over the mark.
-Crewmates keep their full size and at least 30 px of arc each; the whole program scales about the mark when a part would leave the stage.
+Crewmates keep their full size and at least 30 px of arc each; the rings keep their full size wherever the mark rides, even past the window's edge.
 Inside the mark a 10 px icosahedron gem turns slowly in the accent, gaining a wire for each thirtieth of the program finished, at least one, and whole when the program is done.
 With parts running on several computers, each computer's group draws its own copy of the mark with the crewmates running there, each gem showing the whole program.
 A working or idle part keeps its own solid, heat, label, spark and wait arrows, circling without reserving an invisible main-orbit seat.

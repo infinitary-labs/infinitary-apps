@@ -233,10 +233,13 @@ test("the Batches panel shows a held batch, its line and its last day, and point
       await expect(body.locator("[data-batches-open]")).toContainText(
         words.batchesPanelBatchTitle({ number: "31", count: 2 }),
       );
-      // Held, not checking; how many minutes depends on when the launch finished.
-      await expect(body.locator("[data-batches-open]")).toContainText(
-        words.batchesPanelHeld({ duration: "" }).trim(),
-      );
+      // Held, not checking; how many minutes depends on when the launch finished. The row's
+      // trailing datum keeps only the minutes, so its name carries the held state.
+      await expect(
+        body.getByRole("button", {
+          name: `${words.batchesPanelBatchTitle({ number: "31", count: 2 })} · ${words.batchesPanelHeld({ duration: "" }).trim()}`,
+        }),
+      ).toBeVisible();
       await expect(body.locator("[data-batches-failed]")).toContainText("unit-tests");
       // No repair is recorded, so the panel says no one has the hold yet.
       await expect(body.locator('[data-batches-who="none"]')).toHaveText(

@@ -209,7 +209,8 @@ export default function BatchesPanel({ reads, rail, asks, point, cards, view }: 
                   title={title}
                   tone={toneOf(open, hold)}
                   toneLabel={short}
-                  trailing={short}
+                  // A held row's line below says who has it, so the row keeps only how long, and its title room.
+                  trailing={hold ? took(now - (open.hold?.at ?? now)) : short}
                   ariaLabel={`${title} · ${short}`}
                   onClick={details}
                   {...rowStop(`open:${repo.repoId}`)}

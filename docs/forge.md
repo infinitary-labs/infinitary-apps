@@ -1289,7 +1289,7 @@ Collapsed, the panel's header says the open batch's state and how long it has he
 Its first words are bright unless the crew has the hold, as every panel marks what needs the captain.
 Open, it shows:
 
-- the open batch: a dot for its state, its number and size, for a hold a sentence saying who has it ("A held batch") with the repair's key as a button and its latest report line, its checks as a bar with how many passed, the failed checks by name on one line that shows the name's end, the declared fix's key unless the sentence names it, its members as task chips (six, then "+N more"), and Open in Settings while Settings holds the captain's next step: a setting, a rule or no repair;
+- the open batch: a dot for its state, its number and size, its state and how long beside them (for a hold, only how long, since the line below says who has it), for a hold a sentence saying who has it ("A held batch") with the repair's key as a button and its latest report line, its checks as a bar with how many passed, the failed checks by name on one line that shows the name's end, the declared fix's key unless the sentence names it, its members as task chips (six, then "+N more"), and Open in Settings while Settings holds the captain's next step: a setting, a rule or no repair;
 - one row for the changes waiting, and why;
 - a row for each change left out, with why;
 - Last day, closed until opened, with each batch that ended.

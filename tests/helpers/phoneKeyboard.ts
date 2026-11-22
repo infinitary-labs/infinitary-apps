@@ -229,6 +229,115 @@ export class PhoneKeyEvents {
 }
 
 /**
+ * INF-6074: a phone text field's caret taken back by the system's keyboard. UIKit logs its keyboard scene line as a text
+ * field becomes the responder and asks for the keyboard; the keyboard arbiter's client in the app logs a failed
+ * connection, then its order to resign that responder. In phone run 44991488174 the iPhone's task search took the caret
+ * 1.6 seconds after Find a task, its keyboard took six seconds to come up on a starved simulator, and the arbiter's
+ * connection failed and resigned the caret 16 seconds later, so the empty search closed before the journey looked.
+ * Those three lines in that order, with no text field taking the caret after them, are the proof; anything else is
+ * unknown, including a line the Mac reading the log could not compose.
+ */
+const CARET_FIELD_SUBSYSTEM = "com.apple.UIKit";
+const CARET_FIELD_CATEGORY = "KeyboardSceneDelegate";
+const CARET_FIELD_PREFIX = "Try reloading input views for responder:<SwiftUI.UIKitTextField:";
+const KEYBOARD_ARBITER_SUBSYSTEM = "com.apple.KeyboardArbiter";
+const KEYBOARD_ARBITER_CATEGORY = "Client";
+const KEYBOARD_ARBITER_FAILED = "failedConnection";
+const KEYBOARD_ARBITER_RESIGNED = "handleKeyboardChange: resignFirstResponder";
+
+type CaretRecord = KeyRecord & { subsystem?: string; category?: string; processID?: number };
+
+export type PhoneCaretOutcome = { outcome: "taken-back" | "unknown"; pid: number; proof: string[] };
+
+/** Whether the system took back the caret a text field of app `pid` took at or after `since`. */
+export function phoneCaretOutcome(
+  records: readonly CaretRecord[],
+  pid: number,
+  since: number,
+): PhoneCaretOutcome {
+  const lines = records
+    .flatMap((record) => {
+      if (basename(record.processImagePath ?? "") !== PHONE_APP_PROCESS || record.processID !== pid)
+        return [];
+      const at = phoneLogMilliseconds(record.timestamp ?? "");
+      if (!(at >= since)) return [];
+      const message = firstLine(record.eventMessage ?? "");
+      const arbiter =
+        record.subsystem === KEYBOARD_ARBITER_SUBSYSTEM &&
+        record.category === KEYBOARD_ARBITER_CATEGORY;
+      const kind =
+        record.subsystem === CARET_FIELD_SUBSYSTEM &&
+        record.category === CARET_FIELD_CATEGORY &&
+        message.startsWith(CARET_FIELD_PREFIX)
+          ? "field"
+          : arbiter && message === KEYBOARD_ARBITER_FAILED
+            ? "failed"
+            : arbiter && message === KEYBOARD_ARBITER_RESIGNED
+              ? "resigned"
+              : undefined;
+      return kind ? [{ at, kind, line: `${record.timestamp} ${message}` }] : [];
+    })
+    .sort((a, b) => a.at - b.at);
+  const field = lines.findIndex((each) => each.kind === "field");
+  const failed = lines.findIndex(
+    (each, index) => field >= 0 && index > field && each.kind === "failed",
+  );
+  const resigned = lines.findIndex(
+    (each, index) => failed >= 0 && index > failed && each.kind === "resigned",
+  );
+  const again = lines.some(
+    (each, index) => resigned >= 0 && index > resigned && each.kind === "field",
+  );
+  if (resigned < 0 || again)
+    return { outcome: "unknown", pid, proof: lines.map((each) => each.line) };
+  return {
+    outcome: "taken-back",
+    pid,
+    proof: [field, failed, resigned].map((index) => lines[index]?.line ?? ""),
+  };
+}
+
+/**
+ * INF-6074: the caret witness reads the owned subscription first and the kept log only when the subscription holds
+ * no proof, since a live subscription can drop a line its simulator kept (INF-1799). The journey asks only after its
+ * check missed the field, so every line it needs was logged before the question.
+ */
+export class PhoneCaretChanges {
+  private records: CaretRecord[] = [];
+  private readonly recover: (since: number, signal: AbortSignal) => Promise<object[]>;
+
+  constructor(recover: (since: number, signal: AbortSignal) => Promise<object[]>) {
+    this.recover = recover;
+  }
+
+  receive(record: CaretRecord) {
+    if (basename(record.processImagePath ?? "") !== PHONE_APP_PROCESS) return;
+    const subsystem = record.subsystem;
+    if (subsystem !== CARET_FIELD_SUBSYSTEM && subsystem !== KEYBOARD_ARBITER_SUBSYSTEM) return;
+    this.records.push(record);
+  }
+
+  /** The subscription's answer for app `pid` since `since`, else the kept log's, read until `deadline`. */
+  async outcome(pid: number, since: number, deadline: number): Promise<PhoneCaretOutcome> {
+    const heard = phoneCaretOutcome(this.records, pid, since);
+    const left = deadline - Date.now();
+    if (heard.outcome === "taken-back" || left <= 0) return heard;
+    const ended = AbortSignal.timeout(left);
+    try {
+      const kept = phoneCaretOutcome(
+        (await this.recover(since, ended)) as CaretRecord[],
+        pid,
+        since,
+      );
+      return kept.outcome === "taken-back" ? kept : heard;
+    } catch (error) {
+      if (!ended.aborted) throw error;
+      return heard;
+    }
+  }
+}
+
+/**
  * INF-1477 (the captain's choice "Allow a proven second tap"): XCTest gives each synthesized tap a virtual
  * touch screen of its own. When a starved simulator's backboardd cannot read that screen's properties in
  * time, it attaches the screen as an accessory, or as a bad usage pair when it read no usage page, and
@@ -834,7 +943,7 @@ const UNREADABLE_SHARED_MESSAGE = "<compose failure [shared UUID]>";
 /** Registration subset of INF-355's observe.sh, limited to the runner's own simulator,
  * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches,
  * INF-1109's registration warnings and unfinished-contact snapshots from the same backboardd,
- * the photo picker's press-and-hold, and INF-1785's display changes. */
+ * the photo picker's press-and-hold, INF-1785's display changes, and INF-6074's caret taken back. */
 const PHONE_KEYBOARD_LOG_PREDICATE =
   '(process == "backboardd" AND (composedMessage BEGINSWITH "new key command registrations for pid:"' +
   ` OR composedMessage BEGINSWITH "${KEY_EVENT_PREFIX}"` +
@@ -848,7 +957,11 @@ const PHONE_KEYBOARD_LOG_PREDICATE =
   ` OR (subsystem == "${PICKER_PREVIEW_SUBSYSTEM}" AND category == "${PICKER_PREVIEW_CATEGORY}")))` +
   ' OR (process == "SpringBoard" AND composedMessage BEGINSWITH "Arbiter changing style from")' +
   ' OR (process == "CoreSimulatorBridge" AND composedMessage BEGINSWITH "Saved CategoryName: per-app = 0")' +
-  ` OR (process == "${PHONE_APP_PROCESS}" AND composedMessage BEGINSWITH "Read CategoryName: per-app = 0")`;
+  ` OR (process == "${PHONE_APP_PROCESS}" AND (composedMessage BEGINSWITH "Read CategoryName: per-app = 0"` +
+  ` OR (subsystem == "${CARET_FIELD_SUBSYSTEM}" AND category == "${CARET_FIELD_CATEGORY}"` +
+  ` AND composedMessage BEGINSWITH "${CARET_FIELD_PREFIX}")` +
+  ` OR (subsystem == "${KEYBOARD_ARBITER_SUBSYSTEM}" AND category == "${KEYBOARD_ARBITER_CATEGORY}"` +
+  ` AND (composedMessage == "${KEYBOARD_ARBITER_FAILED}" OR composedMessage == "${KEYBOARD_ARBITER_RESIGNED}"))))`;
 
 type PhoneKeyboardOptions = {
   simulator: string;
@@ -872,6 +985,7 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
     touch: (since: number) => stream.touch(since),
     keyOutcome: (pid: number, since: number, until: number, deadline: number) =>
       stream.keyOutcome(pid, since, until, deadline),
+    caret: (pid: number, since: number, deadline: number) => stream.caret(pid, since, deadline),
     preview: (since: number) => stream.preview(since),
     previewLine: (line: string) => stream.previewLine(line),
     appearance: (since: number, style: "light" | "dark", until?: number) =>
@@ -942,6 +1056,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   const previews = new PhonePickerPreviews((since, signal) => keptPhoneLog(options, since, signal));
   const displays = new PhoneDisplayChanges((since) => keptPhoneLog(options, since));
   const keys = new PhoneKeyEvents((since, signal) => keptPhoneLog(options, since, signal));
+  const carets = new PhoneCaretChanges((since, signal) => keptPhoneLog(options, since, signal));
   const child = spawn(
     "xcrun",
     [
@@ -1039,6 +1154,7 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
           previews.receive(record);
           displays.receive(record);
           keys.receive(record);
+          carets.receive(record);
         } catch {
           /* Non-record log diagnostics are not witnesses. */
         }
@@ -1055,6 +1171,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
     // the press's own window does, `deadline`, never at the kept log's own minute (`PhoneKeyEvents`).
     keyOutcome: (pid: number, since: number, until: number, deadline: number) =>
       keys.outcome(pid, since, until, deadline),
+    // INF-6074: whether the system's keyboard took back the caret a text field took since `since`.
+    caret: (pid: number, since: number, deadline: number) => carets.outcome(pid, since, deadline),
     preview: (since: number) => previews.preview(since),
     previewLine: (line: string) => previews.receiveLine(line),
     appearance: (since: number, style: "light" | "dark", until?: number) =>

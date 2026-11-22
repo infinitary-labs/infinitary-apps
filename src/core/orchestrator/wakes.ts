@@ -57,7 +57,6 @@ export const GUIDANCE_MARK_WORDS = "check_change captainGuidance with mark";
 /** The line under the captain's words his own command sent (INF-3898 piece 2). */
 export const CAPTAIN_WORDS_FROM_THE_COMMAND = `Sent ${FROM_THE_COMMAND}.`;
 
-/** What the crewmate is told beside the captain's guidance that holds his kept merge. */
 function guidanceMarkNote(mark: number): string {
   return `[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new merge card when the work is ready).`;
 }
@@ -190,12 +189,10 @@ export type KindWords<F extends { kind: string }> = {
  */
 export const CAPTAIN_TURN_REF = "captain-turn";
 
-/** The ref of a parked captain turn, naming the card it was about when it was about one. */
 export function captainTurnRef(aboutCardId?: string): string {
   return aboutCardId ? `${CAPTAIN_TURN_REF}:card:${aboutCardId}` : CAPTAIN_TURN_REF;
 }
 
-/** The card a parked captain turn's ref names, if any. */
 export function aboutCardIdFromRef(ref: string | null | undefined): string | undefined {
   const prefix = `${CAPTAIN_TURN_REF}:card:`;
   if (!ref?.startsWith(prefix)) return undefined;
@@ -265,7 +262,6 @@ export function renderWake(wake: string | Pick<WakeEnvelope, "facts" | "ways" | 
   }
 }
 
-/** The carriers' words: each wraps the words of the guidance it carries. */
 const CARRIER_WORDS: KindWords<CarrierFacts> = {
   "responses-cancelled": (facts, wake) =>
     `${typeof facts.guidance === "string" ? facts.guidance : renderWake({ facts: facts.guidance, ways: wake.ways })}\n\nThe first mate cancelled response requests ${facts.requests.join(", ")}. Their history remains; do not submit new answers for those requests.`,
@@ -320,7 +316,6 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
   return words(facts, wake);
 }
 
-/** One inbox row as the drain serves it: its prose, and the row it came from. */
 export type DrainedWake = {
   id: number;
   ref: string | null;

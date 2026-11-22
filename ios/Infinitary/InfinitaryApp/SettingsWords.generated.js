@@ -12485,11 +12485,8 @@ ${events}` : prompt;
      * Code the person installed (F14), so a Mac without it says so here.
      */
     unavailable: object({ note: string(), detail: string() }).optional(),
-    /** Whether credentials are currently configured. */
     connected: boolean(),
-    /** Which auth type is active when connected. */
     activeAuthType: _enum(["oauth", "api_key"]).optional(),
-    /** Whether the provider charges by use rather than supplying a subscription allowance. */
     billedPerToken: boolean()
   });
   const authPromptSchema = object({
@@ -12710,14 +12707,11 @@ ${events}` : prompt;
   });
   const batchSendBackSchema = object({
     taskId: string(),
-    /** The version sent back. */
     head: string(),
     reason: string(),
     at: number(),
-    /** The batch's pull request, where it was opened. */
     number: number().int().positive().optional(),
     url: string().nullable().optional(),
-    /** The batch's checks that failed at the held version. */
     failed: array(string()),
     /**
      * The batch's checks that were cancelled, skipped or unfinished there;
@@ -13677,7 +13671,6 @@ ${events}` : prompt;
     label: stopLabelSchema,
     check: stopCommandSchema,
     remove: stopCommandSchema,
-    /** The kept folder for the job's files. */
     folder: string().min(1).max(4096),
     /** The system account the job runs as: the one the crewmate's shell runs as there. */
     account: string().max(256),
@@ -14056,7 +14049,6 @@ ${events}` : prompt;
   const forgeSignInStateSchema = _enum(["ok", "needs_reauth", "unavailable", "unknown"]);
   const forgeServerViewSchema = object({
     kind: string().min(1).max(32),
-    /** What that kind of server is called ("GitHub Enterprise"). */
     name: string().min(1).max(64),
     /** This kind also offers browser sign-in with a registered application. */
     browser: boolean().optional()
@@ -14075,7 +14067,6 @@ ${events}` : prompt;
     since: number().int().nonnegative(),
     /** Public application identifier, never an application secret. */
     applicationId: string().max(256).optional(),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional(),
     /** The sign-in is GitHub CLI's, asked each time it is needed; absent for the app's own. */
     way: _enum(["cli"]).optional()
@@ -14083,7 +14074,6 @@ ${events}` : prompt;
   const forgeHostViewSchema = object({
     host: string().min(1).max(253),
     name: string().min(1).max(64),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional()
   }).strict();
   const forgeSignInFlowSchema = object({
@@ -14372,7 +14362,6 @@ ${events}` : prompt;
     windows: array(quotaWindowViewSchema),
     /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
     credits: quotaCreditsViewSchema.optional(),
-    /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
     savedResets: quotaSavedResetsViewSchema.optional(),
     /**
      * The account's Keep going on credits switch is on, as the vault holds it
@@ -16051,7 +16040,6 @@ ${events}` : prompt;
   const categoriesSchema = (value) => object({ input: value, output: value, cacheRead: value, cacheWrite: value });
   const usageAmountSchema = object({
     tokens: categoriesSchema(number()),
-    /** Records summed here. */
     records: number(),
     /** Records that reported any token count. */
     counted: number(),
@@ -16133,7 +16121,6 @@ ${events}` : prompt;
      * estimate, so either unit can name its own three largest.
      */
     places: array(usagePlaceSchema),
-    /** Where it went, by project and kind of work. */
     where: usageWhereSchema,
     /** Tasks finished in the period and kind of work. */
     finished: number(),

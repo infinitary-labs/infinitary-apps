@@ -37,7 +37,6 @@ const WORK_REQUEST: ActionException = [
   "A crewmate's own work, asked by the computer that runs it; not an app setting",
 ];
 
-/** The captain's own clicks and picks on a card. */
 // i18n-exempt: an inventory reason the channel parity test reads, never shown
 const CARD_CLICKS: ActionException = ["consent", "Captain card clicks"];
 

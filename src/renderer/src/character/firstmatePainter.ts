@@ -372,7 +372,6 @@ export type Sim = {
   wink: number;
   happy: number;
   eye: { x: number; y: number };
-  /** The pointer's pull on the gaze. */
   pointer: PointerGaze;
   /** Offscreens for the composited halo; allocated the first time it glows. */
   glow: GlowBuffers | null;
@@ -701,7 +700,6 @@ export function drawFrame(
   sim.b += (cur.sb * cinchB.spin + (wp?.sb ?? 0)) * dt;
   sim.hs += dt * sim.vel * cur.flat;
 
-  // The gaze: directed by state and emote, wandering when idle.
   if (state === "listening") sim.gaze.look(0, 0);
   else if (state === "working")
     sim.gaze.look(cinchB.look[0] * (1 - ck), cinchB.look[1] - 0.75 * ck);
@@ -890,7 +888,6 @@ export function drawFrame(
       py += noise1(tSec * 13 + i * 5.7) * jit * R;
     }
     if (wp && wp.jitter > 0.0005) {
-      // The tunnel's tremble at warp speed.
       const [nx, ny] = warpJitter(tSec, i);
       px += nx * wp.jitter * R;
       py += ny * wp.jitter * R;
@@ -1250,7 +1247,6 @@ export function drawFrame(
       ctx.arc(e.x, e.y + rw * 0.7, rw * 1.15, Math.PI * 1.15, Math.PI * 1.85);
       ctx.stroke();
     } else if (open < 0.12) {
-      // Closed: a calm line.
       ctx.strokeStyle = fmRgbaOf(eyeCol, 0.8 * light);
       ctx.lineWidth = Math.max(1.2, rw * 0.4);
       ctx.beginPath();

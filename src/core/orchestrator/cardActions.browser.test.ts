@@ -189,7 +189,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     });
     expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
 
-    // "Leave waiting" on a second hand-off card goes back to the crewmate.
     await h.emitCard.run(REQUEST);
     h.specs.at(-1)?.onReport?.("The sign-in card is up again.");
     await h.endTurn();
@@ -212,7 +211,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
   it("pauses the browser before the request card goes up, and the captain's click hands it over in silence", async () => {
     const h = await crewmateWithBrowser();
     h.browsers.requestHelp.mockImplementationOnce(async (taskId: string) => {
-      // The card is not up yet while the browser pauses.
       h.calls.push(`pause ${taskId} with ${h.saved() ? "a card" : "no card"}`);
       h.held.current = true;
       return { ok: true, handle: { session: "run-1", generation: 2 } };
@@ -291,7 +289,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     h.shown.fact = { ...OPEN, control: "captain" };
     expect(h.saved()?.id).toBe(card.id);
 
-    // A reply from beside the page tells the crewmate who holds its browser.
     h.supervisor.cardActions.replyToCard(card.id, "Which email should I use?");
     await tick();
     expect(h.crewmate.promptCalls.at(-1)).toContain(THREAD_BROWSER_HELD);
@@ -299,8 +296,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.endTurn();
     expect(h.saved()?.id).toBe(card.id);
 
-    // Return control with words left in the field: the card leaves, and the
-    // one wake carries the words.
     const prompts = h.crewmate.promptCalls.length;
     h.supervisor.cardActions.holdReturnWords(h.taskId, "  I used my work email.  ");
     const returned = {
@@ -322,7 +317,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
         },
       }),
     );
-    // The words went with that return: the next one carries none.
     await h.endTurn();
     h.supervisor.cardActions.browserReturned(h.taskId, {
       ...returned,
@@ -356,7 +350,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     expect(h.saved()?.id).toBe(card.id);
     expect(h.saved()?.body).toContain("Choose Organization");
 
-    // A request under a new id asks again, which the browser refuses while he holds it.
     h.browsers.requestHelp.mockResolvedValueOnce({
       ok: false,
       text: "the captain already has control of this task's browser.",
@@ -428,7 +421,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await tick();
     await tick();
     expect(h.saved()).toBeUndefined();
-    // Its crewmate hears the choice and that its browser was gone, once, on its lane.
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(h.crewmate.promptCalls.at(-1)).toBe(
       renderWake({
@@ -501,7 +493,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     const card = h.saved();
     await h.endTurn();
     const prompts = h.crewmate.promptCalls.length;
-    // The captain stopped it from the view, and nothing opened it again.
     h.shown.fact = {
       state: "stopped",
       site: "aurora.example",
@@ -604,8 +595,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     expect(() =>
       h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION, "frame"),
     ).toThrow("available only from the card controls");
-    // The captain's click gives the card's own browser the saved sign-in and opens its view;
-    // the captain never takes control.
     expect(h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION)).toEqual({
       effect: {
         kind: "open",
@@ -668,7 +657,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     expect(answer.text).toContain(
       "Your browser uses no saved sign-in for aurora.example, so saved_failed marked nothing.",
     );
-    // A card without the word marks nothing.
     const plain = await crewmateWithBrowser({ marks: true });
     await plain.emitCard.run(REQUEST);
     expect(plain.browsers.markSavedSignInFailed).not.toHaveBeenCalled();
@@ -826,7 +814,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     h.supervisor.cardActions.pageUnanswered(h.taskId, unanswered);
     await tick();
     expect(told()).toEqual([wake]);
-    // The same outage again, once the turn ended, is not new.
     await h.endTurn();
     h.supervisor.cardActions.pageUnanswered(h.taskId, unanswered);
     await tick();
@@ -851,7 +838,6 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
         .filter((card) => card.taskId === h.taskId)
         .map((card) => card.title);
     expect(open()).toEqual([REQUEST.title, "The fare on aurora.example"]);
-    // He took the browser from the record, never pressing the card's action.
     h.shown.fact = { ...OPEN, control: "captain" };
     const prompts = h.crewmate.promptCalls.length;
     h.supervisor.cardActions.browserReturned(h.taskId, {
@@ -860,10 +846,8 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       once: "browser-returned:run-1:2:1",
     });
     await tick();
-    // The request is answered and leaves; the card that asked nothing stays.
     expect(open()).toEqual(["The fare on aurora.example"]);
     expect(h.supervisor.cards.snapshot().map((card) => card.title)).not.toContain(REQUEST.title);
-    // Its crewmate hears only the return's one wake, never a choice he did not make.
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(h.crewmate.promptCalls.at(-1)).toBe(
       renderWake({
@@ -938,7 +922,6 @@ describe("a task's own browser (docs/task-browser.md)", () => {
     expect(bare.specs.at(-1)?.browser).toBeUndefined();
     expect(bare.sessionSpecs.at(-1)?.shell).toBeUndefined();
     expect(bare.sessionSpecs.at(-1)?.instructions.base).not.toContain(CREWMATE_BROWSER_LINE);
-    // Its card tool offers the browser button only beside a browser.
     const emitCardOf = (harness: typeof h) =>
       harness.sessionSpecs.at(-1)?.tools.find((tool) => tool.name === "emit_card");
     expect(emitCardOf(h)?.parameters.properties).toHaveProperty("browser_button");
@@ -1010,7 +993,6 @@ describe("a task's own browser (docs/task-browser.md)", () => {
         session: "run-1",
         generation: 2,
       });
-      // It is part of what the card offers, and no action of the card.
       const offer = cardStore
         .observations(card?.id ?? "")
         .find((observation) => observation.kind === "offer");

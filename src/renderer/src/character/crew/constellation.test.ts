@@ -144,7 +144,6 @@ describe("programsOf", () => {
   });
 });
 
-/** `n` running parts, in the order filed. */
 const live = (n: number): ProgramPart[] =>
   Array.from({ length: n }, (_, i) => ({ id: `p${i}`, state: "live" }));
 
@@ -191,7 +190,6 @@ describe("layoutProgram", () => {
         expect(second.radius - first.radius).toBeGreaterThanOrEqual(
           CONSTELLATION.ringStepPx - 1e-9,
         );
-      // Every part has its own place on a ring.
       const { places } = layoutProgram(live(n), root);
       expect(places.size).toBe(n);
     }
@@ -254,7 +252,6 @@ describe("the program on the orbit", () => {
     seedCrew(model, tasks, 0);
     const frame = model.update(0, true);
     const [program] = frame.programs;
-    // The finished finders and the unstarted synthesis draw nothing.
     expect(program?.nodes.map((n) => n.id)).toEqual(["verify-a", "verify-b"]);
     expect(program?.rings).toHaveLength(1);
     for (const id of ["verify-a", "verify-b"]) {
@@ -262,7 +259,6 @@ describe("the program on the orbit", () => {
       const mate = frame.crew.find((c) => c.id === id);
       expect(mate?.x).toBeCloseTo(node?.x ?? Number.NaN);
       expect(mate?.y).toBeCloseTo(node?.y ?? Number.NaN);
-      // Each circles the mark, a ring's width from it.
       const reach = Math.hypot(
         (mate?.x ?? 0) - (program?.x ?? 0),
         (mate?.y ?? 0) - (program?.y ?? 0),
@@ -365,7 +361,6 @@ describe("the program on the orbit", () => {
       "wait:869>886",
       "wait:911>886",
     ]);
-    // The part stays on its ring rather than circling its blocker.
     const node = program?.nodes.find((n) => n.id === "869");
     const mate = frame.crew.find((c) => c.id === "869");
     expect(mate?.x).toBeCloseTo(node?.x ?? Number.NaN);
@@ -620,7 +615,6 @@ describe("every mark names its task", () => {
       expect(marks.has(id), id).toBe(true);
       expect(facts[id]?.task.id, id).toBe(id);
     }
-    // Pointing at a root ring or a seated part reads that task.
     for (const program of frame.programs) {
       expect(crewHit(stageMarks(frame), program.x, program.y)).toBe(program.id);
       for (const node of program.nodes)

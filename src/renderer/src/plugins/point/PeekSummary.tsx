@@ -118,6 +118,18 @@ function holderOf(peek: NonNullable<TaskPeek>): Element {
   return "anchor" in peek ? peek.anchor : peek.frame;
 }
 
+/** How far each element around a holder was scrolled, the page's own scroller among them. */
+type ScrollPlaces = ReadonlyMap<Element, { left: number; top: number }>;
+
+/** Where every element that can carry `holder` by scrolling stands scrolled now. */
+function scrollPlaces(holder: Element): ScrollPlaces {
+  const places = new Map<Element, { left: number; top: number }>();
+  for (let around = holder.parentElement; around; around = around.parentElement) {
+    places.set(around, { left: around.scrollLeft, top: around.scrollTop });
+  }
+  return places;
+}
+
 /** What a peek rests on: a task key, in a card's body or in the window, or a task in a panel's page. */
 type PeekKind = "key" | "page";
 const kindOf = (peek: NonNullable<TaskPeek>): PeekKind => ("page" in peek ? "page" : "key");
@@ -136,18 +148,18 @@ export function PeekSummary() {
   const openRef = useRef(open);
   openRef.current = open;
   const resting = pointed === null ? null : kindOf(pointed);
-  // Where the task's holder stood when its box was measured, read in the
-  // same task that set it. The window hears a scroll at its next frame,
-  // after the scroll itself: a frame whose key the keyboard brought into
-  // view can report that key, already in its new place, first.
-  const measured = useRef<{ peek: NonNullable<TaskPeek>; left: number; top: number } | null>(null);
+  // How far everything around the task's holder was scrolled when its box
+  // was measured, read in the same task that set it. The window hears a
+  // scroll at its next frame, after the scroll itself: a frame whose key the
+  // keyboard brought into view can report that key, already in its new
+  // place, first.
+  const measured = useRef<{ peek: NonNullable<TaskPeek>; scrolls: ScrollPlaces } | null>(null);
   useLayoutEffect(() => {
     if (!pointed) {
       measured.current = null;
       return;
     }
-    const { left, top } = holderOf(pointed).getBoundingClientRect();
-    measured.current = { peek: pointed, left, top };
+    measured.current = { peek: pointed, scrolls: scrollPlaces(holderOf(pointed)) };
   }, [pointed]);
   useEffect(() => {
     if (!resting) return;
@@ -163,16 +175,23 @@ export function PeekSummary() {
       if (openRef.current) event.stopPropagation();
       letGo();
     };
-    // A scroll carries the task away only if it moved the holder since the
-    // task's box was measured.
+    // A scroll carries the task away only if what scrolled has moved since
+    // the task's box was measured. The holder's own place is no witness:
+    // the stage easing into place moves it with nothing scrolled, and a
+    // scroll heard late would read that move as its own. A holder's own
+    // scroll moves what is inside it, never the holder.
     const onScroll = (event: Event) => {
       const at = taskPeek.get();
       const holder = at && holderOf(at);
-      if (!holder || !(event.target instanceof Node && event.target.contains(holder))) return;
+      const { target } = event;
+      if (!holder || target === holder || !(target instanceof Node && target.contains(holder))) {
+        return;
+      }
+      const scroller = target === document ? document.scrollingElement : target;
       const from = measured.current;
-      if (from?.peek === at) {
-        const { left, top } = holder.getBoundingClientRect();
-        if (left === from.left && top === from.top) return;
+      if (from?.peek === at && scroller instanceof Element) {
+        const was = from.scrolls.get(scroller);
+        if (was?.left === scroller.scrollLeft && was.top === scroller.scrollTop) return;
       }
       letGo();
     };

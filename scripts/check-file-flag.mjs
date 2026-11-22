@@ -7,6 +7,8 @@
  * CHECK_FILES, and
  *
  * - adds the label LABEL and one comment naming the check files it edits;
+ * - labels a pull request GitHub lists only in part too, since its unlisted
+ *   files may be check files, and says so in that comment;
  * - removes the label, and says so in that comment, once a later version no
  *   longer edits check files;
  * - otherwise changes nothing.

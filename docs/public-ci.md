@@ -58,6 +58,7 @@ Set the destination's fork run approval to "Require approval for all external co
 Approve a run only when the change leaves the check files alone, and read any change to them before approving.
 The check files are what decide which checks run, where they run and what installs: `.github/`, `scripts/`, every `package.json` and `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/`, `packaging/` and the `electron-builder*.yml` files.
 `check-file-flag.yml` marks such a pull request before anyone approves a run: it labels it `edits checks` and names its check files in one comment, and removes the label once a later version edits none (`scripts/check-file-flag.mjs`).
+It also labels a pull request whose changed files GitHub lists only in part, since GitHub lists at most 3,000, and says so in that comment.
 It marks and never fails or blocks a pull request, and leaves the project's own pull requests alone.
 Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script, never the pull request's code, uses no secret beyond its own token, holds only issue writes, and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
 Started by hand with a pull request number, it reads any pull request of the project, its own included, so the flag can be proved before an outside copy exists.

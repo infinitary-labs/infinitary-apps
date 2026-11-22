@@ -305,8 +305,8 @@ export type HostBrowserOpen = HostPageEvents & {
    */
   viewport: HostBrowserViewport;
   /**
-   * `page` is the address of the top-level document that asked, when the
-   * engine knows it: a page's own requests to a server on this computer
+   * `page` is the address of the document that asked, or of its page, as
+   * the engine knows it: a page's own requests to a server on this computer
    * that its top-level move reached go through, and no other's
    * (docs/task-browser.md, "Where a page may go").
    */

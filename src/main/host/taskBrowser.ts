@@ -3,7 +3,6 @@ import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { GUARD_SIGN_IN_HOST } from "@core/browser/connectionGuard";
-import { originKey } from "@core/browser/destinations";
 import {
   FORM_RESEND,
   type HostBrowserCookies,
@@ -123,21 +122,22 @@ let signInsAnswered = false;
 const WEB_NAVIGATION = /^https?:/i;
 
 /**
- * The address of the top-level document a request came from: a page's own
- * requests to a server on this computer its top-level move reached go
- * through, and no other's. A new document can ask for its parts before the
- * browser records its address, while its frame still reads the page before
- * it or nothing, so a request the browser says a document at the very
- * origin it asks started (its initiator, which no page sets and no referrer
- * policy hides) counts as that document's.
+ * The address of the document a request came from: a page's own requests to
+ * a server on this computer its top-level move reached go through, and no
+ * other's. The browser names the document that started a request (its
+ * initiator, which no page sets and no referrer policy hides), and that
+ * decides; a frame's recorded address can still read the page before a new
+ * document, or nothing, while that document asks for its parts, so it
+ * decides only a request the browser started with no initiator. An opaque
+ * initiator ("null") names no page.
  */
-function topPageOf(details: {
-  url: string;
-  initiatorOrigin?: string;
-  frame?: Electron.WebFrameMain | null;
-}): { page?: string } {
-  if (details.initiatorOrigin && sameOriginKey(details.initiatorOrigin, details.url)) {
-    return { page: details.initiatorOrigin };
+function topPageOf(details: { initiatorOrigin?: string; frame?: Electron.WebFrameMain | null }): {
+  page?: string;
+} {
+  if (details.initiatorOrigin !== undefined) {
+    return details.initiatorOrigin && details.initiatorOrigin !== "null"
+      ? { page: details.initiatorOrigin }
+      : {};
   }
   try {
     const page = details.frame?.top?.url;
@@ -145,15 +145,6 @@ function topPageOf(details: {
   } catch {
     // A frame that went away mid-request has no address to read.
     return {};
-  }
-}
-
-function sameOriginKey(origin: string, url: string): boolean {
-  try {
-    return originKey(new URL(origin)) === originKey(new URL(url));
-  } catch {
-    // An opaque initiator ("null") names no origin.
-    return false;
   }
 }
 

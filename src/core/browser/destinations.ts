@@ -187,7 +187,7 @@ export type PageRequest = {
   url: string;
   /** Whether it loads a page's own top-level document: a link, a redirect, a typed address. */
   topLevel: boolean;
-  /** The address of the top-level document that asked, when the engine knows it. */
+  /** The address of the document that asked, or of its page, as the engine knows it. */
   page?: string;
 };
 

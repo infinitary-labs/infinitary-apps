@@ -35,7 +35,7 @@ name: phone
 # INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
 # chooser builds the passes its device jobs ran and deals them into jobs of at most 14 recorded minutes, each device
 # past a job's first counted as 2 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546), one phone Mac each, side
-# by side, each stopped at 25 minutes.
+# by side, each stopped at 25 minutes, the first of several at 37, since it builds and shares the app first (INF-6039).
 # The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
 on:
   workflow_call:

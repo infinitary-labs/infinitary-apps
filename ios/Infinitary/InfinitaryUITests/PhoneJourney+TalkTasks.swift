@@ -43,8 +43,7 @@ extension PhoneJourney {
         XCTAssertTrue(waiting.waitForAbsence(timeout: 10), "A tap on the row closes its Start instead of opening it")
         XCTAssertFalse(app.buttons["close-record"].exists, "The tap opened no record")
         // The long press: the Mac's menu for a Backlog row that waits on another task.
-        waitForSteadyTarget(row)
-        row.press(forDuration: 1.2)
+        pressRow(row)
         let drop = moveEntry("Drop task")
         XCTAssertTrue(drop.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(moveEntry("Open record").exists, app.debugDescription)
@@ -90,8 +89,7 @@ extension PhoneJourney {
         tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
         // The long press offers that Start too, and one press sends the same start with no ask.
-        waitForSteadyTarget(work)
-        work.press(forDuration: 1.2)
+        pressRow(work)
         let pressed = moveEntry("Start")
         XCTAssertTrue(pressed.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(pressed.isEnabled, "The long press's Start runs where the row's does")
@@ -108,6 +106,17 @@ extension PhoneJourney {
         return try XCTUnwrap(seeded["done"] as? String)
     }
 
+    /// INF-6075: a task row's long press, held three seconds. UIKit opens the row's menu only when its long-press timer
+    /// runs on the app's main thread; a lift that reaches the app before then reads as a tap on the row, which opens its
+    /// record instead. XCTest lifts at a fixed time whatever the app is doing, so on a busy runner a main thread that stops
+    /// from just after touch-down until past a 1.2 s lift turns the press into that tap (phone run 44991488174, where it
+    /// stopped 0.17 s after touch-down for 1.35 s). Held three seconds, the touch is still down when the stopped thread
+    /// resumes, so the timer runs first and the menu opens, as it does for a finger that keeps holding.
+    private func pressRow(_ row: XCUIElement) {
+        waitForSteadyTarget(row)
+        row.press(forDuration: 3)
+    }
+
     /// The captain's "long press on a task row in the ios app should at least give all the actions i can take when hovering
     /// the same task row in desktop app tasks panel": a Done row, which the Mac's board offers no menu for, keeps Open
     /// record and pins from its long press as the Mac's row does at rest, and a pinned Done row unpins the same way.
@@ -117,8 +126,7 @@ extension PhoneJourney {
         tapOnPhone(done)
         let row = app.buttons["task-\(id)"]
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
-        waitForSteadyTarget(row)
-        row.press(forDuration: 1.2)
+        pressRow(row)
         let pin = moveEntry("Pin")
         XCTAssertTrue(pin.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(moveEntry("Open record").exists, "A Done row keeps Open record")
@@ -128,8 +136,7 @@ extension PhoneJourney {
         XCTAssertTrue(pinned.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertLessThan(pinned.frame.minY, row.frame.minY, "The Done row lists under Pinned")
-        waitForSteadyTarget(row)
-        row.press(forDuration: 1.2)
+        pressRow(row)
         let unpin = moveEntry("Unpin")
         XCTAssertTrue(unpin.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(moveEntry("Open record").exists, "A pinned Done row keeps Open record")
@@ -146,8 +153,7 @@ extension PhoneJourney {
         let row = app.buttons["task-\(id)"]
         let pinned = app.descendants(matching: .any).matching(identifier: "group-pinned").firstMatch
         XCTAssertFalse(pinned.exists, "Nothing is pinned yet")
-        waitForSteadyTarget(row)
-        row.press(forDuration: 1.2)
+        pressRow(row)
         let pin = moveEntry("Pin")
         XCTAssertTrue(pin.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(pin)
@@ -156,8 +162,7 @@ extension PhoneJourney {
         XCTAssertLessThan(pinned.frame.minY, app.buttons["group-backlog"].frame.minY, "Pinned sits above every group")
         XCTAssertLessThan(pinned.frame.minY, row.frame.minY, "The row lists under Pinned")
         picture("tasks-pinned")
-        waitForSteadyTarget(row)
-        row.press(forDuration: 1.2)
+        pressRow(row)
         let unpin = moveEntry("Unpin")
         XCTAssertTrue(unpin.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(unpin)

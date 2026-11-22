@@ -103,8 +103,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const bases = gate.filter((step) => step.name === "Find the change's base");
     expect(bases).toHaveLength(BRANCH_CHECK.length);
     const [base] = bases;
-    expect(base?.run).toBeDefined();
-    for (const other of bases) expect(other.run).toBe(base?.run);
+    expect(base?.uses).toBe("./.github/actions/change-base");
+    for (const other of bases) {
+      expect(other.uses).toBe(base?.uses);
+      expect(other.with).toEqual(base?.with);
+    }
     // INF-2441 (captain's choice: "Run the tests that read each changed file
     // inside the pull request's build check"): the pull request's round of
     // the unit, integration and browser tests that read a changed file
@@ -224,15 +227,19 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // sweeps are the next case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
+    // The base step is the shared action, which reads the ref the change left.
     const from = eventName === "pull_request" ? "HEAD^1" : "origin/main";
-    const found = base?.run?.trim().replace('"$FROM"', from);
+    for (const step of bases)
+      expect(workflowValue(step.with?.from ?? "", { github: { event_name: eventName } })).toBe(
+        from,
+      );
     for (const { id, name, runs } of machines)
       expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
         !change || !BRANCH_CHECK.includes(id)
           ? [install]
           : id === "code-checks"
-            ? [found, notes?.run, phoneFlag?.run, install]
-            : [found, paths?.run, install],
+            ? [notes?.run, phoneFlag?.run, install]
+            : [paths?.run, install],
       );
     const checks = machines
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
@@ -297,9 +304,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         id,
       ).toEqual(["actions/checkout", "Find the change's base"]);
     }
-    const base = loadCi().jobs["code-checks"]?.steps.find((step) => step.id === "base");
+    // The base step is the shared action, so no job runs a script of its own.
     expect(ciJobs("push", false, undefined, held).map(({ id, runs }) => [id, runs])).toEqual(
-      BRANCH_CHECK.map((id) => [id, [base?.run?.trim().replace('"$FROM"', "origin/main")]]),
+      BRANCH_CHECK.map((id) => [id, []]),
     );
     // The batch's own run reads the notes and the phone contract flag from
     // the main version the batch left, which the check skips here.
@@ -598,7 +605,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
  * them.
  */
 describe("the change's base (ci.yml)", () => {
-  const step = loadCi().jobs["code-checks"]?.steps.find((s) => s.name === "Find the change's base");
+  // The three jobs share one composite action; its script is what runs.
+  const action = loadYamlFile(".github/actions/change-base/action.yml") as {
+    runs: { steps: { run?: string }[] };
+  };
+  const step = action.runs.steps[0];
 
   function scratch() {
     const dir = scratchDir("infinitary-change-base-");

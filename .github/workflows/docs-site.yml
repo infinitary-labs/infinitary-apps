@@ -7,7 +7,9 @@ name: docs-site
 # checks' tests and a publish rehearsal. It holds no secret and publishes
 # nothing (docs-site-publish.yml publishes, from main); the app's own check (ci.yml) skips its build for a
 # change that touches only the site (scripts/pr-paths.ts), and main's
-# desktop release check never starts for one (main.yml).
+# desktop release check never starts for one (main.yml). The site reads the
+# catalog's folder names only, never a message, and a new language also adds
+# its words file under docs-site/, so message edits start nothing here.
 on:
   push:
     branches:
@@ -23,7 +25,6 @@ on:
       - ".github/workflows/docs-site.yml"
       - "scripts/docs-site-whats-new.ts"
       - "src/shared/i18n/languages.ts"
-      - "src/shared/i18n/messages/**"
       - "release-notes/archive.json"
       - "release-notes/releases/**"
   pull_request:
@@ -37,7 +38,6 @@ on:
       - ".github/workflows/docs-site.yml"
       - "scripts/docs-site-whats-new.ts"
       - "src/shared/i18n/languages.ts"
-      - "src/shared/i18n/messages/**"
       - "release-notes/archive.json"
       - "release-notes/releases/**"
 

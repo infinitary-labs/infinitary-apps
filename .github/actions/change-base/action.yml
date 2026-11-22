@@ -1,0 +1,30 @@
+name: Find the change's base
+description: Name the commit a branch's change starts from, and the batch version it is built on, if any.
+inputs:
+  from:
+    description: The ref the change left, origin/main for a pushed branch and HEAD^1 for a pull request's merge commit
+    required: true
+outputs:
+  batch:
+    description: The batch version the branch is built on; empty when it is built on none
+    value: ${{ steps.find.outputs.batch }}
+runs:
+  using: composite
+  steps:
+    - id: find
+      shell: bash
+      env:
+        FROM: ${{ inputs.from }}
+      run: |
+        left=$(git merge-base "$FROM" HEAD)
+        base=$left
+        for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
+          if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
+            base=$batch
+          fi
+        done
+        echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
+        if [ "$base" != "$left" ]; then
+          echo "batch=$base" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Checked in the batch::This branch is built on the batch version $base, so the batch's own run checks it with every change beside it once it joins, and this check skips its other steps."
+        fi

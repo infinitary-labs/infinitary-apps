@@ -324,6 +324,10 @@ public enum PhoneMessages {
     public static func `cardBrowserActualSize`() -> String { PhoneWords.format("cardBrowserActualSize", []) }
     public static func `cardBrowserBack`() -> String { PhoneWords.format("cardBrowserBack", []) }
     public static func `cardBrowserBackToCard`() -> String { PhoneWords.format("cardBrowserBackToCard", []) }
+    public static func `cardBrowserBlockedInsecure`(`site`: String) -> String { PhoneWords.format("cardBrowserBlockedInsecure", [`site`]) }
+    public static func `cardBrowserBlockedLocal`(`site`: String) -> String { PhoneWords.format("cardBrowserBlockedLocal", [`site`]) }
+    public static func `cardBrowserBlockedLocalHeld`(`site`: String) -> String { PhoneWords.format("cardBrowserBlockedLocalHeld", [`site`]) }
+    public static func `cardBrowserBlockedPrivate`(`site`: String) -> String { PhoneWords.format("cardBrowserBlockedPrivate", [`site`]) }
     public static func `cardBrowserCopyAddress`() -> String { PhoneWords.format("cardBrowserCopyAddress", []) }
     public static func `cardBrowserFit`() -> String { PhoneWords.format("cardBrowserFit", []) }
     public static func `cardBrowserForward`() -> String { PhoneWords.format("cardBrowserForward", []) }
@@ -4411,6 +4415,10 @@ extension PhoneWords {
         "cardBrowserActualSize": [],
         "cardBrowserBack": [],
         "cardBrowserBackToCard": [],
+        "cardBrowserBlockedInsecure": ["site"],
+        "cardBrowserBlockedLocal": ["site"],
+        "cardBrowserBlockedLocalHeld": ["site"],
+        "cardBrowserBlockedPrivate": ["site"],
         "cardBrowserCopyAddress": [],
         "cardBrowserFit": [],
         "cardBrowserForward": [],

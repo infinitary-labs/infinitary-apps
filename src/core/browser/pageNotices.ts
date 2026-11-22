@@ -1,4 +1,5 @@
 import { HERE } from "@shared/deviceNames";
+import type { TaskBrowserBlock } from "@shared/taskBrowser";
 import { TASK_BROWSER_PAGES_MAX } from "@shared/taskBrowser";
 import { cutText } from "@shared/textCut";
 import type { HostBrowserRefusal } from "../host";
@@ -84,6 +85,32 @@ const BLOCKED_WORDS: readonly [Blocked["kind"], readonly [string, string]][] = [
     ],
   ],
 ];
+
+/**
+ * What the crewmate's first look after the captain returned its browser
+ * says when the page is on an address the browser refuses, so it shows the
+ * browser engine's own refusal (docs/task-browser.md, "A page on a refused
+ * address"). What the page asked for in the captain's time is his, but the
+ * page it rests on is a fact of the page as it is now. It names the host and
+ * port alone: the rest of the address may carry a sign-in's code.
+ */
+export function blockedPageWords(block: {
+  kind: TaskBrowserBlock;
+  host: string;
+  origin: string;
+}): string {
+  // i18n-exempt: served only to the crewmate's model
+  const lead = `This page is the browser's own refusal of ${block.host}`;
+  // i18n-exempt: served only to the crewmate's model
+  switch (block.kind) {
+    case "local":
+      return `${lead}, another server on ${HERE.this} that this task has not opened, so nothing from it loaded; a sign-in often ends at such an address. To let it load, open that server with ${browserCommand(`open ${block.origin}`)}, then go ${browserCommand("back")} to load this page again with its whole address, which you are not shown. If it still does not finish, ask the captain on a card to sign in again.`;
+    case "private":
+      return `${lead}, an address on ${HERE.this}'s network or another private one, so nothing from it loaded. ${ALLOW_WORDS}`;
+    case "insecure":
+      return `${lead}, a website over plain http, so nothing from it loaded. This browser reaches public websites only over https.`;
+  }
+}
 
 /** What the browser refused of a site on its own, as the crewmate reads it. */
 export function refusalWords(refusal: HostBrowserRefusal): string {

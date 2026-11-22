@@ -188,6 +188,13 @@ export type HostBrowserNetwork =
 export type HostPageEvents = {
   /** The top frame committed a new document (a link, a redirect, a script). */
   onNavigated: (url: string) => void;
+  /**
+   * The top frame's load of `url` failed, and the page now shows the
+   * browser's own error page at that address, such as its refusal of an
+   * address this task may not reach (docs/task-browser.md, "A page on a
+   * refused address"). It is no new document of the site's.
+   */
+  onLoadFailed: (url: string) => void;
   /** The page raised a dialog; the host dismissed it. */
   onDialog: (kind: string, message: string) => void;
   /**
@@ -297,7 +304,13 @@ export type HostBrowserOpen = HostPageEvents & {
    * captain's maximized view gives it (docs/task-browser.md, "The view").
    */
   viewport: HostBrowserViewport;
-  allow: (request: { url: string; topLevel: boolean }) => boolean;
+  /**
+   * `page` is the address of the document that asked, or of its page, as
+   * the engine knows it: a page's own requests to a server on this computer
+   * that its top-level move reached go through, and no other's
+   * (docs/task-browser.md, "Where a page may go").
+   */
+  allow: (request: { url: string; topLevel: boolean; page?: string }) => boolean;
   proxy: HostBrowserProxy;
   onRefused: (refusal: HostBrowserRefusal) => void;
   /**

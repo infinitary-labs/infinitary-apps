@@ -203,6 +203,15 @@ export function toldWords(told: TaskBrowserTold): string {
   return `${told.site} asked for a passkey. ${why}, so it told the site none is available. Look on the page for a password or a code.`;
 }
 
+/**
+ * Why a page's own address is one its browser refuses
+ * (docs/task-browser.md, "Where a page may go"): another server on the
+ * browser's computer the task has not opened, an address on a private
+ * network, or a website over plain http.
+ */
+export const TASK_BROWSER_BLOCKS = ["local", "private", "insecure"] as const;
+export type TaskBrowserBlock = (typeof TASK_BROWSER_BLOCKS)[number];
+
 export const taskBrowserFactSchema = z.discriminatedUnion("state", [
   z.object({
     state: z.literal("open"),
@@ -273,6 +282,14 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      * (docs/task-browser.md, "Starting a page again").
      */
     starting: z.literal(true).optional(),
+    /**
+     * The page is on an address its browser refuses, so it shows the
+     * browser's own refusal (docs/task-browser.md, "A page on a refused
+     * address"): another server on the browser's computer, a private
+     * network, or a website over plain http. Read off the page's address as
+     * it is now, so it goes once the page moves on.
+     */
+    blocked: z.enum(TASK_BROWSER_BLOCKS).optional(),
     ...browserIdentity,
   }),
   z.object({
@@ -654,6 +671,30 @@ export function unansweredWords(
   return driver === "crewmate"
     ? m.cardBrowserUnansweredWorking({ site })
     : m.cardBrowserUnansweredAsked({ site });
+}
+
+/**
+ * The view's line while its page is on an address the browser refuses
+ * (docs/task-browser.md, "A page on a refused address"): the page shows the
+ * browser engine's own error, so the line says in Infinitary's words what
+ * was blocked and why, and while the captain holds a page a program on its
+ * computer blocked, that returning control lets the crewmate open it.
+ */
+export function blockedWords(
+  site: string,
+  block: TaskBrowserBlock,
+  driver: TaskBrowserDriver,
+): string {
+  switch (block) {
+    case "local":
+      return driver === "captain"
+        ? m.cardBrowserBlockedLocalHeld({ site })
+        : m.cardBrowserBlockedLocal({ site });
+    case "private":
+      return m.cardBrowserBlockedPrivate({ site });
+    case "insecure":
+      return m.cardBrowserBlockedInsecure({ site });
+  }
 }
 
 /**

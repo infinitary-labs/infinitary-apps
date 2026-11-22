@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "Taille réelle";
 "cardBrowserBack" = "Précédent";
 "cardBrowserBackToCard" = "Revenir à la carte";
+"cardBrowserBlockedInsecure" = "Infinitary a bloqué %1$@ : les navigateurs de tâche n’ouvrent les sites web qu’en https.";
+"cardBrowserBlockedLocal" = "Infinitary a bloqué %1$@, un programme sur l’ordinateur du navigateur que l’équipier n’a pas encore ouvert.";
+"cardBrowserBlockedLocalHeld" = "Infinitary a bloqué %1$@, un programme sur l’ordinateur du navigateur. Rendez le contrôle, et l’équipier pourra laisser la page l’atteindre.";
+"cardBrowserBlockedPrivate" = "Infinitary a bloqué %1$@, une adresse sur un réseau privé. Un navigateur de tâche n’atteint un site privé que par son nom, une fois que vous autorisez ce nom dans les Réglages.";
 "cardBrowserCopyAddress" = "Copier l’adresse de la page";
 "cardBrowserFit" = "Ajuster";
 "cardBrowserForward" = "Suivant";

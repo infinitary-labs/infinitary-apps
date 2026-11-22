@@ -595,6 +595,78 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
 }
 
 /**
+ * A sign-in that returns to a program on this computer (docs/task-browser.md,
+ * "Where a page may go"). A brief carrying this marker and an account page
+ * this Mac serves ("sign in for a program at http://127.0.0.1:PORT/") opens
+ * the task's browser there and asks the captain to sign in, never opening
+ * the program's own address first. Woken by Return control, it takes its
+ * fresh look, opens the sign-in page again, and reports what the program's
+ * page said, read off that look, never assumed.
+ */
+export const TASK_BROWSER_LOCAL_RETURN_MARKER = "sign in for a program at ";
+export const MOCK_LOCAL_RETURN_CARD_TITLE = "Sign in so the program can finish its sign-in";
+export const MOCK_LOCAL_RETURN_ASKED_REPORT = "I asked the captain to sign in for the program.";
+export const MOCK_LOCAL_RETURN_REPORT = "The sign-in came back to the program.";
+/** The words the report puts before each answer it quotes. */
+export const MOCK_LOCAL_RETURN_SAID = "The program's page said";
+
+function taskBrowserLocalReturnStep(body: string): ScriptedCall[] | undefined {
+  const ask = body.match(/sign in for a program at (http:\/\/127\.0\.0\.1:\d+\/)/);
+  if (!ask) return undefined;
+  const url = ask[1] as string;
+  const messages = providerMessages(body);
+  const wake = messages.findIndex(
+    (message) => message.role === "user" && message.text.includes(BROWSER_RETURNED_OPENING),
+  );
+  if (wake === -1) {
+    if (calledTool(body, "report")) return undefined;
+    switch (toolAnswers(messages).length) {
+      case 0:
+        return [browser("open", url)];
+      case 1:
+        return [
+          {
+            name: "emit_card",
+            args: {
+              id: "program-sign-in",
+              title: MOCK_LOCAL_RETURN_CARD_TITLE,
+              body: "<p>The program needs your sign-in on this page, which then returns to it.</p>",
+              browser_handoff: {
+                site: new URL(url).host,
+                reason: "The program needs your sign-in",
+                after: "check that the program finished its sign-in",
+              },
+              actions: [
+                { id: "leave", label: MOCK_LEAVE_WAITING },
+                {
+                  id: "sign-in",
+                  label: BROWSER_SIGN_IN_STEP,
+                  default: true,
+                  effect: { kind: "open", target: "browser" },
+                },
+              ],
+            },
+          },
+        ];
+      default:
+        return [{ name: "report", args: { text: MOCK_LOCAL_RETURN_ASKED_REPORT } }];
+    }
+  }
+  const after = toolAnswers(messages, wake);
+  if (after.some((text) => text.startsWith("Reported."))) return undefined;
+  const look = after[0];
+  if (look === undefined) return [browser()];
+  if (after.length === 1) return [browser("open", url)];
+  const said = look.match(/Program [a-z ]+/)?.[0] ?? look.split("\n").slice(0, 3).join(" | ");
+  return [
+    {
+      name: "report",
+      args: { text: `${MOCK_LOCAL_RETURN_REPORT} ${MOCK_LOCAL_RETURN_SAID} "${said}".` },
+    },
+  ];
+}
+
+/**
  * A sign-in kept on this Mac reaches a later task (docs/task-browser.md,
  * "Signed-in sites"). A brief carrying this marker and a club page this Mac
  * serves ("use the club page at http://127.0.0.1:PORT/ as ...") opens the
@@ -1009,6 +1081,7 @@ const JOURNEYS: ReadonlyArray<
   [TASK_BROWSER_WATCH_MARKER, taskBrowserWatchStep, true],
   [TASK_BROWSER_SAVED_MARKER, taskBrowserSavedStep, false],
   [TASK_BROWSER_HANDOFF_MARKER, taskBrowserHandoffStep, false],
+  [TASK_BROWSER_LOCAL_RETURN_MARKER, taskBrowserLocalReturnStep, false],
   [TASK_BROWSER_TAKE_MARKER, taskBrowserTakeStep, false],
   [TASK_BROWSER_FENCE_MARKER, taskBrowserFenceStep, false],
   [TASK_BROWSER_CARD_MARKER, taskBrowserCardStep, false],

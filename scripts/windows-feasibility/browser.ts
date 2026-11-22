@@ -62,6 +62,7 @@ async function observeBrowser(evidence: string) {
       onRefused: (refusal) => refusals.push(refusal),
       onDownload: () => undefined,
       onNavigated: () => {},
+      onLoadFailed: () => {},
       onDialog: () => {},
       onFileChooser: () => {},
       onPicker: () => {},

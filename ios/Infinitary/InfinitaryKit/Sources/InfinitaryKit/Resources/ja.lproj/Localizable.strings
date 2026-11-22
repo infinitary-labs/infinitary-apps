@@ -300,6 +300,10 @@
 "cardBrowserActualSize" = "実際のサイズ";
 "cardBrowserBack" = "戻る";
 "cardBrowserBackToCard" = "カードに戻る";
+"cardBrowserBlockedInsecure" = "Infinitary が %1$@ をブロックしました。タスクのブラウザーは https のウェブサイトだけを開きます。";
+"cardBrowserBlockedLocal" = "Infinitary が %1$@ をブロックしました。ブラウザーのコンピューター上の、乗組員がまだ開いていないプログラムです。";
+"cardBrowserBlockedLocalHeld" = "Infinitary が %1$@ をブロックしました。ブラウザーのコンピューター上のプログラムです。操作を返すと、乗組員がページからそこへ届くようにできます。";
+"cardBrowserBlockedPrivate" = "Infinitary がプライベートネットワーク上のアドレス %1$@ をブロックしました。タスクのブラウザーは、プライベートなサイトに名前でだけ届きます。その名前を設定で許可してください。";
 "cardBrowserCopyAddress" = "ページのアドレスをコピー";
 "cardBrowserFit" = "合わせる";
 "cardBrowserForward" = "進む";

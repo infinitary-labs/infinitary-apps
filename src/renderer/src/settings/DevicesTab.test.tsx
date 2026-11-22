@@ -44,7 +44,6 @@ import {
  */
 
 const NOW = new Date(2026, 9, 3, 15, 20, 0).getTime();
-/** A Mac that controls this Firstmate, open on it now. */
 const AIR: DeviceView = {
   id: "air",
   kind: "view",
@@ -55,7 +54,6 @@ const AIR: DeviceView = {
   controlling: true,
 };
 const LINK = `infinitary://join?as=view&at=192.168.1.20%3A47623&key=${"K".repeat(43)}&code=${"C".repeat(43)}`;
-/** Another user on this Mac that runs work, in reach, running one task of website. */
 const BUILDER: DeviceView = {
   id: "builder",
   kind: "work",
@@ -67,7 +65,6 @@ const BUILDER: DeviceView = {
   tasks: 1,
   runs: ["website"],
 };
-/** Another Mac that runs work, out of reach since 14:02, running website and api. */
 const MINI: DeviceView = {
   id: "mini",
   kind: "work",
@@ -95,12 +92,10 @@ function acts(html: string, id?: string): string[] {
   return found ? found.split(" ") : [];
 }
 
-/** A device's mono line and its head's status, as the row draws them. */
 function lines(device: DeviceView) {
   return { identity: deviceIdentity(device, NOW), status: deviceStatus(device, NOW).text };
 }
 
-/** The words a row shows, without the parts the detail line is drawn in. */
 function words(html: string) {
   return html.replace(/<[^>]*>/g, "");
 }
@@ -171,7 +166,6 @@ describe("Settings -> Devices", () => {
     expect(words(html)).toContain(
       `a computer · joined today ${new Date(AIR.pairedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
     );
-    // Remove waits alone in the row's ⋯ menu, named for the computer.
     expect(acts(html)).toEqual(["remove"]);
     expect(html).toContain('aria-label="MacBook Air actions"');
     expect(html).toContain("A computer");
@@ -371,7 +365,6 @@ describe("Settings -> Devices", () => {
     expect(html).toContain("The other computer&#x27;s address");
     expect(html).toContain("The one you use with SSH. Remote Login must be on there.");
     expect(html).toContain('placeholder="you@mini.local"');
-    // Nothing typed yet: Add it waits for an address.
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Add it<\/button>/);
   });
 
@@ -394,7 +387,6 @@ describe("Settings -> Devices", () => {
     expect(html).toContain("kun@Studio.local");
     expect(html).toContain("kun@Kuns-Mac-mini.local");
     expect(html).not.toContain(nearbyMacsWords.looking);
-    // Only the Mac mini is on the list already.
     expect(html.match(/data-device-nearby-on-list/g)).toHaveLength(1);
     const mini = html.slice(html.indexOf('data-device-nearby-mac="Kuns-Mac-mini.local"'));
     expect(mini.slice(0, mini.indexOf("</button>"))).toContain(
@@ -496,7 +488,6 @@ describe("Settings -> Devices", () => {
     });
     expect(settingUp).toContain(">Mac mini<");
     expect(settingUp).toContain(remoteLoginWords.settingUpRow("Mac mini"));
-    // How far the copy has gone: the bytes sent so far, then starting it there.
     const sending = render({
       adding: [
         {
@@ -526,7 +517,6 @@ describe("Settings -> Devices", () => {
     const added = { ...MINI, inReach: true, remoteLogin: "sam@mini.local" };
     const updating = render({ devices: [added], updating: [added.id] });
     expect(updating).toContain("Updating Infinitary on Mac mini…");
-    // While it updates, it cannot be removed.
     expect(acts(updating)).not.toContain("remove");
   });
 
@@ -538,10 +528,8 @@ describe("Settings -> Devices", () => {
     expect(strandedLine(builder)).toBe(
       "It still looks for this computer at its old address. A new command run as Builder brings it back.",
     );
-    // Out of reach for any other reason, or back in reach, it says nothing of the address.
     expect(strandedLine(MINI)).toBeNull();
     expect(strandedLine({ ...MINI, inReach: true, addressChanged: true })).toBeNull();
-    // A new command once this Mac's address changed, for another Mac or that user.
     expect(wayBack(MINI)).toBeNull();
     expect(wayBack({ ...MINI, addressChanged: true })).toEqual({
       label: "Make a command",
@@ -566,7 +554,6 @@ describe("Settings -> Devices", () => {
       identity: `a computer · joined today ${time(MINI.pairedAt)}`,
       status: "out of reach",
     });
-    // Out of reach for any other reason, or in reach, it says nothing of this.
     expect(heldLine(MINI)).toBeNull();
     expect(heldLine({ ...held, inReach: true })).toBeNull();
     const html = render({ devices: [held] });
@@ -577,7 +564,6 @@ describe("Settings -> Devices", () => {
     );
     expect(acts(html)).toContain("remove");
     expect(render({ devices: [MINI] })).not.toContain("by its address<");
-    // Asked in place: where to reach it with SSH, as the user it runs work as.
     const asking = render({ devices: [held], changing: held.id });
     expect(asking).toContain(`data-device-address-change="${held.id}"`);
     expect(asking).toContain(">Where to reach Mac mini<");
@@ -586,7 +572,6 @@ describe("Settings -> Devices", () => {
     expect(asking).toContain(">Add it<");
     expect(asking).toContain(">Cancel<");
     expect(acts(asking)).not.toContain("remove");
-    // Added there, its own row says where that stands, with no reason and no button.
     const finding = render({
       devices: [held],
       adding: [{ address: "sam@mini.local", stage: "finding", name: "Mac mini", deviceId: "mini" }],
@@ -619,7 +604,6 @@ describe("Settings -> Devices", () => {
     );
     expect(acts(html)).toContain("remove");
 
-    // Held on the local network, its own line says why, and Fix it comes before Add it by its address.
     const held: DeviceView = {
       ...imac,
       heldOnLocalNetwork: true,
@@ -629,7 +613,6 @@ describe("Settings -> Devices", () => {
     const heldHtml = render({ devices: [held] });
     expect(heldHtml).toContain('data-device-held=""');
     expect(heldHtml.indexOf(">Fix it<")).toBeLessThan(heldHtml.indexOf("Add it by its address<"));
-    // While its work is starting it says so, with no Fix it; in reach, nothing.
     const starting: DeviceView = { ...imac, workSetup: { state: "starting" } };
     expect(deviceState(starting)).toEqual({ text: "setting up", tone: "idle" });
     expect(render({ devices: [starting] })).not.toContain(">Fix it<");
@@ -641,14 +624,12 @@ describe("Settings -> Devices", () => {
     const at = { ...MINI, remoteLogin: "sam@mini.local" };
     const row = (ssh: DeviceView["ssh"], extra: Partial<DeviceView> = {}) =>
       lines({ ...at, ...extra, ...(ssh ? { ssh } : {}) });
-    // Named by its address on its mono line; where its connection stands is its status.
     expect(row({ state: "connected" }, { inReach: true, tasks: 0 })).toEqual({
       identity: "a computer · sam@mini.local",
       status: "idle",
     });
     expect(row({ state: "connecting" }).status).toBe("connecting");
     expect(row({ state: "reconnecting" }, { seenAt: NOW }).status).toBe("Reconnecting via SSH");
-    // Starting at the next login, and could not start, are two things.
     expect(row({ state: "at-login" }).status).toBe("starts the next time sam logs in there");
     expect(row({ state: "not-started" }).status).toBe("could not start");
     expect(
@@ -668,7 +649,6 @@ describe("Settings -> Devices", () => {
     expect(reconnecting).not.toContain("Bring it back");
     expect(acts(reconnecting)).toContain("address");
 
-    // Stopped: why, in warn, with Try again beside it; Change address and Remove wait in the menu.
     const stopped = { ...at, ssh: { state: "stopped" as const, reason: "host-changed" as const } };
     expect(sshStoppedLine(stopped)).toBe(
       sshConnectionWords
@@ -719,7 +699,6 @@ describe("Settings -> Devices", () => {
       adding: [{ address: "sam@mini.local", stage: "reaching", deviceId: "mini" }],
     });
     expect(reaching).toContain("Reaching sam@mini.local with your SSH key…");
-    // No second row stands in the list for it.
     expect(reaching).not.toContain("data-device-adding");
     const finding = render({
       devices: [byAddress],
@@ -727,7 +706,6 @@ describe("Settings -> Devices", () => {
     });
     expect(finding).toContain("Telling Mac mini where this computer is now…");
     expect(finding).not.toContain("data-device-adding");
-    // Its own row says how far the copy has gone too.
     const sending = render({
       devices: [byAddress],
       adding: [
@@ -742,7 +720,6 @@ describe("Settings -> Devices", () => {
     });
     expect(sending).toContain(remoteLoginWords.sendingRow("Mac mini", 5_000_000));
     expect(sending).not.toContain("data-device-adding");
-    // While it works there is no state and no Remove.
     for (const html of [reaching, finding, sending]) {
       expect(html).not.toContain(">out of reach<");
       expect(acts(html)).not.toContain("remove");
@@ -754,7 +731,6 @@ describe("Settings -> Devices", () => {
       adding: [{ address: "sam@mini.local", stage: "reaching" }],
     });
     expect(typed).toContain('data-device-adding="sam@mini.local"');
-    // A computer the list does not hold yet says the same on that row.
     const unlisted = render({
       devices: [],
       adding: [{ address: "sam@mini.local", stage: "finding", name: "Mac mini", deviceId: "mini" }],
@@ -792,7 +768,6 @@ describe("Settings -> Devices", () => {
     expect(html).toContain(`aria-label="${markup(remoteLoginWords.passwordField("sam"))}"`);
     expect(html).toContain(">Add it<");
     expect(html).toContain(">Cancel<");
-    // Nothing is said wrong until a password did not work, and none is in the field.
     expect(html).not.toContain("data-device-password-refusal");
     expect(html).toContain('value=""');
     const [what, todo] = remoteLoginWords.refused("password-wrong", { address: "sam@mini.local" });
@@ -893,7 +868,6 @@ describe("Settings -> Devices", () => {
     expect(html).toContain("Runs website · Signed in to Codex and GitHub");
     expect(html).toContain(">1 task<");
     expect(html).toContain("Mac mini");
-    // Out of reach is said once, on its head, with since when.
     expect(html).toContain(`>out of reach since ${time(MINI.seenAt ?? 0)}<`);
     expect(html).toContain("Runs website and api");
     expect(acts(html, "builder")).toContain("remove");
@@ -926,7 +900,6 @@ describe("Settings -> Devices", () => {
     expect(deviceSummary({ ...BUILDER, removal: "cleaning-up" }, undefined)).toBe(
       "Removing what Infinitary set up as Builder…",
     );
-    // Waiting: out of reach on its head, and a strip that says it goes when back, with Keep it.
     const waiting = render({ devices: [{ ...MINI, removal: "when-back" }] });
     expect(waiting).toContain(`>out of reach since ${time(MINI.seenAt ?? 0)}<`);
     expect(waiting).toMatch(
@@ -966,7 +939,6 @@ describe("Settings -> Devices", () => {
     expect(render({ devices: [{ ...connecting, removal: "when-back" }] })).toContain(
       "It is removed when it is back.",
     );
-    // The dot is grey while it connects, orange once it is out of reach.
     expect(render({ devices: [connecting] })).toContain('data-device-dot="" data-tone="idle"');
     expect(render({ devices: [{ ...remote, ssh: { state: "stopped" } }] })).toContain(
       'data-device-dot="" data-tone="warn"',
@@ -981,7 +953,6 @@ describe("Settings -> Devices", () => {
     const html = render({ devices: [older] });
     expect(html).toContain("Has Infinitary 0.1.20, older than this computer&#x27;s.");
     expect(html).not.toContain("It takes no new work");
-    // It still takes work: in reach, its tasks on the right.
     expect(html).toContain('data-tone="ok"');
     expect(html).toContain(">1 task<");
     expect(html).toContain(
@@ -1024,7 +995,6 @@ describe("Settings -> Devices", () => {
       }),
     ).toBe("Has Infinitary 0.1.31, newer than this computer's.");
 
-    // While it updates, it says so in place of its version, with no Update or Remove.
     const updating = render({ devices: [older], updating: [older.id] });
     expect(updating).toContain("Updating Infinitary on Running as Builder…");
     expect(updating).not.toContain("Has Infinitary");
@@ -1061,7 +1031,6 @@ describe("Settings -> Devices", () => {
   it("lists the version of each copy on a device, marking an app behind this computer's", () => {
     const behind = (html: string) => html.includes("data-behind");
     const said = (html: string) => words(html).replaceAll("&#x27;", "'");
-    // The user's Mac user that only controls, still on 0.8.3.
     const older = render({ devices: [{ ...AIR, appVersion: { app: "0.8.3", than: "older" } }] });
     expect(said(older)).toContain("Its app has Infinitary 0.8.3, older than this computer's.");
     expect(behind(older)).toBe(true);
@@ -1077,7 +1046,6 @@ describe("Settings -> Devices", () => {
     });
     expect(said(phone)).toContain("Its app has version 0.1.0 (212).");
     expect(behind(phone)).toBe(false);
-    // A Mac whose app and work both run this computer's version: a mark on its mono line, no sentence.
     const mac: DeviceView = {
       ...BUILDER,
       kind: "mac",
@@ -1094,7 +1062,6 @@ describe("Settings -> Devices", () => {
       / · Infinitary 0\.8\.4$/,
     );
 
-    // Its app behind while its work is current: both said, the line marked.
     const split = render({ devices: [{ ...mac, appVersion: { app: "0.8.3", than: "older" } }] });
     expect(said(split)).toContain(
       "Its app has Infinitary 0.8.3, older than this computer's. Its work runs Infinitary 0.8.4, as this computer does.",
@@ -1343,7 +1310,6 @@ describe("Settings -> Devices", () => {
         onThisMac: true,
       })?.text,
     ).toBe("Running as Builder is set up. It runs work only, and has no sign-ins yet.");
-    // One already on the list that found this Mac again with a new command.
     expect(
       feedLineFrom({
         type: "device_joined",

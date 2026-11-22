@@ -38,6 +38,7 @@ On a new Mac or x64 Linux computer, Infinitary's first launch shows the address 
 It shows this computer's private network address first, such as Tailscale's, then its address on the local network, each with **Copy**.
 Once the computer where your first mate lives adds it, that window opens your first mate by itself, as long as nothing was set up in it yet.
 A window where you already signed in, added a project or talked to its first mate keeps its own first mate, and so does a window beside an Infinitary you started yourself from Terminal.
+If Infinitary was closed on that computer when it was added, it opens your first mate the next time it starts, whatever was set up in it.
 A Windows PC and an Arm Linux computer join with **Paste its link** instead.
 
 Under the address, **Can't turn on Remote Login there?** offers two other ways.

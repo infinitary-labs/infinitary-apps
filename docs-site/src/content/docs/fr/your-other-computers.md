@@ -39,6 +39,7 @@ Sur un nouveau Mac ou un nouvel ordinateur Linux x64, le premier lancement d’I
 Il affiche d’abord l’adresse de cet ordinateur sur le réseau privé, comme celle de Tailscale, puis son adresse sur le réseau local, chacune avec **Copier**.
 Une fois que l’ordinateur où vit votre second l’a ajouté, cette fenêtre ouvre votre second d’elle-même, tant que rien n’y a encore été configuré.
 Une fenêtre où vous vous êtes déjà connecté, avez ajouté un projet ou parlé à son second garde son propre second, tout comme une fenêtre à côté d’un Infinitary que vous avez lancé vous-même depuis Terminal.
+Si Infinitary était fermé sur cet ordinateur quand il a été ajouté, il ouvre votre second au prochain lancement, quoi qu’on y ait configuré.
 Un PC Windows et un ordinateur Linux Arm rejoignent plutôt avec **Coller son lien**.
 
 Sous l’adresse, **Impossible d’y activer la Session à distance ?** propose deux autres façons.

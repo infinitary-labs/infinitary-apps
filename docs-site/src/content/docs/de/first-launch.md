@@ -48,6 +48,7 @@ Unter den Anbieter-Schaltflächen steht eine zweite Gruppe: „Dein erster Offiz
 Auf einem Mac oder einem x64-Linux-Computer steht **Vom Computer deines ersten Offiziers einrichten** an erster Stelle: Es zeigt die Adresse dieses Computers, die du auf dem Computer eintippst, auf dem dein erster Offizier lebt.
 Sobald jener Computer diesen hinzufügt, öffnet dieses Fenster deinen ersten Offizier von selbst, solange darin noch nichts eingerichtet wurde, etwa eine Anmeldung oder ein Projekt.
 Ein Fenster, in dem du schon etwas eingerichtet hast, behält seinen eigenen ersten Offizier: Steuere dann mit **Link einfügen** oder **Über die Adresse beitreten** stattdessen jenen ersten Offizier von hier aus.
+War Infinitary geschlossen, als jener Computer diesen hinzugefügt hat, öffnet es beim nächsten Start deinen ersten Offizier, egal was darin eingerichtet wurde.
 Ein Fenster neben einem Infinitary, das du selbst im Terminal gestartet hast, behält dessen ersten Offizier und bietet keinen der beiden Wege an; beende zuerst jenes Infinitary, um sie zu nutzen.
 Ein Windows-PC und ein Arm-Linux-Computer zeigen nur die anderen beiden Wege.
 Siehe [Deine anderen Computer](/de/your-other-computers/).

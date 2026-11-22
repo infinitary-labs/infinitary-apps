@@ -330,9 +330,9 @@ export class JoinedHome {
 
   /**
    * The grant this app kept its own first mate beside (`keepOwn`), or null.
-   * A note that cannot be read is null too: it only spares a check, since
-   * nothing adopts a grant without confirming nothing was done here first
-   * (`Shell.start`, `Shell.followAdded`; docs/view.md, "Following along").
+   * A note that cannot be read is null too, so a window that kept its own
+   * first mate then opens as the home's view at its next start, since
+   * `Shell.start` adopts a waiting grant at once (docs/view.md, "Following along").
    */
   keptOwnDeviceId(): string | null {
     const path = join(this.dir, KEPT_OWN_FILE);

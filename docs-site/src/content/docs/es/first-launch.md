@@ -48,6 +48,7 @@ Debajo de los botones de los proveedores, un segundo grupo dice «Tu primer ofic
 En una Mac o una computadora Linux x64, **Configurar desde la computadora de tu primer oficial** aparece primero: muestra la dirección de esta computadora para escribirla en la computadora donde vive tu primer oficial.
 Cuando esa computadora agrega esta, esta ventana abre a tu primer oficial por sí sola, siempre que todavía no se haya configurado nada en ella, como un inicio de sesión o un proyecto.
 Una ventana en la que ya configuraste algo conserva su propio primer oficial: en ese caso, usa **Pegar su enlace** o **Unirse por su dirección** para controlar ese primer oficial desde aquí.
+Si Infinitary estaba cerrado cuando esa computadora agregó esta, abre a tu primer oficial la próxima vez que se inicie, sin importar lo que se haya configurado en él.
 Una ventana junto a un Infinitary que iniciaste tú mismo desde Terminal conserva el primer oficial de ese Infinitary y no ofrece ninguna de las dos formas; detén primero ese Infinitary para usarlas.
 Una PC con Windows y una computadora Linux Arm muestran solo las otras dos formas.
 Consulta [Tus otras computadoras](/es/your-other-computers/).

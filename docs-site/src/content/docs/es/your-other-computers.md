@@ -39,6 +39,7 @@ En una Mac nueva o una computadora Linux x64 nueva, el primer inicio de Infinita
 Muestra primero la dirección de esta computadora en la red privada, como la de Tailscale, y luego su dirección en la red local, cada una con **Copiar**.
 Cuando la computadora donde vive tu primer oficial la agrega, esa ventana abre a tu primer oficial por sí sola, siempre que todavía no se haya configurado nada en ella.
 Una ventana en la que ya iniciaste sesión, agregaste un proyecto o hablaste con su primer oficial conserva su propio primer oficial, y lo mismo pasa con una ventana junto a un Infinitary que iniciaste tú mismo desde Terminal.
+Si Infinitary estaba cerrado en esa computadora cuando se agregó, abre a tu primer oficial la próxima vez que se inicie, sin importar lo que se haya configurado en él.
 Una PC con Windows y una computadora Linux Arm se unen con **Pegar su enlace** en su lugar.
 
 Debajo de la dirección, **¿No puedes activar la Sesión remota allí?** ofrece otras dos formas.

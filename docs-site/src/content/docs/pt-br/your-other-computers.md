@@ -39,6 +39,7 @@ Em um Mac novo ou em um computador Linux x64 novo, a primeira abertura do Infini
 Ela mostra primeiro o endereço deste computador na rede privada, como o do Tailscale, e depois o endereço dele na rede local, cada um com **Copiar**.
 Assim que o computador onde seu imediato mora adicioná-lo, essa janela abre seu imediato sozinha, desde que nada tenha sido configurado nela ainda.
 Uma janela em que você já fez login, adicionou um projeto ou conversou com o imediato dela mantém o próprio imediato, e o mesmo vale para uma janela ao lado de um Infinitary que você mesmo iniciou pelo Terminal.
+Se o Infinitary estava fechado naquele computador quando ele foi adicionado, ele abre seu imediato na próxima vez que iniciar, seja o que for que tenha sido configurado nele.
 Um PC com Windows e um computador Linux Arm entram com **Colar o link dele**.
 
 Abaixo do endereço, **Não dá para ativar o Login Remoto lá?** oferece outros dois jeitos.

@@ -39,6 +39,7 @@ Auf einem neuen Mac oder x64-Linux-Computer zeigt der erste Start von Infinitary
 Es zeigt zuerst die Adresse dieses Computers im privaten Netzwerk, etwa die von Tailscale, dann seine Adresse im lokalen Netzwerk, jeweils mit **Kopieren**.
 Sobald der Computer, auf dem dein erster Offizier lebt, ihn hinzufügt, öffnet jenes Fenster deinen ersten Offizier von selbst, solange darin noch nichts eingerichtet wurde.
 Ein Fenster, in dem du dich schon angemeldet, ein Projekt hinzugefügt oder mit seinem ersten Offizier gesprochen hast, behält seinen eigenen ersten Offizier, und ebenso ein Fenster neben einem Infinitary, das du selbst im Terminal gestartet hast.
+War Infinitary auf jenem Computer geschlossen, als er hinzugefügt wurde, öffnet es beim nächsten Start deinen ersten Offizier, egal was darin eingerichtet wurde.
 Ein Windows-PC und ein Arm-Linux-Computer treten stattdessen mit **Link einfügen** bei.
 
 Unter der Adresse bietet **Kannst du dort „Entfernte Anmeldung“ nicht aktivieren?** zwei andere Wege.

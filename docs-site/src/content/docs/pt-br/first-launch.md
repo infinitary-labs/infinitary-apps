@@ -48,6 +48,7 @@ Abaixo dos botões dos provedores, um segundo grupo diz “Seu imediato está em
 Em um Mac ou em um computador Linux x64, **Configurar pelo computador do seu imediato** vem primeiro: ele mostra o endereço deste computador para digitar no computador onde seu imediato mora.
 Assim que aquele computador adicionar este, esta janela abre seu imediato sozinha, desde que nada tenha sido configurado nela ainda, como um login ou um projeto.
 Uma janela em que você já configurou algo mantém o próprio imediato: use **Colar o link dele** ou **Entrar pelo endereço** para controlar esse imediato daqui.
+Se o Infinitary estava fechado quando aquele computador adicionou este, ele abre seu imediato na próxima vez que iniciar, seja o que for que tenha sido configurado nele.
 Uma janela ao lado de um Infinitary que você mesmo iniciou pelo Terminal mantém o imediato dele e não oferece nenhum dos dois jeitos; encerre esse Infinitary primeiro para usá-los.
 Um PC com Windows e um computador Linux Arm mostram só os outros dois jeitos.
 Veja [Seus outros computadores](/pt-br/your-other-computers/).

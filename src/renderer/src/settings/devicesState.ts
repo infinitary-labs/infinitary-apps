@@ -151,7 +151,6 @@ type SetupStore = {
    */
   following: string[];
   updateCopy: Record<string, RemoteLoginCopy>;
-  /** Computers whose address is changing. */
   moving: MovingMac[];
   stopListening: (() => void) | null;
   addFrom: (address: string, stage?: AddingMac["stage"]) => void;
@@ -298,7 +297,6 @@ export type DevicesTabViewProps = {
    * by its address for one held on the local network.
    */
   changing: string | null;
-  /** Computers whose address is changing. */
   moving: MovingMac[];
   /** + A computer's address form is open. */
   askingAddress: boolean;
@@ -327,12 +325,10 @@ export type DevicesTabViewProps = {
   /** What the port field beside it holds, empty for SSH's own. */
   portDraft: string;
   onPortDraft: (port: string) => void;
-  /** The refusal's lines in that aside, or null while none is showing. */
   addressRefusal: readonly string[] | null;
   onAddressDraft: (address: string) => void;
   /** Add it's question for a Mac whose user runs another Firstmate's work, while open. */
   leaving: RemoteLoginLeaveQuestion | null;
-  /** Macs this Mac is adding by their address. */
   adding: AddingMac[];
   /** Computers whose Firstmate is updating, by id. */
   updating: string[];
@@ -363,7 +359,6 @@ export type DevicesTabViewProps = {
   onKeep: (deviceId: string) => void;
   /** Carry its tasks on's open question; absent where it cannot be asked. */
   carrying?: CarryAsk | null;
-  /** Opens Carry its tasks on's question, or closes it with null. */
   onAskCarry?: (ask: CarryAsk | null) => void;
   /** The captain's yes: the tasks of `from` continue on `to`. */
   onCarry?: (from: string, to: string) => void;
@@ -381,7 +376,6 @@ export type DevicesTabViewProps = {
    * there"); absent where it cannot be asked.
    */
   onUpdateApp?: (deviceId: string) => void;
-  /** Opens a computer's address question, or closes it with null. */
   onAskChangeAddress: (deviceId: string | null) => void;
   onChangeAddress: (deviceId: string, address: string) => void;
   /** Copy a link or a command from the ways section: makes one, copies it, opens the panel. */

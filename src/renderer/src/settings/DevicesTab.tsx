@@ -190,13 +190,11 @@ function HomeDevicesTab() {
   const [addressDraft, setAddressDraft] = useState("");
   /** The port beside it, empty for SSH's own; kept the same way. */
   const [portDraft, setPortDraft] = useState("");
-  /** Keeps an address in the two fields it was typed in. */
   const keepTyped = useCallback((address: string) => {
     const parts = addressParts(address);
     setAddressDraft(parts.address);
     setPortDraft(parts.port);
   }, []);
-  /** The refusal's lines, in that aside. Null until a try is refused. */
   const [addressRefusal, setAddressRefusal] = useState<readonly string[] | null>(null);
   /** A Cancel during a try ignores that try's refusal, so it does not reopen the aside. */
   const addressTry = useRef(0);
@@ -616,7 +614,6 @@ function HomeDevicesTab() {
     }
   }, []);
 
-  // Change address: its row says where this Mac looks; a refusal is said here too.
   const changeAddress = useCallback(
     async (deviceId: string, address: string) => {
       setProblem(null);

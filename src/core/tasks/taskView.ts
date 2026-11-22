@@ -61,7 +61,6 @@ export type Graph = {
   edgesOf?: ReadonlySet<string>;
 };
 
-/** A project's counts while it has no tasks. */
 const NO_COUNTS = { needsYou: 0, waitingOnYou: 0, open: 0, active: 0, doneRecent: 0 } as const;
 
 export function factsKey(facts: LiveFacts): string {
@@ -89,8 +88,6 @@ export function cardFactsOf(record: TaskRecord, graph: Graph): string {
       : false;
   return `${card?.id ?? ""}\0${card ? cardMerges(card) : false}\0${graph.durableDecisions.has(record.id)}\0${gateUp}`;
 }
-
-// ---- view building ------------------------------------------------------
 
 /**
  * The graph around these rows, read from them alone: the edges touching
@@ -454,8 +451,6 @@ function projectView(
     counts: counts.get(project.id) ?? NO_COUNTS,
   };
 }
-
-// ---- a row's marks ------------------------------------------------------
 
 /**
  * Where the row's wait on other work stops (`waitChainOf`), read from the

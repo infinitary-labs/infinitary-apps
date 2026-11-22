@@ -45,7 +45,6 @@ const ID = {
   kimi: "acct_km1",
   openrouter: "acct_or1",
 } as const;
-/** Every account the spec seeds: one row each on the tab. */
 const ACCOUNTS: string[] = Object.values(ID);
 
 function buildQuotaFixture(now: number): QuotaSnapshotView {
@@ -347,7 +346,6 @@ function row(page: Page, accountId: string): Locator {
   return page.locator(`[data-account-row="${accountId}"]`);
 }
 
-/** A pattern that finds any of `words`, each as written. */
 function anyOf(words: readonly string[]): RegExp {
   return new RegExp(words.map((text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"));
 }
@@ -546,7 +544,6 @@ test("the captain picks the account Firstmate answers on, apart from crew work's
     (accountId) => window.infinitary.settings.setFirstmateAccount(accountId),
     ID.codexPersonal,
   );
-  // The account dropdown sits beside the model's, in Firstmate's one row.
   const picker = page
     .locator('[data-setting="firstmate-model"]')
     .getByRole("combobox", { name: "First mate account" });
@@ -569,7 +566,6 @@ test("the captain picks the account Firstmate answers on, apart from crew work's
       .filter((account) => account.pinned)
       .map((account) => account.id);
   expect(await preferred()).toEqual([ID.codexPersonal]);
-  // The pick is what Settings shows after it is opened again.
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: "Intelligence" }).click();
@@ -660,7 +656,6 @@ test("Subscriptions renders model-only and incomplete allowance scope projection
     const { page } = app;
     // Wait for the shell to attach its keys before sending a window command.
     await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
-    // Open Settings and its Intelligence tab by keys, just as a captain does.
     await pressWindowKey(app.app, ",", ["meta"]);
     const tab = page.getByRole("tab", { name: "Intelligence" });
     await pressKey(tab, "Enter");

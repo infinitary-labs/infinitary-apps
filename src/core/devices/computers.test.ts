@@ -344,6 +344,41 @@ describe("each copy's version", () => {
 });
 
 /**
+ * A home run from source on the person's own data (`HostAppInfo.sourceOnOwnData`,
+ * INF-5635's plan, piece 1): its package.json version names no release, so it
+ * names none to compare (src/core/devices/homeDevices.ts), and an installed
+ * computer on its contract reads as current, never as newer with an
+ * Install older version to offer.
+ */
+describe("a home run from source", () => {
+  it("reads a computer on an installed release as current when both speak one contract", () => {
+    const { pairing, connection, computers } = homeAt("192.168.65.2", {
+      contract: PROTOCOL_VERSION,
+    });
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "Mac mini",
+        user: { name: "sam", uid: 501 },
+      },
+      shown(createKeyIdentity("Mac mini"), "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    const mini = joined.grant.deviceId;
+    connection.tell({ deviceId: mini, contact: "in-reach" });
+    connection.tellVersion(mini, {
+      contract: PROTOCOL_VERSION,
+      app: "0.8.6-alpha.16",
+      takesWork: true,
+    });
+    const row = computers.list().find((device) => device.id === mini);
+    expect(row?.otherVersion).toBeUndefined();
+    expect(row?.workVersion).toBe("0.8.6-alpha.16");
+  });
+});
+
+/**
  * A computer on this Mac's major whose hello lacks a change a crewmate turn
  * there needs (INF-5442 behavior 3): a task started there would only wait
  * for its update, so it takes no new work, and its row says so.

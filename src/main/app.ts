@@ -26,6 +26,7 @@ import {
   SAVED_DATA_REFUSAL_TITLE,
   UnsupportedSavedDataError,
 } from "@core/storage/savedDataCompatibility";
+import { keepRecordBeforeSourceRun } from "@core/storage/sourceRunCopy";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
 import { configureWindowsGit, findWindowsGit } from "@core/windowsGit";
@@ -490,10 +491,10 @@ export async function startApp(
 
   // userData is decided before anything reads it - above all before the
   // single-instance lock, which lives inside it (./userDataDir.ts). The
-  // release opens <appData>/infinitary; every other run - pnpm dev, the
-  // local dev bundle - opens <appData>/infinitary-dev. In dev, an isolated
-  // dir can be requested via INFINITARY_USER_DATA_DIR so e2e runs get fresh state
-  // without touching real data; packaged builds ignore it.
+  // release and pnpm dev open <appData>/infinitary, the person's own saved
+  // data; the local dev bundle opens <appData>/infinitary-dev. In dev, an
+  // isolated dir can be requested via INFINITARY_USER_DATA_DIR so e2e runs
+  // get fresh state without touching real data; packaged builds ignore it.
   const folderSpelling = folderSpellingFor({ packaged: app.isPackaged, env: process.env });
   const userDataChoice = chooseUserDataDir({
     packaged: app.isPackaged,
@@ -545,7 +546,9 @@ export async function startApp(
     app.setPath("userData", userDataChoice.dir);
   }
   const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
-  // The e2e that launches the dev flavor without an isolated dir still keeps
+  // pnpm dev on the person's own data folder: a run from source with nothing isolating it.
+  const sourceOnOwnData = !app.isPackaged && userDataChoice.kind === "flavor";
+  // The e2e that launches from source without an isolated dir still keeps
   // its window hidden (captain directive: e2e runs are windowless).
   const hideWindow =
     Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
@@ -689,7 +692,14 @@ export async function startApp(
   // A second run says so and exits.
   if (!app.requestSingleInstanceLock()) {
     if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
-    else app.quit();
+    else {
+      // One app writes a data folder: pnpm dev says in its terminal why it ended.
+      if (sourceOnOwnData)
+        console.warn(
+          `[data folder] Infinitary is already open on ${dataDir}; quit it to run this copy on your saved data.`,
+        );
+      app.quit();
+    }
   } else {
     // The launch that holds the folder clears what earlier ones left in its
     // own temporary folder; a window beside a run leaves it to the run.
@@ -1000,6 +1010,8 @@ export async function startApp(
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }
           : {}),
+        sourceOnOwnData,
+        flavor: work.place.flavor,
         frameLib,
         keychainProcessPath: join(mainDir, "keychainProcessMain.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
@@ -1304,6 +1316,26 @@ export async function startApp(
         if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
         else await showDataRefusal(hideWindow, refusal);
         return;
+      }
+      // Before a run from source first opens the person's own record, and
+      // before any run whose build would migrate it past what the installed
+      // app opens, it keeps a copy to go back to
+      // (src/core/storage/sourceRunCopy.ts); beside a command,
+      // the command's first mate holds the record and this window opens none.
+      if (sourceOnOwnData && !besideRun) {
+        try {
+          const kept = keepRecordBeforeSourceRun(dataDir);
+          if (kept)
+            console.warn(
+              `[data folder] Kept a copy of your saved record from before this source run in ${kept}. To go back, quit Infinitary and copy its files back into ${dataDir}.`,
+            );
+        } catch (error) {
+          console.warn(
+            `[data folder] Could not keep a copy of your saved record: ${(error as Error).message}`,
+          );
+          app.quit();
+          return;
+        }
       }
       try {
         await shell.start();

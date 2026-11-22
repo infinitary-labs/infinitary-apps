@@ -576,7 +576,8 @@
         "!tests/scale-check.test.ts",
         "!tests/browser-fresh-home.test.ts",
         "!tests/bundled-packages.test.ts",
-        "!tests/compile-cache.test.ts"
+        "!tests/compile-cache.test.ts",
+        "!tests/frame-lib.test.ts"
       ],
       "plugins": ["./tests/lint/unit-cohort.grit"]
     }

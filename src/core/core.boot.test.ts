@@ -965,6 +965,41 @@ describe("the captain's language choice at boot", () => {
   }, 60_000);
 });
 
+/**
+ * pnpm dev on the person's own data (INF-5635's plan, piece 1): the source's
+ * package.json version names no release, so the record keeps the version the
+ * installed app last opened it on, and the installed app's next start is no
+ * upgrade from the source's version.
+ */
+describe("a run from source on the person's own data", () => {
+  let core: Core | undefined;
+  let userDataDir: string;
+
+  afterEach(async () => {
+    await core?.dispose();
+    core = undefined;
+    await catalogRefreshesSettled();
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  it("leaves the version the installed app recorded as the record's last", async () => {
+    userDataDir = scratchDir("infinitary-core-source-run-");
+    process.env.PI_OFFLINE = "1";
+    const installed = fakeHost(userDataDir).host;
+    core = await startCore({ ...installed, app: { ...installed.app, version: "0.8.6-alpha.16" } });
+    const recorded = core.services.settings.getReleaseTracking();
+    expect(recorded.baseline?.version).toBe("0.8.6-alpha.16");
+    await core.dispose();
+
+    const source = fakeHost(userDataDir).host;
+    core = await startCore({
+      ...source,
+      app: { ...source.app, version: "0.1.30", sourceOnOwnData: true },
+    });
+    expect(core.services.settings.getReleaseTracking()).toEqual(recorded);
+  }, 60_000);
+});
+
 describe("unsupported saved work stops before services start", () => {
   it("leaves accounts, conversations and launch state untouched", async () => {
     const userData = scratchDir("fm-core-refusal-");

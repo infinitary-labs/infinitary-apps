@@ -37,7 +37,7 @@ export type WindowsCustodyApi = {
 };
 
 export type WindowsCustodyOptions = {
-  /** One name per app flavor, so a development run never reads the release root. */
+  /** One name per app flavor (`SECRETS_CUSTODY_NAMES`): the dev bundle never reads the release root. */
   name: string;
 };
 

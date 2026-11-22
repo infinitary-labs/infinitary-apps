@@ -65,7 +65,9 @@ Custody holds only what the owner cannot protect on its own: a 32-byte random ro
 Values never live in custody.
 An existing home keeps its two native items unchanged.
 A recovered home carries its root, authority head and directory identifier together inside the native root item, so their activation is one native write rather than a file-controlled pointer or a multi-item transaction.
-Each app flavor uses its own custody name, so a development run never reads the release root.
+Each app flavor uses its own custody name, so the local dev bundle and an isolated run from source never read the release root.
+`pnpm dev` on the person's own data folder is the release flavor for its folders and reads the release root, as the installed app does (`docs/saved-data-compatibility.md`, "A run from source").
+On a Mac every Electron signed with the local development identity shares one designated requirement, so an Always Allow the person gives `pnpm dev` on the release root lets every such build on that Mac read it.
 Every adapter reports what the platform answered (`value`, `absent`, `locked` or `unavailable`) and never falls back to a file, an environment variable or another store.
 
 On macOS, [`../src/main/host/darwinSecretCustody.ts`](../src/main/host/darwinSecretCustody.ts) keeps each slot as a generic password item in one keychain file it opens by its path, through Security.framework in the app's own process.
@@ -107,7 +109,7 @@ A missing root beside sealed records is `lost`, never silently replaced; only a 
 
 [`../src/main/host/nativeSecrets.ts`](../src/main/host/nativeSecrets.ts) composes the capability the app hands its core (`startApp`, `src/main/app.ts`).
 Only a run on the person's own data folder gets it: a run on an isolated folder (`INFINITARY_USER_DATA_DIR`) or a folder Chromium was given (`--user-data-dir`) gets none, so no check opens a native store unless it injects its own capability.
-The custody name is one per flavor (`SECRETS_CUSTODY_NAMES`): `Infinitary Secrets` for the release and `Infinitary Secrets (development)` for every development run.
+The custody name is one per flavor (`SECRETS_CUSTODY_NAMES`): `Infinitary Secrets` for the release and for `pnpm dev` on the person's own data, and `Infinitary Secrets (development)` for the local dev bundle and every isolated run from source.
 Renaming one loses every secret that flavor kept, because its sealed files then sit beside no root.
 On macOS the app composes the Keychain custody on the account's own login keychain, LocalAuthentication and an Unlock gesture in two parts.
 First a silent Keychain process reads that file's lock, and when it is locked, or its lock cannot be read, a fresh one unlocks that same file by its path with macOS's own dialog: the app's own process touched the store silently first, so it can never show that dialog itself ([architecture](architecture.md), "The latch").

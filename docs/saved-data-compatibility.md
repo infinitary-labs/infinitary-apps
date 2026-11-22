@@ -1,7 +1,7 @@
 # Saved-data compatibility
 
-Release and alpha installations share `<appData>/infinitary`.
-Development runs remain on `infinitary-dev`; nothing migrates between those roots.
+Release and alpha installations share `<appData>/infinitary`, and so does `pnpm dev` ("A run from source" below).
+The local dev bundle and isolated runs from source remain on `infinitary-dev`; nothing migrates between those roots.
 Each moves the Firstmate 3000 folder of its flavor, `firstmate-3000` or `firstmate-3000-dev`, into itself once ("The one-time move").
 An older app may open saved work only when it supports the persisted formats.
 Release names alone are not compatibility evidence.
@@ -33,6 +33,21 @@ A clone shares the file's blocks until either side changes, so a database of a g
 It does not register view functions, configure WAL, migrate, or rebuild views.
 This assumes startup owns the single-instance lock and no other process writes the app's state.
 The snapshot includes committed WAL state after an unclean shutdown; checking only the main database file would miss it.
+
+## A run from source
+
+`pnpm dev` opens the person's own folder, `<appData>/infinitary`, as the installed app does (`runFlavor`, `src/main/userDataDir.ts`).
+A newer source may migrate the record past what the installed app opens, and the guard above then refuses that app.
+So before a run from source first opens the record, and again before any run whose build would change how the record is saved, it keeps a copy to go back to in `before-source-run/` inside the folder (`keepRecordBeforeSourceRun`, `src/core/storage/sourceRunCopy.ts`): the database and its write-ahead log, the knowledge collection's, and the format marker, made while the run holds the single-instance lock and before services start.
+A build changes how the record is saved when it has a database migration the record or the knowledge collection has not had, or the record has no format marker yet (`formatChangeDue`); a database it cannot read is not one, since the guard refuses it and nothing migrates it, so it never replaces a good copy; a newer copy replaces the older one, so the copy is the record as it stood just before the newest such change.
+A folder with no record yet keeps no copy.
+The copy is made beside its place and moved there whole, so a start that ends partway keeps the older copy and the next start copies again; while a build changes nothing in how the record is saved, no later run from source copies again.
+The run says in its terminal where the copy is and that going back means quitting Infinitary and copying those files back into the folder.
+A run that cannot keep the copy quits without opening the record.
+A window beside a command's run opens no record of its own and keeps no copy.
+
+One app writes the folder: the installed app and `pnpm dev` share Chromium's single-instance lock inside it, so the second to start ends, and `pnpm dev` says in its terminal that the folder is already open; beside the installed app's command run, `pnpm dev`'s window joins it as a view.
+A run from source reports the package.json version, which names no release, so it records no launch in the release tracking (`docs/release-notes.md`) and its devices compare other computers by contract alone (`HostAppInfo.sourceOnOwnData`).
 
 ## Non-database formats
 
@@ -116,8 +131,8 @@ The hand-over window (`src/main/handOver.ts`, its page in `src/main/handOverPage
 It shows the move as it goes: the four steps - counting, copying, checking the copy, finishing - with the current one lit, the unit being copied by its kind and its place among its kind, with the task's short name (`the working copy of task 1a5a170a, 3 of 7`), the files and folders done of the total, the time so far and an estimate for the step at its pace so far, and why it takes this long.
 While it counts, copies and checks, Quit, continue later stops the move, which leaves nothing changed as above, and quits; closing the window does the same.
 It also shows the question, or why the move stopped with Try again; once the work is in it says so, turns on start at login where the older app had it, and starts the app again on its own folder.
-A development run opens `infinitary-dev` and first moves `firstmate-3000-dev` into it, so the move is rehearsed on a throwaway home whose `CFFIXED_USER_HOME` and `HOME` are scratch folders; the work mode makes its own move the same way.
-It may stand in Firstmate 3000's folders instead with `INFINITARY_FOLDER_SPELLING=fm` (`folderSpellingFor`, `src/main/userDataDir.ts`), which opens `firstmate-3000-dev` and moves nothing, to make an older profile to move.
+A run from source opens `infinitary` and first moves `firstmate-3000` into it, so the move is rehearsed on a throwaway home whose `CFFIXED_USER_HOME` and `HOME` are scratch folders; the work mode makes its own move the same way.
+It may stand in Firstmate 3000's folders instead with `INFINITARY_FOLDER_SPELLING=fm` (`folderSpellingFor`, `src/main/userDataDir.ts`), which opens `firstmate-3000` and moves nothing, to make an older profile to move.
 A packaged app ignores it, and a development run's hand-over leaves the computer's login items alone.
 
 A computer that only runs work opens no window, so its work run makes the same move of the whole folder before it starts, and hands its background to the new app's label in the new folder (`docs/helper.md`, "Under the other name").

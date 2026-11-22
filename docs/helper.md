@@ -28,7 +28,7 @@ Its words in Terminal are the design skill's `components/devices/AddAMac`; a per
 
 ## Where it keeps its data
 
-`userData/work/` for the app's flavor - `<appData>/infinitary/work` for the release, `<appData>/infinitary-dev/work` for every other build - in the home folder of the macOS user it runs as (`helperPlace`, `src/core/helper/place.ts`).
+`userData/work/` for the app's flavor - `<appData>/infinitary/work` for the release and for `pnpm dev`, `<appData>/infinitary-dev/work` for the local dev bundle and a run from source whose data or work a test isolated (`runFlavor`, `src/main/userDataDir.ts`) - in the home folder of the macOS user it runs as (`helperPlace`, `src/core/helper/place.ts`).
 Nothing else in that folder is opened: not the record, not the single-instance lock, not a sign-in.
 Only a development run reads `INFINITARY_HELPER_DATA_DIR`, which tests use to isolate it.
 `work/` moves with the rest of the data folder when Infinitary moves an older folder in (`docs/saved-data-compatibility.md`, "The one-time move"): the move rewrites `installed.json` and `left.json`, and git's links in `repos/` and `worktrees/`, to name the new folder.
@@ -291,6 +291,8 @@ A development run may stand in its own service manager with `INFINITARY_LAUNCHCT
 ### Under the other name
 
 Infinitary's app keeps its work under its own label, `com.getinfinitary.infinitary.work` (`.dev.work` for the development flavor), its bundle id and then `.work` as this app's is (`workLabelOf`, `src/shared/codeNames.ts`).
+The label follows the folder: `pnpm dev` on the person's own folder takes the installed app's `.work`, so one background runs on a work folder, and an isolated run from source keeps `.dev.work`, so it never takes the installed app's.
+When `pnpm dev` sets the work up, as a view of another home does when its work is not running, it writes that one agent with its own launcher, Electron and the checkout, so the work runs from the checkout, on whatever the checkout holds, until the installed app writes the agent again.
 An agent `installed.json` records under the other app's label moves to this app's own in one step (`moveInBackground`, the Infinitary rename's FI3-1780 step 2): the new one is set up and started first, it is recorded only once the service manager took it, and the old one's files go and the service manager lets it go last.
 The two never run work at once, because each works only while it holds the folder (`running.lock`).
 A new one the service manager refuses is taken away again and the old one started again as it was, so a move that fails changes nothing.

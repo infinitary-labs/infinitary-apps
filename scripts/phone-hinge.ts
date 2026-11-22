@@ -6,7 +6,8 @@ import { REPO_ROOT } from "./moduleRunner.ts";
 // undocumented interface; it can break when Xcode changes"): the phone check opens and closes a simulated iPhone Duo's
 // hinge through scripts/phone-hinge.m, a helper it builds for the iOS simulator and runs inside the Duo, then reads
 // the pose back and fails the part, by name and with no second try, when the Duo did not reach it. INF-4539: the same
-// helper turns the open Duo, which ignores XCUIDevice's turns, and the gate reads the turn back the same way.
+// helper turns the open Duo, which ignores XCUIDevice's turns, and the gate reads the turn back from SpringBoard through
+// the helper (INF-6069).
 // INF-5183: it presses a key on the open Duo too, where XCTest's own key reaches no app, and the gate reads where the
 // simulator sent it.
 
@@ -57,13 +58,16 @@ export function innerScreenLit(reading: string): boolean {
   return !litScreen(reading).primary;
 }
 
-/** Whether the lit screen shows the app wider than tall: its panel's own size, a quarter turn swapping the two. */
-export function litScreenWide(reading: string): boolean {
-  const screen = litScreen(reading);
-  const [width, height] = screen.bounds?.[1] ?? [];
-  if (!width || !height || !screen.currentOrientation) throw new Error("The Duo's lit screen reports no size or turn");
-  const quarter = screen.currentOrientation === "rot90" || screen.currentOrientation === "rot270";
-  return quarter ? height > width : width > height;
+/**
+ * UIKit's name for the interface orientation SpringBoard holds for the Duo's main screen, as `phone-hinge orientation`
+ * prints it: the inner screen's while the Duo is open.
+ */
+export type PhoneInterfaceOrientation = "portrait" | "portraitUpsideDown" | "landscapeLeft" | "landscapeRight";
+const INTERFACE_ORIENTATIONS: readonly PhoneInterfaceOrientation[] = ["portrait", "portraitUpsideDown", "landscapeLeft", "landscapeRight"];
+
+/** Whether the open Duo's inner screen shows the app wider than tall: its panel stands tall, so a landscape turn widens it. */
+export function innerScreenWide(orientation: PhoneInterfaceOrientation): boolean {
+  return orientation === "landscapeLeft" || orientation === "landscapeRight";
 }
 
 /** What is wrong with a pose read back for `hinge`, or undefined when the Duo shows it. */
@@ -92,36 +96,49 @@ async function hingeAngle(run: Run, simulator: string, helper: string): Promise<
   return degrees;
 }
 
+/** The interface orientation SpringBoard holds for the Duo `simulator`'s main screen, asked through the helper. */
+async function interfaceOrientation(run: Run, simulator: string, helper: string): Promise<PhoneInterfaceOrientation> {
+  const said = (await run("xcrun", ["simctl", "spawn", simulator, helper, "orientation"])).trim().split("\n").at(-1) ?? "";
+  const known = INTERFACE_ORIENTATIONS.find((each) => each === said);
+  if (!known) throw new Error(`The Duo's turn could not be read from SpringBoard: ${said}`);
+  return known;
+}
+
 /**
  * Turns the open Duo `simulator` to `to` once, through the helper `buildPhoneHinge` built, then reads its inner screen
  * back until it shows the turn or `settle` milliseconds pass: wide like a book, tall on its side. A Duo that never
- * shows it fails, naming the turn asked for and what it showed; nothing turns it a second time.
+ * shows it fails, naming the turn asked for and what it showed; nothing turns it a second time. A Duo whose hinge is
+ * not open is refused before anything turns it.
  *
  * INF-5183: before the turn, the hinge's angle is read and stated once more, which moves nothing. After a hinge move
  * the simulated Duo's SpringBoard can leave its screen transition unfinished until the next pose event it hears, and
  * a turn that is that event finishes the transition and can lose its own turn: the Duo takes the event and keeps its
  * inner screen as it was. The restated angle is that event instead, so the turn reaches a Duo with nothing pending.
+ *
+ * INF-6069: the turn is read from SpringBoard, which decides it, never from `devicectl device info displays`. That
+ * reading comes from a cache the simulator's display information daemon refreshes only when a display or orientation
+ * notification arrives, keeping its last values when the refresh's time-boxed orientation read runs out; no later
+ * notification follows a turn, so the gate read the screen as it stood before the turn for the whole settle time
+ * while SpringBoard and backboardd had turned it.
  */
-export async function turnPhone({ run, simulator, helper, to, reading, settle = PHONE_HINGE_SETTLE_MS }: {
-  run: Run; simulator: string; helper: string; to: PhoneTurn; reading: string; settle?: number;
+export async function turnPhone({ run, simulator, helper, to, settle = PHONE_HINGE_SETTLE_MS }: {
+  run: Run; simulator: string; helper: string; to: PhoneTurn; settle?: number;
 }): Promise<void> {
-  const wide = async () => {
-    await run("xcrun", ["devicectl", "device", "info", "displays", "-d", simulator, "--json-output", reading]);
-    const shown = readFileSync(reading, "utf8");
-    if (!innerScreenLit(shown)) throw new Error(`duo: it was asked to turn ${to} closed; only the open Duo turns`);
-    return litScreenWide(shown);
-  };
-  const angle = String(await hingeAngle(run, simulator, helper));
-  await run("xcrun", ["simctl", "spawn", simulator, helper, "sweep", angle, angle, "0"]);
+  const angle = await hingeAngle(run, simulator, helper);
+  if (Math.abs(angle - DEGREES.open) > ANGLE_TOLERANCE) {
+    throw new Error(`duo: it was asked to turn ${to} with its hinge at ${angle} degrees; only the open Duo turns`);
+  }
+  await run("xcrun", ["simctl", "spawn", simulator, helper, "sweep", String(angle), String(angle), "0"]);
   await run("xcrun", ["simctl", "spawn", simulator, helper, "turn", ORIENTATIONS[to]]);
   const until = Date.now() + settle;
-  let shown = await wide();
-  while (shown !== (to === "book") && Date.now() < until) {
+  let shown = await interfaceOrientation(run, simulator, helper);
+  while (innerScreenWide(shown) !== (to === "book") && Date.now() < until) {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    shown = await wide();
+    shown = await interfaceOrientation(run, simulator, helper);
   }
-  if (shown !== (to === "book")) {
-    throw new Error(`duo: it was turned ${to} once, and ${settle / 1000} seconds later its inner screen shows ${shown ? "wide" : "tall"}`);
+  if (innerScreenWide(shown) !== (to === "book")) {
+    throw new Error(`duo: it was turned ${to} once, and ${settle / 1000} seconds later its inner screen shows `
+      + `${innerScreenWide(shown) ? "wide" : "tall"}: SpringBoard holds ${shown}`);
   }
 }
 

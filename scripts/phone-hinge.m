@@ -5,6 +5,7 @@
 //   phone-hinge sweep <from> <to> <seconds>   move the hinge from one angle to another, 0 closed and 180 flat
 //   phone-hinge angle                          print the hinge angle CoreMotion reports, in degrees
 //   phone-hinge turn <orientation>             turn the device: portrait, pud, landscape-left or landscape-right
+//   phone-hinge orientation                    print the interface orientation SpringBoard holds for the main screen
 //   phone-hinge key <name>                     press a key once, as an attached keyboard does: tab, return or escape
 //
 // Apple has no command that moves the simulated hinge. Xcode's Device Hub moves it by posting a vendor-defined HID event
@@ -17,8 +18,16 @@
 // INF-5183: XCTest's typeKey gives its key a keyboard bound to one display, and while the Duo is open the simulator's
 // event router finds that key no destination, so the app never receives it. An attached keyboard names no display, and
 // its key goes to whichever app holds keyboard focus. `key` posts that keyboard event, usage page 7, down then up.
+//
+// `orientation` reads a turn back from SpringBoard itself, which decides it. `devicectl device info displays` answers
+// from a cache the simulator's display information daemon refreshes only when a display or orientation notification
+// arrives, and that refresh's orientation read is time-boxed: past its budget the daemon keeps the last values it knew.
+// After a turn no further notification comes, so a refresh that ran out of time left devicectl showing the screen as it
+// was before the turn for as long as the gate read it. FrontBoard's orientation observer asks SpringBoard on a
+// connection of this process's own, so nothing older than the question can answer it.
 
 #import <Foundation/Foundation.h>
+#import <dlfcn.h>
 #import <mach/mach_time.h>
 
 typedef struct __IOHIDEvent *IOHIDEventRef;
@@ -142,6 +151,45 @@ static int angle(void) {
     return printed ? 0 : 1;
 }
 
+@interface FBSOrientationUpdate : NSObject
+- (long long)orientation;
+@end
+
+@interface FBSOrientationObserver : NSObject
+- (void)activeInterfaceOrientationWithCompletion:(void (^)(FBSOrientationUpdate *update))completion;
+- (void)invalidate;
+@end
+
+// Prints UIKit's name for the interface orientation SpringBoard holds for the main screen, the inner one while the Duo
+// is open: portrait, portraitUpsideDown, landscapeLeft or landscapeRight. SpringBoard answers at once; two seconds
+// without an answer is a failure.
+static int orientation(void) {
+    dlopen("/System/Library/PrivateFrameworks/FrontBoardServices.framework/FrontBoardServices", RTLD_NOW);
+    Class observer = NSClassFromString(@"FBSOrientationObserver");
+    if (!observer) {
+        fprintf(stderr, "phone-hinge: this simulator has no FrontBoard orientation observer\n");
+        return 1;
+    }
+    FBSOrientationObserver *springBoard = [[observer alloc] init];
+    __block long long said = -1;
+    [springBoard activeInterfaceOrientationWithCompletion:^(FBSOrientationUpdate *update) {
+        said = update ? [update orientation] : 0;
+    }];
+    NSDate *until = [NSDate dateWithTimeIntervalSinceNow:2];
+    while (said < 0 && [until timeIntervalSinceNow] > 0) CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.05, true);
+    [springBoard invalidate];
+    NSDictionary<NSNumber *, NSString *> *names = @{ @1: @"portrait", @2: @"portraitUpsideDown", @3: @"landscapeRight",
+                                                     @4: @"landscapeLeft" };
+    NSString *name = names[@(said)];
+    if (!name) {
+        if (said < 0) fprintf(stderr, "phone-hinge: SpringBoard gave no interface orientation within 2 seconds\n");
+        else fprintf(stderr, "phone-hinge: SpringBoard holds no known interface orientation (%lld)\n", said);
+        return 1;
+    }
+    printf("%s\n", name.UTF8String);
+    return 0;
+}
+
 static double degrees(const char *value) { return fmin(fmax(atof(value), 0), 180); }
 
 int main(int argc, char **argv) {
@@ -149,9 +197,10 @@ int main(int argc, char **argv) {
         if (argc == 5 && strcmp(argv[1], "sweep") == 0) return sweep(degrees(argv[2]), degrees(argv[3]), fmax(atof(argv[4]), 0));
         if (argc == 2 && strcmp(argv[1], "angle") == 0) return angle();
         if (argc == 3 && strcmp(argv[1], "turn") == 0) return turn(argv[2]);
+        if (argc == 2 && strcmp(argv[1], "orientation") == 0) return orientation();
         if (argc == 3 && strcmp(argv[1], "key") == 0) return key(argv[2]);
         fprintf(stderr, "usage: phone-hinge sweep <from> <to> <seconds>\n       phone-hinge angle\n       phone-hinge turn <orientation>\n"
-                        "       phone-hinge key <tab|return|escape>\n");
+                        "       phone-hinge orientation\n       phone-hinge key <tab|return|escape>\n");
         return 64;
     }
 }

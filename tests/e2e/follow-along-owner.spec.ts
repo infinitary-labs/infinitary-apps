@@ -297,7 +297,7 @@ test("a window follows along beside the command its agent started, and never sto
       endCommands();
     });
 
-    await test.step("a grant waiting before either starts: the window's own command never takes it, the window follows along once, and nothing starts the command again", async () => {
+    await test.step("a grant waiting before either starts: the window opens as the home's view at once, and nothing starts its command", async () => {
       const userDataDir = scratchDir("infinitary-follow-cold-");
       const homeDir = scratchDir("infinitary-follow-cold-home-");
       standIn = serviceManagerStandIn(homeDir);
@@ -314,12 +314,9 @@ test("a window follows along beside the command its agent started, and never sto
       });
       const { page } = air;
       await expect.poll(() => roleOf(page), { timeout: 90_000 }).toBe("view");
-      // The window's agent started one command, which the window stopped as it followed along.
-      await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 30_000 }).toBe(1);
-      const [owned] = standIn.runs(LABEL);
-      await expect.poll(() => alive(owned as number), { timeout: 30_000 }).toBe(false);
-      await expect.poll(() => standIn?.running(LABEL)).toBe(false);
-      expect(standIn.runs(LABEL)).toHaveLength(1);
+      // A grant waiting at launch takes the window's starter away, so its agent starts no command.
+      expect(standIn.runs(LABEL)).toEqual([]);
+      expect(standIn.running(LABEL)).toBe(false);
       await expect
         .poll(
           async () =>
@@ -336,13 +333,13 @@ test("a window follows along beside the command its agent started, and never sto
       endCommands();
     });
 
-    await test.step("a grant waiting before either starts, beside a sign-in saved here: the window stays home and its command keeps running after it quits", async () => {
+    await test.step("a grant waiting before either starts, beside a sign-in saved here: the window still opens as the home's view, and nothing starts its command", async () => {
       const userDataDir = scratchDir("infinitary-follow-kept-");
       const homeDir = scratchDir("infinitary-follow-kept-home-");
       standIn = serviceManagerStandIn(homeDir);
-      // A GitHub Enterprise sign-in saved here before any database, which only its file's presence answers.
+      // A GitHub Enterprise sign-in saved here before any database: something was done here.
       seedGitHubSignIn(userDataDir, GITHUB_STUB_KEY, "git.example.com");
-      // Its host stands in on loopback, so the command's check of that sign-in reaches nothing outside.
+      // Its host stands in on loopback, so nothing here reaches outside.
       enterprise = await startGitHubStub({ host: "git.example.com" });
       await addedByAddress(join(userDataDir, "work"));
       air = await launchApp({
@@ -356,20 +353,12 @@ test("a window follows along beside the command its agent started, and never sto
         },
       });
       const { page } = air;
-      await welcomed(page);
-      const owned = commandPid(userDataDir);
-      expect(standIn.runs(LABEL)).toEqual([owned]);
-      // Something was set up here, so the window does not take the computer over in place.
-      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
-        followed: false,
-      });
-      expect(await roleOf(page)).toBe("home");
+      // A computer added while its window was closed opens as its home's view, whatever was done here.
+      await expect.poll(() => roleOf(page), { timeout: 90_000 }).toBe("view");
+      expect(standIn.runs(LABEL)).toEqual([]);
       await air.close();
       air = undefined;
-      // The window quit; the command its agent started keeps running, and its agent keeps it.
-      expect(alive(owned)).toBe(true);
-      expect(standIn.running(LABEL)).toBe(true);
-      expect(standIn.runs(LABEL)).toEqual([owned]);
+      expect(standIn.running(LABEL)).toBe(false);
     });
   } finally {
     await air?.close();

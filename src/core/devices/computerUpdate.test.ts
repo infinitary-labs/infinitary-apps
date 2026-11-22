@@ -44,6 +44,7 @@ import { fetchedLauncher, joinHome, keepApp } from "../helper/join";
 import { HomeRoute } from "../helper/route";
 import { type HelperRun, type StartHelperOptions, startHelper } from "../helper/run";
 import { updateHere } from "../helper/update";
+import { setAsidePath } from "../helper/updateTrial";
 import { helperWords } from "../helper/words";
 import { WorkDevices } from "../placed/workDevices";
 import * as platform from "../platform";
@@ -312,6 +313,8 @@ async function world(
       | "downloadIdleSeconds"
       | "update"
       | "trialSeconds"
+      | "sourceRun"
+      | "build"
     >,
     background?: BackgroundContext,
     from: string = dataDir,
@@ -1788,6 +1791,69 @@ describe("a computer whose update brought a copy that does not start", () => {
     expect(readFileSync(join(installedApp, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
       "the Mac's own app",
     );
+  });
+
+  // A computer running the home's source is brought back to a release when the
+  // home runs one (docs/devices.md, "Matching the home's build"): the release
+  // replaces the copy kept at the same path, and the trial puts the build back.
+  it("brings a computer running the home's source back to the release, and goes back to its build when the release does not start", async () => {
+    const at = await world({ kept: true, app: bundle("the home's own copy"), waitMs: 200 });
+    const { context, asked } = standInBackground(at.dataDir);
+    const kept = join(at.dataDir, "app", "Firstmate 3000.app");
+    // Its agent starts a build of the home's source, as a source match leaves it.
+    const build = scratchDir("infinitary-update-source-build-");
+    await startInBackground(
+      { ...context, spelling: "fm" },
+      { launcher: { executable: "/bin/sh", args: [build] }, env: {}, app: kept },
+    );
+    const service = readInstalled(at.dataDir).service;
+    if (!service) throw new Error("no agent");
+    const agentBefore = readFileSync(service.file, "utf8");
+    expect(agentBefore).toContain(build);
+    const record = readFileSync(join(at.dataDir, "installed.json"), "utf8");
+
+    const setUp = asked().length;
+    const before = at.start(
+      {
+        appVersion: HOME_APP,
+        trialSeconds: 2,
+        sourceRun: build,
+        build: { commit: "a".repeat(40), source: { edited: false } },
+      },
+      context,
+    );
+    // The home runs a release, so the computer's own source run is not the same build.
+    await expect.poll(() => at.view()?.otherVersion?.source).toBeUndefined();
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    const updating = at.computers.update(at.deviceId);
+    expect(await before.ended).toBe("updated");
+    // The home's copy replaced the one kept there, which is set aside whole, and the agent starts it.
+    expect(at.kept()).toBe("the home's own copy");
+    expect(readFileSync(service.file, "utf8")).not.toContain(build);
+    expect(
+      readFileSync(
+        join(setAsidePath(at.dataDir), "2-Firstmate 3000.app", "Contents", "Resources", "marker"),
+        "utf8",
+      ).trim(),
+    ).toBe("the copy it kept");
+
+    // The release exits at start: it never reaches this Mac.
+    expect(
+      spawnSync(join(kept, "Contents", "MacOS", "Firstmate 3000"), ["work", "run"]).status,
+    ).toBe(1);
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+
+    // The kept copy, the agent's file and the record are back, and launchd read the agent anew.
+    await expect.poll(() => at.kept(), { timeout: 8_000 }).toBe("the copy it kept");
+    await expect
+      .poll(() => asked().slice(setUp).includes(`bootstrap gui/502 ${service.file}`), {
+        timeout: 8_000,
+      })
+      .toBe(true);
+    expect(readFileSync(service.file, "utf8")).toBe(agentBefore);
+    expect(readFileSync(join(at.dataDir, "installed.json"), "utf8")).toBe(record);
+    expect(existsSync(build)).toBe(true);
   });
 
   it("across the rename, keeps the new copy with no trial when its agent starts only at the next login", async () => {

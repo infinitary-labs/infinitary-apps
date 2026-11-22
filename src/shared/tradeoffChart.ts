@@ -52,6 +52,12 @@ export type TradeoffRow = {
 export type TradeoffTable = {
   start: number;
   end: number;
+  /**
+   * Where the chart stands when it takes the options' place: before the first
+   * option's own row in the element holding every option, so a row laid out
+   * as a flex line, such as div.inf-row, never squeezes the chart beside it.
+   */
+  chartAt?: number;
   headings: string[];
   rows: TradeoffRow[];
 };
@@ -155,6 +161,7 @@ function readTable(table: Node, root: Node, html: string): Read {
   }
   const choices = choicesIn(questionOf(table, root));
   const rows: TradeoffRow[] = [];
+  const labels: Node[] = [];
   for (const row of body) {
     const cells = cellsOf(row);
     const option = hookValue(row.attribs, "option");
@@ -194,6 +201,7 @@ function readTable(table: Node, root: Node, html: string): Read {
     }
     const label = labelOf(choice, root);
     const written = label ? labelWords(label, html) : "";
+    if (label && written) labels.push(label);
     rows.push({
       option,
       words: shown,
@@ -231,8 +239,25 @@ function readTable(table: Node, root: Node, html: string): Read {
       end: (table.endIndex ?? 0) + 1,
       headings,
       rows,
+      ...(labels.length > 0 ? { chartAt: optionsStart(labels) } : {}),
     },
   };
+}
+
+/**
+ * Where the first option's row starts inside the element holding every
+ * option's label: the label itself when the labels sit side by side, or the
+ * row around it, such as a div.inf-row holding its control and label.
+ */
+function optionsStart(labels: Node[]): number {
+  const first = labels.reduce((a, b) => ((b.startIndex ?? 0) < (a.startIndex ?? 0) ? b : a));
+  const holds = (at: Node, each: Node): boolean => {
+    for (let up: Node | null | undefined = each; up; up = up.parent) if (up === at) return true;
+    return false;
+  };
+  let row = first;
+  while (row.parent && !labels.every((each) => holds(row.parent as Node, each))) row = row.parent;
+  return row.startIndex ?? 0;
 }
 
 function readAll(html: string): Read[] {
@@ -397,7 +422,7 @@ export function withTradeoffCharts(html: string): string {
       continue;
     }
     edits.push({ at: table.start, end: table.end, put: fold });
-    const first = Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
+    const first = table.chartAt ?? Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
     edits.push({ at: first, end: first, put: chart });
     for (const row of table.rows) {
       const marks = row.placed;

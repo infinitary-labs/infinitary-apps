@@ -111938,7 +111938,11 @@ ${startersHtml()}`;
     "not-answering"
   ]);
   const commandNoticeSchema = strictObject({
-    /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
+    /**
+     * `waiting` while its start entry is expected to start it again, or, on
+     * `not-answering`, while Start it here waits for that run to stop;
+     * `stopped` once Start it here is offered.
+     */
     state: _enum(["waiting", "stopped"]),
     ending: commandEndingSchema,
     /**
@@ -111946,7 +111950,14 @@ ${startersHtml()}`;
      * window starts it"): the person never ran a command, so the line speaks
      * of their first mate, and Start it here starts that program again.
      */
-    byWindow: literal(true).optional()
+    byWindow: literal(true).optional(),
+    /**
+     * Set on `not-answering` when the notice names no run that does not
+     * answer: its door named none, or another run holds the folder now.
+     * Start it here then stops nothing, and the app starting again connects
+     * to whichever run is there; the line says so.
+     */
+    retries: literal(true).optional()
   });
   const HERE = {
     this: "this computer"

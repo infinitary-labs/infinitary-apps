@@ -532,7 +532,7 @@ export async function holdLockAsStandIn(options: {
   readonly window: MessageWindow;
   readonly control: string;
 }): Promise<StandInHolder> {
-  const holder = spawn(powershell, ["-NoProfile", "-NonInteractive", "-Command", STAND_IN_HOLDER], {
+  const holder = spawn(powershellPath, ["-NoProfile", "-NonInteractive", "-Command", STAND_IN_HOLDER], {
     env: {
       ...process.env,
       HOLD_LOCK_FILE: options.lockFile,

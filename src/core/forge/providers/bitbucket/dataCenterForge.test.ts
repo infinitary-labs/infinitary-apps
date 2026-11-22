@@ -455,6 +455,7 @@ describe("Bitbucket Data Center in Integrations", () => {
         loginOf: () => "jane.doe",
         checkNow: async () => {},
         signOut: () => {},
+        presentHosts: () => [HOST],
       },
       gateway: (host) => ({
         read: async (_task, input) => {

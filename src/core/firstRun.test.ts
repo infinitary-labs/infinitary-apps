@@ -589,6 +589,7 @@ describe("an untouched profile", () => {
       hasConnections: () => accounts,
       ...crewFacts(fixture.tasks),
       createWelcome: () => {},
+      createFirstCrewmateNote: () => {},
     });
     expect(service.view().untouched).toBe(true);
     // A saved sign-in whose subscription cannot serve leaves the gate up, but it was done here.

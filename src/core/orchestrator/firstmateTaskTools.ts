@@ -567,9 +567,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       // INF-6091 finding 1: removing the last wait of when-ready work lets
       // the ready sweep start what the first mate's own open card asks about.
       if (input.remove && input.type === "blocks" && to.startPolicy === "when-ready") {
-        const others = tasks.graph
-          .blockers(to.id)
-          .filter((blocker) => blocker.id !== from.id && !TaskService.blockerCleared(blocker));
+        // The ready sweep's own rule: an approved base answers a wait too.
+        const others = tasks.graph.waitingOn(to.id).filter((blocker) => blocker.id !== from.id);
         const held =
           others.length === 0
             ? cardHeldStartRefusal(to, { ...cardHold(to.id), edit: "wait-removal" })

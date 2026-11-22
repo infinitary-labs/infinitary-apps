@@ -826,7 +826,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `linux-packages.yml`, whose build and checks use hosted Ubuntu unless a publishing release passes `RELEASE_LINUX_PACKAGES_RUNNER`; the Ubuntu 26.04 host check appends `-2604` to that label.
   Rehearsals and an unset variable stay hosted.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` and `contributors.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and opts only the sweep's eight Linux test groups into `LINUX_RUNNER` with `fleet_tests: true`; its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.

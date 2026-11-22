@@ -79,8 +79,8 @@ on:
         required: false
         type: string
         default: all
-      # An alpha's and the swept batch's calls run every journey on the Mac;
-      # main.yml's call runs the tagged ones.
+      # An alpha's, the swept batch's and an outside contributor's calls run
+      # every journey on the Mac; main.yml's call runs the tagged ones.
       all_journeys:
         description: Run every journey on the Mac, not only the tests that need a Mac
         required: false

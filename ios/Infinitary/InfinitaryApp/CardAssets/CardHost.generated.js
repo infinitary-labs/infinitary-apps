@@ -110878,6 +110878,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     }
     const choices = choicesIn(questionOf(table, root));
     const rows = [];
+    const labels2 = [];
     for (const row of body) {
       const cells = cellsOf(row);
       const option = hookValue(row.attribs, "option");
@@ -110916,6 +110917,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       }
       const label = labelOf(choice, root);
       const written = label ? labelWords(label, html) : "";
+      if (label && written) labels2.push(label);
       rows.push({
         option,
         words: shown,
@@ -110948,9 +110950,20 @@ ${FRAME_KEYBOARD_SCRIPT}
         start: table.startIndex ?? 0,
         end: (table.endIndex ?? 0) + 1,
         headings,
-        rows
+        rows,
+        ...labels2.length > 0 ? { chartAt: optionsStart(labels2) } : {}
       }
     };
+  }
+  function optionsStart(labels2) {
+    const first = labels2.reduce((a, b) => (b.startIndex ?? 0) < (a.startIndex ?? 0) ? b : a);
+    const holds = (at, each) => {
+      for (let up = each; up; up = up.parent) if (up === at) return true;
+      return false;
+    };
+    let row = first;
+    while (row.parent && !labels2.every((each) => holds(row.parent, each))) row = row.parent;
+    return row.startIndex ?? 0;
   }
   function readAll(html) {
     if (!html.includes("data-inf-tradeoff")) return [];
@@ -111060,7 +111073,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         continue;
       }
       edits.push({ at: table.start, end: table.end, put: fold });
-      const first = Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
+      const first = table.chartAt ?? Math.min(...table.rows.map((row) => row.placed?.label ?? 0));
       edits.push({ at: first, end: first, put: chart });
       for (const row of table.rows) {
         const marks = row.placed;

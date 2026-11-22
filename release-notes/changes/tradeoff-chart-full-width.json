@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "tradeoff-chart-full-width",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A review card's tradeoff chart keeps its full width",
+      "body": "When a reviewer laid out each option on its own row, the tradeoff chart on the card was squeezed into a narrow strip with its words broken a letter or two per line. The chart now spans the question's full width.",
+      "noPicture": "A fix to an existing view; the release's picture of the chart already shows it at full width.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

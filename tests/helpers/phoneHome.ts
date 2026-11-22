@@ -27,6 +27,7 @@ import {
   type CardMessage,
   PAST_CARD_WORDS_LEAD,
 } from "@shared/cards";
+import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import {
   FOLDED_INTO_16_SINCE,
   MESSAGES_WHILE_READING,
@@ -570,7 +571,12 @@ export async function startPhoneHome(
   // INF-1390: the core reaches each connection this home starts, as the app's shell attaches its
   // own (src/main/shell.ts), so the core's door answers the phone's link once it listens.
   let unreach = () => {};
-  const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true, viewFloor?: number) => {
+  const connect = (
+    protocolVersion = PROTOCOL_VERSION,
+    sceneSupport = true,
+    viewFloor?: number,
+    without: readonly string[] = [],
+  ) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
         if (channel === "inf:conversation:state" || channel === "inf:computers:presence") {
@@ -668,7 +674,7 @@ export async function startPhoneHome(
       // Major 16 folded these names in: a home before it listed them, and the phone still reads one by them.
       changes: sceneSupport
         ? [
-            ...CONTRACT_CHANGES.names,
+            ...CONTRACT_CHANGES.names.filter((name) => !without.includes(name)),
             ...(speaksSince(protocolVersion, FOLDED_INTO_16_SINCE)
               ? []
               : [
@@ -1946,7 +1952,9 @@ export async function startPhoneHome(
                 : "inf:cards:close",
               [card.id],
             );
-          const raised = raiseCarriedCard(core);
+          const said = await controlBody(request);
+          const { id } = (said ? JSON.parse(said) : {}) as { id?: string };
+          const raised = raiseCarriedCard(core, id);
           cardIDs.carried = raised.id;
           turnsBeforeRelease = firstmateTurnsEnded;
           result = raised;
@@ -1964,6 +1972,13 @@ export async function startPhoneHome(
           break;
         case "POST carried-past":
           result = await showCarriedPast(core, cardIDs.carried);
+          break;
+        // A computer from before the change: this build's home whose welcome leaves choice-attachments out.
+        case "POST carried-older-home":
+          await connection.close();
+          connection = connect(PROTOCOL_VERSION, true, undefined, [CHOICE_ATTACHMENTS]);
+          await connection.settled();
+          result = { ok: true };
           break;
         // The notes card's thread as the computer keeps it, each captain line with its notes.
         case "GET note-thread":

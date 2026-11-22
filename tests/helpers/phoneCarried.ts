@@ -1,5 +1,5 @@
 import type { Core } from "@core/index";
-import { PAST_CARD_WORDS_LEAD } from "@shared/cards";
+import { CARD_FILES_FIRST, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { carriedWithChoiceWords } from "@shared/choiceCarried";
 import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
@@ -9,13 +9,14 @@ import * as m from "@shared/i18n/messages.generated";
  * INF-5487): a first mate card whose body holds a paragraph to note and two
  * choices. It answers the card's words and, from their owners, the words the
  * phone shows: the footer's line for one photo and one note, and the past
- * card's lead.
+ * card's lead, and the Mac's words for buttons that wait on a computer
+ * without the change. A second card takes its own id.
  */
-export function raiseCarriedCard(core: Core) {
+export function raiseCarriedCard(core: Core, cardId = "phone-carried") {
   const title = "The harbour chart goes to print";
   const part = "The new chart moves the north buoy twenty metres east.";
   const id = core.services.supervisor.addFirstmateCard({
-    id: "phone-carried",
+    id: cardId,
     title,
     body: `<p>${part}</p><p>The printer needs an answer today.</p>`,
     actions: [
@@ -31,6 +32,7 @@ export function raiseCarriedCard(core: Core) {
     part,
     line: carriedWithChoiceWords({ pictures: 1, files: 0, notes: 1 }),
     sentLead: PAST_CARD_WORDS_LEAD,
+    held: CARD_FILES_FIRST,
   };
 }
 

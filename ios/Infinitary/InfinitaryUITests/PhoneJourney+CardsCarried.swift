@@ -9,7 +9,8 @@ extension PhoneJourney {
     /// paragraph and two choices, a note queued on that paragraph with a comment, and a library photo. Completion: the
     /// footer names what goes with the choice, one tap on a choice takes the card away, the first mate's turn reads the
     /// choice with the note's comment and the photo's attached line and carries the photo as an image, the card's record
-    /// keeps the note and the photo by name, and the card opened again as a past card names both above its buttons.
+    /// keeps the note and the photo by name, and the card opened again as a past card names both above its buttons. A
+    /// computer whose welcome leaves `choice-attachments` out holds every choice while a photo waits, with the Mac's words.
     func testCardChoiceCarries() async throws {
         try await launchJoined()
         let fixture = try await home("carried-card")
@@ -82,8 +83,28 @@ extension PhoneJourney {
         XCTAssertTrue(sentNote.label.contains(part), "The past card's note does not name its paragraph: \(sentNote.label)")
         XCTAssertTrue(app.staticTexts[said].exists, "The past card does not show the note's comment\n\(app.debugDescription)")
         XCTAssertEqual(app.buttons["card-action-hold"].value as? String, "Chosen")
+        // The past card's body draws its paragraph before the picture.
+        XCTAssertTrue(app.webViews.staticTexts[part].firstMatch.waitForPresence(timeout: 20), app.debugDescription)
         picture("1-past-card-names-what-went")
         reveal(app.buttons["put-aside-card"]); tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+
+        // A computer without the change: a photo in the field holds the choices, with the Mac's words, so nothing is lost.
+        _ = try await home("carried-older-home")
+        reach("Live", timeout: 30)
+        let older = try await home("carried-card", body: #"{"id":"phone-carried-older"}"#)
+        showCard(title)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        addPhoneCardPhoto(app: app)
+        let held = app.staticTexts["carried-hold"]
+        XCTAssertTrue(held.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(held.label, try XCTUnwrap(older["held"] as? String))
+        XCTAssertFalse(app.staticTexts["carried-line"].exists, app.debugDescription)
+        let waiting = app.buttons["card-action-hold"]
+        reveal(waiting)
+        XCTAssertFalse(waiting.isEnabled, "A choice on a computer without the change waits while a photo does")
+        XCTAssertFalse(app.buttons["card-action-print"].isEnabled, "Every choice waits while a photo does")
+        picture("2-older-computer-holds-the-choices")
     }
 }

@@ -333,20 +333,34 @@ jobs:
         with:
           sums: ${{ needs.build.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
-      # Without apt's recommended packages: ImageMagick's, Ghostscript and its
-      # fonts, are 25 MB the AppImage check's one screenshot never uses, and a
-      # slow mirror can stretch them past the step's limit (docs/testing.md,
+      # The runner itself needs only Xvfb, which GitHub's hosted Ubuntu images
+      # hold, so the helper downloads nothing there and a stalled mirror
+      # cannot fail the check; the AppImage check takes its screen tools from
+      # its own container (scripts/check-linux-package.sh). A release built
+      # from another commit than the workflow's own, as a stable is from its
+      # alpha's, may run an older check that works the AppImage's screen from
+      # the runner, so that leg also gets xdotool and ImageMagick there,
+      # without ImageMagick's 25 MB of recommended packages (docs/testing.md,
       # "The runner's automatic updates").
       - name: Install the virtual screen
         timeout-minutes: 10
-        run: scripts/apt-install.sh --no-install-recommends xvfb xdotool imagemagick
+        env:
+          OLDER_APPIMAGE_CHECK: ${{ matrix.system == 'appimage' && inputs.ref != '' && inputs.ref != github.sha }}
+        run: |
+          if [ "$OLDER_APPIMAGE_CHECK" = true ]; then
+            scripts/apt-install.sh --no-install-recommends xvfb xdotool imagemagick
+          else
+            scripts/apt-install.sh xvfb
+          fi
       - if: matrix.system == 'nix'
         uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086
+      # Xvfb writes its display's number to -displayfd once it takes clients,
+      # so the wait for it needs no X client of its own.
       - name: Install, open and run a crew turn
         run: |
-          Xvfb :99 -screen 0 1920x1200x24 -ac &
+          Xvfb :99 -screen 0 1920x1200x24 -ac -displayfd 1 > "$RUNNER_TEMP/xvfb-display" &
           export DISPLAY=:99
-          for _ in $(seq 1 20); do xdotool getmouselocation >/dev/null 2>&1 && break; sleep 0.5; done
+          for _ in $(seq 1 20); do [ -s "$RUNNER_TEMP/xvfb-display" ] && break; sleep 0.5; done
           scripts/check-linux-package.sh "$SYSTEM" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
         env:
           SYSTEM: ${{ matrix.system }}

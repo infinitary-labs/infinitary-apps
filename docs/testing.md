@@ -1824,8 +1824,9 @@ It then waits for a run already going to end, which apt's daily script marks by 
 Meanwhile it asks that run's `unattended-upgrade` to stop, the way the package's own shutdown helper does, and it stops after the package it is installing, leaving dpkg consistent.
 `apt-get` then waits for dpkg's lock (`DPkg::Lock::Timeout=-1`) should anything else hold it; apt's own wait covers only dpkg's lock, never the lists' lock `apt-get update` takes, which is why the helper waits for the daily run itself.
 Each wait lasts as long as its step's time limit, ten minutes for each install step.
-That limit holds the download too, so the Linux packages' virtual screen installs with `--no-install-recommends`.
-ImageMagick's recommended packages, Ghostscript and its fonts, are 25 MB that the AppImage check's one screenshot never uses, and a slow mirror can stretch them past ten minutes.
+That limit holds the download too, so the Linux packages' virtual screen downloads nothing it can do without.
+The runner itself needs only Xvfb, which GitHub's hosted Ubuntu images hold, so the step downloads nothing there, and the AppImage check works its question with xdotool and ImageMagick from its own container's packages (`docs/linux-packages.md`, "The checks").
+A release built from another commit than the workflow's own, as a stable is from its alpha's, may run an older check that works the AppImage's screen from the runner, so that leg also installs both there, with `--no-install-recommends`: ImageMagick's recommended packages, Ghostscript and its fonts, are 25 MB that its one screenshot never uses.
 A runner's image may already hold every package a step names: the PC's job image holds every package of the Linux desktop.
 Refreshing the package lists then still downloads about 12 MB, and naming a package installs its newer build with whatever that pulls in, about 28 MB of Mesa's graphics libraries for `libgbm1`, which a slow mirror stretches past ten minutes before any test runs.
 So before it touches the network or waits on the automatic updates, the helper asks apt what installing the named packages would unpack or remove, planned from the machine's own lists and status alone and keeping every package already installed as it is (`apt-get --simulate --no-upgrade`).
@@ -1840,6 +1841,7 @@ So the helper waits 60 seconds after a refresh that fails and starts a fresh one
 Stalled and failed refreshes share one count, three refreshes in all, and any other status stops the step at once.
 Ninety seconds is longer than apt's own longest silence, about a minute while it retries a silent connection.
 The pause after a failure is shorter than the 90 seconds a stall takes to notice, so three refreshes of either kind still end inside an install step's ten minutes, or end at all where a step has no limit of its own.
+None of this helps while a hosted machine's own mirror, the first its list names, stops answering: apt then falls back to Ubuntu's main archive, which can stall each of the three refreshes, so a step downloads nothing it can do without.
 An install inside a container needs none of this: the container's apt is its own, and nothing in it updates automatically.
 
 ## The Linux source desktop

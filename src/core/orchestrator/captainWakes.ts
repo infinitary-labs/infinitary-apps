@@ -3,7 +3,7 @@ import { type CardNote, pointedAtLines } from "@shared/cardNotes";
 /**
  * The captain's own moves as a lane hears them: a card's choice, close or
  * thread reply, a line in the Crewmate tab, a returned browser, a project
- * setup or change, a closed answer task, a stale validation question, and
+ * setup or change, how an add the captain started on the first mate's card ended, a closed answer task, a stale validation question, and
  * the retry when the captain's message moved nothing.
  *
  * The wake envelope, `renderWake` and `WAKE_WORDS`, the map of every
@@ -14,7 +14,7 @@ import { attachmentWords } from "@shared/attachments";
 import { cardAnswerLines, REPLY_SETTINGS_HEAD } from "@shared/cardAnswerLines";
 import { DECLINE_ACTION_ID, NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
 import type { CardAnswer, CardEffect, ChoiceCarriedRecord } from "@shared/cards";
-import { HERE } from "@shared/deviceNames";
+import { COMPUTER, HERE } from "@shared/deviceNames";
 import type { ProjectSetupOutcome } from "@shared/projectSetup";
 import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import type { Through } from "@shared/through";
@@ -117,6 +117,23 @@ export type CaptainFacts =
       work?: string;
       /** Why it could not be added, or which setting could not be saved. */
       reason?: string;
+    }
+  | {
+      /**
+       * An add by address the captain started from the first mate's add
+       * card ended (docs/devices.md, "Asking the first mate"): the computer
+       * is on the list, with the lines that finished the add, or the add was
+       * refused, with what happened and what to do. Told once
+       * (`devices/cardAdds.ts`); a question on the way is not its end.
+       */
+      kind: "device-add";
+      address: string;
+      outcome: "added" | "refused";
+      /** Its name and id on the list, once added. */
+      name?: string;
+      deviceId?: string;
+      /** The feed's own words: the lines that finished it, or the refusal's two. */
+      lines: string[];
     }
   | {
       kind: "project-change";
@@ -375,6 +392,15 @@ function renderProjectSetup(facts: Extract<WakeFacts, { kind: "project-setup" }>
   }
 }
 
+/** How an add the captain started from the first mate's card ended, as the first mate hears it once. */
+function renderDeviceAdd(facts: Extract<WakeFacts, { kind: "device-add" }>): string {
+  const said = facts.lines.map((line) => `"${line}"`).join(" ");
+  if (facts.outcome === "added")
+    // i18n-exempt: a wake served to the first mate, never shown to a person
+    return `[fm-op] the captain chose on your card to add the ${COMPUTER.one} at ${facts.address}, and it is on the list now as ${facts.name ?? facts.address} (device id ${facts.deviceId ?? "unknown"}).${said ? ` The app finished with: ${said}` : ""} Tell the captain it was added, with anything those words say is still to do, and offer the next step toward what they asked it for, such as moving you there when they want you to live on it.`;
+  return `[fm-op] the captain chose on your card to add the ${COMPUTER.one} at ${facts.address}, and it was not added. The app said: ${said} Tell the captain in full what happened and what it says to do, and offer the next step on one card: what those words say to try, or another way to add it.`;
+}
+
 function renderBrowserGone(facts: Extract<WakeFacts, { kind: "card-choice" }>): string {
   const ended = facts.browserGone === "quit" ? "stopped when Infinitary quit" : "had stopped";
   return `${BROWSER_GONE_OPENING} "${facts.card.title}", but the browser that card named ${ended}, so the captain got no page and nothing the card asked for was done there. Nothing from that browser was kept, and any browser you have now is a newer one. If you still need the captain on the page, open the site again with ${browserCommand("open <url>")} and ask again on a new card with browser_handoff. If the card was about something whose outcome is unknown, such as a payment the site never confirmed, it still is: never submit, reload or resend it, and check where the site lists it, such as its bookings, before you ask. ${UNKNOWN_OUTCOME_WORDS}${answersText(facts.choice, facts.source)}`;
@@ -523,6 +549,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
   "project-change": (facts) =>
     `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`,
   "project-setup": (facts) => renderProjectSetup(facts),
+  "device-add": (facts) => renderDeviceAdd(facts),
   "crewmate-tab-line": (facts) => [CREWMATE_TAB_STEER_LEAD, crewmateTabLine(facts)].join("\n"),
   "thread-reply": (facts) =>
     [

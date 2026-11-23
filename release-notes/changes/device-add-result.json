@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "device-add-result",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your first mate tells you how adding a computer from its card went",
+      "body": "When you press Add it on your first mate's card to add a computer by its address, your first mate now hears how it ended. It tells you what happened in full, including why it could not be added and what to try, and offers the next step. Before, the result showed only as a line in Activity, and your first mate did not know.",
+      "noPicture": "The change is in what the first mate says after an add ends, which depends on the model and has no fixed view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

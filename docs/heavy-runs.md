@@ -63,6 +63,8 @@ Missing or stale readings admit nothing.
 The shared `resourceCapacity` owner retains the existing placement margins: 80 percent of observed idle processor capacity, and available memory minus the greater of 512 MiB or 10 percent of installed memory.
 With no admitted run, the first waiting request starts when its memory declaration is at most installed memory less that same memory margin, regardless of processor load or today's available memory (INF-1685 and INF-2165, direction A).
 It still needs a fresh reading with a memory figure and normal pressure.
+A claim that declares more memory than that, read from a fresh reading, can never start, so the line refuses it at once with words naming the most it may declare in MiB, unless a recorded override passes its task (INF-6381).
+A waiting run that can never fit, such as one saved before this rule or claimed without a fresh reading, leaves the line at the next fresh reading, and its next claim is refused.
 Further requests need 80 percent of whole-computer observed idle processors, minus the full processor declarations of admitted starts not yet covered by a qualifying aggregate interval.
 There is no admitted-group CPU add-back or persistent maximum-of-declared-and-measured charge after coverage.
 Each admission spends and durably saves its startup declaration before answering, including repeated claims, observation callbacks, timer passes and reconsideration.
@@ -78,8 +80,12 @@ The available-memory reading already lacks a running group's resident memory, so
 Resident memory comes from the same process-table reading and needs no processor window.
 A run with no measured memory reserves its declaration with nothing added back.
 This is admission accounting, not a prediction or a promise of physical isolation.
-A normal request cannot pass an earlier waiting request, even if the later request is smaller.
-A macOS warning or critical pressure reading suspends new admissions; normal pressure and fresh capacity allow the same line to advance.
+Runs start in arrival order, with one bounded exception (INF-6381, the captain's 10 minutes).
+While the run first in line does not fit, a later run that fits the measured room beside the running runs may start ahead of it, during the first `PASSING_WINDOW_MS` (10 minutes) after that run became first in line.
+After the window nothing passes until the first in line starts, so it waits at most the window plus the passing runs' lengths.
+A passing run never starts through the no-admitted-run exception, which belongs to the first in line.
+The window lives in memory: a run first in line restored after a restart counts as past its window, so a restart never lengthens its wait.
+A macOS warning or critical pressure reading suspends new admissions, passing ones included; normal pressure and fresh capacity allow the same line to advance.
 The existing resource-pressure Activity and first-mate wake remain the only pressure notices.
 Each memory warning is one thing with an ID: memory, the computer, and when the warning began on the home's clock (`memory-warning:<computer or home>:<began, ms>`).
 A warning begins at the first fresh warning or critical reading on a computer with no open warning; the home then writes one Activity line and queues one first-mate wake whose once-name is the ID (`src/core/placed/resourcePressure.ts`).
@@ -155,7 +161,7 @@ The app takes a named caller only for a leader with no parent it can read, recor
 ## The journal
 
 Beside its saved holds the line appends one JSON line per event to `load/journal.jsonl`, with the wall-clock time, task id, hold and declaration.
-It records a run joining the line and how many are ahead, each admission with the capacity it compared against and its basis (measured capacity, installed memory for a lone run, or a recorded override), a blocked front with that capacity or a null capacity and the pressure level, a program that exited with its leftovers' resident memory, each release and why, and each refused claim and its words.
+It records a run joining the line and how many runs wait ahead of it, each admission with the capacity it compared against and its basis (measured capacity, installed memory for a lone run, or a recorded override) and, for a run that passed the first in line, that run's hold, a blocked front with that capacity or a null capacity and the pressure level, a program that exited with its leftovers' resident memory, each release and why, and each refused claim and its words.
 A blocked front is written when the front or its reason changes, not on every two-second pass.
 The file keeps its newest lines within `JOURNAL_MAX_BYTES`; the oldest half drops.
 The journal is a record for reading later: a failed write never changes admission, and the saved holds stay the truth.
@@ -164,7 +170,9 @@ It stores no command, arguments, environment, process identity or credentials.
 ## What the task shows
 
 The task record keeps measured Use unchanged and adds a separate Run row for its declared runs.
-Waiting says which computer, why it is waiting or how many runs are ahead, and the declared processor and memory amounts.
+Waiting says which computer, why it is waiting, and the declared processor and memory amounts.
+A run behind others says how many runs wait ahead of it; running runs are not counted.
+The run first in line, when it waits for room, says how many processors and how much memory are free, from the room the line last compared it with (`free` on the run); the waiting wrapper prints the same room to the crewmate.
 Running shows the same declaration with its admitted state; it never calls that declaration measured use.
 A lost connection preserves explicitly unavailable last-known run state instead of implying the run ended.
 The row adds no control or task status.
@@ -180,9 +188,9 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 ## Checks
 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
-It exercises queue order, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
+It exercises queue order, a fitting run passing a blocked first in line only during its window, the room the first in line prints, a run too big for its computer refused at once, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
 `src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
-`src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, and the journal's entries and size.
+`src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, the journal's entries and size, a run too big for its computer refused and released, the passing window and its bound under a stream of small runs, and what "ahead" counts.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
 `src/core/placed/windowsProcesses.integration.test.ts` runs only on Windows: it reads the real process table, connection table and working folders, keeps a job's programs after its leader ends, and runs a heavy run through the real launcher under Git Bash to its exit status.
 This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

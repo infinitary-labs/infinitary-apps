@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { formatNumber } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 
 /** INF-1621: the caller declares a hold, never an estimate made by the app. */
 export const loadDemandSchema = z.object({
@@ -14,6 +16,13 @@ export const loadRunSchema = z.object({
   state: z.enum(["waiting", "running"]),
   ahead: z.number().int().nonnegative(),
   reason: z.enum(["line", "capacity", "pressure", "unavailable"]).optional(),
+  /** First in line and waiting for room: what the line had to give when it last compared. */
+  free: z
+    .object({
+      cpu: z.number().finite().nonnegative(),
+      memoryBytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    })
+    .optional(),
 });
 export type LoadRun = z.infer<typeof loadRunSchema>;
 export const loadSnapshotSchema = z.object({ runs: z.array(loadRunSchema) });
@@ -44,6 +53,14 @@ export function loadRunWords(run: LoadRun, computer: string): string {
       ? "memory pressure"
       : run.reason === "unavailable"
         ? "readings unavailable"
-        : `${run.ahead} ahead`;
+        : run.reason === "capacity" && run.free
+          ? m.uiTaskResourceRunFree({
+              processors: run.free.cpu,
+              memory: formatNumber(run.free.memoryBytes / 1024 ** 3, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }),
+            })
+          : `${run.ahead} ahead`;
   return `Waiting in line to run on ${computer} · ${reason} · ${demand}`;
 }

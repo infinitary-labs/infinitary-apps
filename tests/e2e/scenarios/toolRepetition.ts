@@ -4,7 +4,7 @@ import { POSSIBLE_REPETITION_OPENING } from "../../../src/core/orchestrator/turn
 import { writeFilesCalls } from "../crewCards";
 import type { Scenario } from "../mockProvider";
 
-export const REPETITION_MARKER = "compare this picture with four prescribed reads";
+export const REPETITION_MARKER = "compare this picture with eleven prescribed reads";
 export const REPETITION_TITLE = "Prescribed picture rereads";
 export const REPETITION_REPLY =
   "These are prescribed rereads. The observation does not require stopping the task.";
@@ -48,7 +48,10 @@ export const toolRepetition: Scenario = () => {
           },
         ]),
       };
-    if (call <= 5) return { calls: [{ name: "read", args: { path: "comparison.png" } }] };
+    const reread = { name: "read", args: { path: "comparison.png" } } as const;
+    // Let the journey inspect the streak after nine and ten completed reads.
+    if (call === 11 || call === 12) return { threadHeld: [reread] };
+    if (call <= 10) return { calls: [reread] };
     return { held: true };
   };
 };

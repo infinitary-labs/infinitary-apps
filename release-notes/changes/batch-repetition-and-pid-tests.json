@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-repetition-and-pid-tests",
+      "reason": "Only tests change: the repetition journey observes the existing successful-read threshold, and the service-manager stand-in handles a removed supervisor PID file during teardown."
+    }
+  ]
+}

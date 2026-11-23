@@ -740,7 +740,7 @@ describe("dealing a request's passes into jobs", () => {
   const every = phonePasses([...PHONE_DEVICES], { parts: PHONE_PARTS.map(({ name }) => name) });
   it("deals every pass once into as few jobs of the budget as its recorded time needs, each in plan order", () => {
     const jobs = dealPhonePasses(every, recorded);
-    expect(PHONE_JOB_BUDGET_MS).toBe(14 * 60_000);
+    expect(PHONE_JOB_BUDGET_MS).toBe(20 * 60_000);
     expect(
       jobs
         .flatMap((job) => job.passes)

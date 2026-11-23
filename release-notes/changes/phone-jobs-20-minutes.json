@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-jobs-20-minutes",
+      "reason": "The project's phone check deals its parts into jobs of up to 20 recorded minutes instead of 14, with its job and gate limits raised to match; only how the project is checked changes."
+    }
+  ]
+}

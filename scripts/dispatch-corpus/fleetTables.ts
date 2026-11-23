@@ -17,6 +17,8 @@ export type TaskRow = {
   /** Null means never dispatched; absent only in databases predating that fact. */
   started_at?: number | null;
   id: string;
+  /** The task's key (`INF-12`); null on a row with none or a database older than keys. */
+  key: string | null;
   title: string;
   status: string;
   kind: string;
@@ -57,6 +59,30 @@ export type CardRow = {
   duplicate_at: number | null;
 };
 
+/**
+ * One override the captain's words declared on a task, as its `note` row
+ * recorded it (`docs/agents-reach.md`, "The override counts").
+ */
+export type RecordedOverride = {
+  /** When the row was written. */
+  at: number;
+  /** Who wrote the row, which says the route its words took (`manifest.rigor.overrides`). */
+  actor: string;
+  /** The soft holds it named (`overrideHoldsFrom`). */
+  holds: string[];
+  /** How long it lasts; null on a row whose override does not say. */
+  until: "version" | "task" | null;
+  /** The version a `version` override covers. */
+  head: string | null;
+  /** The words were the captain's click on a merge (INF-1966): such an override never stands. */
+  mergeClick: boolean;
+  /**
+   * The override the task's record held when this one was written, which
+   * this one replaced; null when none stood or a take-back came between.
+   */
+  replaces: { at: number; holds: string[] } | null;
+};
+
 /** One actor-labelled row of a task's own timeline (`task_events`). */
 export type CardEvent = { taskId: string; actor: string; at: number; action?: string };
 
@@ -92,11 +118,10 @@ export type FleetTables = {
    */
   capResets: Map<string, number>;
   /**
-   * task id -> each override the captain's words declared on it, as the
-   * soft holds it named (INF-484 move 8; `overrideHoldsFrom`). Empty on a
-   * database older than the override.
+   * task id -> each override the captain's words declared on it, oldest
+   * first (INF-484 move 8). Empty on a database older than the override.
    */
-  overrides: Map<string, string[][]>;
+  overrides: Map<string, RecordedOverride[]>;
 };
 
 export const EMPTY_TABLES: FleetTables = {
@@ -133,6 +158,7 @@ export function readFleetTables(dbPath: string): FleetTables {
         (db.prepare(`PRAGMA table_info(${taskTable})`).all() as { name: string }[]).map((c) => c.name),
       );
       const startedAt = taskColumns.has("started_at") ? "started_at, " : "";
+      const key = taskColumns.has("key") ? "key" : "NULL AS key";
       const closedAt = taskColumns.has("closed_at") ? "closed_at" : "NULL AS closed_at";
       const closedReason = taskColumns.has("closed_reason")
         ? "closed_reason"
@@ -150,7 +176,7 @@ export function readFleetTables(dbPath: string): FleetTables {
       const deliveryOf = savedDeliveryReader(db);
       for (const row of db
         .prepare(
-          `SELECT id, title, status, kind, repo_id, ${parent}, created_at, ${startedAt}${closedAt}, ${closedReason}, ${difficulty}, ${shape}, ${delivery}, ${outcome} FROM ${taskTable}`,
+          `SELECT id, ${key}, title, status, kind, repo_id, ${parent}, created_at, ${startedAt}${closedAt}, ${closedReason}, ${difficulty}, ${shape}, ${delivery}, ${outcome} FROM ${taskTable}`,
         )
         .all() as TaskRow[]) {
         tasks.set(row.id, {
@@ -324,20 +350,32 @@ export function readFleetTables(dbPath: string): FleetTables {
     const reviewEvents: ReviewEvent[] = [];
     const capResets = new Map<string, number>();
     // The captain's overrides (INF-484 move 8): a `note` row whose delivery
-    // patch carries the typed override.
-    const overrides = new Map<string, string[][]>();
+    // patch carries the typed override. A take-back's row carries the
+    // override it took back instead, and leaves nothing standing.
+    const overrides = new Map<string, RecordedOverride[]>();
+    const standing = new Map<string, RecordedOverride>();
     if (tables.has("task_events")) {
       for (const row of db
         .prepare(
-          `SELECT task_id, at, kind, data_json FROM task_events
+          `SELECT task_id, at, actor, kind, data_json FROM task_events
              WHERE kind IN ('review', 'cap_reset')
-                OR (kind = 'note' AND data_json LIKE '%"override":%')
+                OR (kind = 'note' AND (data_json LIKE '%"override":%'
+                                    OR data_json LIKE '%"overrideWithdrawn":%'))
              ORDER BY at, id`,
         )
-        .all() as { task_id: string; at: number; kind: string; data_json: string | null }[]) {
+        .all() as {
+          task_id: string;
+          at: number;
+          actor: string;
+          kind: string;
+          data_json: string | null;
+        }[]) {
         if (row.kind === "note") {
-          const holds = overrideHoldsFrom(row.data_json);
-          if (holds) overrides.set(row.task_id, [...(overrides.get(row.task_id) ?? []), holds]);
+          const override = recordedOverrideFrom(row, standing.get(row.task_id));
+          if (override) {
+            overrides.set(row.task_id, [...(overrides.get(row.task_id) ?? []), override]);
+            standing.set(row.task_id, override);
+          } else if (tookBackOverride(row.data_json)) standing.delete(row.task_id);
           continue;
         }
         if (row.kind === "cap_reset") {
@@ -363,6 +401,39 @@ export function readFleetTables(dbPath: string): FleetTables {
     };
   } finally {
     db.close();
+  }
+}
+
+/**
+ * The override a `note` row declared, with the one it replaced; undefined
+ * for any other note. Whether a row is an override at all is
+ * `overrideHoldsFrom`'s, the reading the replay shares.
+ */
+function recordedOverrideFrom(
+  row: { at: number; actor: string; data_json: string | null },
+  replaced: RecordedOverride | undefined,
+): RecordedOverride | undefined {
+  const holds = overrideHoldsFrom(row.data_json);
+  if (!holds) return undefined;
+  const override = (JSON.parse(row.data_json ?? "null") as { override: JsonRecord }).override;
+  return {
+    at: row.at,
+    actor: row.actor,
+    holds,
+    until: override.until === "version" || override.until === "task" ? override.until : null,
+    head: typeof override.head === "string" ? override.head : null,
+    mergeClick: override.mergeClick === true,
+    replaces: replaced ? { at: replaced.at, holds: replaced.holds } : null,
+  };
+}
+
+/** Whether a `note` row is a take-back: it carries the override it took back. */
+function tookBackOverride(dataJson: string | null): boolean {
+  try {
+    const data = JSON.parse(dataJson ?? "null") as { overrideWithdrawn?: unknown } | null;
+    return typeof data?.overrideWithdrawn === "object" && data.overrideWithdrawn !== null;
+  } catch {
+    return false;
   }
 }
 

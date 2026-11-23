@@ -1,0 +1,30 @@
+{
+  "run": {
+    "display_title": "release",
+    "id": 44898655966,
+    "run_started_at": "2026-11-21T11:20:42Z",
+    "updated_at": "2026-11-21T12:00:50Z"
+  },
+  "jobs": [
+    "Requested stable rehearsal · Select source and version",
+    "Requested stable rehearsal · Check compatible phone release",
+    "Requested stable rehearsal · Check release notes · catalog",
+    "Requested stable rehearsal · Check release notes",
+    "Requested stable rehearsal · Build, sign and notarize (Mac)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Build Linux packages",
+    "Requested stable rehearsal · Windows installer",
+    "Requested stable rehearsal · Signed installer publication gate",
+    "Requested stable rehearsal · Desktop checks",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Nix on Ubuntu 24.04)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run AppImage (Fedora; latest image)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Ubuntu 24.04 host)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Ubuntu 26.04 host)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Arch; latest image)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Ubuntu 26.04 container)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Ubuntu 24.04 container)",
+    "Requested stable rehearsal · Linux packages / Requested stable rehearsal · Install and run package (Fedora; latest image)",
+    "Requested stable rehearsal · Preview uploads; upload nothing",
+    "Requested stable rehearsal · Published-alpha update check",
+    "Requested stable rehearsal · Check every copy; switch nothing"
+  ]
+}

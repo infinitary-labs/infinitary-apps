@@ -354,6 +354,7 @@
   "settingsDevicesChangeAddress": "Change address",
   "settingsDevicesChangeAddressFailed": "Could not change where this computer is reached.",
   "settingsDevicesChangeAddressNamed": "Change the address of {device}",
+  "settingsDevicesCheckingRow": "Checking {address}…",
   "settingsDevicesConfirmThis": "This is the computer",
   "settingsDevicesControllingNow": "Controlling your first mate now",
   "settingsDevicesCopied": "Copied",

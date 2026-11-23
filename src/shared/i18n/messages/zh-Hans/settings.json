@@ -346,6 +346,7 @@
   "settingsDevicesChangeAddress": "更改地址",
   "settingsDevicesChangeAddressFailed": "无法更改这台电脑的连接地址。",
   "settingsDevicesChangeAddressNamed": "更改 {device} 的地址",
+  "settingsDevicesCheckingRow": "正在检查 {address}…",
   "settingsDevicesConfirmThis": "就是这台电脑",
   "settingsDevicesControllingNow": "正在控制你的大副",
   "settingsDevicesCopied": "已复制",

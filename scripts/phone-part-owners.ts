@@ -33,6 +33,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/zh-Hant.lproj/",
     "ios/Infinitary/InfinitaryApp/InfinitaryApp.swift",
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneConversationSheet.swift",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-certificates-LICENSE.txt",

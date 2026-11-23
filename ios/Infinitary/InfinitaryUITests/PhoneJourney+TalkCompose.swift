@@ -104,8 +104,18 @@ extension PhoneJourney {
                        "Turned off, the box stays under the card with a Pencil expected: \(app.debugDescription)")
     }
 
-    /// INF-2218's approved reading view: the existing saved round opens without sending another message.
-    /// The talk fixture supplies the real saved reply; the sheet preserves its words and dismissal on both devices.
+    /// The Conversation's words for one round: the captain's bubble and what came back, found by their words, since
+    /// every round in it carries the same identifiers.
+    private func conversationWords(_ words: String) -> XCUIElement {
+        app.staticTexts.matching(identifier: "conversation-words").matching(NSPredicate(format: "label == %@", words)).firstMatch
+    }
+
+    private func conversationYou(_ words: String) -> XCUIElement {
+        app.staticTexts.matching(identifier: "conversation-you").matching(NSPredicate(format: "label == %@", words)).firstMatch
+    }
+
+    /// INF-6337's plan, part 3: the reply line opens the Conversation at that round, which keeps the saved question and
+    /// reply word for word, reads without sending anything, and closes with Done, on both devices.
     private func verifyReplyReading(_ sent: [String: Any]) async throws {
         let round = try XCTUnwrap(sent["lastTurn"] as? [String: Any])
         let question = try XCTUnwrap(round["you"] as? String)
@@ -113,26 +123,21 @@ extension PhoneJourney {
         let words = try XCTUnwrap(reply["words"] as? String ?? reply["text"] as? String)
         let before = try await home("talk-state", method: "GET")
         tapOnPhone(app.buttons["last-turn-reply"])
-        let body = app.staticTexts["reply-note-words"]
-        XCTAssertTrue(body.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(body.label, words, "The sheet keeps the saved reply's literal words")
-        let bubble = app.buttons["reply-note-question"]
-        XCTAssertTrue(bubble.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(bubble.label, question, "The shared bubble shows the original saved question without added quotes")
-        XCTAssertTrue(app.staticTexts["You"].exists)
-        XCTAssertTrue(app.staticTexts["First mate"].exists)
-        XCTAssertFalse(app.staticTexts["reply-note-title"].exists)
+        let body = conversationWords(words)
+        XCTAssertTrue(body.waitForPresence(timeout: 10), "The Conversation keeps the saved reply's literal words: \(app.debugDescription)")
+        XCTAssertTrue(conversationYou(question).waitForPresence(timeout: 10),
+                      "The bubble shows the original saved question without added quotes: \(app.debugDescription)")
         try await appearances("conversation-reply", showing: body)
-        tapOnPhone(app.buttons["close-reply-note"])
-        XCTAssertTrue(app.buttons["close-reply-note"].waitForAbsence(timeout: 10))
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
         let after = try await home("talk-state", method: "GET")
         XCTAssertEqual((after["writes"] as? [Any])?.count, (before["writes"] as? [Any])?.count,
-                       "Reading and dismissing the sheet sends nothing")
+                       "Reading and closing the Conversation sends nothing")
         XCTAssertEqual((after["lastTurn"] as? [String: Any])?["you"] as? String, question)
     }
 
-    /// INF-2218: realistic saved long and picture-only rounds through the task owner, not another reply store.
-    /// The native sheet must keep exact multiline words, allow the long question to open/fold and send nothing.
+    /// INF-2218, kept for the Conversation: realistic saved long and picture-only rounds through the task owner. The
+    /// Conversation keeps exact multiline words, shows the long question whole, scrolls, and sends nothing.
     private func verifyLongReplyReading() async throws {
         _ = try await home("empty-cards")
         let fixture = try await home("reply-reading-fixture")
@@ -142,40 +147,89 @@ extension PhoneJourney {
         let pictureWords = pictureQuestion.label
         let before = try await home("talk-state", method: "GET")
         tapOnPhone(app.buttons["last-turn-reply"])
-        let body = app.staticTexts["reply-note-words"]
-        XCTAssertTrue(body.waitForPresence(timeout: 10))
-        XCTAssertEqual(body.label, fixture["problemWords"] as? String)
-        XCTAssertEqual(app.buttons["reply-note-question"].label, pictureWords)
-        XCTAssertFalse(app.buttons["reply-note-question"].isEnabled)
-        try await appearances("conversation-picture-problem", showing: body)
-        tapOnPhone(app.buttons["close-reply-note"])
-        XCTAssertTrue(app.buttons["close-reply-note"].waitForAbsence(timeout: 10))
+        let problem = conversationWords(try XCTUnwrap(fixture["problemWords"] as? String))
+        XCTAssertTrue(problem.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(conversationYou(pictureWords).exists, "A picture-only message reads as its picture words")
+        try await appearances("conversation-picture-problem", showing: problem)
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
         tapOnPhone(app.buttons["last-turn-older-reply"])
-        XCTAssertTrue(body.waitForPresence(timeout: 10))
-        XCTAssertEqual(body.label, fixture["words"] as? String)
-        let bubble = app.buttons["reply-note-question"]
-        XCTAssertTrue(bubble.isEnabled, "A question cut after two lines can be opened")
-        XCTAssertEqual(bubble.label, fixture["question"] as? String)
-        let folded = bubble.frame.height
-        tapOnPhone(bubble)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in bubble.frame.height > folded }, object: nil, timeout: 10), .completed)
-        // INF-4241 dropped a fold back and a third open, which repeated the first open; the question stays open here.
-        XCTAssertEqual(body.label, fixture["words"] as? String)
+        let body = conversationWords(try XCTUnwrap(fixture["words"] as? String))
+        XCTAssertTrue(body.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(conversationYou(try XCTUnwrap(fixture["question"] as? String)).exists, "The long question shows whole")
         try await appearances("conversation-long-reply", showing: body)
-        let scroll = app.scrollViews["reply-note-scroll"]
+        let scroll = app.scrollViews["conversation-scroll"]
         if body.frame.maxY > scroll.frame.maxY {
             scroll.swipeUp()
             XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in body.frame.maxY <= scroll.frame.maxY + 1 }, object: nil, timeout: 10), .completed)
             picture("conversation-long-reply-scrolled")
         }
-        tapOnPhone(app.buttons["close-reply-note"])
-        XCTAssertTrue(app.buttons["close-reply-note"].waitForAbsence(timeout: 10))
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
         let after = try await home("talk-state", method: "GET")
         XCTAssertEqual((after["writes"] as? [Any])?.count, (before["writes"] as? [Any])?.count,
                        "Reading either saved round sends no message")
         let savedBefore = try XCTUnwrap(before["lastTurn"] as? NSDictionary)
         let savedAfter = try XCTUnwrap(after["lastTurn"] as? NSDictionary)
         XCTAssertEqual(savedAfter, savedBefore, "Reading and scrolling do not change saved words")
+    }
+
+    /// INF-6337's plan, part 3, the captain's words: the conversation holds "cards they interacted" and is "a place for
+    /// people to find their recent cards". The phone's own press of a card's button shows on the strip as a card round;
+    /// the round opens the Conversation, its Cards view lists the card waiting and the one answered, and a tile opens
+    /// its card on Home, after which the Conversation comes back as it was. Data: this part's test home, two first mate
+    /// cards. Resources: this part's own simulator.
+    private func verifyConversationCards() async throws {
+        _ = try await home("empty-cards")
+        let pressed = try await home("conversation-card")
+        let title = try XCTUnwrap(pressed["title"] as? String)
+        let label = try XCTUnwrap(pressed["label"] as? String)
+        let heading = cardHeading(title)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        let choice = app.buttons["card-action-bars"]
+        XCTAssertTrue(choice.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isEnabled == true"), object: choice, timeout: 20), .completed)
+        tapOnPhone(choice)
+        XCTAssertTrue(heading.waitForAbsence(timeout: 10), "The pressed card leaves the stage: \(app.debugDescription)")
+        let cardName = app.buttons["last-turn-card"]
+        XCTAssertTrue(cardName.waitForPresence(timeout: 15), "The press shows on the strip as a card round: \(app.debugDescription)")
+        XCTAssertTrue(cardName.label.contains(title), "The card round names the card")
+        let bubble = app.buttons["last-turn-you"]
+        XCTAssertEqual(bubble.label, label, "The card round shows the button's own words")
+        XCTAssertTrue(app.staticTexts["last-turn-older-you"].exists, "The message before it stays as the older round")
+        try await appearances("strip-card-round", showing: bubble)
+        // The card's name opens it again, as a past card; putting it away leaves the strip as it was.
+        tapOnPhone(cardName)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), "The card's name opens the card: \(app.debugDescription)")
+        tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(heading.waitForAbsence(timeout: 10), app.debugDescription)
+        let waiting = try await home("conversation-waiting")
+        let waitingHeading = cardHeading(try XCTUnwrap(waiting["title"] as? String))
+        XCTAssertTrue(waitingHeading.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(bubble.waitForPresence(timeout: 10), "With a card up the newest round stays: \(app.debugDescription)")
+        tapOnPhone(bubble)
+        let chose = conversationYou("Chose “\(label)”")
+        XCTAssertTrue(chose.waitForPresence(timeout: 10), "The Conversation opens at the card round: \(app.debugDescription)")
+        let pressedTile = app.buttons["conversation-tile-\(try XCTUnwrap(pressed["id"] as? String))"]
+        XCTAssertTrue(pressedTile.exists, "The card's tile stands before the press")
+        try await appearances("conversation-everything", showing: chose)
+        tapOnPhone(app.segmentedControls["conversation-show"].buttons.element(boundBy: 1))
+        let waitingTile = app.buttons["conversation-tile-\(try XCTUnwrap(waiting["id"] as? String))"]
+        XCTAssertTrue(waitingTile.waitForPresence(timeout: 10), "Cards lists the card waiting on you: \(app.debugDescription)")
+        XCTAssertTrue(app.descendants(matching: .any)["conversation-section-answered"].exists, "Cards lists the answered card")
+        XCTAssertTrue(pressedTile.exists)
+        XCTAssertLessThan(waitingTile.frame.minY, pressedTile.frame.minY, "Waiting on you comes first")
+        try await appearances("conversation-cards", showing: pressedTile)
+        tapOnPhone(pressedTile)
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), "The tile opens its card on Home: \(app.debugDescription)")
+        tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForPresence(timeout: 10),
+                      "Once the card leaves, the Conversation comes back: \(app.debugDescription)")
+        XCTAssertTrue(waitingTile.waitForPresence(timeout: 10), "It comes back on the view it was left on")
+        tapOnPhone(app.buttons["close-conversation"])
+        XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
+        _ = try await home("empty-cards")
     }
 
     /// INF-64 piece 5: native input and controls reach the real Mac as captain actions.
@@ -219,6 +273,7 @@ extension PhoneJourney {
         if UIDevice.current.userInterfaceIdiom == .pad { try await pencilPlacement() }
         try await verifyLongReplyReading()
         if UIDevice.current.userInterfaceIdiom == .pad { try await pencilSteadyThenOff() }
+        try await verifyConversationCards()
     }
 
     /// INF-209 and INF-82 integration: one composer retains the actual typed/photo draft across tabs and rotation.

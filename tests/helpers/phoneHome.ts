@@ -2378,6 +2378,36 @@ export async function startPhoneHome(
           result = { title };
           break;
         }
+        // INF-6366: a first mate card for the phone to answer with its own button, so the strip and the Conversation
+        // show that press as a card round; then a card left waiting, for the Conversation's Cards view.
+        case "POST conversation-card": {
+          const title = "Pick the chart style";
+          const id = core.services.supervisor.addFirstmateCard({
+            id: "phone-conversation-chart",
+            title,
+            body: "<p>Bars read best for a week of counts; lines read best for a trend.</p>",
+            actions: [
+              { id: "bars", label: "Use bars", default: true },
+              { id: "lines", label: "Use lines" },
+            ],
+          });
+          result = { id, title, label: "Use bars" };
+          break;
+        }
+        case "POST conversation-waiting": {
+          const title = "Which harbour goes first?";
+          const id = core.services.supervisor.addFirstmateCard({
+            id: "phone-conversation-waiting",
+            title,
+            body: "<p>Both harbours need a fresh chart this week.</p>",
+            actions: [
+              { id: "north", label: "North first", default: true },
+              { id: "south", label: "South first" },
+            ],
+          });
+          result = { id, title };
+          break;
+        }
         // INF-3881: a card holding the Advanced architecture map part, filled with this project's own map files, with words
         // under it so the card is taller than the screen and a finger on the diagram has a card to scroll.
         case "POST map-card": {

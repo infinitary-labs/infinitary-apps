@@ -205,6 +205,7 @@ A round is one thing the captain did and what came back: a message and the reply
   A line typed under the first mate's own card is saved both as a message and as a card line that message names (`typed_card_id`, `typed_line`), and it draws once, as a line under that card; one saved before that link existed draws twice.
   A card deleted with its task takes its tile rounds with it, and a message typed under a card now gone draws as a plain message.
   A home that cannot answer the read shows the two rounds the strip holds and says only those could be read.
+  The iPhone and iPad app reads the same rounds and draws the conversation as a sheet over Home, with the same two views and no field of its own (`docs/ios.md`, "Talk and tasks").
   Open the conversation (`firstmate.reply`, `docs/keyboard.md`) opens it at its newest round from command search, after the lines have faded too, and comes home from Settings first; it keeps the reply note's id, so a key bound to it keeps working.
 - **Motion.**
   A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.

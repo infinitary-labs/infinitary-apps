@@ -243,7 +243,7 @@ extension PhoneJourney {
         if app.keyboards.firstMatch.exists { try await dismissKeyboardForProbe() }
         waitForSteadyTarget(card)
         picture("duo-reply-arrived", activeWindow: true)
-        // Return must not press Show panels behind the reply reader, even if Tab had selected it.
+        // Return must not press Show panels behind the Conversation, even if Tab had selected it.
         // As before the side pose's Tab, read the app's own selection before the one key, which turns it over.
         let toggle = app.buttons["toggle-phone-panels"]
         XCTAssertTrue(toggle.waitForPresence(timeout: 10), "Show panels is back once the keyboard has left")
@@ -251,21 +251,21 @@ extension PhoneJourney {
         try await pressDuoKey("tab")
         let selected = NSPredicate(format: "value == '1'")
         guard waitForPhonePredicate(selected, object: toggle, timeout: 10) == .completed else {
-            XCTFail("Tab selects Show panels before opening the reply reader")
+            XCTFail("Tab selects Show panels before opening the Conversation")
             return
         }
         tapOnPhone(reply)
-        let close = app.buttons["close-reply-note"]
+        let close = app.buttons["close-conversation"]
         XCTAssertTrue(close.waitForPresence(timeout: 10), "The reply reader covers Home")
         try await pressDuoKey("return")
         tapOnPhone(close)
-        XCTAssertTrue(close.waitForAbsence(timeout: 10), "Done closes the reply reader")
-        assertDuoPanelFolded("Return did not show panels behind the reply reader", book: true)
-        XCTAssertEqual(toggle.value as? String, "1", "Show panels is still selected when the reply reader closes")
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), "Done closes the Conversation")
+        assertDuoPanelFolded("Return did not show panels behind the Conversation", book: true)
+        XCTAssertEqual(toggle.value as? String, "1", "Show panels is still selected when the Conversation closes")
         try await pressDuoKey("escape")
         let unselected = NSPredicate(format: "value == '0'")
         XCTAssertEqual(waitForPhonePredicate(unselected, object: toggle, timeout: 10), .completed,
-                       "Escape clears the selection after the reply reader closes, before Home receives another touch")
+                       "Escape clears the selection after the Conversation closes, before Home receives another touch")
         // The touch that tucks the reply stays the card's own: on a choice's words it picks that choice as well.
         let answered = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", phoneAnsweredFormPattern)).firstMatch
         XCTAssertFalse(answered.exists, "The card reads answered before any pick")

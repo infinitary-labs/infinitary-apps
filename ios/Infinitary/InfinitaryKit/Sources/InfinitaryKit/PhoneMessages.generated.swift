@@ -1840,17 +1840,15 @@ public enum PhoneMessages {
     public static func `phoneCommonSettings`() -> String { PhoneWords.format("phoneCommonSettings", []) }
     public static func `phoneCommonTryAgain`() -> String { PhoneWords.format("phoneCommonTryAgain", []) }
     public static func `phoneComposerAddingPhotos`() -> String { PhoneWords.format("phoneComposerAddingPhotos", []) }
-    public static func `phoneComposerFirstMate`() -> String { PhoneWords.format("phoneComposerFirstMate", []) }
+    public static func `phoneComposerCardHint`() -> String { PhoneWords.format("phoneComposerCardHint", []) }
+    public static func `phoneComposerConversationHint`() -> String { PhoneWords.format("phoneComposerConversationHint", []) }
     public static func `phoneComposerPhotoFailed`() -> String { PhoneWords.format("phoneComposerPhotoFailed", []) }
     public static func `phoneComposerPhotoTooLarge`() -> String { PhoneWords.format("phoneComposerPhotoTooLarge", []) }
     public static func `phoneComposerPhotos`() -> String { PhoneWords.format("phoneComposerPhotos", []) }
     public static func `phoneComposerPictureOnly`() -> String { PhoneWords.format("phoneComposerPictureOnly", []) }
     public static func `phoneComposerPlaceholder`() -> String { PhoneWords.format("phoneComposerPlaceholder", []) }
-    public static func `phoneComposerReplyHint`() -> String { PhoneWords.format("phoneComposerReplyHint", []) }
-    public static func `phoneComposerReplyTitle`() -> String { PhoneWords.format("phoneComposerReplyTitle", []) }
     public static func `phoneComposerTooLong`() -> String { PhoneWords.format("phoneComposerTooLong", []) }
     public static func `phoneComposerWorking`() -> String { PhoneWords.format("phoneComposerWorking", []) }
-    public static func `phoneComposerYou`() -> String { PhoneWords.format("phoneComposerYou", []) }
     public static func `phoneComputerAddLine`() -> String { PhoneWords.format("phoneComputerAddLine", []) }
     public static func `phoneComputerAddTitle`() -> String { PhoneWords.format("phoneComputerAddTitle", []) }
     public static func `phoneComputerAnswers`() -> String { PhoneWords.format("phoneComputerAnswers", []) }
@@ -6270,17 +6268,15 @@ extension PhoneWords {
         "phoneCommonSettings": [],
         "phoneCommonTryAgain": [],
         "phoneComposerAddingPhotos": [],
-        "phoneComposerFirstMate": [],
+        "phoneComposerCardHint": [],
+        "phoneComposerConversationHint": [],
         "phoneComposerPhotoFailed": [],
         "phoneComposerPhotoTooLarge": [],
         "phoneComposerPhotos": [],
         "phoneComposerPictureOnly": [],
         "phoneComposerPlaceholder": [],
-        "phoneComposerReplyHint": [],
-        "phoneComposerReplyTitle": [],
         "phoneComposerTooLong": [],
         "phoneComposerWorking": [],
-        "phoneComposerYou": [],
         "phoneComputerAddLine": [],
         "phoneComputerAddTitle": [],
         "phoneComputerAnswers": [],

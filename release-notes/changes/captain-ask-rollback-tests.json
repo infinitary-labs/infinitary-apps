@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "captain-ask-rollback-tests",
+      "reason": "Internal test fixture repair: remove later reply attribution columns before comparing older database schemas. Shipped migrations are unchanged."
+    }
+  ]
+}

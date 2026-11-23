@@ -558,3 +558,10 @@ The step at the next start attaches each listed message to its old thread's stil
 `continues` keeps its saved values and is never written again.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 Dropping the table and removing its history row undoes the migration; the carried attachments stay as `ask` events, which an older build reads as the message's work but not as work its tools acted on, and it ignores `threadCarried`.
+
+## Where a reply was typed
+
+The newest migration adds nullable `captain_asks.typed_card_id` and `captain_asks.typed_line`: the card a captain's message was typed under and its line's number in that card's thread (`docs/task-capture.md`, "Where a reply was typed").
+Every existing row and every message typed in the main input keeps both null; such a message names no card in its retry and no line in the first mate's context, as a message whose card the app lost at a restart did before.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+Dropping the two columns and removing the migration's history row undoes it; an older build with the history row removed but the columns kept reads and writes the table as before, since it names its columns and never reads these two.

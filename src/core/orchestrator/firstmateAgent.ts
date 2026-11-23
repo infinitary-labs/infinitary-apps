@@ -221,6 +221,8 @@ type TurnPayload =
        * phase 2): this card IS the topic, not a maybe-hint.
        */
       aboutCardId?: string;
+      /** The number of the line that reply was saved as in the card's thread (INF-6115 piece 3). */
+      aboutLine?: number;
       /**
        * A past card shown on the stage (FI3-579): a closed card the captain is
        * reading as history. Context like the visible card, never the topic.
@@ -428,11 +430,6 @@ export class FirstmateAgent {
         options.supervisor.cards.hostCards.withdrawHostCard(cardId, "an answering card went up"),
       cardTitle: (cardId) =>
         options.supervisor.cards.snapshot().find((card) => card.id === cardId)?.title,
-      captainMessage: (cardId) =>
-        options.supervisor.cards
-          .thread(cardId)
-          .messages.filter((message) => message.who === "captain")
-          .at(-1)?.id,
       ending: options.supervisor.askEnding,
       observe: options.answerDelivery === "observe",
     });
@@ -462,7 +459,7 @@ export class FirstmateAgent {
         this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
         void this.drainInbox();
       },
-      converseAboutCard: (cardId, text, images, messageFiles, receipt) => {
+      converseAboutCard: (cardId, text, images, messageFiles, receipt, line) => {
         void this.converse({
           text,
           receipt,
@@ -470,6 +467,7 @@ export class FirstmateAgent {
           ...(messageFiles?.length ? { messageFiles } : {}),
           visibleCardId: cardId,
           aboutCardId: cardId,
+          ...(line !== undefined ? { aboutLine: line } : {}),
         });
       },
       moveFlagship: (providerId) => {
@@ -493,6 +491,10 @@ export class FirstmateAgent {
     const aboutCardId =
       typeof turn === "string" ? undefined : turn.aboutCardId?.trim() || undefined;
     const pastCardId = typeof turn === "string" ? undefined : turn.pastCardId?.trim() || undefined;
+    // The reply keeps the card and line it was typed under (INF-6115 piece 3).
+    const aboutLine = typeof turn === "string" ? undefined : turn.aboutLine;
+    const typedUnder =
+      aboutCardId && aboutLine !== undefined ? { cardId: aboutCardId, line: aboutLine } : undefined;
     // The window's focus rides every turn until the captain's next one says otherwise.
     this.context.captainFocus =
       typeof turn === "string" ? undefined : turn.focusedProjectId?.trim() || undefined;
@@ -520,9 +522,9 @@ export class FirstmateAgent {
       messageFiles: typeof turn === "string" ? [] : (turn.messageFiles ?? []),
       hintTaskId,
       ...(typeof turn !== "string" && turn.retryOf ? { retryOf: turn.retryOf } : {}),
+      ...(typedUnder ? { typedUnder } : {}),
     });
     this.asks.select([...this.turn.read].at(-1));
-    this.delivery.noteAbout(ask.id, aboutCardId);
     try {
       this.options.onCaptainTurnAccepted?.();
     } catch (error) {
@@ -566,7 +568,7 @@ export class FirstmateAgent {
     // session and renewed instructions may start it over, and either makes
     // the next context complete.
     const contextNow = () =>
-      this.context.forTurn(visibleCardId, hintTaskId, aboutCardId, pastCardId, sourceFacts);
+      this.context.forTurn(visibleCardId, hintTaskId, typedUnder, pastCardId, sourceFacts);
     const userBody = renderWake(captainTurn(trimmed, false, undefined, undefined, ask.through));
     const userSegment: ServedSegmentInput = { kind: "user", body: userBody, origin: "captain" };
     const captainOnly = (context: string): ServedInput => ({
@@ -654,7 +656,7 @@ export class FirstmateAgent {
     const input =
       pending.length > 0 ? this.servedTurn(context, pending, userSegment) : captainOnly(context);
     this.options.inbox.markDelivered(pending.map((row) => row.id));
-    this.delivery.adopt(pending, (row) => aboutCardIdFromRef(row.ref));
+    this.delivery.adopt(pending);
     this.turn.aboutCardId = aboutCardId;
     // The live words ride no row: a cut-off turn parks them (runTurn).
     this.turn.liveCaptain = { words: trimmed, attachments: kept, aboutCardId, askId: ask.id };
@@ -1071,7 +1073,7 @@ export class FirstmateAgent {
     return this.context.buildContextBlock(
       visibleCardId,
       hintTaskId,
-      aboutCardId,
+      aboutCardId ? { cardId: aboutCardId } : undefined,
       pastCardId,
       focusedProjectId,
     );
@@ -1354,7 +1356,10 @@ export class FirstmateAgent {
       for (const cardId of repliedUnder) {
         try {
           if (this.options.supervisor.cards.recordFirstmateThreadAnswer(cardId, threadAnswer)) {
-            this.delivery.creditReply(cardId);
+            this.delivery.creditReply(cardId, [
+              ...readAsks,
+              ...tookIn.flatMap((steer) => (steer.askId ? [steer.askId] : [])),
+            ]);
           }
         } catch (caught) {
           console.warn("[firstmate] card-thread answer failed at turn end:", caught);
@@ -1597,6 +1602,17 @@ export class FirstmateAgent {
           : aboutCardIdFromRef(row.ref),
       )
       .find(Boolean);
+    // The line under that card the batch's message was typed as, from its
+    // saved message (INF-6115 piece 3).
+    const typedUnder = batch
+      .map((row) =>
+        row.facts?.kind === "answer-missing" || row.facts?.kind === "captain-turn"
+          ? row.facts.askId
+            ? this.options.tasks.capture.getAsk(row.facts.askId)?.typedUnder
+            : undefined
+          : undefined,
+      )
+      .find((typed) => typed !== undefined && typed.cardId === aboutCardId);
     const unavailable = this.options.knowledge?.availability();
     if (unavailable?.state === "unavailable") {
       if (!this.directionsBlocked) {
@@ -1610,7 +1626,13 @@ export class FirstmateAgent {
     }
     this.directionsBlocked = false;
     const input = this.servedTurn(
-      this.context.forTurn(undefined, undefined, aboutCardId, undefined, sourceFacts),
+      this.context.forTurn(
+        undefined,
+        undefined,
+        typedUnder ?? (aboutCardId ? { cardId: aboutCardId } : undefined),
+        undefined,
+        sourceFacts,
+      ),
       batch,
     );
     this.options.inbox.markDelivered(batch.map((row) => row.id));
@@ -1620,7 +1642,7 @@ export class FirstmateAgent {
         return origin ? [[row.id, origin] as const] : [];
       }),
     );
-    this.delivery.adopt(batch, (row) => aboutCardIdFromRef(row.ref));
+    this.delivery.adopt(batch);
     this.turn.aboutCardId = aboutCardId;
     void this.runTurn(
       admitted,

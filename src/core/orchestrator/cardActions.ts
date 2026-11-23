@@ -261,9 +261,18 @@ export class CardActions {
         : messageFiles.length
           ? [messageFiles]
           : [];
+      // The message keeps the line it was typed as (INF-6115 piece 3).
+      const [pasted, receipt] = delivery;
       this.core
         .hooks()
-        .converseAboutCard?.(id, context, hasImages ? images : undefined, ...delivery);
+        .converseAboutCard?.(
+          id,
+          context,
+          hasImages ? images : undefined,
+          pasted,
+          receipt,
+          asked.id,
+        );
       return this.core.cards.thread(id);
     }
     const taskId = card.taskId;

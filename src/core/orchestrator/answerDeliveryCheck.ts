@@ -32,8 +32,6 @@ export type AnswerDeliveryHost = {
   withdrawNotice?: (cardId: string) => void;
   /** The title of a card the captain replied under, when it is still on the stack. */
   cardTitle: (cardId: string) => string | undefined;
-  /** The newest captain message under a card, which the retry names. Absent, it names none. */
-  captainMessage?: (cardId: string) => number | undefined;
   ending: AskEnding;
   /**
    * Judge nothing: no verdict, no retry, no notice. The replay harness and
@@ -69,7 +67,6 @@ export type DeliveryTurnEnd = {
  */
 export class AnswerDeliveryCheck {
   private adopted = new Set<string>();
-  private about = new Map<string, string>();
   private retryAsk: string | undefined;
   /** The running turn reads an answer a captain's message waits on. */
   private answerTurn = false;
@@ -90,26 +87,19 @@ export class AnswerDeliveryCheck {
     return this.outputOnly || this.answerTurn;
   }
 
-  /** A message was a reply under one of Firstmate's own cards. */
-  noteAbout(askId: string, cardId: string | undefined): void {
-    if (cardId) this.about.set(askId, cardId);
-  }
-
   /**
    * A drained batch carries saved messages back: parked captain words name
    * theirs, the answer-missing wake names the one it retries (and is judged
    * as retrying from here on), and a requested-response wake brings back
    * each message its request was asked for.
    */
-  adopt(rows: readonly InboxRow[], aboutOf: (row: InboxRow) => string | undefined): void {
+  adopt(rows: readonly InboxRow[]): void {
     for (const row of rows) {
       const facts = row.facts;
       if (facts?.kind === "captain-turn" && facts.askId) {
         this.adopted.add(facts.askId);
-        this.noteAbout(facts.askId, aboutOf(row));
       } else if (facts?.kind === "answer-missing") {
         this.adopted.add(facts.askId);
-        this.noteAbout(facts.askId, facts.aboutCard?.id);
         this.retryAsk = facts.askId;
         if (this.host.tasks.capture.getAsk(facts.askId)?.delivery !== "retrying") {
           this.host.tasks.capture.setAskDelivery(facts.askId, "retrying");
@@ -169,9 +159,16 @@ export class AnswerDeliveryCheck {
     this.save(read, entry);
   }
 
-  /** Closing words written into a card's replies count for the messages that were replies under it. */
-  creditReply(cardId: string): void {
-    const askIds = [...this.about].filter(([, about]) => about === cardId).map(([id]) => id);
+  /**
+   * Closing words written into a card's replies count for the messages the
+   * running turn read that were typed under it, as each saved (INF-6115
+   * piece 3): those still open, those a drained batch carried back, and
+   * `read`, the ones its turn end has already closed.
+   */
+  creditReply(cardId: string, read: readonly string[] = []): void {
+    const askIds = [...new Set([...read, ...this.scope()])].filter(
+      (id) => this.host.tasks.capture.getAsk(id)?.typedUnder?.cardId === cardId,
+    );
     this.save(askIds, { outcome: "action", kind: "reply", tool: "reply", ref: cardId });
   }
 
@@ -225,7 +222,6 @@ export class AnswerDeliveryCheck {
 
   clear(): void {
     this.adopted.clear();
-    this.about.clear();
     this.retryAsk = undefined;
     this.answerTurn = false;
   }
@@ -353,9 +349,10 @@ export class AnswerDeliveryCheck {
     }
     const refusal = refusalOf(ask.deliveryFacts.entries);
     const filed = ask.taskId ? this.host.tasks.get(ask.taskId) : undefined;
-    const aboutId = this.about.get(id);
+    // The card and line the message was typed as, saved with it (INF-6115 piece 3).
+    const aboutId = ask.typedUnder?.cardId;
     const aboutTitle = aboutId ? this.host.cardTitle(aboutId) : undefined;
-    const aboutMessage = aboutId ? this.host.captainMessage?.(aboutId) : undefined;
+    const aboutMessage = ask.typedUnder?.line;
     // Work a crewmate ran for it ended: the first mate is asked for the answer it found.
     const ran = thread
       ? this.host.ending.ownWork(thread).filter((task) => task.startedAt !== null)

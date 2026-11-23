@@ -218,6 +218,59 @@ describe("the answer-delivery check across a restart", () => {
     expect(f.retryRows()).toEqual([]);
   });
 
+  // INF-6115 piece 3: a reply remembers where it was typed. Two lines of
+  // the captain's under one card each named the card's newest line, and the
+  // card each was typed under lived only in memory, so a restart lost it.
+  it.each([
+    ["at the turn's own end", false],
+    ["after a restart", true],
+  ] as const)(
+    "credits two unanswered replies under one card to their own lines %s",
+    (_when, restart) => {
+      const f = fixture();
+      const cardId = "card-fm-a1b2c3";
+      f.tasks.capture.openAsk({
+        id: "first",
+        text: "which build has the fix?",
+        typedUnder: { cardId, line: 4 },
+      });
+      f.tasks.capture.openAsk({
+        id: "second",
+        text: "and does it run on the PC?",
+        typedUnder: { cardId, line: 7 },
+      });
+      f.ask("elsewhere", "a message from the main input");
+      const turn = f.boot();
+      const check = restart ? f.boot() : turn;
+      // Nothing answered them: the one retry for each names the line it was typed as.
+      if (restart) check.reconcile(["first", "second"]);
+      else check.endTurn({ asks: ["first", "second"], held: false, unread: [] });
+      const named = f.inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .flatMap((row) =>
+          row.facts?.kind === "answer-missing" ? [[row.facts.askId, row.facts.aboutCard]] : [],
+        );
+      expect(named).toEqual([
+        ["first", { id: cardId, title: cardId, messageId: 4 }],
+        ["second", { id: cardId, title: cardId, messageId: 7 }],
+      ]);
+      // The retry turn's closing words under the card count for both replies, not the other message.
+      const retryTurn = restart ? f.boot() : check;
+      retryTurn.creditReply(cardId);
+      const replied = (id: string) =>
+        f.tasks.capture
+          .getAsk(id)
+          ?.deliveryFacts.entries.some(
+            (entry) => entry.outcome === "action" && entry.kind === "reply",
+          );
+      expect([replied("first"), replied("second"), replied("elsewhere")]).toEqual([
+        true,
+        true,
+        false,
+      ]);
+    },
+  );
+
   it("judges nothing in observe mode", () => {
     const f = fixture(true);
     f.ask("m1");

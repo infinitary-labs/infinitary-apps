@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it, onTestFinished } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { encodeClaudeProjectDir } from "../../src/core/claude/claudeTranscript";
 import { clientRecords, enqueued } from "./claudeSeatHarness";
 import { scratchDir } from "./scratchDirs";
@@ -70,7 +70,9 @@ describe("clientRecords", () => {
       if (folderFirst) mkdirSync(folder, { recursive: true });
       const steerQueued = enqueued(STEER);
       let read = false;
+      const seen: Record<string, unknown>[] = [];
       const queued = clientRecords(box, sessionId, (entry) => {
+        seen.push(entry);
         // The wait is reading the transcript: the client queues the steer right now.
         if (!read) {
           read = true;
@@ -89,7 +91,10 @@ describe("clientRecords", () => {
       });
       mkdirSync(folder, { recursive: true });
       writeFileSync(transcript, turnInATool(sessionId));
-      await queued;
+      await expect(queued).resolves.toBeUndefined();
+      // The wait read the turn before the steer was there, then found the steer.
+      expect(seen[0]).toMatchObject({ operation: "enqueue", content: "Which way?" });
+      expect(seen.at(-1)).toMatchObject({ operation: "enqueue", content: STEER });
     },
   );
 });

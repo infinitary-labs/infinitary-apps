@@ -196,6 +196,10 @@ export default defineConfig({
     // and vitest read it.
     // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
     globalSetup: ["./tests/helpers/vitestGlobalSetup.ts"],
+    // A test that runs no expect call fails, so a test cannot pass merely by
+    // finishing (docs/testing.md, "Every test makes an assertion"). Only the
+    // config file reaches the projects: a command-line flag does not.
+    expect: { requireAssertions: true },
     projects: [
       {
         extends: true,

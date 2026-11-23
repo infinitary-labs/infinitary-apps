@@ -90,9 +90,11 @@ describe("each preset", () => {
         const legacy = resolveBindings(presetKeymap("legacy"), panels, system);
         for (const id of allCommandIds(panels)) {
           const kept = keysOf(legacy, id);
-          const own = keysOf(bindings, id).filter(
-            (key) => !kept.some((old) => sameBinding(old, key)),
-          );
+          // Every key Legacy gives is its own, so its hint names one of them.
+          const own =
+            preset === "legacy"
+              ? keysOf(bindings, id)
+              : keysOf(bindings, id).filter((key) => !kept.some((old) => sameBinding(old, key)));
           if (own.length === 0) continue;
           const labels = own.map((key) => bindingLabel(key, system));
           expect(labels, `${id}'s hint`).toContain(keyHint(id, bindings, system));

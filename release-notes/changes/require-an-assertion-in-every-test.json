@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "require-an-assertion-in-every-test",
+      "reason": "Internal: every Vitest test must now make an assertion, and seven tests that passed merely by finishing now assert what they check; nothing a person sees changes."
+    }
+  ]
+}

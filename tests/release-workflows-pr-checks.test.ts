@@ -93,6 +93,17 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     expect(phoneFlag?.run).toBe('node scripts/phone-contract-flag.ts --base "$CHANGE_BASE"');
     expect(phoneFlag?.["continue-on-error"]).toBeFalsy();
+    // INF-6259's weekly audit, the captain's pick "Size headroom: refuse a
+    // change that grows a code file past, or further past, 1,800 lines": the
+    // code checks measure the change from its base and fail on a refusal.
+    const headroom = gate.filter((step) =>
+      step.run?.startsWith("node scripts/file-sizes.ts --headroom"),
+    );
+    expect(headroom.map((step) => step.run)).toEqual([
+      'node scripts/file-sizes.ts --headroom --base "$CHANGE_BASE"',
+    ]);
+    expect(ci.jobs["code-checks"]?.steps).toContain(headroom[0]);
+    expect(headroom[0]?.["continue-on-error"]).toBeFalsy();
     // INF-2915's plan: the paths step decides the build, the browser tests
     // and the critical path (scripts/pr-paths.ts).
     // The tests job reads its browser verdict and the build job its build
@@ -168,6 +179,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       ...bases,
       notes,
       phoneFlag,
+      ...headroom,
       ...pathSteps,
       count,
       reach,
@@ -250,7 +262,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     // ci.yml calls no other workflow.
     expect(Object.keys(ci.calls)).toEqual([]);
     // Every machine installs from the lockfile before it runs anything but a
-    // change's base, notes and paths steps, git and plain Node that need no
+    // change's base, notes, size headroom and paths steps, git and plain Node that need no
     // install and read the commits its checkout fetched: a pull request's
     // base parent, and for a pushed branch the commit it left main at; a
     // requested full sweep has no change to compare, and release.yml's notes
@@ -271,7 +283,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         !change || !BRANCH_CHECK.includes(id)
           ? [install]
           : id === "code-checks"
-            ? [notes?.run, phoneFlag?.run, install]
+            ? [notes?.run, headroom[0]?.run, phoneFlag?.run, install]
             : [paths?.run, install],
       );
     const checks = machines

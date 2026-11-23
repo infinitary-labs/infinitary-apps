@@ -53,6 +53,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Served text, a runbook under `resources/runbooks/` or the generated runbook fallback `src/core/runbooks/fallback.generated.ts`, is carried the same way, so a change to it selects the tests that import `src/core/pi/piResources.ts`, among them the crew prompt's budget test and the prompt contract tests (INF-2925).
   A test naming a folder that holds a runbook, as the runbook loaders' tests do, reads that runbook too.
   Audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, `src/core/tasks/taskService.ts` selects the settle boundary test, `src/core/orchestrator/wakes.ts` and its `*Wakes.ts` word modules select the wake words pins, `src/core/orchestrator/wakes.words.*.test.ts` (INF-3614), `src/core/orchestrator/seat.ts` and `src/core/pi/piResources.ts` select the two Claude session contract tests, which pin the seat's prompt and contract stamp through `tests/helpers/sessionContract.ts`, `src/shared/providers.ts` selects the Claude classifier test, whose scoring process loads it under plain Node, and any file under `scripts/` selects the alpha's build-list test, `tests/release-workflows-alpha-cut.test.ts`, which refuses a script the desktop build reaches that the alpha's build list leaves out (INF-4500).
+  INF-6259's weekly audit added twelve more, each for a change that passed its branch check and failed the batch on a test reaching the file through a helper: the forge's `putIn` to the publication tests that pin its arguments, the change publication and context to the placed working copies test, the `src/core/pi/*Tools.ts` modules to the two fixed-context ledgers, the services, presentation and notifications to the started core's projects test and notifications to the beside window's, the card store to the thread migrations, the placed ledger to the placed Claude contract, the program runner and crew brief to the program test, the placed copies and sessions to the placed callbacks and sign-in tests, `src/shared/holds.ts` to the crewmate wake words, and the forge's index and the publication's repository to the GitLab review test.
   These links add no readers for unrelated changes and leave edited tests to their local rounds.
   An inventory test declares additional indirect files in an `inventoryFiles` literal array of project-relative file paths in its own test file, as `src/shared/actions.test.ts` does for its settings request schemas.
   A generated file's freshness test that reads its source only through the generator's path constant declares that source the same way, as `src/core/personal/infinitaryEnv.test.ts` does for `src/shared/personal/contracts.ts`.
@@ -249,6 +250,13 @@ The warning line, `SIZE_WARNING_LINE` at 1,800 lines, gives that split room befo
   `node scripts/file-sizes.ts --warn` fails naming each code file over the warning line, largest first, less the files on `OVER_CEILING`, whose splits the list already owns.
   `size-warning.yml` runs it on each push to main that changes a code file, and by hand.
   No pull request starts it, and the batch, main's release check, the alpha and every release never read it; `tests/size-warning-workflow.test.ts` holds that.
+- **The headroom.**
+  A change may not grow a code file past the warning line, or further past it (INF-6259's weekly audit, the captain's pick: "refuse a change that grows a code file past, or further past, 1,800 lines").
+  Two changes that each grew a file under the ceiling had together passed it in the batch seven times in two weeks, each time holding every change beside them.
+  `node scripts/file-sizes.ts --headroom --base <commit>` compares each code file the change touches with its length at the change's base: it refuses one now over the warning line and longer than it was, a new file included, and passes one the change shrinks or leaves the same length, so a split can take more than one change.
+  A renamed file is measured at the base under its old name, so moving a large file is not growth.
+  The branch check's code checks run it against the change's base ("A pushed branch"), and `pnpm check:changed` runs it before each push with uncommitted edits included; `tests/release-workflows-pr-checks.test.ts` holds the step.
+  The batch never reads it, since the ceiling already holds the combined version.
 - **The split task.**
   An Automation rule on GitHub's "A workflow run fails", filtered to workflow `size-warning` on branch `main`, files and starts one split task unless one is already open.
   The task splits the first file the run names, the largest, along its owners, with no test or behavior lost; the next red run starts the next.
@@ -581,7 +589,7 @@ The routes:
 `pnpm check` (`scripts/check.ts`) runs every step it names in `package.json`, one after another, even after one fails, and ends by naming each step that failed, so one failure never hides the lints after it (INF-5379).
 Only its first command, the refusal in CI mode, stops it.
 
-A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, every node script `pnpm check` runs (its project lints and generated-file `--check` scripts, read from `package.json`), the pull request's release-notes check once the branch has a commit, the phone contract flag ("What a pull request runs"), and the whole-project typecheck.
+A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, every node script `pnpm check` runs (its project lints and generated-file `--check` scripts, read from `package.json`), the pull request's release-notes check once the branch has a commit, the size headroom ("The size check's warning line"), the phone contract flag ("What a pull request runs"), and the whole-project typecheck.
 They run side by side, as many at once as the job has cores (`scripts/job-cores.ts`) and its computer's memory holds at 2 GiB a step, room for the largest, so a lint or a missing release note fails before the push instead of in the pull request's check.
 A step that loads the app through a Vite module runner holds about 0.9 GB, so cores alone are no bound: an 11-core, 9 GB Linux guest with no swap runs four at once, where eleven ran it out of memory beside the test files sharing it.
 Started all at once they hold more memory than the two-processor Linux runner has beside the tests it runs.
@@ -736,6 +744,8 @@ How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 
 What this project adds is the batch's checks, `.github/workflows/batch-checks.yml`, which `batch-pull-request.yml` calls on the batch pull request's version.
 Its first job, `Merge batch · Regenerate the phone files`, runs the phone's generators on the batch's version (`scripts/batch-regenerate.ts`, the captain's pick in a daily velocity review: "Have each batch regenerate the phone's generated files itself, as its own commit, before its checks run"), since each change regenerated them from its own base and two changes together can leave one out of step.
+It runs the app parts list's generator first, `scripts/generate-runbook-parts.ts`, since the phone's card bundle carries the app's parts (INF-6259's weekly audit, the captain's pick: "it would also rebuild the app parts list").
+The job keeps its name, and its commit keeps the trailer `Batch-regenerated: phone`, so a batch version made before still reads as one.
 When they change nothing, every other job runs on that version.
 When they change files, all of them marked `linguist-generated` in `.gitattributes`, it hands the difference to `Merge batch · Push the regenerated phone files`, which commits it on the batch's version as one commit carrying the trailer `Batch-regenerated: phone` and pushes it to the batch branch; every other job of that run skips.
 That job runs no code of the project, on GitHub's hosted Ubuntu, and is the one job of the batch with a token that writes (`contents: write`, which `batch-pull-request.yml` grants its call).
@@ -987,11 +997,11 @@ Status-only TestFlight requests start no phone or signing job.
 ## What a pull request runs
 
 A change's version runs one check, `ci.yml`'s branch check, on the branch-check line (INF-2915's plan, the captain's direction B with the light profile): each push of a task's branch starts it, and so does a pull request ("A pushed branch").
-The check is three jobs that start together and run side by side, each from its own install, so the longest of them sets the check's time instead of their sum (INF-5577's review, the captain's pick "Split the branch check into three jobs that run side by side"): `code-checks` runs the release notes check, the phone contract flag, the typecheck and `pnpm check`; `reached-tests` runs the tests a change reaches and the browser tests; `build` runs the build and the critical path.
+The check is three jobs that start together and run side by side, each from its own install, so the longest of them sets the check's time instead of their sum (INF-5577's review, the captain's pick "Split the branch check into three jobs that run side by side"): `code-checks` runs the release notes check, the size headroom ("The size check's warning line"), the phone contract flag, the typecheck and `pnpm check`; `reached-tests` runs the tests a change reaches and the browser tests; `build` runs the build and the critical path.
 A change whose tests hold more measured time than one part runs a fourth job, `reached-tests-parts`, a machine per part past the first, once `code-checks` has counted them ("Notes"); it skips for most changes, whose tests take one part (INF-5493).
 The project's own branches send all four to that line, which takes the PC's Linux places first and a compute Mac's arm64 Linux guest when none of them can, so a day with the PC down no longer holds every branch check ("Each Linux job's kind"); an outside contributor's pull request runs them all on GitHub's hosted Ubuntu (`docs/public-ci.md`, "Outside contributors").
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
-Every version runs the release notes check, the phone contract flag, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes"), except a pushed branch built on a batch's version, which leaves all of it to the batch's own run ("A pushed branch").
+Every version runs the release notes check, the size headroom, the phone contract flag, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes"), except a pushed branch built on a batch's version, which leaves all of it to the batch's own run ("A pushed branch").
 The phone contract flag, `scripts/phone-contract-flag.ts`, compares the contract's major and view floor in `src/shared/ipc.ts` with the change's base, and when either moved it names, as a warning that never fails the check, the phone build the next alpha waits for (`docs/alpha.md`, "The phone goes first"); `pnpm check:changed` prints the same before each push, and the change's story carries that build as an after-merge step (INF-4500).
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note, the phone app (`ios/`, except the shared font notice) or the docs site (`docs-site/`, which `docs-site.yml` builds and checks instead; `docs/docs-site.md`).
@@ -1080,12 +1090,13 @@ A step that breaks fails the pull request, and is repaired at its owner; weakeni
 
 A task branch's checks are the check each push of it runs ("A pushed branch"), the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
 INF-4500's weekly audit widened the journey request with the captain's choices "Journeys that import a changed file" and "One Mac round for each edited journey": sixteen later failures in one week were journeys that directly import a changed file, and eight were edited journeys that passed on Linux and failed on the Mac.
+INF-6259's weekly audit widened it again with the captain's choice "Wider journey selection": journeys one import further, the importers of an edited helper and the first-run screen's fallback row, after such journeys broke in the batch on changes whose request ran none of them.
 The swept batch runs every journey on Linux and the Mac, and the critical path, on each approved change before it reaches `main` ("The swept batch").
-So a journey the change only reaches some other way, by a word, a hook, a helper or a fallback row, is checked there, and a break found there sends the change back to its task.
+So a journey the change only reaches some other way, by a word, a hook, a helper most journeys import or an unmarked fallback row, is checked there, and a break found there sends the change back to its task.
 
 | Check | A task branch requests it when | It requests |
 | --- | --- | --- |
-| Edited and importing journeys | its change edits a journey file, or a journey directly imports a product module or a scenario under `tests/e2e/scenarios/` that the change edits; a held batch's fix requests none, since the batch's rebuild runs every journey on it ("A held batch's repair") | `journeys.yml` with the files `node scripts/affected-journeys.ts --request --base origin/main` lists: an edited file runs three rounds and then alone, an importing one once (`scripts/journey-runs.ts`); with an edited file, `platforms=both` and `mac_once: true`, so each edited file runs every test once on the Mac too, after the rounds of its tagged tests |
+| Edited and importing journeys | its change edits a journey file; a journey directly imports a product module or a scenario under `tests/e2e/scenarios/` that the change edits, or a product module one import further (rule 14); it imports a changed export of an edited helper that no more than 40 journeys import that way; or a fallback row marked `request` matches; a held batch's fix requests none, since the batch's rebuild runs every journey on it ("A held batch's repair") | `journeys.yml` with the files `node scripts/affected-journeys.ts --request --base origin/main` lists: an edited file runs three rounds and then alone, an importing one once (`scripts/journey-runs.ts`); with an edited file, `platforms=both` and `mac_once: true`, so each edited file runs every test once on the Mac too, after the rounds of its tagged tests |
 | Other reached journeys | never | nothing: they wait for the swept batch; a journey the batch sent the change back for is named again after its repair |
 | The batch's Linux checks | the swept batch sent the change back ("A change sent back from its batch", below) | `verify.yml` with `linux_only`, task and reason |
 | The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
@@ -1197,7 +1208,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7, 10, 12 and 13 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7, 10, 12, 13 and 14 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
@@ -1205,7 +1216,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
    The parser uses the smallest enclosing JSX subtree plus ancestor container hooks, or the enclosing top-level declaration for non-JSX edits, following local declaration consumers.
    Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
 7. a spec, or a helper most journeys do not import, that calls a `window.infinitary` method, or names a read, whose message between the window and the core the change edits (`scripts/window-messages.ts`);
-8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
+8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence; a row marked `request` names journeys a task branch's request runs too;
 9. a commit of the change names the journey in a `Journeys:` trailer;
 10. a spec, or a helper most journeys do not import, that reads words a string of `src/` serves, when the change alters what it reads.
     It reads them with a regular expression of its own holding a word of four or more letters, or its stand-in scripts a tool by name, as `name: "check_change"`, that most journeys do not script.
@@ -1222,6 +1233,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
     A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
     The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.
     `tests/e2e/mockClaudeClient.ts` declares `src/core/claude/` so changes to the real reader select the stand-in's callers;
+14. a spec one import further than rule 12: it directly imports a product module, other than a hub, that imports a changed product module, or it reaches a helper that imports one, other than a helper more than half the journeys or more than 40 journeys reach.
+    An edited module more than 40 journeys reach this way selects none of them by this rule, as a hub does under rule 12 (INF-6259's weekly audit, the captain's choice "Wider journey selection");
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).
@@ -1293,6 +1306,8 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
 The chooser places every named file on Linux and their tagged tests on the Mac mini.
 Its `mac_all` input runs every named journey on the Mac mini as well, every test of it, for a check of the Mac itself such as a `starve` experiment.
+`mac_all` and `mac_once` place their files on the Mac even when `platforms` names only Linux, since a request that asks for a Mac round gets one (`scripts/journey-budget.ts`; INF-6259's weekly audit found one passed with its Mac round never run).
+Its `base` input, the comparison that decides which named files the change edits, is read where the checkout holds it, or else as the branch of that name where the project lives, so `main` reads `origin/main`; a base that names neither stops each job with words before it runs a journey (`comparisonBase`, `scripts/journey-runs.ts`).
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
 Ordinary journeys pin the built-in task browser even with an installed browser present.

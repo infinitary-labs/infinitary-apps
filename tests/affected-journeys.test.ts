@@ -901,9 +901,16 @@ describe("complete journey selection", () => {
     const directReaders = actualSpecs.filter((spec) =>
       importsOf(spec, actualRead(spec) ?? "").includes(product),
     );
-    expect([...selected.keys()].sort()).toEqual(
-      [...new Set([...declaredCallers, ...directReaders])].sort(),
+    const named = new Set([...declaredCallers, ...directReaders]);
+    expect([...selected.keys()].filter((spec) => named.has(spec)).sort()).toEqual(
+      [...named].sort(),
     );
+    // Rule 14 adds the journeys one import further, and only those.
+    for (const [spec, whys] of selected)
+      if (!named.has(spec))
+        expect(
+          whys.every((why) => why.endsWith(`, which imports ${product}, which the change edits`)),
+        ).toBe(true);
     for (const spec of callers)
       expect(
         selected
@@ -1062,5 +1069,62 @@ describe("complete journey selection", () => {
       ["tests/e2e/devices.spec.ts", ["targeted fallback for src/core/devices/remoteLogin.ts"]],
     ]);
     expect([...requested(reasons).keys()]).toEqual([]);
+  });
+
+  // INF-6259's weekly audit (the captain's choice "Wider journey selection"):
+  // a request also runs the journeys one import further, those importing an
+  // edited helper, and the first-run row's two journeys. Real late failures:
+  // INF-6218 edited tests/e2e/usage.ts and broke custom-usage, which imports
+  // it; INF-6224 changed the first-run screen and stopped bedrock-provider and
+  // follow-along-owner, which no rule reached.
+  it("requests the journeys one import further, an edited helper's importers and the first-run row's", () => {
+    const pick = (changed: string[]) =>
+      requested(select({ changed, sourceDiff: "", specs: actualSpecs, read: actualRead }));
+    expect(pick(["tests/e2e/usage.ts"]).get("tests/e2e/custom-usage.spec.ts")).toEqual([
+      "imports tests/e2e/usage.ts, which the change edits",
+    ]);
+    // A helper more journeys import than the cap waits for the swept batch.
+    expect(pick(["tests/e2e/launch.ts"]).size).toBe(0);
+    const firstRun = pick(["src/renderer/src/app/FirstRunGate.tsx"]);
+    for (const spec of [
+      "tests/e2e/bedrock-provider.spec.ts",
+      "tests/e2e/follow-along-owner.spec.ts",
+    ])
+      expect(firstRun.get(spec)).toEqual([
+        "targeted fallback a request runs for src/renderer/src/app/FirstRunGate.tsx",
+      ]);
+    // INF-6123 edited the repetition store, which the migrations module
+    // imports; automatic-placement imports the migrations module.
+    expect(
+      pick(["src/core/storage/taskRepetitionStore.ts"]).get(
+        "tests/e2e/automatic-placement.spec.ts",
+      ),
+    ).toEqual([
+      "directly imports src/core/storage/migrations.ts, which imports src/core/storage/taskRepetitionStore.ts, which the change edits",
+    ]);
+  });
+
+  it("does not request the journeys one import further from a module more journeys than the cap reach", () => {
+    const module = "src/shared/cards.ts";
+    const further = (why: string) =>
+      why.endsWith(`, which imports ${module}, which the change edits`);
+    const reach = actualSpecs.filter((spec) =>
+      importsOf(spec, actualRead(spec) ?? "").some(
+        (file) =>
+          file.startsWith("src/") &&
+          file !== module &&
+          importsOf(file, actualRead(file) ?? "").includes(module),
+      ),
+    );
+    expect(reach.length).toBeGreaterThan(JOURNEY_SELECTION_CAP);
+    const all = select({ changed: [module], sourceDiff: "", specs: actualSpecs, read: actualRead });
+    expect([...all.values()].flat().filter(further)).toEqual([]);
+    const some = select({
+      changed: [module],
+      sourceDiff: "",
+      specs: reach.slice(0, JOURNEY_SELECTION_CAP),
+      read: actualRead,
+    });
+    expect([...some.values()].flat().filter(further).length).toBeGreaterThan(0);
   });
 });

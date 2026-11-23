@@ -73,6 +73,21 @@ export function aloneArguments(
   ];
 }
 
+/**
+ * The ref the edited files are read against: the requested base when this
+ * checkout holds it, or else the branch of that name where the project
+ * lives. A checkout fetches branches only as `origin/<name>`, so a request
+ * naming `main` failed every job before it ran a journey (INF-6259's weekly
+ * audit). A base neither names is refused with words rather than read as
+ * no edits.
+ */
+export function comparisonBase(base: string, resolves: (ref: string) => boolean): string {
+  if (resolves(base)) return base;
+  const remote = `origin/${base}`;
+  if (!base.startsWith("origin/") && resolves(remote)) return remote;
+  throw new Error(`The comparison base ${base} names no commit in this checkout, nor does ${remote}; request a branch where the project lives or a commit.`);
+}
+
 export function runJourneyRounds(
   rounds: readonly string[][],
   run: (files: string[], round: number) => number | null,
@@ -93,7 +108,10 @@ function main(): void {
   const files = value("--files").split(/\s+/).filter(Boolean);
   if (!files.length || files.some((file) => !/^tests\/e2e\/[^/]+\.spec\.ts$/.test(file) || !existsSync(file)))
     throw new Error("Name existing selected journey files, not an empty or unreadable selection.");
-  const changed = changedPaths(value("--base") || "origin/main", "HEAD");
+  const base = comparisonBase(value("--base") || "origin/main", (ref) =>
+    spawnSync("git", ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { stdio: "ignore" }).status === 0,
+  );
+  const changed = changedPaths(base, "HEAD");
   if (changed === undefined) throw new Error("Cannot read the comparison for edited journey files.");
   const extra = args.includes("--") ? args.slice(args.indexOf("--") + 1) : [];
   const rounds = journeyRounds(files, changed);
@@ -109,7 +127,7 @@ function main(): void {
       const command = round > rounds.length && once ? editedOnceArguments(part, changed, onceTag) : journeyArguments(part, extra);
       if (!command) continue;
       const report = destination ? `${destination}.round-${round}-${lane}.json` : undefined;
-      console.log(JSON.stringify({ head, platform: process.platform, base: value("--base") || "origin/main", round, lane, files: part }));
+      console.log(JSON.stringify({ head, platform: process.platform, base, round, lane, files: part }));
       const result = spawnSync("pnpm", command, {
         stdio: "inherit",
         env: { ...process.env, ...(report ? { PLAYWRIGHT_JSON_OUTPUT_FILE: report } : {}) },

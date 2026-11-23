@@ -4,3 +4,6 @@
 ios/**/*.generated.* linguist-generated
 ios/Infinitary/InfinitaryApp/CardAssets/** linguist-generated
 ios/Infinitary/InfinitaryApp/Assets.xcassets/LaunchBackground.colorset/Contents.json linguist-generated
+src/shared/appParts.generated.json linguist-generated
+resources/runbooks/architecture/skills/advanced-architecture/parts/map.html linguist-generated
+resources/runbooks/architecture/skills/advanced-architecture/parts/map-page.html linguist-generated

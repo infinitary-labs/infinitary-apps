@@ -12,7 +12,7 @@ import { jobCores, jobMemory } from "./job-cores.ts";
  * lints here too): Biome on only the files this branch changed, the adherence
  * lint on its renderer files, every node script `pnpm check` runs (the
  * project lints and the generated-file checks), the release-notes check the
- * pull request runs first, the phone contract flag, and the whole-project
+ * pull request runs first, the size headroom, the phone contract flag, and the whole-project
  * typecheck. Together they take
  * seconds, so they run side by side, as many at once as the job has cores and
  * the computer's memory holds (`quickCheckLanes`), and print in order. It is
@@ -188,6 +188,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       args: ["scripts/release-notes.ts", "change", "--base", base],
     });
   else console.log("check:changed: no commit since main yet, so the release-notes check waits");
+  // The branch check's size headroom, against the same base, uncommitted
+  // edits included.
+  steps.push({
+    label: "size headroom",
+    command: "node",
+    args: ["scripts/file-sizes.ts", "--headroom", "--base", base],
+  });
   // The phone contract flag, which names the phone build a moved major or
   // view floor needs before the next alpha; it prints and never fails.
   steps.push({

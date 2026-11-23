@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { laneFiles } from "../scripts/journey-groups.ts";
 import {
   aloneArguments,
+  comparisonBase,
   editedOnceArguments,
   journeyRounds,
   laneRuns,
@@ -124,5 +125,19 @@ describe("the edited journeys' run-alone pass", () => {
     expect(
       editedOnceArguments(named, ["src/main/host/darwinKeychain.ts"], MAC_ONLY_TAG),
     ).toBeUndefined();
+  });
+
+  // INF-6259's weekly audit, the captain's pick "Fix two journey request
+  // defects: ... a comparison base of main is accepted but fails every job":
+  // a checkout holds main only as origin/main.
+  it("reads a base named by its branch from where the project lives, and refuses one that names nothing", () => {
+    const held = new Set(["origin/main", "origin/inf/fix-login-timeout", "4f1c2a9"]);
+    const resolves = (ref: string) => held.has(ref);
+    expect(comparisonBase("main", resolves)).toBe("origin/main");
+    expect(comparisonBase("origin/main", resolves)).toBe("origin/main");
+    expect(comparisonBase("inf/fix-login-timeout", resolves)).toBe("origin/inf/fix-login-timeout");
+    expect(comparisonBase("4f1c2a9", resolves)).toBe("4f1c2a9");
+    expect(() => comparisonBase("mian", resolves)).toThrow(/names no commit in this checkout/);
+    expect(() => comparisonBase("origin/gone", resolves)).toThrow(/origin\/gone names no commit/);
   });
 });

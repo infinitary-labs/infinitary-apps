@@ -256,7 +256,7 @@ Add it at its address, from Devices or the first mate's card, still finds it aga
 Reaching it, this computer sees that its user there already runs your first mate's work, so it tells that computer where this computer is now instead of setting it up again.
 The feed says "Reaching sam@mini.local with your SSH key.", "Telling Mac mini where this computer is now.", the copy's count and "Starting Infinitary on Mac mini." as above, then "Mac mini found this computer again.
 It runs work as before."
-Its row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", then the copy's count and "Starting Infinitary on Mac mini…", with no state and no Remove; no second row stands in the list.
+Its row reads "Checking sam@mini.local…" while its key is read, "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", then the copy's count and "Starting Infinitary on Mac mini…", with no state and no Remove; no second row stands in the list.
 Mac mini stays the same computer on the list, with its projects, its sign-ins and its unmerged work, and runs this computer's version of Infinitary after.
 When nobody is logged in there as that user, the found line is followed by "Mac mini starts running work the next time sam logs in there."; when that user's session refused to start it in the background, by "Mac mini could not set itself to start in the background, so it runs no work for now." and "Ask again to add it."
 When MacBook Pro removed Mac mini while it was out of reach, Add it sets it up anew, "Preparing Infinitary for Mac mini.", and that computer first does what the removal would have done there.

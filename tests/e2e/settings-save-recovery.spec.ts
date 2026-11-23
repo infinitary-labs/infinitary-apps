@@ -465,12 +465,12 @@ test("appearance refusals show the saved look again and say why beside the choic
     await page.getByRole("tab", { name: "Usage", exact: true }).click();
     const unit = page.getByRole("radiogroup", { name: "Show usage as", exact: true });
     await refuseNext(app, "inf:settings:appearance:set");
-    await unit.getByRole("radio", { name: "Estimated $", exact: true }).click();
+    await unit.getByRole("radio", { name: "Tokens", exact: true }).click();
     await assertRefusal(settingsFeedback(page, "usage-unit"), REFUSAL);
-    await expect(unit.getByRole("radio", { name: "Tokens", exact: true })).toBeChecked();
-    await unit.getByRole("radio", { name: "Estimated $", exact: true }).check();
+    await expect(unit.getByRole("radio", { name: "Estimated $", exact: true })).toBeChecked();
+    await unit.getByRole("radio", { name: "Tokens", exact: true }).check();
     await expect(settingsFeedback(page, "usage-unit")).toHaveCount(0);
-    await expect.poll(async () => (await savedLook(page)).usageUnit).toBe("usd");
+    await expect.poll(async () => (await savedLook(page)).usageUnit).toBe("tokens");
 
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Settings", exact: true }).click();

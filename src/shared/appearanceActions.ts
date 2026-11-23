@@ -9,7 +9,7 @@ import {
   washStrengthSchema,
 } from "./preferences";
 import { crewModelNamesValue, sizeValue, washValue } from "./settingValues";
-import { usageUnitSchema } from "./usage";
+import { DEFAULT_USAGE_UNIT, usageUnitSchema } from "./usage";
 
 /**
  * Settings → Appearance's lines past the theme and fonts, and Usage's unit:
@@ -144,7 +144,7 @@ export const appearanceLines = {
     // i18n-exempt: served to the first mate, a model, never shown
     line: "Whether Settings → Usage shows amounts in tokens or estimated dollars (usd), when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), usageUnit: v.unit }],
-    readValue: (current) => ({ unit: (current as Appearance).usageUnit ?? "tokens" }),
+    readValue: (current) => ({ unit: (current as Appearance).usageUnit ?? DEFAULT_USAGE_UNIT }),
     done: (v) => `usage shown in ${v.unit}`,
   },
   "key-reminders": {

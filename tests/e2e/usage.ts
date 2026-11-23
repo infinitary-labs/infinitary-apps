@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
-import { openDatabase } from "../../src/core/storage/db";
+import { type AppDatabase, openDatabase } from "../../src/core/storage/db";
 import { UsageStore } from "../../src/core/storage/usageStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -14,6 +14,8 @@ import type { WorkKind } from "../../src/shared/routingPolicy";
 import type {
   UsageQuery,
   UsageSummary,
+  UsageTaskCosts,
+  UsageTaskCostsQuery,
   UsageTasks,
   UsageTasksQuery,
   UsageUnit,
@@ -42,6 +44,13 @@ export function usageTab(page: Page): {
   more: Locator;
   tokenCoverage: (category: string) => Locator;
   categoryValue: (category: string) => Locator;
+  /** Cost per task's section, its readouts, filters, line and Values table. */
+  cost: Locator;
+  costReadout: (readout: "now" | "start" | "change") => Locator;
+  costFilter: (filter: "projects" | "kinds") => Locator;
+  costLines: Locator;
+  costEmpty: Locator;
+  costValues: Locator;
 } {
   const section = page.locator('[data-settings-section="usage"]');
   return {
@@ -63,7 +72,21 @@ export function usageTab(page: Page): {
     tokenCoverage: (category) => section.locator(`[data-usage-token-coverage="${category}"]`),
     categoryValue: (category) =>
       section.locator(`[data-usage-detail] [data-usage-category="${category}"] strong`),
+    cost: section.locator("[data-usage-cost]"),
+    costReadout: (readout) => section.locator(`[data-usage-cost-readout="${readout}"]`),
+    costFilter: (filter) => section.locator(`[data-usage-cost-filter="${filter}"]`),
+    costLines: section.locator("[data-usage-cost-line]"),
+    costEmpty: section.locator("[data-usage-cost-empty]"),
+    costValues: section.locator("[data-usage-cost-values]"),
   };
+}
+
+/** The finished tasks Cost per task reads, asked of the core the same way. */
+export function usageTaskCosts(page: Page, query: UsageTaskCostsQuery): Promise<UsageTaskCosts> {
+  return page.evaluate(
+    (args) => window.infinitary.plugins.read("usage.taskCosts", args),
+    query,
+  ) as Promise<UsageTaskCosts>;
 }
 
 /** The recent tasks the tab reads, asked of the core the same way. */
@@ -130,22 +153,15 @@ function gitRepo(dir: string): string {
   return dir;
 }
 
-/**
- * A usage ledger a person would recognize, written through the one writers
- * before the app starts: two projects, tasks of every saved kind created a
- * few hours apart (one with no saved kind, some finished, one dropped), a
- * record of each over the last weeks - priced by category, priced whole
- * the way Claude prices, unpriced, or missing a category - the Firstmate's
- * own conversation and a model call made for no task.
- */
-export function seedUsageLedger(userDataDir: string): void {
-  const db = openDatabase(userDataDir);
-  const now = Date.now();
-  const HOUR = 3_600_000;
+/** The two projects the seeded ledgers' tasks belong to. */
+/** The seeded project whose tasks grow dearer in the cost ledger, by its name. */
+export const SEEDED_COST_PROJECT = "firstmate-3000";
+
+function seedUsageProjects(db: AppDatabase, userDataDir: string, now: number): void {
   seedProject(db, {
     id: "repo-fm",
     path: gitRepo(join(userDataDir, "fm")),
-    name: "firstmate-3000",
+    name: SEEDED_COST_PROJECT,
     setupKind: "clone",
     origin: "https://github.com/o/fm.git",
     runsOn: null,
@@ -164,6 +180,21 @@ export function seedUsageLedger(userDataDir: string): void {
     addedAt: now,
     key: "WEB",
   });
+}
+
+/**
+ * A usage ledger a person would recognize, written through the one writers
+ * before the app starts: two projects, tasks of every saved kind created a
+ * few hours apart (one with no saved kind, some finished, one dropped), a
+ * record of each over the last weeks - priced by category, priced whole
+ * the way Claude prices, unpriced, or missing a category - the Firstmate's
+ * own conversation and a model call made for no task.
+ */
+export function seedUsageLedger(userDataDir: string): void {
+  const db = openDatabase(userDataDir);
+  const now = Date.now();
+  const HOUR = 3_600_000;
+  seedUsageProjects(db, userDataDir, now);
   mkdirSync(join(userDataDir, "worktrees"), { recursive: true });
   // The oldest task first, five hours apart, the newest an hour ago.
   let clock = now - (SEEDED_TASKS.length * 5 + 1) * HOUR;
@@ -236,6 +267,120 @@ export function seedUsageLedger(userDataDir: string): void {
     usage: { input: 150_000, output: 10_000 },
     at: now - 3 * HOUR,
   });
+  db.close();
+}
+
+/** Each kind's work as the seeded projects' tasks name it, used in turn. */
+const COST_TITLES: Readonly<Record<"implement" | "fix" | "chore" | "plan", readonly string[]>> = {
+  implement: [
+    "Add saved searches",
+    "Build the settings import",
+    "Show a task's history",
+    "Add keyboard filters",
+    "Build the export page",
+  ],
+  fix: ["Repair the date picker", "Fix a stuck spinner", "Correct the sort order"],
+  chore: ["Update dependencies", "Tidy the build scripts"],
+  plan: ["Plan the onboarding flow", "Plan the search index"],
+};
+
+/**
+ * What each seeded day finishes, per project: one entry a task, by its
+ * kind, its estimate on the first day, and on the last. firstmate-3000's
+ * implementation work grows dearer over the weeks, as a codebase gathering
+ * complexity does; the website's stays level.
+ */
+const COST_DAY: readonly ["fm" | "web", keyof typeof COST_TITLES, first: number, last: number][] = [
+  ["fm", "implement", 6, 14],
+  ["fm", "fix", 3, 4],
+  ["fm", "implement", 6, 14],
+  ["fm", "chore", 0.9, 0.9],
+  ["fm", "plan", 2.2, 2.2],
+  ["web", "implement", 3.5, 3.5],
+  ["web", "fix", 2, 2],
+];
+
+/** The days the cost ledger covers, today included. */
+export const COST_LEDGER_DAYS = 35;
+
+/**
+ * Five weeks of finished work for Cost per task (docs/usage.md), written
+ * through the one writers before the app starts: seven tasks a day across
+ * two projects, each implementation or fix checked by a review under it
+ * that costs about a third of it, every task priced but one in 23, its
+ * tokens about 2.3M a dollar, and each estimate varied around its kind's
+ * level by a fixed sequence so the median is stable from run to run.
+ */
+export function seedCostPerTaskLedger(userDataDir: string): void {
+  const db = openDatabase(userDataDir);
+  const now = Date.now();
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+  seedUsageProjects(db, userDataDir, now);
+  let clock = 0;
+  const tasks = new TaskService({ db, strict: true, now: () => clock });
+  const usage = new UsageStore(db);
+  const model = { provider: "openai-codex", id: starterFor("openai-codex", "medium") };
+  // A fixed sequence of factors between 0.6 and 1.5, never random.
+  const VARY = [1, 0.7, 1.3, 0.85, 1.5, 0.6, 1.15, 0.95, 1.25, 0.8, 1.05];
+  const record = (taskId: string, usd: number | null) =>
+    usage.record({
+      taskId,
+      model,
+      usage: {
+        input: Math.round((usd ?? 1) * 230_000),
+        output: Math.round((usd ?? 1) * 60_000),
+        cacheRead: Math.round((usd ?? 1) * 1_900_000),
+        cacheWrite: Math.round((usd ?? 1) * 110_000),
+        ...(usd === null ? {} : { cost: usd, costSource: "listed-prices" as const }),
+      },
+      at: clock - HOUR,
+    });
+  const finish = (id: string) =>
+    tasks.close(id, { status: "done", reason: "finished", actor: "host" });
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  let count = 0;
+  for (let day = COST_LEDGER_DAYS - 1; day >= 0; day--) {
+    const progress = (COST_LEDGER_DAYS - 1 - day) / (COST_LEDGER_DAYS - 1);
+    COST_DAY.forEach(([project, kind, first, last], slot) => {
+      // Spread over the working day, never past the moment the app starts.
+      clock = Math.min(
+        today.getTime() - day * DAY + (9 + slot * 1.5) * HOUR,
+        now - (7 - slot) * 60_000,
+      );
+      const id = `cost-${count}`;
+      const titles = COST_TITLES[kind];
+      const usd =
+        count % 23 === 22
+          ? null
+          : Math.round(
+              (first + (last - first) * progress) * (VARY[count % VARY.length] ?? 1) * 100,
+            ) / 100;
+      count++;
+      seedTask(tasks, {
+        id,
+        title: titles[count % titles.length] ?? kind,
+        status: "completed",
+        repoId: project === "fm" ? "repo-fm" : "repo-web",
+        shape: { kind },
+      });
+      record(id, usd);
+      if (kind === "implement" || kind === "fix") {
+        seedTask(tasks, {
+          id: `${id}-review`,
+          title: "Review the change",
+          status: "completed",
+          parentId: id,
+          repoId: project === "fm" ? "repo-fm" : "repo-web",
+          shape: { kind: "review" },
+        });
+        record(`${id}-review`, usd === null ? null : Math.round(usd * 35) / 100);
+        finish(`${id}-review`);
+      }
+      finish(id);
+    });
+  }
   db.close();
 }
 

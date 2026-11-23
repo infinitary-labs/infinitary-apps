@@ -53,6 +53,7 @@ export type HomeSeed = (userDataDir: string, input: never) => void | Promise<voi
 const ASKED: HomeRead[] = [
   ["inf:usage:summary", [DEFAULT_USAGE_QUERY]],
   ["inf:usage:tasks", [{ ...DEFAULT_USAGE_QUERY, limit: USAGE_TASK_PAGE }]],
+  ["inf:usage:task-costs", [{ period: DEFAULT_USAGE_QUERY.period }]],
 ];
 
 /**

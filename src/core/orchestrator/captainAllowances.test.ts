@@ -19,6 +19,7 @@ import {
   allowanceTakenBackWords,
   alreadyAllowedWords,
 } from "@shared/captainAllowances";
+import type { Card } from "@shared/cards";
 import { choiceWords, STANDING_WORDS_FROM } from "@shared/holds";
 import { checkYesCovers, type ValidationScenario } from "@shared/liveValidation";
 import { describe, expect, it, vi } from "vitest";
@@ -404,6 +405,85 @@ describe("a yes the captain gave on a crewmate's card", () => {
     await expect(live.run("after-take-back", [REPOSITORY_LIST.id])).rejects.toThrow(
       REPOSITORY_LIST.id,
     );
+  });
+
+  // INF-6250 finding 2: on INF-2279 the crewmate committed a repair while its
+  // check card waited, and the captain's Allow click approved nothing.
+  async function checkCard(h: Awaited<ReturnType<typeof startedTask>>, request: string) {
+    const title = "Approve the sign-in check on your account?";
+    await h.specs[0]?.onCard?.({
+      title,
+      body: "<p>The check signs in with your own account and changes nothing on it.</p>",
+      actions: [
+        { id: "approve", label: "Approve the check", default: true },
+        { id: "hold", label: "Not now" },
+      ],
+      validationDecision: { request, action: "approve" },
+    });
+    await endTurn(h.crewmate, h.taskId, "The sign-in check waits on your approval.");
+    const card = h.supervisor.cards.snapshot().find((entry) => entry.title === title);
+    if (!card) throw new Error("the check's approval card did not go up");
+    return card;
+  }
+
+  it("counts the captain's yes to a check after the crewmate commits again while the card waits", async () => {
+    const h = await startedTask([], true);
+    const live = await plannedChecks(h, [OWN_ACCOUNT]);
+    await live.check("own-account-ask", OWN_ACCOUNT.id);
+    const card = await checkCard(h, "own-account-ask");
+    const repair = "b".repeat(40);
+    live.commit(repair);
+    h.tasks.delivery.recordChangeEvidence(h.taskId, { validationHead: repair });
+    h.supervisor.cardActions.act(card.id, "approve", "chrome");
+    await tick();
+    expect(h.supervisor.cards.shown(card.id)).toBeUndefined();
+    expect(h.tasks.get(h.taskId)?.delivery?.captainAllowances?.map((yes) => yes.card)).toEqual([
+      card.id,
+    ]);
+    await live.run("at-the-repair");
+    expect(h.tasks.get(h.taskId)?.delivery?.liveValidation?.runs.at(-1)).toMatchObject({
+      id: "at-the-repair",
+      head: repair,
+      checkApprovals: ["own-account-ask"],
+    });
+  });
+
+  it("lets the crewmate renew a check card under its own id after the captain closes the note a changed check left", async () => {
+    const h = await startedTask([], true);
+    const live = await plannedChecks(h, [OWN_ACCOUNT]);
+    await live.check("own-account-ask", OWN_ACCOUNT.id);
+    const card = await checkCard(h, "own-account-ask");
+    const changed = { ...OWN_ACCOUNT, cost: "Two sign-ins to your own GitHub account" };
+    await h.specs[0]?.onReport?.("The check now signs in twice.", undefined, {
+      validation: {
+        kind: "plan",
+        previousRevision: 1,
+        reason: "The check signs in a second time.",
+        scenarios: [changed],
+      },
+    });
+    expect(() => h.supervisor.cardActions.act(card.id, "approve", "chrome")).toThrow();
+    const note = h.supervisor.cards.shown(card.id);
+    expect(note).toMatchObject({
+      title: "This validation question needs a new answer",
+      actions: [],
+    });
+    expect(h.supervisor.cards.pressNote(note as Card)).toBe("got-it");
+    expect(h.supervisor.cards.shown(card.id)).toBeUndefined();
+    await live.check("own-account-ask-again", OWN_ACCOUNT.id);
+    await h.specs[0]?.onCard?.({
+      id: card.id,
+      title: "Approve the sign-in check, which now signs in twice?",
+      body: "<p>The check signs in twice with your own account and changes nothing on it.</p>",
+      actions: [
+        { id: "approve", label: "Approve the check", default: true },
+        { id: "hold", label: "Not now" },
+      ],
+      validationDecision: { request: "own-account-ask-again", action: "approve" },
+    });
+    const renewed = h.supervisor.cards.shown(card.id);
+    expect(renewed?.title).toBe("Approve the sign-in check, which now signs in twice?");
+    expect(renewed?.actions.map((action) => action.id)).toContain("approve");
   });
 
   // INF-4446, the review of the fuller fix: the captain's standing override

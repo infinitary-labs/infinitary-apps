@@ -629,6 +629,21 @@ export class CardEmits {
   }
 
   /**
+   * INF-6250 finding 2: a validation question whose click came too late is
+   * left as a note while its crewmate asks again, and the app tells that
+   * crewmate to revise the same card. The captain closing that note is not
+   * their read of a finished answer, so the renewed question may come back
+   * under its id. It is that note while the newest request bound to the card
+   * expired with no answer (`TaskDeliveries.expireValidationDecision`).
+   */
+  private renewingValidationQuestion(past: PastCard): boolean {
+    if (!past.taskId) return false;
+    const permissions = this.host.tasks.get(past.taskId)?.delivery?.liveValidation?.permissions;
+    const newest = permissions?.findLast((item) => item.decision?.card === past.id);
+    return newest?.state === "expired" && newest.answer === undefined;
+  }
+
+  /**
    * A card the captain answered with a choice stays answered (INF-1389
    * friction 1): an emit under its id is refused while the choice has not
    * reached its author, the refusal carrying the choice, since that
@@ -648,6 +663,7 @@ export class CardEmits {
       past?.ending.how === "dismissed" ||
       (past?.ending.how === "chose" && past.ending.actionId === NOTE_DONE_ACTION_ID);
     if (read && past.actions.length === 0 && (past.ending.by ?? "captain") === "captain") {
+      if (this.renewingValidationQuestion(past)) return;
       throw new Error(
         `Card refused: the captain closed your note "${id}" ("${past.title}"), so it stays closed and nothing was shown. Their close is their read of it, and a closed note is never raised again. When nothing is left, report finished. Only something new that they must see goes on a new card, with an id and title of its own.`,
       );

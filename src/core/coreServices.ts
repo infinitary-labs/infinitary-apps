@@ -13,6 +13,7 @@ import type { EventScreenOffer } from "./decisions/eventScreenOffer";
 import type { startCorrections } from "./decisions/startCorrections";
 import type { HomeAnnouncement } from "./devices/announce";
 import type { CaptainPlaces } from "./devices/captainPlaces";
+import type { CardAdds } from "./devices/cardAdds";
 import type { Computers } from "./devices/computers";
 import type { DeviceSignIns } from "./devices/deviceSignIns";
 import type { FarBuild } from "./devices/farBuilds";
@@ -257,6 +258,11 @@ export type CoreServices = {
    * own click in Settings -> Devices runs each.
    */
   remoteLogin: RemoteLogin;
+  /**
+   * The adds the first mate's card began (docs/devices.md, "Asking the first
+   * mate"): the card's click starts one, and the first mate hears its end once.
+   */
+  cardAdds: CardAdds;
   /**
    * Macs nearby with Remote Login on, listed while "By its address" is open
    * (docs/devices.md, "Macs nearby"): Settings -> Devices asks, and it stops

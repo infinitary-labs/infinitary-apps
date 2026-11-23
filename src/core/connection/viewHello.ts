@@ -5,6 +5,7 @@ import {
   AMBIENT_OWN_STYLES,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
+  COMPUTER_UPDATING,
   DEVICE_ADDS_BY_ADDRESS,
   SETTINGS_CURRENT,
   WORK_UPDATE_SAVING,
@@ -87,5 +88,7 @@ export function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, DEVICE_ADDS_BY_ADDRESS) ? [] : ["addsByAddress"]),
     // A computer's work saved before its update, which an older view's strict device list cannot read.
     ...(listsChange(hello.changes, WORK_UPDATE_SAVING) ? [] : ["updateWork"]),
+    // A device's update, which an older view's strict device list cannot read.
+    ...(listsChange(hello.changes, COMPUTER_UPDATING) ? [] : ["updating"]),
   ];
 }

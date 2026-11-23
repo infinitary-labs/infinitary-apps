@@ -27099,6 +27099,199 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Working…`;
   }
+  function devicesAddressCardAdd() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافته`;
+      case "de":
+        return `Hinzufügen`;
+      case "es":
+        return `Agregarla`;
+      case "fr":
+        return `L’ajouter`;
+      case "ja":
+        return `追加する`;
+      case "ko":
+        return `추가`;
+      case "pt-BR":
+        return `Adicionar`;
+      case "zh-Hans":
+        return `添加`;
+      case "zh-Hant":
+        return `加入`;
+      case "en-XA":
+        return `[Åðð îţ ~~]`;
+      case "ar-XB":
+        return `‮Add it‬`;
+    }
+    return `Add it`;
+  }
+  function devicesAddressCardAsk() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يضيف حاسوبًا إلا نقرتك، لذا أسأل أولًا.`;
+      case "de":
+        return `Nur dein Klick kann einen Computer hinzufügen, deshalb frage ich zuerst.`;
+      case "es":
+        return `Solo tu clic puede agregar una computadora, así que pregunto primero.`;
+      case "fr":
+        return `Seul votre clic peut ajouter un ordinateur, alors je demande d’abord.`;
+      case "ja":
+        return `コンピューターを追加できるのはあなたのクリックだけなので、先に確認します。`;
+      case "ko":
+        return `컴퓨터는 내 클릭으로만 추가할 수 있어서 먼저 물어볼게요.`;
+      case "pt-BR":
+        return `Só o seu clique pode adicionar um computador, por isso pergunto antes.`;
+      case "zh-Hans":
+        return `只有你的点击才能添加电脑，所以我先问你。`;
+      case "zh-Hant":
+        return `只有你的點擊才能加入電腦，所以我先問你。`;
+      case "en-XA":
+        return `[Öñļý ýöûŕ çļîçķ çáñ áðð á çöɱþûţéŕ, šö Î ášķ ƒîŕšţ. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only your click can add a computer, so I ask first.‬`;
+    }
+    return `Only your click can add a computer, so I ask first.`;
+  }
+  function devicesAddressCardNoAccount(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يذكر هذا العنوان أي حساب، لذا أسجّل الدخول باسم المستخدم الخاص بك على ${computer}. إن كان لحسابك هناك اسم آخر، فأخبرني أولًا.`;
+      case "de":
+        return `Diese Adresse nennt kein Benutzerkonto, also melde ich mich mit deinem Benutzernamen auf ${computer} an. Wenn dein Konto dort anders heißt, sag es mir vorher.`;
+      case "es":
+        return `Esta dirección no indica ninguna cuenta, así que inicio sesión con tu nombre de usuario en ${computer}. Si tu cuenta allí tiene otro nombre, dímelo antes.`;
+      case "fr":
+        return `Cette adresse n’indique aucun compte, je me connecte donc avec votre nom d’utilisateur sur ${computer}. Si votre compte là-bas porte un autre nom, dites-le-moi d’abord.`;
+      case "ja":
+        return `このアドレスにはアカウント名がないため、${computer}でのあなたのユーザー名でサインインします。そちらのアカウント名が違う場合は、先に教えてください。`;
+      case "ko":
+        return `이 주소에는 계정 이름이 없어서 ${computer}의 사용자 이름으로 로그인할게요. 그곳의 계정 이름이 다르면 먼저 알려 주세요.`;
+      case "pt-BR":
+        return `Este endereço não indica nenhuma conta, então entro com seu nome de usuário em ${computer}. Se sua conta lá tiver outro nome, me diga antes.`;
+      case "zh-Hans":
+        return `这个地址没有写账户名，所以我会用你在${computer}上的用户名登录。如果你在那边的账户名不同，请先告诉我。`;
+      case "zh-Hant":
+        return `這個位址沒有寫帳號名稱，所以我會用你在${computer}上的使用者名稱登入。如果你在那邊的帳號名稱不同，請先告訴我。`;
+      case "en-XA":
+        return `[Ţĥîš áððŕéšš ñáɱéš ñö áççöûñţ, šö Î šîĝñ îñ ŵîţĥ ýöûŕ ûšéŕ ñáɱé öñ ${computer}. Îƒ ýöûŕ áççöûñţ ţĥéŕé ĥáš áñöţĥéŕ ñáɱé, ţéļļ ɱé ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This address names no account, so I sign in with your user name on ‬${computer}‮. If your account there has another name, tell me first.‬`;
+    }
+    return `This address names no account, so I sign in with your user name on ${computer}. If your account there has another name, tell me first.`;
+  }
+  function devicesAddressCardNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function devicesAddressCardResult(input2) {
+    const address = input2.address;
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يبقى نائب القبطان على ${computer}، ويُنجز الحاسوب على ${address} العمل له. وبعد إضافته يمكنني نقل نائب القبطان إليه بدلًا من ذلك.`;
+      case "de":
+        return `Dein erster Offizier bleibt auf ${computer}, und der Computer unter ${address} erledigt Arbeit für ihn. Sobald er hinzugefügt ist, kann ich deinen ersten Offizier stattdessen dorthin umziehen.`;
+      case "es":
+        return `Tu primer oficial se queda en ${computer}, y la computadora en ${address} hace trabajo para él. Cuando esté agregada, puedo mover tu primer oficial allí en su lugar.`;
+      case "fr":
+        return `Votre second reste sur ${computer}, et l’ordinateur à ${address} fait du travail pour lui. Une fois l’ordinateur ajouté, je peux y déplacer votre second à la place.`;
+      case "ja":
+        return `一等航海士は${computer}に残り、${address} のコンピューターがその作業を実行します。追加したあとで、一等航海士をそちらに移すこともできます。`;
+      case "ko":
+        return `일등항해사는 ${computer}에 남고, ${address}의 컴퓨터가 그 작업을 실행해요. 추가한 뒤에는 일등항해사를 그곳으로 옮겨 드릴 수도 있어요.`;
+      case "pt-BR":
+        return `Seu imediato fica em ${computer}, e o computador em ${address} faz trabalho para ele. Depois que ele for adicionado, posso mover seu imediato para lá em vez disso.`;
+      case "zh-Hans":
+        return `你的大副留在${computer}上，位于 ${address} 的电脑为它运行工作。添加之后，我也可以改为把你的大副搬到那里。`;
+      case "zh-Hant":
+        return `你的大副留在${computer}上，位於 ${address} 的電腦為它執行工作。加入之後，我也可以改為把你的大副搬到那裡。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé šţáýš öñ ${computer}, áñð ţĥé çöɱþûţéŕ áţ ${address} ŕûñš ŵöŕķ ƒöŕ îţ. Öñçé îţ îš áððéð, Î çáñ ɱöṽé ýöûŕ ƒîŕšţ ɱáţé ţĥéŕé îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate stays on ‬${computer}‮, and the computer at ‬${address}‮ runs work for it. Once it is added, I can move your first mate there instead.‬`;
+    }
+    return `Your first mate stays on ${computer}, and the computer at ${address} runs work for it. Once it is added, I can move your first mate there instead.`;
+  }
+  function devicesAddressCardSetUp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُعدّه عبر SSH، بمفتاح SSH الخاص بك. لا يلزم أن يكون شيء مفتوحًا عليه.`;
+      case "de":
+        return `Ich richte ihn über SSH mit deinem eigenen SSH-Schlüssel ein. Dort muss nichts geöffnet sein.`;
+      case "es":
+        return `La configuro por SSH, con tu propia clave SSH. No hace falta tener nada abierto en ella.`;
+      case "fr":
+        return `Je le configure par SSH, avec votre propre clé SSH. Rien n’a besoin d’y être ouvert.`;
+      case "ja":
+        return `あなた自身の SSH キーを使い、SSH で設定します。そちらで何かを開いておく必要はありません。`;
+      case "ko":
+        return `내 SSH 키를 사용해 SSH로 설정할게요. 그곳에서 아무것도 열어 둘 필요가 없어요.`;
+      case "pt-BR":
+        return `Eu o configuro por SSH, com sua própria chave SSH. Nada precisa estar aberto nele.`;
+      case "zh-Hans":
+        return `我会通过 SSH、用你自己的 SSH 密钥设置它。那边不需要打开任何东西。`;
+      case "zh-Hant":
+        return `我會透過 SSH、用你自己的 SSH 金鑰設定它。那邊不需要開著任何東西。`;
+      case "en-XA":
+        return `[Î šéţ îţ ûþ öṽéŕ ŠŠĤ, ŵîţĥ ýöûŕ öŵñ ŠŠĤ ķéý. Ñöţĥîñĝ ñééðš ţö ƀé öþéñ öñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮I set it up over SSH, with your own SSH key. Nothing needs to be open on it.‬`;
+    }
+    return `I set it up over SSH, with your own SSH key. Nothing needs to be open on it.`;
+  }
+  function devicesAddressCardTitle(input2) {
+    const address = input2.address;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة الحاسوب على ${address}`;
+      case "de":
+        return `Den Computer unter ${address} hinzufügen`;
+      case "es":
+        return `Agregar la computadora en ${address}`;
+      case "fr":
+        return `Ajouter l’ordinateur à ${address}`;
+      case "ja":
+        return `${address} のコンピューターを追加`;
+      case "ko":
+        return `${address}의 컴퓨터 추가`;
+      case "pt-BR":
+        return `Adicionar o computador em ${address}`;
+      case "zh-Hans":
+        return `添加位于 ${address} 的电脑`;
+      case "zh-Hant":
+        return `加入位於 ${address} 的電腦`;
+      case "en-XA":
+        return `[Åðð ţĥé çöɱþûţéŕ áţ ${address} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Add the computer at ‬${address}`;
+    }
+    return `Add the computer at ${address}`;
+  }
   function devicesAddressFormNotNow() {
     switch (currentLanguage()) {
       case "ar":
@@ -27183,29 +27376,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function devicesAddressFormSetUp() {
     switch (currentLanguage()) {
       case "ar":
-        return `أُعدّه من هذا الحاسوب عبر «تسجيل الدخول عن بُعد»، بمفتاح SSH الخاص بك، وأُبقيه محدّثًا.`;
+        return `أُعدّه من هذا الحاسوب عبر SSH، بمفتاح SSH الخاص بك، وأُبقيه محدّثًا.`;
       case "de":
-        return `Ich richte ihn von diesem Computer aus über „Entfernte Anmeldung“ mit deinem eigenen SSH-Schlüssel ein und halte ihn aktuell.`;
+        return `Ich richte ihn von diesem Computer aus über SSH mit deinem eigenen SSH-Schlüssel ein und halte ihn aktuell.`;
       case "es":
-        return `La configuro desde esta computadora con la Sesión remota, con tu propia clave SSH, y la mantengo actualizada.`;
+        return `La configuro desde esta computadora por SSH, con tu propia clave SSH, y la mantengo actualizada.`;
       case "fr":
-        return `Je le configure depuis cet ordinateur par la Session à distance, avec votre propre clé SSH, et je le tiens à jour.`;
+        return `Je le configure depuis cet ordinateur par SSH, avec votre propre clé SSH, et je le tiens à jour.`;
       case "ja":
-        return `このコンピューターから「リモートログイン」で、あなた自身の SSH キーを使って設定し、最新に保ちます。`;
+        return `このコンピューターから SSH で、あなた自身の SSH キーを使って設定し、最新に保ちます。`;
       case "ko":
-        return `이 컴퓨터에서 원격 로그인으로, 내 SSH 키를 사용해 설정하고 최신으로 유지할게요.`;
+        return `이 컴퓨터에서 SSH로, 내 SSH 키를 사용해 설정하고 최신으로 유지할게요.`;
       case "pt-BR":
-        return `Eu o configuro a partir deste computador pelo Login Remoto, com sua própria chave SSH, e o mantenho atualizado.`;
+        return `Eu o configuro a partir deste computador por SSH, com sua própria chave SSH, e o mantenho atualizado.`;
       case "zh-Hans":
-        return `我会从这台电脑通过“远程登录”、用你自己的 SSH 密钥设置它，并让它保持最新。`;
+        return `我会从这台电脑通过 SSH、用你自己的 SSH 密钥设置它，并让它保持最新。`;
       case "zh-Hant":
-        return `我會從這台電腦透過「遠端登入」、用你自己的 SSH 金鑰設定它，並讓它保持最新。`;
+        return `我會從這台電腦透過 SSH、用你自己的 SSH 金鑰設定它，並讓它保持最新。`;
       case "en-XA":
-        return `[Î šéţ îţ ûþ ƒŕöɱ ţĥîš çöɱþûţéŕ öṽéŕ Ŕéɱöţé Ļöĝîñ, ŵîţĥ ýöûŕ öŵñ ŠŠĤ ķéý, áñð ķééþ îţ ûþðáţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Î šéţ îţ ûþ ƒŕöɱ ţĥîš çöɱþûţéŕ öṽéŕ ŠŠĤ, ŵîţĥ ýöûŕ öŵñ ŠŠĤ ķéý, áñð ķééþ îţ ûþðáţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮I set it up from this computer over Remote Login, with your own SSH key, and keep it updated.‬`;
+        return `‮I set it up from this computer over SSH, with your own SSH key, and keep it updated.‬`;
     }
-    return `I set it up from this computer over Remote Login, with your own SSH key, and keep it updated.`;
+    return `I set it up from this computer over SSH, with your own SSH key, and keep it updated.`;
   }
   function devicesAddressFormTitle() {
     switch (currentLanguage()) {
@@ -97018,6 +97211,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateWaitsForModel,
     crewmateWaitsForUpdate,
     crewmateWorking,
+    devicesAddressCardAdd,
+    devicesAddressCardAsk,
+    devicesAddressCardNoAccount,
+    devicesAddressCardNotNow,
+    devicesAddressCardResult,
+    devicesAddressCardSetUp,
+    devicesAddressCardTitle,
     devicesAddressFormNotNow,
     devicesAddressFormOpen,
     devicesAddressFormOpenButton,
@@ -100135,6 +100335,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateWaitsForModel": ["left"],
     "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
+    "devicesAddressCardAdd": [],
+    "devicesAddressCardAsk": [],
+    "devicesAddressCardNoAccount": ["computer"],
+    "devicesAddressCardNotNow": [],
+    "devicesAddressCardResult": ["address", "computer"],
+    "devicesAddressCardSetUp": [],
+    "devicesAddressCardTitle": ["address"],
     "devicesAddressFormNotNow": [],
     "devicesAddressFormOpen": [],
     "devicesAddressFormOpenButton": [],

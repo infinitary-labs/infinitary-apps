@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "address-card-says-what-it-makes",
+      "kind": "improvement",
+      "title": "Adding a computer by its address says what you get",
+      "body": "When you name another computer, such as a server, your first mate now asks whether it should stay on this computer or live on that one. Its card for adding a computer by its address says your first mate stays here while that computer runs work, says SSH instead of the Mac's Remote Login, and asks for the account name when the address has none.",
+      "area": "devices",
+      "picture": {
+        "dark": "address-card-says-what-it-makes-dark.webp",
+        "light": "address-card-says-what-it-makes-light.webp",
+        "alt": "The first mate's card to add the computer at 100.94.48.29, saying the first mate stays on this computer, that it is set up over SSH, and that the address names no account"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

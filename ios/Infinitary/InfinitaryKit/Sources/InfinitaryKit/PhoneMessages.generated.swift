@@ -811,6 +811,13 @@ public enum PhoneMessages {
     public static func `crewmateWaitsForModel`(`left`: String) -> String { PhoneWords.format("crewmateWaitsForModel", [`left`]) }
     public static func `crewmateWaitsForUpdate`(`computer`: String, `left`: String) -> String { PhoneWords.format("crewmateWaitsForUpdate", [`computer`, `left`]) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
+    public static func `devicesAddressCardAdd`() -> String { PhoneWords.format("devicesAddressCardAdd", []) }
+    public static func `devicesAddressCardAsk`() -> String { PhoneWords.format("devicesAddressCardAsk", []) }
+    public static func `devicesAddressCardNoAccount`(`computer`: String) -> String { PhoneWords.format("devicesAddressCardNoAccount", [`computer`]) }
+    public static func `devicesAddressCardNotNow`() -> String { PhoneWords.format("devicesAddressCardNotNow", []) }
+    public static func `devicesAddressCardResult`(`address`: String, `computer`: String) -> String { PhoneWords.format("devicesAddressCardResult", [`address`, `computer`]) }
+    public static func `devicesAddressCardSetUp`() -> String { PhoneWords.format("devicesAddressCardSetUp", []) }
+    public static func `devicesAddressCardTitle`(`address`: String) -> String { PhoneWords.format("devicesAddressCardTitle", [`address`]) }
     public static func `devicesAddressFormNotNow`() -> String { PhoneWords.format("devicesAddressFormNotNow", []) }
     public static func `devicesAddressFormOpen`() -> String { PhoneWords.format("devicesAddressFormOpen", []) }
     public static func `devicesAddressFormOpenButton`() -> String { PhoneWords.format("devicesAddressFormOpenButton", []) }
@@ -5011,6 +5018,13 @@ extension PhoneWords {
         "crewmateWaitsForModel": ["left"],
         "crewmateWaitsForUpdate": ["computer", "left"],
         "crewmateWorking": [],
+        "devicesAddressCardAdd": [],
+        "devicesAddressCardAsk": [],
+        "devicesAddressCardNoAccount": ["computer"],
+        "devicesAddressCardNotNow": [],
+        "devicesAddressCardResult": ["address", "computer"],
+        "devicesAddressCardSetUp": [],
+        "devicesAddressCardTitle": ["address"],
         "devicesAddressFormNotNow": [],
         "devicesAddressFormOpen": [],
         "devicesAddressFormOpenButton": [],

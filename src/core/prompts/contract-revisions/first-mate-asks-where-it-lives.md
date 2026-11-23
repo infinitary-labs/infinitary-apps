@@ -1,0 +1,7 @@
+# The first mate asks where it lives
+
+INF-6043 studied a person on a Windows PC who named his Linux server and got a card that added it as a computer that runs work, when he wanted his first mate to live on the server; the captain started its change 1 from that task's card.
+The `device-invite` catalog line, which the first mate reads through `app_state`, now tells it that when the captain names another computer to use without saying where the first mate should live, it first states the two setups in one sentence each and asks which on one decision card: the first mate stays here and that computer runs work for it, or it lives there and this computer becomes a window, which takes adding the computer and then the `home-move` offer once it is in reach.
+The same line calls the address way SSH instead of macOS's Remote Login, and tells the first mate to ask for the account name before offering an address that has none, since SSH would sign in with the person's user name here.
+The address card that action writes is now catalog words: it says the first mate stays here and that computer runs work for it, that a move can follow once it is added, that it is set up over SSH, and, for an address with no account name, that it signs in with the user name here unless the captain says another.
+No tool description, parameter or served prompt changes, so the fixed context is unchanged: the line reaches the Firstmate only through `app_state`, where it grows by about 160 tokens.

@@ -211,6 +211,34 @@ describe("a computer that runs work saving its crew's work before its update", (
     });
   });
 
+  // From review: a later update's save names only its own stops, so a turn
+  // that stop withdraws is never read as stopped by an earlier update.
+  it("names to a later save only its own stops, once the home has the earlier stopped turn's end", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Checked the footer." } }] },
+      { text: "Fixed the footer." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+    await report.reached;
+    const saving = at.order("inf:session:save-for-update", []);
+    report.open();
+    expect(await saving).toEqual({ stopped: [TASK] });
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [TASK],
+      withdrawn: [],
+    });
+
+    // No turn started there since, as for a turn that had already reported.
+    expect(await at.order("inf:session:save-for-update", [])).toEqual({ stopped: [] });
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [],
+      withdrawn: [],
+    });
+  });
+
   // A quit while the save still waits on a running call cuts that turn
   // instead: it is the save's too, and its end is read as the pause.
   it("names a turn the quit cut while its save was stopping it as one the save stopped", async () => {

@@ -70,9 +70,10 @@ const taskStateSchema = z.object({
   continuing: z.literal(true).optional(),
   /**
    * Its home's update is stopping a turn of this task here, stopped one or
-   * withdrew the stop, and no turn has started here since: what letting
-   * that save go names, through a restart here and after this computer
-   * let the save go by itself. An older run drops it.
+   * withdrew the stop, and no turn has started here since, nor a later
+   * save once the home had that turn's end: what letting that save go
+   * names, through a restart here and after this computer let the save go
+   * by itself. An older run drops it.
    */
   updateStop: z.enum(["stopping", "stopped", "withdrawn"]).optional(),
 });

@@ -1416,7 +1416,15 @@ export class SessionHost {
         timer: undefined,
       };
       this.updateSave = own;
-      for (const held of this.held.values()) this.stopForUpdate(held, own);
+      for (const held of this.held.values()) {
+        // An earlier save's stop whose end the home already took is over
+        // there: this save names its own, and one whose end the home lacks.
+        if (held.state.updateStop && held.through >= held.state.seq) {
+          held.state = { ...held.state, updateStop: undefined };
+          this.writeOut(held);
+        }
+        this.stopForUpdate(held, own);
+      }
       own.saving = this.saveTurns(own);
       save = own;
     }
@@ -1519,7 +1527,8 @@ export class SessionHost {
    * restart and after the save is let go, until a turn starts here while
    * no save holds (`record`): a let-go asked again, by a home that came back after
    * either, names it as the first would have. A stop the save made stays
-   * one when a later turn's stop is withdrawn. A stop that settles after
+   * one when a later turn's stop in the same save is withdrawn; a new save
+   * forgets it once the home has that turn's end. A stop that settles after
    * this computer stopped writes nothing: its next start reads the stop it
    * was making as the save's.
    */

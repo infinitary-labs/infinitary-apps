@@ -327,7 +327,13 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
   };
   const supervisor = (label: string) => {
     const file = join(state, `${label}.pid`);
-    return existsSync(file) ? Number(readFileSync(file, "utf8")) : null;
+    try {
+      return Number(readFileSync(file, "utf8"));
+    } catch (error) {
+      // The supervisor can remove its PID record while teardown is checking it.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
   };
   const alive = (pid: number) => {
     try {

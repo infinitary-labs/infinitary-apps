@@ -10,6 +10,7 @@ A crewmate gets a command where the tool it replaces would bind: `infinitary-bro
 That computer runs its own channel and command process, the same way, for the tasks it holds: its keys live in its work folder's `task-channel/` (`docs/helper.md`), and its commands reach only the browsers there.
 `infinitary-integrations-axi` goes to every task on this Mac when the host has a command process, and to a task on a computer that runs work whose channel there carries it, where each call is asked of this Mac (`docs/integrations.md`, "On a computer that runs work").
 `infinitary-files-axi` goes the same way, to a task on a computer that runs work (`docs/files.md`, "The command").
+`infinitary-feedback-axi` goes to every task on this Mac when the host has a command process (`docs/feedback.md`, "The command").
 The crewmate's instructions carry one line for it, `CREWMATE_BROWSER_LINE` (`src/core/pi/piResources.ts`), the captain's approved words: "This task has its own browser: run `infinitary-browser-axi` to see or use a web page.
 Never press the last step of a purchase or booking; ask the captain on a card."
 Its `emit_card` keeps `browser_button` and `browser_handoff`, which carry the sign-in and payment rules (`docs/task-browser.md`, "Asking for help").
@@ -154,6 +155,13 @@ Every decision stays the home's `FileRouter`: a refused path, a computer out of 
 A copy's help tells the crewmate to read it where it is and never to print, quote or paste its content.
 Its kept answers follow the shell's limit as the browser's do, and a later command that finds an earlier copy finished says so before its answer, with the words "this command was not run".
 On a computer that runs work, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, as the integrations command's does.
+
+## The feedback command
+
+`infinitary-feedback-axi` (`src/core/axi/feedbackCommands.ts`) drafts a `/feedback` report for Infinitary's own public project (`docs/feedback.md`).
+`diagnostics` prints the typed facts a report carries, `similar <words>` lists the project's matching issues, and `draft` reads its body from a file in the task's working copy, at most 256 KB, runs the guard and keeps the draft for the captain's click, or answers a filled-in link without a GitHub sign-in.
+A missing or malformed flag exits 2 before reaching the app; a guard refusal names each match and its kind with exit 1 (`REFUSED`).
+It never sends anything itself.
 
 ## Infinitary from your terminal
 

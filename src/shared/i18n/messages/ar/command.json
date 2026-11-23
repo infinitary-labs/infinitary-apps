@@ -73,6 +73,8 @@
   "commandComputersPrevious": "حواسيب العمل السابقة",
   "commandDevicesTryAgain": "محاولة الوصول إلى حواسيبك مجددًا",
   "commandDevicesTryAgainWords": "أجهزة, إعادة الاتصال, اتصال, حواسيب",
+  "commandFeedbackStart": "إرسال ملاحظات",
+  "commandFeedbackStartWords": "ملاحظات, إبلاغ, مشكلة, خطأ, فكرة, اقتراح, بلاغ",
   "commandFirstmateReply": "فتح رد نائب القبطان",
   "commandFirstmateReplyWords": "إجابة, رسالة, ملاحظة, أخير",
   "commandFocusCardActions": "الانتقال إلى أزرار البطاقة",

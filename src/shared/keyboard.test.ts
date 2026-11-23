@@ -103,6 +103,7 @@ describe("the command catalog", () => {
       "updates.check", // INF-2073: Check for updates is chosen by name.
       "updates.home", // INF-4012: the first mate's computer's update row is chosen by name.
       "whats-new.show",
+      "feedback.start", // INF-6172: /feedback in the message box, chosen by name or from the Help menu.
       "firstmate.reply",
       // INF-1988: the approved Runbooks tab and folder are chosen by name.
       "settings.runbooks",
@@ -207,6 +208,7 @@ describe("the command catalog", () => {
       "updates.check",
       "updates.home",
       "whats-new.show",
+      "feedback.start",
       "firstmate.reply",
       // INF-1988: the shell opens the approved Runbooks tab and folder.
       "settings.runbooks",

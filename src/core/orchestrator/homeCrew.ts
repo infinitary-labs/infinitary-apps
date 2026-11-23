@@ -9,6 +9,7 @@ import { cardReader } from "../decisions/homeDecisions";
 import type { CaptainPlaces } from "../devices/captainPlaces";
 import type { HomeDevices } from "../devices/homeDevices";
 import type { CoreEventSink } from "../events";
+import { type FeedbackHost, taskFeedback } from "../feedback/feedbackCommand";
 import type { startHomeFiles } from "../files/homeFiles";
 import type { HomeForges } from "../forge/homeForges";
 import type { HostCapabilities } from "../host";
@@ -119,6 +120,7 @@ export function startHomeCrew({
   homePersonal,
   browsers,
   taskCommands,
+  feedback,
   leftBehind,
   loadLine,
   files,
@@ -183,6 +185,8 @@ export function startHomeCrew({
   homePersonal: Pick<HomePersonal, "live">;
   browsers: ReturnType<typeof startTaskBrowsers>;
   taskCommands: Awaited<ReturnType<typeof openTaskChannel>>;
+  /** What a /feedback report's command reaches (docs/feedback.md); absent, no crewmate has it. */
+  feedback?: FeedbackHost;
   leftBehind: ReturnType<LeftoverPrograms["leftBehind"]>;
   loadLine: HomeDevices["loadLine"];
   files: ReturnType<typeof startHomeFiles>;
@@ -338,6 +342,9 @@ export function startHomeCrew({
             forTask: (taskId: string) =>
               taskStopsCommand(join(paths.crewmatesDir, taskId), ticker.now, leftBehind),
           },
+          ...(feedback
+            ? { feedback: { forTask: (taskId: string) => taskFeedback(feedback, taskId) } }
+            : {}),
           load: {
             forTask: (taskId: string) => loadLine.forTask(taskId),
             available: (machine: string) =>

@@ -352,6 +352,7 @@
         "!src/core/core.settings.test.ts",
         "!src/core/core.settingsParity.test.ts",
         "!src/core/core.wiring.test.ts",
+        "!src/core/core.feedback.test.ts",
         "!src/core/forge/providers/plainGit.test.ts",
         "!src/core/forge/signIns.test.ts",
         "!src/core/hostEnv.gitSignIn.test.ts",

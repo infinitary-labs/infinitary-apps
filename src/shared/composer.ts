@@ -1,5 +1,6 @@
 import { TURN_IMAGE_MAX_BYTES, TURN_IMAGES_MAX } from "./cards";
 import { COMPUTER } from "./deviceNames";
+import { FEEDBACK_WORD } from "./feedback";
 import { formatNumber } from "./i18n/format.ts";
 import * as m from "./i18n/messages.generated.ts";
 import type { KeySystem } from "./platform";
@@ -124,7 +125,18 @@ export const COMPOSER_HINTS = {
   "too-long": [{ words: COMPOSER_NOTICE_WORDS["too-long"] }],
 } satisfies Record<string, ComposerHintPart[]>;
 
-export type ComposerHint = keyof typeof COMPOSER_HINTS;
+/** The foot row's hint: one of the key hints, or `command` while a slash command is being typed. */
+export type ComposerHint = keyof typeof COMPOSER_HINTS | "command";
+
+/**
+ * Whether the field holds the start of a slash command (docs/composer.md,
+ * "The slash hint"): a first word that begins with `/` and could still be
+ * `/feedback`, or is it.
+ */
+export function typingSlashCommand(text: string): boolean {
+  const first = /^\s*(\/\S*)/.exec(text)?.[1]?.toLowerCase();
+  return first !== undefined && FEEDBACK_WORD.startsWith(first);
+}
 
 /** The same hints with a key's words as Linux writes them (design skill readme, "Linux desktop conventions"). */
 const CTRL_HINT_KEYS: Readonly<Record<string, string>> = {
@@ -134,6 +146,7 @@ const CTRL_HINT_KEYS: Readonly<Record<string, string>> = {
 };
 
 export function composerHint(hint: ComposerHint, system: KeySystem = "mac"): ComposerHintPart[] {
+  if (hint === "command") return [{ words: m.composerHintFeedback({ command: FEEDBACK_WORD }) }];
   const parts: ComposerHintPart[] = COMPOSER_HINTS[hint];
   return system === "mac"
     ? parts

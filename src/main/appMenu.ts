@@ -101,6 +101,16 @@ function whatsNewItem(bindings: Bindings, actions: AppMenuActions): MenuItemCons
   };
 }
 
+/** The Help menu's Send Feedback, which starts /feedback in the main message box. */
+function feedbackItem(bindings: Bindings, actions: AppMenuActions): MenuItemConstructorOptions {
+  return {
+    id: "feedback-start",
+    label: m.menuSendFeedback(),
+    accelerator: menuAccelerator("feedback.start", bindings),
+    click: () => actions.shell("feedback.start"),
+  };
+}
+
 /**
  * The items Electron words with `app.name`: the app menu's own title, About,
  * Hide and Quit. That is the package's lowercase name, which stays as it is
@@ -185,8 +195,15 @@ export function appMenuTemplate(
   // Electron's own menu has no Help menu; a later one that does keeps it.
   const help = menu.find((item) => item.role?.toLowerCase() === "help");
   if (help && Array.isArray(help.submenu))
-    help.submenu.unshift(whatsNewItem(bindings, actions), { type: "separator" });
-  else menu.push({ role: "help", label: m.menuHelp(), submenu: [whatsNewItem(bindings, actions)] });
+    help.submenu.unshift(whatsNewItem(bindings, actions), feedbackItem(bindings, actions), {
+      type: "separator",
+    });
+  else
+    menu.push({
+      role: "help",
+      label: m.menuHelp(),
+      submenu: [whatsNewItem(bindings, actions), feedbackItem(bindings, actions)],
+    });
   return menu;
 }
 

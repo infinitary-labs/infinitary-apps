@@ -1,6 +1,7 @@
 {
   "composerFolderNotProject": "そのフォルダをプロジェクトとして追加できませんでした。",
   "composerFolderProject": "そのフォルダはすでにプロジェクトに入っています。",
+  "composerHintFeedback": "{command}：Infinitary の開発者に問題やアイデアを伝えます",
   "composerLines": {
     "plural": "count",
     "other": "{count}行"

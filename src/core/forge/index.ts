@@ -125,6 +125,7 @@ export {
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";
 export { conditionalGets } from "./providers/github/conditionalGets";
+export { githubApiBaseUrl } from "./providers/github/githubForge";
 export { gitlabReleaseFileCalls } from "./providers/gitlab/api";
 export { GITLAB_PRIVATE_MEDIA_REFUSAL } from "./providers/gitlab/attachments";
 export type { LocatedReleaseFile } from "./releaseFile";

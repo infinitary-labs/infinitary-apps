@@ -5,6 +5,7 @@ import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/f
 import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type {
+  FeedbackAskFacts,
   ForgeWriteAsk,
   IntegrationAllowance,
   WriteAsk,
@@ -575,6 +576,34 @@ export class GithubGatewayService {
     }
     if (!route.own) return "it goes outside this task's own project, so it asks the captain";
     return undefined;
+  }
+
+  /**
+   * A /feedback report's issue or comment (docs/feedback.md): always kept for
+   * the captain's click, through the github.com sign-in, whatever the task's
+   * own project is, so not even a task on Infinitary's own project sends one
+   * at once. The click sends it through `sendAsk` like any kept write.
+   */
+  keepFeedback(
+    taskId: string,
+    write: { path: string; body: string; feedback: FeedbackAskFacts },
+  ): string {
+    const target = this.accountTarget(GITHUB_HOST);
+    const route = target.api.route("POST", write.path, Buffer.byteLength(write.body));
+    const ask: ForgeWriteAsk = {
+      id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
+      kind: "github",
+      host: target.forge.host ?? GITHUB_HOST,
+      place: target.api.place,
+      via: "account",
+      method: "POST",
+      path: route.path,
+      body: write.body,
+      feedback: write.feedback,
+      at: this.options.now(),
+    };
+    this.options.tasks.delivery.keepWriteAsk(taskId, ask);
+    return ask.id;
   }
 
   /** Keep a write for the captain's click and tell the crewmate how to ask. */

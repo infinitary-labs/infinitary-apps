@@ -1,0 +1,8 @@
+{
+  "feedbackStripAccount": "点击之前不会发送任何内容。它以你的 GitHub 账户 {login} 发布。",
+  "feedbackStripBug": "一份新的问题报告",
+  "feedbackStripComment": "对议题 #{number} 的评论",
+  "feedbackStripHeading": "你点击后，这会公开发布到 {place}，仅一次",
+  "feedbackStripIdea": "一个新想法",
+  "feedbackStripNoAccount": "点击之前不会发送任何内容。它以你的 GitHub 账户发布。"
+}

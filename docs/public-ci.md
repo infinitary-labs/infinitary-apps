@@ -40,7 +40,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 ### How an outside pull request moves
 
 1. **It opens.**
-   GitHub starts the contributor agreement check at once, which needs no run approval ("The contributor agreement check"); every other check waits for the captain's approval of the run.
+   GitHub starts the contributor agreement check and the Careful review check at once, which need no run approval ("The contributor agreement check", "The Careful review check"); every other check waits for the captain's approval of the run.
 2. **The crew reads it when the captain asks.**
    Nothing reads new outside pull requests on a schedule.
    A crewmate reviews one the captain names (`check_change pull`), reads its code and GitHub's runs, and puts it on a card for the captain.
@@ -86,6 +86,28 @@ Without the issue the check fails on every outside pull request and names what i
 It writes on an outside pull request, as the check-file flag does, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
 It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue, pull request and status writes (GitHub refuses its comment on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu.
 `tests/contributor-agreement.test.ts` holds each of these.
+
+### The Careful review check
+
+An outside pull request is raised with Infinitary at the Careful care level: an independent review and live validation that the review accepted, of its newest version (`CONTRIBUTING.md`, "Infinitary's Careful review").
+Infinitary then writes a record at the end of the pull request's story: no-mistakes' signature line and its v1 attestation, with `producer` set to `infinitary` and a `live_validation` object (`src/core/forge/pipelineAttestation.ts`).
+`careful-review-check.yml` sets the commit status "PR raised with Infinitary's Careful review" on each pull request's newest commit (`scripts/careful-review-check.mjs`):
+
+- a pull request from one of the project's own branches, a task's or a batch's, passes at once;
+- an outside one passes when its description carries the signature line and its first record parses, has `producer` `infinitary` with a `live_validation` verdict and counts, names the pull request's newest version, and marks review, test and document completed;
+- otherwise it fails and keeps one comment, edited in place, saying why and how to raise the pull request with Infinitary; once a later version passes, the comment says so.
+
+The status names the live validation's verdict and counts on a pass and the reason on a failure.
+A record written by no-mistakes alone fails, since only Infinitary's Careful record counts here.
+The check reads the description and newest version live from GitHub's API, never from the event, because a rerun replays its first event's payload.
+
+The record is words in the description, and the author can type it by hand, so the check tells contributors what the project expects and never proves that a review happened.
+It never stands in for reading the change, or any edit to check files before approving a run; the guards stay GitHub's approval of each outside run and the fork guard on the project's own runners.
+
+It writes on an outside pull request, as the agreement check does, so it runs from the default branch on `pull_request_target` (opened, reopened, a push or an edit of the description) rather than from the pull request's own files, and needs no run approval.
+It checks out only its script from the default branch, never the pull request's code, reads the description as data, uses no secret beyond its own token, holds only issue, pull request and status writes, and runs on GitHub's hosted Ubuntu.
+Started by hand with a pull request number, it reads any pull request of the project; on one of the project's own it writes its verdict to the job summary alone, so the reading can be proved without changing that pull request's status.
+`tests/careful-review-check.test.ts` holds each of these.
 
 ## Release environments
 

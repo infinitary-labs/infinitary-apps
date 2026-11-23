@@ -6,7 +6,7 @@
       "area": "cards",
       "title": "Long cards on iPhone scroll their reply box and choices with the card",
       "body": "On the iPhone and iPad app, a card keeps its reply box and choices fixed at its foot only when they leave the card's words at least three quarters of the room. On an iPhone, most long cards now scroll as one piece, so their words get the whole card and the reply box and choices come after them. An upright iPad, which has more room, still keeps them in view.",
-      "noPicture": "PENDING",
+      "noPicture": "The change is in how a long card scrolls: its reply box and choices now move with its words, which one still picture cannot show.",
       "provenance": {
         "origin": "change"
       }

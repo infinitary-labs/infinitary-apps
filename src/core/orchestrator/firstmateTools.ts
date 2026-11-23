@@ -450,7 +450,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         const cardId = target.kind === "new" ? resolveFirstmateCardId(reply.cardId) : target.id;
         if (reply.signsOff) {
           const { signsOff: _signsOff, ...line } = reply;
-          const signed = supervisor.cards.signOffFromFirstmate({ ...line, cardId });
+          const signed = supervisor.cards.threads.signOffFromFirstmate({ ...line, cardId });
           if (signed.mutation) noteTyped(signed.mutation);
           else host.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
           return signed.text;

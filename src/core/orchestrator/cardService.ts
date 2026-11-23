@@ -123,7 +123,7 @@ export class CardService {
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
   private readonly evidence: CardEvidence;
-  private readonly threads: CardThreads;
+  readonly threads: CardThreads;
   private readonly emits: CardEmits;
   readonly hostCards: HostCardStack;
   /** The put-off choices the host keeps and raises again (INF-3846 piece 3). */
@@ -871,13 +871,6 @@ export class CardService {
   /** A line in a card's thread from any first mate or crewmate (`CardThreads`). */
   replyAs(...args: Parameters<CardThreads["replyAs"]>): CardMutation {
     return this.threads.replyAs(...args);
-  }
-
-  /** The first mate's line that signs off its own card (`CardThreads`). */
-  signOffFromFirstmate(
-    ...args: Parameters<CardThreads["signOffFromFirstmate"]>
-  ): ReturnType<CardThreads["signOffFromFirstmate"]> {
-    return this.threads.signOffFromFirstmate(...args);
   }
 
   /** Correct a required action's words on its card (`CardThreads`). */

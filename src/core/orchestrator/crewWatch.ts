@@ -904,10 +904,17 @@ export class CrewWatch {
   readAfterTurn(taskId: string): void {
     const watch = this.checkWatch;
     if (!watch) return;
-    void watch.readAfterTurn(taskId, this.core.now()).then(() => {
-      this.core.cards.refreshSettleFacts([taskId]);
-      this.core.cards.recheckHeld();
-    });
+    void watch
+      .readAfterTurn(taskId, this.core.now())
+      .then((read) => {
+        if (!read) return;
+        this.core.cards.refreshSettleFacts([taskId]);
+        this.core.cards.recheckHeld();
+      })
+      .catch((caught: unknown) => {
+        // The tick rechecks every held card, so a failed recheck here holds nothing.
+        console.warn("[crew] could not recheck a held merge card after its read:", caught);
+      });
   }
 }
 

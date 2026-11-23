@@ -1019,12 +1019,18 @@ export class CardService {
     const before = this.stage.of(card).forChecks;
     if (rework) {
       this.stage.hold(card, { forChecks: rework });
-      if (!before && card.taskId && !this.reworkNoted(card.taskId, card))
+      // "read" is provisional: a reply answered with no push returns once the
+      // read ends, so only a hold on a known newer version is noted.
+      const settled = rework !== "read" && (before === undefined || before === "read");
+      if (settled && card.taskId && !this.reworkNoted(card.taskId, card))
         this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
           news: false,
           data: { cardId: card.id, sentBackAt: card.sentBackAt, held: rework },
         });
-      if (rework === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
+      // Only on entering "read": a recheck while the read is out must not
+      // ask for it again, or each answer queues the next recheck at once.
+      if (rework === "read" && before !== "read" && card.taskId)
+        this.host.readAfterTurn?.(card.taskId);
       return false;
     }
     this.stage.release(card, "forMerge", "forChecks");

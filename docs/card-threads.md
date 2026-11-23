@@ -165,14 +165,14 @@ The rules and the click are in `docs/delivery-rigor.md`, "A card behind its chan
 INF-6241, the captain's words on INF-6224: "ideally, i want it to come back only after the update has been made, new checks passed, and the card content is already updated".
 A crewmate's merge card for its task's own change, answered under a captain's reply, stays in its close-out wait while its change is at a newer version than the one the card showed and any of these holds (`reworkHold` in `reworkHold.ts`, `StageHold.forChecks`):
 
-- `read`: the change has not been read since the crewmate's turn ended, so a push from its shell is not known yet; the close-out starts that read at once (`CheckWatcher.readAfterTurn`);
+- `read`: the change has not been read since the crewmate's turn ended, so a push from its shell is not known yet; entering this hold starts that read at once (`CheckWatcher.readAfterTurn`), and a recheck while a read is out never asks for another;
 - `checks`: a check watch or a run watch stands on the task;
 - `turn`: the crewmate's turn is running;
 - `wake`: a wake waits for the crewmate on a lane that can deliver it.
 
 The version the card showed is the offer the stage last showed (`CardStore.lastAvailableOffer`); a revision written while the card is held, which INF-834 still takes while checks run, reaches the stage only with its return.
 While held, the stage keeps that version beside its thread, with the host's live facts: Merge off and the line saying a newer version was pushed ("A merge card behind its change"), and the fact strip reading the new version's checks.
-`CardService.recheckHeld` returns the card once nothing holds it - after a record change, after the read, and on every tick - once, unread, with no crewmate turn needed; its `card_raised` event carries `heldFor`, the fact that last held it, and the task's timeline carries one note when the hold starts.
+`CardService.recheckHeld` returns the card once nothing holds it - after a record change, after the read, and on every tick - once, unread, with no crewmate turn needed; its `card_raised` event carries `heldFor`, the fact that last held it, and the task's timeline carries one note when the hold first rests on a newer version, never for the provisional `read` hold alone.
 A reply that pushed nothing returns at its turn's end, within one read of the change.
 A wake the lane cannot deliver holds nothing: a held account, a lane stuck at its provider, a computer out of reach or waiting for its update.
 A project with no checks, or only checks a person starts, arms no watch, so the card returns when the crewmate's turn ends.

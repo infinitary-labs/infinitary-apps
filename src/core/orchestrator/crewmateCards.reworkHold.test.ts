@@ -54,6 +54,8 @@ async function shown(options: { checks?: boolean } = {}) {
   const remote: Remote = { head: HEAD, checks: "green" };
   let story: ChangePresentation | undefined;
   let fail = false;
+  /** How long the host takes to answer a read, on the fake clock. */
+  let answerAfter = 0;
   const completionPresentation = vi.fn(async (_taskId: string, revision: number) => {
     if (!story) throw new Error("No story yet");
     return {
@@ -75,6 +77,7 @@ async function shown(options: { checks?: boolean } = {}) {
   let record: TaskService;
   const readCheckWatch = vi.fn(async (taskId: string): Promise<WatchedReading> => {
     reads.push(remote.head);
+    if (answerAfter > 0) await new Promise((resolve) => setTimeout(resolve, answerAfter));
     if (fail) return { kind: "failed", transient: true, problem: "The host did not answer." };
     const { checks, head } = remote;
     const ci = checks === "none" || checks === "manual" ? "pending" : checks;
@@ -223,6 +226,9 @@ async function shown(options: { checks?: boolean } = {}) {
     failReads: (now: boolean) => {
       fail = now;
     },
+    answerReadsAfter: (ms: number) => {
+      answerAfter = ms;
+    },
     /** The card as the captain's stage shows it. */
     onStage: () => at.cards().find((entry) => entry.id === card.id),
     /** Whether the card still waits in its close-out, kept from the captain. */
@@ -249,9 +255,29 @@ describe("a reworked merge card's return (INF-6241)", () => {
       "make it read true at night too",
       "On it: reading the night meter too, then the checks run again.",
     );
-    // The crewmate pushes from its shell, which tells the app nothing.
+    // The crewmate pushes from its shell, which tells the app nothing, and
+    // starts the journeys run on the pushed version, which the app watches.
     at.remote.head = PUSHED;
     at.remote.checks = "pending";
+    const startedAt = Date.now();
+    seedDelivery(at.tasks, at.taskId, {
+      runWatches: [
+        {
+          runId: 42_551_000_001,
+          name: "journeys",
+          attempt: 1,
+          since: startedAt,
+          nextAt: startedAt + 24 * 60 * 60_000,
+          reading: {
+            head: PUSHED,
+            url: "https://github.com/octo/meter/actions/runs/42551000001",
+            state: "running",
+            since: startedAt,
+            at: startedAt,
+          },
+        },
+      ],
+    });
     await endTurn(at.crewmate, at.taskId);
     await tick();
     // The turn's end read the branch at once and found the push running.
@@ -265,6 +291,9 @@ describe("a reworked merge card's return (INF-6241)", () => {
     expect(halfWay?.body).toMatch(
       /data-fact="checks" data-level="waiting"[^>]*>.*?<span class="inf-foot-v">running<\/span>/,
     );
+    expect(halfWay?.body).toContain(
+      `Requested run 42551000001 at ${PUSHED.slice(0, 7)}, which the app watches`,
+    );
     expect(merges(halfWay)).toEqual([]);
     expect(halfWay?.body).toContain("A newer version was pushed after this card went up.");
     expect(
@@ -273,9 +302,10 @@ describe("a reworked merge card's return (INF-6241)", () => {
         .filter((event) => event.kind === "note")
         .map((event) => event.text),
     ).toContain(`Kept the merge card “${TITLE}” from you until its new version's checks end.`);
-    // The checks pass: the watch ends and wakes the crewmate, whose turn
-    // still holds the card.
+    // The checks pass and the run finishes: the watches end and wake the
+    // crewmate, whose turn still holds the card.
     at.remote.checks = "green";
+    seedDelivery(at.tasks, at.taskId, { runWatches: [] });
     await at.minute();
     expect(at.tasks.get(at.taskId)?.delivery?.ciWatch).toBeUndefined();
     expect(at.held()).toBe(true);
@@ -296,6 +326,39 @@ describe("a reworked merge card's return (INF-6241)", () => {
       expect.anything(),
       expect.objectContaining({ returned: true, heldFor: expect.any(String) }),
     ]);
+  });
+
+  // The host answers a read seconds later, never in the same pass: a
+  // recheck while the read is out must not ask for it again, or each
+  // answer queues the next recheck and the read's answer is never handled.
+  it("waits for a slow read without rechecking in a loop, through a record change", async () => {
+    const at = await shown();
+    await at.replyAndAnswer("make it read true at night too", "On it.");
+    at.remote.head = PUSHED;
+    at.remote.checks = "pending";
+    at.answerReadsAfter(5_000);
+    const original = at.supervisor.cards.recheckHeld.bind(at.supervisor.cards);
+    let rechecks = 0;
+    vi.spyOn(at.supervisor.cards, "recheckHeld").mockImplementation((reason) => {
+      rechecks += 1;
+      if (rechecks > 50) throw new Error("recheckHeld runs in a loop");
+      original(reason);
+    });
+    await endTurn(at.crewmate, at.taskId);
+    await tick();
+    expect(at.held()).toBe(true);
+    expect(at.reads).toEqual([PUSHED]);
+    // A record change lands while the read is out.
+    at.tasks.note(at.taskId, "An unrelated line on the timeline.", { news: false });
+    await tick();
+    expect(rechecks).toBeLessThan(10);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await tick();
+    expect(at.tasks.get(at.taskId)?.delivery).toMatchObject({ headSha: PUSHED });
+    expect(at.tasks.get(at.taskId)?.delivery?.ciWatch?.head).toBe(PUSHED);
+    expect(at.reads).toEqual([PUSHED]);
+    expect(rechecks).toBeLessThan(10);
+    expect(at.held()).toBe(true);
   });
 
   it("returns at turn end after a reply that pushed nothing, with or without a watch standing", async () => {

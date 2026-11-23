@@ -196,13 +196,17 @@ export class CheckWatcher {
   /**
    * Read the task now when the read after its crewmate's turn is still owed
    * (`afterTurnReadOwed`): a merge card held for that read (INF-6241) then
-   * waits for one forge read, not for the next tick.
+   * waits for one forge read, not for the next tick. Answers whether this
+   * call read: a read already out answers false at once, and the pass that
+   * started it rechecks when it ends, so a caller that rechecks on true
+   * never loops on a read that has not come back.
    */
-  async readAfterTurn(taskId: string, now: number): Promise<void> {
+  async readAfterTurn(taskId: string, now: number): Promise<boolean> {
     const record = this.host.tasks.get(taskId);
-    if (!record || TaskService.isClosed(record) || this.reading.has(taskId)) return;
-    if (!this.afterTurnReadOwed(record)) return;
+    if (!record || TaskService.isClosed(record) || this.reading.has(taskId)) return false;
+    if (!this.afterTurnReadOwed(record)) return false;
     await this.pollGuarded(record, now);
+    return true;
   }
 
   /**

@@ -140,6 +140,9 @@ struct PhoneTasks: View {
                 .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.always, axes: .vertical)
+        // A family moving into a folded group can shorten the content past the current offset.
+        // Keep the viewport in range on size changes without changing where the list initially opens.
+        .defaultScrollAnchor(.bottom, for: .sizeChanges)
         .onScrollGeometryChange(for: Bool.self) { geometry in
             geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
         } action: { _, pulled in

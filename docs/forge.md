@@ -710,7 +710,7 @@ An outside reader (`docs/agents-reach.md`, "An outside reader") keeps every writ
 `github_write` keeps it as a `WriteAsk` naming its card (`ForgeWriteAsk.card`), and the host lists it there (`IntegrationAsks.askForge`): it joins the task's waiting card of writes, revised in place, or raises `write-ask-<id>`.
 The card draws one ticked row per write, its method and path and the JSON body it sends, with the tally and legend of the integrations' card (`forgeApprovalCard`), and offers Only this time and Not now.
 The click takes every row it showed before the first is sent: an unticked row and Not now send nothing, and Only this time sends the others once each, oldest first, through `GithubGatewayService.sendTaken`, with the same guards as any kept write.
-One `write-answered` steer names every outcome; the cap and dropped asks work as they do for an integration's asks.
+One `write-answered` steer names every outcome, each sent write's answer fenced as `github-data` like the reader's reads; the cap and dropped asks work as they do for an integration's asks.
 A write outside the project, a release file and a validation effect are refused, and `emit_card` refuses a card naming a reader's ask.
 
 ### On GitLab

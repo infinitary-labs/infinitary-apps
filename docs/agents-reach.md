@@ -104,6 +104,7 @@ Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it
 - None of the app's shell commands reach it, so it has no integrations and no browser, and it gets no task reads, no knowledge, no programs and no workflow logs or artifacts: those would bring outside words in unfenced, or reach past its project.
 - `github_read` reaches only its own project, through the project's own sign-in, and every answer comes fenced whole as `github-data`, the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
   Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
+  Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
 - Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
 - It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
 

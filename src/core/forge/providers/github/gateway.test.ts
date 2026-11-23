@@ -24,6 +24,7 @@ import {
 } from "../../../orchestrator/githubGateway";
 import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
+import { ANSWER_WHOLE_MAX_CHARACTERS } from "../../../session/answerFiles";
 import { bindTool } from "../../../session/tools";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
@@ -1681,9 +1682,36 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     });
     const sent = await service.sendTaken("task-reader", take(commentAsk ?? ""), "once");
     expect(sent.ok).toBe(true);
+    expect(fencedSpans(sent.answer ?? "")[0]).toMatchObject({ label: "github-data", closed: true });
     expect(seen.map(({ method, path }) => `${method} ${path}`).slice(2)).toEqual([
       `POST ${comment.path}`,
     ]);
+  });
+
+  // INF-6388's review: a reader has no shell and its fence refuses the
+  // temporary folder, so an answer saved there as a file would never be read.
+  it("serves an outside reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {
+    const { service, seen } = await fixture();
+    const read = bindTool(GITHUB_READ_TOOL, {
+      onGithubRead: (i) => service.readForCrew("task-reader", i),
+    });
+    const paged = (await read.run({ path: "/repos/octo/meter/actions/runs?per_page=50" })).text;
+    expect(paged.length).toBeLessThanOrEqual(ANSWER_WHOLE_MAX_CHARACTERS);
+    const span = fencedSpans(paged)[0];
+    expect(span).toMatchObject({ label: "github-data", closed: true });
+    const answer = JSON.parse(span?.words ?? "");
+    const served = answer.body.workflow_runs.length;
+    expect(served).toBeGreaterThan(0);
+    expect(answer.body.workflow_runs[0].id).toBe(RUNS[0]?.id);
+    expect(answer.note).toMatch(
+      /at per_page=50 exceeds the \d+ characters an outside reader's answer carries whole/,
+    );
+    expect(seen.at(-1)?.path).toBe(`/repos/octo/meter/actions/runs?per_page=${served}`);
+
+    const refused = (await read.run({ path: "/repos/octo/meter/actions/workflows/phone.yml/runs" }))
+      .text;
+    expect(refused).toContain("Its first item alone passes");
+    expect(refused).toContain("Ask for less: a smaller per_page, one item by its number");
   });
 
   it("stops a task at its call budget", async () => {

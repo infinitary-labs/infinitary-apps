@@ -34,6 +34,7 @@ import {
 import { type ApiDialect, apiDialectAt, rawApiKind } from "../forge/api";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import { IntegrationOutcomeUnknown } from "../integrations";
+import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -90,6 +91,19 @@ const READER_WRITE_REFUSAL =
 const READER_VALIDATION_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
   "Refused: an outside reader's writes carry no validation effect. Nothing was kept or sent.";
+
+/**
+ * The longest unfenced answer an outside reader is served: its answer must
+ * reach its model whole, never as a saved file (`serveAnswerFiles`), since
+ * its fence refuses the temporary folder and it has no shell.
+ */
+const READER_ANSWER_MAX =
+  ANSWER_WHOLE_MAX_CHARACTERS -
+  fencedAnswer("", { label: READER_FENCE_LABEL, value: "0".repeat(READER_FENCE_BYTES * 2), at: 0 })
+    .length;
+const READER_NARROW =
+  // i18n-exempt: served to the crewmate as a tool answer
+  " Nothing was served. Ask for less: a smaller per_page, one item by its number, or a narrower path.";
 
 /** Whose allowance the first mate's own calls count against: it has no task. */
 const SEAT_CALLS = "seat:firstmate";
@@ -179,16 +193,28 @@ export class GithubGatewayService {
           throw new ForgeError("refused", READER_READ_REFUSAL);
         const route = api.route(input.method ?? "GET", input.path);
         if (!route.own) throw new ForgeError("refused", READER_READ_REFUSAL);
-        const answer = await this.readOn(taskId, api, input);
-        return fencedAnswer(answer, {
-          label: READER_FENCE_LABEL,
-          value: randomBytes(READER_FENCE_BYTES).toString("hex"),
-          at: this.options.now(),
-        });
+        const answer = await this.readOn(taskId, api, input, READER_ANSWER_MAX);
+        const fenced = this.readerFenced(answer);
+        // Breaking a copied mark lengthens the words by one character each.
+        if (fenced.length > ANSWER_WHOLE_MAX_CHARACTERS)
+          throw new ForgeError(
+            "refused",
+            `The answer exceeds the ${ANSWER_WHOLE_MAX_CHARACTERS} characters an outside reader's answer carries whole.${READER_NARROW}`,
+          );
+        return fenced;
       },
       through,
       propagate,
     );
+  }
+
+  /** Words from outside, fenced with a fresh value so none can forge the closing mark. */
+  private readerFenced(words: string): string {
+    return fencedAnswer(words, {
+      label: READER_FENCE_LABEL,
+      value: randomBytes(READER_FENCE_BYTES).toString("hex"),
+      at: this.options.now(),
+    });
   }
 
   /**
@@ -315,13 +341,31 @@ export class GithubGatewayService {
     );
   }
 
-  private async readOn(caller: string, api: ForgeApi, input: GithubReadInput): Promise<string> {
+  /**
+   * `most` bounds the answer as served, in characters: an outside reader's
+   * answer must reach its model whole (`READER_ANSWER_MAX`), so a longer one
+   * is paged the same way as one past the JSON cap, and refused when no
+   * smaller page would fit.
+   */
+  private async readOn(
+    caller: string,
+    api: ForgeApi,
+    input: GithubReadInput,
+    most?: number,
+  ): Promise<string> {
     const route = api.route(input.method ?? "GET", input.path);
     if (route.write) throw new ForgeError("refused", "github_read sends GET or HEAD only.");
     let path = route.path;
     let served: number | undefined;
     const pageParam = api.pageParam ?? "per_page";
+    const bound = most ?? API_RESPONSE_MAX_BYTES;
+    // i18n-exempt: served to the crewmate as a tool answer
+    const limit =
+      most === undefined
+        ? `${API_RESPONSE_MAX_BYTES / 1024} KiB read limit`
+        : `${most} characters an outside reader's answer carries whole`;
     for (;;) {
+      let held: OversizedAnswer;
       try {
         const response = await this.send(caller, api, route.method, path);
         const asked = new URLSearchParams(route.path.split("?")[1]).get(pageParam);
@@ -329,17 +373,29 @@ export class GithubGatewayService {
           served === undefined
             ? []
             : [
-                `The answer ${asked === null ? "at the default page size" : `at ${pageParam}=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at ${pageParam}=${served}; nextPath continues at that size.`,
+                `The answer ${asked === null ? "at the default page size" : `at ${pageParam}=${asked}`} exceeds the ${limit}, so this is ${api.place}'s page at ${pageParam}=${served}; nextPath continues at that size.`,
               ];
-        return render(response, api, paged);
+        const answer = render(response, api, paged);
+        if (most === undefined || answer.length <= most) return answer;
+        held = new OversizedAnswer(answer.length, response.body || null);
       } catch (caught) {
-        if (!(caught instanceof OversizedAnswer) || route.method !== "GET") throw caught;
-        const smaller = smallerPage(path, caught, api.defaultPerPage, pageParam);
-        if ("refused" in smaller)
-          throw new ForgeError("refused", `${caught.message} ${smaller.refused}`);
-        path = api.route("GET", smaller.path).path;
-        served = smaller.perPage;
+        if (!(caught instanceof OversizedAnswer)) throw caught;
+        held = caught;
       }
+      // i18n-exempt: served to the crewmate as a tool answer
+      const over = most === undefined ? held.message : `The answer exceeds the ${limit}.`;
+      if (route.method !== "GET")
+        throw new ForgeError("refused", `${over}${most === undefined ? "" : READER_NARROW}`);
+      const smaller = smallerPage(path, held, api.defaultPerPage, pageParam, bound);
+      // A reader's answer is measured as rendered, so a page can still miss
+      // by its estimate; each try must ask for fewer items, so the tries end.
+      if ("refused" in smaller || (served !== undefined && smaller.perPage >= served))
+        throw new ForgeError(
+          "refused",
+          `${over} ${"refused" in smaller ? smaller.refused : "No smaller page fits."}${most === undefined ? "" : READER_NARROW}`,
+        );
+      path = api.route("GET", smaller.path).path;
+      served = smaller.perPage;
     }
   }
 
@@ -584,9 +640,12 @@ export class GithubGatewayService {
         ? done({ kind: "refused", why: messageOf(caught) })
         : done({ kind: "unknown", why: messageOf(caught) });
     }
+    const answer = `${render(response, target.api)}${await this.afterWrite(taskId, target, route, response)}`;
+    // A reader's sent write answers with words strangers wrote, such as an
+    // issue's body, and reaches it under the captain's click.
     return done(
       { kind: "answered", status: response.status, requestId: response.requestId },
-      `${render(response, target.api)}${await this.afterWrite(taskId, target, route, response)}`,
+      this.isReader(taskId) ? this.readerFenced(answer) : answer,
     );
   }
 

@@ -593,12 +593,23 @@ test("the Windows installer installs for this person, offers Git, starts the com
         if (evidence) screenshot(join(evidence, "window-took-over.png"));
         expect(topAppProcesses().map((app) => app.pid)).toEqual([window.pid]);
         expect(runProcesses()).toEqual([]);
+        // Read the children while their parent still exists. After the parent exits,
+        // the process snapshot counts children still shutting down as top-level apps.
+        const children = childApps(window.pid).map((app) => app.pid);
         // The person quits that window on purpose with its own key, which runs the tray's Quit.
         const quitKey = pressQuitKey(window.pid);
-        const quitReading = JSON.stringify(quitKey, null, 2);
+        const quitReading = JSON.stringify({ ...quitKey, children }, null, 2);
         keep("takeover-quit-input.json", quitReading);
         expect(quitKey.status, quitReading).toBe("sent");
         expect(await window.ended, window.said()).toBe(0);
+        if (children.length > 0) {
+          await expect
+            .poll(() => stillRunning(children), {
+              message: "The takeover window's own children also exit",
+              timeout: 30_000,
+            })
+            .toEqual([]);
+        }
         nothingRuns();
       });
 

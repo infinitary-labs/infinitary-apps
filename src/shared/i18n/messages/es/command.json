@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "actualizar, reiniciar, estable, alfa",
   "commandUsageUnit": "Cambiar las unidades de Uso",
   "commandUsageUnitWords": "consumo, costo, dólares, estimación",
+  "commandViewerSavePicture": "Guardar la imagen",
+  "commandViewerSavePictureWords": "descargar, imagen, foto, visor",
   "commandWhatsNewShow": "Mostrar las novedades",
   "commandWhatsNewShowWords": "lanzamiento, notas, cambios, versión"
 }

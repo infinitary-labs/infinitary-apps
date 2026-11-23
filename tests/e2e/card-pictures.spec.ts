@@ -1,6 +1,13 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { PICTURE_GROUP_CLASS } from "../../src/core/pi/cardImages";
+import { cardFileSavedWords } from "../../src/renderer/src/cards/cardFileWords";
 import { pictureHint, pictureSize } from "../../src/renderer/src/design/cards/pictureViewerWords";
+import { CARD_PICTURE_HOST, parseCardPictureFileName } from "../../src/shared/cardPictures";
+import { APP_FRAME_SCHEME } from "../../src/shared/csp";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { PICTURE_STRIP_SHOWN } from "../../src/shared/plugins/bridge";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -23,7 +30,7 @@ import {
   PICTURE_CARD_TITLES,
 } from "./scenarios/cardPictures";
 import { clickInBody, pager, showCard, shownCard } from "./stack";
-import { focusOn } from "./windowKeys";
+import { focusOn, pressWindowKey } from "./windowKeys";
 
 /**
  * The picture viewer, card pictures phase 3 of the locked plan: the binding
@@ -326,6 +333,83 @@ test("a click or Enter on a diagram opens it fitted and enlarged, and Z shows it
   await focusOn(diagram);
   await page.keyboard.press("Enter");
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
+  await closeWithEscape(page);
+});
+
+// INF-6347's approved plan: a right-click on the picture opens its menu, whose Copy puts the
+// picture's own pixels on the clipboard and whose Save, or ⌘S, keeps its own file in Downloads.
+test("a right-click opens the picture's menu: Copy, Save to Downloads, and Esc closes only the menu", async () => {
+  const { app, page, userDataDir } = launched;
+  const title = PICTURE_CARD_TITLES.wide;
+  await clickPicture(page, title, 0);
+  const opened = await readViewer(page);
+  const menu = page.getByRole("menu", { name: m.uiPictureViewerMenu() });
+  const geometry = await pictureGeometry(page);
+  // A press lands on a whole pixel, which is where the window says it was.
+  const inside = {
+    x: Math.round(geometry.button.left + geometry.button.width / 3),
+    y: Math.round(geometry.button.top + geometry.button.height / 2),
+  };
+
+  // The space around the picture opens nothing.
+  await page.mouse.click(inside.x, geometry.row.top + 4, { button: "right" });
+  await expect(menu).toHaveCount(0);
+  await expect(viewer(page)).toBeVisible();
+
+  await page.mouse.click(inside.x, inside.y, { button: "right" });
+  await expect(menu).toBeVisible();
+  // Each item's key is drawn beside it but kept out of its name.
+  const names = [
+    m.uiPictureViewerCopyPicture(),
+    m.uiPictureViewerSaveToDownloads(),
+    m.uiPictureViewerActualSize(),
+    // The card takes a reply, so its viewer offers Point at, and its menu does too.
+    m.cardNotePointAt(),
+  ];
+  await expect(menu.getByRole("menuitem")).toHaveCount(names.length);
+  for (const [i, name] of names.entries())
+    await expect(menu.getByRole("menuitem").nth(i)).toHaveAccessibleName(name);
+  // It opens where the press was, its first item focused.
+  const panel = await menu.boundingBox();
+  expect(panel?.x).toBe(inside.x);
+  expect(panel?.y).toBe(inside.y);
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(viewer(page)).toBeVisible();
+
+  // Save keeps the picture's own file, named for the card.
+  const downloads = await app.evaluate(({ app: electron }) => electron.getPath("downloads"));
+  const savedAs = `${title}.png`;
+  const kept = (opened.src ?? "").slice(`${APP_FRAME_SCHEME}://${CARD_PICTURE_HOST}/`.length);
+  const keptFile = parseCardPictureFileName(kept);
+  if (!keptFile) throw new Error(`not a kept picture: ${opened.src}`);
+  const own = readFileSync(
+    join(userDataDir, "crewmates", keptFile.taskId, "cards", keptFile.fileName),
+  );
+  const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
+  await page.mouse.click(inside.x, inside.y, { button: "right" });
+  await menu.getByRole("menuitem", { name: m.uiPictureViewerSaveToDownloads() }).click();
+  await expect(menu).toHaveCount(0);
+  await expect(viewer(page).locator("[data-picture-hint]")).toHaveText(cardFileSavedWords(savedAs));
+  expect(sha256(readFileSync(join(downloads, savedAs)))).toBe(sha256(own));
+  // ⌘S saves it too. The same picture saved again is the file already there,
+  // so the first copy goes before the key brings it back.
+  rmSync(join(downloads, savedAs));
+  await pressWindowKey(app, "s", ["meta"]);
+  await expect.poll(() => existsSync(join(downloads, savedAs))).toBe(true);
+  expect(sha256(readFileSync(join(downloads, savedAs)))).toBe(sha256(own));
+
+  // Native Copy is exercised only on the disposable Linux CI desktop, never this computer's clipboard.
+  if (process.platform === "linux" && process.env.CI === "true") {
+    await app.evaluate(({ clipboard }) => clipboard.clear());
+    await page.mouse.click(inside.x, inside.y, { button: "right" });
+    await menu.getByRole("menuitem", { name: m.uiPictureViewerCopyPicture() }).click();
+    await expect(viewer(page).locator("[data-picture-hint]")).toHaveText(m.uiPictureViewerCopied());
+    await expect
+      .poll(() => app.evaluate(({ clipboard }) => clipboard.readImage().getSize()))
+      .toEqual({ width: WIDE_PICTURE.width, height: WIDE_PICTURE.height });
+  }
   await closeWithEscape(page);
 });
 

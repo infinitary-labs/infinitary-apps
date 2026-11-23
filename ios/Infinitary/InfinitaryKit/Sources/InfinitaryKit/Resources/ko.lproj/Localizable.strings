@@ -716,6 +716,8 @@
 "commandUpdatesShowWords" = "업데이트, 다시 시작, 안정, 알파";
 "commandUsageUnit" = "사용량 단위 바꾸기";
 "commandUsageUnitWords" = "토큰, 비용, 달러, 추정";
+"commandViewerSavePicture" = "사진 저장";
+"commandViewerSavePictureWords" = "다운로드, 사진, 이미지, 보기";
 "commandWhatsNewShow" = "새로운 기능 보기";
 "commandWhatsNewShowWords" = "릴리스, 노트, 변경, 버전";
 "composerFolderNotProject" = "이 폴더를 프로젝트로 추가할 수 없어요.";
@@ -2315,6 +2317,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "최신 메시지보다 위를 읽고 있는 카드 스레드가 없어요";
 "refuseNoOtherCardIsNew" = "다른 새 카드가 없어요";
 "refuseNoPageToPointAt" = "가리킬 페이지가 표시되어 있지 않아요";
+"refuseNoPictureIsOpen" = "먼저 카드의 사진을 여세요";
 "refuseNoReleaseNotesYet" = "아직 릴리스 노트가 없어요";
 "refuseNoUpdateIsAvailable" = "사용 가능한 업데이트가 없어요";
 "refuseNoUpdateIsSavingWorkNow" = "지금 작업을 저장 중인 업데이트가 없어요";
@@ -3996,10 +3999,15 @@
 "uiPercentLeft" = "%1$@%% 남음";
 "uiPictureViewerActualSize" = "실제 크기";
 "uiPictureViewerClose" = "보기 닫기";
+"uiPictureViewerCopied" = "사진을 복사함";
+"uiPictureViewerCopyFailed" = "사진을 복사할 수 없어요";
+"uiPictureViewerCopyPicture" = "사진 복사";
 "uiPictureViewerDemoFrom" = "%1$@의 데모";
+"uiPictureViewerFitToWindow" = "윈도우에 맞추기";
 "uiPictureViewerHintFitted" = "%1$@ · 맞춤 · 클릭하거나 Z를 눌러 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · 드래그하거나 스크롤해서 이동";
 "uiPictureViewerHintOwn" = "%1$@ · 원래 크기로 표시";
+"uiPictureViewerMenu" = "사진 작업";
 "uiPictureViewerNext" = "다음 사진";
 "uiPictureViewerPartFrom" = "%1$@, 전체 화면";
 "uiPictureViewerPause" = "일시 정지";
@@ -4007,6 +4015,8 @@
 "uiPictureViewerPlay" = "재생";
 "uiPictureViewerPrevious" = "이전 사진";
 "uiPictureViewerReplay" = "다시 재생";
+"uiPictureViewerSaveFailed" = "사진을 저장할 수 없어요";
+"uiPictureViewerSaveToDownloads" = "다운로드에 저장";
 "uiPictureViewerSeek" = "탐색";
 "uiPictureViewerSeekValue" = "%1$@ 중 %2$@";
 "uiPictureViewerShownAtOwnSize" = "원래 크기로 표시";

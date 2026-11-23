@@ -93,7 +93,7 @@ function decoded(src: string): Promise<HTMLImageElement> {
  * minted name, as a view's frames ask (`inf:cards:picture`): the frame scheme's copy is another
  * origin's, which a drawing surface refuses to give back. A `data:` picture is the window's own.
  */
-async function readable(src: string): Promise<CanvasImageSource> {
+export async function readable(src: string): Promise<HTMLImageElement> {
   if (!src.startsWith(PICTURE_PREFIX)) return decoded(src);
   const name = src.slice(PICTURE_PREFIX.length);
   if (!parseCardPictureFileName(name)) throw new Error();
@@ -101,7 +101,7 @@ async function readable(src: string): Promise<CanvasImageSource> {
   return decoded(`data:${contentType};base64,${data}`);
 }
 
-function base64Of(blob: Blob): Promise<string> {
+export function base64Of(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ""));

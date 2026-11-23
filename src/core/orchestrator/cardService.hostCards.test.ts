@@ -1,4 +1,4 @@
-import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { type Card, cardTakesReplies, FIRSTMATE_CARD_META } from "@shared/cards";
 import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
 import {
   deviceForgeSignInBody,
@@ -409,6 +409,41 @@ describe("host cards", () => {
     cards.hostCards.withdrawHostCard("card-consent", "gone");
     expect(cards.has("card-consent")).toBe(false);
     cards.dispose();
+  });
+
+  it("lets the first mate answer a reply under a card the app raises, but not under the welcome or an agent-down card", () => {
+    // INF-6265's plan, piece 2: the app's own offers take replies the first
+    // mate answers; the welcome and the agent-down set stay without a field.
+    const { db, make } = setup();
+    const cards = make();
+    const offer = {
+      id: "card-consent",
+      title: "Add the plugin?",
+      meta: "firstmate",
+      body: "<p>It asks to read your tasks.</p>",
+      actions: [{ id: "add", label: "Add it", variant: "primary" as const }],
+    };
+    cards.hostCards.raiseHostCard(offer);
+    cards.hostCards.raiseHostCard({ ...offer, id: "card-quiet", replies: false });
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    const takes = (service: typeof cards, id: string) => {
+      const card = service.get(id);
+      return card && { takesReplies: cardTakesReplies(card), answeredBy: card.answeredBy };
+    };
+    expect(takes(cards, "card-consent")).toEqual({ takesReplies: true, answeredBy: "firstmate" });
+    expect(takes(cards, "card-quiet")).toEqual({ takesReplies: false, answeredBy: undefined });
+    expect(takes(cards, FIRSTMATE_FAILURE_CARD_ID)).toEqual({
+      takesReplies: false,
+      answeredBy: undefined,
+    });
+    cards.dispose();
+    // The answerer is saved with the card, so a restart keeps the field.
+    const restarted = setup(db).make();
+    expect(takes(restarted, "card-consent")).toEqual({
+      takesReplies: true,
+      answeredBy: "firstmate",
+    });
+    restarted.dispose();
   });
 
   it("files the row a restored task-less host decision lacks, and none for a note", () => {

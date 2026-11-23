@@ -228,7 +228,7 @@ export class CardActions {
     // A note its closed task kept has no crewmate left to answer: the
     // Firstmate takes the reply, as it does on its own card.
     const closedTask = card.taskId ? this.core.options.tasks.get(card.taskId) : undefined;
-    // The host's stuck alert names the first mate as its answerer (INF-1670).
+    // A host card the first mate answers names it (`Card.answeredBy`).
     // A /feedback reply is a feedback request for the first mate about this
     // card, never words for its author (docs/feedback.md).
     const feedback = isFeedbackRequest(typed);
@@ -765,8 +765,15 @@ export class CardActions {
     // Where no author hears the choice - the app carried it out, or nobody
     // reads it - the first mate is told once, with what went with it. An
     // answer task's own close carries it on the first mate's closing notice.
+    // Words left in the field of a host card the first mate answers go too,
+    // so a press beside them never drops them.
+    const wordsForFirstmate =
+      card.author === "host" &&
+      card.answeredBy === "firstmate" &&
+      anythingElseOf(answers) !== undefined;
     const tellFirstmate = () => {
-      if (kept && !closedAnswer) this.carriedOut(card, choice, decisionTaskId);
+      if ((kept || wordsForFirstmate) && !closedAnswer)
+        this.carriedOut(card, choice, decisionTaskId);
     };
     // Review carefully (INF-562): the captain's care lands on the record
     // first, so its notice waits on the crewmate's lane ahead of the choice

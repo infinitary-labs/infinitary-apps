@@ -31,7 +31,7 @@ export function unitFiles(root: string): string[] {
     .sort();
 }
 
-/** Explicit indirect contracts from the accepted weekly audits (INF-3262, INF-4500). */
+/** Explicit indirect contracts from the accepted weekly audits (INF-3262, INF-4500, INF-6259). */
 const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   owns: (path: string) => boolean;
   readers: readonly string[];
@@ -102,6 +102,97 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   {
     owns: (path) => path.startsWith("scripts/"),
     readers: ["tests/release-workflows-alpha-cut.test.ts"],
+  },
+  // INF-6259's weekly audit, the captain's pick "Twelve reach links": each
+  // row below is a change that passed its branch check and failed the merge
+  // batch on a test that reaches the changed file only through a test helper
+  // or a chain of imports. The rows name the readers that failed, and those
+  // holding the same assertion.
+  //
+  // The publication tests pin putIn's exact arguments, through the forge
+  // barrel and tests/helpers/prCiHarness.ts: a new required argument failed
+  // all three.
+  {
+    owns: (path) => path === "src/core/forge/forge.ts",
+    readers: [
+      "src/core/orchestrator/changeCutover.test.ts",
+      "src/core/orchestrator/changePublication.stories.test.ts",
+      "src/core/orchestrator/mergeReviews.test.ts",
+    ],
+  },
+  // A placed computer's working copy is published through the delivery that
+  // tests/helpers/placedHome.ts builds: an address guard refused its stand-in.
+  {
+    owns: (path) =>
+      path === "src/core/orchestrator/changePublication.ts" ||
+      path === "src/core/orchestrator/changeContext.ts",
+    readers: ["src/core/placed/placedWorkingCopies.test.ts"],
+  },
+  // The fixed-context ledgers pin the tool words served to the first mate
+  // and a crewmate, through the supervisor and its tool modules: two prompt
+  // trims dropped a pinned rule.
+  {
+    owns: (path) => /^src\/core\/pi\/[a-zA-Z]+Tools\.ts$/.test(path),
+    readers: ["tests/crewmate-fixed-context.test.ts", "tests/firstmate-fixed-context.test.ts"],
+  },
+  // The started core broadcasts through the services' presentation and
+  // notifications: a refresh moved later landed after the test's detach, and
+  // a new notification shape broke its reads and the beside window's.
+  {
+    owns: (path) =>
+      path === "src/core/services.ts" ||
+      path === "src/core/tasks/workPresentation.ts" ||
+      path === "src/core/notifications.ts",
+    readers: ["src/core/core.projects.test.ts"],
+  },
+  {
+    owns: (path) => path === "src/core/notifications.ts",
+    readers: ["src/main/shell.beside.test.ts"],
+  },
+  // The thread migrations read the card store through
+  // tests/helpers/cardServiceHarness.ts: a query naming a new column failed
+  // on their older database.
+  {
+    owns: (path) => path === "src/core/storage/cardStore.ts",
+    readers: ["src/core/storage/cardThreadMigrations.test.ts"],
+  },
+  // The placed Claude contract reads the call ledger's bytes through
+  // tests/helpers/placedContractWorld.ts.
+  {
+    owns: (path) => path === "src/core/placed/placedLedger.ts",
+    readers: ["src/core/placed/placedClaude.contract.test.ts"],
+  },
+  // A program's parts get their briefs through tests/helpers/crewHarness.ts:
+  // a part's brief that stopped carrying the captain's words failed it.
+  {
+    owns: (path) =>
+      path === "src/core/program/programRunner.ts" || path === "src/core/orchestrator/crewBrief.ts",
+    readers: ["src/core/orchestrator/crewPrograms.test.ts"],
+  },
+  // A placed computer's copies and sessions run under tests/helpers/placedHome.ts:
+  // the per-task queue read a task after its database closed, and the copy's
+  // origin moved to the approved address.
+  {
+    owns: (path) =>
+      path === "src/core/placed/placedCopies.ts" || path === "src/core/placed/placedSessions.ts",
+    readers: ["src/core/placed/placedCallbacks.test.ts"],
+  },
+  {
+    owns: (path) => path === "src/core/placed/placedCopies.ts",
+    readers: ["src/core/placed/placedSignIns.test.ts"],
+  },
+  // The crewmate wake words quote the override sentences the wakes take
+  // from the shared holds module.
+  {
+    owns: (path) => path === "src/shared/holds.ts",
+    readers: ["src/core/orchestrator/wakes.words.crewmate.test.ts"],
+  },
+  // The GitLab review runs through tests/helpers/prCiHarness.ts, which
+  // reaches the forge's request kinds and the publication's repository.
+  {
+    owns: (path) =>
+      path === "src/core/forge/index.ts" || path === "src/core/orchestrator/publicationRepo.ts",
+    readers: ["tests/gitlabMergeReview.test.ts"],
   },
 ];
 

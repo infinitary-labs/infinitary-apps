@@ -4,17 +4,18 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * A merge batch regenerates the phone's generated files itself, before its
- * checks run (docs/testing.md, "The swept batch"; the captain's pick in the
- * daily velocity review). Each approved change regenerated them from its
- * own base, so changes combined in one batch can leave a generated phone
- * file out of step with the sources they changed together, which `pnpm
- * check` then fails. batch-checks.yml's first job runs this on the batch's
+ * A merge batch regenerates the phone's generated files and the app parts
+ * list itself, before its checks run (docs/testing.md, "The swept batch";
+ * the captain's pick in the daily velocity review, and the app parts list
+ * since INF-6259's weekly audit). Each approved change regenerated them from
+ * its own base, so changes combined in one batch can leave a generated file
+ * out of step with the sources they changed together, which `pnpm check`
+ * then fails. batch-checks.yml's first job runs this on the batch's
  * version:
  *
  *   node scripts/batch-regenerate.ts --out <folder>
  *
- * It runs the phone's generators, and when they change files it writes the
+ * It runs `BATCH_GENERATORS`, and when they change files it writes the
  * difference and the commit's words into <folder> for the job after it,
  * which commits and pushes them onto the batch branch and runs no code of
  * the project. The app takes that commit as the batch's version and pushes
@@ -30,8 +31,14 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** The phone's generators, each writing only files under ios/ the project marks generated. */
-export const PHONE_GENERATORS = [
+/**
+ * The generators the batch runs, in order, each writing only files the
+ * project marks generated. The app parts list goes first: the phone's card
+ * bundle carries the app's parts, so its generator reads what the first one
+ * writes.
+ */
+export const BATCH_GENERATORS = [
+  "scripts/generate-runbook-parts.ts",
   "scripts/generate-phone-contract.ts",
   "scripts/generate-phone-theme.ts",
   "scripts/generate-phone-scene.ts",
@@ -39,11 +46,15 @@ export const PHONE_GENERATORS = [
   "scripts/generate-phone-settings.ts",
 ] as const;
 
-/** The trailer the regenerated commit carries, by which a version that is one is known. */
+/**
+ * The trailer the regenerated commit carries, by which a version that is one
+ * is known. It keeps the word it had when the batch regenerated only the
+ * phone's files, so a batch version made then is still known as one.
+ */
 export const REGENERATED_TRAILER = "Batch-regenerated: phone";
 
 /** The regenerated commit's subject. */
-export const REGENERATED_SUBJECT = "chore(phone): regenerate the phone's generated files in the batch";
+export const REGENERATED_SUBJECT = "chore(batch): regenerate the generated files in the batch";
 
 /** The attribute the project marks its generated files with, as the app reads it. */
 const GENERATED_ATTRIBUTE = "linguist-generated";
@@ -96,7 +107,7 @@ export function commitMessage(files: readonly string[]): string {
   return [
     REGENERATED_SUBJECT,
     "",
-    "The merge batch's own check ran the phone's generators on the batch's combined changes before its checks, and they changed these files:",
+    "The merge batch's own check ran the project's generators on the batch's combined changes before its checks, and they changed these files:",
     "",
     ...files.map((file) => `- ${file}`),
     "",
@@ -122,21 +133,21 @@ function main(): void {
   // What the install or anything before it left in the checkout is not the generators'.
   const before = new Set(changedFiles(ROOT));
   // The generators read the desktop's compiled messages, as `pnpm check` builds them first.
-  for (const script of ["scripts/generate-messages.ts", ...PHONE_GENERATORS])
+  for (const script of ["scripts/generate-messages.ts", ...BATCH_GENERATORS])
     execFileSync(process.execPath, script.endsWith("generate-messages.ts") ? [script, "--compiled"] : [script], {
       cwd: ROOT,
       stdio: "inherit",
     });
   const files = changedFiles(ROOT).filter((file) => !before.has(file));
   if (files.length === 0) {
-    console.log("The phone's generated files agree with the batch's sources; nothing to regenerate.");
+    console.log("The generated files agree with the batch's sources; nothing to regenerate.");
     output(false);
     return;
   }
   const outside = notGenerated(ROOT, files);
   if (outside.length > 0) {
     console.log(
-      `::error title=A phone generator changed a file not marked generated::${outside.join(", ")}. Mark it generated in .gitattributes or keep the generator to files that are.`,
+      `::error title=A generator changed a file not marked generated::${outside.join(", ")}. Mark it generated in .gitattributes or keep the generator to files that are.`,
     );
     process.exit(1);
   }
@@ -144,7 +155,7 @@ function main(): void {
   git(ROOT, ["add", "--", ...files]);
   writeFileSync(join(out, "regenerated.patch"), git(ROOT, ["diff", "--cached", "--binary"]));
   writeFileSync(join(out, "message.txt"), commitMessage(files));
-  console.log(`The phone's generators changed ${files.length} file(s) on the batch: ${files.join(", ")}`);
+  console.log(`The generators changed ${files.length} file(s) on the batch: ${files.join(", ")}`);
   output(true);
 }
 

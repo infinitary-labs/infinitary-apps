@@ -277,6 +277,46 @@ describe("local direct unit reach", () => {
     expect(directUnitReach([...seat, ...contracts], contracts, root)).toEqual([]);
   });
 
+  // INF-6259's weekly audit, the captain's pick "Twelve reach links": twelve
+  // changes passed their branch checks and failed the merge batch on a test
+  // that reaches the changed file only through a helper or an import chain.
+  // Each case is one change's product file, as it had it, and the tests it
+  // broke.
+  it.each([
+    [
+      "src/core/forge/forge.ts",
+      [
+        "src/core/orchestrator/changeCutover.test.ts",
+        "src/core/orchestrator/changePublication.stories.test.ts",
+        "src/core/orchestrator/mergeReviews.test.ts",
+      ],
+    ],
+    ["src/core/orchestrator/changePublication.ts", ["src/core/placed/placedWorkingCopies.test.ts"]],
+    ["src/core/orchestrator/changeContext.ts", ["src/core/placed/placedWorkingCopies.test.ts"]],
+    ["src/core/pi/taskTools.ts", ["tests/firstmate-fixed-context.test.ts"]],
+    ["src/core/pi/forgeTools.ts", ["tests/crewmate-fixed-context.test.ts"]],
+    ["src/core/tasks/workPresentation.ts", ["src/core/core.projects.test.ts"]],
+    ["src/core/storage/cardStore.ts", ["src/core/storage/cardThreadMigrations.test.ts"]],
+    ["src/core/placed/placedLedger.ts", ["src/core/placed/placedClaude.contract.test.ts"]],
+    ["src/core/program/programRunner.ts", ["src/core/orchestrator/crewPrograms.test.ts"]],
+    ["src/core/placed/placedCopies.ts", ["src/core/placed/placedCallbacks.test.ts"]],
+    ["src/shared/holds.ts", ["src/core/orchestrator/wakes.words.crewmate.test.ts"]],
+    ["src/core/forge/index.ts", ["tests/gitlabMergeReview.test.ts"]],
+    ["src/core/placed/placedCopies.ts", ["src/core/placed/placedSignIns.test.ts"]],
+    [
+      "src/core/notifications.ts",
+      ["src/core/core.projects.test.ts", "src/main/shell.beside.test.ts"],
+    ],
+  ])(
+    "routes the readers a change to %s broke in the merge batch to the PR check",
+    (owner, broke) => {
+      expect(directUnitReach([owner], broke, root)).toEqual(broke);
+      expect(directUnitReach(["src/shared/voice.ts"], broke, root)).toEqual([]);
+      // An edited reader keeps its own three rounds.
+      expect(directUnitReach([owner, ...broke], broke, root)).toEqual([]);
+    },
+  );
+
   it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {
     const inventory = "src/shared/actions.test.ts";
     expect(directUnitReach(["src/shared/voice.ts"], [inventory], root)).toEqual([]);

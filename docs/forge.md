@@ -1178,7 +1178,7 @@ It writes that commit again with the same files, author and words on the version
 Its checks then decide the batch as any version's do, and a failed one holds it.
 A commit that changes any other file, builds on another version, or comes while the batch is held is combined over as any other push, and a batch takes one generated commit per combine.
 After a rebase merge the receipts skip it by its subject, and a squash of a batch of one carries it in that change's commit (`landedCommits`).
-This repository's batch runs the phone's generators this way (`docs/testing.md`, "The swept batch").
+This repository's batch runs the phone's generators and the app parts list's this way (`docs/testing.md`, "The swept batch").
 
 ### A change rebuilt on an open batch
 

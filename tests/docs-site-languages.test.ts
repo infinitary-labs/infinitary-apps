@@ -67,8 +67,8 @@ describe("the docs site's languages check", () => {
     expect(problemsOf(changed, name).join("\n")).toContain("is missing");
   });
 
-  it("refuses a page English lacks, and a translated What's new", () => {
-    for (const name of ["not-in-english.md", "whats-new.md"]) {
+  it("refuses a page English lacks, and a translated What's new or release page", () => {
+    for (const name of ["not-in-english.md", "whats-new.md", "whats-new/0-8-6.md"]) {
       const changed = withPages((pages) => pages.set(name, "---\ntitle: x\n---\n"));
       expect(problemsOf(changed, name).join("\n")).toContain("has no English page");
     }

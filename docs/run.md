@@ -76,7 +76,8 @@ A start with a window that reaches the background file moves to the main executa
 A command keeps its process number through the move, so its starter, `run.json`, `status` and Stop all reach it as before.
 
 The background file keeps the app's identity.
-It carries an Info.plist of its own that holds only the app's bundle id, which `codesign` takes as its signing identifier, so a release and a local package sign it under the app's own name with no change to their signing, and the Keychain and macOS's permissions see the same app.
+It carries an Info.plist of its own that holds only the app's bundle id, which `codesign` takes as its signing identifier, so a release and a local package sign it under the app's own name, and the Keychain and macOS's permissions see the same app.
+A release also gives it the app bundle's explicit designated requirement (`scripts/sign-release-mac.mjs`; `docs/alpha.md`, "Moving releases to another Apple team"), which `codesign` would otherwise replace with its one-team default.
 It is put in place signed ad hoc, because the signing pass may sign the main executable first, whose signature seals the files beside it, and `codesign` refuses to seal one that carries no signature; the signing pass then replaces it.
 That small list is all the info macOS gives a file that carries one, so before Electron starts the file reads the app's own Info.plist back from the app's folder; a file that cannot read it hands the start back to the main executable, which keeps it, as where the move fails below.
 The app's code reads the main executable as its own program (`appExecutable`, `src/main/appExecutable.ts`), so the agent at login, the command for another user and the check for a replaced program ("After an update" below) name the same file they named before.

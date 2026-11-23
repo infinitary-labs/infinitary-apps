@@ -7,7 +7,8 @@
 // The background file carries the app's bundle id in an Info.plist of its
 // own, which codesign takes as the file's signing identifier, so the release
 // and the local package sign it under the app's own name, as they sign the
-// main executable, with nothing in their signing set up for it. It is also
+// main executable; the release's signing hook also gives it the app bundle's
+// designated requirement (scripts/sign-release-mac.mjs). It is also
 // signed ad hoc as it is compiled: the signing pass signs the files of
 // Contents/MacOS in the order it lists them, and the main executable's
 // signature seals the files beside it, which codesign refuses while one of

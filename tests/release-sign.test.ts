@@ -45,11 +45,18 @@ describe("the release's Mac signing hook", () => {
     }
   });
 
-  // The requirement names the app's identifier; a nested file carrying it would fail its own check.
-  it("leaves every nested file electron-builder's own options", () => {
-    for (const nested of [helper, background]) {
-      expect(options.optionsForFile(nested)).toEqual(electronBuilderOptions(nested));
-    }
+  // The background file is signed under the app's identifier and must carry
+  // the app's requirement: scripts/verify-app.sh refuses an alpha whose two differ.
+  it("gives the background file the app bundle's requirement", () => {
+    expect(options.optionsForFile(background)).toEqual({
+      ...electronBuilderOptions(background),
+      requirements: options.optionsForFile(app).requirements,
+    });
+  });
+
+  // The requirement names the app's identifier; a helper, signed under its own, would fail it.
+  it("leaves a helper electron-builder's own options", () => {
+    expect(options.optionsForFile(helper)).toEqual(electronBuilderOptions(helper));
   });
 
   it("keeps electron-builder's app, identity and settings", () => {

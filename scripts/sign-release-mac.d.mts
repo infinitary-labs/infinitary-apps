@@ -5,7 +5,7 @@ export type MacSignConfiguration = Record<string, unknown> & {
   app: string;
   optionsForFile?: (filePath: string) => FileSignOptions;
 };
-/** The signer's options: electron-builder's, with the release's designated requirement on the app bundle alone. */
+/** The signer's options: electron-builder's, with the release's designated requirement on the app bundle and its background file. */
 export function releaseSignOptions<Configuration extends MacSignConfiguration>(
   configuration: Configuration,
 ): Configuration & { optionsForFile: (filePath: string) => FileSignOptions };

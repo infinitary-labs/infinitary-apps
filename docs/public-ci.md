@@ -111,7 +111,7 @@ Started by hand with a pull request number, it reads any pull request of the pro
 
 ## Release environments
 
-At the destination, configure branch rules allowing only `main` on `desktop-release`, `mac-installer-signing`, `ios-release` and `docs-site`, and on `windows-signing` if Windows signing is enabled.
+At the destination, configure branch rules allowing only `main` on `desktop-release`, `mac-installer-signing`, `ios-release`, `docs-site` and `release-announcement`, and on `windows-signing` if Windows signing is enabled.
 Do not add a tag rule or a bypass for ordinary branch checks.
 Place credentials in the environment of their consumers, not in repository- or organization-wide secret stores accessible from the destination:
 
@@ -121,6 +121,7 @@ Place credentials in the environment of their consumers, not in repository- or o
 | `mac-installer-signing` | Developer ID certificate and password and the App Store Connect values used by signed installer verification |
 | `ios-release` | App Store Connect values used for TestFlight readiness, upload and availability |
 | `docs-site` | Docs site publishing credentials |
+| `release-announcement` | The Discord webhook that announces each stable (`docs/alpha.md`, "Announcing a stable") |
 
 The signed installer workflow (`mac-installer.yml`) declares no credentials, and `release.yml` and `verify.yml` call it with `secrets: inherit`: a called workflow reads its job environment's credentials only when its caller hands its secrets on.
 The old private project retains its existing secrets and release routes until cutover; its signed installer checks read the same `mac-installer-signing` environment.

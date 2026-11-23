@@ -45,11 +45,13 @@ const signOffCase = (
   expectedMark,
 });
 
+// The runner stops a run at its first refused or failed call, and a correction's revised card can
+// be refused for reasons of its own, so the cases a refusal must not cut off come first.
 export const signOffCases: SignOffCase[] = [
   signOffCase("answer-close-now", "answer", "this card can close now", "signs-off"),
   signOffCase("answer-thanks", "answer", "thanks, that's all I needed", "signs-off"),
-  signOffCase("answer-correction", "answer", "no, I meant the phone project", "no-sign-off"),
   signOffCase("required-action-close", "required-action", "this can close", "no-sign-off"),
+  signOffCase("answer-correction", "answer", "no, I meant the phone project", "no-sign-off"),
 ];
 
 /** A required action filed by a finished task and shown, as the ready sweep shows one. */

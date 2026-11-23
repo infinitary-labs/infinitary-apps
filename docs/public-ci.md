@@ -85,7 +85,8 @@ In the other three it runs before the checkout of each job that starts the run, 
 Under the routing variables above, those first jobs run on GitHub's hosted machines; on one of the project's own places the step still runs nothing of the version, since it reads commits alone.
 A call from another workflow (`main.yml`, `release.yml`, the swept batch, an outside pull request's `contributors.yml`) skips it: the caller chose the version, and an outside pull request's call runs on GitHub's machines alone.
 It cannot stop a version someone with push access first put on a branch of the project; that stays the crew's safety rule above.
-`tests/requested-version.test.ts` holds the four steps equal and runs the step against a stand-in for GitHub's address that hands out a pull request's commit, as GitHub does.
+After a refusal only the steps that run after any failure go on, such as keeping results, and none of them checks out the requested version: a checkout's second try runs only once its first try failed, and the journeys' timing exporter checks out the workflow's own commit.
+`tests/requested-version.test.ts` holds the four steps equal, holds that no checkout of the requested version and no later job runs once the step refused, and runs the step against a stand-in for GitHub's address that hands out a pull request's commit, as GitHub does.
 
 ### Intake
 

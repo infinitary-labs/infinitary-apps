@@ -16,16 +16,22 @@ import { scratchDir } from "./helpers/scratchDirs";
  */
 
 type Step = {
+  id?: string;
   name?: string;
   if?: string;
   uses?: string;
+  with?: Record<string, unknown>;
   env?: Record<string, string>;
   run?: string;
 };
-type Job = { needs?: string | string[]; steps?: Step[] };
+type Job = { needs?: string | string[]; if?: string; steps?: Step[] };
+type Inputs = Record<string, { type?: string }>;
 type Workflow = {
   name: string;
-  on: { workflow_dispatch?: { inputs?: Record<string, unknown> } | null };
+  on: {
+    workflow_dispatch?: { inputs?: Inputs } | null;
+    workflow_call?: { inputs?: Inputs } | null;
+  };
   jobs: Record<string, Job>;
 };
 
@@ -79,6 +85,65 @@ describe("a check requested by hand", () => {
       }
       expect(runs({ event_name: "push", workflow: name }), file).toBe(false);
       expect(runs({ event_name: "pull_request", workflow: name }), file).toBe(false);
+    }
+  });
+
+  it("lets nothing check out or run a version it refused", () => {
+    // A failed step leaves later steps and jobs to their conditions: one that
+    // names no status function needs success(), and the rest are read here
+    // with every request's choice switched on.
+    const afterRefusal = { success: false, failure: true, always: true, cancelled: false };
+    const condition = (value = "") => {
+      const expression = value.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1") || "true";
+      return /\b(success|failure|always|cancelled)\(\)/.test(expression)
+        ? expression
+        : `success() && (${expression})`;
+    };
+    for (const { file, job } of REQUESTS) {
+      const { on, jobs } = workflow(file);
+      const inputs = Object.fromEntries(
+        Object.entries({ ...on.workflow_call?.inputs, ...on.workflow_dispatch?.inputs }).map(
+          ([input, { type }]) => [input, type === "boolean" ? true : "chosen"],
+        ),
+      );
+      const contexts = (steps: Record<string, unknown>, needs: Record<string, unknown>) => ({
+        github: { event_name: "workflow_dispatch" },
+        inputs,
+        matrix: {},
+        steps,
+        needs,
+        env: {},
+        vars: {},
+        runner: {},
+      });
+
+      const steps = jobs[job]?.steps ?? [];
+      const guard = steps.findIndex((step) => step.name === GUARD);
+      const outcomes = Object.fromEntries(
+        steps.flatMap((step, index) =>
+          step.id
+            ? [[step.id, { outcome: index < guard ? "success" : "skipped", outputs: {} }]]
+            : [],
+        ),
+      );
+      for (const step of steps.slice(guard + 1)) {
+        if (!step.uses?.startsWith("actions/checkout@")) continue;
+        if (!String(step.with?.ref ?? "").includes("inputs.ref")) continue;
+        const runs = workflowValue(condition(step.if), contexts(outcomes, {}), afterRefusal);
+        expect(runs, `${file}: ${step.name}`).toBeFalsy();
+      }
+
+      for (const [id, other] of Object.entries(jobs)) {
+        if (id === job) continue;
+        const needs = Object.fromEntries(
+          needsOf(other).map((need) => [
+            need,
+            { result: need === job ? "failure" : "skipped", outputs: {} },
+          ]),
+        );
+        const runs = workflowValue(condition(other.if), contexts({}, needs), afterRefusal);
+        expect(runs, `${file}: ${id}`).toBeFalsy();
+      }
     }
   });
 

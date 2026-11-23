@@ -122,11 +122,13 @@ describe("the local door", () => {
     const window = await at.local();
     const command = await at.local();
     changed(at.events);
-    await Promise.all(
+    const [toWindow, toCommand] = await Promise.all(
       [window, command].map((client) =>
         client.push((push) => push.channel === "inf:models:changed"),
       ),
     );
+    // One push reaches both, under the same number.
+    expect(toCommand).toEqual(toWindow);
     await window.close();
     await command.close();
   });

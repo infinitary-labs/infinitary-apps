@@ -100,6 +100,15 @@ Retention applies to new uploads only; existing artifacts keep their expiry date
 The opt-in hosted Windows investigation is `docs/windows-feasibility.md`.
 It collects results with disposable data and synthetic sign-ins; it is not a Windows support promise, a recurring suite or a release gate.
 
+## Every test makes an assertion
+
+`vitest.config.ts` sets `expect.requireAssertions`, so a Vitest test that finishes without running an `expect` fails with "expected any number of assertion, but got none".
+A test cannot pass merely by finishing, and a case whose every check sits behind a branch that never runs fails instead of passing empty.
+The setting sits at the config's root, which every project inherits through `extends: true`; a command-line flag does not reach the projects.
+It counts `expect` calls wherever they run, inside a helper too, and `expect.soft`, `expect.poll`, `.resolves`, `.rejects` and `toThrow`; Node's `assert` and chai's `assert` do not count, and neither does an `expect` in an `afterEach` hook or a setup file.
+A type-only `expectTypeOf` does not count either: a test that holds a type equal to a runtime list also checks that list's behavior.
+A test that once passed by finishing states the outcome it waits for: what came back, which calls were made, or that a promise resolved.
+
 ## Comparing binary payloads
 
 Use `expectBytesEqual` (`tests/helpers/expectBytes.ts`) to assert complete byte equality on large recordings or transport pieces.

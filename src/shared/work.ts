@@ -409,7 +409,6 @@ export const handoverFileSchema = z.object({
 });
 export type HandoverFile = z.infer<typeof handoverFileSchema>;
 
-/** One callback's request: its task, its call, and what the tool handed over. */
 function asked<T extends z.ZodRawShape>(shape: T) {
   return z.tuple([z.object({ task: placedTaskIdSchema, callId: workCallIdSchema, ...shape })]);
 }
@@ -1245,7 +1244,6 @@ export const workOrders = {
           .string()
           .regex(/^[A-Za-z0-9_-]+\.bundle$/)
           .max(200),
-        // Infinitary's refs from INFINITARY_REFS_SINCE on, Firstmate 3000's always.
         from: z.string().regex(SOURCE_REF_FROM),
         to: z.string().regex(/^refs\/(infinitary|fm3000)\/sources\/[A-Za-z0-9_-]+$/),
         sha: z.string().regex(/^[0-9a-f]{40,64}$/),
@@ -1520,7 +1518,6 @@ export const workOrders = {
         branch: z.string(),
         /** Acknowledges an exact base; the home refuses an older computer that ignores it. */
         headSha: commitSchema.optional(),
-        /** It cloned the project for this one. */
         cloned: z.boolean(),
         /** It cloned it with this computer's own sign-in where the project lives. */
         signedIn: z.boolean().optional(),
@@ -1842,7 +1839,6 @@ export const updateOrders = {
 
 export type UpdateOrderChannel = keyof typeof updateOrders;
 export const UPDATE_ORDER_CHANNELS = Object.keys(updateOrders) as UpdateOrderChannel[];
-/** The update order's channel. */
 export const WORK_UPDATE_ORDER: UpdateOrderChannel = "fm:firstmate:update";
 export type WorkUpdateAnswer = z.infer<(typeof updateOrders)[typeof WORK_UPDATE_ORDER]["response"]>;
 
@@ -1941,7 +1937,6 @@ export const downloadOrders = {
 
 export type DownloadOrderChannel = keyof typeof downloadOrders;
 export const DOWNLOAD_ORDER_CHANNELS = Object.keys(downloadOrders) as DownloadOrderChannel[];
-/** The download order's channel. */
 export const WORK_DOWNLOAD_ORDER = "fm:firstmate:update-download" satisfies DownloadOrderChannel;
 /** The order that reads how far the download has got. */
 export const WORK_PROGRESS_ORDER = "fm:firstmate:update-progress" satisfies DownloadOrderChannel;

@@ -47,7 +47,6 @@ export type ClaudeModelRow = {
   displayName?: string;
 };
 
-/** Just the part of a live session a catalog read touches. */
 export type ClaudeCatalogQuery = Pick<Query, "supportedModels" | "close">;
 
 export type ClaudeCatalogQueryFactory = (params: {

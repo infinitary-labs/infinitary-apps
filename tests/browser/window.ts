@@ -4,7 +4,6 @@ import type { FakeBridge } from "./bridge";
 /** The size the app's window opens at (src/main/app.ts), as a journey's window first draws. */
 export const APP_WINDOW = { width: 1200, height: 800 } as const;
 
-/** Sizes this test file's page as the app's window opens. */
 export async function openSize(): Promise<void> {
   await page.viewport(APP_WINDOW.width, APP_WINDOW.height);
 }

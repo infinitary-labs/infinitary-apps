@@ -321,7 +321,6 @@ describe("the release check", () => {
       ),
     ).toContain("unchanged");
     f.tag("1.0.1");
-    // The next alpha waits for both records.
     const source = f.commit("feat: next", {
       "release-notes/changes/next.json": note("next-change"),
     });
@@ -410,7 +409,6 @@ describe("the pull request's notes step", () => {
       },
     });
     expect(f.cli("change", "--base", "main")).toContain("release-notes/changes/internal-test.json");
-    // Squashed onto main, the same change passes the alpha's coverage check.
     f.git("checkout", "-q", "main");
     f.git("merge", "-q", "--squash", "change");
     f.git("commit", "-q", "-m", "test: the squashed change");
@@ -445,7 +443,6 @@ describe("the batch's notes step", () => {
     expect(() => f.cli("batch", "--base", "main")).toThrow(
       /this batch's changes below add no file under release-notes\/changes\/ with a note or an exclusion \(1 of 3\):\n\s+[0-9a-f]{12} fix: the held batch's repair\n/,
     );
-    // A malformed note fails it too.
     f.git("reset", "-q", "--hard", "HEAD^");
     const { area: _area, ...noArea } = note("bad").entries[0] as Record<string, unknown>;
     f.commit("fix: the held batch's repair", {
@@ -459,8 +456,6 @@ describe("the batch's notes step", () => {
       "release-notes/changes/repair.json": note("repair"),
     });
     expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 3 change(s)");
-    // Merged by rebase, one commit per change, the batch passes the alpha's
-    // coverage check.
     f.git("checkout", "-q", "main");
     f.git("rebase", "-q", "infinitary-batch/1");
     const source = f.git("rev-parse", "HEAD");
@@ -659,7 +654,6 @@ describe("the offline catalog", () => {
     expect(verify).toThrow(/lead-change-dark\.webp is not the file the catalog hashed/);
     rmSync(join(pictures, "lead-change-dark.webp"));
     expect(verify).toThrow(/lead-change-dark\.webp is missing/);
-    // A development placeholder written over it leaves no picture behind.
     f.cli("generate", "--dev", "--out", out);
     expect(readdirSync(pictures)).toEqual([]);
   });

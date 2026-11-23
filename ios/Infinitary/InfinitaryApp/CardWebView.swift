@@ -208,7 +208,6 @@ import SwiftUI
         return view
     }
 
-    /// The card's page, kept until its view reaches a window.
     private var page: String?
     /// A body built behind another tab loads only once it is on the screen. WebKit suspends a hidden view's process, and a
     /// page that began loading there drew about half a minute after its tab showed again, its choices unusable until then.
@@ -821,7 +820,6 @@ struct CardWebView: UIViewRepresentable {
     """, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: world)
 }
 
-/// Keeps the focused box a card's body frame reported on its view; only a child frame's report counts.
 @MainActor final class CardFocusReader: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard !message.frameInfo.isMainFrame, let body = message.webView as? CardBodyView,

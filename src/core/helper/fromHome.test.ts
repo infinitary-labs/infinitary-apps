@@ -104,7 +104,6 @@ describe("the work mode started by its home over Remote Login", () => {
       sent,
     );
     expect(outcome).toEqual({ firstmate: "updated", background: "running" });
-    // The kept copy is the home's version now, and the background starts it.
     expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
       "the home's version",
     );
@@ -118,7 +117,6 @@ describe("the work mode started by its home over Remote Login", () => {
       service: { label, file },
       app: at.kept,
     });
-    // Still joined.
     expect(new JoinedHome(at.dataDir, () => {}).read()?.grant.deviceId).toBe("mini");
   });
 
@@ -274,7 +272,6 @@ describe("the work mode started by its home over Remote Login", () => {
       });
       expect(await removeFromHome(context)).toEqual({ firstmate: "refused", reason: "other-home" });
     }
-    // Its run was never stopped, and everything there stays.
     expect(at.asked).toEqual([]);
     expect(new JoinedHome(at.dataDir, () => {}).read()?.grant.deviceId).toBe("mini");
     expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
@@ -312,7 +309,6 @@ describe("the work mode started by its home over Remote Login", () => {
       ["bootout", `gui/502/${label}`],
       ["bootstrap", "gui/502", file],
     ]);
-    // Nothing changed here.
     expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
       "the old version",
     );

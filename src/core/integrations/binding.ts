@@ -36,7 +36,6 @@ export type PanelCaller = {
   uses: readonly PanelIntegrationUse[];
 };
 
-/** One action a kind can do, as its binding declares it. */
 export type IntegrationActionSpec = {
   name: string;
   /** A few plain words for the Settings row ("Read from GitHub"). */
@@ -92,7 +91,6 @@ export type IntegrationEventSpec = {
   atOnce?: boolean;
 };
 
-/** One filter field an event declares. */
 export type IntegrationEventFilter = {
   name: string;
   label: string;
@@ -122,9 +120,7 @@ export type IntegrationConnection = {
   name?: string;
   /** What it runs, for Settings alone (`IntegrationView.runs`). */
   runs?: string;
-  /** What it can do. */
   actions: readonly IntegrationActionSpec[];
-  /** What it can tell. */
   events?: readonly IntegrationEventSpec[];
   /** The inbox's door, for Settings alone (`IntegrationView.door`). */
   door?: IntegrationDoorView;
@@ -189,7 +185,6 @@ export type IntegrationBinding = {
   kept?: { days: number; what: string };
   /** A kind the person adds again and again, one row each (an MCP server): always addable. */
   many?: true;
-  /** The connections of this kind that exist now. */
   connections: () => IntegrationConnection[];
   /**
    * Whether a connection of this kind may be saved here, read from whether

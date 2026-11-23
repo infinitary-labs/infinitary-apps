@@ -110,13 +110,11 @@ export function customApiBlock(page: Page, accountId: string) {
     resume: block.getByRole("button", { name: "Resume", exact: true }),
     unencrypted: block.getByText("Unencrypted", { exact: true }),
     exception: block.getByText(CUSTOM_EXCEPTION_WORDS.tag, { exact: true }),
-    /** The model's Firstmate choice on its line. */
     firstmate: (model: string) =>
       block.getByRole("radio", { name: `Use ${model} for your first mate`, exact: true }),
   };
 }
 
-/** The Edit dialog, by the connection's name. */
 export function customApiEditDialog(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name: `Edit ${name}`, exact: true });
 }

@@ -6,7 +6,6 @@
  * whichever field that was and names none of them.
  */
 export type DictationField = {
-  /** The field's own element, when it is on the page. */
   element: () => HTMLElement | null;
   /** Puts the words at the field's caret, keeps its focus and puts the caret after them. */
   insert: (words: string) => void;

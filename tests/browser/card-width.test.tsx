@@ -38,7 +38,6 @@ const FIGURE =
   '<rect x="1" y="10" width="748" height="40" rx="6" style="fill:var(--accent-dim);stroke:var(--accent)"/>' +
   '<text x="12" y="35">Small: 0.02 per turn</text><text x="610" y="35">Large: 0.61</text></svg></figure>';
 
-/** The crewmate's four notes, in the order it showed them. */
 const NOTES = [
   {
     title: TITLES.defaultWide,
@@ -64,7 +63,6 @@ const one = <T extends Element>(selector: string) => document.querySelector<T>(s
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-/** `read` once two reads a painted frame apart agree. */
 async function settled<T>(read: () => T | Promise<T>): Promise<T> {
   let last: string | undefined;
   let value: T | undefined;
@@ -84,15 +82,12 @@ async function settled<T>(read: () => T | Promise<T>): Promise<T> {
 /** The stage's card layer, whose box is the shown card. */
 const layer = () => one<HTMLElement>("[data-card-layer]") as HTMLElement;
 
-/** The shown card's width once its move has settled. */
 const cardWidth = () => settled(() => box(layer()).width);
 
-/** Polls the shown card's width until it is `width`, to the pixel. */
 async function expectCardWidth(width: number): Promise<void> {
   await expect.poll(() => box(layer()).width).toBeCloseTo(width, 0);
 }
 
-/** Opens a collapsed built-in dock, as the captain's click on its header does. */
 async function expandDock(dock: string, title: string): Promise<void> {
   const panel = () => one(`[data-side-panel="${dock}"]`);
   await expect.poll(panel).not.toBeNull();
@@ -135,18 +130,15 @@ test("the captain's drag resizes a card and holds while it is up", async () => {
   await expect.poll(() => box(layer()).width).toBeLessThan(decided);
   const dragged = await cardWidth();
 
-  // Paged away and back, the drag holds.
   await showCard(TITLES.regular);
   await expectCardWidth(regular);
   await showCard(TITLES.wide);
   await expectCardWidth(dragged);
 
-  // The keyboard also widens the card.
   edge().focus();
   await userEvent.keyboard("{ArrowRight}");
   await expect.poll(() => box(layer()).width).toBeGreaterThan(dragged);
 
-  // A double click gives the card back the width the host decided.
   await userEvent.dblClick(one('[data-card-edge="left"]') as HTMLElement);
   await expectCardWidth(decided);
   await expect.poll(() => one('[data-rail-tab="left"]')?.checkVisibility()).toBe(true);

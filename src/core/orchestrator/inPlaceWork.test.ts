@@ -60,7 +60,6 @@ function shop(
   return { ...h, crewmate, folder, reads, repairs };
 }
 
-/** The feed's lines, in order. */
 function feed(events: FmEvent[]): string[] {
   return events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
 }
@@ -73,7 +72,6 @@ function merged(h: ReturnType<typeof shop>, id = "merged1") {
   return record;
 }
 
-/** The pull repair for #12, which a dropped task left open in shop, once its crewmate's first turn began. */
 async function pullRepair(h: ReturnType<typeof shop>): Promise<string> {
   seedTask(h.tasks, {
     id: "dropped1",
@@ -99,13 +97,11 @@ describe("the host's own work in a project's folder", () => {
     expect(h.repairs()).toEqual([]);
     expect(feed(h.events)).toEqual([]);
 
-    // Where folders cannot be read at start, nothing is read at all.
     const unreadable = shop();
     Object.assign(unreadable.workspace, { refreshAtStart: undefined });
     await expect(unreadable.supervisor.inPlaceWork.checkFoldersAtStart()).resolves.toBeUndefined();
     expect(unreadable.repairs()).toEqual([]);
 
-    // A project with no address where it lives is never read.
     const local = shop({ origin: null });
     await local.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(local.reads.refreshAtStart).not.toHaveBeenCalled();
@@ -154,7 +150,6 @@ describe("the host's own work in a project's folder", () => {
     expect(h.tasks.get(repair.id)?.shape?.in_place).toMatchObject({ noticed: "start" });
     expect(h.tasks.timeline(repair.id)).toHaveLength(notes);
 
-    // A project the record no longer holds is named only as a project's folder.
     expect(h.supervisor.inPlaceWork.folderMissing("gone", "start")).toBe(
       "The project's folder is missing.",
     );
@@ -165,7 +160,6 @@ describe("the host's own work in a project's folder", () => {
     h.supervisor.inPlaceWork.folderMissing("shop", "start");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
-    // The repair starts above the missing folder and keeps where it started.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1));
     const startedIn = h.tasks.get(repair.id)?.shape?.in_place;
     expect(startedIn).toMatchObject({ started_in: expect.any(String) });
@@ -189,7 +183,6 @@ describe("the host's own work in a project's folder", () => {
     expect(h.tasks.timeline(repair.id).map((event) => event.text)).toContainEqual(
       expect.stringContaining(update),
     );
-    // Its crewmate, mid-turn, is told too.
     await vi.waitFor(() =>
       expect(h.crewmate.steers.map((steer) => steer.text).join("\n")).toContain(update),
     );
@@ -265,7 +258,6 @@ describe("the host's own work in a project's folder", () => {
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(id)?.activity).toBe("idle"));
 
-    // A card of its own is up.
     const card = h.supervisor.cards.addFirstmateCard({
       title: "Close #12?",
       body: "<p>Close it?</p>",
@@ -276,7 +268,6 @@ describe("the host's own work in a project's folder", () => {
     expect(h.tasks.get(id)?.status).toBe("active");
     h.supervisor.cards.close(card, { kind: "firstmate" });
 
-    // Open, then unreadable: it stays.
     answer = "open";
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     answer = "fails";

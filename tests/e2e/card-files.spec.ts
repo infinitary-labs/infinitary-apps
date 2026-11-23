@@ -181,7 +181,6 @@ test("saves every file of a folded card into one new Downloads folder named for 
     await pressKey(saveAll, "Enter");
     await expect(count).toHaveAttribute("data-card-files-save-state", "saved");
 
-    // The new folder is named for the task the card is about.
     const taskId = cardFileTask((await rows.first().getAttribute("data-card-file")) ?? "");
     const taskTitle = readSavedData(
       userDataDir,

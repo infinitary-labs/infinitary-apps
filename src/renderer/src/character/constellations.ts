@@ -139,7 +139,6 @@ export const BIG_DIPPER: Constellation = {
 /** A star's dot radius relative to a vertex dot, from its magnitude. */
 export const starScale = (mag: number): number => Math.max(0.55, 1.5 - 0.22 * mag);
 
-/** Where star `si` of the figure sits on screen. */
 export function starPoint(
   con: Constellation,
   si: number,

@@ -41,7 +41,6 @@ function universalRequire(): NodeJS.Require {
 const universal = universalRequire();
 const fileUtils = universal("./dist/cjs/file-utils.js") as FileUtils;
 
-/** A package's folder, reached through the chain of packages that installs it. */
 function packageDir(...chain: string[]): string {
   let from = require;
   let dir = "";
@@ -59,7 +58,6 @@ const UNIVERSAL = dirname(universal.resolve("./package.json"));
 
 const FILE = execFileSync("sh", ["-c", "command -v file"], { encoding: "utf8" }).trim();
 
-/** Puts a `file` first on PATH that logs each path it is asked about. */
 function countingFile(): () => string[] {
   const bin = scratchDir("infinitary-universal-file-");
   const log = join(bin, "launches.log");

@@ -127,7 +127,6 @@ async function pasteInto(field: Locator, text: string) {
   }, text);
 }
 
-/** The field stays a password field and shows one masked character for each character of the value. */
 async function masked(field: Locator, value: string) {
   await expect(field).toHaveAttribute("type", "password");
   await expect(field).toHaveJSProperty("value.length", value.length);

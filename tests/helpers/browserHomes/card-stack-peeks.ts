@@ -2,7 +2,6 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the card-stack-peeks test's story holds: how many notes are stacked. */
 type Input = { count: number };
 
 /** The most notes the test stacks. */

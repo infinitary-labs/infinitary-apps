@@ -38,7 +38,6 @@ function clock(ms: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-/** The recording's length on the player's clock. */
 const LENGTH = clock(GIF_DEMO_RECORDING.durationMs);
 
 function body(page: Page): FrameLocator {
@@ -133,7 +132,6 @@ test("Play draws the GIF once in the viewer, Stop takes it away, its end returns
   await expect(control(page)).toHaveAccessibleName("Stop");
   await expect(control(page)).toBeFocused();
 
-  // Stop takes the animation away and leaves the poster, at the start.
   await page.keyboard.press("Space");
   await expect(animation(page)).toHaveCount(0);
   await expect(control(page)).toHaveAccessibleName("Play");
@@ -146,7 +144,6 @@ test("Play draws the GIF once in the viewer, Stop takes it away, its end returns
   await expect(animation(page)).toHaveCount(0);
   await expect(viewer(page).locator("[data-demo-time]")).toHaveText(`${LENGTH} / ${LENGTH}`);
 
-  // Replay plays it once more.
   await page.keyboard.press("Enter");
   await expect(animation(page)).toHaveAttribute("src", /\.gif\?play=3$/);
   await expect(control(page)).toHaveAccessibleName("Stop");
@@ -243,7 +240,6 @@ test("a GIF made by the demo helper's fallback is one the card check accepts", a
   expect(read.gif.durationMs).toBeGreaterThan(3_000);
   expect(read.gif.durationMs).toBeLessThanOrEqual(GIF_DEMO_TARGET.seconds * 1000);
   expect(read.gif.frames).toBe(read.gif.durationMs / 100);
-  // Its poster is a picture of the GIF's own size.
   expect(readPicture(await readFile(files.poster))?.size).toEqual({
     width: read.gif.width,
     height: read.gif.height,

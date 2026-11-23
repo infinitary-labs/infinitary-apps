@@ -21,12 +21,6 @@ import { useShellStore } from "./store";
 import { card, DECIDE, gesture, picture, resetShell } from "./storeTestKit";
 
 /**
- * The card stack in the store (./stackActions.ts): cards, records, past
- * cards, browser views and panel cards, paging, unread and the project
- * focus's hold.
- */
-
-/**
  * The window's project focus, as the stack reads it: the focused project and
  * each task's project on the board, through the shared rule (`holdsBack`).
  * Nothing is focused unless a test focuses it.
@@ -181,7 +175,6 @@ describe("stack visibility (WI-18)", () => {
     state().closeThread("a");
     state().openThread("a");
     expect(state().closedThreadIds).toEqual([]);
-    // It holds while the card is up, and goes with it.
     state().closeThread("a");
     state().applyCards([{ ...item, title: "Revised" }]);
     expect(state().closedThreadIds).toEqual(["a"]);
@@ -403,7 +396,6 @@ describe("stack visibility (WI-18)", () => {
       expect(state().replyDrafts.a).toBe(tooLong);
       expect(shownId()).toBe("a");
 
-      // Leading blank lines and trailing whitespace go; the lines between stay.
       state().setReplyDraft("a", "\nthe second option is wrong\n\nkeep the first\n  ");
       await state().sendReply("a");
       expect(reply).toHaveBeenCalledWith(
@@ -647,7 +639,6 @@ describe("stack visibility (WI-18)", () => {
     const e = ready("e", { actions: DECIDE, createdAt: T0 + 2 });
     state().applyCards([a, b, c]);
     state().focusCard("b");
-    // Two arrivals behind the shown card: both unread, "d" first in stack order.
     state().applyCards([a, b, c, d, e]);
     expect(state().unreadCardIds).toEqual(["d", "e"]);
     state().applyCards([a, c, d, e]);
@@ -797,7 +788,6 @@ describe("stack visibility (WI-18)", () => {
     expect(unread()).toEqual({ before: 1, after: 0 });
     expect(takeCharacterNotice()).toBe(true);
 
-    // A lone card the captain is looking at is not marked.
     reset();
     state().applyCards([a]);
     state().applyCards([{ ...a, awaiting: "answer", sentBackAt: 10 }]);
@@ -851,7 +841,6 @@ describe("stack visibility (WI-18)", () => {
     state().applyCards([a, ready("b", { actions: DECIDE, body: "more" })]);
     expect(takeCharacterNotice()).toBe(false);
     expect(state().unreadCardIds).toEqual(["b"]);
-    // Paging to it clears the badge.
     state().nextCard();
     expect(shownId()).toBe("b");
     expect(state().unreadCardIds).toEqual([]);
@@ -1074,11 +1063,9 @@ describe("the project focus holds other projects' cards back (docs/project-focus
     focusOn("repo-inf");
     expect(stackIds()).toEqual(["inf", "mate"]);
     expect(state().heldBackCardIds).toEqual(["web"]);
-    // The card after it comes up, with no notice and no focus taken back.
     expect(shownId()).toBe("inf");
     expect(takeCharacterNotice()).toBe(false);
     expect(state().focusRequest).toBe(presses);
-    // A push of the same cards keeps it held back.
     state().applyCards([web, inf, mate]);
     expect(stackIds()).toEqual(["inf", "mate"]);
     // A focus move that changes nothing on the stack writes nothing.
@@ -1111,10 +1098,8 @@ describe("the project focus holds other projects' cards back (docs/project-focus
     expect(shownId()).toBe("web");
     expect(stackIds()).toEqual(["inf", "web"]);
     expect(focus.on).toBe("repo-inf");
-    // A push while that focus holds keeps it through.
     state().applyCards([inf, { ...web, body: "web, revised" }]);
     expect(stackIds()).toEqual(["inf", "web"]);
-    // Picking another project ends it; picking back holds it again.
     focusOn("repo-web");
     expect(stackIds()).toEqual(["web"]);
     focusOn("repo-inf");
@@ -1289,7 +1274,6 @@ describe("task records on the card stack", () => {
     shell().closeTaskRecord("t2");
     expect(shell().records).toEqual([]);
     expect(shownId()).toBe("decision");
-    // A task with no open record changes nothing.
     const before = { cardIndex: shell().cardIndex, focusRequest: shell().focusRequest };
     shell().closeTaskRecord("t3");
     expect(shownId()).toBe("decision");
@@ -1333,14 +1317,12 @@ describe("past cards on the card stack", () => {
     expect(shell().records).toEqual([{ pastCardId: "older-note" }, { taskId: "t1" }]);
     // The shown entry left, so the first card comes up, as it does for a record.
     expect(shown()?.id).toBe("decision");
-    // Opening a record puts it at the front without touching the past card.
     shell().openRecord("t1");
     expect(shown()?.recordTaskId).toBe("t1");
     expect(shell().records).toContainEqual({ pastCardId: "older-note" });
     shell().closePastCard("older-note");
     shell().closeRecord();
     expect(shown()?.id).toBe("decision");
-    // The stack of real cards is untouched by any of it.
     expect(shell().cards.map((c) => c.id)).toEqual(["decision"]);
   });
 
@@ -1349,7 +1331,6 @@ describe("past cards on the card stack", () => {
     shell().applyEvent({ type: "past_card_shown", cardId: "old-plan" });
     expect(shown()?.pastCardId).toBe("old-plan");
     expect(shell().cards.map((c) => c.id)).toEqual(["decision"]);
-    // The same card shown again is the same single entry; another event type does nothing.
     shell().applyEvent({ type: "past_card_shown", cardId: "old-plan" });
     shell().applyEvent({ type: "personalized", text: "x" });
     expect(shell().records).toEqual([{ pastCardId: "old-plan" }]);
@@ -1375,7 +1356,6 @@ describe("past cards on the card stack", () => {
       taskId: undefined,
       pastCardId: "old-plan",
     });
-    // Hidden, it supplies nothing.
     shell().closeRecord();
     shell().closeRecord();
     shell().setInputText("and now?");
@@ -1481,7 +1461,6 @@ describe("a task's browser view on the card stack (docs/task-browser.md)", () =>
     const from = { cardId: "try", session: "run-1", generation: 2 };
     shell().openBrowserView("t1", from);
     expect(shown()).toMatchObject({ id: "browser:t1", browserTaskId: "t1", browserFrom: from });
-    // Opening asked the core nothing: the card is still there, unanswered.
     expect(act).not.toHaveBeenCalled();
     expect(shell().cards.map((c) => c.id)).toEqual(["first", "try"]);
     // Hide comes back to the card that opened it, not the stack's first.
@@ -1563,12 +1542,10 @@ describe("a task's browser view on the card stack (docs/task-browser.md)", () =>
     expect(takeCharacterNotice()).toBe(true);
     shell().applyCards([first, raised]);
     expect(takeCharacterNotice()).toBe(false);
-    // A newer one takes the column.
     const newer = { ...raised, id: "newer", createdAt: 4 };
     shell().applyCards([first, raised, newer]);
     expect(shell().records).toEqual([{ browserTaskId: "t1", arrived: "newer" }]);
     expect(takeCharacterNotice()).toBe(false);
-    // Hidden, the view lets go; a card raised then lands as any card does.
     shell().closeRecord();
     const later = { ...raised, id: "later", createdAt: 5 };
     shell().applyCards([first, raised, newer, later]);
@@ -1625,7 +1602,6 @@ describe("a task's browser view on the card stack (docs/task-browser.md)", () =>
     expect(shell().records).toEqual([{ taskId: "t1" }]);
     shell().closeRecord();
     expect(shown()?.id).toBe("first");
-    // The card gone meanwhile: Hide falls back to the stack's first card.
     shell().openRecord("t1", { cardId: "about" });
     useShellStore.setState({ cards: [first] });
     shell().closeRecord();
@@ -1691,7 +1667,6 @@ describe("a panel's cards on the card stack (docs/ui-plugins.md, \"A panel's car
     const id = shell().emitPanelCard("reading-list", { ...reader, id: "later" }, false);
     expect(shown()?.id).toBe("decision");
     expect(shell().unreadCardIds).toEqual([panelCardEntryId("reading-list", id)]);
-    // Paged to, it is seen.
     shell().prevCard();
     expect(shown()?.id).toBe(panelCardEntryId("reading-list", "later"));
     expect(shell().unreadCardIds).toEqual([]);
@@ -1757,7 +1732,6 @@ describe("a panel's cards on the card stack (docs/ui-plugins.md, \"A panel's car
       taskId: "t2",
       pastCardId: undefined,
     });
-    // Paged away, the shown card is the hint again.
     shell().nextCard();
     shell().setInputText("and the card?");
     shell().submit();
@@ -1778,7 +1752,6 @@ describe("a panel's cards on the card stack (docs/ui-plugins.md, \"A panel's car
     expect(shown()?.panelCard?.kept).toEqual({ scroll: 120 });
     shell().emitPanelCard("reading-list", { ...reader, id: "r", data: 2 }, false);
     expect(shown()?.panelCard).toMatchObject({ data: 2, kept: { scroll: 120 } });
-    // A card that is not open keeps nothing, and keeping moves nothing on the stack.
     shell().keepPanelCard("reading-list", "gone", 1);
     expect(shell().records).toHaveLength(1);
     shell().closeRecord();

@@ -197,7 +197,6 @@ describe("redactDeep", () => {
     expect(redacted.args.env.secret).toBe("[redacted credential]");
     expect(redacted.args.env.retries).toBe(3);
     expect(redacted.sibling.visible).toBe("keep me");
-    // Everything else survives unchanged, key order included.
     expect(Object.keys(redacted)).toEqual([
       "args",
       "evidence",

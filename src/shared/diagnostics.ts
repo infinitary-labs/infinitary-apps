@@ -78,7 +78,6 @@ export const DISPOSAL_OUTCOMES = [
   "superseded",
 ] as const;
 
-/** Which kind of phone a phone event came from. */
 export const PHONE_DEVICES = ["iphone", "ipad"] as const;
 export type PhoneDevice = (typeof PHONE_DEVICES)[number];
 
@@ -230,7 +229,6 @@ export type DiagnosticEventData<N extends DiagnosticEventName> = {
   -readonly [K in keyof EventFields<N>]: FieldValue<EventFields<N>[K]>;
 };
 
-/** One event as the app records it: a declared name and its declared fields. */
 export type DiagnosticEvent = {
   [N in DiagnosticEventName]: { name: N; data: DiagnosticEventData<N> };
 }[DiagnosticEventName];

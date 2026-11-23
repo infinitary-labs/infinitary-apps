@@ -65,7 +65,6 @@ export function areaOf(id: string): string {
   return /^[a-z0-9]+/.exec(id)?.[0] ?? id;
 }
 
-/** The file a language's message lives in. */
 export const catalogFile = (tag: string, id: string): string =>
   `${CATALOG_DIR}/${tag}/${areaOf(id)}.json`;
 
@@ -86,7 +85,6 @@ const isPhoneOwn = (id: string) => new RegExp(`^${PHONE_PREFIX}[A-Z0-9]`).test(i
 
 /** The phone app's Info.plist, whose English permission prompts the catalog words in every language. */
 export const PHONE_INFO_PLIST = "ios/Infinitary/Info.plist";
-/** Each permission prompt's Info.plist key and the phone message that words it. */
 export const PHONE_INFO_PLIST_MESSAGES: Readonly<Record<string, string>> = {
   NSCameraUsageDescription: "phonePromptCamera",
   NSFaceIDUsageDescription: "phonePromptFaceId",
@@ -121,14 +119,12 @@ export function panelMessagesPath(panel: string): string {
   return `${RUNBOOK_PANEL_DIRS[panel] ?? `src/panels/${panel}`}/messages.generated.ts`;
 }
 
-/** The app panel a message belongs to, by its name's prefix; none for a shared message. */
 function panelOf(id: string): string | undefined {
   return Object.entries(APP_PANEL_PREFIXES).find(([, prefix]) =>
     new RegExp(`^${prefix}[A-Z0-9]`).test(id),
   )?.[0];
 }
 
-/** One run of a message: words, or a placeholder the caller fills in. */
 type Part = { text: string } | { placeholder: string };
 
 /** A message: one form, or one form per plural category of its selector. */
@@ -195,7 +191,6 @@ function parseMessage(value: unknown, where: string, problems: string[]): Messag
   return { kind: "plural", selector, forms };
 }
 
-/** The placeholders a message fills, its plural count included. */
 function placeholdersOf(message: Message): string[] {
   const parts = message.kind === "text" ? message.parts : [...message.forms.values()].flat();
   const names = new Set(parts.flatMap((part) => ("placeholder" in part ? [part.placeholder] : [])));
@@ -245,7 +240,6 @@ function parseCatalog(tag: string, source: string, problems: string[]): Catalog 
   return catalog;
 }
 
-/** Each translation against the source: the same names, the same placeholders, and its language's plural forms. */
 function checkTranslation(tag: string, catalog: Catalog, source: Catalog, problems: string[]): void {
   for (const id of source.keys()) {
     if (!catalog.has(id))
@@ -676,7 +670,6 @@ export function readCatalogFiles(root = "."): { files: CatalogFiles; strays: str
   return { files, strays };
 }
 
-/** Each language's messages, its area files read into one object; a file that is not one JSON object of messages is a problem. */
 export function joinCatalogFiles(files: CatalogFiles): {
   catalogs: Record<string, Record<string, unknown>>;
   problems: string[];
@@ -733,7 +726,6 @@ export function catalogLayout(messages: Record<string, unknown>): Record<string,
   );
 }
 
-/** Each place the catalog files differ from the compiler's layout. */
 export function layoutProblems(files: CatalogFiles, strays: string[] = []): string[] {
   const problems = strays.map(
     (path) => `${path}: each language's catalog is a folder of area files now; run node scripts/move-catalogs.ts`,
@@ -762,7 +754,6 @@ export function layoutProblems(files: CatalogFiles, strays: string[] = []): stri
   return problems;
 }
 
-/** Writes a language's area files as `catalogLayout` lays them out, and removes one left with no message. */
 export function writeCatalogLayout(root: string, tag: string, messages: Record<string, unknown>): void {
   const dir = join(root, CATALOG_DIR, tag);
   mkdirSync(dir, { recursive: true });
@@ -795,7 +786,6 @@ export function sortedGlossary(text: string): string {
   return [...lines.slice(0, start), ...rows, ...lines.slice(end)].join("\n");
 }
 
-/** Each glossary, one per language, by its path. */
 export function readGlossaries(root = "."): Record<string, string> {
   const dir = join(root, GLOSSARY_DIR);
   if (!existsSync(dir)) return {};
@@ -807,7 +797,6 @@ export function readGlossaries(root = "."): Record<string, string> {
   );
 }
 
-/** Each glossary whose terms are out of name order. */
 export function glossaryProblems(glossaries: Record<string, string>): string[] {
   return Object.entries(glossaries)
     .filter(([, text]) => sortedGlossary(text) !== text)
@@ -892,7 +881,6 @@ async function phoneWordsFixture(facts: Fact[]): Promise<string> {
   return `[\n${cases.map((entry) => `  ${JSON.stringify(entry)}`).join(",\n")}\n]\n`;
 }
 
-/** The command: lays out, checks and compiles, as its flags say. */
 async function main(): Promise<void> {
   if (process.argv.includes("--compiled")) {
     writeCompiledMessages();
@@ -900,7 +888,6 @@ async function main(): Promise<void> {
     const checking = process.argv.includes("--check");
     let { files, strays } = readCatalogFiles();
     if (!checking) {
-      // Lay each language's messages out in name order, each in its area's file, and each glossary's terms in order.
       const joined = joinCatalogFiles(files);
       if (!joined.problems.length)
         for (const [tag, messages] of Object.entries(joined.catalogs)) writeCatalogLayout(".", tag, messages);

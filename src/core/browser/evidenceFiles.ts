@@ -13,7 +13,6 @@ import { clip, type PageNotices } from "./pageNotices";
  * is kept for the owner only, never over another file.
  */
 
-/** The folder inside a task's evidence folder that its browser's downloads go to. */
 const DOWNLOADS_DIR = "downloads";
 
 /** Where a download came from, as the crewmate reads it: a blob's own site, or the page itself. */
@@ -36,7 +35,6 @@ function downloadFileName(suggested: string): string {
   return cutText(name, 200) || "download";
 }
 
-/** Claim the first free name for a download: `name`, then `name-2`, `name-3`... before its extension. */
 function reserveDownload(dir: string, name: string): string {
   const ext = extname(name);
   const stem = ext ? name.slice(0, -ext.length) : name;
@@ -52,7 +50,6 @@ function reserveDownload(dir: string, name: string): string {
   throw new Error("the downloads folder has no free name left");
 }
 
-/** A file's size in words: bytes, KB or MB. */
 function bytesWords(bytes: number): string {
   if (bytes < 1024) return `${bytes} bytes`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -102,9 +99,7 @@ export function saveDownload(
       } else {
         try {
           rmSync(path, { force: true });
-        } catch {
-          // Nothing is left to remove.
-        }
+        } catch {}
         notices.keepDownload(
           `${quoted(clip(offer.name))} from ${site} did not finish downloading (${outcome.state}); nothing was kept.`,
         );
@@ -114,7 +109,6 @@ export function saveDownload(
   };
 }
 
-/** A picture's file name from the crewmate's own: letters, digits and dashes. */
 export function captureFileName(name: string | undefined): string | undefined {
   if (name === undefined) return undefined;
   const base = name
@@ -127,7 +121,6 @@ export function captureFileName(name: string | undefined): string | undefined {
   return base ? `${base}.png` : undefined;
 }
 
-/** Write a picture: under its own name, or the first free `page-N.png`. */
 export async function writePicture(
   dir: string,
   name: string | undefined,

@@ -4,7 +4,6 @@ import { ProjectStore } from "../../../src/core/storage/projectStore";
 import { seedProject } from "../../../src/core/workspace/seedProject";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the projects-tab-added-focus test's story reads back. */
 type Input = { project: { name: string; key: string }; added: string };
 
 /** The window sends no read with arguments for this home. */

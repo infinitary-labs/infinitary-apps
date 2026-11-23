@@ -154,7 +154,6 @@ export async function compilePersonalModule(options: CompileOptions): Promise<Co
     const rel = relativeInside(extensionRoot, path);
     const source = await readFile(path, "utf8");
     if (extname(path) === STYLESHEET_EXTENSION) {
-      // A stylesheet is text: its module default-exports it, and imports nothing.
       modules.set(path, {
         path,
         relative: rel,
@@ -331,7 +330,6 @@ async function rewriteImports(input: RewriteInput): Promise<{ output: string; lo
   let hostImportIndex = 0;
   for (const { node, specifierNode, specifier } of sites) {
     if (isLocal(specifier) && extname(specifier) === STYLESHEET_EXTENSION) {
-      // A stylesheet is a panel's, read as text by one default import.
       if (input.kind === "server") {
         refuse(
           `${where} imports "${specifier}"; a stylesheet belongs to the panel, not server code`,

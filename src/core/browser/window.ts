@@ -22,7 +22,6 @@
 import { browserCommand } from "./commandWords";
 import { CUT_SHORT, type OutlineLine, REF_PATTERN } from "./outline";
 
-/** What chooses the window. */
 export type WindowAsk =
   /** From the page's top: an open, a read, an action; `full` asks for every line. */
   | { kind: "top"; full?: true }
@@ -65,10 +64,6 @@ const MAP_LANDMARKS = new Set([
   "region",
 ]);
 
-/**
- * The answer's window: the lines it prints, its next lines, and for a
- * search, the lines that hold the words.
- */
 export type PageWindow = {
   lines: string[];
   /** How to read on, from facts the window knows; never a control to press. */
@@ -152,7 +147,6 @@ export function linesHolding(lines: readonly OutlineLine[], words: string, from 
   return found;
 }
 
-/** What a search says it found, or that nothing holds the words. */
 export function foundWords(words: string, found: readonly number[], from?: number): string {
   const quotedWords = JSON.stringify(flat(words));
   const after = from !== undefined && from > 1 ? ` from line ${from} on` : "";

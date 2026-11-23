@@ -590,7 +590,6 @@ describe("CardService", () => {
     cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
     expect(shown()).toMatchObject({ body: "<p>Keep Friday for the review.</p>" });
     expect(shown()?.minimized).toBeUndefined();
-    // A thread answer written, then put aside before the turn ends.
     const why = cards.addMessage(id, "captain", "Why Friday?");
     cards.replyFromCrewmate("launch", {
       cardId: id,
@@ -943,14 +942,12 @@ describe("CardService", () => {
     expect(staged()).toEqual([asked, other]);
 
     const question = cards.addMessage(asked, "captain", "why not left?");
-    // On the stage, in its place, carrying what it waits on.
     expect(staged()).toEqual([asked, other]);
     const waiting = cards.snapshot().find((card) => card.id === asked);
     expect(waiting).toMatchObject({ awaiting: "answer", title: decision.title });
     expect(waiting?.sentBackAt).toBeDefined();
     expect(cardStore.awaitingAuthor(asked)).toBe(true);
 
-    // A later card and a restart leave it where it is.
     const later = cards.addFirstmateCard({ ...decision, id: "later", title: "Later" });
     expect(staged()).toEqual([asked, other, later]);
     const restored = make();
@@ -1084,7 +1081,6 @@ describe("CardService", () => {
       { name: "notes", values: ["soon"], changed: true },
     ]);
     vi.advanceTimersByTime(5);
-    // A revision offers a new action; the captain chose the revised one.
     const revised = cards.addFirstmateCard({ ...decision, id: "launch-review" });
     cards.addFirstmateCard({
       ...decision,

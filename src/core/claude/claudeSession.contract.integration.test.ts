@@ -48,7 +48,6 @@ afterAll(async () => {
   await api.close();
 });
 
-/** Every transcript the client wrote under its config dir. */
 function transcripts(configDir: string): string[] {
   try {
     return readdirSync(join(configDir, "projects"), { recursive: true, encoding: "utf8" }).filter(
@@ -59,7 +58,6 @@ function transcripts(configDir: string): string[] {
   }
 }
 
-/** The contract stamps in every sidecar under the app's record dir, in the record's own words. */
 function sidecarStamps(dir: string): Record<string, unknown>[] {
   let names: string[];
   try {

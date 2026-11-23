@@ -17,7 +17,6 @@ import { createPiSessionFactory } from "./session";
  * bound to its own isolated store and a local mock provider.
  */
 
-/** The seat as the agent opens it: the seat preset, through Pi's session factory. */
 function openSeat({ agentDir, ...input }: SeatTestSpec & { agentDir: string }) {
   return createPiSessionFactory({ agentDir }).open(seatSpec(input));
 }
@@ -84,7 +83,6 @@ describe("Pi rebind contract (broker phase 6 gate)", () => {
       expect(lastBody).toContain("turn one: chart a course");
       expect(lastBody).toContain("turn two: report our position");
 
-      // And the rolling JSONL holds both turns plus both assistant replies.
       const transcript = readFileSync(sessionFile as string, "utf8");
       expect(transcript).toContain("turn one: chart a course");
       expect(transcript).toContain("turn two: report our position");

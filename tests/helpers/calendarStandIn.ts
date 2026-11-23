@@ -94,7 +94,6 @@ export function calendarStandIn() {
       revision += 1;
       keptFrom = revision;
     },
-    /** `granted`: the permissions the request's key carries. */
     handle(res: ServerResponse, url: URL, method: string, body: string, granted: string[] = []) {
       const limited = knobs.limited.shift();
       if (limited !== undefined)

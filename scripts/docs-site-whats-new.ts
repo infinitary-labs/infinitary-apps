@@ -44,10 +44,8 @@ const KIND_WORDS: Record<string, string> = {
   removal: "Removed",
 };
 
-/** A release as the page reads it: its version, date and every entry it carries. */
 export type ListedRelease = Pick<ReleaseManifest, "version" | "date" | "entryIds">;
 
-/** Every note entry in the ledger, by id. */
 export function ledgerEntries(root = ROOT): Map<string, NoteEntry> {
   const entries = new Map<string, NoteEntry>();
   for (const folder of ["changes", "history"]) {
@@ -69,7 +67,6 @@ function told(entry: NoteEntry | undefined): entry is NoteEntry {
   );
 }
 
-/** The entries one release added over the one before it, as the page lists them. */
 export function releaseChanges(
   release: ListedRelease,
   before: ListedRelease | null,
@@ -89,7 +86,6 @@ function prose(text: string): string {
   return text.replace(/[\\`*_[\]<>#|{}]/g, (character) => `\\${character}`);
 }
 
-/** The page: the releases newest first, each with its changes grouped by area. */
 export function whatsNewPage(
   releases: { release: ListedRelease; before: ListedRelease | null }[],
   entries: Map<string, NoteEntry>,
@@ -123,7 +119,6 @@ export function whatsNewPage(
   return `${lines.join("\n")}\n`;
 }
 
-/** A release's manifest: committed, or derived from its tag. */
 function manifestOf(version: string, root: string): ListedRelease {
   const committed = join(root, "release-notes", "releases", `${version}.json`);
   const text = existsSync(committed)
@@ -132,7 +127,6 @@ function manifestOf(version: string, root: string): ListedRelease {
   return JSON.parse(text) as ListedRelease;
 }
 
-/** The newest stable releases, each with the stable before it. */
 export function newestStables(root = ROOT): { release: ListedRelease; before: ListedRelease | null }[] {
   const git = (...args: string[]) =>
     execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();

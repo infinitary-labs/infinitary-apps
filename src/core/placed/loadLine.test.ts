@@ -186,7 +186,6 @@ describe("queued identity checks", () => {
     await expect(task.claim(input)).rejects.toThrow(
       "The run's process is not running; nothing started.",
     );
-    // Once readable, a mismatched declaration is refused as before.
     rows = identities;
     await expect(task.claim({ ...input, demand: { ...input.demand, cpu: 5 } })).rejects.toThrow(
       "This process group already declared a different hold.",
@@ -268,7 +267,6 @@ describe("accepted counted-once admission", () => {
     // that same 7.6-processor budget again via claim, timer or reconsideration.
     const third = rowAt(rows, 2);
     rows[2] = { ...third, group: third.pid }; // the same recorded identity is now an independent group
-    // Use a new task identity for the independent run; its claim must remain queued.
     const input = { pid: third.pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
     const queued = line.forTask("third");
     expect((await queued.claim(input)).state).toBe("waiting");

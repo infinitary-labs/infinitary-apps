@@ -98,7 +98,6 @@ for (const theme of themes) {
       await input.click();
       await input.fill(`${SPAWN_PROMPT_MARKER} refactor the auth middleware`);
       await input.press("Enter");
-      // Thinking: the Firstmate agent heats up while it decides and spawns.
       await expect(page.getByRole("img", { name: "First mate - working" })).toBeVisible();
       const key = await taskKey(page, "refactor the auth middleware");
       await expect(startedLine(page, key)).toBeVisible({ timeout: 20_000 });

@@ -130,7 +130,6 @@ export type ForgeSignInRecord = {
 
 export const SIGN_IN_FILE = "sign-in.json";
 export const HEALTH_LOG = "health.log";
-/** The health log keeps its newest lines within this size. */
 export const HEALTH_LOG_MAX_BYTES = 64 * 1024;
 /** A short-lived sign-in renews this long before it runs out: ten of the tick's minutes. */
 export const RENEW_LEAD_MS = 10 * 60_000;
@@ -464,7 +463,6 @@ export class ForgeSignIns {
     };
   }
 
-  /** The person's word for a host that offers a sign-in, or nothing. */
   nameOf(host: string): string | undefined {
     return this.provider(host)?.name;
   }
@@ -831,7 +829,6 @@ export class ForgeSignIns {
         current = this.usable(host) ?? current;
       }
       let reading = await whoAmI(provider, current.token);
-      // The host refused it: renew once, and ask again with the new one.
       if (reading.state === "rejected" && renewal?.outcome !== "renewed" && current.refreshToken) {
         renewal = await this.renew(host, current);
         if (renewal.outcome === "renewed" || renewal.outcome === "superseded") {
@@ -1093,13 +1090,11 @@ export class ForgeSignIns {
     return answer;
   }
 
-  /** The sign-in on file, when there is a readable one. */
   private usable(host: string): ForgeSignInRecord | undefined {
     const record = this.options.store.read(host);
     return record && record !== "unreadable" ? record : undefined;
   }
 
-  /** A short-lived sign-in inside its renewal lead, with a refresh token to renew it. */
   private expiring(record: ForgeSignInRecord): boolean {
     return (
       record.refreshToken !== undefined &&
@@ -1108,7 +1103,6 @@ export class ForgeSignIns {
     );
   }
 
-  /** One dated line of the health log for a change of a host's health. */
   private record(
     host: string,
     from: ForgeSignInState | "none",
@@ -1192,7 +1186,6 @@ export class ForgeSignIns {
   }
 }
 
-/** A host on the person's own server, as a view says it: the kind of server, where there is one. */
 function serverOf(provider: ForgeSignInProvider | undefined): { server?: ForgeServerView } {
   return provider?.server ? { server: provider.server } : {};
 }
@@ -1206,7 +1199,6 @@ function whoAmI(provider: ForgeSignInProvider, token: string): Promise<ForgeWhoA
     .catch((caught): ForgeWhoAmI => ({ state: "unavailable", reason: messageOf(caught) }));
 }
 
-/** When a sign-in the host just issued runs out, from its lifetimes in seconds. */
 function lifetimeOf(
   issued: Pick<ForgeIssued, "refreshToken" | "expiresInS" | "refreshExpiresInS">,
   at: number,
@@ -1220,7 +1212,6 @@ function lifetimeOf(
   };
 }
 
-/** What a renewal during a health read came to, for the health log. */
 function renewalNote(renewal: Renewal | undefined): string {
   if (!renewal || renewal.outcome === "superseded") return "";
   if (renewal.outcome === "renewed") return ", after a renewal";
@@ -1228,7 +1219,6 @@ function renewalNote(renewal: Renewal | undefined): string {
   return `, the renewal could not be asked (${renewal.reason})`;
 }
 
-/** What the host answered, for the health log: its HTTP status, or why it could not be asked. */
 function answerOf(reading: ForgeWhoAmI): string {
   if (reading.state === "unavailable") {
     const { reason, status } = reading;
@@ -1249,7 +1239,6 @@ function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }
 
-/** What the two host rules below read: a store, the hosts that offer the code and the kinds of server. */
 type ForgeHostSources = {
   store: ForgeSignInStore;
   providers: readonly Pick<ForgeSignInProvider, "host">[];

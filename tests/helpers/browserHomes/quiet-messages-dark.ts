@@ -3,10 +3,8 @@ import { openDatabase } from "../../../src/core/storage/db";
 import { SettingsStore } from "../../../src/core/storage/settingsStore";
 import { TaskService } from "../../../src/core/tasks/taskService";
 
-/** One finished round: the captain's message and the first mate's reply line. */
 type Round = { ask: string; reply: string };
 
-/** What a quiet-messages test's story reads back: the look, and its two rounds, oldest first. */
 type Input = { theme: Theme; rounds: Round[] };
 
 /**

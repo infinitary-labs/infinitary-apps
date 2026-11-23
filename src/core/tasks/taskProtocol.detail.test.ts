@@ -245,14 +245,12 @@ describe("the task protocol (task-system P3)", () => {
     tasks.close("recent", { status: "done", reason: "settled", actor: "host" });
     tasks.close("dropped", { status: "dropped", reason: "superseded", actor: "host" });
     const ids = async (text: string) => (await protocol.search(text)).map((task) => task.id);
-    // Nothing earlier until text is typed.
     expect(await protocol.search("")).toEqual([]);
     expect(await protocol.search("   ")).toEqual([]);
     // Eight-day-old work by title, and dropped work of any age, never live or
     // recently done work (the board lists those).
     expect(await ids("idle")).toEqual(["old-done"]);
     expect((await ids("ZEBRA")).sort()).toEqual(["dropped", "old-goal"]);
-    // Key and goal match too.
     const key = (await protocol.search("idle"))[0]?.key ?? "";
     expect(await ids(key.toLowerCase())).toEqual(["old-done"]);
     expect(await ids("nothing like this")).toEqual([]);
@@ -331,7 +329,6 @@ describe("the task protocol (task-system P3)", () => {
       "NOPE-404",
     ]);
     expect(found.map((task) => task.id).sort()).toEqual(["dropped", "live", "old", "week"]);
-    // Each is the board's own row shape, as a search answers it.
     const week = found.find((task) => task.id === "week");
     expect(week).toEqual(protocol.board().tasks.find((task) => task.id === "week"));
     expect(protocol.byKeys(["NOPE-404"])).toEqual([]);
@@ -595,7 +592,6 @@ describe("the task protocol (task-system P3)", () => {
       "The provider did not accept your sign-in - sign in again.",
     );
 
-    // A drop carries the words it was dropped with.
     tasks.create({ id: "b", title: "B", prompt: "p", repoId: "r1" });
     tick();
     tasks.dropWithChildren("b", { reason: "Duplicate of NIA-1.", actor: "firstmate" });

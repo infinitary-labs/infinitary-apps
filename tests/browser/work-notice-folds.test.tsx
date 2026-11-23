@@ -58,7 +58,6 @@ const drawnText = (element: HTMLElement | null) =>
       getComputedStyle(child).visibility === "visible",
   );
 
-/** Whether a press at the middle of `element` reaches it. */
 const takesPress = (element: HTMLElement) => {
   const box = element.getBoundingClientRect();
   const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);

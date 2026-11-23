@@ -59,7 +59,6 @@ export function summaryLine(summary: readonly PanelSummaryPart[]): PanelSummaryL
   return summary.find((part): part is PanelSummaryLine => "line" in part) ?? null;
 }
 
-/** What a panel last said on its rail. */
 export type RailSaid = {
   summary: PanelSummaryPart[] | null;
   /** Whether a panel whose own code decides is on its rail; undefined until it says. */
@@ -88,7 +87,6 @@ export const panelRail = {
       listeners.delete(listener);
     };
   },
-  /** What `panel` last said; nothing until it speaks. */
   get(panel: string): RailSaid {
     return said.get(panel) ?? NOTHING_SAID;
   },
@@ -129,7 +127,6 @@ export const panelRail = {
   },
 };
 
-/** What `panel` last said on its rail, as it changes. */
 export function useRailSaid(panel: string): RailSaid {
   return useSyncExternalStore(
     panelRail.subscribe,

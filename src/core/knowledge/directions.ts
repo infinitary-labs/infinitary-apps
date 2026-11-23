@@ -129,7 +129,6 @@ export class StandingDirections {
     });
   }
 
-  /** One direction whole, with a page of its history, when `actor` may read it. */
   read(args: KnowledgeDirectionArgs, actor: KnowledgeActor = WINDOW): KnowledgeDirectionRead {
     return this.handle.browsing((store): KnowledgeDirectionRead => {
       const row = store?.directions().find((entry) => entry.id === args.id);

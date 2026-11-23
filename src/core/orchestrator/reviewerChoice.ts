@@ -32,7 +32,6 @@ export type ReviewerChoiceModel = {
   miss?: string;
 };
 
-/** How the review was asked for. */
 export type ReviewStart = "first-mate" | "click" | "repair";
 
 export type ReviewerChoiceInput = {
@@ -90,7 +89,6 @@ const LEVEL_WORDS: Record<Slot, string> = {
   premium: "premium",
 };
 
-/** A name's words, lowercase letters only. */
 function words(name: string): string[] {
   return name.toLowerCase().match(/[a-z]+/g) ?? [];
 }
@@ -108,7 +106,6 @@ function letters(n: number): string {
  */
 function shortNames(models: readonly ReviewerChoiceModel[]): string[] {
   const used = new Set<string>();
-  // Its Settings name's words first, then its id's.
   const wordsOf = (model: ReviewerChoiceModel) => [
     ...new Set([...words(model.name), ...words(model.key.split("/").slice(1).join("/"))]),
   ];
@@ -190,7 +187,6 @@ export function reviewerChoiceQuestions(
   return { reviewer: which, ifNotNow: notNow };
 }
 
-/** One model's line of facts. */
 /** A model by name, the subscription it comes from and its key: "Opus 5.5, a Claude model (anthropic-claude/claude-opus-5-5)". */
 export function modelWords(name: string, key: string): string {
   const provider = key.split("/")[0] ?? key;
@@ -206,7 +202,6 @@ function modelLine(model: ReviewerChoiceModel): string {
   ].join("; ");
 }
 
-/** The facts the model reads: the builder's task, how the review started, the usual pick, the directions and each model. */
 export function reviewerChoiceState(input: ReviewerChoiceInput): DecisionState {
   const { kept, leftOut } = directionsThatFit(input.directions);
   return {
@@ -296,7 +291,6 @@ export type ReviewerChooser = {
 
 export function reviewerChooser(
   models: ReviewerChoiceModels,
-  /** The standing directions that apply to a project's work, each whole. */
   directions: Pick<StandingDirections, "applying">,
 ): ReviewerChooser {
   return {

@@ -7,7 +7,6 @@ import { OwnWindow } from "./ownWindow";
 // settings, and only this computer's window touches the desktop (docs/run.md, "The window
 // opened beside it").
 describe("this computer's window, as a first mate a command started asks it", () => {
-  /** A window's connection, which the first mate hears drop. */
   function connection() {
     const gone: (() => void)[] = [];
     const viewer: BrowserViewer = { show: () => {}, onGone: (listener) => gone.push(listener) };

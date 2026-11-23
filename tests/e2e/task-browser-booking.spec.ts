@@ -179,7 +179,6 @@ async function commission(app: LaunchedApp, title: string): Promise<() => Promis
   return async () => (await read()) as TaskDetail;
 }
 
-/** Wait for the crewmate's latest report to carry these words, and answer the record. */
 async function reported(
   detail: () => Promise<TaskDetail>,
   words: string,
@@ -194,7 +193,6 @@ function openBrowser(task: TaskDetail) {
   return task.browser?.state === "open" ? task.browser : undefined;
 }
 
-/** One of the task's cards, as the app keeps it, by its title. */
 async function cardTitled(page: Page, taskId: string, title: string) {
   return (await page.evaluate(() => window.infinitary.cards.list())).find(
     (card) => card.taskId === taskId && card.title === title,
@@ -241,7 +239,6 @@ function photographer(runtime: Runtime): (target: Locator, name: string) => Prom
   };
 }
 
-/** Take control in a view the captain opened, and wait until the page is his. */
 async function takeControl(page: Page, taskId: string): Promise<void> {
   await view(page, taskId)
     .locator("[data-browser-chrome]")
@@ -261,14 +258,12 @@ async function returnControl(page: Page, taskId: string): Promise<void> {
     .click();
 }
 
-/** The captain types his card details into the airline's page, and sends nothing. */
 async function cardOnPage(app: LaunchedApp, taskId: string, siteUrl: string): Promise<void> {
   await typeOnPage(app.app, app.page, taskId, siteUrl, "card", SYNTHETIC_CARD);
   await typeOnPage(app.app, app.page, taskId, siteUrl, "expiry", SYNTHETIC_EXPIRY);
   await typeOnPage(app.app, app.page, taskId, siteUrl, "code", SYNTHETIC_CODE);
 }
 
-/** The captain pays on the airline's page: card details, then Pay. */
 async function payOnPage(app: LaunchedApp, taskId: string, siteUrl: string): Promise<void> {
   await cardOnPage(app, taskId, siteUrl);
   await clickOnPage(app.app, app.page, taskId, siteUrl, "pay");
@@ -290,7 +285,6 @@ function callsHoldCard(app: LaunchedApp, title: string): string[] {
   });
 }
 
-/** Open a task's record from the Tasks dock, and its browser from the record's Browser line. */
 async function openFromRecord(page: Page, task: TaskDetail): Promise<Locator> {
   await expandDock(page, "now");
   await pressRow(page, task.key);
@@ -418,7 +412,6 @@ for (const runtime of RUNTIMES) {
           await showCard(page, MOCK_AIRLINE_SIGN_IN_TITLE);
           await expect(strip).toHaveAttribute("data-attachment-handoff", "waiting");
           await shoot(page.locator(SHOWN_ENTRY), "card-sign-in-dark.png");
-          // The captain dismisses the request without choosing.
           await cardLeave(page).click();
           await expect
             .poll(
@@ -428,7 +421,6 @@ for (const runtime of RUNTIMES) {
           // INF-1879: putting consent away sends no refusal or turn; its browser stays waiting.
           const told = await detail();
           expect(told.browser).toMatchObject({ control: "waiting" });
-          // The request is still reachable: the record says so, and its Open shows it.
           const line = await openFromRecord(page, told);
           await expect(line).toHaveAttribute("data-browser-driver", "waiting");
           await expect(line).toContainText(DRIVER_WORDS.waiting);
@@ -482,7 +474,6 @@ for (const runtime of RUNTIMES) {
                   message.role === "user" && message.text.includes(BROWSER_RETURNED_OPENING),
               ),
             ).toHaveLength(1);
-            // Its browser is paused on the payment page; nothing has been paid.
             expect(current.browser).toMatchObject({
               control: "waiting",
               title: "Review and pay",
@@ -538,7 +529,6 @@ for (const runtime of RUNTIMES) {
           await expect(shownCard(page, bookedNoteTitle(BOOKING_REFERENCE))).toBeVisible();
           await expect(page.locator(SHOWN_ENTRY)).toHaveCSS("opacity", "1");
           await shoot(page.locator(SHOWN_ENTRY), "card-booked-dark.png");
-          // Paid once, and nothing the captain typed is in a file or a model call.
           expect(airline.payments).toHaveLength(1);
           for (const typed of [SYNTHETIC_PASSWORD, SYNTHETIC_CARD]) {
             expect(filesHolding(launched.userDataDir, typed)).toEqual([]);
@@ -637,7 +627,6 @@ for (const runtime of RUNTIMES) {
               ),
             ),
           ).toBe(false);
-          // His details are still on the airline's page, and nothing was sent.
           expect(await pageSays(launched.app, airline.url, "code", "value")).toBe(SYNTHETIC_CODE);
           expect(airline.payments).toEqual([]);
           expect(servedBy(launched, title, runtime)).toBe(true);

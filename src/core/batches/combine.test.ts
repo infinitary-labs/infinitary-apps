@@ -174,17 +174,14 @@ describe("combining approved changes at home", () => {
     expect(result.members.map((member) => member.taskId)).toEqual(["task-parser", "task-export"]);
     const [first, second] = result.members.map((member) => member.commit) as [string, string];
     expect(result.head).toBe(second);
-    // One commit each, the second on the first, the first on the default branch.
     expect(run(at.home, "rev-list", "--parents", "-n", "1", first)).toBe(`${first} ${result.base}`);
     expect(run(at.home, "rev-list", "--parents", "-n", "1", second)).toBe(`${second} ${first}`);
-    // The change's checked title is the subject; its story's words and breaking footer the body.
     expect(run(at.home, "log", "-1", "--format=%B", first)).toBe(
       `${PARSER.title}\n\n${PARSER.body}`,
     );
     expect(run(at.home, "log", "-1", "--format=%s%n%an", second)).toBe(
       `${EXPORT.title}\nGrace Crew`,
     );
-    // Each commit carries its own change and nothing else.
     expect(run(at.home, "diff", "--name-only", result.base, first)).toBe("src/parser.ts");
     expect(run(at.home, "diff", "--name-only", first, second)).toBe("src/export.ts");
     // The project's own folder is untouched: no file moved and no branch changed.
@@ -683,7 +680,6 @@ describe("a held batch's fix built on the version that held", () => {
       string,
       string,
     ];
-    // Its commit carries the fix alone, on the members' own commits.
     expect(run(at.home, "rev-list", "--parents", "-n", "1", third)).toBe(`${third} ${second}`);
     expect(run(at.home, "diff", second, third)).toContain("+| date | total | zone |");
     expect(run(at.home, "diff", "--name-only", second, third)).toBe("docs/report.md");
@@ -926,9 +922,7 @@ describe("a held batch's fix built on the version that held", () => {
   it("carries a fix declared on a saved hold from its version after Try again released it", async () => {
     const at = host();
     const { page, held, record: saved } = await heldBatch(at);
-    // The page goes back beside the fix, and the repair declares its own change the fix.
     let record = declared(withdraw(saved, page.taskId), "task-fix");
-    // Try again releases the hold before the fix is approved.
     record = await recombined(at, release(record), AT + 30_000);
     expect(record.open?.hold).toBeUndefined();
 
@@ -1213,7 +1207,6 @@ describe("pushing the batch branch the app owns", () => {
       head: first.head,
       expected: null,
     });
-    // A person pushes to the batch branch by hand.
     run(at.work, "fetch", "--quiet", "origin");
     run(at.work, "checkout", "--quiet", "-B", "by-hand", "origin/infinitary-batch/7c41");
     write(at.work, "NOTES.md", "a note\n");

@@ -177,7 +177,6 @@ function editingCommand(event: React.KeyboardEvent, system: KeySystem): EditingC
   return EDITING_COMMANDS[key];
 }
 
-/** What a key types on the page, for a key that types. */
 function typedText(event: React.KeyboardEvent): string | undefined {
   if (event.metaKey || event.ctrlKey) return undefined;
   if (event.key === "Enter") return "\r";
@@ -458,7 +457,6 @@ function useTopHeight(): [(node: HTMLDivElement | null) => void, number] {
   return [setTop, height];
 }
 
-/** A frame's JPEG, decoded off the base64 the host sent. */
 function bitmapOf(frame: TaskBrowserFrame): Promise<ImageBitmap> {
   const raw = atob(frame.data);
   const bytes = new Uint8Array(raw.length);
@@ -654,7 +652,6 @@ export function TaskBrowserView({
         open: boolean;
         /** The open column's width, the thread column's own. */
         width: number;
-        /** Opens the folded column beside the page. */
         onOpen?: () => void;
         column: React.ReactNode;
         line: React.ReactNode;

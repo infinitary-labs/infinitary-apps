@@ -30,7 +30,6 @@ export type Paint = {
   digest: string;
 };
 
-/** The crew canvases, far then near. */
 function layers(): HTMLCanvasElement[] {
   return ["far", "near"].map((layer) => {
     const canvas = document.querySelector<HTMLCanvasElement>(`canvas[data-crew-layer="${layer}"]`);
@@ -39,7 +38,6 @@ function layers(): HTMLCanvasElement[] {
   });
 }
 
-/** What the ring has painted, across both layers. */
 export function paint(): Paint {
   const out = { count: 0, r: 0, g: 0, b: 0, x: 0, y: 0, digest: "" };
   for (const canvas of layers()) {
@@ -87,7 +85,6 @@ export function ringBlur(): number[] {
   return layers().map((canvas) => canvas.width - Math.round(canvas.offsetWidth * devicePixelRatio));
 }
 
-/** Pushes one recorded push to the window, as main forwards it. */
 function replay(bridge: FakeBridge, push: StoryPush): void {
   switch (push.channel) {
     case "inf:event":
@@ -105,7 +102,6 @@ function replay(bridge: FakeBridge, push: StoryPush): void {
 export type CrewWindow = {
   /** The crewmate goes out and goes idle, as the core told the window. */
   arrive(): void;
-  /** It is cancelled, as the core told the window. */
   cancel(): void;
 };
 

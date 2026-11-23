@@ -396,7 +396,6 @@ extension PhoneJourney {
                        "\(situation): Activity cannot be used and the card takes panel space; card \(card.frame), window \(window.frame), Activity \(activity.debugDescription)")
     }
 
-    /// The sidebar's width, once its frame holds still, with the card on the stage beside it.
     private func foldSidebarWidth(_ size: String) -> CGFloat {
         let sidebar = phoneSidebar(app), card = app.scrollViews["card-scroll"].firstMatch
         waitForSteadyTarget(sidebar)
@@ -405,7 +404,6 @@ extension PhoneJourney {
         return sidebar.frame.width
     }
 
-    /// Settings → Appearance through the bar's Settings button.
     private func openFoldAppearance() throws {
         tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
         let appearance = app.buttons["phone-settings-appearance"]

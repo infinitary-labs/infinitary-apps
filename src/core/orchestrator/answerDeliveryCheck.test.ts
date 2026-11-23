@@ -92,7 +92,6 @@ describe("the answer-delivery check across a restart", () => {
     expect(f.tasks.capture.getAsk("covered")?.delivery).toBe("covered");
     expect(f.tasks.capture.getAsk("silent")?.delivery).toBe("retrying");
     expect(f.retryRows()).toEqual(["silent"]);
-    // Booting again changes nothing.
     f.boot().reconcile([]);
     expect(f.retryRows()).toEqual(["silent"]);
     expect(f.notices).toEqual([]);
@@ -204,7 +203,6 @@ describe("the answer-delivery check across a restart", () => {
       workEnded: [{ id: "panels", title: "Build personal panels in isolation" }],
     });
     expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("retrying");
-    // A second sweep finds it already asked about.
     f.boot().sweep();
     expect(f.retryRows()).toEqual(["m1"]);
 

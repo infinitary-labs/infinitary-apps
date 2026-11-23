@@ -8,7 +8,6 @@ import { railStore } from "./railStore";
 
 const shell = () => useShellStore.getState();
 
-/** A personal snapshot holding one extension from `source`. */
 function snapshot(source: PersonalExtensionView["source"]) {
   return { extensions: [{ id: "clock", source } as PersonalExtensionView] };
 }
@@ -31,7 +30,6 @@ describe("the create-your-own-panel slot's click", () => {
     expect(shell().inputText).toBe(CREATE_PANEL_DRAFT);
     expect(shell().inputCaret).toBe(CREATE_PANEL_DRAFT.length);
     expect(shell().focusRequest).toBe(focus + 1);
-    // A second click changes no words.
     createPanelSlot.startAsk();
     expect(shell().inputText).toBe(CREATE_PANEL_DRAFT);
 

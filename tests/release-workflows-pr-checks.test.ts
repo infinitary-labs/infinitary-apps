@@ -59,7 +59,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ["pushed task branch", "push", "", "refs/heads/fm/task-ci-contract"],
   ])("runs the real Linux gate for %s", (_name, eventName, headRef, ref) => {
     const ci = loadCi();
-    // A pull request or a pushed branch, each one change, against a request.
     const change = eventName !== "workflow_dispatch";
     // The event must reach every job, not disappear behind a branch/path filter.
     expect(ci.on).toHaveProperty("pull_request", null);
@@ -466,7 +465,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(workflowValue(steps[desktop]?.if ?? "true", contexts), `${event} ${built}`).toBe(runs);
       expect(workflowValue(step?.if ?? "true", contexts), `${event} ${built}`).toBe(runs);
     }
-    // The source desktop workflow prepares its desktop through the same action.
     const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
       jobs: { "source-desktop": { steps: Step[] } };
     };
@@ -549,7 +547,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     return projects;
   };
-  /** Each vitest project's shards across the jobs' `pnpm test` commands, "whole" for an unsharded run. */
   const vitestShards = (jobs: { name: string; runs: string[] }[], projects: string[]) => {
     const shardsOf = new Map<string, string[]>();
     for (const { name, runs } of jobs) {
@@ -571,7 +568,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     }
     return shardsOf;
   };
-  /** Whether a project's shards are one whole run, or each part of one count once. */
   const coversOnce = (shards: string[]) => {
     const whole = shards.length === 1 && shards[0] === "whole";
     const cover = shards.map((_, index) => `${index + 1}/${shards.length}`);
@@ -623,7 +619,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           expect(tools, name).toBe(-1);
         }
       }
-      // The browser group installs its Chromium before its tests.
       const browser = groups.find(({ name }) => name.includes("Browser tests"))?.steps ?? [];
       const chromium = browser.findIndex(({ uses }) =>
         uses?.endsWith("/.github/actions/browser-chromium"),

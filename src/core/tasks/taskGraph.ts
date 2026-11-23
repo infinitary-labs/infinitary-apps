@@ -17,7 +17,6 @@ export class TaskGraphRefusal extends Error {
   override readonly name = "TaskGraphRefusal";
 }
 
-/** The derived state of an open row (design section 4.1, "derived on open"). */
 /** A `blocks` edge into a task, with the blocker it runs from. */
 export type BlockingEdge = { link: TaskLink; task: TaskRecord };
 
@@ -119,10 +118,6 @@ function refName(ref: SettleTaskRef): string {
 
 const MAX_HIERARCHY_WALK = 64;
 
-/**
- * How a link's `to` stands to its `from` - the end a `linked` event is
- * written on - and so how that event's task reads from the other end.
- */
 /** How an `unlinked` line names the edge that went, read from its `to`. */
 const LINK_WORDS: Record<TaskLinkType, string> = {
   blocks: "blocked by",
@@ -248,7 +243,6 @@ export class TaskGraph {
     return this.writer.store.earliestDonePartStart(parentId);
   }
 
-  /** When the last work this task waits on closed (`TaskRecordStore.latestBlockerClose`). */
   latestBlockerClose(id: string): number | undefined {
     return this.writer.store.latestBlockerClose(id);
   }
@@ -694,7 +688,6 @@ export class TaskGraph {
     return carried;
   }
 
-  /** The waits a task declared it needs merged (`shape.needs_merge`), by id. */
   private needsMerge(record: Pick<TaskRecord, "shape">): Set<string> {
     const ids = new Set<string>();
     for (const ref of record.shape?.needs_merge ?? []) {
@@ -783,7 +776,6 @@ export class TaskGraph {
     return base ? new Set([base.task.id, ...base.carried]) : new Set();
   }
 
-  /** `blockers` less the waits this task's approved base answers. */
   private unanswered(id: string, blockers: TaskRecord[]): TaskRecord[] {
     const answered = this.answeredByApproval(id, blockers);
     return answered.size ? blockers.filter((task) => !answered.has(task.id)) : blockers;
@@ -794,7 +786,6 @@ export class TaskGraph {
     return this.writer.store.listDeadBlocked();
   }
 
-  /** The uncleared blockers of a task. */
   waitingOn(id: string): TaskRecord[] {
     return this.unanswered(
       id,
@@ -1159,7 +1150,6 @@ export class TaskGraph {
     return this.moveWait(link, { fromId: carrierId, toId: waiterId }, carrierId, actor, at);
   }
 
-  /** One wait moved to `next`, its old link removed and the move on the waiter's timeline. */
   private moveWait(
     link: TaskLink,
     next: { fromId: string; toId: string },
@@ -1208,7 +1198,6 @@ export class TaskGraph {
     });
   }
 
-  /** The references in `record`'s needs_merge that name `id`. */
   private namedInNeedsMerge(record: TaskRecord | undefined, id: string): string[] {
     return (record?.shape?.needs_merge ?? []).filter((ref) => this.tasks.resolve(ref)?.id === id);
   }

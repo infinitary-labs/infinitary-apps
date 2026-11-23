@@ -150,7 +150,6 @@ export async function notarizeArtifact(
     try {
       recordNetwork(name, attempt, result);
     } catch {
-      /* retain original outcome */
     }
   };
   async function request(args: string[], name: string) {

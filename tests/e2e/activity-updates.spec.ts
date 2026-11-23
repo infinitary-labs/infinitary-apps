@@ -45,7 +45,6 @@ test("task updates show the key and content without a long title", async ({}, te
   const { userDataDir, homeDir } = launched;
   await launched.close();
   launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
-  // Collapsed after the restart, the dock shows the last line from before.
   await expect(dockSummaryLine(launched.page, "activity")).toBeVisible();
   const restored = reportLine(launched.page, key).last();
   await expect(restored).toBeVisible();

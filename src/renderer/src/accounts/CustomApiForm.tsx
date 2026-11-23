@@ -76,7 +76,6 @@ const emptyHeader = () => ({
 type FormHeader = ReturnType<typeof emptyHeader>;
 type Field = "name" | "address" | "http" | "key" | "headers" | "certificates" | "models" | "save";
 type Errors = Partial<Record<Field, string>>;
-/** A row's failure, and whether its ID, its sizes or the model itself is at fault. */
 type RowError = { text: string; at: "id" | "sizes" | "model" };
 /** An approval holds for the address it was given for, and returns with that address. */
 type Approvals = { http?: string; storage?: string; certificates?: string; exception?: string };
@@ -108,7 +107,6 @@ const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; readonly label: 
     },
   },
 };
-/** The standard design input, marked at fault in danger. */
 function FormInput({ invalid = false, ...rest }: InputProps & { invalid?: boolean }) {
   return (
     <Input
@@ -133,7 +131,6 @@ const hostOf = (value: string) => {
 const digits = (value: string) => Number(value.replace(/[^0-9]/g, "")) || 0;
 /** Marks where a part drawn in its own type sits in a sentence, so the sentence stays one message. */
 const PART_MARK = "\u0000";
-/** A sentence's words either side of its marked part. */
 const aroundPart = (text: string): [string, string] => {
   const [before = "", after = ""] = text.split(PART_MARK);
   return [before, after];
@@ -586,7 +583,6 @@ export function CustomApiForm({
         );
         setPausedDraft(failedDraft);
       };
-      // 1 · The form itself; nothing is sent.
       if (!label.trim()) found.name = m.accountsCustomApiNameNeeded();
       if (!baseUrl.trim()) found.address = m.accountsCustomApiAddressNeeded();
       if (!models.length) found.models = m.accountsCustomApiModelsNeeded();
@@ -616,7 +612,6 @@ export function CustomApiForm({
           found.http = m.accountsCustomApiHttpToSave();
           return stop();
         }
-        // 2 · Reach the server: its network, a draft, and its model list.
         const result = await api.connect(connectInput(models, read.destination));
         if (!keep(result.view)) return;
         failedDraft = result.view?.draftId;
@@ -656,7 +651,6 @@ export function CustomApiForm({
           setModels(current);
         };
         setModels(current);
-        // 3 · Test each model, one at a time, with its progress on its row.
         const testable = current.filter((row) => row.id.trim());
         let tested = false;
         for (const [index, row] of testable.entries()) {
@@ -699,7 +693,6 @@ export function CustomApiForm({
         // Nothing could be tested, and the list did not answer at this path either.
         if (!tested && noListHint) show(noListHint, found);
         if (Object.keys(found).length || Object.keys(rows).length) return stop();
-        // 4 · Saved and ready, unless the form was cancelled meanwhile.
         if (closed.current) return;
         setProgress(m.accountsCustomApiSaving());
         finish(await api.save(view.draftId, false));

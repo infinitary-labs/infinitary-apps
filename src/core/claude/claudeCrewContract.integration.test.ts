@@ -38,7 +38,6 @@ vi.setConfig({ testTimeout: 40_000 });
 const MODEL = "claude-haiku-4-5";
 /** Every crewmate prompt opens with it; the client's own housekeeping does not. */
 const CREWMATE = "You are a crewmate";
-/** What an upgrade adds to the crewmate's prompt, and to one tool's description. */
 const NEW_RULE = "A rule this build added for every crewmate.";
 const REWORDED = "This build reworded the report tool.";
 
@@ -67,7 +66,6 @@ function evidence(journey: string, observed: unknown): void {
   }
 }
 
-/** A crewmate's box: a throwaway HOME with the client in it, a working copy, and its task's record. */
 function crewmate() {
   const home = scratchDir("infinitary-claude-contract-home-");
   const installed = resolveClaudeExecutable();
@@ -159,7 +157,6 @@ it("starts a new conversation on the build's own instructions after an upgrade c
   const c = crewmate();
   const build = c.spec();
   const started = await c.turn(build, "Remember the word cobalt.");
-  // The same build reopens the same conversation, its earlier turn in it.
   const same = await c.turn(build, "Which word?", started.id);
   expect(same.id).toBe(started.id);
   expect(same.renewal).toBeUndefined();
@@ -176,9 +173,7 @@ it("starts a new conversation on the build's own instructions after an upgrade c
   // from, so its first answer is on the model the reopen asked for, never
   // the client's own default.
   expect(after.model).toBe(MODEL);
-  // The earlier conversation's record stays.
   expect(JSON.stringify(c.store.entries(started.id))).toContain("Remember the word cobalt.");
-  // The new conversation resumes on that build from here on.
   const again = await c.turn(next, "And again.", after.id);
   expect(again).toMatchObject({ id: after.id, renewal: undefined });
   expect(again.system).toContain(NEW_RULE);

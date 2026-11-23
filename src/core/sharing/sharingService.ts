@@ -100,7 +100,6 @@ export type SharingServiceOptions = {
   newInstallId?: () => string;
 };
 
-/** A phone event as a phone hands it: a declared `ios_*` name and its fields. */
 export type PhoneDiagnosticEvent = Extract<DiagnosticEvent, { name: PhoneDiagnosticEventName }>;
 
 export class SharingService {

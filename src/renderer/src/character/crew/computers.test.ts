@@ -487,7 +487,6 @@ describe("a program on another computer", () => {
       Math.hypot(p.x - c.x, p.y - c.y);
     expect(from(program("505"), mini)).toBeLessThan(mini.radius + 1);
     expect(from(program("923"), { x: 0, y: 0 })).toBeLessThan(from(program("923"), mini));
-    // Each live part circles its mark on its own computer's orbit.
     for (const [parent, part] of [
       ["505", "507"],
       ["923", "925"],
@@ -543,7 +542,6 @@ describe("a program running parts on two computers", () => {
         expect(mate.y).toBeCloseTo(node.y);
       }
     }
-    // Every crewmate stays where its work runs.
     for (const id of mini) expect(frame.crew.find((c) => c.id === id)?.computerId).toBe("mini");
   });
 
@@ -630,7 +628,6 @@ describe("the multi-computer stage (FI3-1519)", () => {
       6,
     );
     expect(by.a?.labelY).toBeCloseTo((by.a?.y ?? 0) + remoteRadius(6) + CLUSTER_LAYOUT.labelPx, 6);
-    // Every remote crewmate clears the home formation's edge by the gap.
     for (const c of frame.crew.filter((c) => c.computerId !== HOME_COMPUTER))
       expect(Math.hypot(c.x, c.y)).toBeGreaterThanOrEqual(homeEdge + gap - 1);
     // The scene reaches as far as its widest wing and its lowest cluster, clear air included.

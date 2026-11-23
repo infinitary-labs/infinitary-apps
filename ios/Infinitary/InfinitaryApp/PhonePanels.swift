@@ -115,7 +115,6 @@ import SwiftUI
     /// The panels' cards as entries of Home's row, after the computer's cards.
     var stackCards: [PhoneCard] { cards.entries.map(PhoneCard.panelCard) }
 
-    /// The panel a card of Home belongs to, as the computer lists it now.
     func panel(of entryID: String) -> PhonePanel? {
         cards.entry(entryID).flatMap { entry in all.first { $0.id == entry.panel } }
     }
@@ -196,14 +195,12 @@ import SwiftUI
         }
     }
 
-    /// Every open card's page hears its card as it now stands, and a card that left Home closes its page.
     private func syncCardPages() {
         for (entryID, host) in cardHosts {
             if let entry = cards.entry(entryID) { host.setCard(entry) } else { host.close(); cardHosts[entryID] = nil }
         }
     }
 
-    /// Only the shown card runs a page.
     private func releaseCardPages() {
         for (entryID, host) in cardHosts where entryID != shownCard { host.close(); cardHosts[entryID] = nil }
     }

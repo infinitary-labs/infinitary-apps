@@ -16,7 +16,6 @@ describe("a task's title", () => {
     const refusal = taskTitleRefusal(FILED);
     expect(refusal).toContain(`${FILED.length} characters`);
     expect(refusal).toContain(`at most ${TASK_TITLE_MAX}`);
-    // A title that fills the room exactly, and one inside it, pass whole.
     expect(taskTitleRefusal(FILED.slice(0, TASK_TITLE_MAX))).toBeUndefined();
     expect(taskTitleRefusal("Name the first mate's computer in timelines")).toBeUndefined();
   });

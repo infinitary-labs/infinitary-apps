@@ -113,7 +113,6 @@ describe("PanelEvents", () => {
       ],
     });
     expect(f.handed).toEqual([{ event: "item_arrived", items: 2 }]);
-    // A look with nothing new writes nothing.
     f.at(4);
     await f.events.tick();
     expect(f.handed).toHaveLength(1);

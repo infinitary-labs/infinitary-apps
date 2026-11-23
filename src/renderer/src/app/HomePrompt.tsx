@@ -322,7 +322,6 @@ export const HomePrompt = memo(function HomePrompt() {
         style={{
           position: "absolute",
           left: "50%",
-          // Hung 10px under the input's pinned bottom.
           top: "calc(100% - var(--prompt-floor))",
           paddingTop: 10,
           transform: "translateX(-50%)",

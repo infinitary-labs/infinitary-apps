@@ -452,20 +452,17 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
         const at = s.records.findIndex((held) => isPanelCard(held, panel, id));
         const active = shownEntry(s);
         if (front) {
-          // The captain's own click or key: at the front, shown, seen.
           return {
             ...toFront(s, { panelCard: entry }, (held) => isPanelCard(held, panel, id)),
             unreadCardIds: s.unreadCardIds.filter((unread) => unread !== entryId),
           };
         }
         if (at >= 0) {
-          // Revised in place: where it is, as it is, with its new data.
           const records = s.records.map((held, index) =>
             index === at ? { panelCard: entry } : held,
           );
           return { records };
         }
-        // Raised on its own: behind the entry he is reading, marked new.
         const records: OpenRecord[] = [{ panelCard: entry }, ...s.records];
         const shown = stackOf({ ...s, records });
         const cardIndex = active ? indexKeeping(shown, active) : 0;

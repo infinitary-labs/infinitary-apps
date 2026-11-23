@@ -86,7 +86,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
 
   await runFromSearch(app, page, "settings.integrations");
   const tab = settingsSection(page, "integrations");
-  // Its own section, off until the person turns it on, says what it is.
   const section = tab.locator("[data-inbox-section]");
   await expect(section).toHaveAttribute("data-inbox-section", "off");
   await expect(section).toContainText(INBOX_WORDS.intro);
@@ -101,7 +100,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await expect(door).toContainText(INBOX_WORDS.exampleNote);
   await expect(door.locator("[data-inbox-setup]")).toContainText("setup");
 
-  // The short name's link, by one press, into the folder this run names.
   const link = door.getByRole("button", { name: INBOX_WORDS.link });
   await focusOn(link);
   await pressKey(link, "Enter");
@@ -125,7 +123,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
     )
     .toEqual([[INBOX_WORDS.ruleName, "enabled"]]);
 
-  // The line as Settings shows it, with a request id and a source, answers at once.
   const words = "Deploy of the website finished";
   const dropLine = `${line} note --request-id deploy-7 --source ci "${words}"`;
   const dropped = await sh(dropLine, process.env.PATH ?? "");
@@ -162,7 +159,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
     ),
   );
 
-  // Once the turn handled it, the receipts read it handled, by the short name.
   const receiptsLine = line.replace(/'[^']*infinitary-axi'$/, `${INFINITARY_COMMAND} receipts`);
   await expect
     .poll(
@@ -210,7 +206,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
 
   const rules = () => page.evaluate(async () => (await window.infinitary.automation.list()).rules);
 
-  // The rule paused in Automation: the box says the first mate is not told.
   const [rule] = await rules();
   if (!rule) throw new Error("turning the inbox on added no rule");
   await page.evaluate((id) => window.infinitary.automation.setState(id, "pause"), rule.id);
@@ -220,7 +215,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await page.evaluate((id) => window.infinitary.automation.setState(id, "resume"), rule.id);
   await expect(ruleLine).toHaveAttribute("data-inbox-rule", "told");
 
-  // Switched off, scripts get an error, and the key and the notes stay.
   await focusOn(toggle);
   await pressKey(toggle, "Space");
   await expect(section).toHaveAttribute("data-inbox-section", "off");
@@ -230,7 +224,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   expect(refused.exitCode).not.toBe(0);
   expect(refused.stdout).toContain(`${INFINITARY_COMMAND} is off`);
 
-  // On again, the same line works, the one rule listens, and the first note is still there.
   await pressKey(toggle, "Space");
   await expect(door).toBeVisible();
   expect(await door.locator("[data-inbox-line]").textContent()).toBe(line);
@@ -243,12 +236,10 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   const kept = await sh(receiptsLine, `${linkDir}:${process.env.PATH ?? ""}`);
   expect(kept.stdout).toContain(receipt.event);
 
-  // The rule deleted in Automation: the box says no rule listens.
   await page.evaluate((id) => window.infinitary.automation.delete(id), rule.id);
   await expect(ruleLine).toHaveAttribute("data-inbox-rule", "none");
   await expect(ruleLine).toContainText(INBOX_WORDS.noRule);
 
-  // Delete in the Data section, confirmed by keys: the notes and the key go, and the inbox is off.
   const remove = settingRow(page, "delete-inbox-notes");
   await expect(remove).toContainText(INBOX_WORDS.deleteTitle);
   const deleteButton = remove.getByRole("button", { name: INBOX_WORDS.delete });

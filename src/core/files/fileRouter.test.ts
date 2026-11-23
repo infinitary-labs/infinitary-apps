@@ -197,7 +197,6 @@ describe("the files command at the home", () => {
         text: `copied ${join(mini.home, "Documents", "clips.csv")} from Kun's Mac mini into its hand-over folder (8.0 MB)`,
       },
     ]);
-    // Neither computer keeps a copy once it is delivered.
     expect(leftIn(mini.stagingDir)).toEqual([]);
     expect(leftIn(fetchedDir)).toEqual([]);
   });
@@ -353,11 +352,9 @@ describe("the files command at the home", () => {
     expect(leftIn(handover.get("task-builder") ?? "")).toEqual([
       handoverFileName("shared.txt", sha256(shared)),
     ]);
-    // The home never read a file for that user, and that computer let each copy go.
     expect(homeReads).not.toHaveBeenCalled();
     expect(leftIn(builder.stagingDir)).toEqual([]);
 
-    // A listing as that user shows the captain's private folders as protected.
     const listing = await files.list("home:~");
     const kinds = Object.fromEntries(
       ((listing.data?.entries ?? []) as { name: string; kind: string }[]).map((entry) => [

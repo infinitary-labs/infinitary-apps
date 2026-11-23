@@ -82,7 +82,6 @@ describe("the main build's bundled packages", () => {
     );
     const built = await bundle(repo, entry, join(app, "out", "main"));
     const text = readFileSync(built, "utf8");
-    // Bundled, not loaded from the package at run time.
     expect(text).not.toMatch(/from\s*"@earendil-works\/pi-coding-agent"/);
 
     const agent = (await import(pathToFileURL(built).href)) as {

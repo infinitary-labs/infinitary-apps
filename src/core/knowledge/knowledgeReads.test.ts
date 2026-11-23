@@ -53,7 +53,6 @@ function fixture(options: { store?: KnowledgeStore } = {}) {
   return { root, service, crew, kept };
 }
 
-/** Two concepts, a claim between them, and a second finding that contradicts it. */
 async function seed(f: ReturnType<typeof fixture>) {
   const concept = (title: string) =>
     f.kept(f.crew(), {

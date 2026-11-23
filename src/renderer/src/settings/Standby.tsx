@@ -35,7 +35,6 @@ export function useStandbyViews(): StandbyViews {
   return views;
 }
 
-/** A computer's copy in one line under its summary, with a count in mono when it counts. */
 export function StandbyLine({ view, now }: { view: StandbyView; now: number }) {
   const count =
     view.state === "copying" && view.total && view.done !== undefined

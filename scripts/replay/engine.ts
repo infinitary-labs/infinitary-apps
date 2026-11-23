@@ -146,10 +146,6 @@ import {
 } from "./translation.ts";
 import { type ReplayWindow, windowTables } from "./window.ts";
 
-// --------------------------------------------------------------------------
-// Sources and report
-// --------------------------------------------------------------------------
-
 export type ReplaySources = {
   /** The session's name in reports and in the baseline file. */
   name: string;
@@ -275,10 +271,6 @@ export type SessionReport = {
     task_shapes: { title: string; deliverable: string | null; kind: string | null }[];
   };
 };
-
-// --------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------
 
 /**
  * A program's script, never run (INF-799 piece 3): the recording holds only
@@ -415,10 +407,6 @@ class ReplayClock {
 
 const realSleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// --------------------------------------------------------------------------
-// The replay
-// --------------------------------------------------------------------------
-
 type PlayedTurn = {
   cardsShown: string[];
   actions: number;
@@ -554,8 +542,6 @@ class Replay {
     }
   }
 
-  // ---- loading -----------------------------------------------------------
-
   private load(): void {
     const window = this.sources.window ?? null;
     this.tables = windowTables(
@@ -576,8 +562,6 @@ class Replay {
       0,
     );
   }
-
-  // ---- wiring the real host ----------------------------------------------
 
   private wire(): void {
     const workspace = isolatedWorkspace(this.paths, true);
@@ -729,8 +713,6 @@ class Replay {
     const replayKey = this.tasks.get(replay)?.key;
     if (key && replayKey) this.ids.alias(key, replayKey);
   }
-
-  // ---- the Firstmate's recorded turns ------------------------------------
 
   private firstmateSession(served: readonly BoundTool[]): ModelSession {
     const tools = new Map(served.map((tool) => [tool.name, tool]));
@@ -1113,8 +1095,6 @@ class Replay {
     return played;
   }
 
-  // ---- the plan-to-build handoff -----------------------------------------
-
   private approvalLabelMap: Map<string, boolean> | null = null;
 
   /** The hand labels, read once per engine; an unreadable file is a loud failure, never an empty sample. */
@@ -1221,8 +1201,6 @@ class Replay {
       this.refusedCardChoices.push(card.title);
     }
   }
-
-  // ---- inputs ------------------------------------------------------------
 
   private async apply(event: TimelineEvent): Promise<void> {
     switch (event.type) {
@@ -1384,9 +1362,6 @@ class Replay {
     this.fidelity.settle_timeouts += 1;
   }
 
-  // ---- scoring -----------------------------------------------------------
-
-  /** Every recorded crewmate turn the replay never played, by crewmate and turn, and why. */
   private unplayedCrewTurns(): SessionReport["details"]["unplayed_crewmate_turns"] {
     const unplayed: SessionReport["details"]["unplayed_crewmate_turns"] = [];
     for (const [alias, recording] of [...this.crew].sort(([a], [b]) => a.localeCompare(b))) {
@@ -1431,7 +1406,6 @@ class Replay {
     return "unserved";
   }
 
-  /** Whether the replay ever showed a card with this title on the crewmate's task. */
   private everShown(alias: string, title: string): boolean {
     const taskId = this.ids.toReplay.get(alias);
     if (!taskId) return false;
@@ -1578,7 +1552,6 @@ class Replay {
   }
 }
 
-/** Replay one recorded captain session against the current code and score it. */
 export async function replaySession(sources: ReplaySources): Promise<SessionReport> {
   return new Replay(sources).run();
 }

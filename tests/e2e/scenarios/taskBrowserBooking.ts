@@ -144,7 +144,6 @@ function reviewCard(
   };
 }
 
-/** The booking journey's next scripted step, from the wakes and browser answers so far. */
 function taskBrowserBookingStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(
     /book the Lisbon flight at (http:\/\/aurora\.localhost:\d+\/) for ([A-Z][a-z]+ [A-Z][a-z]+)/,
@@ -338,10 +337,8 @@ export const MOCK_LOST_SAID = {
 } as const;
 export const MOCK_LOST_ASKED_AGAIN_REPORT =
   "My browser was gone when the captain chose to check, so I opened My bookings again and asked anew.";
-/** The decision that says the outcome is unknown. */
 export const unknownCardTitle = (site: string): string => `The payment on ${site} is unknown`;
 
-/** The decision that asks the captain to check a payment whose outcome is unknown, in the browser. */
 function unknownCard(site: string, id: string, lead: string): ScriptedCall {
   return {
     name: "emit_card",
@@ -367,7 +364,6 @@ function unknownCard(site: string, id: string, lead: string): ScriptedCall {
   };
 }
 
-/** The lost payment's next scripted step, from the wakes and browser answers so far. */
 function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/pay for the held Lisbon fare at (http:\/\/aurora\.localhost:\d+\/)pay/);
   if (!ask) return undefined;
@@ -477,7 +473,6 @@ export const MOCK_UNPAID_PICTURE = "unpaid-payment";
 /** The card fields the crewmate reads after the return, by their labels on the page. */
 export const MOCK_UNPAID_FIELDS = ["Card number", "Expiry", "Security code"] as const;
 
-/** The unpaid payment's next scripted step, from the wakes and browser answers so far. */
 function taskBrowserUnpaidStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/prepare the Lisbon payment at (http:\/\/aurora\.localhost:\d+\/)pay/);
   if (!ask) return undefined;
@@ -519,7 +514,6 @@ function taskBrowserUnpaidStep(body: string): ScriptedCall[] | undefined {
         ),
       ];
     case 2: {
-      // Each field as the fresh look read it: its value, hidden, or not there.
       const lines = (answers[0] ?? "").split("\n").map((line) => line.trim());
       const read = MOCK_UNPAID_FIELDS.map((label) => {
         const line = lines.find((text) => text.startsWith(`textbox "${label}`));
@@ -536,7 +530,6 @@ function taskBrowserUnpaidStep(body: string): ScriptedCall[] | undefined {
   }
 }
 
-/** Each booking journey's marker and its next step. */
 const JOURNEYS: ReadonlyArray<
   [marker: string, step: (body: string) => ScriptedCall[] | undefined]
 > = [
@@ -545,7 +538,6 @@ const JOURNEYS: ReadonlyArray<
   [TASK_BROWSER_UNPAID_MARKER, taskBrowserUnpaidStep],
 ];
 
-/** Booking and paying in a task's browser, for the crewmate whose brief names one. */
 export const taskBrowserBooking: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {

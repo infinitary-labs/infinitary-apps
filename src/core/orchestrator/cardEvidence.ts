@@ -63,7 +63,6 @@ type Opened = {
   predecessor?: string;
 };
 
-/** A card write with the lifecycle and offer it carries (`CardEvidence.stamp`). */
 type Stamped = { card: Card; offer: boolean; opened?: Opened };
 
 export class CardEvidence {
@@ -542,7 +541,6 @@ function offerFingerprint(card: Card): string {
 /** The shell's submission metadata, read so that nothing it says can refuse a choice. */
 type SubmissionReading = {
   submission?: CardSubmission;
-  /** Something arrived, and it could not be read. */
   malformed: boolean;
   questions?: CardQuestion[];
   questionsGap?: "no-fresh-reading" | "too-large" | "invalid";

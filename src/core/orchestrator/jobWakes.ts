@@ -9,7 +9,6 @@
 import { formatDurationShort } from "@shared/quotaSignals";
 import type { KindWords, TypedWake, WakeFacts, WakeLane, WakeTask } from "./wakes";
 
-/** The facts of a background job's wakes. */
 export type JobFacts =
   | {
       /** A background job ran past its bound and no longer counts as the task moving. */
@@ -77,7 +76,6 @@ export function unnamedBackgroundWork(computer?: string): string {
   return computer ? `background work on ${computer}` : "background work in the Claude client";
 }
 
-/** A running job in a steer's words: its age and its command. */
 function jobWords(job: { command: string; runMs: number }): string {
   return `background job is still running after ${formatDurationShort(job.runMs)}: "${job.command}".`;
 }
@@ -99,7 +97,6 @@ export function checkBackAsk(
   };
 }
 
-/** The job bound's one wake, once per job. */
 export function jobBoundWake(
   task: WakeTask,
   job: { jobId: string; command: string; startedAt: number },
@@ -142,7 +139,6 @@ function formatJobDuration(ms: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-/** A background job's wakes, worded. */
 export const JOB_WORDS: KindWords<JobFacts> = {
   "job-bound": (facts) =>
     `[fm-op] task ${facts.task.id} "${facts.task.title}" has had a background job running for ${Math.round((facts.runMs / 3_600_000) * 10) / 10} hours: "${facts.command}". It no longer counts as the task moving, so the idle ladder now watches the task; the job itself keeps running.`,

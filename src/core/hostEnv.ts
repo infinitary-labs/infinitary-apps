@@ -37,7 +37,6 @@ export type LoginPathCapture = {
    */
   source: LoginPathSource;
   entries: readonly string[];
-  /** Why the interactive ask did not answer, when it did not. */
   interactiveMiss?: LoginShellMiss;
   /** Why the login-only ask did not answer, when it was needed and did not. */
   loginMiss?: LoginShellMiss;
@@ -88,12 +87,10 @@ export function refreshLoginPath(env: NodeJS.ProcessEnv = process.env): Promise<
   return captureLoginPath(env);
 }
 
-/** What the one capture found, or nothing while it has not finished. */
 export function loginPathCapture(): LoginPathCapture | undefined {
   return captured;
 }
 
-/** Forget the capture. For tests, which plant their own shell. */
 export function resetLoginPathForTests(): void {
   captured = undefined;
   capturing = undefined;

@@ -46,7 +46,6 @@ test.afterEach(async () => {
   for (const app of apps.splice(0)) await app.close();
 });
 
-/** A project where it lives, a bare repository on this disk, and the home's clone of it. */
 function projectWithOrigin(): string {
   const root = scratchDir("infinitary-e2e-task-move-");
   const origin = join(root, "origin.git");
@@ -81,7 +80,6 @@ function seedGrokKey(dir: string): void {
   ]);
 }
 
-/** The stand-in's models, with Grok's crew model answering there too. */
 function grokModels(port: number): string {
   const config = JSON.parse(mockModelsJson(port));
   config.providers.xai = {
@@ -126,7 +124,6 @@ async function homeAndComputer() {
   restores.push(replayHelperCpuAvailable());
   const invite = await page.evaluate(() => window.infinitary.devices.invite({ kind: "work" }));
   const dataDir = scratchDir("infinitary-e2e-computer-");
-  // The computer is signed in to the same Grok key, its model answering at the stand-in.
   const port = app.mockProvider?.port;
   if (!port) throw new Error("The stand-in provider did not start.");
   seedGrokKey(dataDir);
@@ -166,7 +163,6 @@ async function homeAndComputer() {
   return { app, page, deviceId: joined.grant.deviceId, dataDir };
 }
 
-/** The captain's words, answered by a Firstmate turn that makes `calls`; the tools' results. */
 async function ask(app: LaunchedApp, words: string, calls: ScriptedCall[]): Promise<string[]> {
   if (!app.mockProvider) throw new Error("Asking Firstmate needs the mock provider");
   await waitForFirstmateIdle(app.page);
@@ -186,7 +182,6 @@ async function ask(app: LaunchedApp, words: string, calls: ScriptedCall[]): Prom
   return answer.outcome().results;
 }
 
-/** The started task with `title`, from the board. */
 async function started(page: Page, title: string): Promise<{ key: string; id: string }> {
   const { tasks } = await page.evaluate(() => window.infinitary.tasks.board());
   const task = tasks.find((each) => each.title === title);

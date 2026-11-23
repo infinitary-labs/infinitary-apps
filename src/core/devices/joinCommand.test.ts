@@ -166,7 +166,6 @@ const LAUNCHER = {
 /** This computer's version, as the command carries it; a test's own. */
 const VERSION = "0.13.0";
 
-/** The line that updates an Ubuntu package there, at this version's published address. */
 const UPDATE_LINE =
   linuxUpdateCommand(
     { chip: "x64", package: "deb" },
@@ -184,8 +183,6 @@ const MAC = {
   version: VERSION,
 } as const;
 
-/** Runs a command as Terminal would, typing `answer` when it asks; answers its words and exit. */
-/** A folder whose `uname` says Darwin, first on the search path; none on a Mac. */
 function macUname(): string {
   if (process.platform === "darwin") return "";
   const bin = scratchDir("infinitary-command-mac-bin-");
@@ -1227,7 +1224,6 @@ describe("the command that runs work as another Windows account on this PC", () 
 });
 
 describe("getting Firstmate from this Mac", () => {
-  /** One request to the fetch path, as a client that checks nothing; answers its status and body. */
   function fetchApp(
     at: string,
     options: { method?: string; body?: string; headers?: Record<string, string> } = {},

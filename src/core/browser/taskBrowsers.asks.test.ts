@@ -80,7 +80,6 @@ describe("a permission the captain is asked", () => {
     const clipboard = asks(page, "clipboard");
     await flush();
     expect(browsers.fact("t1")).toMatchObject({ ask: { id: 2, kind: "clipboard" } });
-    // An answer to an ask that is gone changes nothing.
     expect(await browsers.answerAsk("t1", handle, 1, "allow")).toEqual({
       ok: false,
       text: "The page no longer asks for that.",
@@ -119,7 +118,6 @@ describe("a passkey the captain's site asks for", () => {
       told: { kind: "passkey", site: SITE, where: "engine" },
     });
     expect(browsers.fact("t1")).not.toHaveProperty("ask");
-    // What the captain was told goes with control.
     await browsers.returnControl("t1", handle);
     expect(browsers.fact("t1")).not.toHaveProperty("told");
   });

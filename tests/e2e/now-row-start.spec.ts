@@ -130,7 +130,6 @@ test("a backlog row's Start starts its task by keys and by the pointer, and a bl
         reason && !reason.ok ? reason.text : "",
       );
       await page.keyboard.press("Enter");
-      // The press writes nothing: the task still waits in the backlog.
       expect(await status(page, "rs-blocked")).toEqual({ status: "open", dispatched: false });
       await expect.poll(() => nowRowGroup(page, key("rs-blocked"))).toBe("backlog");
     });

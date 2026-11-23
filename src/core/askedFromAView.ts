@@ -30,7 +30,6 @@ export function asAView<T>(
   );
 }
 
-/** Whether the work running now began with a paired view's request. */
 export function askedFromAView(): boolean {
   return asking.getStore() !== undefined;
 }
@@ -44,7 +43,6 @@ export function askingViewHas(name: FoldedInto16): boolean {
   return hasSince16(from?.version, from?.changes, name);
 }
 
-/** The paired device whose request began the work running now, if a view's did. */
 export function askingView(): string | undefined {
   return asking.getStore()?.view;
 }

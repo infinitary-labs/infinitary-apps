@@ -59,7 +59,6 @@ test("a first reply that opens the thread beside a full card leaves it following
   await openWindow(bridge);
   await expect.element(page.getByRole("region", { name: TITLE, exact: true })).toBeVisible();
 
-  // The captain's first reply opens the thread beside the card.
   const field = inShown("[data-card-reply] textarea");
   await userEvent.click(field);
   await userEvent.fill(field, REPLY);

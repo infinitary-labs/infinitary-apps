@@ -59,7 +59,6 @@ function invalid(message: string, help: string[] = []): never {
   throw new AxiError(message, "VALIDATION_ERROR", help);
 }
 
-/** Usage help for a command whose arguments did not fit. */
 function usage(command: string, spec: string): string[] {
   return [`Usage: ${BROWSER_COMMAND} ${spec}`, `Run \`${BROWSER_COMMAND} ${command} --help\``];
 }
@@ -82,7 +81,6 @@ function isRef(value: string): boolean {
   return REF_ARG.test(value.trim());
 }
 
-/** A positive whole number argument, such as a line or a page. */
 function whole(value: string | undefined, what: string, command: string, spec: string): number {
   const number = value !== undefined && /^\d+$/.test(value) ? Number(value) : Number.NaN;
   if (!Number.isSafeInteger(number) || number < 1)
@@ -90,7 +88,6 @@ function whole(value: string | undefined, what: string, command: string, spec: s
   return number;
 }
 
-/** Words after the arguments a command takes, as one text: quoted or not. */
 function words(positional: readonly string[], from: number): string | undefined {
   return positional.length > from ? positional.slice(from).join(" ") : undefined;
 }
@@ -101,7 +98,6 @@ function none(args: AxiArguments, command: string, spec: string): void {
   }
 }
 
-/** The help an answer ends with: how to read on, then the rules that apply to it. */
 function helpOf(answer: ChannelAnswer, rules: readonly string[]): string[] {
   const next = answer.next ?? [];
   const picture = answer.picture
@@ -111,7 +107,6 @@ function helpOf(answer: ChannelAnswer, rules: readonly string[]): string[] {
   return [...next, ...picture, ...rules, ...signedIn];
 }
 
-/** A page answer: its facts, what it did, then the body as the browser wrote it. */
 function pageOutput(answer: ChannelAnswer, rules: readonly string[]): string {
   const facts = answer.page;
   if (!facts) return messageOutput(answer, rules);
@@ -133,7 +128,6 @@ function pageOutput(answer: ChannelAnswer, rules: readonly string[]): string {
   return parts.join("\n");
 }
 
-/** An answer with no page facts: a stop, a page list, or words alone. */
 function messageOutput(answer: ChannelAnswer, rules: readonly string[]): string {
   if (answer.pages) {
     return encode({
@@ -149,7 +143,6 @@ function messageOutput(answer: ChannelAnswer, rules: readonly string[]): string 
   return encode({ browser: answer.text, ...(rules.length > 0 ? { help: rules } : {}) });
 }
 
-/** The console or network list as compact rows, with its totals and an explicit zero. */
 function diagnosticsOutput(list: NonNullable<ChannelAnswer["diagnostics"]>): string {
   if (list.show === "console") {
     const counts = Object.entries(list.counts)
@@ -190,7 +183,6 @@ function refusal(answer: ChannelAnswer, lead = ""): never {
   );
 }
 
-/** What one command prints for the app's reply: the answer, or how a kept one stands. */
 export function renderReply(
   command: string,
   reply: BrowserReply,
@@ -228,7 +220,6 @@ export function renderReply(
   }
 }
 
-/** One command of the table: its usage, words, flags and the operation it asks. */
 function command(
   spec: string,
   description: string,
@@ -245,7 +236,6 @@ const OPEN_RULES = [BROWSER_RULES.signIn];
 const SCROLL_DIRECTIONS = ["up", "down", "top", "bottom"] as const;
 type ScrollDirection = (typeof SCROLL_DIRECTIONS)[number];
 
-/** Run one browser operation and print its answer. */
 async function ask<Op extends BrowserOp>(
   browser: BrowserConnection,
   name: string,

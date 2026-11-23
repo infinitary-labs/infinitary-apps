@@ -2,9 +2,7 @@ import type { ManagedAuth } from "./auth";
 
 export type QuotaResponse = {
   status: number;
-  /** The parsed JSON body, for a `json` request. */
   json?: unknown;
-  /** The raw body, for a `bytes` request. */
   bytes?: Uint8Array;
   /** Response headers, lower-cased. gRPC-web puts its verdict here. */
   headers?: Record<string, string>;

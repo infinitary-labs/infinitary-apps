@@ -184,7 +184,6 @@ describe("timingsFromJourneyReports", () => {
   it("keeps the record's times for what a run did not measure", () => {
     const kept = readJourneyTimings();
     expect(timingsFromJourneyReports([], [], kept)).toEqual(kept);
-    // An incomplete Linux report measures nothing.
     const linux = { ...fixture("linux-report.json"), complete: false };
     expect(timingsFromJourneyReports([linux], [], kept).linux).toBe(kept.linux);
   });

@@ -39,7 +39,6 @@ export const ALONE_RESULTS = "alone-results.json";
 /** The lanes whose tests overlap in the full run (tests/e2e/lanes.ts); desktop stays serial. */
 const PARALLEL_LANES = new Set(["renderer", "application"]);
 
-/** One test the pass runs by itself. */
 export type AloneTest = { file: string; line: number; lane: string; title: string; tags: string[] };
 
 export type AloneResult = AloneTest & {
@@ -63,7 +62,6 @@ type ListSuite = {
   suites?: ListSuite[];
 };
 
-/** A spec file that shares one app across its tests, from its own source. */
 export function sharesOneApp(source: string): boolean {
   return /\bbeforeAll\(/.test(source);
 }
@@ -103,7 +101,6 @@ export function laterTests(report: ListReport): AloneTest[] {
   return later.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
 
-/** The tests that carry `tag`, or every test when none is named. */
 export function withTag(tests: AloneTest[], tag: string | undefined): AloneTest[] {
   return tag ? tests.filter((test) => test.tags.includes(tag)) : tests;
 }
@@ -124,7 +121,6 @@ export function shardTests(tests: AloneTest[], shard: string | undefined): Alone
   return tests.filter((_, position) => position % total === index - 1);
 }
 
-/** Whether a run's JSON result says its tests skipped and none ran. */
 export function skippedAll(report: { stats?: { expected?: number; skipped?: number } }): boolean {
   return (report.stats?.skipped ?? 0) > 0 && (report.stats?.expected ?? 0) === 0;
 }
@@ -161,7 +157,6 @@ export function summary(results: AloneResult[]): string {
   return lines.join("\n");
 }
 
-/** The files the pass covers: the named ones, or every spec file on CI. */
 function specFiles(named: string[]): string[] {
   if (named.length > 0) return named.map((file) => relative(REPO_ROOT, resolve(file)));
   if (!process.env.CI) {
@@ -206,7 +201,6 @@ function readReport(json: string): { stats?: { expected?: number; skipped?: numb
   }
 }
 
-/** The first error a run's JSON result names, whether a test's or the run's own. */
 function firstError(json: string): string | undefined {
   type Result = { errors?: Array<{ message?: string }> };
   type Suite = { specs?: Array<{ tests: Array<{ results: Result[] }> }>; suites?: Suite[] };
@@ -288,7 +282,6 @@ function runAlone(test: AloneTest, out: string, tag: string | undefined): Promis
   });
 }
 
-/** Runs `tests` at most `width` at a time, in order, reporting each as it ends. */
 async function pool(
   tests: AloneTest[],
   width: number,

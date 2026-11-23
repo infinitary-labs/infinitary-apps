@@ -322,7 +322,6 @@ describe("CrewSupervisor", () => {
       startedOn(fellBack.handle.taskId, { named: "claude-fable-5-1", took: "fm-mock/mock-1" }),
     ]);
     expect(fellBack.model).toBe("fm-mock/mock-1");
-    // Nothing named: no wake names a model.
     const plain = await spawn(fakeCrewmate({ model: fable }));
     expect(plain.wakes).toEqual([]);
   });
@@ -480,7 +479,6 @@ describe("CrewSupervisor", () => {
       boot.finishPrompt();
       await tick();
 
-      // The first mate moves it; the next launch reopens it where it moved.
       expect(
         (
           await reopened.fresh.moves.requestMove(taskId, {
@@ -532,7 +530,6 @@ describe("CrewSupervisor", () => {
       expect(notices()).toEqual([
         `[fm-op] ${key} "Orbit prototype" now answers on Opus 5.5, not on Fable 5.1, the model it asked for: its conversation opened on Opus 5.5 although the app asked for Fable 5.1. The captain named Fable 5.1 for this task.`,
       ]);
-      // Back on Fable and off it again: the same move is told once.
       crewmate.emit({ type: "model_served", model: fable });
       crewmate.emit({ type: "model_served", model: opus });
       expect(notices()).toHaveLength(1);
@@ -1337,7 +1334,6 @@ describe("CrewSupervisor", () => {
       actions: [],
     });
     await tick();
-    // A fresh supervisor over the same database (a restart).
     const fresh = reboot(
       {
         paths,

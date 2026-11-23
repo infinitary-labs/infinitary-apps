@@ -12,7 +12,6 @@ describe("requestedRange", () => {
     expect(requestedRange("bytes=0-9", 100)).toEqual({ start: 0, end: 9 });
     expect(requestedRange("bytes=90-", 100)).toEqual({ start: 90, end: 99 });
     expect(requestedRange("bytes=-10", 100)).toEqual({ start: 90, end: 99 });
-    // A range past the end is cut to the file; a suffix longer than it is the whole file.
     expect(requestedRange("bytes=95-500", 100)).toEqual({ start: 95, end: 99 });
     expect(requestedRange("bytes=-500", 100)).toEqual({ start: 0, end: 99 });
   });

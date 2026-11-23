@@ -61,7 +61,6 @@ afterEach(async () => {
   await Promise.all(stores.splice(0).map((store) => store.flushed()));
 });
 
-/** A crewmate in a box of its own, opened through a factory that runs the SDK's query (or the one handed in). */
 function boxedCrewmate(sdkQuery?: ClaudeQueryFactory) {
   const home = scratchDir("infinitary-claude-time-limit-home-");
   const client = resolveClaudeExecutable();
@@ -107,7 +106,6 @@ type ServedLimits = {
   background: { default: number; ceiling: number } | undefined;
 };
 
-/** Runs one turn of the crewmate and reads the limits its Bash tool was served with. */
 async function servedLimits(crewmate: ReturnType<typeof boxedCrewmate>): Promise<ServedLimits> {
   const from = api.requests.length;
   const session = await crewmate.factory.open(crewmate.spec);

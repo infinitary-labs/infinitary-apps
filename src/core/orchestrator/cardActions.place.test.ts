@@ -30,7 +30,6 @@ const MINI = { id: "device-mini", name: "Sam's Mac mini", system: "macos" as con
 const HOME_NAME = "Sam's MacBook Pro";
 const PHONE = { id: "device-phone", name: "Sam's iPhone", system: "ios" as const };
 
-/** A started task whose crewmate asks the captain to be at the Mac mini. */
 async function askedAtTheMini(devices: (typeof MINI | typeof PHONE)[]) {
   // The crew's own clock, which emit_card's answer reads too.
   const places = new CaptainPlaces({

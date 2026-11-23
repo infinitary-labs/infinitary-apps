@@ -78,7 +78,6 @@ function movedOn(status: UpdateStatus): boolean {
 
 /** The window opened beside a first mate a command started, which installs this Mac's copy. */
 export type UpdatingWindow = {
-  /** Whether the window is open to ask. */
   open: () => boolean;
   /** Asks the window one step of its own update; rejects when it is gone. */
   ask: (step: "status" | "install" | "later", from?: string) => Promise<UpdateStatus>;
@@ -87,7 +86,6 @@ export type UpdatingWindow = {
 };
 
 export type HomeUpdatesOptions = {
-  /** This first mate's own updater. */
   updates: UpdateChecker;
   /**
    * Present where the window installs the update (a Mac whose first mate a

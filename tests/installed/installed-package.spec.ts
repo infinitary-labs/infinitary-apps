@@ -29,7 +29,6 @@ test.afterAll(async () => {
   await launched?.close();
 });
 
-/** A project with one commit, made with the system's git. */
 function project(): string {
   const dir = scratchDir("infinitary-installed-repo-");
   const git = (...args: string[]) => execFileSync("git", ["-C", dir, ...args]);

@@ -79,7 +79,6 @@ test("a newly connected sensed account shows reading…, never the no-reader sen
     await expect(row.getByText(SUBSCRIPTIONS_WORDS.noReader)).toHaveCount(0);
     await expect(row.getByRole("img", { name: /reading…$/ })).toBeVisible();
 
-    // Dark + light screenshots of the pending row (PR assets).
     await row.screenshot({
       path: test.info().outputPath("dark-allowance-pending-on-connect.png"),
     });

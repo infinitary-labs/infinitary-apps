@@ -28,7 +28,6 @@ function noScreen(env: Record<string, string>): Record<string, string> {
   return rest;
 }
 
-/** The environment a command starts in: the hermetic one, with a throwaway HOME of its own. */
 export async function runEnv(userDataDir: string, extra: Record<string, string> = {}) {
   const homeDir = scratchDir("infinitary-run-command-home-");
   return noScreen({

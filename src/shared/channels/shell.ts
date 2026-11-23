@@ -14,10 +14,6 @@ import {
 import { type ChannelDeclaration, okSchema } from "./common";
 import { runbookFolderRequestSchema } from "./ownWindow";
 
-/**
- * The window's own buttons where the app draws them (design skill readme,
- * "Linux desktop conventions"): minimize, maximize or restore, and close.
- */
 /** `front` brings the window ahead of other apps, as when a sign-in in the browser finishes (INF-838). */
 const windowControlSchema = z.enum(["minimize", "maximize", "close", "front"]);
 export type WindowControl = z.infer<typeof windowControlSchema>;
@@ -140,7 +136,6 @@ export const shellChannels = {
     request: z.tuple([]),
     response: keyRemindersSchema,
   },
-  // Turns every key reminder on or off.
   "inf:keyboard:reminders:set": {
     effect: "change",
     surface: "host",

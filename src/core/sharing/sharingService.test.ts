@@ -36,7 +36,6 @@ function payloadOf(body: unknown): Record<string, unknown> {
   return (body as { payload: Record<string, unknown> }).payload;
 }
 
-/** A wire that only remembers: every body it was handed, in order. */
 class RecordingClient implements TelemetryClient {
   readonly sent: Record<string, unknown>[] = [];
   /** What the endpoint answers; false stands for offline or a refusal. */
@@ -138,7 +137,6 @@ function setup(overrides: Partial<SharingServiceOptions> = {}) {
   };
 }
 
-/** The next launch over the same row: a new service, the same wire. */
 function relaunch(settings: SettingsStore, raw: RecordingClient): SharingService {
   return new SharingService({
     settings,
@@ -461,7 +459,6 @@ describe("SharingService - a phone's events", () => {
         }),
       }),
     ]);
-    // The computer's own ID and names stay its own.
     expect(service.get().diagnostics.installId).toBe(installId(1));
     expect(service.get().diagnostics.phones).toEqual({
       [PHONE]: { installId: installId(2), milestones: [] },

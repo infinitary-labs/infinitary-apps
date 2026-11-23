@@ -21,7 +21,6 @@ export const useCardSound = create<{
   demo: boolean;
 }>(() => ({ sound: null, playing: false, demo: false }));
 
-/** A demo recording with sound started or stopped playing. */
 export function setDemoSounding(on: boolean): void {
   useCardSound.setState({ demo: on });
 }

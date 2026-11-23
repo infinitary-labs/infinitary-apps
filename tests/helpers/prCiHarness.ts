@@ -66,7 +66,6 @@ export class FakeForge implements Forge {
     headSha: "cafe0042",
     title: "fix: ship it",
   };
-  /** Fail `changeFor` only this many more times. */
   failChangeForTimes = 0;
   /** The checks GitHub holds at named versions, or its refusal there; other versions read `states`. */
   atHead: Record<
@@ -186,7 +185,6 @@ export type CheckedOut = (
   taskId: string,
 ) => Promise<{ branch: string | null; head: string } | null>;
 
-/** The service wired over a fresh database, with what a test reads and moves. */
 export type PrCiHarness = {
   db: AppDatabase;
   tasks: TaskService;

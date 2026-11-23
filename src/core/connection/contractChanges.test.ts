@@ -28,7 +28,6 @@ describe("the contract's changes by name", () => {
       PROTOCOL_VERSION,
       "Only a major moves PROTOCOL_VERSION; a minor change adds a file (src/shared/contract-changes/README.md).",
     ).toBe(protocolVersionOf(CONTRACT_CHANGES));
-    // Each name its hello and its welcome list reaches the other side whole.
     const hello = clientFrameSchema.parse({
       t: "hello",
       protocolVersion: PROTOCOL_VERSION,
@@ -55,7 +54,6 @@ describe("the contract's changes by name", () => {
       "inbox-integration",
       "project-folders",
       "remote-change-lines",
-      // The required update onto main after PR #493 brought seven more.
       "fetch-ubuntu-package",
       "landed-time-retired",
       "longer-join-command",
@@ -63,22 +61,15 @@ describe("the contract's changes by name", () => {
       "project-repo-kind",
       "report-check-back",
       "report-merge-completion",
-      // The required update onto main after PR #549 brought one more.
       "started-by-command-control",
-      // The required update onto main after its attachment hand-over brought three more.
       "card-seen-snapshot",
       "complete-integration-actions",
       "empty-source-files",
-      // The required update onto main after PR #587 brought one more.
       "placement-inherited",
-      // The required update onto main after its operations major 12 brought two more.
       "task-timeline-reading",
       "work-task-history-field",
-      // The required update onto main after its journey timing repair brought one more.
       "background-job-named",
-      // The required update onto main after its late-picture repair brought one more.
       "mac-update-channels",
-      // The required update for main's resource, card and first-release additions.
       "card-answered-by",
       "card-asked-line",
       "first-release-reports",
@@ -87,15 +78,12 @@ describe("the contract's changes by name", () => {
       "linux-automatic-startup",
       "task-resource-observations",
       "work-reply-interim",
-      // The required update for main's check facts and offer-based readiness.
       "check-declarations",
       "check-facts-and-crew-verdict",
       "merge-offer-readiness",
-      // The conflict-required update brings the view contract and two additive home interfaces.
       "forge-github-cli",
       "last-turn-previous",
       "view-floor",
-      // The required update after PR #806 includes completed-operation observations.
       "tool-observations",
       // Major 14 includes every addition since queue delivery.
       "after-merge-steps",
@@ -131,10 +119,8 @@ describe("the contract's changes by name", () => {
       "review-covers",
       "stall-card-backlog",
       "task-run-null-review",
-      // The next conflict-required update also belongs to the same pending major.
       "check-queue-answer",
       "computer-github-cli",
-      // The requested main update for the one-device phone route precedes this major too.
       "card-allows",
       "cost-limit",
       "record-close-done",

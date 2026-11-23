@@ -405,7 +405,6 @@ describe("UsageStore.summary, Settings → Usage", () => {
     db.prepare(
       "INSERT INTO usage_events (task_id, provider, model, input, output, cost, at) VALUES ('site', 'anthropic-claude', 'opus', 400, 40, 0.8, ?), ('site', 'anthropic-claude', 'opus', 10, 1, 0, ?)",
     ).run(NOW - 4 * DAY, NOW - 4 * DAY);
-    // Outside the last 30 days.
     store.record({
       taskId: "old",
       model: { provider: "openai-codex", id: "gpt-5.5" },
@@ -427,7 +426,6 @@ describe("UsageStore.summary, Settings → Usage", () => {
     // Only priced records count toward the estimate; the older zero is unpriced.
     expect(summary.total.priced).toBe(4);
     expect(summary.total.cost).toBeCloseTo(2 + 0.1 + 0.5 + 0.8, 6);
-    // The days, the models and the places each add up to the same total.
     for (const parts of [
       summary.days.map((day) => day.amount),
       summary.models.map((model) => model.amount),
@@ -610,7 +608,6 @@ describe("UsageStore, where it went by project and kind of work, and recent task
     record("orphan", 60, NOW - DAY);
     record("firstmate", 900, NOW - HOUR);
     record("routing", 80, NOW - HOUR);
-    // Outside the last 30 days.
     record("pricing", 5000, NOW - 40 * DAY);
     return store;
   }

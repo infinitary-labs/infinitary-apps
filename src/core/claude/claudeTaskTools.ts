@@ -125,7 +125,6 @@ function zodOf(schema: JsonSchema, at: string): z.ZodType {
   }
 }
 
-/** An object's fields, each optional unless required, each with its own description. */
 export function zodShapeOf(schema: JsonSchema, at = "parameters"): Record<string, z.ZodType> {
   const required = new Set(schema.required ?? []);
   return Object.fromEntries(
@@ -151,7 +150,6 @@ function zodObjectOf(schema: JsonSchema, at: string): z.ZodObject {
   return schema.additionalProperties === true ? object.passthrough() : object;
 }
 
-/** The Claude tool for one bound tool. */
 export function claudeToolOf(bound: BoundTool) {
   return tool(
     bound.name,
@@ -193,7 +191,6 @@ export function claudeToolOf(bound: BoundTool) {
   );
 }
 
-/** Bound tools as Claude tools, in order: the Firstmate seat's whole set. */
 export function claudeToolsOf(tools: readonly BoundTool[]) {
   return tools.map(claudeToolOf);
 }
@@ -298,7 +295,6 @@ export function claudeToolNameHint(tools: readonly BoundTool[]): HookCallback {
   };
 }
 
-/** A Claude crewmate's app-owned tools: every entry its callbacks bind, in the spec's order. */
 export function claudeCrewmateTools(
   delegate: CrewmateToolDelegate,
   tools: readonly CrewmateTool[] = CREWMATE_TOOLS,

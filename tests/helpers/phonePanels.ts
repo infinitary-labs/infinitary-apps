@@ -75,7 +75,6 @@ export function phonePanelControls(
       }, 60_000);
     });
   };
-  /** Waits until the computer's list says what the journey needs. */
   const until = (
     check: (panel: PersonalExtensionView | undefined) => boolean,
     failure: string,
@@ -168,7 +167,6 @@ export function phonePanelControls(
       );
       return { ok: true };
     },
-    /** Turned off, the runbook's panel goes; its folder goes after. */
     async runbookOff() {
       await core.dispatch("inf:settings:runbooks:set", [PHONE_RUNBOOK_ID, false]);
       await until(

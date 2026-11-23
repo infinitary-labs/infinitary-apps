@@ -98,7 +98,6 @@ export type HeldForges = {
   close: () => void;
 };
 
-/** Where this computer keeps its sign-ins where projects live. */
 export function computerForgesDir(dataDir: string): string {
   return join(dataDir, "forges");
 }

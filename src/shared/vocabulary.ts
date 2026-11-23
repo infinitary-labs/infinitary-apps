@@ -21,7 +21,6 @@ import type { RunChecks, TaskDeliveryView } from "./tasks";
 type Words<State extends string> = Readonly<Record<State, string>> &
   Readonly<Partial<Record<string, string>>>;
 
-/** Where a finished change goes, by delivery posture. */
 export const DELIVERY_WORDS: Record<string, string> = {
   "direct-pr": "pull request",
   "queue-pr": "batched pull request",
@@ -115,7 +114,6 @@ export function sendWriteWords(place: string): string {
   return `Send it to ${place}`;
 }
 
-/** How carefully the work was done, by rigor tier. */
 export const RIGOR_WORDS: Words<Rigor> = {
   quick: "Quick",
   standard: "Default",
@@ -141,7 +139,6 @@ export const RIGOR_LABELS: Readonly<Record<Rigor, string>> = {
 /** The project a fact names for a task that sits in no project. */
 export const DEFAULT_WORKSPACE_WORD = "Default workspace";
 
-/** What the checks on a proposed change say, by CI state. */
 export const CHECK_WORDS: Words<NonNullable<TaskDeliveryView["ci"]>> = {
   green: "passed",
   red: "failed",
@@ -168,7 +165,6 @@ export const RUN_WATCH_WORDS = {
   running: CHECK_WORDS.pending,
 } as const;
 
-/** What the checks say of a change no reading has reached yet. */
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 
 /**
@@ -297,7 +293,6 @@ export const VIEW_WORDS: Record<string, string> = {
   v_repos: "how each of your projects is set up",
 };
 
-/** A view's words, by its versioned name. */
 export function viewWords(view: string): string {
   return VIEW_WORDS[view.replace(/_v[0-9]+$/, "")] ?? view;
 }

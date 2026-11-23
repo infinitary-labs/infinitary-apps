@@ -15,14 +15,12 @@ test("dictation key taps toggle talking while a hold stops on release", async ()
   try {
     await expect(page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER))).toBeVisible();
     await voiceSettled(page);
-    // A hold remains live until release, then ends without latching.
     await page.keyboard.down(DICTATION_KEY);
     await expect(abandon).toBeVisible();
     await page.waitForTimeout(600);
     await page.keyboard.up(DICTATION_KEY);
     await expect(abandon).toHaveCount(0);
 
-    // A quick tap leaves the microphone active. Another quick tap stops it.
     await page.keyboard.down(DICTATION_KEY);
     await page.waitForTimeout(80);
     await page.keyboard.up(DICTATION_KEY);

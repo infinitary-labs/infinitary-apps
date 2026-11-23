@@ -2,10 +2,8 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the focus-recovery-stack test's story reads back: the stacked notes' titles, top first. */
 type Input = { titles: string[] };
 
-/** The most notes the test stacks. */
 const MOST = 3;
 
 /** Each note's thread, read when it shows or is prepared. */

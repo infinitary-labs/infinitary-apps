@@ -231,7 +231,6 @@ function classify(b: Box, model?: string, maxOutputTokens?: number) {
   return classifierOn(b, model, maxOutputTokens).classify(WORK, new AbortController().signal);
 }
 
-/** Every transcript the client wrote under the box's config dir. */
 function transcripts(b: Box): string[] {
   try {
     return readdirSync(join(b.configDir, "projects"), { recursive: true, encoding: "utf8" }).filter(
@@ -254,7 +253,6 @@ describe("the kind classifier on the real Claude client", () => {
     });
     const served = api.requests.slice(first);
     expect(served).toHaveLength(1);
-    // The question's own instruction is the system prompt, and no tool is served.
     expect(JSON.stringify(served[0]?.body.system)).toContain(
       JSON.stringify(INSTRUCTION).slice(1, -1),
     );

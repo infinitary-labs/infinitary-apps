@@ -228,7 +228,6 @@ describe("removing a computer that runs work", () => {
     return { computers, pushed, problems };
   }
 
-  /** A project that runs on the computer, with a task working there that holds a commit never merged. */
   async function busyComputer(options: { remoteLogin?: string } = {}) {
     const project = await gitProject();
     const at = await world(() => project.forge(Buffer.alloc(0)), options);
@@ -258,7 +257,6 @@ describe("removing a computer that runs work", () => {
       .flatMap((list) => list.map((device) => device.removal ?? null))
       .filter((stage, index, all) => stage !== null && stage !== all[index - 1]);
     expect(stages).toEqual(["bringing-work", "cleaning-up"]);
-    // The task stopped, and its work came home before the working copy went there.
     expect(home.tasks.get("t-gone")?.status).toBe("dropped");
     expect(home.tasks.get("t-gone")?.workspaceState).toBe("removed");
     const kept = await git(project.home, ["rev-parse", keptRefFor("t-gone")]);
@@ -268,7 +266,6 @@ describe("removing a computer that runs work", () => {
     expect(home.repos.get(repo.id)?.runsOn).toBeNull();
     expect(at.pairing().list()).toEqual([]);
     expect(computers.list()).toEqual([]);
-    // Cut off, it removes what Firstmate set up there, and stops.
     await expect.poll(() => existsSync(join(at.dataDir, "repos"))).toBe(false);
     expect(existsSync(work)).toBe(false);
     expect(existsSync(join(at.dataDir, "home.json"))).toBe(false);
@@ -311,7 +308,6 @@ describe("removing a computer that runs work", () => {
     expect(await computers.remove(at.deviceId, "when-back")).toMatchObject({
       removal: "when-back",
     });
-    // Keep it takes the wait back, and asking again waits once more.
     expect(computers.keep(at.deviceId).removal).toBeUndefined();
     await computers.remove(at.deviceId, "when-back");
     expect(at.pairing().list()).toHaveLength(1);
@@ -339,7 +335,6 @@ describe("removing a computer that runs work", () => {
     );
     expect(home.repos.get(repo.id)?.runsOn).toBeNull();
 
-    // Back, it learns it was removed: what Firstmate set up goes, its unmerged work stays.
     await home.listen();
     await expect
       .poll(() => existsSync(join(at.dataDir, "home.json")), { timeout: 8_000 })
@@ -385,7 +380,6 @@ describe("removing a computer that runs work", () => {
     expect(reached).toEqual(["sam@mini.local"]);
     expect(at.pairing().list()).toEqual([]);
     expect(home.tasks.get("t-gone")?.status).toBe("dropped");
-    // What Firstmate set up there is gone now; the working copy with its unmerged work stays.
     expect(existsSync(join(at.dataDir, "home.json"))).toBe(false);
     expect(existsSync(join(at.dataDir, "tasks"))).toBe(false);
     expect(await git(work, ["log", "-1", "--format=%s"])).toBe("feat: a footer");
@@ -416,7 +410,6 @@ describe("a closed task's files on a computer that runs work", () => {
     writeFileSync(join(folders.temp, "bulk.txt"), "bulk working material\n");
     writeFileSync(join(folders.evidence, "proof.txt"), "a picture's stand-in\n");
 
-    // Still open: nothing is asked of that computer.
     const asked = vi.spyOn(home.devices, "ask");
     await expect(home.placed.removeClosedTaskTemp(home.tasks.get("t-clean")!)).rejects.toThrow(
       "This task is not closed on another computer.",

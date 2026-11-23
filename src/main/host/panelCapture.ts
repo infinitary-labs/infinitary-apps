@@ -149,7 +149,6 @@ ${CSS_COLLECTOR}
   })()`;
 }
 
-/** One panel frame's own CSS and body, read inside that frame. */
 const FRAME_READ_SCRIPT = `(() => {
 ${CSS_COLLECTOR}
   const body = document.body ? document.body.cloneNode(true) : null;

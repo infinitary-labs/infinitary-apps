@@ -307,7 +307,6 @@ export type EmittedCard = {
  */
 export type ShownWithLine = { shown: string; line: string };
 
-/** What the host answers for one card write. */
 type CardWriteResult = string | CardMutation | ShownWithLine | undefined;
 
 export type OnCardEmitted = (card: EmittedCard) => CardWriteResult | Promise<CardWriteResult>;
@@ -350,7 +349,6 @@ export type CloseCardInput = {
 
 export type OnCardClosed = (input: CloseCardInput) => string;
 
-/** Validate the optional emit_card id. Empty is absent; anything else must be kebab-case. */
 export function parseStableCardId(raw: string | undefined): string | undefined {
   const id = raw?.trim() ?? "";
   if (!id) return undefined;
@@ -362,7 +360,6 @@ export function parseStableCardId(raw: string | undefined): string | undefined {
   return id;
 }
 
-/** Firstmate-routable card id from a caller-supplied stable key. */
 export function resolveFirstmateCardId(stableId: string): string {
   if (stableId.startsWith("card-fm-")) return stableId;
   if (stableId.startsWith("fm-")) return `card-${stableId}`;
@@ -431,7 +428,6 @@ const untilParam = Type.Object({
   filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
 });
 
-/** One declared action, with the effects a role's schema may declare. */
 function actionParam<Effect extends TSchema>(effect: Effect) {
   // Open to fields it does not declare, so a retired `keeps_open` reaches
   // `emitCard` on both runtimes and is refused there rather than dropped
@@ -542,7 +538,6 @@ const firstmateCardParams = {
 
 export type EmitCardRole = "crewmate" | "firstmate";
 
-/** The emit_card params every role passes, plus the Firstmate's attribution and attach-first fields. */
 type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"> & {
   actions?: Static<typeof crewmateBrowserCardParams>["actions"];
   /** As the call carried it: the host reads it again (`riskDeclarationOf`). */
@@ -597,7 +592,6 @@ export const CARD_FILES_PARAM = [
   "Never give a path instead, least of all one on another computer or in temporary or evidence folders. A revision passes files again; the list replaces the card's.",
 ].join(" ");
 
-/** Why a card naming a read or view it may not have is refused. */
 function cardReadsRefusal(what: string): CardRefusedError {
   return new CardRefusedError(`Card refused: ${what}`, "shape", what);
 }
@@ -791,7 +785,6 @@ const crewmateBrowserCardParams = Type.Object({
 /** The refusal for a merge card of the task's own change that declares no risk. */
 export const RISK_MISSING_REFUSAL = `a merge card carries risk: give each of ${RISK_DIMENSIONS.join(", ")} a level (low, medium or high) and why, one line of at most ${RISK_WHY_MAX} characters, and emit it again.`;
 
-/** The refusal for risk on a card that merges nothing. */
 export const RISK_ELSEWHERE_REFUSAL = "risk rides only on a merge card: drop it from this card.";
 
 /**
@@ -843,7 +836,6 @@ export function savedStoryRefusal(refused: readonly string[]): string {
     : SAVED_STORY_REFUSAL;
 }
 
-/** Each field a saved-story merge card's call passed that the card does not take. */
 function savedStoryRefusedFields(params: EmitCardParams, note = false): string[] {
   const actions = params.actions ?? [];
   const merge = actions.find((action) => action.effect?.kind === "merge");
@@ -1136,12 +1128,10 @@ async function emitCard(
     : `Card shown: ${params.title}`;
 }
 
-/** The related refs as passed: trimmed, each named once. */
 function relatedOf(refs: string[] | undefined): string[] {
   return [...new Set((refs ?? []).map((ref) => ref.trim()).filter(Boolean))];
 }
 
-/** One crewmate's emit_card run, bound to its callbacks. */
 function crewmateEmitCard(
   delegate: CrewmateToolDelegate,
   onCard: NonNullable<CrewmateToolDelegate["onCard"]>,

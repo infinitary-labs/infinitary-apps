@@ -38,7 +38,6 @@ import UIKit
         self.link = link
         link.add(to: .main, forMode: .common)
     }
-    /// The display the running link ticks with.
     @ObservationIgnored private weak var tickingScreen: UIScreen?
 
     private func displayLink() -> CADisplayLink {

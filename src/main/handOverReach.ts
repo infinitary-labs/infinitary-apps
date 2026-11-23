@@ -18,7 +18,6 @@ function appNameOfFolder(dir: string): string {
   return APP_IDENTITIES[spellingOfUserDataFolder(basename(dir)) ?? "fm"].app.release;
 }
 
-/** The two apps of the one-time move, by the names a person knows them. */
 export function handOverNames(move: FolderMove): HandOverNames {
   return { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) };
 }

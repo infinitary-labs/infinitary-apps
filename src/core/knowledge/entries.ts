@@ -108,7 +108,6 @@ export function named(store: KnowledgeStore, id: string): Named | undefined {
   };
 }
 
-/** The one-line view of an entry, as its current revision (or `shown`) says. */
 export function summary(
   store: KnowledgeStore,
   scopeName: (scope: string) => string,

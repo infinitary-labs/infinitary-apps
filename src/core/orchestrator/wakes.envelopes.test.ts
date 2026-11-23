@@ -407,7 +407,6 @@ describe("guidance wrapped for its delivery", () => {
   });
 });
 
-/** A crewmate lane's row as the inbox serves it. */
 function row(id: number, body: Pick<WakeEnvelope, "facts" | "text">, cuts = 0): InboxRow {
   return {
     v: 1,

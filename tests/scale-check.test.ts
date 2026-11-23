@@ -100,7 +100,6 @@ it("keeps each repeated read's statements and rows when closed history quadruple
   expect(movedCounts(base, quadrupled), "a repeated read grew with closed history").toEqual({});
 });
 
-/** Per read, each statement whose runs or returned rows differ between the two records. */
 type Moved = { caller: string; before: Count | null; after: Count | null };
 
 function movedCounts(
@@ -208,7 +207,6 @@ async function counted(read: string, work: () => void | Promise<void>): Promise<
   return counts;
 }
 
-/** Lets the minute pass's asynchronous checks finish their reads. */
 async function settle(): Promise<void> {
   for (let turn = 0; turn < 20; turn += 1) await new Promise((resolve) => setImmediate(resolve));
 }
@@ -475,7 +473,6 @@ async function buildRecord() {
           protocol.board();
         }),
       };
-      // A running task's close, and the passes over closed tasks' files it starts.
       const closing = `closing-${closes++}`;
       seedTask(tasks, { id: closing, title: `Closing work ${closing}`, status: "idle" });
       counts["task close"] = await counted("task close", async () => {
@@ -504,7 +501,6 @@ async function buildRecord() {
           await settle();
         },
       );
-      // The captain's card shows the action and its button confirms it.
       for (const filed of tasks.listWithRequirementFrom(declaring, [])) {
         const shown = tasks.delivery.presentCaptainAction(filed.id);
         if (
@@ -537,7 +533,6 @@ async function buildRecord() {
   };
 }
 
-/** One action the captain takes after several merges: installing the new version on another computer. */
 const REQUIRED_ACTION = {
   id: "install-on-the-work-computer",
   target: "the work computer",

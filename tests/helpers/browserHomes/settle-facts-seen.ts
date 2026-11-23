@@ -16,10 +16,6 @@ const TASK_ID = "settle-facts-seen";
 /** The card's thread, which the window reads when the card shows. */
 export const asked: HomeRead[] = [["inf:cards:thread", [CARD_ID]]];
 
-/**
- * What the settle-facts-seen test's story reads back: the card's words, and
- * the lines its change adds and deletes once the host has read them.
- */
 type Input = { title: string; merge: string; lines?: { added: number; deleted: number } };
 
 /**

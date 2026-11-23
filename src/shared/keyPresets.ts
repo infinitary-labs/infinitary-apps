@@ -40,7 +40,6 @@ export function isPresetId(value: string): value is PresetId {
   return (PRESET_IDS as readonly string[]).includes(value);
 }
 
-/** A key that works only while the person is not typing. */
 function bare(key: string, more: Omit<KeyChord, "key"> = {}, second?: KeyChord): KeyBinding {
   return { key, ...more, ...(second ? { second } : {}), when: "not-typing" };
 }
@@ -61,7 +60,6 @@ const cmd = (key: string, shift = false): KeyChord => ({
   ...(shift ? { shift: true } : {}),
 });
 
-/** The preset's own keys for a command, then the catalog's it keeps beside them. */
 function withLegacy(id: CommandId, ...more: KeyBinding[]): readonly KeyBinding[] {
   return [...more, ...KEYBOARD_COMMANDS[id].keys];
 }
@@ -215,7 +213,6 @@ const lin = (key: string, shift = false): KeyChord => ({
 });
 /** Ctrl+X, then a key: Emacs's prefix, outside a text field. */
 const linX = (second: KeyChord): KeyBinding => pair(lin("x"), second, true);
-/** Ctrl+H, then a key, outside a text field. */
 const linH = (key: string): KeyBinding => pair(lin("h"), { key }, true);
 const EMACS_CTRL: PresetTable = {
   "commands.search": [{ key: "x", alt: true }],
@@ -314,12 +311,10 @@ export function presetChanges(
   return Object.hasOwn(tableOn(preset, system), id);
 }
 
-/** A preset's table on a system: its own Ctrl table there, if it has one. */
 function tableOn(preset: TabledPreset, system: KeySystem): PresetTable {
   return (system === "ctrl" ? CTRL_TABLES[preset] : undefined) ?? TABLES[preset];
 }
 
-/** Whether two chords are one press: the same key, a letter in either case, and the same modifiers. */
 export function sameChord(a: KeyChord, b: KeyChord): boolean {
   const key = (chord: KeyChord) =>
     /^[a-z]$/i.test(chord.key) ? chord.key.toLowerCase() : chord.key;
@@ -345,7 +340,6 @@ export function prefixed(prefix: KeyChord, second: KeyChord): KeyBinding {
   };
 }
 
-/** Whether two bindings are the same press, or the same pair of presses. */
 function sameKeys(a: KeyBinding, b: KeyBinding): boolean {
   return (
     sameChord(a, b) &&

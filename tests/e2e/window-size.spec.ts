@@ -303,7 +303,6 @@ test("Firstmate changes the saved size when asked, with one trail and no card", 
   }
 });
 
-/** The size choice, made where a person makes it: Settings → Appearance. */
 async function chooseSize(page: Page, size: UiSize) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: "Appearance", exact: true }).click();
@@ -339,7 +338,6 @@ async function expectControlsWhole(page: Page, controls: Locator[]) {
   expect(boxes.card.y + boxes.card.height).toBeLessThanOrEqual(boxes.input.y);
 }
 
-/** The height the stage gives the shown card, once it holds still. */
 const cardRoom = (page: Page) =>
   settled(page, async () => (await cardSurface(page).boundingBox())?.height ?? 0);
 

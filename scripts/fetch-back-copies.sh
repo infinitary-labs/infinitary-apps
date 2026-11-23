@@ -64,7 +64,6 @@ keyless() {
   done < "$EXPECTED"
 }
 
-# The app inside a fetched zip, unpacked to its own folder and gated again.
 gate_zip() {
   local zip="$1" extract="$2"
   rm -rf "$extract" && mkdir -p "$extract"

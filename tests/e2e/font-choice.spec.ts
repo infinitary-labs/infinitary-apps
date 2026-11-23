@@ -42,7 +42,6 @@ async function emitCard(app: LaunchedApp): Promise<void> {
   await expect.poll(answer.outcome).toMatchObject({ state: "closed" });
 }
 
-/** The family list a token resolves to on the window's document. */
 function windowToken(page: Page, token: string): Promise<string> {
   return page.evaluate(
     (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim(),
@@ -50,7 +49,6 @@ function windowToken(page: Page, token: string): Promise<string> {
   );
 }
 
-/** A family name as a pattern, its letters taken literally. */
 function literal(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -84,7 +82,6 @@ test("Fonts: any installed font for the app, reading and code, chosen by keys, f
     await emitCard(first);
     const body = cardBody(page, CARD_TITLE);
     await expect(body.locator("p").first()).toHaveText(CARD_WORDS);
-    // Infinitary's own fonts before any choice.
     expect(await firstFont(body.locator("body"))).toBe("Space Grotesk");
     expect(await firstFont(body.locator("code"))).toBe("JetBrains Mono");
 
@@ -94,21 +91,17 @@ test("Fonts: any installed font for the app, reading and code, chosen by keys, f
     const code = settingRow(page, "font-code").locator("select");
     await expect(reading.locator("option").first()).toHaveText(m.settingsFontSameAsApp());
 
-    // The computer's installed fonts are listed under their own heading.
     const families = app.locator(`optgroup[label="${m.settingsFontInstalled()}"] option`);
     await expect(families.first()).toBeAttached();
     installed = (await families.first().getAttribute("value")) ?? "";
     expect(installed).not.toBe("");
 
-    // The app font: an installed font, from the keyboard-focused picker. The
-    // window's words take it at once.
     await focusOn(app);
     await app.selectOption(installed);
     await expect
       .poll(() => windowToken(page, "--font-ui"))
       .toMatch(new RegExp(`^"${literal(installed)}", "Space Grotesk"`));
 
-    // The code font: this computer's own, named by its row.
     await focusOn(code);
     await expect(code.locator("option").nth(1)).toHaveText(m.settingsFontComputer());
     // A closed picker's arrow keys change its value only on Linux (and
@@ -138,7 +131,6 @@ test("Fonts: any installed font for the app, reading and code, chosen by keys, f
   const second = await launchApp({ withMockProvider: true, userDataDir, homeDir });
   try {
     const { page } = second;
-    // The choice outlives the restart, from the first paint.
     await expect
       .poll(() => windowToken(page, "--font-ui-face"))
       .toBe(`"${installed}", "Space Grotesk"`);
@@ -146,7 +138,6 @@ test("Fonts: any installed font for the app, reading and code, chosen by keys, f
     const app = settingRow(page, "font-app").locator("select");
     await expect(app).toHaveValue(installed);
 
-    // Infinitary's own font again: the choice is gone from the saved look.
     await focusOn(app);
     await app.selectOption("");
     await expect.poll(() => windowToken(page, "--font-ui")).toMatch(/^"Space Grotesk"/);

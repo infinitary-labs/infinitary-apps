@@ -81,7 +81,6 @@ extension PhoneJourney {
         picture("activity-summary")
         tapOnPhone(app.buttons["close-activity-summary"])
         XCTAssertTrue(summaryText.waitForAbsence(timeout: 10))
-        // Tapping a line's key opens that task's record.
         let key = try XCTUnwrap(app.buttons.matching(identifier: "activity-key").allElementsBoundByIndex.last)
         XCTAssertEqual(key.label, taskKey)
         tapOnPhone(key)

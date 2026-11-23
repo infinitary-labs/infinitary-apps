@@ -68,8 +68,6 @@ test("a wide card's table is reachable whole at the smallest window, and the rai
     await resizeWindow(app, page, original);
   }
 
-  // A card that asks for the whole stage folds the docks; the edge tab
-  // brings them back.
   await showCard(page, WIDTH_CARD_TITLES.full);
   await expect(page.locator('[data-rail-tab="left"]')).toBeVisible();
   await page.locator('[data-rail-tab="left"]').click();

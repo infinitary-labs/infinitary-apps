@@ -136,7 +136,6 @@ describe("the presentation pass (INF-1073)", () => {
     f.presentation.schedule();
     await f.settled();
     f.reset();
-    // A crewmate's turn starts: its record is written and its posture moves.
     const changedId = "crew-1";
     f.postures.set(changedId, { state: "active", reason: "turn" });
     f.tasks.turns.setActivity(changedId, "running");
@@ -207,7 +206,6 @@ describe("the presentation pass (INF-1073)", () => {
     f.onCounts(() => {
       if (reacted) return;
       reacted = true;
-      // Something heard the counts and moved another crewmate.
       f.postures.set("crew-2", { state: "active", reason: "job" });
       f.tasks.turns.setActivity("crew-2", "running");
     });

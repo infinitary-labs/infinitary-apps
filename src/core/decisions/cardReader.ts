@@ -58,7 +58,6 @@ export const CARD_READINGS = {
   ),
 } as const;
 
-/** The card's title and its open text: tags, scripts, styles and folded parts dropped. */
 export function cardReaderState(card: { title: string; body: string }): DecisionState {
   return { facts: { card_title: card.title, card_text: openText(card.body) } };
 }
@@ -105,7 +104,6 @@ export function cardReader(models: EventScreenModels) {
   };
 }
 
-/** The facts the author is told: which readings did not pass, and that the choice is theirs. */
 export function readerWords(failed: readonly string[]): string {
   if (failed.length === 0) return "";
   const list =

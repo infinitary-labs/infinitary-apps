@@ -43,7 +43,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** The launcher's source. */
 export const MAC_APP_LAUNCHER_SOURCE = join(
   dirname(fileURLToPath(import.meta.url)),
   "mac-app-launcher.m",
@@ -52,7 +51,6 @@ export const MAC_APP_LAUNCHER_SOURCE = join(
 /** The background file's name beside the main executable's (BACKGROUND_SUFFIX in the source). */
 export const MAC_BACKGROUND_SUFFIX = " Background";
 
-/** The macOS SDK version `file` records it was built with, the first one it lists. */
 function recordedSdk(file) {
   const shown = execFileSync("/usr/bin/xcrun", ["vtool", "-show-build", file], {
     encoding: "utf8",
@@ -62,7 +60,6 @@ function recordedSdk(file) {
   return sdk;
 }
 
-/** One value of a bundle's Info.plist, as text. */
 function infoValue(bundle, key) {
   return execFileSync(
     "/usr/bin/plutil",
@@ -71,7 +68,6 @@ function infoValue(bundle, key) {
   ).trim();
 }
 
-/** `text` as plist string content. */
 function plistText(text) {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

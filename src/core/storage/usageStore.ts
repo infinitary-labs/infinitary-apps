@@ -66,7 +66,6 @@ const LARGEST_TASKS = 3;
 /** The days each period covers, today included. */
 const PERIOD_DAYS = { "7d": 7, "30d": 30 } as const;
 
-/** The first moment a period covers; null for all time. */
 function periodStart(period: UsageQuery["period"], now: number): number | null {
   return period === "all" ? null : localDayStart(now, 1 - PERIOD_DAYS[period]);
 }
@@ -137,14 +136,12 @@ function amountOf(group: AmountRow): UsageAmount {
   };
 }
 
-/** The local calendar date of a moment, YYYY-MM-DD. */
 export function localDate(at: number): string {
   const day = new Date(at);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
 }
 
-/** The start of the local day `days` after the one holding `at`. */
 function localDayStart(at: number, days = 0): number {
   const day = new Date(at);
   day.setHours(0, 0, 0, 0);
@@ -152,7 +149,6 @@ function localDayStart(at: number, days = 0): number {
   return day.getTime();
 }
 
-/** Each local date from `since` through the day holding `until`, oldest first. */
 function localDates(since: number, until: number): string[] {
   const dates: string[] = [];
   for (let day = localDayStart(since); day <= until; day = localDayStart(day, 1)) {
@@ -161,7 +157,6 @@ function localDates(since: number, until: number): string[] {
   return dates;
 }
 
-/** Groups by a key, summing each group's amount. */
 function sumBy<K>(
   groups: readonly LedgerGroup[],
   key: (group: LedgerGroup) => K,
@@ -253,7 +248,6 @@ export class UsageStore {
       row(input.model, "requested", input.usage);
       return;
     }
-    // One row per model the provider named, under the session's provider.
     this.db.transaction(() => {
       for (const { model, ...counts } of served) {
         row({ provider: input.model?.provider ?? null, id: model }, "served", counts);
@@ -396,7 +390,6 @@ export class UsageStore {
     };
   }
 
-  /** The key, title, project and saved kind of each task the groups name. */
   private taskFacts(groups: readonly LedgerGroup[]): Map<string, TaskFacts> {
     const ids = [...new Set(groups.flatMap((group) => (group.task_id ? [group.task_id] : [])))];
     if (ids.length === 0) return new Map();
@@ -664,7 +657,6 @@ function whereOf(
   };
 }
 
-/** A model's identity: its provider and the model as recorded. */
 function modelKey(group: LedgerGroup): string {
   return `${group.provider ?? ""}/${group.model ?? ""}`;
 }
@@ -676,7 +668,6 @@ function attributionOf(groups: readonly LedgerGroup[]): UsageAttribution {
   return "served";
 }
 
-/** Where a model's priced records got their estimates. */
 function priceSourcesOf(groups: readonly LedgerGroup[]): UsagePriceSource[] {
   const sources = new Set<UsagePriceSource>();
   for (const group of groups) {

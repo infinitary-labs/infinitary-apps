@@ -62,7 +62,6 @@ function sameChange(left: TaskRecord, right: TaskRecord): boolean {
   );
 }
 
-/** A named delivery: a pull request number or a commit, or why the words name neither. */
 function namedDelivery(
   words: string | undefined,
 ): { pull: number } | { commit: string } | { invalid: string } | undefined {
@@ -76,7 +75,6 @@ function namedDelivery(
   };
 }
 
-/** A count of things in words: `3 commits`. */
 function count(n: number, one: string): string {
   return `${n} ${one}${n === 1 ? "" : "s"}`;
 }
@@ -313,7 +311,6 @@ export class DoneClose {
     return this.locks.working(record.id) || Boolean(record.activity && record.activity !== "idle");
   }
 
-  /** Why the crewmate has not reported what the close would record, if it has not. */
   private unreported(
     record: TaskRecord,
     why: DoneWhy | undefined,
@@ -355,7 +352,6 @@ export class DoneClose {
   ): Promise<ReadFacts> {
     const facts: DeliveryFact[] = [];
     const read: ReadFacts = { facts, ownOpen: [], merged: undefined, work: undefined };
-    // The pull request or commit the close names.
     const namedPull =
       named && "pull" in named
         ? named.pull

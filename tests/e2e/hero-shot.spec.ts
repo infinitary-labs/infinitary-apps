@@ -93,7 +93,6 @@ async function activityLines(page: Page): Promise<string[]> {
   return (await page.evaluate(() => window.infinitary.feed.recent())).map((line) => line.text);
 }
 
-/** The titles of the operations on the record. */
 async function operations(page: Page): Promise<string[]> {
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   return board.tasks.filter((task) => task.kind === "operation").map((task) => task.title);

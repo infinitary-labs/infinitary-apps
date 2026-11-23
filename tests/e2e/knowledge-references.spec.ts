@@ -68,7 +68,6 @@ async function taskCount(page: Page): Promise<number> {
   return page.evaluate(async () => (await window.infinitary.tasks.board()).tasks.length);
 }
 
-/** Hides the browser with its own title row's Hide. */
 async function hideBrowser(page: Page): Promise<void> {
   await page
     .locator(`${SHOWN_ENTRY} [data-panel-card-chrome]`)
@@ -165,7 +164,6 @@ test("an answer's finding opens the inspector, a task's Knowledge used opens the
       await expect(compareRow(page, "conditions")).not.toHaveAttribute("data-changed");
       await expect.poll(() => focusInBrowser(page)).toBe("section:overview");
 
-      // The current revision, then back to revision 1 from History.
       await pressIn(browser(page).locator("[data-knowledge-current]"));
       await expect.poll(() => revisionRead(page)).toBe(2);
       await expect(browser(page).locator("[data-knowledge-compare]")).toHaveCount(0);
@@ -197,7 +195,6 @@ test("an answer's finding opens the inspector, a task's Knowledge used opens the
       // the message is about exactly that record (its words: place.test.ts).
       const words = await promptInput(page).inputValue();
       expect(words).toMatch(new RegExp(`${k.retains}\\b[^)]*\\b1\\)`));
-      // The captain can change it before he sends it; until then nothing leaves.
       await typeInto(promptInput(page), "Is it still true?");
       await expect(promptInput(page)).toHaveValue(`${words}Is it still true?`);
       // Held, not sent: the core's newest captain message is not the

@@ -105,7 +105,6 @@ export function createOwnBatches(owners: {
         !entry.review && entry.target.branch === record.branch && candidateHead(entry) === head,
     );
   };
-  // A send-back as a wake names it: its batch's pull request as the host labels it.
   const named = (repo: RepoView | undefined, entry: BatchSendBack) => {
     const change =
       repo && entry.number !== undefined

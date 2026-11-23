@@ -64,7 +64,6 @@ export const plusIcon = (
 
 const EMPTY_VIEW: ForgesView = { signIns: [], hosts: [], flow: null, ended: null };
 
-/** The row's dot and its one word, from the sign-in's health alone. */
 export function forgeRowView(signIn: Pick<ForgeSignInView, "state" | "name">): {
   tone: StatusDotTone;
   label: string;
@@ -444,12 +443,10 @@ export function KeyAside({
   );
 }
 
-/** The design input in the mono face, for an address or a key. */
 function KeyFormInput(props: InputProps) {
   return <Input mono {...props} />;
 }
 
-/** The device-code aside: the code, the host's page, and how it ended. */
 export function SignInAside({
   view,
   onRetry,

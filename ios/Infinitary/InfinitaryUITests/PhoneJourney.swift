@@ -321,7 +321,6 @@ import XCTest
         }
     }
 
-    /// Fails the test with every situation the keyboard checks recorded.
     func finishKeyboardChecks(_ failures: [String]) {
         if !failures.isEmpty { XCTFail("\(failures.count) keyboard situations failed:\n" + failures.joined(separator: "\n")) }
     }
@@ -556,7 +555,6 @@ import XCTest
         picture("secrets-settings-enrolled")
         closeSettings()
 
-        // One use waits on the computer; this phone allows it once, with Face ID.
         let first = try await home("secrets-request")
         XCTAssertEqual(first["state"] as? String, "waiting")
         let title = try XCTUnwrap(first["title"] as? String)

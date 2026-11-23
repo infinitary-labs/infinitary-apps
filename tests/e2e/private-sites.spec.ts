@@ -90,7 +90,6 @@ test("an Allow card adds a private site, and Settings adds, refuses and removes 
       await pressKey(field, "Enter");
       await expect(section.getByText(refused.text, { exact: true })).toBeVisible();
       await expect(field).toHaveValue(ADDRESS);
-      // Tab walks from the field to Add, then Cancel.
       const add = section.getByRole("button", { name: PRIVATE_SITES_WORDS.add, exact: true });
       await pressKey(field, "Tab");
       await expect(add).toBeFocused();

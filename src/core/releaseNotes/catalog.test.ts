@@ -35,7 +35,6 @@ function entry(id: string, covers: number[] = [], extra: Partial<NoteEntry> = {}
   };
 }
 
-/** An entry that keeps a hero pair instead of a reason. */
 function pictured(id: string, extra: Partial<NoteEntry> = {}): NoteEntry {
   const { noPicture: _none, ...rest } = entry(id, [1], extra);
   return {
@@ -452,11 +451,9 @@ describe("membership and the catalog", () => {
     ]);
     const expected = { version: "0.1.29-alpha.1", sourceCommit: sha(3) };
     expect(verifyCatalog(catalog, expected)).toEqual([]);
-    // A highlight's pair the ledger did not supply refuses the catalog.
     expect(buildCatalog({ ...input, pictures: {} }).problems.join()).toContain(
       "lead-change-dark.webp was not read",
     );
-    // A packaged catalog that drops a pair, adds a stranger or loses a hash is refused.
     const { "lead-change-light.webp": _light, ...half } = catalog?.pictures ?? {};
     expect(verifyCatalog({ ...catalog, pictures: half }, expected).join()).toContain(
       "lead-change-light.webp is not in the catalog",
@@ -563,7 +560,6 @@ describe("a stable's picked highlights", () => {
       "lead-change-light.webp",
     ]);
     expect(verifyCatalog(catalog, { version: "1.0.1", sourceCommit: sha(4) })).toEqual([]);
-    // Nothing else in the alpha's catalog changes.
     const { entries: _a, pictures: _b, ...rest } = catalog ?? {};
     const { entries: _c, pictures: _d, ...was } = before ?? {};
     expect(rest).toEqual(was);

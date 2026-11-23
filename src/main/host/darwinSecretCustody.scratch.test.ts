@@ -90,7 +90,6 @@ it.skipIf(!enabled)(
     security("unlock-keychain", "-p", SCRATCH_PASSWORD, keychainPath);
     expect(await custody.read("root")).toEqual({ kind: "value", bytes: root });
 
-    // A protected owner on this custody: sealed, reopened, and running one use.
     const owner = join(home, "owner");
     const fresh = createDarwinSecretCustody(api, { service: `${SERVICE} owner` });
     const opened = await ProtectedSecrets.open({

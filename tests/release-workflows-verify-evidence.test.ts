@@ -421,7 +421,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       (needs[id]?.inputs ?? []).flatMap((input) => [input, ...upstream(input)]);
     const green = Object.fromEntries(ids.map((id) => [id, "success"]));
     for (const [id, { lanes, inputs }] of Object.entries(needs)) {
-      // It runs in its own job and in no other Mac job.
       expect(
         macLanes.filter((lane) => stepRuns(stage(id), green, lane)),
         `${id}'s Mac jobs`,
@@ -436,7 +435,6 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           stepRuns(stage(id), unrelatedRed, lane),
           `${id} after unrelated failures in ${lane}`,
         ).toBe(true);
-        // Any input red or skipped: it does not.
         for (const input of inputs)
           for (const outcome of ["failure", "skipped"])
             expect(

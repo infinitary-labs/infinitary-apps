@@ -57,7 +57,6 @@ describe("what a pull request version's build check runs", () => {
 
   it.each([
     ["the shared font notice alone", ["ios/Infinitary/InfinitaryApp/Fonts/Font-licenses.txt"]],
-    // The app's code builds.
     [
       "fix(devices): end a dial's late socket quietly once its link was closed",
       [
@@ -107,7 +106,6 @@ describe("what a pull request version's build check runs", () => {
   });
 
   it("runs the browser tests alone for a change to the browser tests", () => {
-    // The browser test file of the change above, on its own.
     const paths = [
       "release-notes/changes/account-add-unhandled-rejection.json",
       "tests/browser/card-action-feedback-accounts.test.tsx",

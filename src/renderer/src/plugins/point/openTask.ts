@@ -95,7 +95,6 @@ export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Pr
   );
 }
 
-/** The newest card the task owns or waits on, excluding ended and off-stage cards. */
 function newestTaskCard(
   task: Pick<TaskView, "id" | "waitingCardId">,
   cards: readonly Card[],

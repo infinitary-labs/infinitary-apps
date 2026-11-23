@@ -47,7 +47,6 @@ type StepJson = {
   state?: StateJson;
 };
 
-/** A finished state's result as the shared words: success, failure, cancelled or skipped. */
 const RESULTS: Record<string, string> = {
   SUCCESSFUL: "success",
   FAILED: "failure",
@@ -61,7 +60,6 @@ export class BitbucketWorkflows implements ForgeWorkflows {
   constructor(
     private readonly client: BitbucketClient,
     private readonly repositoryPath: () => string,
-    /** The repository's page on the website, for a run's link. */
     private readonly webPath: () => string,
   ) {}
 
@@ -138,7 +136,6 @@ export class BitbucketWorkflows implements ForgeWorkflows {
     );
   }
 
-  /** The pipeline by its build number, only when the answer names that same number. */
   private async pipeline(id: number): Promise<PipelineJson> {
     const pipeline = await this.client.get<PipelineJson | null>(
       `${this.repositoryPath()}/pipelines/${id}`,

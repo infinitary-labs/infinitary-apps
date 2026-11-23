@@ -112,7 +112,6 @@ function effectOf(action: unknown): { kind?: unknown; integration?: unknown; op?
   return (action as { effect?: { kind?: unknown } } | null)?.effect ?? {};
 }
 
-/** Whether this action is a button the view cannot read. */
 function unread(action: unknown, reads: ActionReads): boolean {
   const effect = effectOf(action);
   if (!reads.taskAllow && effect.kind === "request_write" && effect.integration === "task")
@@ -130,7 +129,6 @@ function unread(action: unknown, reads: ActionReads): boolean {
   return !reads.keepGoing && effect.kind === "host" && effect.op === "keep-going-on-credits";
 }
 
-/** The value with every button the view cannot read left out, at any depth. */
 export function withoutUnreadActions(value: unknown, reads: ActionReads): unknown {
   if (
     reads.taskAllow &&
@@ -166,7 +164,6 @@ export function withoutUnreadActions(value: unknown, reads: ActionReads): unknow
   return Object.fromEntries(entries);
 }
 
-/** A frame's text for such a view: unchanged unless it carries a button the view cannot read. */
 export function frameWithoutUnreadActions(text: string, reads: ActionReads): string {
   const carries =
     (!reads.taskAllow && text.includes(TASK_ALLOW_MARK)) ||
@@ -179,12 +176,10 @@ export function frameWithoutUnreadActions(text: string, reads: ActionReads): str
   return carries ? JSON.stringify(withoutUnreadActions(JSON.parse(text), reads)) : text;
 }
 
-/** The value with every Allow for the rest of this task button left out, at any depth. */
 export function withoutTaskAllow(value: unknown): unknown {
   return withoutUnreadActions(value, { taskAllow: false, keepGoing: true });
 }
 
-/** A frame's text for a view without Allow for the rest of this task. */
 export function frameWithoutTaskAllow(text: string): string {
   return frameWithoutUnreadActions(text, { taskAllow: false, keepGoing: true });
 }

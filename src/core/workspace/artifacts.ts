@@ -30,7 +30,6 @@ export function artifactPath(
   return `${folder}/run-${runId}/artifact-${artifactId}${part ? `-${part}` : ""}.zip`;
 }
 
-/** The artifact folder is a link, or not a folder: nothing is written through it. */
 export class ArtifactFolderError extends Error {
   constructor() {
     super("The artifact folder must be a directory inside the working copy, not a link.");

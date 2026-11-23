@@ -220,7 +220,6 @@ export function mapRead(result: { status: number; value?: string }): HostKeychai
   return failed(result.status);
 }
 
-/** What a native unlock's status means to the host. */
 export function mapUnlock(status: number): HostKeychainUnlockOutcome {
   return status === SEC_SUCCESS ? { kind: "unlocked" } : failed(status);
 }
@@ -469,7 +468,6 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
     keychain = opened[0];
   }
 
-  /** The store holding a found item: its lock state and its file. */
   const storeOf = (item: unknown): { locked?: boolean; keychainPath?: string } => {
     const store: [unknown] = [null];
     if ((copyItemKeychain(item, store) as number) !== SEC_SUCCESS || store[0] == null) return {};

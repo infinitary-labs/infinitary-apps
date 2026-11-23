@@ -76,7 +76,6 @@ export class CostLimitStore {
     ).run(scope, ownerId, JSON.stringify(costLimitSchema.parse(limit)), at);
   }
 
-  /** The hold standing on a task, if one does. */
   hold(taskId: string): CostHold | undefined {
     const row = prepared(
       this.db,

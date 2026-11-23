@@ -90,7 +90,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       const moved = h.tasks.get(h.taskId);
       expect(moved).toMatchObject({ status: "active", backlogSince: clock.now });
-      // Its working copy, branch and conversation stay.
       expect([moved?.worktreeDir, moved?.branch, moved?.sessionFile]).toEqual([
         work?.worktreeDir,
         work?.branch,
@@ -127,7 +126,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         `[fm-op] task ${h.taskId} "Job" has waited in the backlog for 3h, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: [job] background job j1 finished: "make" exited 0`,
       ]);
 
-      // The captain's Start carries it on in the same conversation, the job result after one line.
       expect(h.supervisor.hostOps.runTaskOp(h.taskId, "start-task")).toBeUndefined();
       await settle();
       expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
@@ -367,7 +365,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
 
       await tenTicks(supervisor);
-      // Not one attempt: none spent, no backoff advanced, the row as it was.
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(inbox.allFor(taskId)).toEqual([
         expect.objectContaining({ attempts: 0, failures: 1, escalatedAt: null }),
@@ -378,7 +375,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(ops.filter((line) => line.includes("still failing"))).toEqual([]);
       expect(idleWakes(ops)).toEqual([]);
       expect(cards().filter((card) => card.id.startsWith("card-stall-"))).toEqual([]);
-      // Guidance given while it waits is kept, and says so.
       expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
       // INF-4165 finding 2: what keeps it is named as the account, the one hold that is.
       expect(supervisor.facts.laneHold(taskId)).toEqual({ kind: "account" });
@@ -462,8 +458,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       clock.now += minutes(1);
       supervisor.cardActions.replyToCard(card.id, "what about the northern route?");
       await settle();
-      // Saved, with no attempt spent: the wait names the hold's class,
-      // provider and reset, and no turn claims to be working on it.
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(inbox.allFor(taskId).at(-1)).toMatchObject({ attempts: 0, failures: 0 });
       expect(wait()).toEqual({
@@ -482,7 +476,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // Its turn ends without an answer: the reply is the author's to give.
       await endTurn(crewmate, taskId);
       expect(wait()).toEqual({ on: "author" });
-      // Its answer ends the wait.
       specs[0]?.onReply?.({
         cardId: card.id,
         text: "The northern route adds a day.",
@@ -537,8 +530,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
       const prompts = crewmate.promptCalls.length;
       const otherPrompts = other.promptCalls.length;
-      // New guidance is kept, not sent into the spent window - on this lane
-      // and on every other lane of the account.
       clock.now += minutes(1);
       expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
       expect(await supervisor.steer.steerCrewmate(otherId, "and the docs")).toBe("recorded-held");
@@ -623,7 +614,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
 
     it("a card the Firstmate owes is still owed while a cut-off holds the crewmate", async () => {
-      // The original outage intent survives retirement of its old count-cap fixture.
       const login = claudeLogin();
       const { supervisor, taskId, tasks, ops, idleSince, at } = await stopped(
         login.extras,
@@ -706,8 +696,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(inbox.allFor(taskId)).toEqual([expect.objectContaining({ attempts: 1 })]);
 
-      // Signed in again: nothing is left to sign in to, so the card comes
-      // down and the kept guidance goes on by itself.
       login.clear();
       supervisor.reconcileCutOffs();
       await settle();
@@ -721,7 +709,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const { supervisor, crewmate, taskId, ops } = harness;
       await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await settle();
-      // A spent allowance with no reset to wait for stands nowhere.
       await cutOffTurn(crewmate, taskId, { class: "no_headroom" });
       expect(cutOffWakes(ops)).toEqual([]);
       expect(turnWakes(ops)).toEqual([expect.stringContaining("failed at the provider")]);
@@ -758,7 +745,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       const prompts = crewmate.promptCalls.length;
 
-      // One wake for the account, no failed-turn wake, and the guidance waits for the reset.
       expect(cutOffWakes(ops)).toHaveLength(1);
       expect(turnWakes(ops)).toEqual([]);
       expect(inbox.allFor(taskId)).toEqual([
@@ -973,7 +959,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const boundWakes = (ops: string[]) =>
       ops.filter((line) => line.includes("background job running"));
 
-    /** A stopped crewmate whose guidance the provider has failed `failures` times. */
     async function failing(failures: number) {
       const harness = await stopped();
       const { supervisor, crewmate, taskId } = harness;
@@ -1045,7 +1030,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(boundWakes(ops)).toEqual([
         `[fm-op] task ${taskId} "Job" has had a background job running for 2.5 hours: "gh run watch". It no longer counts as the task moving, so the idle ladder now watches the task; the job itself keeps running.`,
       ]);
-      // The ledger row records the text the Firstmate is served.
       expect(ledger).toContain(boundWakes(ops)[0]);
     });
 
@@ -1097,7 +1081,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       };
     }
 
-    /** A few more ticks, a minute apart, on whichever supervisor is live. */
     async function ticks(supervisor: CrewSupervisor, count = 3) {
       for (let n = 0; n < count; n += 1) {
         clock.now = clock.now + minutes(1);
@@ -1106,7 +1089,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       }
     }
 
-    /** A new outage on the lane, at the store: its rows fail at the provider again from now. */
     function newOutage(inbox: InboxStore, taskId: string) {
       inbox.endOutage(taskId);
       const ids = inbox.allFor(taskId).map((row) => row.id);
@@ -1131,7 +1113,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(inbox.outage(taskId).since).toBe(since);
       expect(stillDownWakes(after.ops.slice(after.before))).toEqual([]);
 
-      // A new outage on the same task is its own, and is woken for.
       newOutage(inbox, taskId);
       clock.now = clock.now + STILL_DOWN_MS;
       after.supervisor.watch.reconcileIdle(clock.now);
@@ -1156,10 +1137,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const after = disturb(harness, how, jobs);
       await ticks(after.supervisor);
       expect(boundWakes(after.ops.slice(after.before))).toEqual([]);
-      // Nor does a repeat spend a ledger row.
       expect(boundRows(after.sorts.slice(after.sortsBefore))).toEqual([]);
 
-      // A new job past its bound is its own, and is woken for.
       job = { jobId: "poll-2", command: "gh run watch", startedAt: clock.now - JOB_BOUND_MS };
       await ticks(after.supervisor);
       expect(boundWakes(after.ops.slice(after.before))).toHaveLength(1);
@@ -1217,7 +1196,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       expect(inbox.outage(taskId).failures).toBe(1);
       expect(stillDownWakes(ops)).toEqual([]);
-      // Its turn ends clean, and the outage with it.
       await endTurn(crewmate, taskId, "Done.");
       expect(inbox.outage(taskId).failures).toBe(0);
       expect(stillDownWakes(ops)).toEqual([]);

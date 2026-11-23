@@ -33,10 +33,6 @@ function writeDemoCalls(): ScriptedCall[] {
   ]);
 }
 
-/**
- * The demo crewmate: write the files, offer the card with the filler
- * recording, then with the real one once the decoder refused it.
- */
 export const demoCard: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
@@ -64,8 +60,6 @@ export const demoCard: Scenario =
         ],
       };
     }
-    // The demo crewmate: write the files, offer the card with the filler
-    // recording, then with the real one once the decoder refused it.
     if (!isFirstmate && latestUserTail.includes(DEMO_PROMPT_MARKER) && wantsStream) {
       if (!hasToolResults) {
         return { calls: [...writeChangePicturesCalls(), ...writeDemoCalls()] };

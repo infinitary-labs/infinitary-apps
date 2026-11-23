@@ -64,7 +64,6 @@ function parentPort(): Port {
   throw new Error("the command process has no parent to answer");
 }
 
-/** A command's connection: each operation sent to the app and its reply, whatever the tool. */
 type Connection = {
   call: (
     command: string,
@@ -73,7 +72,6 @@ type Connection = {
   ) => Promise<never>;
 };
 
-/** The commands this process can run, by the name the shell ran. */
 const TOOLS: Record<
   string,
   (version: string, connect: () => Promise<Connection>, cwd: string) => TaskAxiCli<Connection>

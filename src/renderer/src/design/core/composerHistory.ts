@@ -6,7 +6,6 @@
  * so a card or a feed line going away would split what one Cmd+Z takes back.
  */
 
-/** What the field holds: its words and its selection. */
 export type FieldState = { value: string; start: number; end: number };
 
 /**
@@ -25,7 +24,6 @@ export type ComposerHistory = {
   run?: { kind: "type" | "delete"; caret: number };
 };
 
-/** How many steps back a field keeps. */
 export const HISTORY_STEPS = 200;
 
 export const emptyHistory: ComposerHistory = { undo: [], redo: [] };
@@ -85,7 +83,6 @@ export function undoStep(
   return { state, history: { undo: history.undo.slice(0, -1), redo: [...history.redo, current] } };
 }
 
-/** One step forward from `current`, after an undo. */
 export function redoStep(
   history: ComposerHistory,
   current: FieldState,

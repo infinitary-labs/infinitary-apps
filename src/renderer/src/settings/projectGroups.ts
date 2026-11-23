@@ -13,7 +13,6 @@ export type ProjectEntry =
   | { kind: "one"; repo: RepoView; project: GroupProject | null }
   | { kind: "several"; project: GroupProject; repos: RepoView[] };
 
-/** The repository names a project holds, from the board's project list. */
 function namesOf(project: ProjectView): string[] {
   if (project.repos) return project.repos.map((repo) => repo.name);
   return project.repo ? [project.repo.name] : [];

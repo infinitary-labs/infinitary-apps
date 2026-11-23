@@ -47,7 +47,6 @@ export function buildJob(workflow: string): string {
   return lines.slice(start, end < 0 ? undefined : end).join("\n");
 }
 
-/** The composite actions the build job uses, as folders. */
 function buildActions(job: string): string[] {
   return [...new Set([...job.matchAll(/uses:\s*\.\/(\.github\/actions\/[\w-]+)/g)].map((m) => `${m[1]}/`))];
 }

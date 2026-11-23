@@ -76,7 +76,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
 fakeCrewTimersEachTest();
 
 describe("CrewSupervisor", () => {
-  /** A direct-pr task with its open pull request #9 on GitHub. */
   async function withOpenPullRequest() {
     const crewmate = fakeCrewmate();
     const change: ForgeChange = { number: 9, branch: "", headSha: "abc", url: null };
@@ -212,7 +211,6 @@ describe("CrewSupervisor", () => {
       shape: { escalate_from: tasks.get(taskId)?.key },
     });
     await tick();
-    // The retry built on it: its delivery names the same pull request.
     seedDelivery(tasks, retry.taskId, { prNumber: 9 });
     const carrier = tasks.get(retry.taskId)?.key;
     expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
@@ -459,7 +457,6 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(label()).toBe(words));
       }
 
-      // The click on failed checks merges nothing now, keeps the approval and says it waits for a fix.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       expect(h.forge.merges).toEqual([]);
@@ -576,7 +573,6 @@ describe("CrewSupervisor", () => {
           headSha: APPROVED,
           presentationRevision: 1,
         });
-        // The crewmate revises the story's words and publishes it at the same commit.
         const revised = story(h.taskId, 2, ["The meter keeps every reading across a restart."]);
         const shown = published(revised);
         h.tasks.delivery.updateChangePresentation(h.taskId, (record) => ({
@@ -640,7 +636,6 @@ describe("CrewSupervisor", () => {
           expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
           expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
           expect(mergeCard(h)).toBeUndefined();
-          // In its turn the crewmate reads the merge and puts up the merge card it is told to.
           await repairTurn(h, async () => {
             expect(await h.declare({})).toContain(
               "put up your merge card for this pull request with after close",
@@ -672,7 +667,6 @@ describe("CrewSupervisor", () => {
       // card calls refuse, where check_change asks for the merge's report.
       it("asks for the merge's report in its wake, not a merge card, when the pull request merged at a version its story never reached", async () => {
         const h = await mergedByHand();
-        // A commit pushed after the story was published, then merged by hand.
         h.forge.headSha = REPAIRED;
         expect(await h.supervisor.settling.settle.reconcileExternalMerge(h.taskId)).toBe(true);
         const refused = `#7 was merged outside the app at ${REPAIRED}, a version its published story revision 1 at ${APPROVED} never reached. A merged pull request takes no new story, so it has no merge card: report the merge`;
@@ -715,7 +709,6 @@ describe("CrewSupervisor", () => {
           const approval = h.authorization();
           if (!approval) throw new Error("The click kept no approval.");
           const line = keptApprovalLine(approval);
-          // While the pull request is open, the reading asks for the repair.
           expect(line).toContain("conflictRepair");
           expect(await h.declare({})).toContain(line);
           h.forge.headSha = head;
@@ -784,7 +777,6 @@ describe("CrewSupervisor", () => {
           actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
           ...(reply ? { reply, answersMessage: askedOn(h.supervisor, id) } : {}),
         });
-      // The captain asks for a smaller change; the rebuilt version's checks run.
       h.supervisor.cardActions.replyToCard(h.card.id, "this is over-engineering a bit");
       await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
       h.forge.headSha = REVISED;
@@ -806,7 +798,6 @@ describe("CrewSupervisor", () => {
         "I cut it down to one setting; the checks are running.",
       );
       expect(merge()?.label).toBe(MERGE_WORDS.whenChecksPass);
-      // His click merges nothing while they run and keeps his approval for the revised version.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       expect(h.authorization()?.approvedHead).toBe(REVISED);
@@ -1038,7 +1029,6 @@ describe("CrewSupervisor", () => {
      */
     it("Review carefully on a merge card makes the task Careful from the captain, starts its crewmate and starts the review of the version the card offered", async () => {
       const h = await approved({ guidance: true });
-      // The branch has the committed version the card offered.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(APPROVED);
       const careful = h.card.actions.find((action) => action.care);
       expect(careful).toMatchObject({ label: REVIEW_CAREFULLY_WORDS, care: "reviewed" });
@@ -1098,7 +1088,6 @@ describe("CrewSupervisor", () => {
                 `the app started review ${review?.key} of version ${APPROVED.slice(0, 7)}`,
           ),
       ).toBe(true);
-      // The first mate's own spawn for the same review finds it open.
       await expect(
         h.supervisor.intake.commission({
           title: "Review",
@@ -1111,7 +1100,6 @@ describe("CrewSupervisor", () => {
     it("says in the feed and wakes the first mate at once when the app cannot start the review from the merge card, and the care still rose", async () => {
       const h = await approved();
       const careful = h.card.actions.find((action) => action.care);
-      // No commits to read on the branch: nothing to review yet.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(null);
       const woken = h.ops.length;
       h.supervisor.cardActions.act(h.card.id, careful?.id ?? "");
@@ -1146,7 +1134,6 @@ describe("CrewSupervisor", () => {
     it("reviews a task with no recorded words of the captain's against its goal from the merge card", async () => {
       const h = await approved({ filed: true });
       expect(h.tasks.get(h.taskId)?.intent).toBeNull();
-      // The branch has the committed version the card offered.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(APPROVED);
       const careful = h.card.actions.find((action) => action.care);
       const woken = h.ops.length;
@@ -1282,7 +1269,6 @@ describe("CrewSupervisor", () => {
 });
 
 describe("task-level autonomy and the host's merge hold (contract v3.9)", () => {
-  /** A direct-pr repository, its autonomy as given, with one task on it. */
   async function onRepo(
     autonomy: boolean,
     shape?: { autonomy_ask?: boolean },
@@ -1313,7 +1299,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     return { dispose: repo.dispose, taskId, supervisor, tasks, specs, cards, mergePullRequest };
   }
 
-  /** The crewmate's completion card, as the host finishes it. */
   function completionCard(specs: CrewmateSpec[]): void {
     specs[0]?.onCard?.({
       requiredActions: [],
@@ -1363,7 +1348,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       expect(
         supervisor.facts.crewStatus().find((row) => row.taskId === taskId)?.autonomy,
       ).toBeUndefined();
-      // The refusal the Firstmate reads is the deliverable's, not autonomy's.
       const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toContain("delivers an answer, not a change");
       expect(result.refusal?.refused).not.toBe("autonomy-off");
@@ -1410,7 +1394,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       });
       expect(result.text).toContain("is not yours to do: autonomy is off for this task");
       expect(result.text).toContain("meterlab asks before merging");
-      // Nothing moved: no merge, the task still active, the card still up.
       expect(h.mergePullRequest).not.toHaveBeenCalled();
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
       expect(h.cards().some((entry) => entry.id === card?.id)).toBe(true);
@@ -1594,7 +1577,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       target: { prNumber: 7 },
     });
     await h.emitNext();
-    // The second card's approval waits beside it, never in its place.
     expect(h.authorization()).toMatchObject({ status: "standing", target: { prNumber: 7 } });
     expect(h.authorization()?.queued?.map((item) => item.target.prNumber)).toEqual([8]);
     expect(h.forge.merges).toEqual([]);
@@ -1669,7 +1651,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     h.crewmate.finishPrompt();
     await tick();
     await vi.waitFor(() => expect(h.forge.merges).toEqual([REPAIRED]));
-    // The approval of the first still stands, waiting for its checks.
     expect(h.authorization()).toMatchObject({ status: "standing", target: { prNumber: 7 } });
     firstReady = true;
     h.crewmate.finishPrompt();
@@ -1712,7 +1693,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
         else h.forge.merged = true;
         return { sha: `squash-${headSha}` };
       };
-      // The crewmate asks for the second pull request in a turn of its own.
       await h.supervisor.steer.steerCrewmate(h.taskId, "merge the label fix too");
       await h.declare({ pull: 8 });
       const review = h.tasks
@@ -1780,8 +1760,6 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     const held = h.supervisor.settling.locks.claim(h.taskId, "merge-pr");
     await h.supervisor.steer.steerCrewmate(h.taskId, "put both merge cards up again");
     h.repos.configure(repoId, { autonomy: true });
-    // The app takes the first card under the project's autonomy; the second
-    // asks the captain first, and the captain clicks it.
     await h.emit("Ready to merge again");
     await h.emitNext("The captain decides label changes himself.");
     h.crewmate.finishPrompt();

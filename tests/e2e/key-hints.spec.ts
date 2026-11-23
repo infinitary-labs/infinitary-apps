@@ -26,7 +26,6 @@ import {
  * Tasks panel's commands that do the same have now.
  */
 
-/** Opens Keyboard settings the keyboard's way: command search, then its row. */
 async function openKeyboardSettings(app: LaunchedApp["app"], page: Page): Promise<void> {
   await pressWindowKey(app, "k", ["meta"]);
   const search = commandSearch(page);
@@ -102,7 +101,6 @@ test("a control's label names the key its command has now, as Keyboard settings 
   }
 });
 
-/** Records `key` for `command` in the open Keyboard settings, and returns once its row shows it. */
 async function recordKey(
   app: LaunchedApp["app"],
   page: Page,
@@ -117,7 +115,6 @@ async function recordKey(
   await expect(keyboard.keys(command).locator("kbd")).toHaveText([key]);
 }
 
-/** Closes Keyboard settings and opens the task board with its own key, the keyboard on its tiles. */
 async function backToBoard(app: LaunchedApp["app"], page: Page, key: string): Promise<void> {
   await pressWindowKey(app, "Escape");
   await expect(keyboardSettings(page).section).toBeHidden();
@@ -144,7 +141,6 @@ test("the task board's own controls name the keys the Tasks panel's commands hav
   try {
     const { app, page } = launched;
     const board = boardEntry(page);
-    // The key each control draws after its words, by the control it sits in.
     const drawn = (target: string) => board.locator(`[data-board-command-key="${target}"]`);
     const find = board.locator("[data-board-find]");
     const backlog = boardViewTab(page, "backlog");

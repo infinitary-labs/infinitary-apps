@@ -52,7 +52,6 @@ const KINDS: (CrewmateProcedureFacts | undefined)[] = [
 
 const tools = piToolsOf(bindTools(CREWMATE_TOOLS, crewmateToolDelegate()));
 
-/** The app's own count of the fixed part (tests/helpers/promptBudget.ts). */
 function fixedTokens(systemPrompt: string): number {
   return countFixed({ systemPrompt, tools });
 }
@@ -272,7 +271,6 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
         // INF-2930: a prompt up to the hard line still leaves the
         // conversation the room that line leaves, half of what the budget promises.
         expect(fits(roomAtHardLine(CREWMATE_BUDGET)), label(runtime, kind)).toBe(true);
-        // The check is the real one: it refuses what cannot fit.
         const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
         expect(fits(room), label(runtime, kind)).toBe(true);
         expect(fits(room + 1), label(runtime, kind)).toBe(false);

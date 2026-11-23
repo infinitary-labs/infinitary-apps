@@ -32,7 +32,6 @@ export type ProjectFocusState = {
   shown: boolean;
   /** Tasks waiting on the captain in other projects than the focused one. */
   elsewhere: number;
-  /** The row of project pills is open. */
   open: boolean;
   /** How many times a command asked the row to open with focus in it. */
   openAsk: number;
@@ -127,7 +126,6 @@ export const projectFocus = {
   },
 };
 
-/** The focus as it stands, read as it changes. */
 export function useProjectFocus(): ProjectFocusState {
   return useSyncExternalStore(projectFocus.subscribe, projectFocus.state, projectFocus.state);
 }

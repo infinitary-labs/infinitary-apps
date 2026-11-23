@@ -11,7 +11,6 @@ export const NODE_VERSION_PROMPT_MARKER = "say which node this Mac runs";
 
 export const MOCK_NODE_REPORT_PREFIX = "This Mac's node answers";
 
-/** The crewmate runs node from the login search path and reports its version. */
 export const nodeVersion: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {

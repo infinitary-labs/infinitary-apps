@@ -21,13 +21,10 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
-/** The folders held to one sentence per line. */
 export const SENTENCE_LINE_ROOTS = ["docs", "primitives", ".claude/skills/infinitary-design"] as const;
 
-/** Folders inside those that hold someone else's files. */
 const SKIPPED_FOLDERS = new Set(["vendor", "node_modules"]);
 
-/** Every Markdown file held to one sentence per line, relative to the repository. */
 export function sentenceLineFiles(root: string = REPO_ROOT): string[] {
   const found: string[] = [];
   const walk = (dir: string) => {
@@ -55,7 +52,6 @@ const LIST_ITEM = /^(\s*)([-*+]|\d{1,9}[.)])( +)(\S.*)$/;
 const BLOCK_START = /^([-*+](\s|$)|\d{1,9}[.)](\s|$)|#{1,6}(\s|$)|>|\||<|`{3,}|~{3,}|=+\s*$|-+\s*$|\[[^\]]*\]:)/;
 /** What may close a sentence after its stop: brackets, quotes and emphasis. */
 const CLOSERS = new Set([")", "]", '"', "'", "”", "’", "*", "_"]);
-/** What a sentence may start with. */
 const SENTENCE_START = /[\p{Lu}0-9`"“*_[(]/u;
 /** Words whose stop does not end a sentence. */
 const ABBREVIATION = /^(e\.g|i\.e|etc|vs|cf|al|approx|incl|Inc|Ltd|Mr|Mrs|Ms|Dr|St|Jr|Sr|Fig|[A-Za-z]|([A-Za-z]\.)+[A-Za-z])$/;

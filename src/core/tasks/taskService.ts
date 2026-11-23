@@ -319,7 +319,6 @@ export type CloseInput = {
   actor: TaskEventActor;
   /** The feed-ready line; a default is phrased from the reason. */
   text?: string;
-  /** The error a failed close carries. */
   error?: string;
   /** Extra facts the close records, e.g. an escalation's `escalated_to`. */
   data?: Record<string, unknown>;
@@ -448,8 +447,6 @@ export class TaskService {
     }
   }
 
-  // ---- the change seam (P3) ----------------------------------------------
-
   /**
    * Hear every committed mutation, after its commit. The listener runs
    * synchronously on the writer's thread and must not write tasks itself;
@@ -492,8 +489,6 @@ export class TaskService {
   boardSeq(): number {
     return this.writer.store.boardSeq();
   }
-
-  // ---- reads --------------------------------------------------------------
 
   /** One synchronous projection shares task reads, never a conversation or turn's writes. */
   readProjection<T>(read: () => T, known: readonly TaskRecord[] = []): T {
@@ -616,7 +611,6 @@ export class TaskService {
     return this.writer.store.listByStatus("active");
   }
 
-  /** The live set: everything not closed. */
   listLive(): TaskRecord[] {
     return this.writer.store.listByStatus("open", "active");
   }
@@ -914,7 +908,6 @@ export class TaskService {
     return blocker.status === "done";
   }
 
-  /** Closed = no longer open or active: done or dropped. */
   isClosed(record: Pick<TaskRecord, "status">): boolean {
     return TaskService.isClosed(record);
   }
@@ -949,8 +942,6 @@ export class TaskService {
     return isHostRaisedShape(record.shape);
   }
 
-  // ---- graph reads (P2) ---------------------------------------------------
-
   /** A task by id or by key (`FM3K-12`, any case); tools accept either. */
   resolve(ref: string): TaskRecord | undefined {
     return this.writer.resolve(ref);
@@ -968,8 +959,6 @@ export class TaskService {
   static blockerHoldsClose(blocker: Pick<TaskRecord, "status">): boolean {
     return blocker.status === "open" || blocker.status === "active";
   }
-
-  // ---- writes -------------------------------------------------------------
 
   create(input: CreateTaskInput): TaskRecord {
     const at = input.createdAt ?? this.writer.now();
@@ -1072,8 +1061,6 @@ export class TaskService {
     });
     return run();
   }
-
-  // ---- graph writes (P2) --------------------------------------------------
 
   /** A task's policies now, read with its project's settings; none for a missing record. */
   policiesOf(record: TaskRecord | undefined): EffectiveTaskPolicies | null {

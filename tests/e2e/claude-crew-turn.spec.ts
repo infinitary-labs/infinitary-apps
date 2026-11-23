@@ -220,7 +220,6 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
     expect(copies).toHaveLength(1);
     const sessionId = basename(copies[0] ?? "", ".jsonl");
 
-    // The client's own file goes, as its 30-day sweep would take it.
     const projects = join(claudeDefaultStore(homeDir), "projects");
     const clientFiles = readdirSync(projects)
       .map((dir) => join(projects, dir, `${sessionId}.jsonl`))

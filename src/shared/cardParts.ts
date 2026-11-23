@@ -93,7 +93,6 @@ function keyOf(node: Element, media?: ReadonlyMap<string, string>, includeScript
   return `<${name}${attributes ? ` ${attributes}` : ""}>${inner}</${name}>`;
 }
 
-/** The parts of a body, in document order. */
 export function cardParts(body: string, media?: ReadonlyMap<string, string>): CardPart[] {
   const document = parseDocument(body, { decodeEntities: true, withStartIndices: true });
   const parts: CardPart[] = [];

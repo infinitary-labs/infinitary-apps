@@ -189,7 +189,6 @@ describe("a task that runs on a computer that runs work", () => {
     model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
     await at.start("t-routed");
     await expect.poll(() => home.tasks.get("t-routed")?.outcome).toBe("The footer is fixed.");
-    // Routed among that computer's own sign-ins, with the record saying so.
     const [routed] = home.decisions.routing({ taskIds: ["t-routed"], chosen: true });
     expect(routed).toMatchObject({ provider: "xai", model: "grok-stub" });
     const who = home.placed.placeOf(at.deviceId).who;
@@ -203,7 +202,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(
       home.tasks.timeline("t-routed").find((event) => event.kind === "dispatched")?.text,
     ).toContain("xai/grok-stub");
-    // Its brief reached the model there.
     expect(said(api.requests[requests])).toContain("Fix the footer.");
   });
 
@@ -293,7 +291,6 @@ describe("a task that runs on a computer that runs work", () => {
         deviceId: at.deviceId,
       });
 
-    // A model named while it waits starts it on that model there.
     queued("t-model");
     const named = holdServed();
     model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
@@ -333,7 +330,6 @@ describe("a task that runs on a computer that runs work", () => {
       id: CODEX_MEDIUM_STARTER,
     });
     const at = await world(undefined, { ...TWO_CODEX_THERE, runtime: starter });
-    // One turn before the restarts, and the steered one after them.
     model([
       { text: "Started on the footer." },
       { tools: [{ name: "report", args: { text: "The header is fixed too." } }] },
@@ -371,7 +367,6 @@ describe("a task that runs on a computer that runs work", () => {
       // Its vault lists the signed-in Claude account with no models at all.
       served: [{ accountId: "acct_claude_there", models: [] }],
     });
-    // What a task set to run there routes among, and the account each model binds.
     const pool = await at.home().placed.served(at.deviceId);
     expect(pool.available).toEqual(CLAUDE_CATALOG.map(({ provider, id }) => ({ provider, id })));
     expect(
@@ -421,14 +416,12 @@ describe("a task that runs on a computer that runs work", () => {
     model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
     await at.start("t-openrouter");
     await expect.poll(() => home.tasks.get("t-openrouter")?.outcome).toBe("The footer is fixed.");
-    // Routed among that computer's OpenRouter models, none of them this Mac's.
     const [routed] = home.decisions.routing({ taskIds: ["t-openrouter"], chosen: true });
     expect(routed).toMatchObject({ provider: "openrouter", model: alias });
     const who = home.placed.placeOf(at.deviceId).who;
     expect(routingReasons(home, "t-openrouter")).toContain(
       `routed among ${who}'s own sign-ins (openrouter): 451 models`,
     );
-    // The computer bound its own OpenRouter account, and its brief reached the model there.
     expect(at.bound).toEqual([
       { backend: "pi", provider: "openrouter", accountId: "acct_or_there" },
     ]);
@@ -439,7 +432,6 @@ describe("a task that runs on a computer that runs work", () => {
   it("does not start a task whose computer is signed in to no subscription that can take it, and makes nothing there", async () => {
     const at = await world(undefined, {
       routing: THIS_MAC_ON_CODEX,
-      // Its only account is switched off there.
       signedInTo: [computerAccount("acct_grok_off", "xai", { enabled: false })],
     });
     const home = at.home();
@@ -498,7 +490,6 @@ describe("a task that runs on a computer that runs work", () => {
       await home.supervisor.starts.startQueuedNow("t-none", { audience: "captain" }),
     ).toContain("has no sign-ins yet");
 
-    // Signed in there: the computer says so, and the task starts by itself.
     model([{ text: "Done." }]);
     accounts.push(computerAccount("acct_grok_there", "xai"));
     await home.signIns.refresh(at.deviceId);
@@ -520,7 +511,6 @@ describe("a task that runs on a computer that runs work", () => {
       forges: () => forges,
     });
     const home = at.home();
-    // A project that lives on GitHub, adopted here from a clone whose origin names it.
     const project = await gitProject();
     const address = "https://github.com/octo/website.git";
     await git(project.home, ["remote", "set-url", "origin", address]);
@@ -542,7 +532,6 @@ describe("a task that runs on a computer that runs work", () => {
       deviceId: at.deviceId,
       gate: { kind: "captain", ref },
     });
-    // Nothing was tried there: no clone, no conversation.
     expect(at.bound).toEqual([]);
     expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
     expect(
@@ -567,8 +556,6 @@ describe("a task that runs on a computer that runs work", () => {
         ],
       });
 
-    // The captain signed it in there: the computer says so, the card comes
-    // down, and the task starts by itself, cloning with that sign-in.
     model([{ text: "Done." }]);
     forges.signIns.push({
       host: "github.com",
@@ -636,7 +623,6 @@ describe("a task that runs on a computer that runs work", () => {
         ],
       });
 
-    // Signed in to GitLab there: the card comes down and the task starts.
     model([{ text: "Done." }]);
     forges.signIns.push({
       host: "gitlab.com",
@@ -686,7 +672,6 @@ describe("a task that runs on a computer that runs work", () => {
         home.cards().some((card) => card.id === deviceForgeSignInCardId("github.com", at.deviceId)),
       )
       .toBe(true);
-    // Lifted once that computer reports the sign-in: the clone goes through.
     model([{ text: "Done." }]);
     refuse = false;
     await home.supervisor.placement.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");

@@ -10,13 +10,10 @@ import type { HomeRead } from "../browserFreshHome";
 
 const TASK_ID = "story-layout";
 
-/** One view of the story: its caption and the release-note pictures of each state. */
 type View = { caption: string; before: string[]; after: string[]; fresh?: boolean };
 
-/** What the story-layout test's story reads back: each card's title, and the views. */
 type Words = { legacy: string; table: string; views: View[] };
 
-/** The card drawn by each version of the story's drawing. */
 const CARDS = [
   { id: "story-layout-legacy", version: 1, words: "legacy" },
   { id: "story-layout-table", version: 2, words: "table" },

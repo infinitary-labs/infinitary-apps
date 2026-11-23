@@ -8,7 +8,6 @@ type BrowserEntry = {
   browserArrived?: string | undefined;
 };
 
-/** Whether `card` asks the captain to take over task `taskId`'s browser and is still up. */
 function asksForBrowser(card: Card, taskId: string): boolean {
   return (
     !card.ended &&

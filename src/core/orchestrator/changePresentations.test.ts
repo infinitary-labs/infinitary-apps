@@ -576,7 +576,6 @@ describe("saved change publication", () => {
     expect(readFileSync(join(at.media, before.file))).toEqual(readFileSync(earlier));
     expect(sha256(readFileSync(join(at.media, before.file)))).toBe(before.uploadSha256);
 
-    // With no identical copy left, the refusal names the picture and the way out.
     for (const name of readdirSync(at.media))
       if (sha256(readFileSync(join(at.media, name))) === before.uploadSha256)
         rmSync(join(at.media, name));
@@ -812,7 +811,6 @@ describe("no-mistakes' attestation on a Careful story", () => {
     const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
     at.setHead(pushed);
     at.change = { ...(at.change as ForgeChange), headSha: pushed };
-    // A CI repair that leaves the view as captured.
     const repaired = {
       ...at.staged,
       head: pushed,

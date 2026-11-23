@@ -17,7 +17,6 @@ import { heroShot, regionShot } from "./pictures";
 import { setThemeViaSettings } from "./theme";
 import { focusOn, pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
-/** The stable release the stand-in serves in these channel tests, named once and passed to it. */
 const STABLE_TARGET = "0.5.0";
 
 // INF-640: keyboard channel selection, persisted membership and consent/progress/error UI.
@@ -261,7 +260,6 @@ test("an update saves running work first, and Update later installs nothing, by 
     const panel = page.locator("[data-update-channel]");
     const fixture = <K extends "downloads" | "saves" | "installations">(key: K) =>
       app.evaluate((_, name) => globalThis.__macUpdateFixture[name], key);
-    /** Opens the panel, presses Restart to update, and lets the download finish. */
     const update = async (downloads: number) => {
       if (!(await panel.isVisible())) await runFromSearch(app, page, "updates.show");
       await pressKey(panel.getByRole("button", { name: UPDATE_WORDS.restart }), "Enter");
@@ -269,7 +267,6 @@ test("an update saves running work first, and Update later installs nothing, by 
       await app.evaluate(() => globalThis.__macUpdateFixture.finish());
     };
 
-    // Saving work: the panel names the task whose running work it waits for.
     await update(1);
     await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_WORK_WORDS.saving);
     await expect(panel.locator("[data-update-waiting]")).toHaveText(
@@ -277,7 +274,6 @@ test("an update saves running work first, and Update later installs nothing, by 
     );
     await regionShot(panel, test.info().outputPath("update-saving-dark.png"));
 
-    // Update later, reached by Tab from the update icon.
     await focusOn(page.getByRole("button", { name: /Update available/ }));
     await page.keyboard.press("Tab");
     await untilFocused(panel.getByRole("button", { name: UPDATE_WORDS.later }));
@@ -296,7 +292,6 @@ test("an update saves running work first, and Update later installs nothing, by 
     await expect(panel.locator("[data-update-line]")).toContainText(UPDATE_LATER);
     expect(await fixture("installations")).toBe(0);
 
-    // Saved, it updates: the panel and the Version row say so.
     await update(3);
     await expect(panel.locator("[data-update-waiting]")).toBeVisible();
     await app.evaluate(() => globalThis.__macUpdateFixture.saved());

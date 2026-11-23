@@ -357,7 +357,6 @@ test("a Cursor account from an earlier version is skipped, and its store is kept
   await expect(page.locator(`[data-account-row="${CLAUDE_PERSONAL}"]`)).toBeVisible({
     timeout: 15_000,
   });
-  // No row, no chip, no model: Cursor is not a provider any more.
   await expect(page.locator(`[data-account-row="${LEFTOVER_CURSOR}"]`)).toHaveCount(0);
   const intelligence = settingsSection(page, "subscriptions");
   await expect(intelligence).toBeVisible();
@@ -412,7 +411,6 @@ test("the account pin toggles and persists", async () => {
   await page.keyboard.press("Escape");
 });
 
-/** Ensure the Models disclosure is open. */
 async function openModels(page: Page) {
   const models = modelsSection(page);
   const head = models.getByRole("button", { name: /^Models/ });
@@ -491,13 +489,11 @@ test("slot membership and off persist across a settings round-trip", async () =>
   const reopened = await openModels(page);
   await expect(nameIn("medium")).toBeVisible({ timeout: 10_000 });
 
-  // A second level is a second membership, not a move: the first pill stays.
   const again = await openModelPanel(page, levelLane(reopened, "medium"), label);
   await setLevelInPanel(again, label, "low", true);
   await expect(nameIn("low")).toBeVisible();
   await expect(nameIn("medium")).toBeVisible();
 
-  // Removing it from all levels clears every membership at once.
   await removeFromAllLevels(again, label);
   await expect(nameIn("off")).toBeVisible();
   await expect(rowIn("medium")).toHaveCount(0);

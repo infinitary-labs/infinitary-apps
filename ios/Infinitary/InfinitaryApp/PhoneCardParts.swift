@@ -269,7 +269,6 @@ struct PhoneThreadScroller: View {
     /// leaves where the thread goes to that arrival.
     @State private var taken = -1
 
-    /// The thread's whole content, whose bottom is the foot.
     private static let content = "thread-content"
 
     var body: some View {
@@ -364,7 +363,6 @@ struct PhoneThreadScroller: View {
         }
     }
 
-    /// The jump down: to the first message that came while the captain read above, or to the foot.
     private func jump(_ scroller: ScrollViewProxy) -> some View {
         let unread = unreadCount > 0
         return Button {

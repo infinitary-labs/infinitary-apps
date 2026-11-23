@@ -49,7 +49,6 @@ export const CAPTURE_PANEL_TOOL_DESCRIPTION = [
   "Pass id: the extension's directory name.",
 ].join(" ");
 
-/** The capture result's text half, shared by both backends' tools. */
 export function renderCaptureText(result: PanelCaptureResult): string {
   if (!result.ok) return `Could not capture "${result.id}": ${result.reason}.`;
   const files = result.images.map(
@@ -72,7 +71,6 @@ export function renderCaptureText(result: PanelCaptureResult): string {
   ].join("\n");
 }
 
-/** The placing's text half, shared by both backends' tools. */
 export function renderPlaceText(result: PanelPlaceResult): string {
   if (!result.ok) return `Could not place: ${result.reason}.`;
   const seconds = Math.round(result.waitedMs / 100) / 10;

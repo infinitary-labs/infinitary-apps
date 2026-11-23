@@ -19,7 +19,6 @@ import type { TaskWriter } from "./taskWriter";
 
 /** A report saved at its call that no counted report followed (`TaskTurns.keptReport`). */
 export type KeptReport = {
-  /** The record's event that holds it. */
   eventId: number;
   at: number;
   text: string;

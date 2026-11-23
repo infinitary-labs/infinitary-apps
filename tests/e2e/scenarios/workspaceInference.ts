@@ -11,10 +11,6 @@ export const AMBIGUOUS_PROMPT_MARKER = "which project should take this";
 /** The one decision card the mock Firstmate asks with on an ambiguous request. */
 export const MOCK_WHICH_PROJECT_TITLE = "Which project?";
 
-/**
- * The first mate's project moves on the captain's words: unregister a
- * repository, configure one, and ask which project takes an ambiguous ask.
- */
 export const workspaceInference: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
@@ -55,8 +51,6 @@ export const workspaceInference: Scenario =
       };
     }
     if (!hasToolResults && latestUserTail.includes(AMBIGUOUS_PROMPT_MARKER)) {
-      // The ask path: one concise decision card naming the plausible
-      // repositories from the context block.
       const repoNames = contextRepos(body)
         .map(([name]) => name)
         .filter((name) => name !== PERSONAL_WORKSPACE_NAME)

@@ -9,7 +9,6 @@ import { resultRefusal } from "../tasks/taskResult";
  * JSON and nothing else - a fenced block is the one wrapping taken off.
  */
 
-/** The question session's system instruction for a JSON answer. */
 export const ASK_INSTRUCTION = [
   "You answer one question from a program with one JSON value and nothing else: no prose, no explanation.",
   "When a JSON Schema is given, your answer must fit it.",
@@ -20,7 +19,6 @@ export type JsonAnswerer = (
   text: string,
 ) => Promise<{ text: string } | { failed: string }>;
 
-/** The question as the session's one message: the prompt, then the schema it must fit. */
 function question(prompt: string, schema: Record<string, unknown> | null, why?: string): string {
   return [
     prompt,
@@ -31,7 +29,6 @@ function question(prompt: string, schema: Record<string, unknown> | null, why?: 
   ].join("\n");
 }
 
-/** The answer's JSON, or why it is not an answer. */
 export function parseAnswer(
   text: string,
   schema: Record<string, unknown> | null,
@@ -48,7 +45,6 @@ export function parseAnswer(
   return refused ? { refused } : { value };
 }
 
-/** The checked answer, or null when two tries gave none. */
 export async function askJson(
   answer: JsonAnswerer,
   prompt: string,

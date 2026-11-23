@@ -50,7 +50,6 @@ function labelPattern(words: string): RegExp {
   return new RegExp(`^${literal(before)}.+${literal(after)}$`);
 }
 
-/** The offer the merge card shows now, read from the core's stack. */
 const offerOf = (page: Page) =>
   page.evaluate(
     async (title) =>
@@ -58,7 +57,6 @@ const offerOf = (page: Page) =>
     RETURNING_MERGE_TITLE,
   );
 
-/** Returns once the merge card is up at another offer than `earlier`: its crewmate showed it again. */
 const shownAgain = (page: Page, earlier: string | undefined) =>
   expect
     .poll(
@@ -132,7 +130,6 @@ test("a merge card that comes back opens with its crewmate's summary under the c
         labelPattern(m.cardSinceSeenSaw({ when: HOLE })),
       );
       await expect(section.locator("p")).toHaveText([RETURNING_MERGE_SUMMARIES.reply]);
-      // The summary is the first thing the card says, above the story's Why.
       const words = await frame.locator("body").innerText();
       expect(words.indexOf(RETURNING_MERGE_SUMMARIES.reply)).toBeLessThan(words.indexOf(why));
       await stageAtRest(page);

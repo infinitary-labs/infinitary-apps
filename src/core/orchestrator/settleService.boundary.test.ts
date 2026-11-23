@@ -20,7 +20,6 @@ import { heldLine } from "./settleCardFacts";
 
 type World = ReturnType<typeof settleWorld>;
 
-/** A first mate merge whose request reads the last look after `change` ran. */
 async function firstmateMergeAfter(world: World, change: () => void) {
   world.live.autonomy = true;
   let looked: string | undefined;
@@ -280,7 +279,6 @@ describe("an app-approved merge with a reported check-back", () => {
       expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization?.retryAt).toBeGreaterThan(
         first?.retryAt ?? 0,
       );
-      // Clearing the real wait keeps the same approval; it needs no new click.
       world.cards.takeDown("card-question", "The meter order is settled.");
       world.tasks.turns.recordReport(TASK, { text: "The wait is resolved." });
       world.tasks.placement.setGate(TASK, null);

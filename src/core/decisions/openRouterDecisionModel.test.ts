@@ -36,7 +36,6 @@ it("honors caller cancellation while the selected account runtime is still being
   });
 });
 
-// Finding A makes account selection asynchronous; cancellation must still prevent runtime construction.
 it("does not construct a runtime after cancellation overtakes account selection", async () => {
   let selected!: (account: string) => void;
   const account = new Promise<string>((resolve) => {

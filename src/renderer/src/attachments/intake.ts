@@ -37,7 +37,6 @@ export type IntakeResult =
   | { kind: "text"; text: string; name: string }
   /** Neither a picture nor text: its path on this Mac, or null when it has no place on disk. */
   | { kind: "unsupported"; path: string | null }
-  /** A folder, with its path on this computer. */
   | { kind: "folder"; path: string }
   | { kind: "notice"; notice: ComposerNotice };
 
@@ -210,7 +209,6 @@ export function cancelPending(key: string, id: string): void {
   if (name) say(key, m.attachCancelled({ name }));
 }
 
-/** Whether any file is still being prepared for this destination. */
 export function isPreparing(key: string): boolean {
   return (useIntakeStore.getState().pending[key]?.length ?? 0) > 0;
 }

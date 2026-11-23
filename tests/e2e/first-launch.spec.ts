@@ -58,7 +58,6 @@ const clients = () => ({
   INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
 });
 
-/** Connects the mock provider through the gate's own chip, with a pasted key. */
 async function connectThroughGate(page: Page): Promise<void> {
   const gate = page.locator("[data-first-run-gate]");
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
@@ -136,7 +135,6 @@ test("first-launch cards stay reachable with collapsed, expanded or one-sided pa
     );
     await expect(page.locator(`[data-rail="${x}"] > [data-side-panel="activity"]`)).toBeVisible();
     await reachable(`expanded-${x}`);
-    // Collapsing must leave the card reachable too.
     await page.getByRole("button", { name: "Collapse Activity" }).click();
     await reachable(`collapsed-${x}`);
   }
@@ -190,7 +188,6 @@ test("fresh key setup commits the welcome before ready without inference, restor
   if (!mockProvider) throw new Error("no mock provider");
   mockProvider.failFirstmate(true);
   const gate = page.locator("[data-first-run-gate]");
-  // Gated: the input takes nothing, and hold-to-talk is ignored.
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
   await expect(promptInput(page)).toBeDisabled();
   await page.keyboard.down(DICTATION_KEY);
@@ -276,7 +273,6 @@ test("fresh key setup commits the welcome before ready without inference, restor
   expect(restored.id).toBe(initial.id);
   expect(mockProvider.requests()).toBe(0);
 
-  // The welcome takes no reply: no reply row under it, and the core refuses one.
   await expect(cardReply(launched.page).row).toHaveCount(0);
   await expect(cardLeave(launched.page, shownCard(launched.page, WELCOME_TITLE))).toBeVisible();
   const refused = await launched.page.evaluate(async (id) => {
@@ -445,7 +441,6 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       });
       expect(await passes()).toHaveLength(1);
       await page.screenshot({ path: test.info().outputPath(`welcome-${theme}-5.png`) });
-      // Next at the end and Back at the start do nothing.
       await expect(next).toHaveAttribute("aria-disabled", "true");
       await press(next);
       await press(back);
@@ -492,7 +487,6 @@ test("the welcome shows one part per press by keys in both themes at the minimum
     expect(await prompt.evaluate((field: HTMLTextAreaElement) => field.selectionStart)).toBe(
       clone.words.length,
     );
-    // Another starter's words take the place of the first's.
     await press(frame.getByRole("button", { name: fresh.label }), " ");
     await expect(prompt).toBeFocused();
     await expect(prompt).toHaveValue(fresh.words);
@@ -533,13 +527,11 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       }, path);
     const projects = () => page.evaluate(() => window.infinitary.repos.list());
     const before = await projects();
-    // Cancel in the picker changes nothing: no project, no words, the draft kept.
     await standInPicker(null);
     await press(button);
     await expect(prompt).toHaveValue("my own words");
     await expect(status).toHaveCount(0);
     expect(await projects()).toEqual(before);
-    // A folder chosen is added and named under the title, with focus in the box.
     const folder = scratchDir("infinitary-welcome-folder-");
     await standInPicker(folder);
     await press(button);
@@ -552,7 +544,6 @@ test("the welcome shows one part per press by keys in both themes at the minimum
     await expect(prompt).toHaveValue("my own words");
     await expect(shownCard(page, WELCOME_TITLE)).toBeVisible();
     expect((await page.evaluate(() => window.infinitary.app.firstRun())).firstTurnAt).toBeNull();
-    // The same folder again is named as already one of the projects.
     await press(button);
     await expect(status).toHaveText(m.welcomeFolderAlreadyAdded({ name: added.name }));
     expect(await projects()).toHaveLength(before.length + 1);
@@ -565,8 +556,6 @@ test("a fresh profile takes no words before it has read the gate, and still gets
   mockProvider.failFirstmate(true);
   const gate = page.locator("[data-first-run-gate]");
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
-  // The window starts again on this fresh profile, with someone typing and
-  // sending at the first moment the input would take it.
   await reloadTypingEarly(page);
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
   const early = await page.evaluate(() => window.earlyInput);
@@ -651,7 +640,6 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
     const model = await page.evaluate(() => window.infinitary.settings.getFirstmateModel());
     expect(model?.provider).toBe(CLAUDE_PROVIDER_ID);
 
-    // The captain's first turn is answered on Claude too.
     await input.click();
     await input.fill(`what can you do? ${ANSWER_PROMPT_MARKER}`);
     await input.press("Enter");

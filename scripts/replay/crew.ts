@@ -259,7 +259,6 @@ export class CrewPlayback {
     if (finished?.[1]) this.runningJobs.get(taskId)?.delete(finished[1]);
   }
 
-  /** Whether the recording says a job of this task is still running: the registry, replayed. */
   hasRunningJobs(taskId: string): boolean {
     return (this.runningJobs.get(taskId)?.size ?? 0) > 0;
   }

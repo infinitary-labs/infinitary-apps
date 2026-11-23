@@ -44,7 +44,6 @@ export type ClaudeQuotaAuth = {
   subscriptionType?: string;
 };
 
-/** errSecItemNotFound as `security(1)` used to report it - residual classifier. */
 const SEC_ITEM_NOT_FOUND_CLI = 44;
 /** errSecItemNotFound as Security.framework OSStatus. */
 const SEC_ITEM_NOT_FOUND = -25300;

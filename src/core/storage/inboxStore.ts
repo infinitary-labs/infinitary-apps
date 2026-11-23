@@ -97,7 +97,6 @@ export const INBOX_BACKOFF_MS: readonly number[] = [
 ];
 const INBOX_BACKOFF_CEILING_MS = 15 * 60_000;
 
-/** How long a row that has now failed at the provider `failures` times waits. */
 export function inboxBackoffMs(failures: number): number {
   return INBOX_BACKOFF_MS[Math.max(failures, 1) - 1] ?? INBOX_BACKOFF_CEILING_MS;
 }
@@ -108,7 +107,6 @@ export function inboxBackoffMs(failures: number): number {
  * the first mate is told once (docs/inbox.md, "Stuck at its provider").
  */
 export const STUCK_REFUSAL_LIMIT = 3;
-/** The orchestrator's own lane. */
 export const FIRSTMATE_RECIPIENT = "firstmate";
 /** The supervision session's lane (design B); its owner drains it. */
 export const SUPERVISION_RECIPIENT = "supervision";
@@ -138,7 +136,6 @@ export function wakeIdentity(body: WakeBody, origin: ServedOrigin | null): strin
   return inboxContentHash(canonicalJson({ origin, facts: body.facts }));
 }
 
-/** The payload column's JSON for a wake body. */
 export function encodeWake(body: WakeBody): string {
   return JSON.stringify(
     typeof body === "string"
@@ -191,10 +188,6 @@ function canonicalJson(value: unknown): string {
   );
 }
 
-/**
- * One inbox row: the wake envelope (`v`, `origin`, `ref`, and `facts` and
- * `ways` or `text`) and its delivery state.
- */
 export type InboxRow = WakeEnvelope & {
   id: number;
   recipient: string;
@@ -207,7 +200,6 @@ export type InboxRow = WakeEnvelope & {
   escalatedAt: number | null;
   /** Provider failures this row has met since it last went through (the honest retry). */
   failures: number;
-  /** When this row first failed at the provider; null while it never has. */
   failingSince: number | null;
   /** When the row is next due; null means now. */
   nextAttemptAt: number | null;
@@ -579,7 +571,6 @@ export class InboxStore {
       .run(now, now, now + this.graceMs, ...ids);
   }
 
-  /** Retire obsolete typed requests; prose and unrelated work retain their delivery. */
   retireTypedWakes(
     recipient: string,
     kinds: readonly NonNullable<WakeEnvelope["facts"]>["kind"][],
@@ -898,7 +889,6 @@ export class InboxStore {
       .run(...keep).changes;
   }
 
-  /** Pending task-lane rows whose attempt budget is spent, not yet escalated. */
   spent(recipient: string, maxAttempts: number): InboxRow[] {
     const rows = this.db
       .prepare(

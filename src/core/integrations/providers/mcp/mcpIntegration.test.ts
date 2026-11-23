@@ -195,7 +195,6 @@ describe.each([
     await service.check(id);
     expect((await service.look(id, "resource_changed", start.cursor)).resynced).toBe(true);
 
-    // A change is kept on the task, and runs once on the captain's click.
     const change = await service.call(
       task,
       "Notes",
@@ -398,7 +397,6 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
     expect(second.book.notes).toEqual(SAMPLE_NOTES);
     expect(first.book.notes).toEqual(SAMPLE_NOTES);
 
-    // A request kept for the replacement survives its rename and a restart.
     await service.call(
       task,
       "Studio notes",
@@ -604,11 +602,9 @@ describe("an MCP server that cannot connect", () => {
     const root = scratchDir("mcp-integration");
     const { service, close } = serviceIn(root);
     opened.push({ service, close });
-    // Plain http leaves this computer for no server.
     await expect(
       service.add("mcp", { name: "Far", runs: "http://93.184.215.14/mcp" }),
     ).rejects.toThrow(/Plain http is only for a server on this computer/);
-    // A redirect is never followed to wherever it points.
     const redirecting = createServer((_request, reply) => {
       reply.writeHead(307, { location: "http://169.254.169.254/latest" });
       reply.end();
@@ -630,7 +626,6 @@ describe("an MCP server that cannot connect", () => {
 // dropped without being closed, so each look - an Automation rule's every
 // minute, or Check again - left one more program running.
 describe("a connected server that fails its tool listing (INF-3367)", () => {
-  /** The programs on this computer started with this notes file. */
   const runningWith = (file: string): number[] =>
     execFileSync("ps", ["-A", "-o", "pid=,command="], { encoding: "utf8" })
       .split("\n")
@@ -835,7 +830,6 @@ describe("an MCP server's key", () => {
       });
       expect(readFileSync(join(root, "mcp.json"), "utf8")).not.toContain(KEY);
 
-      // Started again by Check and by a call, it still asks nothing.
       await service.check(id);
       expect(row()?.health).toBe("ok");
       allowIntegrationReads(service);
@@ -849,7 +843,6 @@ describe("an MCP server's key", () => {
       for (const use of history)
         expect(use).toMatchObject({ state: "completed", given: true, secrets: [entry?.ref] });
 
-      // Removing the server forgets its key.
       await service.remove(id);
       expect(await secrets.entries()).toEqual([]);
     });

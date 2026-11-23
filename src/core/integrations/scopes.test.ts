@@ -18,12 +18,10 @@ describe("Allow for the rest of this task's place (INF-2993)", () => {
     expect(
       github({ method: "POST", path: "repos/octo/queue-proof-4ca5/statuses/abc?per_page=1" }).key,
     ).toBe(pulls.key);
-    // Another kind of request to the same repository, or another repository, is another scope.
     expect(github({ method: "DELETE", path: "/repos/octo/queue-proof-4ca5" }).key).not.toBe(
       pulls.key,
     );
     expect(github({ method: "POST", path: "/repos/octo/other/pulls" }).key).not.toBe(pulls.key);
-    // A read names the method it defaults to.
     expect(github({ path: "/repos/octo/queue-proof-4ca5/pulls" }).key).toBe(
       "GET /repos/octo/queue-proof-4ca5",
     );
@@ -50,13 +48,11 @@ describe("Allow for the rest of this task's place (INF-2993)", () => {
       words: "POST requests to project group/meter",
     });
     expect(gitlab({ method: "PUT", path: "/projects/42/labels" }).key).toBe("PUT /projects/42");
-    // A GitHub-shaped path on GitLab is no project.
     expect(gitlab({ method: "POST", path: "/repos/octo/meter/pulls" }).key).toBe(
       "POST /repos/octo/meter/pulls",
     );
   });
 
-  // The Bitbucket row's actions (its plan's piece 4): one repository by its workspace and slug.
   it("names a Bitbucket repository by its workspace and slug, in lower case", () => {
     const bitbucket = forgeScope("bitbucket");
     expect(

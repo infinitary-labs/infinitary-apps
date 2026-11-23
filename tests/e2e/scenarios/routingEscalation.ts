@@ -20,10 +20,6 @@ export const MOCK_BLOCKED_REPORT =
 
 const BLOCKED_REPORT_NEEDLE = "I cannot get the meter to reset";
 
-/**
- * The captain's rejection in words becomes a spawn with escalate_from, and a
- * crewmate that reports itself blocked has the first mate file the triage.
- */
 export const routingEscalation: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

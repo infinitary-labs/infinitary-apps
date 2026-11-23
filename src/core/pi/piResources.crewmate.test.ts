@@ -350,7 +350,6 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(reaching).toContain(
       "To read a file on another of these computers, copy it with infinitary-files-axi in your shell: `ls <computer>:<folder>` lists a folder, `get <computer>:<path>` copies one file into your hand-over folder and prints its path, and the bare command names each computer.",
     );
-    // Programs and actions there, and a file the command refuses, still go through the first mate.
     expect(reaching).toContain(
       "A program or action on another of these computers, or a file that command refuses, is out of your reach: report it with needs_firstmate",
     );
@@ -363,7 +362,6 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(reaching).not.toContain(
       "A file, folder, program or action on another of these computers",
     );
-    // Without the command, the paragraph stays as it was.
     expect(prompt(false)).not.toContain("infinitary-files-axi");
     expect(prompt(false)).toContain(
       "A file, folder, program or action on another of these computers is out of your reach",
@@ -422,10 +420,6 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // ordinary-read acknowledgement is covered through both served runtimes.
     expect(prompt).toContain("Putting a card away grants no permission and ends no task.");
     expect(prompt).not.toContain("Closing your completion card keeps you idle and steerable.");
-    // The call mechanics - the completion trigger, the labels, that every
-    // action closes the card - stay in the descriptor; what a card should LOOK like is the authoring
-    // text this prompt now carries, so "semantic HTML fragment" is expected
-    // here and refused in the descriptor by the one-home pin below.
     expect(prompt).not.toContain("Body must name the repo");
     expect(prompt).not.toContain("Merge PR");
     // Questions are named form controls a footer click sends (contract
@@ -512,7 +506,6 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("naming each failed check and your diagnosis");
     expect(prompt).not.toContain("record an evidence-backed red verdict");
     expect(prompt).not.toContain("Diagnosis alone does not permit that offer");
-    // Genuinely blocked is a report, never a card of its own.
     expect(prompt).toContain("a blocker report is the escalation, not a card");
     // INF-1891, the captain's choice: a failed run outside the pull request's
     // own checks is the crew's to handle like a failed command, never a merge
@@ -556,12 +549,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       const rule = prompt.indexOf("Before your first edit, confirm you can deliver and prove");
       expect(rule, `${backend}`).toBeGreaterThan(prompt.indexOf("First brief yourself"));
       expect(rule, `${backend}`).toBeLessThan(prompt.indexOf("Work autonomously."));
-      // What delivery takes, and what the evidence takes.
       expect(prompt).toContain(
         "pushing your branch, opening the pull request and reading its checks when shipping through one",
       );
       expect(prompt).toContain("a workflow log or artifact reader");
-      // Confirmed by calls that change nothing, not assumed.
       expect(prompt).toContain("confirm each with the cheapest call that changes nothing");
       expect(prompt).toContain("git push --dry-run");
       expect(prompt).toContain("plan only evidence you can gather");

@@ -5,7 +5,6 @@ import { ForgeError } from "./forge";
 /** Raw API writes never substitute for the version-pinned merge card. */
 export const MERGE_WRITE_REFUSAL = `Merging or moving or deleting the default branch requires the merge card. Prepare a review with check_change pull, then ask on your merge card; github_write cannot send it. ${fixedHoldWords("recorded-path")}`;
 
-/** What one kind of host's REST paths say about a write. */
 type WriteGrammar = {
   /** A merge, or a branch update the merge card owns. */
   merges: (rest: string) => boolean;

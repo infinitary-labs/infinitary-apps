@@ -14,7 +14,6 @@ import { sinceLastUser } from "../providerRequest";
 export const DECLARED_CLOSE_MARKER = "merge the release then finish";
 /** release-please's pull request, on a branch the task did not open (RUU-35). */
 export const RELEASE_PULL = { number: 151, branch: "release-please--branches--main" } as const;
-/** The pull request on the task's own branch. */
 export const OWN_PULL = 56;
 export const RELEASE_CARD_TITLE = "Merge the release pull request";
 export const FINISH_CARD_TITLE = "The meter reads on the first paint";

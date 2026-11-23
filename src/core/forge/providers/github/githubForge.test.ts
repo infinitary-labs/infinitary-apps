@@ -236,7 +236,6 @@ describe("GitHubForge", () => {
         },
       ],
     });
-    // The pull request's own run finished with its checks: green.
     versionRuns = [{ ...ci, status: "completed" }, replay];
     checkRuns = [
       {
@@ -446,7 +445,6 @@ describe("GitHubForge", () => {
         { name: "deploy/preview", state: "success" },
       ],
     });
-    // A queued run or a pending status is not green yet, and not red.
     runs = [{ name: "linux-checks", status: "queued", conclusion: null }];
     expect((await forge.checks(change)).items[0]?.state).toBe("pending");
     // A conditional skipped run is finished and does not block green.
@@ -644,7 +642,6 @@ describe("GitHubForge", () => {
         },
       ],
     });
-    // The raw-facts change preserves the existing auth and transient-error boundaries.
     metadataStatus = 403;
     const unread = await forge.checks({ number: 23, url: null, branch: "b", headSha: "feedbeef" });
     expect(unread).toMatchObject({

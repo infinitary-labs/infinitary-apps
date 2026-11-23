@@ -85,11 +85,9 @@ export function seedBitbucketSignIn(userDataDir: string): void {
   );
 }
 
-/** One build status a check service posted on a commit, as Bitbucket keeps it. */
 export type BitbucketStubStatus = {
   key: string;
   name: string;
-  /** `SUCCESSFUL`, `FAILED`, `INPROGRESS` or `STOPPED`. */
   state: "SUCCESSFUL" | "FAILED" | "INPROGRESS" | "STOPPED";
 };
 
@@ -126,7 +124,6 @@ type StubPullRequest = {
   /** The merge queue holds it, with the merge it was asked for. */
   queued?: { strategy: string; message: string };
   comments: StubComment[];
-  /** The version it merged, once merged. */
   mergedHead?: string;
   mergeCommit?: string;
 };
@@ -238,7 +235,6 @@ export async function startBitbucketStub() {
       },
     };
   };
-  /** A comment as Bitbucket lists it: every one here is the signed-in account's. */
   const commentJson = (comment: StubComment) => ({
     type: "pullrequest_comment",
     id: comment.id,
@@ -435,7 +431,6 @@ export async function startBitbucketStub() {
       const head = headOfRequest(request);
       const taskLink = { location: `${url.pathname}/task-status/queue-${request.id}` };
       if (request.queued) {
-        // Asked again while queued: the same link, and nothing new.
         send(202, null, taskLink);
       } else if (request.state !== "OPEN" || !head) {
         send(400, { type: "error", error: { message: "This pull request is already closed." } });
@@ -449,7 +444,6 @@ export async function startBitbucketStub() {
         // now, and the Location names the task to ask about it.
         send(202, null, { location: `${url.pathname}/task-status/merge-1` });
       } else if (queueOn) {
-        // The merge queue takes it, with the merge it was asked for.
         request.queued = {
           strategy: String(body.merge_strategy ?? "merge_commit"),
           message: String(body.message ?? ""),
@@ -592,7 +586,6 @@ export async function startBitbucketStub() {
     requests: () => [...requests],
     /** Every merge Bitbucket made, in order; a refused one is only a request. */
     merges: () => [...merges],
-    /** Each pull request's description as Bitbucket holds it now, by its number. */
     descriptions: () =>
       new Map([...pullRequests.values()].map((request) => [request.id, request.description])),
     /** The project's branches and commits where it lives, read from git there. */
@@ -603,15 +596,12 @@ export async function startBitbucketStub() {
     setStatuses: (next: BitbucketStubStatus[]) => {
       statuses = next;
     },
-    /** Whether the pull requests conflict with newer work on main. */
     conflicts: (on: boolean) => {
       conflicted = on;
     },
-    /** Whether main's rules want an approval the pull requests lack. */
     requireApproval: (on: boolean) => {
       approvalRequired = on;
     },
-    /** Turn an open pull request into a draft, as its author would on its page. */
     markDraft: (id: number) => {
       const request = pullRequests.get(id);
       if (request) request.draft = true;
@@ -628,7 +618,6 @@ export async function startBitbucketStub() {
     onBranchRead: (apply: (branch: string) => void) => {
       onBranchRead = apply;
     },
-    /** Open a pull request as a person would on Bitbucket's own page. */
     openPullRequest: (input: {
       branch: string;
       title: string;
@@ -661,13 +650,10 @@ export async function startBitbucketStub() {
     onBranchDelete: (apply: (branch: string) => void) => {
       onBranchDelete = apply;
     },
-    /** The branches the app deleted, in order. */
     deletedBranches: () => [...deletedBranches],
-    /** Whether main has Bitbucket's merge queue. */
     mergeQueue: (on: boolean) => {
       queueOn = on;
     },
-    /** The pull requests the merge queue holds now, by number. */
     queued: () =>
       [...pullRequests.values()].filter((request) => request.queued).map((request) => request.id),
     /** The merge queue merges a pull request it holds, with the merge it was asked for. */
@@ -686,7 +672,6 @@ export async function startBitbucketStub() {
         description,
         state,
       })),
-    /** The person revoked the first token and made a new one: only that one is accepted now. */
     revokeFirstKey: () => {
       accepted = BITBUCKET_STUB_NEW_KEY;
     },

@@ -26,7 +26,6 @@ import type { TaskDelivery, TaskRecord } from "./taskRecords";
  * is left out, never made up.
  */
 
-/** The project facts the change reads: that it is a project, and the host it lives on. */
 export type ChangeRepo = { kind: RepoKind; forge: ForgeKind };
 
 /** A change the record keeps, less what the store assigns: its id and its clock. */
@@ -59,7 +58,6 @@ export function carriesChange(record: TaskRecord, repo: ChangeRepo | undefined):
 
 const MERGED_CLOSES = new Set<string>(["merged", "landed", "released"]);
 
-/** Whether a task's close is the one that merged its change. */
 export function mergingClose(reason: string | null | undefined): boolean {
   return MERGED_CLOSES.has(reason ?? "");
 }
@@ -140,7 +138,6 @@ export function placeStories(
   return { presentation: current, presentations: others.length > 0 ? others : undefined };
 }
 
-/** Every review the slot keeps: its reviews, its selection and its approval's. */
 function reviewsOf(delivery: TaskDelivery): MergeReview[] {
   return [
     ...(delivery.mergeReviews ?? []),
@@ -795,7 +792,6 @@ export function otherChangeRepoId(record: TaskRecord, number: number): string | 
   return review?.repoId && review.repoId !== record.repoId ? review.repoId : undefined;
 }
 
-/** The branch another pull request the task names is on, as its newest review or its approval says. */
 function otherBranchOf(delivery: TaskDelivery, number: number): string {
   const review = reviewsOf(delivery)
     .filter((entry) => entry.number === number)

@@ -14,11 +14,6 @@ import {
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 
-/**
- * A crewmate's conversation held on a computer that runs work
- * (`tests/helpers/sessionHostWorld.ts`): how long a callback waits for the home, and a tool withdrawn when Claude gives up.
- */
-
 sessionHostHooks();
 
 describe("a conversation held on a computer that runs work", () => {

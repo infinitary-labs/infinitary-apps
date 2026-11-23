@@ -99,7 +99,6 @@ export function RunsOnControl({
   );
 }
 
-/** The row's description, in the design's words. */
 export function runsOnDescription(repo: RepoView): string {
   if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomaticDescription();
   return runsHereOnly(repo) ?? m.settingsRunsOnDescription();

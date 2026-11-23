@@ -70,7 +70,6 @@ export class PushedQuotaStore {
     this.load();
   }
 
-  /** Record one window reading for one account. */
   record(accountId: string, window: PushedWindow): void {
     const windows = this.readings.get(accountId) ?? new Map<string, PushedWindow>();
     windows.set(window.windowId, window);

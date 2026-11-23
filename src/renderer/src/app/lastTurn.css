@@ -155,7 +155,6 @@
   opacity: 1;
 }
 
-/* The reply line as a button: the same line of type, with the pointer. */
 button[data-last-turn-bubble] {
   margin: 0;
   padding: 0;

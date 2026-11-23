@@ -64,7 +64,6 @@ for (const operation of ["download", "fallback"] as const) {
       test.skip(process.platform !== "darwin", "needs macOS zip tools");
       test.setTimeout(120_000);
       process.env.PI_OFFLINE = "1";
-      /** A stand-in app with a payload, its marker saying whose copy it is. */
       const standIn = (marker: string) => {
         const bundle = join(scratchDir("infinitary-e2e-command-app-"), "Infinitary.app");
         mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
@@ -99,7 +98,6 @@ for (const operation of ["download", "fallback"] as const) {
           "Enter",
         );
         const command = (await linkInTab(page).textContent()) ?? "";
-        // Its command downloads the same published version there first.
         expect(command).toContain(shellWord(release.publicUrl));
         expect(command).toContain(shellWord(release.sha256));
         // The computer's run is this process: its curl reaches the stand-in
@@ -154,8 +152,6 @@ for (const operation of ["download", "fallback"] as const) {
           "A Mac a command added updates by itself, with its download's count",
           "window",
           async () => {
-            // Its run connects on an older version: the app updates it by
-            // itself, and its row follows the download.
             const older = start("0.0.1");
             await expect(row).toContainText(
               remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
@@ -322,8 +318,6 @@ for (const operation of ["add", "update", "fallback"] as const) {
             "A Mac updates by itself with download progress",
             "window",
             async () => {
-              // Its run connects on an older version: the app updates it by
-              // itself, and its row follows the download.
               const started = startHelper({
                 dataDir: work,
                 appVersion: "0.0.1",

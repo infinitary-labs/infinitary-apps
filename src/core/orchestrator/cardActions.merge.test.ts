@@ -322,7 +322,6 @@ describe("CrewSupervisor", () => {
       undefined,
       expect.objectContaining({ beforeDispatch: expect.any(Function) }),
     );
-    // The task survives a refused merge, and the captain is told why.
     expect(tasks.get(taskId)).toBeDefined();
     expect(settleLines(tasks, taskId).some((line) => /not fully green/.test(line))).toBe(true);
   });
@@ -368,7 +367,6 @@ describe("CrewSupervisor", () => {
     expect(settleWakes(ops)[0]).toContain(UNSEEN_STOP_WORDS);
     expect(tasks.get(taskId)?.status).toBe("active");
 
-    // A retry is the Firstmate settling again.
     expect(
       await supervisor.settling.settle.settleTask(taskId, "merge-pr", undefined, "captain"),
     ).toContain("Merged #23");
@@ -751,7 +749,6 @@ describe("the task graph (R1)", () => {
 
   it("opens Settings on exactly the clicks `opensSettings` names, so a Mac controlling this one can tell before it asks (docs/view.md)", async () => {
     const { supervisor, cards } = setup(fakeCrewmate());
-    // The host's own cards, as it builds them.
     supervisor.cards.hostCards.addAuthDecisionCard(
       "auth-restore",
       "Codex",
@@ -770,7 +767,6 @@ describe("the task graph (R1)", () => {
       providerName: "Codex",
       body: "Codex serves again.",
     });
-    // A Firstmate decision per effect it may declare, and a plain choice.
     const effects: (CardEffect | undefined)[] = [
       { kind: "open", target: "settings" },
       { kind: "open", target: "projects", signIn: "github.com" },
@@ -976,7 +972,6 @@ describe("decision actions", () => {
       type: "firstmate_note",
       text: 'Closed "What delivered means" as a duplicate of "Delivered means the crewmate stopped".',
     });
-    // A refusal changes nothing and says nothing.
     const eventsBefore = events.length;
     expect(
       supervisor.flagDuplicate({ cardId: second ?? "", duplicateOf: first ?? "", note: "again" })

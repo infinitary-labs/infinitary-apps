@@ -751,7 +751,6 @@ test("the Windows installer installs for this person, offers Git, starts the com
     // the task's file go (the review of INF-5409): there while it is registered.
     expect(await powerShellTaskLookup(process.env, label)).toBe("there");
 
-    // `--off` takes the task away.
     const off = execFileSync(executable, ["start-at-boot", "--off"], { encoding: "utf8" });
     keep("start-at-boot-off.txt", off);
     expect(off).toContain(BOOT_WORDS.windowsOff(user)[0]);
@@ -845,7 +844,6 @@ test("the Windows installer installs for this person, offers Git, starts the com
   await test.step("the Devices line run by the home's own Windows account is refused, its yes typed in a PowerShell console", async () => {
     const me = await thisDeviceUser({ platform: "win32" });
     if (!me || !("sid" in me)) throw new Error("Windows did not say which user this is");
-    // A home whose own account is this one.
     const home = await standInHome({ ownSid: me.sid });
     let consolePid = 0;
     try {
@@ -937,7 +935,6 @@ test("the Windows installer installs for this person, offers Git, starts the com
         { WORK_TASK: label },
       );
       expect(again).toBe(WORK_TASK_AGAIN);
-      // The run reaches the home.
       await expect.poll(() => home.reached, { timeout: 120_000 }).toContain(device?.id);
 
       // It keeps a copy of the home's record, and puts a newer full copy in
@@ -957,7 +954,6 @@ test("the Windows installer installs for this person, offers Git, starts the com
         JSON.stringify(await copyHello(home, device?.id ?? ""), null, 2),
       );
 
-      // The work folder lets in this person alone.
       const sddl = ps<string>("(Get-Acl -LiteralPath $env:WORK_DIR).Sddl", { WORK_DIR: workDir });
       keep("work-folder-access.txt", sddl);
       expect(onlyOwnerReaches(readAccessList(sddl), me.sid)).toBe(true);
@@ -1141,7 +1137,6 @@ test("the Windows installer installs for this person, offers Git, starts the com
   });
 });
 
-/** The job's numbers file, in the task's working copy under the project's worktrees. */
 /**
  * Waits until the window accepts a pasted link (the review of INF-5409): it started the command
  * through Task Scheduler as it opened, which answers before the run begins, and Paste its link is
@@ -1263,7 +1258,6 @@ async function copyHello(home: Awaited<ReturnType<typeof standInHome>>, deviceId
   return standbyHelloSchema.parse(await home.connection.ask(deviceId, STANDBY_HELLO_ORDER, []));
 }
 
-/** Whether a plain connection to `host:port` opens within ten seconds, in words. */
 function reaches(at: string): Promise<string> {
   const split = at.lastIndexOf(":");
   const host = at.slice(0, split).replace(/^\[|\]$/g, "");

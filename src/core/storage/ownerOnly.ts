@@ -31,7 +31,6 @@ export type AccessEntry = {
   readonly text: string;
 };
 
-/** A folder's owner and access list, read from its security descriptor string. */
 export type AccessList = {
   readonly owner: string | null;
   /** Null when the folder has no list at all, which lets everyone in, or none read whole. */
@@ -382,7 +381,6 @@ function asArray<T>(value: T | readonly T[] | null | undefined): T[] {
   return Array.isArray(value) ? [...value] : [value as T];
 }
 
-/** Runs `ACCESS_SCRIPT` with Windows' own PowerShell. */
 export const powerShellAccess: AccessRun = (ask) =>
   new Promise((resolve, reject) => {
     const child = spawn(
@@ -431,7 +429,6 @@ export const powerShellAccess: AccessRun = (ask) =>
     });
   });
 
-/** A folder's state once the app has kept it: private, or why not. */
 export type KeptFolder =
   | { readonly kind: "owner-only"; readonly path: string; readonly changed: boolean }
   | {

@@ -212,7 +212,6 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
   if (hostPlatform() === "win32" && args[0] === "run")
     watchRunStop(place.dataDir, new Date(), () => stop());
 
-  // A run whose data a test isolated reads no saved passwords.
   const isolated = !app.isPackaged && Boolean(settingFrom(process.env, "HELPER_DATA_DIR")?.trim());
   const standbyLock = isolated
     ? undefined

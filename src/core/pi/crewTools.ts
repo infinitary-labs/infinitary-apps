@@ -316,7 +316,6 @@ export type CrewDelegate = {
 export const CLOSING_SENTENCE_DESCRIPTION =
   "Required except done answered or carried_on: one plain sentence for the captain on what became of the work and why.";
 
-/** A close of started work refused for want of its sentence: what is missing and how to answer. */
 export function closingSentenceMissing(mode: string): string {
   return `Not closed: ${mode} needs closing_sentence, one plain sentence for the captain on what became of this task's work and why. Call it again with one.`;
 }
@@ -333,7 +332,6 @@ export const INTERNAL_STEP_DESCRIPTION =
 export const BASIS_DESCRIPTION =
   "The task (id or key) whose report specifies this work, or whose reproduction it fixes. Name it only when that task carries it; the host ignores an unverified basis.";
 
-/** A group's description: what it holds, then each field's rule on its own line under the field's name. */
 function groupDescription(lead: string, rules: Record<string, string>): string {
   return [lead, ...Object.entries(rules).map(([name, rule]) => `${name}: ${rule}`)].join("\n");
 }
@@ -431,7 +429,6 @@ export const START_AFTER_GROUP_DESCRIPTION = groupDescription(
   START_AFTER_FIELD_RULES,
 );
 
-/** The work-shape facts spawn_crewmate carries in `shape`, with the type each holds. */
 const SHAPE_FIELDS = {
   ongoing: "boolean",
   intelligence: "string",
@@ -453,7 +450,6 @@ const SHAPE_FIELDS = {
   repairs_batch: "boolean",
 } as const;
 
-/** The waits spawn_crewmate carries in `start_after`, with the type each holds. */
 const START_AFTER_FIELDS = {
   after_task: "string",
   when_quota_resets: "string",
@@ -494,7 +490,6 @@ export function groupSpawnArgs(args: Record<string, unknown>): Record<string, un
   return grouped;
 }
 
-/** How the refusal of an escalation the captain did not ask for opens. */
 /**
  * A task's result shape (INF-799): any JSON object, checked by the host when
  * it is named, written as the bare keyword so every seat reads a few
@@ -1083,7 +1078,6 @@ async function batchRepairLine(delegate: CrewDelegate, taskId: string): Promise<
     : " It is recorded as the repair of its project's held batch.";
 }
 
-/** Translate the spawn's start_after group into one gate; at most one may be set. */
 function startAfterFrom(params: {
   after_task?: string;
   when_quota_resets?: string;

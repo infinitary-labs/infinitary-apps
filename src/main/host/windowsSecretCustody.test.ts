@@ -9,7 +9,6 @@ import { createWindowsSecretCustody, type WindowsCustodyApi } from "./windowsSec
 // (docs/secrets.md, "Native custody").
 const NAME = SECRETS_CUSTODY_NAMES.dev;
 
-/** A Credential Manager stand-in that answers with the Windows error each case names. */
 function credentials(error?: number) {
   const items = new Map<string, Buffer>();
   const api: WindowsCustodyApi = {

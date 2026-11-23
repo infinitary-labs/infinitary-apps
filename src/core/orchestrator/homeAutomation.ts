@@ -59,7 +59,6 @@ export function startHomeAutomation({
     inbox,
     broadcastEvent,
     now,
-    // An event rule looks through the integrations and the task events (docs/automation.md).
     events: withTaskEvents(tasks, integrationEvents(integrations)),
     raise: (cardId) => void supervisor.cards.putOffs.raiseCard(cardId),
     // A hold's event rule ends its task's hold (docs/automation.md, "A rule that ends a hold").

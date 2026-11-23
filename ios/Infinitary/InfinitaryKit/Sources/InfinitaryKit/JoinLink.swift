@@ -42,7 +42,6 @@ public struct JoinLink: Equatable, Sendable {
         return [first] + rest.filter { $0 != first }
     }
 
-    /// This link, tried first at `address`.
     public func trying(first address: String) -> JoinLink {
         var link = self; link.first = address; return link
     }

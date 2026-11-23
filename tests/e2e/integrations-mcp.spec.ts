@@ -86,7 +86,6 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
 
 const STAND_IN = join(process.cwd(), "tests", "helpers", "mcpStandIn.ts");
 
-/** The host's approval card, once the call that raises it was kept. */
 async function approval(page: Page, title: string) {
   // INF-950: crew startup and its shell call precede the host's approval.
   // Wait for that fact before showCard checks the presentation transition.
@@ -105,7 +104,6 @@ async function approval(page: Page, title: string) {
   return shownCard(page, title);
 }
 
-/** The stand-in notes server over a fresh notes file, as a person writes what it runs. */
 function notesServer(prefix: string): { notes: string; runs: string } {
   const notes = join(scratchDir(prefix), "notes.json");
   writeFileSync(notes, JSON.stringify({ notes: SAMPLE_NOTES }));
@@ -164,7 +162,6 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
   });
 
   await test.step("a crewmate calls one of its reads from its shell and reports the answer", async () => {
-    // Escape leaves Settings for the composer.
     await page.keyboard.press("Escape");
     await expect(page.locator("[data-screen-label]")).not.toHaveAttribute(
       "data-screen-label",
@@ -438,7 +435,6 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
     await expect(rows.nth(index)).toContainText(note.text);
     await expect(rows.nth(index)).toContainText(note.reason);
   }
-  // The other two raised no card of their own.
   expect(
     (await page.evaluate(() => window.infinitary.cards.list())).filter(
       (shown) => shown.meta === "Integration approval",
@@ -485,7 +481,6 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
       return row ? ((await window.infinitary.tasks.detail(row.id))?.outcome ?? "") : "";
     }, MCP_NOTES_THREE_MARKER);
   await expect.poll(outcome, { timeout: 60_000 }).toContain(MCP_NOTES_REPORT_PREFIX);
-  // One message carries the refusal of the unticked row and both answers.
   const report = await outcome();
   expect(report).toContain(NOT_ALLOWED_WHY);
   expect(report).toContain(addedNote(SAMPLE_NOTES.length + 1));

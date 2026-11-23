@@ -45,7 +45,6 @@ declare global {
   }
 }
 
-/** Every board push the window has received since it started recording. */
 function boardPushes(page: Page): Promise<BoardPush[]> {
   return page.evaluate(() => window.__boardPushes ?? []);
 }
@@ -184,7 +183,6 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
       window.infinitary.tasks.onBoardDelta((value) => pushes.push({ channel: "delta", value }));
     });
 
-    // Section 1: the first mate puts the importer behind the parser fix.
     await firstmateLinks(app, "Have the importer wait for the parser fix.", false);
     await expect
       .poll(() => carrierOf(page, "waiter", (task) => task.blockedBy.includes(ownerKey)))
@@ -192,7 +190,6 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await expect(near(page)).toHaveAttribute("data-crew-arrows", "wait:waiter>owner");
     await regionShot(formation(page), out("delta-wait-drawn.png"));
 
-    // Section 2: the first mate puts the second verifier behind the first.
     await firstmateLinks(app, "Have the second check wait for the verification.", false, {
       from: "verify",
       to: "check",
@@ -208,7 +205,6 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
       .toEqual(["wait:check>verify", "wait:waiter>owner"]);
     await regionShot(formation(page), out("delta-part-linked.png"));
 
-    // Section 3: the first mate takes the wait away again.
     const linked = (await boardPushes(page)).length;
     await firstmateLinks(app, "The importer no longer needs to wait for the parser fix.", true);
     await expect
@@ -217,7 +213,6 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await expect(near(page)).toHaveAttribute("data-crew-arrows", "wait:check>verify");
     await regionShot(formation(page), out("delta-wait-cleared.png"));
 
-    // Nothing reached the window but deltas: no snapshot redrew the stage.
     expect((await boardPushes(page)).map((push) => push.channel)).not.toContain("snapshot");
   } finally {
     await app.close();

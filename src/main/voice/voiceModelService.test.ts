@@ -34,7 +34,6 @@ describe("VoiceModelService", () => {
       expect(url).toContain(`${VOICE_MODEL_REPO}/resolve/${VOICE_MODEL_REVISION}/`);
     }
     expect(fractions.at(-1)).toBe(1);
-    // Idempotent: nothing re-downloads once present.
     await service.ensureModel();
     expect(urls).toHaveLength(VOICE_MODEL_FILES.length);
   });

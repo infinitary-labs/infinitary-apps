@@ -17,7 +17,6 @@ const repo = resolve(__dirname, "..");
 // at its fastest, three starts to a test.
 vi.setConfig({ testTimeout: 10_000 });
 
-/** One start: turn the cache on for `build`, load real code, take the after-load step. */
 function start(dataDir: string, build: string): string {
   const script = `
     import { startCompileCache } from ${JSON.stringify(join(repo, "src/main/compileCache.ts"))};

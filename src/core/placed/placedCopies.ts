@@ -89,7 +89,6 @@ export type PlacedCopiesOptions = {
   projects: () => readonly string[];
   /** A paired computer's name, as Devices lists it. */
   deviceName: (deviceId: string) => string;
-  /** A project's name, by its id. */
   projectName: (repoId: string) => string | undefined;
   broadcastEvent: (event: FmEvent) => void;
   now: () => number;
@@ -373,7 +372,6 @@ export class PlacedCopies {
     return (await commitOf(repoDir, head)) ? [head] : [];
   }
 
-  /** What the task's working copy there has checked out; null when none is there. */
   private async checkoutAt(
     deviceId: string,
     taskId: string,
@@ -647,12 +645,10 @@ export class PlacedCopies {
       if (move && (move.to === deviceId || (move.from === deviceId && !move.away))) return;
       const left = record?.shape?.away_copies?.findLast((entry) => entry.from === deviceId);
       if (left) {
-        // Removed already: nothing of it is left there to keep.
         if (left.kept?.removed !== undefined) return;
         await this.keepAwayCopy(deviceId, taskId, left, folder).catch((caught: unknown) =>
           this.options.log(`could not save what ${taskId} left there yet: ${messageOf(caught)}`),
         );
-        // A closed task's copy there goes, its work saved here first.
         if (record && TaskService.isClosed(record))
           await this.dropAwayCopy(deviceId, taskId, folder).catch((caught: unknown) =>
             this.options.log(
@@ -1031,8 +1027,6 @@ export class PlacedCopies {
     throw new Error("The artifact did not arrive whole.");
   }
 
-  // ---- inside -------------------------------------------------------------------
-
   /**
    * Fetches one of the task's refs there into `to` here, as a bundle of
    * only what this Mac lacks; answers the commit it points at.
@@ -1071,7 +1065,6 @@ export class PlacedCopies {
     return made.sha;
   }
 
-  /** The bundle's bytes, read there in pieces into `file` here. */
   private async download(
     deviceId: string,
     taskId: string,
@@ -1123,7 +1116,6 @@ export class PlacedCopies {
     return [...have].slice(0, HAVE_MAX);
   }
 
-  /** The commit the task's working copy started from, as its timeline says. */
   private startedFrom(taskId: string): string[] {
     for (const event of [...this.options.tasks.timeline(taskId)].reverse()) {
       const base = (event.data as { base?: { sha?: unknown } } | null)?.base;

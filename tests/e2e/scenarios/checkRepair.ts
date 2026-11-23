@@ -78,7 +78,6 @@ function checkRepairMove(
       const unstarted = user.match(/It waits on ([\w-]+) "[^"]*" \(not started\)/)?.[1];
       if (unstarted && results.length === 0)
         return { calls: [{ name: "update_task", args: { task: unstarted, start_now: true } }] };
-      // Routine waits are not decisions.
       return { text: "The separate owner and wait remain recorded; no captain decision needed." };
     }
     return undefined;
@@ -183,7 +182,6 @@ function checkRepairMove(
   return { text: "Reported." };
 }
 
-/** The diagnosed check failures, for the first mate and for its crewmate. */
 export const checkRepair: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) =>

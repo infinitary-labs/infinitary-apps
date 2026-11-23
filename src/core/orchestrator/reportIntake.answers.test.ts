@@ -226,7 +226,6 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
       summary: "The search reads keys now.",
     });
 
-    // A report that is not plausible prose is refused with the fix.
     expect(() => spec.onReport?.("Done.")).toThrow(/Report refused: it has fewer than 2 words/);
     expect(() => spec.onReport?.("  ")).toThrow(/text is required/);
   });

@@ -35,7 +35,6 @@ import { git } from "./git";
  * plain file is refused.
  */
 
-/** The task's own folders a pack carries, by name. */
 export const MOVED_FOLDERS = [
   "evidence",
   "card-bodies",
@@ -67,7 +66,6 @@ export type MoveEntry = z.infer<typeof entrySchema>;
 
 export const moveManifestSchema = z.object({
   v: z.literal(1),
-  /** The commit the checkout is at, on `branch`. */
   head: z.string().regex(/^[0-9a-f]{40,64}$/),
   branch: z.string().min(1),
   /** The index's tree, and the whole working tree's (untracked files included). */

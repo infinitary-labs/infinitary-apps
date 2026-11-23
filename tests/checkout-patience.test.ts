@@ -129,7 +129,6 @@ describe("the wait after a refused checkout", () => {
     );
   }
 
-  /** What every request carried: the address and credential checkout's own fetch sends. */
   function expectAskedAsCheckout(asked: { url: string; authorization: string | undefined }[]) {
     const basic = `Basic ${Buffer.from(`x-access-token:${TOKEN}`).toString("base64")}`;
     for (const request of asked)

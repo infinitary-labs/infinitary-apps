@@ -19,7 +19,6 @@ vi.setConfig({ testTimeout: 10_000 });
 describe("local packaging identity (electron-builder.dev.yml)", () => {
   // INF-2267: keep these smoke-workflow assertions separate from the native bundle checks.
   it("checks the dev bundle's git the way the release gate does", () => {
-    // The package smoke checks the dev bundle's git the way the release gate does.
     expect(read(".github/workflows/verify.yml")).toContain(
       'scripts/check-bundled-git.sh "dist/mac-universal/Infinitary Dev.app"',
     );

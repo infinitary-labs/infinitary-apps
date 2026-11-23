@@ -130,7 +130,6 @@ const PLAIN_LABELS = join(process.cwd(), "tests", "fixtures", "plain-language", 
 /** The host's one card for a sign-in GitHub refused. */
 const SIGN_IN_AGAIN = forgeSignInTitle("GitHub");
 
-/** How many open cards the core holds under `title`. */
 async function cardsTitled(page: Page, title: string): Promise<number> {
   const cards = await page.evaluate(() => window.infinitary.cards.list());
   return cards.filter((card) => card.title === title).length;
@@ -145,7 +144,6 @@ let bare: string;
 /** Stops what this test started, however it ended. */
 let stop: (() => Promise<void>) | undefined;
 
-/** A project whose origin is on GitHub while every push lands on a bare repository here. */
 function seedGitHubProject(dir: string, origin: string, remote?: string) {
   git("init", "--initial-branch=main", dir);
   git("-C", dir, "config", "user.name", "Test");
@@ -314,7 +312,6 @@ async function send(page: Page, text: string) {
   await input.press("Enter");
 }
 
-/** The tab that holds GitHub's sign-in. */
 const section = (page: Page) => page.locator("[data-integrations]");
 
 test("Settings -> Integrations offers the GitHub sign-in as optional, and each way a code can end", async () => {
@@ -328,8 +325,6 @@ test("Settings -> Integrations offers the GitHub sign-in as optional, and each w
   await expect(forges).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("forge-signin-optional.png") });
 
-  // The chip starts GitHub's device flow; the aside shows the code, and
-  // "Open GitHub" hands GitHub's page to the system browser.
   const chip = page.getByRole("button", { name: "Sign in to GitHub", exact: true });
   await chip.click();
   await expect(page.locator("[data-forge-code]")).toHaveText(STUB_USER_CODE);
@@ -341,12 +336,10 @@ test("Settings -> Integrations offers the GitHub sign-in as optional, and each w
     )
     .toEqual([`${github.url}/login/device`]);
 
-  // Cancel: the code is gone and nothing else changed.
   await forges.getByRole("button", { name: "Cancel" }).click();
   await expect(page.locator("[data-forge-flow]")).toHaveCount(0);
   await expect(page.locator("[data-integrations-quiet]")).toBeVisible();
 
-  // The person says no on GitHub's page: quiet - the aside simply closes.
   await chip.click();
   await expect(page.locator("[data-forge-code]")).toBeVisible();
   github.device.deny();
@@ -354,7 +347,6 @@ test("Settings -> Integrations offers the GitHub sign-in as optional, and each w
   await expect(page.locator("[data-forge-ended]")).toHaveCount(0);
   await expect(page.locator("[data-forge-row]")).toHaveCount(0);
 
-  // The code runs out: said plainly, with a fresh one on request.
   await chip.click();
   await expect(page.locator("[data-forge-code]")).toBeVisible();
   github.device.expire();
@@ -364,7 +356,6 @@ test("Settings -> Integrations offers the GitHub sign-in as optional, and each w
   await page.getByRole("button", { name: "Get a new code" }).click();
   await expect(page.locator("[data-forge-code]")).toHaveText(STUB_USER_CODE);
 
-  // Approved on GitHub: the row says who, and the quiet line and chip go.
   github.device.approve();
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toContainText("GitHub", { timeout: 15_000 });
@@ -433,7 +424,6 @@ test("the GitHub code can be copied by keyboard, with honest feedback scoped to 
   await expect(feedback).toHaveAttribute("aria-live", "polite");
   await expect(feedback).toHaveAttribute("aria-atomic", "true");
 
-  // The button is beside the code and reachable in the normal tab order.
   await pressKey(open, "Shift+Tab");
   await expect(copy).toBeFocused();
   await copy.press("Enter");
@@ -448,7 +438,6 @@ test("the GitHub code can be copied by keyboard, with honest feedback scoped to 
   await expect(copy).toBeEnabled();
   await page.screenshot({ path: test.info().outputPath("forge-copy-success.png") });
 
-  // A rejected write says so, leaves the code selectable and permits retry.
   await copy.press("Space");
   await expect(feedback).toBeEmpty();
   await finishCopy(page, false);
@@ -482,7 +471,6 @@ test("the GitHub code can be copied by keyboard, with honest feedback scoped to 
     "FRESH-CODE",
   ]);
 
-  // An absent clipboard API is also an honest failure; narrow layout still fits.
   await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { value: undefined }));
   await copy.click();
   await expect(feedback).toHaveText(FORGE_SECTION_WORDS.copyFailed);
@@ -495,7 +483,6 @@ test("the GitHub code can be copied by keyboard, with honest feedback scoped to 
   await page.screenshot({ path: test.info().outputPath("forge-copy-narrow.png") });
   await assertSettingsFits(page);
 
-  // Copy never opens GitHub or signs in; the existing controls still do their jobs.
   expect(
     await launched.app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened),
   ).toEqual([]);
@@ -592,7 +579,6 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
-  // The branch the app named, which the task's record keeps.
   const branch = task?.repo?.branch ?? "";
   expect(branch).not.toBe("");
   // The branch went up through git with the app's helper answering, and
@@ -607,7 +593,6 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   const link = facts.change.locator('a[href="https://github.com/octo/meterlab/pull/100"]');
   await expect(link).toHaveText("#100");
   await expect(facts.checks).toHaveText(CHECK_WORDS.green);
-  // The pull request link beside the buttons opens the change on GitHub.
   await clickInBody(link);
   await expect
     .poll(() =>
@@ -722,7 +707,6 @@ test("an organization that blocks the app: GitHub CLI's sign-in, chosen under th
   );
   await line.getByRole("button", { name: FORGE_CLI_WORDS.use }).click();
 
-  // The row says who, and through what; the code is gone.
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toHaveAttribute("data-forge-state", "ok", { timeout: 15_000 });
   await expect(row).toContainText(`as ${STUB_LOGIN} · ${FORGE_CLI_WORDS.through}`);
@@ -738,8 +722,6 @@ test("an organization that blocks the app: GitHub CLI's sign-in, chosen under th
   ]);
   await page.keyboard.press("Escape");
 
-  // Every GitHub reach above the sign-in is unchanged: a crewmate opens its
-  // change with GitHub CLI's sign-in, and its checks clear the gate.
   const title = `meterlab ${GITHUB_CHANGE_PROMPT_MARKER}`;
   await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
   await expect(shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE)).toBeVisible({ timeout: 45_000 });
@@ -858,7 +840,6 @@ async function writeAskJourney(title: string, evidenceName: string): Promise<str
   await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
   const card = shownCard(page, WRITE_ASK_CARD_TITLE);
   await expect(card).toBeVisible({ timeout: 45_000 });
-  // The host drew the call it kept: the method, the path and the JSON body.
   const strip = cardBody(page, WRITE_ASK_CARD_TITLE).locator('[data-inf-call="write"]');
   await expect(strip.locator("[data-inf-call-line]")).toHaveText(request);
   await expect(strip.locator("[data-inf-call-body]")).toHaveText(
@@ -1151,7 +1132,6 @@ test("the first change goes in and its continuation starts from the landed proje
     )
     .toBe(landedHead);
   const originKey = origin?.key;
-  // The continuation starts from its origin's recorded findings.
   await expect
     .poll(
       () =>
@@ -1210,8 +1190,6 @@ test("when GitHub stops accepting the sign-in: one card, gone once signed in aga
   expect(label).toMatchObject({ plain: true, from: "tests/e2e/forge-signin.spec.ts" });
   await page.screenshot({ path: test.info().outputPath("forge-signin-again-card.png") });
 
-  // Signed in again from the row itself: the card takes itself down the
-  // moment GitHub answers again.
   await openIntegrations(page);
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toHaveAttribute("data-forge-state", "needs_reauth");
@@ -1225,8 +1203,6 @@ test("when GitHub stops accepting the sign-in: one card, gone once signed in aga
   await page.keyboard.press("Escape");
   await expectNoCard(page, SIGN_IN_AGAIN);
 
-  // Refused again: the card's one action is the one-step way back - it
-  // lands on Settings -> Integrations with the code already on screen.
   await refuse();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Sign in again", exact: true }).click();
@@ -1241,7 +1217,6 @@ test("when GitHub stops accepting the sign-in: one card, gone once signed in aga
   await page.keyboard.press("Escape");
   await expectNoCard(page, SIGN_IN_AGAIN);
 
-  // Each refusal and each sign-in again left its one line.
   expect(healthLines().slice(logged)).toEqual([
     "github.com sign-in ok -> needs_reauth (answered 401)",
     "github.com sign-in needs_reauth -> ok (signed in, answered 200)",
@@ -1262,7 +1237,6 @@ test("a project kept on this Mac never names a host or a sign-in, and signing ou
   await expect(settings).not.toContainText(/GitHub|sign in/i);
   await page.locator("[data-project-back]").click();
 
-  // Sign out and remove in Integrations: the folder goes, and the tab reads as it did at first.
   await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title }).click();
   await page.getByRole("button", { name: "GitHub actions" }).click();
   await page.getByRole("menuitem", { name: "Sign out and remove" }).click();
@@ -1275,14 +1249,10 @@ test("a project kept on this Mac never names a host or a sign-in, and signing ou
   // - so a sign-in GitHub stops accepting says when.
   expect(healthLines().slice(logged)).toEqual(["github.com sign-in ok -> none (signed out)"]);
 
-  // Signed out, the Firstmate is told so - and still nothing about the
-  // project kept here.
   expect(await servedLives(page)).toEqual(["meterlab: github (not signed in)", "ledger: github"]);
 });
 
 test("a sign-in on file is still signed in after a real quit and start of the app", async () => {
-  // A sign-in on file, then a real quit and a real start of the app over
-  // the same folder: the captain does not sign in again.
   await arrange({ signedIn: true });
   await launched.close();
   launched = await launchApp({
@@ -1317,7 +1287,6 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toHaveAttribute("data-forge-state", "ok", { timeout: 15_000 });
   await page.keyboard.press("Escape");
-  // One approved code, one sign-in handed over and kept, with its renewal.
   expect(github.exchanges()).toBe(1);
   const file = join(userDataDir, "forges", "github.com", "sign-in.json");
   const stored = () => JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
@@ -1339,7 +1308,6 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   await page.keyboard.press("Escape");
   await expectNoCard(page, SIGN_IN_AGAIN);
 
-  // Git asks the app's own helper, which answers with the renewed sign-in.
   const answer = execFileSync(
     join(process.cwd(), "resources", "git-askpass"),
     ["Password for 'https://x-access-token@github.com': "],
@@ -1353,7 +1321,6 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   );
 });
 
-/** A GitHub Enterprise host the app has never seen, and the key the captain makes there. */
 const ENTERPRISE = "github.example.com";
 const ENTERPRISE_KEY = "ghp_e2e_enterprise_key_0123456789";
 
@@ -1366,8 +1333,6 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   // Before the app knows the host, its projects are a plain Git host's.
   expect(await servedLives(page)).toEqual([`meterlab: git (${ENTERPRISE})`, "ledger: git"]);
 
-  // The captain signs in from Settings -> Integrations, by keys alone: the
-  // chip, the address, the page where the key is made, and the key.
   await openIntegrations(page);
   await pressKey(
     page.getByRole("button", { name: `Sign in to ${GITHUB_ENTERPRISE.name}` }),
@@ -1380,7 +1345,6 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   await form.getByRole("button", { name: `Make a key on ${ENTERPRISE}` }).click();
   await expect.poll(opened).toEqual([forgeKeyPage(GITHUB_ENTERPRISE.kind, ENTERPRISE)]);
 
-  // A key the host does not accept is kept nowhere, and the form says why.
   github.rejectSignIn();
   const key = form.getByLabel(FORGE_SECTION_WORDS.key);
   await key.fill("ghp_e2e_wrong_key_0123456789");
@@ -1433,7 +1397,6 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   expect(healthLines()).toContain(
     `${ENTERPRISE} sign-in none -> ok (signed in with a key, answered 200)`,
   );
-  // Git asks the app's own helper, which answers the host with the key.
   const askpass = (prompt: string) =>
     execFileSync(join(process.cwd(), "resources", "git-askpass"), [prompt], {
       env: { PATH: process.env.PATH ?? "", INFINITARY_GIT_SIGNIN_DIR: join(userDataDir, "forges") },
@@ -1443,7 +1406,6 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
     `${ENTERPRISE_KEY}\n`,
   );
 
-  // Its projects are GitHub projects now, and the Firstmate is told so.
   expect((await addedProjects(page)).map((repo) => repo.host)).toEqual([
     { kind: "github", name: ENTERPRISE },
     { kind: "github", name: ENTERPRISE },
@@ -1453,16 +1415,12 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
     "ledger: github",
   ]);
 
-  // The Firstmate lists the projects there, through the host's own API.
   await send(page, `${LOCATE_PROJECTS_PROMPT_MARKER}website`);
   const listing = cardBody(page, MOCK_LOCATED_CARD_TITLE);
   await expect(listing.locator("li")).toHaveText(["octo/website"], { timeout: 30_000 });
   expect(github.requests()).toContain("GET /api/v3/user/repos");
   await noteDone(page).click();
 
-  // A crewmate sends its branch up and opens its change there with its own
-  // tools; the completion card reads its checks there, and the captain's
-  // click merges it there.
   const title = `meterlab ${GITHUB_CHANGE_PROMPT_MARKER}`;
   await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
   await expect(shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE)).toBeVisible({

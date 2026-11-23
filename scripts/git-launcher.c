@@ -26,7 +26,6 @@
 #include <mach-o/dyld.h>
 #endif
 
-/* The first of two variables that is set and not empty, else "". */
 static const char *named(const char *name, const char *older) {
   const char *value = getenv(name);
   if (value && *value) return value;
@@ -47,7 +46,6 @@ static int setUnder(const char *name, const char *dir, const char *tail) {
   return setenv(name, value, 1) == 0;
 }
 
-/* The real path of the directory this program is in, or 0. */
 static int ownDir(char *out) {
 #ifdef __APPLE__
   char self[PATH_MAX];

@@ -20,7 +20,6 @@ import {
 export type TaskKeyLook = "prose" | "quiet";
 
 export type TaskKeyProps = {
-  /** The key as the words write it. */
   children: string;
   look?: TaskKeyLook;
   /**
@@ -29,7 +28,6 @@ export type TaskKeyProps = {
    * a press, on Esc, and on losing focus.
    */
   onRest: (key: HTMLElement | null) => void;
-  /** A click or Enter: open the task. */
   onOpen: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => void;
   /**
    * A rest elsewhere in the window lights this key's task (INF-237): the

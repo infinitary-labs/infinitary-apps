@@ -23,7 +23,6 @@ import type {
 
 const STAND_IN_ID = "stand-in";
 
-/** The one event the stand-in tells. */
 export const STAND_IN_EVENT: IntegrationEventSpec = {
   name: "item_arrived",
   label: "An item arrives",
@@ -33,7 +32,6 @@ export const STAND_IN_EVENT: IntegrationEventSpec = {
 };
 const ITEMS_FILE = "items.jsonl";
 
-/** The stand-in's one action: it reads and changes nothing. */
 export const STAND_IN_COUNT: IntegrationActionSpec = {
   name: "count_items",
   label: "Count the stand-in's items",

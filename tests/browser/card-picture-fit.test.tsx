@@ -17,7 +17,6 @@ import { openWindow } from "./window";
 
 const TITLE = "The whole meter row, at any width";
 
-/** The locked plan's very wide picture. */
 const WIDE = { path: "shots/wide.png", alt: "The whole meter row", width: 2800, height: 520 };
 
 test("a very wide picture shows whole inside its card at the smallest window", async () => {

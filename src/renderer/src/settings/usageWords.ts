@@ -67,12 +67,10 @@ export const UNIT_WORDS: Readonly<Record<UsageUnit, string>> = {
   },
 };
 
-/** The unit as a column or section names it. */
 export function unitHeading(unit: UsageUnit): string {
   return unit === "tokens" ? m.settingsUsageHeadingTokens() : m.settingsUsageHeadingUsd();
 }
 
-/** A token count, short: 950, 12.4k, 17.26M, 1.20B. */
 export function compactTokens(tokens: number): string {
   if (tokens >= 1e9) return `${(tokens / 1e9).toFixed(2)}B`;
   if (tokens >= 1e6) return `${(tokens / 1e6).toFixed(2)}M`;
@@ -87,13 +85,11 @@ export function dollars(usd: number): string {
   return `$${usd.toFixed(2)}`;
 }
 
-/** A value in the unit, or the words for one that is not available. */
 export function formatUsage(value: number | null, unit: UsageUnit): string {
   if (value === null) return USAGE_WORDS.notAvailable;
   return unit === "tokens" ? compactTokens(value) : dollars(value);
 }
 
-/** An amount in the unit. */
 export function formatAmount(amount: UsageAmount, unit: UsageUnit): string {
   return formatUsage(usageValue(amount, unit), unit);
 }
@@ -103,7 +99,6 @@ export function formatRecorded(amount: UsageAmount, unit: UsageUnit): string {
   return amount.records === 0 ? m.settingsUsageNoActivity() : formatAmount(amount, unit);
 }
 
-/** A day's amount, or no activity. */
 export function formatDay(day: UsageDay, unit: UsageUnit): string {
   return formatRecorded(day.amount, unit);
 }
@@ -204,7 +199,6 @@ export function sortedModels(models: readonly UsageModel[], unit: UsageUnit): Us
   return [...models].sort((a, b) => byValue(a.amount, b.amount, unit));
 }
 
-/** A model as its row names it. */
 export function modelName(model: UsageModel): string {
   return model.name ?? m.settingsUsageModelNotRecorded();
 }
@@ -335,7 +329,6 @@ export function whereRows(
   };
 }
 
-/** A token count in full: 6,800,000. */
 export function exactTokens(tokens: number): string {
   return formatNumber(Math.round(tokens));
 }
@@ -452,7 +445,6 @@ export function createdWords(at: number): string {
   return m.settingsUsageCreated({ when });
 }
 
-/** How many recent tasks the list shows of those that match. */
 export function taskCount(shown: number, matching: number): string {
   if (shown >= matching) {
     return matching === 1

@@ -73,7 +73,6 @@ export function readPendingMove(stagingDir: string): PendingMove | null {
   return pendingMoveSchema.parse(JSON.parse(readFileSync(file, "utf8")));
 }
 
-/** Whether a move's mark stands in this data folder's staging folder. */
 export function movePending(stagingDir: string): boolean {
   return existsSync(join(stagingDir, PENDING_FILE));
 }
@@ -100,7 +99,6 @@ export type OutgoingHost = {
   ask: (deviceId: string, channel: string, args: unknown) => Promise<unknown>;
   /** The computer is connected and its version lists the move's contract change. */
   speaksMove: (deviceId: string) => boolean;
-  /** Whether that computer is in reach now. */
   inReach: (deviceId: string) => boolean;
   homeNumber: () => number;
   /** Takes a higher home number, which every device follows and every lower home is refused by. */
@@ -196,7 +194,6 @@ export class OutgoingHomeMove {
 
   constructor(private readonly host: OutgoingHost) {}
 
-  /** Whether a move runs now. */
   moving(): boolean {
     return this.running !== null;
   }

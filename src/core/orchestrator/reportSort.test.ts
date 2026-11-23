@@ -14,7 +14,6 @@ import {
  * facts that would have answered differently one step later.
  */
 
-/** Nothing is true: an unobservable backend with a quiet, empty task. */
 const NOTHING: ReportSortFacts = {
   threadAwaitingAuthor: false,
   decisionCardOpen: false,

@@ -904,7 +904,6 @@ export class CardActions {
       return {};
     }
     if (cardId.startsWith(FIRSTMATE_CARD_PREFIX)) {
-      // The answer to a Firstmate decision card returns to the agent.
       const wake: TypedWake = {
         facts: {
           kind: "card-choice",
@@ -1109,7 +1108,6 @@ export class CardActions {
     return from ? { from } : {};
   }
 
-  /** A choice on a crewmate's card, steered to its session through the task's durable lane. */
   private steerChoice(
     taskId: string,
     card: Card,

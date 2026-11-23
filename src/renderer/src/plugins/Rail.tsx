@@ -48,7 +48,6 @@ export function Rail({
 }: {
   side: RailSide;
   panels: readonly SidePanelContribution[];
-  /** The shell's theme, pushed into every frame the rail mounts. */
   theme: FrameTheme;
 }) {
   const root = useRef<HTMLDivElement>(null);

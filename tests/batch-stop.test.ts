@@ -30,7 +30,6 @@ const run839 = JSON.parse(
   readFileSync(new URL("./fixtures/batch-stop/queue-run-839.json", import.meta.url), "utf8"),
 ) as RecordedJob[];
 
-/** The run's jobs as GitHub listed them at `time`: created, then queued, running or ended. */
 const readingAt = (time: string) =>
   run839
     .filter((job) => job.created_at <= time)
@@ -298,7 +297,6 @@ const jobsOf = (file: string) =>
 const github = { run_id: "43188445742", run_attempt: "1" };
 const lead = `batch-stop-${github.run_id}-${github.run_attempt}-`;
 
-/** Every concurrency group a job takes across its matrix, for the inputs its caller passes. */
 function groups(job: Job, inputs: Record<string, unknown>): string[] {
   const matrix = job.strategy!.matrix;
   const value = (raw: unknown) =>

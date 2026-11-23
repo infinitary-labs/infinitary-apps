@@ -35,7 +35,6 @@ export type LogReaderProps = {
   read?: (src: string) => Promise<string>;
 };
 
-/** The log's text from the computer that keeps it, asked by its kept name. */
 async function readKept(src: string): Promise<string> {
   const log = parseCardLogFileName(src.slice(src.lastIndexOf("/") + 1));
   if (!log) throw new Error("Not a kept log's address.");

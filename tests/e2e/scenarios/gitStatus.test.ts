@@ -24,14 +24,12 @@ const COMMAND = "git --version && git status --short --branch";
 const PRINTED = "git version 2.53.0\n## fm/task-19c96eec";
 const REPORT = `${MOCK_GIT_REPORT_PREFIX} git version 2.53.0 on ## fm/task-19c96eec.`;
 
-/** The bash tool's answer to the command, in its own words: the output, or a job's receipt. */
 async function bashAnswer(outcome: BashOutcome) {
   const tool = createEventBashTool(async () => outcome);
   const context = {} as Parameters<typeof tool.execute>[4];
   return (await tool.execute("bash", { command: COMMAND }, undefined, undefined, context)).content;
 }
 
-/** A served wake, as the host puts it to the crewmate. */
 function wakeMessage(body: string) {
   return {
     role: "user",

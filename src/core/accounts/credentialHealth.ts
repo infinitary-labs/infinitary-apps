@@ -114,7 +114,6 @@ export function servesModels(status: { connected: boolean; reason?: string }): b
   return status.connected && !isWithheldReason(status.reason);
 }
 
-/** A reason that withholds a connected account from serving. */
 export function isWithheldReason(reason: string | undefined): boolean {
   return isClientIssueReason(reason) || reason === CUT_OFF_REFUSED || reason === CUT_OFF_SIGNED_OUT;
 }
@@ -160,7 +159,6 @@ export function isConnectedHealth(health: CredentialHealth): boolean {
   return health.state !== "needs_reauth" && health.state !== "unsigned";
 }
 
-/** Classify a live access token against the proactive lead. */
 export function classifyExpiry(
   expiresAt: number | undefined,
   now: number,

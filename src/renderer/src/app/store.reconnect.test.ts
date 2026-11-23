@@ -32,7 +32,6 @@ function view(contact: "in-reach" | "lost", caughtUp = 0): Extract<ThisMac, { ro
   };
 }
 
-/** The notes list as the core answers it for an alpha that has shown none yet. */
 const NOTES: ReleaseNotesView = {
   version: "0.8.2-alpha.628",
   name: "alpha 0.8.2-alpha.628",
@@ -52,7 +51,6 @@ function line(cardId: string, text: string): CardMessage {
   return { id: 7, cardId, who: "firstmate", text, at: 3_000 };
 }
 
-/** An active crewmate's task, as the board lists it. */
 function task(id: string, activity: TaskView["activity"]): TaskView {
   return {
     id,
@@ -147,7 +145,6 @@ describe("changes coming back on for a window controlling another computer (docs
     expect(reads.devices.shown).toHaveBeenCalledTimes(1);
     expect(state()).toMatchObject({ releaseNotes: NOTES, devicesShown: true, secretsShown: true });
 
-    // Still in reach: nothing is asked again.
     state().applyThisMac({ ...view("in-reach"), heardAt: 2_500 });
     expect(reads.devices.shown).toHaveBeenCalledTimes(1);
     expect(reads.releaseNotes.list).toHaveBeenCalledTimes(1);
@@ -177,7 +174,6 @@ describe("changes coming back on for a window controlling another computer (docs
     // Only the one-time reads: a replayed drop reads nothing else again.
     expect(resynced).toBe(0);
 
-    // The same link, told again: nothing is asked again.
     state().applyThisMac({ role: "home", left: null, linkBack: 1 });
     expect(reads.releaseNotes.list).toHaveBeenCalledTimes(1);
     state().applyThisMac({ role: "home", left: null, linkBack: 2 });

@@ -24,7 +24,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: knowledge and the captain's override (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**
@@ -356,7 +355,6 @@ describe("the captain's override, cited from his message on the task", () => {
       until: "task",
     });
     await finish();
-    // His line in the Crewmate tab, cited the same way, replaces it.
     await f.supervisor.steer.steerFromCrewmateTab("ab12", tabLine);
     notifyProse(
       f.db,

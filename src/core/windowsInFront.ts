@@ -12,7 +12,6 @@ export class WindowsInFront {
   private readonly front = new Set<BrowserViewer>();
   private readonly heard = new WeakSet<BrowserViewer>();
 
-  /** One window's latest word, on the connection that said it. */
   report(window: BrowserViewer, inFront: boolean): void {
     if (!this.heard.has(window)) {
       this.heard.add(window);
@@ -22,7 +21,6 @@ export class WindowsInFront {
     else this.front.delete(window);
   }
 
-  /** Whether any window still connected last said it is in front. */
   any(): boolean {
     return this.front.size > 0;
   }

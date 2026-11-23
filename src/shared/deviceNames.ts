@@ -80,7 +80,6 @@ export const COMPUTER = {
   Many: "Computers",
 } as const;
 
-/** What a device is, as its words name it. */
 export type DeviceNoun = "computer" | "phone";
 
 /**
@@ -136,7 +135,6 @@ export function anotherUserHere(platform: string): {
       };
 }
 
-/** A device as a row names what it is: "a computer" or "a phone". */
 export function aDevice(device: { system?: DeviceSystem | undefined }): string {
   return `a ${deviceNoun(device)}`;
 }

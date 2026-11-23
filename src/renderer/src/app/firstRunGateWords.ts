@@ -16,7 +16,6 @@ export const GATE_TITLE = (): string => m.shellGateTitle();
  */
 export const GATE_HOME_TITLE = m.shellGateHomeTitle();
 
-/** The home computer's first-screen heading, worded when shown. */
 export function gateHomeTitle(): string {
   return m.shellGateHomeTitle();
 }

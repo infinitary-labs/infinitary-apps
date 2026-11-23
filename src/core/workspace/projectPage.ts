@@ -48,7 +48,6 @@ export function projectFile(
   return { file: at };
 }
 
-/** `projectFile` for a page itself: the same checks, and an HTML file. */
 export function projectPageFile(
   folder: string,
   path: string,

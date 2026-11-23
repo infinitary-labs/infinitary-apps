@@ -44,13 +44,11 @@ export class ShellGroups {
     };
   }
 
-  /** The shell that started `group`, while its task is open. */
   of(group: number): ShellGroup | undefined {
     const shell = this.groups.get(group);
     return shell && this.open(shell.owner) ? { ...shell } : undefined;
   }
 
-  /** Each owner whose task is no longer open: its groups are no longer the crew's. */
   forgetClosed(owners: Iterable<string>): void {
     for (const owner of owners) {
       if (this.open(owner)) continue;

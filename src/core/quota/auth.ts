@@ -103,7 +103,6 @@ export type SensedQuotaProviderId = Extract<
   "codex" | "grok" | "claude" | "kimi" | "copilot"
 >;
 
-/** The quota mapping for a provider id, when that provider has quota at all. */
 export function quotaEntryForPiProvider(
   piId: string,
 ): (typeof QUOTA_PROVIDERS)[number] | undefined {

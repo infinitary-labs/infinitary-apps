@@ -205,5 +205,4 @@ struct PhonePushAsk: ViewModifier {
     }
 }
 
-/// The name the phone's own words give this device.
 @MainActor var phoneDeviceName: String { UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone" }

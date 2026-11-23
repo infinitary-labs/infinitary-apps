@@ -12,7 +12,6 @@ import { pressKey, typeInto } from "./windowKeys";
  * task browser spec reads them through here.
  */
 
-/** The task browser view on the stage, its parts by their typed hooks. */
 export const browserView = (page: Page, taskId: string): Locator =>
   page.locator(`${SHOWN_ENTRY} [data-task-browser="${taskId}"]`);
 
@@ -142,7 +141,6 @@ export async function pageSays(
   )) as string | null;
 }
 
-/** The size the task's hidden page at an address lays out at, as its own document reads it. */
 export async function pageLaidOutAt(app: ElectronApplication, siteUrl: string): Promise<string> {
   const size = (await onPage(app, siteUrl, "innerWidth + 'x' + innerHeight")) as string | null;
   if (!size) throw new Error(`no page at ${siteUrl}`);

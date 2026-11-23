@@ -42,19 +42,16 @@ export type StandInEra = "legacy" | "modern";
  */
 export type NotesBook = { notes: string[]; unavailable?: string; key?: string };
 
-/** The variable a keyed book's server reads its key from, as a real server's would. */
 export const NOTES_KEY_VARIABLE = "NOTES_KEY";
 
 export const NOTES_URI = "notes://all";
 
-/** Notes a person might keep, for a book to start from. */
 export const SAMPLE_NOTES = [
   "Groceries: oat milk, eggs, the good bread from the corner bakery",
   "Call the dentist to move Thursday's cleaning",
   "Mia's birthday is on the 14th - she wanted the blue raincoat",
 ];
 
-/** The list tool's title, the adding tool's name, and what adding answers once the book holds `count` notes. */
 export const NOTES_LIST_TITLE = "List notes";
 export const NOTES_ADD_TOOL = "add_note";
 export const addedNote = (count: number) => `Added note ${count}.`;
@@ -71,7 +68,6 @@ function noteOf(book: NotesBook, id: number): string {
   return book.notes[id - 1] ?? `There is no note ${id}.`;
 }
 
-/** The server in the 2026-07-28 era, through the SDK's second version. */
 function modernNotes(book: NotesBook, added: () => void, notebooks: string[] = []): McpServer {
   const server = new McpServer(
     { name: "notes-stand-in", version: "1.0.0" },
@@ -120,7 +116,6 @@ function modernNotes(book: NotesBook, added: () => void, notebooks: string[] = [
   return server;
 }
 
-/** The server in the 2025 era, through the SDK's first version. */
 function legacyNotes(
   book: NotesBook,
   added: () => void,
@@ -172,7 +167,6 @@ function legacyNotes(
 }
 
 export type NotesHttpServer = {
-  /** The server's address, on this computer. */
   url: string;
   book: NotesBook;
   /** Add a note as the person would elsewhere, and tell every subscribed client. */
@@ -182,7 +176,6 @@ export type NotesHttpServer = {
   close: () => Promise<void>;
 };
 
-/** Serve the notes over Streamable HTTP on 127.0.0.1, in one era. */
 export async function serveNotesHttp(
   era: StandInEra,
   notebooks: () => string[] = () => [],
@@ -308,7 +301,6 @@ export function publishNotes(file: string, book: NotesBook): void {
   renameSync(pending, file);
 }
 
-/** The child program: the notes from a file, told about when the file changes. */
 async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
   const { key } = JSON.parse(readFileSync(file, "utf8")) as NotesBook;
   if (key && process.env[NOTES_KEY_VARIABLE] !== key) {

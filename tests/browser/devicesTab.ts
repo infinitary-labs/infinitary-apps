@@ -81,7 +81,6 @@ export function refusedAs(channel: InvokeChannel, reason: string): Error {
   return new Error(`Error invoking remote method '${channel}': Error: ${reason}`);
 }
 
-/** One answer the test holds until it says how it ends. */
 export function held<T>() {
   let resolve: (value: T) => void = () => {};
   let reject: (error: Error) => void = () => {};
@@ -120,7 +119,6 @@ export function clipboard() {
   };
 }
 
-/** Opens Settings on its Devices tab, and waits for the home's list to draw. */
 export async function openDevices(): Promise<HTMLElement> {
   await userEvent.click(page.getByRole("button", { name: "Settings", exact: true }));
   await userEvent.click(page.getByRole("tab", { name: "Devices", exact: true }));
@@ -128,7 +126,6 @@ export async function openDevices(): Promise<HTMLElement> {
   return document.querySelector<HTMLElement>("[data-devices]") as HTMLElement;
 }
 
-/** The element `selector` names, once it is on screen. */
 export async function shown(selector: string): Promise<HTMLElement> {
   await expect.poll(() => document.querySelector(selector)).not.toBeNull();
   return document.querySelector<HTMLElement>(selector) as HTMLElement;
@@ -144,12 +141,10 @@ export async function afterNextFrame(): Promise<void> {
     await new Promise((drawn) => requestAnimationFrame(() => drawn(undefined)));
 }
 
-/** Waits until nothing `selector` names is on screen. */
 export async function gone(selector: string): Promise<void> {
   await expect.poll(() => document.querySelector(selector)).toBeNull();
 }
 
-/** A button inside `within`, by the words a person reads on it or its label. */
 export function button(within: Element, name: string): HTMLButtonElement {
   const found = [...within.querySelectorAll<HTMLButtonElement>("button")].find(
     (each) => each.getAttribute("aria-label") === name || each.innerText.trim() === name,
@@ -182,18 +177,14 @@ export async function rowAction(id: string, act: string): Promise<HTMLButtonElem
   return (await shown(`[role="menu"] [data-menu-item="${act}"]`)) as HTMLButtonElement;
 }
 
-/** The problem line Settings -> Devices says above Your devices, or null. */
-
 export function problemLine(): string | null {
   return document.querySelector('[data-settings-error="devices"]')?.textContent ?? null;
 }
 
-/** Every channel the window asked that the test gave no answer for. */
 export function unansweredOf(bridge: FakeBridge): string[] {
   return [...new Set(bridge.unanswered)];
 }
 
-/** Opens a peer's details from the same selection a person uses. */
 export async function selectDevice(id: string) {
   const viewport = await shown("[data-device-topology]");
   const selector = `[data-device-select="${id}"]`;

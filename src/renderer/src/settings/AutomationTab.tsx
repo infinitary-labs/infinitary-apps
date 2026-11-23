@@ -1101,7 +1101,6 @@ function ReviewPanel({
   );
 }
 
-/** The weekdays a rule runs on: one pill each, any number chosen. */
 function Weekdays({ days, onChange }: { days: number[]; onChange: (days: number[]) => void }) {
   return (
     <div data-automation-days style={{ alignSelf: "flex-start" }}>

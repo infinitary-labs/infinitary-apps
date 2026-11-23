@@ -29,7 +29,6 @@ function words(who: "you" | "firstmate"): HTMLElement {
   return found;
 }
 
-/** The ellipsis's width as the page draws it in these words' type. */
 function ellipsisWidth(node: HTMLElement): number {
   const probe = document.createElement("span");
   probe.textContent = "…";
@@ -69,7 +68,6 @@ function drawn(node: HTMLElement) {
     whole: text.data,
     shown: text.data.slice(0, shown),
     hidden: text.data.charAt(shown),
-    // Room the box keeps after the ellipsis, beside the width of the first hidden character.
     spare: box - widthTo(shown) - ellipsis,
     hiddenWidth: widthTo(shown + 1) - widthTo(shown),
   };

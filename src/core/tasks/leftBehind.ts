@@ -145,7 +145,6 @@ export class LeftBehindHere {
     }
   }
 
-  /** Finished here, and its close's own cleanup done. */
   private finished(task: string): boolean {
     return (
       this.options.closed(task) &&
@@ -154,7 +153,6 @@ export class LeftBehindHere {
     );
   }
 
-  /** The tasks that kept something here, finished or not, read from the index alone. */
   private indexed(): string[] {
     let names: string[];
     try {

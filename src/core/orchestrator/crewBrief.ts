@@ -67,7 +67,6 @@ function briefSources(tasks: TaskService, taskId: string, basis: string | undefi
   ];
 }
 
-/** The captain's pictures the brief's `sources` keep, then `extra`, each picture once. */
 function briefPictureRefs(
   tasks: TaskService,
   sources: readonly string[],
@@ -120,7 +119,6 @@ export type CrewBriefHost = {
   ): Promise<{ file: string; path: string }>;
   /** This Mac's knowledge for a task, when the computer it runs on reads it. */
   knowledgeFor(taskId: string): KnowledgeService | undefined;
-  /** The backend a task's running crewmate is on, when one runs. */
   backendOf(taskId: string): string | undefined;
   /** The notes section of a crewmate an automation's run started (docs/automation.md, "A rule's notes"). */
   ruleNotesSection?(taskId: string): Promise<string | undefined>;
@@ -403,7 +401,6 @@ export class CrewBrief {
     ].filter((source) => source.id !== taskId && this.readsLiveWork(record, source));
   }
 
-  /** Whether a source's work is read live on the computer it is on: a change of the same project, its working copy there. */
   private readsLiveWork(record: TaskRecord | undefined, source: TaskRecord): boolean {
     return Boolean(
       source.deviceId &&
@@ -529,7 +526,6 @@ export class CrewBrief {
     return { ...rest, cardFile: remoteFile };
   }
 
-  /** Where a source's code lives in its own repository, as the record names it. */
   private codeElsewhere(source: TaskRecord): CodeElsewhere {
     const delivery = source.delivery;
     const label = delivery?.changeLabel;

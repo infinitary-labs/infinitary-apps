@@ -13,7 +13,6 @@ export type RowProps = {
   word?: string;
   /** The trailing datum - a key, a count, a time - rendered in dim mono. */
   trailing?: React.ReactNode;
-  /** A child row indents under its parent; one step per level. */
   depth?: number;
   /** The row whose detail is open beside the panel: accent-tinted, no border. */
   selected?: boolean;

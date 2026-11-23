@@ -40,11 +40,8 @@ export const providerViewSchema = z.object({
    * Code the person installed (F14), so a Mac without it says so here.
    */
   unavailable: z.object({ note: z.string(), detail: z.string() }).optional(),
-  /** Whether credentials are currently configured. */
   connected: z.boolean(),
-  /** Which auth type is active when connected. */
   activeAuthType: z.enum(["oauth", "api_key"]).optional(),
-  /** Whether the provider charges by use rather than supplying a subscription allowance. */
   billedPerToken: z.boolean(),
 });
 export type ProviderView = z.infer<typeof providerViewSchema>;
@@ -88,7 +85,6 @@ export type AuthNotice = z.infer<typeof authNoticeSchema>;
 export const backendIdSchema = z.enum(["pi", "claude"]);
 export type BackendId = z.infer<typeof backendIdSchema>;
 
-/** The Firstmate orchestrator role, and the crewmate role. */
 export type ProviderRole = "firstmate" | "crewmate";
 
 export type ProviderCatalogEntry = {
@@ -96,7 +92,6 @@ export type ProviderCatalogEntry = {
   name: string;
   tier: ProviderView["tier"];
   backend: BackendId;
-  /** Roles this provider's accounts may be bound to. */
   roles: ReadonlyArray<ProviderRole>;
   /**
    * The provider signs in with a code the person types on its page, and the
@@ -209,7 +204,6 @@ export function providerSignInNote(
     : API_KEY_LABEL;
 }
 
-/** Pi's provider id for GitHub Copilot. */
 export const COPILOT_PROVIDER_ID = "github-copilot";
 
 /**
@@ -258,7 +252,6 @@ export function catalogEntry(id: string): ProviderCatalogEntry | undefined {
   return PROVIDER_CATALOG.find((entry) => entry.id === id);
 }
 
-/** The backend serving a provider; unknown providers default to Pi. */
 export function backendForProvider(id: string): BackendId {
   return catalogEntry(id)?.backend ?? "pi";
 }

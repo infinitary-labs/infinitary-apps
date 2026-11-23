@@ -31,7 +31,6 @@ export function automationRulesOf(services: Pick<CoreServices, "scheduler">) {
   return services.scheduler.rules().map((record) => automationRuleOf(services, record, events));
 }
 
-/** A saved rule as Automation shows it (src/shared/automation.ts). */
 export function automationRuleOf(
   services: Pick<CoreServices, "scheduler">,
   record: ScheduleRecord,

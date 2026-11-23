@@ -34,7 +34,6 @@ function notifier(
   return { instance, show };
 }
 
-/** The one notice a card arriving after the first snapshot shows. */
 function noticeOf(arriving: Card, facts?: (card: Card) => NoticeFacts) {
   const { instance, show } = notifier(facts ? { facts } : {});
   instance.observe([]);
@@ -90,7 +89,6 @@ describe("CardNotifier", () => {
     const { instance, show } = notifier();
     instance.observe([card({ id: "old-decision" })]);
     expect(show).not.toHaveBeenCalled();
-    // The same card broadcast again later stays quiet too.
     instance.observe([card({ id: "old-decision" })]);
     expect(show).not.toHaveBeenCalled();
   });
@@ -159,7 +157,6 @@ describe("CardNotifier", () => {
     expect(show).toHaveBeenLastCalledWith(
       expect.objectContaining({ kind: "reply", title: m.noticeReply() }),
     );
-    // A later push of the same answered card is not news.
     instance.observe([card({ id: "c1", title: "Pick a course, answered" })]);
     expect(show).toHaveBeenCalledTimes(1);
   });
@@ -179,7 +176,6 @@ describe("CardNotifier", () => {
       title: m.noticeReply(),
       body: "Pick a course, answered\nFirst line. Second line.",
     });
-    // A later push of the same answered card is not news.
     instance.observe([card({ id: "c1", title: "Pick a course, answered" })]);
     expect(show).toHaveBeenCalledTimes(1);
   });

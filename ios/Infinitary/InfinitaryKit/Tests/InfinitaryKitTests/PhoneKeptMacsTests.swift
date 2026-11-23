@@ -20,7 +20,6 @@ struct PhoneKeptMacsTests {
         #expect(kept.shown == studio && kept.others == [lab, office])
         let unknown = kept.show("not-kept")
         #expect(!unknown)
-        // Joining a kept computer again replaces its record and shows it.
         var renamed = office; renamed.name = "Work laptop"
         kept.joined(renamed)
         #expect(kept.shown == renamed && kept.others == [studio, lab])
@@ -54,7 +53,6 @@ struct PhoneKeptMacsTests {
         #expect(!FileManager.default.fileExists(atPath: files.legacyURL.path), "The list now holds the computer from before")
         #expect(try files.url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
 
-        // A switch saved: both computers stay, the other one shown.
         kept.show(studio.pin)
         try files.save(kept)
         #expect(try files.read() == PhoneKeptMacs(shown: studio, others: [office]))

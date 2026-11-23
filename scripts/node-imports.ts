@@ -74,7 +74,6 @@ export function nodeEntries(root: string): string[] {
     .sort();
 }
 
-/** The module specifiers a file loads when Node runs it, with their lines. */
 function loads(source: ts.SourceFile): Array<{ specifier: string; line: number }> {
   const found: Array<{ specifier: string; line: number }> = [];
   const add = (node: ts.Node, literal: ts.Expression | undefined) => {

@@ -59,12 +59,6 @@ export interface KindClassifier {
   classify(input: KindInput, signal: AbortSignal): Promise<KindVerdict>;
 }
 
-/**
- * The implementation S1 ships: it classifies nothing, so every shape is
- * `unclear` and R8 routes it high. It is not a stub for tests only - it
- * is the honest answer when no classifier is wired, and it is what S2
- * runs on until S3 lands the real one.
- */
 export const noneKindClassifier: KindClassifier = {
   async classify(): Promise<KindVerdict> {
     return { kind: "unclear", source: "none", version: "none-1" };

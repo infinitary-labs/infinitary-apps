@@ -15,7 +15,6 @@ import { lintMacTag, macTests, needsMac } from "./lint/e2eMacTag";
  * skipped there without it.
  */
 
-/** The same journey with its tag taken off. */
 const untag = (source: string) => source.replace(/\{\s*tag: MAC_ONLY_TAG,?\s*\},\s*/, "");
 const spec = (name: string) => readFileSync(new URL(`./e2e/${name}`, import.meta.url), "utf8");
 

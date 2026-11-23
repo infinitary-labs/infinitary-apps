@@ -569,7 +569,6 @@ export type CrewSupervisorOptions = {
     facts?: WakeFacts;
     verdict: "routine" | "captain";
     summary: string;
-    /** The rule that sorted it. */
     rule: ReportSortRule | IdleRule;
     wakeKind: ServedWakeOrigin;
     /** The wake itself, run inside the store's own transaction. */

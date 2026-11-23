@@ -110,7 +110,6 @@ const helpItem = (app: ElectronApplication) =>
     return item ? { enabled: item.enabled, inHelp: help?.submenu?.items.includes(item) } : null;
   });
 
-/** Chooses What's New in the Help menu, as a click on it does. */
 const chooseHelpItem = (app: ElectronApplication) =>
   app.evaluate(({ Menu }) => {
     const item = Menu.getApplicationMenu()?.getMenuItemById("whats-new");

@@ -132,7 +132,6 @@ describe("closed task worktrees always go, work saved first (real git)", {
     }
   }
 
-  /** A commissioned crewmate, idle, on a real worktree of the default repo. */
   async function commissionReal(extras: Pick<SetupExtras, "readPull"> = {}) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { realWorkspace: true, ...extras });
@@ -307,7 +306,6 @@ describe("closed task worktrees always go, work saved first (real git)", {
     expect(await git(repoDir, ["ls-tree", "-r", "--name-only", ref])).not.toContain("node_modules");
     // ONE commit whose parent is the branch's own head: the history rides along.
     expect(await git(repoDir, ["log", "--format=%s", ref])).toContain("ignore deps");
-    // Quiet: a timeline line naming no ref, and no feed line about it.
     const saved = tasks.timeline(taskId).find((event) => event.data?.saved);
     expect(saved).toMatchObject({ feed: false });
     expect(saved?.text).not.toContain("refs/");
@@ -587,7 +585,6 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
 
   it("pending then green: exactly one wake, and no model turn while the checks run", async () => {
     const { crewmate, forge, taskId, tasks, said, sorts, ops, at } = await waiting();
-    // The reading tells the crewmate to wait for the wake, and the watch stands.
     expect(said).toContain("facts: ");
     expect(said).not.toContain("crew verdict:");
     expect(said).toContain("The app is watching these checks and will wake you once");
@@ -596,8 +593,6 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
     const prompts = crewmate.promptCalls.length;
 
-    // Forty minutes of running checks: the host reads them, the crewmate
-    // takes no turn - no nudge, no steer, no stall wake.
     for (let minute = 1; minute <= 40; minute++) await at(minutes(minute));
     expect(crewmate.promptCalls).toHaveLength(prompts);
     expect(crewmate.steer).not.toHaveBeenCalled();
@@ -788,7 +783,6 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     const ciRows = () => tasks.timeline(taskId).filter((event) => event.kind === "ci").length;
     const reads = forge.checkReads;
     const rows = ciRows();
-    // A day on the shared tick, every five minutes.
     for (let minute = 5; minute <= 24 * 60; minute += 5) await at(minutes(minute));
     expect(forge.checkReads).toBe(reads);
     expect(ciRows()).toBe(rows);
@@ -900,7 +894,6 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
       await second.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
     }
-    // The resumed crewmate hears it once.
     expect(watchWakes(second.crewmate.promptCalls)).toEqual([
       expect.stringContaining("finished at cafe000"),
     ]);

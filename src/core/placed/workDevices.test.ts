@@ -5,7 +5,6 @@ import { home } from "../../../tests/helpers/connectionHome";
 import type { WorkDeviceContact, WorkDeviceVersion } from "../connection/connection";
 import { type WorkDeviceLink, WorkDevices } from "./workDevices";
 
-/** A connection that keeps what it is told to hold. */
 function link(held: (string | null)[]): WorkDeviceLink {
   return {
     ask: async () => {

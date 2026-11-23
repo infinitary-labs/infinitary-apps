@@ -19,7 +19,6 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
 /// loopback address and passes it to the computer, or passes the address the person pastes when it cannot listen.
 @MainActor @Observable public final class PhoneGoogle {
     public enum Stage: Equatable {
-        /// Nothing in progress.
         case idle
         /// Google's notice is up; nothing is asked of the computer until it is accepted.
         case notice
@@ -96,10 +95,8 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
         }
     }
 
-    /// Shows the page again, as the computer's Settings offers.
     public func openAgain() { if case .waiting(let page?, _) = stage { showing = page.url } }
 
-    /// Ends the computer's sign-in.
     public func cancel() async {
         cancelling = true
         busy = true; defer { busy = false }

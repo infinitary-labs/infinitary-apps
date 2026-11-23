@@ -304,7 +304,6 @@ function standInAllowance(codexModels?: readonly string[]): {
         url,
         ...(init.headers?.Authorization ? { auth: init.headers.Authorization } : {}),
       });
-      // The Codex account's own model list, in Codex's shape, when the test names one.
       if (codexModels && new URL(url).pathname === "/backend-api/codex/models")
         return { status: 200, json: { models: codexModels.map((slug) => ({ slug })) } };
       if (url === "https://chatgpt.com/backend-api/wham/usage")
@@ -340,7 +339,6 @@ function standInAllowance(codexModels?: readonly string[]): {
   };
 }
 
-/** Every file under `dir`, as text, for a search. */
 function savedText(dir: string): { file: string; text: string }[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -484,7 +482,6 @@ async function joined(
     allowanceReads: [] as string[],
   };
   let held: Promise<HeldSignIns> | undefined;
-  // What the computer wrote to its own log.
   const logs: string[] = [];
   const started = startHelper({
     dataDir,
@@ -600,7 +597,6 @@ async function joined(
   await expect.poll(() => started.run.state().contact).toBe("in-reach");
   await expect.poll(() => work.inReach(deviceId)).toBe(true);
 
-  /** Every step of one sign-in the home heard, in order. */
   const steps = (signInId: string): SignInStep[] =>
     pushes.filter((event) => event.signInId === signInId).map((event) => event.step);
   const ended = async (signInId: string) => {
@@ -632,7 +628,6 @@ async function joined(
     allowance,
     claude,
     steps,
-    /** Every sign-in the home heard a step of, in order. */
     signInIds: () => [...new Set(pushes.map((event) => event.signInId))],
     ended,
     prompt,
@@ -683,7 +678,6 @@ function servedThere(world: Awaited<ReturnType<typeof joined>>, providerId: stri
 describe("a computer that runs work signs in to its own subscriptions from its home", () => {
   it("lists what it can sign in to only once its home asks, with no sign-in yet", async () => {
     const world = await joined();
-    // Nothing of the sign-ins loads until the home asks about them.
     expect(world.group()).toMatchObject({ name: "Mac mini", user: "builder", signIns: null });
     world.signIns.read();
     await expect
@@ -817,7 +811,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
   it("keeps a computer's own Codex account going on credits from home, saved there, so its spent allowance routes on credits", async () => {
     standInProviders();
     const world = await joined();
-    // Its allowance is used up, and ChatGPT says the account has credits.
     world.allowance.codex.usedPercent = 100;
     world.allowance.codex.credits = { has_credits: true, balance: "12.50" };
     await signInToCodex(world);
@@ -858,7 +851,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     );
     expect(row()?.keepGoingOnCredits).toBe(true);
     expect(onCredits()).toBe(true);
-    // Saved on the computer's own account, and nowhere at home.
     expect(
       savedText(world.dataDir).some(({ text }) => text.includes('"keepGoingOnCredits": true')),
     ).toBe(true);
@@ -910,7 +902,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
             step.kind === "notice" && step.notice.url?.startsWith("https://auth.openai.com/"),
         ),
     ).toBe(true);
-    // Codex ran there, with its home in the account's own folder on that computer.
     expect(codex.homes.every((home) => home?.startsWith(world.dataDir))).toBe(true);
     expect(codex.homes.every((home) => home?.includes(account.id))).toBe(true);
     // Its allowance is read there again, and that reading reaches the home.
@@ -960,7 +951,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     });
     expect(seen()).toMatchObject({ enabled: false, connected: true });
     expect(pooled()).toBe(0);
-    // Saved in the computer's own store, and nowhere at home.
     expect(savedText(world.dataDir).some(({ text }) => text.includes("Studio Codex"))).toBe(true);
     expect(savedText(world.homeDir).filter(({ text }) => text.includes("Studio Codex"))).toEqual(
       [],
@@ -1103,7 +1093,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
   // FI3-1806: a computer that runs work builds its model lists as the home
   // does, so an Automatic start routes among what it actually serves.
   it("lists the Claude models that computer's own client answers, as the home lists its own", async () => {
-    // A plan whose client there serves no Fable, and still lists an earlier Opus.
     const rows: ClaudeModelRow[] = [
       ...CLAUDE_CLIENT_ROWS.filter((row) => row.resolvedModel !== "claude-fable-5-1"),
       { value: "claude-opus-4-8", resolvedModel: "claude-opus-4-8", displayName: "Opus 4.8" },
@@ -1453,7 +1442,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     const askpass = join(__dirname, "../../../resources/git-askpass");
     const world = await joined({ gitAskpass: askpass });
     world.signIns.read();
-    // It offers GitHub, and is not signed in there yet.
     await expect
       .poll(() => world.group()?.signIns?.forges)
       .toEqual({
@@ -1488,7 +1476,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     expect(world.events).toContainEqual(
       expect.objectContaining({ type: "device_signed_in", who: "Builder", provider: "GitHub" }),
     );
-    // GitHub was asked who it is with the computer's own sign-in.
     expect(github.asked).toContainEqual({
       url: "https://api.github.com/user",
       auth: `Bearer ${GITHUB_SIGN_IN}`,
@@ -1519,7 +1506,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     await (await world.held()).forges.checkHealth();
     await expect.poll(() => world.group()?.signIns?.forges?.signIns[0]?.state).toBe("needs_reauth");
 
-    // Signing it out from home deletes it there.
     await world.signIns.signOutForge(world.deviceId, "github.com");
     await expect.poll(() => world.group()?.signIns?.forges?.signIns).toEqual([]);
     expect(existsSync(join(forges, "github.com"))).toBe(false);
@@ -1544,7 +1530,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     };
     const world = await joined({ githubCli });
     world.signIns.read();
-    // It says GitHub CLI is there, and is not signed in yet.
     await expect
       .poll(() => world.group()?.signIns?.forges)
       .toEqual({
@@ -1570,12 +1555,10 @@ describe("a computer that runs work signs in to its own subscriptions from its h
           way: "cli",
         },
       ]);
-    // GitHub was asked who it is with GitHub CLI's sign-in, there.
     expect(github.asked).toContainEqual({
       url: "https://api.github.com/user",
       auth: `Bearer ${GITHUB_CLI_SIGN_IN}`,
     });
-    // The computer's store names the way and the program, never the token.
     const forges = join(world.dataDir, "forges");
     const file = readFileSync(join(forges, "github.com", "sign-in.json"), "utf8");
     expect(JSON.parse(file)).toMatchObject({ way: "cli", program: gh, login: "octo-mini" });
@@ -1670,7 +1653,6 @@ describe("a computer that runs work signs in to its own subscriptions from its h
       auth: expect.stringContaining(ENTERPRISE_KEY),
     });
 
-    // Signing it out from home deletes it there.
     await world.signIns.signOutForge(world.deviceId, "github.example.com");
     await expect.poll(() => world.group()?.signIns?.forges?.signIns).toEqual([]);
     expect(existsSync(join(forges, "github.example.com"))).toBe(false);

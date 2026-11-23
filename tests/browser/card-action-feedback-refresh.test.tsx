@@ -21,7 +21,6 @@ import { openSize, openWindow } from "./window";
  * Refresh first, then General's Purge.
  */
 
-/** The reason a refused request gives in this story. */
 const REQUEST_REASON = "The request could not be completed.";
 
 /** Words that belong to the transport, never to a refusal a person reads. */

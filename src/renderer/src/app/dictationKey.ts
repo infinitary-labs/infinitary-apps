@@ -5,7 +5,6 @@ import { useShellStore } from "./store";
 /** A press released sooner is a tap; one held this long is a hold. */
 const HOLD_MS = 250;
 
-/** One press of the dictation key, from its keydown until it ends. */
 type Press = {
   at: number;
   /** This press stopped a tapped recording, so its release starts nothing. */

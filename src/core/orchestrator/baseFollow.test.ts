@@ -34,7 +34,6 @@ const run = (cwd: string, ...args: string[]) =>
     .toString()
     .trim();
 
-/** Commit one file on the checked-out branch and return the new version. */
 function commit(repo: string, file: string, text: string, subject: string): string {
   writeFileSync(join(repo, file), text);
   run(repo, "add", file);
@@ -58,7 +57,6 @@ function chain() {
   const first = commit(repo, "export.ts", "export const csv = 1;\n", "feat: add the CSV export");
   run(repo, "checkout", "-b", "inf/export-panel");
   const second = commit(repo, "panel.ts", "export const panel = 1;\n", "feat: show the export");
-  // The default branch moves on and the first part is brought up to date with it.
   run(repo, "checkout", "main");
   commit(repo, "license.md", "MIT\n", "docs: add the license");
   run(repo, "checkout", "inf/csv-export");

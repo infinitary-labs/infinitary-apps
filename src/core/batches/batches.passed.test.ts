@@ -46,21 +46,18 @@ async function heldBatch() {
 }
 
 describe("a held batch whose version passes on a rerun", () => {
-  // The held version passes on a rerun after its fix was approved: it merges as it is.
   it("merges a held version whose failed checks pass on a rerun after its fix was approved, and the fix forms the next batch", async () => {
     const home = await heldBatch();
     const held = home.open();
     expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
     await home.pass();
     expect(home.open().hold).toBeDefined();
-    // The failed checks pass on their rerun, and the fix is approved before the next pass.
     home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
     home.host.ready("clean");
     home.approve(FIX);
     await home.pass();
     expect(home.host.merges.map((merge) => merge.head)).toEqual([held.head]);
     expect(home.place(PARSER)).toMatchObject({ state: "merged" });
-    // The fix did not join the merged batch: it forms the next one, still the fix.
     expect(home.members()).toEqual(["t-fix"]);
     expect(home.open().members[0]?.fix).toBe(true);
     expect(home.heard.combinedOn.at(-1)).toEqual([held.head]);

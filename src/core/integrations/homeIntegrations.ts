@@ -76,7 +76,6 @@ export function startHomeIntegrations(options: {
   const google = googleSetup({ packaged: host.app.packaged });
   // A binding's own change reaches the service once it exists.
   let integrationsChanged: () => void = () => {};
-  // Which conversations received fenced words, and when, so they go when due.
   const outsideReads = new OutsideReads(paths.integrationsDir);
   // The inbox (docs/integrations.md, "The inbox"): infinitary-axi's switch
   // and the notes the person's own programs drop with it. The command's

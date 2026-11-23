@@ -1,6 +1,5 @@
 import type { Scenario } from "../mockProvider";
 
-/** How long the stand-in takes over the summary that shortens a conversation. */
 export const SHORTENING_HOLD_MS = 6000;
 
 /**

@@ -55,7 +55,6 @@ export type OwnKey = {
   publicLine: string;
 };
 
-/** The key in `dir`, or null when there is none whole. */
 export function readOwnKey(dir: string): OwnKey | null {
   const folder = join(dir, OWN_KEY_FOLDER);
   const privatePath = join(folder, PRIVATE_FILE);

@@ -117,7 +117,6 @@ test("kept jobs are listed, checked and removed by keys, and a failed remove kee
     await test.step("Enter on a row opens Settings → Automation with the keyboard on its Check", async () => {
       await pressKeyTakingFrame(row("task-1-s1"), "Enter");
       await expect(job("task-1-s1")).toContainText(BACKUP);
-      // Listed by the computer it runs on, the account it runs as and the task that set it up.
       await expect(job("task-1-s1")).toContainText(COMPUTER);
       await expect(job("task-1-s1")).toContainText("captain");
       await expect(job("task-1-s1")).toContainText("INF-7");
@@ -136,7 +135,6 @@ test("kept jobs are listed, checked and removed by keys, and a failed remove kee
       await pressKey(job("task-1-s1").locator("[data-kept-check]"), "Tab");
       await expect(job("task-1-s1").locator("[data-kept-remove]")).toBeFocused();
       await pressKey(job("task-1-s1").locator("[data-kept-remove]"), "Enter");
-      // Asked once: the job is still there and its file untouched.
       const forGood = job("task-1-s1").locator("[data-kept-remove-for-good]");
       await expect(forGood).toBeFocused();
       expect(existsSync(marker)).toBe(true);
@@ -170,7 +168,6 @@ test("kept jobs are listed, checked and removed by keys, and a failed remove kee
       await pressKey(failed.locator("[data-kept-remove-for-good]"), "Tab");
       await expect(failed.locator("[data-kept-remove]")).toBeVisible();
       await expect(failed.locator("[data-kept-forget]")).toBeVisible();
-      // Nothing ran: the record still holds the same failed remove.
       expect(jobs.list()[0]?.removeFailed).toEqual(before);
     });
 
@@ -180,7 +177,6 @@ test("kept jobs are listed, checked and removed by keys, and a failed remove kee
       await pressKey(forget, "Enter");
       await expect(job("task-2-s1")).toHaveCount(0);
       expect(jobs.list()).toEqual([]);
-      // Nothing ran: its kept folder stays on that computer.
       expect(existsSync(stuck)).toBe(true);
     });
 

@@ -98,7 +98,6 @@ describe("the Claude store lease", () => {
     } finally {
       session.dispose();
     }
-    // The session ended and its client exited: the store is free and renewal may proceed.
     await session.closed();
     expect(hasActiveSession(dir)).toBe(false);
     await backend.renew(ref, "vendor_rejected");

@@ -74,7 +74,6 @@ function tried(mockProvider: MockProviderServer, words: string): number {
   }).length;
 }
 
-/** The open card titled `title`, as the core's stack holds it. */
 async function pauseCard(page: Page, title: string) {
   return page.evaluate(
     async (wanted) => (await window.infinitary.cards.list()).find((card) => card.title === wanted),
@@ -177,7 +176,6 @@ test("a refusal pauses the seat on its own card, and Try Claude again answers th
   expect(tried(mock, words)).toBe(1);
   await stillOpen(page);
   expect(tried(mock, words)).toBe(1);
-  // Picking Claude again is refused in the refusal's own words.
   const refusal = await page.evaluate(
     (model) =>
       window.infinitary.settings
@@ -213,7 +211,6 @@ test("a message the paused seat keeps after its card is put away says it is save
   const later = "are you there?";
   await say(page, later);
   const saved = keptMessageWords(`${title}.`, "refused", "Claude");
-  // The reply beside his message says it the moment he sends; the feed keeps it.
   await expect(bubbleWords(yourBubble(page))).toHaveText(later);
   await expect(bubbleWords(mateBubble(page))).toHaveText(saved, { timeout: 30_000 });
   await expect(feedLine(page, saved)).toBeVisible();
@@ -286,7 +283,6 @@ test("a spent allowance pauses with its reset, asks to move to Codex, and tries 
   await expect(failureLines(page)).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("claude-seat-no-headroom-move.png") });
 
-  // Nothing moves before a click, and nothing is tried before the reset.
   expect(tried(mock, words)).toBe(1);
   await stillOpen(page);
   expect(tried(mock, words)).toBe(1);
@@ -394,7 +390,6 @@ test("a Codex seat that runs out is offered Claude, moves only on the click, and
   mockProvider = mock;
   launched = await launchClaudeSeat({ mockProvider: mock, withCodex: true, codexPercent: 0 });
   const { page } = launched;
-  // The captain put the Firstmate on Codex's high model.
   await page.evaluate(
     (id) => window.infinitary.settings.setFirstmateModel({ provider: "openai-codex", id }),
     starterFor("openai-codex", "high"),
@@ -408,7 +403,6 @@ test("a Codex seat that runs out is offered Claude, moves only on the click, and
   await expect(page.getByRole("button", { name: "Move to Claude" })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("codex-seat-move-to-claude.png") });
 
-  // Nothing moves before the click, and nothing is tried on either seat.
   await stillOpen(page);
   expect(await page.evaluate(() => window.infinitary.settings.getFirstmateModel())).toMatchObject({
     provider: "openai-codex",

@@ -57,7 +57,6 @@ function repo(name: string, origin: string | null, runsOn: string | null): RepoV
   };
 }
 
-/** A home's stack, repos and each computer's word, as fakes a test moves by hand. */
 function world() {
   const raised: Card["id"][] = [];
   const stack = new Map<string, Omit<Card, "author" | "priority" | "status" | "createdAt">>();
@@ -270,13 +269,11 @@ describe("finishing a computer's setup", () => {
     at.setup.signInsChanged("d1");
     expect(at.rows()).toEqual(["subscription:true", "github:true", "project:false"]);
     expect(at.forge).toEqual(["ready d1 github.com"]);
-    // The last row: a project set to run there.
     at.repos.push(repo("website", "https://github.com/octo/website.git", "d1"));
     at.setup.runsOnChanged(at.repos[0] as RepoView);
     expect(at.stack.has(CARD)).toBe(false);
     expect(at.withdrawn).toContainEqual([CARD, "set up"]);
     expect(at.notes()).toEqual(["Mac mini is set up. It runs website with its own sign-ins."]);
-    // Done is done: later words from the computer raise nothing.
     at.setup.signInsChanged("d1");
     expect(at.raised).toEqual([CARD, CARD]);
   });

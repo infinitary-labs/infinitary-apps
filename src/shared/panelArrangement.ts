@@ -16,7 +16,6 @@ import { BUILTIN_SURFACES } from "./surfaces";
  * other group, where a new panel lands.
  */
 
-/** A panel as the arrangement needs it: its id, the slot it asks for and its declared order. */
 export type ArrangedPanel = { id: string; preferred: SidePanelPlacement; order: number };
 
 /** The four slots, in reading order: the left rail's top and bottom, then the right's. */
@@ -46,7 +45,6 @@ export function slotPanels(
   return arrangement[slot.x][slot.y];
 }
 
-/** Where a panel is listed, or undefined when the arrangement does not list it. */
 export function panelSlot(
   arrangement: PanelArrangement,
   id: string,
@@ -58,7 +56,6 @@ export function panelSlot(
   return undefined;
 }
 
-/** The arrangement without one panel: what forgetting it leaves. */
 export function withoutPanel(arrangement: PanelArrangement, id: string): PanelArrangement {
   const next = copy(arrangement);
   for (const slot of RAIL_SLOTS)
@@ -78,7 +75,6 @@ function byDeclaredOrder(a: ArrangedPanel, b: ArrangedPanel): number {
   return a.order - b.order || a.id.localeCompare(b.id);
 }
 
-/** Puts panels at a slot's middle, keeping their own order. */
 function atMiddle(slot: SidePanelPlacement, listed: string[], added: string[]): string[] {
   return slot.y === "top" ? [...listed, ...added] : [...added, ...listed];
 }
@@ -165,7 +161,6 @@ function unique(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
-/** A saved arrangement with any panel listed twice kept at its first place. */
 function deduplicated(arrangement: PanelArrangement): PanelArrangement {
   const seen = new Set<string>();
   const next = emptyArrangement();

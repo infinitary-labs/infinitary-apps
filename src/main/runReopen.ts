@@ -23,7 +23,6 @@ export type ReopenedApp = {
   setActivationPolicy: (policy: "prohibited") => void;
 };
 
-/** The `.app` folder an executable inside `Contents/MacOS` belongs to, or null outside one. */
 export function bundleOf(execPath: string): string | null {
   const macos = dirname(execPath);
   const contents = dirname(macos);
@@ -33,7 +32,6 @@ export function bundleOf(execPath: string): string | null {
   return bundle;
 }
 
-/** macOS's own open, starting `bundle` as a new copy with `args` after it. */
 export function openNewCopy(bundle: string, args: readonly string[]): void {
   execFile(
     "/usr/bin/open",

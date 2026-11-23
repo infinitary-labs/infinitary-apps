@@ -29,7 +29,6 @@ const DECISION = "Choose the launch window";
 const NOTE = "The launch checklist is ready";
 const WORDS = "Keep the review beside the launch";
 
-/** Which of the two cards the owner holds put aside, by id. */
 function putAside(page: Page): Promise<Record<string, boolean>> {
   return page.evaluate(async () =>
     Object.fromEntries(

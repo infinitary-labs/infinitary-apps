@@ -506,7 +506,6 @@ describe("every package step in the release path", { timeout: 10_000 }, () => {
     return { status, output, zips };
   }
 
-  /** Runs `script` and expects it to succeed, returning its output and the zips pnpm's stand-in read. */
   async function succeed(script: string, kept: boolean) {
     const { status, output, zips } = await run(script, kept);
     expect(status, output).toBe(0);

@@ -192,7 +192,6 @@ function startCrewTask(userDataDir: string): string {
       assignee: "crewmate",
       model: CLAUDE,
     });
-    // The crewmate finished; its record keeps the explanation.
     tasks.close(id, { status: "done", reason: "settled", actor: "host" });
     return id;
   } finally {
@@ -289,7 +288,6 @@ test("the task record explains why its crewmate got its model, and the hover sum
     if (!detail.modelReason || !detail.modelChoice) throw new Error("No model reason saved");
     const reason = modelReasonLine(detail.modelReason);
 
-    // Resting on the task's row opens its summary, which shows no Why this model.
     await expandDock(launched.page, "now");
     await openGroup(launched.page, "landed");
     await restOnRow(launched.page, detail.key);
@@ -300,8 +298,6 @@ test("the task record explains why its crewmate got its model, and the hover sum
       await regionShot(rowSummaryBody(launched.page), join(evidence, "after-summary.png"));
     await launched.page.mouse.move(4, 400);
 
-    // The record's Why this model opens from the keyboard: the model's reason,
-    // then how the allowance decided, then the models ranked as decided.
     let why = await openRecord(launched, detail.key);
     await expect(why.locator("summary")).toHaveText(MODEL_WHY_WORDS.summary);
     if (evidence)
@@ -332,13 +328,11 @@ test("the task record explains why its crewmate got its model, and the hover sum
     // The model's reason lives only there: the footnote no longer says it.
     await expect(taskFact(recordCard(launched.page), "reason")).toHaveCount(0);
 
-    // A new reading leaves the explanation as it was decided.
     await launched.page.evaluate(() => window.infinitary.quota.refresh());
     const refreshed = await readWhy(why);
     expect(refreshed).toEqual(shown);
     await launched.close();
 
-    // A restart reads the same saved choice.
     launched = await launchSignedInClaude(CLAUDE_ACCOUNT, { ...options, homeDir });
     await expandDock(launched.page, "now");
     await openGroup(launched.page, "landed");

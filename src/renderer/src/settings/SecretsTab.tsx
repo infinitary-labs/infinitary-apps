@@ -499,7 +499,6 @@ export function SecretsTab() {
   );
 }
 
-/** One secret: its name, its place, and what last happened with it; opening it offers its changes. */
 function SecretRow({
   entry,
   asking,
@@ -1047,7 +1046,6 @@ function historySummary(history: SecretsView["history"]): string {
   return SECRETS_WORDS.historySummary(history.length, dayOf(newest));
 }
 
-/** Today, yesterday, or the month and day. */
 function dayOf(at: number): string {
   const day = new Date(at);
   const today = new Date();

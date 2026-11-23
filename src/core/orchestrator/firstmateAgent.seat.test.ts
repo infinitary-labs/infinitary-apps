@@ -42,10 +42,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: the paused seat and its ways back (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
-/** The seat's turn ends in a typed cut-off, as the Claude client reports one. */
 async function cutOffTurn(session: FakeSession, cutOff: CutOff): Promise<void> {
   session.emit({
     type: "turn_failed",
@@ -81,7 +79,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     const seat = t.sessions[0] as FakeSession;
     await cutOffTurn(seat, { class: "signed_out" });
 
-    // The turn is a turn_failed with its class; the words wait on the inbox.
     expect(t.events).toContainEqual(
       expect.objectContaining({
         type: "turn_failed",
@@ -114,12 +111,10 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     // The seat lets go of its client while paused, so the sign-in's health can be read.
     expect(seat.detach).toHaveBeenCalled();
 
-    // Paused: nothing is attempted, however long, and the card is raised once.
     await ticksPass(t.agent, 4);
     expect(seat.prompts).toHaveLength(1);
     expect(t.ledger.filter((row) => row.reasons[0] === "seat paused")).toHaveLength(1);
 
-    // A new sign-in clears the fact: a feed line, the card goes, the words go through.
     t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     await ticksPass(t.agent, 1);
     expect(notes(t.events)).toContain("Your first mate is answering again on Claude.");
@@ -162,7 +157,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     ]);
     expect(notes(t.events)).toContain(`Your first mate paused: ${sentence}`);
 
-    // A message kept meanwhile names the same way back.
     await t.agent.converse("still there?");
     await tick();
     const kept = keptMessageWords(sentence, "signed_out", "Claude", true);
@@ -198,7 +192,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     );
     expect(captainRows(t.inbox)).toEqual(["hello"]);
 
-    // The client is installed: the seat attaches and the words go through.
     Object.assign(t.account(CLAUDE_ACCOUNT), { withheld: undefined, detail: undefined });
     t.agent.onCutOffChanged();
     await tick();
@@ -231,7 +224,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     seat.resolveNextPrompt();
     await tick();
 
-    // An operational wake meets the spent allowance.
     const resetsAt = Date.now() + 3 * 60 * 60_000;
     t.agent.notifyOp(
       { facts: { kind: "scheduled", prompt: "check the build", catchUp: false } },
@@ -257,7 +249,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     await ticksPass(t.agent, 3);
     expect(seat.prompts).toHaveLength(2);
 
-    // The reset passes: the fact clears, and the wake goes through at once.
     t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     await ticksPass(t.agent, 1);
     expect(notes(t.events)).toContain("Your first mate is answering again on Claude.");
@@ -327,7 +318,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     void t.agent.recheckAllowance();
     expect(rechecks).toBe(1);
 
-    // Still spent on the same login: the card comes back as it was, nothing tried.
     read();
     await tick();
     expect(card()?.body).not.toContain(ALLOWANCE_CHECKING_WORDS);
@@ -348,7 +338,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(notes(t.events)).toContain("Your first mate is answering again on Claude.");
     expect(seat.prompts).toHaveLength(2);
     expect(seat.prompts[1]).toContain("hello");
-    // Later readings deliver nothing twice.
     t.agent.onQuotaRefreshed();
     await tick();
     expect(seat.prompts).toHaveLength(2);
@@ -378,7 +367,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(seat.prompts).toHaveLength(1);
     expect(t.tryAgains).toEqual([]);
 
-    // The captain's word clears it, and the one drain is the attempt.
     t.supervisor.cardActions.act("card-fm-refused", "try-again");
     await tick();
     expect(t.tryAgains).toEqual([CLAUDE_ACCOUNT]);
@@ -387,7 +375,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(seat.prompts).toHaveLength(2);
     expect(seat.prompts[1]).toContain("hello");
 
-    // Refused again: the seat pauses again, and still tries nothing on its own.
     await cutOffTurn(seat, { class: "refused" });
     expect(t.cards().map((entry) => entry.id)).toContain("card-fm-refused");
     await ticksPass(t.agent, 3);
@@ -415,7 +402,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
       "offered Codex: it has headroom",
     ]);
 
-    // Nothing moves before the click.
     await ticksPass(t.agent, 3);
     expect(t.specs).toHaveLength(1);
     expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
@@ -438,14 +424,12 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(codex.prompts[0]).toContain(
       '- the captain said "hello"; you used no tool; the turn failed',
     );
-    // ...and the words the refusal kept, as the captain's.
     expect(codex.prompts[0]).toContain("[user]\nhello");
     codex.emit({ type: "tool_start", taskId: "firstmate", callId: "c1", toolName: "emit_card" });
     codex.emitTurnEnd("Answered on Codex.");
     codex.resolveNextPrompt();
     await tick();
 
-    // The way back asks too: Claude serves again, and nothing moves until the click.
     t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     await ticksPass(t.agent, 1);
     expect(notes(t.events)).toContain("Claude can serve your first mate again.");
@@ -504,7 +488,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     ]);
     expect(captainRows(t.inbox)).toEqual(["second"]);
 
-    // With nowhere to move, the one card is the sign-in.
     t.account("acct_grok").connected = false;
     t.supervisor.close("card-fm-flagship-move");
     await ticksPass(t.agent, 1);
@@ -550,7 +533,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
       "Your message is saved. Claude is not answering your first mate right now. Your first mate answers it once Claude answers again, or choose another model for your first mate in Settings, under Intelligence.",
     );
 
-    // Claude answers again: the seat's own line says so and the kept words go.
     t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     t.agent.onCutOffChanged();
     await tick();
@@ -626,7 +608,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     const seat = t.sessions[0] as FakeSession;
     await cutOffTurn(seat, { class: "signed_out" });
 
-    // The way back drains the parked words, and that turn fails the ordinary way.
     t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     await ticksPass(t.agent, 1);
     expect(seat.prompts).toHaveLength(2);
@@ -642,7 +623,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     seat.emitTurnEnd("Hello again.");
     seat.resolveNextPrompt();
     await tick();
-    // Answered: nothing is left to deliver, and the stale Retry is gone.
     await ticksPass(t.agent, 2);
     expect(seat.prompts).toHaveLength(3);
     expect(t.cards()).toEqual([]);
@@ -668,7 +648,6 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     t.agent.pokeInbox();
     await tick();
     expect(seat.prompts).toHaveLength(1);
-    // Retry on the card makes them due now: the one attempt it asks for.
     t.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
     await tick();
     expect(seat.prompts).toHaveLength(2);
@@ -687,13 +666,11 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     });
     after.agent.pokeInbox();
     await tick();
-    // Still refused: the restored card stands, and nothing is said or recorded twice.
     expect(after.supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-fm-refused"]);
     expect(notes(after.events)).toEqual([]);
     expect(after.ledger).toEqual([]);
     expect(after.sessions.flatMap((session) => session.prompts)).toEqual([]);
 
-    // Another login clears the refusal: the card goes and the words go through.
     after.account(CLAUDE_ACCOUNT).cutOff = undefined;
     after.agent.pokeInbox();
     await tick();
@@ -786,7 +763,6 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
   } satisfies FlagshipAccount;
   const GROK = { provider: "xai", id: "grok-4.6" };
 
-  /** Two Codex accounts, the seat on the first after one finished turn unless `fresh`. */
   async function codexPair(options: { fresh?: boolean } = {}) {
     const t = setupWithFlagship({ accounts: [{ ...PERSONAL }, { ...WORK }] });
     t.setHeadroom("acct_a", 80);
@@ -801,7 +777,6 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     return t;
   }
 
-  /** A seat on Codex that left Claude, with the way back offered by card. */
   async function movedOffClaude() {
     const t = setupWithFlagship({
       claudeSeat: true,

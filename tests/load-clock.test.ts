@@ -81,7 +81,6 @@ async function run(
       signal("SIGCONT");
       frozen = false;
       phaseEnds = now + schedule.runMs;
-      // One long stop, then the run goes on unfrozen.
       if (schedule.runMs === Number.POSITIVE_INFINITY) schedule = undefined;
     } else if (!frozen && !doneAt && now >= phaseEnds) {
       signal("SIGSTOP");

@@ -37,7 +37,6 @@ const DELIVERED = {
 } as const;
 const CHART_REPO = "repo-chart";
 const CHART_ORIGIN = { host: "github.com", owner: "octo", name: "chart" } as const;
-/** The pull request each task's branch has on GitHub, by role. */
 const CHART_PULLS = { merged: 61, held: 62, unanswered: 71, moved: 72, pending: 73 } as const;
 
 /**

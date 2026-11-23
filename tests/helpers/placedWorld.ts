@@ -164,7 +164,6 @@ export function gate(): { held: Promise<void>; open: () => void } {
   return { held, open };
 }
 
-/** The words of every user turn a request carried. */
 export function said(request: StubRequest | undefined): string {
   return JSON.stringify(request?.body.messages ?? []);
 }
@@ -598,7 +597,6 @@ export async function world(
     },
     home: () => home,
     pairing: pairingNow,
-    /** Whether the computer's own process still runs. */
     running: () => run,
     inReach,
     /** A queued task placed on the computer, started now that it is in reach. */
@@ -663,13 +661,11 @@ export async function world(
       moved?.(dataDir);
       startComputer();
     },
-    /** The computer's folder for a task. */
     folders: (taskId: string) =>
       placedTaskFolders(join(dataDir, "tasks"), taskId, join(dataDir, "worktrees")),
     /** Every binding the home asked the computer to resolve, oldest first. */
     bound,
     ordered,
-    /** Whether the computer refuses to open a conversation from now on. */
     refuseOpens: (on: boolean) => {
       refusing = on;
     },
@@ -755,7 +751,6 @@ export function computerAccount(
   };
 }
 
-/** The folders under `dir`, none when it is absent. */
 export function listed(dir: string): string[] {
   return existsSync(dir) ? readdirSync(dir).sort() : [];
 }

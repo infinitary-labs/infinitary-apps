@@ -73,7 +73,6 @@ function macReads(node: ts.Node): Set<string> {
   return reads;
 }
 
-/** Whether a test or describe call's details carry the tag. */
 function carriesTag(call: ts.CallExpression): boolean {
   const isTag = (value: ts.Expression) =>
     (ts.isIdentifier(value) && value.text === TAG_NAME) ||
@@ -100,7 +99,6 @@ function inherited(scope: Scope | undefined): { tagged: boolean; reads: Set<stri
   return { tagged, reads };
 }
 
-/** Every test call of a spec, whether it carries the tag and the Mac facts it reads. */
 export function macTests(source: string, file = "journey.spec.ts"): MacTest[] {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.ESNext, true);
   const found: { call: ts.CallExpression; scope: Scope; tagged: boolean; reads: Set<string> }[] =

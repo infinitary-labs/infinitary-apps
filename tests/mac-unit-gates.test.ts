@@ -57,7 +57,6 @@ describe("Mac-only cases", () => {
         `const enabled = process.env.KEYCHAIN === "1";\nit.runIf(enabled)("scratch", () => {});`,
       ),
     ).toEqual([]);
-    // A Linux-only case is not a Mac case.
     expect(gates(`it.runIf(process.platform === "linux")("avahi", () => {});`)).toEqual([]);
   });
 });

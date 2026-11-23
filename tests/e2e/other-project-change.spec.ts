@@ -50,7 +50,6 @@ const OTHER_ID = "repo-dotfiles";
 /** The spawn binds the project its title names: the task's own, shipyard. */
 const TASK_TITLE = `${OWN_PROJECT} ${OTHER_PROJECT_MARKER}`;
 
-/** A git project in the scratch data with one commit on main. */
 function gitProject(userDataDir: string, folder: string) {
   const dir = join(userDataDir, folder);
   const git = (...args: string[]) =>
@@ -71,7 +70,6 @@ async function send(page: Page, text: string): Promise<void> {
   await input.press("Enter");
 }
 
-/** The task the card with this title belongs to, as the core lists it. */
 async function cardTask(page: Page, title: string): Promise<string> {
   const cards = await page.evaluate(() => window.infinitary.cards.list());
   const taskId = cards.find((card) => card.title === title)?.taskId;
@@ -137,7 +135,6 @@ test("a crewmate opens its change in another project the app manages, and the co
       true,
     );
 
-    // The card names the project beside the pull request and links its page there.
     const facts = factsStrip(cardBody(page, OTHER_CARD_TITLE));
     await expect(facts.mergeLine).toHaveText(MERGE_CLOSES_WORDS.closes);
     await expect(facts.change).toHaveText(`${OTHER_PROJECT} #100`);
@@ -160,7 +157,6 @@ test("a crewmate opens its change in another project the app manages, and the co
       })
       .toMatchObject({ status: "done", closedReason: "merged" });
 
-    // The record keeps the change under the project it is in.
     const changes = readSavedData(userDataDir, (saved) =>
       new ChangeStore(saved).allForTask(taskId).map((change) => ({
         repoId: change.repoId,

@@ -11,7 +11,6 @@ import { preparedRevision, prepareMockStory } from "./changeStory";
  * reports.
  */
 export const GITHUB_CHANGE_PROMPT_MARKER = "open the meter fix as a proposed change";
-/** The proposed change this crewmate opens: its title and body. */
 export const MOCK_GITHUB_CHANGE = {
   title: "fix!: the meter reads on time",
   body: "## Intent\nThe meter reads on time.",

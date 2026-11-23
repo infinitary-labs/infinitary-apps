@@ -135,7 +135,6 @@ async function postForm(
   return body;
 }
 
-/** Step one: a code for the person to enter on GitHub's page. */
 export async function requestDeviceCode(options: FlowOptions = {}): Promise<DeviceCode> {
   const body = await postForm(options, "/login/device/code", {
     client_id: options.clientId ?? GITHUB_OAUTH_CLIENT_ID,
@@ -228,7 +227,6 @@ export async function pollForToken(
   }
 }
 
-/** The sign-in in a token answer - the access token, and a short-lived one's lifetime and refresh token. */
 function issuedSignIn(body: Record<string, unknown>): IssuedSignIn | undefined {
   if (typeof body.access_token !== "string" || !body.access_token) return undefined;
   const scopes = typeof body.scope === "string" ? body.scope.split(/[\s,]+/).filter(Boolean) : [];

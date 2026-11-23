@@ -131,7 +131,6 @@ function eachWorkFolder(body: readonly string[]): string[] {
 
 const DEV_NAME = `if [ "$2" = dev ] && [ -n "${standIn("DEVICE_NAME")}" ]; then N="${standIn("DEVICE_NAME")}"; fi`;
 
-/** Checks the copy at `$F` against the SHA-256 in `$S`, with the system's own tool. */
 function checksum(sum: string): string[] {
   return [
     'if command -v sha256sum >/dev/null 2>&1; then H="$(sha256sum "$F")"; else H="$(shasum -a 256 "$F")"; fi',
@@ -384,7 +383,6 @@ export const LINUX: FarSystem = {
 /** Every system an adapter is written for, a Mac first: it stands in for a system the look could not tell. */
 export const FAR_SYSTEMS: readonly FarSystem[] = [MACOS, LINUX];
 
-/** The adapter for what `uname -s` answered there, or null for a system with none. */
 export function farSystemOf(uname: string | undefined): FarSystem | null {
   return FAR_SYSTEMS.find((far) => far.uname === uname) ?? null;
 }
@@ -399,7 +397,6 @@ export function farSystemNamed(system: DeviceSystem | undefined): FarSystem | nu
   return FAR_SYSTEMS.find((far) => far.system === system) ?? null;
 }
 
-/** One `case` on what `uname -s` answers there, each adapter's lines in its arm, and `fallback` for any other. */
 function bySystem(
   arm: (far: FarSystem) => readonly string[],
   fallback: readonly string[],

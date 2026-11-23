@@ -18,7 +18,6 @@ import { STARTERS_URL } from "../update/updateChannels";
  * stays in force and the next pass asks again.
  */
 
-/** How long one answer stands before the feed is asked again: a day. */
 export const STARTERS_REFRESH_MS = 24 * 60 * 60 * 1000;
 
 export type ServedStartersStore = {

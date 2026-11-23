@@ -44,7 +44,6 @@ const F5 = renderFinding(f5);
 const F6 = renderFinding(f6);
 const F7 = renderFinding(f7);
 
-/** The typed review record the reviewer reported for one round (INF-1875). */
 function typedReview(
   head: string,
   revision: number,

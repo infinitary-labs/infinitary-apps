@@ -25,7 +25,6 @@ import type { AppDatabase } from "../storage/db";
 export type PanelSource = "builtin" | "yours" | "installed";
 export type PanelRuntimeKind = "live" | "draft";
 
-/** One panel runtime: where it came from, its id, live or draft, and the code version it runs. */
 export type PanelRuntimeIdentity = {
   source: PanelSource;
   id: string;
@@ -107,7 +106,6 @@ export class PanelStops {
       );
   }
 
-  /** The kill that followed a stop finished, one way or the other. */
   terminated(
     identity: PanelRuntimeIdentity,
     incidentId: string,

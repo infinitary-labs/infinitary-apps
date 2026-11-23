@@ -1379,19 +1379,15 @@ export function isWindowCommand(id: CommandId): id is WindowCommandId {
   return KEYBOARD_COMMANDS[id].scope === "window";
 }
 
-/** Whether a window command is the shell page's to run. */
 export function isShellCommand(id: CommandId): id is ShellCommandId {
   const command: KeyboardCommand = KEYBOARD_COMMANDS[id];
   return command.runs === "shell";
 }
 
-/** Every command id, in the catalog's order. */
 export const COMMAND_IDS = Object.keys(KEYBOARD_COMMANDS) as CommandId[];
 
-/** The shell's window commands, in the catalog's order. */
 export const SHELL_COMMAND_IDS = COMMAND_IDS.filter(isShellCommand);
 
-/** The window commands the main process runs itself, in the catalog's order. */
 export const MAIN_COMMAND_IDS = COMMAND_IDS.filter(
   (id): id is MainCommandId => isWindowCommand(id) && !isShellCommand(id),
 );
@@ -1415,10 +1411,8 @@ export const MOVE_KEYS = {
 /** A movement command: it presses one of `MOVE_KEYS` where focus is. */
 export type MoveCommandId = keyof typeof MOVE_KEYS;
 
-/** A key a movement command presses. */
 export type MoveKey = (typeof MOVE_KEYS)[MoveCommandId];
 
-/** Every key a movement command presses. */
 export const MOVE_KEY_NAMES = Object.values(MOVE_KEYS) as MoveKey[];
 
 /** The window's size commands, the other commands the main process runs. */
@@ -1450,7 +1444,6 @@ export function isPanelCommandId(id: string): id is PanelCommandId {
   return /^panel:[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/.test(id);
 }
 
-/** The panel and the command a panel command's id names. */
 export function panelCommandParts(id: PanelCommandId): { panel: string; command: string } {
   const [panel = "", command = ""] = id.slice("panel:".length).split("/");
   return { panel, command };
@@ -1479,7 +1472,6 @@ export type PanelCommand = {
   own?: true;
 };
 
-/** A command of the catalog's, or a panel's. */
 export type AnyCommandId = CommandId | PanelCommandId;
 
 /**
@@ -1511,7 +1503,6 @@ export function panelCommandEntry(
   });
 }
 
-/** Whether an id is one of the catalog's own commands. */
 export function isCatalogCommand(id: string): id is CommandId {
   return Object.hasOwn(KEYBOARD_COMMANDS, id);
 }
@@ -1605,19 +1596,16 @@ export function systemKeys(keys: readonly KeyBinding[], system: KeySystem): read
   return pressed;
 }
 
-/** A catalog command's own keys on this system. */
 export function catalogKeys(id: CommandId, system: KeySystem = "mac"): readonly KeyBinding[] {
   return systemKeys(KEYBOARD_COMMANDS[id].keys, system);
 }
 
-/** The catalog's own keys on a system. */
 export function catalogBindings(system: KeySystem): Bindings {
   return Object.fromEntries(
     COMMAND_IDS.map((id): [CommandId, readonly KeyBinding[]] => [id, catalogKeys(id, system)]),
   ) as Record<CommandId, readonly KeyBinding[]>;
 }
 
-/** The catalog's own keys, as a Mac presses them. */
 export const DEFAULT_BINDINGS: Bindings = catalogBindings("mac");
 
 /** What the listener that hears a key knows about where it was pressed. */
@@ -1628,7 +1616,6 @@ export type KeyContext = {
   field?: "main-message" | "reply";
 };
 
-/** Whether a command with this scope works where the key was pressed. */
 export function scopeIsActive(scope: CommandScope, context: KeyContext): boolean {
   if (scope === "window") return true;
   if (scope === "message-field") return context.field !== undefined;
@@ -1645,7 +1632,6 @@ function letterOf(press: KeyPress): string | undefined {
   return /^Key([A-Z])$/.exec(press.code)?.[1]?.toLowerCase();
 }
 
-/** Whether a press is this chord: the same key, with exactly its modifiers held. */
 export function chordMatches(chord: KeyChord, press: KeyPress): boolean {
   if (
     press.meta !== (chord.meta === true) ||
@@ -1701,7 +1687,6 @@ export function panelCommandFor(
   )?.id;
 }
 
-/** Whether a press is the first key of some two-key shortcut that works where it was pressed. */
 export function startsTwoKeys(
   press: KeyPress,
   context: KeyContext,
@@ -1797,7 +1782,6 @@ export function nextKeys(
   ];
 }
 
-/** Whether a press runs its command: a held key repeats only a command that allows it. */
 export function runsOnPress(id: CommandId, press: KeyPress): boolean {
   return !press.repeat || KEYBOARD_COMMANDS[id].repeat;
 }
@@ -1930,7 +1914,6 @@ export function bindingLabel(binding: KeyBinding, system: KeySystem = "mac"): st
     : chordLabel(binding, system);
 }
 
-/** The key a hint shows for a command: its first, or none. */
 export function keyHint(
   id: AnyCommandId,
   bindings: Bindings = DEFAULT_BINDINGS,

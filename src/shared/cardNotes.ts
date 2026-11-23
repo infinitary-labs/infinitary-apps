@@ -115,7 +115,6 @@ export function placeKey(place: NotePlace | undefined): string {
   ]);
 }
 
-/** The smallest box that holds a place's box and lines. */
 export function placeBounds(place: NotePlace): PlaceBox {
   const points = [
     ...(place.box
@@ -233,7 +232,6 @@ export function noteText(note: CardNote, mark?: number): string {
   const page = note.page ? pageWords(note.page) : undefined;
   return `${label}${page?.address ?? ""}${place}${page?.under ?? ""}\n${note.comment || EMPTY_NOTE}`;
 }
-/** Every note of one reply as `noteText` writes it, each place with its mark number. */
 export function noteTexts(notes: readonly CardNote[]): string[] {
   const marks = markNumbers(notes);
   return notes.map((note, index) => noteText(note, marks[index]));

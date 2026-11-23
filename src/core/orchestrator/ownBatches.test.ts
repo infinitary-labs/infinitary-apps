@@ -169,7 +169,6 @@ function home(git: ReturnType<typeof standInGit> | undefined = undefined) {
     members: () => batches.record(REPO).open?.members.map((member) => member.taskId),
     record: () => batches.record(REPO),
     batches: () => batches,
-    /** The app closed and opened again: a new wiring over what was saved. */
     restart() {
       heard.ticks.length = 0;
       batches = start();
@@ -186,7 +185,6 @@ describe("the batches of a person's own, wired to the task record", () => {
       EXPORT,
       approvalOf(EXPORT, { approvedHead: "c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7" }),
     );
-    // The captain withdrew the approval.
     at.approve(LEGEND, approvalOf(LEGEND, { status: "revoked", reason: "withdrawn" }));
     await at.pass();
     expect(at.members()).toEqual([PARSER.id]);
@@ -301,7 +299,6 @@ describe("the batches of a person's own, wired to the task record", () => {
     at.approve(PARSER);
     at.approve(EXPORT);
     await at.pass();
-    // The batch stopped at its failed unit tests and cancelled its journeys.
     at.forge.report([
       { name: "unit-tests", state: "failure" },
       { name: "journeys", state: "cancelled" },
@@ -380,7 +377,6 @@ describe("the batches of a person's own, wired to the task record", () => {
     expect(legend).toBeDefined();
     expect(legend).not.toHaveProperty("sentBack");
 
-    // Sent back again: its crewmate hears this send-back and the earlier one.
     const second = "its repair still fails the date test";
     await at.batches().answer(REPO, {
       action: "send-back",
@@ -420,7 +416,6 @@ describe("the batches of a person's own, wired to the task record", () => {
     await at.pass();
     at.forge.report([{ name: "unit-tests", state: "failure" }]);
     await at.pass();
-    // The parser is sent back at the project's first address; its approval is kept.
     const reason = "its date test fails on the batch's version";
     await at.batches().answer(REPO, {
       action: "send-back",
@@ -433,10 +428,8 @@ describe("the batches of a person's own, wired to the task record", () => {
     await at.pass();
     expect(at.record().line.map((entry) => entry.taskId)).toEqual([LEGEND.id]);
 
-    // The project moves to a new address.
     at.repos.configure(REPO, { origin: "https://github.com/acme/new-meter.git" });
     await at.pass();
-    // The former open batch and the waiting line lose their approvals, with no send-back kept.
     expect(at.record().open).toBeUndefined();
     expect(at.record().line).toEqual([]);
     for (const change of [EXPORT, LEGEND])
@@ -460,7 +453,6 @@ describe("the batches of a person's own, wired to the task record", () => {
       state: "sent-back",
       reason,
     });
-    // A new version, approved at the new address, joins a batch there.
     const repaired = { ...PARSER, head: commitId("the parser's repair at the new address") };
     seedDelivery(at.tasks, PARSER.id, { mergeAuthorization: moved(repaired) });
     at.enqueue({
@@ -561,7 +553,6 @@ describe("the batches of a person's own, wired to the task record", () => {
     ).toBe(false);
     // A member's own crewmate hears of its batch through the batch, not its run watch.
     expect(runBatchFacts(owners, PARSER.id, run)).toBeUndefined();
-    // A run of an ordinary branch is no batch's.
     expect(
       runBatchFacts(owners, "watcher9", { branch: "fm/task-watcher9", headSha: open.head }),
     ).toBeUndefined();
@@ -635,7 +626,6 @@ describe("a later part built on an earlier part's approved version, wired to the
       }),
     });
     at.tasks.close(EXPORT.id, { status: "dropped", reason: "cancelled", actor: "captain" });
-    // The parser merged: its approval was spent by the merge.
     insertTask(at.tasks, { id: PARSER.id, repoId: REPO, branch: branchOf(PARSER) });
     seedDelivery(at.tasks, PARSER.id, {
       mergeAuthorization: approvalOf(PARSER, { status: "consumed" }),

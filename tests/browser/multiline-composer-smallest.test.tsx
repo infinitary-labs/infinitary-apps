@@ -22,7 +22,6 @@ const ASK = "keep a firstmate thread open";
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-/** Reads `read` until two reads a frame and a poll apart agree, and answers the last. */
 async function settled<T>(read: () => T): Promise<T> {
   let last: string | undefined;
   let value: T | undefined;
@@ -76,7 +75,6 @@ test("at the smallest window a tall draft stays in view and clear of the card, a
     card: box("[data-card-layer] [data-card-presentation]"),
     window: windowBox(),
   }));
-  // The draft's field stays whole in the window, and never covers the card.
   expect(within(laid.shell, laid.window)).toEqual([]);
   expect(intersects(laid.shell, laid.card)).toBe(false);
 

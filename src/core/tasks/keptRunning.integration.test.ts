@@ -181,7 +181,6 @@ describe("kept running", () => {
     const running = here(jobs, workThere(there));
     expect(running.list().jobs.map((job) => job.id)).toEqual(["task-1-s1", "task-1-s1@mini"]);
     expect((await running.remove("task-1-s1@mini")).removed).toBe(true);
-    // The job kept here, with its file, is untouched.
     expect(existsSync(marker)).toBe(true);
     expect(jobs.list().map((job) => job.label)).toEqual([LABEL]);
   });

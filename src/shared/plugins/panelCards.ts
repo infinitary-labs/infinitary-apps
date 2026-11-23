@@ -34,7 +34,6 @@ export const DEFAULT_PANEL_CARD_WIDTH: PanelCardWidth = "wide";
 export const PANEL_CARD_HEIGHTS = ["content", "fill"] as const;
 export const panelCardHeightSchema: z.ZodType<PanelCardHeight> = z.enum(PANEL_CARD_HEIGHTS);
 
-/** The height a card takes when its panel names none: as tall as its view. */
 export const DEFAULT_PANEL_CARD_HEIGHT: PanelCardHeight = "content";
 
 /**
@@ -55,7 +54,6 @@ export const panelHeaderIconSchema: z.ZodType<PanelHeaderIcon> = z.enum(PANEL_HE
 
 /** How many header buttons a panel may have: the header is a rail wide. */
 export const PANEL_HEADER_MAX = 3;
-/** How many commands one panel may add to command search. */
 export const PANEL_COMMANDS_MAX = 16;
 /** How many named cards and how many card views one panel may declare. */
 export const PANEL_CARD_VIEWS_MAX = 16;
@@ -81,7 +79,6 @@ export const PANEL_CARD_KEPT_MAX_BYTES = 4_096;
 export const PANEL_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const panelNameSchema = z.string().min(1).max(32).regex(PANEL_NAME_PATTERN, "kebab-case");
 
-/** A card's own id, as `cards.emit` takes it: a name, or anything plain up to 64 characters. */
 export const PANEL_CARD_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/;
 export const panelCardIdSchema = z.string().regex(PANEL_CARD_ID_PATTERN, "a plain id");
 
@@ -104,7 +101,6 @@ export const panelCardDataSchema: z.ZodType<StoreValue> = storeValueSchema.refin
   `a card's data is at most ${PANEL_CARD_DATA_MAX_BYTES} bytes of JSON`,
 );
 
-/** A card's kept place: JSON, at most `PANEL_CARD_KEPT_MAX_BYTES` bytes of it. */
 export const panelCardKeptSchema: z.ZodType<StoreValue> = storeValueSchema.refine(
   (value) =>
     new TextEncoder().encode(JSON.stringify(value)).byteLength <= PANEL_CARD_KEPT_MAX_BYTES,
@@ -192,7 +188,6 @@ export const panelCardsDeclarationSchema = z
 export const panelHeaderSchema = z.array(panelHeaderButtonSchema).max(PANEL_HEADER_MAX);
 export const panelCommandsSchema = z.array(panelCommandDeclarationSchema).max(PANEL_COMMANDS_MAX);
 
-/** The modifier glyphs a suggested key may lead with, as a Mac writes them. */
 const MODIFIER_GLYPHS: Readonly<Record<string, keyof Omit<KeyChord, "key">>> = {
   "⌃": "ctrl",
   "⌥": "alt",
@@ -231,7 +226,6 @@ export function panelCardViewModule(view: string): string {
   return `cards/${view}.mjs`;
 }
 
-/** What a panel declares about its cards, as its manifest says it. */
 export type PanelCardsDeclared = {
   cards?: Record<string, PanelCardDeclaration>;
   header?: PanelHeaderButton[];

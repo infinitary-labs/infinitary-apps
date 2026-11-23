@@ -17,7 +17,6 @@ export type FileIntake = {
   onCancel: (id: string) => void;
   /** What a screen reader is told about the files, said when it changes. */
   status: string;
-  /** Whether the input takes files now. */
   enabled: boolean;
 };
 
@@ -67,7 +66,6 @@ const chipStyle: React.CSSProperties = {
   fontSize: "var(--text-xs)",
 };
 
-/** A file being prepared: its name, "Preparing", and the control that stops it. */
 export function PendingFileChip({ name, onCancel }: { name: string; onCancel: () => void }) {
   return (
     <div data-file-preparing="" style={chipStyle}>
@@ -90,7 +88,6 @@ export function PendingFileChip({ name, onCancel }: { name: string; onCancel: ()
   );
 }
 
-/** The chips of files still being prepared, or nothing. */
 export function PendingFileChips({ intake }: { intake: FileIntake }) {
   if (intake.pending.length === 0) return null;
   return (

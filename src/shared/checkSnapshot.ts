@@ -50,17 +50,14 @@ export const checkItemSchema = z.object({
 });
 export type CheckItem = z.infer<typeof checkItemSchema>;
 
-/** Whether a check waits for a person to start it (`checkItemSchema`'s `manual`). */
 export function waitsToStart(item: { manual?: boolean }): boolean {
   return item.manual === true;
 }
 
-/** Whether a check failed where its project allows it (`checkItemSchema`'s `failureAllowed`). */
 export function failsAllowed(item: { failureAllowed?: boolean }): boolean {
   return item.failureAllowed === true;
 }
 
-/** The checks of a reading that wait for a person to start them, by name. */
 export function checksWaitingToStart(items: readonly CheckItem[]): string[] {
   return items.filter(waitsToStart).map((item) => item.name);
 }
@@ -105,7 +102,6 @@ export type CheckSnapshot = z.infer<typeof checkSnapshotSchema>;
  * fails too lets the card up at once, stated from this fact.
  */
 export const mainCheckEvidenceSchema = z.object({
-  /** The default branch's version the checks were read on. */
   sha: z.string(),
   at: z.number(),
   items: z.array(z.object({ name: z.string(), state: checkStateSchema })),
@@ -125,10 +121,8 @@ const STATE_WORDS: Record<ForgeCheckState, string> = {
   pending: "running",
 };
 
-/** What a check that waits for a person to start it says (`waitsToStart`). */
 export const CHECK_WAITING_TO_START_WORDS = "waiting to be started";
 
-/** What a check that failed where its project allows it says (`failsAllowed`). */
 export const CHECK_FAILURE_ALLOWED_WORDS = "allowed to fail";
 
 export const CHECKS_NOT_REPORTED_WORDS = "none reported";
@@ -208,7 +202,6 @@ export function checkSnapshotSummary(reading: CheckSnapshot): {
   return { overall: "green", words, dot: "ok" };
 }
 
-/** One check's state in the checks cell's words. */
 function itemWords(check: {
   state: ForgeCheckState;
   manual?: boolean;
@@ -276,7 +269,6 @@ export function failedBatch(
   };
 }
 
-/** What the checks say when the app's reading is of another version of the change. */
 export const CHECKS_OTHER_VERSION_WORDS = "not read for this version";
 
 /** A cached reading never describes a different version. */

@@ -35,7 +35,6 @@ function tree(): string {
   return scratchDir("infinitary-claude-cli-");
 }
 
-/** A real, executable file at `path`, parents included. */
 function client(path: string, version = "2.1.278"): string {
   mkdirSync(join(path, ".."), { recursive: true });
   writeFileSync(path, `#!/bin/sh\necho "${version} (Claude Code)"\nexit 0\n`);

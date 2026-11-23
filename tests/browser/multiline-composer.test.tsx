@@ -24,7 +24,6 @@ function sentTexts(bridge: FakeBridge): string[] {
     .map(([turn]) => (typeof turn === "string" ? turn : (turn.text ?? "")));
 }
 
-/** How many turns carried `text` exactly as typed, line breaks and all. */
 const sentWith = (bridge: FakeBridge, text: string) =>
   sentTexts(bridge).filter((sent) => sent.includes(text)).length;
 
@@ -34,7 +33,6 @@ function field(): HTMLTextAreaElement {
   return box;
 }
 
-/** Types `lines` as keystrokes, adding each line after the first with `newline`. */
 async function typeLines(lines: string[], newline = "{Shift>}{Enter}{/Shift}"): Promise<void> {
   for (const [i, line] of lines.entries()) {
     if (i > 0) await userEvent.keyboard(newline);
@@ -42,7 +40,6 @@ async function typeLines(lines: string[], newline = "{Shift>}{Enter}{/Shift}"): 
   }
 }
 
-/** Pastes text into the message box the way the clipboard hands it over. */
 function pasteText(text: string): void {
   const clipboardData = new DataTransfer();
   clipboardData.setData("text/plain", text);
@@ -145,8 +142,6 @@ test("the message box adds lines, pastes, recalls and undoes as the captain type
     await userEvent.keyboard(" before lunch");
     await expect.poll(() => field().value).toBe(`${first}\nthen ship the fix before lunch`);
 
-    // Each Cmd+Z takes back one run: the words typed after the caret moved,
-    // then the second line, then the first with its line break.
     const undo = "{Meta>}z{/Meta}";
     await userEvent.keyboard(undo);
     await expect.poll(() => field().value).toBe(`${first}\nthen ship the fix`);
@@ -155,14 +150,12 @@ test("the message box adds lines, pastes, recalls and undoes as the captain type
     await userEvent.keyboard(undo);
     await expect.poll(() => field().value).toBe("");
 
-    // Cmd+Shift+Z puts each back in turn.
     const redo = "{Meta>}{Shift>}z{/Shift}{/Meta}";
     await userEvent.keyboard(redo);
     await expect.poll(() => field().value).toBe(`${first}\n`);
     await userEvent.keyboard(redo);
     await expect.poll(() => field().value).toBe(`${first}\nthen ship the fix`);
 
-    // The draft sent is the one undo left.
     await userEvent.keyboard("{Enter}");
     await expect.poll(() => field().value).toBe("");
     await expect.poll(() => sentWith(bridge, `${first}\nthen ship the fix`)).toBeGreaterThan(0);

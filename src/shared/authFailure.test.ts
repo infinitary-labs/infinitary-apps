@@ -323,7 +323,6 @@ describe("classifyClaudeSignal", () => {
   });
 
   it("classifies from typed fields only, never from a status that is not one", () => {
-    // A 429 or 500 status is not a cut-off class on its own.
     expect(classifyClaudeSignal({ ...failedResult, apiErrorStatus: 429 })).toEqual({
       kind: "turn-failed",
     });

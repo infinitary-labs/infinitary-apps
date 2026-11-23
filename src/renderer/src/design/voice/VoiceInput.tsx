@@ -229,10 +229,8 @@ const LINE_CAP = 8;
 /** The send control's size and its gap: the column the text keeps clear. */
 const SEND_SIZE = 32;
 const ROW_GAP = 10;
-/** The field's own side padding. */
 const FIELD_PAD = 8;
 
-/** The first line with words in it, for the pasted-text chip. */
 function firstWords(text: string): string {
   return (
     text

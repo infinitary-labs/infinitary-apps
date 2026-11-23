@@ -35,11 +35,9 @@ extension PhoneJourney {
         XCTAssertEqual(first["registered"] as? Bool, true, "\(first)")
         let firstKeys = try XCTUnwrap(first["keys"] as? [String])
         XCTAssertEqual(firstKeys.count, 1, "\(first)")
-        // With one computer kept, the bar shows its one icon.
         let computer = app.buttons["computer-details"]
         XCTAssertEqual(computer.label, "Your computer", "One computer kept: the bar names none")
 
-        // A second computer joins from the sheet's Add another computer and its pasted link, while the first stays kept.
         let second = try await home("second-home", budget: 150)
         let secondControl = try XCTUnwrap(second["control"] as? String)
         let secondName = try XCTUnwrap(second["name"] as? String)
@@ -83,14 +81,12 @@ extension PhoneJourney {
         showCard("Review the phone connection finding")
         try await sentSealed(secondControl, after: 0)
 
-        // By keys: Command-I opens the sheet on the first computer's row, marked as answering.
         try await pressPhoneKey("i", modifiers: .command, in: app)
         let row = app.buttons["kept-computer"].firstMatch
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(row.label, "Test Mac mini")
         try reachMark(row, "Answers now")
         try await appearances("homes-sheet", showing: row)
-        // The first computer's home goes away and comes back: the mark follows it, and the phone stays on the second.
         tapOnPhone(app.buttons["close-computer-details"], repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
         _ = try await home("offline")
@@ -110,7 +106,6 @@ extension PhoneJourney {
         _ = try await home("phone-path", body: "{\"usable\":true}")
         try reachMark(row, "Answers now")
         XCTAssertEqual(computer.label, secondName, "A network change switches nothing")
-        // Return on the row shows the first computer, with its own cards and not the second's.
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return on the row shows its computer and closes the sheet")
         reach("Live", timeout: 30)
@@ -142,7 +137,6 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["close-computer-details"], repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
 
-        // A card on the computer not shown arrives as a notification naming that computer; its tap shows it and the card.
         XCUIDevice.shared.press(.home)
         let away = waitForPhonePredicate(NSPredicate { _, _ in
             [.runningBackground, .runningBackgroundSuspended].contains(self.app.state)
@@ -169,7 +163,6 @@ extension PhoneJourney {
         _ = try await homeAt(secondControl, "homes-card")
         try await sentSealed(secondControl, after: secondSent)
 
-        // Leaving the shown computer shows the other, and the bar goes back to its one icon.
         try leaveShown()
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Your computer"), object: computer, timeout: 30),
                        .completed, "One computer left: the bar names none")
@@ -177,12 +170,10 @@ extension PhoneJourney {
         XCTAssertFalse(app.buttons["paste-link"].exists, "The first computer shows, not the first screen")
         let kept = try await home("push-state", method: "GET")
         XCTAssertEqual(kept["keys"] as? [String], firstKeys, "The first computer keeps the phone's registration and key: \(kept)")
-        // Leaving the last computer ends on the first screen.
         try leaveShown()
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 30), "No computer left: the first screen")
     }
 
-    /// Waits for the kept computer's row to say `words` of its reach.
     private func reachMark(_ row: XCUIElement, _ words: String) throws {
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == %@", words), object: row, timeout: 30),
@@ -197,7 +188,6 @@ extension PhoneJourney {
         XCTAssertEqual((state["problems"] as? [String])?.isEmpty, true, "\(state)")
     }
 
-    /// Leaves the computer shown, from its sheet.
     private func leaveShown() throws {
         reach("Live", timeout: 30)
         tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)

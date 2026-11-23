@@ -223,7 +223,6 @@ function pausedWords(paused: NonNullable<PersonalExtensionView["paused"]>): stri
   return `; background work paused: its server.ts is written for panel API ${paused.api} and this app serves ${paused.serves.join(" or ")}${paused.asked ? "; the captain pressed Update panel" : ""}`;
 }
 
-/** Whose a listed surface is: the app's, the captain's own, one he added, or a runbook's, and who it is by. */
 export function surfaceOwner(
   surface: SurfaceView,
   personal: PersonalSnapshot,

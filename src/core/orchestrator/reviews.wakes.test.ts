@@ -83,7 +83,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         shape: { review_of: builderId },
       });
       await tick();
-      // Re-review preparation needs the builder's committed head to remain readable.
       const before = ops.length;
       await reportTurn(reviewer, reviewId, "Standing by for the new head, nothing to say yet.");
       (specs[1] as CrewmateSpec).onCard?.({
@@ -498,13 +497,11 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(returns()).toHaveLength(0);
       expect(lostLines()).toHaveLength(1);
       expect(lostLines()[0]?.text).toContain("once the Mac mini is back");
-      // A sweep while it is away tries nothing.
       const readsAway = reading.reads;
       await supervisor.watch.sweepGates(Date.now());
       await tick();
       expect(reading.reads).toBe(readsAway);
 
-      // The Mac mini comes back and catches up: the fix goes to the reviewer by itself.
       away.now = false;
       supervisor.placedCaughtUp([builderId, reviewId]);
       await vi.waitFor(() => expect(returns()).toHaveLength(1));
@@ -532,7 +529,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         "The host could not return the fix to its reviewer: the Mac mini went out of reach twice while the fix was read for its reviewer",
       );
       expect(returns()).toHaveLength(1);
-      // Nothing waits after the first mate heard: a later sweep tries nothing more.
       const readsTold = reading.reads;
       await supervisor.watch.sweepGates(Date.now());
       await tick();

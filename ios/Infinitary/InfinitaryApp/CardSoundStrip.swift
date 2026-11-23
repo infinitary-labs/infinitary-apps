@@ -147,7 +147,6 @@ import SwiftUI
         Output.endSession()
     }
 
-    /// A clip's time as the strip shows it: `2:10`.
     static func clock(_ seconds: TimeInterval) -> String {
         let whole = Int(max(0, seconds.isFinite ? seconds : 0))
         return "\(whole / 60):\(String(format: "%02d", whole % 60))"

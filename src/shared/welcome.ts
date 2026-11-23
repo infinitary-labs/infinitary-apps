@@ -50,7 +50,6 @@ function labels() {
   };
 }
 
-/** The English words, as the record keeps them. */
 export const WELCOME_WORDS = english(chapterWords);
 export const WELCOME_STARTERS_LEAD = english(() => m.welcomeStartersLead());
 export const WELCOME_STARTERS = english(starters);
@@ -77,7 +76,6 @@ export function isWelcomeFolderStarter(body: string | undefined, words: string):
   );
 }
 
-/** The chapters as the picture counts them. */
 export const WELCOME_CHAPTERS = 5;
 
 const round = (value: number) => Math.round(value * 10) / 10;

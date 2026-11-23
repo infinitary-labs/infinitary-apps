@@ -49,9 +49,7 @@ export type FileRouterOptions = {
   here: FileReach;
   /** The home's own name, once read; the command takes `home` too. */
   homeName: () => string | undefined;
-  /** The computers that run work on the list. */
   computers: () => readonly FileComputer[];
-  /** Asks a computer that runs work one file order. */
   ask: (machine: string, channel: FileOrderChannel, args: unknown) => Promise<unknown>;
   /** The computer a task runs on: `local`, or its device id. */
   machineOf: (taskId: string) => string;
@@ -73,7 +71,6 @@ export type FileRouterOptions = {
 /** A computer the command can name: the home, or one that runs work. */
 type Source = { id: string; name: string };
 
-/** The computer that reads a file for a task, the path it reads, and whether it reads as another user here. */
 type Reader = { machine: string; path: string; asAnotherUser: boolean };
 
 /** Words a crewmate reads as the command's refusal. */
@@ -123,7 +120,6 @@ export class FileRouter {
 
   constructor(private readonly options: FileRouterOptions) {}
 
-  /** The files command for one task. */
   forTask(taskId: string): TaskFiles {
     return {
       computers: async () => ({ data: { computers: this.rows(taskId) } }),
@@ -154,7 +150,6 @@ export class FileRouter {
     );
   }
 
-  /** One piece of a copy set aside there, from `offset`. */
   async readThere(machine: string, id: string, offset: number): Promise<Buffer> {
     const piece = fileOrders["inf:files:read"].response.parse(
       await this.options.ask(machine, "inf:files:read", [{ id, offset }]),
@@ -163,7 +158,6 @@ export class FileRouter {
     return Buffer.from(piece.data, "base64");
   }
 
-  /** Lets a copy set aside there go. */
   async releaseThere(machine: string, id: string): Promise<void> {
     await this.options.ask(machine, "inf:files:release", [{ id }]).catch(() => undefined);
   }
@@ -176,7 +170,6 @@ export class FileRouter {
     }
   }
 
-  /** Every computer the command may name, with whether it is in reach and which one runs this task. */
   private rows(taskId: string): Record<string, unknown>[] {
     const runsOn = this.options.machineOf(taskId);
     return [
@@ -335,7 +328,6 @@ export class FileRouter {
     return file;
   }
 
-  /** The computer and path a target names, refused when it names none or the task's own computer. */
   private target(taskId: string, target: string): { source: Source; path: string } {
     const split = splitTarget(target);
     if (!split)

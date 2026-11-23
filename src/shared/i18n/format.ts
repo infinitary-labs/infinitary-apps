@@ -38,12 +38,10 @@ export function formatDate(at: When, options?: Intl.DateTimeFormatOptions): stri
   return new Date(at).toLocaleDateString(regionalLocale(), options);
 }
 
-/** A time of day, written as `formatDate` writes a date. */
 export function formatTime(at: When, options?: Intl.DateTimeFormatOptions): string {
   return new Date(at).toLocaleTimeString(regionalLocale(), options);
 }
 
-/** A date and time together, written as `formatDate` writes a date. */
 export function formatDateTime(at: When, options?: Intl.DateTimeFormatOptions): string {
   return new Date(at).toLocaleString(regionalLocale(), options);
 }
@@ -53,7 +51,6 @@ export function formatLanguageDate(at: When, options?: Intl.DateTimeFormatOption
   return new Date(at).toLocaleDateString(languageLocale(), options);
 }
 
-/** A date and time in the language's own form, as `formatLanguageDate`. */
 export function formatLanguageDateTime(at: When, options?: Intl.DateTimeFormatOptions): string {
   return new Date(at).toLocaleString(languageLocale(), options);
 }

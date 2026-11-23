@@ -73,7 +73,6 @@ export async function windowShot(page: Page, path?: string): Promise<Buffer> {
   return saved(await drawnWindow(page, "allow"), path);
 }
 
-/** The picture, written to `path` first when there is one. */
 function saved(png: Buffer, path?: string): Buffer {
   if (path) {
     mkdirSync(dirname(path), { recursive: true });
@@ -122,7 +121,6 @@ const MARGIN = 12;
 const NARROWEST = 16 / 9;
 const WIDEST = 2;
 
-/** The union of the region and its anchors, with a margin, grown to landscape inside the window. */
 export function heroClip(boxes: Box[], window: { width: number; height: number }): Box {
   const left = Math.min(...boxes.map((box) => box.x)) - MARGIN;
   const top = Math.min(...boxes.map((box) => box.y)) - MARGIN;
@@ -138,7 +136,6 @@ export function heroClip(boxes: Box[], window: { width: number; height: number }
     throw new Error(
       `The hero crop is ${Math.round(width)} by ${Math.round(height)}: crop to a smaller component or widen the window.`,
     );
-  // Centered on the union, then kept inside the window.
   const x = Math.min(Math.max(0, (left + right) / 2 - width / 2), window.width - width);
   const y = Math.min(Math.max(0, (top + bottom) / 2 - height / 2), window.height - height);
   return {
@@ -206,7 +203,6 @@ async function themed(app: ElectronApplication, page: Page, theme?: Theme): Prom
   );
 }
 
-/** A PNG screenshot as WebP, no wider than the cap, at the first quality that fits under it. */
 async function toWebp(page: Page, png: Buffer): Promise<Buffer> {
   for (const quality of [0.86, 0.78, 0.68, 0.56]) {
     const base64 = await page.evaluate(

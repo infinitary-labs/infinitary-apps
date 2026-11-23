@@ -77,11 +77,9 @@ describe('a browser handed back keeps only what the task needs (docs/task-browse
     const look = (await browser.inspect({})).text;
     expect(look).not.toContain("Sam Rivera");
     expect(look).not.toContain("4111");
-    // It still reads that each field holds something, and a list's choice.
     expect(look).toContain('textbox "Name" [g2:e1] (value hidden)');
     expect(look).toContain('textbox "Card number" [g2:e4] (value hidden)');
     expect(look).toContain('combobox "Seat" [g2:e2]: "Aisle"');
-    // A search never reads it either.
     const search = (await browser.inspect({ find: "4111 1111" })).text;
     expect(search).toContain('No line holds "4111 1111".');
     expect(search).not.toContain('textbox "Card number" [g2:e4]: ');
@@ -96,7 +94,6 @@ describe('a browser handed back keeps only what the task needs (docs/task-browse
     expect(refused.text).not.toContain("4111");
     expect(page.effects).not.toContain("capture");
     expect(existsSync(join(evidence, "t1", "pay.png"))).toBe(false);
-    // What the crewmate types itself is its own to read.
     await browser.act({ action: "type", ref: "g2:e1", text: "Sam Rivera" });
     expect((await browser.inspect({})).text).toContain('textbox "Name" [g2:e1]: "Sam Rivera"');
     // The captain holds the page again: once he hands it back, the name may be his.
@@ -104,7 +101,6 @@ describe('a browser handed back keeps only what the task needs (docs/task-browse
     expect(await browsers.takeControl("t1", handle)).toEqual({ ok: true });
     expect(await browsers.returnControl("t1", handle)).toEqual({ ok: true });
     expect((await browser.inspect({})).text).toContain('textbox "Name" [g3:e1] (value hidden)');
-    // Cleared, the page holds nothing of his, and its picture is taken.
     page.nodeList = typed("", "");
     const taken = await browser.capture({ name: "pay", reason: "the task needs the total" });
     expect(taken.image).toEqual(PICTURE);
@@ -178,16 +174,11 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     },
   ];
 
-  /** The browsers on one computer, with its list of signed-in sites in a scratch folder. */
   function onThisComputer() {
     const signIns = new WebSignIns(scratchDir("infinitary-web-sign-ins-"), () => 1_000);
     return { ...harness({ signIns, now: () => 1_000 }), signIns };
   }
 
-  /**
-   * Task t1's browser asks for a sign-in; the captain takes it, signs in at
-   * the site through another site's sign-in page, and returns it with a rule.
-   */
   async function signedInAndReturned(h: ReturnType<typeof onThisComputer>, automatic = false) {
     const browser = h.browsers.forTask("t1");
     await browser.navigate({ url: "http://localhost:5173/account" });
@@ -206,7 +197,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     return { browser, page, handle };
   }
 
-  /** Task t2's browser, on the same site, asking the captain on a card. */
   async function asking(h: ReturnType<typeof onThisComputer>) {
     const browser = h.browsers.forTask("t2");
     await browser.navigate({ url: "http://localhost:5173/account" });
@@ -255,7 +245,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
   it("carries the site's rule on this computer's list in the fact while the captain holds the kept browser, so Return control starts from it", async () => {
     const h = onThisComputer();
     await signedInAndReturned(h, true);
-    // The crewmate holds it again: the fact names no rule.
     expect(h.browsers.fact("t1")).not.toHaveProperty("rule");
     const asked = await h.browsers.requestHelp("t1", request);
     if (!asked.ok) throw new Error(asked.text);
@@ -265,7 +254,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
       control: "captain",
       rule: "automatic",
     });
-    // Returning with that rule leaves it as the captain chose it.
     expect(
       await h.browsers.returnControl("t1", asked.handle, {
         site: "localhost:5173",
@@ -306,7 +294,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     const h = onThisComputer();
     await signedInAndReturned(h);
     const { browser, page, handle } = await asking(h);
-    // Its own context holds none of the captain's sign-ins.
     expect(page.opened.kept).toBeUndefined();
     expect(page.cookies.cookies).toEqual([]);
     expect(h.browsers.savedSignInFor("t2", "localhost:5173")).toEqual({
@@ -344,7 +331,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     );
     // The page may show the captain's account, so a picture needs the task's reason.
     expect((await browser.capture({})).image).toBeUndefined();
-    // A third task, never allowed, opens the site in its own empty context.
     const third = h.browsers.forTask("t3");
     await third.navigate({ url: "http://localhost:5173/account" });
     const signedOut = h.pages.at(-1) as FakePage;
@@ -359,10 +345,8 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     const { browser, handle } = await asking(h);
     await h.browsers.grantSavedSignIn("t2", handle);
     const inKept = h.pages.at(-1) as FakePage;
-    // The sign-in page the captain passed through stays in the kept profile.
     await browser.navigate({ url: "https://login.example/authorize" });
     expect(h.pages.at(-1)).toBe(inKept);
-    // Another site leaves it for an empty context, signed out.
     const answer = await browser.navigate({ url: "https://tracker.example/" });
     const outside = h.pages.at(-1) as FakePage;
     expect(outside).not.toBe(inKept);
@@ -372,7 +356,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     expect(answer.text).toContain(
       "This task may not use the captain's sign-ins at tracker.example, so the browser opened it in an empty context of its own, signed out",
     );
-    // Back to its allowed site, it opens in the kept profile again.
     await browser.navigate({ url: "http://localhost:5173/account" });
     expect((h.pages.at(-1) as FakePage).opened.kept).toBe(true);
   });
@@ -383,7 +366,6 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     const { handle } = await asking(h);
     await h.browsers.grantSavedSignIn("t2", handle);
     const inKept = h.pages.at(-1) as FakePage;
-    // A link on the page leads elsewhere.
     expect(await inKept.load("https://tracker.example/")).toEqual({
       ok: false,
       code: "ERR_BLOCKED_BY_CLIENT",

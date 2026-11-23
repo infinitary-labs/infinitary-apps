@@ -108,7 +108,6 @@ export class CreditsCards {
 
   /** A new reading of this Mac's own allowance. */
   readHere(snapshot: QuotaSnapshotView | undefined): void {
-    // An offered account whose allowance answers again may be offered again.
     forgetAnsweredOffers(snapshot, this.offeredHere, this.options.now());
     // Keep going on credits: started spending, ran out, answers again.
     for (const text of snapshot ? this.options.noteHere(snapshot) : []) this.options.note(text);

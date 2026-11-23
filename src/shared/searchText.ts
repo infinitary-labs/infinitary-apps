@@ -1,7 +1,6 @@
 /** ‘ ’ ‚ ‛ and the modifier-letter apostrophe ʼ. */
 const SINGLE_QUOTES = /[‘’‚‛ʼ]/g;
 
-/** “ ” „ ‟ */
 const DOUBLE_QUOTES = /[“”„‟]/g;
 
 /**

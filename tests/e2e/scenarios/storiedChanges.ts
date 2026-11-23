@@ -16,7 +16,6 @@ export const STORIED_CHANGES_MARKER = "publish both stories and merge the second
 /** The existing branch the crewmate opens as its second pull request. */
 export const STORIED_BRANCH = "reading-fix";
 export const STORIED_CARD_TITLE = "Merge the second reading";
-/** The task's own story. */
 export const OWN_STORY = { ...MOCK_GITHUB_STORY, whatChanged: ["The meter reads on time."] };
 export const OWN_STORY_TITLE = "fix: the meter reads on time";
 /** The other pull request's own story. */
@@ -26,7 +25,6 @@ export const STORIED_STORY = {
 };
 export const STORIED_STORY_TITLE = "fix: read the selected pull request";
 
-/** One git reading: main's version, then the checked-out one. */
 const READ_VERSIONS = "git rev-parse main HEAD";
 
 export function storiedChanges(

@@ -53,7 +53,6 @@ export function resampleLinear(
   return out;
 }
 
-/** Concatenates captured PCM frames into one contiguous Float32Array. */
 export function mergeFloat32(chunks: Float32Array[]): Float32Array {
   let total = 0;
   for (const chunk of chunks) total += chunk.length;
@@ -66,7 +65,6 @@ export function mergeFloat32(chunks: Float32Array[]): Float32Array {
   return out;
 }
 
-/** Merges raw capture frames and resamples to the 16kHz mono Whisper expects. */
 export function framesToMono16k(frames: Float32Array[], inputRate: number): Float32Array {
   return resampleLinear(mergeFloat32(frames), inputRate, VOICE_SAMPLE_RATE);
 }

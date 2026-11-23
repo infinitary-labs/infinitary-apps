@@ -83,13 +83,10 @@ export function formatFlagshipError(
  * (`FirstmateSeatHost`).
  */
 
-/** What the seat reaches of the first mate agent. */
 type FirstmateSeatHost = {
   /** A turn is running: a change waits for its idle boundary. */
   running(): boolean;
-  /** The tools an attachment binds. */
   tools(): ReturnType<typeof buildFirstmateTools>;
-  /** The captain's sequences as served now. */
   sequences(): ServedSequences;
   /** A new session read no context of this app's: the next input is complete. */
   contextChanged(): void;
@@ -99,14 +96,12 @@ type FirstmateSeatHost = {
 };
 
 export class FirstmateSeat {
-  /** The rolling session, while one is attached. */
   session: ModelSession | undefined;
   /** The attach in flight, so a second asker shares it. */
   creating: Promise<ModelSession> | undefined;
   private unsubscribe: (() => void) | undefined;
   /** Set by the quit: no attach goes on after it (`dispose`). */
   private disposed = false;
-  /** The flagship account this attachment is bound to (broker phase 6). */
   boundAccountId: string | undefined;
   boundLocal = false;
   /** Consecutive thinking-runaway failures; Reset on a clean turn or Retry. */
@@ -259,7 +254,6 @@ export class FirstmateSeat {
     return this.session?.modelRef() ?? this.options.settings.getFirstmateModel();
   }
 
-  /** The attached session's file, whichever seat serves it; null before one attaches. */
   sessionFile(): string | null {
     return this.session?.recordPath() ?? null;
   }
@@ -419,7 +413,6 @@ export class FirstmateSeat {
     backend: SeatBackend,
     from: { provider: string; model: string },
   ): void {
-    // The new session read no context of this app's: the next one is complete.
     this.host.contextChanged();
     const changed = renewal.changed
       .map((part) => (part === "prompt" ? "the first mate's prompt" : "the served instructions"))
@@ -492,7 +485,6 @@ export class FirstmateSeat {
     return sessionFile && existsSync(sessionFile) ? { backend, sessionFile } : undefined;
   }
 
-  /** Record the attached session as its backend's rolling session. */
   private rememberResume(session: ModelSession): void {
     const settings = this.options.settings;
     const resume = session.resume();
@@ -753,7 +745,6 @@ export class FirstmateSeat {
     this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card);
   }
 
-  /** The pause card for the seat's account and its pause, as it stands now. */
   private pauseCard(accountId: string, pause: SeatPause): FirstmatePauseCard {
     const flagship = this.options.flagship;
     const providerId =
@@ -948,7 +939,6 @@ export class FirstmateSeat {
     }
   }
 
-  /** The account the seat is on: the attachment's, else - before one - the setting's. */
   private seatAccount(): string | undefined {
     return this.boundAccountId ?? this.options.settings.getFirstmateAccount() ?? undefined;
   }
@@ -1051,7 +1041,6 @@ export class FirstmateSeat {
     }
   }
 
-  /** The seat is paused on a spent allowance: its card, as it stands now, is up. */
   private showSpentAllowanceCard(): void {
     const flagship = this.options.flagship;
     const paused = this.paused;

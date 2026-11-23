@@ -49,7 +49,6 @@ describe("the merge card of a story pull request merged outside the app", () => 
     const story = { ...saved, title: "feat: share the story" };
     expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toBeDefined();
     mergedOutside(at, original);
-    // check_change asks for the card the walk shows.
     expect(await at.service.checkTool.checkForCrew("ab12cd34", {})).toContain(
       "put up your merge card for this pull request with after close",
     );
@@ -65,7 +64,6 @@ describe("the merge card of a story pull request merged outside the app", () => 
     });
     expect(at.tasks.delivery.changePresentation("ab12cd34", phone)?.revisions).toHaveLength(1);
     expect(opens(at)).toBe(1);
-    // The card call shows that story at the version that merged.
     expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
       revision: 1,
       title: story.title,
@@ -120,7 +118,6 @@ describe("the merge card of a story pull request merged outside the app", () => 
     const story = { ...saved, title: "feat: share the story" };
     expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toBeDefined();
     mergedOutside(at, original);
-    // A commit after the merge.
     checkedOut.head = repaired;
     at.readHead.mockResolvedValue(repaired);
     const ahead = `#1413 was merged outside the app at ${original}, and the committed version here is ${repaired}, which did not merge. Its merge card shows the version that merged: check that version out to show it.`;
@@ -166,7 +163,6 @@ describe("the merge card of a story pull request merged outside the app", () => 
       });
       expect(at.tasks.delivery.changePresentation("ab12cd34", phone)?.revisions).toHaveLength(1);
       if (read === "merged") {
-        // Read again, the merge card shows the story it merged with.
         mergedOutside(at, original);
         expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toMatchObject({
           revision: 1,

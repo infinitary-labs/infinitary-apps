@@ -44,7 +44,6 @@ function computerHome(): void {
   vi.stubEnv("HOME", own);
 }
 
-/** What the model was served on the turn just ended. */
 async function servedOn(at: Awaited<ReturnType<typeof placed>>, turn: number): Promise<string> {
   model([{ text: "Done." }]);
   await at.order("inf:session:prompt", [{ orderId: `rows:${turn}`, task: TASK, text: "Go." }]);

@@ -29,10 +29,8 @@ const LAG_BUDGET_MS = 1_000;
 /** One paint of the list, the full two-hundred-line window included. */
 const RENDER_BUDGET_MS = 100;
 const RETAINED_LINES = 200;
-/** The words of the spec's own seeded feed line `i`, where it is written and where it is read. */
 const seededLine = (i: number) => `seeded line ${i}`;
 
-/** One paint of the list: what it built, and how long it took. */
 type Paint = { duration: number; rows: number; added: number; removed: number };
 type Measures = { lag: number[]; render: Paint[] };
 
@@ -60,7 +58,6 @@ async function feedPinned(page: Page): Promise<string> {
   return pin.pinned && pin.flag === "true" ? "pinned" : JSON.stringify(pin);
 }
 
-/** The scroller's pin and its metrics. */
 function feedPin(page: Page): Promise<{
   pinned: boolean;
   flag: string | null;
@@ -103,8 +100,6 @@ test("every feed line the core writes reaches the frame, in order, with the newe
   await input.click();
   await input.fill(asked);
   await input.press("Enter");
-  // A fleet moment: the captain's turn, the spawn and the report - lines
-  // through the vehicle.
   await expect(feedLineOf(page, { type: "user_turn", text: asked })).toBeVisible({
     timeout: 10_000,
   });
@@ -114,7 +109,6 @@ test("every feed line the core writes reaches the frame, in order, with the newe
     reportLine(page, key).filter({ hasText: reportSummary(MOCK_COMPLETION_TEXT) }),
   ).toBeVisible({ timeout: 30_000 });
 
-  // The frame shows exactly the core's feed, oldest first, newest last.
   const core = await page.evaluate(() => window.infinitary.feed.recent());
   await expect.poll(() => feedRows(page)).toEqual(core.map((line) => line.text));
   await expect.poll(() => feedPinned(page)).toBe("pinned");
@@ -165,8 +159,6 @@ test("two hundred persisted lines come back at boot with the newest in view, and
     RENDER_BUDGET_MS,
   );
 
-  // A new line lands: it is the newest, in view, and the list is still
-  // exactly the core's.
   const input = promptInput(page);
   await input.click();
   await input.fill("hello there");

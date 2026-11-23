@@ -117,7 +117,6 @@ async function home(
   let connection = listen();
   return {
     pairing,
-    /** Where the home answers now. */
     get at() {
       return `127.0.0.1:${port}`;
     },
@@ -216,7 +215,6 @@ describe("joining a home as a computer that runs work", () => {
       expect(said).toEqual(words);
       expect(asked).toEqual([]);
     }
-    // Nothing was sent: the link is still open.
     expect(at.pairing.list()).toEqual([]);
   });
 
@@ -247,7 +245,6 @@ describe("joining a home as a computer that runs work", () => {
     expect(joined).toMatchObject({ name: "MacBook Pro", grant: { kind: "work", at: at.at } });
     expect(statSync(dataDir).mode & 0o777).toBe(0o700);
     expect(statSync(join(dataDir, "home.json")).mode & 0o777).toBe(0o600);
-    // The lock went with the join.
     expect(existsSync(join(dataDir, "running.lock"))).toBe(false);
     expect(readFileSync(join(dataDir, "home.json"), "utf8")).not.toContain(
       parsePairingLink(link).code,
@@ -480,7 +477,6 @@ describe("joining a home as a computer that runs work", () => {
       },
     ]);
 
-    // A command whose link was used keeps nothing.
     const other = scratchDir("infinitary-helper-");
     const used = await join2(link, other);
     expect(used.outcome).toMatchObject({ ok: false, reason: "used" });
@@ -552,7 +548,6 @@ describe("finding the home again after its address changes", () => {
     expect(asked).toEqual([]);
     expect(said).toEqual(helperWords.foundAgain(thisMac, "MacBook Pro", "builder", "running"));
     expect(steps).toEqual(["paused", `started ${JSON.stringify({ launcher: null, app: null })}`]);
-    // The same computer on the home's list, dialing the home where it is now.
     expect(at.pairing.list()).toEqual([expect.objectContaining({ id: grant.deviceId })]);
     expect(joinedNames).toEqual([{ again: false }, { again: true }]);
     expect(new JoinedHome(dataDir).read()).toEqual({
@@ -602,7 +597,6 @@ describe("finding the home again after its address changes", () => {
       again: true,
       grant: { deviceId: windowGrant.deviceId },
     });
-    // One computer, one entry: the same one, with the window's key in both folders.
     expect(at.pairing.list()).toEqual([
       expect.objectContaining({ id: windowGrant.deviceId, name: "MacBook Air", kind: "mac" }),
     ]);
@@ -879,7 +873,6 @@ describe("leaving a home that is gone for a new one", () => {
       background: async () => "running",
     });
     expect(outcome).toMatchObject({ ok: true, again: false, name: "MacBook Pro" });
-    // One question, one yes: leaving the old home and joining the new one.
     expect(asked).toEqual([
       [...helperWords.askLeave(from), ...helperWords.ask(thisMac, "builder"), helperWords.prompt],
     ]);
@@ -1142,7 +1135,6 @@ describe("a home on this Mac while this Mac's network address changes", () => {
     await expect.poll(() => said.at(-1)).toBe(quit);
     await at.reopen();
     await expect.poll(() => said.at(-1)).toBe(inReach);
-    // The same computer, dialing where it always did; no new link was made for it.
     expect(at.pairing.list()).toEqual([expect.objectContaining({ id: outcome.grant.deviceId })]);
     expect(new JoinedHome(dataDir).read()?.grant.at).toBe(at.at);
   });
@@ -1463,7 +1455,6 @@ describe("a home that reaches this computer through its own SSH connection", () 
       },
     });
 
-    // The same computer, its sign-ins kept, now reaching the home only over its SSH.
     expect(outcome).toMatchObject({ ok: true, again: true });
     expect(steps).toEqual(["paused", "started"]);
     const grant = { ...joined.grant, at: parsePairingLink(link).at, via: "ssh" };

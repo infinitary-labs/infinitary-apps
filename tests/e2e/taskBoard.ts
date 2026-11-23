@@ -15,10 +15,8 @@ import { SHOWN_ENTRY } from "./stack";
 /** The app's own Tasks panel, whose card the board is. */
 export const BOARD_PANEL = "now";
 
-/** The board's card element on the stage, by its panel. */
 const boardCardSelector = (panel: string) => `[data-panel-card="${panel}/board"]`;
 
-/** The board's stack entry id, by its panel. */
 export function boardEntryId(panel = BOARD_PANEL): string {
   return `panel-card:${panel}/board`;
 }
@@ -33,10 +31,8 @@ export function boardsOnStage(page: Page, panel = BOARD_PANEL): Locator {
   return page.locator(`[data-card-layer] ${boardCardSelector(panel)}`);
 }
 
-/** The shown board's frame element, by its panel. */
 const boardFrameSelector = (panel: string) => `${SHOWN_ENTRY} ${boardCardSelector(panel)} iframe`;
 
-/** The shown board's own page. */
 export function boardPage(page: Page, panel = BOARD_PANEL): FrameLocator {
   return drawnFrame(page, boardFrameSelector(panel));
 }
@@ -51,14 +47,12 @@ export function boardEntry(page: Page, panel = BOARD_PANEL): Locator {
   return boardPage(page, panel).locator("[data-task-board]");
 }
 
-/** The app's Hide in the shown board card's title row. */
 export function hideBoard(page: Page): Locator {
   return page
     .locator(`${SHOWN_ENTRY} [data-panel-card-chrome]`)
     .getByRole("button", { name: "Hide", exact: true });
 }
 
-/** One tile on the shown board, by its task key. */
 export function boardTile(page: Page, key: string, panel = BOARD_PANEL): Locator {
   return boardEntry(page, panel).locator(`[data-board-tile][data-board-key="${key}"]`);
 }
@@ -196,13 +190,11 @@ export function boardConfirm(page: Page, key: string, panel = BOARD_PANEL) {
   };
 }
 
-/** The open ⋯ menu of a tile, in the board's page, and one of its entries by id. */
 export function boardMenu(page: Page, key: string, panel = BOARD_PANEL) {
   const menu = boardPage(page, panel).getByRole("menu", { name: `${key} actions` });
   return { menu, entry: (id: string) => menu.locator(`[data-menu-item="${id}"]`) };
 }
 
-/** A tile's ⋯, the button that opens its menu, by the tile's task key. */
 export function boardMore(page: Page, key: string, panel = BOARD_PANEL): Locator {
   return boardEntry(page, panel).locator(
     `[data-board-card]:has([data-board-tile][data-board-key="${key}"]) [data-board-more] button`,
@@ -232,7 +224,6 @@ function visibleMiddle(drop: Locator): Promise<PagePoint> {
   });
 }
 
-/** The pointer's fields for one of a mouse drag's events; each caller adds where. */
 function mouseOf(type: string) {
   return {
     bubbles: true,
@@ -246,7 +237,6 @@ function mouseOf(type: string) {
   };
 }
 
-/** One pointer event in the board's page, at a point of it, on whatever is there. */
 function pointerAt(board: Locator, type: string, at: PagePoint): Promise<void> {
   return board.evaluate(
     (root, { type, at, init }) => {

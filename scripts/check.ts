@@ -18,7 +18,6 @@ import { fileURLToPath } from "node:url";
  */
 export const STEP_SEPARATOR = ",";
 
-/** The commands this script is given, each as its program and arguments. */
 export function checkSteps(args: readonly string[]): string[][] {
   const steps: string[][] = [[]];
   for (const arg of args) {
@@ -41,7 +40,6 @@ export function checkCommands(check: string): string[][] {
     .filter((words) => words.length > 0 && words[0] !== "");
 }
 
-/** Runs every step in order and answers the ones that failed. */
 export function runSteps(
   steps: readonly string[][],
   run: (step: readonly string[]) => boolean = (step) => {

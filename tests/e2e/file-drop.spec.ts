@@ -95,21 +95,17 @@ test("dropping files on the main input: supported files become chips, unsupporte
   const before = sentTexts().length;
   await dropFiles(page, shell(page), [pdfPath, notesPath, picturePath, zipPath]);
 
-  // Chips for what is supported, by name, with the picture beside the text file.
   await expect(shell(page).locator("[data-voice-input-paste]")).toHaveCount(1);
   await expect(shell(page).locator("[data-voice-input-paste]")).toContainText("notes.csv");
   await expect(shell(page).locator("[data-voice-input-attachment]")).toContainText("shot.png");
-  // The unsupported formats are ordinary text: exact paths, one per line, after the words.
   await expect(input).toHaveValue(`look at these:\n${pdfPath}\n${zipPath}`);
   expect(sentTexts().length).toBe(before);
 
-  // They are normal, undoable text edits; the chips are not text.
   await input.press("ControlOrMeta+z");
   await expect(input).not.toHaveValue(new RegExp(pdfPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   await input.press("ControlOrMeta+Shift+z");
   await expect(input).toHaveValue(`look at these:\n${pdfPath}\n${zipPath}`);
 
-  // Sending delivers the words with the paths, the file's preview and its full-text pointer.
   await input.press("Enter");
   await expect(input).toHaveValue("");
   await expect
@@ -131,7 +127,6 @@ test("dropping files on the main input: supported files become chips, unsupporte
   const [message] = readdirSync(attachments);
   const [copy] = readdirSync(join(attachments, message ?? ""));
   expect(statSync(join(attachments, message ?? "", copy ?? "")).mode & 0o777).toBe(0o600);
-  // The originals stay where they were.
   expect(existsSync(pdfPath) && existsSync(notesPath) && existsSync(picturePath)).toBe(true);
 });
 
@@ -212,10 +207,8 @@ test("a drop on a card's reply goes to that reply alone, while the main draft st
 
   await expect(reply.field).toHaveValue(`reply words\n${pdfPath}`);
   await expect(reply.row.locator("[data-voice-input-paste]")).toContainText("reply notes.txt");
-  // The main input is untouched: no path, no chip.
   await expect(main).toHaveValue("main draft stays");
   await expect(shell(page).locator("[data-voice-input-paste]")).toHaveCount(0);
-  // Nothing was sent by the drop.
   expect(
     sentTexts().some((text) => text.includes(pdfPath) || text.includes("reply notes.txt")),
   ).toBe(false);

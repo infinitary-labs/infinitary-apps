@@ -228,7 +228,6 @@ function savedPasswords(allows: boolean, holds: () => boolean = () => true) {
   return { keychain, queries };
 }
 
-/** Replaces the system browser here with a recorder of the links it is asked to open. */
 function recordOpens(launched: LaunchedApp) {
   return launched.app.evaluate(({ shell }) => {
     const recorded: string[] = [];
@@ -340,7 +339,6 @@ async function homeAndComputer(
   // The computer in this process asks the same GitHub stand-in the home does.
   if (options.github) Object.assign(process.env, options.github.env);
   const userDataDir = scratchDir("infinitary-e2e-");
-  // The home is signed in to GitHub with its own sign-in.
   if (options.github) seedGitHubSignIn(userDataDir);
   const app = await launchApp({
     withMockProvider: true,
@@ -349,8 +347,6 @@ async function homeAndComputer(
   });
   apps.push(app);
   const { page } = app;
-  // The home makes a link for a computer that runs work in its own window
-  // (the Devices tab's command panel is piece 12).
   const invite = await page.evaluate(() => window.infinitary.devices.invite({ kind: "work" }));
   const dataDir = scratchDir("infinitary-e2e-computer-");
   const joined = await joinHome({
@@ -420,14 +416,12 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
   const { app, page, deviceId, dataDir } = await homeAndComputer();
   await openIntelligence(page);
 
-  // The computer has a group of its own.
   const group = page.locator(`[data-device-sign-ins="${deviceId}"]`);
   await expect(group).toBeVisible();
   await expect(group.locator("[data-device-no-sign-ins]")).toBeVisible();
   // No Claude Code there, so its chip cannot start one.
   await expect(group.locator('[data-connect-provider="anthropic-claude"]')).toBeDisabled();
 
-  // A key, typed here and sent there once.
   await group.locator('[data-connect-provider="openrouter"]').click();
   await group.getByRole("button", { name: "API key", exact: true }).click();
   const aside = group.locator('[data-device-sign-in-provider="openrouter"]');
@@ -458,8 +452,6 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
     }),
   ).toBeVisible();
 
-  // Firstmate's card opens the tab with the sign-in already started there:
-  // a code to read here, which the computer finishes itself.
   await ask(page, "device-sign-in", { deviceId, provider: "xai" });
   const signIn = page.getByRole("button", { name: "Sign in", exact: true });
   await expect(signIn).toBeVisible();
@@ -525,10 +517,8 @@ test("a computer signs in to Claude with the link opened here and the code it sh
     feedLineOf(page, { type: "device_signed_in", deviceId, who: PLACE.who, provider: "Claude" }),
   ).toBeVisible();
 
-  // Its client there took the code once, and opened no browser there.
   expect(claude.seen.pasted).toEqual([CLAUDE_CODE]);
   expect(claude.seen.browser).toEqual([NO_BROWSER]);
-  // Nothing the home keeps holds the code.
   expect(savedText(app.userDataDir).filter(({ text }) => text.includes(CLAUDE_CODE))).toEqual([]);
 
   // The allowance it reads there, with its own login, shows in its row,
@@ -539,8 +529,6 @@ test("a computer signs in to Claude with the link opened here and the code it sh
   await expect(claudeRow).toContainText(`${100 - CLAUDE_USED}%`);
   expect(saved.queries.filter((query) => query.interactive === true)).toEqual([]);
 
-  // Disconnect signs that computer out of the Claude login Firstmate made
-  // there from the pasted code, and the feed says so.
   await claudeRow.getByRole("button", { name: /actions$/ }).click();
   await page.getByRole("menuitem", { name: "Disconnect", exact: true }).click();
   await expect(claudeRow).toHaveCount(0);
@@ -638,7 +626,6 @@ test("a computer's own Claude account keeps going on credits, turned on by keys 
     m.settingsSubscriptionsCreditsClaudeAvailableUsed({ percent: String(CLAUDE_CREDITS_USED) }),
   );
 
-  // The row's menu offers the switch, and Enter on it turns it on there.
   const kebab = claudeRow.getByRole("button", { name: /actions$/ });
   await pressKey(kebab, "Enter");
   const item = page.locator('[data-menu-item="keep-going"]');
@@ -670,7 +657,6 @@ test("a computer's own account is preferred, renamed and paused by keys from its
   await expect(row).toHaveCount(1);
   const kebab = row.getByRole("button", { name: /actions$/ });
 
-  // The menu opens on Prefer for crew work, and Enter prefers it there.
   await pressKey(kebab, "Enter");
   const prefer = page.locator('[data-menu-item="prefer"]');
   await expect(prefer).toHaveText(new RegExp(m.settingsSubscriptionsMenuPrefer()));
@@ -680,7 +666,6 @@ test("a computer's own account is preferred, renamed and paused by keys from its
   await expect(prefer).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
-  // Rename asks for its new name in the row, and Enter saves it there.
   await pressKey(kebab, "Enter");
   await pressKey(page.locator('[data-menu-item="rename"]'), "Enter");
   const name = row.getByPlaceholder(m.settingsSubscriptionsRenamePlaceholder());
@@ -723,8 +708,6 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
     page.locator("[data-forges], [data-device-forge-row], [data-forge-row]"),
   ).toHaveCount(0);
 
-  // Integrations holds this Mac's GitHub connection and, under it, the
-  // computer's own row, not signed in.
   await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
   const list = page.locator("[data-integrations-list]");
   await expect(list.locator('[data-forge-row="github.com"]')).toHaveAttribute(
@@ -734,7 +717,6 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   const row = list.locator(`[data-device-forge-row="${deviceId}"]`);
   await expect(row).toHaveAttribute("data-forge-state", "none");
 
-  // GitHub's code to read, here; the computer finishes the sign-in itself.
   await row.getByRole("button", { name: "Sign in", exact: true }).click();
   const aside = page.locator('[data-device-sign-in-provider="github.com"]');
   await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
@@ -753,12 +735,10 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
     feedLineOf(page, { type: "device_signed_in", deviceId, who: "Builder", provider: "GitHub" }),
   ).toBeVisible();
 
-  // Its git answers GitHub with the computer's own sign-in, never the home's.
   const answer = (prompt: string) =>
     execFileSync("sh", [ASKPASS, prompt], { env: hostEnv(), encoding: "utf8" }).trim();
   expect(answer("Username for 'https://github.com':")).toBe("x-access-token");
   expect(answer("Password for 'https://x-access-token@github.com':")).toBe(COMPUTER_GITHUB);
-  // Nothing the home keeps holds it; the computer's own store does.
   expect(savedText(app.userDataDir).filter(({ text }) => text.includes(COMPUTER_GITHUB))).toEqual(
     [],
   );
@@ -766,7 +746,6 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
     savedText(join(dataDir, "forges")).some(({ text }) => text.includes(COMPUTER_GITHUB)),
   ).toBe(true);
 
-  // Signing it out from its menu here deletes it there.
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
   await row.getByRole("button", { name: "GitHub as Builder actions" }).click();
@@ -845,13 +824,11 @@ test("a computer signs in to GitHub Enterprise with a key typed here, by keys, a
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
 
-  // Under the computer's rows, the servers it signs in to: one of each kind it keeps a sign-in for.
   const servers = page.locator(`[data-device-forge-servers="${deviceId}"]`);
   const chip = servers.locator(`[data-forge-chip="github@${deviceId}"]`);
   await expect(servers.locator("[data-forge-chip]")).toHaveCount(SIGN_IN_KINDS.length);
   await pressKey(chip, "Enter");
 
-  // The key form opens on its address; the computer is who it signs in.
   const form = servers.locator('[data-forge-key-form="github"]');
   const address = form.getByLabel(FORGE_SECTION_WORDS.address, { exact: true });
   const key = form.getByLabel(FORGE_SECTION_WORDS.key, { exact: true });
@@ -862,7 +839,6 @@ test("a computer signs in to GitHub Enterprise with a key typed here, by keys, a
   await page.keyboard.press("Tab");
   await typeInto(key, "ghp_e2e_revoked_7731");
   await page.keyboard.press("Enter");
-  // The server refused that key; the field clears and the form says why.
   await expect(form.locator("[data-forge-key-problem]")).toHaveText(
     forgeKeyProblemText("refused", "github.example.com", GITHUB_ENTERPRISE),
   );
@@ -878,21 +854,18 @@ test("a computer signs in to GitHub Enterprise with a key typed here, by keys, a
   await expect(row).toContainText("mona");
   await expect(form).toHaveCount(0);
 
-  // The computer keeps the key in its own store; nothing the home keeps holds it.
   expect(
     savedText(app.userDataDir).filter(({ text }) => text.includes(COMPUTER_ENTERPRISE)),
   ).toEqual([]);
   expect(
     savedText(join(dataDir, "forges")).some(({ text }) => text.includes(COMPUTER_ENTERPRISE)),
   ).toBe(true);
-  // Its git answers that server with it.
   const answer = (prompt: string) =>
     execFileSync("sh", [ASKPASS, prompt], { env: hostEnv(), encoding: "utf8" }).trim();
   expect(answer("Password for 'https://x-access-token@github.example.com':")).toBe(
     COMPUTER_ENTERPRISE,
   );
 
-  // Its menu, by keys, signs it out there, and the row goes.
   await pressKey(row.getByRole("button", { name: /actions$/ }), "Enter");
   const signOut = page.locator('[data-menu-item="sign-out"]');
   await expect(signOut).toBeFocused();
@@ -929,8 +902,6 @@ test("a computer signs in to GitHub through its own GitHub CLI from Settings -> 
   const row = page.locator(`[data-device-forge-row="${deviceId}"]`);
   await expect(row).toHaveAttribute("data-forge-state", "none");
 
-  // The code stays first; GitHub CLI's line sits under it, naming that
-  // computer, and nothing asks GitHub CLI until the click.
   await row.getByRole("button", { name: "Sign in", exact: true }).click();
   const aside = page.locator('[data-device-sign-in-provider="github.com"]');
   await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
@@ -944,7 +915,6 @@ test("a computer signs in to GitHub through its own GitHub CLI from Settings -> 
   });
   await line.getByRole("button", { name: FORGE_CLI_WORDS.use }).click();
 
-  // The row says it signs in through GitHub CLI; the code is gone.
   await expect(row).toHaveAttribute("data-forge-state", "ok");
   await expect(row).toContainText(
     `${PLACE.label} · ${FORGE_CLI_WORDS.through} · ${DEVICE_FORGE_WORDS.deviceRole}`,
@@ -1021,7 +991,6 @@ test("a custom API added on a computer is kept there and its model can be placed
     await expect(
       block.block.getByRole("button", { name: "Disconnect", exact: true }),
     ).toBeVisible();
-    // It pauses there like any of that computer's accounts.
     await expect(block.block.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
     await expect(block.firstmate("operator-model")).toHaveCount(0);
 

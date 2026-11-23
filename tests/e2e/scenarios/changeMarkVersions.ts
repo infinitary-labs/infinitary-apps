@@ -45,7 +45,6 @@ const CHANGE_MARKS_QUESTION =
   `<fieldset><legend>${CHANGE_MARKS_SIGNS[3]}</legend>` +
   '<label><input type="radio" name="route" value="clock" checked> Mock the clock</label><label><input type="radio" name="route" value="queue"> Await the queue</label><label><input type="radio" name="route" value="other" data-inf-write-in> Something else</label></fieldset>';
 
-/** The figure version 7 adds: ten runs, one more on each press of Next run. */
 const CHANGE_MARKS_PLAYABLE_FIGURE =
   `<figure aria-label="${CHANGE_MARKS_PLAYABLE_NAME}">` +
   `<button type="button">${CHANGE_MARKS_NEXT_RUN}</button>` +
@@ -60,7 +59,6 @@ const CHANGE_MARKS_PLAYABLE_FIGURE =
   "<script>(function(){var figure=document.currentScript.closest('figure');var runs=figure.querySelectorAll('[data-run]');var label=figure.querySelector('[data-runs-label]');var shown=runs.length;figure.querySelector('button').addEventListener('click',function(){shown=shown%runs.length+1;runs.forEach(function(run,i){run.style.opacity=i<shown?'1':'0';});label.textContent=shown+' of '+runs.length+' passed';});})();</script>" +
   "</figure>";
 
-/** Each version's body, by the number the captain names. */
 export const CHANGE_MARKS_VERSIONS: Record<number, string> = {
   1:
     "<p>The upload test fails when the queue drains late.</p>" +
@@ -100,7 +98,6 @@ export const CHANGE_MARKS_VERSIONS: Record<number, string> = {
     CHANGE_MARKS_PLAYABLE_FIGURE,
 };
 
-/** The first mate revises one card through its numbered versions, so each revision's marks show. */
 export const changeMarkVersions: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

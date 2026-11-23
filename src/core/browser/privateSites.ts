@@ -24,7 +24,6 @@ export class PrivateSites {
 
   constructor(private readonly file: string) {}
 
-  /** Hears each change the captain makes, with the list as it now stands. */
   onChange(listener: (sites: string[]) => void): void {
     this.listeners.add(listener);
   }
@@ -52,7 +51,6 @@ export class PrivateSites {
     return { ok: true, sites };
   }
 
-  /** Remove an entry; one not listed changes nothing. */
   remove(site: string): PrivateSiteChange {
     const sites = this.list();
     const kept = sites.filter((listed) => listed !== site);

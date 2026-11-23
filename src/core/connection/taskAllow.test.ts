@@ -295,7 +295,6 @@ it("sends Bring into Secrets only to views that list the bring, and shows the ot
     protocolVersion: PROTOCOL_VERSION,
     changes: ["secrets-ask", "secrets-bring"],
   });
-  /** Whether the line saying where to pick would show in the card's frame. */
   const shows = (html: string) => {
     const line = html.match(/<p[^>]*data-secret-bring-elsewhere[^>]*>/)?.[0];
     if (!line) throw new Error("The card has no line saying where to pick.");

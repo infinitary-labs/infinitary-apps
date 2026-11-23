@@ -42,7 +42,6 @@ const PICKED = `${USER}@${NEARBY_MAC.at}`;
 /** The check line a Mac's host key reads as. */
 const CHECK_LINE = "ED25519 SHA256:4mF1o0bKqv3n2WZ5c9yTt2kq8hQe8nV7rS1aLm0pXcU";
 
-/** The Mac once it joined, as the home lists it. */
 const JOINED: DeviceView = {
   id: "studio",
   kind: "mac",
@@ -67,7 +66,6 @@ test("adding a computer by its address follows each step, keeps a refused addres
   bridge.answer("inf:devices:list", []);
   bridge.answer("inf:devices:addresses", ADDRESSES);
   bridge.answer("inf:devices:sign-ins", []);
-  /** The nearby looks the window asked, each answered once the test says. */
   const looks: ReturnType<typeof held<NearbyMacsView>>[] = [];
   bridge.answer("inf:devices:nearby", (watching) => {
     if (!watching) return { state: "off", user: null, macs: [] };
@@ -75,7 +73,6 @@ test("adding a computer by its address follows each step, keeps a refused addres
     looks.push(look);
     return look.promise;
   });
-  /** Each add the window sends, answered once the test says. */
   const adds: ReturnType<typeof held<AddAnswer>>[] = [];
   bridge.answer("inf:devices:add", () => {
     const add = held<AddAnswer>();

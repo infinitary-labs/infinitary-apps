@@ -51,7 +51,6 @@ function setup() {
     const files = await keepHandoverFiles(paths, dir);
     await notes.takeBack(taskId, dir, files);
   };
-  /** The notes file the brief handed `taskId`, by the path its section names. */
   const handed = async (taskId: string) => {
     const section = (await notes.briefSection(taskId)) ?? "";
     const path = /(\/\S+automation-notes\.md)/.exec(section)?.[1];
@@ -108,7 +107,6 @@ describe("a rule's notes", () => {
       /changed since you were handed them\. The newer page is at \//,
     );
     expect(f.scheduler.notes(f.rule.id)?.version).toBe(2);
-    // The crewmate carries its line into the newer page and reports that.
     const newer = /The newer page is at (\S+automation-notes\.md)/.exec(
       String(await refused.catch((error: Error) => error.message)),
     )?.[1];

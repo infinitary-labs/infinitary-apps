@@ -77,7 +77,6 @@ export async function takeBundle(
     throw new Error(`${to} does not point at ${sha} after the bundle was fetched.`);
 }
 
-/** The commit `ref` names here, or null. */
 export async function commitOf(repoDir: string, ref: string): Promise<string | null> {
   try {
     return (await git(repoDir, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`])) || null;

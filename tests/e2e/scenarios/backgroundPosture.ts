@@ -3,10 +3,8 @@ import type { Scenario } from "../mockProvider";
 
 /** Presentation regression: a real host job continues alongside a question. */
 export const WORK_POSTURE_MARKER = "verify background posture";
-/** Beside the marker, the crewmate starts the job and asks nothing. */
 export const WORK_POSTURE_QUIET_MARKER = "without a question";
 
-/** The crewmate starts a background job that waits on a file, and asks its question beside it unless told not to. */
 export const backgroundPosture: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

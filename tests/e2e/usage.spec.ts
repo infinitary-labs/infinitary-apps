@@ -44,7 +44,6 @@ test("Usage shows the recorded model usage and keeps the chosen unit, all from t
       await runFromSearch(app, page, "settings.usage");
       await expect(usage.unit("tokens")).toBeChecked();
       await expect(usage.unit("tokens")).toBeFocused();
-      // Every recorded model is listed.
       const { models } = await usageSummary(page, { period: "30d", scope: "all" });
       expect(models.length).toBeGreaterThan(0);
       for (const model of models) await expect(usage.model(model.id)).toBeVisible();

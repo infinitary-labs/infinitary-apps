@@ -54,7 +54,6 @@ plist_get() {
   /usr/libexec/PlistBuddy -c "Print :$1" "$APP_DIR/Contents/Info.plist" 2>/dev/null || true
 }
 
-# ---- Structure ----
 [[ "$(plist_get CFBundleIdentifier)" == "$EXPECTED_BUNDLE_ID" ]] \
   || fail "CFBundleIdentifier is '$(plist_get CFBundleIdentifier)', expected $EXPECTED_BUNDLE_ID"
 [[ "$(plist_get CFBundleExecutable)" == "$EXPECTED_EXECUTABLE" ]] \
@@ -143,7 +142,6 @@ if [[ "${#SINGLE_ARCH[@]}" -gt 0 ]]; then
   fi
 fi
 
-# ---- Version fields must agree ----
 SHORT_VERSION="$(plist_get CFBundleShortVersionString)"
 [[ -n "$SHORT_VERSION" ]] || fail "CFBundleShortVersionString missing"
 
@@ -153,11 +151,9 @@ if [[ "$MODE_SIGNED" -eq 0 ]]; then
   exit 0
 fi
 
-# ---- Signature validity (all nested code + outer seal) ----
 codesign --verify --deep --strict --verbose=2 "$APP_DIR" 2>&1 \
   || fail "codesign --verify --deep --strict failed"
 
-# ---- Identity, Team ID, hardened runtime on the app and helpers ----
 check_signature() {
   local target="$1"
   local INFO
@@ -179,7 +175,6 @@ while IFS= read -r -d '' helper; do
   check_signature "$helper"
 done < <(find "$APP_DIR/Contents/Frameworks" -maxdepth 1 -name "*.app" -print0)
 
-# ---- Entitlement allowlist on every signed executable ----
 check_entitlements() {
   local target="$1"
   local XML KEYS
@@ -200,7 +195,6 @@ while IFS= read -r -d '' helper_bin; do
   check_entitlements "$helper_bin"
 done < <(find "$APP_DIR/Contents/Frameworks" -path "*/MacOS/*" -type f -print0)
 
-# ---- Outer bundle identity ----
 APP_INFO="$(codesign -dvvv "$APP_DIR" 2>&1)"
 echo "$APP_INFO" | grep -q "^Identifier=$EXPECTED_BUNDLE_ID$" \
   || fail "app signing identifier is not $EXPECTED_BUNDLE_ID"
@@ -224,7 +218,6 @@ if [[ "$MODE_GATEKEEPER" -eq 0 ]]; then
   exit 0
 fi
 
-# ---- Notarization + Gatekeeper (final-artifact gate) ----
 xcrun stapler validate "$APP_DIR" >/dev/null \
   || fail "no stapled notarization ticket"
 SPCTL_OUT="$(spctl --assess --type execute --verbose=4 "$APP_DIR" 2>&1)" \

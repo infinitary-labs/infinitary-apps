@@ -99,7 +99,6 @@ export async function boxLoginItems(app: ElectronApplication) {
   });
 }
 
-/** The reason a refused Settings write gives in these journeys. */
 export const REFUSAL = "The saved settings are locked. Try again.";
 
 /**

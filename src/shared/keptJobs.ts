@@ -40,7 +40,6 @@ export const keptRemoveFailedSchema = z.object({
  */
 export const KEPT_ITEM_PREFIX = "kept:";
 
-/** One kept job as a list shows it. */
 export const keptJobViewSchema = z.object({
   /** Its kept folder's own name (`<task>-<keep id>`), with `@` and the computer's id for a job on a computer that runs work. */
   id: z.string().min(1).max(256),

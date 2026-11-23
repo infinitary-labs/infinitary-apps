@@ -146,7 +146,6 @@ function somethingElseRow(gap: { name: string; control: "radio" | "checkbox" | "
 const START_TAG = /^<[a-z][^\s/>]*(?:\s+[^\s=/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*\s*\/?>/i;
 const TAG_ATTRIBUTE = /\s+([^\s=/>]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g;
 
-/** The start tag with its written pick turned into the recommendation mark, or the mark added. */
 function markRecommended(
   tag: string,
   pick: { attribute: "checked" | "selected"; written: boolean },

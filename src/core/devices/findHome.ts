@@ -63,7 +63,6 @@ function runToEnd(run: DnsSdRun, args: readonly string[], line: (text: string) =
   });
 }
 
-/** Every address heard announcing Infinitary through macOS's own dns-sd, or its stand-in. */
 export async function announcedWithDnsSd(run: DnsSdRun): Promise<string[]> {
   const names = new Set<string>();
   await runToEnd(run, ["-t", String(LOOK_SECONDS), "-B", ANNOUNCE_SERVICE, "local."], (text) => {
@@ -90,7 +89,6 @@ export async function announcedWithDnsSd(run: DnsSdRun): Promise<string[]> {
   return [...new Set(found.flat())].slice(0, ANNOUNCED_HOMES_MAX);
 }
 
-/** Every address heard announcing Infinitary through Avahi's avahi-browse. */
 export async function announcedWithAvahi(run: DnsSdRun): Promise<string[]> {
   const found = new Set<string>();
   await runToEnd(

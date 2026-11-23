@@ -13,7 +13,6 @@ import { sinceLastUser, spawnedTaskOf } from "../providerRequest";
 export const DEPENDENCY_WAIT_PROMPT = "exercise a dependency wait";
 export const DEPENDENCY_WAIT_MARKER = "shared fixture fix";
 export const DEPENDENCY_WAIT_TITLE = "Ship the gauge";
-/** The waiting crewmate's report while it waits, and the start of its report once the wait ends. */
 export const DEPENDENCY_WAIT_REPORT = "Waiting for the fixture fix to merge first.";
 export const DEPENDENCY_RESUMED_REPORT = "Resumed after the wait ended:";
 
@@ -66,7 +65,6 @@ function dependencyWaitMove(
       };
 }
 
-/** The dependency wait, for the first mate and for the crewmate that waits. */
 export const dependencyWait: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) =>

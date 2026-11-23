@@ -46,7 +46,6 @@ export const ownWindowChannels = {
     request: z.tuple([]),
     response: okSchema,
   },
-  /** The window's answer to one ask, by the ask's id. */
   "inf:own-window:answer": {
     effect: "change",
     surface: "core",
@@ -114,7 +113,6 @@ export const ownWindowChannels = {
   },
 } as const satisfies Record<string, ChannelDeclaration>;
 
-/** The pushes a first mate sends for this computer's own window alone. */
 export const ownWindowPushes = {
   // One thing a first mate a command started asks of the window opened
   // beside it; the window answers with `inf:own-window:answer`.

@@ -71,10 +71,6 @@ import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 
 type JsonRecord = Record<string, unknown>;
 
-// --------------------------------------------------------------------------
-// The joins: tasks, repos, cards
-// --------------------------------------------------------------------------
-
 export type TaskJoin = {
   task_id: string;
   via: string;
@@ -302,7 +298,6 @@ export type BuildOptions = {
   joined?: boolean;
 };
 
-/** One turn + the tables → a labelled dispatch record. */
 export function buildRecord(
   turn: DispatchTurn,
   tables: FleetTables,
@@ -513,10 +508,6 @@ function goldLabel(
   return { gold_class: primary, weak: true, unknown: false, basis, confidence, evidence };
 }
 
-// --------------------------------------------------------------------------
-// The extractor
-// --------------------------------------------------------------------------
-
 export type ExtractOptions = SessionSources & {
   dbPath?: string;
   /** Keep `[fm-op]` operational wakes (default true - they are dispatch too). */
@@ -580,10 +571,6 @@ export function extractDispatchCorpus(options: ExtractOptions): ExtractResult {
     copiedEntriesExcluded,
   };
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   userData: string;

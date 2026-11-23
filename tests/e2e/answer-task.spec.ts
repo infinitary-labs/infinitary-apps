@@ -161,7 +161,6 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
   const frame = nowFrame(page);
   const waiting = frame.locator('[data-now-group="waiting"]');
   await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toBeVisible({ timeout: 30_000 });
-  // Product evidence: the answer on the stage, the row waiting on the rail.
   await page.screenshot({ path: test.info().outputPath("answer-task-waiting.png") });
 
   // The captain's choice IS the close (F2 A): the deliverable was produced
@@ -171,13 +170,10 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
     status: "done",
     closedReason: "answered",
   });
-  // The close is the task's own line, naming the choice.
   await expect(statusLine(page, row.key).filter({ hasText: MOCK_ANSWER_ACTION_LABEL })).toBeVisible(
     { timeout: 30_000 },
   );
 
-  // ...and the row moves from "waiting on you" to "landed", where the record
-  // reads the word the panel's own vocabulary gives it.
   await expect(waiting).toHaveCount(0, { timeout: 30_000 });
   // Landed is one of the groups the minimal panel collapses to a count, so
   // the row is there and the group has to be opened to see it.
@@ -213,8 +209,6 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
     .toBe(true);
   await page.screenshot({ path: test.info().outputPath("answer-task-answered.png") });
 
-  // Nothing shipped: no pull request, nothing landed, and the scratch
-  // worktree is gone with the close.
   const closed = await detail();
   expect(closed.delivery?.prUrl ?? null).toBeNull();
   expect(closed.delivery?.landedMode ?? null).toBeNull();
@@ -315,8 +309,6 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
     });
     const { key, title } = await detail();
 
-    // The captain allows it. The task goes on: its crewmate hears the
-    // choice and shows its answer.
     await consent.getByRole("button", { name: CONSENT_ALLOW.label }).click();
     const signed = shownCard(page, SIGNED_CARD_TITLE);
     await expect(signed).toBeVisible({ timeout: 30_000 });
@@ -331,7 +323,6 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
       ),
     ).toBe(true);
 
-    // The captain's choice on the answer closes the task answered.
     const [answer] = await page.evaluate(() => window.infinitary.cards.list());
     if (!answer || answer.taskId !== taskId) throw new Error("the answer card is not the task's");
     await signed.getByRole("button", { name: SIGNED_CHOICE.label }).click();
@@ -460,7 +451,6 @@ test("a choice on an answer card while its crewmate works closes it answered and
 
     await page.getByRole("button", { name: ANSWER_MID_TURN_CHOICE }).click();
 
-    // The choice is the close: answered, never cancelled.
     await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
       status: "done",
       closedReason: "answered",
@@ -470,7 +460,6 @@ test("a choice on an answer card while its crewmate works closes it answered and
     });
     expect(mockProvider?.heldRequests()).toBe(0);
 
-    // The first mate is served the choice it closed on, once.
     const told = renderWake({
       facts: {
         kind: "answer-closed",
@@ -497,7 +486,6 @@ test("a choice on an answer card while its crewmate works closes it answered and
     expect(heard().every((count) => count === 1)).toBe(true);
     await page.screenshot({ path: test.info().outputPath("answer-mid-turn-after.png") });
   } finally {
-    // What the record says and every answer_task_closed the first mate was served.
     if (taskId)
       await test.info().attach("answer-mid-turn.json", {
         body: JSON.stringify(

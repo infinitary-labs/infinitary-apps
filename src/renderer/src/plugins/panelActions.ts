@@ -50,13 +50,10 @@ import { frameTasksAction, PANEL_TASKS_ACTIONS, panelTasks } from "./panelTasks"
 export type FramePanelPage = {
   /** The panel; `own` for one of the app's own, which names no panel on a task's record. */
   panel: { id: string; title: string; own?: boolean };
-  /** The page's frame, found when asked. */
   frame: () => HTMLIFrameElement | null;
   /** Set for a card's own page: the card it draws. */
   card?: string;
-  /** The reads the panel was served. */
   reads: readonly string[];
-  /** It was granted moves. */
   moves: boolean;
   /** The settings it was granted to change (`actions`); empty for none. */
   settings?: readonly string[];

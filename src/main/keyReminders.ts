@@ -28,7 +28,6 @@ export class KeyReminderStore {
     return this.value;
   }
 
-  /** Turns every reminder on or off. */
   setOn(on: boolean): KeyReminders {
     if (this.value.on !== on) this.save({ ...this.value, on });
     return this.value;

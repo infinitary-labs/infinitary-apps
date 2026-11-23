@@ -92,7 +92,6 @@ export class PassSteps {
     },
   ) {}
 
-  /** Attach the recorder; returns the detach. */
   listen(listener: StepListener): () => void {
     this.listener = listener;
     return () => {
@@ -104,7 +103,6 @@ export class PassSteps {
     };
   }
 
-  /** A pass begins: hand over the previous one and start collecting this one. */
   passStarted(): void {
     const listener = this.listener;
     if (!listener) return;
@@ -117,7 +115,6 @@ export class PassSteps {
     if (done) listener.pass({ at: done.at, steps: done.steps.map((timing) => ({ ...timing })) });
   }
 
-  /** Run one step, marked and timed while a listener is attached. */
   run<T>(name: string, step: () => T): T {
     const listener = this.listener;
     if (!listener) return step();

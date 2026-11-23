@@ -43,7 +43,6 @@ export type LoopbackSignInOptions = {
   fetch?: typeof fetch;
 };
 
-/** How long one request to Google may take. */
 export const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
 
 /** The page the browser shows once it has brought the answer back. */
@@ -146,7 +145,6 @@ function waitForCode(server: Server, state: string, signal: AbortSignal): Promis
   });
 }
 
-/** Trade the code for the sign-in, with the verifier only this sign-in holds. */
 async function exchange(
   options: LoopbackSignInOptions,
   code: string,

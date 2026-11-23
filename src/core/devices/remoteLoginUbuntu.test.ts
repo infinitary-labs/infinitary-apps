@@ -271,7 +271,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding an Ubuntu computer by its address",
       );
       const sudoLine =
         linger === "on" ? [] : remoteLoginWords.afterLogout(device, device.user ?? "");
-      /** The last lines said, each with its stage and tone, from `first` on. */
       const lastSaid = (first: string) =>
         at.said
           .slice(at.said.findIndex((event) => event.text === first))

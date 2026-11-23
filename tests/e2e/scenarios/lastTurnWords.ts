@@ -24,7 +24,6 @@ export const SALUTE_PROMPT_MARKER = "salute me";
 
 export const WORDLESS_CLOSE_PROMPT_MARKER = "and close without words";
 
-/** The first mate salutes, closes with no words, or takes its time over a turn's closing line. */
 export const lastTurnWords: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

@@ -15,7 +15,6 @@ export const TASK_COMMAND_NAME = /^(infinitary|fm)-[a-z][a-z0-9-]*-axi$/;
  */
 export const CREW_SHELL_PROGRAM = "infinitary-crew-shell";
 
-/** A task command under its own name: `fm-browser-axi` is `infinitary-browser-axi`. */
 export function ownTaskCommand(name: string): string {
   return name.startsWith("fm-") ? `infinitary-${name.slice("fm-".length)}` : name;
 }

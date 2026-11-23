@@ -118,7 +118,6 @@ type Entry =
   /** A file of the record changed, appeared or went: its content is read when it is sent. */
   | { kind: "touch"; seq: number; at: number; path: string; bytes: number };
 
-/** One computer's copy, as the home follows it. */
 type Follower = {
   deviceId: string;
   /** The last change of this stream its copy holds; null until a hello or full copy says. */
@@ -157,7 +156,6 @@ function tailAfter(tail: Buffer, chunk: Buffer): Buffer {
   return Buffer.from(Buffer.concat([tail, chunk.subarray(-TAIL_BYTES)]).subarray(-TAIL_BYTES));
 }
 
-/** What a file's content is, as a copy would hold it. */
 function knownOf(data: Buffer): Known {
   const hash = createHash("sha256").update(data);
   return {
@@ -261,8 +259,6 @@ export class StandbyStream {
     return this.host.now?.() ?? Date.now();
   }
 
-  // -- the named computers -----------------------------------------------
-
   private file(): string {
     return join(this.host.userData, ...STANDBYS_FILE.split("/"));
   }
@@ -296,7 +292,6 @@ export class StandbyStream {
     }
   }
 
-  /** The computers named to keep a copy. */
   named(): string[] {
     return this.read().standbys.map((each) => each.deviceId);
   }
@@ -567,13 +562,10 @@ export class StandbyStream {
         void this.tellHome(follower);
   }
 
-  // -- where each copy stands -------------------------------------------
-
   views(): StandbyView[] {
     return [...this.followers.values()].map((follower) => this.viewOf(follower));
   }
 
-  /** Where one computer's copy stands. */
   view(deviceId: string): StandbyView | undefined {
     const follower = this.followers.get(deviceId);
     return follower ? this.viewOf(follower) : undefined;
@@ -607,8 +599,6 @@ export class StandbyStream {
     this.checkSettled();
     if (!this.disposed) this.host.emit(this.views());
   }
-
-  // -- the stream ---------------------------------------------------------
 
   /** Begins watching the record and reading the logs, once any computer is named. */
   private activate(): void {
@@ -1030,8 +1020,6 @@ export class StandbyStream {
     this.tellEveryHome();
   }
 
-  // -- following each copy ---------------------------------------------
-
   private follow(deviceId: string, copyAt: number | null): void {
     if (this.followers.has(deviceId) || this.disposed) return;
     this.activate();
@@ -1162,7 +1150,6 @@ export class StandbyStream {
       }
       const oldest = (this.entries[0]?.seq ?? this.seq + 1) - 1;
       if (ack < oldest) {
-        // Further behind than the home keeps: a full copy again.
         follower.ack = null;
         await this.fullCopy(follower);
         continue;
@@ -1422,7 +1409,6 @@ export class StandbyStream {
     return sha256;
   }
 
-  /** A blob kept in a file, sent in pieces read from it. */
   private async sendFileBlob(
     deviceId: string,
     abs: string,

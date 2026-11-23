@@ -80,7 +80,6 @@ async function taskHandoverDir(app: LaunchedApp, title: string): Promise<string>
   );
 }
 
-/** Sends the turn and waits until the input took it. */
 async function send(page: Page, words: string): Promise<void> {
   const input = promptInput(page);
   await input.fill(words);
@@ -104,10 +103,8 @@ test("pictures pasted and dropped into a message reach the crewmate the message 
 
   const body = await servedBrief(launched, title);
   writeFileSync(testInfo.outputPath("spawned-brief.json"), body);
-  // Both pictures ride the crewmate's first request beside its brief.
   expect(body).toContain(PASTE_PICTURE_PNG_BASE64);
   expect(body).toContain(DROPPED_PNG.toString("base64"));
-  // The brief names each copy in this task's hand-over folder, with the same bytes.
   const copies = namedCopies(briefWords(body));
   expect(copies).toHaveLength(2);
   const handoverDir = await taskHandoverDir(launched, title);
@@ -126,7 +123,6 @@ test("a picture on a message that files a task reaches its crewmate after a rela
   await send(launched.page, `${FILE_TASK_PROMPT_MARKER} ${title}`);
   const key = await taskKey(launched.page, title);
 
-  // Quit and open the app again before the task starts.
   await launched.close();
   launched = await launchApp({
     scenarios: [fileTask],

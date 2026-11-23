@@ -21,7 +21,6 @@ const TEST_FILE = /(?:^|\s)((?:[\w.@-]+\/)*[\w.@-]+\.(?:test|spec)\.[cm]?[jt]sx?
 // Vitest's line naming the test file an unhandled error came from: such an
 // error fails the run even when every test passed, and prints no FAIL line.
 const UNHANDLED_IN = /^\s*This error originated in "((?:[\w.@-]+\/)*[\w.@-]+)" test file\./;
-// A job log's timestamp before each line, and a terminal's colors.
 const LOG_PREFIX = /^\d{4}-\d\d-\d\dT[\d:.]+Z /;
 // biome-ignore lint/suspicious/noControlCharactersInRegex: a terminal's color codes start with ESC
 const COLORS = /\u001b\[[0-9;]*m/g;

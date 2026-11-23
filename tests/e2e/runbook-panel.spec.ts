@@ -28,7 +28,6 @@ import { commandSearch, focusOn, pressKey, pressWindowKey, runFromSearch } from 
 
 const RUNBOOK = "reading-desk";
 const FOLDER = "reading";
-/** A runbook panel's id: its runbook's and its folder's. */
 const PANEL = `${RUNBOOK}-${FOLDER}`;
 const FIXTURE = join(process.cwd(), "tests", "fixtures", "panel-cards", "reading-list");
 
@@ -83,7 +82,6 @@ test("a runbook of your own shows its panel only while it is on", async ({}, tes
     await search.field.fill("reading");
     await expect(search.row(panelCommandId(PANEL, "open"))).toBeVisible();
     await page.keyboard.press("Escape");
-    // Its command puts the panel's card up on the stack.
     const card = shownPanelCard(page, PANEL, "reader");
     await runFromSearch(app, page, panelCommandId(PANEL, "open"));
     await expect(card).toBeVisible();
@@ -96,7 +94,6 @@ test("a runbook of your own shows its panel only while it is on", async ({}, tes
     await expect(control).toHaveAttribute("aria-checked", "false");
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
-    // The card it put up goes with it.
     await expect(card).toHaveCount(0);
     await pressWindowKey(app, "k", ["meta"]);
     await search.field.fill("reading");

@@ -43,7 +43,6 @@ export type PanelMountState = (typeof PANEL_MOUNT_STATES)[number];
 export const PANEL_MOUNT_KINDS = ["app", "personal", "installed"] as const;
 export type PanelMountKind = (typeof PANEL_MOUNT_KINDS)[number];
 
-/** The kind of a panel from the core's snapshot, by where it came from. */
 export function mountKindOf(source: PluginSource): PanelMountKind {
   return source === "installed" ? "installed" : "personal";
 }

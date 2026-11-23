@@ -371,7 +371,6 @@ export function playableDemoKind(src: string): CardDemoKind | undefined {
   return kind === "mp4" || kind === "gif" ? kind : undefined;
 }
 
-/** What a media URL a frame named is, when it is one of the host's own minted copies. */
 function servedMediaKind(src: string): CardMediaExtension | undefined {
   const prefix = `${APP_FRAME_SCHEME}://${CARD_MEDIA_HOST}/`;
   return src.startsWith(prefix)
@@ -406,7 +405,6 @@ export function soundSources(body: string): Set<string> {
   return found;
 }
 
-/** The kept clip file each sound a card body plays names (`soundSources`), each once. */
 export function cardSoundNames(body: string): string[] {
   const prefix = `${APP_FRAME_SCHEME}://${CARD_MEDIA_HOST}/`;
   return [...soundSources(body)].map((src) => src.slice(prefix.length));
@@ -517,7 +515,6 @@ export async function withDrawingFaces(
   return DRAWING_SOURCE_PREFIX + encodeURIComponent(embedded);
 }
 
-/** One host's links in a body turned into the files they stand for, each file listed once. */
 function linkedFiles(
   body: string,
   host: string,

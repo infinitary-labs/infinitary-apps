@@ -63,7 +63,6 @@ export type ReportIntakeHost = {
   pokeInbox(): void;
   /** When a crewmate's own client jobs began, while any runs. */
   clientJobStart(taskId: string): number | undefined;
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
   /** Whether a relay made now wakes the first mate at once (`CrewTurns.relayWakesNow`). */
   relayWakesNow(task: TaskRuntime): boolean;

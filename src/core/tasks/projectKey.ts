@@ -21,7 +21,6 @@ function baseKey(name: string): string {
     .filter(Boolean);
   if (tokens.length === 0) return "";
   if (tokens.length === 1) return (tokens[0] as string).slice(0, 4);
-  // Two letters of the first word, then one initial per following word.
   const first = (tokens[0] as string).slice(0, 2);
   const rest = tokens
     .slice(1)
@@ -76,7 +75,6 @@ export function projectKeyInUseWords(
   return `${key} is already the task key of ${project}${how}. Choose another.`;
 }
 
-/** A caller-supplied key, normalized and validated against the pattern. */
 export function normalizeProjectKey(key: string): string {
   const normalized = key.trim().toUpperCase();
   if (!PROJECT_KEY_PATTERN.test(normalized)) {

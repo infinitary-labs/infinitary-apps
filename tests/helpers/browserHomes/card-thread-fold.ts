@@ -2,10 +2,8 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The first mate's card the card-thread-fold test folds the thread of. */
 const CARD_ID = "thread-fold";
 
-/** What the card-thread-fold test's story reads back: the card's title. */
 type Input = { title: string };
 
 /** The card's thread, read when the card shows. */

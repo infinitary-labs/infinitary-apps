@@ -142,7 +142,6 @@ export class CodexAppServer {
     });
   }
 
-  /** Hears every notification Codex sends; answers a function that stops hearing. */
   onNotification(listener: (method: string, params: unknown) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

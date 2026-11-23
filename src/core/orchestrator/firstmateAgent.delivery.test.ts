@@ -33,7 +33,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: answer delivery (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**
@@ -358,7 +357,6 @@ describe("FirstmateAgent answer delivery", () => {
     await finish(f);
     expect(states(f)).toEqual(["covered"]);
     expect(noticeOf(f)).toBeUndefined();
-    // The other wake is served next, on its own.
     await drained(f.session, 3);
     expect(f.session.prompts[2]).toContain("a different thing happened");
     expect(f.session.prompts[2]).not.toContain(ANSWER_MISSING_OPENING);
@@ -536,7 +534,6 @@ describe("FirstmateAgent answer delivery", () => {
     expect(retries(f)).toEqual([]);
     expect(noticeOf(f)).toBeUndefined();
 
-    // Its crewmate's answering card is the answer the captain chooses on.
     const work = f.tasks.list().find((task) => task.title.startsWith("Find what is using"));
     await f.crewSpecs[0]?.callbacks?.onCard?.({
       title: "A file indexer holds most of the memory",
@@ -634,7 +631,6 @@ describe("FirstmateAgent answer delivery", () => {
     });
     expect(retries(f)).toHaveLength(1);
 
-    // Leave it ends the message: naming it again is refused as ended.
     f.supervisor.cardActions.act(notice, "leave-it");
     notifyProse(f.db, f.agent, "[fm-op] another report on PR 58", "agent");
     await drained(f.session, 4);
@@ -704,7 +700,6 @@ describe("FirstmateAgent answer delivery", () => {
       ?.run({ text: "PR 58 merged.", summary: "PR 58 merged." });
     expect(noticeOf(f)).toBeUndefined();
 
-    // A newer message about that work joins the message's chain.
     await f.agent.converse({ text: "and did its checks pass?", taskId: work?.id ?? "" });
     await vi.waitFor(() => expect(f.tasks.capture.listAsks()).toHaveLength(2));
     const newer = f.tasks.capture.listAsks()[1];
@@ -1111,7 +1106,6 @@ describe("FirstmateAgent answer delivery", () => {
     const shown = f.supervisor.cards.snapshot().find((card) => card.id === cardId);
     expect(shown).toBeDefined();
 
-    // The captain reads the card a while and then asks under it.
     vi.advanceTimersByTime(60_000);
     f.supervisor.cardActions.replyToCard(cardId, "where do I run the rebuild?");
     await drained(f.session, 1);
@@ -1127,7 +1121,6 @@ describe("FirstmateAgent answer delivery", () => {
     expect(answered?.content[0]?.text).toContain(cardId);
     await finish(f, "Answered on the card.");
     expect(states(f)).toEqual(["covered"]);
-    // The host kept its own card and wrote the answer into the thread.
     expect(f.supervisor.cards.snapshot().find((card) => card.id === cardId)?.body).toBe(
       shown?.body,
     );
@@ -1136,13 +1129,11 @@ describe("FirstmateAgent answer delivery", () => {
       text: "Run it on the computer that still has the old setup.",
     });
 
-    // Later the captain does the step and confirms it on the same card.
     vi.advanceTimersByTime(60_000);
     f.supervisor.cardActions.act(cardId, "confirm");
     await tick();
     const ask = f.tasks.capture.listAsks()[0];
     const chain = f.supervisor.askEnding.chain(ask?.id ?? "");
-    // The message ended on the card the first mate answered it under.
     expect(chain && f.supervisor.askEnding.state(chain)).toEqual({ kind: "answered", cardId });
   });
 
@@ -1164,7 +1155,6 @@ describe("FirstmateAgent answer delivery", () => {
       await finish(f, "Answered on a card.");
       const cardId =
         f.supervisor.cards.snapshot().find((shown) => shown.title === card.title)?.id ?? "";
-      // The captain reads it a while, then asks under it.
       vi.advanceTimersByTime(60_000);
       f.supervisor.cardActions.replyToCard(cardId, "is that a cosmetic or a legal problem?");
       await drained(f.session, 2);
@@ -1196,7 +1186,6 @@ describe("FirstmateAgent answer delivery", () => {
         `Card shown: ${card.title} (${cardId}). Your line is message ${lines[0]?.id}; it answers the captain's message ${asked} and ends that question.`,
       );
 
-      // A second line naming the answered message is a comment, and says who answered first.
       const again = await toolsOf(f.specs)
         .get("emit_card")
         ?.execute("c2", {

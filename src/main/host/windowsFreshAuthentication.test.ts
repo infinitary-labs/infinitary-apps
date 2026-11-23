@@ -12,7 +12,6 @@ import {
 // password when Hello is off". A dismissed Hello approves nothing and never
 // falls back to the password (docs/secrets.md, "Trusted approvals").
 
-/** Records which of Windows' dialogs a confirmation asked, answering as each case names. */
 function windows(answers: {
   availability: number | undefined;
   hello?: number | "unstarted";

@@ -8,7 +8,6 @@ import type { SidePanelContribution } from "./contributions";
 import { emitNamedCard, pushPanelAsk } from "./panelCards";
 import { railStore } from "./railStore";
 
-/** What the buttons are drawn from: the panel's id and its manifest's header and commands. */
 type HeaderButtonsPanel = Pick<SidePanelContribution, "id" | "header" | "commands">;
 
 /**
@@ -107,7 +106,6 @@ export function pressHeaderButton(
   pressPanelAsk(panelId, button.id, via);
 }
 
-/** Asks a panel by name, as its header button would: from the home screen, the panel opened first. */
 export function pressPanelAsk(panelId: string, ask: string, via: PanelAskVia): void {
   const s = useShellStore.getState();
   if (s.view !== "home") s.setView("home");

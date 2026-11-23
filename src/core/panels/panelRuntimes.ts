@@ -69,7 +69,6 @@ export type PanelRuntimeServices = {
   integrations?: PanelRuntimeIntegrations;
 };
 
-/** The words a call answers for a panel whose host serves it no integrations. */
 export const NO_PANEL_INTEGRATIONS =
   'Not run: this panel\'s manifest.json names no integration under "integrations".';
 
@@ -156,7 +155,6 @@ export class PanelRuntimes {
     this.clock = options.clock ?? realClock;
   }
 
-  /** Hears every running runtime the host stops; returns the unsubscribe. */
   onStop(listener: (runtime: PanelRuntime, stop: PanelStop) => void): () => void {
     this.stopListeners.add(listener);
     return () => {
@@ -164,12 +162,10 @@ export class PanelRuntimes {
     };
   }
 
-  /** Whether this app can run a panel's background work at all. */
   get available(): boolean {
     return this.options.spawner !== undefined;
   }
 
-  /** The stop holding this runtime, or null. */
   holding(identity: PanelRuntimeIdentity): PanelStop | null {
     return this.options.stops.holding(identity);
   }
@@ -475,7 +471,6 @@ class Runtime implements PanelRuntime {
     }
   }
 
-  /** Every call waiting on this runtime is refused, and the watch ends. */
   private end(error: Error): void {
     this.clock.clearInterval(this.watch);
     for (const waiting of this.waiting.values()) waiting.reject(error);

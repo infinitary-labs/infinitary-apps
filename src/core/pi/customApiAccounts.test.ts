@@ -857,7 +857,6 @@ it.each(["openai-completions", "openai-responses"] as const)(
           isError: false,
         }),
       );
-      // Every prompt reached the server and closed with its answer.
       for (let turn = 1; turn <= turns; turn++) {
         expect(
           api.requests.some((request) => JSON.stringify(request.body).includes(`Turn ${turn}:`)),

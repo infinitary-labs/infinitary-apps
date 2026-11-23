@@ -117,7 +117,6 @@ describe("files one task hands another", () => {
     for (const id of ["t-here", "t-there", "t-held"])
       expect(await keptHandoverFiles(crewmateHandoverDir(paths, id))).toHaveLength(1);
 
-    // The steer after the close delivers the kept file whole.
     const [listed] = await keptHandoverFiles(crewmateHandoverDir(paths, "t-here"));
     const into = join(scratchDir("infinitary-handover-in-"), "temp", "handover");
     const delivered = await deliverHandoverFile(listed?.path ?? "", into, listed?.file ?? "");

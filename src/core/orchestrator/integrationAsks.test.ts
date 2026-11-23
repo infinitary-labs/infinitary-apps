@@ -116,7 +116,6 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     );
     expect(wakes()[0]).toContain("1. Return the library books by Friday");
 
-    // The card is answered: a second click or a close runs nothing and wakes nobody.
     supervisor.cardActions.act(cardId, "once");
     supervisor.close(cardId);
     await tick();

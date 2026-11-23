@@ -334,7 +334,6 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
     expect(CARD_MECHANICS).toContain(
       "Reuse an open card's id to revise it in place when new information augments or overlaps it; a distinct finding is a new card",
     );
-    // No one-card-per-topic cap anywhere.
     expect(core).not.toMatch(/one card per/i);
   });
 });
@@ -362,7 +361,6 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.5 and v1.6, cards/tasks/agents P0 a
       "Green: the crewmate's merge card decides, never you; the app merges from it with autonomy on.",
     );
     expect(core).not.toContain('labeled "Merge PR"');
-    // No reserved id and no kind survive in the contract.
     expect(core).not.toMatch(/native action id/);
     expect(core).not.toMatch(/reserved/);
     expect(core).not.toMatch(/\bkind\b/);
@@ -409,7 +407,6 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
     expect(core).toContain("answered for an answer, finished for verified folder work");
     // What released needs is settle_task's own rule (INF-490; the ledger names it).
     expect(core).not.toContain("use released only with verified evidence");
-    // The `finish` mode and the `delivered` status are gone from the contract.
     expect(core).not.toMatch(/\bdelivered\b/);
     expect(core).not.toMatch(/\bfinish\b/);
   });

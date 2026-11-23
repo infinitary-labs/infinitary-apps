@@ -42,7 +42,6 @@ export type InPlaceWorkHost = {
   runtime(taskId: string): TaskRuntime | undefined;
   /** Steer a task as the host, answering no message or card. */
   steer(taskId: string, message: string): Promise<unknown>;
-  /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
   /** Start every queued task whose wait ended (`IdleLadder`'s ready sweep). */
   sweepGates(at: number): Promise<void>;
@@ -241,7 +240,6 @@ export class InPlaceWork {
     return { record, filed: true };
   }
 
-  /** A folder repair's brief, rendered from its facts and its project as they stand now. */
   folderRepairBrief(repo: Pick<RepoView, "name" | "path" | "origin">, facts: InPlaceFacts): string {
     // Rendered just before a start, so it names where that start opens (`inPlaceDir`).
     const workdir = existsSync(repo.path) ? undefined : nearestFolderAbove(repo.path);
@@ -413,7 +411,6 @@ export class InPlaceWork {
   }
 }
 
-/** The line a folder repair closes on when the folder is clean, on its default branch and at or past the merge. */
 export function folderUpToDateLine(branch: string, reach: string | undefined | null): string {
   return `The project's folder is up to date: clean, on ${branch} and at or past ${reach ? reach.slice(0, 7) : `origin's ${branch}`}.`;
 }

@@ -72,7 +72,6 @@ function page(title: string, did: string, extra: Partial<BrowserAnswer> = {}): B
   };
 }
 
-/** A stand-in for one task's browser: every call recorded, each answered as given. */
 function standIn(title: string): CrewmateBrowser & { calls: { op: string; input: unknown }[] } {
   const calls: { op: string; input: unknown }[] = [];
   const record =
@@ -228,7 +227,6 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
       expect(response).toContain("NO_CHANNEL");
     }
 
-    // A revoked task's key names nothing any more.
     channel.revoke("task-a");
     const revoked = await shell(granted, ["snapshot"]);
     expect(revoked.exitCode).toBe(1);
@@ -325,7 +323,6 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     expect(decode(click.stdout)).toMatchObject({ running: "click" });
     expect(release).toBeDefined();
 
-    // Still running: the next command is not run, and says so.
     const busy = await shell(granted, ["snapshot"], limit);
     expect(busy.exitCode).toBe(1);
     expect(decode(busy.stdout)).toMatchObject({ code: "BUSY" });
@@ -603,7 +600,6 @@ describe("the infinitary-integrations-axi command", () => {
     expect(decode(write.stdout)).toMatchObject({ code: "REFUSED" });
     expect(write.stdout).toContain("Kept as ask a1");
 
-    // A malformed input never reaches the integration.
     expect((await run(granted, ["call", "GitHub", "read", "{nope"])).exitCode).toBe(2);
     expect((await run(granted, ["call", "GitHub", "read", "[1]"])).exitCode).toBe(2);
     expect(integrations.calls).toEqual([
@@ -611,7 +607,6 @@ describe("the infinitary-integrations-axi command", () => {
       ["GitHub", "write", { method: "POST", path: "/x" }],
     ]);
 
-    // A task granted only a browser has no integrations command, and the other way round.
     const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
     expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
     expect((await shell(granted, ["snapshot"])).stdout).toContain("code: NO_TOOL");
@@ -696,7 +691,6 @@ describe("the infinitary-files-axi command", () => {
     expect(decode(refused.stdout)).toMatchObject({ code: "REFUSED" });
     expect(refused.stdout).toContain("never copies");
 
-    // A command without a computer, or with two paths, never reaches the home.
     expect((await run(granted, ["get", "~/Documents/clips.csv"])).exitCode).toBe(2);
     expect((await run(granted, ["get", "home:~/a", "home:~/b"])).exitCode).toBe(2);
     expect(files.calls).toEqual([
@@ -705,7 +699,6 @@ describe("the infinitary-files-axi command", () => {
       ["copy", "home:~/auth.json"],
     ]);
 
-    // A task granted only a browser has no files command.
     const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
     expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
   });
@@ -979,7 +972,6 @@ describe("the Secrets command's disposable operation proof", () => {
         secrets: [{ name: "Webhook secret" }, { replace: "stripe-old" }],
       },
     ]);
-    // No reason, a name beside a replacement, or a value in the list is refused before asking.
     for (const args of [
       ["ask", "--name", "Key", "--id", "a"],
       ["ask", "--name", "Key", "--replace", "stripe-old", "--reason", "r", "--id", "a"],
@@ -1053,7 +1045,6 @@ describe("the Secrets command's disposable operation proof", () => {
       bring: { bring: "vault", state: "waiting" },
       help: SECRET_BRING_WORDS.waiting,
     });
-    // A value in the shape, or a field outside it, is refused before anything is asked.
     const refused = await run([
       "bring",
       "--from",

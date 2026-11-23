@@ -63,7 +63,6 @@ export function lostComputer(
   return lost;
 }
 
-/** The status line of a start that went back in line, waiting for `who`. */
 export function lostStartLine(who: string, step: StartStep): string {
   return `returned to the queue - ${who} went out of reach ${lostStepWords(step)}; it starts again once ${who} is back`;
 }

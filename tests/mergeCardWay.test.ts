@@ -34,7 +34,6 @@ const OTHER_HEAD = sha("other head");
 const TITLE = "fix: the meter reads on time";
 const MERGE_ONLY: MergeWays = { squash: false, merge: true, rebase: false };
 
-/** Every merge request body the forge put on the wire, as it sent it. */
 function recorder() {
   const sent: unknown[] = [];
   const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {

@@ -85,7 +85,6 @@ describe("a Playwright run's evidence directory", () => {
 
   it("leaves everything outside the runs alone, whether or not another run is going", () => {
     const own = join(RUNS_DIR, `20261001T000000Z-${process.pid}`);
-    // Alone (a finished run and one whose pid was reused), and beside a live run.
     for (const others of [[`20260930T000000Z-${GONE}`, REUSED_RUN], [RUNNING]]) {
       const root = workingCopy(others, ["custom-api"]);
       tidyRunEvidence(root, own, started);
@@ -102,7 +101,6 @@ describe("a Playwright run's evidence directory", () => {
     expect(
       liveRuns(root, (pid) => (pid === RUNNER ? Date.parse("2026-09-30T12:00:03Z") : undefined)),
     ).toEqual([]);
-    // A working copy no run has started in has none.
     expect(liveRuns(scratchDir("infinitary-evidence-"), started)).toEqual([]);
   });
 });

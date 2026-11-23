@@ -38,7 +38,6 @@ export type DeviceUpdateNudgeFacts = {
   refusal?: readonly string[] | undefined;
 };
 
-/** A card id's part from a device's id: lowercase words joined by dashes. */
 function slug(id: string): string {
   return id
     .toLowerCase()
@@ -94,7 +93,6 @@ export function deviceUpdatesItself(
   return !installedThere(facts) && facts.other.updateBy !== "command";
 }
 
-/** A version in words: "alpha 0.4.0-alpha.70", "Infinitary 0.4.0". */
 function versionWords(app: string): string {
   return /-alpha\b/.test(app) ? `alpha ${app}` : `Infinitary ${app}`;
 }
@@ -103,7 +101,6 @@ export function deviceUpdateTitle(facts: DeviceUpdateNudgeFacts): string {
   return `Update Infinitary on ${deviceLabel(facts)}`;
 }
 
-/** The card's meta line: which computer it is about. */
 export function deviceUpdateMeta(facts: DeviceUpdateNudgeFacts): string {
   return deviceLabel(facts);
 }
@@ -116,7 +113,6 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-/** What the gap costs, and only while it costs something. */
 function cost(facts: DeviceUpdateNudgeFacts): string {
   return facts.other.takesWork
     ? "It still takes work. Updating keeps the two in step."
@@ -153,7 +149,6 @@ export function deviceUpdateBody(facts: DeviceUpdateNudgeFacts): string {
   return paragraphs.map((text) => `<p>${text}</p>`).join("\n");
 }
 
-/** Update it (or Make the command), opening Settings -> Devices, beside Not now. */
 export function deviceUpdateActions(facts: DeviceUpdateNudgeFacts): CardAction[] {
   const gap = deviceUpdateGap(facts);
   const hereAsUser = facts.onThisMac === true && facts.user !== undefined;

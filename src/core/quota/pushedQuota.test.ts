@@ -263,7 +263,6 @@ describe("extra usage a session pushed (INF-4104 piece 1)", () => {
     // A reason the client could not read is unknown, never off.
     expect(pushedCredits([refused("fetch_error")], NOW)?.credits).toEqual({ state: "unknown" });
     expect(pushedCredits([refused()], NOW)?.credits).toEqual({ state: "unknown" });
-    // A reading that said nothing about extra usage says nothing.
     expect(pushedCredits([{ windowId: "five_hour", status: "allowed", at: NOW }], NOW)).toBe(
       undefined,
     );

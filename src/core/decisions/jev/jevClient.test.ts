@@ -247,10 +247,6 @@ describe("JevDecisionModel: how it fails", () => {
   });
 });
 
-/**
- * A local stand-in for the vendor endpoint, reached through the real
- * transport: what it hears, and whether the connection was torn down.
- */
 async function stubVendor(respond: (response: ServerResponse) => void) {
   let arrived!: () => void;
   const requested = new Promise<void>((resolve) => {

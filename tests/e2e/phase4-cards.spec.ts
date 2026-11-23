@@ -23,16 +23,6 @@ import {
 } from "./scenarios/everyCardKind";
 import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
 
-/**
- * Phase 4 acceptance (docs/architecture.md §17): a crewmate's cards wear
- * the chrome their shape derives (a card with actions is a decision, one
- * without a note); a card with a small interactive preview body renders
- * coherently in both themes, cannot reach network or the parent DOM, and
- * its action buttons round-trip to the orchestrator. The preview used to be
- * its own `live-prototype` kind and is now a decision whose body is
- * interactive, so two cards in this stack share the decision's priority.
- */
-
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
@@ -121,7 +111,6 @@ test("an entity-escaped body is refused by name and the raw-tag retry renders as
   // (review F2).
   const overflow = await facts.strip.evaluate((strip) => {
     const doc = strip.ownerDocument;
-    // A copy of the host's own project fact beside it, its value made far too wide.
     const project = strip.querySelector('[data-fact="project"]') as HTMLElement;
     const cell = project.cloneNode(true) as HTMLElement;
     const value = cell.lastElementChild as HTMLElement;

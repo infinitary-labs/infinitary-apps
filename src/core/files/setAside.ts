@@ -22,10 +22,8 @@ import { HANDOVER_FILE_BYTES } from "../tasks/handoverFiles";
 /** A refusal in words that say what to do, never an error code. */
 export class FileRefusal extends Error {}
 
-/** A file as checked: the device and inode its path named. */
 export type FileIdentity = { dev: number; ino: number };
 
-/** One file to set aside. */
 export type SetAsideOrder = {
   /** The path as the crewmate named it, which a refusal's words name. */
   path: string;
@@ -47,7 +45,6 @@ export type SetAsideChildMessage =
   | { type: "refused"; words: string }
   | { type: "failed"; message: string };
 
-/** The SQLite file header, which says a file is a database. */
 const SQLITE_HEADER = Buffer.from("SQLite format 3\0", "binary");
 
 /** The files SQLite opens by name beside a database: its log, its shared memory and its journal. */
@@ -185,7 +182,6 @@ async function backUp(
   }
 }
 
-/** That none of the files SQLite opens beside a database is a link. */
 async function sidecarsPlain(path: string, file: string): Promise<void> {
   for (const suffix of DATABASE_SIDECARS) {
     const facts = await lstat(`${file}${suffix}`).catch(() => undefined);
@@ -196,7 +192,6 @@ async function sidecarsPlain(path: string, file: string): Promise<void> {
   }
 }
 
-/** Whether an open file begins with the SQLite header. */
 async function isDatabase(handle: FileHandle): Promise<boolean> {
   const head = Buffer.alloc(SQLITE_HEADER.length);
   const { bytesRead } = await handle.read(head, 0, head.length, 0);

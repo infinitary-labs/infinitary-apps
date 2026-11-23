@@ -92,7 +92,6 @@ async function launchWithCards(keys: PresetId, cards: readonly (typeof CARDS)[nu
   return launched;
 }
 
-/** The shown card holds focus whole, with the ring a key draws. */
 async function expectCardFocused(page: Page): Promise<void> {
   await expect
     .poll(() =>
@@ -106,7 +105,6 @@ async function expectCardFocused(page: Page): Promise<void> {
     .toBe(true);
 }
 
-/** Presses window keys until focus is in `region`, the way F6 walks the window's parts. */
 async function walkTo(app: ElectronApplication, page: Page, region: string): Promise<void> {
   for (let press = 0; press < 8 && (await focusedRegion(page)) !== region; press++) {
     const from = await focusedRegion(page);
@@ -186,7 +184,6 @@ test("Vim: paging, putting aside and answering chain from the shown card, with n
   }
 });
 
-/** Four decision cards whose bodies each hold a button of their own. */
 const FIRST_BUTTON_CARD = "Pick a berth";
 const BUTTON_CARDS = [FIRST_BUTTON_CARD, "Pick a pilot", "Pick a tug", "Pick a mooring"].map(
   (title, index) => ({
@@ -327,7 +324,6 @@ test("Legacy: the next card takes the keys; typing and a side panel keep their f
   }
 });
 
-/** Pages twice from the shown card with `next`, landing on each card it shows. */
 async function pageTwiceFromCard(
   preset: PresetId,
   next: (app: ElectronApplication) => Promise<void>,

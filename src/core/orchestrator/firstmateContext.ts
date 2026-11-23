@@ -87,7 +87,6 @@ const SEQUENCES_FALLBACK_WORDS: Record<SequencesFallback, string> = {
   oversized: "the file is larger than 16 KB",
 };
 
-/** The context segment's body: the plain marker, then one TOON-encoded value. */
 function contextText(context: Record<string, unknown>): string {
   return `[fm-op] context (not the user)\n${encode(context)}`;
 }
@@ -290,7 +289,6 @@ export class FirstmateContext {
     ];
   }
 
-  /** One card the captain resolved: his choice or close, and the answers it carried. */
   private cardResolutionLines(
     { card: stored, offer, action, resolvedAt, answers, through }: CardResolution,
     now: number,
@@ -316,7 +314,6 @@ export class FirstmateContext {
     ];
   }
 
-  /** One click of the captain's on a task card's own buttons, in that button's words. */
   private taskCardClickLine(
     { taskId, at, op, panel, through }: TaskCardClick,
     now: number,
@@ -402,7 +399,7 @@ export class FirstmateContext {
       const key = servedModelKey(model);
       if (!availableKeys.has(key)) continue;
       const memberSlots = this.options.slotsOf?.({ provider: piProvider, id: model.id }) ?? [];
-      if (memberSlots.length === 0) continue; // off: not placed in any bucket
+      if (memberSlots.length === 0) continue;
       const providerName = catalogEntry(piProvider)?.name ?? piProvider;
       for (const slot of memberSlots) {
         const rows = byBucket.get(slot) ?? [];
@@ -1086,7 +1083,6 @@ function scheduleTextOf(record: ScheduleRecord): string {
     : scheduleText(record.spec);
 }
 
-/** "just now", "4m ago", "2h ago": an age a context line can carry. */
 function ageText(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 1) return "just now";

@@ -137,7 +137,6 @@ test("a dropped edge still prevents starting without naming closed work as a liv
   });
   await expect(recordBarButton(page, "next")).toHaveAccessibleName(RECORD_NEXT_LABELS.start);
   await expect(recordBarButton(page, "next")).toBeDisabled();
-  // The body's attention box says why it cannot start yet.
   await expect(recordCard(page).locator("[data-record-attention]")).toBeVisible();
   // INF-1605 / INF-2363: dropped prerequisites still block Start and retain
   // their dates. The record owns structured waits; queueWait is the list's

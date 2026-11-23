@@ -44,7 +44,6 @@ test.afterEach(endCommands);
 /** The card the command's record holds before it starts, which the window beside it shows. */
 const RUN_CARD_TITLE = "A card the command's first mate shows";
 
-/** A data folder holding the command's card, with the mock provider's models. */
 function seededDataDir(provider: MockProviderServer): string {
   const userDataDir = scratchDir("infinitary-run-window-");
   seedMockModelCatalog(userDataDir, mockModelsJson(provider.port));
@@ -74,10 +73,8 @@ function startEntryInPlace(): string {
   return entry;
 }
 
-/** The notice over the whole window once its command no longer runs. */
 const noticeOver = (page: Page) => page.locator("[data-command-stopped]");
 
-/** The notice shows this state, in its own words, and offers Start it here only once it is stopped. */
 async function expectNotice(page: Page, notice: CommandNotice): Promise<void> {
   const over = noticeOver(page);
   await expect(over).toHaveAttribute("data-command-stopped", notice.state, { timeout: 60_000 });
@@ -91,7 +88,6 @@ async function expectNotice(page: Page, notice: CommandNotice): Promise<void> {
   );
 }
 
-/** Resolves once the window's own program ends. */
 const ended = (opened: LaunchedApp) =>
   new Promise<void>((resolve) => opened.app.process().once("exit", () => resolve()));
 
@@ -164,7 +160,6 @@ test("Infinitary's window opened while a command runs joins it, and offers Start
         command: stopped,
       });
 
-      // By keys: focus starts on Quit, Escape closes nothing, and Tab reaches Start it here.
       const quit = noticeOver(page).getByRole("button", { name: COMMAND_NOTICE_WORDS.quit });
       const startHere = noticeOver(page).getByRole("button", {
         name: COMMAND_NOTICE_WORDS.startHere,

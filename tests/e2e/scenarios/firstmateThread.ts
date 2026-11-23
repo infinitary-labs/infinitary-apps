@@ -21,7 +21,6 @@ export const FM_THREAD_CARD_REVISED_TITLE = "Lead with the caption, not the chip
 export const FM_THREAD_REVISE_ANSWER = "Good catch; the card now leads with the caption.";
 export const FM_THREAD_PROSE_ANSWER = "The chips stay; the caption is the first thing you read.";
 
-/** The first mate's card as it first shows. */
 const ORIGINAL_CARD = {
   title: FM_THREAD_CARD_TITLE,
   body: '<p>Lead with the caption, not the chips.</p><p>The chips are still there; they just are not the first thing you read.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
@@ -31,7 +30,6 @@ const ORIGINAL_CARD = {
   ],
 };
 
-/** The card after the captain's words changed what it says. */
 const REVISED_CARD = {
   title: FM_THREAD_CARD_REVISED_TITLE,
   body: '<p>Lead with the caption, not the chips.</p><p>The chips stay underneath once the caption has said what this is.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',

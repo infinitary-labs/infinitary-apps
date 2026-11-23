@@ -44,7 +44,6 @@ function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", env, stdio: "pipe" }).trim();
 }
 
-/** The repository variables a `git bisect run` step in `linked` is given. */
 function bisectStepVariables(linked: string): Record<string, string> {
   const dump = join(scratchDir("infinitary-bisect-step-"), "env");
   git(linked, "bisect", "start", "HEAD", "HEAD~2");
@@ -63,7 +62,6 @@ function bisectStepVariables(linked: string): Record<string, string> {
   return variables;
 }
 
-/** What the scratch project holds: every ref, the linked copy's state and the shared settings. */
 function projectState(project: string, linked: string) {
   return {
     refs: git(project, "for-each-ref", "--format=%(refname) %(objectname)"),

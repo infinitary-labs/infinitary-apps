@@ -85,7 +85,6 @@ export function homeMoveStaging(userData: string): string {
   return join(userData, HOME_MOVING);
 }
 
-/** The old home's side of moving the first mate, over the core's own services. */
 export function outgoingHomeMove(
   services: CoreServices,
   host: HostCapabilities,

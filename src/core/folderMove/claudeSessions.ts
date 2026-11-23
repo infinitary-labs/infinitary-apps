@@ -82,7 +82,6 @@ export async function mapClaudeSessions(input: {
   return copied;
 }
 
-/** Copies a session folder under a new name, keeping every file already there. */
 async function copyInto(sourceDir: string, targetDir: string, copy: CopyOptions): Promise<void> {
   if (!existsSync(targetDir)) {
     await copyEntry(sourceDir, targetDir, copy);

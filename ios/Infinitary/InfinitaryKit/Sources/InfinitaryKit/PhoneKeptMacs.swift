@@ -16,7 +16,6 @@ public struct PhoneKeptMacs: Equatable, Sendable {
         self.others = others.filter { seen.insert($0.pin).inserted }
     }
 
-    /// Every kept computer, the shown one first.
     public var all: [JoinedMac] { (shown.map { [$0] } ?? []) + others }
 
     /// A computer the phone joined: it shows, the one shown before stays among the others, and a computer joined
@@ -28,7 +27,6 @@ public struct PhoneKeptMacs: Equatable, Sendable {
         if let before, before.pin != mac.pin { others.insert(before, at: 0) }
     }
 
-    /// Shows a kept computer; false when the phone keeps none with that pin.
     @discardableResult public mutating func show(_ pin: String) -> Bool {
         if shown?.pin == pin { return true }
         guard let index = others.firstIndex(where: { $0.pin == pin }) else { return false }
@@ -62,7 +60,6 @@ public struct PhoneKeptMacs: Equatable, Sendable {
 /// first unlock and left out of backups, as the one record was.
 public struct PhoneKeptMacsFiles: Sendable {
     public let url: URL
-    /// The one computer a build before this one saved.
     public let legacyURL: URL
 
     /// Where a save writes the new list before it replaces the old one: a folder left out of backups.
@@ -79,7 +76,6 @@ public struct PhoneKeptMacsFiles: Sendable {
         var others: [JoinedMac]
     }
 
-    /// The kept computers, or none before the first join.
     public func read() throws -> PhoneKeptMacs {
         if FileManager.default.fileExists(atPath: url.path) {
             let record = try JSONDecoder().decode(Record.self, from: Data(contentsOf: url))

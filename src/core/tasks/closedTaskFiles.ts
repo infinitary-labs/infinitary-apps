@@ -17,7 +17,6 @@ import { TaskService } from "./taskService";
  * keeps for itself stay.
  */
 
-/** How long a closed task's leftover files stay after its close. */
 export const CLOSED_TASK_FILES_KEPT_MS = 7 * 24 * 60 * 60 * 1000;
 
 type TasksReader = Pick<
@@ -48,7 +47,6 @@ export type ClosedTaskFilesOptions = {
   };
 };
 
-/** Whether a closed task's leftover files are due to go now. */
 function closedTaskFilesDue(record: TaskRetentionFields, held: Set<string>, now: number): boolean {
   return (
     TaskService.isClosed(record) &&

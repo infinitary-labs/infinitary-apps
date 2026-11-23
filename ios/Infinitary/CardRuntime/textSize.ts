@@ -12,12 +12,10 @@ import typographyCss from "../../../src/renderer/src/design/tokens/typography.cs
 /** The custom property the factor sits in: the rule's own value at mount, then the frame's `text-scale` message. */
 export const TEXT_SCALE_PROPERTY = "--inf-text-scale";
 
-/** Each `--text-*` size token the Mac's typography sets, in pixels, read from its own file. */
 export function typeSizes(css: string = typographyCss): [name: string, px: number][] {
   return [...css.matchAll(/(--text-[a-z]+)\s*:\s*([\d.]+)px/g)].map((match) => [String(match[1]), Number(match[2])]);
 }
 
-/** A factor the page may draw at: a positive finite number, or the Mac's own size. */
 export function textScale(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 1;
 }

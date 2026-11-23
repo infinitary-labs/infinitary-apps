@@ -194,7 +194,6 @@ test("a put-in the project's host refuses reads plainly in the feed, and the raw
   const launched = await launchApp({ userDataDir, env: github.env });
   try {
     const { page } = launched;
-    // GitHub stops accepting the app's sign-in before the captain's click.
     github.rejectSignIn();
     await page.getByRole("button", { name: "Merge the pull request", exact: true }).click();
     // One click deeper, the record keeps exactly what the host said.

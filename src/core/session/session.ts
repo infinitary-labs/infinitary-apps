@@ -222,7 +222,6 @@ export type SessionSpec = {
   bounds?: SessionBounds;
   /** App-owned automatic compaction ceiling; smaller model budgets still win. */
   compaction?: { maxContextTokens: number };
-  /** What the role needs from the backend's control plane (`admits`). */
   needs?: Partial<Pick<ControlProfile, "steer">>;
   /**
    * What the session's shell carries beyond the host's environment: a
@@ -385,11 +384,9 @@ export type ModelSession = {
   closed(): Promise<void>;
 };
 
-/** A tool call a safe stop waits on: the call's own id and the tool's name. */
 export type RunningCall = { callId: string; toolName: string };
 
 export type SafeStopOptions = {
-  /** Aborted: the stop is withdrawn while it still waits. */
   signal?: AbortSignal;
   /** Each change in the calls the stop still waits on; `[]` once none runs. */
   waiting?: (calls: readonly RunningCall[]) => void;

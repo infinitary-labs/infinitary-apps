@@ -407,7 +407,6 @@ export class WorkflowEvidenceService {
   }
 }
 
-/** The paths a selection names, each a path inside the archive. */
 function selection(files: unknown): string[] {
   if (
     !Array.isArray(files) ||
@@ -462,7 +461,6 @@ function formatListing(
   ].join("\n");
 }
 
-/** The run's name, state, version, link and attempt, then one line per job. */
 function formatShortRunRead(run: WorkflowRun, list: WorkflowJobList): string {
   const header = [
     run.name,

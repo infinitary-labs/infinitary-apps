@@ -134,7 +134,6 @@ export type TimelineRecord =
   | {
       source: "task-event";
       event: TaskEvent;
-      /** A report, as its typed entry. */
       report?: ReportEntry;
       /** A brief receipt, read back whole as it was served. */
       brief?: string;
@@ -845,8 +844,6 @@ function parseCursor(cursor: string): { cut: TimelineCut; after: SortKey } {
     };
     if (parsed.v === 1 && parsed.cut && parsed.after)
       return { cut: parsed.cut, after: parsed.after };
-  } catch {
-    // Falls through to the refusal below.
-  }
+  } catch {}
   throw new Error("That timeline cursor is not one this reader gave.");
 }

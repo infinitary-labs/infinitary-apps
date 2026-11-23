@@ -150,7 +150,6 @@ describe("ChangeChecks", () => {
     };
     await service.checkTool.checkForCrew(task.id);
     expect(service.checks.reading(task.id)?.overall).toBe("pending");
-    // Another version is refused, and nothing is stored.
     const stale = await service.checkTool.checkForCrew(task.id, {
       absentChecks: { ...absence, headSha: "another-version" },
     });
@@ -158,14 +157,12 @@ describe("ChangeChecks", () => {
     expect(stale).toContain(headSha);
     expect(tasks.get(task.id)?.delivery?.mergeReviews ?? []).toEqual([]);
     expect(service.checks.reading(task.id)?.overall).toBe("pending");
-    // Beside another declaration it is refused too, never half-read.
     expect(
       await service.checkTool.checkForCrew(task.id, {
         absentChecks: absence,
         diagnosis: { headSha, check: "x", classification: "unknown", evidence: "none" },
       }),
     ).toContain("send absentChecks on its own");
-    // The declaration for this version registers on the task's own pull request.
     const stored = await service.checkTool.checkForCrew(task.id, { absentChecks: absence });
     expect(stored).toContain("Absence evidence stored for this version");
     expect(stored).not.toContain("refused");
@@ -479,7 +476,6 @@ describe("ChangeChecks", () => {
   });
 });
 
-// Legacy publication idempotence is independent of the retired repair-count tests.
 it("does not open a change again when an older task recorded its number before its label", async () => {
   const { tasks, repos, service, forge } = setup();
   await insertDirectPrTask(tasks, repos);
@@ -607,7 +603,6 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
       ci: "red",
       ciFinishedAt: at("03:33:21"),
     });
-    // A new version whose checks have not started yet has no time at all.
     forge.change = { ...(forge.change as ForgeChange), headSha: "feed0002" };
     forge.states = ["pending"];
     forge.times = [];
@@ -1147,7 +1142,6 @@ ${said}`);
           .timeline("ab12cd34")
           .filter((event) => event.kind === "ci")
           .map((event) => event.text);
-      // An hour of quiet refreshes, then the crewmate's own reading: nothing changed.
       for (let read = 0; read < 12; read++) {
         clock += 5 * 60_000;
         await service.checks.readWatched("ab12cd34");
@@ -1381,7 +1375,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
   const RELEASE_BRANCH = "release-please--branches--main";
   const R1 = "1".repeat(40);
   const R2 = "2".repeat(40);
-  /** The fake forge with a release pull request on another branch, read by its branch and by its number. */
   class SelectingForge extends FakeForge {
     constructor() {
       super();
@@ -1446,7 +1439,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
       checks: { headSha: R1 },
       checkTarget: { number: 94, headSha: R1 },
     });
-    // The release pull request moves on; the next reading follows it under its number.
     forge.release = { ...forge.release, headSha: R2 };
     await service.checkTool.checkForCrew("ab12cd34");
     expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
@@ -1468,7 +1460,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     expect(own?.ci).toBeUndefined();
     expect(own?.ciAt).toBeUndefined();
     expect(heads()).toEqual(["feedbeef"]);
-    // The own reading follows at the own head.
     await service.checkTool.checkForCrew("ab12cd34");
     expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
       prNumber: 23,
@@ -1578,7 +1569,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     ).toBe(replacement);
   });
 
-  /** The change id a check_change answer reports on its facts line. */
   const reportedChange = (answer: string): string | null => {
     const line = answer.split("\n").find((item) => item.startsWith("facts: "));
     if (!line) throw new Error(`No facts line in: ${answer}`);
@@ -1606,7 +1596,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     expect(release).toBeDefined();
     expect(read).toBe(release?.id);
     expect(read).not.toBe(own);
-    // The reported id passed back reads the release pull request, not the own one.
     expect(
       reportedChange(await service.checkTool.checkForCrew("ab12cd34", { change: read ?? "" })),
     ).toBe(release?.id);
@@ -1618,7 +1607,6 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     // The capped list no longer keeps the release's review; its change stays on the record.
     seedDelivery(tasks, "ab12cd34", { mergeReviews: [] });
     expect(tasks.changesFor("ab12cd34").some((change) => change.id === release?.id)).toBe(true);
-    // A judgment sent beside it is refused until it is read again, recording nothing.
     expect(
       await service.checkTool.checkForCrew("ab12cd34", {
         change: release?.id,
@@ -1776,7 +1764,6 @@ describe('a project with no checks (docs/forge.md, "A project with no checks")',
     await service.checkTool.checkForCrew(task.id);
     expect(service.checks.reading(task.id)?.overall).toBe("green");
     expect(tasks.get(task.id)?.delivery?.ciWatch).toBeUndefined();
-    // A pull request it reviews in the project reads the same way.
     const review = await service.checkTool.checkForCrew(task.id, { pull: 23 });
     expect(review).toContain(PROJECT_NO_CHECKS_WORDS);
     expect(review).not.toContain("An empty hosted reading alone does not establish");

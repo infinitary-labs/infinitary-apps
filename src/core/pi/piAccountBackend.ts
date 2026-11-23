@@ -303,7 +303,6 @@ export class PiAccountBackend implements AccountBackend {
     }
   }
 
-  /** In-flight login or runtime-creation work has fully settled. */
   async settled(accountId: string): Promise<void> {
     await this.pendingLogins.get(accountId);
     await this.runtimes.get(accountId)?.then(

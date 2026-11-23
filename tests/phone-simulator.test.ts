@@ -254,7 +254,6 @@ describe("the gate's wait for a simulator to boot", () => {
       () => undefined,
       (error: Error) => error.message,
     );
-    // The gate stopped the boot it no longer waits for.
     expect(stops.map((stop) => stop.aborted)).toEqual([true]);
     const lastStep = printed
       .slice(printed.findLastIndex((line) => / Status=/.test(line)) + 1)

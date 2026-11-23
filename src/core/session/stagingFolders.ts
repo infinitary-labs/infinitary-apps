@@ -22,7 +22,6 @@ export const SHARED_STAGING: readonly string[] = [
 /** The staging folders an open session of this process holds, by path. */
 const held = new Set<string>();
 
-/** A session's own staging folder: its path, and the call that lets it go. */
 export type StagingFolder = { dir: string; release: () => void };
 
 /**

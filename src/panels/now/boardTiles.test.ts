@@ -355,7 +355,6 @@ describe("a page of a lane", () => {
       ["FI3-4", 0, "part of FI3-2"],
     ]);
     expect(read(2)).toEqual([["FI3-5", 0, "part of FI3-4"]]);
-    // Every task once across the pages.
     const all = [0, 1, 2].flatMap((page) => shownKeys(boardPageOf(tiles, page, 2).tiles));
     expect(all).toEqual(["FI3-1", "FI3-2", "FI3-3", "FI3-4", "FI3-5"]);
     // On one page together, the child nests under its parent as before.

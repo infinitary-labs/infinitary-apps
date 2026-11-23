@@ -19,7 +19,6 @@ test("the layout invariant accepts any clear side and refuses overlap, escape an
     ...clear,
     // Over its control.
     { left: 200, top: 200 },
-    // Past the window's left edge.
     { left: -20, top: 200 },
     // Clear of where its control was, and the control gone.
     { left: 100, top: 200, controlRemoved: true },

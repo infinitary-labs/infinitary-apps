@@ -52,7 +52,6 @@ export type PlacedSessionLink = {
   readonly callbacks: CrewmateToolDelegate | undefined;
   /** Asks the computer one order; refused with `DeviceOutOfReachError` while it is out of reach. */
   order<C extends WorkOrderChannel>(channel: C, args: unknown): Promise<WorkOrderResponse<C>>;
-  /** The computer is in reach now. */
   inReach(): boolean;
   /** Brings the record's copy home up to the computer's. */
   copy(): Promise<void>;
@@ -60,7 +59,6 @@ export type PlacedSessionLink = {
   interrupted(retry?: boolean): string;
   /** What a prompt's turn whose end never arrived failed with, in the person's words. */
   unheard(): string;
-  /** The session let go here. */
   released(session: PlacedSession): void;
 };
 
@@ -538,7 +536,6 @@ export function working(entry: PlacedRosterTask): boolean {
   return entry.running !== undefined || entry.state?.streaming === true;
 }
 
-/** An event that carries a typed cut-off its turn met there. */
 export function metCutOff(event: PlacedEvent): boolean {
   return (
     (event.type === "turn_failed" || event.type === "continuation_ended") &&

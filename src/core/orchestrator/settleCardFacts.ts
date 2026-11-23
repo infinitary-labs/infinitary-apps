@@ -75,7 +75,6 @@ export type SettleFactsReading = {
   othersOpen: () => boolean;
   /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */
   mergeLabel?: (card: Card) => string | undefined;
-  /** Whether a settle card offers Merge anyway beside its merge now. */
   mergeAnyway?: (card: Card) => boolean;
   /**
    * Why a merge card no longer shows its task's current change
@@ -139,7 +138,6 @@ export function heldLine(why: "pushed" | "other" | "earlier", merges: Card["acti
  */
 const REVIEW_QUESTIONS_LINE = /<div class="inf-panel" data-merge-waits[^>]*>[\s\S]*?<\/ul><\/div>/;
 
-/** The merge card's line naming the review's open questions, or none. */
 function reviewQuestionsLine(titles: readonly string[]): string {
   if (titles.length === 0) return "";
   const items = titles.map((title) => `<li>${escapeCardText(title)}</li>`).join("");
@@ -227,7 +225,6 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
       id: MERGE_ANYWAY_ACTION,
       label: MERGE_ANYWAY_WORDS,
       variant: "secondary",
-      // The same merge as the one it stands beside, with what follows it.
       effect: (beside && mergeEffectOf(beside)) ?? { kind: "merge", after: "close" },
       passes: "checks",
     };
@@ -260,7 +257,6 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
 export function emittedSettleFacts(
   input: EmittedCardInput,
   read: Pick<SettleFactsReading, "facts" | "othersOpen"> & {
-    /** What the crew filed under the task's name. */
     followups: () => string | undefined;
   },
 ): EmittedCardInput {
@@ -310,9 +306,7 @@ const statusDot = factDotSvg;
 /** What the fact strip reads of the supervisor beyond its options. */
 export type SettleFactsHost = {
   now(): number;
-  /** How the task's change is delivered now. */
   taskDelivery(taskId: string): RepoDelivery | undefined;
-  /** Whether a review of the task's change is open. */
   reviewOpen(taskId: string): boolean;
 };
 
@@ -720,7 +714,6 @@ function watchedRuns(
   );
 }
 
-/** Words linked to a run's page where the host gave an https one. */
 function runLink(url: string, words: string): string {
   return /^https:\/\//.test(url) ? `<a href="${escapeCardText(url)}">${words}</a>` : words;
 }

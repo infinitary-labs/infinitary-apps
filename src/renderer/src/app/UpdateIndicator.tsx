@@ -132,7 +132,6 @@ export function UpdateIndicator() {
   );
 }
 
-/** What the panel's step reads when nothing was pressed in this window. */
 const NOTHING_PRESSED: Omit<UpdateStepPresses, "now"> = {
   checking: false,
   busy: false,

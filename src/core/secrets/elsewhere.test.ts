@@ -160,7 +160,6 @@ describe("Secrets used from a computer that runs work", () => {
       expect(
         await h.settings.take({ task: TASK, computer: BUILD_MAC }, asked.request, "take-again"),
       ).toEqual({ state: "completed" });
-      // Another computer or task cannot read this use at all.
       expect(
         await h.settings.take({ task: TASK, computer: OTHER_MAC }, asked.request, "take-other"),
       ).toEqual({ state: "unavailable" });
@@ -192,13 +191,11 @@ describe("Secrets used from a computer that runs work", () => {
       expect(await build.check({ cwd, argv, env })).toMatchObject({ decision: "allow" });
       expect(await studio.check({ cwd, argv, env })).toMatchObject({ decision: "ask" });
 
-      // On the computer it was saved for, the next use starts with no card.
       const cardsBefore = h.cards.length;
       const again = await build.inject(run.use("deploy-again"));
       expect(again.state).not.toBe("waiting");
       await vi.waitFor(() => expect(h.ended).toHaveLength(2));
       expect(h.cards).toHaveLength(cardsBefore);
-      // On the other one it waits for its own answer.
       expect((await studio.inject(run.use("deploy-elsewhere"))).state).toBe("waiting");
       expect(await run.lines()).toEqual([TOKEN, TOKEN]);
     },

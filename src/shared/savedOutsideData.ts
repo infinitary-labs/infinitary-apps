@@ -45,15 +45,12 @@ export function outsideDataDeletedNote(what: string): string {
   return `[${what} deleted]`;
 }
 
-/** A kept kind as a person reads of it: its days and its name. */
 type KeptWords = Omit<KeptOutsideData, "label">;
 
-/** Every kept kind's name, as one phrase. */
 function whatOf(kept: readonly KeptWords[]): string {
   return kept.map((entry) => entry.what).join(" and ");
 }
 
-/** How many conversations, in words. */
 function conversationCount(count: number): string {
   return count === 1 ? "1 conversation" : `${count} conversations`;
 }

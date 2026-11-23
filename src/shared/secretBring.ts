@@ -18,7 +18,6 @@ export const secretBringRowSchema = z.strictObject({
   place: z.string().optional(),
   /** A secret Secrets already keeps under that name and place: it arrives unticked. */
   replaces: z.strictObject({ ref: z.string(), version: z.number().int().positive() }).optional(),
-  /** Whether the row arrives ticked. */
   ticked: z.boolean(),
   /** Why the row cannot be kept, read from the source: it arrives unticked and cannot be ticked. */
   cannot: z.enum(["empty", "too-large", "not-text"]).optional(),
@@ -86,7 +85,6 @@ export const SECRET_BRING_ELSEWHERE_HIDDEN =
 export const SECRET_BRING_ELSEWHERE_SHOWN =
   '<p class="secret-bring-fine" data-secret-bring-elsewhere>';
 
-/** The bring card's own words. */
 export const SECRET_BRING_CARD_WORDS = {
   /** Its title names how many secrets and the tool, in the asker's word. */
   title: (count: number | null, tool: string) =>

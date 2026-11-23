@@ -23,7 +23,6 @@ import * as m from "@shared/i18n/messages.generated";
 /** The two apps by the names a person knows them: `from` Firstmate 3000, `to` Infinitary. */
 export type HandOverNames = { from: string; to: string };
 
-/** How long a move under way has taken: in all, and in its current step. */
 export type MoveClock = { elapsedMs: number; stepElapsedMs: number };
 
 export type HandOverView =
@@ -44,7 +43,6 @@ const ACTIONS: readonly HandOverAction[] = ["bring", "keep", "later", "again", "
 /** Where every button's form goes: a name nothing answers, read and stopped by the window. */
 export const HAND_OVER_ADDRESS = "https://hand-over.invalid/";
 
-/** The action a navigation to `url` asks for, or undefined for anything else. */
 export function actionOf(url: string): HandOverAction | undefined {
   let parsed: URL;
   try {
@@ -68,7 +66,6 @@ export function sizeOf(bytes: number): string {
   return `${(bytes / 1e9).toFixed(1)} GB`;
 }
 
-/** The move's four steps, in order, as the window names them. */
 const STEPS: readonly { phase: MovePhase; words: string }[] = [
   { phase: "checking", words: "Counting" },
   { phase: "copying", words: "Copying" },
@@ -81,7 +78,6 @@ export function countOf(count: number): string {
   return formatNumber(Math.round(count));
 }
 
-/** A length of time as the window says it: 45 s, 1 min 05 s. */
 export function durationOf(ms: number): string {
   const seconds = Math.max(0, Math.round(ms / 1000));
   if (seconds < 60) return `${seconds} s`;
@@ -108,7 +104,6 @@ export function fillOf(progress: MoveProgress): number {
   return Math.min(1, Math.max(0, progress.done / progress.total));
 }
 
-/** The words for a unit being copied: its kind and its place among its kind, with the task's short name. */
 export function itemWords(item: MoveItem): string {
   const mono = (name: string | undefined) =>
     name ? ` <span class="mono">${escapeHtml(name)}</span>` : "";
@@ -137,7 +132,6 @@ function stepNote(progress: MoveProgress, step: MovePhase): string {
   return `, step ${index + 1} of ${STEPS.length}`;
 }
 
-/** Why the move takes as long as it does, once it knows what it carries. */
 function whyWords(progress: MoveProgress): string {
   const counted = progress.counted;
   if (!counted || counted.files === 0) return "";
@@ -269,7 +263,6 @@ function refusalWords(
   }
 }
 
-/** The page body for a view: the parts a person reads, and the buttons. */
 export function handOverBody(view: HandOverView, names: HandOverNames): string {
   switch (view.kind) {
     case "working":

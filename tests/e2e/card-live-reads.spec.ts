@@ -30,7 +30,6 @@ import { cardReply, expectCardSeen, expectEndedCard, showCard } from "./stack";
 
 let launched: LaunchedApp;
 
-/** The lines the live card's script fills, read from its frame. */
 async function liveLines(page: Page) {
   const body = cardBody(page, LIVE_READS_CARD_TITLE);
   const line = (name: string) => body.locator(`[data-${name}]`).textContent();
@@ -44,7 +43,6 @@ async function liveLines(page: Page) {
   };
 }
 
-/** How many tasks the window's task board holds. */
 async function boardTasks(page: Page): Promise<number> {
   return (await page.evaluate(() => window.infinitary.tasks.board())).tasks.length;
 }

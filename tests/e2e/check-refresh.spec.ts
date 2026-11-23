@@ -150,7 +150,6 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
         )
         .toBe(true);
 
-      // GitHub's checks turn red on the same pull request.
       github.setChecks(
         empty
           ? []

@@ -12,7 +12,6 @@ import type { BlockKind } from "./destinations";
 /** Page errors and dialogs one answer lists before it counts the rest. */
 const NOTICES_SHOWN = 8;
 const NOTICE_MAX = 300;
-/** Notices kept between answers; older ones only count. */
 const NOTICES_KEPT = 50;
 
 /** How a crewmate asks for a private site, which only the captain's click allows. */
@@ -112,7 +111,6 @@ export function blockedPageWords(block: {
   }
 }
 
-/** What the browser refused of a site on its own, as the crewmate reads it. */
 export function refusalWords(refusal: HostBrowserRefusal): string {
   const site = siteOf(refusal.url);
   switch (refusal.kind) {
@@ -164,7 +162,6 @@ function listed(addresses: readonly string[]): string {
     : (shown[0] ?? "");
 }
 
-/** The non-public answers by kind, each as "addresses, what they are", and the sentences after. */
 function nonPublic(answers: readonly GuardAnswer[]): { named: string[]; after: string[] } {
   const named: string[] = [];
   const after: string[] = [];
@@ -190,7 +187,6 @@ export function guardRefusalLead(site: string, refusal: GuardRefusal): string | 
     (refusal.listed === true && answer.kind === "private" && !neverReachable(answer.address));
   const skipped = refusal.answers.filter((answer) => !admitted(answer));
   const { named, after } = nonPublic(skipped);
-  // An unlisted name with a private answer may be allowed by the captain.
   const allow =
     !refusal.listed && skipped.some((answer) => answer.kind === "private")
       ? ` The captain can allow it for task browsers: if the task needs ${refusal.host}, ask the first mate in your report (needs_firstmate), naming ${refusal.host}.`
@@ -227,7 +223,6 @@ export function clip(text: string, max = NOTICE_MAX): string {
   return flat.length > max ? `${cutText(flat, max - 1)}…` : flat;
 }
 
-/** The lists of what a page said that an answer reads out and empties. */
 type KeptList = "dialogs" | "errors" | "popups" | "refusals" | "pageNotes";
 
 /**
@@ -268,7 +263,6 @@ export class PageNotices {
 
   constructor(private readonly paused: () => boolean) {}
 
-  /** A page's notice, kept for the crewmate's next answer unless the captain holds the page. */
   keep(list: KeptList, text: string): void {
     if (this.paused()) return;
     if (this[list].length >= NOTICES_KEPT) {
@@ -287,14 +281,12 @@ export class PageNotices {
     this.downloads.push(text);
   }
 
-  /** A request or connection the browser refused or could not make, counted by host for the next answer. */
   block(host: string, kind: Blocked["kind"]): void {
     if (this.paused()) return;
     const seen = this.blocked.get(host);
     this.blocked.set(host, { count: (seen?.count ?? 0) + 1, kind });
   }
 
-  /** What the crewmate is told once about its browser, at the head of an answer. */
   take(): string {
     const notice = this.notice;
     this.notice = undefined;
@@ -354,7 +346,6 @@ export class PageNotices {
       this.popups,
     );
     if (signedIn && this.errors.length > 0) {
-      // A page that may show the captain's account keeps its error words to itself.
       const count = this.errors.length;
       lines.push(
         `The page logged ${count === 1 ? "an error" : `${count} errors`}; on a page that may show the captain's account their words are not passed on.`,

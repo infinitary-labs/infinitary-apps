@@ -23,7 +23,6 @@ import { escapeCardText } from "./cardText";
  */
 export type AskDelivery = "pending" | "held" | "covered" | "retrying" | "unresolved" | "legacy";
 
-/** The states a message can still be judged in. */
 export const JUDGEABLE_DELIVERY: readonly AskDelivery[] = ["pending", "held", "retrying"];
 
 /**
@@ -183,7 +182,6 @@ export const ANSWER_ONLY_REFUSAL =
 export const CREWMATE_ANSWER_ASK =
   "Report refused once: your task is the last work for the captain's message and no card of yours answers it. Show the card that answers it with emit_card and answering true - or revise your open card under the same id with answering true - then report. A note the captain closed stays closed: if they closed the note that answers it, or you cannot answer it, report finished again saying so, and the first mate answers it.";
 
-/** The one notice's card title. */
 export const ANSWER_NOTICE_TITLE = "Your first mate has not answered your message";
 
 const NOTICE_CARD_PREFIX = "card-ask-";
@@ -193,7 +191,6 @@ export function noticeCardId(askId: string): string {
   return `${NOTICE_CARD_PREFIX}${askId}`;
 }
 
-/** The message a notice card is for, or undefined for any other card. */
 export function noticeAskId(cardId: string): string | undefined {
   if (!cardId.startsWith(NOTICE_CARD_PREFIX)) return undefined;
   return cardId.slice(NOTICE_CARD_PREFIX.length);
@@ -202,7 +199,6 @@ export function noticeAskId(cardId: string): string | undefined {
 /** How much of the captain's message the notice and the wake quote. */
 export const EXCERPT_CHARS = 240;
 
-/** The captain's words, whitespace flattened and clipped. */
 export function excerptOf(text: string): string {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length <= EXCERPT_CHARS ? flat : `${cutText(flat, EXCERPT_CHARS - 1)}…`;

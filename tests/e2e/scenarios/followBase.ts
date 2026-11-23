@@ -39,11 +39,9 @@ export const FOLLOW_BASE_MARKER = "exercise following the part under it";
 export const CHAIN = ["first", "second", "third"] as const;
 export type ChainPart = (typeof CHAIN)[number];
 
-/** The prompt that starts the first part and files the rest behind it, in `project`. */
 export const followBasePrompt = (project: string) =>
   `${SPAWN_PROMPT_MARKER} ${project} ${FOLLOW_BASE_MARKER}`;
 
-/** A part's task title, as the first mate files it. */
 export const chainTask = (project: string, part: ChainPart) =>
   `${project} ${FOLLOW_BASE_MARKER} ${part}`;
 
@@ -53,18 +51,14 @@ export const chainTitle = (part: ChainPart) => `feat(${part}): add the ${part} p
 /** A part's merge card id, so a new version revises the card in place. */
 export const chainCardId = (part: ChainPart) => `merge-${part}-part`;
 
-/** A part's report once its card at the replayed version is up, after the scenario's marker. */
 export const FOLLOWED = (part: ChainPart) =>
   `the ${part} part follows the part under it and its merge card is up.`;
 
-/** A part's report once it heard the part under it closed without merging, after the scenario's marker. */
 export const CLOSED_REPORT = (part: ChainPart) =>
   `the ${part} part builds on work that closed without merging; the first mate decides.`;
 
-/** The journey's words to the first part's crewmate: the default branch moved. */
 export const BRING_FIRST_UP_TO_DATE = `${FOLLOW_BASE_MARKER}: the default branch moved, bring the first part up to date`;
 
-/** The base-moved steer's words, from their owner: a part's base moved from `from` to `to`. */
 export const movedSteer = (
   base: { key: string; title: string; branch: string },
   from: string,
@@ -79,20 +73,17 @@ const SAMPLE = movedSteer({ key: "", title: "", branch: "" }, FROM, TO);
 /** The steer's words between the newer version and the one the branch builds on. */
 export const MOVED_BETWEEN = SAMPLE.slice(SAMPLE.indexOf(TO) + TO.length, SAMPLE.indexOf(FROM));
 
-/** The newer version and the one the branch builds on, as a base-moved steer names them. */
 function movedVersions(text: string): { to: string; from: string } | undefined {
   const escaped = MOVED_BETWEEN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const found = new RegExp(`([0-9a-f]{40})${escaped}([0-9a-f]{40})`).exec(text);
   return found ? { to: found[1] as string, from: found[2] as string } : undefined;
 }
 
-/** The closed-unmerged steer's words, from their owner: the part under a part, `base`, closed. */
 export const closedSteer = (
   base: { key: string; title: string; head: string; newer?: string },
   closed: "done" | "dropped",
 ) => DELIVERY_WORDS["base-closed-unmerged"]({ kind: "base-closed-unmerged", base, closed }, {});
 
-/** Stands for the closed part's version in the steer's words. */
 const HEAD = "\u0000head\u0000";
 const CLOSED_SAMPLE = closedSteer({ key: "", title: "", head: HEAD }, "dropped");
 
@@ -126,7 +117,6 @@ function chainMove(body: string, firstmate: boolean): ScenarioAnswer | undefined
   if (pending) return { text: "" };
   if (firstmate) return firstmateMove(body, user, results);
   const part = ownPart(body);
-  // The base-moved steer names the newer version and the one the branch builds on.
   const moved = movedVersions(user);
   const steps = user.includes(CLOSED_UNDER)
     ? [report(CLOSED_REPORT(part))]
@@ -139,10 +129,8 @@ function chainMove(body: string, firstmate: boolean): ScenarioAnswer | undefined
   return next ? { calls: [next] } : { text: "Ready." };
 }
 
-/** The versions a shell's `git rev-parse` printed, in order. */
 const versions = (reading: string | undefined) => reading?.match(/[0-9a-f]{40}/g) ?? [];
 
-/** Prepare, publish and offer the part's change at its current version. */
 function offerSteps(body: string, part: ChainPart, results: string[], reading: string | undefined) {
   const title = chainTitle(part);
   return [
@@ -177,7 +165,6 @@ function report(text: string): ScriptedCall {
   return { name: "report", args: { text: `${FOLLOW_BASE_MARKER}: ${text}` } };
 }
 
-/** The part's first build: one file of its own on the approved version under it. */
 function buildSteps(body: string, part: ChainPart, results: string[]): ScriptedCall[] {
   const earlier = CHAIN.slice(0, CHAIN.indexOf(part));
   const command = [
@@ -192,7 +179,6 @@ function buildSteps(body: string, part: ChainPart, results: string[]): ScriptedC
   ];
 }
 
-/** A kept approval's repair onto the newer default branch, declared with impact none. */
 function upToDateSteps(body: string, user: string, results: string[]): ScriptedCall[] {
   const [from, to, base] = versions(results[0]);
   const mark = Number(
@@ -231,7 +217,6 @@ function upToDateSteps(body: string, user: string, results: string[]): ScriptedC
   ];
 }
 
-/** Replay only the part's own commits onto the newer version the steer names. */
 function followSteps(
   body: string,
   part: ChainPart,
@@ -239,7 +224,6 @@ function followSteps(
   to: string,
   from: string,
 ): ScriptedCall[] {
-  // Replay only the part's own commits, those after `from`, onto `to`, keeping the old version.
   const replay = `old=$(git rev-parse HEAD) && git reset -q --hard ${to} && git cherry-pick ${from}..$old`;
   if (part === "second") {
     // Under the captain's kept approval: declare the replay as a repair onto that version.

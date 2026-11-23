@@ -7,7 +7,6 @@ import type { Scenario } from "../mockProvider";
  */
 export const ADD_PANEL_PROMPT_MARKER = "add the panel from ";
 
-/** The first mate installs the panel from the folder the captain named. */
 export const installPanel: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

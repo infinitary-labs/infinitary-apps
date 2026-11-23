@@ -15,9 +15,6 @@ import { openDatabase, openInMemoryDatabase } from "./db";
 import { ProjectStore } from "./projectStore";
 import { dropViews } from "./views";
 
-// The project migrations: scope, standing rigor, workspace kind, where a project lives and where
-// its tasks run.
-
 it("INF-1117: upgrades existing projects with empty scope, saves it across reopen and reverses without losing rows", () => {
   const dir = tmpUserData();
   const legacy = openDatabase(dir, 91);
@@ -61,11 +58,9 @@ describe("migration 36 (the repository's standing rigor, delivery rigor phase 3)
     const upgraded = openDatabase(dir);
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     expect(columnNames(upgraded, "repos")).toContain("rigor");
-    // Existing projects receive the explicit standard standing value.
     expect(
       upgraded.prepare("SELECT id, delivery, autonomy, rigor FROM repos WHERE id = 'r-old'").get(),
     ).toEqual({ id: "r-old", delivery: "direct-pr", autonomy: 1, rigor: "standard" });
-    // The registry reads the column as the view's `rigor`.
     const registry = new RepoRegistry(upgraded, join(dir, "fleet"));
     expect(registry.get("r-old")?.rigor).toBe("standard");
     expect(registry.configure("r-old", { rigor: "reviewed" }).rigor).toBe("reviewed");
@@ -113,8 +108,6 @@ describe("migration 37 (the workspace kind, crew-posture rationalization Task A)
       { id: "r-project", kind: "project", delivery: "direct-pr" },
       { id: "r-local", kind: "project", delivery: "local-only" },
     ]);
-    // The registry reads it as the view's `kind` and refuses the personal
-    // row's whole policy patch.
     const registry = new RepoRegistry(upgraded, join(dir, "fleet"));
     expect(registry.get("r-personal")?.kind).toBe("personal");
     expect(registry.get("r-project")?.kind).toBe("project");
@@ -174,7 +167,6 @@ describe("migration 40 (where each project lives, git integration PR 1.1)", () =
       { id: "r-host", forge_kind: "git", forge_host: "git.example.com" },
       { id: "r-local", forge_kind: "none", forge_host: null },
     ]);
-    // Every backfilled value is logged beside the origin it came from.
     expect(
       upgraded
         .prepare("SELECT repo_id, origin, forge_kind FROM forge_backfill ORDER BY repo_id")
@@ -184,13 +176,11 @@ describe("migration 40 (where each project lives, git integration PR 1.1)", () =
       { repo_id: "r-host", origin: "https://git.example.com/me/wiki.git", forge_kind: "git" },
       { repo_id: "r-local", origin: null, forge_kind: "none" },
     ]);
-    // The registry reads it as the view's `host`: null for a project kept on this Mac.
     const registry = new RepoRegistry(upgraded, join(dir, "fleet"));
     expect(registry.get("r-gh")?.host).toEqual({ kind: "github", name: "github.com" });
     expect(registry.get("r-host")?.host).toEqual({ kind: "git", name: "git.example.com" });
     expect(registry.get("r-local")?.host).toBeNull();
 
-    // Reversible: dropping the two columns and the log restores the v39 shape.
     upgraded.exec(
       `${REVERSE_MIGRATION_64}ALTER TABLE repos DROP COLUMN forge_kind; ALTER TABLE repos DROP COLUMN forge_host; DROP TABLE forge_backfill;`,
     );
@@ -237,7 +227,6 @@ describe("migration 64 (where a project's tasks run, multi-machine piece 11)", (
     expect(reopened.prepare("SELECT runs_on FROM repos WHERE id = 'r1'").get()).toEqual({
       runs_on: "mini",
     });
-    // Reversible: dropping the column restores the v63 shape with every row.
     dropViews(reopened);
     reopened.exec(REVERSE_MIGRATION_64);
     expect(columnNames(reopened, "repos")).toEqual(columnsAt63);

@@ -19,7 +19,6 @@ export type SavedOrigin =
   | { kind: "chose"; cardId: string; card: string; choice: string; written?: string }
   | { kind: "report"; taskId: string; words?: { text: string; at: number } };
 
-/** The `note` event a saved origin rides: its data's one key. */
 export const ORIGIN_NOTE_KEY = "origin";
 
 /** The saved origin's timeline line. */
@@ -36,7 +35,6 @@ export function originNoteText(origin: SavedOrigin, reporter?: string): string {
   }
 }
 
-/** A saved origin read back from its note's data, or undefined for any other note. */
 export function savedOriginOf(event: TaskEvent): SavedOrigin | undefined {
   if (event.kind !== "note") return undefined;
   const origin = event.data?.[ORIGIN_NOTE_KEY] as Partial<SavedOrigin> | undefined;

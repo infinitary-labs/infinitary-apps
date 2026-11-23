@@ -56,7 +56,6 @@ afterEach(async () => {
   await catalogRefreshesSettled();
 });
 
-/** Creates a runtime and a promise for its background refresh settling. */
 async function createWithRefresh(
   options: Parameters<typeof createModelRuntime>[0],
 ): Promise<{ runtime: Awaited<ReturnType<typeof createModelRuntime>>; refreshed: Promise<void> }> {

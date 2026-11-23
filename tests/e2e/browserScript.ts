@@ -36,7 +36,6 @@ export function browser(...args: (string | number)[]): ScriptedCall {
   };
 }
 
-/** Whether a tool answer is a browser command's: what infinitary-browser-axi printed. */
 function isBrowserAnswer(text: string): boolean {
   return /^(?:page:|browser:|running:|earlier:|error:|pages\[|bin: )/m.test(shellOutput(text));
 }

@@ -25,7 +25,6 @@ export function revisedLine(changes: CardChanges, now: number = Date.now()): str
   return clauses.join(" · ");
 }
 
-/** The time of day, with the date in front when it was not today. */
 export function clock(at: number, now: number): string {
   const date = new Date(at);
   const time = formatTime(date, { hour: "numeric", minute: "2-digit" });

@@ -153,7 +153,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       await expect(review("nope")).rejects.toThrow(/Unknown task "nope" in review_of/);
 
-      // Before the builder reported, the brief says so where its report goes.
       const first = await review(taskId);
       await tick();
       expect(first.crewmate).not.toBe("queued");
@@ -762,7 +761,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           ],
         });
 
-      // The reviewer: host-briefed, read-only by brief, kind review by the host.
       const { taskId: reviewId } = await supervisor.intake.commission({
         title: "whatever the Firstmate called it",
         intent: intentOf("make the meter test stop flaking"),
@@ -911,7 +909,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(ops.slice(beforeCard)).toEqual([]);
       expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
 
-      // A reply under the card reaches the reviewer, which answers it there.
       supervisor.cardActions.replyToCard(findingCard?.id ?? "", "Where does Later show?");
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("Where does Later show?");
@@ -1103,7 +1100,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         .snapshot()
         .find((entry) => entry.title === "Review of the meter fix");
       expect(findingCard).toMatchObject({ taskId: reviewId, reviewTaskId: reviewId });
-      // The card places the builder's captain gate, naming it.
       expect(tasks.get(builderId)?.gate).toMatchObject({ kind: "captain", ref: findingCard?.id });
 
       // The builder's wait names its reviewer's card, by the id the
@@ -1116,7 +1112,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(receipt).toContain("Your task now waits on the captain");
       expect(receipt).not.toContain("first mate is woken");
-      // waits_on naming its own review is dropped with a receipt line.
       const named = await (specs[0] as CrewmateSpec).onReport?.(
         "Waiting on the captain's answer on the reviewer's card.",
         undefined,
@@ -1174,7 +1169,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         expect.stringContaining("Done once the captain answers the reviewer."),
       ]);
 
-      // The captain's answer reaches the builder and lifts the gate the card placed.
       supervisor.cardActions.act(findingCard?.id ?? "", "keep");
       await tick();
       expect(received(builder)).toContain(
@@ -1321,7 +1315,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           .mocked(workspace.removeTaskWorktree)
           .mock.calls.some(([args]) => args.taskId === reviewId),
       ).toBe(true);
-      // Nothing lingers: the closed review is no longer a crew row.
       expect(supervisor.facts.crewStatus(reviewId)).toEqual([]);
     } finally {
       repo.dispose();
@@ -1661,7 +1654,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         branch: "inf/export",
         head: APPROVED,
       });
-      // The builder's kept proof: one transcript in its card pictures folder.
       const transcript = "pnpm test src/meter.test.ts: 10 of 10 passed\n";
       const file = `${builderId}-meter-run.txt`;
       const pictures = crewmateCardPicturesDir(paths, builderId);
@@ -1741,7 +1733,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         repoId: view.id,
       });
       await tick();
-      // Briefed at Default care: no brief holds the fix rules.
       expect(builder.promptCalls[0]).toContain(renderRigorSection("standard"));
       expect(builder.promptCalls[0]).not.toContain(REVIEW_FIX_RULES);
       await reportTurn(builder, builderId, BUILDER_REPORT);
@@ -1794,7 +1785,6 @@ describe("a review bound to the version it read (INF-3141)", () => {
     await tick();
     await reportTurn(builder, builderId, "Intent: fix. Committed.");
     vi.mocked(env.workspace.branchHead).mockResolvedValue(OLD);
-    // The builder still holds edits not yet committed when the review is asked for.
     vi.mocked(env.workspace.taskWorkStatus).mockResolvedValueOnce({
       dirty: true,
       unlandedCommits: 0,
@@ -1811,32 +1801,27 @@ describe("a review bound to the version it read (INF-3141)", () => {
   it("names the assigned version on the ask, and moves a reviewer whose first turn failed to the builder's newer commit", async () => {
     const h = await commissioned();
     try {
-      // The ask's answer names the version it assigned and the edits it cannot see.
       expect(h.asked.review).toEqual({ head: OLD, uncommitted: true });
       expect(h.tasks.get(h.reviewId)?.delivery?.headSha).toBe(OLD);
 
-      // The reviewer's first turn fails at the provider: no report.
       h.reviewer.emit({ type: "turn_failed", taskId: h.reviewId, error: "Internal error" });
       h.reviewer.emit({ type: "turn_end", taskId: h.reviewId });
       h.reviewer.finishPrompt();
       await tick();
       expect(h.tasks.get(h.reviewId)?.outcome ?? null).toBeNull();
 
-      // The builder commits its repair; the steer's turn is assigned it.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(NEW);
       await h.supervisor.steer.steerCrewmate(h.reviewId, "Review the repaired version.");
       await tick();
       expect(h.tasks.get(h.reviewId)?.delivery?.headSha).toBe(NEW);
       expect(h.reviewer.promptCalls.at(-1)).toContain("Current review assignment");
 
-      // A verdict for the earlier version is refused, naming both versions.
       const stale = { ...typedReview(h.tasks, h.reviewId, { code: "clear" }), head: OLD };
       await expect(
         h.specs[1]!.onReport!("Reviewed.", undefined, { validation: stale }),
       ).rejects.toThrow(
         `version ${NEW.slice(0, 7)} at evidence revision ${stale.revision}; this record names ${OLD.slice(0, 7)}`,
       );
-      // The verdict at the assigned version records the pass.
       await reviewTurn(h, h.reviewer, 1, h.reviewId, "No findings.", { code: "clear" });
       expect(h.tasks.get(h.builderId)?.delivery).toMatchObject({
         reviewVerdict: "pass",
@@ -1857,7 +1842,6 @@ describe("a review bound to the version it read (INF-3141)", () => {
       expect(h.supervisor.facts.crewStatus(h.builderId)[0]?.review).toBe(
         `review passed at ${OLD.slice(0, 7)}`,
       );
-      // The builder commits more work after the pass and pushes it.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(NEW);
       seedDelivery(h.tasks, h.builderId, {
         prUrl: "https://github.com/o/r/pull/55",

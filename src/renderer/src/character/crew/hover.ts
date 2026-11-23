@@ -104,7 +104,6 @@ export type SummaryPlacement = {
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(Math.max(min, max), value));
 
-/** Whether a panel at `at` lies inside `room.within` and over none of `room.avoid`. */
 function hasRoom(
   at: { x: number; y: number },
   panel: { width: number; height: number },
@@ -191,7 +190,6 @@ export function placeCrewSummary(
     x: clamp(first.x, within.left, within.right - width),
     y: first.y,
   };
-  // The hairline runs from the brackets toward the nearest point of the panel.
   return { ...at, line: tie(anchor, reach, at, panel) };
 }
 
@@ -231,12 +229,10 @@ function besideEdge(
   return placeOn(towardLeft) ?? placeOn(!towardLeft);
 }
 
-/** Whether the side of `edge` facing the middle of `room.within` is its left. */
 function facesLeft(edge: Pick<Box, "left" | "right">, room: SummaryRoom): boolean {
   return (edge.left + edge.right) / 2 > (room.within.left + room.within.right) / 2;
 }
 
-/** The panel's left edge beside `edge`, the lead clear of it, on one side. */
 function besideX(edge: Pick<Box, "left" | "right">, panel: { width: number }, left: boolean) {
   return left ? edge.left - CREW_HOVER.leadPx - panel.width : edge.right + CREW_HOVER.leadPx;
 }

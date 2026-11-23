@@ -46,7 +46,6 @@ export async function ownComputerName(options: {
   return standIn ?? (await computerName());
 }
 
-/** A name a device may carry (`deviceNameSchema`), cut to its length; null when none is left. */
 export function asDeviceName(text: string): string | null {
   const parsed = deviceNameSchema.safeParse(cutText(text.trim(), 64));
   return parsed.success ? parsed.data : null;

@@ -51,7 +51,6 @@ export const FLICKER_TUNING: FlickerTuning = {
   glowSpill: 0.12,
 };
 
-/** The request's total token count: every token field the usage carries. */
 export function usageTotal(usage: FmUsage): number {
   return (
     (usage.input ?? 0) + (usage.output ?? 0) + (usage.cacheRead ?? 0) + (usage.cacheWrite ?? 0)

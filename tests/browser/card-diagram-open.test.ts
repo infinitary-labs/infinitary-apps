@@ -42,7 +42,6 @@ const BODY = `
 const KEEPS_ITS_PRESS =
   "document.getElementById('kept').addEventListener('click', function (event) { event.preventDefault(); });";
 
-/** The frame's name, by which the browser reaches into it. */
 const FRAME = "diagram-card";
 
 type Picture = { src: string; alt: string; width: number; height: number };
@@ -58,7 +57,6 @@ function inFrame<T, A>(read: (argument: A) => T, argument: A): Promise<Awaited<T
   return commands.evaluateInFrame(FRAME, read.toString(), argument) as Promise<Awaited<T>>;
 }
 
-/** A click on the element with `id`, as the captain's press reaches the body. */
 const press = (id: string) =>
   inFrame((target: string) => {
     document
@@ -102,7 +100,6 @@ async function mounted(annotations = false): Promise<Heard[]> {
 
 const opened = (heard: Heard[]) => heard.filter((message) => message.type === "image");
 
-/** A posted drawing, read back as the document a picture of it shows. */
 function drawn(picture: Picture): Document {
   expect(picture.src.startsWith(DRAWING_SOURCE_PREFIX)).toBe(true);
   const markup = decodeURIComponent(picture.src.slice(DRAWING_SOURCE_PREFIX.length));
@@ -125,7 +122,6 @@ test("a press on a figure's diagram, or on one drawn full width, opens it as it 
   const picture = drawn(diagram);
   const root = picture.documentElement;
   expect([root.getAttribute("width"), root.getAttribute("height")]).toEqual(["750", "120"]);
-  // No script and no handler goes with it.
   expect(picture.querySelector("script")).toBeNull();
   expect(root.hasAttribute("onclick")).toBe(false);
   expect(root.hasAttribute("tabindex")).toBe(false);
@@ -145,7 +141,6 @@ test("a press on a figure's diagram, or on one drawn full width, opens it as it 
     /@font-face[^}]*app-frame:\/\/fonts\/[a-z0-9-]+\.woff2/,
   );
 
-  // A drawing the width of the body opens alone, named by its label.
   await press("wide");
   const wide = opened(heard)[2]?.pictures?.[0];
   expect(wide?.alt).toBe(WIDE_LABEL);

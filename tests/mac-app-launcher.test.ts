@@ -89,7 +89,6 @@ function reports(file: string): Report[] {
     .map((line) => JSON.parse(line) as Report);
 }
 
-/** Waits, for what is left of its test's budget, until the report holds a line `matches` takes, and answers it. */
 function reported(file: string, matches: (line: Report) => boolean): Promise<Report> {
   return vi.waitFor(
     () => {
@@ -128,7 +127,6 @@ describe.skipIf(process.platform !== "darwin")("the app's own executables on a M
   let report = "";
   const started: ChildProcess[] = [];
 
-  /** Starts the stand-in's `file` (its main executable unless named) with `args`, its macOS home pinned to the scratch one. */
   const start = (args: string[], file = executable): ChildProcess => {
     const child = spawn(file, args, {
       env: { ...process.env, HOME: home, CFFIXED_USER_HOME: home, ELECTRON_RUN_AS_NODE: "" },

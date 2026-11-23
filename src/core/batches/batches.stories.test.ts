@@ -34,7 +34,6 @@ const CHANGES: BatchChange[] = Array.from({ length: 20 }, (_, index) => ({
   at: 1_000 + index,
 }));
 
-/** The project with every change approved, each story at its length. */
 function approvedBatch(changes: readonly BatchChange[] = CHANGES) {
   const home = setup();
   for (const [index, change] of changes.entries()) {
@@ -44,7 +43,6 @@ function approvedBatch(changes: readonly BatchChange[] = CHANGES) {
   return home;
 }
 
-/** The app's own comments that carry the batch's stories, oldest first. */
 const storyComments = (comments: readonly StandInComment[] = []) =>
   comments.filter(
     (comment) => comment.author === APP_ACCOUNT && comment.body.startsWith(BATCH_STORIES_MARKER),
@@ -70,7 +68,6 @@ describe("a batch whose stories pass the host's description limit", () => {
     expect(storiesRead(pull, comments)).toEqual(CHANGES.map((change) => change.taskId));
     const reading = [pull.body, ...comments.map((comment) => comment.body)].join("\n");
     for (const change of CHANGES) expect(reading).toContain(home.storyOf(change).region);
-    // The description says how many stories follow below it.
     const following = storiesRead({ ...pull, body: "" }, comments).length;
     expect(following).toBeGreaterThan(0);
     expect(pull.body).toContain(BATCH_DESCRIPTION_WORDS.continued(following));

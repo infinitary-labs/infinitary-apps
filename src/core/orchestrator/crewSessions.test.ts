@@ -187,7 +187,6 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     h.supervisor.watch.deliverJobResult("t-left", "[job] the background wait ended");
     expect(await h.supervisor.steer.steerCrewmate("t-left", "carry on")).toBe("mid-turn");
     await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
-    // A second open of the task, now that it has its crewmate, is that crewmate.
     const again = await h.supervisor.sessions.resumeTask("t-left");
     expect(again.session).toBe(crewmate);
     expect(await h.supervisor.sessions.resumeTask("t-left")).toBe(again);
@@ -195,7 +194,6 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(h.sessionSpecs).toHaveLength(1);
     expect(h.specs[0]).toMatchObject({ resumeToken: "/sessions/t-left.jsonl" });
     expect(crewmate.dispose).not.toHaveBeenCalled();
-    // Both wakes reach the one crewmate, and so does the next steer.
     crewmate.finishPrompt();
     await vi.waitFor(() =>
       expect(crewmate.promptCalls.join("\n")).toContain("the background wait ended"),
@@ -218,7 +216,6 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
       intent: intentOf("make the meter count every press"),
     });
     await tick();
-    // A cancel whose abort is still on its way.
     const aborting = deferred<void>();
     crewmate.abort = vi.fn(() => aborting.promise);
     const cancelling = h.supervisor.sessions.interruptCrewmate(taskId, "cancel");
@@ -345,7 +342,6 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
         .map((event) => event.data?.personal);
     expect(reads()).toEqual([{ ...version, home: true }]);
 
-    // The same version again writes nothing; a new one is written when a conversation opens with it.
     const reopen = async () => {
       crewmate.emit({ type: "turn_end", taskId });
       crewmate.finishPrompt();

@@ -13,7 +13,6 @@
 
 let presses = 0;
 
-/** How many presses the captain has begun in this window so far. */
 export function pressesSoFar(): number {
   return presses;
 }
@@ -41,7 +40,6 @@ export function hearOut(answered: Promise<unknown>): void {
   void answered.then(heard, heard);
 }
 
-/** Runs `decide` now, or once every frame asked to answer has answered. */
 export function oncePressesHeard(decide: () => void): void {
   if (unheard === 0) decide();
   else deciding.push(decide);

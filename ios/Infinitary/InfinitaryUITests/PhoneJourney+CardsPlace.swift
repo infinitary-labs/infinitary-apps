@@ -25,10 +25,8 @@ extension PhoneJourney {
         let thread = app.scrollViews["card-thread"]
         let jump = app.buttons["thread-jump"]
         let opening = back.staticTexts[first]
-        // A thread opens at its foot, where nothing waits below.
         waitForSteadyTarget(thread)
         XCTAssertFalse(jump.exists, "The thread opened above its foot\n\(app.debugDescription)")
-        // The captain scrolls back to the thread's start; the jump down shows as a plain arrow.
         for _ in 0..<8 where !(opening.exists && opening.isHittable) { thread.swipeDown() }
         waitForSteadyTarget(opening)
         XCTAssertTrue(opening.isHittable, "The thread's first message cannot be reached\n\(app.debugDescription)")
@@ -41,13 +39,11 @@ extension PhoneJourney {
         let label = app.staticTexts["thread-count"]
         let arrived = NSPredicate { _, _ in label.exists && label.label == "THREAD · \(count + 2)" }
         XCTAssertEqual(waitForPhonePredicate(arrived, object: nil, timeout: 20), .completed, app.debugDescription)
-        // The new lines move nothing: the first message holds its place, and the jump counts them.
         let counted = NSPredicate { _, _ in jump.exists && jump.label == "↓ 2 NEW" }
         XCTAssertEqual(waitForPhonePredicate(counted, object: nil, timeout: 10), .completed, app.debugDescription)
         waitForSteadyTarget(opening)
         XCTAssertEqual(opening.frame.minY, before.minY, accuracy: 1, "A new line moved the thread\n\(app.debugDescription)")
         picture("2-two-new-below")
-        // The jump goes to the first new line.
         tapOnPhone(jump)
         let firstNew = back.staticTexts[added]
         XCTAssertTrue(waitForPhonePress(firstNew), "The jump did not reach the first new line\n\(app.debugDescription)")

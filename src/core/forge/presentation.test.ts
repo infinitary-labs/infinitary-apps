@@ -109,7 +109,6 @@ function story(kinds: ("picture" | "recording")[], visibility: "public" | "priva
 function figures(body: string) {
   return DomUtils.findAll((node) => node.name === "figure", parseDocument(body).children);
 }
-/** Each table's header words and, per row, each cell's figure (or null when it is empty). */
 function tables(body: string) {
   return DomUtils.findAll((node) => node.name === "table", parseDocument(body).children).map(
     (table) => ({
@@ -270,7 +269,6 @@ describe("the layout GitLab can actually display", () => {
       const recordings = selected.views.flatMap((view) =>
         [...view.before, ...view.after].filter((entry) => entry.asset === video),
       );
-      // One image link per shown recording, each with its alt text and its own paragraph.
       expect(blocks.filter((block) => block.includes(gitlabUrls.get(video) as string))).toEqual(
         recordings.map((entry) => `![${entry.alt}](${gitlabUrls.get(video)})`),
       );

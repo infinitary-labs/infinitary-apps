@@ -50,7 +50,6 @@ vi.mock("node:fs/promises", async (load) => {
   };
 });
 
-/** Puts a link to `target` where `path` was, keeping what was there beside it. */
 function swapForLink(path: string, target: string): () => void {
   return () => {
     renameSync(path, `${path}.was`);
@@ -174,7 +173,6 @@ describe("one computer's files", () => {
     await expect(
       reach.answer("inf:files:list", [{ path: "~/Documents/innocent" }]),
     ).rejects.toThrow("never copies");
-    // Nothing was set aside for any of them.
     expect(existsSync(stagingDir) ? readdirSync(stagingDir) : []).toEqual([]);
   });
 
@@ -325,7 +323,6 @@ describe("one computer's files", () => {
       `~/Documents/shelf ${changed}`,
     );
     expect(writer.before.size).toBe(0);
-    // Nothing was set aside for any of them.
     expect(existsSync(stagingDir) ? readdirSync(stagingDir) : []).toEqual([]);
   });
 

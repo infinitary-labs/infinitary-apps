@@ -10,7 +10,6 @@ import type { IntegrationEventSpec } from "./binding";
 export type AppEventSource = {
   /** The id a rule keeps, like an integration's. */
   id: string;
-  /** Its name as the person reads it. */
   name: string;
   events: readonly IntegrationEventSpec[];
 };
@@ -32,7 +31,6 @@ export const APP_EVENTS: readonly AppEventSource[] = [
   { id: TASK_EVENTS_ID, name: "Tasks", events: [TASK_CLOSED_EVENT] },
 ];
 
-/** The app's own event source a rule names by id or name, if any. */
 export function appEventSource(integration: string): AppEventSource | undefined {
   const wanted = integration.trim().toLowerCase();
   return APP_EVENTS.find((source) => source.id === wanted || source.name.toLowerCase() === wanted);

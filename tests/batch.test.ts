@@ -103,7 +103,6 @@ describe("batch-checks.yml", () => {
     expect(job.with!.ref).toBe(batch.jobs.sweep!.with!.ref);
     const fixtures = workflow(".github/workflows/linux-startup.yml").jobs["runtime-facts"]!;
     expect(fixtures["runs-on"]).toBe("ubuntu-24.04");
-    // The fixtures run on exactly the commit their caller names.
     const checkout = fixtures.steps!.find((step) => step.uses?.startsWith("actions/checkout@"))!;
     expect(workflowString(String(checkout.with!.ref), { inputs: { ref: head } })).toBe(head);
   });

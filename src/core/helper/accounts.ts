@@ -87,7 +87,6 @@ export type ComputerAccounts = {
 
 export type ComputerAccountsOptions = {
   dataDir: string;
-  /** Every new reading of the allowance. */
   onAllowance: (snapshot: QuotaSnapshotView) => void;
   /** The allowance's requests; the providers' own endpoints unless a test stands in its own. */
   http?: QuotaHttp;
@@ -206,7 +205,6 @@ export async function startComputerAccounts(
   const resolve = (accountId: string): Promise<ManagedAuth | undefined> =>
     isClaude(accountId) ? resolveClaude(accountId) : vault.resolveForQuota(accountId);
 
-  // The allowance, read here with each account's own store.
   const fetch = createQuotaFetcher({
     auth: {
       accounts: () =>

@@ -257,7 +257,6 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     },
     [tasks],
   );
-  // A row's pin: one press pins or unpins its task, and the row moves.
   const pinTask = useCallback(
     (task: PanelTaskRow) => {
       if (!tasks) return;
@@ -291,7 +290,6 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
     [reads, wantsClosed],
   );
 
-  // The collapsed tasks as kept, and again whenever the kept list changes.
   useEffect(() => {
     let live = true;
     const load = () =>
@@ -725,7 +723,6 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks, stor
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
               onKeyDown={(event) => {
-                // ↓ from the search goes to the first match.
                 if (event.key !== "ArrowDown" || event.nativeEvent.isComposing) return;
                 const first = navItems[0];
                 if (!first) return;
@@ -878,7 +875,6 @@ function barSegments(words: string): PartSegment[] {
 /** The last press on a row's Start: the row as it stood, and the app's refusal once it answered. */
 type StartPress = { taskId: string; updatedAt: number; refusal: string | null };
 
-/** Where a row sits in the page, to the pixel. */
 function boxKey(row: HTMLElement): string {
   const { top, left, width, height } = row.getBoundingClientRect();
   return [top, left, width, height].map(Math.round).join(",");
@@ -1144,7 +1140,6 @@ const Row = memo(function Row({
   parts?: string | undefined;
   /** It has rows listed under it: it offers the collapse control. */
   folds?: boolean;
-  /** It is collapsed. */
   shut?: boolean;
   /** A collapsed row's bar: each part's state and id, `state:id`, parted by spaces (`barWords`). */
   bar?: string | undefined;
@@ -1159,8 +1154,6 @@ const Row = memo(function Row({
   // A press let the rest go: it stays gone until the pointer leaves the row, as before.
   const pressed = useRef(false);
   const segments = bar ? barSegments(bar) : [];
-  // The segment of the bar under the pointer and the part it names; null on
-  // the rest of the row, or on a segment that names no part.
   const partAt = (target: EventTarget): { index: number; id: string } | null => {
     const at = (target as HTMLElement).closest<HTMLElement>("[data-now-part]");
     if (!at) return null;
@@ -1382,7 +1375,6 @@ function RowFold({
   );
 }
 
-/** The row this control belongs to. */
 function rowOfControl(control: HTMLElement): HTMLElement | null {
   return control.closest("[data-now-item]")?.querySelector<HTMLElement>("[data-now-row]") ?? null;
 }

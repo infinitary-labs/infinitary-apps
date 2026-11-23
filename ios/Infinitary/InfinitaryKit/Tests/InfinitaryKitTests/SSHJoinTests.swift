@@ -38,7 +38,6 @@ import Testing
         #expect(seen == home.key)
         #expect(seen.fingerprint == home.fingerprint)
         #expect(home.commands.isEmpty)
-        // A different key later stops the join before anything is sent.
         let other = SSHHostKey(NIOSSHPrivateKey(p256Key: .init()).publicKey)
         await #expect(throws: SSHJoinError.hostChanged("127.0.0.1")) {
             try await SSHJoin.link(home.address, trusted: other, key: phone)
@@ -78,7 +77,6 @@ import Testing
         let home = try await Home.start(password: "right horse", answer: PhoneSSHCommand.placed + "\n")
         defer { home.stop() }
         let phone = PhoneSSHKey(NIOSSHPrivateKey(p256Key: .init()))
-        // The home refuses the key and says it takes a password.
         await #expect(throws: SSHJoinError.keyRefused("127.0.0.1", password: true)) {
             try await SSHJoin.link(home.address, trusted: home.key, key: phone)
         }

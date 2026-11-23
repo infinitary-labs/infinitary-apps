@@ -8,7 +8,6 @@ import { SHOWN_ENTRY } from "./stack";
  * a card by its panel and its id there, never by its words.
  */
 
-/** The shown entry when it is this panel's card. */
 export function shownPanelCard(page: Page, panel: string, id: string): Locator {
   return page.locator(`${SHOWN_ENTRY} [data-panel-card="${panel}/${id}"]`);
 }

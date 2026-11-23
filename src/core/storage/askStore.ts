@@ -39,7 +39,6 @@ export type AskRecord = {
   id: string;
   at: number;
   text: string;
-  /** Attachment shapes only - never the bytes. */
   images: AskImage[];
   /**
    * The message's own copies of those pictures (`src/core/attachments.ts`),
@@ -108,7 +107,6 @@ type Row = {
   through?: string | null;
 };
 
-/** The saved reply line back to its shape; anything unreadable is no reply, never a throw. */
 function replyOf(json: string | null): LastTurnReply | null {
   if (!json) return null;
   try {
@@ -300,7 +298,6 @@ export class AskStore {
     this.db.prepare("UPDATE captain_asks SET turn_state = ? WHERE id = ?").run(turnState, id);
   }
 
-  /** The answer-delivery check's state and facts for one message. */
   setDelivery(id: string, delivery: AskDelivery, facts?: DeliveryFacts): void {
     if (facts === undefined) {
       this.db.prepare("UPDATE captain_asks SET delivery = ? WHERE id = ?").run(delivery, id);
@@ -315,7 +312,6 @@ export class AskStore {
     this.db.prepare("UPDATE captain_asks SET notice_card_id = ? WHERE id = ?").run(cardId, id);
   }
 
-  /** The earlier message whose open work this one joined. */
   setContinues(id: string, earlier: string): void {
     this.db
       .prepare("UPDATE captain_asks SET continues = ? WHERE id = ? AND continues IS NULL")
@@ -376,7 +372,6 @@ export class AskStore {
     );
   }
 
-  /** The messages that joined this one's work, oldest first. */
   listContinuing(id: string): AskRecord[] {
     const rows = this.db
       .prepare("SELECT * FROM captain_asks WHERE continues = ? ORDER BY at, rowid")
@@ -391,7 +386,6 @@ export class AskStore {
       .run(JSON.stringify(reply), id);
   }
 
-  /** The newest message's id, or undefined before the first. */
   latestId(): string | undefined {
     const row = this.db
       .prepare("SELECT id FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 1")
@@ -418,7 +412,6 @@ export class AskStore {
     return { ...round(row), previous: before ? round(before) : null };
   }
 
-  /** Asks whose turn has not closed yet, oldest first. */
   listOpen(): AskRecord[] {
     const rows = this.db
       .prepare("SELECT * FROM captain_asks WHERE turn_state = 'open' ORDER BY at, rowid")
@@ -426,7 +419,6 @@ export class AskStore {
     return rows.map(fromRow);
   }
 
-  /** The messages the answer-delivery check holds in one state, oldest first. */
   listByDelivery(delivery: AskDelivery): AskRecord[] {
     const rows = this.db
       .prepare("SELECT * FROM captain_asks WHERE delivery = ? ORDER BY at, rowid")

@@ -39,7 +39,6 @@ type FrameTarget = {
 };
 
 type RawAxValue = { value?: unknown };
-/** One accessibility node as the protocol gives it. */
 export type RawAxNode = {
   nodeId: string;
   ignored?: boolean;
@@ -87,13 +86,11 @@ function renamed(nodes: BrowserNode[], prefix: string): BrowserNode[] {
   }));
 }
 
-/** The node no other node names as a child: a document's root. */
 function rootOf(nodes: readonly BrowserNode[]): BrowserNode | undefined {
   const children = new Set(nodes.flatMap((node) => node.childIds));
   return nodes.find((node) => !children.has(node.id));
 }
 
-/** Put a frame's document under its frame's node, naming the address it shows. */
 function graft(nodes: BrowserNode[], owner: number, url: string, document: BrowserNode[]): boolean {
   const frame = nodes.find(
     (node) =>
@@ -189,7 +186,6 @@ export class PageFrames {
     return { sessionId: frame.sessionId, node, chain: [...this.chainOf(frame), frame] };
   }
 
-  /** A frame's frames above it, from the page down. */
   private chainOf(frame: FrameTarget): FrameTarget[] {
     const chain: FrameTarget[] = [];
     let parent = frame.parent ? this.bySession.get(frame.parent) : undefined;
@@ -334,7 +330,6 @@ export class PageFrames {
   }
 }
 
-/** The part two boxes share; empty when they do not meet. */
 function intersect(a: HostBrowserBox, b: HostBrowserBox): HostBrowserBox {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);

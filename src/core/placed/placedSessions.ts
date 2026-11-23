@@ -157,7 +157,6 @@ export type PlacedSessionsOptions = {
   computers?: () => readonly string[];
   /** How the home's words place a paired computer (`devicePlace`); absent, by its name alone. */
   devicePlace?: (deviceId: string) => ReturnType<typeof signInPlace>;
-  /** A project's name, by its id. */
   projectName: (repoId: string) => string | undefined;
   /**
    * The home's repository for a task's work: its project's, or this Mac's
@@ -337,8 +336,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     this.host = host;
   }
 
-  // ---- the crew's side ------------------------------------------------------
-
   factories(machine: string): SessionFactories | undefined {
     const claude = this.factory(machine, "claude");
     return { pi: this.factory(machine, "pi") as SessionFactory, ...(claude ? { claude } : {}) };
@@ -452,7 +449,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.options.devices.takesCurrentWork(machine);
   }
 
-  /** Whether the computer answers the file orders, so its files can be read from here. */
   answersFiles(machine: string): boolean {
     return this.options.devices.takesCurrentWork(machine);
   }
@@ -692,8 +688,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return Math.max(back, this.placed.get(taskId)?.adoptingSince ?? back);
   }
 
-  // ---- the work requests ------------------------------------------------------
-
   async answer<C extends WorkInvokeChannel>(
     deviceId: string,
     channel: C,
@@ -841,8 +835,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
   }
 
-  // ---- opening ----------------------------------------------------------------
-
   private factory(deviceId: string, backend: SessionBackend): SessionFactory | undefined {
     const profile = this.options.profiles[backend];
     if (!profile) return undefined;
@@ -983,8 +975,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       .map((device) => this.personal?.bring(device.id));
     return Promise.all(sends).then(() => undefined);
   }
-
-  // ---- contact ------------------------------------------------------------------
 
   private contact(contact: WorkDeviceContact): void {
     const device = this.device(contact.deviceId);
@@ -1248,8 +1238,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return session;
   }
 
-  // ---- events ---------------------------------------------------------------------
-
   private async events(
     placed: Placed,
     records: readonly PlacedEventRecord[],
@@ -1312,8 +1300,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (placed.kept > keptBefore) await this.options.beforeKept?.();
     return { through: placed.through, kept: placed.kept };
   }
-
-  // ---- what the computer says is working ------------------------------------------
 
   async answerReads(taskId: string): Promise<AnsweredWait[]> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
@@ -1417,8 +1403,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
   }
 
-  // ---- removing a computer -------------------------------------------------------
-
   /**
    * Before a computer that runs work is removed (docs/devices.md, "Remove"):
    * every conversation it holds is closed there for good and every working
@@ -1450,8 +1434,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         `the work of ${left === 1 ? "one task" : `${left} tasks`} on ${name} could not come here yet`,
       );
   }
-
-  // ---- closing ------------------------------------------------------------------
 
   /** Called only for a closed task whose home-authoritative retention period is over (`PlacedCloses`). */
   removeClosedTaskFiles(
@@ -1565,8 +1547,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return rosterSchema.parse(await this.options.devices.ask(deviceId, "inf:session:roster", []));
   }
 
-  // ---- what the home keeps ----------------------------------------------------------
-
   private device(deviceId: string): Device {
     let device = this.devices.get(deviceId);
     if (!device) {
@@ -1587,8 +1567,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       this.log(`could not keep ${placed.task}'s place: ${errorText(caught)}`);
     }
   }
-
-  // ---- words ------------------------------------------------------------------------
 
   private devicesWithWork(): Set<string> {
     const devices = new Set<string>();
@@ -1611,7 +1589,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return { label: name, where: `on ${name}`, who: name };
   }
 
-  /** The projects a computer's active work belongs to, as one phrase. */
   private projectsOf(deviceId: string): string {
     const names = [
       ...new Set(

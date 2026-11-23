@@ -15,7 +15,6 @@ import type { EndedUseReceipt } from "../secrets/requests";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
 
-/** The facts of a change's delivery wakes. */
 export type DeliveryFacts =
   | { kind: "secrets-use-ended"; receipt: EndedUseReceipt }
   /** An ask to keep a secret ended (docs/secrets.md, "Asking to keep a secret"): names and references, never a value. */
@@ -105,7 +104,6 @@ export type DeliveryFacts =
   | {
       /** Work an active task waited on closed (FI3-250): its one steer. */
       kind: "dependency-closed";
-      /** The work that closed, by its key and title, and its pull request when it had one. */
       dependency: { key: string; title: string; pullRequest?: number; program?: boolean };
       closed: "done" | "dropped";
       /** How the wait was declared: a baseline wait on its checks, or a blocks link holding its merge. */
@@ -232,7 +230,6 @@ export type DeliveryFacts =
        */
       kind: "merge-card-behind";
       lane: "crewmate" | "firstmate";
-      /** The card's id, and its task. */
       card: string;
       task: { id: string; title: string };
       /** `earlier`: an earlier version of Infinitary showed the card, and its change did not move. */
@@ -310,7 +307,6 @@ export type SentBackFacts = {
   notRun?: string[];
 };
 
-/** One send-back in a list: where, why, and what never ran there. */
 export function sentBackLine(entry: Omit<SentBackFacts, "head"> & { head?: string }): string {
   const where = [entry.head ? `at ${entry.head}` : "", entry.change ? `in ${entry.change}` : ""]
     .filter(Boolean)
@@ -335,7 +331,6 @@ export const BATCH_SENT_BACK_WORDS = {
     "Run at the repaired version the checks your project's rules name for a change sent back from its batch, and the checks that never ran on it, and let them finish before you declare the repair with check_change conflictRepair or put up a new merge card for it: a repair declared with impact none rejoins the next batch with no card, and a batch can be the first place many of a project's tests run, so a repair that re-proves only the failure named can be sent back again.",
 } as const;
 
-/** A change's own crewmate hears its send-back, with how often and why it went back before. */
 function renderBatchSentBack(facts: Extract<WakeFacts, { kind: "batch-sent-back" }>): string {
   const earlier = facts.earlier ?? [];
   const count = earlier.length + 1;
@@ -482,10 +477,8 @@ function renderChecksSettled(facts: ChecksSettledFacts): string {
   }
 }
 
-/** How the steer after an independent repair assessment ended a kept approval opens. */
 export const REPAIR_ASSESSED_OPENING = "An independent assessment of your repair";
 
-/** What ended the approval, in the crewmate's words. */
 const ASSESSED_FINDING: Record<Extract<WakeFacts, { kind: "repair-assessed" }>["verdict"], string> =
   {
     "changed-work": "found that your repair changed the work the captain approved",
@@ -803,7 +796,6 @@ export type WriteAnswered = {
   also?: readonly Omit<WriteAnswered, "kind" | "to" | "also">[];
 };
 
-/** How a `write-answered` steer opens when the captain's click sent the write. */
 export const WRITE_ANSWERED_LEAD = "the captain sent ask";
 
 /**
@@ -849,7 +841,6 @@ export function afterMergeWords(
     .join(" ");
 }
 
-/** One ask's outcome in a `write-answered` steer. */
 function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string {
   const allowed = facts.allowed
     ? ` The captain chose Allow for the rest of this task: your later calls of ${facts.call} on ${facts.place} for ${facts.allowed} run at once without a card until this task closes.`
@@ -865,7 +856,6 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
   }${allowed}`;
 }
 
-/** A change's delivery wakes, worded. */
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "secrets-use-ended": (facts) =>
     `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.receipt.request}: ${facts.receipt.state}.${facts.receipt.exitCode === undefined ? "" : ` The recipient exited with status ${facts.receipt.exitCode}.`} This is a receipt, not permission for another use or an external action.${facts.receipt.state === "unknown" ? " Do not repeat this request; reconcile what happened before depending on it." : ""}`,
@@ -923,7 +913,6 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
 
 /** Protected-use completion, metadata only; its receipt grants no further authority. */
 export const SECRETS_USE_ENDED_LEAD = "Secrets request";
-/** The lead of every ask-ended wake. */
 export const SECRETS_ASK_ENDED_LEAD = "Your ask to keep a secret";
 
 /** What the asker hears once when its ask ends: each kept secret's name, place, reference and version, never a value. */

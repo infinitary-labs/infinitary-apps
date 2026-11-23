@@ -63,7 +63,6 @@ const git = (dir: string, ...args: string[]) =>
     .toString()
     .trim();
 
-/** Where each section stood, kept with the run's results. */
 const picture = (name: string) => test.info().outputPath(`${name}.png`);
 
 test("a fresh install signs in, adds a project, asks the first mate and merges its crewmate's change", async () => {
@@ -151,7 +150,6 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
       const task = board.tasks.find((row) => row.key === key);
       if (!task) throw new Error("The started task is not on the board.");
       taskId = task.id;
-      // The first mate put it in the project the person named.
       expect(board.projects.find((project) => project.id === task.projectId)?.name).toBe(PROJECT);
       await expect.poll(() => taskWorktrees(projectDir)).toHaveLength(1);
       await windowShot(page, picture("4-first-mate"));

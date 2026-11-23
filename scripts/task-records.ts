@@ -10,7 +10,6 @@ import { openDatabase } from "../src/core/storage/db.ts";
 import { exportTaskRecords, parseTaskExport } from "../src/core/tasks/taskExport.ts";
 import { TaskService } from "../src/core/tasks/taskService.ts";
 
-/** Export the record under `userDataDir` to `outPath`; returns the line count. */
 export function exportToFile(userDataDir: string, outPath: string): number {
   const db = openDatabase(userDataDir);
   try {
@@ -23,7 +22,6 @@ export function exportToFile(userDataDir: string, outPath: string): number {
   }
 }
 
-/** Reload the export at `importPath` into `userDataDir`; returns what was written. */
 export function importFromFile(
   userDataDir: string,
   importPath: string,

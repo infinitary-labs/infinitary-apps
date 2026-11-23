@@ -142,7 +142,6 @@ test("a merge card the app merges on its own shows once, after the merge, with i
     const line = frame.locator(`[${MERGE_LINE_MARK}]`);
     // No first mate turn merged it, so the line carries no closing sentence.
     await expect(line).not.toContainText(MOCK_CLOSING_SENTENCES["merge-pr"]);
-    // The card the app merged from holds no button.
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).find(
         (card) => card.title === MOCK_SELF_MERGE_CHANGE_TITLE,
@@ -161,7 +160,6 @@ test("a merge card the app merges on its own shows once, after the merge, with i
         "data-risk-level",
         rating.level,
       );
-    // The merge card's fact strip beside Chat, the pull request linked.
     const facts = factsStrip(frame);
     await expect(facts.project).toHaveText("meterlab");
     await expect(facts.care).toHaveText(RIGOR_WORDS.quick);

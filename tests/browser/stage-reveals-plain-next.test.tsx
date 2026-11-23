@@ -25,7 +25,6 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
 const warmFrame = () =>
   document.querySelector<HTMLIFrameElement>('[data-card-layer] [data-stage-entry="warm"] iframe');
 
-/** The tide table's fade, read inside its page: its state and time, or null before it runs. */
 const fade = () =>
   inFrameTitled(`${TIDE_TABLE} body`, () => {
     const animation = document.querySelector("#fade")?.getAnimations()[0];

@@ -393,7 +393,6 @@ describe("disposable installer environment", () => {
       expect(appEnv).not.toHaveProperty("GITHUB_ACTIONS");
       expect(appEnv).not.toHaveProperty("RUNNER_ENVIRONMENT");
 
-      // A missing fact is not replaced with a successful hosted identity.
       const missing = installerServerEnvironment(child, {});
       expect(missing.GITHUB_ACTIONS).toBeUndefined();
       expect(missing.RUNNER_ENVIRONMENT).toBeUndefined();

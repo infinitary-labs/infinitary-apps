@@ -13,8 +13,6 @@ export const CLOSE_QUOTE = "”";
  */
 export const CONVERSATION_HEADING = m.shellConversationHeading();
 
-/** The read-only conversation note's heading, worded when shown. */
 export const conversationHeading = (): string => m.shellConversationHeading();
 
-/** Words someone said, inside their quotation marks. */
 export const quoted = (words: string) => `${OPEN_QUOTE}${words}${CLOSE_QUOTE}`;

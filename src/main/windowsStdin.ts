@@ -2,7 +2,6 @@ import { read as readHandle } from "node:fs";
 import { Readable } from "node:stream";
 import { isatty } from "node:tty";
 
-/** Reads one piece of the input handle into `into`, answering how much came, or what stopped it. */
 export type HandleRead = (
   into: Buffer,
   done: (error: NodeJS.ErrnoException | null, got: number) => void,

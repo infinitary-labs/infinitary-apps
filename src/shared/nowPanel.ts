@@ -123,7 +123,6 @@ export function nowGroupOf(task: NowGroupInput): NowGroup | null {
   }
 }
 
-/** A row the grouping places, with where it hangs in its tree. */
 type PlacedTask = NowGroupInput & Pick<TaskView, "id" | "parentId">;
 
 /**

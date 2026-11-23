@@ -157,6 +157,5 @@ export async function deliveringFromAnotherBranch() {
   return { at, story, checkedOut };
 }
 
-/** How many pull requests the fake forge was asked to open. */
 export const opens = (at: { forge: FakeForge }) =>
   at.forge.calls.filter((call) => call.startsWith("openChange")).length;

@@ -25,14 +25,12 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 
-/** electron-builder.yml parsed by the YAML reader electron-builder uses. */
 function electronBuilderConfig() {
   const electronBuilder = createRequire(require.resolve("electron-builder/package.json"));
   const yaml = electronBuilder("js-yaml");
   return yaml.load(readFileSync(join(root, "electron-builder.yml"), "utf8"));
 }
 
-/** The matcher @electron/universal applies to x64ArchFiles. */
 function universalMatcher() {
   const electronBuilder = createRequire(require.resolve("electron-builder/package.json"));
   const appBuilderLib = createRequire(electronBuilder.resolve("app-builder-lib/package.json"));

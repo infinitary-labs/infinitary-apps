@@ -73,7 +73,6 @@ describe("OpenReads", () => {
     expect(write.signals[0]?.aborted).toBe(false);
     await Promise.resolve();
     expect(wrote).toBe(false);
-    // Asked again, nothing is left to answer.
     expect(reads.answer(clock)).toEqual([]);
   });
 

@@ -33,7 +33,6 @@ export const GALAXY = {
   lid: 0.12,
 } as const;
 
-/** The disc's turn at `tSec`. */
 export const galaxySpin = (tSec: number): number => tSec * GALAXY.spin;
 
 /**

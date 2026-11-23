@@ -19,7 +19,6 @@ export type PhoneApproval =
   | { state: "comparing"; card?: string }
   | { state: "on"; device: string; code: string; stopping: boolean };
 
-/** Where one paired phone stands, from the Secrets view the home answers. */
 export function phoneApprovalOf(view: SecretsView, paired: string): PhoneApproval {
   const enrolled = view.devices.find((device) => device.paired === paired);
   const setup = view.phones?.find((phone) => phone.paired === paired);
@@ -37,7 +36,6 @@ export function phoneApprovalOf(view: SecretsView, paired: string): PhoneApprova
   return { state: "off" };
 }
 
-/** Shows a card the captain decides on next: home, with that card in front. */
 function showCard(card: string): void {
   const shell = useShellStore.getState();
   shell.setView("home");

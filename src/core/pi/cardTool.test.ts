@@ -406,11 +406,9 @@ describe("createEmitCardTool", () => {
       { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
     ];
     const card = { title: "The meter fix is ready", body: "<p>Ready.</p>", actions: merge };
-    // A merge with no risk is refused, naming every dimension to rate.
     await expect(tool.execute("t1", card)).rejects.toThrow(
       /Card refused: a merge card carries risk: give each of blast, behavior, undo, evidence, sensitivity, novelty, deps a level/,
     );
-    // One with a dimension left out, or a level the scale has not, names it.
     const { deps: _deps, ...sixOfSeven } = RISK;
     await expect(tool.execute("t2", { ...card, risk: sixOfSeven })).rejects.toThrow(
       /Card refused: risk\.deps is missing or not right/,
@@ -418,7 +416,6 @@ describe("createEmitCardTool", () => {
     await expect(
       tool.execute("t3", { ...card, risk: { ...RISK, undo: { level: "huge", why: "x" } } }),
     ).rejects.toThrow(/Card refused: risk\.undo\.level is missing or not right/);
-    // A line over the length is refused; one the model wrapped reads as one.
     await expect(
       tool.execute("t4", {
         ...card,
@@ -434,7 +431,6 @@ describe("createEmitCardTool", () => {
       ...card,
       riskDeclaration: { ...RISK, blast: { level: "low", why: "One file in the footer" } },
     });
-    // Risk on a card that merges nothing is refused.
     await expect(
       tool.execute("t6", { title: "Pick a meter", body: "<p>Two meters.</p>", risk: RISK }),
     ).rejects.toThrow(/Card refused: risk rides only on a merge card/);
@@ -476,7 +472,6 @@ describe("createEmitCardTool", () => {
       reads: ["quota.snapshot", "tasks.board"],
       sql: ["v_usage_v1"],
     });
-    // A catalog read no panel may name, and a view the app does not publish.
     await expect(tool.execute("t2", { ...card, reads: ["crew.counts"] })).rejects.toThrow(
       /Card refused: reads names "crew\.counts", which is not a read a card may use/,
     );
@@ -723,12 +718,10 @@ it("offers the browser button only to a crewmate whose task has its own browser"
   await withBrowser.run({ ...card, browser_button: "Try it" });
   expect(onCard.mock.calls[0]?.[0]).toMatchObject({ browserButton: "Try it" });
 
-  // Without a browser the schema has no such field, and a stray one is not carried.
   const without = bindTool(EMIT_CARD_TOOL, { onCard, taskId: "t1" });
   expect(without.parameters.properties).not.toHaveProperty("browser_button");
   await without.run({ ...card, browser_button: "Try it" });
   expect(onCard.mock.calls[1]?.[0]).not.toHaveProperty("browserButton");
-  // Nor does the Firstmate's.
   const firstmate = createEmitCardTool(onCard, undefined, { role: "firstmate" });
   expect(firstmate.parameters.properties).not.toHaveProperty("browser_button");
 });
@@ -795,12 +788,10 @@ it('carries a crewmate\'s request that the captain take its browser over (docs/t
       },
     ],
   });
-  // Without a browser there is no request, and a stray one is not carried.
   const without = bindTool(EMIT_CARD_TOOL, { onCard, taskId: "t1" });
   expect(without.parameters.properties).not.toHaveProperty("browser_handoff");
   await without.run({ ...request, actions: [{ id: "ok", label: "Looks right", default: true }] });
   expect(onCard.mock.calls[1]?.[0]).not.toHaveProperty("browserHandoff");
-  // The Firstmate opens no task's browser: its lint says so.
   expect(
     lintFirstmateCard(
       {

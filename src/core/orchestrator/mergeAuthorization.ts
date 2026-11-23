@@ -274,7 +274,6 @@ export function standInFront(
   if (front) tasks.delivery.recordPermissionRecords(taskId, { mergeAuthorization: front });
 }
 
-/** The one head an approval can merge now. */
 export function candidateHead(authorization: MergeAuthorization): string {
   return TaskGraph.newestApproved(authorization);
 }
@@ -349,7 +348,6 @@ export function coveringApproval(
  */
 export type CoveredFailure = "none" | "checks" | "batch";
 
-/** What a crewmate does at an approved version its batch failed, sent back or left out. */
 export const COVERED_BATCH_STEP =
   "Put up no merge card: this version's batch failed with it alone, sent it back or left it out, as the batch check's words say, and no checks override passes a batch, so there is no Merge anyway. Fix the cause in a new version and declare it with check_change conflictRepair: with impact none the approval goes ahead without a new card and the new version joins the project's next batch once its checks pass; with changed-work the approval ends and you put up a new merge card.";
 
@@ -385,7 +383,6 @@ export function keptApprovalLine(kept: MergeAuthorization): string {
   return `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` Their guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`;
 }
 
-/** The approval that stands on a delivery record, if any. */
 export function standingAuthorization(
   delivery: TaskDelivery | null | undefined,
 ): MergeAuthorization | undefined {
@@ -835,7 +832,6 @@ export function parseRepairAssessment(report: string): MergeRepairImpact | "unst
 /** How long an independent repair assessment may take before the approval stops waiting on it. */
 export const ASSESSMENT_BOUND_MS = 60 * 60_000;
 
-/** Why an independent assessment's verdict ends the approval, in the host's words. */
 export function assessmentEndReason(
   verdict: Exclude<NonNullable<MergeRepairAssessment["verdict"]>, "none">,
 ): string {
@@ -1088,7 +1084,6 @@ const TIMED_WAITS: Partial<Record<MergeWait, number>> = {
   "host-queue": 60_000,
 };
 
-/** The longest a timed wait backs off to. */
 const MAX_RETRY_MS = 30 * 60_000;
 
 /**
@@ -1097,7 +1092,6 @@ const MAX_RETRY_MS = 30 * 60_000;
  */
 const READ_ONLY_WAITS: Partial<Record<MergeWait, number>> = { "host-queue": 5 * 60_000 };
 
-/** When a timed wait is read again, backing off with each try; undefined for an untimed wait. */
 export function retryAfter(wait: MergeWait, retries: number, now: number): number | undefined {
   const base = TIMED_WAITS[wait];
   if (base === undefined) return undefined;

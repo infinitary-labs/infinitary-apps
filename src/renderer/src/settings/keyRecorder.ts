@@ -71,7 +71,6 @@ export function keysAfterPress(
     : binding;
 }
 
-/** Whether the recorded keys could still take a second key. */
 export function takesSecondKey(
   id: AnyCommandId,
   keys: KeyBinding | null,
@@ -88,7 +87,6 @@ export function takesSecondKey(
   );
 }
 
-/** Whether the keys are the prefix in use and nothing after it yet. */
 function isPrefixAlone(keys: KeyBinding, prefix: KeyChord | undefined): boolean {
   return (
     prefix !== undefined &&
@@ -140,7 +138,6 @@ export function recorderVerdict(
   return { kind: "moves", clashes, words };
 }
 
-/** What is saved once the recorded keys are saved, or null when there is nothing to save. */
 export function savedAfterRecording(
   saved: SavedKeymap,
   bindings: Bindings,

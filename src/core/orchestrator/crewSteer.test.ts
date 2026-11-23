@@ -48,7 +48,6 @@ async function running(fields: Parameters<typeof workComputer>[2] = {}) {
   return { ...h, crewmate, taskId };
 }
 
-/** Each steer the record holds for the task, with what happened to it. */
 function steers(h: Awaited<ReturnType<typeof running>>, taskId: string) {
   return h.tasks
     .timeline(taskId)

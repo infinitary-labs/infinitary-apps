@@ -2,7 +2,6 @@ import { browserCommand } from "./commandWords";
 import type { OutlineLine } from "./outline";
 import { mapOf, type PageWindow, WINDOW_CHARS, WINDOW_LINES } from "./window";
 
-/** The changed list when the outline is the same as before. */
 export const NOTHING_CHANGED_LINE = "changed: nothing changed in the outline.";
 
 /** Compare only outline text already filtered by the page's privacy rules.

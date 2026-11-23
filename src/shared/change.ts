@@ -116,7 +116,6 @@ export const changeVersionSchema = z.object({
 });
 export type ChangeVersion = z.infer<typeof changeVersionSchema>;
 
-/** How the change ended: merged, discarded, or closed another way with the task's reason. */
 export const changeReceiptSchema = z.object({
   outcome: z.enum(["merged", "discarded", "closed"]),
   reason: taskClosedReasonSchema.optional(),

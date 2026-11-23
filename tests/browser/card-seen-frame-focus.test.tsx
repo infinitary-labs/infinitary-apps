@@ -17,7 +17,6 @@ import { openSize, openWindow } from "./window";
 
 const TITLE = "Sampler result";
 
-/** The one card a seeded home lists. */
 function listedCard(home: Awaited<ReturnType<typeof seededHome>>): Card {
   const listed = home["inf:cards:list"];
   if (!Array.isArray(listed) || listed.length !== 1)
@@ -25,7 +24,6 @@ function listedCard(home: Awaited<ReturnType<typeof seededHome>>): Card {
   return listed[0] as Card;
 }
 
-/** Whether the window is in front of the captain, as the page reads it. */
 const inFront = (value: boolean) =>
   Object.defineProperty(document, "hasFocus", { configurable: true, value: () => value });
 

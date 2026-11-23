@@ -66,7 +66,6 @@ describe("the width a card's body asks for", () => {
     expect(contentCardWidth(`${ANSWER}${table(4)}`)).toBe("wide");
     expect(contentCardWidth(`${ANSWER}${table(5, { header: true })}`)).toBe("wide");
     expect(contentCardWidth(`${ANSWER}${table(6)}`)).toBe("full");
-    // A spanning cell counts every column it spans.
     const spanned = '<table><tr><td colspan="3">a</td><td>b</td></tr></table>';
     expect(contentCardWidth(`${ANSWER}${spanned}`)).toBe("wide");
   });

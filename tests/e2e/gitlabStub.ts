@@ -148,11 +148,9 @@ type StubMergeRequest = {
   title: string;
   description: string;
   state: "opened" | "closed" | "merged";
-  /** The head it merged at, once merged. */
   mergedHead?: string;
   /** The commit its merge wrote on the default branch, where the test's repository made one. */
   mergedCommit?: string;
-  /** Whether it merged by squash. */
   squashed?: boolean;
   draft?: boolean;
 };
@@ -360,7 +358,6 @@ export async function startGitLabStub(host: string) {
         });
       });
     }
-    // A branch pipeline for each pushed branch no merge request names: its one job passed.
     const requested = new Set([...mergeRequests.values()].map((request) => request.branch));
     for (const branch of pushedBranches?.() ?? []) {
       const head = branchHead(branch);

@@ -319,7 +319,6 @@ describe("Careful's accepted live-validation contract", () => {
     expect(() => review(asked, head, { verdict: "go" })).toThrow(
       /^(?!.*accepted gap).*rules out go/,
     );
-    // A failure is no-go and nothing else, as on the run's own record.
     const passed = run(plan());
     const { revision: _r, at: _a, deviceId: _d, ...input } = passed.runs[0]!;
     const failed = recordValidation(

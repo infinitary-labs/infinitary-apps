@@ -77,7 +77,6 @@ export type EscalationPlan = {
 /** What a source's facts read: its record, its card's saved answers and where pictures live. */
 type SourceOptions = Pick<CrewSupervisorOptions, "tasks" | "cardStore" | "paths">;
 
-/** The card stack's reads of a source's answer card and its thread. */
 type SourceCards = Pick<
   CardService,
   "newestAnswerForTask" | "newestResolutionForTask" | "messages"

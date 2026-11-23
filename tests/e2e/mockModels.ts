@@ -4,10 +4,8 @@
  * provider, or a real catalog provider moved onto the stand-in's port.
  */
 
-/** The provider the app's models.json defines the mock model under. */
 export const MOCK_PROVIDER_ID = "fm-mock";
 
-/** The id of the one mock model, as the app's models.json defines it. */
 export const MOCK_MODEL_ID = "mock-1";
 
 /** The catalog name of the one mock model - what a card's model chip calls it. */
@@ -40,7 +38,6 @@ export function mockProviderOverrideModelsJson(
   )}\n`;
 }
 
-/** The app-scoped models.json contents pointing Pi at the mock server. */
 export function mockModelsJson(port: number): string {
   return `${JSON.stringify(
     {

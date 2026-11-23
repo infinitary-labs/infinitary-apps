@@ -50,7 +50,6 @@ export const PANEL_DRAFT_ACTION = "point.draft";
 /** And the other: `point.openSettings`. */
 export const PANEL_OPEN_SETTINGS_ACTION = "point.openSettings";
 
-/** Where a page runs and whether the captain's own click or key holds it now. */
 export type PointPage = {
   /** The reads the panel declared: pointing needs `tasks.board`. */
   reads: readonly string[];
@@ -348,7 +347,6 @@ export function panelViewKey(
   return JSON.stringify([openTaskIds, shownTaskId, litTaskId, focusedProjectId]);
 }
 
-/** The view a key names. */
 export function panelViewOf(key: string): PanelView {
   const [openTaskIds, shownTaskId, litTaskId, focusedProjectId = null] = JSON.parse(key) as [
     string[],

@@ -349,8 +349,6 @@ test("a merge click on a branch with GitHub's merge queue hands the pull request
       ).toBeVisible({ timeout: 20_000 });
       await expect(noteLines(page, key)).toHaveCount(1);
       await page.screenshot({ path: test.info().outputPath("settle-merge-queued.png") });
-      // GitHub holds it in the queue and merged nothing; the task is open,
-      // nothing landed here, and no card asks the captain anything.
       expect(github.inMergeQueue()).toEqual([CHANGE.number]);
       expect(github.merges()).toEqual([]);
       await expect(putInLine(page, key)).toHaveCount(0);
@@ -541,13 +539,9 @@ for (const refusal of REFUSALS) {
       await expect
         .poll(async () => refusal.stoppedBy(stopOf(await detail()), fact), { timeout: 20_000 })
         .toBe(true);
-      // Nothing went in: GitHub merged nothing (and was asked only when the
-      // head moved under it), main is untouched, and the task is still open
-      // with its work on its branch.
       expect(github.merges()).toEqual([]);
       expect(github.mergeRequests()).toHaveLength(refusal.asksGitHub ? 1 : 0);
       expect(repo.mainLog()).not.toContain("the crewmate's work");
-      // The feed says so: the task's one settle line is the refusal now, and no put-in line.
       await expect(noteLines(page, key)).toHaveCount(1);
       await expect(noteLines(page, key)).toContainText(REFUSAL_LEADS);
       await expect(putInLine(page, key)).toHaveCount(0);

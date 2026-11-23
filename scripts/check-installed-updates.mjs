@@ -154,7 +154,6 @@ async function fresh(version, channel, legacyData = false) {
   record(`Fresh ${channel} installation${legacyData ? " with the legacy handover" : ""}`, "The copied signed app runs and preserves the saved task and draft without Homebrew.");
   return page;
 }
-// The replacement as seen from outside the signed app: process, ShipIt, bundle and phase.
 async function sampleInstall(page) {
   const running = pattern => spawnSync("/usr/bin/pgrep", ["-f", pattern]).status === 0;
   let phase = null, problem = null, timer;
@@ -171,7 +170,6 @@ async function sampleInstall(page) {
   try { version = installedVersion(); } catch { /* ShipIt may be moving the bundle. */ }
   return { appRunning: running(processPattern), shipItRunning: running("/ShipIt( |$)"), installedVersion: version, phase, problem };
 }
-// A replacement that never arrived keeps the app's last answer, ShipIt's logs and the system log.
 async function stalledInstall(page, label) {
   try {
     const value = await bounded("Reading the update status after the stalled installation", () => page.evaluate(() => window.infinitary.update.status()), 10_000);

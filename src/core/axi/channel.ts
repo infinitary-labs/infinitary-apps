@@ -147,7 +147,6 @@ export type CaptainTool = {
   [Op in CaptainOp]: (input: CaptainOpInput[Op]) => Promise<Record<string, unknown>>;
 };
 
-/** What one operation answers, for any tool. */
 type OpAnswer =
   | ChannelAnswer
   | IntegrationChannelAnswer
@@ -288,7 +287,6 @@ export class AxiChannel {
     private readonly server: Server,
   ) {}
 
-  /** Empty the keys' folder, its owner's alone, and listen on a loopback port. */
   static async open(options: AxiChannelOptions): Promise<AxiChannel> {
     const dir = options.keysDir;
     // Keys a killed run left answer nothing now; none of them may linger.
@@ -410,7 +408,6 @@ export class AxiChannel {
     );
   }
 
-  /** Whether a task holds a key now. */
   granted(taskId: string): boolean {
     return this.grants.has(taskId);
   }

@@ -23,7 +23,6 @@ export const MAIN_PROCESS_ROOTS = ["src/main", "src/core", "src/shared"] as cons
 /** Node's calls that wait on another program on the calling thread. */
 export const WAIT_CALLS = ["execSync", "execFileSync", "spawnSync"] as const;
 
-/** Each file allowed to wait on another program on the main thread, with why. */
 export const LISTED_WAITS: Record<string, string> = {
   "src/core/storage/privateCopy.ts":
     "clones the database with /bin/cp -c, a local call that answers in a few milliseconds; the saved-data check is synchronous by design (it refuses before any writer opens the record) and copied the whole file on this thread before",
@@ -33,7 +32,6 @@ export const LISTED_WAITS: Record<string, string> = {
 
 export type Wait = { path: string; line: number; call: string };
 
-/** Whether the check reads this file. */
 export function readsFile(path: string): boolean {
   return (
     MAIN_PROCESS_ROOTS.some((root) => path.startsWith(`${root}/`)) &&
@@ -110,7 +108,6 @@ export function codeOnly(text: string): string {
   return out.join("");
 }
 
-/** Every wait on another program a file's code makes, by line. */
 export function waitsIn(path: string, text: string): Wait[] {
   const code = codeOnly(text);
   const waits: Wait[] = [];
@@ -124,7 +121,6 @@ export function waitsIn(path: string, text: string): Wait[] {
   return waits;
 }
 
-/** Every unlisted wait, and every listed file that no longer waits. */
 export function waitProblems(waits: readonly Wait[], listed: Record<string, string>): string[] {
   const problems: string[] = [];
   for (const wait of waits)

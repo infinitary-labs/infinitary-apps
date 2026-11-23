@@ -82,7 +82,6 @@ type Endpoint = {
   repository?: { full_name?: string; uuid?: string } | null;
 };
 
-/** The pull request states Bitbucket names: open, merged, declined and superseded. */
 const PULL_REQUEST_STATES = new Set(["OPEN", "MERGED", "DECLINED", "SUPERSEDED"]);
 
 type PullRequestJson = {
@@ -426,7 +425,6 @@ export class BitbucketForge implements Forge {
     };
   }
 
-  /** Whether Bitbucket's merge queue holds the pull request now: its own `queued` flag. */
   async inHostQueue(number: number): Promise<boolean> {
     return (await this.pullRequest(number)).queued === true;
   }
@@ -480,7 +478,6 @@ export class BitbucketForge implements Forge {
         {
           type: "pullrequest",
           message: body ? `${title}\n\n${body}` : title,
-          // The merge the caller chose from the branch's strategies: a squash, a rebase or a merge commit.
           merge_strategy: MERGE_STRATEGY[way],
           close_source_branch: false,
         },
@@ -904,7 +901,6 @@ export class BitbucketForge implements Forge {
     return `/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
   }
 
-  /** Where the change's branch lives: the person's fork for a contribution, otherwise this repository. */
   private sourcePath(): string {
     return this.location.source
       ? repositoryPathOf(this.location.source.fullName)
@@ -936,7 +932,6 @@ export class BitbucketForge implements Forge {
     return `${id}/${decodeURIComponent(task)}`;
   }
 
-  /** The status path of a kept `<N>/<task>` merge reference; with a number, only that pull request's. */
   private mergeTaskPath(task: string, number?: number): string | undefined {
     const kept = /^(\d+)\/(.+)$/.exec(task);
     if (!kept || (number !== undefined && Number(kept[1]) !== number)) return undefined;
@@ -948,7 +943,6 @@ export class BitbucketForge implements Forge {
   }
 }
 
-/** Bitbucket's name for each merge the app sends. */
 const MERGE_STRATEGY: Readonly<Record<MergeWay, string>> = {
   squash: "squash",
   rebase: "rebase_merge",
@@ -979,7 +973,6 @@ function statusState(state: string | undefined): ForgeCheckState {
   }
 }
 
-/** One build status as a check, named as Bitbucket shows it. */
 function statusCheck(status: StatusJson): ForgeCheck {
   const state = statusState(status.state);
   return {

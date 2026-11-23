@@ -125,7 +125,6 @@ test("the font crewmate still offers the real font after a missing-file refusal"
   const real = offered(r.next());
   expect(real).toContain(REAL);
   expect(real).not.toContain(DAMAGED);
-  // A shown card ends the font crewmate's script.
   r.results([`Card shown: ${PROJECT_FONT_CARD_TITLE}`]);
   expect(r.next()).toBeUndefined();
 });

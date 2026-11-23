@@ -64,7 +64,6 @@ export type CardContribution = {
   expectedRevision?: string;
   reason?: string;
   operationId?: string;
-  /** The captain message this contribution's reply answers. */
   answersMessage?: number;
 };
 
@@ -1040,7 +1039,6 @@ export class CardThreads {
     });
   }
 
-  /** The thread facts a write's result names. */
   lineResult(
     line: CardMessage,
     answer: { facts: MessageFacts; already?: CardMessage } | { refusal: string } | undefined,
@@ -1070,7 +1068,6 @@ function stillWaitingWords(cards: readonly { id: string; title: string }[]): str
   return `The captain's reply under ${waitingCardWords(cards)} still waits on your answer: answer it there with reply, or in that card's emit_card revision, naming their message in answers_message.`;
 }
 
-/** Whether a card is the caller's own: the first mate's, or its crewmate's on its task. */
 function ownedBy(card: Card, caller: CardCaller): boolean {
   return caller.actor === "firstmate"
     ? card.author === "firstmate"

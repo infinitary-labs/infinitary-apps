@@ -112,7 +112,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
 
-      // The captain's word beats the repository's default.
       const asked = await supervisor.intake.commission({
         title: "Quick fix",
         intent: intentOf("just do it quickly"),
@@ -137,7 +136,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(sessionSpecs[1]?.thinking).toMatchObject({ level: "xhigh" });
       expect(sessionSpecs[1]?.thinking.quick).toBeUndefined();
       expect(noted.promptCalls[0]).toContain(renderRigorSection("reviewed"));
-      // A repo note is no longer a convention: nothing reads it.
       repos.configure(view.id, { rigor: null });
 
       // Every repository defaults to standard - the local-only default
@@ -192,7 +190,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       expect(followupCrewmate.promptCalls[0]).toContain(renderRigorSection("standard"));
 
-      // The repository's standing rigor reaches a follow-up too.
       repos.configure(view.id, { rigor: "reviewed" });
       (specs[0] as CrewmateSpec).onFollowup?.({
         title: "Document the keychain",
@@ -277,7 +274,6 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     expect(crewmate.promptImageCalls[0]).toEqual([pngImage]);
     const [row] = inbox.inFlight(taskId);
     expect(row?.facts).toMatchObject({ kind: "attachments-kept", attachments });
-    // The pinned brief the record keeps names the copy too.
     expect(
       tasks.servedBrief(tasks.timeline(taskId).filter((e) => e.kind === "briefed")[0] as TaskEvent),
     ).toContain("dialog.png");
@@ -321,7 +317,6 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
       "skipped openrouter/deepseek/deepseek-v4-pro: the turn carries images and its def takes text only",
     );
 
-    // Words alone still go to the model that takes text only.
     const words = await supervisor.intake.commission({
       title: "Fix the dialog's wording",
       intent: intentOf("fix the dialog's wording"),
@@ -341,7 +336,6 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
       [textOnly.id, { reasoning: true, input: ["text"], contextWindow: 1_048_576 }],
       [readsPictures.id, { reasoning: true, input: ["text", "image"], contextWindow: 1_048_576 }],
     ]);
-    // The model that reads text only is the one placed for hard and premium work.
     const slots = (model: { id: string }) =>
       model.id === textOnly.id ? (["premium", "high"] as const) : (["medium"] as const);
     const crewmate = fakeCrewmate();
@@ -386,7 +380,6 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
         "none there reads the pictures it carries, so no quota reset will start it",
       ),
     );
-    // Its record says the same, never that premium's allowance ran out.
     const record = recordOf(tasks).detail(premium.taskId);
     expect(record.hold).toEqual(taskHoldWords({ kind: "premium", cause: "pictures" }));
     expect(record.hold?.text).toContain("none of your premium models can read the pictures");

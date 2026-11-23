@@ -73,7 +73,6 @@ import XCTest
     func testPlacesMatchTheDesktop() throws {
         for reading in try readings().places {
             let label = "\(reading.count) stars over \(reading.crew) crew"
-            // The orbits the phone's own seats hand the stars are the desktop's.
             let book = PhoneSceneRoster.SeatBook(crew: (1...reading.crew).map { "crew-\($0)" }, marks: [])
             let orbits = PhoneFixedStars.orbits(counts: book.counts)
             XCTAssertEqual(orbits.map(\.plane), reading.orbits.map(\.plane), label)
@@ -117,7 +116,6 @@ import XCTest
         }
     }
 
-    /// A settled frame snaps every star to its place and holds it there, with no twinkle, whatever the clock reads.
     func testASettledFrameIsSteady() throws {
         let roster = try read(PhoneSceneRoster.Cache(), board(crew: 8, pinned: ["crew-4", "crew-7"]))
         let motion = PhoneSceneMotion()
@@ -160,7 +158,6 @@ import XCTest
         let drawn = PhoneSceneRoster.projected(seat)
         XCTAssertEqual(waiting.point.x, waiting.center.x + drawn.point.x, accuracy: 0.5, "the waiting crewmate stays on its orbit")
         XCTAssertEqual(frame.links.count, 1)
-        // A warp: the star holds, the others ride.
         let seconds = CharacterCatalog.shared.fidgets[CharacterMachine.Fidget.tunnel.rawValue]! / 1000
         var moved = 0.0, drift = 0.0
         let rest = Dictionary(uniqueKeysWithValues: frame.glyphs.map { ($0.task.id, $0.point) })
@@ -180,7 +177,6 @@ import XCTest
         }
         XCTAssertLessThan(drift, 0.5, "the star holds still through the warp")
         XCTAssertGreaterThan(moved, 20, "the rest ride the warp")
-        // Unpinned: it eases back to a seat, and the orbit spaces all six evenly again.
         let unpinned = try read(cache, board(crew: 6, pinned: [], seq: 3, waits: waits))
         let leaving = try XCTUnwrap(motion.frame(roster: unpinned, now: now + 1.0 / 60, settled: false).glyphs.first { $0.task.id == "crew-4" })
         XCTAssertGreaterThan(leaving.star, 0.5, "it eases back, never jumps")

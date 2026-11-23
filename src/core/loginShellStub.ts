@@ -41,7 +41,6 @@ exit $status
   return { shell, log };
 }
 
-/** A program named `name` in `dir` that prints `output`, as an installer would leave it. */
 export function plantProgram(dir: string, name: string, output: string): string {
   mkdirSync(dir, { recursive: true });
   const path = join(dir, name);

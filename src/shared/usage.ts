@@ -47,7 +47,6 @@ const categoriesSchema = <T extends z.ZodType>(value: T) =>
  */
 export const usageAmountSchema = z.object({
   tokens: categoriesSchema(z.number()),
-  /** Records summed here. */
   records: z.number(),
   /** Records that reported any token count. */
   counted: z.number(),
@@ -106,7 +105,6 @@ export const USAGE_WORK_KINDS = [
 export const usageWorkKindSchema = z.enum(USAGE_WORK_KINDS);
 export type UsageWorkKind = z.infer<typeof usageWorkKindSchema>;
 
-/** One project's usage: its subtotal, and the same usage by kind of work. */
 export const usageProjectSchema = z.object({
   /** Null when the record no longer has the task's project. */
   project: z.object({ id: z.string(), name: z.string() }).nullable(),
@@ -180,7 +178,6 @@ export const usageSummarySchema = z.object({
    * estimate, so either unit can name its own three largest.
    */
   places: z.array(usagePlaceSchema),
-  /** Where it went, by project and kind of work. */
   where: usageWhereSchema,
   /** Tasks finished in the period and kind of work. */
   finished: z.number(),
@@ -227,7 +224,6 @@ export const usageTasksSchema = z.object({
 });
 export type UsageTasks = z.infer<typeof usageTasksSchema>;
 
-/** The tokens an amount counts, each category once. */
 export function usageTokens(amount: UsageAmount): number {
   const { input, output, cacheRead, cacheWrite } = amount.tokens;
   return input + output + cacheRead + cacheWrite;
@@ -242,7 +238,6 @@ export function usageValue(amount: UsageAmount, unit: UsageUnit): number | null 
   return amount.counted > 0 ? usageTokens(amount) : null;
 }
 
-/** One token category in the chosen unit, or null where it is not available. */
 export function usageCategoryValue(
   amount: UsageAmount,
   category: UsageCategory,
@@ -292,7 +287,6 @@ export function addUsageAmounts(amounts: readonly UsageAmount[]): UsageAmount {
 /** Finished-work milestones: a few counts worth noticing, and nothing past them. */
 export const USAGE_MILESTONES = [1, 10, 25, 50] as const;
 
-/** The milestone a count has reached, and the next one, if any. */
 export function usageMilestone(finished: number): { reached: number | null; next: number | null } {
   const reached = [...USAGE_MILESTONES].reverse().find((stop) => finished >= stop) ?? null;
   const next = USAGE_MILESTONES.find((stop) => finished < stop) ?? null;

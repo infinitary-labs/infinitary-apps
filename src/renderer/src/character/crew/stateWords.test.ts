@@ -25,7 +25,6 @@ const base: Omit<StateWordInput, "now"> = {
   reducedMotion: false,
 };
 
-/** Reads the rule every 100 ms from `from` to `to`, collecting what it taught. */
 function run(
   start: StateWordState,
   from: number,

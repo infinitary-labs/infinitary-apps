@@ -151,7 +151,6 @@ export class DeviceSetup {
     }
   }
 
-  /** The device list changed: a computer taken off it takes its cards with it. */
   devicesChanged(): void {
     const listed = new Set(this.options.devices().map((device) => device.id));
     for (const deviceId of [...this.raised.keys()]) {
@@ -171,7 +170,6 @@ export class DeviceSetup {
     }
   }
 
-  /** The card's facts for a computer, as they stand now. */
   private facts(deviceId: string, device: ListedDevice | undefined): DeviceSetupFacts | undefined {
     if (!device || !deviceRunsWork(device.kind)) return undefined;
     const place = signInPlace({ ...device, onThisMac: device.onThisMac === true });

@@ -4,13 +4,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Group } from "./panel";
 
-/**
- * A group of the Tasks panel as it paints (./panel.tsx), rendered: the
- * earlier group, a row's mark, key, title and accessible label, and the
- * expand mark a group that opens and closes wears - the panel library's
- * own, the one the rail's panel header wears.
- */
-
 function task(overrides: Partial<PanelTaskRow> = {}): PanelTaskRow {
   return {
     id: "t1",
@@ -73,7 +66,6 @@ function group(
   );
 }
 
-/** The expand mark as painted in a header. */
 function expandChevron(html: string): string {
   const mark = html.match(/<span data-panel-expand-chevron=""[\s\S]*?<\/span>/)?.[0];
   if (!mark) throw new Error(`header has no panel expand chevron: ${html}`);

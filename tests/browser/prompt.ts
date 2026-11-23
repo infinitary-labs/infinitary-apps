@@ -26,7 +26,6 @@ export function messageBoxLocator(): Locator {
   return page.getByRole("textbox", { name: "Task prompt", exact: true });
 }
 
-/** A real picture: a 16 by 16 PNG, painted and encoded by the page's own canvas. */
 export async function picturePng(): Promise<Uint8Array<ArrayBuffer>> {
   const canvas = document.createElement("canvas");
   canvas.width = 16;
@@ -47,10 +46,6 @@ export function base64(bytes: Uint8Array): string {
   return btoa(text);
 }
 
-/**
- * Pastes picture files into `field` as the clipboard hands them over: each
- * is `png`, or `bytes` long when it gives a size.
- */
 export function pastePictures(
   field: HTMLElement,
   png: Uint8Array<ArrayBuffer>,

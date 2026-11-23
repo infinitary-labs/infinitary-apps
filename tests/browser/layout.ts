@@ -4,13 +4,11 @@
  * the window, clear of a neighbour - never a pixel typed into a test.
  */
 
-/** A box as `getBoundingClientRect()` gives it. */
 export type Rect = { x: number; y: number; width: number; height: number };
 
 /** Sub-pixel rounding between two boxes laid out by the same engine is not a breach. */
 const ROUNDING = 0.5;
 
-/** The window's own box. */
 export const windowBox = (): Rect => ({ x: 0, y: 0, width: innerWidth, height: innerHeight });
 
 /**

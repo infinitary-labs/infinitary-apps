@@ -25,7 +25,6 @@ export const PIN_LABEL = m.taskPinPin();
 export const PINNED_MARK_LABEL = "Pinned";
 export const UNPIN_LABEL = m.taskPinUnpin();
 
-/** What a pin control is called: Pin INF-402 on a task that is not pinned, Unpin INF-402 on one that is. */
 export function pinActionLabel(pinned: boolean, key: string): string {
   return `${pinned ? PIN_WORDS.unpin : PIN_WORDS.pin} ${key}`.trim();
 }
@@ -38,7 +37,6 @@ export function pinActivity(actor: "captain" | "firstmate", pinned: boolean): st
     : `${who} unpinned this task from the top of Tasks.`;
 }
 
-/** Why a pin wrote nothing: the task is not here. */
 export function pinMissingRefusal(id: string): string {
   return `Cannot pin ${id}: that task is not here.`;
 }

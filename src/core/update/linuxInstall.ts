@@ -33,7 +33,6 @@ export type LinuxInstallation = {
   chip: string;
   /** Which package installed the app; null when it is none Firstmate knows. */
   package: LinuxPackage | null;
-  /** The AppImage file the app runs from, for an AppImage. */
   appImage?: string;
 };
 
@@ -127,7 +126,6 @@ export const INSTALLS_IN_APP: Partial<Record<LinuxPackage, { asksPassword: boole
   appimage: { asksPassword: false },
 };
 
-/** One offered build the app installs: what it is, where it comes from, and the channel it is from. */
 export type LinuxInstallPlan = {
   package: LinuxPackage;
   version: string;

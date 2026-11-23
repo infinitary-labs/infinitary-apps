@@ -36,7 +36,6 @@ const localHost: QosHost = {
   },
 };
 
-/** The command to spawn so `file args` runs at utility QoS. */
 export function atUtilityQos(
   file: string,
   args: readonly string[],

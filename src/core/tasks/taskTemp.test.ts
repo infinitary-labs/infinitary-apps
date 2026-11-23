@@ -28,7 +28,6 @@ describe("a task's temporary folder across the rename", () => {
     mkdirSync(join(older, TEMP_DIR_NAME), { recursive: true });
     writeFileSync(join(older, OLDER_TEMP_MARKER_NAME), "fm3000-temp-v1\n");
     writeFileSync(join(older, TEMP_DIR_NAME, "download.zip"), "bytes");
-    // Provisioning again keeps the older marker as it is.
     provisionTaskTemp(older);
     expect(existsSync(join(older, TEMP_MARKER_NAME))).toBe(false);
     const trash = join(root, "trash");
@@ -100,7 +99,6 @@ describe("closed tasks' temporary folders", () => {
     const paths = appPathsFor(scratchDir("infinitary-task-temp-history-"));
     const tasks = new TaskService({ db: openInMemoryDatabase(), now: () => 1_000, strict: true });
     seedTask(tasks, { id: "away", title: "away", status: "cancelled", deviceId: "mini" });
-    // A finished task's history: the crewmate's notes from its turns.
     for (let step = 1; step <= 40; step += 1)
       tasks.note("away", `step ${step} of the work is done`, { news: false });
     const temp = new TaskTempFiles({

@@ -28,7 +28,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: capture (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**
@@ -401,7 +400,6 @@ describe("FirstmateAgent capture", () => {
     // The card itself carries no task id: a question task is the record of
     // the answer, not a settle target for the card's buttons.
     expect(supervisor.cards.snapshot()[0]?.taskId).toBeUndefined();
-    // Revising the same card keeps its row and updates the answer.
     await emit?.execute("c2", {
       id: cardId,
       title: "The port flag",
@@ -802,7 +800,6 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
     await tick();
-    // The retry that answered it files it, once, with its own answer.
     expect(tasks.capture.getAsk(ask?.id ?? "")).toMatchObject({
       turnState: "closed",
       attachedVia: "tool:emit_card",
@@ -900,7 +897,6 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
     await tick();
-    // The turn that read it attached and closed it, with its own answer.
     expect(tasks.capture.getAsk("waiting")).toMatchObject({
       turnState: "closed",
       attachedVia: "tool:emit_card",

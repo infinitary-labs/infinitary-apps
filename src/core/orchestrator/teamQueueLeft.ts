@@ -61,7 +61,6 @@ export class TeamQueueLeft {
           ...(left.rule ? { rule: left.rule } : {}),
         });
     } catch {
-      // Unread: the next look reads again.
     } finally {
       this.looking.delete(repoId);
     }

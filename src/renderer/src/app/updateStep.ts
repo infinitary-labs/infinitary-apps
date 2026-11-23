@@ -87,7 +87,6 @@ const releasesPage: UpdateStepButton = { action: "release", label: UPDATE_WORDS.
  */
 const fromSource = (status: UpdateStatus): boolean => status.source !== undefined;
 
-/** The step for this status, or null before the first status arrives. */
 export function updateStep(
   status: UpdateStatus | null,
   pressed: UpdateStepPresses,

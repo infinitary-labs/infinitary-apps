@@ -217,7 +217,6 @@ function outside(text: string): string {
   return span.words;
 }
 
-/** An answer's JSON, read through its fence. */
 function parsed(text: string) {
   return JSON.parse(outside(text)) as Record<string, unknown>;
 }
@@ -846,7 +845,6 @@ describe("Google as an integration", () => {
     });
     expect(google.sent).toHaveLength(1);
     expect(google.drafts).toHaveLength(1);
-    // Neither is ever run again.
     expect((await integrations.sendAsk("task-1", send?.id ?? "")).ok).toBe(false);
     expect((await integrations.sendAsk("task-1", draft?.id ?? "")).ok).toBe(false);
     expect(google.sent).toHaveLength(1);
@@ -889,7 +887,6 @@ describe("Google as an integration", () => {
       },
     ]);
     expect(found.resynced).toBeUndefined();
-    // Looking again from the new cursor finds nothing new.
     const again = await integrations.look("google", "message_received", found.cursor);
     expect(again.items).toEqual([]);
 
@@ -928,7 +925,6 @@ describe("Google as an integration", () => {
       "Gmail asked the app to wait 20 more seconds.",
     );
     expect(google.seen).toHaveLength(asked);
-    // The sign-in itself is fine.
     expect(integrations.view().integrations[0]?.health).toBe("ok");
 
     clock.now += 20_000;
@@ -987,7 +983,6 @@ describe("Google as an integration", () => {
     expect(refused.text).toContain("Sign in again in Settings -> Integrations");
     expect(integrations.view().integrations[0]).toMatchObject({ health: "needs_reauth" });
 
-    // Signing in again brings the row back.
     await integrations.signIn("google", NOTICE_ACCEPTED);
     allowIntegrationReads(integrations);
     expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });

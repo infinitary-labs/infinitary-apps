@@ -82,7 +82,6 @@ import {
 
 const taskWindows = new WeakSet<BrowserWindow>();
 
-/** Whether a window is a task browser page rather than one of the app's own. */
 export function isTaskBrowserWindow(win: BrowserWindow): boolean {
   return taskWindows.has(win);
 }
@@ -221,7 +220,6 @@ function codeOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Resolves when the page stops loading, with how the top frame's load ended. */
 function nextLoad(contents: WebContents, bound: number): Promise<HostLoadOutcome> {
   return new Promise((resolve) => {
     let failed: string | undefined;
@@ -265,7 +263,6 @@ function windowOptions(width: number, height: number): BrowserWindowConstructorO
   };
 }
 
-/** A task page's preferences: sandboxed, isolated, no bridge, no Node. */
 const PAGE_PREFERENCES = {
   contextIsolation: true,
   nodeIntegration: false,
@@ -415,7 +412,6 @@ function refuseEveryPermission(ses: Session): void {
   ses.setDevicePermissionHandler(() => false);
 }
 
-/** The built-in engine's kept profile, emptied: every cookie and every origin's site data. */
 async function forgetAllInKeptProfile(): Promise<void> {
   const ses = keptSession?.ses ?? electronSession.fromPartition(KEPT_PARTITION);
   const jar = cookieJar(ses);

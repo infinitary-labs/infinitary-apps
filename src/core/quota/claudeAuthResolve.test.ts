@@ -55,7 +55,6 @@ describe("managedFromClaudeStore", () => {
       reason: "keychain_locked",
     }).unresolved;
     expect(unresolved).toMatchObject({ status: "unavailable", reason: "keychain_locked" });
-    // What the meter tells the person: it is locked, and Retry asks to unlock it.
     expect(unresolved?.detail).toMatch(/locked/);
     expect(unresolved?.detail).toMatch(/Retry, then enter your password to unlock/);
     expect(unresolved?.detail).not.toMatch(/Always Allow/);

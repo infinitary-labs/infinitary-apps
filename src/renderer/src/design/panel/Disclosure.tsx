@@ -4,7 +4,6 @@ import { useInPlaceReveal } from "../reveals";
 import { MicroLabel } from "./MicroLabel";
 
 export type DisclosureProps = {
-  /** The region's name, rendered as the design system's micro label. */
   label: React.ReactNode;
   /** The collapsed count, in dim mono: what the reader gets by opening it. */
   count?: number | string;

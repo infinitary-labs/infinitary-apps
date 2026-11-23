@@ -154,7 +154,6 @@ function Row({
       if (leave) left.current?.();
       return;
     }
-    // It rises in by the stack's distance, and lifts out by half of it.
     const rise = motionToken(el, "--move-stack");
     const motion = el.animate(
       leave

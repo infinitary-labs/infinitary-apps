@@ -79,13 +79,11 @@ export class CdpPipe {
     });
   }
 
-  /** Hear every event Chrome sends; the answer stops hearing. */
   on(listener: CdpListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  /** Hear once that Chrome's end closed. */
   onClose(listener: () => void): void {
     if (this.closed) listener();
     else this.closedListeners.add(listener);

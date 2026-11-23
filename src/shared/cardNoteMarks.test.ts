@@ -158,7 +158,6 @@ describe("the marks as every surface draws them", () => {
     const copy = smallCopy(page, 220, 160);
     expect(copy.width).toBe(220);
     expect(copy.unit).toBeCloseTo(1280 / 220, 5);
-    // A picture smaller than the copy is drawn at its own size.
     expect(smallCopy({ width: 96, height: 64 }, 220, 160)).toEqual({ width: 96, unit: 1 });
   });
 });

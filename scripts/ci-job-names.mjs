@@ -36,7 +36,6 @@ export const TRIGGERS = Object.freeze([
 
 const LEAD = " · ";
 
-/** One level of a job name split into its trigger and purpose, or null when it leads with no known trigger. */
 export function splitLevel(level) {
   const at = level.indexOf(LEAD);
   if (at < 0) return null;

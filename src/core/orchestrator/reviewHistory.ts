@@ -54,7 +54,6 @@ export type ReviewHistoryReader = {
 /** A card resolution that is not an answer: the captain put the card away without choosing. */
 const NOT_AN_ANSWER = new Set(["dismissed", "closed"]);
 
-/** Whether a timeline event is the captain's choice on a card, not a card put away. */
 export function isCaptainAnswer(event: TaskEvent): boolean {
   const action = event.data?.action;
   return (
@@ -204,7 +203,6 @@ export function renderReviewHistory(entries: readonly ReviewHistoryEntry[]): str
   ].join("\n");
 }
 
-/** One entry of the section, as its readers read it. */
 function historyLine(entry: ReviewHistoryEntry): string {
   switch (entry.kind) {
     case "round": {

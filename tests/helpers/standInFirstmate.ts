@@ -232,7 +232,6 @@ export function standInFirstmate(
  */
 export const STAND_IN_APP = process.platform === "linux" ? "infinitary.AppImage" : "Infinitary.app";
 
-/** The stand-in's own program: inside a Mac's bundle, or the AppImage itself on Linux. */
 export function standInProgram(app: string): string {
   return process.platform === "linux" ? app : join(app, "Contents", "MacOS", "Infinitary");
 }
@@ -247,7 +246,6 @@ export function addStandInPayload(app: string, bytes: Buffer): void {
   else writeFileSync(join(app, "Contents", "Resources", "payload"), bytes);
 }
 
-/** What the stand-in wrote down: the pairing code it was given, and every curl start's arguments. */
 export function standInRecord(record: string): { code: string; curl: string[] } {
   const text = readFileSync(record, "utf8");
   return {

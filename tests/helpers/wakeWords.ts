@@ -156,7 +156,6 @@ export type WordsCase<K extends WakeKind> = {
   words: string;
 };
 
-/** At least one case for each of `Kinds`. */
 export type WordsCases<Kinds extends WakeKind> = {
   [K in Kinds]: [WordsCase<K>, ...WordsCase<K>[]];
 };
@@ -179,7 +178,6 @@ export function pinWakeWords<Kinds extends WakeKind>(title: string, cases: Words
   });
 }
 
-/** The task most cases are about, and its review. */
 export const WAKE_TASK = { id: "479823ee", title: "Restructure the wakes file" };
 export const WAKE_REVIEW = { id: "b9299a73", title: "Review: Restructure the wakes file" };
 

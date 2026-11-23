@@ -17,7 +17,6 @@ function unmatchedCloser(value: string, open: string, close: string): boolean {
   return depth < 0;
 }
 
-/** Peel sentence punctuation and unmatched closers off a URL match. */
 export function trimTrailingUrlPunctuation(raw: string): { url: string; trailing: string } {
   let url = raw;
   let trailing = "";

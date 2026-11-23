@@ -25,7 +25,6 @@ function typeAlias(name: string): ts.TypeAliasDeclaration {
   return found;
 }
 
-/** Props ResponseCard actually declares, in declaration order. */
 function declaredProps(): string[] {
   const alias = typeAlias("ResponseCardProps");
   if (!ts.isTypeLiteralNode(alias.type)) throw new Error("ResponseCardProps is not a type literal");
@@ -37,7 +36,6 @@ function declaredProps(): string[] {
   });
 }
 
-/** Kind literals ResponseCard actually declares, in declaration order. */
 function declaredKinds(): string[] {
   const alias = typeAlias("ResponseCardKind");
   if (!ts.isUnionTypeNode(alias.type)) throw new Error("ResponseCardKind is not a union");

@@ -127,7 +127,6 @@ public struct ApprovalKey: Sendable, Equatable {
         return .refused("\(notConfirmed) LocalAuthentication: domain=\(failure.domain), code=\(failure.code), description=\(failure.localizedDescription)")
     }
 
-    /// The key this phone keeps, or nil when it keeps none.
     public static func load() throws -> ApprovalKey? {
         #if os(iOS)
         try load(on: .current, from: DeviceKeychain())

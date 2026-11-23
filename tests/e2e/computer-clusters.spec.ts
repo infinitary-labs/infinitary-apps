@@ -14,7 +14,6 @@ import { promptInput } from "./prompt";
 import { expectRecordBody, hideRecord, recordCard } from "./rails";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
-/** Every crew glyph target on the page, with the computer it belongs to and its box. */
 function crewTargets(page: import("@playwright/test").Page) {
   return page
     .locator("[data-crew-model-name]")
@@ -30,7 +29,6 @@ function crewTargets(page: import("@playwright/test").Page) {
     );
 }
 
-/** The box around a set of boxes. */
 function union(boxes: Rect[]): Rect {
   const x = Math.min(...boxes.map((b) => b.x));
   const y = Math.min(...boxes.map((b) => b.y));
@@ -256,9 +254,6 @@ test("a wait and a review between computers draw their arrows across the stage",
         "data-crew-computer",
         other,
       );
-    // This Mac's first task waits on both of the other computer's tasks, and
-    // the other computer's review reads this Mac's second: two wait arrows
-    // and one review arrow cross the stage, and nothing else is drawn.
     await expect
       .poll(() => drawnArrows(page))
       .toEqual(

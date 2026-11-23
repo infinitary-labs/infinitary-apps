@@ -25,7 +25,6 @@ import { shownCard } from "./stack";
  */
 
 const SETTLE_MERGE = { kind: "merge", after: "close" } as const;
-/** The completion card whose body tries the settle. */
 const CARD_TITLE = "The work is ready";
 
 test("a card script calling inf.action for a settle at mount does not settle the task", async () => {
@@ -61,7 +60,6 @@ test("a card script calling inf.action for a settle at mount does not settle the
     priority: 30,
     title: CARD_TITLE,
     meta: "crewmate 1",
-    // The body attempts its host-run settle as soon as it mounts.
     body:
       "<p>The work is ready to settle.</p><p role='status'>pending</p>" +
       "<script>inf.action('land-it').then(function () {" +
@@ -93,8 +91,6 @@ test("a card script calling inf.action for a settle at mount does not settle the
     // frame; the rejection proves that the bridge is live.
     await expect(frame.getByRole("status")).toHaveText("action_not_declared", { timeout: 20_000 });
 
-    // Nothing landed: main is still its init commit, the worktree stands,
-    // the card is still on the stack, and the task is still active.
     expect(git("-C", repoDir, "log", "--oneline", "main")).not.toContain("the crewmate's work");
     expect(existsSync(join(worktreeDir, "feature.txt"))).toBe(true);
     await expect(shownCard(page, CARD_TITLE)).toBeVisible();

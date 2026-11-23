@@ -29,7 +29,6 @@ describe("emote tool", () => {
     for (const emote of FIRSTMATE_EMOTES) {
       await tool.execute(`call-${emote}`, { emote });
       expect(request).toHaveBeenLastCalledWith(emote);
-      // The event the agent broadcasts is one the wire schema accepts.
       expect(fmEventSchema.safeParse({ type: "firstmate_emote", emote }).success, emote).toBe(true);
     }
     expect(fmEventSchema.safeParse({ type: "firstmate_emote", emote: "shake" }).success).toBe(

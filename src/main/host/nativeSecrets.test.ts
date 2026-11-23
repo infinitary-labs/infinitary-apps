@@ -88,7 +88,6 @@ describe("nativeSecrets", () => {
 });
 
 describe("interactiveUnlock", () => {
-  /** A custody whose slots answer as given, recording each read. */
   function custody(answers: Record<CustodySlot, CustodyRead["kind"]>) {
     const reads: CustodySlot[] = [];
     const handed: Buffer[] = [];

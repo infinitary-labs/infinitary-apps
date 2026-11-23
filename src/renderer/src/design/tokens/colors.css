@@ -1,6 +1,5 @@
 /* Infinitary — color system. Dark ("deep space") is the default theme; light opts in via [data-theme="light"]. */
 :root {
-  /* base */
   --bg-0: #05070d; /* void — the opaque fallback behind --material-tint */
   --material-tint: rgba(5, 7, 13, 1); /* opaque tint mixed toward clear by wash percentage */
   --bg-1: #0a0e18; /* surface — panels, input shell */

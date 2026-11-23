@@ -17,7 +17,6 @@ import { openSize, openWindow } from "./window";
 
 const row = (id: string) => document.querySelector<HTMLElement>(`[data-device-row="${id}"]`);
 
-/** The Mac mini as the update card reads it: connected on an older version, updated over Remote Login. */
 function factsOf(device: DeviceView): DeviceUpdateNudgeFacts {
   if (!device.otherVersion) throw new Error(`${device.name} is on this computer's version`);
   return {

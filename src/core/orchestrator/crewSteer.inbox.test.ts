@@ -56,7 +56,6 @@ describe("the durable inbox (design A)", () => {
     await fresh.watch.sweepInbox(clock.now);
     await settle();
 
-    // The stranded guidance became the resumed crewmate's next turn.
     expect(bootCrewmate.promptCalls).toEqual(["use the other library"]);
   });
 
@@ -184,7 +183,6 @@ describe("the durable inbox (design A)", () => {
       await fresh.watch.sweepInbox(clock.now);
       await settle();
 
-      // The same message again, opened by the note that it is a replay.
       expect(bootCrewmate.promptCalls).toEqual([`${RESTART_REPLAY_NOTE}\n\n${brief}`]);
       expect(new InboxStore(db).inFlight(taskId)).toEqual([
         expect.objectContaining({ attempts: 1, cuts: launch - 1, escalatedAt: null }),
@@ -195,7 +193,6 @@ describe("the durable inbox (design A)", () => {
     }
     expect(setAside).toEqual([]);
 
-    // The last replay's turn ends clean: the message is handled and leaves the lane.
     turnCrewmate.emit({ type: "turn_end", taskId });
     turnCrewmate.finishPrompt();
     await settle();
@@ -272,7 +269,6 @@ describe("the durable inbox (design A)", () => {
     // The wake and the feed line are the escalation; no host card (P0, WI-3).
     expect(cards()).toEqual([]);
 
-    // The budget is spent: no further delivery attempts.
     const attempts = (crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length;
     passGrace();
     await supervisor.watch.sweepInbox(clock.now);

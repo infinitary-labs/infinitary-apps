@@ -79,7 +79,6 @@ import UIKit.UIGestureRecognizerSubclass
     }
 }
 
-/// The probe's counts as one accessibility element, for the journey to read.
 struct PhoneMenuTapProbeReading: View {
     let probe: PhoneMenuTapProbe
     var body: some View {

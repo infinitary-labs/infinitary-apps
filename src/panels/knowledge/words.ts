@@ -22,7 +22,6 @@ import * as m from "./messages.generated";
  */
 export const SLOT = "\u0000";
 
-/** A worded sentence's words before and after its one `SLOT`. */
 export function aroundSlot(worded: string): [string, string] {
   const at = worded.indexOf(SLOT);
   return at < 0 ? [worded, ""] : [worded.slice(0, at), worded.slice(at + SLOT.length)];
@@ -88,7 +87,6 @@ export function directionOrigin(origin: string): string {
   return m.knowledgePanelOriginAgent();
 }
 
-/** A finding's standing as its chip says it. */
 export const STANDING_WORDS: Readonly<Record<PanelKnowledgeStanding, string>> = {
   get checked() {
     return m.knowledgePanelStandingChecked();
@@ -142,7 +140,6 @@ export function connectionSentence(
   return m.knowledgePanelReadWith({ from: connection.from.title, to: connection.to.title });
 }
 
-/** Where a kept source came from, in words. */
 export function originLine(origin: PanelKnowledgeOrigin): string {
   if (origin.kind === "file") {
     const lines =
@@ -171,7 +168,6 @@ export function originLine(origin: PanelKnowledgeOrigin): string {
   return m.knowledgePanelOriginQuote({ citation: origin.citation });
 }
 
-/** What a kept source reads like now, in words. */
 export const CHECK_WORDS: Readonly<Record<PanelKnowledgeSource["check"]["state"], string>> = {
   get unchanged() {
     return m.knowledgePanelSourceUnchanged();
@@ -190,7 +186,6 @@ export const CHECK_WORDS: Readonly<Record<PanelKnowledgeSource["check"]["state"]
   },
 };
 
-/** A verdict as a check says it. */
 export const VERDICT_WORDS = {
   get supports() {
     return m.knowledgePanelVerdictSupports();

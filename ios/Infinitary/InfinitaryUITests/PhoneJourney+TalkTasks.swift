@@ -101,7 +101,6 @@ extension PhoneJourney {
         XCTAssertTrue(sent.contains { ($0["args"] as? [String]) == ["phone-work", "start-task"] }, "The row's Start is the Mac's start: \(sent)")
         tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
-        // The long press offers that Start too, and one press sends the same start with no ask.
         pressRow(work)
         let pressed = moveEntry("Start")
         XCTAssertTrue(pressed.waitForPresence(timeout: 10), app.debugDescription)
@@ -331,7 +330,6 @@ extension PhoneJourney {
         let heading = app.staticTexts["card-title"]
         XCTAssertTrue(heading.waitForPresence(timeout: 10))
         XCTAssertTrue(noticed.hasSuffix(": " + heading.label), "The notice \(noticed) opens its own card, not \(heading.label)")
-        // The card opens on Home, where the last turn and the message box are.
         XCTAssertTrue(app.buttons["tab-home"].isSelected)
         XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
     }

@@ -28,11 +28,8 @@ export const THREAD_CARD_TITLE = "Two ways to fix the flaky test";
 export const THREAD_CARD_REVISED_TITLE = "Await the queue, not the clock";
 /** The thread card's default action, on every version of it. */
 export const THREAD_CARD_DEFAULT_LABEL = "Await the queue";
-/** The captain's reply that changes what the card should say: a revision. */
 export const THREAD_REVISE_REPLY = "the second option is wrong";
-/** The crewmate's short answer, passed as the revision's `reply`. */
 export const THREAD_REVISE_ANSWER = "You are right; the card now leads with awaiting the queue.";
-/** The captain's reply that changes nothing on the card: prose in the thread. */
 export const THREAD_PROSE_REPLY = "and the flaky retry - keep it?";
 export const THREAD_PROSE_ANSWER = "Kept it; the queue flush makes the retry harmless either way.";
 /**
@@ -366,7 +363,6 @@ export function crewScriptAnswer(request: CrewScriptRequest): ScenarioAnswer | u
         ],
       };
     }
-    // Nothing on the card changes: answer in the thread itself.
     if (!hasToolResults && latestUserTail.includes(THREAD_PROSE_REPLY)) {
       return {
         calls: [
@@ -401,8 +397,6 @@ export function crewScriptAnswer(request: CrewScriptRequest): ScenarioAnswer | u
     }
     return { text: "The card is up and I am holding for the captain." };
   }
-  // The Claude crewmate on a refused login (CLAUDE_REFUSED_PROMPT_MARKER):
-  // the organisation refusal while the server refuses, then a report.
   if (
     !isFirstmate &&
     anthropicMessages &&

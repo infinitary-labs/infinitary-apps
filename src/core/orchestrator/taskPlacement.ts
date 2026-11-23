@@ -171,7 +171,6 @@ export class TaskPlacement {
     return this.options.accountlessModels?.().find((model) => routesNamed(named, model));
   }
 
-  /** Whether a start routed so runs on the named model, as routed or account-less. */
   servesNamed(named: string, machine: string | null, routed: RouteResult | undefined): boolean {
     return (
       routesNamed(named, routed?.choice) ||
@@ -465,7 +464,6 @@ export class TaskPlacement {
     );
   }
 
-  /** Why a task cannot be asked to run at `ask`, or undefined when it can. */
   placeRefusal(handle: string, record: PlacementRecord, ask: string): string | undefined {
     if (record.shape?.kind === "review")
       return `${handle} is a review and follows its builder's computer; its location cannot be chosen separately.`;
@@ -776,7 +774,6 @@ export class TaskPlacement {
     return device ? this.options.machines?.placeOf(device).where : undefined;
   }
 
-  /** The project's name, or the task's title for a task with none. */
   private projectWord(repoId: string | null, title: string): string {
     return (repoId ? this.options.repos.get(repoId)?.name : undefined) ?? title;
   }

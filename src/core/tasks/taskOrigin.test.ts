@@ -202,7 +202,6 @@ describe("where a card's work came from", () => {
       through: 2,
     });
     expect(tasks.capture.originAbout("inf-3188")).toMatchObject({ at: typed, through: 1 });
-    // The timeline says the report passed the captain's words on.
     expect(tasks.timeline("inf-3188").at(-1)?.text).toBe(
       `Filed after ${tasks.get("inf-3106")?.key}'s report, which passed on your words`,
     );

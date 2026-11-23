@@ -403,7 +403,6 @@ describe("One owner for integration names (INF-946)", () => {
     await expect(integrations.add("mcp", { name: " studio NOTES " })).rejects.toThrow(
       "An integration named studio NOTES is being added. Choose another name.",
     );
-    // Another name whose words make the same id gets the next id, never the same one.
     const second = integrations.add("mcp", { name: "Studio-notes" });
     mcp.finish();
     mcp.finish();
@@ -484,7 +483,6 @@ describe("One owner for integration names (INF-946)", () => {
       ["mcp-drafts", "Drafts", undefined],
     ]);
     expect(store.read()["mcp-notes-2"]).toMatchObject({ paused: true, off: ["add_note"] });
-    // The same rows listed in another order keep the same names.
     expect(names([servers([...saved].reverse()).binding])).toEqual(
       view.integrations.map((row) => [row.id, row.name]).sort(),
     );
@@ -872,8 +870,6 @@ describe("Allow for the rest of this task (INF-2993)", () => {
       await f.write("task-1", "POST", "/repos/octo/queue-proof-4ca5/statuses/0be4f05"),
     ).not.toHaveProperty("refused");
     expect(f.kept.size).toBe(asksBefore);
-    // Another kind of request, another repository, a path that could leave
-    // the repository, another task and the first mate each still ask.
     for (const [taskId, method, path] of [
       ["task-1", "DELETE", "/repos/octo/queue-proof-4ca5"],
       ["task-1", "POST", "/repos/octo/meter/pulls"],

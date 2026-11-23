@@ -80,7 +80,6 @@ test("a task card with a long Progress list opens to show all of it, without a s
         if (!key) throw new Error(`The seeded task ${id} is missing`);
         await pressRow(page, key);
         await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
-        // The whole plan and the readout are on the card, and the lower part has drawn.
         await expect(
           recordCard(page).locator("[data-task-plan-list] [data-plan-label]"),
         ).toHaveText(plan.map((item) => item.label));

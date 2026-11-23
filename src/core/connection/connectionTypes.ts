@@ -97,7 +97,6 @@ export type PairedDevices = {
   ): void;
 };
 
-/** A computer that runs work came into reach of this home, or went. */
 export type WorkDeviceContact = { deviceId: string; contact: "in-reach" | "gone" };
 
 /** A Mac that controls this Firstmate connected to this home, or its last connection went. */

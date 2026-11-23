@@ -66,7 +66,6 @@ import { TaskService } from "./taskService";
 import { type DeliveryObservation, keyOrId, type TaskWriter } from "./taskWriter";
 import { liveWaitCycle } from "./waitCycles";
 
-/** The editable fields (update_task); every one optional. */
 /** What a required-action correction did (`TaskService.delivery.reviseRequiredAction`). */
 export type RequiredActionRevision =
   | {
@@ -1405,7 +1404,6 @@ export class TaskDeliveries {
     );
   }
 
-  /** The steps a crewmate does, each with the id its filing takes. */
   private crewmateAfterMergeSteps(sourceId: string): { id: string; step: AfterMergeStep }[] {
     return this.afterMergeSteps(sourceId).filter(({ step }) => step.doer !== "firstmate");
   }

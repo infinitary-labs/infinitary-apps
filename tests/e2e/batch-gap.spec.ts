@@ -78,7 +78,6 @@ test("a batched project's batch gap is set by keys in Settings → Projects and 
     await expect(row).toContainText(BATCH_GAP_WORDS.description);
     expect(await saved()).toBeNull();
 
-    // Tab from Where changes go reaches it, before Require pull request checks.
     await focusOn(batched);
     await pressKey(batched, "Tab");
     await expect(gap).toBeFocused();
@@ -97,7 +96,6 @@ test("a batched project's batch gap is set by keys in Settings → Projects and 
       ready: inView,
     });
 
-    // Put back: the project starts a batch as soon as a change is approved again.
     await focusOn(gap);
     await gap.selectOption("now");
     await expect.poll(saved).toBeNull();

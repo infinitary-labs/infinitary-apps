@@ -29,7 +29,6 @@ import { fileURLToPath } from "node:url";
 /** The last version written by hand; each revision file since adds one to its minor. */
 const LAST_WRITTEN = { major: 4, minor: 72 } as const;
 
-/** The folder of revision files, beside this module in the source tree. */
 export function contractRevisionsDir(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "contract-revisions");
 }
@@ -39,12 +38,10 @@ function isRevision(name: string): boolean {
   return name.endsWith(".md") && name !== "README.md";
 }
 
-/** The revision files in a folder, by name. */
 export function contractRevisionFiles(dir: string = contractRevisionsDir()): string[] {
   return readdirSync(dir).filter(isRevision).sort();
 }
 
-/** The version a set of revision files serves. */
 export function contractVersionOf(revisionFiles: readonly string[]): string {
   return `${LAST_WRITTEN.major}.${LAST_WRITTEN.minor + revisionFiles.filter(isRevision).length}`;
 }

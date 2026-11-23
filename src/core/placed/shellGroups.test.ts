@@ -41,7 +41,6 @@ describe("a crewmate shell's process group", () => {
     expect(inCrewShell(row(byPid, 59302), byPid, shells)).toBe(true);
     expect(inCrewShell(row(byPid, 59304), byPid, shells)).toBe(true);
 
-    // Its task closed: the same programs are no longer the crew's.
     open.delete("task-a");
     expect(inCrewShell(row(byPid, 59302), byPid, shells)).toBe(false);
   });

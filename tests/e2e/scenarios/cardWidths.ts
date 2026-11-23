@@ -18,7 +18,6 @@ export const WIDTH_CARD_TITLES = {
 /** The regular card's one paragraph: prose alone. */
 export const WIDTH_CARD_REGULAR_TEXT =
   "The meter row now reads on the first paint, all five meters in one line.";
-/** The wide card's drawing: 510 units across, at width="100%". */
 const WIDTH_CARD_FIGURE = "Cost grows with the turn";
 const WIDTH_CARD_PARAGRAPH =
   "Each row is one model family, measured over the same forty recorded turns, and the columns read left to right from the cheapest input to the costliest output, so the row that matters most is the one whose last two columns grow fastest as the turn grows longer.";
@@ -84,7 +83,6 @@ function widthCardToolCalls(): ScriptedCall[] {
   ];
 }
 
-/** The crewmate shows the cards a journey sizes: the widths, or the scripted viewport-height body. */
 export const cardWidths: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

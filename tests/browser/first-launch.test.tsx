@@ -19,13 +19,10 @@ import { openSize, openWindow } from "./window";
 const ASK = "Please pause the work for now";
 const REPLY = "Paused. Nothing new starts until you say so.";
 
-/** The last turn above the input. */
 const LAST_TURN = "[data-last-turn]";
 
-/** The gate's band while it is open. */
 const OPEN_GATE = '[data-first-run-gate="open"]';
 
-/** Returns once nothing that moves `element`, or a box holding it, is still running. */
 async function atRest(element: Element): Promise<void> {
   await Promise.all(
     document

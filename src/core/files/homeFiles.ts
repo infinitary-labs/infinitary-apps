@@ -23,7 +23,6 @@ export function startHomeFiles(options: {
   paths: AppPaths;
   /** The home folder `~` names here; this computer's user's own unless a test names a scratch one. */
   home?: string;
-  /** The home's own name, as this computer reads it. */
   homeName: string | undefined;
   machines: Pick<CrewMachines, "computers" | "nameOf" | "placeOf"> & {
     answersFiles(machine: string): boolean;

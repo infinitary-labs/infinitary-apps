@@ -67,7 +67,6 @@ export function enterAction(keys: EnterKeys): EnterAction {
  */
 export type ShellEdit = "kill-line-before" | "kill-line-after" | "kill-word-before" | "yank";
 
-/** A kill: every shell edit but the yank. */
 export type ShellKill = Exclude<ShellEdit, "yank">;
 
 /** What a message field does for a key it owns: a shell edit, or bringing back the last message. */

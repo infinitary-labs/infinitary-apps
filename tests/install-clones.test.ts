@@ -62,7 +62,6 @@ function privateBytes(file: string): number {
   return Number(reply.readBigUInt64LE(24));
 }
 
-/** A folder holding a 1 MiB program, a nested file and a relative link to the program. */
 function plantFolder(dir: string): Buffer {
   const program = randomBytes(MIB);
   mkdirSync(join(dir, "bin"), { recursive: true });

@@ -44,7 +44,6 @@ async function fixture() {
     if (!outcome.committed) throw new Error(outcome.text);
     return outcome.ids[0] as string;
   };
-  // Three saved references from one import, and a finding about the first.
   const article = await publish({
     kind: "concept",
     title: "Scion",
@@ -127,7 +126,6 @@ describe("retiring an approved list", () => {
         { revision: 1, op: "publish", reason: "", actor: "task:task-a", origin: "crewmate" },
       ]);
     }
-    // Not on the card, so still active.
     expect(f.service.get(CAPTAIN, review).summary.retired).toBe(false);
   });
 

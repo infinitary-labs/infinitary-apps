@@ -298,7 +298,6 @@ export class SavedOutsideData {
     return changed ? "changed" : "unchanged";
   }
 
-  /** The first mate's sessions, its Claude copies, and the Claude client's own files for them. */
   private firstmateFiles(claude: ClaudeFiles): string[] {
     const { firstmateSessionsDir, firstmateClaudeDir, supervisionSessionsDir, firstmateHomeDir } =
       this.options.paths;

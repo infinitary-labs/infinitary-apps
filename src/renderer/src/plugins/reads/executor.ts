@@ -154,7 +154,6 @@ export class ReadExecutor {
 
     let disposed = false;
     let inFlight = false;
-    // The read in flight asks for the lesser value (`narrows`).
     let inFlightLesser = false;
     let dirty = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -193,7 +192,6 @@ export class ReadExecutor {
             if (wantsWhole()) dirty = true;
             return;
           }
-          // A re-run that found nothing new is not news to the subscriber.
           if (hasValue && sameValue?.(current, value)) return;
           deliver(value);
         })
@@ -218,7 +216,6 @@ export class ReadExecutor {
       if (disposed || timer !== undefined) return;
       timer = setTimeout(run, COALESCE_MS);
     };
-    /** A reader asks for all of a value while the one held is the lesser. */
     const wantsWhole = () =>
       narrows !== undefined && wholeReaders.size > 0 && hasValue && narrows.lesser(current);
 

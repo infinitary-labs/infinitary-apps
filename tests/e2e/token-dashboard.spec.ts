@@ -66,7 +66,6 @@ test.afterAll(async () => {
   if (!quit) await launched?.close();
 });
 
-/** Every process still naming this app's userData: the app and its children. */
 function queryProcessesOf(userDataDir: string): string[] {
   return execFileSync("ps", ["-ax", "-o", "pid=,command="], { encoding: "utf8" })
     .split("\n")
@@ -125,7 +124,6 @@ test(`the token dashboard counts every Firstmate turn, its row painting after th
     const before = await newestFirstmateUsage(page);
     await askFirstmate(page, `how are we doing, check ${turn}`);
     const after = await newestFirstmateUsage(page);
-    // The turn wrote usage, and the panel's Firstmate row says the new total.
     expect(after.at).toBeGreaterThan(before.at);
     expect(after.total).toBeGreaterThan(before.total);
     const shown = `${formatTokens(after.total)} tokens`;
@@ -144,7 +142,6 @@ test(`the token dashboard counts every Firstmate turn, its row painting after th
     expect(paint as number).toBeGreaterThanOrEqual(after.at);
     lags.push((paint as number) - after.at);
   }
-  // The Firstmate is the app, labelled as such, apart from any crewmate.
   await expect(tokens.getByText("Firstmate", { exact: true })).toBeVisible();
   measured("tokens:lag", lags, LAG_BUDGET_MS);
 });
@@ -210,6 +207,5 @@ test("a runaway statement is stopped at the cap, the next query is answered, and
   quit = true;
   await launched.close();
   expect(await exited).toBe(0);
-  // Nothing of the query process outlives the app.
   await expect.poll(() => queryProcessesOf(userDataDir), { timeout: 5_000 }).toEqual([]);
 });

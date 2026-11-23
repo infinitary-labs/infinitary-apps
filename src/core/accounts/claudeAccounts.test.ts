@@ -40,7 +40,6 @@ const { CLAUDE_LOGIN_UNREADABLE_TEXT, ClaudeAuthBackend } = await import("../cla
 const { claudeAvailableModels } = await import("../claude/claudeModels");
 const { PiAccountBackend } = await import("../pi/piAccountBackend");
 
-/** A stand-in for Claude's client: writes and reads one directory, nothing else. */
 const fakeClaudeClient = async (
   args: string[],
   configDir: string,
@@ -178,7 +177,6 @@ describe("Claude accounts in the vault", () => {
       expect.objectContaining({ provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" }),
     );
 
-    // A paused account leaves the pool, models and all.
     subject.setEnabled(account.id, false);
     expect(subject.availableModels()).toEqual([]);
   });
@@ -374,7 +372,6 @@ describe("status reads from the current store", () => {
     const account = await counting.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
     const afterAdd = calls;
 
-    // Ten concurrent polls, then ten more: the client is not started again.
     await Promise.all(Array.from({ length: 10 }, () => counting.status(account.id)));
     await counting.views();
     expect(calls).toBe(afterAdd);

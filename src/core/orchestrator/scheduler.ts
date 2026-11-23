@@ -72,7 +72,6 @@ export type ListenedEvent = {
 /** One look's answer: where to look from next and what arrived. */
 export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced?: boolean };
 
-/** Finds the event a rule names. */
 export type EventFinder = Pick<SchedulerEvents, "find">;
 
 /**
@@ -210,7 +209,6 @@ function label(record: Pick<ScheduleRecord, "name" | "prompt">): string {
   return record.name ?? cutText(record.prompt, PROMPT_EXCERPT);
 }
 
-/** " (1 unsent prompt taken back)", or nothing when none was. */
 function recalledText(count: number): string {
   return count > 0 ? ` (${count} unsent ${count === 1 ? "prompt" : "prompts"} taken back)` : "";
 }
@@ -360,14 +358,12 @@ function weekdaysText(days: readonly number[]): string {
 }
 
 export class Scheduler {
-  /** The registration on the host's ticker, undone at stop. */
   private unregister: (() => void) | undefined;
   private readonly now: () => number;
   /** Ticks counted since start: an event rule looks every `every` of them. */
   private ticks = 0;
   /** The tick each event rule last looked at. */
   private readonly looked = new Map<string, number>();
-  /** Looks still running, one per rule at most. */
   private readonly looking = new Map<string, Promise<void>>();
   /** Rules asked to look at once while a look was running: they look again after it. */
   private readonly again = new Set<string>();
@@ -572,7 +568,6 @@ export class Scheduler {
       this.listen(record, true);
   }
 
-  /** How many turned-on rules listen to an integration's events now. */
   listeners(integration: string): number {
     return this.options.store
       .list()
@@ -1250,7 +1245,6 @@ export class Scheduler {
     return record;
   }
 
-  /** One rule, or a refusal saying it is gone. */
   rule(id: string): ScheduleRecord {
     return this.require(id);
   }

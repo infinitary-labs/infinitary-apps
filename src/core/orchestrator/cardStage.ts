@@ -33,19 +33,16 @@ type Part = keyof StageHold;
 export class CardStage {
   private readonly holds = new Map<string, StageHold & { lifecycleId: string }>();
 
-  /** What the stage holds on this card's current lifecycle. */
   of(card: Card): StageHold {
     const hold = this.holds.get(card.id);
     return hold && hold.lifecycleId === card.lifecycleId ? hold : {};
   }
 
-  /** Hold more on a card's current lifecycle, keeping what it already holds there. */
   hold(card: Card, parts: StageHold): void {
     if (!card.lifecycleId) return;
     this.holds.set(card.id, { ...this.of(card), ...parts, lifecycleId: card.lifecycleId });
   }
 
-  /** Release some parts of a card's hold; whether any of them was held. */
   release(card: Card, ...parts: Part[]): boolean {
     const hold = this.holds.get(card.id);
     if (!hold || hold.lifecycleId !== card.lifecycleId) return false;
@@ -58,12 +55,10 @@ export class CardStage {
     return held;
   }
 
-  /** The card left the stack: nothing it held waits any more. */
   leave(cardId: string): void {
     this.holds.delete(cardId);
   }
 
-  /** The cards whose hold names this writer. */
   heldBy(writer: string): string[] {
     return [...this.holds].filter(([, hold]) => hold.writer === writer).map(([id]) => id);
   }

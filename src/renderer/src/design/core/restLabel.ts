@@ -93,7 +93,6 @@ export function useRestLabel(
   };
 }
 
-/** The handlers of an element's own that its rest label runs beside. */
 export type OwnRestHandlers<T extends HTMLElement> = {
   ref?: React.Ref<T> | undefined;
   onPointerEnter?: React.PointerEventHandler<T> | undefined;

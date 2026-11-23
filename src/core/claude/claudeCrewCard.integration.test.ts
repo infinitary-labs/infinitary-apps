@@ -70,7 +70,6 @@ afterAll(async () => {
   await api.close();
 });
 
-/** The model emits the completion decision once, then ends its turn. */
 function emitsTheCompletionDecision(): void {
   api.answer((request: StubRequest, res: ServerResponse) => {
     if (request.raw.includes('"tool_result"')) {
@@ -121,7 +120,6 @@ describe("a Claude crewmate's completion decision, on the real client", () => {
       await session.closed();
     }
 
-    // The client handed the call on and the app's tool showed the card.
     const answered = api.requests
       .slice(first)
       .find((request) => request.raw.includes("tool_result"));

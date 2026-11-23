@@ -25,7 +25,6 @@ export async function showSavedDataRefusal(hidden: boolean): Promise<void> {
   await showDataRefusal(hidden, SAVED_DATA_REFUSAL);
 }
 
-/** The same standalone refusal window, with the words of the refusal given. */
 export async function showDataRefusal(hidden: boolean, refusal: DataRefusal): Promise<void> {
   const win = standaloneWindow({ title: "Infinitary", width: 640, height: 360 });
   // The window a second launch brings forward (./windows.ts), unless held hidden for a capture.

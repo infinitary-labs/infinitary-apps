@@ -68,7 +68,6 @@ const FAILED = new Set(["failure", "timed_out", "startup_failure"]);
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
-/** The page's answer: its status, body and the next page, or a throw that says why. */
 async function get(read: GithubLookRead, path: string) {
   const text = await read({ path });
   let answer: { status?: number; body?: unknown; nextPath?: string | null };
@@ -82,7 +81,6 @@ async function get(read: GithubLookRead, path: string) {
   return answer as { status: number; body: unknown; nextPath?: string | null };
 }
 
-/** Every page from `path` on, by each answer's next page. */
 async function every<T>(
   read: GithubLookRead,
   path: string,
@@ -199,7 +197,6 @@ export async function lookForRuns(
   return { cursor: cursorOf(next), items };
 }
 
-/** The latest attempt's failed jobs, each with its first failed step. */
 async function failedJobs(read: GithubLookRead, base: string, runId: number): Promise<Job[]> {
   const jobs = await every<Job>(
     read,
@@ -209,7 +206,6 @@ async function failedJobs(read: GithubLookRead, base: string, runId: number): Pr
   return jobs.filter((job) => FAILED.has(job.conclusion ?? ""));
 }
 
-/** The newest passing run of the same workflow on the same branch, when GitHub has one. */
 async function newestPassing(
   read: GithubLookRead,
   base: string,

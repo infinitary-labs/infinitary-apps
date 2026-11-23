@@ -223,7 +223,6 @@ export class AccountSelector {
     );
   }
 
-  /** The user label of an account, for user-facing copy. */
   labelOf(accountId: string): string | undefined {
     return this.options.pool.list().find((account) => account.id === accountId)?.label;
   }

@@ -12,7 +12,6 @@ export const PROPOSE_PROJECT_PROMPT_MARKER = "report that the runner fixes need 
 const PROPOSE_PROJECT_REPORT_NEEDLE = "set up as a project first";
 export const MOCK_PROPOSED_WORK = "open the pull request for the runner fixes";
 
-/** The crewmate reports that its work needs a folder, and the first mate proposes it as a project. */
 export const projectProposal: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

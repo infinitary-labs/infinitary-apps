@@ -148,7 +148,6 @@ async function joinComputer(app: LaunchedApp, prefix: string) {
   const { page } = app;
   const invite = await page.evaluate(() => window.infinitary.devices.invite({ kind: "work" }));
   const dataDir = scratchDir(prefix);
-  // The computer is signed in to the same Grok key, its model answering at the stand-in.
   const port = app.mockProvider?.port;
   if (!port) throw new Error("The stand-in provider did not start.");
   seedGrokKey(dataDir);
@@ -283,7 +282,6 @@ test("a started task moves to another computer and back from its record, by keys
     expect(readFileSync(join(there, "notes.md"), "utf8")).toBe("the footer's colours\n");
     expect(readFileSync(join(there, "README.md"), "utf8")).toBe("# website\n\nFooter.\n");
     await expect.poll(() => existsSync(here), { timeout: 30_000 }).toBe(false);
-    // Its record's Activity says who moved it, from where to where.
     const detail = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
     expect(detail.events.map((event) => event.text)).toContain(
       `the captain moved it from ${HERE.this} to ${MINI}; it keeps its key, branch, working copy and files`,
@@ -377,7 +375,6 @@ test("a move waits for the crewmate's turn, the record says what it waits for, a
   await pressKey(cancel, "Enter");
   await expect.poll(async () => (await view(page, id))?.computerMove).toBeUndefined();
   await expect(line).toHaveCount(0);
-  // The turn carries on here, and the task never left.
   mock.releaseHeldCrew();
   await expect.poll(async () => (await view(page, id))?.activity, { timeout: 60_000 }).toBe("idle");
   expect((await view(page, id))?.executionDeviceId ?? null).toBeNull();
@@ -410,7 +407,6 @@ test("a computer out of reach cannot take a task: the picker says why, and the t
   await expect.poll(async () => (await view(page, id))?.activity, { timeout: 60_000 }).toBe("idle");
   writeFileSync(join(here, "notes.md"), "the sidebar's width\n");
 
-  // The Mac mini's app stops, so it is out of reach.
   await Promise.all(runs.splice(0).map((run) => run.stop()));
   const outOfReach = moveOutOfReach(MINI);
   await expect
@@ -462,7 +458,6 @@ test("a task on a computer out of reach moves here from the commit this Mac hold
   const { repo } = await page.evaluate(
     async ({ path, device }) => {
       const result = await window.infinitary.repos.setup({ kind: "adopt", path, name: "website" });
-      // Its tasks start on the Mac mini.
       await window.infinitary.devices.runsOn(result.repo.id, device);
       return result;
     },
@@ -635,7 +630,6 @@ test("a task on a computer out of reach moves here from the commit this Mac hold
       { name: "steer_crewmate", args: { task_id: id, message: "Carry on with the menu." } },
     ]);
     await expect.poll(told, { timeout: 60_000 }).toBe(true);
-    // Still here: the task never went back.
     expect((await view(page, id))?.executionDeviceId ?? null).toBeNull();
   });
 });
@@ -792,7 +786,6 @@ test("a computer that joins again under a new key carries its earlier entry's ta
   await test.step("Settings -> Devices names the earlier entry, and by keys its task carries on here", async () => {
     await openDevices(page);
     const newRow = page.locator(`[data-device-row="${again}"]`);
-    // The strip's sentence, beside its Carry its tasks on here button.
     await expect(newRow.locator("[data-device-earlier] [data-notice-text]")).toHaveText(
       m.settingsDevicesCarryEarlier({ count: 1 }),
     );
@@ -833,7 +826,6 @@ test("a computer that joins again under a new key carries its earlier entry's ta
       )
       .not.toContain(deviceId);
     await expect(page.locator(`[data-device-row="${deviceId}"]`)).toHaveCount(0);
-    // Its working copy on the new entry starts at the commit this Mac held.
     const copy = join(againDir, "worktrees", id);
     await expect.poll(() => existsSync(copy), { timeout: 60_000 }).toBe(true);
     expect(execFileSync("git", ["rev-parse", "HEAD"], { cwd: copy }).toString().trim()).toBe(held);

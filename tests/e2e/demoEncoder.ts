@@ -207,7 +207,6 @@ export function needWindowRecorder(): void {
   if (said) console.log(`[demo] ${said}`);
 }
 
-/** Runs the encoder, throwing its own last words when it fails. */
 export function runEncoder(binary: string, args: readonly string[]): void {
   const run = spawnSync(binary, ["-hide_banner", "-loglevel", "error", "-y", ...args], {
     encoding: "utf8",
@@ -219,7 +218,6 @@ export function runEncoder(binary: string, args: readonly string[]): void {
   }
 }
 
-/** Whether a file decodes from start to end with the pinned build. */
 export function decodesWhole(binary: string, file: string): boolean {
   const run = spawnSync(binary, ["-hide_banner", "-v", "error", "-i", file, "-f", "null", "-"], {
     encoding: "utf8",

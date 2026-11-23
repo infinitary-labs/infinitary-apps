@@ -33,7 +33,6 @@ export type RunHandOverOptions = {
   deps: Omit<MoveDeps, "progress" | "signal">;
   /** How the run takes over from an older copy holding the older folder; absent, it only says to stop it. */
   takeOver?: TakeOverDeps;
-  /** Writes lines for whoever reads the run's output. */
   say: (lines: readonly string[]) => void;
   /** Asks the person at a terminal and answers what they typed; absent where no terminal is there to answer. */
   ask?: (lines: readonly string[], prompt: string) => Promise<string>;
@@ -43,20 +42,16 @@ export type RunHandOverOptions = {
   startAtLogin: () => void;
   /** Hands the moved work's background to this app's own label (`handBackgroundOver`). */
   handBackground?: () => Promise<unknown>;
-  /** How often a step under way says how far it is, at most. */
   progressEveryMs?: number;
 };
 
 export type RunHandOver =
   /** Nothing to move, or the work is in this app's own folder now: the run goes on from it. */
-  | { kind: "here" }
-  /** The run ends here, with why. */
-  | { kind: "ended"; end: RunEnd };
+  { kind: "here" } | { kind: "ended"; end: RunEnd };
 
 /** How often a step under way says how far it is, at most. */
 const PROGRESS_EVERY_MS = 15_000;
 
-/** The words a run ends with when the move cannot go on now: what happened and what to do. */
 export function runRefusalLines(refusal: MoveRefusal, names: HandOverNames): string[] {
   // The move's own error ends without a full stop of its own in the sentence.
   const detail = (text: string) => text.replace(/[.\s]+$/, "");

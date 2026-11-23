@@ -732,7 +732,6 @@ export class GitLabForge implements Forge {
     return counted.sort((a, b) => a.id - b.id);
   }
 
-  /** Whether a merged-result commit merges the head: the head is one of its parents. */
   private pipelineProject(pipeline: PipelineJson): string {
     return pipeline.project_id === undefined
       ? this.projectPath()

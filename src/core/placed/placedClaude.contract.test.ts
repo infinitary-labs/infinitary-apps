@@ -754,7 +754,6 @@ it("reads a placed Claude record's own files once per check however many calls i
       })
       .toEqual({ ended: CALLS, requests: CALLS + 1 });
     await expect.poll(() => scheduled.size).toBe(1);
-    // The first copy brings the record and its staged skills home.
     await copyAndCheck();
     expect(readdirSync(stagedDir, { recursive: true, encoding: "utf8" })).toContainEqual(
       expect.stringMatching(/infinitary-design\/SKILL\.md$/),
@@ -900,7 +899,6 @@ async function homeReadsOverOneStep(calls: number) {
   const asking = session.prompt("Run the footer check on Mac mini, file by file.");
   try {
     await waitingAfter(calls);
-    // The first copy brings the record and its staged skills home.
     await copyAndCheck();
     expect(
       readdirSync(join(recordDir, "staged"), { recursive: true, encoding: "utf8" }),
@@ -952,7 +950,6 @@ it("reads none of the record's staged skills for a step of a placed Claude turn"
   ]);
 });
 
-/** Every file under `dir`, by its path there, with a digest of its bytes. */
 function filesOf(dir: string): Record<string, string> {
   return Object.fromEntries(
     (readdirSync(dir, { recursive: true, encoding: "utf8" }) as string[])

@@ -185,7 +185,6 @@ export class CrewTranscripts {
   }
 }
 
-/** The bound on what the crewmate is writing now that the live read carries. */
 const LIVE_TEXT_MAX = 16_000;
 
 /**
@@ -315,7 +314,6 @@ export function transcriptLines(
       }
     });
   }
-  // Each turn the captain or Firstmate stopped, where it stopped.
   for (const stop of stops) {
     placeByTime(lines, {
       kind: "stopped",
@@ -439,7 +437,6 @@ function blockLine(name: string, args: JsonRecord, id: string, at: number): Crew
   return null;
 }
 
-/** An ordinary call: the tool, its target, its reading, and what an edit changed. */
 function callLine(
   name: string,
   args: JsonRecord,
@@ -605,7 +602,6 @@ function hunkOf(before: string, after: string): CrewDiffLine[] {
   ];
 }
 
-/** The first entry's time in a session: when it began. */
 function startOf(entries: readonly JsonRecord[]): number | null {
   for (const entry of entries) {
     const at = timeOf(entry);
@@ -659,7 +655,6 @@ function clip(text: string): string {
     : text;
 }
 
-/** A longer text, cut at its bound. */
 function bounded(text: string): string {
   return text.length > CREW_TEXT_MAX ? `${cutText(text, CREW_TEXT_MAX - 1).trimEnd()}…` : text;
 }

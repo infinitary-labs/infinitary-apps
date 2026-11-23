@@ -136,7 +136,6 @@ export type ShellOptions = {
    * its local door and this process starts no core.
    */
   beside?: BesideOptions;
-  /** Hands a push to every window. */
   broadcast: (channel: PushChannel, payload: unknown) => void;
   /** This Mac's Notification Center: a view posts the other Mac's cards here. */
   notifications: HostNotifications;
@@ -298,7 +297,6 @@ export class Shell {
     await this.becomeHome();
   }
 
-  /** The running core, while this app holds Firstmate itself. */
   core(): Core | null {
     return this.mode?.kind === "home" ? this.mode.core : null;
   }
@@ -357,7 +355,6 @@ export class Shell {
     if (this.mode?.kind === "beside") await this.mode.beside.replacing();
   }
 
-  /** One core channel the window asked: this Mac's core, or the view's rules. */
   async dispatch<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown[],
@@ -828,7 +825,6 @@ export class Shell {
     this.preferences.use(core.services.preferences);
   }
 
-  /** The window beside a command's first mate (`BesideWindow`). */
   private async becomeBeside(options: BesideOptions): Promise<void> {
     const beside = new BesideWindow({
       beside: options,
@@ -1177,7 +1173,6 @@ export class Shell {
     });
   }
 
-  /** One switch at a time; every window starts over once it is done. */
   /** Changes mode; the windows start again for the new one unless `keepWindows` (the same home, carried on). */
   private switchTo(change: () => Promise<void>, keepWindows = false): Promise<void> {
     this.switching = (async () => {
@@ -1192,7 +1187,6 @@ export class Shell {
   }
 }
 
-/** What a failed join says, from what the other Mac or the network answered. */
 function joinRefusal(error: unknown): Exclude<JoinOutcome, { ok: true }>["refused"] {
   if (error instanceof HomeKeyMismatchError) return "not-that-mac";
   if (error instanceof PairRefusedError) {

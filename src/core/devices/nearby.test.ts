@@ -28,7 +28,6 @@ type Running = {
   stopped: boolean;
 };
 
-/** A dns-sd in memory: each run is kept, to print to and end. */
 function standIn() {
   const runs: Running[] = [];
   const run: DnsSdRun = (args, heard) => {
@@ -53,7 +52,6 @@ function standIn() {
   return { run, runs, browse, lookup };
 }
 
-/** A clock that moves only when told. */
 function clock() {
   let now = 0;
   const timers: { at: number; fire: () => void; cancelled: boolean }[] = [];
@@ -65,7 +63,6 @@ function clock() {
         timer.cancelled = true;
       };
     },
-    /** Moves the clock on `ms`, firing each timer that came due. */
     pass: (ms: number) => {
       now += ms;
       for (const timer of timers.filter((each) => each.at <= now && !each.cancelled)) {

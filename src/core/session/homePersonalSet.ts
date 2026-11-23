@@ -104,7 +104,6 @@ export class HomePersonalSet {
   }
 }
 
-/** The set over this app's saved settings, as the home keeps it (docs/personal-resources.md). */
 export function homePersonalSetOver(
   settings: {
     getPersonalResourcesEnabled(): boolean;

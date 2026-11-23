@@ -93,7 +93,6 @@ export function renderFilesReply(command: string, reply: FilesReply, help: strin
   }
 }
 
-/** The one `<computer>:<path>` a command takes. */
 function targetOf(args: AxiArguments, usage: string): string {
   const [target, extra] = args.positional;
   if (!target || extra !== undefined)

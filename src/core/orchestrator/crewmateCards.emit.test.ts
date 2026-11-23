@@ -47,7 +47,6 @@ describe("CrewSupervisor", () => {
     const onCard = specs[0]?.onCard;
     const note = (body: string) => ({ id: "plan", title: "The plan", body, actions: [] });
     const first = await onCard?.(note("<p>One.</p><p>Two.</p><p>Three.</p>"));
-    // Never seen: no counts.
     expect(first).toBe(`card-${taskId}-plan`);
     crewmate.finishPrompt();
     await tick();
@@ -118,8 +117,6 @@ describe("CrewSupervisor", () => {
       true,
     );
 
-    // The action round-trip: a declared choice steers the idle session as a
-    // new turn and the resolution is recorded.
     supervisor.cardActions.act(decision.id, "change");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(
@@ -252,7 +249,6 @@ describe("CrewSupervisor", () => {
       supervisor.closeCard(owned.id, { kind: "firstmate" }, "answered by the captain"),
     ).toThrow(/not yours to close/);
     await tick();
-    // The card is untouched: still on the stack, still unresolved.
     expect(cards().find((card) => card.id === owned.id)).toBeDefined();
     expect(cardStore.chosenAction(owned.id)).toBeUndefined();
     expect(supervisor.facts.crewStatus(ownerId)[0]?.status).not.toBe("completed");
@@ -559,7 +555,6 @@ describe("a card places the captain gate (cards as tasks)", () => {
       title: "Your first mate has used up its allowance",
       gate: { kind: "captain", ref: "card-fm-flagship-move" },
     });
-    // A revision or a second raise files nothing more.
     supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Move Firstmate?</p>",
@@ -615,7 +610,6 @@ describe("a card places the captain gate (cards as tasks)", () => {
     await supervisor.watch.sweepGates(Date.now());
     const open = hostRows(tasks, "card-fm-no-headroom").filter((row) => row.status === "open");
     expect(open).toHaveLength(1);
-    // And the other way: a row whose card never made it to the stack.
     const orphan = tasks.capture.fileHostCardTask({
       id: "orphan-1",
       title: "Gone",
@@ -710,10 +704,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     await vi.advanceTimersByTimeAsync(from + ms - Date.now());
   }
 
-  /**
-   * A crewmate whose first turn emitted a card and reported it: the card is
-   * on the stage, the crewmate idle.
-   */
   async function onTheStage(
     harness: ReturnType<typeof setup>,
     crewmate: FakeCrewmate,
@@ -732,7 +722,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     return { taskId, cardId, stable: cardId.replace(`card-${taskId}-`, "") };
   }
 
-  /** The task's `card_raised` rows for a card, as the timeline records its stage moments. */
   function stageMoments(harness: ReturnType<typeof setup>, taskId: string, cardId: string) {
     return harness.tasks
       .timeline(taskId)
@@ -762,12 +751,10 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(staged(harness, cardId)).toBeUndefined();
     const waiting = harness.cards().find((card) => card.id === cardId);
     expect(waiting?.awaiting).toBe("answer");
-    // Still on the stage, at the back, showing what it showed at the reply.
     expect(waiting && onStage(waiting)).toBe(true);
     expect(waiting?.sentBackAt).toBeDefined();
     expect(waiting?.title).toBe("Idle crew recovery");
     expect(harness.cards().at(-1)?.id).toBe(cardId);
-    // One feed line while the author works: nothing on the stage.
     expect(harness.events).toContainEqual({
       type: "firstmate_note",
       text: 'You asked crewmate 1 under "Idle crew recovery"',
@@ -780,7 +767,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       text: "I'll assess a general recovery mechanism rather than assume separate fixes are the answer. Your heartbeat proposal is a useful candidate: I'll compare it.",
     });
     await tick();
-    // The acknowledgement paints the thread and nothing else.
     expect(harness.threads.at(-1)?.messages.at(-1)?.who).toBe("crewmate");
     expect(staged(harness, cardId)).toBeUndefined();
 
@@ -809,7 +795,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     await at(replied, 185 * S);
     spec?.onReport?.("Intent: assess a general catch-all for all idle crewmates.");
     await tick();
-    // The crewmate works on: the card waits at the back, as it was.
     expect(staged(harness, cardId)).toBeUndefined();
     expect(harness.cards().find((card) => card.id === cardId)).toMatchObject({
       title: "Idle crew recovery",
@@ -838,7 +823,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     });
     harness.supervisor.cardActions.replyToCard(cardId, "why not left?");
     await tick();
-    // The author revised it meanwhile: the stage still shows the old offer.
     harness.specs[0]?.onCard?.({
       id: stable,
       reply: "Middle is safer; I changed the offer.",
@@ -852,7 +836,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     });
     await tick();
     expect(() => harness.supervisor.cardActions.act(cardId, "middle")).toThrow();
-    // The chosen offer is the shown one's: "right" resolves the card.
     expect(() => harness.supervisor.cardActions.act(cardId, "right")).not.toThrow();
     await tick();
     expect(harness.cards().some((card) => card.id === cardId)).toBe(false);
@@ -931,7 +914,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       "but i don't want you to fix it one-off. i need fm3000 to 'just work' for all users. what's the gap?",
     );
     await tick();
-    // Each recorded step, then what the stage shows after it.
     const shownAfter: number[] = [];
     const sample = (offset: number) => {
       if (staged(harness, cardId)) shownAfter.push(offset);
@@ -978,8 +960,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     spec?.onReport?.("Intent: find a fix that works for users, not an edit to your saved item.");
     await tick();
     sample(110 * S);
-    // Still working: more reports on the same turn, and the crewmate never
-    // writes on the card again.
     for (const offset of [186, 576, 793, 819]) {
       await at(replied, offset * S);
       spec?.onReport?.("Still testing the product-level path against a throwaway sign-in.");
@@ -987,7 +967,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       sample(offset * S);
     }
 
-    // No report brought it back while the crewmate worked on.
     expect(shownAfter).toEqual([]);
     crewmate.finishPrompt();
     await tick();
@@ -1140,7 +1119,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(harness.supervisor.cards.thread(cardId).messages.map((m) => m.who)).toEqual(before);
     expect(harness.cardStore.get(cardId)?.body).toBe(old);
 
-    // A progress note is taken and keeps their question waiting.
     syncCardId(
       spec?.onCard?.({ ...revision, reply: "Checking the queue settings first.", interim: true }),
     );
@@ -1151,7 +1129,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       awaiting: "answer",
     });
 
-    // The answer naming their message shows the revision at the turn's end.
     await harness.supervisor.steer.steerCrewmate(taskId, "Go on.");
     await tick();
     syncCardId(spec?.onCard?.({ ...revision, answersMessage: asked }));
@@ -1291,8 +1268,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     );
     spec?.onReport?.("Moving the release plan to Saturday.");
     await tick();
-    // The crewmate works on: the card stays aside through its answer,
-    // its revision and its report.
     expect(aside()).toBe(true);
     syncCardId(
       spec?.onCard?.({
@@ -1391,7 +1366,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       "<p>I moved the rebase hook into the IPC seam.</p><details><summary>How I checked</summary><p>pnpm vitest</p></details>";
     const shown = onCard?.({ id: "done", title: "Hook moved", body, actions: [] });
     await tick();
-    // The card is up while the readings are still being asked.
     expect(cards().map((card) => card.id)).toContain(`card-${taskId}-done`);
     expect(seen).toEqual([
       {
@@ -1420,7 +1394,6 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       `card-${taskId}-done Reader check: the card is up; the decision model read it as not passing plain words and terms explained. If you agree, revise it once under the same id; if not, leave it as it is.`,
     );
 
-    // Switched off, the card's answer is as it was, and nothing is asked.
     on = false;
     expect(onCard?.({ id: "next", title: "Next", body: "<p>Done.</p>", actions: [] })).toBe(
       `card-${taskId}-next`,

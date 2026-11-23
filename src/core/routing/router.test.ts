@@ -11,7 +11,6 @@ import { modelChoiceOf } from "./modelChoice";
 import { ModelSlots } from "./modelSlots";
 import { Router } from "./router";
 
-/** What every spawn carries until S3's classifier lands: R8, high. */
 const UNCLEAR: WorkShape = { kind: "unclear", kind_source: "none" };
 
 /** The captain named a model (R0). */
@@ -98,9 +97,7 @@ describe("Router", () => {
       slots,
     });
     expect(labeled.modelLabel({ provider: "openai-codex", id: "gpt-5.5" })).toBe("GPT-5.5");
-    // An offering the catalog does not know keeps its raw id...
     expect(labeled.modelLabel({ provider: "fm-mock", id: "mock-1" })).toBe("mock-1");
-    // ...and so does every offering when no slot record is wired at all.
     const unlabeled = new Router({
       decisions: new DecisionStore(db),
       settings,
@@ -271,7 +268,6 @@ describe("Router", () => {
       },
       { placed: { work: [], samples: [], charges: {} } },
     );
-    // R6: a fix on a verified basis is the captain's medium rule.
     expect(result?.bucket).toBe("medium");
     expect(result?.rule).toBe("R6");
     const row = db
@@ -811,7 +807,6 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       }),
       availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
     });
-    // The computer is signed in to Claude alone.
     const pool = {
       available: [{ provider: "anthropic-claude", id: "claude-sonnet-5-5" }],
       catalog: [{ provider: "claude", id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" }],
@@ -829,7 +824,6 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
     expect(JSON.parse(row.reasons_json)).toContain(
       "routed among Mac mini's own sign-ins (anthropic-claude): 1 model",
     );
-    // A pinned model that computer does not serve is not taken there either.
     settings.setRoutingSettings({
       ...settings.getRoutingSettings(),
       pins: [{ provider: "codex", id: "gpt-5.5" }],
@@ -851,7 +845,6 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       placed: { work: [], samples: [], charges: {} },
     });
     expect(empty?.choice).toBeUndefined();
-    // Here, the same task takes this Mac's own.
     expect(
       router.decide("here", "add a settings row", UNCLEAR, {
         placed: { work: [], samples: [], charges: {} },
@@ -878,7 +871,6 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
       onSpentAt: (providers, deviceId) => spent.push([providers, deviceId]),
     });
-    // The computer's own Codex account has used up its allowance there.
     const pool = {
       available: [{ provider: "openai-codex", id: "gpt-5.5" }],
       catalog: [

@@ -87,7 +87,6 @@ async function world() {
   plantSkill(join(agentDir, "skills"), "agent-dir-skill", "Planted in the agentDir.");
   put(join(root, "worktrees", "AGENTS.md"), "Planted above the working copy.\n");
   plantSkill(join(root, "worktrees", ".agents", "skills"), "above-skill", "Planted above.");
-  /** A crewmate's coding session on this working copy, recorded in `recordDir`. */
   const open = (extra: Partial<SessionSpec> = {}, recordDir?: string) =>
     createPiSessionFactory({ agentDir }).open({
       ...codingSpec({
@@ -98,14 +97,12 @@ async function world() {
       }),
       ...extra,
     });
-  /** The system prompt Pi sends for this session, on its first request. */
   const system = async (session: Awaited<ReturnType<typeof open>>): Promise<string> => {
     const next = api.nextRequest();
     await session.prompt("Which way?");
     const request = await next;
     return JSON.stringify(request.body.system ?? "");
   };
-  /** The system prompt Pi sends for this working copy's crewmate, on its first request. */
   const served = async (personalResources = false): Promise<string> => {
     const session = await open({ personalResources });
     const sent = await system(session);

@@ -560,7 +560,6 @@ describe("INF-443 learned placed-work ranking", () => {
     const scored = w.scores.score(reading, AT, undefined, w.scores.data(AT));
     expect(scored.lastsThroughReset).toBe(false);
     expect(scored.band).toBe("room");
-    // A fresh reading at the floor moves it.
     expect(w.scores.score(row("grok", "mini-grok", 9), AT, undefined, w.scores.data(AT)).band).toBe(
       "near_floor",
     );

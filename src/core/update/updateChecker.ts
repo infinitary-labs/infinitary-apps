@@ -74,7 +74,6 @@ import {
 // so it is offered only what the command it uses installs.
 const releasesUrlOf = (tap: TapNames) =>
   `https://api.github.com/repos/${tap.repo}/releases?per_page=100`;
-// A check at most every 4 hours.
 const DEFAULT_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const REQUEST_HEADERS = { "User-Agent": "infinitary" };
 
@@ -216,7 +215,6 @@ export function pickNewestStableRelease(payload: unknown, tap: TapNames = TAP): 
   return newest;
 }
 
-/** A plausible next version on the channel, for the dev affordance only. */
 function simulatedNext(currentVersion: string, channel: UpdateChannel): string {
   const parsed = parseSemver(currentVersion);
   if (!parsed) return channel === "alpha" ? "0.0.1-alpha.1" : "0.0.1";
@@ -365,7 +363,6 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     return target ? { version: target.version, url: target.releaseUrl } : null;
   }
 
-  /** What a successful read says when nothing newer is offered. */
   const noticeFor = (offer: Offer | null, channel: UpdateChannel): Pick<UpdateStatus, "notice"> => {
     if (offer && isNewerVersion(offer.version, options.currentVersion)) return {};
     return {
@@ -403,7 +400,6 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     return next;
   }
 
-  /** The dev affordance's offer, or null to read the release source. */
   function simulated(channel: UpdateChannel, tap: TapNames): UpdateStatus | null {
     if (!options.simulateUpdate) return null;
     return {
@@ -491,7 +487,6 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     return run;
   }
 
-  /** The installer this copy runs for an offer, or null when it installs none itself. */
   function installerFor(
     offer: Offer | undefined | null,
     channel: UpdateChannel,
@@ -530,11 +525,9 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
     if (installing) return { ok: false, problem: "The update is already installing." };
     installing = true;
-    // A new attempt answers for itself.
     handOverProblem = undefined;
     let later = false;
     try {
-      // The crew's work stops where nothing is lost before the copy is replaced.
       await installer(async () => {
         if (await saving.save()) return;
         later = true;
@@ -654,8 +647,6 @@ export function createInstalledUpdateChecker(
       openExternal: options.openExternal,
     });
   const installation = options.macDriver?.installation;
-  // A copy this checker cannot update offers nothing: one whose installation
-  // the app could not confirm.
   const cannotUpdate =
     installation?.kind === "unknown" ? UPDATE_PROBLEMS.unknownInstallation : null;
   if (cannotUpdate) {
@@ -751,7 +742,6 @@ export function createInstalledUpdateChecker(
     ...(windows ? { windows } : {}),
     ...(windowsHandOver ? { windowsHandOverProblem: windowsHandOverProblem(windowsHandOver) } : {}),
     ...(overrides.buildsUrl ? { buildsUrl: overrides.buildsUrl } : {}),
-    // An installed Linux copy marks its reads of the download server's builds file.
     ...(linux && app.packaged ? { activeMarks: createActiveMarks(app.userDataDir) } : {}),
     ...(linux && options.relaunch
       ? {

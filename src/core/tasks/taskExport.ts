@@ -228,7 +228,6 @@ const lineSchema = z.discriminatedUnion("kind", [
 
 export type TaskExportLine = z.infer<typeof lineSchema>;
 
-/** The parsed export: the record's rows, in the stores' own shapes. */
 export type TaskExportBundle = {
   header: z.infer<typeof headerLineSchema>;
   projects: ProjectRecord[];

@@ -12,7 +12,6 @@ import { MOCK_MODEL_ID, mockProviderOverrideModelsJson } from "./mockModels";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { feedLine } from "./rails";
 
-/** The line the seat writes once it runs on the mock's model at `url`, the endpoint the spec gave. */
 function seatLine(url: string): string {
   return localOrchestratorLine({ model: { id: MOCK_MODEL_ID }, host: new URL(url).host });
 }
@@ -37,7 +36,6 @@ function seatLine(url: string): string {
  * unpackaged.
  */
 
-/** Whether a request body names the mock's model, the one the seat was given. */
 function namesMockModel(body: string): boolean {
   const id = MOCK_MODEL_ID.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`"model":\\s*"${id}"`).test(body);

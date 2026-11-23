@@ -44,7 +44,6 @@ export const threadSignOff: Scenario = () => {
     if (!body.includes(SIGN_OFF_PROMPT_MARKER)) return undefined;
     if (hasToolResults) return { text: "Waiting on the captain." };
     const cardId = body.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "missing";
-    // The thread steer carrying the captain's closing line.
     if (latestUserTail.includes(SIGN_OFF_CAPTAIN_LINE)) {
       const named = answering(latestUserTail);
       return {

@@ -65,7 +65,6 @@ test("a rule's notes are edited, saved, read back and cleared in Settings by key
       "Enter",
     );
 
-    // The crewmate's page, edited by keys and saved with Tab and Enter.
     const field = tab.locator("#automation-notes");
     await expect(field).toHaveValue(LEARNED);
     await focusOn(field);
@@ -81,7 +80,6 @@ test("a rule's notes are edited, saved, read back and cleared in Settings by key
     await expect(field).toHaveValue(`${LEARNED}\n${ADDED}`);
     await expect(save).toBeDisabled();
 
-    // Earlier versions opens by Enter and names who wrote each.
     const earlier = tab.locator("[data-automation-notes-earlier] summary");
     await pressKey(earlier, "Enter");
     const version = (n: number) => tab.locator(`[data-automation-notes-version="${n}"]`);
@@ -90,7 +88,6 @@ test("a rule's notes are edited, saved, read back and cleared in Settings by key
     await expect(version(1)).toContainText(LEARNED);
     await expect(version(1)).toContainText(writer(m.settingsAutomationNotesByCrew));
 
-    // Clear notes by Enter: an empty version, its own line, and an empty field.
     await pressKey(tab.locator("[data-automation-notes-clear]"), "Enter");
     await expect(field).toHaveValue("");
     await expect(version(3)).toContainText(m.settingsAutomationNotesEmpty());

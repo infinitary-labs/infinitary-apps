@@ -176,7 +176,6 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(brief).toContain(`${BUILD_IN_PLACE_OPENING}: this task carries no delivery posture`);
     expect(brief).toContain(`Workspace: ${h.workspaceDir}`);
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail)');
-    // Nothing stamped a tier on the record either.
     expect(h.tasks.get(taskId)?.shape?.rigor).toBeUndefined();
   });
 
@@ -254,7 +253,6 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
     await tick();
-    // No settle mode applies to a personal task, with the reason.
     expect(await h.supervisor.settling.settle.settleTask(taskId, "land")).toContain(
       "builds in place on the personal workspace",
     );
@@ -325,14 +323,11 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(
       h.tasks.timeline(taskId).find((event) => event.data?.commitFailed !== undefined)?.data,
     ).toMatchObject({ commitFailed: refusal });
-    // The Firstmate hears git's words about this task.
     expect(h.ops[0]).toContain(taskId);
     expect(h.ops[0]).toContain(refusal);
 
-    // The failed turn's report is not routed as finished work.
     expect(h.ops[0]).not.toContain("Tokyo clock panel added.");
 
-    // A steer starts the next turn; its report commits again and routes.
     await h.supervisor.steer.steerCrewmate(taskId, "the lock is gone, report again");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added again." });

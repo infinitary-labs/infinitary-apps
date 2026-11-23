@@ -37,7 +37,6 @@ function typingRest(target: EventTarget | null): boolean {
   return !target.matches(":focus-visible");
 }
 
-/** Starts keeping the typing fact; returns the stop. */
 function trackRest(): () => void {
   const focusIn = (event: FocusEvent) => {
     const target = event.target;
@@ -80,12 +79,10 @@ export function offerNotTypingKey(press: KeyPress, frame?: string): void {
   void window.infinitary.keyboard.offer(press, frame).catch(() => {});
 }
 
-/** Whether a person was typing where focus last rested. */
 export function typingWhereFocusRested(): boolean {
   return restedTyping;
 }
 
-/** Puts focus where the rule says, with nothing usable holding it now. */
 export function landLostFocus(): void {
   const prompt = document.querySelector<HTMLElement>('[aria-label="Task prompt"]');
   // Settings and the first-launch gate have no available main message: nothing to land on.
@@ -118,7 +115,6 @@ export function landLostFocus(): void {
   prompt.focus({ preventScroll: true });
 }
 
-/** The landing the lost-focus fallback uses, with the typing fact kept for it. */
 export function focusLanding(): Landing & { stop: () => void } {
   const stop = trackRest();
   return {

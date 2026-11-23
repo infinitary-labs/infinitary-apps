@@ -67,7 +67,6 @@ test("the viewer marks a drawing by keys, keeps the queued mark on it and opens 
   const step = keyStep(DRAWING);
   expect(useShellStore.getState().annotationPick?.note).toMatchObject({
     kind: "drawing",
-    // The picture's caption is the note's excerpt.
     excerpt: ANNOTATION_DRAWING_CAPTION,
     place: sizedBox(movedBox(movedBox(middleBox(DRAWING), step, 0), 0, step), step, 0),
   });
@@ -115,7 +114,6 @@ test("the viewer marks a drawing by keys, keeps the queued mark on it and opens 
   if (!note) throw new Error("the mark queued no note");
   // The queued mark stays on its picture with its number.
   await expect.poll(drawnMarks).toBe("1");
-  // It is drawn in the accent of the theme the window shows, and again when the theme changes.
   const drawing = () =>
     decodeURIComponent(
       document.querySelector<HTMLImageElement>("[data-picture-marks-drawn]")?.src ?? "",
@@ -130,12 +128,10 @@ test("the viewer marks a drawing by keys, keeps the queued mark on it and opens 
 
   await userEvent.keyboard("{Escape}");
   await expect.element(viewer).not.toBeInTheDocument();
-  // The note waits as Not sent, with a small copy of the marked picture.
   await expect.element(page.getByText(NOT_SENT, { exact: true })).toBeVisible();
   expect(document.querySelector('[data-marked-copy="1"]')).not.toBeNull();
   expect(bridge.requests("inf:cards:reply")).toEqual([]);
 
-  // A press on the note opens the viewer at its mark.
   await userEvent.click(page.getByRole("button", { name: noteLabel(note, 1), exact: true }));
   await expect.element(viewer).toBeVisible();
   await expect.poll(drawnMarks).toBe("1");
@@ -163,7 +159,6 @@ function inlinePicture(alt: string, width: number, height: number) {
   return { src: canvas.toDataURL("image/png"), alt, width, height };
 }
 
-/** A sent picture as the window decodes it: its size, and the color of one pixel. */
 async function decodedPicture(picture: { mimeType: string; data: string }) {
   const image = new Image();
   image.src = `data:${picture.mimeType};base64,${picture.data}`;

@@ -12,12 +12,6 @@ import { PluginHost, placeSidePanels } from "../plugins/host";
 import { panelDrafts } from "./PanelDrafts";
 import { PersonalPlugins, startPersonalPlugins } from "./personalPlugins";
 
-/**
- * The reconciler mounts the core's snapshot through the host's one door:
- * presence is the panel's content source (null hides it with no chrome),
- * running is the busy dot's source, a manifest change re-registers, a
- * removal unregisters, and a rail holds every panel registered to it.
- */
 /** The tests' personal workspace (tests/fixtures/personal-skills), by folder. */
 const FIXTURE_MANIFESTS = {
   "crew-reports": crewReports,

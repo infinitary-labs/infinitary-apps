@@ -38,9 +38,7 @@ export class PanelLog {
     const text = `${this.now().toISOString()} ${message.replace(/\r?\n/g, "\n  ")}\n`;
     try {
       this.append(text);
-    } catch {
-      // Dropped: see the class comment.
-    }
+    } catch {}
   }
 
   private append(text: string): void {

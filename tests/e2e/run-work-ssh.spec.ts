@@ -86,7 +86,6 @@ function builtAppBundle(): string {
   return bundle;
 }
 
-/** The program a kept copy starts: inside a Mac's bundle, or the AppImage itself. */
 function programOf(kept: string): string {
   return kept.endsWith(".AppImage") ? kept : join(kept, "Contents", "MacOS", "Firstmate 3000");
 }
@@ -361,8 +360,6 @@ test("a Mac a command joined, stranded when the home's address changes, is found
     .toBe(helperWords.quit(THIS_MAC, "MacBook Pro")[0]);
   const moved = await homeAt();
 
-  // Add it at its address finds it as the same computer, stops its stranded
-  // run, and moves it onto the home's own SSH, with its sign-in kept.
   said.splice(0);
   const asked = await moved.remote.addOrAsk(sshd.address);
   if (!("asks" in asked) || asked.asks !== "confirm")
@@ -413,7 +410,6 @@ test("its home gone for good, a new home adds it by its address: asked once, its
   writeFileSync(join(dir, "only-copy.txt"), "unique uncommitted work\n");
   seedRetainedAccountDirectory(me.dataDir);
 
-  // The new home adds that Mac by its address over the captain's own SSH.
   const said: string[] = [];
   const { pairing, remote } = await sshHome({
     sshd,

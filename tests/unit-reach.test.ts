@@ -229,7 +229,6 @@ describe("local direct unit reach", () => {
       expect(directUnitReach([words], pins, root)).toEqual(wakes);
       expect(selectLinuxReach([words], root).run).toEqual(expect.arrayContaining(wakes));
     }
-    // A near name and an unrelated module select none of them.
     expect(directUnitReach(["src/core/orchestrator/mainCheckWake.ts"], pins, root)).toEqual([]);
     expect(directUnitReach(["src/shared/voice.ts"], pins, root)).toEqual([]);
     // An edited pin keeps its own three rounds.
@@ -245,7 +244,6 @@ describe("local direct unit reach", () => {
     const scripts = ["scripts/generate-messages.ts", "scripts/github-errors.ts"];
     expect(directUnitReach(scripts, [buildList], root)).toEqual([buildList]);
     expect(selectLinuxReach(scripts, root).run).toContain(buildList);
-    // App code outside scripts/ does not select it.
     expect(directUnitReach(["src/shared/voice.ts"], [buildList], root)).toEqual([]);
     // An edited build-list test keeps its own three rounds.
     expect(directUnitReach([...scripts, buildList], [buildList], root)).toEqual([]);
@@ -273,7 +271,6 @@ describe("local direct unit reach", () => {
     // load; the classifier test's scoring process loads the catalog.
     expect(directUnitReach(["src/shared/providers.ts"], readers, root)).toEqual([classifier]);
     expect(selectLinuxReach(["src/shared/providers.ts"], root).run).toContain(classifier);
-    // An unrelated module, and the seat's neighbour, select none of them.
     expect(directUnitReach(["src/shared/voice.ts"], readers, root)).toEqual([]);
     expect(directUnitReach(["src/core/orchestrator/seatDigest.ts"], contracts, root)).toEqual([]);
     // An edited reader keeps its own three rounds.

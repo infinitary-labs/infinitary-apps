@@ -138,7 +138,6 @@ export type GitHubStub = {
    * a merge method or commit words.
    */
   setMergeQueue: (on: boolean) => void;
-  /** The pull requests that queue holds now, by number. */
   inMergeQueue: () => number[];
   /** GitHub's queue merges a pull request it holds, as it does once the queue's own checks pass. */
   queueMerges: (number: number) => void;

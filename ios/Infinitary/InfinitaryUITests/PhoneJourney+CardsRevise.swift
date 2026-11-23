@@ -49,7 +49,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts[added].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(cue.waitForPresence(timeout: 10), app.debugDescription)
         picture("3-face-after-revision")
-        // The thread's own minus puts the card aside, as the face's does.
         reveal(cue); tapOnPhone(cue)
         XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
         let threadAside = app.buttons["thread-put-aside"]

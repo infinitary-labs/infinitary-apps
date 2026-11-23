@@ -62,7 +62,6 @@ export type LocalOrchestratorSpec = {
   host: string;
   /** The bearer sent with every request; a placeholder where the endpoint ignores it. */
   apiKey: string;
-  /** Who asked: the Settings row, or the environment. */
   source: LocalOrchestratorSource;
 };
 
@@ -277,7 +276,6 @@ export class LocalOrchestratorService {
 
   constructor(private readonly options: LocalOrchestratorServiceOptions) {}
 
-  /** At boot: resolve, build, and say where the seat is. */
   async boot(): Promise<LocalOrchestratorSeat | undefined> {
     const spec = this.resolve();
     if (!spec) return undefined;
@@ -290,7 +288,6 @@ export class LocalOrchestratorService {
     return this.current;
   }
 
-  /** The seat the Firstmate is on, or nothing. */
   seat(): LocalOrchestratorSeat | undefined {
     return this.current;
   }

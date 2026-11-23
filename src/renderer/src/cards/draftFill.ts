@@ -21,7 +21,6 @@ export function fillShownBodies(cardId: string, answers: CardAnswer[]): boolean 
   return took;
 }
 
-/** Lists this body under its card while it is mounted. */
 export function useDraftFill(
   cardId: string | undefined,
   controllerRef: React.RefObject<FrameController | null>,

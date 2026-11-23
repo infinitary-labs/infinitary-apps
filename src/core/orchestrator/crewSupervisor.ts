@@ -753,8 +753,6 @@ export class CrewSupervisor {
     this.ladder.checkCutOffs();
   }
 
-  // ---- the card stack (CardService) -----------------------------------------
-
   /**
    * Whether the first mate's emit_card names a card that is not its own -
    * someone else's open or closed card, or a card id the record lacks -
@@ -1094,7 +1092,6 @@ export class CrewSupervisor {
     return brief;
   }
 
-  /** Whether a task's events skip supervision: a review task itself. */
   private bypassesSupervision(taskId: string): boolean {
     return this.options.tasks.get(taskId)?.shape?.kind === "review";
   }

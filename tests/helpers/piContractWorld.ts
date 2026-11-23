@@ -23,7 +23,6 @@ import { type ContractWorld, servedByStub, stubReply } from "./sessionContract";
 const PROVIDER = "fm-contract";
 const MODEL = "stub-1";
 
-/** Every file under a directory, recursively. */
 function filesUnder(dir: string): string[] {
   try {
     return readdirSync(dir, { recursive: true, encoding: "utf8" });
@@ -42,7 +41,6 @@ function contractEntries(dir: string): Record<string, unknown>[] {
     .map((entry) => entry.data as Record<string, unknown>);
 }
 
-/** The stub's provider and model, which a runtime for the world serves. */
 export const PI_CONTRACT_MODEL = { provider: "fm-contract", id: "stub-1" } as const;
 
 /** The stub's one provider, as a Pi models file names it, for a runtime the caller builds. */

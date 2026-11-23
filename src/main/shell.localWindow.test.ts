@@ -114,7 +114,6 @@ describe("the window on the first mate's own computer", () => {
     ]);
     at.own.core.events.emit("inf:models:changed", { ok: true });
     await expect.poll(() => pushed(at.pushes, "inf:models:changed")).toBe(1);
-    // Quitting the first mate's connection leaves the window's request with no door to go through.
     await at.connection()?.close();
     await expect(at.shell.dispatch("inf:app:healthcheck", [])).rejects.toThrow();
   });

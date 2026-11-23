@@ -336,7 +336,6 @@ const PLACE_INDEX = ".place-index";
 /** A draft's store slice is its extension's id and this; `#` is outside every extension id. */
 const DRAFT_SLICE_SUFFIX = "#draft";
 
-/** Which runtime a store slice belongs to: the panel's own, or its draft's. */
 function runtimeOf(slice: string): PanelRuntimeKind {
   return slice.endsWith(DRAFT_SLICE_SUFFIX) ? "draft" : "live";
 }
@@ -359,7 +358,6 @@ function draftSlice(id: string): string {
   return `${id}${DRAFT_SLICE_SUFFIX}`;
 }
 
-/** The extension whose draft a slice is, or null for a panel's own slice. */
 function draftSliceOwner(slice: string): string | null {
   return slice.endsWith(DRAFT_SLICE_SUFFIX) ? slice.slice(0, -DRAFT_SLICE_SUFFIX.length) : null;
 }
@@ -370,7 +368,6 @@ export class PersonalExtensions {
   private readonly drafts = new Map<string, Loaded>();
   /** Each refused `server.ts` already logged, by id and the hash of its text: one line per code version. */
   private readonly refusalsLogged = new Set<string>();
-  /** The runbooks' panels the last scan left off the rails, and why. */
   private refusedRunbookPanels: NonNullable<PersonalSnapshot["refused"]> = [];
   /**
    * The panels whose Update panel the captain pressed, until their background
@@ -445,7 +442,6 @@ export class PersonalExtensions {
     return service;
   }
 
-  /** Seed, scan, and start watching. The whole of "on". */
   private async activate(): Promise<void> {
     try {
       // The heal's commit queues behind the seed as a write of its own, so
@@ -478,7 +474,6 @@ export class PersonalExtensions {
     if (this.options.watch !== false) this.startWatching();
   }
 
-  /** Whether the captain's own panels are running at all (Step 5). */
   get isEnabled(): boolean {
     return this.enabled;
   }
@@ -506,12 +501,10 @@ export class PersonalExtensions {
     await this.activate();
   }
 
-  /** The current snapshot, as the last push carried it. */
   snapshot(): PersonalSnapshot {
     return this.lastSnapshot;
   }
 
-  /** The loaded panel whose own data a store slice is, if any. */
   private ownerOf(slice: string): Loaded | undefined {
     const byId = this.loaded.get(slice);
     if (byId?.slice === slice) return byId;
@@ -519,7 +512,6 @@ export class PersonalExtensions {
     return undefined;
   }
 
-  /** Every loaded extension's error, for the crewmate-facing side (Step 4). */
   errors(): { id: string; error: PersonalError }[] {
     return [...this.loaded.values()]
       .filter((entry): entry is Loaded & { error: PersonalError } => entry.error !== null)
@@ -530,8 +522,6 @@ export class PersonalExtensions {
   get workspaceDir(): string {
     return this.options.workspaceDir;
   }
-
-  // --- the live build loop (Step 4) ------------------------------------------
 
   /**
    * A live task is building: from now until `endLiveTask`, every reconcile
@@ -555,7 +545,6 @@ export class PersonalExtensions {
     void this.refresh();
   }
 
-  /** Takes a task's placed versions off the rails; true when it had any. */
   private unplace(taskId: string): boolean {
     let any = false;
     for (const [id, placed] of this.placed) {
@@ -566,7 +555,6 @@ export class PersonalExtensions {
     return any;
   }
 
-  /** The extensions with uncommitted changes right now. */
   touched(): Promise<string[]> {
     return changedExtensionIds(this.options.workspaceDir).catch(() => []);
   }
@@ -742,7 +730,6 @@ export class PersonalExtensions {
     };
   }
 
-  /** Why the window has no docked picture of a panel, in its own answer's words. */
   private notDocked(id: string, kind: PanelMountKind): string {
     const mount = this.options.mounts?.of(id, kind);
     if (!mount) {
@@ -907,7 +894,6 @@ export class PersonalExtensions {
     return this.events?.tick() ?? Promise.resolve();
   }
 
-  /** Every panel, live or drafted, whose manifest names an event to hear. */
   private listening(): PanelListening[] {
     const reach = this.options.integrations;
     if (!reach || !this.enabled || this.disposed) return [];
@@ -927,7 +913,6 @@ export class PersonalExtensions {
     });
   }
 
-  /** What a panel is to the integrations: its key, its name, and what its manifest names. */
   private panelCaller(entry: Loaded): PanelCaller {
     return {
       key: panelKey(entry),
@@ -1172,7 +1157,6 @@ export class PersonalExtensions {
     this.drafts.clear();
   }
 
-  /** Every server disposed and every panel and draft forgotten, the drafts' stores with them. */
   private unloadAll(): void {
     for (const entry of this.loaded.values()) entry.server?.dispose();
     this.loaded.clear();
@@ -1181,7 +1165,6 @@ export class PersonalExtensions {
     for (const id of [...this.drafts.keys()]) this.dropDraft(id);
   }
 
-  /** A draft's build is over: its server stops and its store goes. */
   private dropDraft(id: string): void {
     const draft = this.drafts.get(id);
     if (!draft) return;
@@ -1386,7 +1369,6 @@ export class PersonalExtensions {
     this.pushIfChanged();
   }
 
-  /** Every panel folder in the workspace (`isPanel`), sorted. */
   private async discover(): Promise<string[]> {
     let entries: import("node:fs").Dirent[];
     try {
@@ -1451,14 +1433,12 @@ export class PersonalExtensions {
     return dir;
   }
 
-  /** The rails hold this extension's working files exactly as they are now (`place`). */
   private async placedAsIs(id: string): Promise<boolean> {
     const placed = this.placed.get(id);
     if (!placed) return false;
     return (await workingTree(this.options.workspaceDir, id, this.placeIndex())) === placed.tree;
   }
 
-  /** A scratch index of its own for one `workingTree`, under the cache. */
   private placeIndex(): string {
     this.placeIndexes += 1;
     return join(this.options.cacheRoot, `${PLACE_INDEX}-${process.pid}-${this.placeIndexes}`);
@@ -1488,7 +1468,6 @@ export class PersonalExtensions {
     return status !== "done" && status !== "dropped";
   }
 
-  /** The app log's line for a refused `server.ts`, the first time each version of its text is refused. */
   private async logRefusal(id: string, dir: string): Promise<void> {
     let text: string;
     try {
@@ -1500,7 +1479,6 @@ export class PersonalExtensions {
     this.logOnce(key, `personal: ${olderServerApiLine(id)}`);
   }
 
-  /** One line in the panel log the first time its key comes up. */
   private logOnce(key: string, line: string): void {
     if (this.refusalsLogged.has(key)) return;
     this.refusalsLogged.add(key);

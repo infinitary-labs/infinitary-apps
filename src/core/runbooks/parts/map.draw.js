@@ -1,4 +1,3 @@
-  // ---- drawing
   const el = (tag, attrs, parent) => {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -339,7 +338,6 @@
     if (full) window.inf?.expand?.(root, stateNow());
   }
 
-  // ---- words
   const files = (k) => `${fmt(k)} file${k === 1 ? "" : "s"}`;
   const sizeWords = (x) =>
     x && x.files !== undefined
@@ -349,7 +347,6 @@
     cmp >= 0 && c && c[0] + c[1] + c[2]
       ? ` · ${files(c[0])} added, ${fmt(c[1])} removed, ${fmt(c[2])} changed`
       : "";
-  // a machine's change in words: states and moves counted apart
   const machWords = (m) => {
     if (cmp < 0 || !m.known || !m.cs) return "";
     const part = (c, one, many) =>

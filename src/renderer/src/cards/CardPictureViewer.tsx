@@ -93,7 +93,6 @@ export function CardPictureViewer({
     if (lit?.note.place && here(lit.note) && !notes.some((note) => sameNote(note, lit.note)))
       marks.push({ number: lit.number ?? 1, place: lit.note.place, lit: true });
     const count = numbers.filter((number) => number !== undefined).length;
-    // A queued note opened again keeps its number; a new one takes the next.
     const queuedAt = pick ? notes.findIndex((note) => sameNote(note, pick.note)) : -1;
     const next = queuedAt >= 0 ? (numbers[queuedAt] as number) : count + 1;
     if (writing && pick.note.place) marks.push({ number: next, place: pick.note.place, lit: true });

@@ -138,7 +138,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.buttons["phone-settings-appearance"].waitForPresence(timeout: 10), app.debugDescription)
     }
 
-    /// Settings → Appearance from the main view, answering its Language row.
     private func openAppearance(fromList: Bool = false) throws -> XCUIElement {
         if !fromList { reachSettings() }
         tapOnPhone(app.buttons["phone-settings-appearance"])

@@ -17,7 +17,6 @@ import { findOnPath } from "../userBin";
  * it out.
  */
 
-/** The program's name on the search path. */
 export const GITHUB_CLI_NAME = "gh";
 
 /** GitHub CLI answers from its config or the Keychain at once; a hung one is given this long. */
@@ -37,7 +36,6 @@ export type GitHubCliToken =
 
 /** How the sign-in service reaches GitHub CLI; tests hand in a scripted one. */
 export type GitHubCli = {
-  /** The program's path on this computer, or nothing where it is not installed. */
   find: () => string | undefined;
   token: (program: string, host: string) => Promise<GitHubCliToken>;
 };

@@ -18,11 +18,6 @@ import { createPiSessionFactory } from "../pi/sessionFactory";
 import { PlacedTasks } from "./placedTasks";
 import { SessionHost, type SessionHostOptions } from "./sessionHost";
 
-/**
- * A crewmate's conversation held on a computer that runs work
- * (`tests/helpers/sessionHostWorld.ts`): interrupted turns, late and refused events, restarts, the folder migration, and copying, closing and removing a conversation.
- */
-
 sessionHostHooks();
 
 describe("a conversation held on a computer that runs work", () => {
@@ -54,7 +49,6 @@ describe("a conversation held on a computer that runs work", () => {
       turn: 1,
       outcome: "interrupted",
     });
-    // The roster says what it holds now: nothing open, nothing running.
     const roster = await at.order("inf:session:roster", []);
     expect(roster.tasks).toEqual([
       expect.objectContaining({ task: TASK, open: false, closed: false }),
@@ -207,7 +201,6 @@ describe("a conversation held on a computer that runs work", () => {
       // a send asks before `reached` returns.
       first.reached();
       expect(refused).toHaveLength(1);
-      // Nothing of the refused events is left to send.
       expect(tasks.outbox(TASK, tasks.state(TASK).kept)).toEqual([]);
 
       // Nor does the run that starts next from the same folder.

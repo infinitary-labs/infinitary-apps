@@ -131,7 +131,6 @@ const alive = (pid: number) => {
   }
 };
 
-/** Opens Settings → General by keys. */
 async function openGeneral(opened: LaunchedApp): Promise<void> {
   await runFromSearch(opened.app, opened.page, "settings.open");
   await expect(settingsSection(opened.page, "general")).toBeVisible();

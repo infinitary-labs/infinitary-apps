@@ -193,7 +193,6 @@ export function authorAnswer(messages: readonly CardMessage[]): string | undefin
     ?.text;
 }
 
-/** Never a notification's gist, whatever they hold. */
 const NOT_GIST = new Set([
   ...NON_COPY,
   "figure",
@@ -216,7 +215,6 @@ const NOT_GIST = new Set([
 const HOST_MARKS = ["data-facts", "data-followups", "data-merge-line"];
 /** Elements whose text is one prose block. */
 const BLOCKS = new Set(["p", "li", "blockquote", "dd", "dt", "pre", "figcaption"]);
-/** Elements that sit inside a line of prose rather than holding blocks. */
 const INLINE = new Set([
   "a",
   "abbr",
@@ -287,7 +285,6 @@ function proseBlocks(body: string): { heading: string | undefined; text: string 
   return blocks;
 }
 
-/** The visible text under one element, leaving out what is never a gist. */
 function proseOf(node: Element): string {
   if (node.type === ElementType.Text) return node.data ?? "";
   if (!ELEMENT_TYPES.has(node.type)) return "";
@@ -312,7 +309,6 @@ function oneLine(text: string): string {
   );
 }
 
-/** `text` whole, or cut back to its last whole word within `max` with an ellipsis. */
 function cutAtWord(text: string, max: number): string {
   if (text.length <= max) return text;
   const room = cutText(text, max - 1);

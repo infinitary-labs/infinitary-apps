@@ -347,7 +347,6 @@ export function claudeSeat(
 export const CLAUDE_MODEL = { provider: "anthropic-claude", id: "claude-opus" };
 export const CODEX_MODEL = { provider: "openai-codex", id: "gpt-5.5" };
 
-/** The one Claude login, as the vault fake holds it. */
 export function claudeLogin(): FlagshipAccount {
   return {
     id: CLAUDE_ACCOUNT,

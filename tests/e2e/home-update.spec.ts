@@ -79,7 +79,6 @@ async function restarting(row: Locator, shots: string): Promise<void> {
   await regionShot(row, test.info().outputPath(`${shots}-restarting.png`));
 }
 
-/** The view starts the update by keys, Update then Enter, and the home restarts. */
 async function updateFromView(view: LaunchedApp, shots: string): Promise<void> {
   const row = await armFromView(view, shots);
   await regionShot(row, test.info().outputPath(`${shots}-confirm.png`));

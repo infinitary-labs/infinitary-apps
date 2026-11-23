@@ -80,7 +80,6 @@ static bool shows_no_window(int argc, char *argv[]) {
   return false;
 }
 
-// The file this process runs, links resolved, into `out`.
 static bool own_file(char out[PATH_MAX]) {
   char started[PATH_MAX];
   uint32_t size = sizeof started;

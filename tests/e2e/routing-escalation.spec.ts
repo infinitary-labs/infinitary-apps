@@ -48,7 +48,6 @@ function readTasks(userDataDir: string): TaskRow[] {
   );
 }
 
-/** The earlier attempt each task retries, as its relationship row records it. */
 function readRetries(userDataDir: string) {
   return readSavedData(
     userDataDir,
@@ -112,7 +111,6 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
   await expect.poll(() => readTasks(userDataDir).length, { timeout: 30_000 }).toBe(2);
   const [rejected, fresh] = readTasks(userDataDir) as [TaskRow, TaskRow];
 
-  // One tier up, with the lineage stamped on the shape the row routed from.
   expect(fresh.difficulty).toBe("premium");
   expect(JSON.parse(fresh.shape_json ?? "{}")).toMatchObject({
     escalation: { from: rejected.key, attempt: 1, floor: "premium" },
@@ -133,7 +131,6 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
     .toBe("superseded");
   expect(readTasks(userDataDir)[0]?.status).toBe("dropped");
 
-  // The lineage edge the captain chose.
   const links = readSavedData(
     userDataDir,
     (db) =>
@@ -151,7 +148,6 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
     actor: "captain",
   });
 
-  // The two `escalated` rows, and exactly one of them on the feed.
   const rejectedEscalated = readEvents(userDataDir, rejected.id).filter(
     (event) => event.kind === "escalated",
   );
@@ -174,8 +170,6 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
   );
   expect(superseded?.feed).toBe(0);
 
-  // The rejected row's one line names the stored tier it moved to and the
-  // row the work goes on as.
   const escalated = taskLine(page, rejected.key, "escalated");
   await expect(escalated).toContainText(fresh.key, { timeout: 20_000 });
   await expect(escalated).toContainText(levelWord("premium"));
@@ -201,7 +195,6 @@ test("an escalate_from on an [fm-op] wake is refused and creates nothing", async
     )
     .toBe(true);
 
-  // Nothing climbed: no new row, and the crewmate's own task is untouched.
   const tasks = readTasks(userDataDir);
   const created = tasks.filter((task) => !before.has(task.id));
   const blocked = created.find((task) => task.title.includes(BLOCKED_REPORT_PROMPT_MARKER));

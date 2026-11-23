@@ -274,7 +274,6 @@ describe("startCardDrafts", () => {
     const at = windowWith([CARD_DRAFTS]);
     at.stack([{ id: "card-1", lifecycleId: "opening-1" }]);
     await vi.runAllTimersAsync();
-    // The card opened anew; another window's words for it arrive before this stack hears of it.
     at.live({
       cardId: "card-1",
       lifecycle: "opening-2",

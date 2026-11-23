@@ -24,13 +24,7 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 const topLine = (page: Page) => page.locator("[data-remote-control]");
 
-/**
- * The person's whole join by its address, from the keyboard: the chip by
- * Tab, the address and port, the key line's yes, then the paste path's
- * question, until this app controls the first mate there.
- */
 async function joinByItsAddress(page: Page, sshd: SshServer): Promise<void> {
-  // Both chips are reached with Tab; Enter opens the address.
   const paste = page.locator("[data-join-chip]");
   const byAddress = page.locator("[data-join-address-chip]");
   await focusOn(paste);
@@ -55,7 +49,6 @@ async function joinByItsAddress(page: Page, sshd: SshServer): Promise<void> {
     "Enter",
   );
 
-  // The paste path's question, naming the computer the address names, then the join.
   const confirm = page.locator('[data-join-another-mac="confirm"]');
   await expect(confirm).toContainText(computerOf(addressParts(typed).address));
   await expect(confirm).toContainText(JOIN_RUNS_WORK);
@@ -63,7 +56,6 @@ async function joinByItsAddress(page: Page, sshd: SshServer): Promise<void> {
   await expect(topLine(page)).toHaveAttribute("data-remote-control", "in-reach");
 }
 
-/** Whether the first mate's computer lists `name` as a computer that controls it and runs work. */
 async function listsJoined(pro: LaunchedApp, name: string): Promise<void> {
   await expect
     .poll(async () =>

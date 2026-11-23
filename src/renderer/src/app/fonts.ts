@@ -68,10 +68,6 @@ function measuredKeyGlyph(doc: Document): string | null {
   }
 }
 
-/**
- * Keeps the window in the chosen fonts, now and as the choice or the app's
- * language changes. Answers what stops following.
- */
 export function followFonts(
   choice: () => FontChoices,
   subscribe: (listener: () => void) => () => void,

@@ -31,7 +31,6 @@ fakeCrewTimersEachTest();
 
 const HEAD = "a".repeat(40);
 
-/** A crewmate on its first turn in "meter", a project that delivers `delivery`. */
 async function builder(delivery: "direct-pr" | "local-only" = "direct-pr") {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate);

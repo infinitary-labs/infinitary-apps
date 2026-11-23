@@ -56,26 +56,18 @@ export function discardedText(pullRequest = ""): string {
   return `Discarded.${pullRequest ? ` ${pullRequest}` : ""}`;
 }
 
-/** A drop refused because the task is a decision, which holds no crew work to drop. */
 export function decisionDropRefusal(key: string): string {
   return `Task ${key} is a decision, not crew work, so there is nothing to drop.`;
 }
 
-/** A merge that did not go in, in what its failure means. */
 export function cannotMergeText(plain: string): string {
   return englishOf(cannotMergeSaid(plain));
 }
 
-/** A merge that did not go in, as a fact (`cannotMergeText`). */
 export function cannotMergeSaid(plain: string): Said {
   return said("settleCannotMerge", { problem: plain });
 }
 
-/**
- * A discard refused because it would destroy work that was never merged:
- * the commits and uncommitted edits the task's working copy holds, and the
- * two ways on - confirm the discard, or merge the work (`keepMode`).
- */
 export function unlandedWorkText(
   task: { key: string; title: string },
   work: { dirty: boolean; unlandedCommits: number },
@@ -167,28 +159,23 @@ export const CLOSE_LINE_MARK = "data-close-line";
 const CLOSE_LINE_OPEN = `<p class="inf-panel" ${CLOSE_LINE_MARK}>`;
 const CLOSE_LINE = new RegExp(`${CLOSE_LINE_OPEN}[\\s\\S]*?</p>`);
 
-/** The close line: the work's key and what became of it, then the first mate's sentence. */
 export function closedLine(key: string, outcome: ClosedWithoutClick, sentence?: string): string {
   return `${CLOSE_LINE_OPEN}${saidMark(closingNoteSaid(key, outcome), "strong")}${firstMateSaid(sentence)}</p>`;
 }
 
-/** The first mate's own sentence after a line, inside the app's words around it. */
 function firstMateSaid(sentence: string | undefined): string {
   const trimmed = sentence?.trim();
   return trimmed ? `<br>${saidMark(said("closeYourFirstMate", { sentence: trimmed }))}` : "";
 }
 
-/** The body with its close line put first, or the one it had replaced. */
 export function withCloseLine(body: string, line: string): string {
   return CLOSE_LINE.test(body) ? body.replace(CLOSE_LINE, () => line) : `${line}${body}`;
 }
 
-/** The first mate's note on a task it closed: its key and what became of it. */
 export function closingNoteTitle(key: string, outcome: ClosedWithoutClick): string {
   return englishOf(closingNoteSaid(key, outcome));
 }
 
-/** The close's title as a fact (`closingNoteTitle`). */
 export function closingNoteSaid(key: string, outcome: ClosedWithoutClick): Said {
   switch (outcome) {
     case "merged":
@@ -207,7 +194,6 @@ export function droppedLine(sentence: string): string {
   return englishOf(droppedSaid(sentence));
 }
 
-/** A drop's line as a fact (`droppedLine`). */
 export function droppedSaid(sentence: string): Said {
   return said("feedDropped", { sentence });
 }
@@ -224,19 +210,16 @@ export const MERGE_LINE_MARK = "data-merge-line";
 const MERGE_LINE_OPEN = `<p class="inf-panel" ${MERGE_LINE_MARK}>`;
 const MERGE_LINE = new RegExp(`${MERGE_LINE_OPEN}[\\s\\S]*?</p>`);
 
-/** Who set the task to merge on its own, as facts. */
 const MERGE_SETTING_SAID = {
   task: said("mergeSetByFirstMate"),
   project: said("mergeSetInProject"),
 } as const;
 
-/** Who set the task to merge on its own, in the app's words. */
 export const MERGE_SETTING_WORDS = {
   task: englishOf(MERGE_SETTING_SAID.task),
   project: englishOf(MERGE_SETTING_SAID.project),
 } as const;
 
-/** What the line says while the merge is still to come. */
 export const MERGES_NEXT_WORDS = englishOf(said("mergesNext"));
 
 /** The merged line's lead: on its own, or by the captain's own click. */
@@ -244,7 +227,6 @@ export function mergedWords(at: string, onItsOwn: boolean): string {
   return englishOf(said(onItsOwn ? "mergedOnItsOwnAt" : "mergedAt", { at }));
 }
 
-/** The line before the merge. */
 export function pendingMergeLine(source: keyof typeof MERGE_SETTING_WORDS): string {
   return `${MERGE_LINE_OPEN}${saidMark(said("mergesOnItsOwn"), "strong")} · ${saidMark(said("mergesNext"))}<br>${saidMark(MERGE_SETTING_SAID[source], "span", 'class="inf-muted"')}</p>`;
 }
@@ -295,7 +277,6 @@ export function receiptMergedLine(
   });
 }
 
-/** Whether a body carries the merge line. */
 export function hasMergeLine(body: string): boolean {
   return MERGE_LINE.test(body);
 }
@@ -321,7 +302,6 @@ export function contributionStatusLine(record: TaskRecord): string {
   return `${MERGE_LINE_OPEN}<strong>${words}</strong>${link}</p>`;
 }
 
-/** The body with its merge line put first, or the one it had replaced. */
 export function withMergeLine(body: string, line: string): string {
   return hasMergeLine(body) ? body.replace(MERGE_LINE, () => line) : `${line}${body}`;
 }

@@ -202,7 +202,6 @@ export const PROBES = [
   },
 ] as const;
 
-/** Every probe file, in the order the rows list them. */
 export const PROBE_FILES: readonly string[] = PROBES.flatMap((row) => row.files);
 
 export type Reasons = Map<string, string[]>;

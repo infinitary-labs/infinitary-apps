@@ -213,10 +213,7 @@ describe("scopeSignals - spendPriority", () => {
   it("makes the whole scope unmeasurable when any bound lacks usable pace - never zero", () => {
     const scope = scopeSignals({
       scope: "all_models",
-      windows: [
-        claudeSevenDay,
-        { id: "five_hour", label: "session", percentRemaining: 55 }, // no clock
-      ],
+      windows: [claudeSevenDay, { id: "five_hour", label: "session", percentRemaining: 55 }],
       nowMs: NOW,
     });
     expect(scope.spendPriority).toBeUndefined();

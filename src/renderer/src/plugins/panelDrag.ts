@@ -20,7 +20,6 @@ const DRAG_START_DISTANCE = 5;
 
 export type Box = { left: number; top: number; right: number; bottom: number };
 
-/** One place a held panel could land. */
 export type PanelDropTarget = {
   /** The move a drop here makes, or null where the panel already is. */
   move: PanelMove | null;
@@ -34,7 +33,6 @@ export type PanelDropTarget = {
   zone?: Box;
 };
 
-/** One group of a column, as the window drew it. */
 export type DropGroup = {
   slot: SidePanelPlacement;
   /** The panels a person sees in it, top to bottom. */
@@ -72,7 +70,6 @@ export function columnTargets(
   });
 }
 
-/** The target nearest the pointer in the column it is over, or none outside every column. */
 export function nearestTarget(
   targets: readonly PanelDropTarget[],
   x: number,
@@ -109,7 +106,6 @@ export type PanelDrag = {
 
 let holding = false;
 
-/** Whether a panel is held now. */
 export function isHoldingPanel(): boolean {
   return holding;
 }
@@ -276,7 +272,6 @@ function railShown(rail: HTMLElement): boolean {
   );
 }
 
-/** Where an empty rail would draw its top and bottom groups, a header high each. */
 function emptyRailZones(rail: HTMLElement, side: RailSide): { area: Box; top: Box; bottom: Box } {
   const box = rail.getBoundingClientRect();
   const width = tokenPx(rail, "var(--rail-width)");
@@ -294,7 +289,6 @@ function emptyRailZones(rail: HTMLElement, side: RailSide): { area: Box; top: Bo
   };
 }
 
-/** The places the rails offer a held panel, read from the window as drawn now. */
 export function railTargets(panelId: string): PanelDropTarget[] {
   return SIDES.flatMap((side) => {
     const rail = document.querySelector<HTMLElement>(`[data-rail="${side}"]`);

@@ -18,7 +18,6 @@ export type TaskRelationshipRule = {
    * closes done. Only a dependency does; the ready query reads only that.
    */
   holdsStart: boolean;
-  /** Whether a relationship that would lead back to the task is refused. */
   refusesCycles: boolean;
   /** Where the other task must be: the child moves into its parent's project. */
   scope: "joins-project" | "same-repository" | "any";

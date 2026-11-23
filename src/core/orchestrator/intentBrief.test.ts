@@ -172,8 +172,6 @@ describe("renderIntentBrief", () => {
       "Before reporting a panel change, lint_panel checks it, place_panel puts it on the captain's rail, and capture_panel photographs it there.",
     );
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail).');
-    // Without the facts nothing of the workspace is said; without surfaces
-    // it says so.
     expect(renderIntentBrief({ goal: "g", userWords: "w" }, undefined)).not.toContain("Workspace:");
     expect(
       renderIntentBrief({ goal: "g", userWords: "w" }, undefined, {
@@ -181,7 +179,6 @@ describe("renderIntentBrief", () => {
         surfaces: [],
       }),
     ).toContain("Surfaces now: none yet.");
-    // An ordinary posture carries its Delivery line and no workspace facts.
     const project = renderIntentBrief({ goal: "g", userWords: "w" }, "local-only");
     expect(project).toContain(
       "Delivery: local-only - work merges on a local branch and never leaves the machine.",
@@ -439,7 +436,6 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "Delivery: direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then show_merge_card, or open_change where show_merge_card is not served).",
     );
-    // The host's goal, not the Firstmate's.
     expect(brief).not.toContain("ignored: the host names the goal");
   });
 
@@ -592,7 +588,6 @@ describe("the deliverable axis (Task B, captain F1 A)", () => {
         "Goal: g\n\nFiled as a follow-up.\n\nDelivery: local-only - work lands on a local branch.",
       ),
     ).toBe("Goal: g\n\nFiled as a follow-up.");
-    // A brief with no Delivery line is left as it is.
     const personal = renderFollowupBrief(facts, undefined, { workspaceDir: "/w", surfaces: [] });
     expect(withoutDeliveryLine(personal)).toBe(personal);
   });
@@ -879,14 +874,12 @@ describe("the basis section (Task B, captain F3 A)", () => {
     expect(threaded).toContain(
       "What was said under its card, newest last:\n- captain: B, but keep the gear icon\n- crewmate: Revised: B keeps the gear icon.",
     );
-    // None of the three: the section is exactly what it was.
     for (const section of [plain, renderBasisSection({ ...facts, thread: [] })]) {
       expect(section).not.toContain("Its work is on branch");
       expect(section).not.toContain("its work is saved");
       expect(section).not.toContain("What was said under its card");
     }
     expect(renderBasisSection({ ...facts, thread: [] })).toBe(plain);
-    // The captain's choice on the card, when the basis closed on one.
     expect(renderBasisSection({ ...facts, choice: "Group into sections" })).toContain(
       'The captain closed it by choosing "Group into sections".',
     );
@@ -902,7 +895,6 @@ describe("the basis section (Task B, captain F3 A)", () => {
       'The captain closed it by choosing "Lock the plan".\n\nThe captain\'s latest submitted settings/answers (supersede earlier values):\n- read-scope: "Every project your sign-in can see" (all-visible), changed',
     );
     expect(plain).not.toContain("answers to the questions");
-    // Its report is presented as the final answer it recorded.
     expect(plain).toContain(
       "Its report - the final answer it recorded:\nThe scheduler never claims",
     );
@@ -1021,7 +1013,6 @@ describe("renderPicturesSection", () => {
         "Where your work depends on a picture you cannot see, say so plainly and ask the captain on a card to send it again, rather than answering without it.",
       ].join("\n"),
     );
-    // Every copy found: nothing to ask for.
     expect(
       renderPicturesSection({
         riding: [{ name: "only.png", path: "/h/only.png" }],

@@ -8,7 +8,6 @@ const CARD_ID = "card-viewport-height";
 /** The card's thread, which the window reads when the card shows. */
 export const asked: HomeRead[] = [["inf:cards:thread", [CARD_ID]]];
 
-/** What the card-viewport-height test's story reads back: the card's title and its body. */
 type Words = { title: string; body: string };
 
 /** A crewmate's note whose body is as tall as the viewport, at the width the core decides for it. */

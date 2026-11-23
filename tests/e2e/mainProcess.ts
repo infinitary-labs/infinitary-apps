@@ -47,7 +47,6 @@ export async function mainProcessSettled(app: ElectronApplication, rounds = 5): 
   }
 }
 
-/** Each launched app, by the context its windows' pages belong to. */
 const launchedApps = new WeakMap<BrowserContext, ElectronApplication>();
 
 /**
@@ -58,7 +57,6 @@ export function rememberApp(app: ElectronApplication): void {
   launchedApps.set(app.context(), app);
 }
 
-/** The app whose window shows `page`, when the launcher started it; otherwise none. */
 export function appOf(page: Page): ElectronApplication | undefined {
   return launchedApps.get(page.context());
 }

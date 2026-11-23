@@ -29,7 +29,6 @@ describe("the crystal's form", () => {
     const used = new Set(edges.flat());
     expect(used.size).toBe(14);
     for (const sink of LAYOUT.sinks) expect(used.has(sink)).toBe(false);
-    // Every equator vertex reaches both apexes.
     for (const v of LAYOUT.equator) {
       for (const apex of LAYOUT.apexes) {
         expect(edges.some(([p, q]) => (p === v && q === apex) || (p === apex && q === v))).toBe(
@@ -49,7 +48,6 @@ describe("the crystal's form", () => {
     const upper = projectCrystal(top as [number, number, number], size / 2, R);
     const lower = projectCrystal(bottom as [number, number, number], size / 2, R);
     expect(upper.y).toBeLessThan(lower.y);
-    // The crystal stays inside the canvas (and inside the crew ring).
     expect(upper.y).toBeGreaterThan(size * 0.05);
     expect(lower.y).toBeLessThan(size * 0.95);
     // The e2e reads the upper apex here.

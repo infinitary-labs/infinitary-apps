@@ -133,7 +133,6 @@ export function sameModel(
   return !asked || (model !== undefined && offeringKey(model) === offeringKey(asked));
 }
 
-/** What an open there answered, read whole: one of the three answers it may give. */
 export type OpenOutcome<S> = { state: S } | { needsOpen: true } | { notOpened: string };
 
 /**
@@ -158,7 +157,6 @@ export function openOutcome<S>(
   throw new Error("The computer's answer to an open said nothing sure about what opened there.");
 }
 
-/** A conversation's spec reopened on the model and account routing picked. */
 export function routedSpec(
   opened: PlacedSpec,
   routed: {
@@ -233,7 +231,6 @@ type ReopenRoute = {
   passOver(): void;
 };
 
-/** What a reopen asked so far: the spec, the routing pick, and whether it opens anew. */
 export type ReopenProgress = { asked: PlacedSpec; routed?: ReopenRoute; anew: boolean };
 
 /**

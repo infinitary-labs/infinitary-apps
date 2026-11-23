@@ -25,7 +25,6 @@ export type RemoteHost = {
   name: string;
   signedIn: boolean;
   login: string | null;
-  /** Every project the sign-in lists, and whether that is all of them. */
   list: () => Promise<{ projects: ForgeProject[]; complete: boolean }>;
   /** One project by its exact owner/name, or null; absent where the host cannot. */
   find?: (fullName: string) => Promise<ForgeProject | null>;

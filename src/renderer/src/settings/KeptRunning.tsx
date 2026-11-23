@@ -40,7 +40,6 @@ const CHECK_TONES: Record<NonNullable<KeptJobView["checked"]>["outcome"], Status
   unreachable: "idle",
 };
 
-/** What the job's last check says, in the row's words. */
 export function keptCheckWords(job: KeptJobView): string | null {
   if (!job.checked) return null;
   const time = formatDateTime(job.checked.at, WHEN);
@@ -56,7 +55,6 @@ export function keptCheckWords(job: KeptJobView): string | null {
   }
 }
 
-/** What a remove that did not finish says, in the row's words. */
 export function keptRemoveWords(job: KeptJobView): string | null {
   if (!job.removeFailed) return null;
   const time = formatDateTime(job.removeFailed.at, WHEN);

@@ -41,9 +41,7 @@ export type ModelCapabilityLookup = (ref: PiModelRef) => ModelCapability | undef
 
 /** What the turn about to run will actually send. */
 export type TurnNeeds = {
-  /** The turn carries image parts. */
   images?: boolean;
-  /** Tokens the turn's input needs to fit. */
   contextTokens?: number;
 };
 

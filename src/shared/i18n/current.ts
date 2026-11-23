@@ -31,7 +31,6 @@ export function setCurrentLanguage(tag: string): void {
   for (const listener of listeners) listener(tag);
 }
 
-/** Hears each later change of the process's language; answers what stops hearing. */
 export function onLanguageChange(listener: (tag: string) => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

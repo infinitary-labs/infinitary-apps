@@ -608,7 +608,6 @@ extension PhoneJourney {
             XCTAssertFalse(gotIt.waitForAbsence(timeout: 2), "A tap while the reply typed read the note\n\(app.debugDescription)")
             XCTAssertEqual((reply.value as? String), words, "The words stay in the field")
         }
-        // The next tap reads the note, carrying the words.
         reveal(gotIt)
         tapOnPhone(gotIt)
         let read = try await home("context-read")
@@ -629,7 +628,6 @@ extension PhoneJourney {
     }
 }
 
-/// The home crew's orbits as the scene fixture gives them: the orbiting crewmates, by identifier, and each orbit's pace.
 private struct CrewOrbits {
     let orbiting: Set<String>
     let pace: PhoneOrbitPace

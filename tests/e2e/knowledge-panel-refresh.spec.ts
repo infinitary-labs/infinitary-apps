@@ -26,7 +26,6 @@ import { KNOWLEDGE_RETIRE_PROMPT_MARKER, knowledgeRetire } from "./scenarios/kno
 /** Longer than the watchdog's unanswered pings take to stop a page, with two seconds to spare. */
 const PAUSE_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_STOP_INTERVALS + 2_000;
 
-/** The panel's collapsed count of `n` concepts. */
 const conceptsLine = (n: number) => counted(n, "concept", "concepts");
 
 const RETIRED = [

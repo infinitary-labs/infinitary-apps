@@ -90,7 +90,6 @@ const EMOTE_ENTRY_CLIP: Record<Exclude<FirstmateEmote, "fidget">, TransitionClip
   aww: "blush",
 };
 
-/** Blend duration of each transition clip, in ms. */
 export const CLIP_BLEND_MS: Record<string, number> = {
   none: 1,
   attend: 350,
@@ -331,8 +330,6 @@ export class FirstmateMachine {
       this.enteredAt = now - this.pinnedT * this.emoteDurationMs();
     }
     if (isEmote(this.state) && now - this.enteredAt >= this.emoteDurationMs()) {
-      // One-shot done: home is working when busy or just submitted, idle
-      // otherwise.
       const home = this.busy || now < this.submitGraceUntil ? "working" : "idle";
       this.go(home, "return", now);
     }

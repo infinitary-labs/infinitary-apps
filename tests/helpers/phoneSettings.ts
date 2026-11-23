@@ -39,7 +39,6 @@ export const PHONE_SETTINGS_ACCOUNTS = {
   team: "acct_phone_team",
 } as const;
 
-/** The stand-in projects. */
 export const PHONE_SETTINGS_PROJECTS = { website: "phone-website", app: "phone-app" } as const;
 
 function gitRepo(dir: string): string {

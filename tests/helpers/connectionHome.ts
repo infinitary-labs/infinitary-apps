@@ -43,7 +43,6 @@ export function standInCore() {
   return { dispatch, asked, events: new CoreEventBus() };
 }
 
-/** Whether anything accepts a connection on loopback at that port. */
 export function answersAt(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = connect({ port, host: "127.0.0.1", rejectUnauthorized: false });
@@ -89,7 +88,6 @@ export async function home(
     port,
     at,
     link: (kind: DeviceKind = "view") => pairing.invite({ kind, at }).link,
-    /** Makes a link, waits for the listener, and joins with it as the device itself would. */
     join: async (kind: DeviceKind = "view", name = "Test Mac"): Promise<DeviceGrant> => {
       const { link } = pairing.invite({ kind, at });
       await connection.settled();
@@ -120,7 +118,6 @@ export async function postPair(
     origin?: string;
     body?: string;
     device?: DeviceKey | null;
-    /** Sends the body without a length, in chunks. */
     chunked?: boolean;
   },
 ): Promise<{ status: number; body: string }> {

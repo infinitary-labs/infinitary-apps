@@ -10,7 +10,6 @@ import {
 
 type MoveServices = Pick<CoreServices, "repos" | "tasks" | "scheduler">;
 
-/** What a move takes along, read from the task record and the automations. */
 function impactOf(services: Pick<MoveServices, "tasks" | "scheduler">, move: RepositoryMove) {
   return moveImpact(move, {
     tasksJoining: (joining) => services.tasks.tasksJoining(joining),

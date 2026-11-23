@@ -67,7 +67,6 @@ type ChatMessage = {
   tool_calls?: { function: { name: string; arguments: string } }[];
 };
 
-/** A message's text, whether the request carries it as a string or as parts. */
 function textOf(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -122,7 +121,6 @@ function spawnExchange(
   return undefined;
 }
 
-/** The rule of every routing decision recorded for a task, from the app's own ledger. */
 function routingRules(userDataDir: string, taskId: string): string[] {
   return readSavedData(userDataDir, (db) =>
     (
@@ -221,7 +219,6 @@ test("new work on a model the app cannot serve waits, says so once, and Firstmat
   // It routed by the captain's named model (R0), and started on none.
   expect(routingRules(launched.userDataDir, taskId)[0]).toBe(ruleIdSchema.enum.R0);
 
-  // Firstmate hears, in one wake, that the task waits for the model it named.
   const told = renderWake({
     facts: {
       kind: "named-model-wait",

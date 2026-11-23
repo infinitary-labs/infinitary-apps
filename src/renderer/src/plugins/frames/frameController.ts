@@ -295,7 +295,6 @@ export type FrameMountSpec = {
  */
 export const FRAME_COLLECT_TIMEOUT_MS = 1_000;
 
-/** How often an armed controller pings its frame. */
 export const FRAME_WATCHDOG_INTERVAL_MS = 1_000;
 /** Consecutive unanswered pings that make a frame unresponsive. */
 export const FRAME_WATCHDOG_MISSES = 4;
@@ -367,7 +366,6 @@ export function onFrameHostUpdate(listener: (controller: FrameController) => voi
   };
 }
 
-/** A request's correlation id, and which document of the mount sent it. */
 type Asker = { id: number; document: string | undefined; birth: number };
 
 function byteLength(value: unknown): number {
@@ -1296,7 +1294,6 @@ export class FrameController {
     }
   }
 
-  /** A data file the body names, by the address it names it with; never another. */
   private async dataRequest(asker: Asker, request: Extract<FrameRequest, { verb: "data" }>) {
     const name = cardDataName(request.src);
     if (!name || !this.spec.data?.has(name) || !this.deps.data) {
@@ -1407,7 +1404,6 @@ export class FrameController {
     }
   }
 
-  /** Counts one async request in, refusing past the cap. */
   private admit(asker: Asker): boolean {
     if (this.inFlight >= FRAME_MAX_IN_FLIGHT) {
       // i18n-exempt: not shown (a console line, or an error for the panel's code)

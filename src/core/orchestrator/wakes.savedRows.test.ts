@@ -21,7 +21,6 @@ function drained(payload: object): string | undefined {
 
 const TASK = { id: "479823ee", title: "Restructure the wakes file" };
 
-/** What every retired count hold's row is served as. */
 const RETIRED_COUNT_HOLD =
   '[fm-op] An earlier version recorded a count hold on task 479823ee "Restructure the wakes file". Repair, re-review and rerun count holds are retired. This record places no hold and grants no authorization. Read current facts and judge the next action from your delivery guidance.';
 

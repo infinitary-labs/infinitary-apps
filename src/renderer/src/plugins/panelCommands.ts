@@ -47,10 +47,6 @@ export function panelCommandsOf(panels: readonly SidePanelContribution[]): Panel
   );
 }
 
-/**
- * Tells the window the panels' commands whenever the panels change, and
- * takes the keys it installs back. Returns the stop function.
- */
 export function startPanelCommands(host: PluginHost): () => void {
   let told = "[]";
   const tell = () => {
@@ -70,7 +66,6 @@ export function startPanelCommands(host: PluginHost): () => void {
   return host.sidePanels.subscribe(tell);
 }
 
-/** A panel command's panel and its declaration, while that panel has it. */
 function resolve(host: PluginHost, id: PanelCommandId) {
   const { panel: panelId, command: commandId } = panelCommandParts(id);
   const panel = host.sidePanels.get(panelId);

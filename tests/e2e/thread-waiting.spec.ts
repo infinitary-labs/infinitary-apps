@@ -29,7 +29,6 @@ import { cardReply, showCard } from "./stack";
 
 const TITLE = `chart the reef ${CLAUDE_CREW_PROMPT_MARKER} ${CLAUDE_REFUSED_PROMPT_MARKER} ${CLAUDE_HELD_CARD_MARKER}`;
 
-/** The thread column beside the shown card. */
 function thread(page: Page) {
   return page.locator("[data-card-thread]");
 }
@@ -48,7 +47,6 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
   const taskPrompt = (page: Page) => page.getByRole("textbox", { name: "Task prompt" });
   let launched: LaunchedApp | undefined;
   try {
-    // 1. The crewmate puts up its card while Claude still serves it.
     mockProvider.refuseClaude(false);
     launched = await launchClaudeCrew({
       homeDir,
@@ -74,8 +72,6 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
       .toBe(true);
     await showCard(launched.page, MOCK_CLAUDE_HELD_CARD_TITLE);
 
-    // 2. Claude starts refusing the sign-in, and the captain's reply meets it:
-    // kept, with nothing working on it, and the thread names the hold.
     mockProvider.refuseClaude(true);
     const reply = cardReply(launched.page).field;
     await reply.click();
@@ -89,8 +85,6 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
     await launched.close();
     launched = undefined;
 
-    // 3. A restart on the same login: the hold and the reply's wait are on
-    // the record, so the thread says the same thing again.
     launched = await launchClaudeCrew({
       userDataDir,
       homeDir,
@@ -106,8 +100,6 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
     await launched.close();
     launched = undefined;
 
-    // 4. Another login, which Claude serves: the kept reply goes out, the
-    // crewmate answers in the thread, and the waiting line is gone.
     mockProvider.refuseClaude(false);
     launched = await launchClaudeCrew({
       userDataDir,

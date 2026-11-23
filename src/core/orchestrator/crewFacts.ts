@@ -48,7 +48,6 @@ export class CrewFacts {
 
   constructor(private readonly core: CrewCore) {}
 
-  /** A task lane's due rows. */
   deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
     const task = this.core.tasks.get(taskId);
@@ -205,7 +204,6 @@ export class CrewFacts {
     return serveabilityOf(this.core.options);
   }
 
-  /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
   machineOf(taskId: string): string {
     return this.core.options.tasks.get(taskId)?.deviceId ?? LOCAL_MACHINE_ID;
   }
@@ -255,7 +253,6 @@ export class CrewFacts {
     return verdict ? `review: ${verdict}` : undefined;
   }
 
-  /** The personal brief's workspace facts (Step 4): the directory and the surfaces that exist. */
   personalFacts(ongoing?: boolean): PersonalBriefFacts | undefined {
     const personal = this.core.options.personal;
     if (!personal) return undefined;
@@ -524,7 +521,6 @@ export class CrewFacts {
     return record.status === "open" ? undefined : HERE.this;
   }
 
-  /** An open row's wait on its blockers, phrased; empty when none remain. */
   private waitingOnBlockers(record: TaskRecord): string | undefined {
     const waiting = this.core.options.tasks.graph
       .blockers(record.id)

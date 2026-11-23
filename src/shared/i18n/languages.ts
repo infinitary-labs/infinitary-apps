@@ -117,7 +117,6 @@ export function languageArgument(tag: string): string {
   return `${LANGUAGE_ARG}${tag}`;
 }
 
-/** The language an argument names, or the source language when none does or it is not a language tag. */
 export function languageFromArgv(argv: readonly string[]): string {
   const arg = argv.find((entry) => entry.startsWith(LANGUAGE_ARG));
   const tag = arg?.slice(LANGUAGE_ARG.length);
@@ -137,7 +136,6 @@ export function localeArgument(tag: string): string {
   return `${LOCALE_ARG}${tag}`;
 }
 
-/** A locale tag the runtime reads, in its canonical form, or undefined for none or one it cannot read. */
 export function readableLocale(tag: string | null | undefined): string | undefined {
   if (!tag) return undefined;
   try {
@@ -147,7 +145,6 @@ export function readableLocale(tag: string | null | undefined): string | undefin
   }
 }
 
-/** The computer's preferred locale an argument names, or undefined when none does. */
 export function localeFromArgv(argv: readonly string[]): string | undefined {
   return readableLocale(
     argv.find((entry) => entry.startsWith(LOCALE_ARG))?.slice(LOCALE_ARG.length),

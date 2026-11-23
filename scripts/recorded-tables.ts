@@ -42,7 +42,6 @@ export function emptyTables(): RecordedTables {
   return { tasks: [], cards: [], supervision_outcomes: [], captain_asks: [], card_messages: [] };
 }
 
-/** A path ending in `.json` is a dump; anything else is a SQLite database. */
 export function readRecordedTables(path: string): RecordedTables {
   return path.endsWith(".json") ? readTablesDump(path) : readTablesDatabase(path);
 }
@@ -120,13 +119,11 @@ export function scrubRecording(value: unknown): unknown {
   return out;
 }
 
-/** Numeric column, or null when absent or not a number. */
 export function numberColumn(row: TableRow, key: string): number | null {
   const value = row[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** String column, or null when absent or empty. */
 export function stringColumn(row: TableRow, key: string): string | null {
   const value = row[key];
   return typeof value === "string" && value ? value : null;

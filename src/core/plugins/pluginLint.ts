@@ -117,7 +117,6 @@ function lintFile(file: PanelSourceFile): PanelLintFinding[] {
   const at = (line: number, rule: string, severity: PanelLintSeverity, message: string) =>
     findings.push({ rule, severity, file: file.path, line, message });
 
-  // --- refusals -----------------------------------------------------------
   for (const line of source.split("\n").entries()) {
     const [index, text] = line;
     if (EMOJI.test(text)) {
@@ -150,7 +149,6 @@ function lintFile(file: PanelSourceFile): PanelLintFinding[] {
     );
   }
 
-  // --- warnings, each naming the nearest token ----------------------------
   const lines = source.split("\n");
   const shortHex = matches(source, SHORT_HEX_COLOR).filter((found) =>
     COLOR_CONTEXT.test(lines[found.line - 1] ?? ""),
@@ -280,7 +278,6 @@ function declaredIntegrations(
   files: PanelSourceFile[],
 ): Map<string, { actions: Set<string>; events: Set<string> }> | null {
   const manifest = files.find((file) => file.path === "manifest.json");
-  // A panel with no manifest names no integration.
   if (!manifest) return new Map();
   let parsed: unknown;
   try {

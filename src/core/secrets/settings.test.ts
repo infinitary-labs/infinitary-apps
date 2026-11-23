@@ -688,7 +688,6 @@ describe("trusted Secrets settings", () => {
     expect((await f.settings.view()).entries).toHaveLength(1);
     expect((await f.settings.view()).question).toEqual(asked);
 
-    // Keep secret changes nothing and closes the question; its passes stop working.
     const kept = await f.answer(SECRET_QUESTION_WORDS.keepSecret);
     expect(kept.question).toBeNull();
     expect(kept.entries).toEqual([saved]);
@@ -702,7 +701,6 @@ describe("trusted Secrets settings", () => {
     await f.answer(SECRET_QUESTION_WORDS.forget, dropped);
     expect((await f.settings.view()).entries).toEqual([saved]);
 
-    // Forget secret forgets it, says so, and a second answer does nothing more.
     const again = (await f.settings.action({ kind: "forget", ref: INPUT.ref })).question;
     const forgotten = await f.answer(SECRET_QUESTION_WORDS.forget, again);
     expect(forgotten.entries).toEqual([]);
@@ -1300,7 +1298,6 @@ describe("a phone's Secrets approvals", () => {
 
     await f.settings.action({ kind: "ask-phone", paired: PAIRED });
     expect((await f.settings.view()).phones).toEqual([{ paired: PAIRED, state: "waiting" }]);
-    // Only the phone the switch belongs to is asked.
     expect(
       (await asAView(() => f.settings.approvals(PHONE), { view: "another-phone" })).asked,
     ).toBe(false);
@@ -1347,7 +1344,6 @@ describe("a phone's Secrets approvals", () => {
     const phone = phoneKey();
     await enrolled(f, phone.key);
     const raised = f.cards.length;
-    // The same key from the same unlinked request raises nothing.
     await f.settings.enroll({ device: PHONE, label: "Kun’s iPhone", key: phone.key });
     expect(f.cards).toHaveLength(raised);
 
@@ -1508,7 +1504,6 @@ describe("a phone's Secrets approvals", () => {
       "waiting",
     );
 
-    // A new key re-enrolls the same phone at the next generation; the old key no longer passes.
     const replacement = phoneKey();
     await enrolled(f, replacement.key);
     expect((await f.settings.view()).devices[0]?.generation).toBe(2);

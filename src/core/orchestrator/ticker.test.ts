@@ -14,7 +14,6 @@ function manualTimers() {
       (handle as { cancelled: boolean }).cancelled = true;
     },
   };
-  /** The interval elapsing once: every live schedule fires. */
   const elapse = () => {
     for (const entry of scheduled) if (!entry.cancelled) entry.run();
   };
@@ -97,7 +96,6 @@ describe("Ticker (one clock, P5)", () => {
     ticker.start();
     expect(interval.scheduled.map((entry) => entry.ms)).toEqual([2_000]);
 
-    // The minute's pass runs on every shortened period, the hour's on every sixtieth.
     interval.elapse();
     expect(runs).toEqual(["inbox-sweep"]);
     for (let tick = 1; tick < 60; tick += 1) interval.elapse();
@@ -140,7 +138,6 @@ describe("Ticker (one clock, P5)", () => {
     unregister();
     interval.elapse();
     expect(runs).toEqual(["schedules", "sweep", "sweep"]);
-    // The name is free again.
     expect(() => ticker.register("schedules", TICK_PERIOD_MS, () => {})).not.toThrow();
   });
 

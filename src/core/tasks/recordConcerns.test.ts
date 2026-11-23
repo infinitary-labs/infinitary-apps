@@ -35,10 +35,8 @@ function setup() {
   });
   const detail = (id: string): TaskDetail => protocol.detail(id);
   const keyOf = (id: string) => tasks.get(id)?.key ?? id;
-  /** The rows another task wrote on this record, by that task's key, in time order. */
   const fromOthers = (id: string) =>
     detail(id).activityLog.flatMap((row) => (row.from ? [[row.from.key, row.text]] : []));
-  /** Every line of the record, folded ones included, as [kind, text, from key]. */
   const everyLine = (id: string) =>
     detail(id).activityLog.flatMap((row) => [
       [row.kind, row.text, row.from?.key ?? null],
@@ -116,7 +114,6 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     tasks.close("runner", { status: "done", reason: "finished", actor: "host" });
     tasks.graph.unlink("runner", "waiter", "blocks", "firstmate");
     const [waiter, runner] = [keyOf("waiter"), keyOf("runner")];
-    // The waiting task's own lines, and the blocker's close.
     expect(detail("waiter").activityLog.map((row) => row.text)).toEqual(
       expect.arrayContaining([
         `waits for "Bring the Mac runner back" (${runner})`,
@@ -218,7 +215,6 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
       note: `Carried on by ${next}`,
       replacedBy: next,
     });
-    // The task carrying it says whose work it carries on.
     expect(detail("next").activityLog.map((row) => row.text)).toContainEqual(
       `replaces "Fix the notice" (${old})`,
     );

@@ -11,13 +11,9 @@
  * right and whose pictures are not is refused all the same.
  */
 
-/** The longest a demo may play. */
 export const MAX_DEMO_SECONDS = 30;
-/** The most frames a second a demo may play. */
 export const MAX_DEMO_FRAME_RATE = 30;
-/** A demo's longer side, at most. */
 export const MAX_DEMO_LONG_SIDE = 1920;
-/** A demo's shorter side, at most. */
 export const MAX_DEMO_SHORT_SIDE = 1080;
 
 /** The H.264 profiles a demo may use: each is 8-bit 4:2:0 here, and every Chromium decodes it. */
@@ -46,11 +42,8 @@ export type DemoVideo = {
   /** The size it is shown at (its track header's), in pixels. */
   width: number;
   height: number;
-  /** How long it plays. */
   durationMs: number;
-  /** How many pictures it holds. */
   frames: number;
-  /** Its H.264 profile's name. */
   profile: string;
   /** Whether it holds a sound track beside its pictures, played on the captain's press. */
   sound: boolean;
@@ -431,7 +424,6 @@ function demoVideo(bytes: Buffer): DemoVideo {
   const { children, mdiaChildren } = pictures[0] as (typeof handlers)[number];
   const sound = sounds[0];
 
-  // The track header: the size the video is shown at.
   const tkhd = only(children, "tkhd", "track header");
   const wideHeader = version(bytes, tkhd) === 1;
   const sizeAt = tkhd.content + 4 + (wideHeader ? 32 : 20) + 52;
@@ -445,7 +437,6 @@ function demoVideo(bytes: Buffer): DemoVideo {
   const stblBox = only(minfChildren, "stbl", "sample table");
   const stbl = boxes(bytes, stblBox.content, stblBox.end);
 
-  // The one sample description: H.264, and the size it is coded at.
   const stsd = only(stbl, "stsd", "sample description");
   version(bytes, stsd);
   need(stsd, 8);
@@ -480,7 +471,6 @@ function demoVideo(bytes: Buffer): DemoVideo {
     }
   }
 
-  // How long it plays, and how many pictures a second.
   const seconds = Math.max(movie.duration / movie.timescale, track.duration / track.timescale);
   if (!(seconds > 0)) refuse("is not a structurally valid MP4: it states no duration");
   if (seconds > MAX_DEMO_SECONDS) {

@@ -587,7 +587,6 @@ async function world(options: { api?: boolean } = {}) {
           start: async () => {},
           startBrowser: async () => {},
           signInWithKey: async () => ({ ok: false, problem: "not-server", host: null }),
-          // No GitHub CLI there.
           signInWithCli: async (host) => ({ ok: false, problem: "missing", host }),
           cancel: () => {},
           signOut: () => {},
@@ -628,7 +627,6 @@ async function world(options: { api?: boolean } = {}) {
   run = started.run;
   stops.push(() => run?.stop());
   await expect.poll(() => home.ready(deviceId)).toBe(true);
-  // This Mac's own Claude sign-in.
   const here = await home.vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
   await home.vault.status(here.id, { refresh: true });
 
@@ -687,11 +685,9 @@ async function world(options: { api?: boolean } = {}) {
     thisMacAccount: here.id,
     settle,
     tick,
-    /** Ticks every `step` for `total`. */
     ticks: async (total: number, step = MINUTE) => {
       for (let elapsed = 0; elapsed < total; elapsed += step) await tick(step);
     },
-    /** A queued task for the Mac mini, dispatched now. */
     dispatch: async (id: string, title: string, prompt: string) => {
       seedTask(home.tasks, { id, title, prompt, status: "queued", deviceId });
       await home.supervisor.starts.dispatchQueuedTask(id);
@@ -708,7 +704,6 @@ async function world(options: { api?: boolean } = {}) {
         late = undefined;
       };
     },
-    /** Claude Code on the Mac mini is signed in again, and that Mac's minute read sees it. */
     signInThere: async () => {
       credential.signInAgain();
       await computerHealth.tick();
@@ -745,7 +740,6 @@ function signInCards(at: World): string[] {
     .map((card) => card.id);
 }
 
-/** Which task's work each answered turn there carried, in order: the footer's or the header's. */
 function answered(at: World): string[] {
   return at.claude.turns
     .filter((turn) => turn.kind === "ok")
@@ -758,7 +752,6 @@ function postureOf(at: World, taskId: string) {
   return at.home.supervisor.postures.workPosture(record);
 }
 
-/** What this Mac's own Claude account serves for its Firstmate and crew. */
 async function servingHere(at: World) {
   return {
     cutOff: at.home.vault.cutOff(at.thisMacAccount)?.class ?? null,
@@ -855,7 +848,6 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(feed(at)).toContain("website header's next task started on Mac mini.");
     expect(home.tasks.get("t2")?.deviceId).toBe(at.deviceId);
 
-    // This Mac's own Claude served throughout, and holds nothing of it.
     expect(await servingHere(at)).toEqual(before);
     expect(home.noteCutOff).not.toHaveBeenCalled();
   });
@@ -894,7 +886,6 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     await at.tick(MINUTE);
     await expect.poll(() => answered(at)).toEqual(["Fix the footer.", "Fix the header."]);
     expect(kinds(at)).toContain("provider-back");
-    // Nothing is left to sign in to, so its sign-in card is gone.
     await expect.poll(() => signInCards(at)).toEqual([]);
   });
 
@@ -952,7 +943,6 @@ describe("moving a crewmate off a spent subscription on another computer (INF-49
         assignments: { "anthropic-claude/claude-fable-5-2": ["premium", "high", "medium", "low"] },
         seen: ["anthropic-claude/claude-fable-5-2"],
       });
-      // First turn on the subscription there: fine.
       at.claude.play({ kind: "ok" });
       await at.dispatch("t1", "website footer", "Fix the footer.");
       expect(at.home.tasks.get("t1")?.model).toBe("anthropic-claude/claude-fable-5-2");

@@ -94,8 +94,6 @@ function asJson(value: unknown, what: string): unknown {
   return JSON.parse(text) as unknown;
 }
 
-// --- asks: one in flight per lane, the rest queued here ------------------------
-
 type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 type Lane = {
   queue: { op: PanelAskOp; input: unknown[]; pending: Pending }[];
@@ -131,8 +129,6 @@ function ask(op: PanelAskOp, input: unknown[]): Promise<unknown> {
     pump(lane);
   });
 }
-
-// --- events: what the manifest names, handed over as they arrive ---------------
 
 type EventListener = (items: { id: string; summary: string }[]) => void;
 const listeners = new Map<string, Set<EventListener>>();
@@ -179,8 +175,6 @@ function contextFor(id: string): unknown {
     }),
   });
 }
-
-// --- loading ------------------------------------------------------------------
 
 function namedActions(value: unknown): Map<string, Action> {
   const out = new Map<string, Action>();

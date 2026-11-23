@@ -18,7 +18,6 @@ import type { BoardColumn, BoardLane } from "./boardTiles";
 import * as m from "./messages.generated";
 import { isCardOnly } from "./rows";
 
-/** What Drop task would affect, as `tasks.detail` lists it. */
 type DropEffects = NonNullable<PanelTaskDetail["dropEffects"]>;
 
 /**
@@ -53,7 +52,6 @@ type DropEffects = NonNullable<PanelTaskDetail["dropEffects"]>;
 /** Where a tile can be dropped: a lane, or the foot's Drop task tray. */
 export type BoardTarget = "waiting" | BoardColumn | "drop";
 
-/** The facts beyond the task a move reads. */
 export type BoardMoveContext = {
   /** The task's completion card while it is up on the stack, else null. */
   completionCardId: string | null;
@@ -115,7 +113,6 @@ export const UNPIN_DETAIL = m.nowPanelBoardUnpinDetail();
 
 /** What the board's live line says as a move goes. */
 export const BOARD_SAID = {
-  /** The live line as a drag begins. */
   get dragStarted() {
     return m.nowPanelBoardDragStarted();
   },
@@ -139,7 +136,6 @@ export function boardMovable(lane: BoardLane): boolean {
   return lane !== "landed" && lane !== "dropped";
 }
 
-/** What dropping `task`, whose tile is in `from`, onto `target` does. */
 export function boardMoveOf(
   task: PanelTaskRow,
   from: BoardLane,
@@ -377,7 +373,6 @@ export function boardDoneText(key: string, op: PanelTaskMove): string {
   }
 }
 
-/** One entry of a tile's ⋯ menu: what it is called, what it does, and why it cannot run. */
 export type BoardMenuEntry =
   | {
       id: "open" | "card" | "pin" | "continue" | "queue" | "unqueue" | "start" | "drop";

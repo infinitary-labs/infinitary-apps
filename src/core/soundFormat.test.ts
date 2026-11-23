@@ -50,13 +50,11 @@ describe("readSoundClip", () => {
       /is not an M4A, MP3 or WAV sound clip/,
     );
     const wav = clip("tone.wav");
-    // A WAV whose header claims more than it holds.
     expect(reason(wav.subarray(0, wav.length - 100))).toMatch(/size does not match/);
     // A WAV that says it is something other than PCM.
     const float = Buffer.from(wav);
     float.writeUInt16LE(3, 20);
     expect(reason(float)).toMatch(/is not PCM sound/);
-    // An M4A cut short, and an MP3 with something else after its frames.
     const m4a = clip("tone.m4a");
     expect(reason(m4a.subarray(0, m4a.length - 10))).toMatch(/runs past the end of the file/);
     const mp3 = clip("tone.mp3");

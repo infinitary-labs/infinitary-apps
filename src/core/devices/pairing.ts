@@ -407,7 +407,6 @@ export class DevicePairing implements PairedDevices {
   private readonly joinsFromAnotherMac: boolean;
   private readonly leaveWithWork: (device: DeviceView) => boolean;
   private readonly lookAtFirewall: (() => Promise<HomeFirewall | null>) | null;
-  /** What the last look at this home's firewall found, and when it looked. */
   private firewallSeen: { firewall: HomeFirewall | null; at: number } | null = null;
   private readonly addsByAddress: boolean;
   private firewallLooking: Promise<void> | null = null;
@@ -639,7 +638,6 @@ export class DevicePairing implements PairedDevices {
     }
   }
 
-  /** The device that used a link, by the link's handle; undefined while nobody has. */
   claimedBy(linkId: string): string | undefined {
     for (const link of this.links.values()) if (link.id === linkId) return link.deviceId;
     return undefined;
@@ -1922,7 +1920,6 @@ export class DevicePairing implements PairedDevices {
     this.writeFile(SEEN_FILE, { version: 1, seen: Object.fromEntries(this.seenAt) });
   }
 
-  /** A device on the list reached this Mac at `where`; kept when it is somewhere new. */
   private noteReached(deviceId: string, where: string | undefined): void {
     if (!where || this.reachedAt.get(deviceId) === where) return;
     this.reachedAt.set(deviceId, where);

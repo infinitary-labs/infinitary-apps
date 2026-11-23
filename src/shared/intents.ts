@@ -131,7 +131,6 @@ export function foldCards<T extends FoldedCard>(
   return shown;
 }
 
-/** What a cards snapshot says of a card intent. */
 export function cardEvidence(intent: CardIntent, cards: readonly FoldedCard[]): IntentEvidence {
   const card = cards.find((entry) => entry.id === intent.card);
   if (intent.kind === "seen") {

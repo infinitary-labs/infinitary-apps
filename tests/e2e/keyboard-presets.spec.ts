@@ -44,12 +44,10 @@ import {
 /** A key no preset gives, which a person records in each journey. */
 const OWN_KEY: KeyBinding = { key: "F9" };
 
-/** The keys a row shows, as this computer draws them. */
 function labels(bindings: readonly KeyBinding[]): string[] {
   return bindings.map((binding) => bindingLabel(binding, THIS_DESKTOP.keys));
 }
 
-/** A prefix as this computer draws it. */
 function prefixShown(chord: KeyChord): string {
   return chordLabel(chord, THIS_DESKTOP.keys);
 }
@@ -59,7 +57,6 @@ function keysHere(preset: PresetId, id: AnyCommandId, prefix?: KeyChord): readon
   return presetKeys(preset, id, THIS_DESKTOP.keys, prefix);
 }
 
-/** Expects a command's row to show exactly these keys. */
 async function showsKeys(page: Page, id: AnyCommandId, bindings: readonly KeyBinding[]) {
   await expect(keyboardSettings(page).row(id).locator("[data-keyboard-key]")).toHaveCount(
     bindings.length,
@@ -71,13 +68,11 @@ async function showsKeys(page: Page, id: AnyCommandId, bindings: readonly KeyBin
   expect(shown).toEqual(labels(bindings));
 }
 
-/** Expects a command's row to show a preset's own keys for it, unchanged. */
 async function showsPresetKeys(page: Page, preset: PresetId, id: AnyCommandId) {
   await expect(keyboardSettings(page).row(id)).not.toHaveAttribute("data-keyboard-changed");
   await showsKeys(page, id, presetKeys(preset, id, THIS_DESKTOP.keys));
 }
 
-/** Picks a preset in the Preset row by the arrows, as a person does from the keyboard. */
 async function pickPreset(page: Page, preset: PresetId) {
   const keyboard = keyboardSettings(page);
   const count = await keyboard.presets.count();
@@ -343,7 +338,6 @@ test("tmux: picked in the Preset row, driven by ⌃B mid-sentence, and its prefi
 });
 
 test("Legacy: a profile updated from before presets stays on it with its changed key", async () => {
-  // A profile an older version kept, with a key its person changed in it.
   const userDataDir = scratchDir("infinitary-keyboard-presets-");
   // Saved as it stood just before the presets migration, wherever later migrations put it.
   const db = openDatabase(userDataDir, MIGRATIONS.indexOf(keyboardPresets));

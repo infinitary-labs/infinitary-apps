@@ -63,7 +63,6 @@ function fromRow(row: Row): ProjectRecord {
   };
 }
 
-/** One repository of a project, as its membership lists it. */
 export type ProjectRepository = { id: string; name: string; kind: "project" | "personal" };
 
 /** The id a repo's own project carries; deterministic so migrations and runtime agree. */
@@ -291,7 +290,6 @@ export class ProjectStore {
       .run(project.nextSeq, project.createdAt, project.id);
   }
 
-  /** A chosen key, normalized, or its refusal in words (`freeProjectKey`). */
   freeKey(key: string): string {
     return freeProjectKey(this.db, key);
   }

@@ -20,7 +20,6 @@ export function savedText(dir: string): { file: string; text: string }[] {
   });
 }
 
-/** What `read` finds at `path`, or nothing when `path` itself is gone. */
 function unlessGone<T>(path: string, read: () => T[]): T[] {
   try {
     return read();

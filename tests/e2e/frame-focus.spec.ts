@@ -214,13 +214,10 @@ async function changeTheme(page: Page): Promise<void> {
   );
 }
 
-/** The main message's words and where its caret is. */
 type Draft = { words: string; caret: number };
 
-/** The draft the captain starts from: the caret after "ship the". */
 const STARTING: Draft = { words: DRAFT, caret: CARET };
 
-/** Puts the main message's caret where `draft` has it. */
 const placeCaret = (prompt: Locator, { caret }: Draft) =>
   prompt.evaluate((field: HTMLTextAreaElement, at) => field.setSelectionRange(at, at), caret);
 
@@ -254,10 +251,6 @@ async function typeThroughTries(
   return typed;
 }
 
-/**
- * The captain types in the main message, the caret after "ship the", while
- * the frame's script tries to take focus once the theme changes.
- */
 async function typeThroughThemeTries(page: Page, frame: Locator): Promise<void> {
   const prompt = promptInput(page);
   await prompt.click();

@@ -71,7 +71,6 @@ export type PanelLibrary = z.infer<typeof panelLibrarySchema>;
 
 /** What a window says in place of a panel it cannot draw from the first mate's files. */
 export const PANEL_FILES_WORDS = {
-  /** The window's app and the first mate's are on different versions. */
   otherVersion:
     "This panel shows once Infinitary here and on the computer where your first mate lives are on the same version.",
 } as const;

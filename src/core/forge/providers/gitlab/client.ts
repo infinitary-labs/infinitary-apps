@@ -484,9 +484,7 @@ export class GitLabClient {
       const said = json.message ?? json.error;
       if (typeof said === "string") return cutText(said, 300);
       if (said !== undefined) return cutText(JSON.stringify(said), 300);
-    } catch {
-      /* not JSON */
-    }
+    } catch {}
     return cutText(text.trim(), 200);
   }
 

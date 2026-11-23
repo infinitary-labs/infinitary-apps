@@ -144,7 +144,6 @@ function propertiesOf(source: ts.SourceFile, object: string): ts.ObjectLiteralEl
   return properties;
 }
 
-/** The named entries of a top-level object literal, by name. */
 function entriesOf(file: string, text: string, object: string): Map<string, Part> {
   const source = parse(file, text);
   const entries = new Map<string, Part>();
@@ -232,7 +231,6 @@ function windowMethods(file: string, text: string): Map<string, Part> {
   return methods;
 }
 
-/** The channels a part names, as the `inf:` strings in its code. */
 function channelsOf(part: Part): string[] {
   return [
     ...new Set([...part.code.matchAll(/["'`](inf:[^"'`\s]+)["'`]/g)].map((match) => match[1] ?? "")),

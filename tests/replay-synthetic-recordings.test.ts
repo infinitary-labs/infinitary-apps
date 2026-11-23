@@ -95,7 +95,6 @@ function recordings(
   return root;
 }
 
-/** A userData holding one Pi session file, the tables beside it. */
 function recording(sessionDir: string[], lines: Line[], tables: Record<string, unknown[]>) {
   return recordings([{ dir: sessionDir, lines }], tables);
 }
@@ -252,7 +251,6 @@ describe("recorded task card retirements", () => {
  * captain turn about the card the recording holds, played once.
  */
 describe("card-thread replies", () => {
-  /** The thread lines the host wrote on each card, in order. */
   function threads(lines: { mock: { calls: unknown[][] } }): Record<string, string[]> {
     const out: Record<string, string[]> = {};
     for (const [card, who, text] of lines.mock.calls as [string, string, string][]) {

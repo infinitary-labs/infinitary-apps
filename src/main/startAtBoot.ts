@@ -58,7 +58,6 @@ export const BOOT_WORDS = {
     "Starts Infinitary with no window whenever this computer starts, as this user.",
     "With --settings, that run reads the file (infinitary help run). --off undoes it.",
   ],
-  /** Set up, and whether it starts before anyone logs in. */
   set: (user: string, lingers: boolean) =>
     lingers
       ? [`Infinitary now starts whenever ${HERE.this} starts, as ${user}, before anyone logs in.`]
@@ -86,7 +85,6 @@ export const BOOT_WORDS = {
     `Infinitary could not check whether systemd runs on ${HERE.this}, so it set nothing up.`,
     `Run this again where ${user} is logged in, such as over SSH, or see infinitary help run for other ways to start it.`,
   ],
-  /** A Mac's login agent, written, and how it starts whenever the Mac starts. */
   macSet: (user: string) => [
     `Infinitary now starts whenever ${user} logs in.`,
     `It stops when ${user} logs out, and nothing runs while ${HERE.this} waits at its login window.`,
@@ -113,7 +111,6 @@ export const BOOT_WORDS = {
     line,
   ],
   couldNot: (reason: string) => [`Infinitary could not set up its start at boot: ${reason}`],
-  /** Windows' task, registered, and what starts it. */
   windowsSet: (user: string) => [
     `Infinitary now starts whenever ${user} signs in to Windows.`,
     `It stops when ${user} signs out, and nothing runs while ${HERE.this} waits at its sign-in screen.`,
@@ -132,7 +129,6 @@ export const BOOT_WORDS = {
   ],
 } as const;
 
-/** Whether the app was started as `<app> start-at-boot`, and the words after it when it was. */
 export function startAtBootCommand(argv: readonly string[], defaultApp: boolean): string[] | null {
   const words = commandWords(argv, defaultApp);
   return words?.[0] === "start-at-boot" ? words.slice(1) : null;
@@ -140,7 +136,6 @@ export function startAtBootCommand(argv: readonly string[], defaultApp: boolean)
 
 export type BootAsked = { off: true } | { off: false; settings?: string };
 
-/** What the words after `start-at-boot` ask for, or null for words it does not take. */
 export function bootAsked(words: readonly string[]): BootAsked | null {
   if (words.length === 0) return { off: false };
   if (words.length === 1 && words[0] === "--off") return { off: true };
@@ -507,7 +502,6 @@ async function lingerOn(context: BootContext): Promise<boolean> {
   return (await context.loginctl(["enable-linger", "--no-ask-password", context.user])).ok;
 }
 
-/** Whether the app was started as `<app> help`, and the words after it when it was. */
 export function helpCommand(argv: readonly string[], defaultApp: boolean): string[] | null {
   const words = commandWords(argv, defaultApp);
   return words?.[0] === "help" ? words.slice(1) : null;
@@ -525,7 +519,6 @@ export function helpWords(
   launcher: Launcher,
 ): { code: number; lines: string[] } {
   const own = [launcher.executable, ...launcher.args];
-  // A word a shell would split or read is quoted, as a path with a space.
   const app = own.map(shellWord).join(" ");
   if (words.length === 1 && words[0] === "run")
     return {

@@ -20,7 +20,6 @@ describe("ActivityStore (P10: the feed survives)", () => {
     for (let i = 0; i < 260; i += 1) {
       store.record({ kind: "info", text: `line ${i}` });
     }
-    // Retention keeps the newest 200; a default read returns the newest 20.
     const recent = store.recent();
     expect(recent).toHaveLength(20);
     expect(recent.at(-1)?.text).toBe("line 259");
@@ -156,7 +155,6 @@ describe("feedLineFrom (the one shared mapping)", () => {
         }),
       ),
     ).toMatchObject({ kind: "ok" });
-    // A crewmate's own progress note stays off the global feed.
     expect(
       english(
         feedLineFrom({

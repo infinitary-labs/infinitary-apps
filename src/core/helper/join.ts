@@ -59,7 +59,6 @@ import {
  * (`leaveFor`).
  */
 
-/** How the join talks to its person: lines to show, and a question to answer. */
 export type HelperIO = {
   say: (lines: readonly string[]) => void;
   /** Shows the question's lines and the prompt, and answers what was typed ("" for none). */
@@ -560,12 +559,10 @@ async function joinWithLink(
   };
 }
 
-/** How a dial with the link goes: within the join's time, where the join was told to dial. */
 function linkDial(options: JoinOptions): DialOptions {
   return { ...options.dial, timeoutMs: options.timeoutMs };
 }
 
-/** This Mac's name, the user it runs as and what it found here, as the home is told them. */
 async function deviceOf(options: JoinOptions): Promise<{
   name: string;
   user: DeviceUser;
@@ -615,7 +612,6 @@ async function inBackground(options: JoinOptions, kept: string | null): Promise<
   return result;
 }
 
-/** Says why the home refused a link, or that it could not be reached, and answers the refusal. */
 function linkRefused(io: HelperIO, error: unknown, place: HomePlace): Refused {
   const refuse = refuser(io);
   if (error instanceof HomeKeyMismatchError)
@@ -636,7 +632,6 @@ function linkRefused(io: HelperIO, error: unknown, place: HomePlace): Refused {
   }
 }
 
-/** This user runs work for another home, which stays. */
 function alreadyJoined(
   io: HelperIO,
   already: Joined,
@@ -710,7 +705,6 @@ export function fetchedLauncher(kept: string | null): Launcher | null {
  */
 export type HomeHeard = { name: string | null; onHomeMac: boolean | null };
 
-/** How a dial only to hear the home goes: the dial, the contract it speaks, and its time. */
 export type Hearing = {
   dial: (grant: DeviceGrant) => Promise<WebSocket>;
   protocolVersion?: string;
@@ -718,7 +712,6 @@ export type Hearing = {
   automaticStartup?: import("@shared/devices").AutomaticStartup;
 };
 
-/** The join's one dial goes where the join was told to dial, within the join's time. */
 function joinHearing(options: JoinOptions): Hearing {
   return {
     dial: (dialed) => dialHome(dialed, linkDial(options)),

@@ -20,7 +20,6 @@ export type QuestionUsage = {
   usage: FmUsage;
 };
 
-/** One question's answer text, or why there was none. */
 export type QuestionTurn =
   | { text: string; source: string; usage?: QuestionUsage }
   | { failed: string; source?: string; usage?: QuestionUsage };
@@ -75,7 +74,6 @@ export type QuestionTurnsOptions = {
   prepareHome?: () => Promise<void>;
 };
 
-/** One candidate bound: the model and the binding its session is opened on. */
 type BoundCandidate = { model: { provider: string; id: string }; binding: SessionBinding };
 
 /**
@@ -304,7 +302,6 @@ export class QuestionTurns {
     );
   }
 
-  /** Binds one named model, or nothing when its account or store is gone. */
   private async bind(
     model: { provider: string; id: string },
     attribution: string,
@@ -320,7 +317,6 @@ export class QuestionTurns {
     }
   }
 
-  /** Whether the model's backend has a factory to answer on. */
   private answers(model: { provider: string }): boolean {
     return this.options.sessions[backendForProvider(model.provider)] !== undefined;
   }

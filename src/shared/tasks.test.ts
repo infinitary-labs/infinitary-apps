@@ -90,7 +90,7 @@ function evolve(prev: TaskBoard, random: () => number, seq: number): TaskBoard {
   const tasks: TaskView[] = [];
   for (const task of prev.tasks) {
     const roll = random();
-    if (roll < 0.15) continue; // removed
+    if (roll < 0.15) continue;
     if (roll < 0.5) {
       tasks.push({
         ...task,

@@ -367,7 +367,6 @@ export function LeaveQuestion({
   );
 }
 
-/** A Mac being added by its address: an idle dot, and where its setup stands. */
 export function AddingRow({ mac }: { mac: AddingMac }) {
   const here = useHereAs();
   return (

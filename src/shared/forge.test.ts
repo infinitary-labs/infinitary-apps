@@ -61,7 +61,6 @@ describe("forgeOf", () => {
       kind: "git",
       host: "gitlab.example.com",
     });
-    // A host with no owner/name path still names the host.
     expect(forgeOf("https://git.example.com/r.git")).toEqual({
       kind: "git",
       host: "git.example.com",

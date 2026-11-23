@@ -224,7 +224,6 @@ function laneName(lane: BoardLane): string {
 /** How long Find waits for the earlier matches before saying they cannot be read. */
 const EARLIER_WAIT_MS = 5_000;
 
-/** A task board tile's element, by its task id. */
 const tileSelector = (taskId: string) => `[data-board-tile="${CSS.escape(taskId)}"]`;
 
 /**
@@ -337,7 +336,6 @@ export default function TaskBoardCard({
   const follow = useRef<{ taskId: string; from: BoardLane; index: number } | null>(null);
   /** Counts accepted moves, so focus follows one at once when the board already drew it. */
   const [followed, setFollowed] = useState(0);
-  /** The tile focus is on, while it is. */
   const focusedAt = useRef<FocusedAt | null>(null);
   /** Where the body is scrolled, kept with the place without a render per scroll. */
   const scrolled = useRef(born.scroll);
@@ -560,7 +558,6 @@ export default function TaskBoardCard({
    */
   const [refocus, setRefocus] = useState<{ taskId: string; n: number } | null>(null);
   const backTo = (taskId: string) => setRefocus((last) => ({ taskId, n: (last?.n ?? 0) + 1 }));
-  /** Turns the lane that holds `taskId` in this view to its page, and focuses its tile there. */
   const turnTo = (taskId: string) => {
     for (const entry of drawn) {
       const index = walkOf(entry).indexOf(taskId);
@@ -593,7 +590,6 @@ export default function TaskBoardCard({
     const walk = entry ? walkOf(entry) : layout.row;
     return walk[Math.min(was.index, walk.length - 1)] ?? stop;
   };
-  /** The lane that lists a task now, or null when the board no longer does. */
   const laneHolding = (taskId: string): BoardLane | null => {
     for (const [name, list] of tiles) {
       if (list.some((tile) => tile.task.id === taskId)) return name;
@@ -816,7 +812,6 @@ export default function TaskBoardCard({
     }
   };
 
-  // The tile that landed and asks is brought into view whole.
   const askedOn = pending ? `${pending.taskId}:${pending.target}` : null;
   useEffect(() => {
     if (!askedOn) return;
@@ -1027,7 +1022,6 @@ export default function TaskBoardCard({
       };
     });
 
-  /** A tile's face: its mark and key, its one word, the project, the title and the status. */
   const face = (task: PanelTaskRow, word: string, row = false) => {
     const reading = taskStatusOf(task);
     const project = projectName(task);
@@ -1296,7 +1290,6 @@ export default function TaskBoardCard({
   const dropped = lane("dropped");
   const waitingAll = lane("waiting");
 
-  /** One of the Board's columns: its head, a page of its tiles, and its foot. */
   const column = ({ lane: name, page: at }: DrawnLane) => (
     <div
       key={name}
@@ -1317,7 +1310,6 @@ export default function TaskBoardCard({
     </div>
   );
 
-  /** A lane as a list: its head with Previous and Next, a page of rows, and its foot with the range. */
   const list = ({ lane: name, page: at }: DrawnLane) => {
     const note =
       name !== "earlier" ? null : found?.failed && !found.tasks ? (
@@ -1455,7 +1447,6 @@ export default function TaskBoardCard({
             value={place.query}
             onChange={(event) => patch({ query: event.currentTarget.value, pages: {} })}
             onKeyDown={(event) => {
-              // ↓ from Find goes to the first tile it left.
               if (event.key !== "ArrowDown" || event.nativeEvent.isComposing || !stop) return;
               event.preventDefault();
               tileOf(stop)?.focus();
@@ -1543,7 +1534,6 @@ export default function TaskBoardCard({
           {m.nowPanelBoardDroppedToggle({ count: dropped.length })}
           {droppedKey && <CommandKey target="dropped" drawn={droppedKey.keys} />}
         </button>
-        {/* The Drop task tray: there only while a tile is in the air. */}
         {dragging && (
           <div className="fm-board-tray" data-board-drop-tray="" {...dropProps("drop")}>
             {DROP_TASK_LABEL}
@@ -1604,7 +1594,6 @@ function CommandKey({ target, drawn }: { target: string; drawn: string }) {
   );
 }
 
-/** Where a tile sits in the page, to the pixel. */
 function boxKey(tile: HTMLElement): string {
   const { top, left, width, height } = tile.getBoundingClientRect();
   return [top, left, width, height].map(Math.round).join(",");

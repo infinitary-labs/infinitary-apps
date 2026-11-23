@@ -14,18 +14,15 @@ import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
  * nothing took effect: no line. The answer check judges the message apart.
  */
 export type ReplyFacts = {
-  /** The turn's closing words. */
   closing?: string;
   /** Latest shown or revised card title. */
   latest?: string;
   /** Latest app-written reply, used only when the Firstmate gave no words. */
   app?: string;
-  /** Some action took effect. */
   acted?: boolean;
 };
 
 export function replyLine(facts: ReplyFacts): string | undefined {
-  // One line: every whitespace run, line breaks included, is one space.
   const closing = facts.closing?.replace(/\s+/gu, " ").trim();
   return (
     closing || (facts.latest ?? facts.app ?? (facts.acted ? AUTOMATIC_EMOTE_WORDS.nod : undefined))

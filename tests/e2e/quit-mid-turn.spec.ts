@@ -53,7 +53,6 @@ test("a crewmate's turn the app closes under three times picks up again at the n
           requestToolNames(body).includes("report") &&
           providerMessages(body).at(-1)?.role === "user",
       );
-  /** The words the crewmate was handed last. */
   const latestWords = () => providerMessages(deliveries().at(-1) ?? "").at(-1)?.text ?? "";
   /** The tasks on the board, by title: the work never starts over as another task. */
   const boardTitles = () =>
@@ -148,7 +147,6 @@ test("a crewmate's turn the app closes under three times picks up again at the n
         )
         .join("\n\n"),
     );
-    // The fourth launch as the captain sees it, with Activity and Tasks open.
     await Promise.all([expandDock(app.page, "activity"), expandDock(app.page, "now")]).catch(
       () => {},
     );

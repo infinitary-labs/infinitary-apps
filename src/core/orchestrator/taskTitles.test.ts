@@ -106,7 +106,6 @@ describe("a task title past its room", () => {
       `afterMerge step 1's title is ${step.length} characters, and it holds at most ${room}`,
     );
 
-    // The same words said in the room are saved whole.
     const fits = FILED.slice(0, TASK_TITLE_MAX).replace(/ \S*$/, "");
     const filed = h.supervisor.intake.plan({
       title: fits,

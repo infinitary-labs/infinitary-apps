@@ -421,7 +421,6 @@ async function world(options: {
   const deviceId = joined.grant.deviceId;
   computer = await options.computerVault(dataDir);
   const own = computer;
-  /** The account each binding there resolved to, with the one this Mac described. */
   const bound: { described?: string | undefined; resolved?: string | undefined }[] = [];
   let run: HelperRun | undefined;
   const started = startHelper({
@@ -459,7 +458,6 @@ async function world(options: {
     bound,
     /** How this Mac's words place the computer: "on Mac mini", or "as Builder" for another user here. */
     where: () => devicePlace(pairingNow().list(), deviceId).where,
-    /** A queued task placed on the computer, started now that it is in reach. */
     start: async (id: string) => {
       seedTask(home.tasks, {
         id,
@@ -474,7 +472,6 @@ async function world(options: {
   };
 }
 
-/** What this Mac's own Claude account serves for its Firstmate and crew. */
 function servingHere(vault: AccountVault, accountId: string) {
   const flagship = new Flagship({
     vault,
@@ -524,7 +521,6 @@ describe("a task on another computer, on that computer's own sign-in", () => {
         }),
       }),
     });
-    // This Mac's own Claude sign-in.
     const account = await at.home.vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
     await at.home.vault.status(account.id, { refresh: true });
     if (!computerVault) throw new Error("The computer kept no sign-ins.");
@@ -549,25 +545,21 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     await expect.poll(() => home.events.some((event) => event.type === "turn_failed")).toBe(true);
     await expect.poll(() => home.tasks.get("t-signed-out")?.activity).toBe("idle");
 
-    // This Mac named the computer's own Claude account, and the computer bound it.
     expect(at.bound).toEqual([{ described: at.computerAccount, resolved: at.computerAccount }]);
     // The fact is that computer's own account's, in its own store.
     await expect.poll(() => at.computerVault.cutOff(at.computerAccount)?.class).toBe("signed_out");
     expect(at.computerVault.servesSync(at.computerAccount)).toBe(false);
-    // Nothing of it is this Mac's: its Firstmate and crew keep serving.
     expect(home.noteCutOff).not.toHaveBeenCalled();
     expect(servingHere(home.vault, at.thisMacAccount)).toEqual(before);
     expect(await home.selector.selectForSpawn("t-next-here", CLAUDE_PROVIDER_ID)).toBe(
       at.thisMacAccount,
     );
-    // The turn's usage is booked on that computer's own account.
     expect(home.recordUsage).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: "t-signed-out", accountId: at.computerAccount }),
     );
     expect(home.recordUsage).not.toHaveBeenCalledWith(
       expect.objectContaining({ accountId: at.thisMacAccount }),
     );
-    // The way back is signing in again there, and the card says where.
     await expect
       .poll(() => home.cards().find((card) => card.id === "card-auth-t-signed-out")?.body)
       .toContain(`which needs you to sign in again ${at.where()}.`);
@@ -599,7 +591,6 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     await expect.poll(() => home.tasks.get("t-placed")?.activity).toBe("idle");
     // A task an earlier build started there still names this Mac's account.
     home.tasks.placement.setAccountId("t-placed", at.thisMacAccount);
-    // This Mac's own Claude is refused here, by work of its own.
     home.vault.noteCutOff(at.thisMacAccount, { class: "refused" });
     home.supervisor.reconcileCutOffs();
     expect(home.vault.servesSync(at.thisMacAccount)).toBe(false);
@@ -611,7 +602,6 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     expect(
       await home.supervisor.steer.steerCrewmate("t-placed", "Also fix the header.", "captain"),
     ).not.toBe("recorded-held");
-    // The Firstmate hears this Mac's cut-off for no task that runs there.
     expect(
       home.wakes.filter((wake) => JSON.stringify(wake).includes("t-placed")),
     ).not.toContainEqual(
@@ -633,7 +623,6 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     const at = await world({
       routedTo: { provider: "fm-placed", id: "stub-1" },
       piRuntime: runtime,
-      // This Mac's selection would hand its own Pi account, and its binder bind it.
       accounts: {
         selectForSpawn: () => THIS_MAC,
         reselectForResume: (_task, accountId) => ({
@@ -643,7 +632,6 @@ describe("a task on another computer, on that computer's own sign-in", () => {
         labelOf: () => "This Mac's Pi",
       },
       bind: async (accountId) => ({ backend: "pi", ...(accountId ? { accountId } : {}), runtime }),
-      // Mac mini's own Pi sign-in for that provider.
       computerVault: async () =>
         ({
           vault: {

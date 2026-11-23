@@ -33,7 +33,6 @@ const SETTLED_PAINTS = 120;
  */
 const SAMPLED_PAINTS = 2 * SETTLED_PAINTS;
 
-/** Polls `read` until two reads a paint apart agree, and answers the last. */
 async function settled<T>(read: () => Promise<T> | T): Promise<T> {
   let last: string | undefined;
   let value: T | undefined;

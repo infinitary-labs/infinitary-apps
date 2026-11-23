@@ -57,7 +57,6 @@ type TaskRow = {
   reason: string | null;
 };
 
-/** The tasks the journey started, straight from the saved record. */
 function tasksOf(userDataDir: string): TaskRow[] {
   return readSavedData(userDataDir, (db) =>
     db

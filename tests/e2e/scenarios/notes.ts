@@ -7,7 +7,6 @@ export const REMEMBER_PROMPT_MARKER = "remember that I always squash-merge";
 
 export const FORGET_PROMPT_MARKER = "forget the squash-merge note";
 
-/** The first mate records the squash-merge direction on the captain's words, and retires it on his word. */
 export const notes: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

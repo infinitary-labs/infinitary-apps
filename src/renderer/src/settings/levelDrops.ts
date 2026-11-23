@@ -14,7 +14,6 @@ import { SLOTS, type Slot, type SlotModelView } from "../../../shared/modelSlots
 export type LevelTarget = Slot | "off";
 
 export type DropPlan =
-  /** Leaves the level it was picked up from and joins the one it lands on. */
   | { kind: "move"; from: Slot; to: Slot; label: string }
   /** Joins the level it lands on and keeps every level it already has. */
   | { kind: "add"; to: Slot; label: string }
@@ -111,7 +110,6 @@ export function newModelNote(model: Pick<SlotModelView, "slots">): string {
     : m.settingsLevelsNewNotInUse();
 }
 
-/** One line on where a model is used, for its panel. */
 export function usedLine(model: Pick<SlotModelView, "slots" | "isNew">): string {
   if (model.isNew) return newModelNote(model);
   return model.slots.length > 0

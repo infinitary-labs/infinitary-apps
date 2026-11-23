@@ -129,10 +129,6 @@ const KIND_API: Record<
   },
 };
 
-/**
- * A host's own REST API action in one sentence shape, by its name, the part
- * of the address its paths follow and an example list.
- */
 function restDescription(
   action: IntegrationActionSpec,
   name: string,

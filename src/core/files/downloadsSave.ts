@@ -28,7 +28,6 @@ export function downloadsName(name: string): string {
   return plain || "file";
 }
 
-/** `name.ext`, then `name (2).ext`, `name (3).ext` and on. */
 function numbered(name: string, n: number): string {
   if (n === 1) return name;
   const ext = extname(name);
@@ -46,7 +45,6 @@ function sha256Of(file: string): Promise<string> {
   });
 }
 
-/** Whether a file at `path` is this one already, by size and sha256. */
 async function sameFile(path: string, bytes: number, sha256: string): Promise<boolean> {
   const info = await lstat(path).catch(() => undefined);
   if (!info?.isFile() || info.nlink !== 1 || info.size !== bytes) return false;
@@ -83,7 +81,6 @@ async function claimName(
 }
 
 export async function saveIntoDownloads(options: {
-  /** This computer's Downloads folder. */
   folder: string;
   /** One piece of the file from an offset (`inf:cards:file`). */
   read: (offset: number) => Promise<CardFilePiece>;
@@ -94,7 +91,6 @@ export async function saveIntoDownloads(options: {
   const { bytes, sha256 } = first;
   await mkdir(options.folder, { recursive: true });
   const folder = await realpath(options.folder);
-  // Saved before with the same content: nothing more is written.
   const existing = join(folder, name);
   if (await sameFile(existing, bytes, sha256)) {
     await options.mark?.(existing);
@@ -163,7 +159,6 @@ export type SaveAllFile = { id: string; read: (offset: number) => Promise<CardFi
  * and the rest are still saved.
  */
 export async function saveAllIntoDownloads(options: {
-  /** This computer's Downloads folder. */
   folder: string;
   /** The task's title, which names the new folder. */
   name: string;

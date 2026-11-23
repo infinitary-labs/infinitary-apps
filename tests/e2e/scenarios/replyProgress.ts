@@ -21,7 +21,6 @@ export const REPLY_PROGRESS_DOING = "Rename review to audit across the app";
 /** The crewmate's real answer once the work is done. */
 export const REPLY_PROGRESS_ANSWER = "Renamed review to audit; the evaluations pass again.";
 
-/** How long the stand-in takes over the work before it answers. */
 const REPLY_PROGRESS_WORK_MS = 15_000;
 
 export const replyProgress: Scenario =

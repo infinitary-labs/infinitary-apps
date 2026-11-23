@@ -230,7 +230,6 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
     did: z.string().optional(),
     /** Who holds it besides the crewmate; absent while it is the crewmate's. */
     control: z.enum(TASK_BROWSER_CONTROLS).optional(),
-    /** The crewmate's request for help, while it stands. */
     request: taskBrowserRequestSchema.optional(),
     /** The captain has handed it back: it may hold what he signed in to, until it stops. */
     returned: z.literal(true).optional(),
@@ -356,7 +355,6 @@ export const taskBrowserInputSchema = z.discriminatedUnion("kind", [
     key: z.string().min(1).max(32),
     code: z.string().max(32),
     keyCode: z.number().int().min(0).max(255),
-    /** What the key types, for a key that types. */
     text: z.string().max(4).optional(),
     modifiers,
     /** An editing command the key stands for in the window's own key system: select all, undo, paste. */
@@ -543,7 +541,6 @@ export const VIEW_DRIVER_WORDS: Record<TaskBrowserDriver, string> = {
   captain: "you have control · the crewmate cannot see this page",
 };
 
-/** The view's controls and visible notice for the one-click handoff. */
 export const TAKE_CONTROL_LABEL = "Take control";
 export const RETURN_CONTROL_LABEL = "Return control";
 /** The control on a browser the captain's own click opened: there is no crewmate to hand it to. */

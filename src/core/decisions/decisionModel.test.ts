@@ -106,7 +106,6 @@ describe("questionVersion", () => {
   });
 });
 
-/** A decision model that answers whatever it was told to. */
 function model(
   id: string,
   native: boolean,
@@ -160,7 +159,6 @@ function serviceWith(
   });
 }
 
-/** The settings rows held in memory, written back the way the store would. */
 function settingsPort(
   initial: DecisionsSettings,
   initialUses: DecisionUseSwitches = {},
@@ -187,7 +185,6 @@ function settingsPort(
 /** The stored key's value, distinctive so a view can be checked for it. */
 const STORED_KEY = "ts-live-1234567890";
 
-/** A key store that always has one. */
 const KEY_PORT = {
   keys: {
     has: () => true,

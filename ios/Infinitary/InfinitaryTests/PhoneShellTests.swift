@@ -178,7 +178,6 @@ import XCTest
                        .init(leading: 39, trailing: 0))
         // An iPad Pro 11-inch on its side has no fold and keeps 32 percent, up to 320 points.
         XCTAssertEqual(PhoneLayout.sidebarWidth(width: 1210, folds: []), 320)
-        // A fold across the window moves nothing.
         XCTAssertEqual(PhoneLayout.sidebarWidth(width: 867, folds: [CGRect(x: 0, y: 455, width: 867, height: 40)]), 867 * 0.32)
     }
 
@@ -227,7 +226,6 @@ import XCTest
                                          window: .init(size: CGSize(width: 951, height: 669), folds: book), home: .init()),
                        .beside(455))
         XCTAssertTrue(PhoneLayout.recordInPlace(.beside(455), width: 951, folds: book))
-        // Every split at a fold across the window keeps the record in its place too.
         XCTAssertTrue(PhoneLayout.recordInPlace(.panelAbove(fold), width: 669, folds: [fold]))
         // Closed, 466 by 678 with no fold: one column with the strip.
         XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .compact, vertical: .regular,
@@ -264,7 +262,6 @@ import XCTest
         for pages: PhoneLayout.Pages in [.beside(455), .beside(320), .panelAbove(across), .panelBelow(across), .typing(across)] {
             XCTAssertTrue(PhoneLayout.maximized(pages, chosen: true, cardShown: true), "\(pages)")
             XCTAssertFalse(PhoneLayout.maximized(pages, chosen: false, cardShown: true), "\(pages)")
-            // With no card on Home the split shows as before.
             XCTAssertFalse(PhoneLayout.maximized(pages, chosen: true, cardShown: false), "\(pages)")
         }
         // One column already gives the card the window, and a panel's own field typing keeps the panel in sight.

@@ -19,7 +19,6 @@ export function recordOffersCloseDone(task: RecordBarInput): boolean {
   return taskStatusOf(task).mark !== "starting";
 }
 
-/** The confirm sentence: what the close does to the task's work. */
 export function closeDoneConfirm(key: string): string {
   return `Close ${key} as done? A working crewmate stops, unmerged work is saved, and an open pull request stays open.`;
 }
@@ -29,12 +28,10 @@ export function closeDoneNotStartedRefusal(key: string): string {
   return `Cannot close ${key} as done: it has not started. Drop task drops it.`;
 }
 
-/** The host's refusal for a task already closed, done or dropped. */
 export function closeDoneClosedRefusal(key: string): string {
   return `Cannot close ${key} as done: it is already closed.`;
 }
 
-/** The host's refusal for a task it cannot find. */
 export function closeDoneMissingRefusal(key: string): string {
   return `Cannot close ${key} as done: that task is not here.`;
 }

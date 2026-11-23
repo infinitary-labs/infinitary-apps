@@ -108,7 +108,6 @@ function keyOf(input: RequestInfo | URL, init?: RequestInit): string | undefined
   ].join(" ");
 }
 
-/** The kept answer as an ordinary 200, under the 304's fresh headers. */
 function replay(earlier: Kept, fresh: Response): Response {
   const headers = new Headers(earlier.headers);
   for (const [name, value] of fresh.headers) {
@@ -117,7 +116,6 @@ function replay(earlier: Kept, fresh: Response): Response {
   return new Response(earlier.body, { status: 200, statusText: "OK", headers });
 }
 
-/** The whole body as text, or undefined once it passes the one-answer bound. */
 async function boundedText(response: Response): Promise<string | undefined> {
   const reader = response.body?.getReader();
   if (!reader) return "";

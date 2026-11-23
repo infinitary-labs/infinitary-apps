@@ -25,7 +25,6 @@ export const KEEPING_CLOSES = [
   "finished",
 ] as const;
 
-/** What a close with this reason does with the task's keeps. */
 export function keepsAtClose(reason: string | null | undefined): "keep" | "remove" {
   return (KEEPING_CLOSES as readonly string[]).includes(reason ?? "") ? "keep" : "remove";
 }
@@ -38,7 +37,6 @@ export const stopLabelSchema = z.string().trim().min(1).max(120);
 /** The shell command a stop runs, as the crewmate wrote it. */
 export const stopCommandSchema = z.string().trim().min(1).max(4000);
 
-/** One registered stop: what it stops, the command that stops it, and where it runs. */
 export const taskStopSchema = z.object({
   id: z.string().regex(/^s[1-9][0-9]*$/),
   label: stopLabelSchema,
@@ -63,7 +61,6 @@ export const taskKeepSchema = z.object({
   label: stopLabelSchema,
   check: stopCommandSchema,
   remove: stopCommandSchema,
-  /** The kept folder for the job's files. */
   folder: z.string().min(1).max(4096),
   /** The system account the job runs as: the one the crewmate's shell runs as there. */
   account: z.string().max(256),
@@ -80,7 +77,6 @@ export const taskStopsFileSchema = z.object({
 });
 export type TaskStopsFile = z.infer<typeof taskStopsFileSchema>;
 
-/** How one registered stop went at the close. */
 export const stopOutcomeSchema = z.object({
   label: stopLabelSchema,
   outcome: z.enum(["ran", "failed", "timed-out"]),
@@ -134,7 +130,6 @@ export type LeftoversReport = z.infer<typeof leftoversReportSchema>;
 /** The timeline event data key the report rides on. */
 export const LEFTOVERS_DATA_KEY = "leftoverPrograms";
 
-/** Whether the close found anything to say: a stop, a program or a handover. */
 export function reportsAnything(report: LeftoversReport): boolean {
   return (
     report.stops.length > 0 ||
@@ -161,7 +156,6 @@ export function leftoversKept(report: LeftoversReport): {
   };
 }
 
-/** A timeline event's report, read from its data, or undefined when it carries none. */
 export function leftoversOf(
   data: Record<string, unknown> | null | undefined,
 ): LeftoversReport | undefined {
@@ -310,7 +304,6 @@ export const leftBehindSchema = z.object({
 });
 export type LeftBehind = z.infer<typeof leftBehindSchema>;
 
-/** Whether a computer's list names anything. */
 export function leftAnything(left: LeftBehind): boolean {
   return left.stops.length + left.programs.length + left.runs.length > 0;
 }

@@ -35,9 +35,7 @@ export type RigorInput = {
    */
   gated: boolean;
   delivery: RepoDelivery;
-  /** The captain said in words how careful to be. */
   ask?: Rigor | undefined;
-  /** The repository's own standing rigor, when it declares one. */
   repoRigor?: Rigor | undefined;
 };
 
@@ -136,7 +134,6 @@ export function missingEvidenceHeading(
   return undefined;
 }
 
-/** Whether a set of headings carries the evidence contract in order. */
 export function carriesEvidenceHeadings(headings: string[]): boolean {
   return missingEvidenceHeading(headings) === undefined;
 }

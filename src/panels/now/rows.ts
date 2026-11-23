@@ -37,7 +37,6 @@ export { NOW_GROUPS, type NowGroup };
  */
 export type PanelGroup = "pinned" | NowGroup | "earlier";
 
-/** Every group the panel paints, in its order: Pinned first, Earlier last. */
 export const PANEL_GROUPS: readonly PanelGroup[] = ["pinned", ...NOW_GROUPS, "earlier"];
 
 export const PANEL_GROUP_LABELS: Readonly<Record<PanelGroup, string>> = {
@@ -64,7 +63,6 @@ export const PANEL_GROUP_LABELS: Readonly<Record<PanelGroup, string>> = {
   },
 };
 
-/** Groups whose rows show without a click. */
 export const OPEN_BY_DEFAULT: ReadonlySet<PanelGroup> = new Set([
   "pinned",
   "waiting",
@@ -173,7 +171,6 @@ export function rowTrailing(task: PanelTaskRow): RowTrailing {
   // Connected and catching up is in reach: the row says catching up, never out of reach.
   const catchingUp = task.place?.reach === "in-reach" && task.place.catchingUpSince !== undefined;
   return {
-    // The row says why its computer cannot take work now: out of reach, connecting or catching up.
     outOfReach: catchingUp || (task.place?.reach !== undefined && task.place.reach !== "in-reach"),
     connecting,
     ...(catchingUp ? { catchingUp: true as const } : {}),
@@ -210,7 +207,6 @@ function matches(task: PanelTaskRow, filter: NowFilter): boolean {
   return foldForSearch(task.title).includes(q) || foldForSearch(task.key).includes(q);
 }
 
-/** Whether the captain pinned this task to the top of Tasks. */
 export function isPinned(task: PanelTaskRow): boolean {
   return task.pinnedAt !== undefined;
 }
@@ -514,7 +510,6 @@ function openPartsOf(board: PanelTaskBoard): ReadonlyMap<string, PanelTaskRow[]>
   return parts;
 }
 
-/** One segment of a collapsed parent's bar: its part's state, and the part it names. */
 export type PartSegment = {
   state: PartState;
   /** The part's task id; null where the row cannot name it, and its rest keeps the parent's. */
@@ -549,9 +544,7 @@ export function partsBarOf(board: PanelTaskBoard, task: PanelTaskRow): PartSegme
   return bar;
 }
 
-/** One group's rows with the collapsed tasks' parts left out. */
 export type FoldedRows = {
-  /** The rows the group draws. */
   shown: NowRow[];
   /** Tasks with rows listed under them in this group: each offers the collapse control. */
   parents: ReadonlySet<string>;
@@ -591,7 +584,6 @@ export function foldRows(rows: readonly NowRow[], collapsed: ReadonlySet<string>
 /** Where the panel keeps the tasks the captain collapsed, in its own store slice. */
 export const COLLAPSED_KEY = "collapsed";
 
-/** The collapsed tasks a stored value names: task ids, anything else ignored. */
 export function collapsedIdsOf(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
 }

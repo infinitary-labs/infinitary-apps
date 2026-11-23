@@ -106,7 +106,6 @@ export function consumerConfigMessage(options: ConsumerConfigOptions): Uint8Arra
   return messageField(1, concatBytes(...config));
 }
 
-/** A complete successful gRPC-web body: one data frame plus an OK trailer. */
 export function grpcWebOkBody(message: Uint8Array): Uint8Array {
   return concatBytes(grpcFrame(message), grpcTrailer({ "grpc-status": "0" }));
 }

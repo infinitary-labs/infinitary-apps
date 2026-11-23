@@ -249,7 +249,6 @@ export class ChangeStore {
     return rows.map((row) => record(row, this.versionsOf(row.id)));
   }
 
-  /** Every change, oldest first. */
   list(): ChangeRecord[] {
     if (!this.exists()) return [];
     const rows = prepared(
@@ -301,7 +300,6 @@ export class ChangeStore {
     }
   }
 
-  /** Write one projected change over its row, or as a new one. */
   private write(
     existing: ChangeRow | undefined,
     at: number,

@@ -7,7 +7,6 @@ import { createDarwinSecretCustody, type DarwinCustodyApi } from "./darwinSecret
 // "Native custody"). The real Keychain is the opt-in scratch probe's.
 const SERVICE = "Infinitary Secrets (development)";
 
-/** A Keychain stand-in that answers with the OSStatus each case names. */
 function keychain(status?: number) {
   const items = new Map<string, Buffer>();
   const interaction: boolean[] = [];

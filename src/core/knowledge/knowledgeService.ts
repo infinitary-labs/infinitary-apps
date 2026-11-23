@@ -144,7 +144,6 @@ function randomId(prefix: string): string {
 }
 
 export class KnowledgeService {
-  /** The captain's standing directions, kept beside the collection. */
   readonly directions: StandingDirections;
   /** What the captain's window reads. */
   readonly window: KnowledgeWindow;
@@ -170,7 +169,6 @@ export class KnowledgeService {
     this.writes = new KnowledgeWrites(handle);
   }
 
-  /** Whether the collection can be used, opening it the first time. */
   availability(): Availability {
     try {
       this.open();
@@ -212,8 +210,6 @@ export class KnowledgeService {
     if (scope === PRIVATE_SCOPE) return "private";
     return this.deps.projects.get(scope)?.name ?? scope;
   }
-
-  // -- reads ---------------------------------------------------------------
 
   /** Lexical search over names, aliases and text, best first, within `scopes`. */
   search(
@@ -391,7 +387,6 @@ export class KnowledgeService {
     );
   }
 
-  /** How many active entries the collections hold. */
   count(scopes: readonly string[]): number {
     return this.open().countActive(scopes);
   }
@@ -412,8 +407,6 @@ export class KnowledgeService {
       return true;
     }
   }
-
-  // -- writes --------------------------------------------------------------
 
   /**
    * One write, all or nothing. A refusal is the answer's words, never a
@@ -485,8 +478,6 @@ export class KnowledgeService {
       ids: done.ids,
     };
   }
-
-  // -- the one store -------------------------------------------------------
 
   private open(): KnowledgeStore {
     if (this.store) return this.store;

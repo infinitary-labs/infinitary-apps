@@ -26,7 +26,6 @@ const ROUND = "[data-last-turn] [data-last-turn-pair]:not([data-leaving])";
 const NEWEST = `${ROUND}:not([data-older])`;
 const OLDER = `${ROUND}[data-older]`;
 
-/** The captain's own bubble in the newest round, or the older one's. */
 export function yourBubble(page: Page, round: "newest" | "older" = "newest"): Locator {
   return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="you"]`);
 }
@@ -41,7 +40,6 @@ export function mateBubble(page: Page, round: "newest" | "older" = "newest"): Lo
   return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="firstmate"]`);
 }
 
-/** The older round, while it shows. */
 export function olderRound(page: Page): Locator {
   return page.locator(OLDER);
 }
@@ -56,7 +54,6 @@ export function replyQuestion(page: Page): Locator {
   return page.locator("[data-reply-note-question] [data-question-bubble]");
 }
 
-/** The question's words through their shared bubble owner. */
 export function replyQuestionWords(page: Page): Locator {
   return replyQuestion(page).locator("[data-question-bubble-words]");
 }

@@ -46,14 +46,12 @@ export function crewTwinTime(turn: number, step: number): string {
   return new Date(Date.UTC(2026, 8, 27, 10, turn, step)).toISOString();
 }
 
-/** A crewmate's session folder under a userData root. */
 export function crewSessionsDir(root: string, taskId: string): string {
   const dir = join(root, "crewmates", taskId, "sessions");
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-/** The Pi crewmate's session file. */
 export function piCrewTwin(dir: string): string {
   const lines: unknown[] = [
     { type: "session", version: 3, id: "pi-crew", timestamp: crewTwinTime(0, 0), cwd: "/wt" },

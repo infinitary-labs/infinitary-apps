@@ -215,9 +215,6 @@ import XCTest
         let expectedModes = nativeSceneExpectedModes(state: state, reaction: reaction?.1)
         let sampleDiagnostic = "source=\(source) " + sample.diagnostic(phase: "sample", result: sampleResult, heartbeat: sampleHeartbeat)
             + " " + nativeSceneFrameDiagnostic(frames, expectedModes: expectedModes)
-        // INF-1378 changed only the captain-approved idle-fidget expectation, and INF-1506 only the
-        // clock the 20-second budgets run on. Every other predicate stays, naming missing callbacks,
-        // a missing drawing or an unexpected animation mode.
         XCTAssertEqual(sampleResult, .completed, "The display completes the sampled callbacks; \(sampleDiagnostic)")
         XCTAssertGreaterThan(frames.count, 1, "The visible native character actually draws; \(sampleDiagnostic)")
         XCTAssertTrue(frames.allSatisfy { expectedModes.contains($0.mode) }, "Only the named target Canvas's expected states enter the sample; \(sampleDiagnostic)")

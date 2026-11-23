@@ -79,7 +79,6 @@ afterEach(async () => {
 /** The macOS user number the stand-in joins as; the home runs as another. */
 const THEIR_UID = 4242;
 
-/** A computer that runs work, as it pairs. */
 const MINI = { kind: "work", name: "Mac mini", user: { name: "sam", uid: THEIR_UID } } as const;
 
 async function server(options?: { forwarding?: boolean }): Promise<SshServer> {
@@ -181,7 +180,6 @@ async function home(
     controlBase,
     changes: () => changes,
     seen,
-    /** What the stand-in there wrote down. */
     record: () => (existsSync(record) ? readFileSync(record, "utf8") : ""),
     /** How many forwards this Mac put in place there, one a connection. */
     forwards: () =>
@@ -205,7 +203,6 @@ async function home(
   };
 }
 
-/** The other user's world: a home folder of its own, and where its work keeps its data. */
 function otherUser() {
   const home = scratchDir("infinitary-ssh-user-");
   const work = join(home, "work");
@@ -215,7 +212,6 @@ function otherUser() {
   };
 }
 
-/** The ssh processes this home started, by its control sockets' folder. */
 function sshProcesses(controlBase: string): string[] {
   try {
     return execFileSync("/usr/bin/pgrep", ["-f", controlBase], { encoding: "utf8" })
@@ -226,7 +222,6 @@ function sshProcesses(controlBase: string): string[] {
   }
 }
 
-/** The socket this Mac forwarded there for the connection now, from what the stand-in wrote down. */
 function forwarded(record: string): string {
   return [...record.matchAll(/^forwarded (.+)$/gm)].at(-1)?.[1] ?? "";
 }
@@ -358,7 +353,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       // Up here too, so what drops is a connection this Mac had.
       await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
 
-      // The connection drops: it is made again by itself.
       for (const pid of sshProcesses(at.controlBase)) process.kill(Number(pid), "SIGKILL");
       await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
       await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
@@ -391,7 +385,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(at.forwards()).toBe(tried);
 
-      // Mended, Try again makes it once more.
       at.pairing.rememberHost(sshd.address, remembered);
       expect(at.connections.tryAgain()).toBe(1);
       await vi.waitFor(() => expect(at.forwards()).toBe(tried + 1), { timeout: 10_000 });
@@ -418,7 +411,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       const device = await addChecked(at.remote, sshd.address);
       await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
 
-      // The app does not approve it this time, and the connection drops.
       sshd.agentAnswers("decline");
       for (const pid of sshProcesses(at.controlBase)) process.kill(Number(pid), "SIGKILL");
       await vi.waitFor(
@@ -666,7 +658,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
       await new Promise((resolve) => setTimeout(resolve, 1_800));
       expect(at.forwards()).toBe(2);
-      // And it does not read connecting for good: it becomes reconnecting.
       expect(state(at.connections, device.id)?.state).toBe("reconnecting");
     });
 
@@ -903,7 +894,6 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       const device = await addChecked(at.remote, sshd.address);
       await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
 
-      // That Mac stops answering, and the captain removes it now.
       await sshd.stop();
       at.pairing.remove(device.id, { cleanUpThere: true });
       expect(at.pairing.sshCleanups()).toEqual([

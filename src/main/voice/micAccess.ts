@@ -10,7 +10,6 @@ export const MIC_SETTINGS_URL =
 /** Windows Settings → Privacy & security → Microphone. */
 export const WINDOWS_MIC_SETTINGS_URL = "ms-settings:privacy-microphone";
 
-/** The page that turns this app's microphone access on: the Mac's or Windows' own. */
 export function micSettingsUrl(platform: string = hostPlatform()): string {
   return platform === "win32" ? WINDOWS_MIC_SETTINGS_URL : MIC_SETTINGS_URL;
 }

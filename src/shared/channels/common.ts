@@ -15,7 +15,6 @@ import { PASTE_FILE_MAX_BYTES, PASTE_FILES_MAX } from "../composer";
  */
 type ChannelReach = "views" | "home" | "work";
 
-/** One channel of the contract: its effect, both directions' shapes, and where it may be asked. */
 export type ChannelDeclaration = {
   effect: "read" | "change";
   request: z.ZodType;

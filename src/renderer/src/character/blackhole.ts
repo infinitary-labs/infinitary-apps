@@ -179,8 +179,6 @@ export function blackholeEye(
   };
 }
 
-// ---- drawing ----------------------------------------------------------------
-
 export type BhColors = {
   acc: Rgb;
   dim: Rgb;
@@ -416,9 +414,6 @@ export function drawBlackholeOver(env: BhEnv): void {
     );
     ctx.stroke();
   }
-  // The character's own wires, wound into the disk as connected streamlines
-  // that follow the disk and ride up its lensed image.
   drawDiskChain(env, hr);
-  // Hawking pairs at the rim, escaping radially.
   drawHawkingPairs(env, hr);
 }

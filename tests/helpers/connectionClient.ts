@@ -44,7 +44,6 @@ export type ConnectionClient = {
   welcome: Welcome;
   /** Every push this connection received, in order, replayed ones first. */
   pushes: ReceivedPush[];
-  /** Every `live` frame this connection received, in order. */
   lives: ReceivedLive[];
   /** The cursor to hand back on the next hello. */
   cursor: () => ConnectionCursor;
@@ -55,7 +54,6 @@ export type ConnectionClient = {
   asked: { channel: string; args: unknown }[];
   /** How many frames came in parts (`frame-parts`), each joined once its last part arrived. */
   readonly joined: number;
-  /** Sends any text as a frame, for refusal tests. */
   sendRaw: (text: string) => void;
   /** Resolves with the close code once the home closes the connection. */
   closed: Promise<number>;

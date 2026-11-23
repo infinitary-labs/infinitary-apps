@@ -49,7 +49,6 @@ describe("a crewmate stuck at its provider", () => {
 
   const stuckWakes = (ops: string[]) => ops.filter((op) => op.includes("is stuck at its provider"));
 
-  /** Fail the lane's turns until it is stuck, sweeping each retry when due. */
   async function refuseUntilStuck(harness: Awaited<ReturnType<typeof stopped>>) {
     for (let refusal = 1; refusal <= STUCK_REFUSAL_LIMIT; refusal++) {
       if (refusal > 1) await sweepWhenDue(harness, harness.taskId);
@@ -171,7 +170,6 @@ describe("a crewmate stuck at its provider", () => {
 
     await supervisor.steer.steerCrewmate(taskId, "skip the pictures and read the summary");
     await settle();
-    // The steer carries the kept guidance with it.
     expect(crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(crewmate.promptCalls.at(-1)).toContain("carry on with the handoff");
     expect(crewmate.promptCalls.at(-1)).toContain("skip the pictures and read the summary");
@@ -182,7 +180,6 @@ describe("a crewmate stuck at its provider", () => {
     expect(stuckWakes(ops)[1]).toContain("the same way 4 times in a row");
     expect(statusOf(harness)).toBe(AT_PROVIDER_WORDS.stuck);
 
-    // A turn that goes through ends it all, and the feed says so.
     await supervisor.steer.steerCrewmate(taskId, "answer with what you have");
     await settle();
     await endTurn(crewmate, taskId, "Read the summary; the handoff is done.");
@@ -197,7 +194,6 @@ describe("a crewmate stuck at its provider", () => {
     const { supervisor, crewmate, taskId, inbox, specs } = harness;
     await supervisor.steer.steerCrewmate(taskId, "carry on with the handoff");
     await settle();
-    // A task that is not stuck is refused, and nothing changes.
     expect(await supervisor.turns.unstick(taskId, "restart")).toMatchObject({ ok: false });
     await refuseUntilStuck(harness);
     const prompts = crewmate.promptCalls.length;
@@ -312,7 +308,6 @@ describe("a crewmate stuck at its provider", () => {
       fakeCrewmate({ model: codex }),
     );
     const { supervisor, taskId, tasks, inbox, ops } = harness;
-    // Its conversation is held on the Mac mini.
     tasks.placement.setDevice(taskId, MINI);
     await supervisor.steer.steerCrewmate(taskId, "carry on with the handoff");
     await settle();
@@ -323,7 +318,6 @@ describe("a crewmate stuck at its provider", () => {
     expect(await supervisor.turns.unstick(taskId, "move")).toMatchObject({ ok: true });
     await settle();
     await settle();
-    // It reopened on the Mac mini, on Claude under the Mac mini's own account.
     expect(opened.at(-1)).toMatchObject({ machine: MINI, model: claude });
     expect(opened.at(-1)?.binding).toMatchObject({ accountId: "mini-claude" });
     expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");

@@ -30,7 +30,6 @@ function riskLine(story: ChangePresentation): string {
     : "Risk: low in every dimension.";
 }
 
-/** The public record keeps commands and the full assessment behind explicit folds. */
 export const CARD_ONLY_MEDIA_WORDS =
   "Pictures and recordings are retained on the card; this host receives the story's text only.";
 

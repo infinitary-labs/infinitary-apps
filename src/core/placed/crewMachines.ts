@@ -415,7 +415,6 @@ export type CrewMachines = {
    * this Mac, so the next open there opens anew instead of reattaching to it.
    */
   refuseHeld?(taskId: string, refused: boolean): void;
-  /** Whether the conversation the task's computer holds was refused words here (`refuseHeld`). */
   refusedHeld?(taskId: string): boolean;
   /**
    * What the computer last said of its own sign-ins, asked now when it has

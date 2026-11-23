@@ -188,14 +188,12 @@ describe("a Mac that approves Secrets uses for another computer", () => {
       SECRETS_WORDS.once,
       SECRETS_WORDS.deny,
     ]);
-    // Its card says a lasting allowance is answered on the home, where only Allow once is offered here.
     expect(useShown.body).toContain(SECRET_MAC_WORDS.saveOnHome("MacBook Pro"));
     expect(useShown.body).not.toContain(SECRET_MAC_WORDS.notSetUp("MacBook Pro"));
     const homeConfirms = w.homeConfirms();
     const allow = w.pass(SECRETS_WORDS.once);
     expect(await mac.act(allow.card, allow.action)).toEqual({});
     expect(w.macConfirms()).toBe(1);
-    // The home's own confirmation was never asked for this use.
     expect(w.homeConfirms()).toBe(homeConfirms);
     await vi.waitFor(async () => expect(await w.state(receipt.request)).toBe("completed"));
     expect(w.sent).toEqual([`Bearer ${TOKEN}`]);
@@ -203,7 +201,6 @@ describe("a Mac that approves Secrets uses for another computer", () => {
       (await w.settings.view()).history.find((one) => one.request === receipt.request),
     ).toMatchObject({ approval: "remote" });
 
-    // Without its confirmation the Mac signs nothing, and the next use keeps waiting.
     const next = await w.ask();
     w.touchId(false);
     const again = w.pass(SECRETS_WORDS.once);
@@ -232,7 +229,6 @@ describe("a Mac that approves Secrets uses for another computer", () => {
     await w.settings.action({ kind: "ask-phone", paired: PAIRED });
     await unconfirmed.refresh();
     const use = w.cards.find((one) => one.id === allow.card);
-    // Its window offers only Don't allow and says where to set it up.
     const [shown] = unconfirmed.shown([use]) as [Raised];
     expect(shown.actions.map((action) => action.label)).toEqual([SECRETS_WORDS.deny]);
     expect(shown.body).toContain(SECRET_MAC_WORDS.notSetUp("MacBook Pro"));
@@ -254,7 +250,6 @@ describe("a Mac that approves Secrets uses for another computer", () => {
     expect(w.homeConfirms()).toBe(homeConfirms);
     expect(await w.state(receipt.request)).toBe("waiting");
     expect(w.sent).toEqual([]);
-    // The home's own window still answers it.
     await w.settings.decide(w.pass(SECRETS_WORDS.once, use).action);
     await vi.waitFor(async () => expect(await w.state(receipt.request)).toBe("completed"));
     expect(w.sent).toEqual([`Bearer ${TOKEN}`]);

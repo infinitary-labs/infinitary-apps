@@ -279,7 +279,6 @@ export type ServiceManagerStandIn = {
   runs: (label: string) => number[];
   /** Each run's exit code, in order; null for a signal. */
   exits: (label: string) => (number | null)[];
-  /** Whether it is running the job now. */
   running: (label: string) => boolean;
   /** Refuses the next `count` starts it is asked for, as launchd refuses an agent whose background item is off. */
   refuseStarts: (count: number) => void;

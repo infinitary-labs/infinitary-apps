@@ -81,7 +81,6 @@ test("a merge card's after-merge steps lead its body and scroll away with it, th
   expect(strip.captainWarn).toBe(true);
   expect(strip.crewWarn).toBe(false);
 
-  // The strip keeps clear of the risk chart beside it.
   const at = frame.getBoundingClientRect();
   const chart = document.querySelector(`${SHOWN_ENTRY} [data-risk-chart]`)?.getBoundingClientRect();
   if (!chart) throw new Error("The card drew no risk chart");

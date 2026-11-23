@@ -22,7 +22,6 @@ function event(
 const label = (model: string) => (model === "openai/gpt-6-sol" ? "GPT-6 Sol" : model);
 const read = (events: TaskEventView[]) =>
   condenseActivity(events, label).map((row) => [row.kind, row.text]);
-/** Each row with the words folded under it. */
 const folds = (events: TaskEventView[]) =>
   condenseActivity(events, label).map((row) => [
     row.text,
@@ -455,7 +454,6 @@ describe("the record's condensed activity", () => {
       ["steered", { words: { from: 0, to: 3 }, cardId: "c" }, "captain"],
       ["pr_opened", { prNumber: 4 }, "crewmate"],
     );
-    // Each order: as listed, reversed, minor events first, and minor events alone.
     const minor = shapes.filter(([kind, data]) => ACTIVITY_PLACES[kind] === "folded" && !data);
     const rest = shapes.filter((shape) => !minor.includes(shape));
     const orders = [shapes, [...shapes].reverse(), [...minor, ...rest], minor];
@@ -471,7 +469,6 @@ describe("the record's condensed activity", () => {
       const read = rows.flatMap((row) => [row.id, ...(row.folded ?? []).map((line) => line.id)]);
       const kept = events.filter((each) => ACTIVITY_PLACES[each.kind] !== "evidence");
       expect([...read].sort((a, b) => a - b)).toEqual(kept.map((each) => each.id));
-      // Each action folds once, in time order, under a row recorded at or after it.
       expect(rows.flatMap((row) => row.actions ?? [])).toEqual(actions);
       for (const row of rows.slice(0, -1)) {
         for (const action of row.actions ?? []) expect(action.at).toBeLessThanOrEqual(row.at);

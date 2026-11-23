@@ -121,7 +121,6 @@ function seeded() {
   return { userDataDir, head, origin, followup, fix };
 }
 
-/** The captain's words, typed in the input; the scripted Firstmate answers with these calls. */
 async function ask(app: LaunchedApp, words: string, calls: ScriptedCall[]) {
   if (!app.mockProvider) throw new Error("The journey needs the mock provider");
   await waitForFirstmateIdle(app.page);
@@ -166,21 +165,18 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
       },
     ]);
     expect(dropped.results[0]).toContain(`${fix} carries on its work`);
-    // The captain merges the replacement.
     await (await completionAction(page, "The hang fix is ready")).click();
     await expect
       .poll(() => detail("fix"), { timeout: 20_000 })
       .toMatchObject({ status: "done", closedReason: "merged" });
     expect(github.merges()).toHaveLength(1);
 
-    // The first task's record lists all three, each naming the task it came from.
     const origin = await detail("origin");
     const texts = origin.activityLog.map((row) => [row.from?.key ?? null, row.text]);
     expect(texts).toContainEqual([null, expect.stringContaining(`follow-up filed`)]);
     expect(texts).toContainEqual([hang, expect.stringContaining(`${fix} carries on its work`)]);
     expect(texts).toContainEqual([fix, expect.stringContaining(`merged pull request #977`)]);
 
-    // By keys: open the record, open Activity, and open the replacement from its line.
     await expandDock(page, "now");
     await pressKey(nowRow(page, seed.origin.key), "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "origin");

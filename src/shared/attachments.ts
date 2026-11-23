@@ -77,9 +77,7 @@ export function looksLikeText(bytes: Uint8Array, truncated = false): boolean {
     try {
       decoder.decode(bytes.subarray(0, bytes.length - drop));
       return true;
-    } catch {
-      // try shorter
-    }
+    } catch {}
   }
   return false;
 }

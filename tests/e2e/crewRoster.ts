@@ -101,7 +101,6 @@ export async function crewRoster(count: number, options: CrewRosterOptions = {})
     for (const model of models)
       for (const served of SLOTS)
         for (const quick of [false, true]) {
-          // The level the supervisor asks for at that served level.
           const requested = (DEFAULT_ROUTING_POLICY.effort?.[served] ?? "medium") as
             | "low"
             | "medium"

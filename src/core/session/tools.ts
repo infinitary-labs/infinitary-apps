@@ -268,7 +268,6 @@ export function labeledActions(actions: readonly DeclaredAction[]): EmittedActio
   });
 }
 
-/** The recorded reason and words for whatever stopped a card. */
 export function cardRefusalOf(error: unknown): Pick<CardRefusal, "reason" | "why"> {
   if (error instanceof CardRefusedError) return { reason: error.reason, why: error.why };
   return { reason: "other", why: error instanceof Error ? error.message : String(error) };
@@ -306,10 +305,8 @@ export type StartProgramInput = {
   stop?: boolean;
 };
 
-/** A callback's answer, now or later. */
 type Awaitable<T> = T | Promise<T>;
 
-/** A read of knowledge, as the `knowledge` tool passes it on (docs/knowledge.md). */
 export type KnowledgeReadInput = {
   action: "search" | "get" | "neighbors" | "history";
   query?: string;
@@ -349,7 +346,6 @@ export type CrewmateToolDelegate = {
   ) => void;
   requestedSpeed?: (model: { provider: string; id: string }) => CrewSpeed | Promise<CrewSpeed>;
   taskId?: string;
-  /** The working copy the crewmate operates in. */
   cwd?: string;
   /**
    * Where the host keeps copies of the pictures this crewmate's cards name
@@ -571,7 +567,6 @@ export type SecretUsesElsewhere = {
   ask?(computer: UseComputer, input: PlacedSecretAskInput): Promise<PlacedSecretAskAnswer>;
 };
 
-/** A tool's answer, whichever runtime carries it: the text, then any pictures. */
 export type ToolOutput = {
   text: string;
   images?: ReadonlyArray<{ data: string; mimeType: string }>;
@@ -598,7 +593,6 @@ export type BoundTool<N extends string = string, T extends TObject = TObject> = 
   run: ToolRun;
 };
 
-/** The call a model makes of a tool: its name and the arguments its parameters accept. */
 export type ToolCallOf<Tool> = Tool extends { name: infer N; parameters: infer T extends TObject }
   ? { name: N; args: Static<T> }
   : never;
@@ -689,7 +683,6 @@ export function zodParameter<T>(
   });
 }
 
-/** One crewmate tool, before it is bound to a crewmate's callbacks. */
 export type CrewmateTool<N extends string = string, T extends TObject = TObject> = {
   name: N;
   /** Pi's display label; the Claude client has none. */
@@ -716,7 +709,6 @@ export function callWithSignal<R>(
   return signal === undefined ? fn(...args) : fn(...args, signal);
 }
 
-/** Declare a crewmate tool: a bound tool once a crewmate's callbacks bind it. */
 export function crewmateTool<const N extends string, T extends TObject>(spec: {
   name: N;
   label: string;
@@ -738,7 +730,6 @@ export function crewmateTool<const N extends string, T extends TObject>(spec: {
   };
 }
 
-/** Every entry the delegate can bind, in the spec's order. */
 export function bindTools(
   tools: readonly CrewmateTool[],
   delegate: CrewmateToolDelegate,

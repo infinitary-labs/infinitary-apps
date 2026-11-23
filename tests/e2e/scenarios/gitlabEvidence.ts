@@ -12,11 +12,6 @@ import { sinceLastUser } from "../providerRequest";
  */
 export const GITLAB_EVIDENCE_MARKER = "inspect the GitLab pipeline evidence";
 
-/**
- * The GitLab crewmate gathers its evidence where the project lives: the
- * pipeline for its version, its jobs, the failed job's log and archive, then
- * a write to another project the app holds back.
- */
 export const gitlabEvidence: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {
@@ -26,7 +21,6 @@ export const gitlabEvidence: Scenario =
       const call = <N extends ScriptedCall["name"]>(name: N, args: ScriptedArgs<N>) => ({
         calls: [{ name, args } as ScriptedCall],
       });
-      // The GitLab stand-in's project, by its URL-encoded path.
       const project = `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`;
       if (!results.length) {
         return call("bash", { command: "git rev-parse HEAD" });

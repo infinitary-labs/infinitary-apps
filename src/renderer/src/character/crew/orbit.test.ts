@@ -20,7 +20,6 @@ function orbit(now = 0): CrewOrbit {
   return new CrewOrbit(now, { ...DEFAULT_ORBIT }, seeded());
 }
 
-/** Step the model in 16ms frames up to `until`, returning the last frame. */
 function run(model: CrewOrbit, from: number, until: number, settled = false): OrbitFrame {
   let frame = model.update(from, settled);
   for (let t = from + 16; t <= until; t += 16) frame = model.update(t, settled);
@@ -64,7 +63,6 @@ describe("CrewOrbit", () => {
     expect(cues[0]?.kind).toBe("sendoff");
     expect(Math.hypot(cues[0]?.kind === "sendoff" ? cues[0].dx : 0, 0)).toBeLessThanOrEqual(1);
     expect(m.takeCues()).toEqual([]);
-    // A staggered second spawn cues exactly SENDOFF_LEAD_MS before its turn.
     m.spawn("b", "idle", 1000);
     const second = 1000 + DEFAULT_ORBIT.staggerMs;
     m.update(second - SENDOFF_LEAD_MS - 1);
@@ -227,7 +225,6 @@ describe("CrewOrbit", () => {
     expect(glyphScaleFor(5)).toBe(1);
     expect(glyphScaleFor(12)).toBeCloseTo(0.65, 5);
     expect(glyphScaleFor(40)).toBe(0.6);
-    // Twelve on the ring: no two glyphs overlap once settled.
     const m = orbit();
     for (let i = 0; i < 12; i++) m.spawn(`c${i}`, i % 2 ? "idle" : "working", 0);
     const f = run(m, 0, 9000);
@@ -305,11 +302,6 @@ describe("CrewOrbit", () => {
   });
 });
 
-/**
- * Guardrails for INF-2625's renderer piece, which moves the companions and
- * the constellations out of orbit.ts: the branches the crew's tests did not
- * reach before the move, each held by what the stage draws.
- */
 describe("CrewOrbit's waits, reviews and constellations", () => {
   const satellite = (waiterId: string, blockerId: string) => ({
     waiterId,

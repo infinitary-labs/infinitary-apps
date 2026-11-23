@@ -19,7 +19,6 @@ const SCRIPT = fileURLToPath(new URL("../../scripts/contract-client.ts", import.
 export type ClientLine = { t: string; [field: string]: unknown };
 
 export type ScriptedClient = {
-  /** Every line it printed so far, in order. */
   lines: ClientLine[];
   /** Resolves with the first line, printed or still to come, that matches. */
   line: (match: (line: ClientLine) => boolean) => Promise<ClientLine>;

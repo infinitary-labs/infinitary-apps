@@ -12,7 +12,6 @@ import { button, shown } from "./devicesTab";
 // with the draft once it came - checked each model and saved the
 // connection the person had just cancelled (docs/custom-api.md).
 
-/** A connection on the organization's network, saved and checked before, opened with Edit. */
 const SAVED: CustomApiView = {
   accountId: "lab-connection",
   label: "Lab server",
@@ -65,7 +64,6 @@ test("Cancel while Save reaches the server saves nothing, and lets the draft tha
     expect(mount.querySelector(".fm-custom-body")).toBeNull();
     reached({ view: DRAFT, listed: [{ id: "qwen3-32b", context: 32_768, output: 8_192 }] });
 
-    // The draft that answered after Cancel is let go, and nothing is saved.
     await expect
       .poll(
         () =>

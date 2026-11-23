@@ -61,7 +61,6 @@ import "./lastTurn.css";
  * any language is set) for a spec; the rounds word them when shown.
  */
 export const WORKING_WORDS = m.shellLastTurnWorking();
-/** A message that was only pictures. */
 export const PICTURE_ONLY_WORDS = m.shellLastTurnPictureOnly();
 /** The lane whose width bounds each line, which the lines' own words never size. */
 const LANE = "[data-last-turn]";
@@ -74,14 +73,12 @@ const MARK_REST_DEG = 60;
 
 type Mate = { kind: "working" } | { kind: "reply"; text: string; problem: boolean };
 
-/** The Firstmate's line: its reply when there is one, else working while busy. */
 function mateOf(busy: boolean, round: LastRound): Mate | null {
   if (round.reply)
     return { kind: "reply", text: round.reply.text, problem: round.reply.problem === true };
   return busy ? { kind: "working" } : null;
 }
 
-/** What the Firstmate's line says, as one comparable value. */
 function mateKey(mate: Mate | null): string {
   if (mate === null) return "";
   return mate.kind === "working" ? "working" : `reply:${mate.problem}:${mate.text}`;
@@ -160,7 +157,6 @@ function useCuttingRef(
   );
 }
 
-/** What the reply's label says beside its key when its words fit. */
 const REPLY_COMMAND_WORDS = KEYBOARD_COMMANDS["firstmate.reply"].label;
 
 /** The Firstmate's line, swapping its words with a leave and a rise. */
@@ -267,7 +263,6 @@ function MateLine({
   );
 }
 
-/** One message and its reply, as the round and the busy signal say. */
 export function LastTurnRound({
   round,
   busy,

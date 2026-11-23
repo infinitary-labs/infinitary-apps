@@ -57,7 +57,6 @@ export const OWN_FONTS: Readonly<Record<FontSlot, string>> = {
 
 const GENERIC_FAMILIES = new Set(["system-ui", "ui-monospace", "ui-sans-serif", "ui-serif"]);
 
-/** A family as CSS writes it: a generic name bare, every other name quoted. */
 export function cssFamily(family: string): string {
   return GENERIC_FAMILIES.has(family) ? family : `"${family}"`;
 }

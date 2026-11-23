@@ -40,7 +40,6 @@ import type { ForgeWorkflows } from "./workflows";
  *   change.
  */
 
-/** Where a repository lives, as the seam needs it: its kind, host and working folder. */
 export type ForgeLocation = {
   kind: ForgeKind;
   /** Lower-case host name; null for a project on this Mac or a remote on its disk. */
@@ -53,15 +52,12 @@ export type ForgeLocation = {
   source?: { id: number; fullName: string };
 };
 
-/** One proposed change where the project lives. */
 export type ForgeChange = {
   /** The host's own number for it (`#N` on GitHub, `!N` on GitLab); absent for a sent-up working copy. */
   number?: number;
   /** Where the person can open it; null where the host has no page for it. */
   url: string | null;
-  /** The branch the change carries. */
   branch: string;
-  /** The version the host holds for that branch now. */
   headSha: string;
   /** Request title; at a contributor merge, the verified story supplies the squash title. */
   title?: string;
@@ -213,19 +209,15 @@ export type ForgeComment = { id: number; body: string };
 
 /** One pull request (a merge request on GitLab) read by its number, whatever its state (FI3-304). */
 export type ForgePull = {
-  /** The request's page, as the host returned it. */
   url?: string;
   number: number;
   state: "open" | "closed";
   merged: boolean;
-  /** The merge commit, once merged. */
   mergedSha?: string;
   /** The host's last change time, including review activity, never a local guess. */
   updatedAt?: string;
   headSha: string;
-  /** The branch it merges into. */
   base: string;
-  /** The branch it carries, when the host named one. */
   branch?: string;
   title?: string;
   /**
@@ -294,7 +286,6 @@ export type ForgeSkipMerge =
   | { status: "failed"; message: string }
   | { status: "unknown"; message: string };
 
-/** A project the person has where it lives, newest first. */
 export type { ForgeProject } from "@shared/forges";
 
 /**
@@ -385,7 +376,6 @@ export class ForgeMergeUnconfirmed extends ForgeError {
   }
 }
 
-/** When a spent allowance comes back, if that is why the host refused; otherwise undefined. */
 export function allowanceResetOf(caught: unknown): number | undefined {
   return caught instanceof ForgeAllowanceSpent ? caught.resetAt : undefined;
 }
@@ -398,7 +388,6 @@ export function changeTitle(kind: ForgeKind, change: ForgeChange): string | unde
     : change.title;
 }
 
-/** The host refused who the app is: no sign-in, or one it no longer accepts. */
 export function isSignInForgeFailure(caught: unknown): boolean {
   return caught instanceof ForgeError && caught.failure === "sign-in";
 }
@@ -441,7 +430,6 @@ export interface Forge {
   mergeTaskRefused?(number: number, task: string): Promise<boolean>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
-  /** Optional read-only workflow evidence; absent on hosts without a reader. */
   readonly workflows?: ForgeWorkflows;
   /**
    * The host's own words for why it has no runs, logs or release files,
@@ -453,7 +441,6 @@ export interface Forge {
   /** Native evidence attachments, offered only on hosts qualified for publication. */
   readonly attachments?: ForgeAttachments;
   readonly contributions?: ForgeContributions;
-  /** Optional project-scoped JSON gateway; absent on hosts without a REST API. */
   readonly api?: ForgeApi;
   /** Saved-story identity, also on hosts without native media or a description. */
   storyDestination?(): Promise<PresentationDestination>;
@@ -617,14 +604,12 @@ export interface Forge {
    * never retried; only the captain's click on its card calls it.
    */
   putInSkippingRules?(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge>;
-  /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */
   label(change: ForgeChange): string;
   url(change: ForgeChange): string | null;
 }
 
-/** The batch check's name and its waiting words, owned beside the batches that use them. */
 export { BATCH_CHECK, BATCH_WAITING_WORDS } from "@shared/batches";
 
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */

@@ -97,7 +97,6 @@ it("answers what grouping the whole history answers as the record changes", () =
   const shown = fed();
   events.deleteIds([shown[0] as number, earlier]);
   expect(fed()).toEqual(whole());
-  // A task whose timeline is erased.
   events.deleteFor("settings");
   expect(fed()).toEqual(whole());
   report("pricing", "The pricing review is ready.");
@@ -108,7 +107,6 @@ it("answers what grouping the whole history answers as the record changes", () =
 it("reads only the lines written since the last read", () => {
   const { db, report, fed, whole } = setup();
   fed();
-  // With nothing new the read takes no feed row; with two new lines, those two.
   const unchanged = rowsRead(db, fed);
   report("home-page", "The home page review is ready.");
   report("pictures", "The pictures are ready.");

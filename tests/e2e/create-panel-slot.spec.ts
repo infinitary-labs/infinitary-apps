@@ -35,7 +35,6 @@ async function firstRunRead(page: Page): Promise<number | null> {
   );
 }
 
-/** A profile whose crewmates have already finished `count` tasks, merged. */
 function withFinishedCrewmates(count: number): string {
   const userDataDir = scratchDir("infinitary-create-panel-slot-");
   const db = openDatabase(userDataDir);

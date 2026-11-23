@@ -19,7 +19,6 @@ function served(wake: TypedWake): string {
   return renderWake(row);
 }
 
-/** A clean first mate turn that served these inbox rows and acted on these tasks. */
 function handledTurn(startedAt: number, inboxIds: number[], tasks: string[]): DecisionRecord {
   return {
     schema: 1,

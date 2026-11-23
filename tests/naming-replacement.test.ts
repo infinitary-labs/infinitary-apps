@@ -36,7 +36,6 @@ const CODE: RunbookFacts = {
   care: "standard",
   backend: "pi",
 };
-// A team that names work by its area in capitals and brackets, and keeps ticket references.
 const TEAM: NamingRule = {
   pattern: "^\\[[A-Z][A-Z0-9-]*\\] \\S.+$",
   message: 'Start with the area in capitals and brackets, such as "[DOCS] Explain the export".',
@@ -64,7 +63,6 @@ function teamRunbooks(): Runbooks {
   return books;
 }
 
-/** The subject of the newest commit `ref` reaches. */
 const subject = (dir: string, ref = "HEAD") => git(dir, ["log", "-1", "--format=%s", ref]);
 
 describe("a replacement naming runbook decides every name", () => {
@@ -103,7 +101,6 @@ describe("a replacement naming runbook decides every name", () => {
     run("add", "export.ts");
     run("commit", "-m", "feat: add the export");
 
-    // A built-in name the replacement does not accept is refused, on the title and on a commit.
     const builtInTitle = await service.publication.open("ab12cd34", {
       title: "feat: add the export",
       body: "b",
@@ -118,7 +115,6 @@ describe("a replacement naming runbook decides every name", () => {
     expect(builtInCommit).toContain(TEAM.message);
     expect(forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
 
-    // Named the replacement's way, the same change opens.
     run("commit", "--amend", "-m", "[APP] Add the export");
     expect(
       await service.publication.open("ab12cd34", { title: "[APP] Add the export", body: "b" }),
@@ -141,14 +137,12 @@ describe("a replacement naming runbook decides every name", () => {
     const books = teamRunbooks();
     const namingRule = () => books.naming();
 
-    // A new project's first commit.
     const repos = new RepoRegistry(freshDatabase(), join(scratchDir("inf-team-fleet-"), "fleet"), {
       namingRule,
     });
     const { repo } = await repos.setup({ kind: "init", name: "meter" });
     expect(await subject(repo.path)).toBe("[APP] initialize fleet project");
 
-    // The default workspace's first commit, a local merge, and kept work.
     const paths = appPathsFor(scratchDir("inf-team-workspace-"));
     const workspace = new WorkspaceService(paths, { namingRule, pool: false });
     const home = await workspace.ensureDefaultRepo();
@@ -168,13 +162,10 @@ describe("a replacement naming runbook decides every name", () => {
     expect(await subject(home, keptRefFor("team2222"))).toBe(
       "[APP] keep work of task team2222 (fm/task-team2222)",
     );
-    // A branch commit named the built-in's way does not land.
     const plain = await workspace.createTaskWorktree("team3333");
     await git(plain.cwd, ["commit", "--allow-empty", "-m", "feat: add the export"]);
     await expect(workspace.landTaskWork(plain)).rejects.toThrow(TEAM.message);
 
-    // The personal workspace: its seed, and a report kept when it already
-    // follows the rule, otherwise put in its form.
     const personal = join(scratchDir("inf-team-personal-"), "personal");
     await seedPersonalWorkspace({ dir: personal, namingRule });
     expect(await subject(personal)).toBe("[APP] seed the personal workspace");

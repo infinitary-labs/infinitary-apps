@@ -11,7 +11,6 @@ import type { BrowserNode } from "./outline";
 /** One element's machine-readable time and title tooltip, keyed by the host's node id. */
 export type PageMark = { datetime?: string; title?: string };
 
-/** Copy a snapshot's marks onto the accessibility nodes they belong to. */
 export function applyMarks(
   nodes: readonly BrowserNode[],
   marks: ReadonlyMap<number, PageMark>,
@@ -55,10 +54,8 @@ export type PageSnapshot = {
   strings?: string[];
 };
 
-/** The viewport a check is made at, and the page's own layout size. */
 export type PageSize = { width: number; height: number };
 
-/** Which elements the page lays out, and of those, which its window shows now. */
 export type PageScreen = {
   laidOut: Set<number>;
   onScreen: Set<number>;

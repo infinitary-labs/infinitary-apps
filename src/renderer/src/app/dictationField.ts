@@ -10,9 +10,7 @@ import { useShellStore } from "./store";
 export type DictationFieldState = {
   /** The field as the voice store holds it, for the voice lines drawn under it. */
   field: DictationField;
-  /** The dictation key records into this field now. */
   recording: boolean;
-  /** This field's words are coming back. */
   transcribing: boolean;
   /**
    * The field's keydown, before its own keys: true when the key is not the

@@ -59,7 +59,6 @@ export class TaskReferenceStore {
     return this.present;
   }
 
-  /** Replaces the task's reference of that kind. */
   set(taskId: string, reference: TaskReference): void {
     prepared(
       this.db,
@@ -96,7 +95,6 @@ export class TaskReferenceStore {
     return rows.map(fromRow).sort(byKind);
   }
 
-  /** The references of each of these tasks, by task id. */
   listFor(taskIds: readonly string[]): Map<string, TaskReference[]> {
     const byTask = new Map<string, TaskReference[]>();
     if (taskIds.length === 0 || !this.exists()) return byTask;

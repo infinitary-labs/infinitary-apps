@@ -86,12 +86,10 @@ import {
  * drops native clicks into a hidden window's sandboxed frames.
  */
 
-/** Clicks a control inside the card's frame, where the captain would. */
 async function pick(frame: FrameLocator, selector: string) {
   await frame.locator(selector).evaluate((control: HTMLInputElement) => control.click());
 }
 
-/** Types into a field inside the card's frame, as an input event. */
 async function type(frame: FrameLocator, selector: string, text: string) {
   await frame.locator(selector).evaluate((field: HTMLTextAreaElement, value) => {
     field.value = value;
@@ -304,7 +302,6 @@ test("picks inside a card queue until a footer button sends them, and survive a 
         ],
       ),
     );
-    // The record keeps them on the resolution.
     const resolved = (
       await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)
     ).events.findLast((event) => event.kind === "card_resolved");
@@ -587,7 +584,6 @@ test("a question's Something else row takes the captain's own words to the autho
   }
 });
 
-/** The scripted-body test's two cards, as it files them and finds them. */
 const UNTOUCHED_TITLE = "Pick a wash";
 const LOOK_TITLE = "Tune the glass";
 
@@ -677,7 +673,6 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
   }
 });
 
-/** The recommendations test's two cards, as it files them and finds them. */
 const PICK_TITLE = "Share the weekly report";
 const DEFER_TITLE = "Defer the report";
 
@@ -847,7 +842,6 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
   }
 });
 
-/** The skippable-questions test's card, as it files it and finds it. */
 const SKIP_TITLE = "Four calls settle the weekly report";
 const SKIP_ID = "card-fm-skippable";
 const SKIP_SEND = "Send the report";
@@ -904,7 +898,6 @@ test("a question the captain may skip tags its Default, rings it until touched, 
     ],
   };
   store.upsert(card);
-  // A copy the captain dismissed: it sent no answers.
   store.upsert({ ...card, id: SKIP_DISMISSED_ID, createdAt: Date.now() - 60_000 });
   store.resolve(SKIP_DISMISSED_ID, "close");
   db.close();

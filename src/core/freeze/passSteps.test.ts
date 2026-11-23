@@ -6,7 +6,6 @@ import { PassSteps, type PassTiming, type StepMark } from "./passSteps";
 // each step of the once-a-minute pass, including the work each step sets off,
 // and tag each stall with the step that was running.
 
-/** A clock the test moves: monotonic and processor time advance only when a step spends them. */
 function manualClock() {
   const clock = { at: 1_000, cpu: 0 };
   return {
@@ -64,7 +63,6 @@ describe("the minute pass's steps", () => {
       { running: "board-push", unsettled: ["check-watch"] },
       { running: null, unsettled: ["check-watch"] },
       { running: null, unsettled: [] },
-      // The second pass begins.
       { running: "idle-ladder", unsettled: [] },
       { running: null, unsettled: [] },
       { running: "check-watch", unsettled: [] },

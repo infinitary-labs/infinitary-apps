@@ -261,7 +261,6 @@ test("an older Jev approval asks once from the keyboard, beside the locked task 
     await expect(dialog.getByRole("term")).toHaveText([...MODELS_WORDS.decisionDisclosureLabels]);
     const notNow = dialog.getByRole("button", { name: "Not now", exact: true });
     await expect(notNow).toBeFocused();
-    // Escape changes nothing and gives focus back to the switch.
     await running.page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(replies).toBeFocused();
@@ -275,7 +274,6 @@ test("an older Jev approval asks once from the keyboard, beside the locked task 
     await running.page.keyboard.press("Tab");
     const allow = dialog.getByRole("button", { name: DECISION_USES_WORDS.allow, exact: true });
     await expect(allow).toBeFocused();
-    // Tab stays inside the dialog.
     await running.page.keyboard.press("Tab");
     await expect(notNow).toBeFocused();
     await running.page.keyboard.press("Shift+Tab");

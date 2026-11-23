@@ -219,7 +219,6 @@ const say = {
   }),
 };
 
-/** A client that answers each prompt with one clean turn and goes idle. */
 function answering(text = "Aye.") {
   return (message: SDKUserMessage, emit: (message: unknown) => void) => {
     emit(say.running);
@@ -953,7 +952,6 @@ describe("the Claude seat's turns", () => {
     await session.closed();
     expect(s.harness().closed()).toBe(true);
     expect(hasActiveSession(s.configDir)).toBe(false);
-    // A plain interrupt ends the turn quietly.
     expect(events.some((event) => event.type === "turn_failed")).toBe(false);
     await expect(session.prompt("after")).rejects.toThrow("has ended");
   });

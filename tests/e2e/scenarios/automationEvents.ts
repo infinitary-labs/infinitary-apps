@@ -10,7 +10,6 @@ import { sinceLastUser } from "../providerRequest";
  */
 export type AutomationEventsSeen = { turns: string[] };
 
-/** The scripted first mate's one-line answer to each event turn. */
 export const AUTOMATION_EVENTS_ANSWER = "Triaged the new items.";
 
 /** The words a served event rule's prompt opens with (`renderWake`, docs/automation.md "Events"). */

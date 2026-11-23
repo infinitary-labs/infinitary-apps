@@ -24,7 +24,6 @@ export class PanelMountsHolder {
     return this.latest;
   }
 
-  /** One panel as the window last answered, or undefined when it did not name it. */
   of(id: string, kind: PanelMountKind): PanelMount | undefined {
     return this.latest ? mountOf(this.latest, id, kind) : undefined;
   }

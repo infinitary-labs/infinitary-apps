@@ -37,7 +37,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
  * cases hold whichever module the logic moves to.
  */
 
-/** A GitHub and a GitLab API on loopback, answering as each host does for these reads. */
 function forgeStandIn(): Promise<{ server: Server; url: string; gitlabFails: { now: boolean } }> {
   const gitlabFails = { now: false };
   const json = (response: ServerResponse, status: number, body: unknown) => {

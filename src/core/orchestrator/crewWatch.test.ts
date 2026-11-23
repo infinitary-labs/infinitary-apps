@@ -75,7 +75,6 @@ describe("the crew's watch between turns, as CrewWatch keeps it", () => {
 
     await h.supervisor.watch.reconcileFleetHygiene();
 
-    // The live task's tree is never touched; the other two are retired, and one is kept.
     expect(retired).toEqual(["stuck", "saved"]);
     expect(h.events.filter((event) => event.type === "firstmate_note")).toEqual([
       {

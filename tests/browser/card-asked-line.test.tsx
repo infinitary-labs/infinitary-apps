@@ -28,10 +28,8 @@ import { openSize, openWindow } from "./window";
  * that task.
  */
 
-/** A short message of the captain's, answered on one card. */
 const SHORT_ASK = "what does the port flag do?";
 
-/** A long message of three paragraphs, the kind the line must not show whole. */
 const LONG_ASK = [
   "did something change about how we order the cards in the stack? this morning a card I had replied under jumped behind two newer notes, and then the merge card for the footer fix showed up first even though I had been reading the plan card.",
   "I'm not sure whether that's the new reply rule or something else. could you check what changed in the last few days, and whether the order is still the one we agreed on in the design skill?",
@@ -52,11 +50,9 @@ const FROM = {
 };
 const LONG_TITLE = "Yes: a card you replied under keeps its place";
 
-/** How many lines of text the words element shows. */
 const linesShown = (element: HTMLElement) =>
   Math.round(element.clientHeight / Number.parseFloat(getComputedStyle(element).lineHeight));
 
-/** Returns once the card titled `title` is shown and the stage rests. */
 async function shownCard(title: string): Promise<void> {
   await expect.element(page.getByRole("region", { name: title, exact: true })).toBeVisible();
   await stageAtRest();
@@ -76,7 +72,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   await openWindow(bridge);
   const label = askedLabel({ at: Date.now() }).split(" · ")[0] as string;
 
-  // A short message shows whole, with when it was sent and an inert bubble.
   await shownCard(SHORT_TITLE);
   expect(inShown("[data-card-asked-label]").textContent).toMatch(new RegExp(`^${label} · `));
   expect(inShown("[data-question-bubble-words]").textContent).toContain(
@@ -85,7 +80,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   expect((inShown("[data-question-bubble]") as HTMLButtonElement).disabled).toBe(true);
   await userEvent.click(cardLeave());
 
-  // A long one shows its start in two lines and offers the rest.
   await shownCard(LONG_TITLE);
   const words = inShown("[data-question-bubble-words]");
   const toggle = inShown("[data-question-bubble]");
@@ -96,7 +90,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   expect(linesShown(words)).toBe(2);
   expect(words.scrollHeight > words.clientHeight).toBe(true);
 
-  // A click on the bubble opens the whole message, paragraphs and all.
   await userEvent.click(toggle);
   await expect.element(toggle).toHaveAccessibleName(ASKED_SHOW_LESS);
   await expect.element(page.getByText(ASKED_SHOW_LESS, { exact: true })).not.toBeInTheDocument();
@@ -104,7 +97,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   expect(words.innerText).toContain(askedWords(LONG_ASK, true));
   expect(linesShown(words)).toBeGreaterThan(4);
 
-  // Clicking again folds it; the same button keeps Enter and Space operation.
   await userEvent.click(toggle);
   await expect.element(toggle).toHaveAccessibleName(ASKED_SHOW_ALL);
   expect(linesShown(words)).toBe(2);
@@ -118,7 +110,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   const close = () => userEvent.click(cardLeave());
   await close();
 
-  // Work an automation filed names the automation, with no bubble of words.
   await shownCard(AUTOMATION.title);
   expect(inShown("[data-card-asked-label]").textContent).toMatch(
     new RegExp(`^${ASKED_LABELS.automation} · `),
@@ -138,7 +129,6 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   );
   await close();
 
-  // Work from a task nobody asked for in words names that task by key and title.
   await shownCard(FROM.title);
   expect(inShown("[data-card-asked-label]").textContent).toMatch(/^From [A-Z]+-\d+$/);
   expect(inShown("[data-card-asked-name]").textContent).toBe(FROM.parent);

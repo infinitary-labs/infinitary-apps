@@ -44,12 +44,6 @@ import { BROWSER_ORDER_CHANNELS } from "./workBrowsers";
 // below keeps it the file CONTRACT_FILE names.
 const inventoryFiles = ["docs/contract.json"] as const;
 
-/**
- * The published contract (docs/contract.md) is generated: the committed file
- * is what the contract renders today, and every shape in it is one a client
- * can validate with on its own.
- */
-
 const committed = readFileSync(join(__dirname, "../..", CONTRACT_FILE), "utf8");
 const published = JSON.parse(committed) as PublishedContract;
 // A standard JSON Schema validator, as a client in any language would use:
@@ -65,7 +59,6 @@ const validator = (schema: unknown) => {
   return { safeParse: (value: unknown) => ({ success: validate(value) }) };
 };
 
-// Every shape the file publishes, by where it sits in the file.
 const pairsOf = (
   section: string,
   requests: Record<string, { request: unknown; response: unknown }>,
@@ -170,7 +163,6 @@ describe("the published contract", () => {
   });
 
   it("admits a request as the home does", () => {
-    // Each argument list is held to the counts the home holds it to.
     const cases = [
       ["inf:cards:act", ["card-1", "approve", "chrome"], true],
       ["inf:cards:act", ["card-1", "approve", "chrome", { gesture: 1 }, null], true],

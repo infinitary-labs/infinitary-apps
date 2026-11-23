@@ -329,7 +329,6 @@ export class NearbyMacs {
     this.tell();
   }
 
-  /** Asks one Mac its name on this network, once; four at a time. */
   private resolve(name: string): void {
     const run = this.options.run;
     if (!run || this.reached.has(name) || this.resolving.has(name)) return;

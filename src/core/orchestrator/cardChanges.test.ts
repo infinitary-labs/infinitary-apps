@@ -29,7 +29,6 @@ describe("cardParts", () => {
       "fieldset",
       "p",
     ]);
-    // Each start is the part's own opening tag in the body as written.
     expect(parts.map((part) => body.slice(part.start, part.start + 3))).toEqual([
       "<p>",
       "<li",
@@ -113,7 +112,6 @@ describe("cardChanges", () => {
         `<p>After:</p><img src="app-frame://images/1bf72c63-${hex}.png" alt="the dock" width="1200" height="800">`,
       );
     expect(cardChanges(at("a".repeat(32)), at("b".repeat(32)), 1)).toBeUndefined();
-    // Another picture is another part.
     const other = card(
       `<p>After:</p><img src="app-frame://images/1bf72c63-${"c".repeat(32)}.png" alt="the rail" width="1200" height="800">`,
     );

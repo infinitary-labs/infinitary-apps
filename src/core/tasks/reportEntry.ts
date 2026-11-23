@@ -45,7 +45,6 @@ export type ReportEntry = {
 /** A task's latest typed result: the newest one a report carried. */
 export type TaskResult = { at: number; value: Record<string, unknown> };
 
-/** A `report` event as its typed entry. */
 export function reportEntryOf(event: TaskEvent): ReportEntry {
   if (event.kind !== "report") throw new Error(`Event ${event.id} is not a report.`);
   const data = event.data ?? {};

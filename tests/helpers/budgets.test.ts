@@ -38,7 +38,6 @@ it("keeps a request through a stall past its deadline, and ends it once the work
   vi.advanceTimersByTime(STALL_MS);
   expect(signal.aborted).toBe(false);
 
-  // Running again: a tick each LOAD_CLOCK_TICK_MS, until the load time reaches the deadline.
   const run = () => {
     wall += LOAD_CLOCK_TICK_MS;
     clock.tick();

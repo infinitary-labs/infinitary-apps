@@ -147,7 +147,6 @@ describe("one task's facts on the crew summary and the task record", () => {
     expect(reasoning).toBe("Extra high");
     expect(reason).toBe("Reasoning one step lower for Quick rigor.");
     expect(why).toBe("Why this modelBuilding from the plan in SCR-1.Comparison not recorded");
-    // One order on both: the record only moves its strip below its rows.
     expect(onRecord.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => id !== "browser"));
     const stripAt = record.indexOf("data-record-strip");
     const rowsAt = record.indexOf("data-record-rows");
@@ -172,7 +171,6 @@ describe("one task's facts on the crew summary and the task record", () => {
     expect(labels(record)).not.toContain("Intelligence");
     expect(labels(record)).not.toContain("Checks");
     expect(record).toContain('data-fact-dot="running"');
-    // The summary draws the plan as one dot per item, the record as the whole list.
     expect(summary.match(/data-plan-item="/g)).toHaveLength(3);
     expect(summary).toContain('data-task-plan-dots="3"');
     expect(record).toContain('data-task-plan-list="3"');
@@ -221,7 +219,6 @@ describe("one task's facts on the crew summary and the task record", () => {
     const record = renderToStaticMarkup(<TaskFactStrip facts={facts} why />);
     const labels = (html: string) =>
       [...html.matchAll(/data-task-fact-label="">([^<]+)</g)].map((match) => match[1]);
-    // One row of three cells, then the review's own row.
     const doc = parseDocument(summary) as unknown as Node;
     const rows: string[][] = [];
     walk(doc, (node) => {

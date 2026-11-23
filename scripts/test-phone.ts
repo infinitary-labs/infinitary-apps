@@ -128,7 +128,6 @@ const devices: PhoneDevice[] = planned ? PHONE_DEVICES.filter((device) => planne
 // A gate of several devices keeps a folder of evidence per device, as piece 1 did, and so does every dealt job, so the
 // jobs of one request keep one layout.
 const perDevice = devices.length > 1 || !!planned;
-// Every part on every device unless parts are named.
 const named = !!(values.part || values["iphone-part"]);
 const jobs: PhoneJob[] = planned ?? phonePasses(devices, only ? { parts: ["rest"] } : {
   parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),

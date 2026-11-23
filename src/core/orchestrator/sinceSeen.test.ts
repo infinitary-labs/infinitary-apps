@@ -261,7 +261,6 @@ describe("a merge card shown again after the captain saw one", () => {
     const h = await storyTask();
     h.at(SEEN_HEAD, 1366, 80);
     const first = await h.emit();
-    // A merge card the captain has not seen before carries no notice.
     expect(first).not.toContain("The captain last saw");
     await h.seen();
     expect(h.tasks.get(h.taskId)?.delivery?.seenMerge).toMatchObject({
@@ -271,7 +270,6 @@ describe("a merge card shown again after the captain saw one", () => {
       lines: { added: 1366, deleted: 80 },
     });
 
-    // Review repairs push the change to 4,562 added lines; the crewmate shows its card again.
     h.setClock(NEXT_AT);
     h.at(NEXT_HEAD, 4562, 90);
     const again = await h.emit();
@@ -349,11 +347,9 @@ describe("a merge card shown again after the captain saw one", () => {
       act: { kind: "approved" },
       headSha: SEEN_HEAD,
     });
-    // Its batch's checks failed and the batch's repair sent it back, through the app's own wiring.
     await sendBack(h, SEEN_HEAD, "the published contract was missing a field");
     // A send-back keeps the captain's approval (INF-5097, the captain's answer Keep).
     expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("standing");
-    // The crewmate repaired it and shows its card again at the new version.
     h.setClock(NEXT_AT);
     h.at(NEXT_HEAD, 1370, 80);
     const answer = await h.emit(INF_4801_SUMMARY);
@@ -384,7 +380,6 @@ describe("a merge card shown again after the captain saw one", () => {
     expect(answer).toContain(
       `The captain chose “Not now” on a merge card for this change on ${seenAtWords(SEEN_AT)}`,
     );
-    // Without a summary the label stands alone, and the answer still asks for one.
     expect(labelOf(h.card().body)).toBe(
       englishOf(said("cardSinceSeenChose", { button: "Not now", when: seenAtWords(SEEN_AT) })),
     );

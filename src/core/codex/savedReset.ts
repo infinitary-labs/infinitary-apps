@@ -389,7 +389,6 @@ export function callbackFor(redirect: URL, pasted: string): string | undefined {
   return target.toString();
 }
 
-/** The available reset that expires first; one that never expires comes last. */
 export function earliestExpiring(
   credits: readonly { id: string; status: string; expiresAt: number | null }[],
 ): string | undefined {

@@ -7,7 +7,6 @@ import { launchApp } from "./launch";
 import { expandDock, nowFrame, nowRow, recordBarButton, recordCard } from "./rails";
 import { focusOn, pressKey, untilFocused } from "./windowKeys";
 
-// One journey owns its dropped work and the outstanding wait it restores.
 test("keyboard Start again replaces dropped work, moves its wait and leaves the old record closed", async () => {
   const userDataDir = scratchDir("infinitary-start-again-");
   const db = openDatabase(userDataDir);
@@ -77,7 +76,6 @@ test("keyboard Start again replaces dropped work, moves its wait and leaves the 
         }),
       ]),
     );
-    // A stale second activation refuses without another task or history event.
     const before = dropped.events;
     const refused = await page.evaluate(
       (id) => window.infinitary.task.run(id, "start-again"),

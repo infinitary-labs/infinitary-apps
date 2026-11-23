@@ -177,7 +177,6 @@ describe("personalize", () => {
     expect(removed).toEqual(["open-prs"]);
     expect(settings.getLayout().placements).toEqual({});
     expect(feed(events)).toEqual(["Tasks hidden", "Open PRs removed"]);
-    // Gone from the surfaces, so a second remove is a refusal by list.
     expect(await run({ action: "remove", surface: "open-prs" })).toBe(
       'No surface "open-prs". Your surfaces: create-panel, activity, now.',
     );
@@ -537,7 +536,6 @@ describe("the your-surfaces section", () => {
     ).find((line) => line.startsWith("the captain's panels are off"));
     expect(byHand).toContain("the captain turned them off");
 
-    // On, the section says nothing about the switch at all.
     expect(
       renderSurfacesSection(
         {

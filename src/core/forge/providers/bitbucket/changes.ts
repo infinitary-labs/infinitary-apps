@@ -108,7 +108,6 @@ function rowOf(
   };
 }
 
-/** The build statuses as the one reading a row needs: none is no checks. */
 function checksOf(statuses: StatusJson[]): ForgeChangeRow["checks"] {
   if (statuses.length === 0) return "none";
   if (statuses.some((status) => status.state === "FAILED" || status.state === "STOPPED"))

@@ -250,10 +250,8 @@ export type HostAskKind = (typeof HOST_ASK_KINDS)[number];
  */
 export type HostBrowserAsk = { kind: HostAskKind; url: string; ended: Promise<void> };
 
-/** A page's request for a file: its file field, and whether it takes more than one. */
 export type HostFileChooser = { target: number; multiple: boolean };
 
-/** A picker of the Mac's a page asked for and the host never shows. */
 export type HostPickerKind = "print" | "color";
 
 /**
@@ -360,7 +358,6 @@ export type HostKeptProfiles = {
  */
 export type HostDownloadOffer = { url: string; name: string; bytes: number };
 
-/** Where the core has the host save a download, and who hears how it ended. */
 export type HostDownloadTarget = {
   path: string;
   done: (outcome: HostDownloadOutcome) => void;
@@ -400,7 +397,6 @@ export type HostBrowserPage = {
   setFiles: (target: number, paths: readonly string[]) => Promise<void>;
   /** A real left click at a point of the viewport. */
   click: (point: { x: number; y: number }) => Promise<void>;
-  /** Move the pointer onto a visible point without clicking. */
   hover: (point: { x: number; y: number }) => Promise<void>;
   /** Drag between elements sharing the viewport; false when either is absent. */
   drag: (source: number, destination: number) => Promise<boolean>;

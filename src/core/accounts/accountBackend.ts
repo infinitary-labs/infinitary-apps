@@ -74,7 +74,6 @@ export type AccountRef = {
 /** What signing an account out did to the login its vendor's client keeps for the whole macOS user. */
 export type LogoutOutcome = { login: MachineLoginOutcome };
 
-/** What a backend needs to run one account's login, keyed to its own store. */
 export type AccountLoginRequest = AccountRef & {
   type: "oauth" | "api_key";
   bridge: AuthInteractionBridge;

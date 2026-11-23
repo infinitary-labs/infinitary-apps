@@ -359,7 +359,6 @@ export function filesCommand(asks: TaskAsks): TaskFiles {
   });
 }
 
-/** The integrations command here: each list, show and call asked of the home within its deadline. */
 export function integrationsCommand(asks: TaskAsks): TaskIntegrations {
   return integrationsAskedOfHome((channel, input, signal) =>
     asks.withDeadline(

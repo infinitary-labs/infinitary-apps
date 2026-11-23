@@ -27,7 +27,6 @@ import type { TimelineReading } from "@shared/timeline";
  * beside the captain's words and a crewmate's, which stay as written.
  */
 
-/** A card on the stage, before the fields a card below sets. */
 function stageCard(id: string): Card {
   return {
     id,
@@ -172,7 +171,6 @@ export function ownTimeline(): TimelineReading[] {
   return readings;
 }
 
-/** The feed line of the captain's own turn, as the core draws it. */
 function captainLine(text: string): Omit<FeedLine, "at"> {
   const line = feedLineFrom({ type: "user_turn", text });
   if (!line) throw new Error("The captain's turn draws no feed line.");

@@ -3,10 +3,8 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The first mate's one card. */
 const CARD_ID = "press-input";
 
-/** What the press-input test's story reads back: the card's words, its body and its choices. */
 type Input = { title: string; body: string; actions: CardAction[] };
 
 /** The card's thread, read when it shows. */

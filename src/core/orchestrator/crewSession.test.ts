@@ -225,11 +225,8 @@ it("stamps a crewmate's conversation with the prompt and tools it serves, the sa
   const first = open();
   const stamp = stampOf(first);
   expect(stamp).toEqual(crewmateContractStamp(first.instructions.base, first.tools));
-  // Each tool the conversation is offered has its own sha.
   expect(Object.keys(stamp?.tools ?? {})).toEqual(first.tools.map((tool) => tool.name));
-  // A reopen of the same task on the same build serves the same contract.
   expect(stampOf(open())).toEqual(stamp);
-  // A task that loses a tool keeps the shas of the tools it still has.
   const { onOpenChange: _openChange, ...fewer } = every;
   const shrunk = stampOf(open(fewer));
   expect(shrunk?.tools?.open_change).toBeUndefined();
@@ -237,7 +234,6 @@ it("stamps a crewmate's conversation with the prompt and tools it serves, the sa
   for (const [name, sha] of Object.entries(shrunk?.tools ?? {})) {
     expect(stamp?.tools?.[name]).toBe(sha);
   }
-  // Changed words move the prompt's sha and the changed tool's own.
   const reworded = first.tools.map((tool) =>
     tool.name === "emit_card" ? { ...tool, description: `${tool.description} Reworded.` } : tool,
   );
@@ -262,7 +258,6 @@ it("tells a crewmate in a new conversation why, where its record is, and its bri
   expect(renewed).toContain("Goal: count the rivets.");
   expect(next).toBe("Goal: count the rivets.");
   expect(renewed.endsWith("The message that brought you back follows.")).toBe(true);
-  // Each cause names itself; a record without a brief or a saved copy says less.
   const personal = crewmateRestartText({
     restart: { from: "old", changed: ["instructions"] },
     taskKey: "FI3-7",

@@ -67,7 +67,6 @@ async function debuggingPort(
   return port;
 }
 
-/** The app's own window: the page whose bridge answers. */
 async function appWindow(browser: Browser): Promise<Page> {
   let found: Page | undefined;
   await expect
@@ -90,7 +89,6 @@ async function appWindow(browser: Browser): Promise<Page> {
   return found as Page;
 }
 
-/** The home folder a run gives the app: its own on Linux; on Windows the profile's too. */
 function homeEnv(homeDir: string): Record<string, string> {
   if (process.platform === "win32") {
     // %APPDATA% and %LOCALAPPDATA% stay the person's: the per-user Git for
@@ -192,7 +190,6 @@ export async function launchInstalled(
   }
 }
 
-/** One process of the installed app, as the system's process table reads it. */
 export type AppProcess = {
   readonly pid: number;
   readonly name: string;

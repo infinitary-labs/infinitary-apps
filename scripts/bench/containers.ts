@@ -23,7 +23,6 @@ export type Mount = { host: string; container: string };
 
 export type ContainerResult = { code: number; stdout: string; stderr: string };
 
-/** Runs the `container` CLI to completion, capturing its output. */
 export function containerCli(args: string[], input?: string | Buffer): ContainerResult {
   const result = spawnSync("container", args, {
     input,
@@ -48,7 +47,6 @@ type ContainerRow = {
   configuration: { labels?: Record<string, string> };
 };
 
-/** Every container this tooling started, running or not, by id. */
 export function benchContainers(): { id: string; state: string; role: string }[] {
   const rows = JSON.parse(must(["ls", "--all", "--format", "json"])) as ContainerRow[];
   return rows
@@ -163,10 +161,6 @@ export function execIn(opts: {
     child.stdin.end(opts.input ?? undefined);
   });
 }
-
-// ---------------------------------------------------------------------------
-// Images
-// ---------------------------------------------------------------------------
 
 export function localImages(): Set<string> {
   const rows = JSON.parse(must(["image", "ls", "--format", "json"])) as {

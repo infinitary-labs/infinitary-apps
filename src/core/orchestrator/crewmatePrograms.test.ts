@@ -69,13 +69,11 @@ describe("a crewmate's start_program (INF-3022)", () => {
     await vi.waitFor(() => expect(sessions[0]?.promptCalls).toHaveLength(1), WAIT);
     const origin = sessions[0] as FakeCrewmate;
     const spec = h.specs[0];
-    /** The crewmate's turn ends. */
     const endTurn = async () => {
       origin.emit({ type: "turn_end", taskId });
       origin.finishPrompt();
       await tick();
     };
-    /** What the crewmate heard after its first prompt: later prompts and steers. */
     const heard = () => [
       ...origin.promptCalls.slice(1),
       ...origin.steer.mock.calls.map((call) => String(call[0])),

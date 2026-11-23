@@ -60,10 +60,6 @@ afterEach(async () => {
   await Promise.all(stores.splice(0).map((store) => store.flushed()));
 });
 
-/**
- * A throwaway HOME with the boxed client, its own stub API, and Claude's
- * factory over it on a clock moved by hand.
- */
 async function boxedClaude() {
   const api = await startStubApi((body) => JSON.stringify(body.system ?? "").includes(INSTRUCTION));
   apis.push(api);
@@ -96,7 +92,6 @@ function stopTheClient(): number {
   return client;
 }
 
-/** The run log's trace of one close: how long after the stop it came, and whether the client still ran. */
 function traceClose(name: string, client: number, stoppedAt: number): void {
   console.info(
     JSON.stringify({

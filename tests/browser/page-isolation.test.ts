@@ -10,7 +10,6 @@ import { freshPage } from "./freshPage";
  * cookies and motion setting reached the next.
  */
 
-/** What a file can keep on the page, read as the window would find it. */
 function kept() {
   return {
     localStorage: localStorage.length,

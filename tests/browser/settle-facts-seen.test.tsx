@@ -21,7 +21,6 @@ const TITLE = "The meter test reads after the write";
 const MERGE = "Merge";
 const LINES = { added: 12, deleted: 3 };
 
-/** The one card a seeded home lists. */
 function listedCard(home: Awaited<ReturnType<typeof seededHome>>): Card {
   const listed = home["inf:cards:list"];
   if (!Array.isArray(listed) || listed.length !== 1)

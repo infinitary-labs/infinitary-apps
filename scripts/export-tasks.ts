@@ -77,7 +77,6 @@ export type MainDeps = {
   loadRecords: () => Promise<{ records: TaskRecordsModule; close?: () => Promise<void> }>;
 };
 
-/** The CLI's own loader: the core through a Vite module runner. */
 export async function loadRecordsThroughVite(): ReturnType<MainDeps["loadRecords"]> {
   const runner = await openModuleRunner();
   try {

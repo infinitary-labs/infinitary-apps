@@ -10,7 +10,6 @@ import { useShellStore } from "../app/store";
  * list both read (docs/ambient-music.md), so the two never differ.
  */
 
-/** Each ambient style's name and one line on how it sounds. */
 export const STYLE_WORDS: Record<AmbientStyle, { name: () => string; description: () => string }> =
   {
     "deep-drift": {
@@ -55,7 +54,6 @@ export const STYLE_WORDS: Record<AmbientStyle, { name: () => string; description
     },
   };
 
-/** The styles in the picker, under the four kinds of journey they come from. */
 export const STYLE_GROUPS: [() => string, AmbientStyle[]][] = [
   [m.settingsSoundStyleGroupSpace, ["star-cruise", "deep-drift", "cold-sleep"]],
   [m.settingsSoundStyleGroupPirate, ["quiet-cove", "tavern-embers", "moonlit-deck"]],

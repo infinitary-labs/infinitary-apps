@@ -160,7 +160,6 @@ export type BrowsersCore = {
   readonly stopped: Map<string, string>;
   /** Task browsers this Mac runs at once. */
   readonly max: number;
-  /** Runs `fn` after `ms` and answers its cancel. */
   readonly timer: (ms: number, fn: () => void) => () => void;
   /** The last ref book a task's browsers numbered in this run, or 0. */
   lastBook(taskId: string): number;

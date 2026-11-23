@@ -14,7 +14,6 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
 export const FREEZE_MERGE_MARKER = "offer the gauge fix with an install after";
 export const FREEZE_MERGE_TITLE = "fix: the gauge reads on time";
 
-/** The action the captain takes once the gauge fix merges. */
 export const FREEZE_MERGE_ACTION = {
   id: "install-on-the-work-computer",
   target: "the work computer",

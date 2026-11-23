@@ -10,7 +10,6 @@ import { escapeCardText } from "./cardText";
  */
 export type RequiredActionProvenance = { filedFrom: (sourceId: string) => string };
 
-/** The filing words every required-action card shows: the source task's key, else its id. */
 export function requiredActionProvenance(
   tasks: Pick<TaskService, "get">,
 ): RequiredActionProvenance {
@@ -87,7 +86,6 @@ export function requiredActionCard(
   };
 }
 
-/** The filing and each correction, in the card's muted small print. */
 function provenanceLines(
   filedFrom: string,
   corrections: NonNullable<CaptainAction["requirements"][number]["corrections"]>,

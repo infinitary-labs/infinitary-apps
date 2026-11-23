@@ -55,7 +55,6 @@ export const TOP: WindowAsk = { kind: "top" };
 /** How much of a picture's reason the captain's timeline line quotes. */
 const CAPTURE_REASON_SHOWN = 120;
 
-/** A line of the outline that names a control's ref. */
 const REF_IN_OUTLINE = new RegExp(` \\[${REF_PATTERN}\\]`);
 
 /**
@@ -233,7 +232,6 @@ function openedWords(url: URL, site: string | undefined): string {
   return `opened ${url.host}${where}`;
 }
 
-/** One page as the crewmate reads it: its title and address. */
 function entryLine(browser: Browser, entry: PageEntry): string {
   const title = titleOf(browser, entry);
   return `${title ? `${quoted(title)} at ` : ""}${shown(browser, entry.page.url())}`;
@@ -564,7 +562,6 @@ export class CrewmateCommands {
             : from
               ? `read from line ${from}`
               : "read the page";
-    // Which part of the page the answer shows: around the words, from a line, or the top.
     const full = input.full === true ? { full: true as const } : {};
     const asked: WindowAsk = find
       ? { kind: "find", words: find, ...(from ? { from } : {}) }
@@ -724,7 +721,6 @@ export class CrewmateCommands {
     };
   }
 
-  /** Every page the browser holds, as the crewmate reads their addresses. */
   async pages(taskId: string): Promise<BrowserAnswer> {
     const browser = this.core.browsers.get(taskId);
     if (!browser) return this.noBrowser(taskId);

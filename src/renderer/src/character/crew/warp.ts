@@ -62,7 +62,6 @@ export class CrewWarp {
     else this.variant = null;
   }
 
-  /** The warp this frame, or null when the crew are on their own. */
   frame(now: number): WarpFrame | null {
     const variant = this.variant;
     if (!variant) return null;
@@ -94,7 +93,6 @@ export class CrewWarp {
 /** The one warp the home stage shares: the character writes it, the orbit and the crew canvases read it. */
 export const crewWarp = new CrewWarp();
 
-/** Points in a rider's light trail. */
 const TRAIL_POINTS = 6;
 
 /**

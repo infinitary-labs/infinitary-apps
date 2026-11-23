@@ -12,7 +12,6 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
  */
 export const CONTINUE_CHANGE_PROMPT_MARKER = "open the staged meter fix then carry on";
 export const CONTINUE_CHANGE_TITLE = "Continue: check the landed meter";
-/** The proposed change this crewmate opens: its title and body. */
 export const MOCK_CONTINUE_CHANGE = {
   title: "fix: stage the meter",
   body: "## Intent\nStage the meter.",

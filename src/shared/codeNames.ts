@@ -31,13 +31,10 @@ export const OWN_IDENTITY: Spelling = "inf";
 /** The spelling every version reads: a version from before the rename knows only it. */
 export const FIRST_SPELLING: Spelling = "fm";
 
-/** Each spelling's long form, where a name spells the product out. */
 export const LONG_SPELLING: Readonly<Record<Spelling, string>> = {
   fm: "firstmate",
   inf: "infinitary",
 };
-
-// --- the connection ---------------------------------------------------------
 
 /**
  * Names that keep one spelling for good: the orders a home of any version
@@ -68,7 +65,6 @@ export function channelIn(channel: string, spelling: Spelling): string {
   return FROZEN_CHANNELS.has(renamed) ? channel : renamed;
 }
 
-/** A channel as this build knows it, whichever spelling the other side wrote. */
 export function ownChannel(channel: string): string {
   return channelIn(channel, OWN_SPELLING);
 }
@@ -92,8 +88,6 @@ export function spellingFor(
   return (peerReads ?? [FIRST_SPELLING]).includes(speaks) ? speaks : FIRST_SPELLING;
 }
 
-// --- card hooks -------------------------------------------------------------
-
 /** A card hook's attribute in every spelling, this build's first: `data-inf-action`, `data-fm-action`. */
 export function hookAttributes(name: string): string[] {
   return [OWN_SPELLING, ...SPELLINGS.filter((spelling) => spelling !== OWN_SPELLING)].map(
@@ -101,7 +95,6 @@ export function hookAttributes(name: string): string[] {
   );
 }
 
-/** Whether an element's attributes carry the hook in any spelling. */
 export function hasHook(
   attribs: Readonly<Record<string, string>> | undefined,
   name: string,
@@ -109,7 +102,6 @@ export function hasHook(
   return hookValue(attribs, name) !== undefined;
 }
 
-/** The hook's value on an element, in this build's spelling first. */
 export function hookValue(
   attribs: Readonly<Record<string, string>> | undefined,
   name: string,
@@ -120,7 +112,6 @@ export function hookValue(
   return undefined;
 }
 
-/** A CSS selector matching the hook in any spelling. */
 export function hookSelector(name: string): string {
   return hookAttributes(name)
     .map((attribute) => `[${attribute}]`)
@@ -132,8 +123,6 @@ export function hasHookClass(classes: string | undefined, name: string): boolean
   const tokens = (classes ?? "").split(/\s+/);
   return SPELLINGS.some((spelling) => tokens.includes(`${spelling}-${name}`));
 }
-
-// --- panel imports ----------------------------------------------------------
 
 /**
  * A host module a panel imports, as this build names it: `@firstmate/ui`
@@ -147,8 +136,6 @@ export function ownHostModule(specifier: string): string {
   }
   return specifier;
 }
-
-// --- the app as a system knows it -------------------------------------------
 
 /**
  * Each spelling's app as a system knows it: its Mac bundle id, and its Mac
@@ -206,7 +193,6 @@ export function workLabels(flavor: BuildFlavor): string[] {
   );
 }
 
-/** Which spelling's Mac app a bundle is for this flavor, by its file name (`Infinitary.app`). */
 export function spellingOfMacApp(bundleName: string, flavor: BuildFlavor): Spelling | undefined {
   return SPELLINGS.find((spelling) => `${APP_IDENTITIES[spelling].app[flavor]}.app` === bundleName);
 }

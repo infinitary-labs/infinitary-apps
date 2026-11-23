@@ -19,7 +19,6 @@ import { hostEnv } from "../hostEnv";
  * this one.
  */
 
-/** macOS's own log reader. */
 export const SYSTEM_LOG = "/usr/bin/log";
 
 /** The service behind "access data from other apps" (`NSAppDataUsageDescription`). */
@@ -34,7 +33,6 @@ export const PRIVACY_LOG_ARGS = [
   'subsystem == "com.apple.TCC" AND category == "access" AND eventMessage BEGINSWITH "AUTHREQ_"',
 ] as const;
 
-/** One request line, as the watch reads it; anything else is not one. */
 export type PrivacyLogLine =
   | { kind: "context"; request: string; service: string }
   | { kind: "attribution"; request: string; responsible: number; accessing: number }
@@ -43,7 +41,6 @@ export type PrivacyLogLine =
 /** macOS's answer to a request: its `authValue`, 0 refused and 2 allowed. */
 export type PrivacyAnswer = "allowed" | "refused" | "other";
 
-/** The message of one ndjson log line, or nothing when the line is not one. */
 function messageOf(line: string): string | undefined {
   if (!line.startsWith("{")) return undefined;
   try {
@@ -54,7 +51,6 @@ function messageOf(line: string): string | undefined {
   }
 }
 
-/** One line of `log stream --style ndjson` as a request line, or nothing. */
 export function readPrivacyLogLine(line: string): PrivacyLogLine | undefined {
   const message = messageOf(line.trim());
   if (!message) return undefined;
@@ -99,7 +95,6 @@ export const PRIVACY_WORDS = {
     "The app stopped reading macOS's privacy log, so it cannot tell when macOS has your answer. The search goes on once you answer.",
 } as const;
 
-/** What the watch reads of a process: its parent and its working folder. */
 export type ProcessReader = {
   parent(pid: number): Promise<number | undefined>;
   cwd(pid: number): Promise<string | undefined>;

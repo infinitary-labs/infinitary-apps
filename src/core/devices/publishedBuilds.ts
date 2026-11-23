@@ -65,7 +65,6 @@ export type PublishedBuildsOptions = {
   fetchImpl?: typeof fetch;
   /** The builds file; the tap's own unless a test stands one in. */
   buildsUrl?: string;
-  /** The largest build it takes. */
   maxBytes?: number;
 };
 
@@ -190,7 +189,6 @@ export class PublishedBuilds {
     return null;
   }
 
-  /** The tap's JSON at `url`; null when it has none there. */
   private async readJson(
     url: string,
     signal?: AbortSignal,
@@ -298,7 +296,6 @@ function readRecorded(file: string): string | null {
   }
 }
 
-/** The SHA-256 of the file at `path`, or null when there is none. */
 export async function sha256Of(path: string): Promise<string | null> {
   try {
     if (!statSync(path).isFile()) return null;

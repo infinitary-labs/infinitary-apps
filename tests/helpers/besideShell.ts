@@ -180,7 +180,6 @@ export function besideShell(
   const restartWindows: Mock<() => void> = vi.fn();
   const openPage: Mock<(url: string) => Promise<void>> = vi.fn(async (_url: string) => {});
   const pushes: { channel: string; payload: unknown }[] = [];
-  /** What the command's records say now, and which start entry is in place. */
   const command = {
     // The run its agent started, whose own reading of force stops runs.
     records:

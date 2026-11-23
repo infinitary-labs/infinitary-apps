@@ -69,7 +69,6 @@ import { writeStartedLine } from "./startedFromCard";
  * lends them (`FirstmateToolHost`).
  */
 
-/** What the tools reach of the first mate agent: its options, the running turn and its captures. */
 export type FirstmateToolHost = FirstmateTaskToolsHost & {
   readonly decisions: DecisionCapture;
   readonly delivery: AnswerDeliveryCheck;
@@ -136,7 +135,6 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
    */
   const steerTie = (response?: import("@shared/crewResponses").AskedResponsePolicy) =>
     askFor(response) ? ("tie" as const) : undefined;
-  /** A first mate steer's source, read from this turn as it stands. */
   const steerSource = (response?: import("@shared/crewResponses").AskedResponsePolicy) => ({
     via: "tool" as const,
     decision: host.decisions.current() ?? null,
@@ -152,7 +150,6 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     captainWords: host.turn.origin === "captain-turn",
     ...steeredPictures(host.asks),
   });
-  /** A steer the first mate's tool accepted. */
   const steered = (taskId: string) => {
     host.turn.delivered = true;
     // A steer the app saved because the crewmate's account is held counts
@@ -888,7 +885,6 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
   linkRelated(host, recordId, card.relatedTaskIds ?? []);
 }
 
-/** Files the card's record and attaches the turn's ask to it; returns the record's id. */
 function fileCard(host: FirstmateToolHost, card: EmittedCard, cardId: string): string {
   const tasks = host.options.tasks;
   const decision = card.actions.length > 0;
@@ -1031,7 +1027,6 @@ function steeredPictures(asks: AskCapture): {
 
 type OperationDescription = { title: string; repoId?: string | null; projectId?: string };
 
-/** The operation row a personalize call files, titled by what it did. */
 function personalizeTitle(params: Record<string, unknown>): string {
   const action = stringParam(params.action);
   const surface = stringParam(params.surface);

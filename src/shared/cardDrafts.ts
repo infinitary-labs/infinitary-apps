@@ -30,9 +30,7 @@ export const cardDraftSchema = z.strictObject({
   revision: z.number().int().nonnegative(),
   /** The body's answers that a window changed, one per question name. */
   answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS),
-  /** The words in the card's own field; empty for none. */
   words: z.string().max(CARD_REPLY_MAX_CHARS),
-  /** The notes pointing at parts of the card, waiting to go with a reply. */
   notes: cardNotesSchema,
 });
 export type CardDraft = z.infer<typeof cardDraftSchema>;
@@ -79,7 +77,6 @@ export const cardDraftChangedSchema = z.union([
 ]);
 export type CardDraftChanged = z.infer<typeof cardDraftChangedSchema>;
 
-/** A card with nothing in its draft yet. */
 export function emptyDraft(cardId: string): CardDraft {
   return { cardId, revision: 0, answers: [], words: "", notes: [] };
 }

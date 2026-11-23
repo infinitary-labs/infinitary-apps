@@ -52,7 +52,6 @@ export function usageTab(page: Page): {
     models: section.locator("[data-usage-model]"),
     model: (id) => section.locator(`[data-usage-model="${id}"]`),
     detail: section.locator("[data-usage-detail]"),
-    // The details' one button closes them.
     close: section.locator("[data-usage-detail]").getByRole("button"),
     where: section.locator(
       '[data-usage-where="selection"] :is([data-usage-place], [data-usage-project])',
@@ -88,7 +87,6 @@ export function usageSummary(page: Page, query: UsageQuery): Promise<UsageSummar
   ) as Promise<UsageSummary>;
 }
 
-/** Whether focus rests on a model's row. */
 export function focusOnModel(page: Page): Promise<string | null> {
   return page.evaluate(() => document.activeElement?.getAttribute("data-usage-model") ?? null);
 }

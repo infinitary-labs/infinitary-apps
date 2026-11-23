@@ -247,7 +247,6 @@ describe("the task graph (R1)", () => {
       { keepAlways: true },
     );
 
-    // The lineage edge and the one feed line.
     expect(tasks.graph.discoveredOrigins(taskId).map((row) => row.id)).toContain(previous.id);
     const timeline = tasks.timeline(previous.id);
     const escalated = timeline.find((event) => event.kind === "escalated");
@@ -263,7 +262,6 @@ describe("the task graph (R1)", () => {
     expect(taskFeedLine(closed as TaskRecord, escalated as TaskEvent)?.text).toBe(
       `Moved to a stronger model: Hard; continues as ${fresh?.key}`,
     );
-    // The fresh row's own escalated event stays off the feed.
     expect(tasks.timeline(taskId).find((event) => event.kind === "escalated")).toMatchObject({
       feed: false,
       data: { escalated_from: previous.key },
@@ -304,7 +302,6 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks } = setup(crewmate, {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
     });
-    // The first attempt the lineage escalated from.
     const first = seedTask(tasks, {
       id: "attempt1",
       title: "First go",
@@ -742,7 +739,6 @@ describe("the task graph (R1)", () => {
     const wake = ops.find((line) => line.includes("needs a premium model"));
     expect(wake).toContain("the default model could serve it now");
 
-    // The explicit go-ahead starts it despite the shortage.
     expect(await supervisor.starts.startQueuedNow(taskId)).toContain("is starting.");
     await tick();
     expect(sessions.open).toHaveBeenCalled();
@@ -1041,12 +1037,10 @@ describe("background job results (R2)", () => {
       intent: intentOf("long build"),
     });
     await tick();
-    // Twenty-one quiet minutes, but its build is running: no escalation.
     supervisor.watch.checkQuietTasks(Date.now() + 21 * 60_000);
     await tick();
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
-    // The job ended and the turn stays quiet: now it escalates, as a wake.
     jobRunning = false;
     supervisor.watch.checkQuietTasks(Date.now() + 22 * 60_000);
     await tick();

@@ -25,15 +25,9 @@ function writeGifDemoCalls(): ScriptedCall[] {
   ]);
 }
 
-/**
- * The GIF demo crewmate: write the files, offer the card with a GIF that
- * loops, then with the single-play one once the host refused it.
- */
 export const gifDemoCard: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
-    // The GIF demo crewmate: write the files, offer the card with a GIF
-    // that loops, then with the single-play one once the host refused it.
     if (!isFirstmate && latestUserTail.includes(GIF_DEMO_PROMPT_MARKER) && wantsStream) {
       if (!hasToolResults) {
         return { calls: [...writeChangePicturesCalls(), ...writeGifDemoCalls()] };

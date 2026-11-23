@@ -124,7 +124,6 @@ describe("a sign-in on a computer that runs work", () => {
 
   it("knows a link sends the browser back to the Mac it opens on by any address there", () => {
     expect(returnsToLoopback(CODEX_LINK)).toBe(true);
-    // OpenRouter's, back to a port of its own.
     expect(
       returnsToLoopback(
         "https://openrouter.ai/auth?callback_url=http%3A%2F%2F127.0.0.1%3A53121%2Foauth%2Fcallback%2Fu1&code_challenge=c",

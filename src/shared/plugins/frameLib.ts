@@ -88,7 +88,6 @@ export function builtinPanelFile(id: BuiltinFramePanel, view?: string): string {
 /** File -> `sha256-<base64>`, every file the lib serves and nothing else. */
 export type FrameLibPins = Readonly<Record<string, string>>;
 
-/** A lib file's URL. */
 export function frameLibUrl(file: string): string {
   return `${APP_FRAME_SCHEME}://${FRAME_LIB_HOST}/${file}`;
 }

@@ -137,7 +137,6 @@ test("a project recorded by keys as running no checks shows its merge card at on
     expect(branch).not.toBe("");
     const pushed = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
 
-    // The card offers the merge at once: no checks, and Merge the pull request.
     const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));
     await expect(facts.checks).toHaveText(CHECKS_ABSENT_WORDS);
     const merge = page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true });
@@ -151,7 +150,6 @@ test("a project recorded by keys as running no checks shows its merge card at on
     expect(delivery()?.checks).toMatchObject({ headSha: pushed, items: [], absenceDeclared: true });
     expect(delivery()?.ciWatch).toBeUndefined();
 
-    // One key merges the pushed version.
     await pressKey(merge, "Enter");
     await expect
       .poll(() => github.merges().map(({ number, sha }) => ({ number, sha })), { timeout: 30_000 })

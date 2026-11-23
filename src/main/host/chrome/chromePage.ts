@@ -65,7 +65,6 @@ function outcomeOf(wait: LoadWait): HostLoadOutcome {
   return code ? { ok: false, code } : { ok: true };
 }
 
-/** What the engine gives a page: its connection, its session and its browser's policy. */
 export type ChromePageInput = {
   pipe: CdpPipe;
   sessionId: string;
@@ -85,7 +84,6 @@ export type ChromePageInput = {
   close: () => void;
 };
 
-/** The engine's hold on a page: the page itself, and where its events and changes go. */
 export type ChromePage = {
   page: HostBrowserPage;
   /** An event from this page's session or a frame or worker attached under it. */
@@ -277,7 +275,6 @@ export async function driveChromePage(input: ChromePageInput): Promise<ChromePag
       authRequired(params, from);
       return;
     }
-    // The page's own session is no frame's.
     const frame = from === sessionId ? undefined : from;
     if (method === "Target.attachedToTarget") {
       // A frame in another process, or a worker: its requests are asked of

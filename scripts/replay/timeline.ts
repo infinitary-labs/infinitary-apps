@@ -225,7 +225,6 @@ export type RecordedTimeline = {
   threadReplies: number;
 };
 
-/** Every input the captain or the outside world gave, in recorded order. */
 export function recordedTimeline(recording: {
   captainTurns: readonly RecordedFirstmateTurn[];
   opTurns: readonly RecordedFirstmateTurn[];

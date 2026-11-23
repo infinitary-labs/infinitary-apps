@@ -183,7 +183,6 @@ export const cardDemoSchema = z.strictObject({
   height: z.number().int().positive(),
   durationMs: z.number().int().positive(),
   bytes: z.number().int().positive(),
-  /** The SHA-256 of the bytes the host verified and copied, in hex. */
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 export type CardDemo = z.infer<typeof cardDemoSchema>;
@@ -281,7 +280,6 @@ export type RiskLevel = (typeof RISK_LEVELS)[number];
 /** The longest line a crewmate may give for one dimension. */
 export const RISK_WHY_MAX = 100;
 
-/** One dimension as the crewmate declares it: its level and one line why. */
 export const riskRatingSchema = z.strictObject({
   level: z.enum(RISK_LEVELS),
   why: z.string().min(1).max(RISK_WHY_MAX),
@@ -430,7 +428,6 @@ export function mergeClosesLine(
   return words ? mergeClosesMarkup(words) : undefined;
 }
 
-/** The merge line as a card's body carries it. */
 function mergeClosesMarkup(words: string): string {
   return `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${words}</p>`;
 }
@@ -593,7 +590,6 @@ export const PAST_CARD_WORDS_LEAD = m.cardPastSentLead();
 export const CARD_FILES_FIRST = "Send the file as a reply first";
 /** A reply is one message, not a document: longer is refused at the boundary. */
 export const CARD_REPLY_MAX_CHARS = 4_000;
-/** The most a choice carries from the field: as much as a reply. */
 export const ANYTHING_ELSE_MAX_CHARS = CARD_REPLY_MAX_CHARS;
 
 /**
@@ -640,7 +636,6 @@ export function withAnythingElse(answers: readonly CardAnswer[], words: string):
     : rest;
 }
 
-/** What the card's field sent with a choice, if it sent anything. */
 export function anythingElseOf(answers: readonly CardAnswer[] | undefined): string | undefined {
   return answers?.find((answer) => answer.name === ANYTHING_ELSE_ANSWER)?.written;
 }
@@ -696,7 +691,6 @@ export const cardQuestionOptionSchema = z.strictObject({
   value: z.string().max(CARD_ANSWER_TEXT_MAX),
   /** The words bound to the option, when any are. */
   label: z.string().max(CARD_QUESTION_LABEL_MAX).nullable(),
-  /** Checked or selected as the author wrote the body. */
   authoredDefault: z.boolean(),
   disabled: z.boolean(),
   /** Laid out with no box: in the body, but not on screen. */
@@ -873,7 +867,6 @@ export const cardSchema = z.strictObject({
   /** Higher shows first in the stack. */
   priority: z.number(),
   title: z.string(),
-  /** Mono metadata line: relative time, crewmate ref. */
   meta: z.string(),
   /**
    * The model its author ran on, as a label (a crewmate's card). The chrome
@@ -1148,7 +1141,6 @@ export const cardMutationSchema = z.object({
     .optional(),
   /** A closed card's dated note. */
   clarification: z.literal(true).optional(),
-  /** What the write kept as it was. */
   unchanged: z.array(z.string()).optional(),
   display: z.enum(["available", "held"]),
   responseId: z.string().optional(),
@@ -1302,7 +1294,6 @@ export const TURN_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 /** Durable copy of a turn whose images the inbox cannot keep. */
 export const ATTACHMENTS_DROPPED_NOTE = "[image attachments could not be kept - ask to resend]";
 
-/** The word a card is spoken of by ("decision", "note") from its actions alone. */
 export function cardWord(card: { actions: readonly unknown[] }): "decision" | "note" {
   return card.actions.length > 0 ? "decision" : "note";
 }
@@ -1438,7 +1429,6 @@ export const shellEffectSchema = z.object({
   signInOn: signInOnSchema.optional(),
   /** Settings -> Projects starts that computer's own sign-in where projects live on arrival. */
   forgeSignInOn: forgeSignInOnSchema.optional(),
-  /** The section, the item it shows and the phone's link, as `settingsPlaceShape` says. */
   ...settingsPlaceShape,
 });
 export type ShellEffect = z.infer<typeof shellEffectSchema>;

@@ -674,7 +674,6 @@ class PiRollingSession implements ModelSession {
     queue.messages = [...ahead, message, ...rest.filter((queued) => !this.firstSteers.has(queued))];
   }
 
-  /** The first steers still queued, taken out of Pi's queue in order. */
   private takeFirstSteers(): QueuedMessage[] {
     const queue = steeringQueue(this.session.agent);
     if (!queue) return [];

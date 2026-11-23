@@ -24,7 +24,6 @@ export const SIGNED_CARD_TITLE = "The Secrets test app is signed with your Devel
 export const SIGNED_CHOICE = { id: "noted", label: "Got it" } as const;
 const SIGNED_RECHECK = { id: "recheck", label: "Check the signatures again" } as const;
 
-/** What the crewmate is told when the captain allows, in the app's own words. */
 export const CONSENT_ALLOWED_STEER = renderWake({
   facts: {
     kind: "card-choice",
@@ -59,7 +58,6 @@ export const answerConsent: Scenario =
       };
     }
     if (!body.includes(ANSWER_CONSENT_MARKER)) return undefined;
-    // The captain allowed it: the crewmate signs and shows its answer.
     if (latestUserTail.includes(ALLOWED_IN_BODY)) {
       return {
         calls: [

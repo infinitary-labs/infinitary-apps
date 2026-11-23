@@ -65,7 +65,6 @@ describe("what a panel says on its rail", () => {
     await expect(frameRailAction("desk", true)("rail.show", "yes")).rejects.toThrow(
       "true or false",
     );
-    // Off its rail it may say why, in its own words; on it, there is no why.
     railProp("desk", false, true).show(false, "There are no tasks yet");
     expect(panelRail.get("desk")).toMatchObject({ shown: false, why: "There are no tasks yet" });
     await frameRailAction("desk", true)("rail.show", { shown: false, why: "Nothing here" });

@@ -28,7 +28,6 @@ function headerChecks(label, response) {
   ];
 }
 
-/** Where served first differs from built, and what the answer holds from there, for a failed check's detail. */
 function difference(served, built) {
   let at = 0;
   while (at < served.length && at < built.length && served[at] === built[at]) at++;
@@ -37,10 +36,8 @@ function difference(served, built) {
   return `${served.length} characters served, ${built.length} built; from character ${from} the answer holds: ${excerpt || "nothing"}`;
 }
 
-/** The pages checked, each with the file in dist/ it must arrive as. */
 export const BUILT_FILES = Object.freeze({ home: "index.html", inner: "install/index.html", notFound: "404.html" });
 
-/** The pages checked in a shipped language other than English, by its address segment, each with its built file. */
 export function languageFiles(segment) {
   return { [`${segment}:home`]: `${segment}/index.html`, [`${segment}:inner`]: `${segment}/install/index.html` };
 }

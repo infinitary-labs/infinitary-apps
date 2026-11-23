@@ -120,7 +120,6 @@ export async function buildFrameLib(root: string, outDir: string): Promise<Recor
   return pins;
 }
 
-/** Every file under `dir`, relative to it with forward slashes. */
 async function filesUnder(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { recursive: true, withFileTypes: true });
   return entries

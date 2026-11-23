@@ -59,7 +59,6 @@ export type JournalEntry =
 
 type Line = { seq: number; at: number; entry: JournalEntry; mac: string };
 
-/** One use as history shows it. */
 export type HistoryItem = {
   request: string;
   intent: string;

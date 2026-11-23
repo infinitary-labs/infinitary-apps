@@ -30,7 +30,6 @@ import { lookOnClose, TASK_CLOSED_EVENT, TASK_EVENTS_ID, withTaskEvents } from "
 
 fakeCrewTimersEachTest();
 
-/** The first mate's real update_task over this harness's supervisor and record. */
 function firstmateUpdateTask(harness: { supervisor: CrewSupervisor; tasks: TaskService }) {
   const delegate = firstmateTaskTools({
     options: { supervisor: harness.supervisor, tasks: harness.tasks },
@@ -77,12 +76,10 @@ describe("a hold an event ends sooner (INF-5145 part 2)", () => {
       filter: { task: run.key || run.id },
     };
     const until = harness.idleSince + minutes(6 * 60);
-    /** The task's rules that can still run. */
     const waiting = () =>
       scheduler
         .rules()
         .filter((rule) => rule.task === harness.taskId && rule.state !== "completed");
-    /** The run's task closes, and the rules waiting for it look at once. */
     const closeRun = async () => {
       tasks.close(run.id, { status: "done", reason: "finished", actor: "host" });
       await scheduler.settled();

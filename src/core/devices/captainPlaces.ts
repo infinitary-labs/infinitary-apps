@@ -19,7 +19,6 @@ const CAPTAIN_INPUT_CHANNELS = new Set<CoreInvokeChannel>([
   "inf:task:steer",
 ]);
 
-/** Whether a core request is the captain's own input (no actor is the captain). */
 export function isCaptainInput(
   channel: CoreInvokeChannel,
   actor: ActionActor | { kind: "device" } | undefined,

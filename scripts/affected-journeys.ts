@@ -205,7 +205,6 @@ export const FREEZE_JOURNEY = {
 /** A unit test beside the product, which no journey runs. */
 const isUnitTest = (file: string) => /\.test\.tsx?$/.test(file);
 
-/** Why the change runs the freeze journey, or undefined when it touches none of its paths. */
 export function freezeJourneyReason(changed: readonly string[]): string | undefined {
   const reaches = changed.filter(
     (file) =>
@@ -272,7 +271,6 @@ export function dataImportsOf(file: string, source: string): string[] {
   return found;
 }
 
-/** Every file a spec reaches through its imports, itself included. */
 export function closureOf(
   entry: string,
   read: (file: string) => string | undefined,
@@ -621,7 +619,6 @@ function git(args: string[]): string {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
 }
 
-/** What the selection reads: the changed paths, the source diff, the specs, and a file's text. */
 export type Change = {
   changed: readonly string[];
   sourceDiff: string;

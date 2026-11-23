@@ -29,7 +29,6 @@ export function panelRemovedLine(title: string, by: string | null): string {
   return `removed "${title}", a panel by ${by}`;
 }
 
-/** One of the captain's own panels, removed from the personal workspace. */
 export function personalPanelRemovedLine(title: string): string {
   return `${title} removed`;
 }

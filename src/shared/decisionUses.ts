@@ -164,7 +164,6 @@ export const decisionUseSwitchesSchema = z.record(
 );
 export type DecisionUseSwitches = z.infer<typeof decisionUseSwitchesSchema>;
 
-/** Whether the use's switch is on: its saved switch, or its kind's default. */
 export function decisionUseSwitchedOn(use: DecisionUse, switches: DecisionUseSwitches): boolean {
   if (use.kind === "always-on") return true;
   const saved = switches[use.id];

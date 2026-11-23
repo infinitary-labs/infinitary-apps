@@ -191,7 +191,6 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
   const [projects, setProjects] = useState<readonly PanelProject[] | null>(null);
   useEffect(() => reads.subscribe("tasks.board", (board) => setProjects(board.projects)), [reads]);
   const focusKey = focusedKeyOf(projects, view.focusedProjectId);
-  // The lines this window shows: under focus, the focused project's and those about no task.
   const lines = useMemo(
     () => (allLines === null ? null : linesInFocus(allLines, focusKey)),
     [allLines, focusKey],
@@ -241,7 +240,6 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
     [reads],
   );
 
-  // Collapsed, the header shows the newest line and its age, or quiet before the first.
   const newest = lines?.at(-1) ?? null;
   useEffect(() => {
     if (!rail || lines === null) return;
@@ -283,7 +281,6 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
       feed.toggleAttribute("data-feed-above", scroller.scrollTop > STICK_THRESHOLD_PX);
       feed.toggleAttribute("data-feed-below", !edges.current.atBottom());
     },
-    /** Scrolls to the newest line and remembers that this scroll is ours. */
     pin: () => {
       const scroller = scrollerRef.current;
       if (!scroller) return;

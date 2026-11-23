@@ -39,7 +39,6 @@ export function plainTaps(path: string, text: string): PlainTap[] {
   return taps;
 }
 
-/** What the check says about one plain tap. */
 export function tapProblem(tap: PlainTap): string {
   return `${tap.path}:${tap.line}: a plain XCTest tap skips tapOnPhone, which waits for its target and the screen inside it to hold still and reads whether the simulator delivered the touch; UIKit drops a touch while a sheet or an alert is still arriving. Send it through tapOnPhone (docs/ios.md)`;
 }

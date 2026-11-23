@@ -76,7 +76,6 @@
 [data-thread-settings-state] {
   color: var(--fg-3);
 }
-/* The narrowest thread stacks each key over its value. */
 @container (max-width: 250px) {
   [data-thread-settings-rows] {
     grid-template-columns: minmax(0, 1fr);

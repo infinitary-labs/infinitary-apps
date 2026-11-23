@@ -69,7 +69,6 @@ export function joinRecord(other: string, file: string): RecordJoin | undefined 
   return again.length > 0 ? "rejoined" : "continued";
 }
 
-/** A record's lines, the last one kept even when nothing ended it. */
 function linesOf(text: string): string[] {
   const lines = text.split("\n");
   if (lines.at(-1) === "") lines.pop();

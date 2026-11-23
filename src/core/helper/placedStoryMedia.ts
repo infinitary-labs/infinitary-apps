@@ -31,7 +31,6 @@ export async function sendPictures(
       { id: picture.id, extension, data: data.toString("base64") },
       signal,
     );
-    // A poster's recording follows it, a piece at a time.
     if (!picture.demo) continue;
     const { id, kind } = picture.demo;
     const recording = media.tasks.recording(media.task, id, kind);

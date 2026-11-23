@@ -38,7 +38,6 @@ export type AppearanceSlice = {
   /** Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md). */
   ambientMusic: boolean;
   ambientPaused: boolean;
-  /** Whether it keeps playing while nobody is at the computer, rather than pausing. */
   ambientPlaysWhenAway: boolean;
   ambientVolume: number;
   /**
@@ -114,7 +113,6 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
   );
 }
 
-/** No font chosen: every slot is Infinitary's own. */
 const NO_FONTS: FontChoices = {};
 /** No own style saved. */
 const NO_OWN_STYLES: SavedOwnStyle[] = [];

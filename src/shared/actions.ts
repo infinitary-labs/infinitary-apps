@@ -275,18 +275,15 @@ function integrationsBrief(view: IntegrationsView): Record<string, unknown>[] {
   }));
 }
 
-/** Whether a line is a multi-machine one (`multiMachine`). */
 export function isMultiMachineLine(line: Pick<ActionLine, "handover" | "multiMachine">): boolean {
   return line.handover === "devices" || line.multiMachine === true;
 }
-/** A card id's part from a device's or provider's id: lowercase words joined by dashes. */
 function cardSlug(id: string): string {
   return id
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
-/** The rule an automation action names by id; the refusal says why there is none. */
 function automationRule(current: unknown, id: unknown): AutomationRule {
   const list = current as AutomationList;
   if (list.state === "unavailable") throw new Error(list.reason);

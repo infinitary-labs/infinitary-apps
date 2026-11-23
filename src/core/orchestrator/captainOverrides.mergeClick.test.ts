@@ -77,7 +77,6 @@ describe("ordinary merge clicks are not general consent (INF-3284)", () => {
     expect(result.text).toContain(KEPT_APPROVAL_WORDS);
     expect(result.text).toContain(`waits on checks at ${h.authorization()?.waiting?.head}`);
     expect(result.text).not.toContain(softHoldWords("asks-first", "firstmate"));
-    // The refusal moved nothing: the approval still stands and nothing was sent.
     expect(h.authorization()).toMatchObject({ status: "standing", issuer: "captain" });
     expect(h.forge.sends).toBe(0);
   });

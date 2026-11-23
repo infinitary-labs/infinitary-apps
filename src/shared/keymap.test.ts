@@ -612,7 +612,6 @@ describe("presets", () => {
     expect(vim.keys).toEqual({});
     expect(legacyOffered(vim)).toBe(true);
     expect(keymapRefusal(vim, legacy)).toBeNull();
-    // Vim's own keys, with nothing changed: j moves down while not typing.
     expect(resolveBindings(vim)["move.down"]).toContainEqual({ key: "j", when: "not-typing" });
     const vimChanged = withKeys(vim, "move.down", [{ key: "n", when: "not-typing" }]);
     const back = withPreset(vimChanged, "legacy");
@@ -692,7 +691,6 @@ describe("tmux's prefix", () => {
     expect(bindings["settings.open"]).toEqual([{ ...ctrlA, second: { key: "," } }]);
     // ⌃B is Vim's page up again.
     expect(bindings["move.page-up"]).toContainEqual({ key: "b", ctrl: true, when: "not-typing" });
-    // Back to ⌃B saves no prefix at all.
     expect(withPrefix(moved, { key: "b", ctrl: true }).prefix).toBeUndefined();
   });
 

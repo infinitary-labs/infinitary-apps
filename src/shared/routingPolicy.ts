@@ -111,7 +111,6 @@ export const KINDS_BY_DELIVERABLE = {
   operation: [],
 } as const satisfies Record<Deliverable, ReadonlyArray<(typeof CLASSIFIABLE_KINDS)[number]>>;
 
-/** Whether a kind is one of the answer branch's. */
 export function isAnswerKind(kind: WorkKind | undefined): boolean {
   return (KINDS_BY_DELIVERABLE.answer as ReadonlyArray<string>).includes(kind ?? "");
 }
@@ -424,14 +423,12 @@ export const workShapeSchema = z.object({
     .optional(),
 });
 export type WorkShape = z.infer<typeof workShapeSchema>;
-/** The in-place facts on a work shape (`WorkShape.in_place`), either shape. */
 export type InPlaceWork = NonNullable<WorkShape["in_place"]>;
 /** The facts of a folder a merge left behind. */
 export type InPlaceFacts = Extract<InPlaceWork, { cause: unknown }>;
 /** The facts of a pull request an abandoned task could not close. */
 export type InPlacePull = Extract<InPlaceWork, { pull: unknown }>;
 
-/** A folder a merge left behind (`WorkShape.in_place`). */
 export function isFolderRepair(facts: InPlaceWork | undefined): facts is InPlaceFacts {
   return facts !== undefined && "cause" in facts;
 }
@@ -443,7 +440,6 @@ export function isFolderWork(
   return facts !== undefined && "folder" in facts;
 }
 
-/** A pull request an abandoned task could not close (`WorkShape.in_place`). */
 export function isPullRepair(facts: InPlaceWork | undefined): facts is InPlacePull {
   return facts !== undefined && "pull" in facts;
 }
@@ -688,7 +684,6 @@ const DEFAULT_ROUTING_POLICY_VALUE: RoutingPolicy = {
 
 export const DEFAULT_ROUTING_POLICY: RoutingPolicy = Object.freeze(DEFAULT_ROUTING_POLICY_VALUE);
 
-/** The tier a shape routes to, and the rule that said so. */
 export type TierDecision = {
   rule: RuleId;
   /**

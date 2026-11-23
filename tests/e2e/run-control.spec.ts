@@ -84,7 +84,6 @@ const RUN_NAME = "Mac mini";
 /** The seeded sign-in card's one button, named once where it goes in and where it is pressed. */
 const OPEN_SETTINGS_LABEL = "Open settings";
 
-/** A built-in Settings tab's name, read from the manifest that declares it. */
 function tabLabel(id: string): string {
   const section = builtinManifest.contributes.settingsSections.find((entry) => entry.id === id);
   if (!section) throw new Error(`No Settings section ${id}`);
@@ -118,7 +117,6 @@ function command(env: Record<string, string>, args: string[], entry = builtAppDi
   let error = "";
   let ready: () => void = () => {};
   let ended: (reason: Error) => void = () => {};
-  // Settled by the start line, or by the command ending before it, with what it said.
   const started = new Promise<void>((resolve, reject) => {
     ready = resolve;
     ended = reject;
@@ -169,7 +167,6 @@ function signInCard(data: string): void {
   }
 }
 
-/** The page the joined app's browser opened, recorded in its main process. */
 async function recordOpened(app: LaunchedApp["app"]): Promise<() => Promise<string[]>> {
   await app.evaluate(({ shell }) => {
     const opened: string[] = [];
@@ -194,7 +191,6 @@ async function joinWith(page: Page, link: string): Promise<void> {
   );
 }
 
-/** A card's button that opens Settings opens it on this computer. */
 async function cardOpensSettingsHere(page: Page): Promise<void> {
   await test.step("a card's Open settings button opens Intelligence here", async () => {
     await showCard(page, PROVIDER_SIGN_IN_TITLE);
@@ -221,11 +217,6 @@ const VIEW_RETURN_HOST = "127.0.0.2";
 /** On Linux any 127.x address is this computer's own; a Mac has only 127.0.0.1. */
 const RETURN_WAY: ReturnWay = process.platform === "linux" ? "caught" : "pasted";
 
-/**
- * A Google sign-in started on this computer opens here, its return comes
- * back here, caught or pasted, and the sign-in is kept where the first mate
- * lives.
- */
 async function googleSignInFromHere(
   { app, page }: LaunchedApp,
   opened: () => Promise<string[]>,
@@ -245,7 +236,6 @@ async function googleSignInFromHere(
     await expect.poll(async () => (await opened()).length, { timeout: 30_000 }).toBe(1);
     const [consent = ""] = await opened();
     expect(consent.startsWith(`${stand.base}/o/oauth2/v2/auth?`)).toBe(true);
-    // This computer's browser approves on Google's page, which sends it back to 127.0.0.1.
     const approved = await fetch(consent, { redirect: "manual" });
     const back = new URL(approved.headers.get("location") ?? "");
     expect(back.hostname).toBe("127.0.0.1");

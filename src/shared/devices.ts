@@ -174,7 +174,6 @@ export const dialAddressSchema = z.string().refine((text) => splitDialAddress(te
   message: "Expected host:port",
 });
 
-/** A dial address's host and port, or null when it is not one. */
 export function splitDialAddress(text: string): { host: string; port: number } | null {
   const match = /^(?:\[([^\]]+)\]|([^:[\]]+)):(\d{1,5})$/.exec(text);
   if (!match) return null;
@@ -1290,7 +1289,6 @@ export function deviceJoinedLine(joined: {
     : `${joined.name} joined your devices.${way}`;
 }
 
-/** Names in a sentence: "website", "website and api", "website, api and docs". */
 export function namesInWords(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
@@ -1311,7 +1309,6 @@ export function deviceLabel(device: {
     : device.name;
 }
 
-/** The sentence for the app open on a device, by how its version compares with this computer's. */
 function appVersionLine(device: { system?: DeviceSystem | undefined }, version: DeviceAppVersion) {
   if (isPhone(device))
     return version.app ? `Its app has version ${version.app}.` : "Its app did not say its version.";
@@ -1339,7 +1336,6 @@ export function sharedVersion(device: DeviceView): string | undefined {
   return work ?? app?.app;
 }
 
-/** The words of Remove, for a card and the feed. */
 export const deviceWords = {
   label: deviceLabel,
 

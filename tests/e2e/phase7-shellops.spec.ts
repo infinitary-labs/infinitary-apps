@@ -56,7 +56,6 @@ test("the purge control removes every task and its data", async () => {
     (db) => (db.prepare("SELECT COUNT(*) AS count FROM tasks").get() as { count: number }).count,
   );
   await page.getByRole("button", { name: "Settings" }).click();
-  // Two-step confirm: Purge arms, Confirm purge executes.
   await page.getByRole("button", { name: "Purge", exact: true }).click();
   await page.getByRole("button", { name: "Confirm purge" }).click();
   await expect(

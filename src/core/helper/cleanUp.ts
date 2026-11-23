@@ -187,7 +187,6 @@ export async function cleanUp(options: CleanUpOptions): Promise<CleanUpResult> {
     for (const file of serviceFiles(installed.service)) remove(file);
   if (installed.app && finished()) {
     remove(installed.app);
-    // The folder that held it, once nothing else is in it.
     try {
       if (readdirSync(dirname(installed.app)).length === 0) remove(dirname(installed.app));
     } catch {

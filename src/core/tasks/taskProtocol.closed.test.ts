@@ -80,7 +80,6 @@ describe("the board without its closed rows (INF-3750, option B)", () => {
     expect(lesser.closedLeftOut).toEqual({
       done: { [project ?? ""]: ["done-a"], [scratch ?? ""]: ["done-scratch"] },
     });
-    // The same rows and links as the whole board, with its counts and seq.
     for (const task of lesser.tasks) {
       expect(task).toEqual(whole.tasks.find((row) => row.id === task.id));
     }

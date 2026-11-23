@@ -12,7 +12,6 @@ export const ADOPT_REPO_PROMPT_MARKER = "manage my folder at ";
 export const CLONE_REPO_PROMPT_MARKER = "manage the remote repository at ";
 export const INIT_REPO_PROMPT_MARKER = "start a new project ";
 
-/** The first mate adopts, clones or starts the named project, and offers a sign-in when a clone needs one. */
 export const projectSetup: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

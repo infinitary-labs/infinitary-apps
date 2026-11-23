@@ -196,8 +196,6 @@ export class CardEmits {
       { author: "firstmate", meta: FIRSTMATE_CARD_META },
       this.host.now(),
     );
-    // How the host presents it: the welcome takes no reply and keeps the
-    // regular width its picture was drawn for.
     const built = {
       ...emitted,
       ...(presentation.replies === false ? { replies: false as const } : {}),
@@ -598,7 +596,6 @@ export class CardEmits {
     return id;
   }
 
-  /** What an own-card write did, read back for its writer (`OwnCardWrite`). */
   private noteWrite(
     written: OwnCardWrite,
     cardId: string,

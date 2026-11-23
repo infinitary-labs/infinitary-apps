@@ -87,7 +87,6 @@ test("signs in to Bitbucket with an API token, refuses a bad one, clones a liste
     const { page } = launched;
     await resizeWindow(launched.app, page, { width: 1280, height: 800 });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    // Add project offers Bitbucket beside GitHub and GitLab, and its sign-in opens Integrations.
     await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
     const add = page.locator("[data-add-project]");
     const choose = add.getByRole("button", { name: "Bitbucket repo", exact: true });
@@ -157,7 +156,6 @@ test("signs in to Bitbucket with an API token, refuses a bad one, clones a liste
           { host: "bitbucket.org", login: BITBUCKET_STUB_LOGIN, state: "ok", server: BITBUCKET },
         ],
       });
-    // Integrations lists the Bitbucket row; the token is in no view or log.
     const bitbucketRow = section.locator('[data-integration-row="bitbucket"]');
     await expect(bitbucketRow).toContainText(BITBUCKET_STUB_LOGIN);
     expect(

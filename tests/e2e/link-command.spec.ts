@@ -95,7 +95,6 @@ async function link(env: Record<string, string>, args: string[], code: number) {
   return { out: asked.out(), error: asked.error() };
 }
 
-/** The link a successful `link` printed: its one line that is a pairing link. */
 function printedLink(out: string): string {
   const found = out.split("\n").filter((line) => {
     try {
@@ -114,7 +113,6 @@ test("link prints a computer's link and a phone's code from a running command, e
   const env = await environment(data);
   const notRunning = linkOutput({ for: "computer", json: false }, { kind: "not-running" }, 0);
 
-  // With nothing running it says so, starts nothing and makes no data.
   expect((await link(env, [], 1)).error).toBe(notRunning.error);
   expect(existsSync(join(data, "firstmate.db"))).toBe(false);
   expect((await link(env, ["--qr"], 2)).error).toBe(`${LINK_WORDS.usage.join("\n")}\n`);
@@ -122,7 +120,6 @@ test("link prints a computer's link and a phone's code from a running command, e
   const running = command(env, ["run"]);
   await running.started;
 
-  // Another computer's Infinitary joins with the printed link, once.
   const computer = await link(env, [], 0);
   const forComputer = printedLink(computer.out);
   expect(computer.out).toContain(LINK_WORDS.lasts(PAIRING_LINK_TTL_MS));
@@ -137,14 +134,12 @@ test("link prints a computer's link and a phone's code from a running command, e
   const iphone = await claimLink(forPhone, { kind: "mac", name: "Test iPhone", system: "ios" });
   expect(iphone.kind).toBe("view");
 
-  // A script reads one object, whose link is a new one.
   const json = JSON.parse((await link(env, ["--json"], 0)).out) as Record<string, unknown>;
   expect(json).toMatchObject({ schemaVersion: 1, for: "computer" });
   const forScript = String(json.link);
   expect(parsePairingLink(forScript).code).not.toBe(parsePairingLink(forComputer).code);
   expect(Date.parse(String(json.expiresAt))).toBeGreaterThan(Date.now());
 
-  // Once the run stops, nothing answers and the command says so.
   running.child.kill("SIGTERM");
   expect(await running.exited).toBe(0);
   expect((await link(env, [], 1)).error).toBe(notRunning.error);

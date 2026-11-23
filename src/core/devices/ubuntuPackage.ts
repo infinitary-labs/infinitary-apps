@@ -14,7 +14,6 @@ import type { Writable } from "node:stream";
 /** Releases whose address setup installs the Ubuntu package. */
 export const UBUNTU_PACKAGE_RELEASES = ["24.04", "26.04"] as const;
 
-/** Where the Ubuntu package puts its program. */
 export const UBUNTU_PACKAGE_BIN = "/opt/infinitary/infinitary";
 
 /**
@@ -42,7 +41,6 @@ export function packageVersionsMatch(installed: string, app: string): boolean {
   return norm(installed) === norm(app);
 }
 
-/** The Ubuntu release this look found, when address setup installs the package there. */
 export function ubuntuPackageRelease(look: {
   distro?: string | undefined;
   release?: string | undefined;
@@ -170,7 +168,6 @@ export const INSTALL_AS_ROOT = [
   'rm -f "$src"',
 ].join("\n");
 
-/** Whether the install said it could not turn on linger (`LINGER_OFF_LINE`). */
 export function lingerOff(stdout: string): boolean {
   return stdout.split("\n").some((line) => line.trim() === LINGER_OFF_LINE);
 }

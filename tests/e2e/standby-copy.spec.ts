@@ -273,7 +273,6 @@ test("two computers keep a live copy: one follows, one stops and catches up, all
     await pressKey(ready.getByRole("button", { name: m.settingsDevicesStandbyStop() }), "Enter");
     await expect((await rowAgain(studio)).locator("[data-standby]")).toHaveCount(0);
     await expect.poll(() => existsSync(copyOf(studio)), { timeout: 30_000 }).toBe(false);
-    // Mac mini keeps its copy.
     await expect((await rowAgain(mini)).locator("[data-standby]")).toHaveAttribute(
       "data-standby",
       "in-sync",

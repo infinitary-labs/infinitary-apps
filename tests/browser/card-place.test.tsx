@@ -19,10 +19,8 @@ const TITLE =
 const PLACE = "on Mac mini";
 const CARD = "The README's first line is Hello World";
 
-/** Every character shows: nothing inside it is cut or scrolled out of view. */
 const readsWhole = (el: Element) => el.scrollWidth <= el.clientWidth + 1;
 
-/** The shown card's head part `selector`. */
 const shownHead = (selector: string) => inShown(`[data-card-head] ${selector}`);
 
 test("a card from a task on another Mac names where it runs whole, however long its task's title", async () => {
@@ -35,7 +33,6 @@ test("a card from a task on another Mac names where it runs whole, however long 
     await expect.element(place).toHaveTextContent(PLACE);
     await expect.element(place).toBeInViewport({ ratio: 1 });
     expect(readsWhole(place), `the place reads whole at ${size.width}x${size.height}`).toBe(true);
-    // The title is what gives way, and the place stays clear of the model and close.
     const meta = shownHead("[data-card-meta]");
     expect(meta.textContent).toBe(TITLE);
     expect(readsWhole(meta), "the title gives way").toBe(false);

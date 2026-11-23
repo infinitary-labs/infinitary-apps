@@ -24,14 +24,12 @@ export type TaskMovesInput = RecordBarInput & Pick<TaskView, "key">;
 const OK: TaskMoveAllowance = Object.freeze({ ok: true });
 const no = (text: string): TaskMoveAllowance => ({ ok: false, text });
 
-/** "FM3K-3", "FM3K-3 and FM3K-4", "FM3K-3, FM3K-4 and FM3K-5". */
 function keyList(keys: readonly string[]): string {
   if (keys.length === 0) return "What it waits on";
   if (keys.length === 1) return keys[0] as string;
   return `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
 }
 
-/** The lifecycle moves of work that can start or continue, or undefined otherwise. */
 export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
   if (task.requiredAction && task.status === "open") {
     const captainOwns = no("This action waits for you, not a crewmate.");

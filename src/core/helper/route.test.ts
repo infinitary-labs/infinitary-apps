@@ -71,7 +71,6 @@ describe("the route to a home over its SSH connection", () => {
       route: { socket, homeKey: home, deviceId: "mini", leaseUntil: 9_000_000 + ROUTE_LEASE_MS },
     });
 
-    // Another home's grant, or another device's, has no route here.
     expect(route.current({ ...grant, deviceId: "studio" })).toBeNull();
     expect(route.current({ ...grant, homeKey: createKeyIdentity("Another home").pin })).toBeNull();
 
@@ -135,7 +134,6 @@ describe("the route to a home over its SSH connection", () => {
     expect(route.current(grant)).toBeNull();
     expect(route.publish(generation, { socket, ...grant })).toBe(false);
     route.withdraw(generation);
-    // Nothing is left: no route, and no lock.
     expect(readdirSync(dataDir)).toEqual([]);
   });
 

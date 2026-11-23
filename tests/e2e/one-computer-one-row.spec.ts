@@ -130,7 +130,6 @@ test("a Mac joined twice keeps one row, and a Mac on the list twice folds into t
       await expect
         .poll(async () => (await rows()).map((row) => row.id).sort())
         .toEqual([windowId, workId].sort());
-      // The project was set to run on the window's row.
       await pro.page.evaluate(
         ([repoId, deviceId]) => window.infinitary.devices.runsOn(repoId, deviceId),
         ["repo-ledger", windowId] as const,

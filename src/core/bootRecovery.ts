@@ -69,10 +69,6 @@ export function recoverAtBoot(options: {
   // `provider-back` makes the held lanes' rows due at once), so the boot
   // sweep delivers each lane's kept guidance as one turn.
   supervisor.reconcileCutOffs();
-  // The inbox boot sweep (design A): task-lane rows the quit stranded are
-  // re-delivered (resuming their idle tasks) or reported as orphaned, and
-  // the firstmate and supervision lanes each get one explicit drain instead
-  // of waiting for an incidental trigger.
   supervisor.watch.announceCarryOn();
   void supervisor.watch.sweepInbox(now());
   // The idle reconciler's boot sweep (docs/report-sort.md): a record the

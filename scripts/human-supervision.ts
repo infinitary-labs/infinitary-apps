@@ -36,7 +36,6 @@ import {
 
 /** The episode record's schema: a reader treats another version by its own rules. */
 export const HUMAN_SUPERVISION_SCHEMA = "fm3000.human-supervision.episode/1";
-/** The normalizer that turned observations into episodes. */
 export const HUMAN_SUPERVISION_NORMALIZER = 1;
 
 export const HUMAN_SUPERVISION_FILE = "human-supervision.jsonl";
@@ -366,7 +365,6 @@ function readSnapshot(dbPath: string): Snapshot {
   }
 }
 
-/** An observation row read through its kind's schema, or the reason it cannot be. */
 function parseObservation(row: ObservationRow): Observation | { excluded: string } {
   if (row.capture_version > CARD_CAPTURE_VERSION) return { excluded: "newer-capture-version" };
   if (!(CARD_OBSERVATION_KINDS as readonly string[]).includes(row.kind)) {
@@ -489,7 +487,6 @@ export function buildHumanSupervision(input: {
   const exclude = (reason: string, seq: number) =>
     exclusions.set(reason, [...(exclusions.get(reason) ?? []), seq]);
 
-  // Group the readable observations by lifecycle, in log order.
   const lifecycles = new Map<string, Observation[]>();
   for (const row of snapshot.observations) {
     const parsed = parseObservation(row);
@@ -573,7 +570,6 @@ export function buildHumanSupervision(input: {
     };
   };
 
-  // Captured lifecycles.
   const capturedCards = new Set<string>();
   for (const observations of lifecycles.values()) {
     const first = observations[0] as Observation;
@@ -923,7 +919,6 @@ export function buildHumanSupervision(input: {
   };
 }
 
-/** Whether a record references only pack assets that exist in the list it ships with. */
 export function danglingAssets(pack: HumanSupervisionPack): string[] {
   const shipped = new Set(pack.assets.map((asset) => asset.to));
   return pack.episodes.flatMap((episode) =>

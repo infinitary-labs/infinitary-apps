@@ -28,12 +28,10 @@ import { scratchDir } from "./scratchDirs";
  * itself answers again at its own key with the takeover's number, as the computer that took over would.
  */
 export type PhoneTakeOverHome = {
-  /** Where the record's device list lives on the test home. */
   devicesDir: string;
   /** The test home's name, as the copy heard it. */
   name: string;
   userData: string;
-  /** Ends the test home's connection, and starts it again. */
   offline: () => Promise<void>;
   online: () => Promise<void>;
   /** Sends every device the home's routes again, with the computers that keep a copy. */

@@ -49,7 +49,6 @@ export function splitPolicies(shape: WorkShape | null | undefined): {
   return { shape: kept as WorkShape, row: named ? row : null };
 }
 
-/** A shape as it is read: the stored fields, and each policy input under its shape field. */
 export function withPolicies(
   shape: WorkShape | null,
   row: TaskPolicyRow | undefined,
@@ -79,7 +78,6 @@ export class TaskPolicyStore {
     return this.present;
   }
 
-  /** Replaces the task's policy inputs; none clears them. */
   set(taskId: string, row: Omit<TaskPolicyRow, "task_id"> | null): void {
     if (!row) {
       prepared(this.db, "DELETE FROM task_policies WHERE task_id = ?").run(taskId);
@@ -102,7 +100,6 @@ export class TaskPolicyStore {
       | undefined;
   }
 
-  /** The policy rows of each of these tasks, by task id. */
   listFor(taskIds: readonly string[]): Map<string, TaskPolicyRow> {
     const byTask = new Map<string, TaskPolicyRow>();
     if (taskIds.length === 0 || !this.exists()) return byTask;

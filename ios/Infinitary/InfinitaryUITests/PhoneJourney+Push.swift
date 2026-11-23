@@ -21,7 +21,6 @@ extension PhoneJourney {
         try await launchFresh()
         try await join()
 
-        // The one-sentence ask, then iOS's own question.
         let ask = app.alerts["Get a notification for each card?"]
         XCTAssertTrue(ask.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(ask.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "cannot read it")).firstMatch.exists,
@@ -42,7 +41,6 @@ extension PhoneJourney {
         XCTAssertEqual(lettered["lettered"] as? Bool, true, "\(lettered)")
         XCTAssertEqual(lettered["letters"] as? Int, 1, "One letter for one computer: \(lettered)")
 
-        // Settings → Devices says notifications are on.
         tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
         let devices = app.buttons["phone-settings-devices"]
         XCTAssertTrue(devices.waitForPresence(timeout: 20), app.debugDescription)
@@ -74,7 +72,6 @@ extension PhoneJourney {
         XCTAssertEqual((pushed["problems"] as? [String])?.isEmpty, true, "\(pushed)")
         picture("push-notification")
 
-        // Its tap brings Infinitary back to the front.
         tapOnPhone(notification, repeatDiscarded: false)
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20), "\(app.state.rawValue)")
         XCTAssertTrue(app.buttons["phone-settings"].waitForPresence(timeout: 20), app.debugDescription)

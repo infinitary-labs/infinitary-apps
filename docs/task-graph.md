@@ -44,6 +44,7 @@ The successor inherits the predecessor's parent only while that parent is still 
 `CrewWatch.sweepGates` runs it on the shared 60 s tick, after any close (`closeTask` sweeps), after any graph change (`graphChanged`), on quota refresh, and once at boot.
 The quit (`CrewSupervisor.disposeAll`) runs no new sweep and starts nothing, a start still waiting before its claim included, and it waits, at most `QUIT_SETTLE_MS`, for a sweep already running to end, so a host closes its database only after the sweep's last write; the next launch's sweep starts what the quit left.
 A start the quit stops part way, whoever began it - the sweep, a computer's new sign-in, the captain's Start or the first mate - did not fail: `dispatchQueuedTask` neither settles nor tells its failure, since the database may already be closed, and the next launch starts it, a claimed row that began nothing back in the queue first (`TaskStarts.releaseUnstartedDispatches`).
+If a task closes while its conversation opens, the start disposes the late session before it can record a dispatch; the close stays recorded and the queue sends no start-failure wake.
 On-request rows never appear in it; a captain-held row waits on its card.
 When completed blockers release a queued task, its Starting line in Activity names each finished task by its title and key.
 

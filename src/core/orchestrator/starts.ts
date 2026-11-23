@@ -595,6 +595,11 @@ export class CrewStarts {
         ? (this.core.options.tasks.get(taskId)?.shape?.override_reasoning ??
           this.core.options.router?.reasoningChoice?.(routedModel, servedLevel))
         : undefined;
+      // A task with no project elsewhere merges into this Mac's default workspace.
+      const workspaceRepoDir =
+        task.workspace?.repoDir ??
+        repoDir ??
+        (elsewhere ? await this.core.options.workspace.ensureDefaultRepo() : "");
       step = "conversation";
       const session = await this.core.sessions.openCrewmate(
         task,
@@ -614,15 +619,14 @@ export class CrewStarts {
         accountId,
       );
       task.session = session;
+      // Done can close the task while its session opens. Check before the
+      // dispatch write, with no await between the check and the write.
+      this.core.sessions.endIfLetGo(task);
       // The record's dispatch facts, once the crewmate really exists: the
       // model the session runs on outranks the routing choice it came from.
       this.core.options.tasks.starts.dispatch(taskId, {
         workspace: {
-          // A task with no project elsewhere merges into this Mac's default workspace.
-          repoDir:
-            task.workspace?.repoDir ??
-            repoDir ??
-            (elsewhere ? await this.core.options.workspace.ensureDefaultRepo() : ""),
+          repoDir: workspaceRepoDir,
           worktreeDir: live || inPlace || !task.workspace ? "" : task.workspace.cwd,
           branch: task.workspace?.branch ?? elsewhere?.branch ?? "",
           ...(elsewhere ? { elsewhere: true } : {}),
@@ -1414,6 +1418,9 @@ export class CrewStarts {
       // (`releaseUnstartedDispatches`), and nobody is told: the task store
       // may already be closed.
       if (this.core.disposed()) return;
+      // A close took this attempt; there is no failed start to settle or tell.
+      const after = this.core.options.tasks.get(taskId);
+      if (after && TaskService.isClosed(after)) return;
       const message = caught instanceof Error ? caught.message : String(caught);
       this.settle.settleOutsideStart(taskId, caught, asked, !options.requested);
       const current = this.core.options.tasks.get(taskId);

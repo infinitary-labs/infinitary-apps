@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "answer-note-stays-done",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Done on a saved answer keeps its task closed",
+      "body": "If a crewmate is opening while you press Done, the task stays closed and any reply you included still reaches the first mate.",
+      "noPicture": "The card and task record look the same; a late start no longer changes the closed task back to active.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

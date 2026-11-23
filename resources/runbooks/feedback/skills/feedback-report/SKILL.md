@@ -1,6 +1,6 @@
 ---
 name: feedback-report
-description: Draft a /feedback report as an issue for Infinitary's makers, with the app's diagnostics and no personal details, and publish it only on the captain's click. Read only when your task is a feedback report.
+description: Draft a /feedback report as an issue for Infinitary's maker, with the app's diagnostics and no personal details, and publish it only on the captain's click. Read only when your task is a feedback report.
 ---
 
 # A feedback report
@@ -38,7 +38,7 @@ Without the captain's words to go on, write a one-line draft that says so and as
 The draft answers one of two ways.
 
 - With a GitHub sign-in, it keeps the issue as a write and names its ask.
-  Emit a card titled "Send this feedback to Infinitary's makers?" whose body says in one sentence whether a similar issue is open, naming it, and that a reply changes any word.
+  Emit a card titled "Send this feedback to Infinitary's maker?" whose body says in one sentence whether a similar issue is open, naming it, and that a reply changes any word.
   Give it one action whose effect is `{"kind":"request_write","ask":"<ask>"}`, the default, beside your own Not now; the app draws the exact title and body and names the button.
   For a comment on a matching issue, add an action "Send as a new issue instead"; on that choice, draft again without `--comment-on` and revise the same card.
 - Without one, it gives a filled-in link to the project's new-issue page.

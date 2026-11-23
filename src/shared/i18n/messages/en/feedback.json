@@ -4,5 +4,6 @@
   "feedbackStripComment": "A comment on issue #{number}",
   "feedbackStripHeading": "Your click publishes this on {place}, publicly, once",
   "feedbackStripIdea": "A new idea",
-  "feedbackStripNoAccount": "Nothing is sent before your click. It goes under your GitHub account."
+  "feedbackStripNoAccount": "Nothing is sent before your click. It goes under your GitHub account.",
+  "feedbackSubmitButton": "Submit feedback"
 }

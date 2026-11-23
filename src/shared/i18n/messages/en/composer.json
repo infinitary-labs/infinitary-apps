@@ -1,7 +1,7 @@
 {
   "composerFolderNotProject": "That folder could not be added as a project.",
   "composerFolderProject": "That folder is already one of your projects.",
-  "composerHintFeedback": "{command}: tell Infinitary's makers about a problem or an idea",
+  "composerHintFeedback": "{command}: tell Infinitary's maker about a problem or an idea",
   "composerLines": {
     "plural": "count",
     "one": "{count} line",

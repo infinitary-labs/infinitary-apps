@@ -1003,6 +1003,7 @@
 "feedbackStripHeading" = "你点击后，这会公开发布到 %1$@，仅一次";
 "feedbackStripIdea" = "一个新想法";
 "feedbackStripNoAccount" = "点击之前不会发送任何内容。它以你的 GitHub 账户发布。";
+"feedbackSubmitButton" = "提交反馈";
 "fileAdd" = "添加文件";
 "fileCancel" = "取消准备 %1$@";
 "fileDropHere" = "拖放文件以添加";

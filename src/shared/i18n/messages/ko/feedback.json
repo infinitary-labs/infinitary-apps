@@ -4,5 +4,6 @@
   "feedbackStripComment": "이슈 #{number}에 다는 댓글",
   "feedbackStripHeading": "클릭하면 {place}에 공개적으로 한 번 게시됩니다",
   "feedbackStripIdea": "새 아이디어",
-  "feedbackStripNoAccount": "클릭하기 전에는 아무것도 보내지 않습니다. 내 GitHub 계정으로 게시됩니다."
+  "feedbackStripNoAccount": "클릭하기 전에는 아무것도 보내지 않습니다. 내 GitHub 계정으로 게시됩니다.",
+  "feedbackSubmitButton": "피드백 제출"
 }

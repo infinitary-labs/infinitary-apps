@@ -25315,29 +25315,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const command = input2.command;
     switch (currentLanguage()) {
       case "ar":
-        return `${command}: أخبر صانعي Infinitary بمشكلة أو فكرة`;
+        return `${command}: أخبر صانع Infinitary بمشكلة أو فكرة`;
       case "de":
-        return `${command}: den Machern von Infinitary ein Problem oder eine Idee mitteilen`;
+        return `${command}: dem Macher von Infinitary ein Problem oder eine Idee mitteilen`;
       case "es":
-        return `${command}: cuéntales a los creadores de Infinitary un problema o una idea`;
+        return `${command}: cuéntale al creador de Infinitary un problema o una idea`;
       case "fr":
-        return `${command} : signalez un problème ou une idée aux créateurs d’Infinitary`;
+        return `${command} : signalez un problème ou une idée au créateur d’Infinitary`;
       case "ja":
         return `${command}：Infinitary の開発者に問題やアイデアを伝えます`;
       case "ko":
         return `${command}: Infinitary 제작자에게 문제나 아이디어를 알립니다`;
       case "pt-BR":
-        return `${command}: conte aos criadores do Infinitary um problema ou uma ideia`;
+        return `${command}: conte ao criador do Infinitary um problema ou uma ideia`;
       case "zh-Hans":
         return `${command}：向 Infinitary 的开发者报告问题或提出想法`;
       case "zh-Hant":
         return `${command}：向 Infinitary 的開發者回報問題或提出想法`;
       case "en-XA":
-        return `[${command}: ţéļļ Îñƒîñîţáŕý'š ɱáķéŕš áƀöûţ á þŕöƀļéɱ öŕ áñ îðéá ~~~~~~~~~~~~~~~~~~]`;
+        return `[${command}: ţéļļ Îñƒîñîţáŕý'š ɱáķéŕ áƀöûţ á þŕöƀļéɱ öŕ áñ îðéá ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `${command}‮: tell Infinitary's makers about a problem or an idea‬`;
+        return `${command}‮: tell Infinitary's maker about a problem or an idea‬`;
     }
-    return `${command}: tell Infinitary's makers about a problem or an idea`;
+    return `${command}: tell Infinitary's maker about a problem or an idea`;
   }
   function composerLines(input2) {
     const count = formatNumber(input2.count);
@@ -34353,6 +34353,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Nothing is sent before your click. It goes under your GitHub account.‬`;
     }
     return `Nothing is sent before your click. It goes under your GitHub account.`;
+  }
+  function feedbackSubmitButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تقديم الملاحظات`;
+      case "de":
+        return `Feedback absenden`;
+      case "es":
+        return `Enviar comentarios`;
+      case "fr":
+        return `Envoyer l’avis`;
+      case "ja":
+        return `フィードバックを送信`;
+      case "ko":
+        return `피드백 제출`;
+      case "pt-BR":
+        return `Enviar feedback`;
+      case "zh-Hans":
+        return `提交反馈`;
+      case "zh-Hant":
+        return `送出意見回饋`;
+      case "en-XA":
+        return `[Šûƀɱîţ ƒééðƀáçķ ~~~~~]`;
+      case "ar-XB":
+        return `‮Submit feedback‬`;
+    }
+    return `Submit feedback`;
   }
   function fileAdd() {
     switch (currentLanguage()) {
@@ -99884,6 +99911,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedbackStripHeading,
     feedbackStripIdea,
     feedbackStripNoAccount,
+    feedbackSubmitButton,
     fileAdd,
     fileCancel,
     fileDropHere,
@@ -103075,6 +103103,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedbackStripHeading": ["place"],
     "feedbackStripIdea": [],
     "feedbackStripNoAccount": [],
+    "feedbackSubmitButton": [],
     "fileAdd": [],
     "fileCancel": ["name"],
     "fileDropHere": [],

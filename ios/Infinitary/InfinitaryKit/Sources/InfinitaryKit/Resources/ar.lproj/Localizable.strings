@@ -704,7 +704,7 @@
 "commandWhatsNewShowWords" = "إصدار, ملاحظات, تغييرات, نسخة";
 "composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
 "composerFolderProject" = "هذا المجلد من مشاريعك بالفعل.";
-"composerHintFeedback" = "%1$@: أخبر صانعي Infinitary بمشكلة أو فكرة";
+"composerHintFeedback" = "%1$@: أخبر صانع Infinitary بمشكلة أو فكرة";
 "composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
@@ -1003,6 +1003,7 @@
 "feedbackStripHeading" = "نقرتك تنشر هذا على %1$@ علنًا، مرة واحدة";
 "feedbackStripIdea" = "فكرة جديدة";
 "feedbackStripNoAccount" = "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub.";
+"feedbackSubmitButton" = "تقديم الملاحظات";
 "fileAdd" = "إضافة ملفات";
 "fileCancel" = "إلغاء تجهيز %1$@";
 "fileDropHere" = "أفلت الملفات لإضافتها";

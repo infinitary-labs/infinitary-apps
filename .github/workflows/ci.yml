@@ -150,6 +150,13 @@ jobs:
       - name: Release notes
         if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
         run: node scripts/release-notes.ts change --base "$CHANGE_BASE"
+      # A change may not grow a code file past the size check's warning line,
+      # or further past it, so two changes cannot together pass the ceiling
+      # in a merge batch (docs/testing.md, "The size check's headroom").
+      # Plain Node, no install.
+      - name: Size headroom
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.base.outputs.batch == '' }}
+        run: node scripts/file-sizes.ts --headroom --base "$CHANGE_BASE"
       # A change that moves the contract's major or view floor is flagged
       # with the phone build the next alpha waits for (docs/testing.md, "What
       # a task branch requests"; INF-4500). Plain Node, never fails.

@@ -13,14 +13,15 @@ extension PhoneJourney {
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         try await composeAndSend()
-        if UIDevice.current.userInterfaceIdiom == .pad { try await pencilPlacement() }
     }
 
     /// The captain's Approve and build on comfortable Apple Pencil input, on an iPad simulator told at launch that a
     /// Pencil was seen and is expected, since a simulator has none: the message box stands above the card upright and on
     /// its side, a finger's tap in it puts it back under the card, and the off switch in Settings → Appearance keeps it
-    /// there after a relaunch. Data: this part's test home and its hero card. Resources: this part's own simulator.
+    /// there after a relaunch. Data: this part's test home, the harbour ask just sent as the last turn, and its hero
+    /// card alone on the stage. Resources: this part's own simulator.
     private func pencilPlacement() async throws {
+        _ = try await home("empty-cards")
         let hero = try await home("hero-card")
         let heading = cardHeading(try XCTUnwrap(hero["title"] as? String))
         let box = app.textFields["message-box"]
@@ -183,6 +184,8 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("last-turn")
         try await verifyReplyReading(sent)
+        // Before the saved-rounds fixture below adds its problem round, so the last turn is the ask just sent.
+        if UIDevice.current.userInterfaceIdiom == .pad { try await pencilPlacement() }
         try await verifyLongReplyReading()
     }
 

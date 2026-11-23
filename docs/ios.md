@@ -657,7 +657,7 @@ A tap on a reply line opens that whole reply in the existing Reply sheet, with i
 The captain's message sits in the shared question bubble below You at the right, followed by the first mate's mark, First mate label and unboxed reply at the left (INF-2218, A · Open reply).
 The shared `PhoneQuestionBubble` owns the grey surface and two-line fold; a tap on a long question opens or folds it, and the sheet owns that expansion state.
 The reply keeps its literal words, line breaks, text selection and problem colour; reading or dismissing it sends nothing.
-Its component owns messages and photos; the shared shell places it at the foot of Home.
+Its component owns messages and photos; the shared shell places it at the foot of Home, or at the top while Apple Pencil is in use on an iPad (the Pencil paragraph under "Native shell").
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
 Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.

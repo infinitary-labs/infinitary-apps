@@ -3752,11 +3752,11 @@
 "shellDiagnosticsTurnOff" = "关闭";
 "shellGateBack" = "我住在哪里";
 "shellGateChoiceAnother" = "另一台电脑";
-"shellGateChoiceAnotherSub" = "在那里运行三条命令，然后粘贴它们生成的链接。你在这里控制我。";
+"shellGateChoiceAnotherSub" = "让我在你设置的另一台电脑上运行，并在这里控制我。";
 "shellGateChoiceHere" = "这台电脑";
 "shellGateChoiceHereSub" = "在这里登录一个订阅。我在这台电脑上生活和工作。";
 "shellGateChoiceRunning" = "一台已在运行的电脑";
-"shellGateChoiceRunningSub" = "粘贴那里的链接，或输入它的地址。你在这里控制我。";
+"shellGateChoiceRunningSub" = "连接到已经在另一台电脑上运行的我，并在这里控制我。";
 "shellGateCommandsHead" = "用命令把我设置在另一台电脑上";
 "shellGateCommandsInstall" = "在那里安装 Infinitary。";
 "shellGateCommandsLink" = "在那里为这台电脑生成链接：";

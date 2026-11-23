@@ -17,14 +17,12 @@ That line reads "I'm your first mate.
 I'll help you manage the rest of the crew."
 Under it the first mate asks where it lives before anything opens (the captain's approval of INF-6207, "ask first"): "Where should I live?
 Pick a computer that stays on as much as possible."
-Three equal cards follow in one row, each a button whose line says what happens before it is pressed:
+Three equal cards follow in one row, each a button whose line says how that setup works:
 
 1. **This computer** - "Sign in to a subscription here.
    I live and work on this computer." - opens the provider chips below.
-2. **Another computer** - "Run three commands there, then paste the link they make.
-   You control me from here." - opens the commands route ("Joining the first mate on another Mac" below).
-3. **One already running** - "Paste a link from it, or give its address.
-   You control me from here." - opens the chips that join a first mate on another computer.
+2. **Another computer** - "Let me run on another computer you set up, and control me from here." - opens the commands route ("Joining the first mate on another Mac" below).
+3. **One already running** - "Connect to me where I already run on another computer, and control me from here." - opens the chips that join a first mate on another computer.
 
 Tab reaches each card, the arrow keys move between them, and Enter or Space opens one; a narrow stage stacks them.
 `tests/browser/first-launch-choices.test.tsx` drives the cards by keys, the commands route to the paste box, and Where I live back.

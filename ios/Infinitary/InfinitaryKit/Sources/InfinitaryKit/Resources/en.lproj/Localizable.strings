@@ -3752,11 +3752,11 @@
 "shellDiagnosticsTurnOff" = "Turn off";
 "shellGateBack" = "Where I live";
 "shellGateChoiceAnother" = "Another computer";
-"shellGateChoiceAnotherSub" = "Run three commands there, then paste the link they make. You control me from here.";
+"shellGateChoiceAnotherSub" = "Let me run on another computer you set up, and control me from here.";
 "shellGateChoiceHere" = "This computer";
 "shellGateChoiceHereSub" = "Sign in to a subscription here. I live and work on this computer.";
 "shellGateChoiceRunning" = "One already running";
-"shellGateChoiceRunningSub" = "Paste a link from it, or give its address. You control me from here.";
+"shellGateChoiceRunningSub" = "Connect to me where I already run on another computer, and control me from here.";
 "shellGateCommandsHead" = "Set me up on another computer with commands";
 "shellGateCommandsInstall" = "Install Infinitary there.";
 "shellGateCommandsLink" = "Make a link there for this computer:";

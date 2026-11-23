@@ -3752,11 +3752,11 @@
 "shellDiagnosticsTurnOff" = "オフにする";
 "shellGateBack" = "私の住む場所";
 "shellGateChoiceAnother" = "別のコンピューター";
-"shellGateChoiceAnotherSub" = "そちらで3つのコマンドを実行し、作られたリンクを貼り付けます。ここから私を操作できます。";
+"shellGateChoiceAnotherSub" = "あなたが設定する別のコンピューターで私を動かし、ここから操作します。";
 "shellGateChoiceHere" = "このコンピューター";
 "shellGateChoiceHereSub" = "ここでサブスクリプションにサインインします。私はこのコンピューターに住んで働きます。";
 "shellGateChoiceRunning" = "すでに動いているもの";
-"shellGateChoiceRunningSub" = "そちらのリンクを貼り付けるか、アドレスを入力します。ここから私を操作できます。";
+"shellGateChoiceRunningSub" = "すでに別のコンピューターで動いている私につなぎ、ここから操作します。";
 "shellGateCommandsHead" = "コマンドで別のコンピューターに私を準備する";
 "shellGateCommandsInstall" = "そちらに Infinitary をインストールします。";
 "shellGateCommandsLink" = "そちらでこのコンピューター用のリンクを作ります:";

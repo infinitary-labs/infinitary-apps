@@ -87518,29 +87518,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateChoiceAnotherSub() {
     switch (currentLanguage()) {
       case "ar":
-        return `شغّل ثلاثة أوامر هناك، ثم الصق الرابط الذي تُنشئه. تتحكم بي من هنا.`;
+        return `دعني أعمل على حاسوب آخر تُعدّه، وتحكّم بي من هنا.`;
       case "de":
-        return `Führ dort drei Befehle aus und füge dann den Link ein, den sie erstellen. Du steuerst mich von hier aus.`;
+        return `Lass mich auf einem anderen Computer laufen, den du einrichtest, und steuere mich von hier aus.`;
       case "es":
-        return `Ejecuta allí tres comandos y pega el enlace que crean. Me controlas desde aquí.`;
+        return `Déjame funcionar en otra computadora que configures y contrólame desde aquí.`;
       case "fr":
-        return `Lancez-y trois commandes, puis collez le lien qu’elles créent. Vous me pilotez d’ici.`;
+        return `Faites-moi tourner sur un autre ordinateur que vous configurez, et pilotez-moi d’ici.`;
       case "ja":
-        return `そちらで3つのコマンドを実行し、作られたリンクを貼り付けます。ここから私を操作できます。`;
+        return `あなたが設定する別のコンピューターで私を動かし、ここから操作します。`;
       case "ko":
-        return `그곳에서 명령 세 개를 실행한 뒤 만들어진 링크를 붙여넣으세요. 여기서 저를 제어해요.`;
+        return `직접 설정한 다른 컴퓨터에서 저를 실행하고, 여기서 저를 제어해요.`;
       case "pt-BR":
-        return `Rode três comandos lá e cole o link que eles criam. Você me controla daqui.`;
+        return `Deixe-me rodar em outro computador que você configurar e me controle daqui.`;
       case "zh-Hans":
-        return `在那里运行三条命令，然后粘贴它们生成的链接。你在这里控制我。`;
+        return `让我在你设置的另一台电脑上运行，并在这里控制我。`;
       case "zh-Hant":
-        return `在那裡執行三條指令，然後貼上它們產生的連結。你在這裡控制我。`;
+        return `讓我在你設定的另一台電腦上執行，並在這裡控制我。`;
       case "en-XA":
-        return `[Ŕûñ ţĥŕéé çöɱɱáñðš ţĥéŕé, ţĥéñ þášţé ţĥé ļîñķ ţĥéý ɱáķé. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ļéţ ɱé ŕûñ öñ áñöţĥéŕ çöɱþûţéŕ ýöû šéţ ûþ, áñð çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Run three commands there, then paste the link they make. You control me from here.‬`;
+        return `‮Let me run on another computer you set up, and control me from here.‬`;
     }
-    return `Run three commands there, then paste the link they make. You control me from here.`;
+    return `Let me run on another computer you set up, and control me from here.`;
   }
   function shellGateChoiceHere() {
     switch (currentLanguage()) {
@@ -87626,29 +87626,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateChoiceRunningSub() {
     switch (currentLanguage()) {
       case "ar":
-        return `الصق رابطًا منه، أو أدخل عنوانه. تتحكم بي من هنا.`;
+        return `اتصل بي حيث أعمل بالفعل على حاسوب آخر، وتحكّم بي من هنا.`;
       case "de":
-        return `Füge einen Link von dort ein oder gib seine Adresse an. Du steuerst mich von hier aus.`;
+        return `Verbinde dich mit mir, wo ich schon auf einem anderen Computer laufe, und steuere mich von hier aus.`;
       case "es":
-        return `Pega un enlace de ella o indica su dirección. Me controlas desde aquí.`;
+        return `Conéctate conmigo donde ya funciono en otra computadora y contrólame desde aquí.`;
       case "fr":
-        return `Collez un lien venant de lui, ou donnez son adresse. Vous me pilotez d’ici.`;
+        return `Connectez-vous à moi là où je tourne déjà sur un autre ordinateur, et pilotez-moi d’ici.`;
       case "ja":
-        return `そちらのリンクを貼り付けるか、アドレスを入力します。ここから私を操作できます。`;
+        return `すでに別のコンピューターで動いている私につなぎ、ここから操作します。`;
       case "ko":
-        return `그곳의 링크를 붙여넣거나 주소를 입력하세요. 여기서 저를 제어해요.`;
+        return `이미 다른 컴퓨터에서 실행 중인 저에게 연결하고, 여기서 저를 제어해요.`;
       case "pt-BR":
-        return `Cole um link dele ou informe o endereço dele. Você me controla daqui.`;
+        return `Conecte-se a mim onde eu já rodo em outro computador e me controle daqui.`;
       case "zh-Hans":
-        return `粘贴那里的链接，或输入它的地址。你在这里控制我。`;
+        return `连接到已经在另一台电脑上运行的我，并在这里控制我。`;
       case "zh-Hant":
-        return `貼上那裡的連結，或輸入它的位址。你在這裡控制我。`;
+        return `連接到已經在另一台電腦上執行的我，並在這裡控制我。`;
       case "en-XA":
-        return `[Þášţé á ļîñķ ƒŕöɱ îţ, öŕ ĝîṽé îţš áððŕéšš. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Çöññéçţ ţö ɱé ŵĥéŕé Î áļŕéáðý ŕûñ öñ áñöţĥéŕ çöɱþûţéŕ, áñð çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Paste a link from it, or give its address. You control me from here.‬`;
+        return `‮Connect to me where I already run on another computer, and control me from here.‬`;
     }
-    return `Paste a link from it, or give its address. You control me from here.`;
+    return `Connect to me where I already run on another computer, and control me from here.`;
   }
   function shellGateCommandsHead() {
     switch (currentLanguage()) {

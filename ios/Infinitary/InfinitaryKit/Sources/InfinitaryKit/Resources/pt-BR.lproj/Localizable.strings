@@ -3752,11 +3752,11 @@
 "shellDiagnosticsTurnOff" = "Desativar";
 "shellGateBack" = "Onde eu moro";
 "shellGateChoiceAnother" = "Outro computador";
-"shellGateChoiceAnotherSub" = "Rode três comandos lá e cole o link que eles criam. Você me controla daqui.";
+"shellGateChoiceAnotherSub" = "Deixe-me rodar em outro computador que você configurar e me controle daqui.";
 "shellGateChoiceHere" = "Este computador";
 "shellGateChoiceHereSub" = "Entre em uma assinatura aqui. Eu moro e trabalho neste computador.";
 "shellGateChoiceRunning" = "Um que já está rodando";
-"shellGateChoiceRunningSub" = "Cole um link dele ou informe o endereço dele. Você me controla daqui.";
+"shellGateChoiceRunningSub" = "Conecte-se a mim onde eu já rodo em outro computador e me controle daqui.";
 "shellGateCommandsHead" = "Configure-me em outro computador com comandos";
 "shellGateCommandsInstall" = "Instale o Infinitary lá.";
 "shellGateCommandsLink" = "Crie lá um link para este computador:";

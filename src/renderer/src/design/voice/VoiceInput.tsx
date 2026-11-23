@@ -10,6 +10,7 @@ import {
   normalizeLineEndings,
   PASTED_TEXT_WORDS,
   type PastedText,
+  typingSlashCommand,
 } from "@shared/composer";
 import * as m from "@shared/i18n/messages.generated";
 import { cutText } from "@shared/textCut";
@@ -403,10 +404,12 @@ export function VoiceInput({
   const hasChips = attachments.length > 0 || pastes.length > 0 || preparing;
   const drop = useFileDrop(files);
   const multiLine = text.includes("\n") || wrapped || hasChips;
-  const foot = multiLine || recording;
+  // A slash command being typed shows the foot row, whose hint names it.
+  const slash = typingSlashCommand(text);
+  const foot = multiLine || recording || slash;
   // Recording from an empty field is the one-row waveform pill.
   const showText = !(recording && text === "");
-  const hint: ComposerHint = over ? "too-long" : inFence ? "fence" : "keys";
+  const hint: ComposerHint = over ? "too-long" : inFence ? "fence" : slash ? "command" : "keys";
 
   // Stable, so React never detaches them between commits: the field
   // measures the shell in its own layout effect, which runs before a

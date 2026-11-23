@@ -52,6 +52,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "pull-comments",
   "computer-cleanup",
   "bring-secrets",
+  "feedback",
   "architecture",
 ] as const;
 

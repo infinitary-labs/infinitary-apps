@@ -344,6 +344,20 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // The feedback labels (feedback-labels.yml, docs/feedback.md "Triage"): a
+  // new issue whose body carries the app's feedback mark.
+  {
+    file: "feedback-labels.yml",
+    trigger: "New issue",
+    scenario: {
+      github: {
+        event_name: "issues",
+        event: {
+          issue: { body: "Words\n\n<!-- infinitary-feedback v1 kind=bug version=1.0.0 -->" },
+        },
+      },
+    },
+  },
   // A batch pull request's run (batch-pull-request.yml), whose one job calls
   // batch-checks.yml on the pull request's version; its checks passed, so
   // its last job runs.

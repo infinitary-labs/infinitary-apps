@@ -602,9 +602,16 @@ export type CrewSupervisorOptions = {
         load?: import("../placed/loadLine").TaskLoad;
         files?: TaskFiles;
         stops?: import("../tasks/taskStops").TaskStopsCommand;
+        feedback?: import("../feedback/feedbackCommand").TaskFeedback;
       },
     ) => TaskShell;
   };
+  /**
+   * A /feedback report's command (docs/feedback.md): every crewmate on this
+   * Mac with a task channel gets `infinitary-feedback-axi`, which the
+   * Feedback runbook's skill tells it how to use. Absent, none does.
+   */
+  feedback?: { forTask: (taskId: string) => import("../feedback/feedbackCommand").TaskFeedback };
   /**
    * Each task's registered stops (docs/leftover-programs.md): every crewmate
    * on this Mac with a task channel gets `infinitary-stops-axi`. Absent, none does.

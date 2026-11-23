@@ -231,7 +231,7 @@
     {
       "from": "core",
       "to": "GitHub, GitLab and Bitbucket",
-      "why": "opens changes, reads checks and merges"
+      "why": "opens changes, reads checks, merges and files /feedback reports"
     },
     {
       "from": "core",

@@ -73,6 +73,8 @@
   "commandComputersPrevious": "Previous work computers",
   "commandDevicesTryAgain": "Try again to reach your computers",
   "commandDevicesTryAgainWords": "devices, ssh, reconnect, connect, macs",
+  "commandFeedbackStart": "Send feedback",
+  "commandFeedbackStartWords": "feedback, report, problem, bug, idea, suggestion, issue",
   "commandFirstmateReply": "Open the first mate's reply",
   "commandFirstmateReplyWords": "answer, message, note, last",
   "commandFocusCardActions": "Go to the card's buttons",

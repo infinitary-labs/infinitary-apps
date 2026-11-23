@@ -125,6 +125,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too), or Check for Updates… in the app menu |
 | `updates.home`, Update the first mate's computer | window, run by the shell page | none: chosen by name (update, computer, remote, restart and version find it too) |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
+| `feedback.start`, Send feedback | window, run by the shell page | none: chosen by name (feedback, report, problem, bug, idea, suggestion and issue find it too), or Send Feedback… in the Help menu |
 | `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
 | `settings.runbooks`, Open Runbooks; `runbooks.open-folder`, Open your runbooks folder | window, run by the shell page | none: chosen by name |
 | `settings.usage`, Open Usage | window, run by the shell page | none: chosen by name (tokens, models, cost and dollars find it too) |
@@ -343,6 +344,9 @@ The main process's own commands, the size keys, are never refused by the page.
 - `whats-new.show`, Show what's new, goes home and asks the core's What's new door for the newest release note that listed changes: an open note comes to the front of the stack, a closed one comes back read-only (`showReleaseNote`, `docs/release-notes.md` "Reading a note again").
   It works from Settings too, and refuses until a note was shown ("No release notes yet").
   The Help menu's What’s New in Infinitary tells the page the same command.
+- `feedback.start`, Send feedback, goes home and starts `/feedback ` in the main message box with the caret after it, for the person's words (`docs/feedback.md`).
+  It refuses, as Go to the main message does, while the box is held.
+  The Help menu's Send Feedback… tells the page the same command.
 - `firstmate.reply`, Open the first mate's reply, goes home and opens the first mate's newest reply whole as a note at the front of the stack, as a click on the reply line above the input does, after the line has faded too (`docs/composer.md` "The reply note").
   It works from Settings too, and refuses until a reply is saved ("Your first mate has not replied yet").
 - `settings.usage`, Open Usage, opens Settings at its Usage tab with focus on the unit switch; it works from Settings too (`docs/usage.md`).
@@ -746,7 +750,7 @@ A desktop with no menu bar (Linux) has no app menu: `src/main/app.ts` sets none,
 On a Mac, `installAppMenu` builds Electron's menu again at every install: the View menu's zoom items run the size commands, and after About the app menu has Check for Updates…, then Settings…, Keyboard Settings… and Reset All Keys…, in the platform's title case.
 Electron words the app menu's title, About, Hide and Quit with `app.name`, the package's lowercase name, so every Mac process that may show a menu, the window or a run macOS brings forward, first puts the bundle's name there (`nameAppMenu`): About Infinitary, Hide Infinitary and Quit Infinitary, or Infinitary Dev for a development build.
 Check for Updates… runs `updates.check` and is greyed out on a copy that cannot check, one whose installation the app could not confirm (`checksUpdates`, read once from `inf:update:status`).
-Electron's own menu has no Help menu, so the app adds one (`role: "help"`, where the Mac puts its menu search) holding What’s New in Infinitary, which runs `whats-new.show`; it is greyed out until a release note was shown, and the menu is built again when the core pushes the first one (`inf:release-notes`).
+Electron's own menu has no Help menu, so the app adds one (`role: "help"`, where the Mac puts its menu search) holding What’s New in Infinitary, which runs `whats-new.show`, and Send Feedback…, which runs `feedback.start`; What’s New is greyed out until a release note was shown, and the menu is built again when the core pushes the first one (`inf:release-notes`).
 Each shows its command's first single key from the installed map; the window takes a command's key before the menu does, so an accelerator only shows it.
 Keyboard Settings…, Reset All Keys… and What’s New stay whatever keys a person removes; Reset All Keys… asks first, naming the chosen preset (`resetAllKeysAfterAsking`).
 Quit, close the window and the editing items keep the platform's own.

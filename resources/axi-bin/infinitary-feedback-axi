@@ -1,0 +1,244 @@
+#!/bin/sh
+# Infinitary's task commands on a crewmate's search path
+# (docs/axi-commands.md, "The launcher").
+#
+# Every infinitary-<tool>-axi name in this directory is an identical copy of
+# this one file, and so is the fm-<tool>-axi name Firstmate 3000 gave it, kept
+# for a crewmate whose instructions predate the Infinitary rename: copies,
+# because a Windows checkout cannot make links. The name it ran
+# as says which command it is; infinitary-axi is the person's own, run from
+# any shell of theirs, and infinitary-inbox-axi its old name, kept until
+# the person retires it (below). The
+# app puts this directory
+# first on the search path of a task's shell only when that task has the
+# tool (src/core/axi/channel.ts), with three variables: the loopback address
+# of the app's task channel, the file holding this task's key (a header line
+# only its owner can read), and the app's version. The key never appears on
+# a command line or in the environment: curl reads the header from the file.
+#
+# The app runs the command and answers what it prints and its exit code, as
+# the first line of its answer. Only shell builtins and the system's curl
+# run here: the packaged app has no Node a shell could run.
+
+nl='
+'
+tool=${0##*/}
+case $tool in
+  infinitary-axi | infinitary-*-axi | fm-*-axi) ;;
+  *)
+    printf 'error: run this as one of its infinitary-<tool>-axi names, such as infinitary-browser-axi\ncode: VALIDATION_ERROR\n'
+    exit 2
+    ;;
+esac
+
+# Each variable under its Infinitary name, or the older FM3000_ one.
+version=${INFINITARY_AXI_VERSION:-${FM3000_AXI_VERSION:-}}
+
+# A bare version flag answers at once, without the app.
+if [ "$#" -eq 1 ] && [ -n "$version" ]; then
+  case $1 in
+    -v | -V | --version)
+      printf '%s\n' "$version"
+      exit 0
+      ;;
+  esac
+fi
+
+# The load wrapper must keep the caller's streams, working directory and
+# environment, and exec its program in its own group after admission.
+if [ "$tool" = infinitary-load-axi ] && [ "${1:-}" = run ]; then
+  exec /bin/bash "${0%/*}/infinitary-load-run" "$@"
+fi
+
+address=${INFINITARY_AXI_ADDRESS:-${FM3000_AXI_ADDRESS:-}}
+key=${INFINITARY_AXI_KEY:-${FM3000_AXI_KEY:-}}
+cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}
+started=${INFINITARY_SHELL_STARTED_MS:-}
+shell=${INFINITARY_SHELL_ID:-}
+# The system's curl, which every command below sends its request with.
+curl=/usr/bin/curl
+[ -x "$curl" ] || curl=curl
+# infinitary-axi is the person's own command, not a task's
+# (docs/axi-commands.md, "Infinitary from your terminal"): any program of
+# this user runs it, from any shell, through the app's local door - the
+# folder the running app writes its loopback address, its certificate's pin
+# and its key into, under the data folder INFINITARY_DATA names or the
+# release's. A script written for the old inbox may name its folder,
+# <data>/integrations/inbox, in INFINITARY_INBOX instead: the data folder
+# is the one above it. The key travels as a header read from a file only
+# this user can read, never on a command line. No shell's limit applies.
+person=
+case $tool in
+  infinitary-axi | infinitary-inbox-axi) person=1 ;;
+esac
+if [ -n "$person" ]; then
+  if [ -n "${INFINITARY_AXI_KEY:-}" ]; then
+    printf 'error: %s is for you, never for the crew, so it does not run in a task'"'"'s shell\ncode: REFUSED\n' "$tool"
+    exit 1
+  fi
+  data=${INFINITARY_DATA:-}
+  if [ -z "$data" ] && [ -n "${INFINITARY_INBOX:-}" ]; then
+    data=${INFINITARY_INBOX%/}
+    data=${data%/*}
+    data=${data%/*}
+  fi
+  if [ -z "$data" ]; then
+    if [ -d "$HOME/Library/Application Support" ]; then
+      data="$HOME/Library/Application Support/infinitary"
+    else
+      data="${XDG_CONFIG_HOME:-$HOME/.config}/infinitary"
+    fi
+  fi
+  door=$data/local-door
+  address=
+  pin=
+  if [ -r "$door/address" ]; then IFS= read -r address <"$door/address" || :; fi
+  if [ -r "$door/pin" ]; then IFS= read -r pin <"$door/pin" || :; fi
+  case $address in
+    127.0.0.1:*) port=${address#127.0.0.1:} ;;
+    *) port= ;;
+  esac
+  case $port in '' | *[!0-9]*) address= ;; esac
+  case $pin in '' | *[!A-Za-z0-9_-]*) address= ;; esac
+  if [ -z "$address" ] || [ ! -r "$door/key" ]; then
+    printf 'error: Infinitary is not open, so %s cannot reach it\ncode: NO_CHANNEL\nhelp[1]: Open Infinitary, then run %s again\n' "$tool" "$tool"
+    exit 1
+  fi
+  # The pin is base64url; curl reads standard base64 with its padding.
+  pin=$(printf '%s' "$pin" | tr '_-' '/+')
+  while [ $((${#pin} % 4)) -ne 0 ]; do pin="$pin="; done
+  header=$(mktemp) || exit 1
+  trap 'rm -f "$header"' EXIT
+  trap 'rm -f "$header"; exit 1' TERM INT HUP
+  IFS= read -r secret <"$door/key" || :
+  printf 'x-infinitary-local-key: %s\n' "$secret" >"$header"
+  secret=
+  cwd=$PWD
+  count=$#
+  while [ "$count" -gt 0 ]; do
+    arg=$1
+    shift
+    set -- "$@" --data-urlencode "arg=$arg"
+    count=$((count - 1))
+  done
+  # -q first: no ~/.curlrc may add options. -k with the pin: the door's
+  # certificate is its own, and the pin is what proves it is this app's;
+  # the door itself refuses anything older than TLS 1.3.
+  answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
+    --insecure --pinnedpubkey "sha256//$pin" \
+    -H @"$header" \
+    --data-urlencode "tool=$tool" \
+    --data-urlencode "bin=$0" \
+    --data-urlencode "cwd=$cwd" \
+    "$@" "https://$address/command" 2>&1)
+  status=$?
+  code=${answer%%"$nl"*}
+  case $status:$code in
+    0:[0-9] | 0:[0-9][0-9]) ;;
+    *)
+      printf 'error: %s could not reach Infinitary: %s\ncode: NO_CHANNEL\n' "$tool" "$code"
+      exit 1
+      ;;
+  esac
+  case $answer in
+    *"$nl"*) printf '%s\n' "${answer#*"$nl"}" ;;
+  esac
+  exit "$code"
+fi
+# The working folder as the app names it: Git Bash on Windows says /c/...,
+# and pwd -W says C:/...
+cwd=$PWD
+case ${OSTYPE:-} in
+  msys* | cygwin*) cwd=$(pwd -W) ;;
+esac
+# Only this Mac's loopback and a port number.
+case $address in
+  127.0.0.1:*) port=${address#127.0.0.1:} ;;
+  *) port= ;;
+esac
+case $port in
+  '' | *[!0-9]*) address= ;;
+esac
+if [ -z "$address" ] || [ -z "$key" ] || [ ! -r "$key" ]; then
+  printf 'error: this shell has no channel to an Infinitary task, so %s cannot reach its task\ncode: NO_CHANNEL\nhelp[1]: Run %s in the shell of a task that has it, while Infinitary is open\n' "$tool" "$tool"
+  exit 1
+fi
+
+# Admission claims and launch receipts are separate idempotent operations.
+# Remember its identity before replacing argv with curl's form fields.
+load_operation=
+if [ "$tool" = infinitary-load-axi ]; then
+  case ${1:-} in claim|receipt) load_operation=$1 ;; esac
+fi
+
+# Each argument travels as its own form field, in order.
+count=$#
+while [ "$count" -gt 0 ]; do
+  arg=$1
+  shift
+  set -- "$@" --data-urlencode "arg=$arg"
+  count=$((count - 1))
+done
+
+# -q first: no ~/.curlrc may add options to this request.
+# Receipt transport owns a cancelable curl child, so a completed payload leaves
+# no request tail holding its streams or continuing receipt polling.
+if [ "$load_operation" = receipt ]; then
+  output=
+  canceled=
+  transport=
+  finish_receipt() {
+    trap '' TERM INT HUP
+    if [ -n "$transport" ]; then kill "$transport" 2>/dev/null; wait "$transport" 2>/dev/null; fi
+    [ -z "$output" ] || rm -f "$output"
+    exit 1
+  }
+  cancel_receipt() {
+    canceled=1
+    [ "$transport" = starting ] || finish_receipt
+  }
+  trap cancel_receipt TERM INT HUP
+  output=$(mktemp) || exit 1
+  transport=starting
+  "$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
+    -H @"$key" --data-urlencode "tool=$tool" --data-urlencode "bin=$0" \
+    --data-urlencode "cwd=$cwd" --data-urlencode "cap=$cap" \
+    --data-urlencode "started=$started" --data-urlencode "shell=$shell" \
+    "$@" "http://$address/run" >"$output" 2>&1 &
+  transport=$!
+  [ -z "$canceled" ] || finish_receipt
+  wait "$transport"
+  status=$?
+  transport=
+  answer=$(cat "$output")
+  rm -f "$output"
+  trap - TERM INT HUP
+else
+  answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
+    -H @"$key" \
+    --data-urlencode "tool=$tool" \
+    --data-urlencode "bin=$0" \
+    --data-urlencode "cwd=$cwd" \
+    --data-urlencode "cap=$cap" \
+    --data-urlencode "started=$started" \
+    --data-urlencode "shell=$shell" \
+    "$@" "http://$address/run" 2>&1)
+  status=$?
+fi
+if [ "$status" -eq 28 ] && [ -n "$load_operation" ]; then
+  case $load_operation in claim) failure=CLAIM_UNAVAILABLE ;; receipt) failure=RECEIPT_UNAVAILABLE ;; esac
+  printf 'error: The load request timed out; the same operation can ask again.\ncode: %s\n' "$failure"
+  exit 1
+fi
+code=${answer%%"$nl"*}
+case $status:$code in
+  0:[0-9] | 0:[0-9][0-9]) ;;
+  *)
+    printf 'error: %s could not reach Infinitary: %s\ncode: NO_CHANNEL\n' "$tool" "$code"
+    exit 1
+    ;;
+esac
+case $answer in
+  *"$nl"*) printf '%s\n' "${answer#*"$nl"}" ;;
+esac
+exit "$code"

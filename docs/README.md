@@ -123,6 +123,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 ## Sharing and data
 
 - `sharing.md`: Diagnostics and contribution, and what leaves the computer.
+- `feedback.md`: `/feedback`, the issue a person reviews and publishes on Infinitary's own project.
 - `dev-observe.md`: Observe, development observability in development and alpha builds.
 - `provenance-capture.md`: prospective provenance capture on the task record.
 - `corpus-export.md`: the corpus export.

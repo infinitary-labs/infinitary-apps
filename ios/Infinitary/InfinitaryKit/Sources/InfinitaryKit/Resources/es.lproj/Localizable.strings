@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "Computadoras de trabajo anteriores";
 "commandDevicesTryAgain" = "Volver a intentar llegar a tus computadoras";
 "commandDevicesTryAgainWords" = "dispositivos, reconectar, conectar, computadoras";
+"commandFeedbackStart" = "Enviar comentarios";
+"commandFeedbackStartWords" = "comentarios, informe, problema, error, idea, sugerencia, incidencia";
 "commandFirstmateReply" = "Abrir la respuesta del primer oficial";
 "commandFirstmateReplyWords" = "respuesta, mensaje, nota, última";
 "commandFocusCardActions" = "Ir a los botones de la tarjeta";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "lanzamiento, notas, cambios, versión";
 "composerFolderNotProject" = "No se pudo añadir esa carpeta como proyecto.";
 "composerFolderProject" = "Esa carpeta ya es uno de tus proyectos.";
+"composerHintFeedback" = "%1$@: cuéntales a los creadores de Infinitary un problema o una idea";
 "composerTooLongShorten" = "Demasiado largo para enviar. Acórtalo primero.";
 "composerWordsOnly" = "Solo se pueden enviar palabras hasta que se actualice Infinitary. Quita las imágenes y los archivos para enviar esto.";
 "crewAPart" = "Una parte";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "Mensaje no entregado: %1$@";
 "feedUpdated" = "Actualización: %1$@";
 "feedYouChose" = "Elegiste «%1$@»";
+"feedbackStripAccount" = "No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub %1$@.";
+"feedbackStripBug" = "Un nuevo informe de problema";
+"feedbackStripComment" = "Un comentario en la incidencia #%1$@";
+"feedbackStripHeading" = "Tu clic lo publica en %1$@, públicamente, una vez";
+"feedbackStripIdea" = "Una nueva idea";
+"feedbackStripNoAccount" = "No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub.";
 "fileAdd" = "Agregar archivos";
 "fileCancel" = "Cancelar la preparación de %1$@";
 "fileDropHere" = "Suelta archivos para agregarlos";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "Ayuda";
 "menuKeyboardSettings" = "Configuración del teclado…";
 "menuResetAllKeys" = "Restablecer todas las teclas…";
+"menuSendFeedback" = "Enviar comentarios…";
 "menuSettings" = "Configuración…";
 "menuWhatsNew" = "Novedades de Infinitary";
 "mergeButtonAfterFixing" = "Fusionar tras corregir los errores";

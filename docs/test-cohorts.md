@@ -290,6 +290,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/dispatcher.placement.test.ts` | the whole core, real git and a project placement change | 30 s (Mac slowest 3.683 s) |
 | `src/core/core.contract.test.ts` | the whole core, its connection on loopback, the scripted client as its own process | 60 s on its boot |
 | `src/core/core.wiring.test.ts` | the whole core, a loopback GitHub and GitLab stand-in, the e2e mock provider | 120 s on its boot and its one first mate turn |
+| `src/core/core.feedback.test.ts` | the whole core and its connection on loopback, the e2e mock provider, a paired phone | 120 s on its boot and on each first mate turn |
 | `tests/replay-gate-catches-lint.test.ts` | the replay CLI, git | 60 s |
 | `src/core/batches/combine.test.ts` | real git against a bare host, at the run's own priority | 10 s (Mac slowest 1.1 s) |
 | `src/core/orchestrator/baseFollow.test.ts` | real git in a scratch repository, at the run's own priority | 12 s (Mac slowest 2.4 s) |

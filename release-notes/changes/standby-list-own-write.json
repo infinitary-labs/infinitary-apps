@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standby-list-own-write",
+      "reason": "The home's stream takes its own write of the list of computers keeping a copy as the next change at once, instead of waiting for the folder watch, which on a Mac names it a second or more later; the standby tests for catching up and for taking over behind another copy stop failing on a busy Mac. Nothing a person sees changes."
+    }
+  ]
+}

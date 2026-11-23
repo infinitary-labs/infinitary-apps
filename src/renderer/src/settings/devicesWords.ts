@@ -221,7 +221,10 @@ export function removeLines(device: DeviceView): [string, ...string[]] {
     ];
   if (!device.inReach)
     return [
-      m.settingsDevicesRemoveAway({ device: label, state: awayWord(deviceConnecting(device)) }),
+      m.settingsDevicesRemoveAway({
+        device: label,
+        state: awayWord(deviceConnecting(device), device.updating),
+      }),
       projects
         ? m.settingsDevicesRemoveWaitOn({ projects, device: label })
         : m.settingsDevicesRemoveWait({ device: label }),

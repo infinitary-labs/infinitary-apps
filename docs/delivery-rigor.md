@@ -54,14 +54,17 @@ The host's own dispatch-time sign-in hold still runs first (`docs/forge.md`, "Di
 
 Every crewmate, at every care, delivery and backend, is served one passage on how tests are written and repaired (`CREWMATE_TEST_DEFAULT` in `src/core/pi/piResources.ts`, from FI3-1756's approved plan).
 It names six words a test meets - intent, fixture, failure, layer, owner and gate - so a test is written only for a stated intent: the user's ask, a standing ruling, or a bug being fixed.
+Its failure word names the three tests that cannot fail: one whose expected value the code under test computes, one that asserts what a stand-in was set to return, and one that makes no assertion; its owner word has the owning test state its fact, and a pin elsewhere is derived from that source.
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
 It adds the captain's direction on a change's own tests (INF-840): a test whose own code the change adds or edits - a journey file, a device test function, a unit test file, never only a helper, scenario or runner it uses - is never a suspected flake.
-Before its merge card, the crewmate runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
+Before its merge card, the crewmate runs each test its change adds or edits once against code the test should reject - without the change, or with the guarded behavior broken - sees it fail, restores the code and reports the break and the failure.
+It then runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
 The host adds no pull request check that repeats them; a project's own rule may move them to one, as this project's `ci.yml` does for unit test files (`docs/testing.md`, "This project's rulings on tests").
 The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
 A test file, helper or stand-in a change edits is brought to the six words in the same pull request; a bad pattern is removed by deriving a pin from its source or moving a stand-in to its owner, never deleting on sight.
 A pattern seen elsewhere is named in the report for the first mate to file, not fixed in passing and never copied; deleting a test still asks for the captain's approval.
+Every independent review is served Testing rules' review section beside it (`docs/runbooks.md`): a test the change adds or edits that cannot fail is a warning to fix, ask-user when the only fix deletes the test, reading a value from the test that owns it is not a finding, and an untouched test with the same fault gets a follow-up.
 This project adds six rulings, including ask-first weakening, skipping or deletion (`docs/testing.md`, "This project's rulings on tests").
 A new end-to-end journey follows the passage like any other test, with no ask, and its review still names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
 The passage decides the rest.

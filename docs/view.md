@@ -79,7 +79,8 @@ When no address can be read yet, the aside says "Could not find this computer's 
 
 ### Following along
 
-While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
+While the welcome is open on this computer's own first mate and no sign-in is under way, the window asks `inf:devices:follow-added` every few seconds, whichever choice is showing or before one is picked.
+The shell itself decides (`Shell.followAdded`).
 When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
 A window opened beside a command's first mate follows the same way, and joins at all (`joinable`), only beside the run its starter owns (`ownedRun`): one the window's own run agent started, as that run's own note says.
 While no command runs, the shell accepts a pasted link's join alone (`Shell.join`, `followsAdded`'s `pastes`): that join names no run to stop, so the agent is let go with no stop file and no signal, its Mac or Linux job ending only a run it started itself, and a command started by hand meanwhile keeps going; Join by its address and following along wait for the run the starter owns.
@@ -111,7 +112,6 @@ A job the service manager would not end, or a Windows task Task Scheduler would 
 On Windows, where the task's stop is a file every run there reads, the agent's stop names the run as above.
 A grant waiting decides the window's starter (`keepsStarterBesideGrant`, `src/main/runCommand.ts`): with no command running the window keeps none and opens as that home's view, as below; a window reopened while the command its run agent started still runs keeps that command's starter, so it can stop the command when it follows along; beside a command started by hand the window keeps no starter.
 A grant the window kept its own first mate beside counts as no grant here, so that window keeps its starter as ever.
-The welcome checks for a waiting grant before any of its three choices is picked, so reopening beside a command the window owns does not require opening One already running.
 The window asks its first mate whether anything was done only once a grant is waiting in the work folder, so most of its asks read nothing of the profile.
 Where something was done, the window notes that it keeps its own first mate beside that grant (`JoinedHome.keepOwn`, `kept-own.json`), so it stays itself after a restart too: neither a reopened window nor a reopened starter adopts that grant.
 A window opened with a grant waiting and no such note - the grant came while it was closed, or the note cannot be read - opens as that home's view at once, whatever was done here, as a computer added by a command or its address always has (`Shell.start`, below); it starts no first mate of its own and asks none whether anything was done.

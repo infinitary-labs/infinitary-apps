@@ -26,6 +26,7 @@ export function useFollowAdded(can: boolean, untouched: boolean): FollowAddedSta
         (said) => {
           if (live) setAnswer(said);
         },
+        // An unreadable answer leaves joining unknown, never allowed.
         () => {
           if (live) setAnswer(null);
         },
@@ -38,6 +39,8 @@ export function useFollowAdded(can: boolean, untouched: boolean): FollowAddedSta
       clearInterval(every);
     };
   }, [can]);
+  // Only a command started outside the window gets the "stays" line.
+  // Until both join routes are available, a starting or absent owned command carries no promise.
   const afterAdd = !answer
     ? "unknown"
     : answer.outside

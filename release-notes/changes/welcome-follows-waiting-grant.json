@@ -1,15 +1,9 @@
 {
-  "entries": [
+  "entries": [],
+  "exclusions": [
     {
       "id": "welcome-follows-waiting-grant",
-      "kind": "fix",
-      "area": "devices",
-      "title": "The welcome screen follows a ready connection again",
-      "body": "If your first mate's computer added this one while the welcome window was closed, reopening it can connect without choosing One already running first. Infinitary still leaves commands you started yourself running.",
-      "noPicture": "The welcome and connected windows look the same; the connection no longer waits for a choice.",
-      "provenance": {
-        "origin": "change"
-      }
+      "reason": "Restores automatic follow on reopen after a regression in the unreleased three-choice welcome. No published release had the defect."
     }
   ]
 }

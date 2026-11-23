@@ -17,7 +17,8 @@ The one exception is the branch check each push of the project's own task branch
 Leave the repository variables `LINUX_RUNNER` and `RELEASE_LINUX_PACKAGES_RUNNER` unset on the destination, and set `LINUX_QUEUES` to `{"typecheck":"fleet-linux-pr"}` alone: every other Linux job then falls back to `ubuntu-24.04` (`docs/testing.md`, "Each Linux job's kind").
 An outside contributor's pull request takes hosted Ubuntu before any variable, so it never reaches that queue ("Outside contributors").
 The existing private project keeps its variables until it is archived, since GitHub bills its hosted minutes.
-The Mac, Windows, signing and TestFlight jobs keep their runner variables and stay on the project's own machines.
+The Windows installer's unsigned build runs on hosted `windows-2025` whenever `WINDOWS_RUNNER` is unset (`docs/windows.md`, "The checks"); leave it unset.
+The Mac jobs, the fresh Windows 11 check, signing and TestFlight keep their runner variables and stay on the project's own machines.
 Use neutral runner registration names that identify platform and queue, not people or machines.
 Keep routing labels intact, and verify an ordinary internal batch and release rehearsal select their existing lanes.
 Do not share reusable runner workspaces, dependency stores, caches or deployment artifacts with untrusted jobs.

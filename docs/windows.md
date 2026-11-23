@@ -89,7 +89,8 @@ A Windows PC that keeps a copy offers Take over while the home is out of reach, 
 ## The checks
 
 `windows.yml` has two jobs, and a third on request ("The update check" below).
-`build` runs on the PC's Windows places, a fresh standard account removed when the job ends (`vars.WINDOWS_RUNNER`, default `shell-pc-windows`).
+`build` runs on GitHub's hosted `windows-2025`: the unsigned installer reads no secret, and a public project's hosted minutes cost nothing, so the PC's cores stay for the fresh Windows 11 check.
+Setting `vars.WINDOWS_RUNNER` to a place of the project's own, a fresh standard account on the PC removed when the job ends, pins the build back there; `hosted` always takes the hosted machine.
 It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only an alpha's upload job publishes it.
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
 Each job's checkout then waits while GitHub refuses the job's token and checks out once more, as every checkout a release reaches does (`docs/testing.md`, "GitHub refusing a job's token"); the wait runs in that Git Bash, in the PowerShell job too.

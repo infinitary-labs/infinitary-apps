@@ -506,7 +506,8 @@ export function sshStoppedLine(device: DeviceView): string | null {
 }
 
 /**
- * A Mac this Mac is adding by its address: reaching it - or, on the call
+ * A Mac this Mac is adding by its address: checking the key it answers
+ * with, from the press on; reaching it - or, on the call
  * that carries the password typed once, letting Firstmate's own key in -
  * then setting it up once it said its name, or, for a computer already on
  * the list (`deviceId`), telling it where this Mac is now; `copy` is how far
@@ -514,7 +515,7 @@ export function sshStoppedLine(device: DeviceView): string | null {
  */
 export type AddingMac = {
   address: string;
-  stage: "reaching" | "letting-in" | "setting-up" | "finding";
+  stage: "checking" | "reaching" | "letting-in" | "setting-up" | "finding";
   name?: string;
   deviceId?: string;
   copy?: RemoteLoginCopy;
@@ -537,6 +538,8 @@ export function addingWords(mac: AddingMac, name: string): string {
       return remoteLoginWords.findingRow({ name });
     case "letting-in":
       return remoteLoginWords.lettingInRow(mac.address);
+    case "checking":
+      return m.settingsDevicesCheckingRow({ address: mac.address });
     default:
       return remoteLoginWords.reachingRow(mac.address);
   }

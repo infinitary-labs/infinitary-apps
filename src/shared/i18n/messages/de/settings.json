@@ -354,6 +354,7 @@
   "settingsDevicesChangeAddress": "Adresse ändern",
   "settingsDevicesChangeAddressFailed": "Konnte nicht ändern, wo dieser Computer erreicht wird.",
   "settingsDevicesChangeAddressNamed": "Adresse von {device} ändern",
+  "settingsDevicesCheckingRow": "{address} wird geprüft …",
   "settingsDevicesConfirmThis": "Das ist der Computer",
   "settingsDevicesControllingNow": "Steuert gerade deinen ersten Offizier",
   "settingsDevicesCopied": "Kopiert",

@@ -346,6 +346,7 @@
   "settingsDevicesChangeAddress": "アドレスを変更",
   "settingsDevicesChangeAddressFailed": "このコンピューターへの接続先を変更できませんでした。",
   "settingsDevicesChangeAddressNamed": "{device} のアドレスを変更",
+  "settingsDevicesCheckingRow": "{address} を確認しています…",
   "settingsDevicesConfirmThis": "このコンピューターです",
   "settingsDevicesControllingNow": "現在、一等航海士を操作中",
   "settingsDevicesCopied": "コピーしました",

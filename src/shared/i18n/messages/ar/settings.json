@@ -386,6 +386,7 @@
   "settingsDevicesChangeAddress": "تغيير العنوان",
   "settingsDevicesChangeAddressFailed": "تعذّر تغيير العنوان الذي يُوصل منه إلى هذا الحاسوب.",
   "settingsDevicesChangeAddressNamed": "تغيير عنوان {device}",
+  "settingsDevicesCheckingRow": "جارٍ التحقق من {address}…",
   "settingsDevicesConfirmThis": "هذا هو الحاسوب",
   "settingsDevicesControllingNow": "يتحكم في نائب القبطان الآن",
   "settingsDevicesCopied": "نُسخ",

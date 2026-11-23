@@ -2722,6 +2722,7 @@
 "settingsDevicesChangeAddress" = "更改位址";
 "settingsDevicesChangeAddressFailed" = "無法更改連絡這台電腦的位址。";
 "settingsDevicesChangeAddressNamed" = "更改 %1$@ 的位址";
+"settingsDevicesCheckingRow" = "正在檢查 %1$@…";
 "settingsDevicesConfirmThis" = "就是這台電腦";
 "settingsDevicesControllingNow" = "正在控制你的大副";
 "settingsDevicesCopied" = "已複製";

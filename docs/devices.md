@@ -416,6 +416,12 @@ Only a home that reads the tap installs the package; one that reads none (below,
 `inf:devices:add` answers the device once it joined, or the question for another first mate's Mac (below); each step is a `device_setup` feed line, and the row in Settings -> Devices follows them.
 From then on this Mac keeps its own SSH connection to it (below, "Through the home's SSH").
 
+Settings -> Devices says an add is under way from the press on: before the check line is read, its row in the list and a line beside the address field say "Checking sam@mini.local…", which turns to step 1 when the key was checked before (`AddingMac`, `src/renderer/src/settings/devicesWords.ts`).
+Another press of Add it, or a card's Add it, for an address being added waits for that add, so the home is never asked twice and never answers that it is under way already.
+The add's answer is kept with its try until the tab shows it (`useAddTry`, `src/renderer/src/settings/devicesState.ts`): its question or refusal lands in the address aside even when Settings closed and opened again meanwhile.
+Pressing + A computer during an add opens the form on that address and waits for the same answer; only Cancel ignores it.
+After a card's Add it, the page scrolls to the row while the add is under way, then to the question or refusal it ended with.
+
 ### How far the copy has gone
 
 The copy is made as it is sent, so nothing knows its size before its end: the row and the feed say the bytes sent so far, never a share of a total (captain's approval of FI3-1361, piece 5).

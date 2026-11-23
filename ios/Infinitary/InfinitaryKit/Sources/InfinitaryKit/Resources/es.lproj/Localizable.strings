@@ -2722,6 +2722,7 @@
 "settingsDevicesChangeAddress" = "Cambiar dirección";
 "settingsDevicesChangeAddressFailed" = "No se pudo cambiar la dirección con la que se llega a esta computadora.";
 "settingsDevicesChangeAddressNamed" = "Cambiar la dirección de %1$@";
+"settingsDevicesCheckingRow" = "Comprobando %1$@…";
 "settingsDevicesConfirmThis" = "Es esta computadora";
 "settingsDevicesControllingNow" = "Controlando a tu primer oficial ahora";
 "settingsDevicesCopied" = "Copiado";

@@ -362,6 +362,7 @@
   "settingsDevicesChangeAddress": "Cambiar dirección",
   "settingsDevicesChangeAddressFailed": "No se pudo cambiar la dirección con la que se llega a esta computadora.",
   "settingsDevicesChangeAddressNamed": "Cambiar la dirección de {device}",
+  "settingsDevicesCheckingRow": "Comprobando {address}…",
   "settingsDevicesConfirmThis": "Es esta computadora",
   "settingsDevicesControllingNow": "Controlando a tu primer oficial ahora",
   "settingsDevicesCopied": "Copiado",

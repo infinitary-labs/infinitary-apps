@@ -2722,6 +2722,7 @@
 "settingsDevicesChangeAddress" = "주소 변경";
 "settingsDevicesChangeAddressFailed" = "이 컴퓨터에 연결하는 주소를 바꿀 수 없어요.";
 "settingsDevicesChangeAddressNamed" = "%1$@의 주소 변경";
+"settingsDevicesCheckingRow" = "%1$@ 확인 중…";
 "settingsDevicesConfirmThis" = "이 컴퓨터가 맞아요";
 "settingsDevicesControllingNow" = "지금 일등항해사를 제어하는 중";
 "settingsDevicesCopied" = "복사됨";

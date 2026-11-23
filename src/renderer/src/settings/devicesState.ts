@@ -2,6 +2,7 @@ import type { DeviceAddresses, DeviceInvite, DeviceRemoveWhen, DeviceView } from
 import { deviceJoinedLine, deviceRunsWork } from "@shared/devices";
 import type { NearbyMacsView } from "@shared/nearbyMacs";
 import {
+  type RemoteLoginAddAnswer,
   type RemoteLoginConfirmQuestion,
   type RemoteLoginCopy,
   type RemoteLoginLeaveQuestion,
@@ -215,6 +216,10 @@ export const useSetups = create<SetupStore>((set, get) => {
                 ...(event.stage === "setting-up" || event.stage === "finding"
                   ? { stage: event.stage }
                   : {}),
+                // A computer whose key was read before goes on to the sign-in with no question.
+                ...(event.stage === "reaching" && mac.stage === "checking"
+                  ? { stage: "reaching" as const }
+                  : {}),
                 ...(event.stage === "finding" && event.deviceId
                   ? { deviceId: event.deviceId }
                   : {}),
@@ -273,6 +278,66 @@ export const useSetups = create<SetupStore>((set, get) => {
     },
   };
 });
+
+/** How an add by its address ended: the home's answer, or the refusal's lines. */
+export type AddOutcome =
+  | { address: string; answer: RemoteLoginAddAnswer }
+  | { address: string; lines: readonly string[] };
+
+type AddTryStore = {
+  /** The newest try the address aside listens to; a Cancel moves it on, so that try is ignored. */
+  current: number;
+  /** The add by its address this window has under way, by its try. */
+  underWay: { address: string; mine: number } | null;
+  /** An ended try's outcome, kept until the open tab shows it. */
+  outcome: AddOutcome | null;
+  /** Starts a try: its number, now the one listened to. */
+  start: (address: string) => number;
+  /** Ignores the try under way, as Cancel does. */
+  ignore: () => void;
+  /** Listens again to the try under way, returning its address, or null when none is. */
+  adopt: () => string | null;
+  /** Keeps a try's outcome when it is still the one listened to, and ends it. */
+  settle: (mine: number, outcome: AddOutcome) => void;
+  /** The tab showed the outcome. */
+  shown: () => void;
+};
+
+/**
+ * The address aside's try (docs/devices.md, "Adding a computer by its
+ * address"), outliving a tab switch like the setups: an add's result lands
+ * where it was pressed even when the tab closed and opened again meanwhile,
+ * and opening the form during an add listens to that add instead of
+ * dropping it.
+ */
+export const useAddTry = create<AddTryStore>((set, get) => ({
+  current: 0,
+  underWay: null,
+  outcome: null,
+  start: (address) => {
+    const mine = get().current + 1;
+    set({ current: mine, underWay: { address, mine }, outcome: null });
+    return mine;
+  },
+  ignore: () => set({ current: get().current + 1, outcome: null }),
+  adopt: () => {
+    const { underWay } = get();
+    if (!underWay) {
+      get().ignore();
+      return null;
+    }
+    set({ current: underWay.mine, outcome: null });
+    return underWay.address;
+  },
+  settle: (mine, outcome) => {
+    const { current, underWay } = get();
+    set({
+      ...(underWay?.mine === mine ? { underWay: null } : {}),
+      ...(mine === current ? { outcome } : {}),
+    });
+  },
+  shown: () => set({ outcome: null }),
+}));
 
 /** Which click is under way: making a link or a command, or removing a device. */
 export type Busy = "link" | "remove" | "carry" | null;

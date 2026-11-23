@@ -17,7 +17,9 @@ When that is not this computer's own - a Mac adding a Linux computer, or a Linux
 The address is the one thing the person supplies, with a port beside it only when its SSH server listens on another one than 22.
 That address is then `ssh://sam@mini.local:2222`, as SSH writes one, and every later update, removal and key check reaches the computer there.
 An alias from their own SSH settings works, because their own SSH resolves it; the app reads no SSH settings.
-While it works, a row stands in the list with an `idle` dot and the summary "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent", and "Starting Infinitary on Mac mini…".
+While it works, a row stands in the list with an `idle` dot, from the press on: first "Checking sam@mini.local…" while its key is read, said again as a `--text-sm --fg-2` line above the address field when the form holds that address.
+Another press for the same address, from the form or a card, waits for that add, and Add it stays disabled meanwhile; its answer lands in the form even after + A computer or leaving Devices, and after a card's Add it the page scrolls the row to the window's middle.
+The summary then reads "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent", and "Starting Infinitary on Mac mini…".
 The count is what was sent so far, in the words a file's size takes on a chip ("640 KB", "42.3 MB"), and it moves about once a second while the copy goes (captain's approval of FI3-1361).
 The copy is made as it is sent, so nothing knows its size before its end: never a percentage, a share of a total, a bar that fills or a time left.
 The feed says each stage: "Reaching sam@mini.local with your SSH key.", "Preparing Infinitary for Mac mini.", "Sending Infinitary to Mac mini: 42.3 MB sent.", which rewrites itself in place as the count moves while it is the feed's newest line, "Starting Infinitary on Mac mini.", then "Mac mini joined your devices.

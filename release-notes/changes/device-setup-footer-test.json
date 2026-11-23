@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "device-setup-footer-test",
+      "reason": "Internal test repair: verify both device setup offer buttons and the keyboard order through the reply row on secret offers, without changing app behavior."
+    }
+  ]
+}

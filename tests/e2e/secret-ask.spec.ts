@@ -14,7 +14,7 @@ import { cardBody } from "./frames";
 import { heroShot, regionShot } from "./pictures";
 import { savedText } from "./savedText";
 import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
-import { shownCard } from "./stack";
+import { cardReply, shownCard } from "./stack";
 import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 const TASK = { id: "secret-ask-proof-task", title: "Wire up the checkout" };
@@ -103,11 +103,15 @@ test("a crewmate's ask is kept from Infinitary's own card by keys alone", async 
     await expect(hookField).toHaveAttribute("type", "password");
     await expect(card.getByLabel(new RegExp(`^${KEY.name}`))).toHaveCount(1);
 
-    // Tab order: the fields sit between the body and the buttons, so Shift-Tab
-    // from Don't save reaches the last field, then the first.
+    const { row: reply, field: replyField } = cardReply(page);
+    const addFiles = reply.getByRole("button", { name: "Add files to this reply", exact: true });
     const dontSave = card.getByRole("button", { name: SECRET_ASK_CARD_WORDS.dontSave });
     await focusOn(dontSave);
     await pressKey(dontSave, "Shift+Tab");
+    await expect(addFiles).toBeFocused();
+    await pressKey(addFiles, "Shift+Tab");
+    await expect(replyField).toBeFocused();
+    await pressKey(replyField, "Shift+Tab");
     await expect(hookField).toBeFocused();
     await pressKey(hookField, "Shift+Tab");
     await expect(keyField).toBeFocused();

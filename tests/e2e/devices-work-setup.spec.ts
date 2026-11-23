@@ -132,20 +132,12 @@ test("setup names the work wait, and sign-in choices return after Fix it in Inte
   const body = cardBody(card, title);
   const reason = workSetupWords(place.label, { state: "blocked", reason: "background-off" });
   if (!reason) throw new Error("The background-off reason has no words");
-  const waitingActions = deviceSetupActions({
-    deviceId,
-    place,
-    reach: "out-of-reach",
-    waitReason: reason,
-    signIns: null,
-    runs: [],
-  });
   const footer = card.locator("[data-card-actions]");
   await expect(card).toBeVisible();
   await expect(body.locator('[data-setup-wait="work"]')).toHaveText(reason);
-  await expect(footer.getByRole("button")).toHaveCount(waitingActions.length);
-  for (const { label } of waitingActions)
-    await expect(footer.getByRole("button", { name: label, exact: true })).toBeVisible();
+  await expect(footer.getByRole("button")).toHaveCount(2);
+  await expect(footer.getByRole("button", { name: "Not now", exact: true })).toBeVisible();
+  await expect(footer.getByRole("button", { name: "Chat", exact: true })).toBeVisible();
 
   const input = promptInput(page);
   await typeInto(input, DEVICE_SETUP_FACTS_ASK);

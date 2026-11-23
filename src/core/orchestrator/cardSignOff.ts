@@ -3,9 +3,10 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 
 /**
- * The action a signed-off answer is recorded under (INF-2845, the captain's
- * direction A): the crewmate marked the captain's line under its answer as
- * saying they are done, and the card ended as Done ends a saved answer.
+ * The action a signed-off card is recorded under (INF-2845, the captain's
+ * direction A; the first mate's own cards since INF-6317): its author marked
+ * the captain's line under it as saying they are done, and the card ended as
+ * Done ends a saved answer.
  */
 export const SIGNED_OFF_ACTION_ID = "signed-off";
 
@@ -58,7 +59,10 @@ function sharedRefusal(
     (action) =>
       settleEffectOf(action) !== undefined ||
       mergeEffectOf(action) !== undefined ||
-      action.effect?.kind === "request_write",
+      action.effect?.kind === "request_write" ||
+      // A required action's Confirm and Not now (INF-6333 review): a mark
+      // would drop the card without completing or deferring the action.
+      action.effect?.kind === "host",
   );
   if (sends || (card.attachment?.kind === "browser" && card.attachment.handoff)) {
     return "this card carries something only the captain's click sends, so write the line without signs_off.";
@@ -72,10 +76,7 @@ function sharedRefusal(
 }
 
 /** What the host reads before the first mate's line may sign off its own card. */
-export type FirstmateSignOffFacts = Pick<
-  SignOffFacts,
-  "card" | "answersMessage" | "interim" | "waitingOn"
->;
+export type FirstmateSignOffFacts = Pick<SignOffFacts, "card" | "answersMessage" | "waitingOn">;
 
 /**
  * Why the first mate's line may not carry `signs_off`, or undefined when it
@@ -90,8 +91,6 @@ export function firstmateSignOffRefusal(facts: FirstmateSignOffFacts): string | 
     // i18n-exempt: a refusal served only to the first mate's model
     return "signs_off needs answers_message, naming the captain's message that says they are done.";
   }
-  // i18n-exempt: a refusal served only to the first mate's model
-  if (facts.interim) return "signs_off ends the card, so it is never an interim line.";
   if (!card || !card.id.startsWith(FIRSTMATE_CARD_PREFIX)) {
     // i18n-exempt: a refusal served only to the first mate's model
     return "signs_off goes only on your own card while it is on the stack.";

@@ -40,7 +40,8 @@ import type { ScheduleRecord } from "../storage/scheduleStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { type TaskCardClick, TaskService } from "../tasks/taskService";
-import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
+import { cardEmitter } from "./cardEmit";
+import { firstmateSignOffRefusal } from "./cardSignOff";
 import type { ThreadOwed } from "./cardThreads";
 import {
   ContextDelivery,
@@ -513,11 +514,17 @@ export class FirstmateContext {
     // says it answers it; a handoff stays open"). The line is the one the
     // message was saved as, never the card's newest (INF-6115 piece 3).
     const asked = aboutCard ? replied?.line : undefined;
-    // The sign-off is said only where it applies: a reply under the first
-    // mate's own card (INF-6317 part 1). Whether the words say "done" is
+    // The sign-off is said only where the host would take it: a reply under
+    // the first mate's own card that nothing only the captain's click ends
+    // (INF-6317 part 1). Whether the words say "done" is
     // its judgment; the host never reads them.
     const signOffGuide =
-      asked !== undefined && aboutCard?.id.startsWith(FIRSTMATE_CARD_PREFIX)
+      asked !== undefined &&
+      firstmateSignOffRefusal({
+        card: aboutCard,
+        answersMessage: asked,
+        waitingOn: asked,
+      }) === undefined
         ? // i18n-exempt: the about line, served only to the first mate's model
           "; when their words, however put, say they need nothing more from this card and ask, correct or approve nothing, pass signs_off true with that reply instead of close_card"
         : "";

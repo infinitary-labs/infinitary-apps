@@ -280,12 +280,13 @@ export class CardThreads {
   }
 
   /**
-   * The captain's line under an answer said they are done, and the crewmate
-   * that answered it marked it so (INF-2845, direction A): the card resolves
-   * through the one resolution path as read, the message it answers takes
-   * it as its answer, and the task closes as answered - the same ending as
-   * Done on a saved answer. The past card names its crewmate, never a click
-   * of the captain's. Returns whether the task closed.
+   * The captain's line under a card said they are done, and the card's
+   * author marked it so (INF-2845, direction A; the first mate's own cards
+   * since INF-6317): the card resolves through the one resolution path as
+   * read and each message it answers takes it as its answer. A crewmate's
+   * answer task closes as answered - the same ending as Done on a saved
+   * answer. The past card names its author, never a click of the captain's.
+   * Returns whether a task closed.
    */
   private signOff(id: string, by: "crewmate" | "firstmate" = "crewmate"): boolean {
     const card = this.stack.cards.get(id);
@@ -318,7 +319,6 @@ export class CardThreads {
     const refusal = firstmateSignOffRefusal({
       card,
       answersMessage: input.answersMessage,
-      interim: false,
       waitingOn: this.host.cardStore.awaitingAuthor(id)
         ? this.host.cardStore.newestCaptainMessage(id)?.id
         : undefined,

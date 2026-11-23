@@ -144,7 +144,7 @@ The crewmate's `emit_card` has its own `interim` parameter, so a revision made w
 The steer preamble's do-this sentence says the answer names the captain's message in `answers_message`, by the number its per-card line gives.
 Putting a card aside never asks to discard an unanswered reply; its hold and draft remain until its author answers.
 
-**Signing off** (INF-2845, the captain's direction A): a reply resolves nothing, except a crewmate's line marked `signs_off`.
+**Signing off** (INF-2845, the captain's direction A): a reply resolves nothing, except a line its author marks `signs_off`: a crewmate's, or the first mate's on its own card.
 When the captain's line under its answer says they need nothing more from it, in whatever words, the crewmate answers it naming the message in `answers_message` with `signs_off` true.
 The card resolves as read, the message takes it as its answer, and the answer task closes as answered (`docs/task-capture.md`, "How a message ends").
 When the captain had seen the card, it stays in front of them marked ended, with the crewmate's line in its thread and one Close, as a card its author closed does (`docs/card-authoring.md`, "A card its author ended while the captain had seen it"); the captain's words on INF-5561: "even if it's considered a sign-off, the card should not just disappear in front of me".
@@ -155,7 +155,7 @@ The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`
 
 The first mate signs off its own card the same way (INF-6317): `emit_card` as a reply alone, naming the message in `answers_message`, with `signs_off` true.
 Its judgment's one home is the `about:` line of the turn the captain wrote under its card, and the parameter says only what the mark does.
-The host refuses it, writing nothing, on anyone else's card and on the same cards it refuses a crewmate's mark on, and beside a body.
+The host refuses it, writing nothing (`firstmateSignOffRefusal`): on anyone else's card, on an `asking` or `continues` card, on a card with a merge, settle, write or host action such as a required action's Confirm, or a browser hand-off, when it names a message other than the one the card waits on, and beside a body.
 Every message the card was shown for takes it as its answer, where `close_card` would withdraw it and leave them without one.
 
 ## A merge card behind its change
@@ -451,7 +451,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
   Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
-  A reply resolves nothing but a crewmate's signed-off line; the buttons stay pinned and explicit choices, task endings or author withdrawals retire cards.
+  A reply resolves nothing but its author's signed-off line; the buttons stay pinned and explicit choices, task endings or author withdrawals retire cards.
   A reply keeps the card shown while its author answers; a revision is released at its writer's close-out, held in the core as `Card.awaiting` ("When a card reaches the stage").
   The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and the captain's words verbatim, delivered fire-and-forget the way a click's round-trip is.
   `CARD_REPLY` (contract v4.2) is the shared contract, stated ONCE the way `CARD_AUTHORING` is and included by every persona (`piResources.test.ts` pins both directions); the crewmate's `reply(card_id, text)` is its prose half on Pi and Claude, and the first mate's tool count stays 24.

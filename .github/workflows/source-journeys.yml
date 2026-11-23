@@ -202,11 +202,11 @@ jobs:
       # pointer takes the keyboard, so the pointer waits on the screen's last
       # pixel, where no window reaches, and no window gains or loses focus
       # as a journey resizes it. Xvfb runs with -noreset: otherwise it
-      # resets as its last client leaves - xdotool, before any app opens -
-      # and puts the pointer back at the screen's centre. Every app window
-      # opens centred, so a pointer there sits in each one, and parallel
-      # journeys' windows opening over one another hand it to the window
-      # under test, off what its journey rests on. The step stops unless
+      # resets as its last client leaves - the pointer's park, before any
+      # app opens - and puts the pointer back at the screen's centre. Every
+      # app window opens centred, so a pointer there sits in each one, and
+      # parallel journeys' windows opening over one another hand it to the
+      # window under test, off what its journey rests on. The step stops unless
       # the pointer is on the last pixel. Affected files end with the run-alone
       # pass over the directly edited ones (scripts/journey-runs.ts), and a
       # requested run-alone job runs each later test of every spec file that

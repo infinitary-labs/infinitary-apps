@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-journeys-screen-without-mirror",
+      "reason": "The Linux journeys stop downloading a pointer tool from Ubuntu's mirrors on GitHub's hosted machines and park the pointer through the X library instead, so a stalled mirror no longer fails their checks; it changes only how the project's checks prepare their machines, not the app."
+    }
+  ]
+}

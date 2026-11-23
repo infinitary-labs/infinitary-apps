@@ -14,8 +14,10 @@ function fence(cwd: string, path: string): void {
 }
 
 /**
- * A fenced session's whole file reach (`SessionSpec.fenced`): Pi's read,
- * grep and ls, each checking every path it opens against the working copy.
+ * A fenced session's whole file reach (`SessionSpec.fenced`): Pi's read and
+ * ls, each checking every path it opens against the working copy, and grep,
+ * which checks its search root and leaves the files beneath it to ripgrep,
+ * which follows no links out of it.
  * Pi's find is left out: it runs its own search program on the path it is
  * given, with nothing of ours asked first.
  */

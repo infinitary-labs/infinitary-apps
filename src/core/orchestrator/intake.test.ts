@@ -105,13 +105,17 @@ describe("new work", () => {
       signInWait: () => undefined,
     } as unknown as CrewMachines;
     const crewmate = fakeCrewmate();
-    const h = { ...setup(crewmate, { machines }) };
+    const personal = {
+      enabled: () => true,
+      version: () => ({ version: "a".repeat(64), since: 1, files: 1 }),
+    };
+    const h = { ...setup(crewmate, { machines, personal }) };
     const folder = join(h.paths.fleetDir, "meter");
     mkdirSync(join(folder, ".git"), { recursive: true });
     const repo = seedProject(h.db, { id: "meter", name: "meter", path: folder, setupKind: "init" });
     h.repos.configure(repo.id, { origin: "https://github.com/octo/meter.git" });
     h.repos.setRunsOn(repo.id, "mini-device");
-    const personal = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    const workspace = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
     const readOnly = {
       ...intentOf("read the waiting issues and say which are real"),
       constraints: [{ kind: "read-only" as const }],
@@ -125,7 +129,7 @@ describe("new work", () => {
       });
 
     await expect(commission(undefined)).rejects.toThrow(OUTSIDE_READER_PROJECT);
-    await expect(commission(personal.id)).rejects.toThrow(OUTSIDE_READER_PROJECT);
+    await expect(commission(workspace.id)).rejects.toThrow(OUTSIDE_READER_PROJECT);
     await expect(commission(repo.id, intentOf("fix the waiting issues"))).rejects.toThrow(
       OUTSIDE_READER_ANSWERS,
     );
@@ -142,7 +146,8 @@ describe("new work", () => {
     expect(spec?.fenced).toBe(true);
     expect(spec?.onReadCard).toBeUndefined();
     expect(spec?.onQueryTasks).toBeUndefined();
-    expect(h.sessionSpecs.at(-1)?.fenced).toBe(true);
+    expect(h.sessionSpecs.at(-1)).toMatchObject({ fenced: true, personalResources: false });
+    expect(h.sessionSpecs.at(-1)?.runbookSkills).toBeUndefined();
     expect(crewmate.promptCalls.at(-1)).toContain(OUTSIDE_READER_WORDS);
   });
 

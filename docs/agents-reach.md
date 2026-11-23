@@ -98,7 +98,8 @@ Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it
 `spawn_crewmate` refuses one with no project, on the personal workspace, or that is not an answer (`OUTSIDE_READER_PROJECT`, `OUTSIDE_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 
 - Its session is fenced (`SessionSpec.fenced`): no shell, no file change, no web and no browser, on both kinds of model session.
-  Pi serves only its read, grep and ls tools, each checking every path it opens (`fencedPiReadTools`), and leaves out find, which runs its own search program unasked.
+  Pi serves only its read, grep and ls tools (`fencedPiReadTools`): read and ls check every path they open, and grep checks its search root and leaves the files beneath it to ripgrep, which follows no links out of it.
+  It leaves out find, which runs its own search program unasked, and stages no runbook or personal skills, which sit outside the working copy.
   Claude serves only Read, Grep and Glob, and a gate before each call refuses a path outside the working copy (`claudeFenceHook`); no skill is staged, since a plugin can bring hooks and servers of its own.
   A path's links are followed before the check, and a `~` path is refused whole (`outsideWorkingCopy`, `src/core/session/fencedReads.ts`).
 - None of the app's shell commands reach it, so it has no integrations and no browser, and it gets no task reads, no knowledge, no programs and no workflow logs or artifacts: those would bring outside words in unfenced, or reach past its project.

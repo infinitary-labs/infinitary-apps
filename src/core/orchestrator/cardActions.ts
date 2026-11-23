@@ -48,10 +48,12 @@ import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import {
   chromeValue,
+  interactionOf,
   type KeptCarried,
   keepCarried,
   keptPictures,
   type NotePress,
+  withoutCarried,
 } from "./cardSubmissionValue";
 import { CardWriteAsks } from "./cardWriteAsks";
 import type { CrewCore } from "./crewCore";
@@ -60,7 +62,7 @@ import { standingAuthorization } from "./mergeAuthorization";
 import { MergeCardActions } from "./mergeCardActions";
 import { reviewedTaskOf } from "./reviewCard";
 import { reviewHistory } from "./reviewHistory";
-import { holdsMerge, type MergeBehind } from "./settleCardFacts";
+import { holdsMerge, type MergeBehind, mergeBehindRefusal } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
 
@@ -101,19 +103,6 @@ export class CardChoiceUnavailableError extends Error {
                   : "This choice is not ready. Wait for the card to return.",
     );
   }
-}
-
-/**
- * The refused click on a merge card behind its change (INF-4031): what
- * changed, and that the card now shows it, since the refusal holds or
- * redraws the card at once.
- */
-function mergeBehindRefusal(behind: MergeBehind | undefined): string {
-  if (behind?.why === "earlier") return m.mergeRefusedEarlier();
-  if (behind?.why === "other")
-    return "Another pull request became this task's current change after this card went up, so I did not merge. The card now says so.";
-  const version = behind?.current ? `, ${behind.current.slice(0, 7)},` : "";
-  return `A newer version${version} was pushed after this card went up, so I did not merge. The card now shows it.`;
 }
 
 /**
@@ -1166,16 +1155,4 @@ export class CardActions {
         });
       });
   }
-}
-
-/** A choice without anything the field sent besides its words. */
-function withoutCarried(choice: WakeChoice): WakeChoice {
-  const { carried: _carried, ...plain } = choice;
-  return plain;
-}
-
-/** The gesture's own id the shell minted at a click, when it sent a well-formed one. */
-function interactionOf(submission: unknown): { interactionId?: string } {
-  const id = (submission as { id?: unknown } | null | undefined)?.id;
-  return typeof id === "string" && id.length >= 8 && id.length <= 64 ? { interactionId: id } : {};
 }

@@ -31,6 +31,7 @@ import {
 } from "@shared/checksSpan";
 import { type FactDotState, factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
+import * as m from "@shared/i18n/messages.generated";
 import { said, saidMark } from "@shared/i18n/said";
 import { HELD_LINE, heldMerges, mergeActionsOf } from "@shared/mergeHeld";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
@@ -112,6 +113,19 @@ export type MergeBehind = {
   /** Where that revision's publication stands, which a redraw on a hosted project waits for. */
   published?: string;
 };
+
+/**
+ * The refused click on a merge card behind its change (INF-4031): what
+ * changed, and that the card now shows it, since the refusal holds or
+ * redraws the card at once.
+ */
+export function mergeBehindRefusal(behind: MergeBehind | undefined): string {
+  if (behind?.why === "earlier") return m.mergeRefusedEarlier();
+  if (behind?.why === "other")
+    return "Another pull request became this task's current change after this card went up, so I did not merge. The card now says so.";
+  const version = behind?.current ? `, ${behind.current.slice(0, 7)},` : "";
+  return `A newer version${version} was pushed after this card went up, so I did not merge. The card now shows it.`;
+}
 
 /** Whether a reason refuses the card's click, and so holds its Merge. */
 export function holdsMerge(behind: MergeBehind | null | undefined): behind is MergeBehind {

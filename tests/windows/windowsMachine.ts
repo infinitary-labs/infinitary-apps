@@ -218,7 +218,11 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
           }
           $front = [System.IntPtr]$window.Current.NativeWindowHandle
           # Windows lets a program bring another window to the front just after a key press of its own.
+          # An unassigned key (0xE8) between Alt's press and release keeps Alt alone from opening the
+          # window's menu, which would then take the Enter below.
           [InfDialog.Front]::keybd_event(0x12, 0, 0, [System.UIntPtr]::Zero)
+          [InfDialog.Front]::keybd_event(0xE8, 0, 0, [System.UIntPtr]::Zero)
+          [InfDialog.Front]::keybd_event(0xE8, 0, 2, [System.UIntPtr]::Zero)
           [InfDialog.Front]::keybd_event(0x12, 0, 2, [System.UIntPtr]::Zero)
           [void][InfDialog.Front]::SetForegroundWindow($front)
           try { $candidate.SetFocus() } catch { }

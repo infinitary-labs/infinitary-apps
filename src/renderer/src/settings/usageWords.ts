@@ -1,6 +1,15 @@
-import { formatLanguageDate, formatLanguageDateTime, formatNumber } from "@shared/i18n/format";
+import {
+  formatLanguageDate,
+  formatLanguageDateTime,
+  formatList,
+  formatNumber,
+} from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import {
+  COST_MIN_TASKS,
+  COST_WINDOW_DAYS,
+  type CostPoint,
+  type CostSeries,
   type UsageAmount,
   type UsageAttribution,
   type UsageCategory,
@@ -11,6 +20,7 @@ import {
   type UsageScope,
   type UsageSummary,
   type UsageTask,
+  type UsageTaskCost,
   type UsageUnit,
   type UsageWhere,
   type UsageWorkKind,
@@ -486,4 +496,176 @@ export function usageSummaryLine(summary: UsageSummary): string {
   return tokens === null
     ? period
     : m.settingsUsageSummary({ tokens: compactTokens(tokens), period });
+}
+
+/** "Oct 24": the local date of a moment, as Cost per task's axis and table name it. */
+export function momentDate(at: number): string {
+  return formatLanguageDate(new Date(at), { month: "short", day: "numeric" });
+}
+
+/** The words beside Cost per task's heading: the unit, then what each point is. */
+export function costUnitLine(unit: UsageUnit): string {
+  return m.settingsUsageCostUnit({ unit: unitHeading(unit) });
+}
+
+/** Up 31%, Down 12%, No change: a change as a whole percent; Not available without one. */
+export function costChangeWords(change: number | null): string {
+  if (change === null) return USAGE_WORDS.notAvailable;
+  const percent = Math.round(change * 100);
+  if (percent === 0) return m.settingsUsageCostSame();
+  const words = formatNumber(Math.abs(percent));
+  return percent > 0
+    ? m.settingsUsageCostUp({ percent: words })
+    : m.settingsUsageCostDown({ percent: words });
+}
+
+/** Cost per task's three readouts: the median now, at the start, and the change between. */
+export function costReadouts(series: CostSeries, unit: UsageUnit): UsageReadout[] {
+  return [
+    {
+      label: m.settingsUsageCostNow(),
+      value: formatUsage(series.now.median, unit),
+      note: m.settingsUsageCostNowNote({ count: series.now.tasks, days: String(COST_WINDOW_DAYS) }),
+    },
+    {
+      label: m.settingsUsageCostStart(),
+      value: formatUsage(series.start?.median ?? null, unit),
+      note: series.start
+        ? m.settingsUsageCostStartNote({ date: momentDate(series.start.at) })
+        : m.settingsUsageCostStartNone(),
+    },
+    {
+      label: m.settingsUsageCostChange(),
+      value: costChangeWords(series.change),
+      note: m.settingsUsageCostChangeNote(),
+    },
+  ];
+}
+
+/**
+ * The line under the chart while nothing is pointed at: what a point is,
+ * the band, and the selected tasks left out for want of a value in the unit.
+ */
+export function costLegend(series: CostSeries, unit: UsageUnit): string {
+  const lead = m.settingsUsageCostLegend({ days: String(COST_WINDOW_DAYS) });
+  if (series.missing === 0) return lead;
+  const missing =
+    unit === "usd"
+      ? m.settingsUsageCostMissingUsd({ count: series.missing })
+      : m.settingsUsageCostMissingTokens({ count: series.missing });
+  return m.settingsUsageCostLegendWith({ lead, missing });
+}
+
+/** "Nov 3, 3:00 PM": when a point's window ends, in local time. */
+function pointMoment(at: number): string {
+  return formatLanguageDateTime(new Date(at), {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** The line under the chart while the pointer rests on a point. */
+export function costPointWords(point: CostPoint, unit: UsageUnit): string {
+  const when = pointMoment(point.at);
+  if (point.median === null) {
+    return m.settingsUsageCostPointTooFew({
+      when,
+      count: point.tasks,
+      least: String(COST_MIN_TASKS),
+    });
+  }
+  return m.settingsUsageCostPoint({
+    when,
+    median: formatUsage(point.median, unit),
+    low: formatUsage(point.q1, unit),
+    high: formatUsage(point.q3, unit),
+    count: point.tasks,
+  });
+}
+
+/** A Values row's middle half, or that too few tasks finished for one. */
+export function costMiddleHalf(point: CostPoint, unit: UsageUnit): string {
+  return point.median === null
+    ? m.settingsUsageCostTooFewCell()
+    : m.settingsUsageCostRange({
+        low: formatUsage(point.q1, unit),
+        high: formatUsage(point.q3, unit),
+      });
+}
+
+export type CostOption<K> = { key: K; name: string; tasks: number };
+
+/**
+ * A filter's choices: each project or kind the period's finished tasks
+ * name, the most tasks first and names breaking ties, and any already
+ * picked that the period no longer has.
+ */
+export function costOptions<K extends string | null>(
+  tasks: readonly UsageTaskCost[],
+  since: number | null,
+  keyOf: (task: UsageTaskCost) => K,
+  nameOf: (task: UsageTaskCost | undefined, key: K) => string,
+  picked: ReadonlySet<K> | null,
+): CostOption<K>[] {
+  const counts = new Map<K, { task: UsageTaskCost; tasks: number }>();
+  for (const task of tasks) {
+    if (since !== null && task.closedAt < since) continue;
+    const key = keyOf(task);
+    const held = counts.get(key);
+    if (held) held.tasks++;
+    else counts.set(key, { task, tasks: 1 });
+  }
+  const options = [...counts].map(([key, { task, tasks }]) => ({
+    key,
+    name: nameOf(task, key),
+    tasks,
+  }));
+  for (const key of picked ?? []) {
+    if (!counts.has(key)) options.push({ key, name: nameOf(undefined, key), tasks: 0 });
+  }
+  return options.sort((a, b) => b.tasks - a.tasks || a.name.localeCompare(b.name));
+}
+
+/** The projects filter's choices, a project the record no longer has by those words. */
+export function costProjectOptions(
+  tasks: readonly UsageTaskCost[],
+  since: number | null,
+  picked: ReadonlySet<string | null> | null,
+): CostOption<string | null>[] {
+  const names = new Map(tasks.map((task) => [task.project?.id ?? null, task.project?.name]));
+  return costOptions(
+    tasks,
+    since,
+    (task) => task.project?.id ?? null,
+    (_task, key) => (key === null ? m.settingsUsageProjectUnavailable() : (names.get(key) ?? key)),
+    picked,
+  );
+}
+
+/** The kinds filter's choices, in the names Where it went gives them. */
+export function costKindOptions(
+  tasks: readonly UsageTaskCost[],
+  since: number | null,
+  picked: ReadonlySet<UsageWorkKind | null> | null,
+): CostOption<UsageWorkKind | null>[] {
+  return costOptions(
+    tasks,
+    since,
+    (task) => task.kind,
+    (_task, key) => kindWords(key),
+    picked,
+  );
+}
+
+/** What a closed filter says it holds: all, one or two by name, or how many. */
+export function costFilterValue(
+  options: readonly CostOption<string | null>[],
+  picked: ReadonlySet<string | null> | null,
+  all: string,
+): string {
+  if (picked === null || picked.size === 0) return all;
+  const names = options.filter((option) => picked.has(option.key)).map((option) => option.name);
+  return names.length <= 2 ? formatList(names) : m.settingsUsageCostPicked({ count: names.length });
 }

@@ -1,5 +1,6 @@
 import * as m from "@shared/i18n/messages.generated";
 import {
+  type CostSelection,
   DEFAULT_USAGE_QUERY,
   USAGE_PERIODS,
   USAGE_SCOPES,
@@ -23,6 +24,7 @@ import { KeyedText } from "../cards/TaskKey";
 import { Button, GroupedPills } from "../design";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { SectionLabel, SettingError } from "./settingRows";
+import { CostPerTask } from "./UsageCostPerTask";
 import "./usage.css";
 import {
   createdWords,
@@ -49,12 +51,15 @@ import {
   whereRows,
 } from "./usageWords";
 
+/** Cost per task's filters as the tab opens: every project and every kind. */
+const ALL_TASKS: CostSelection = { projects: null, kinds: null };
+
 /**
  * Settings → Usage (docs/usage.md; the design skill's
  * `components/usage/UsageTab.prompt.md`): recorded model usage across the
- * fleet, in tokens or estimated dollars. The unit is the captain's and the
- * core remembers it; the period and the kind of work start over on every
- * opening. The summary is the `usage.summary` read and the recent tasks
+ * fleet, in estimated dollars or tokens. The unit is the captain's and the
+ * core remembers it, dollars until the captain picks tokens; the period, the
+ * kind of work and Cost per task's filters start over on every opening. The summary is the `usage.summary` read and the recent tasks
  * the `usage.tasks` read, each re-read after every model response while
  * the tab is open.
  */
@@ -69,6 +74,8 @@ export function UsageTab() {
   const [summary, setSummary] = useState<UsageSummary | null>(null);
   const [failed, setFailed] = useState(false);
   const [openModel, setOpenModel] = useState<string | null>(null);
+  // Cost per task's filters: All on every opening, kept across the period and work.
+  const [costSelection, setCostSelection] = useState<CostSelection>(ALL_TASKS);
   const root = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);
   const opening = useRef(false);
@@ -176,6 +183,8 @@ export function UsageTab() {
         <UsageBody
           summary={summary}
           unit={unit}
+          costSelection={costSelection}
+          onCostSelection={setCostSelection}
           model={model}
           onModel={(id) => {
             if (id === openModel) {
@@ -202,6 +211,8 @@ export function UsageTab() {
 function UsageBody({
   summary,
   unit,
+  costSelection,
+  onCostSelection,
   model,
   onModel,
   onClose,
@@ -209,6 +220,8 @@ function UsageBody({
 }: {
   summary: UsageSummary;
   unit: UsageUnit;
+  costSelection: CostSelection;
+  onCostSelection: (next: CostSelection) => void;
   model: UsageModel | undefined;
   onModel: (id: string) => void;
   onClose: () => void;
@@ -238,6 +251,14 @@ function UsageBody({
             ))}
           </div>
           <DailyUsage summary={summary} unit={unit} />
+          {(summary.query.scope === "all" || summary.query.scope === "task") && (
+            <CostPerTask
+              period={summary.query.period}
+              unit={unit}
+              selection={costSelection}
+              onSelection={onCostSelection}
+            />
+          )}
           <div className="fm-usage-columns">
             <ModelList summary={summary} unit={unit} open={model?.id ?? null} onModel={onModel} />
             <WhereItWent

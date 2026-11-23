@@ -1485,6 +1485,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       }),
     "inf:usage:summary": (query) => services.usage.summary(query),
     "inf:usage:tasks": (query) => services.usage.tasks(query),
+    "inf:usage:task-costs": (query) => services.usage.taskCosts(query),
 
     "inf:plugins:fetch": (call) => services.pluginFetch(call),
     "inf:sql:query": (request) => services.sql.query(request),

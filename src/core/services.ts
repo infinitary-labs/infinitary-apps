@@ -1782,6 +1782,7 @@ export async function createServices(
         });
       },
       tasks: (query) => usageStore.tasks(query, { now: Date.now() }),
+      taskCosts: (query) => usageStore.taskCosts(query, { now: Date.now() }),
     },
     costLimit: {
       view: () => appCostLimitView(),

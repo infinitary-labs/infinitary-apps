@@ -82852,6 +82852,1369 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Close details`;
   }
+  function settingsUsageCostAllKinds() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل الأنواع`;
+      case "de":
+        return `Alle Arten`;
+      case "es":
+        return `Todos los tipos`;
+      case "fr":
+        return `Tous les types`;
+      case "ja":
+        return `すべての種類`;
+      case "ko":
+        return `모든 종류`;
+      case "pt-BR":
+        return `Todos os tipos`;
+      case "zh-Hans":
+        return `所有类型`;
+      case "zh-Hant":
+        return `所有類型`;
+      case "en-XA":
+        return `[Åļļ ķîñðš ~~~]`;
+      case "ar-XB":
+        return `‮All kinds‬`;
+    }
+    return `All kinds`;
+  }
+  function settingsUsageCostAllProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل المشاريع`;
+      case "de":
+        return `Alle Projekte`;
+      case "es":
+        return `Todos los proyectos`;
+      case "fr":
+        return `Tous les projets`;
+      case "ja":
+        return `すべてのプロジェクト`;
+      case "ko":
+        return `모든 프로젝트`;
+      case "pt-BR":
+        return `Todos os projetos`;
+      case "zh-Hans":
+        return `所有项目`;
+      case "zh-Hant":
+        return `所有專案`;
+      case "en-XA":
+        return `[Åļļ þŕöĵéçţš ~~~~]`;
+      case "ar-XB":
+        return `‮All projects‬`;
+    }
+    return `All projects`;
+  }
+  function settingsUsageCostChange() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التغيّر`;
+      case "de":
+        return `Veränderung`;
+      case "es":
+        return `Cambio`;
+      case "fr":
+        return `Évolution`;
+      case "ja":
+        return `変化`;
+      case "ko":
+        return `변화`;
+      case "pt-BR":
+        return `Variação`;
+      case "zh-Hans":
+        return `变化`;
+      case "zh-Hant":
+        return `變化`;
+      case "en-XA":
+        return `[Çĥáñĝé ~~]`;
+      case "ar-XB":
+        return `‮Change‬`;
+    }
+    return `Change`;
+  }
+  function settingsUsageCostChangeNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `خلال الفترة المعروضة`;
+      case "de":
+        return `Im gezeigten Zeitraum`;
+      case "es":
+        return `En el periodo mostrado`;
+      case "fr":
+        return `Sur la période affichée`;
+      case "ja":
+        return `表示中の期間`;
+      case "ko":
+        return `표시된 기간 동안`;
+      case "pt-BR":
+        return `No período exibido`;
+      case "zh-Hans":
+        return `所示期间内`;
+      case "zh-Hant":
+        return `所示期間內`;
+      case "en-XA":
+        return `[Öṽéŕ ţĥé þéŕîöð šĥöŵñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Over the period shown‬`;
+    }
+    return `Over the period shown`;
+  }
+  function settingsUsageCostChartTokens() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسيط الرموز لكل مهمة منتهية خلال الفترة المعروضة`;
+      case "de":
+        return `Median der Tokens pro abgeschlossener Aufgabe im gezeigten Zeitraum`;
+      case "es":
+        return `Mediana de tokens por tarea terminada en el periodo mostrado`;
+      case "fr":
+        return `Médiane des tokens par tâche terminée sur la période affichée`;
+      case "ja":
+        return `表示中の期間における完了タスクあたりのトークンの中央値`;
+      case "ko":
+        return `표시된 기간 동안 완료된 작업당 토큰 중앙값`;
+      case "pt-BR":
+        return `Mediana de tokens por tarefa concluída no período exibido`;
+      case "zh-Hans":
+        return `所示期间内每个已完成任务的 token 中位数`;
+      case "zh-Hant":
+        return `所示期間內每個已完成任務的 token 中位數`;
+      case "en-XA":
+        return `[Ṁéðîáñ ţöķéñš þéŕ ƒîñîšĥéð ţášķ öṽéŕ ţĥé þéŕîöð šĥöŵñ ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Median tokens per finished task over the period shown‬`;
+    }
+    return `Median tokens per finished task over the period shown`;
+  }
+  function settingsUsageCostChartUsd() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `وسيط الدولارات التقديرية لكل مهمة منتهية خلال الفترة المعروضة`;
+      case "de":
+        return `Median der geschätzten Dollar pro abgeschlossener Aufgabe im gezeigten Zeitraum`;
+      case "es":
+        return `Mediana de dólares estimados por tarea terminada en el periodo mostrado`;
+      case "fr":
+        return `Médiane des dollars estimés par tâche terminée sur la période affichée`;
+      case "ja":
+        return `表示中の期間における完了タスクあたりの推定ドルの中央値`;
+      case "ko":
+        return `표시된 기간 동안 완료된 작업당 추정 달러 중앙값`;
+      case "pt-BR":
+        return `Mediana de dólares estimados por tarefa concluída no período exibido`;
+      case "zh-Hans":
+        return `所示期间内每个已完成任务的估算美元中位数`;
+      case "zh-Hant":
+        return `所示期間內每個已完成任務的估算美元中位數`;
+      case "en-XA":
+        return `[Ṁéðîáñ éšţîɱáţéð ðöļļáŕš þéŕ ƒîñîšĥéð ţášķ öṽéŕ ţĥé þéŕîöð šĥöŵñ ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Median estimated dollars per finished task over the period shown‬`;
+    }
+    return `Median estimated dollars per finished task over the period shown`;
+  }
+  function settingsUsageCostDown(input2) {
+    const percent = input2.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انخفاض ${percent}%`;
+      case "de":
+        return `${percent} % weniger`;
+      case "es":
+        return `Baja ${percent} %`;
+      case "fr":
+        return `En baisse de ${percent} %`;
+      case "ja":
+        return `${percent}% 減少`;
+      case "ko":
+        return `${percent}% 감소`;
+      case "pt-BR":
+        return `Queda de ${percent}%`;
+      case "zh-Hans":
+        return `下降 ${percent}%`;
+      case "zh-Hant":
+        return `下降 ${percent}%`;
+      case "en-XA":
+        return `[Ðöŵñ ${percent}% ~~]`;
+      case "ar-XB":
+        return `‮Down ‬${percent}‮%‬`;
+    }
+    return `Down ${percent}%`;
+  }
+  function settingsUsageCostFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّرت قراءة التكلفة لكل مهمة الآن.`;
+      case "de":
+        return `Die Kosten pro Aufgabe konnten gerade nicht gelesen werden.`;
+      case "es":
+        return `No se pudo leer el costo por tarea en este momento.`;
+      case "fr":
+        return `Le coût par tâche n’a pas pu être lu pour l’instant.`;
+      case "ja":
+        return `タスクあたりのコストを今は読み取れませんでした。`;
+      case "ko":
+        return `지금은 작업당 비용을 읽을 수 없습니다.`;
+      case "pt-BR":
+        return `Não foi possível ler o custo por tarefa agora.`;
+      case "zh-Hans":
+        return `暂时无法读取每个任务的成本。`;
+      case "zh-Hant":
+        return `暫時無法讀取每個任務的成本。`;
+      case "en-XA":
+        return `[Çöšţ þéŕ ţášķ çöûļð ñöţ ƀé ŕéáð ĵûšţ ñöŵ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Cost per task could not be read just now.‬`;
+    }
+    return `Cost per task could not be read just now.`;
+  }
+  function settingsUsageCostHeading() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التكلفة لكل مهمة`;
+      case "de":
+        return `Kosten pro Aufgabe`;
+      case "es":
+        return `Costo por tarea`;
+      case "fr":
+        return `Coût par tâche`;
+      case "ja":
+        return `タスクあたりのコスト`;
+      case "ko":
+        return `작업당 비용`;
+      case "pt-BR":
+        return `Custo por tarefa`;
+      case "zh-Hans":
+        return `每个任务的成本`;
+      case "zh-Hant":
+        return `每個任務的成本`;
+      case "en-XA":
+        return `[Çöšţ þéŕ ţášķ ~~~~~]`;
+      case "ar-XB":
+        return `‮Cost per task‬`;
+    }
+    return `Cost per task`;
+  }
+  function settingsUsageCostKinds() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الأنواع`;
+      case "de":
+        return `Arten`;
+      case "es":
+        return `Tipos`;
+      case "fr":
+        return `Types`;
+      case "ja":
+        return `種類`;
+      case "ko":
+        return `종류`;
+      case "pt-BR":
+        return `Tipos`;
+      case "zh-Hans":
+        return `类型`;
+      case "zh-Hant":
+        return `類型`;
+      case "en-XA":
+        return `[Ķîñðš ~~]`;
+      case "ar-XB":
+        return `‮Kinds‬`;
+    }
+    return `Kinds`;
+  }
+  function settingsUsageCostLead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل مهمة منتهية مع مراجعاتها. الخط الصاعد يعني أن المهام تتطلب عملًا أكثر من ذي قبل.`;
+      case "de":
+        return `Jede abgeschlossene Aufgabe mit ihren Prüfungen. Eine steigende Linie heißt, dass Aufgaben mehr Arbeit brauchen als zuvor.`;
+      case "es":
+        return `Cada tarea terminada con sus revisiones. Una línea que sube indica que las tareas requieren más trabajo que antes.`;
+      case "fr":
+        return `Chaque tâche terminée avec ses relectures. Une ligne qui monte signifie que les tâches demandent plus de travail qu’avant.`;
+      case "ja":
+        return `完了した各タスクとそのレビュー。線が上がるほど、タスクに以前より多くの作業がかかっています。`;
+      case "ko":
+        return `완료된 각 작업과 그 검토를 합친 값입니다. 선이 올라가면 작업에 예전보다 더 많은 일이 든다는 뜻입니다.`;
+      case "pt-BR":
+        return `Cada tarefa concluída com suas revisões. Uma linha que sobe indica que as tarefas estão exigindo mais trabalho do que antes.`;
+      case "zh-Hans":
+        return `每个已完成任务连同其审查。线条上升表示任务比以前需要更多工作。`;
+      case "zh-Hant":
+        return `每個已完成任務連同其審查。線條上升表示任務比以前需要更多工作。`;
+      case "en-XA":
+        return `[Éáçĥ ƒîñîšĥéð ţášķ ŵîţĥ îţš ŕéṽîéŵš. Å ļîñé ţĥáţ çļîɱƀš ɱéáñš ţášķš áŕé ţáķîñĝ ɱöŕé ŵöŕķ ţĥáñ ƀéƒöŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each finished task with its reviews. A line that climbs means tasks are taking more work than before.‬`;
+    }
+    return `Each finished task with its reviews. A line that climbs means tasks are taking more work than before.`;
+  }
+  function settingsUsageCostLegend(input2) {
+    const days = input2.days;
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل نقطة هي وسيط المهام التي انتهت في الأيام الـ ${days} السابقة لها. ويضم الشريط النصف الأوسط منها.`;
+      case "de":
+        return `Jeder Punkt ist der Median der Aufgaben, die in den ${days} Tagen davor abgeschlossen wurden. Das Band zeigt die mittlere Hälfte davon.`;
+      case "es":
+        return `Cada punto es la mediana de las tareas terminadas en los ${days} días anteriores. La franja muestra la mitad central de ellas.`;
+      case "fr":
+        return `Chaque point est la médiane des tâches terminées dans les ${days} jours qui le précèdent. La bande contient leur moitié centrale.`;
+      case "ja":
+        return `各点は、その前の ${days} 日間に完了したタスクの中央値です。帯はその中間の半分を示します。`;
+      case "ko":
+        return `각 점은 그 전 ${days}일 동안 완료된 작업의 중앙값입니다. 띠는 그 가운데 절반을 나타냅니다.`;
+      case "pt-BR":
+        return `Cada ponto é a mediana das tarefas concluídas nos ${days} dias anteriores. A faixa mostra a metade central delas.`;
+      case "zh-Hans":
+        return `每个点是此前 ${days} 天内完成的任务的中位数。色带表示其中间一半。`;
+      case "zh-Hant":
+        return `每個點是此前 ${days} 天內完成的任務的中位數。色帶表示其中間一半。`;
+      case "en-XA":
+        return `[Éáçĥ þöîñţ îš ţĥé ɱéðîáñ öƒ ţĥé ţášķš ţĥáţ ƒîñîšĥéð îñ ţĥé ${days} ðáýš ƀéƒöŕé îţ. Ţĥé ƀáñð ĥöļðš ţĥé ɱîððļé ĥáļƒ öƒ ţĥéɱ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each point is the median of the tasks that finished in the ‬${days}‮ days before it. The band holds the middle half of them.‬`;
+    }
+    return `Each point is the median of the tasks that finished in the ${days} days before it. The band holds the middle half of them.`;
+  }
+  function settingsUsageCostLegendWith(input2) {
+    const lead = input2.lead;
+    const missing = input2.missing;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${lead} ${missing}`;
+      case "de":
+        return `${lead} ${missing}`;
+      case "es":
+        return `${lead} ${missing}`;
+      case "fr":
+        return `${lead} ${missing}`;
+      case "ja":
+        return `${lead}${missing}`;
+      case "ko":
+        return `${lead} ${missing}`;
+      case "pt-BR":
+        return `${lead} ${missing}`;
+      case "zh-Hans":
+        return `${lead}${missing}`;
+      case "zh-Hant":
+        return `${lead}${missing}`;
+      case "en-XA":
+        return `[${lead} ${missing} ~]`;
+      case "ar-XB":
+        return `${lead}‮ ‬${missing}`;
+    }
+    return `${lead} ${missing}`;
+  }
+  function settingsUsageCostMedian() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الوسيط`;
+      case "de":
+        return `Median`;
+      case "es":
+        return `Mediana`;
+      case "fr":
+        return `Médiane`;
+      case "ja":
+        return `中央値`;
+      case "ko":
+        return `중앙값`;
+      case "pt-BR":
+        return `Mediana`;
+      case "zh-Hans":
+        return `中位数`;
+      case "zh-Hant":
+        return `中位數`;
+      case "en-XA":
+        return `[Ṁéðîáñ ~~]`;
+      case "ar-XB":
+        return `‮Median‬`;
+    }
+    return `Median`;
+  }
+  function settingsUsageCostMiddleHalf() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النصف الأوسط`;
+      case "de":
+        return `Mittlere Hälfte`;
+      case "es":
+        return `Mitad central`;
+      case "fr":
+        return `Moitié centrale`;
+      case "ja":
+        return `中間の半分`;
+      case "ko":
+        return `가운데 절반`;
+      case "pt-BR":
+        return `Metade central`;
+      case "zh-Hans":
+        return `中间一半`;
+      case "zh-Hant":
+        return `中間一半`;
+      case "en-XA":
+        return `[Ṁîððļé ĥáļƒ ~~~~]`;
+      case "ar-XB":
+        return `‮Middle half‬`;
+    }
+    return `Middle half`;
+  }
+  function settingsUsageCostMissingTokens(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لم تُستبعد أي مهمة بلا رموز مُبلَّغ عنها.`;
+          case "one":
+            return `استُبعدت مهمة واحدة لم تُبلغ عن رموز.`;
+          case "two":
+            return `استُبعدت مهمتان لم تُبلغا عن رموز.`;
+          case "few":
+            return `استُبعدت ${count} مهام لم تُبلغ عن رموز.`;
+          case "many":
+            return `استُبعدت ${count} مهمة لم تُبلغ عن رموز.`;
+          default:
+            return `استُبعدت ${count} مهمة لم تُبلغ عن رموز.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Aufgabe ohne gemeldete Tokens ist nicht enthalten.`;
+          default:
+            return `${count} Aufgaben ohne gemeldete Tokens sind nicht enthalten.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Se omite ${count} tarea que no informó tokens.`;
+          case "many":
+            return `Se omiten ${count} de tareas que no informaron tokens.`;
+          default:
+            return `Se omiten ${count} tareas que no informaron tokens.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche sans tokens signalés est laissée de côté.`;
+          case "many":
+            return `${count} de tâches sans tokens signalés sont laissées de côté.`;
+          default:
+            return `${count} tâches sans tokens signalés sont laissées de côté.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `トークンを報告しなかった ${count} 件のタスクは含まれていません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `토큰을 보고하지 않은 작업 ${count}개는 제외되었습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa que não informou tokens fica de fora.`;
+          case "many":
+            return `${count} de tarefas que não informaram tokens ficam de fora.`;
+          default:
+            return `${count} tarefas que não informaram tokens ficam de fora.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `未计入 ${count} 个未报告 token 的任务。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `未計入 ${count} 個未回報 token 的任務。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ţášķ ţĥáţ ŕéþöŕţéð ñö ţöķéñš îš ļéƒţ öûţ. ~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ţášķš ţĥáţ ŕéþöŕţéð ñö ţöķéñš áŕé ļéƒţ öûţ. ~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ task that reported no tokens is left out.‬`;
+          default:
+            return `${count}‮ tasks that reported no tokens are left out.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} task that reported no tokens is left out.`;
+      default:
+        return `${count} tasks that reported no tokens are left out.`;
+    }
+  }
+  function settingsUsageCostMissingUsd(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لم تُستبعد أي مهمة بلا تقدير.`;
+          case "one":
+            return `استُبعدت مهمة واحدة بلا تقدير.`;
+          case "two":
+            return `استُبعدت مهمتان بلا تقدير.`;
+          case "few":
+            return `استُبعدت ${count} مهام بلا تقدير.`;
+          case "many":
+            return `استُبعدت ${count} مهمة بلا تقدير.`;
+          default:
+            return `استُبعدت ${count} مهمة بلا تقدير.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Aufgabe ohne Schätzung ist nicht enthalten.`;
+          default:
+            return `${count} Aufgaben ohne Schätzung sind nicht enthalten.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Se omite ${count} tarea sin estimación.`;
+          case "many":
+            return `Se omiten ${count} de tareas sin estimación.`;
+          default:
+            return `Se omiten ${count} tareas sin estimación.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche sans estimation est laissée de côté.`;
+          case "many":
+            return `${count} de tâches sans estimation sont laissées de côté.`;
+          default:
+            return `${count} tâches sans estimation sont laissées de côté.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `推定のない ${count} 件のタスクは含まれていません。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `추정치가 없는 작업 ${count}개는 제외되었습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa sem estimativa fica de fora.`;
+          case "many":
+            return `${count} de tarefas sem estimativa ficam de fora.`;
+          default:
+            return `${count} tarefas sem estimativa ficam de fora.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `未计入 ${count} 个没有估算的任务。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `未計入 ${count} 個沒有估算的任務。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ţášķ ŵîţĥ ñö éšţîɱáţé îš ļéƒţ öûţ. ~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ţášķš ŵîţĥ ñö éšţîɱáţé áŕé ļéƒţ öûţ. ~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ task with no estimate is left out.‬`;
+          default:
+            return `${count}‮ tasks with no estimate are left out.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} task with no estimate is left out.`;
+      default:
+        return `${count} tasks with no estimate are left out.`;
+    }
+  }
+  function settingsUsageCostNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الوسيط الآن`;
+      case "de":
+        return `Median jetzt`;
+      case "es":
+        return `Mediana actual`;
+      case "fr":
+        return `Médiane actuelle`;
+      case "ja":
+        return `現在の中央値`;
+      case "ko":
+        return `현재 중앙값`;
+      case "pt-BR":
+        return `Mediana atual`;
+      case "zh-Hans":
+        return `当前中位数`;
+      case "zh-Hant":
+        return `目前中位數`;
+      case "en-XA":
+        return `[Ṁéðîáñ ñöŵ ~~~~]`;
+      case "ar-XB":
+        return `‮Median now‬`;
+    }
+    return `Median now`;
+  }
+  function settingsUsageCostNowNote(input2) {
+    const count = formatNumber(input2.count);
+    const days = input2.days;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لا مهام في آخر ${days} أيام`;
+          case "one":
+            return `مهمة واحدة في آخر ${days} أيام`;
+          case "two":
+            return `مهمتان في آخر ${days} أيام`;
+          case "few":
+            return `${count} مهام في آخر ${days} أيام`;
+          case "many":
+            return `${count} مهمة في آخر ${days} أيام`;
+          default:
+            return `${count} مهمة في آخر ${days} أيام`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Aufgabe in den letzten ${days} Tagen`;
+          default:
+            return `${count} Aufgaben in den letzten ${days} Tagen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarea en los últimos ${days} días`;
+          case "many":
+            return `${count} de tareas en los últimos ${days} días`;
+          default:
+            return `${count} tareas en los últimos ${days} días`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche ces ${days} derniers jours`;
+          case "many":
+            return `${count} de tâches ces ${days} derniers jours`;
+          default:
+            return `${count} tâches ces ${days} derniers jours`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `直近 ${days} 日間で ${count} 件のタスク`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `최근 ${days}일 동안 작업 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa nos últimos ${days} dias`;
+          case "many":
+            return `${count} de tarefas nos últimos ${days} dias`;
+          default:
+            return `${count} tarefas nos últimos ${days} dias`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最近 ${days} 天内 ${count} 个任务`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最近 ${days} 天內 ${count} 個任務`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ţášķ îñ ţĥé ļášţ ${days} ðáýš ~~~~~~~~]`;
+          default:
+            return `[${count} ţášķš îñ ţĥé ļášţ ${days} ðáýš ~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ task in the last ‬${days}‮ days‬`;
+          default:
+            return `${count}‮ tasks in the last ‬${days}‮ days‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} task in the last ${days} days`;
+      default:
+        return `${count} tasks in the last ${days} days`;
+    }
+  }
+  function settingsUsageCostPicked(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لم يُختر شيء`;
+          case "one":
+            return `عنصر واحد مختار`;
+          case "two":
+            return `عنصران مختاران`;
+          case "few":
+            return `${count} عناصر مختارة`;
+          case "many":
+            return `${count} عنصرًا مختارًا`;
+          default:
+            return `${count} عنصر مختار`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ausgewählt`;
+          default:
+            return `${count} ausgewählt`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} elegido`;
+          case "many":
+            return `${count} elegidos`;
+          default:
+            return `${count} elegidos`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} choisi`;
+          case "many":
+            return `${count} choisis`;
+          default:
+            return `${count} choisis`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 件を選択`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}개 선택됨`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} escolhido`;
+          case "many":
+            return `${count} escolhidos`;
+          default:
+            return `${count} escolhidos`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已选 ${count} 个`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `已選 ${count} 個`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} þîçķéð ~~~]`;
+          default:
+            return `[${count} þîçķéð ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ picked‬`;
+          default:
+            return `${count}‮ picked‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} picked`;
+      default:
+        return `${count} picked`;
+    }
+  }
+  function settingsUsageCostPoint(input2) {
+    const count = formatNumber(input2.count);
+    const high = input2.high;
+    const low = input2.low;
+    const median = input2.median;
+    const when = input2.when;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، بلا مهام`;
+          case "one":
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، مهمة واحدة`;
+          case "two":
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، مهمتان`;
+          case "few":
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، ${count} مهام`;
+          case "many":
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، ${count} مهمة`;
+          default:
+            return `${when}: الوسيط ${median}، النصف الأوسط ${low} – ${high}، ${count} مهمة`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: Median ${median}, mittlere Hälfte ${low} – ${high}, ${count} Aufgabe`;
+          default:
+            return `${when}: Median ${median}, mittlere Hälfte ${low} – ${high}, ${count} Aufgaben`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: mediana ${median}, mitad central ${low} – ${high}, ${count} tarea`;
+          case "many":
+            return `${when}: mediana ${median}, mitad central ${low} – ${high}, ${count} de tareas`;
+          default:
+            return `${when}: mediana ${median}, mitad central ${low} – ${high}, ${count} tareas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when} : médiane ${median}, moitié centrale ${low} – ${high}, ${count} tâche`;
+          case "many":
+            return `${when} : médiane ${median}, moitié centrale ${low} – ${high}, ${count} de tâches`;
+          default:
+            return `${when} : médiane ${median}, moitié centrale ${low} – ${high}, ${count} tâches`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：中央値 ${median}、中間の半分 ${low} – ${high}、${count} 件のタスク`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}: 중앙값 ${median}, 가운데 절반 ${low} – ${high}, 작업 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: mediana ${median}, metade central ${low} – ${high}, ${count} tarefa`;
+          case "many":
+            return `${when}: mediana ${median}, metade central ${low} – ${high}, ${count} de tarefas`;
+          default:
+            return `${when}: mediana ${median}, metade central ${low} – ${high}, ${count} tarefas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：中位数 ${median}，中间一半 ${low} – ${high}，${count} 个任务`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：中位數 ${median}，中間一半 ${low} – ${high}，${count} 個任務`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${when}: ɱéðîáñ ${median}, ɱîððļé ĥáļƒ ${low} – ${high}, ${count} ţášķ ~~~~~~~~~~~]`;
+          default:
+            return `[${when}: ɱéðîáñ ${median}, ɱîððļé ĥáļƒ ${low} – ${high}, ${count} ţášķš ~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${when}‮: median ‬${median}‮, middle half ‬${low}‮ – ‬${high}‮, ‬${count}‮ task‬`;
+          default:
+            return `${when}‮: median ‬${median}‮, middle half ‬${low}‮ – ‬${high}‮, ‬${count}‮ tasks‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${when}: median ${median}, middle half ${low} – ${high}, ${count} task`;
+      default:
+        return `${when}: median ${median}, middle half ${low} – ${high}, ${count} tasks`;
+    }
+  }
+  function settingsUsageCostPointTooFew(input2) {
+    const count = formatNumber(input2.count);
+    const least = input2.least;
+    const when = input2.when;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${when}: بلا مهام، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+          case "one":
+            return `${when}: مهمة واحدة، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+          case "two":
+            return `${when}: مهمتان، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+          case "few":
+            return `${when}: ${count} مهام، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+          case "many":
+            return `${when}: ${count} مهمة، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+          default:
+            return `${when}: ${count} مهمة، وهذا أقل من أن يعطي وسيطًا (على الأقل ${least})`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: ${count} Aufgabe, zu wenige für einen Median (mindestens ${least})`;
+          default:
+            return `${when}: ${count} Aufgaben, zu wenige für einen Median (mindestens ${least})`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: ${count} tarea, muy pocas para una mediana (al menos ${least})`;
+          case "many":
+            return `${when}: ${count} de tareas, muy pocas para una mediana (al menos ${least})`;
+          default:
+            return `${when}: ${count} tareas, muy pocas para una mediana (al menos ${least})`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when} : ${count} tâche, trop peu pour une médiane (au moins ${least})`;
+          case "many":
+            return `${when} : ${count} de tâches, trop peu pour une médiane (au moins ${least})`;
+          default:
+            return `${when} : ${count} tâches, trop peu pour une médiane (au moins ${least})`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：${count} 件のタスク。中央値には少なすぎます（${least} 件以上必要）`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}: 작업 ${count}개, 중앙값을 내기에 너무 적습니다(최소 ${least}개)`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${when}: ${count} tarefa, poucas para uma mediana (pelo menos ${least})`;
+          case "many":
+            return `${when}: ${count} de tarefas, poucas para uma mediana (pelo menos ${least})`;
+          default:
+            return `${when}: ${count} tarefas, poucas para uma mediana (pelo menos ${least})`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：${count} 个任务，太少，无法得出中位数（至少 ${least} 个）`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${when}：${count} 個任務，太少，無法得出中位數（至少 ${least} 個）`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${when}: ${count} ţášķ, ţöö ƒéŵ ƒöŕ á ɱéðîáñ (áţ ļéášţ ${least}) ~~~~~~~~~~~~~~]`;
+          default:
+            return `[${when}: ${count} ţášķš, ţöö ƒéŵ ƒöŕ á ɱéðîáñ (áţ ļéášţ ${least}) ~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${when}‮: ‬${count}‮ task, too few for a median (at least ‬${least}‮)‬`;
+          default:
+            return `${when}‮: ‬${count}‮ tasks, too few for a median (at least ‬${least}‮)‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${when}: ${count} task, too few for a median (at least ${least})`;
+      default:
+        return `${when}: ${count} tasks, too few for a median (at least ${least})`;
+    }
+  }
+  function settingsUsageCostProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشاريع`;
+      case "de":
+        return `Projekte`;
+      case "es":
+        return `Proyectos`;
+      case "fr":
+        return `Projets`;
+      case "ja":
+        return `プロジェクト`;
+      case "ko":
+        return `프로젝트`;
+      case "pt-BR":
+        return `Projetos`;
+      case "zh-Hans":
+        return `项目`;
+      case "zh-Hant":
+        return `專案`;
+      case "en-XA":
+        return `[Þŕöĵéçţš ~~~]`;
+      case "ar-XB":
+        return `‮Projects‬`;
+    }
+    return `Projects`;
+  }
+  function settingsUsageCostRange(input2) {
+    const high = input2.high;
+    const low = input2.low;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${low} – ${high}`;
+      case "de":
+        return `${low} – ${high}`;
+      case "es":
+        return `${low} – ${high}`;
+      case "fr":
+        return `${low} – ${high}`;
+      case "ja":
+        return `${low} – ${high}`;
+      case "ko":
+        return `${low} – ${high}`;
+      case "pt-BR":
+        return `${low} – ${high}`;
+      case "zh-Hans":
+        return `${low} – ${high}`;
+      case "zh-Hant":
+        return `${low} – ${high}`;
+      case "en-XA":
+        return `[${low} – ${high} ~]`;
+      case "ar-XB":
+        return `${low}‮ – ‬${high}`;
+    }
+    return `${low} – ${high}`;
+  }
+  function settingsUsageCostReading() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ قراءة المهام المنتهية…`;
+      case "de":
+        return `Abgeschlossene Aufgaben werden gelesen…`;
+      case "es":
+        return `Leyendo las tareas terminadas…`;
+      case "fr":
+        return `Lecture des tâches terminées…`;
+      case "ja":
+        return `完了したタスクを読み取っています…`;
+      case "ko":
+        return `완료된 작업을 읽는 중…`;
+      case "pt-BR":
+        return `Lendo as tarefas concluídas…`;
+      case "zh-Hans":
+        return `正在读取已完成的任务…`;
+      case "zh-Hant":
+        return `正在讀取已完成的任務…`;
+      case "en-XA":
+        return `[Ŕéáðîñĝ ƒîñîšĥéð ţášķš… ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reading finished tasks…‬`;
+    }
+    return `Reading finished tasks…`;
+  }
+  function settingsUsageCostSame() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تغيير`;
+      case "de":
+        return `Keine Veränderung`;
+      case "es":
+        return `Sin cambios`;
+      case "fr":
+        return `Aucune évolution`;
+      case "ja":
+        return `変化なし`;
+      case "ko":
+        return `변화 없음`;
+      case "pt-BR":
+        return `Sem variação`;
+      case "zh-Hans":
+        return `没有变化`;
+      case "zh-Hant":
+        return `沒有變化`;
+      case "en-XA":
+        return `[Ñö çĥáñĝé ~~~]`;
+      case "ar-XB":
+        return `‮No change‬`;
+    }
+    return `No change`;
+  }
+  function settingsUsageCostStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `في البداية`;
+      case "de":
+        return `Zu Beginn`;
+      case "es":
+        return `Al inicio`;
+      case "fr":
+        return `Au début`;
+      case "ja":
+        return `期間の始め`;
+      case "ko":
+        return `시작 시점`;
+      case "pt-BR":
+        return `No início`;
+      case "zh-Hans":
+        return `期初`;
+      case "zh-Hant":
+        return `期初`;
+      case "en-XA":
+        return `[Åţ ţĥé šţáŕţ ~~~~]`;
+      case "ar-XB":
+        return `‮At the start‬`;
+    }
+    return `At the start`;
+  }
+  function settingsUsageCostStartNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد نافذة فيها مهام كافية`;
+      case "de":
+        return `Kein Zeitfenster hat genug Aufgaben`;
+      case "es":
+        return `Ninguna ventana tiene suficientes tareas`;
+      case "fr":
+        return `Aucune fenêtre n’a assez de tâches`;
+      case "ja":
+        return `十分なタスクがある期間はありません`;
+      case "ko":
+        return `작업이 충분한 기간이 없습니다`;
+      case "pt-BR":
+        return `Nenhuma janela tem tarefas suficientes`;
+      case "zh-Hans":
+        return `没有哪个时间窗有足够的任务`;
+      case "zh-Hant":
+        return `沒有哪個時間窗有足夠的任務`;
+      case "en-XA":
+        return `[Ñö ŵîñðöŵ ĥáš éñöûĝĥ ţášķš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No window has enough tasks‬`;
+    }
+    return `No window has enough tasks`;
+  }
+  function settingsUsageCostStartNote(input2) {
+    const date2 = input2.date;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نافذة تنتهي في ${date2}`;
+      case "de":
+        return `Zeitfenster bis ${date2}`;
+      case "es":
+        return `Ventana que termina el ${date2}`;
+      case "fr":
+        return `Fenêtre se terminant le ${date2}`;
+      case "ja":
+        return `${date2} までの期間`;
+      case "ko":
+        return `${date2}에 끝나는 기간`;
+      case "pt-BR":
+        return `Janela que termina em ${date2}`;
+      case "zh-Hans":
+        return `截至 ${date2} 的时间窗`;
+      case "zh-Hant":
+        return `截至 ${date2} 的時間窗`;
+      case "en-XA":
+        return `[Ŵîñðöŵ éñðîñĝ ${date2} ~~~~~]`;
+      case "ar-XB":
+        return `‮Window ending ‬${date2}`;
+    }
+    return `Window ending ${date2}`;
+  }
+  function settingsUsageCostTasks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المهام`;
+      case "de":
+        return `Aufgaben`;
+      case "es":
+        return `Tareas`;
+      case "fr":
+        return `Tâches`;
+      case "ja":
+        return `タスク`;
+      case "ko":
+        return `작업`;
+      case "pt-BR":
+        return `Tarefas`;
+      case "zh-Hans":
+        return `任务`;
+      case "zh-Hant":
+        return `任務`;
+      case "en-XA":
+        return `[Ţášķš ~~]`;
+      case "ar-XB":
+        return `‮Tasks‬`;
+    }
+    return `Tasks`;
+  }
+  function settingsUsageCostTooFew() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المهام المنتهية في هذا الاختيار قليلة جدًا لرسم وسيط. تحتاج كل نقطة إلى 5 على الأقل.`;
+      case "de":
+        return `Zu wenige abgeschlossene Aufgaben in dieser Auswahl für einen Median. Jeder Punkt braucht mindestens 5.`;
+      case "es":
+        return `Hay muy pocas tareas terminadas en esta selección para trazar una mediana. Cada punto necesita al menos 5.`;
+      case "fr":
+        return `Trop peu de tâches terminées dans cette sélection pour tracer une médiane. Chaque point en demande au moins 5.`;
+      case "ja":
+        return `この選択では完了したタスクが少なすぎて中央値を描けません。各点には少なくとも 5 件必要です。`;
+      case "ko":
+        return `이 선택에는 완료된 작업이 너무 적어 중앙값을 그릴 수 없습니다. 각 점에는 최소 5개가 필요합니다.`;
+      case "pt-BR":
+        return `Há poucas tarefas concluídas nesta seleção para traçar uma mediana. Cada ponto precisa de pelo menos 5.`;
+      case "zh-Hans":
+        return `此选择中已完成的任务太少，无法绘制中位数。每个点至少需要 5 个。`;
+      case "zh-Hant":
+        return `此選擇中已完成的任務太少，無法繪製中位數。每個點至少需要 5 個。`;
+      case "en-XA":
+        return `[Ţöö ƒéŵ ƒîñîšĥéð ţášķš îñ ţĥîš šéļéçţîöñ ţö ðŕáŵ á ɱéðîáñ. Éáçĥ þöîñţ ñééðš áţ ļéášţ 5. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Too few finished tasks in this selection to draw a median. Each point needs at least 5.‬`;
+    }
+    return `Too few finished tasks in this selection to draw a median. Each point needs at least 5.`;
+  }
+  function settingsUsageCostTooFewCell() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهام قليلة جدًا`;
+      case "de":
+        return `Zu wenige Aufgaben`;
+      case "es":
+        return `Muy pocas tareas`;
+      case "fr":
+        return `Trop peu de tâches`;
+      case "ja":
+        return `タスクが少なすぎます`;
+      case "ko":
+        return `작업이 너무 적음`;
+      case "pt-BR":
+        return `Poucas tarefas`;
+      case "zh-Hans":
+        return `任务太少`;
+      case "zh-Hant":
+        return `任務太少`;
+      case "en-XA":
+        return `[Ţöö ƒéŵ ţášķš ~~~~~]`;
+      case "ar-XB":
+        return `‮Too few tasks‬`;
+    }
+    return `Too few tasks`;
+  }
+  function settingsUsageCostUnit(input2) {
+    const unit = input2.unit;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${unit} · الوسيط لكل مهمة`;
+      case "de":
+        return `${unit} · Median pro Aufgabe`;
+      case "es":
+        return `${unit} · Mediana por tarea`;
+      case "fr":
+        return `${unit} · Médiane par tâche`;
+      case "ja":
+        return `${unit} · タスクあたりの中央値`;
+      case "ko":
+        return `${unit} · 작업당 중앙값`;
+      case "pt-BR":
+        return `${unit} · Mediana por tarefa`;
+      case "zh-Hans":
+        return `${unit} · 每个任务的中位数`;
+      case "zh-Hant":
+        return `${unit} · 每個任務的中位數`;
+      case "en-XA":
+        return `[${unit} · Ṁéðîáñ þéŕ ţášķ ~~~~~~]`;
+      case "ar-XB":
+        return `${unit}‮ · Median per task‬`;
+    }
+    return `${unit} · Median per task`;
+  }
+  function settingsUsageCostUp(input2) {
+    const percent = input2.percent;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ارتفاع ${percent}%`;
+      case "de":
+        return `${percent} % mehr`;
+      case "es":
+        return `Sube ${percent} %`;
+      case "fr":
+        return `En hausse de ${percent} %`;
+      case "ja":
+        return `${percent}% 増加`;
+      case "ko":
+        return `${percent}% 증가`;
+      case "pt-BR":
+        return `Alta de ${percent}%`;
+      case "zh-Hans":
+        return `上升 ${percent}%`;
+      case "zh-Hant":
+        return `上升 ${percent}%`;
+      case "en-XA":
+        return `[Ûþ ${percent}% ~~]`;
+      case "ar-XB":
+        return `‮Up ‬${percent}‮%‬`;
+    }
+    return `Up ${percent}%`;
+  }
+  function settingsUsageCostValues() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `القيم`;
+      case "de":
+        return `Werte`;
+      case "es":
+        return `Valores`;
+      case "fr":
+        return `Valeurs`;
+      case "ja":
+        return `値`;
+      case "ko":
+        return `값`;
+      case "pt-BR":
+        return `Valores`;
+      case "zh-Hans":
+        return `数值`;
+      case "zh-Hant":
+        return `數值`;
+      case "en-XA":
+        return `[Ṽáļûéš ~~]`;
+      case "ar-XB":
+        return `‮Values‬`;
+    }
+    return `Values`;
+  }
   function settingsUsageCoverageUnavailable() {
     switch (currentLanguage()) {
       case "ar":
@@ -99117,6 +100480,41 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsUsageAttributionServed,
     settingsUsageBarsPriced,
     settingsUsageCloseDetails,
+    settingsUsageCostAllKinds,
+    settingsUsageCostAllProjects,
+    settingsUsageCostChange,
+    settingsUsageCostChangeNote,
+    settingsUsageCostChartTokens,
+    settingsUsageCostChartUsd,
+    settingsUsageCostDown,
+    settingsUsageCostFailed,
+    settingsUsageCostHeading,
+    settingsUsageCostKinds,
+    settingsUsageCostLead,
+    settingsUsageCostLegend,
+    settingsUsageCostLegendWith,
+    settingsUsageCostMedian,
+    settingsUsageCostMiddleHalf,
+    settingsUsageCostMissingTokens,
+    settingsUsageCostMissingUsd,
+    settingsUsageCostNow,
+    settingsUsageCostNowNote,
+    settingsUsageCostPicked,
+    settingsUsageCostPoint,
+    settingsUsageCostPointTooFew,
+    settingsUsageCostProjects,
+    settingsUsageCostRange,
+    settingsUsageCostReading,
+    settingsUsageCostSame,
+    settingsUsageCostStart,
+    settingsUsageCostStartNone,
+    settingsUsageCostStartNote,
+    settingsUsageCostTasks,
+    settingsUsageCostTooFew,
+    settingsUsageCostTooFewCell,
+    settingsUsageCostUnit,
+    settingsUsageCostUp,
+    settingsUsageCostValues,
     settingsUsageCoverageUnavailable,
     settingsUsageCreated,
     settingsUsageDailyChartTokens,
@@ -102234,6 +103632,41 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsUsageAttributionServed": [],
     "settingsUsageBarsPriced": [],
     "settingsUsageCloseDetails": [],
+    "settingsUsageCostAllKinds": [],
+    "settingsUsageCostAllProjects": [],
+    "settingsUsageCostChange": [],
+    "settingsUsageCostChangeNote": [],
+    "settingsUsageCostChartTokens": [],
+    "settingsUsageCostChartUsd": [],
+    "settingsUsageCostDown": ["percent"],
+    "settingsUsageCostFailed": [],
+    "settingsUsageCostHeading": [],
+    "settingsUsageCostKinds": [],
+    "settingsUsageCostLead": [],
+    "settingsUsageCostLegend": ["days"],
+    "settingsUsageCostLegendWith": ["lead", "missing"],
+    "settingsUsageCostMedian": [],
+    "settingsUsageCostMiddleHalf": [],
+    "settingsUsageCostMissingTokens": ["count"],
+    "settingsUsageCostMissingUsd": ["count"],
+    "settingsUsageCostNow": [],
+    "settingsUsageCostNowNote": ["count", "days"],
+    "settingsUsageCostPicked": ["count"],
+    "settingsUsageCostPoint": ["count", "high", "low", "median", "when"],
+    "settingsUsageCostPointTooFew": ["count", "least", "when"],
+    "settingsUsageCostProjects": [],
+    "settingsUsageCostRange": ["high", "low"],
+    "settingsUsageCostReading": [],
+    "settingsUsageCostSame": [],
+    "settingsUsageCostStart": [],
+    "settingsUsageCostStartNone": [],
+    "settingsUsageCostStartNote": ["date"],
+    "settingsUsageCostTasks": [],
+    "settingsUsageCostTooFew": [],
+    "settingsUsageCostTooFewCell": [],
+    "settingsUsageCostUnit": ["unit"],
+    "settingsUsageCostUp": ["percent"],
+    "settingsUsageCostValues": [],
     "settingsUsageCoverageUnavailable": [],
     "settingsUsageCreated": ["when"],
     "settingsUsageDailyChartTokens": [],
@@ -116407,6 +117840,28 @@ ${FRAME_KEYBOARD_SCRIPT}
     /** How many tasks have recorded usage in the period and work. */
     matching: number()
   });
+  const usageTaskCostsQuerySchema = strictObject({ period: usagePeriodSchema });
+  const usageTaskCostSchema = object({
+    /** When it closed done: where it falls on the chart. */
+    closedAt: number(),
+    /** Null when the record no longer has the task's project. */
+    project: object({ id: string(), name: string() }).nullable(),
+    /** Its saved kind; null for none, `unclear` or one the list does not know. Never `review`. */
+    kind: usageWorkKindSchema.nullable(),
+    /** Tokens it and its reviews recorded; null when no record reported any. */
+    tokens: number().nullable(),
+    /** Its and its reviews' known estimate in USD; null when nothing was priced. */
+    cost: number().nullable()
+  });
+  object({
+    query: usageTaskCostsQuerySchema,
+    /** The period's first moment; null for all time with nothing finished. */
+    since: number().nullable(),
+    /** When it was read: the chart's last point. */
+    at: number(),
+    /** Finished tasks from one window before `since`, oldest closed first. */
+    tasks: array(usageTaskCostSchema)
+  });
   function entry(definition) {
     return definition;
   }
@@ -116579,6 +118034,17 @@ ${FRAME_KEYBOARD_SCRIPT}
         pushes: ["inf:tasks", "inf:tasks:delta"]
       },
       description: "The newest tasks with recorded usage by period and kind of work, and their count."
+    }),
+    "usage.taskCosts": entry({
+      channel: "inf:usage:task-costs",
+      args: usageTaskCostsQuerySchema,
+      toRequest: (args) => [args],
+      invalidate: {
+        events: (event) => event.type === "turn_end" || event.type === "tool_end" && event.usage !== void 0,
+        pushes: ["inf:tasks", "inf:tasks:delta"]
+      },
+      // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+      description: "Each task finished in a period, and in the week before it, with what it and its reviews spent in tokens and estimated dollars."
     }),
     // The captain's own panels, as the app has them mounted right now
     // (talk-to-personalize Step 5). Observe's Panels group: not a session -

@@ -1977,6 +1977,90 @@
       <string>%1$ld 次已保存的重置 · 在 %2$@ 使用</string>
     </dict>
   </dict>
+  <key>settingsUsageCostMissingTokens</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>未计入 %1$ld 个未报告 token 的任务。</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostMissingUsd</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>未计入 %1$ld 个没有估算的任务。</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostNowNote</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>最近 %2$@ 天内 %1$ld 个任务</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPicked</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>已选 %1$ld 个</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPoint</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%5$@：中位数 %4$@，中间一半 %3$@ – %2$@，%1$ld 个任务</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPointTooFew</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%3$@：%1$ld 个任务，太少，无法得出中位数（至少 %2$@ 个）</string>
+    </dict>
+  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

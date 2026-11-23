@@ -1,14 +1,25 @@
 import {
+  type CostPoint,
+  type CostSeries,
   EMPTY_USAGE_AMOUNT,
   type UsageAmount,
   type UsageModel,
   type UsageSummary,
   type UsageTask,
+  type UsageTaskCost,
   type UsageWhere,
 } from "@shared/usage";
 import { describe, expect, it } from "vitest";
 import {
   compactTokens,
+  costChangeWords,
+  costFilterValue,
+  costKindOptions,
+  costLegend,
+  costMiddleHalf,
+  costPointWords,
+  costProjectOptions,
+  costReadouts,
   createdWords,
   dollars,
   exactTokens,
@@ -375,4 +386,114 @@ it("calls the saved retrieval kind Lookups and explanations without renaming res
   expect(kindWords("retrieval")).toBe("Lookups and explanations");
   expect(kindWords("research")).toBe("Research");
   expect(kindWords(null)).toBe("Other task work");
+});
+
+describe("Usage's cost per task", () => {
+  const NOW = new Date(2026, 9, 5, 15).getTime();
+  const DAY = 86_400_000;
+  const point = (fields: Partial<CostPoint>): CostPoint => ({
+    at: NOW,
+    tasks: 12,
+    median: 3.1,
+    q1: 1.8,
+    q3: 5.25,
+    ...fields,
+  });
+  const series = (fields: Partial<CostSeries> = {}): CostSeries => {
+    const now = point({});
+    const start = point({ at: new Date(2026, 8, 6, 9).getTime(), median: 2.37, tasks: 9 });
+    return { points: [start, now], now, start, change: 3.1 / 2.37 - 1, missing: 0, ...fields };
+  };
+
+  it("reads the median now, at the start and the change, never a missing median as zero", () => {
+    expect(costReadouts(series(), "usd")).toEqual([
+      { label: "Median now", value: "$3.10", note: "12 tasks in the last 7 days" },
+      { label: "At the start", value: "$2.37", note: "Window ending Sep 6" },
+      { label: "Change", value: "Up 31%", note: "Over the period shown" },
+    ]);
+    const thin = costReadouts(
+      series({
+        now: point({ tasks: 1, median: null, q1: null, q3: null }),
+        start: null,
+        change: null,
+      }),
+      "usd",
+    );
+    expect(thin.map((readout) => readout.value)).toEqual([
+      USAGE_WORDS.notAvailable,
+      USAGE_WORDS.notAvailable,
+      USAGE_WORDS.notAvailable,
+    ]);
+    expect(thin[0]?.note).toBe("1 task in the last 7 days");
+    expect(thin[1]?.note).toBe("No window has enough tasks");
+    expect(costChangeWords(-0.124)).toBe("Down 12%");
+    expect(costChangeWords(0.002)).toBe("No change");
+  });
+
+  it("names the tasks left out for want of an estimate, in the unit shown", () => {
+    expect(costLegend(series(), "usd")).toBe(
+      "Each point is the median of the tasks that finished in the 7 days before it. The band holds the middle half of them.",
+    );
+    expect(costLegend(series({ missing: 3 }), "usd")).toMatch(
+      / 3 tasks with no estimate are left out\.$/,
+    );
+    expect(costLegend(series({ missing: 1 }), "tokens")).toMatch(
+      / 1 task that reported no tokens is left out\.$/,
+    );
+  });
+
+  it("says what the pointed window holds, or that it has too few tasks", () => {
+    expect(costPointWords(point({}), "usd")).toBe(
+      "Oct 5, 3:00 PM: median $3.10, middle half $1.80 – $5.25, 12 tasks",
+    );
+    const thin = point({ tasks: 3, median: null, q1: null, q3: null });
+    expect(costPointWords(thin, "tokens")).toBe(
+      "Oct 5, 3:00 PM: 3 tasks, too few for a median (at least 5)",
+    );
+    expect(costMiddleHalf(thin, "usd")).toBe("Too few tasks");
+    expect(costMiddleHalf(point({ q1: 4_100_000, q3: 12_000_000 }), "tokens")).toBe(
+      "4.10M – 12.00M",
+    );
+  });
+
+  it("offers each project and kind the period finished, the most tasks first, and keeps a pick the period lost", () => {
+    const fm = { id: "repo-fm", name: "firstmate-3000" };
+    const web = { id: "repo-web", name: "Website" };
+    const task = (
+      daysAgo: number,
+      project: UsageTaskCost["project"],
+      kind: UsageTaskCost["kind"],
+    ) => ({
+      closedAt: NOW - daysAgo * DAY,
+      project,
+      kind,
+      tokens: 1000,
+      cost: 1,
+    });
+    const tasks = [
+      task(40, null, "plan"),
+      task(3, web, "fix"),
+      task(2, fm, "implement"),
+      task(1, fm, null),
+    ];
+    const since = NOW - 30 * DAY;
+    const projects = costProjectOptions(tasks, since, new Set([null]));
+    expect(projects.map((option) => [option.name, option.tasks])).toEqual([
+      ["firstmate-3000", 2],
+      ["Website", 1],
+      ["Project unavailable", 0],
+    ]);
+    expect(costKindOptions(tasks, since, null).map((option) => option.name)).toEqual([
+      "Fixes",
+      "Implementation",
+      "Other task work",
+    ]);
+    expect(costFilterValue(projects, null, "All projects")).toBe("All projects");
+    expect(costFilterValue(projects, new Set(["repo-fm", "repo-web"]), "All projects")).toBe(
+      "firstmate-3000 and Website",
+    );
+    expect(costFilterValue(projects, new Set(["repo-fm", "repo-web", null]), "All projects")).toBe(
+      "3 picked",
+    );
+  });
 });

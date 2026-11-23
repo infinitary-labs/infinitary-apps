@@ -3720,6 +3720,41 @@ public enum PhoneMessages {
     public static func `settingsUsageAttributionServed`() -> String { PhoneWords.format("settingsUsageAttributionServed", []) }
     public static func `settingsUsageBarsPriced`() -> String { PhoneWords.format("settingsUsageBarsPriced", []) }
     public static func `settingsUsageCloseDetails`() -> String { PhoneWords.format("settingsUsageCloseDetails", []) }
+    public static func `settingsUsageCostAllKinds`() -> String { PhoneWords.format("settingsUsageCostAllKinds", []) }
+    public static func `settingsUsageCostAllProjects`() -> String { PhoneWords.format("settingsUsageCostAllProjects", []) }
+    public static func `settingsUsageCostChange`() -> String { PhoneWords.format("settingsUsageCostChange", []) }
+    public static func `settingsUsageCostChangeNote`() -> String { PhoneWords.format("settingsUsageCostChangeNote", []) }
+    public static func `settingsUsageCostChartTokens`() -> String { PhoneWords.format("settingsUsageCostChartTokens", []) }
+    public static func `settingsUsageCostChartUsd`() -> String { PhoneWords.format("settingsUsageCostChartUsd", []) }
+    public static func `settingsUsageCostDown`(`percent`: String) -> String { PhoneWords.format("settingsUsageCostDown", [`percent`]) }
+    public static func `settingsUsageCostFailed`() -> String { PhoneWords.format("settingsUsageCostFailed", []) }
+    public static func `settingsUsageCostHeading`() -> String { PhoneWords.format("settingsUsageCostHeading", []) }
+    public static func `settingsUsageCostKinds`() -> String { PhoneWords.format("settingsUsageCostKinds", []) }
+    public static func `settingsUsageCostLead`() -> String { PhoneWords.format("settingsUsageCostLead", []) }
+    public static func `settingsUsageCostLegend`(`days`: String) -> String { PhoneWords.format("settingsUsageCostLegend", [`days`]) }
+    public static func `settingsUsageCostLegendWith`(`lead`: String, `missing`: String) -> String { PhoneWords.format("settingsUsageCostLegendWith", [`lead`, `missing`]) }
+    public static func `settingsUsageCostMedian`() -> String { PhoneWords.format("settingsUsageCostMedian", []) }
+    public static func `settingsUsageCostMiddleHalf`() -> String { PhoneWords.format("settingsUsageCostMiddleHalf", []) }
+    public static func `settingsUsageCostMissingTokens`(`count`: Int) -> String { PhoneWords.format("settingsUsageCostMissingTokens", [`count`]) }
+    public static func `settingsUsageCostMissingUsd`(`count`: Int) -> String { PhoneWords.format("settingsUsageCostMissingUsd", [`count`]) }
+    public static func `settingsUsageCostNow`() -> String { PhoneWords.format("settingsUsageCostNow", []) }
+    public static func `settingsUsageCostNowNote`(`count`: Int, `days`: String) -> String { PhoneWords.format("settingsUsageCostNowNote", [`count`, `days`]) }
+    public static func `settingsUsageCostPicked`(`count`: Int) -> String { PhoneWords.format("settingsUsageCostPicked", [`count`]) }
+    public static func `settingsUsageCostPoint`(`count`: Int, `high`: String, `low`: String, `median`: String, `when`: String) -> String { PhoneWords.format("settingsUsageCostPoint", [`count`, `high`, `low`, `median`, `when`]) }
+    public static func `settingsUsageCostPointTooFew`(`count`: Int, `least`: String, `when`: String) -> String { PhoneWords.format("settingsUsageCostPointTooFew", [`count`, `least`, `when`]) }
+    public static func `settingsUsageCostProjects`() -> String { PhoneWords.format("settingsUsageCostProjects", []) }
+    public static func `settingsUsageCostRange`(`high`: String, `low`: String) -> String { PhoneWords.format("settingsUsageCostRange", [`high`, `low`]) }
+    public static func `settingsUsageCostReading`() -> String { PhoneWords.format("settingsUsageCostReading", []) }
+    public static func `settingsUsageCostSame`() -> String { PhoneWords.format("settingsUsageCostSame", []) }
+    public static func `settingsUsageCostStart`() -> String { PhoneWords.format("settingsUsageCostStart", []) }
+    public static func `settingsUsageCostStartNone`() -> String { PhoneWords.format("settingsUsageCostStartNone", []) }
+    public static func `settingsUsageCostStartNote`(`date`: String) -> String { PhoneWords.format("settingsUsageCostStartNote", [`date`]) }
+    public static func `settingsUsageCostTasks`() -> String { PhoneWords.format("settingsUsageCostTasks", []) }
+    public static func `settingsUsageCostTooFew`() -> String { PhoneWords.format("settingsUsageCostTooFew", []) }
+    public static func `settingsUsageCostTooFewCell`() -> String { PhoneWords.format("settingsUsageCostTooFewCell", []) }
+    public static func `settingsUsageCostUnit`(`unit`: String) -> String { PhoneWords.format("settingsUsageCostUnit", [`unit`]) }
+    public static func `settingsUsageCostUp`(`percent`: String) -> String { PhoneWords.format("settingsUsageCostUp", [`percent`]) }
+    public static func `settingsUsageCostValues`() -> String { PhoneWords.format("settingsUsageCostValues", []) }
     public static func `settingsUsageCoverageUnavailable`() -> String { PhoneWords.format("settingsUsageCoverageUnavailable", []) }
     public static func `settingsUsageCreated`(`when`: String) -> String { PhoneWords.format("settingsUsageCreated", [`when`]) }
     public static func `settingsUsageDailyChartTokens`() -> String { PhoneWords.format("settingsUsageDailyChartTokens", []) }
@@ -7920,6 +7955,41 @@ extension PhoneWords {
         "settingsUsageAttributionServed": [],
         "settingsUsageBarsPriced": [],
         "settingsUsageCloseDetails": [],
+        "settingsUsageCostAllKinds": [],
+        "settingsUsageCostAllProjects": [],
+        "settingsUsageCostChange": [],
+        "settingsUsageCostChangeNote": [],
+        "settingsUsageCostChartTokens": [],
+        "settingsUsageCostChartUsd": [],
+        "settingsUsageCostDown": ["percent"],
+        "settingsUsageCostFailed": [],
+        "settingsUsageCostHeading": [],
+        "settingsUsageCostKinds": [],
+        "settingsUsageCostLead": [],
+        "settingsUsageCostLegend": ["days"],
+        "settingsUsageCostLegendWith": ["lead", "missing"],
+        "settingsUsageCostMedian": [],
+        "settingsUsageCostMiddleHalf": [],
+        "settingsUsageCostMissingTokens": ["count"],
+        "settingsUsageCostMissingUsd": ["count"],
+        "settingsUsageCostNow": [],
+        "settingsUsageCostNowNote": ["count", "days"],
+        "settingsUsageCostPicked": ["count"],
+        "settingsUsageCostPoint": ["count", "high", "low", "median", "when"],
+        "settingsUsageCostPointTooFew": ["count", "least", "when"],
+        "settingsUsageCostProjects": [],
+        "settingsUsageCostRange": ["high", "low"],
+        "settingsUsageCostReading": [],
+        "settingsUsageCostSame": [],
+        "settingsUsageCostStart": [],
+        "settingsUsageCostStartNone": [],
+        "settingsUsageCostStartNote": ["date"],
+        "settingsUsageCostTasks": [],
+        "settingsUsageCostTooFew": [],
+        "settingsUsageCostTooFewCell": [],
+        "settingsUsageCostUnit": ["unit"],
+        "settingsUsageCostUp": ["percent"],
+        "settingsUsageCostValues": [],
         "settingsUsageCoverageUnavailable": [],
         "settingsUsageCreated": ["when"],
         "settingsUsageDailyChartTokens": [],
@@ -8544,6 +8614,12 @@ extension PhoneWords {
         "settingsProjectsCount": "count",
         "settingsProjectsRepositoryCount": "count",
         "settingsSubscriptionsSavedResets": "count",
+        "settingsUsageCostMissingTokens": "count",
+        "settingsUsageCostMissingUsd": "count",
+        "settingsUsageCostNowNote": "count",
+        "settingsUsageCostPicked": "count",
+        "settingsUsageCostPoint": "count",
+        "settingsUsageCostPointTooFew": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
         "uiCardStackNew": "count",

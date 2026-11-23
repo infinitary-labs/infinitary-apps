@@ -670,6 +670,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/shared/usage.ts": {
     USAGE_TASKS_MAX: physical("none yet: Show more stops at 5,000; older tasks are not listed"),
+    COST_MIN_TASKS: {
+      rests: "consent",
+      way: "the captain's approved Cost per task plan; a thinner window reads too few tasks and its count, never 0",
+    },
   },
   "src/shared/voice.ts": {
     VOICE_CLIP_MAX_SAMPLES: physical("never met: capture stops at 120 s; past it, refused as too long"),

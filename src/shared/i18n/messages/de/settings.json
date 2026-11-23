@@ -1296,6 +1296,65 @@
   "settingsUsageAttributionServed": "Benannt vom Anbieter, der geantwortet hat.",
   "settingsUsageBarsPriced": "Die Balken zeigen nur Aktivität mit Preis. Aktivität ohne Preis ist weggelassen.",
   "settingsUsageCloseDetails": "Details schließen",
+  "settingsUsageCostAllKinds": "Alle Arten",
+  "settingsUsageCostAllProjects": "Alle Projekte",
+  "settingsUsageCostChange": "Veränderung",
+  "settingsUsageCostChangeNote": "Im gezeigten Zeitraum",
+  "settingsUsageCostChartTokens": "Median der Tokens pro abgeschlossener Aufgabe im gezeigten Zeitraum",
+  "settingsUsageCostChartUsd": "Median der geschätzten Dollar pro abgeschlossener Aufgabe im gezeigten Zeitraum",
+  "settingsUsageCostDown": "{percent} % weniger",
+  "settingsUsageCostFailed": "Die Kosten pro Aufgabe konnten gerade nicht gelesen werden.",
+  "settingsUsageCostHeading": "Kosten pro Aufgabe",
+  "settingsUsageCostKinds": "Arten",
+  "settingsUsageCostLead": "Jede abgeschlossene Aufgabe mit ihren Prüfungen. Eine steigende Linie heißt, dass Aufgaben mehr Arbeit brauchen als zuvor.",
+  "settingsUsageCostLegend": "Jeder Punkt ist der Median der Aufgaben, die in den {days} Tagen davor abgeschlossen wurden. Das Band zeigt die mittlere Hälfte davon.",
+  "settingsUsageCostLegendWith": "{lead} {missing}",
+  "settingsUsageCostMedian": "Median",
+  "settingsUsageCostMiddleHalf": "Mittlere Hälfte",
+  "settingsUsageCostMissingTokens": {
+    "plural": "count",
+    "one": "{count} Aufgabe ohne gemeldete Tokens ist nicht enthalten.",
+    "other": "{count} Aufgaben ohne gemeldete Tokens sind nicht enthalten."
+  },
+  "settingsUsageCostMissingUsd": {
+    "plural": "count",
+    "one": "{count} Aufgabe ohne Schätzung ist nicht enthalten.",
+    "other": "{count} Aufgaben ohne Schätzung sind nicht enthalten."
+  },
+  "settingsUsageCostNow": "Median jetzt",
+  "settingsUsageCostNowNote": {
+    "plural": "count",
+    "one": "{count} Aufgabe in den letzten {days} Tagen",
+    "other": "{count} Aufgaben in den letzten {days} Tagen"
+  },
+  "settingsUsageCostPicked": {
+    "plural": "count",
+    "one": "{count} ausgewählt",
+    "other": "{count} ausgewählt"
+  },
+  "settingsUsageCostPoint": {
+    "plural": "count",
+    "one": "{when}: Median {median}, mittlere Hälfte {low} – {high}, {count} Aufgabe",
+    "other": "{when}: Median {median}, mittlere Hälfte {low} – {high}, {count} Aufgaben"
+  },
+  "settingsUsageCostPointTooFew": {
+    "plural": "count",
+    "one": "{when}: {count} Aufgabe, zu wenige für einen Median (mindestens {least})",
+    "other": "{when}: {count} Aufgaben, zu wenige für einen Median (mindestens {least})"
+  },
+  "settingsUsageCostProjects": "Projekte",
+  "settingsUsageCostRange": "{low} – {high}",
+  "settingsUsageCostReading": "Abgeschlossene Aufgaben werden gelesen…",
+  "settingsUsageCostSame": "Keine Veränderung",
+  "settingsUsageCostStart": "Zu Beginn",
+  "settingsUsageCostStartNone": "Kein Zeitfenster hat genug Aufgaben",
+  "settingsUsageCostStartNote": "Zeitfenster bis {date}",
+  "settingsUsageCostTasks": "Aufgaben",
+  "settingsUsageCostTooFew": "Zu wenige abgeschlossene Aufgaben in dieser Auswahl für einen Median. Jeder Punkt braucht mindestens 5.",
+  "settingsUsageCostTooFewCell": "Zu wenige Aufgaben",
+  "settingsUsageCostUnit": "{unit} · Median pro Aufgabe",
+  "settingsUsageCostUp": "{percent} % mehr",
+  "settingsUsageCostValues": "Werte",
   "settingsUsageCoverageUnavailable": "Abdeckung nicht verfügbar",
   "settingsUsageCreated": "Erstellt {when}",
   "settingsUsageDailyChartTokens": "Tägliche Token-Summen für den gewählten Zeitraum",

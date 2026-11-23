@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { JoinedHome } from "../../src/core/devices/joinedHome";
 import { ACTIONS } from "../../src/shared/actions";
+import { DEFAULT_USAGE_UNIT } from "../../src/shared/usage";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
@@ -25,7 +26,8 @@ const operations = async (page: Page) =>
     .filter((task) => task.kind === "operation")
     .map((task) => task.title);
 const usageUnit = async (page: Page) =>
-  (await page.evaluate(() => window.infinitary.settings.getAppearance())).usageUnit ?? "tokens";
+  (await page.evaluate(() => window.infinitary.settings.getAppearance())).usageUnit ??
+  DEFAULT_USAGE_UNIT;
 const reminders = async (page: Page) =>
   (await page.evaluate(() => window.infinitary.keyboard.reminders())).on;
 /** The first mate's computer's saved usage unit, read-only while its core runs. */
@@ -34,11 +36,12 @@ const savedHomeUnit = (userDataDir: string) =>
     const row = db.prepare("SELECT value FROM settings WHERE key = 'appearance'").get() as
       | { value: string }
       | undefined;
-    return (row ? JSON.parse(row.value).usageUnit : undefined) ?? "tokens";
+    return (row ? JSON.parse(row.value).usageUnit : undefined) ?? DEFAULT_USAGE_UNIT;
   });
 /** A Mac's own look while it controls the first mate's, as it saved it. */
 const savedViewUnit = (userDataDir: string) =>
-  new JoinedHome(join(userDataDir, "joined"), () => {}).look()?.appearance.usageUnit ?? "tokens";
+  new JoinedHome(join(userDataDir, "joined"), () => {}).look()?.appearance.usageUnit ??
+  DEFAULT_USAGE_UNIT;
 /** A window's saved key reminder; a file never written means on. */
 const savedReminders = (userDataDir: string) => {
   const file = join(userDataDir, "key-reminders.json");
@@ -71,15 +74,15 @@ test("the first mate changes the named Mac's own usage unit and key reminder at 
       askFirstmate(home.page, APP_CATALOG_PROMPT_MARKER + JSON.stringify(change));
 
     await test.step("the usage unit changes on Studio alone, with one line naming it", async () => {
-      expect(await usageUnit(studio.page)).not.toBe("usd");
+      expect(await usageUnit(studio.page)).not.toBe("tokens");
       const homeUnit = await usageUnit(home.page);
       const before = await operations(home.page);
-      await ask({ action: "usage-unit", value: { unit: "usd" }, computer: "Studio" });
-      await expect.poll(() => usageUnit(studio.page)).toBe("usd");
-      await expect.poll(() => savedViewUnit(studio.userDataDir)).toBe("usd");
+      await ask({ action: "usage-unit", value: { unit: "tokens" }, computer: "Studio" });
+      await expect.poll(() => usageUnit(studio.page)).toBe("tokens");
+      await expect.poll(() => savedViewUnit(studio.userDataDir)).toBe("tokens");
       expect(await usageUnit(home.page)).toBe(homeUnit);
       expect(savedHomeUnit(home.userDataDir)).toBe(homeUnit);
-      const line = `${ACTIONS["usage-unit"].done({ unit: "usd" })} on Studio`;
+      const line = `${ACTIONS["usage-unit"].done({ unit: "tokens" })} on Studio`;
       await expect
         .poll(async () => (await operations(home.page)).filter((title) => !before.includes(title)))
         .toEqual([line]);

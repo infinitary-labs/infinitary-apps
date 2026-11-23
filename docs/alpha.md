@@ -701,6 +701,9 @@ The update check covers only the path from the current alpha to the release; cha
 A fresh manual run in `infinitary-apps` must use the exact commit of its protected `main` dispatch.
 The build and the Apple silicon check request the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none; a publishing release hands the build its `release_build` kind's queue instead (`docs/testing.md`, "Each Mac job's kind and size").
 The installed check runs on Apple silicon only: no Intel Mac runs it.
+A fresh build checks its own copies in the build job, on the Mac that built them, after it removes the signing material and returns to the runner's own home without the signing home's variables.
+Handing the copies to a separate check job meant uploading about 3.7 GB over the Mac mini's uplink and downloading them back, about 23 minutes of each check, while the build's place kept a release's signing job waiting.
+The build job keeps the signed copies as an artifact only when that check fails, for one day, so a repair can reuse them (below); the separate installed job runs only for a reuse.
 The workflow uses existing Apple credentials only in disposable Actions Macs, under a scratch signing home, and publishes nothing.
 Before installation, signing or trust changes, `scripts/installer-environment.ts` refuses local execution and requires the kernel's virtual-machine reading on a self-hosted runner; the physical Mac cannot substitute for a guest.
 `scripts/installer-signing.mjs` repeats that guard and keeps passwords off command lines.
@@ -771,14 +774,14 @@ The normal release call supplies no declaration and still builds fresh copies.
 Preparing this route does not itself authorize a verification run, new signing or publication.
 
 `scripts/installer-reuse.ts` checks the clean checkout and exact declared differences, then reads the original run, artifact and successful build through the job's read-only GitHub access.
-The artifact must belong to that run and workflow version and have been created during the successful signed build; the overall original run may have failed in its installed checks.
+The artifact must belong to that run and workflow version and have been created during the original build job, whose signing step passed; that job's own installed check, which is why it kept the copies, may have failed.
 The selected artifact ID and SHA-256 are explicit, and an expired, missing or changed artifact fails rather than silently starting a build.
 The download streams to disk, matches GitHub's byte count and the declared archive digest, and forwards no GitHub sign-in header to the download host.
 The standard Python ZIP64 reader extracts only the producer's exact flat file inventory, refusing duplicates, special files, encrypted members and paths outside that inventory.
 Every fixture's bytes must match its recorded size and both digests, the fixture roles must match the current test's roles, and every app ZIP must retain the declared original source in its embedded source record.
 The temporary outer archive is removed after verification; the existing app ZIPs and disk images are not modified.
 
-Both disposable-Mac jobs then run the same complete native and Homebrew scenarios as a fresh build, with no signing credentials restored.
+The installed job then runs the same complete native and Homebrew scenarios as a fresh build, with no signing credentials restored.
 The evidence retains the compatibility declaration, original run and artifact, original source and newer check source; the temporary Homebrew metadata also names the original signed source.
 Reuse neither waives an installed check nor establishes a new signed pass until those checks actually complete.
 

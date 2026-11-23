@@ -1598,7 +1598,7 @@ The recipe:
 
 ## Signed Mac installation and updates
 
-`verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build and Apple silicon check on the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none, using the selected ref and existing release credentials without publishing anything.
+`verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build, which checks its own copies, on the `build` kind's queue and a reused-copies check on the `light` kind's queue, or the placement service's `mini-mac-virtual` virtual-only label where those have none, using the selected ref and existing release credentials without publishing anything.
 Its scratch signing home, real notarized binaries, native replacements, saved-work checks and failure cases are described in `docs/alpha.md`, "Isolated signed verification".
 The legacy private project keeps its requested pre-merge check.
 After cutover to `infinitary-apps`, the first alpha and alphas that change installer inputs (`docs/alpha.md`, "The update check", names them) must pass the full check after merge and before publication, in addition to the update check from the previous alpha (`docs/alpha.md`, "The update check").
@@ -1711,9 +1711,9 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
 | `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |
 | `testflight` | `ios-release.yml`'s `testflight`, which signs after the separate unsigned phone job succeeds | on the real Mac |
-| `build` | `mac-installer.yml`'s `build` | in a virtual Mac only |
+| `build` | `mac-installer.yml`'s `build`, which also checks the copies it signed | in a virtual Mac only |
 | `sign` | `release.yml`'s signing job | on the real Mac |
-| `light` | `mac-installer.yml`'s Apple-silicon checks, `mac-update.yml`'s update checks, `release.yml`'s `publish`, `republish-casks.yml` and `phone.yml`'s `scene-evidence` | in a virtual Mac only |
+| `light` | `mac-installer.yml`'s check of reused copies, `mac-update.yml`'s update checks, `release.yml`'s `publish`, `republish-casks.yml` and `phone.yml`'s `scene-evidence` | in a virtual Mac only |
 | `release_split`, `release_build`, `release_sign`, `release_light` | the same jobs as `split`, `build`, `sign` and `light`, in a publishing release | as their ordinary kind |
 
 A publishing release asks first for its own kinds, whose queues the placement service starts before every other waiting Mac job (DOP-178); each falls back to its ordinary kind and then to the old label.
@@ -1723,7 +1723,7 @@ A dry run asks for the ordinary kinds, so a rehearsal never takes a release's pl
 `release.yml` hands `release_split` to `verify.yml` as its `mac_runner` input, `release_build` to `mac-installer.yml` and `release_light` to `mac-update.yml` as their `runner` input, and `verify.yml`'s Mac lanes read their kind only when that input is empty.
 The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
-The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first and the signing job runs while the build's copies upload and are checked; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.
+The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
 The `phone` mapping remains `mini-mac-phone`, served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike.
 Those places also take other queues, such as the merge batch's Mac lanes (`release_split`), so phone checks and batch lanes wait for the same places (INF-3726).

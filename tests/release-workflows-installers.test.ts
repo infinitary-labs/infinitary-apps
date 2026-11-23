@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { SIGNED_BUILD_STEP } from "../scripts/installer-reuse";
 import { releaseSource } from "../src/core/update/releaseSource";
 import {
   loadYamlFile,
@@ -155,7 +156,7 @@ it("selects only the complete installed checks for reuse, without a signing job"
   type Job = {
     if?: string;
     with?: Record<string, string>;
-    steps?: { id?: string; if?: string; run?: string; uses?: string }[];
+    steps?: { id?: string; name?: string; if?: string; run?: string; uses?: string }[];
   };
   const installer = loadYamlFile(".github/workflows/mac-installer.yml") as {
     jobs: Record<string, Job>;
@@ -165,6 +166,12 @@ it("selects only the complete installed checks for reuse, without a signing job"
     if (!job) throw new Error("The verification job is missing");
     return Boolean(workflowValue(job.if ?? "${{ true }}", contexts));
   };
+  // A fresh build checks its own copies in its job; reused copies get the
+  // installed job, with the same check.
+  const checks = (job: Job | undefined) =>
+    (job?.steps ?? []).filter((step) => step.run?.includes("scripts/check-installed-updates.mjs"));
+  expect(checks(installer.jobs.build)).toHaveLength(1);
+  expect(checks(installer.jobs.installed)).toHaveLength(1);
   for (const reuse of ["", "reviewed declaration"]) {
     const inputs = { reuse };
     const github = { repository: "infinitary-labs/infinitary", ref: "refs/heads/inf/rehearsal" };
@@ -174,20 +181,15 @@ it("selects only the complete installed checks for reuse, without a signing job"
         inputs,
         needs: { build: { result: reuse ? "skipped" : "success" } },
       }),
-    ).toBe(true);
+    ).toBe(Boolean(reuse));
     expect(
       selected(installer.jobs.installed, { inputs, needs: { build: { result: "failure" } } }),
     ).toBe(false);
-    const steps = installer.jobs.installed?.steps ?? [];
-    expect(selected(steps.find((step) => step.id === "reuse") as Job, { inputs })).toBe(
-      Boolean(reuse),
-    );
-    expect(
-      selected(steps.find((step) => step.uses?.startsWith("actions/download-artifact@")) as Job, {
-        inputs,
-      }),
-    ).toBe(!reuse);
   }
+  // The reuse check reads the build's signing step by this name.
+  expect(installer.jobs.build?.steps?.find((step) => step.id === "fixtures")).toMatchObject({
+    name: SIGNED_BUILD_STEP,
+  });
   const source = "28114f4d9a20fee71369281701e2601315a24601";
   const github = {
     repository: "infinitary-labs/infinitary-apps",
@@ -342,9 +344,8 @@ it("runs the installed check on Apple silicon only, for every caller", () => {
   expect(installed?.strategy).toBeUndefined();
   const queues = { MAC_QUEUES: JSON.stringify({ light: "q-light" }) };
   expect(workflowString(installed?.["runs-on"] ?? "", { vars: queues })).toBe("q-light");
-  expect(installed?.steps?.some((step) => step.run?.includes('process.arch !== "arm64"'))).toBe(
-    true,
-  );
+  for (const job of [installed, installer.jobs.build])
+    expect(job?.steps?.some((step) => step.run?.includes('process.arch !== "arm64"'))).toBe(true);
   // No caller can ask for a chip any more.
   expect(installer.on.workflow_call.inputs).not.toHaveProperty("chip");
   expect(verify.on.workflow_dispatch.inputs).not.toHaveProperty("installer_chip");

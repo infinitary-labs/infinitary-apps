@@ -155,7 +155,9 @@ export class CrewUpdates {
    * (docs/devices.md, "Saving work before an update"). A turn the let-go
    * did not name stopped goes on there - its stop withdrawn, or a save it
    * never got - so its pause and its lane rows go, as `letGoThere` takes
-   * them.
+   * them. That computer names a turn its save stopped until a turn starts
+   * in that task there again, even after it restarted or let the save go
+   * by itself, so such a turn keeps both.
    */
   async letGoReturned(deviceId: string, there: SaveThere | undefined): Promise<void> {
     if (this.isUpdating(deviceId)) return;

@@ -68,6 +68,13 @@ const taskStateSchema = z.object({
    * works, which only its live session says (INF-2332).
    */
   continuing: z.literal(true).optional(),
+  /**
+   * Its home's update is stopping a turn of this task here, stopped one or
+   * withdrew the stop, and no turn has started here since: what letting
+   * that save go names, through a restart here and after this computer
+   * let the save go by itself. An older run drops it.
+   */
+  updateStop: z.enum(["stopping", "stopped", "withdrawn"]).optional(),
 });
 export type PlacedTaskState = z.infer<typeof taskStateSchema>;
 

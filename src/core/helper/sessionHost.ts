@@ -266,10 +266,6 @@ type Flush = { seq: number; resolve: () => void };
 type UpdateSave = {
   /** Withdraws each stop still waiting (`releaseUpdate`). */
   readonly withdraw: AbortController;
-  /** Each task whose turn the save stopped. */
-  readonly stopped: Set<string>;
-  /** Each task whose stop the let-go withdrew before it cut the turn. */
-  readonly withdrawn: Set<string>;
   /** Each task's latest stop, settled once its turn ended here or it was withdrawn. */
   readonly stops: Map<string, Promise<void>>;
   /** Each task whose stop is under way now. */
@@ -282,7 +278,10 @@ type UpdateSave = {
   timer: NodeJS.Timeout | undefined;
 };
 
-/** What the save answers: each task whose turn the save stopped. */
+/**
+ * What the save answers: each task whose turn an update's save stopped here
+ * since a turn last started there (`updateStop`).
+ */
 type UpdateSaveAnswer = { stopped: string[] };
 /** What the let-go answers besides: each task whose stop it withdrew. */
 type UpdateReleaseAnswer = UpdateSaveAnswer & { withdrawn: string[] };
@@ -384,6 +383,11 @@ export class SessionHost {
     // A turn left running by a quit, or a crash, ended then: say so first.
     for (const task of options.tasks.list()) {
       const held = this.load(task);
+      // The quit cut the turn its home's update was stopping: the save's.
+      if (held.state.updateStop === "stopping") {
+        held.state = { ...held.state, updateStop: "stopped" };
+        this.writeOut(held);
+      }
       if (held.state.running) {
         const { turn } = held.state.running;
         held.state = { ...held.state, running: undefined };
@@ -1335,6 +1339,8 @@ export class SessionHost {
       ...held.state,
       turn,
       running: { turn, orderId },
+      // A turn that reaches its model here: what an update's save did is over.
+      ...(this.updateSave ? {} : { updateStop: undefined }),
     };
     this.record(held, { type: "turn_started", turn, orderId });
     this.writeOut(held);
@@ -1405,8 +1411,6 @@ export class SessionHost {
     if (!save) {
       const own: UpdateSave = {
         withdraw: new AbortController(),
-        stopped: new Set(),
-        withdrawn: new Set(),
         stops: new Map(),
         stopping: new Set(),
         asked: 0,
@@ -1432,7 +1436,7 @@ export class SessionHost {
       }, this.options.updateReturnMs ?? UPDATE_RETURN_MS);
       own.timer.unref?.();
     }
-    return { stopped: [...save.stopped] };
+    return { stopped: this.updateStops("stopped") };
   }
 
   /**
@@ -1461,7 +1465,8 @@ export class SessionHost {
    * One conversation working here stops for the update: safely when its
    * session can hold its calls, cut when it cannot. A turn the stop cut is
    * the save's, so its home carries it on after the update. A later turn
-   * of a task whose earlier one the save already stopped stops too.
+   * of a task whose earlier one the save already stopped stops too. What
+   * each stop came to is kept in the task's state (`markStop`).
    */
   private stopForUpdate(held: Held, save: UpdateSave): void {
     const session = held.session;
@@ -1471,6 +1476,7 @@ export class SessionHost {
       : session.abort().then(() => "stopped" as const);
     save.stopping.add(held.task);
     save.asked += 1;
+    this.markStop(held, "stopping");
     save.stops.set(
       held.task,
       stopping
@@ -1481,10 +1487,10 @@ export class SessionHost {
         })
         .then(async (outcome) => {
           if (outcome !== "stopped") {
-            save.withdrawn.add(held.task);
+            this.markStop(held, "withdrawn");
             return;
           }
-          save.stopped.add(held.task);
+          this.markStop(held, "stopped");
           await held.turnOver;
         })
         .finally(() => save.stopping.delete(held.task)),
@@ -1496,16 +1502,40 @@ export class SessionHost {
    * waiting is withdrawn and its turn goes on as if never asked, and turns
    * start here again. Answers once each stop settled, naming every task
    * whose turn the save stopped, which its home carries on, and every one
-   * whose stop it withdrew, whose turn its home lets go on.
+   * whose stop it withdrew, whose turn its home lets go on - the same after
+   * a restart here or once it let the save go by itself (`markStop`).
    */
   private async releaseUpdate(): Promise<UpdateReleaseAnswer> {
     const save = this.updateSave;
-    if (!save) return { stopped: [], withdrawn: [] };
-    this.updateSave = undefined;
-    clearTimeout(save.timer);
-    save.withdraw.abort();
-    await Promise.all(save.stops.values());
-    return { stopped: [...save.stopped], withdrawn: [...save.withdrawn] };
+    if (save) {
+      this.updateSave = undefined;
+      clearTimeout(save.timer);
+      save.withdraw.abort();
+      await Promise.all(save.stops.values());
+    }
+    return { stopped: this.updateStops("stopped"), withdrawn: this.updateStops("withdrawn") };
+  }
+
+  /**
+   * Keeps what an update's save did to this task's turn here, through a
+   * restart and after the save is let go, until a turn reaches its model
+   * here (`prompt`): a let-go asked again, by a home that came back after
+   * either, names it as the first would have. A stop the save made stays
+   * one when a later turn's stop is withdrawn. A stop that settles after
+   * this computer stopped writes nothing: its next start reads the stop it
+   * was making as the save's.
+   */
+  private markStop(held: Held, mark: NonNullable<PlacedTaskState["updateStop"]>): void {
+    if (this.stopped || (held.state.updateStop === "stopped" && mark !== "stopped")) return;
+    held.state = { ...held.state, updateStop: mark };
+    this.writeOut(held);
+  }
+
+  /** Each task whose turn an update's save stopped here, or whose stop it withdrew. */
+  private updateStops(mark: "stopped" | "withdrawn"): string[] {
+    return [...this.held.values()]
+      .filter((held) => held.state.updateStop === mark)
+      .map((held) => held.task);
   }
 
   private async closeTask(held: Held): Promise<void> {

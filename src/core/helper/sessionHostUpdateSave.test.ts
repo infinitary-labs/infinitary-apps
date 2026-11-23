@@ -8,13 +8,15 @@ import {
   sessionHostHooks,
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
+import { PlacedTasks } from "./placedTasks";
 
 /**
  * A computer that runs work saving its crew's work before its home updates
  * it (docs/helper.md, "Saving its work before an update";
  * `tests/helpers/sessionHostWorld.ts`): it decides when its work is saved,
- * holds turns meanwhile, stops a turn its crewmate carries on by itself, and
- * lets the save go by itself only when its home says nothing after it.
+ * holds turns meanwhile, stops a turn its crewmate carries on by itself,
+ * lets the save go by itself only when its home says nothing after it, and
+ * names the turns it stopped to a let-go asked after it restarted.
  */
 
 sessionHostHooks();
@@ -71,7 +73,7 @@ describe("a computer that runs work saving its crew's work before its update", (
     await at.ended(turn);
     expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", outcome: "done" });
     expect(api.requests.length).toBeGreaterThan(asked);
-    // Let go already, the release answers that nothing is held.
+    // Let go already, and a turn reached its model since: the release names nothing.
     expect(await at.order("inf:session:release-update", [])).toEqual({
       stopped: [],
       withdrawn: [],
@@ -160,6 +162,74 @@ describe("a computer that runs work saving its crew's work before its update", (
       type: "turn_ended",
       turn: 1,
       outcome: "done",
+    });
+  });
+
+  // From review: a home that comes back after this computer restarted asks
+  // it to let go, and must hear which turn its save stopped, so that turn's
+  // end is read as the update's pause and carried on, never as its finish.
+  it("still names the turn its save stopped after it restarts, until a turn reaches its model there", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Checked the footer." } }] },
+      { text: "Fixed the footer." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+    await report.reached;
+    const saving = at.order("inf:session:save-for-update", []);
+    report.open();
+    expect(await saving).toEqual({ stopped: [TASK] });
+
+    await at.restartComputer();
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [TASK],
+      withdrawn: [],
+    });
+
+    await at.order("inf:session:open", [{ orderId: "open:again", task: TASK, spec: at.spec }]);
+    model([{ text: "Picked the footer up again." }]);
+    const { turn } = await at.order("inf:session:prompt", [
+      { orderId: "rows:2", task: TASK, text: "Carry on." },
+    ]);
+    await at.ended(turn);
+    expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", outcome: "done" });
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [],
+      withdrawn: [],
+    });
+  });
+
+  // A quit while the save still waits on a running call cuts that turn
+  // instead: it is the save's too, and its end is read as the pause.
+  it("names a turn the quit cut while its save was stopping it as one the save stopped", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Checked the footer." } }] },
+      { text: "Fixed the footer." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+    await report.reached;
+    void at.order("inf:session:save-for-update", []).catch(() => undefined);
+    const state = () => new PlacedTasks(at.dataDir).state(TASK);
+    await expect.poll(() => state().updateStop).toBe("stopping");
+
+    // It quits while the call still runs: the quit cuts the turn, and the
+    // call is let finish only then, so the run can let its conversation go.
+    const restarting = at.restartComputer();
+    await expect.poll(() => state().running).toBeUndefined();
+    report.open();
+    await restarting;
+    await at.ended(1);
+    expect(
+      at.home.events.find((record) => record.event.type === "turn_ended")?.event,
+    ).toMatchObject({ turn: 1, outcome: "interrupted" });
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [TASK],
+      withdrawn: [],
     });
   });
 });

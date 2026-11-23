@@ -1132,6 +1132,7 @@ Every route of `Computers.update` - over Remote Login, over the connection and M
   That computer holds new turns, lets each running call finish, records each stopped turn, and decides when it is saved: it answers once every stopped turn's end is written there and here, so the update has no time limit of its own to cut a turn.
   Meanwhile this Mac keeps answering the crew's tool calls from there, and holds only new work (below, "While it is updated").
   A drop while it saves is waited out for `UPDATE_RETURN_MS`, then the same save is asked again, which joins the one that went on there; a computer that does not come back by then refuses the update as out of reach on every route, and it is carried on as below.
+  A connection that refuses the ask at once while it closes still reads in reach until its close is heard, so the save asks again after a short pause (`ASK_AGAIN_MS`), never at once.
   A computer without the change has its running turns stopped from here, and the update waits for those turns to end there at most `QUIT_SETTLE_MS`.
 - **What saving does here.**
   Each task with a turn running there gets one `turn-resumed` row on its lane, which says its last turn stopped part way while Infinitary there was updated and asks it to check what already took effect before it repeats a step.

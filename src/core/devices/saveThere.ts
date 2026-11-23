@@ -9,6 +9,13 @@ import type { WorkDevices } from "../placed/workDevices";
 type SaveLink = Pick<WorkDevices, "ask" | "inReach" | "onWorkDevice" | "version">;
 
 /**
+ * How long a save waits before asking again a computer that still reads in
+ * reach after its connection refused the ask: that connection is closing,
+ * and its close is heard on a later turn.
+ */
+const ASK_AGAIN_MS = 100;
+
+/**
  * The save a computer that runs work does itself before its home updates it
  * (docs/helper.md, "Saving its work before an update"), when it is in reach
  * and lists `work-update-saving`; undefined for any other, whose turns its
@@ -50,14 +57,19 @@ export function saveThereFor(
   };
 }
 
-/** Resolves once the computer is in reach again; rejects after `returnMs`, or once `signal` aborts. */
+/**
+ * Resolves once the computer is in reach again; rejects after `returnMs`, or
+ * once `signal` aborts. One that still reads in reach is asked again after
+ * `ASK_AGAIN_MS`, never at once, so the save never spins before its
+ * connection's close is heard.
+ */
 function back(
   work: SaveLink,
   deviceId: string,
   signal: AbortSignal,
   returnMs: number,
 ): Promise<void> {
-  if (work.inReach(deviceId)) return Promise.resolve();
+  const closing = work.inReach(deviceId);
   return new Promise((resolve, reject) => {
     const done = (settle: () => void) => {
       clearTimeout(timer);
@@ -66,7 +78,9 @@ function back(
       settle();
     };
     const aborted = () => done(() => reject(signal.reason));
-    const timer = setTimeout(() => done(() => reject(new DeviceOutOfReachError())), returnMs);
+    const timer = closing
+      ? setTimeout(() => done(resolve), ASK_AGAIN_MS)
+      : setTimeout(() => done(() => reject(new DeviceOutOfReachError())), returnMs);
     const stop = work.onWorkDevice((contact) => {
       if (contact.deviceId === deviceId && contact.contact === "in-reach") done(resolve);
     });

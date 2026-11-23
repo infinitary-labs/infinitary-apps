@@ -70,6 +70,33 @@ describe("the save a computer that runs work does before its update", () => {
     expect(home.asked).toEqual([WORK_SAVE_ORDER, WORK_SAVE_ORDER]);
   });
 
+  // The connection refuses an ask at once while it closes, and its close is
+  // heard on a later turn: a save that asked again at once never let it be heard.
+  it("asks again only after a pause while the computer still reads in reach as its connection closes", async () => {
+    const home = link();
+    let heard = false;
+    home.answers.push(() => {
+      setImmediate(() => {
+        heard = true;
+        home.contact("gone");
+      });
+      return Promise.reject(new DeviceOutOfReachError());
+    });
+    home.answers.push(() =>
+      Promise.reject(
+        heard
+          ? new DeviceOutOfReachError()
+          : new Error("The save was asked again before its connection's close was heard."),
+      ),
+    );
+    home.answers.push(async () => ({ stopped: ["task-footer"] }));
+    const saving = saveThereFor(home, MINI, 60_000)?.save(new AbortController().signal);
+    await expect.poll(() => home.asked.length).toBe(2);
+    home.contact("in-reach");
+    await expect(saving).resolves.toEqual({ stopped: ["task-footer"] });
+    expect(home.asked).toEqual([WORK_SAVE_ORDER, WORK_SAVE_ORDER, WORK_SAVE_ORDER]);
+  });
+
   it("gives up once the computer has not come back for as long as an update has to return, or once Update later lets it go", async () => {
     const home = link();
     home.answers.push(() => {

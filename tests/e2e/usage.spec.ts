@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { USAGE_TASK_PAGE, usageCategoryValue } from "../../src/shared/usage";
+import {
+  type CostSelection,
+  costDayEnds,
+  costSeries,
+  USAGE_TASK_PAGE,
+  usageCategoryValue,
+} from "../../src/shared/usage";
 import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
@@ -7,11 +13,14 @@ import { promptInput } from "./prompt";
 import {
   focusOnModel,
   focusOnTask,
+  SEEDED_COST_PROJECT,
   SEEDED_USAGE_TASKS,
+  seedCostPerTaskLedger,
   seedTokenCoverageLedger,
   seedUsageLedger,
   usageSummary,
   usageTab,
+  usageTaskCosts,
   usageTasks,
 } from "./usage";
 import { pressKey, runFromSearch, typeInto, untilWindowCommands } from "./windowKeys";
@@ -19,9 +28,9 @@ import { pressKey, runFromSearch, typeInto, untilWindowCommands } from "./window
 /**
  * Settings → Usage, end to end and by keys alone (docs/usage.md): a real
  * Firstmate turn through the mock provider writes the usage ledger, and the
- * captain opens Usage from command search, switches to estimated dollars,
- * narrows the period and the work, opens the model's details and leaves
- * them with Escape, and finds the unit he chose after a reload.
+ * captain opens Usage from command search in estimated dollars, switches
+ * to tokens, narrows the period and the work, opens the model's details and
+ * leaves them with Escape, and finds the unit they chose after a reload.
  */
 test("Usage shows the recorded model usage and keeps the chosen unit, all from the keyboard", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -40,25 +49,25 @@ test("Usage shows the recorded model usage and keeps the chosen unit, all from t
         .toBeGreaterThan(0);
     });
 
-    await test.step("Open Usage from command search lands on the unit switch, in tokens", async () => {
+    await test.step("Open Usage from command search lands on the unit switch, in estimated dollars", async () => {
       await runFromSearch(app, page, "settings.usage");
-      await expect(usage.unit("tokens")).toBeChecked();
-      await expect(usage.unit("tokens")).toBeFocused();
+      await expect(usage.unit("usd")).toBeChecked();
+      await expect(usage.unit("usd")).toBeFocused();
       const { models } = await usageSummary(page, { period: "30d", scope: "all" });
       expect(models.length).toBeGreaterThan(0);
       for (const model of models) await expect(usage.model(model.id)).toBeVisible();
     });
 
-    await test.step("the arrows switch every amount to estimated dollars, and the core keeps it", async () => {
-      await page.keyboard.press("ArrowRight");
-      await expect(usage.unit("usd")).toBeChecked();
+    await test.step("the arrows switch every amount to tokens, and the core keeps it", async () => {
+      await page.keyboard.press("ArrowLeft");
+      await expect(usage.unit("tokens")).toBeChecked();
       await expect
         .poll(
           async () =>
             (await page.evaluate(() => window.infinitary.settings.getPreferences())).appearance
               .usageUnit,
         )
-        .toBe("usd");
+        .toBe("tokens");
     });
 
     await test.step("Tab reaches the period and the work, and typing picks one", async () => {
@@ -92,21 +101,21 @@ test("Usage shows the recorded model usage and keeps the chosen unit, all from t
       await page.reload();
       await untilWindowCommands(page);
       await runFromSearch(app, page, "settings.usage");
-      await expect(usage.unit("usd")).toBeChecked();
+      await expect(usage.unit("tokens")).toBeChecked();
       await expect(usage.period).toHaveValue("30d");
       await expect(usage.scope).toHaveValue("all");
     });
 
-    await test.step("Switch Usage units goes back to tokens from command search", async () => {
+    await test.step("Switch Usage units goes back to estimated dollars from command search", async () => {
       await runFromSearch(app, page, "usage.unit");
-      await expect(usage.unit("tokens")).toBeChecked();
+      await expect(usage.unit("usd")).toBeChecked();
       await expect
         .poll(
           async () =>
             (await page.evaluate(() => window.infinitary.settings.getPreferences())).appearance
               .usageUnit,
         )
-        .toBe("tokens");
+        .toBe("usd");
     });
   } finally {
     await launched.close();
@@ -148,7 +157,7 @@ test("Usage groups where it went by project and lists recent tasks ten at a time
     await test.step("Where it went lists the Firstmate, each project with its kinds of work, then other work", async () => {
       await expect(promptInput(page)).toBeVisible();
       await runFromSearch(app, page, "settings.usage");
-      await expect(usage.unit("tokens")).toBeFocused();
+      await expect(usage.unit("usd")).toBeFocused();
       const { where } = await usageSummary(page, { period: "30d", scope: "all" });
       expect(where.projects.length).toBe(2);
       await expect(usage.where).toHaveCount(where.projects.length + 2);
@@ -182,13 +191,13 @@ test("Usage groups where it went by project and lists recent tasks ten at a time
     await test.step("switching the unit keeps every task listed, in the same order", async () => {
       const before = await listed();
       await runFromSearch(app, page, "usage.unit");
-      await expect(usage.unit("usd")).toBeChecked();
+      await expect(usage.unit("tokens")).toBeChecked();
       await expect.poll(listed).toEqual(before);
     });
 
     await test.step("a new period starts the list over at ten", async () => {
       await runFromSearch(app, page, "settings.usage");
-      await expect(usage.unit("usd")).toBeFocused();
+      await expect(usage.unit("tokens")).toBeFocused();
       await page.keyboard.press("Tab");
       await typeInto(usage.period, "All");
       await expect(usage.period).toHaveValue("all");
@@ -209,6 +218,9 @@ test("Usage preserves category coverage through the ledger, filters and model de
     const usage = usageTab(page);
     await expect(promptInput(page)).toBeVisible();
     await runFromSearch(app, page, "settings.usage");
+    // Usage opens in dollars; category coverage is a token reading.
+    await runFromSearch(app, page, "usage.unit");
+    await expect(usage.unit("tokens")).toBeChecked();
     const summary = await usageSummary(page, { period: "30d", scope: "all" });
     expect(summary.total.tokenReported).toEqual({
       input: 3,
@@ -251,6 +263,118 @@ test("Usage preserves category coverage through the ledger, filters and model de
     ).toEqual(summary.total.tokenReported);
     await usage.scope.selectOption("other");
     await expect(usage.models).toHaveCount(0);
+  } finally {
+    await launched.close();
+  }
+});
+
+/**
+ * Cost per task over five seeded weeks of finished work (docs/usage.md):
+ * the median line of each finished task with its reviews, in dollars, its
+ * readouts checked against the core's own read, a project and a kind
+ * picked from the filters by keys alone, Escape closing a filter onto its
+ * row, the Values table giving every day's window, and the filters back at
+ * All when Usage opens again.
+ */
+test("Cost per task draws the median finished task and filters by project and kind, from the keyboard", async () => {
+  const userDataDir = scratchDir("infinitary-usage-cost-");
+  seedCostPerTaskLedger(userDataDir);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    const usage = usageTab(page);
+    /** The readout's figure matches the core's read, worked by the same shared math. */
+    const readsAs = async (selection: CostSelection) => {
+      await expect
+        .poll(async () => {
+          const costs = await usageTaskCosts(page, { period: "30d" });
+          const expected = costSeries(costs, selection, "usd").now.median;
+          const shown = await usage.costReadout("now").getAttribute("data-usage-value");
+          return expected !== null && shown === String(expected);
+        })
+        .toBe(true);
+    };
+    /** Tab on until the element holds focus. */
+    const tabTo = async (target: ReturnType<typeof usage.costFilter>) => {
+      for (
+        let step = 0;
+        step < 60 && !(await target.evaluate((element) => element === document.activeElement));
+        step++
+      ) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(target).toBeFocused();
+    };
+    const projects = usage.costFilter("projects");
+    const kinds = usage.costFilter("kinds");
+
+    await test.step("Usage opens in dollars and draws the median of every finished task", async () => {
+      await expect(promptInput(page)).toBeVisible();
+      await runFromSearch(app, page, "settings.usage");
+      await expect(usage.unit("usd")).toBeFocused();
+      await expect(usage.cost).toBeVisible();
+      await expect(usage.costLines.first()).toBeVisible();
+      await expect(usage.costEmpty).toHaveCount(0);
+      await readsAs({ projects: null, kinds: null });
+    });
+
+    await test.step("a project picked from the Projects filter by keys redraws the median for it alone", async () => {
+      await tabTo(projects.locator("summary"));
+      await page.keyboard.press("Enter");
+      await expect(projects).toHaveAttribute("open", "");
+      await page.keyboard.press("Tab");
+      await expect(projects.locator("[data-usage-cost-all]")).toBeFocused();
+      await expect(projects.locator("[data-usage-cost-all]")).toBeChecked();
+      // The project's id on the record, as the read names it.
+      const { tasks } = await usageTaskCosts(page, { period: "30d" });
+      const fm = tasks.find((task) => task.project?.name === SEEDED_COST_PROJECT)?.project?.id;
+      if (!fm) throw new Error("The seeded project has no finished task");
+      const firstmate = projects.locator(`input[value="${fm}"]`);
+      await tabTo(firstmate);
+      await page.keyboard.press(" ");
+      await expect(firstmate).toBeChecked();
+      await expect(projects.locator("[data-usage-cost-all]")).not.toBeChecked();
+      await readsAs({ projects: new Set([fm]), kinds: null });
+    });
+
+    await test.step("Escape closes the filter onto its row and leaves Settings open", async () => {
+      await page.keyboard.press("Escape");
+      await expect(projects).not.toHaveAttribute("open", "");
+      await expect(projects.locator("summary")).toBeFocused();
+      await expect(usage.section).toBeVisible();
+    });
+
+    await test.step("a kind picked too narrows the line to that project's implementation work", async () => {
+      await tabTo(kinds.locator("summary"));
+      await page.keyboard.press(" ");
+      const implement = kinds.locator('input[value="implement"]');
+      await expect(kinds.locator('input[value="review"]')).toHaveCount(0);
+      await tabTo(implement);
+      await page.keyboard.press(" ");
+      await expect(implement).toBeChecked();
+      const { tasks } = await usageTaskCosts(page, { period: "30d" });
+      const fm = tasks.find((task) => task.project?.name === SEEDED_COST_PROJECT)?.project?.id;
+      await readsAs({ projects: new Set([fm ?? ""]), kinds: new Set(["implement"]) });
+      await page.keyboard.press("Escape");
+      await expect(kinds.locator("summary")).toBeFocused();
+    });
+
+    await test.step("Values gives every day's window, today last", async () => {
+      const summary = usage.costValues.locator("summary");
+      await tabTo(summary);
+      await page.keyboard.press("Enter");
+      const costs = await usageTaskCosts(page, { period: "30d" });
+      await expect(usage.costValues.locator("tbody tr")).toHaveCount(costDayEnds(costs).length);
+    });
+
+    await test.step("the filters are back at All when Usage opens again", async () => {
+      await page.reload();
+      await untilWindowCommands(page);
+      await runFromSearch(app, page, "settings.usage");
+      await expect(projects.locator("[data-usage-cost-all]")).toBeChecked();
+      await expect(kinds.locator("[data-usage-cost-all]")).toBeChecked();
+      await readsAs({ projects: null, kinds: null });
+    });
   } finally {
     await launched.close();
   }

@@ -12,8 +12,9 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | The summary the tab reads | `UsageStore.summary`, served as `services.usage.summary` on `inf:usage:summary` |
 | The read the tab subscribes to | `usage.summary` in the read catalog (`src/shared/reads.ts`) |
 | Its recent tasks | `UsageStore.tasks`, served as `services.usage.tasks` on `inf:usage:tasks`, read as `usage.tasks` |
+| Its cost per task | `UsageStore.taskCosts`, served as `services.usage.taskCosts` on `inf:usage:task-costs`, read as `usage.taskCosts` |
 | Its shapes and pure math | `src/shared/usage.ts` |
-| The tab, its words and numbers | `src/renderer/src/settings/UsageTab.tsx`, `usageWords.ts`, `usage.css` |
+| The tab, its words and numbers | `src/renderer/src/settings/UsageTab.tsx`, `UsageCostPerTask.tsx`, `usageWords.ts`, `usage.css` |
 | The remembered unit | `appearance.usageUnit` (`src/shared/preferences.ts`), written through `setAppearance` |
 | The two commands | `settings.usage` and `usage.unit` (`src/shared/keyboard.ts`, `docs/keyboard.md`) |
 
@@ -76,7 +77,7 @@ If live reporting is unavailable, the existing terminal report still records spe
 
 ## Daily totals
 
-The summary, the recent tasks and Observe's `byTask` add up daily totals, never every ledger record (INF-4393 measured 100 to 380 ms of main-thread time per read over 226,027 records).
+The summary, the recent tasks, the cost per task and Observe's `byTask` add up daily totals, never every ledger record (INF-4393 measured 100 to 380 ms of main-thread time per read over 226,027 records).
 `usage_days` holds one row per local day, task, provider, recorded model, model source and price source, with each amount column already summed: records, reporting counts, tokens, the priced estimate and its parts, and the first and last moment.
 An estimate nothing on the row priced stays null, so adding rows up again answers exactly what adding the records would.
 `usage_days_state` says through which ledger row the totals are folded and in which time zone their days were counted.
@@ -126,10 +127,42 @@ A tie on the moment a task was created breaks by task id, so a longer read lists
 It answers the first `limit` of them, at most `USAGE_TASKS_MAX`, and `matching`, how many there are.
 Each task carries its key, title and project, when it was created, its amount over the period alone (its supporting model calls included once), and how many records reported each token category (`reported`) and how many priced records split their estimate into each (`costReported`), so a category no record reported is told from a measured zero.
 
+## Cost per task
+
+`UsageStore.taskCosts({ period }, { now })` answers each task that finished in the period, and in the week before it, with what it spent over its whole life (INF-6217's plan).
+It shows whether tasks in a project take more work than before, as complexity or debt grows.
+
+- **Finished.**
+  The summary's rule: done, not an operation, with a crewmate, started and closed.
+  A task counts at the moment it closed.
+- **Reviews.**
+  A review is a task under the one it checks whose saved kind is review.
+  It, and anything under it, adds its tokens and estimate to the task it reviews and is never a task of its own, so Reviews is not one of the kinds.
+  A separate task filed under a finished one is a task of its own and adds nothing to it.
+- **Each task.**
+  It carries when it closed, its project (null when the record no longer has it), its saved kind, and its tokens and known estimate with its reviews'.
+  Tokens are null when no record reported any, and the estimate is null unless something was priced above zero.
+- **The window.**
+  Each point is the median of the selected tasks that closed in the `COST_WINDOW_DAYS` (7) days before it, with the middle half of them as a band around it.
+  The period draws `COST_POINTS` (150) evenly spaced windows from its first moment to now; the week before the period gives its first point a full window.
+  A window with fewer than `COST_MIN_TASKS` (5) tasks has no median, and the line breaks there instead of reading 0.
+  All time starts on the local day of the first finished task.
+- **The unit.**
+  It follows the tab's unit; a task with no value in it is left out and the legend counts the ones in the period.
+- **Readouts.**
+  Median now is the window ending now, At the start the period's first window with a median, and Change the one against the other as a whole percent.
+- **Filters.**
+  Projects and Kinds pick from the projects and kinds the period's tasks name, most tasks first; no box ticked is All.
+  They start at All on every opening of the tab and stay through a new period, work or unit.
+- The section shows when the work is all or task work, since the first mate and other work have no finished tasks.
+- The medians are `costSeries` in `src/shared/usage.ts`, pure math over the read; Values gives each local day's window, today ending now.
+- It sends no alert and changes nothing on the phone's Usage page.
+
 ## The tab
 
 The captain's design (FI3-925, Overview): the header with the Tokens / Estimated $ switch, Period and Work, three readouts, the daily bars with their Daily values table, tokens per model beside Where it went, a model's details, and the milestone strip.
 FI3-993 took the lines from between rows, grouped Where it went by project, and added Recent tasks under the milestone strip.
+INF-6217's plan added Cost per task under the daily bars.
 
 - Where it went lists the first mate first whenever the work includes it, "No activity" when it has no record, then each project by its subtotal with its kinds of work beneath it under category names (Plans, Research, Lookups and explanations, Issue reproduction, Implementation, Fixes, Maintenance, Reviews, Other task work), then other work.
   Projects and kinds go largest first in the unit shown, those with no value in it after, and names break ties.
@@ -138,7 +171,7 @@ FI3-993 took the lines from between rows, grouped Where it went by project, and 
   The list starts over at ten when the period or the work changes and stays as it is when the unit does; a read that fails keeps the tasks shown and offers Try again.
 
 - The unit switch changes every amount together, within Usage only; counts stay counts.
-  The core keeps it (`appearance.usageUnit`); Usage opens in tokens until the captain picks dollars.
+  The core keeps it (`appearance.usageUnit`); Usage opens in estimated dollars until the captain picks tokens (`DEFAULT_USAGE_UNIT`).
   Period and Work start over at the last 30 days and all work on every opening.
 - Token totals count known categories only; with incomplete coverage the total's readout says it holds reported categories only.
   Model details show each category’s reporting count beside its value, including zero reporting records.
@@ -187,6 +220,8 @@ Open Usage (`settings.usage`) opens Settings at Usage from anywhere with focus o
 Neither has a default key.
 In the tab the unit switch takes the arrows, Tab reaches Period, Work, Daily values and each model; Enter or Space on a model opens its details with focus on Close details, and Escape closes them and puts focus back on the model, leaving Settings open.
 Each recent task's key is a link to that task, a Tab stop of its own (FI3-1271; the design skill's core rule "Task keys"): resting on it or focusing it opens the task's summary, and a click or Enter leaves Settings and opens the task on the main view.
+Under the daily bars Tab reaches Cost per task's Projects and Kinds; Enter or Space opens one, Tab moves through All and each choice and Space ticks one, and Escape closes it and leaves focus on its row with Settings open.
+Its Values table, also a Tab stop, gives every day's median, middle half and task count, so nothing the line shows needs a pointer.
 Tab reaches See more under the recent tasks, past their keys; Enter or Space adds the next ten and puts focus on the first of them, and the count under the list is announced.
 
 ## Tests
@@ -194,15 +229,17 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 - `src/core/claude/claudeEvents.test.ts` ("a turn's usage, model by model"): each model's share, running totals, a resumed client's turns from its own results (`tests/fixtures/claude-resume`), a result reported twice, a client that starts over, a turn that names no model.
 - `src/core/pi/piEvents.test.ts`: the listed-prices estimate and its split, and no cost for a model with no listed prices.
 - `src/core/storage/usageDays.test.ts`: one daily row per day, task and model; records written after a fold, by this writer or straight into the ledger, answer as a full recount does for every period; a changed time zone counts the days again.
-- `src/core/storage/usageStore.test.ts`: one row per served model; the summary reconciles days, models and where it went to one total, names models and places, groups by project and saved kind, counts finished work, filters, and answers an empty ledger; recent tasks in order, ties, limits, the period and each category's reporting.
+- `src/core/storage/usageStore.test.ts`: one row per served model; the summary reconciles days, models and where it went to one total, names models and places, groups by project and saved kind, counts finished work, filters, and answers an empty ledger; recent tasks in order, ties, limits, the period and each category's reporting; cost per task with its reviews and what sits under them, the week before the period, unpriced and silent tasks.
+- `src/shared/usage.test.ts`: the sliding median, its window, too few tasks, the change, tasks left out and the Values days.
 - `src/core/storage/settingsMigrations.test.ts` ("migration 66").
 - `src/renderer/src/settings/usageWords.test.ts`: every printed word and number.
-- `src/renderer/src/settings/UsageTab.test.tsx`: the recent tasks while a read is out, after one fails, with nothing to list, and with more to show.
+- `src/renderer/src/settings/UsageTab.test.tsx`: the recent tasks while a read is out, after one fails, with nothing to list, and with more to show; cost per task's line breaking where a week has too few tasks, and no line at zero.
 - `src/core/storage/costLimitStore.test.ts` and `src/core/orchestrator/costLimits.test.ts`: the cost limit's spend, its 30-day count, the crossing, the card and each of its answers.
 - `src/core/core.settings.test.ts`: the first mate changes app and project limits through their catalog actions, task/project/app precedence, and invalid amounts leave the saved limit unchanged.
 - `tests/e2e/cost-limit.spec.ts`: the app default, project choices and persistence by keys, plus family spend and a live limit update in task Info.
-- `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.
-  `tests/e2e/usage.ts` holds its hooks and the seeded ledger.
+- `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage in dollars, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.
+  Over five seeded weeks of finished work, Cost per task opens in dollars, its median matches the read, a project and a kind are picked and Escape closes a filter, Values lists every day, and the filters start at All again, all by keys.
+  `tests/e2e/usage.ts` holds its hooks and the seeded ledgers.
 
 ## Historical context-shortening records
 

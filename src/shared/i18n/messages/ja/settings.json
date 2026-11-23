@@ -1270,6 +1270,59 @@
   "settingsUsageAttributionServed": "応答したプロバイダーが示したモデル名です。",
   "settingsUsageBarsPriced": "棒には価格のあるアクティビティのみを表示します。価格のないアクティビティは含まれません。",
   "settingsUsageCloseDetails": "詳細を閉じる",
+  "settingsUsageCostAllKinds": "すべての種類",
+  "settingsUsageCostAllProjects": "すべてのプロジェクト",
+  "settingsUsageCostChange": "変化",
+  "settingsUsageCostChangeNote": "表示中の期間",
+  "settingsUsageCostChartTokens": "表示中の期間における完了タスクあたりのトークンの中央値",
+  "settingsUsageCostChartUsd": "表示中の期間における完了タスクあたりの推定ドルの中央値",
+  "settingsUsageCostDown": "{percent}% 減少",
+  "settingsUsageCostFailed": "タスクあたりのコストを今は読み取れませんでした。",
+  "settingsUsageCostHeading": "タスクあたりのコスト",
+  "settingsUsageCostKinds": "種類",
+  "settingsUsageCostLead": "完了した各タスクとそのレビュー。線が上がるほど、タスクに以前より多くの作業がかかっています。",
+  "settingsUsageCostLegend": "各点は、その前の {days} 日間に完了したタスクの中央値です。帯はその中間の半分を示します。",
+  "settingsUsageCostLegendWith": "{lead}{missing}",
+  "settingsUsageCostMedian": "中央値",
+  "settingsUsageCostMiddleHalf": "中間の半分",
+  "settingsUsageCostMissingTokens": {
+    "plural": "count",
+    "other": "トークンを報告しなかった {count} 件のタスクは含まれていません。"
+  },
+  "settingsUsageCostMissingUsd": {
+    "plural": "count",
+    "other": "推定のない {count} 件のタスクは含まれていません。"
+  },
+  "settingsUsageCostNow": "現在の中央値",
+  "settingsUsageCostNowNote": {
+    "plural": "count",
+    "other": "直近 {days} 日間で {count} 件のタスク"
+  },
+  "settingsUsageCostPicked": {
+    "plural": "count",
+    "other": "{count} 件を選択"
+  },
+  "settingsUsageCostPoint": {
+    "plural": "count",
+    "other": "{when}：中央値 {median}、中間の半分 {low} – {high}、{count} 件のタスク"
+  },
+  "settingsUsageCostPointTooFew": {
+    "plural": "count",
+    "other": "{when}：{count} 件のタスク。中央値には少なすぎます（{least} 件以上必要）"
+  },
+  "settingsUsageCostProjects": "プロジェクト",
+  "settingsUsageCostRange": "{low} – {high}",
+  "settingsUsageCostReading": "完了したタスクを読み取っています…",
+  "settingsUsageCostSame": "変化なし",
+  "settingsUsageCostStart": "期間の始め",
+  "settingsUsageCostStartNone": "十分なタスクがある期間はありません",
+  "settingsUsageCostStartNote": "{date} までの期間",
+  "settingsUsageCostTasks": "タスク",
+  "settingsUsageCostTooFew": "この選択では完了したタスクが少なすぎて中央値を描けません。各点には少なくとも 5 件必要です。",
+  "settingsUsageCostTooFewCell": "タスクが少なすぎます",
+  "settingsUsageCostUnit": "{unit} · タスクあたりの中央値",
+  "settingsUsageCostUp": "{percent}% 増加",
+  "settingsUsageCostValues": "値",
   "settingsUsageCoverageUnavailable": "対象範囲を取得できません",
   "settingsUsageCreated": "{when} に作成",
   "settingsUsageDailyChartTokens": "選択した期間の日別トークン合計",

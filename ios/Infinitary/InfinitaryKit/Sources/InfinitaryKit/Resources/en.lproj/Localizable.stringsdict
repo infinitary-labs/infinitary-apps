@@ -2259,6 +2259,102 @@
       <string>%1$ld saved resets · use one on %2$@</string>
     </dict>
   </dict>
+  <key>settingsUsageCostMissingTokens</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task that reported no tokens is left out.</string>
+      <key>other</key>
+      <string>%1$ld tasks that reported no tokens are left out.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostMissingUsd</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task with no estimate is left out.</string>
+      <key>other</key>
+      <string>%1$ld tasks with no estimate are left out.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostNowNote</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld task in the last %2$@ days</string>
+      <key>other</key>
+      <string>%1$ld tasks in the last %2$@ days</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPicked</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld picked</string>
+      <key>other</key>
+      <string>%1$ld picked</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPoint</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%5$@: median %4$@, middle half %3$@ – %2$@, %1$ld task</string>
+      <key>other</key>
+      <string>%5$@: median %4$@, middle half %3$@ – %2$@, %1$ld tasks</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPointTooFew</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%3$@: %1$ld task, too few for a median (at least %2$@)</string>
+      <key>other</key>
+      <string>%3$@: %1$ld tasks, too few for a median (at least %2$@)</string>
+    </dict>
+  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

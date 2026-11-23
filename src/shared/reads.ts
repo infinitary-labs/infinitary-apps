@@ -18,7 +18,7 @@ import { panelSettingNamesSchema } from "./panelSettingNames";
 import { RESOURCE_DEMAND_RENEW_MS } from "./resources";
 import { sameSqlAnswer, sqlQuerySchema } from "./sql";
 import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "./tasks";
-import { usageQuerySchema, usageTasksQuerySchema } from "./usage";
+import { usageQuerySchema, usageTaskCostsQuerySchema, usageTasksQuerySchema } from "./usage";
 
 /**
  * The read catalog (v0 in phase 1 of the UI plugin system, docs/ui-plugins.md;
@@ -335,6 +335,19 @@ export const readCatalog = {
     },
     description:
       "The newest tasks with recorded usage by period and kind of work, and their count.",
+  }),
+  "usage.taskCosts": entry({
+    channel: "inf:usage:task-costs",
+    args: usageTaskCostsQuerySchema,
+    toRequest: (args) => [args],
+    invalidate: {
+      events: (event) =>
+        event.type === "turn_end" || (event.type === "tool_end" && event.usage !== undefined),
+      pushes: ["inf:tasks", "inf:tasks:delta"],
+    },
+    // i18n-exempt: served only to the first mate, as the read's description (src/core/pi/appReads.ts).
+    description:
+      "Each task finished in a period, and in the week before it, with what it and its reviews spent in tokens and estimated dollars.",
   }),
   // The captain's own panels, as the app has them mounted right now
   // (talk-to-personalize Step 5). Observe's Panels group: not a session -

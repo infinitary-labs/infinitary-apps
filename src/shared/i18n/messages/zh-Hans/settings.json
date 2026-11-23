@@ -1270,6 +1270,59 @@
   "settingsUsageAttributionServed": "由作答的服务商命名。",
   "settingsUsageBarsPriced": "柱形只显示已定价的活动，未定价的活动不计入。",
   "settingsUsageCloseDetails": "关闭详情",
+  "settingsUsageCostAllKinds": "所有类型",
+  "settingsUsageCostAllProjects": "所有项目",
+  "settingsUsageCostChange": "变化",
+  "settingsUsageCostChangeNote": "所示期间内",
+  "settingsUsageCostChartTokens": "所示期间内每个已完成任务的 token 中位数",
+  "settingsUsageCostChartUsd": "所示期间内每个已完成任务的估算美元中位数",
+  "settingsUsageCostDown": "下降 {percent}%",
+  "settingsUsageCostFailed": "暂时无法读取每个任务的成本。",
+  "settingsUsageCostHeading": "每个任务的成本",
+  "settingsUsageCostKinds": "类型",
+  "settingsUsageCostLead": "每个已完成任务连同其审查。线条上升表示任务比以前需要更多工作。",
+  "settingsUsageCostLegend": "每个点是此前 {days} 天内完成的任务的中位数。色带表示其中间一半。",
+  "settingsUsageCostLegendWith": "{lead}{missing}",
+  "settingsUsageCostMedian": "中位数",
+  "settingsUsageCostMiddleHalf": "中间一半",
+  "settingsUsageCostMissingTokens": {
+    "plural": "count",
+    "other": "未计入 {count} 个未报告 token 的任务。"
+  },
+  "settingsUsageCostMissingUsd": {
+    "plural": "count",
+    "other": "未计入 {count} 个没有估算的任务。"
+  },
+  "settingsUsageCostNow": "当前中位数",
+  "settingsUsageCostNowNote": {
+    "plural": "count",
+    "other": "最近 {days} 天内 {count} 个任务"
+  },
+  "settingsUsageCostPicked": {
+    "plural": "count",
+    "other": "已选 {count} 个"
+  },
+  "settingsUsageCostPoint": {
+    "plural": "count",
+    "other": "{when}：中位数 {median}，中间一半 {low} – {high}，{count} 个任务"
+  },
+  "settingsUsageCostPointTooFew": {
+    "plural": "count",
+    "other": "{when}：{count} 个任务，太少，无法得出中位数（至少 {least} 个）"
+  },
+  "settingsUsageCostProjects": "项目",
+  "settingsUsageCostRange": "{low} – {high}",
+  "settingsUsageCostReading": "正在读取已完成的任务…",
+  "settingsUsageCostSame": "没有变化",
+  "settingsUsageCostStart": "期初",
+  "settingsUsageCostStartNone": "没有哪个时间窗有足够的任务",
+  "settingsUsageCostStartNote": "截至 {date} 的时间窗",
+  "settingsUsageCostTasks": "任务",
+  "settingsUsageCostTooFew": "此选择中已完成的任务太少，无法绘制中位数。每个点至少需要 5 个。",
+  "settingsUsageCostTooFewCell": "任务太少",
+  "settingsUsageCostUnit": "{unit} · 每个任务的中位数",
+  "settingsUsageCostUp": "上升 {percent}%",
+  "settingsUsageCostValues": "数值",
   "settingsUsageCoverageUnavailable": "覆盖范围不可用",
   "settingsUsageCreated": "创建于 {when}",
   "settingsUsageDailyChartTokens": "所选时段内每日的 token 总计",

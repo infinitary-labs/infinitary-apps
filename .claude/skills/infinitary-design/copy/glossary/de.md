@@ -88,11 +88,13 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | live validation | Live-Prüfung | Trying the change for real; kept apart from "Überprüfungen". |
 | log (a check's kept output) | das Log | "Protokoll" already names the task's record. |
 | main message | Hauptnachricht | |
+| median (Usage, Cost per task) | Median | The middle task of a week's finished tasks; never "average". |
 | merge | zusammenführen, Zusammenführen | GitHub's German docs say "Zusammenführen eines Pull Requests"; "mergen" is avoided as jargon. |
 | merge queue (the host's own) | Merge-Warteschlange | |
 | merged locally | lokal zusammengeführt | The "local merge" pill is "Lokal zusammengeführt". |
 | Merges on its own | Führt selbst zusammen | |
 | message box | Nachrichtenfeld | |
+| middle half (Usage, Cost per task) | mittlere Hälfte | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | Modell | |
 | Models board | Modelltafel | The board of models under Intelligenz in the settings. |
 | Not now | Nicht jetzt | |

@@ -500,7 +500,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Adding a Mac by its address, and updating Firstmate there, over the
     // captain's own SSH (docs/devices.md, "Adding a computer by its address").
     // Another Firstmate's Mac is asked about once; `leave` is the captain's yes.
-    "inf:devices:add": (address, options) => services.remoteLogin.addOrAsk(address, options),
+    // An add the first mate's card began tells the first mate how it ended.
+    "inf:devices:add": (address, options) =>
+      services.cardAdds.watch(address, () => services.remoteLogin.addOrAsk(address, options)),
     // Join by its address from the window beside a command (docs/run.md,
     // "Joining another computer"): this first mate keeps the SSH trust, so
     // it asks there, and only the window's program hears the link.
@@ -599,6 +601,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           submission,
         );
         services.supervisor.cards.flushBroadcast();
+        // The first mate's add card: the add its button opens is watched.
+        services.cardAdds.chose(result);
         return result;
       } catch (error) {
         if (!(error instanceof CardChoiceUnavailableError)) throw error;

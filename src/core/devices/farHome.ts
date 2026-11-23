@@ -115,6 +115,21 @@ export const HOME_START = [
   "fi",
 ].join("\n");
 
+/**
+ * Run as the account by `MAKE_ACCOUNT`: adds each key line on standard input
+ * that `$1/.ssh/authorized_keys` lacks. Written for single quotes: it holds none.
+ */
+// i18n-exempt: a shell script run on the other computer, never shown
+const ADD_KEYS = [
+  "set -eu",
+  "umask 077",
+  'mkdir -p "$1/.ssh"',
+  'touch "$1/.ssh/authorized_keys"',
+  'while IFS= read -r k; do [ -z "$k" ] || grep -qxF -- "$k" "$1/.ssh/authorized_keys" || printf "%s\\n" "$k" >> "$1/.ssh/authorized_keys"; done',
+  'chmod 700 "$1/.ssh"',
+  'chmod 600 "$1/.ssh/authorized_keys"',
+].join("\n");
+
 /** The account a root sign-in makes there for the first mate. */
 export const HOME_ACCOUNT = "infinitary";
 
@@ -124,7 +139,14 @@ export const HOME_ACCOUNT = "infinitary";
  * lets in added to its own, owned by it alone, and linger on so its first
  * mate runs before anyone logs in. An account of that name already there
  * is kept, and only the keys it lacks are added. Says
- * `infinitary:account=<name>` once it can sign in. Exit 6: no keys to carry.
+ * `infinitary:account=<name>` once it can sign in. Exit 6: no keys to carry;
+ * exit 7: the account has no home folder.
+ *
+ * The keys are written as that account (`su`), never as root: an existing
+ * account, or work running in it, can link `.ssh` or `authorized_keys`
+ * anywhere, and root following such a link would change files that are not
+ * the account's. `[ ... ] || exit` is spelled out because `set -e` does not
+ * stop on a failed test inside an and-list.
  */
 // i18n-exempt: a shell script run on the other computer, never shown
 export const MAKE_ACCOUNT = [
@@ -133,13 +155,8 @@ export const MAKE_ACCOUNT = [
   '[ -s "$HOME/.ssh/authorized_keys" ] || exit 6',
   'id -u "$U" >/dev/null 2>&1 || useradd -m -s /bin/sh "$U"',
   'H="$(getent passwd "$U" | cut -d: -f6)"',
-  '[ -n "$H" ] && [ -d "$H" ]',
-  'mkdir -p "$H/.ssh"',
-  'touch "$H/.ssh/authorized_keys"',
-  'while IFS= read -r k; do [ -z "$k" ] || grep -qxF -- "$k" "$H/.ssh/authorized_keys" || printf \'%s\\n\' "$k" >> "$H/.ssh/authorized_keys"; done < "$HOME/.ssh/authorized_keys"',
-  'chown -R "$U:" "$H/.ssh"',
-  'chmod 700 "$H/.ssh"',
-  'chmod 600 "$H/.ssh/authorized_keys"',
+  '{ [ -n "$H" ] && [ "$H" != / ] && [ -d "$H" ]; } || exit 7',
+  `su -s /bin/sh "$U" -c '${ADD_KEYS}' firstmate "$H" < "$HOME/.ssh/authorized_keys"`,
   'loginctl enable-linger "$U" 2>/dev/null || true',
   "printf 'infinitary:account=%s\\n' \"$U\"",
 ].join("\n");

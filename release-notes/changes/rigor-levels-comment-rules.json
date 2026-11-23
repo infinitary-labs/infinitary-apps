@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "rigor-levels-comment-rules",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Crewmates leave out comments that only repeat the code",
+      "body": "At Default and Careful, crewmates write a code comment only when it explains something the code cannot show, such as why it is this way. They leave out comments that restate the code, excuse a shortcut instead of fixing it, or are no longer true, and every independent review flags such comments in the change it reads. A project's own rule on comments still wins, and turning off Rigor levels in Settings → Runbooks turns these rules off too.",
+      "noPicture": "This changes the guidance crewmates and reviewers follow, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

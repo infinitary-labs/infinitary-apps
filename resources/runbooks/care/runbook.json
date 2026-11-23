@@ -28,6 +28,14 @@
           "reviewed"
         ]
       }
+    },
+    {
+      "file": "review.md",
+      "when": {
+        "kind": [
+          "review"
+        ]
+      }
     }
   ],
   "skills": "skills"

@@ -4,7 +4,7 @@ A runbook is a folder of guidance, not a program runtime and not a skill.
 Its `runbook.json` may name a first-mate section, one crew section or several each with its own selector, a skills folder and HTML parts or pictures.
 A section is plain text, either a Markdown file or a JSON string.
 Delivery, Testing and Naming sections are Markdown; `node scripts/generate-runbook-fallback.ts` produces their code fallback for app and plain-Node consumers, and `pnpm check` refuses drift.
-Rigor levels retains its JSON-string fallbacks, and runbooks other people made may still use JSON strings.
+Rigor levels retains its JSON-string fallbacks for its care sections, and runbooks other people made may still use JSON strings.
 Skills inside it use the Agent Skills format and are read on demand.
 The host does not decide which subject an ask belongs to.
 
@@ -152,8 +152,9 @@ Its guide points to the workspace-owned `personal-panel/parts/lesson/` template;
 It declares ongoing work and a requested intelligence rather than a special task kind.
 Testing rules supplies only its selected crew sections.
 Rigor levels holds what each of the three care names asks (`resources/runbooks/care`): the host records Quick, Default and Careful as typed facts and selects by them, and holds nothing else on a name.
-Its Default section, served at Default and Careful, carries the procedure before a pull request, the evidence-first validation and the five report headings; its Quick section says nothing beyond the project's gate and green checks is required; its Careful section points at the `careful-change` skill, which holds the independent review's order - commit, report, no push or card until the review passed - the care notice for work already built and the live validation contract; and its first-mate guide says when to commission the review, how to relay findings and when to steer the push and the card.
-With no runbook reader present, the crewmate prompt serves the same bundled sections itself (`careGuideFor`, `src/core/pi/piResources.ts`), so a crewmate on a work computer or in a test is told the same.
+Its Default section, served at Default and Careful, carries the procedure before a pull request, the evidence-first validation, the five report headings and which code comments to write (only a decision record, never a tautology, an excuse or a stale comment); its Quick section says nothing beyond the project's gate and green checks is required; its Careful section points at the `careful-change` skill, which holds the independent review's order - commit, report, no push or card until the review passed - the care notice for work already built and the live validation contract; and its first-mate guide says when to commission the review, how to relay findings and when to steer the push and the card.
+Its review section (`review.md`, selected by `kind: review`) reaches every independent review, which carries no care of its own: it makes a useless comment the change adds, edits or makes untrue a finding, and an excuse comment's shortcut the finding.
+With no runbook reader present, the crewmate prompt serves the same bundled care sections itself (`careGuideFor`, `src/core/pi/piResources.ts`), so a crewmate on a work computer or in a test is told the same; the review section has no such fallback.
 Turning it off leaves the names on the record and serves no procedure for them.
 Batched pull requests holds `batch-repair`, which repairs a held batch of the captain's own approved changes: it accounts for every failed test against every change in the batch, then sends back the changes at fault, fixes forward, merges a version that passed on a rerun, or runs the failed checks again for a flake that still gets an owner (`docs/forge.md`, "Batches of your own").
 Its id is `batches`, and a person who turned it off under its earlier id, `queue`, keeps it off (`SettingsStore.getRunbookStates`).

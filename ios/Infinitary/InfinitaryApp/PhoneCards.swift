@@ -788,9 +788,8 @@ private struct PhoneCardPane: View {
     @State private var shapedAt: Set<[CGFloat]> = []
 
     /// Moving the choices can change what they measure, and while a rotation animates both places are drawn at once, so
-    /// the frame changes its shape at most once for each stage, bar and foot height and never animates the move; otherwise
-    /// the two could trade places on every frame and the app would never come to rest. A new real measurement, such as
-    /// the foot growing a line, is a new height, so the frame shapes itself again.
+    /// the frame changes its shape at most once for each stage, bar and foot height and never animates the move, or the
+    /// two could trade places on every frame and never rest; a new real measurement, such as a taller foot, shapes it again.
     /// INF-1524: the reply field sits in the pinned foot, and moving the foot in or out of the scroller makes a new field,
     /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     private func shapeFrame() {
@@ -803,6 +802,9 @@ private struct PhoneCardPane: View {
         moved.disablesAnimations = true
         withTransaction(moved) { pinsFrame = pins }
     }
+
+    /// INF-6136: the bar stays on an upright phone or with the choices at the foot; else the whole card scrolls (docs/ios.md).
+    private var barStays: Bool { pinsFrame || !phoneOnItsSide(verticalSize) }
 
     private var measuredBar: some View {
         bar.fixedSize(horizontal: false, vertical: true)
@@ -997,14 +999,15 @@ private struct PhoneCardPane: View {
     /// The card's face: everything a choice needs, with the thread's latest line at its foot.
     private var front: some View {
         let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
-        // INF-944 items 1 and 2, the Mac's shape, with INF-6136's top bar: the one-line bar always stays in the frame,
-        // and the rest of the head and the body scroll under it in this one native scroller, the choices at the frame's
-        // foot when they fit (shapeFrame). The body's web view never scrolls on its own.
+        // INF-944 items 1 and 2, the Mac's shape, with INF-6136's top bar: the one-line bar stays in the frame, and the
+        // rest of the head and the body scroll under it in this one native scroller, the choices at the frame's foot when
+        // they fit (shapeFrame). The body's web view never scrolls on its own.
         return VStack(alignment: .leading, spacing: 0) {
-            measuredBar
+            if barStays { measuredBar }
             ScrollViewReader { scroller in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        if !barStays { measuredBar }
                         headRest
                         content.padding([.horizontal], PhoneTheme.space4).padding(.bottom, PhoneTheme.space4)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1059,8 +1062,7 @@ private struct PhoneCardPane: View {
         .clipShape(shape)
         // INF-1524 piece 1: the Mac's raised surface, its edge and shadow outside the clipped content.
         .phoneCardSurface()
-        // The frame is card-frame while its choices stay at its foot; while they scroll it keeps the scroller's name, which
-        // journeys read as a card whose choices scroll, as when the frame held only its scroller.
+        // card-frame while its choices stay at its foot; else the scroller's name, which journeys read as choices that scroll.
         .accessibilityElement(children: .contain).accessibilityIdentifier(pinsFrame ? "card-frame" : "card-scroll")
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { surfaceHeight = $0; if shown { row.height = $0 } }
         // INF-3296's phone piece: the body lights what Point at, the queue and the open note say.
@@ -1237,8 +1239,7 @@ private struct PhoneCardPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space3)
         .contentShape(Rectangle())
-        // INF-3106 direction B inside the scroller: the tap exists only while the keyboard is up, so at rest no tap of the
-        // scroller's own waits on it and the body's taps, such as Point at's, reach the body untouched.
+        // INF-3106 direction B: tapping only while the keyboard is up, so the body's taps, such as Point at's, reach it.
         .gesture(TapGesture().onEnded { dismissPhoneKeyboard() }, including: messageContext.keyboardUp ? .all : .subviews)
     }
 

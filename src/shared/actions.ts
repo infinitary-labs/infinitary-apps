@@ -15,7 +15,7 @@ import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
 import type { DeviceMake } from "./deviceArrival";
-import { addressFormOffer, deviceInviteLine } from "./deviceInvite";
+import { addressFormOffer, addressOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
 import {
   buildsSourceThere,
@@ -588,17 +588,7 @@ const actionLines = {
       if (v.how === "address" && here.platform !== "win32") {
         // Chosen without an address: the form, with the computers nearby to pick from.
         if (typeof v.address !== "string") return addressFormOffer(name);
-        return {
-          cardId: "app-device-invite",
-          title: `Add the ${COMPUTER.one} at ${v.address}`,
-          paragraphs: [
-            "I set it up over Remote Login, with your own SSH key. Nothing needs to be open on it.",
-            `Only your click can add a ${COMPUTER.one}, so I ask first.`,
-          ],
-          label: "Add it",
-          decline: "Not now",
-          arrival: { add: v.address },
-        };
+        return addressOffer(v.address);
       }
       if (v.how === "phone")
         return {

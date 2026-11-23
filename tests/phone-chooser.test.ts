@@ -29,7 +29,9 @@ import {
   requestPasses,
   swiftFunctions,
   UI_TESTS,
+  wordsReach,
 } from "../scripts/affected-phone";
+import { PHONE_MESSAGES_PATH as GENERATED_WORDS } from "../scripts/generate-messages";
 import { PHONE_JOB_BUDGET_MS } from "../scripts/phone-deadlines";
 import { phoneFileOwners, unownedPhoneFiles } from "../scripts/phone-part-owners";
 import {
@@ -921,9 +923,9 @@ type Recorded = {
   generated?: Record<string, { diff: string; after: string }>;
   sources?: Record<string, string>;
 };
-function recorded(file: string) {
+function recorded(file: string, task = "inf-3379") {
   const { texts, cases } = JSON.parse(
-    readFileSync(`tests/fixtures/phone-changes/inf-3379-${file}.json`, "utf8"),
+    readFileSync(`tests/fixtures/phone-changes/${task}-${file}.json`, "utf8"),
   ) as { texts: Record<string, string>; cases: Record<string, Recorded> };
   const text = (files: Record<string, string> = {}) =>
     new Map(Object.entries(files).map(([path, id]) => [path, texts[id]!]));
@@ -1079,6 +1081,59 @@ describe("the generated contract and card words", () => {
     const reaches = new Map([[GENERATED_CONTRACT, undefined]]);
     const reach = partReach([GENERATED_CONTRACT], "", [], () => undefined, PHONE_PARTS, reaches);
     expect(requestedParts([GENERATED_CONTRACT], reach).map(({ part }) => part)).toEqual(EVERY_PART);
+  });
+});
+
+// INF-6223's answer (the captain's "Run only the phone parts that read a changed word"). Each case is a real change
+// to main, its generated files kept only on the lines the reader looks at (blank runs squeezed, positions moved) and
+// its sources the Swift files that call a changed message, beside two that call others.
+describe("the phone's generated words", () => {
+  function words(name: string) {
+    const { cases, text, texts } = recorded("words", "inf-6223");
+    const each = cases[name]!;
+    const sources = text(each.sources);
+    const reaches = new Map(
+      Object.entries(each.generated!).map(([path, { diff, after }]) => [
+        path,
+        wordsReach(diff, texts[after], sources, path),
+      ]),
+    );
+    return { each, reaches };
+  }
+
+  it("reaches no part for desktop words the phone never calls", () => {
+    // cadd726dc added the command panel's words, which the catalog, its string files and both hosts bundle.
+    const { each, reaches } = words("cadd726dc");
+    expect([...reaches.values()].every((reach) => reach?.length === 0)).toBe(true);
+    const reasons = phoneDecision(each.paths).reasons;
+    expect(reasons.filter((path) => !reaches.has(path))).toEqual([
+      "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneWords.generated.json",
+    ]);
+    const reach = partReach(reasons, "", [], () => undefined, PHONE_PARTS, reaches);
+    expect(requestedParts(reasons, reach).map(({ part }) => part)).toEqual(["join-read"]);
+  });
+
+  it("reaches the owners of the Swift file that calls a changed message", () => {
+    // 6719eaa70 changed the secret ask card's words, which PhoneCards.swift calls through PhoneMessages; no Swift file
+    // calls its new plural messages.
+    const { reaches } = words("6719eaa70");
+    const owners = phoneFileOwners("ios/Infinitary/InfinitaryApp/PhoneCards.swift");
+    const strings =
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings";
+    expect(reaches.get(GENERATED_WORDS)).toEqual(owners);
+    expect(reaches.get(strings)).toEqual(owners);
+    expect(reaches.get(`${strings}dict`)).toEqual([]);
+  });
+
+  it("keeps every part for a host change outside the catalog's messages, or a change it cannot read", () => {
+    // One hunk of 6b3f5ff11, which added the build identity's schema to the card host.
+    const { each, reaches } = words("6b3f5ff11");
+    const host = "ios/Infinitary/InfinitaryApp/CardAssets/CardHost.generated.js";
+    expect(reaches.has(host) && reaches.get(host)).toBeUndefined();
+    const { texts } = recorded("words", "inf-6223");
+    expect(
+      wordsReach(undefined, texts[each.generated![host]!.after], new Map(), host),
+    ).toBeUndefined();
   });
 });
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-checks-changed-words-only",
+      "reason": "The project's phone check chooser runs only the phone parts whose code calls a changed message; it changes how the project is checked, not the app."
+    }
+  ]
+}

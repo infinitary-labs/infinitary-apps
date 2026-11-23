@@ -3,6 +3,7 @@ import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:f
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { PHONE_MESSAGES_PATH } from "./generate-messages.ts";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
 import {
   dealPhonePasses, devicePartNames, PHONE_DEVICES, PHONE_JOURNEY, PHONE_PART_TIMES, PHONE_PARTS, type PhoneDealtJob, type PhoneDevice,
@@ -203,6 +204,109 @@ export function generatedReach(
     // runs its file.
     if (path.startsWith(UI_TESTS)) continue;
     const owners = hostedTest(path) ? appTestParts(path) : phoneFileOwners(path);
+    if (!owners.length) return undefined;
+    for (const part of owners) reached.add(part);
+  }
+  return [...reached];
+}
+
+// INF-6223's answer (the captain's "Run only the phone parts that read a changed word"): every part owns the phone's
+// generated messages and their string files, and the card and panels parts own the card and panel hosts, which
+// bundle the whole catalog; a change to them reaches only the parts whose code calls a changed message: the owners of each Swift
+// file naming it through `PhoneMessages`, and a host's owners when the host's own code calls it. A message the phone
+// words only from a saved fact, by its name at run time, reaches no part here; the release check runs every part.
+const PHONE_STRINGS = /^ios\/Infinitary\/InfinitaryKit\/Sources\/InfinitaryKit\/Resources\/[\w-]+\.lproj\/Localizable\.strings(dict)?$/;
+// The hosts scripts/generate-phone-cards.ts bundles.
+const PHONE_HOSTS = /^ios\/Infinitary\/InfinitaryApp\/CardAssets\/\w+Host\.generated\.js$/;
+export const phoneWordsFile = (path: string) =>
+  path === PHONE_MESSAGES_PATH || PHONE_STRINGS.test(path) || PHONE_HOSTS.test(path);
+
+/** A host's top-level declarations by their 1-based lines, a statement outside any named "". */
+function hostDeclarations(lines: readonly string[]) {
+  const declarations: { name: string; start: number; end: number }[] = [];
+  for (const [at, line] of lines.entries()) {
+    const name = /^ {2}(?:async\s+)?(?:function\*?|const|let|var|class)\s+([\w$]+)/.exec(line)?.[1];
+    if (name) declarations.push({ name, start: at + 1, end: at + 1 });
+    // A closing line ends the declaration before it; any other top-level statement belongs to none.
+    else if (declarations.length && /^ {2}[}\])]/.test(line)) declarations.at(-1)!.end = at + 1;
+    else if (/^ {0,2}\S/.test(line)) declarations.push({ name: "", start: at + 1, end: at + 1 });
+  }
+  return declarations;
+}
+const CATALOG_TABLES = ["MESSAGES", "MESSAGE_FILLS"];
+
+/**
+ * The message each changed line of a phone words file words, "" for a blank or comment line, undefined for a line
+ * naming no message.
+ */
+function wordsLines(path: string, text: string, changed: readonly number[]): (string | undefined)[] {
+  const lines = text.split("\n");
+  const host = PHONE_HOSTS.test(path) ? hostDeclarations(lines) : [];
+  const catalog = new Set(host.filter((each) => each.name === "MESSAGES")
+    .flatMap((each) => lines.slice(each.start, each.end).map((line) => /^ {4}([\w$]+),?$/.exec(line)?.[1] ?? "")));
+  return changed.map((line) => {
+    const at = lines[line - 1]?.trim() ?? "";
+    if (!at || /^(\/\/|\/\*|<!--)/.test(at)) return "";
+    if (path === PHONE_MESSAGES_PATH)
+      return /^public static func `?(\w+)`?\(/.exec(at)?.[1] ?? /^"(\w+)": /.exec(at)?.[1];
+    if (PHONE_HOSTS.test(path)) {
+      // A host's line is in a message's function, or in a table's entry for one.
+      const around = host.findLast((each) => each.start <= line);
+      if (!around || around.end < line) return undefined;
+      if (CATALOG_TABLES.includes(around.name)) return /^"?([\w$]+)"?(?:[,:]|$)/.exec(at)?.[1];
+      return catalog.has(around.name) ? around.name : undefined;
+    }
+    if (!path.endsWith("dict")) return /^"(\w+)" = /.exec(at)?.[1];
+    // A plural message is the dictionary after its name, two spaces in.
+    for (let each = line; each >= 1; each--) {
+      const name = /^ {2}<key>(\w+)<\/key>$/.exec(lines[each - 1]!)?.[1];
+      if (name) return name;
+      if (/^\S/.test(lines[each - 1]!)) return undefined;
+    }
+    return undefined;
+  });
+}
+
+/** Whether a host's own code calls one of the messages: a name outside its function and the catalog's tables. */
+function hostCalls(text: string, messages: ReadonlySet<string>): boolean {
+  const lines = text.split("\n");
+  const skip = hostDeclarations(lines).filter((each) => messages.has(each.name) || CATALOG_TABLES.includes(each.name));
+  const word = new RegExp(`(?<![\\w$])(?:${[...messages].map((name) => name.replaceAll("$", "\\$")).join("|")})(?![\\w$])`);
+  return lines.some((line, at) => word.test(line) && !skip.some((each) => each.start <= at + 1 && each.end >= at + 1));
+}
+
+/**
+ * The parts a change to a phone words file reaches: the owners of each Swift file calling a changed message through
+ * `PhoneMessages`, and for a host, its owners when its own code calls one. `diff` is the file's zero-context diff,
+ * `after` the file as the change leaves it and `sources` every other Swift file's text. Undefined when the change
+ * cannot be placed, so every part keeps the file: an unreadable diff, a line naming no message, or a reader nobody
+ * owns.
+ */
+export function wordsReach(
+  diff: string | undefined, after: string | undefined, sources: ReadonlyMap<string, string>, path: string,
+): string[] | undefined {
+  const hunks = diff === undefined ? undefined : diffHunks(diff).get(path);
+  if (!hunks || after === undefined) return undefined;
+  const sides = [
+    { text: after, lines: hunks.flatMap((hunk) => Array.from({ length: hunk.added }, (_, at) => hunk.newStart + at)) },
+    { text: before(after, hunks), lines: hunks.flatMap((hunk) => hunk.removed.map((_, at) => hunk.oldStart + at)) },
+  ];
+  const messages = new Set<string>();
+  for (const side of sides) for (const message of wordsLines(path, side.text, side.lines)) {
+    if (message === undefined) return undefined;
+    if (message) messages.add(message);
+  }
+  if (!messages.size) return [];
+  if (PHONE_HOSTS.test(path)) {
+    if (!sides.some((side) => hostCalls(side.text, messages))) return [];
+    const owners = phoneFileOwners(path);
+    return owners.length ? owners : undefined;
+  }
+  const reached = new Set<string>();
+  const calls = new RegExp(`\\bPhoneMessages\\s*\\.\\s*\`?(?:${[...messages].join("|")})\`?(?!\\w)`);
+  for (const [file, text] of sources) {
+    if (file === PHONE_MESSAGES_PATH || file.startsWith(UI_TESTS) || !calls.test(blankSwift(text))) continue;
+    const owners = hostedTest(file) ? appTestParts(file) : phoneFileOwners(file);
     if (!owners.length) return undefined;
     for (const part of owners) reached.add(part);
   }
@@ -961,7 +1065,8 @@ function main(): void {
       testDiff = testSpec.length ? git(["diff", "-U0", "--no-renames", range, "--", ...testSpec]) : "";
     } catch { /* Counted as every part edited. */ }
     const generated = new Map<string, string[] | undefined>();
-    const changedGenerated = GENERATED_ENTRIES.filter((path) => decision.reasons.includes(path));
+    const changedGenerated = decision.reasons.filter((path) =>
+      (GENERATED_ENTRIES as readonly string[]).includes(path) || phoneWordsFile(path));
     if (changedGenerated.length) {
       const sources = new Map<string, string>();
       try {
@@ -973,7 +1078,8 @@ function main(): void {
       for (const path of changedGenerated) {
         let diff: string | undefined;
         try { diff = git(["diff", "-U0", "--no-renames", range, "--", path]); } catch { /* Every part keeps it. */ }
-        generated.set(path, sources.size ? generatedReach(diff, readFile(join(root, path)), sources, path) : undefined);
+        const reach = phoneWordsFile(path) ? wordsReach : generatedReach;
+        generated.set(path, sources.size ? reach(diff, readFile(join(root, path)), sources, path) : undefined);
       }
     }
     // The working tree is the change's head.

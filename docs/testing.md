@@ -741,6 +741,8 @@ How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 
 What this project adds is the batch's checks, `.github/workflows/batch-checks.yml`, which `batch-pull-request.yml` calls on the batch pull request's version.
 Its first job, `Merge batch · Regenerate the phone files`, runs the phone's generators on the batch's version (`scripts/batch-regenerate.ts`, the captain's pick in a daily velocity review: "Have each batch regenerate the phone's generated files itself, as its own commit, before its checks run"), since each change regenerated them from its own base and two changes together can leave one out of step.
+It runs the app parts list's generator first, `scripts/generate-runbook-parts.ts`, since the phone's card bundle carries the app's parts (INF-6259's weekly audit, the captain's pick: "it would also rebuild the app parts list").
+The job keeps its name, and its commit keeps the trailer `Batch-regenerated: phone`, so a batch version made before still reads as one.
 When they change nothing, every other job runs on that version.
 When they change files, all of them marked `linguist-generated` in `.gitattributes`, it hands the difference to `Merge batch · Push the regenerated phone files`, which commits it on the batch's version as one commit carrying the trailer `Batch-regenerated: phone` and pushes it to the batch branch; every other job of that run skips.
 That job runs no code of the project, on GitHub's hosted Ubuntu, and is the one job of the batch with a token that writes (`contents: write`, which `batch-pull-request.yml` grants its call).

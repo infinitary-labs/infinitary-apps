@@ -33,7 +33,7 @@ name: Batch checks
 # confirms end in a few minutes and run on.
 #
 # Before any of that, its first job regenerates the phone's generated files
-# on the batch's version; when they changed, it pushes them as one commit,
+# and the app parts list on the batch's version; when they changed, it pushes them as one commit,
 # every check here skips, and the app's push of that commit starts this
 # check again on it (scripts/batch-regenerate.ts).
 #
@@ -59,8 +59,9 @@ permissions:
   actions: read
 
 jobs:
-  # The phone's generated files, regenerated on the batch's version before
-  # any check runs (the captain's pick in the daily velocity review): each
+  # The phone's generated files and the app parts list, regenerated on the
+  # batch's version before any check runs (the captain's pick in the daily
+  # velocity review, and INF-6259's weekly audit for the parts list): each
   # change regenerated them from its own base, so changes combined here can
   # leave one out of step with the sources they changed together. When the
   # generators change files, the job after this one pushes them as one
@@ -136,7 +137,7 @@ jobs:
             commit --quiet --file "$FILES/message.txt"
           pushed=$(git rev-parse HEAD)
           git push --quiet origin "$pushed:refs/heads/$BRANCH"
-          echo "::notice::The phone's generated files were out of step with this batch's changes, so this run pushed $pushed with them regenerated. The app takes it as the batch's version, and the checks run on it."
+          echo "::notice::The generated files were out of step with this batch's changes, so this run pushed $pushed with them regenerated. The app takes it as the batch's version, and the checks run on it."
           for _ in $(seq 1 66); do
             now=$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)
             if [ "$now" != "$pushed" ]; then

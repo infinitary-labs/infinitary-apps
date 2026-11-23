@@ -7,11 +7,16 @@ Macs, and Linux computers with an x64 chip (FI3-1432, piece 9): a Mac home or a 
 The examples name the computer where the first mate lives "MacBook Pro", the added computer "Mac mini", its address `sam@mini.local` and the other user "Builder"; the app always uses the real names.
 
 **By its address.**
-"add my mini at sam@mini.local" yields one decision from the first mate, "Add the computer at sam@mini.local": "I set it up over Remote Login, with your own SSH key.
+"add my mini at sam@mini.local" yields one decision from the first mate, "Add the computer at sam@mini.local": "Your first mate stays on this computer, and the computer at sam@mini.local runs work for it.
+Once it is added, I can move your first mate there instead.", "I set it up over SSH, with your own SSH key.
 Nothing needs to be open on it." and "Only your click can add a computer, so I ask first.", with a ghost "Not now" and a primary "Add it".
+For an address with no account name, such as `100.94.48.29`, a paragraph before the last says "This address names no account, so I sign in with your user name on this computer.
+If your account there has another name, tell me first."
+The card says SSH, never macOS's Remote Login, since the computer added is often a Linux server.
 Devices' + A computer does the same with no card.
+Told about another computer without saying where the first mate should live, the first mate first states the two setups, it stays here or it lives there with this computer as its window, and asks which.
 Asked to add a computer without saying how, the first mate offers every way on one card and recommends the address.
-Asked for the address way with no address, it offers "Add a computer by its address": "I set it up from here over Remote Login, with your own SSH key, and keep it updated." and "Open the form here, then type its address or pick it from the computers on this network.", with a ghost "Not now" and a primary "Open the form", which opens + A computer's address form.
+Asked for the address way with no address, it offers "Add a computer by its address": "I set it up from this computer over SSH, with your own SSH key, and keep it updated." and "Open the form here, then type its address or pick it from the computers on this network.", with a ghost "Not now" and a primary "Open the form", which opens + A computer's address form.
 A Linux computer is added the same way, at its SSH server; this computer asks its system first, and sends the Infinitary made for it.
 When that is not this computer's own - a Mac adding a Linux computer, or a Linux computer adding a Mac - it is the one published for that system at this computer's version, got and checked before anything is sent, and the feed says so: "Getting Infinitary for Studio's system from its published release, and checking it.", while the row still reads "Preparing Infinitary for Studio…".
 The address is the one thing the person supplies, with a port beside it only when its SSH server listens on another one than 22.

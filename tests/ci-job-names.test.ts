@@ -275,6 +275,24 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
       },
     },
   },
+  // The Discord announcement of each stable (docs/alpha.md, "Announcing a
+  // stable"), on main by the same operator as the docs site's publish.
+  {
+    file: "release-announce.yml",
+    trigger: "Requested stable",
+    scenario: {
+      github: {
+        event_name: "workflow_run",
+        ...docsPublisher,
+        event: { workflow_run: { conclusion: "success", head_branch: "main" } },
+      },
+    },
+  },
+  {
+    file: "release-announce.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch", ...docsPublisher } },
+  },
   // An outside contributor's pull request (contributors.yml, docs/public-ci.md
   // "Outside contributors"), whose change edits a journey and reaches the
   // Windows installer, so the batch's full check, the startup fixtures, the

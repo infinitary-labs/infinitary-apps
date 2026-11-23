@@ -1,0 +1,80 @@
+name: release-announce
+run-name: ${{ github.event_name == 'workflow_run' && format('release-announce after release run {0}', github.event.workflow_run.id) || format('release-announce {0} {1}', inputs.mode, inputs.version) }}
+
+# Announces each stable release in the project's Discord channel, once
+# (docs/alpha.md, "Announcing a stable"). It follows every release run, as
+# docs-site-publish.yml does, and an alpha or a rehearsal posts nothing.
+# scripts/release-announce.ts makes every check before the post; the claim
+# ref it creates is what keeps a version from posting twice.
+on:
+  # The release run creates its tags with the job's own token, and GitHub
+  # starts no run for those, so the announcement follows the run's end.
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: normal announces the newest stable once; preview prints the message and posts nothing; replay posts a claimed version that has no posted marker, only after a person checked the channel
+        required: true
+        type: choice
+        options:
+          - normal
+          - preview
+          - replay
+      version:
+        description: The stable version, X.Y.Z
+        required: true
+        type: string
+
+# contents: write creates the claim and posted refs; actions: read reads the
+# release run's jobs. Nothing here writes issues.
+permissions:
+  contents: write
+  actions: read
+
+# One announcement at a time, never cancelled midway: a cancelled run could
+# stop between Discord's answer and the posted marker. queue: max keeps
+# every waiting run, where GitHub by default keeps one and cancels the rest.
+concurrency:
+  group: release-announce-discord
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  # Its name leads with what started it (scripts/ci-job-names.mjs).
+  announce:
+    name: ${{ github.event_name == 'workflow_run' && 'Requested stable' || 'Manual request' }} · Announce the stable on Discord (Linux)
+    if: >-
+      github.repository == 'infinitary-labs/infinitary-apps' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'kunchenguid' &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main'))
+    # The webhook lives only in this environment, which lets only main's
+    # runs read it.
+    environment: release-announcement
+    # A machine GitHub hosts and deletes after the job, so the webhook never
+    # reaches a machine that outlives it.
+    runs-on: ubuntu-24.04
+    # The wait for What's new is up to 30 minutes.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Announce the stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode || 'normal' }}
+          VERSION: ${{ inputs.version }}
+          RELEASE_RUN: ${{ github.event.workflow_run.id }}
+          # A preview reads no webhook, so it can never post.
+          INFINITARY_DISCORD_RELEASE_WEBHOOK_URL: ${{ inputs.mode != 'preview' && secrets.INFINITARY_DISCORD_RELEASE_WEBHOOK_URL || '' }}
+        run: |
+          args=(--mode "$MODE")
+          [[ -z "$VERSION" ]] || args+=(--version "$VERSION")
+          [[ -z "$RELEASE_RUN" ]] || args+=(--release-run "$RELEASE_RUN")
+          node scripts/release-announce.ts "${args[@]}"

@@ -1,0 +1,32 @@
+{
+  "run": {
+    "display_title": "release",
+    "id": 45219209472,
+    "run_started_at": "2026-11-23T16:40:47Z",
+    "updated_at": "2026-11-23T17:26:40Z"
+  },
+  "jobs": [
+    "Requested stable · Select source and version",
+    "Requested stable · Watch for a stop",
+    "Requested stable · Check compatible phone release",
+    "Requested stable · Check release notes",
+    "Requested stable · Check release notes · catalog",
+    "Requested stable · Linux packages / Requested stable · Build Linux packages",
+    "Requested stable · Build, sign and notarize (Mac)",
+    "Requested stable · Desktop checks",
+    "Requested stable · Windows installer",
+    "Requested stable · Signed installer publication gate",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Ubuntu 24.04 host)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Ubuntu 26.04 host)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Ubuntu 24.04 container)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Arch; latest image)",
+    "Requested stable · Linux packages / Requested stable · Install and run AppImage (Fedora; latest image)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Ubuntu 26.04 container)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Fedora; latest image)",
+    "Requested stable · Linux packages / Requested stable · Install and run package (Nix on Ubuntu 24.04)",
+    "Requested stable · Upload every download",
+    "Requested stable · Published-alpha update check",
+    "${{ needs.resolve.outputs.trigger }} · Stop the cut (${{ matrix.job }})",
+    "Requested stable · Check every copy and switch downloads"
+  ]
+}

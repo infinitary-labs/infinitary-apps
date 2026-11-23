@@ -79,7 +79,8 @@ When no address can be read yet, the aside says "Could not find this computer's 
 
 ### Following along
 
-While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
+While the welcome is open on this computer's own first mate and no sign-in is under way, the window asks `inf:devices:follow-added` every few seconds, whichever choice is showing or before one is picked.
+The shell itself decides (`Shell.followAdded`).
 When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
 A window opened beside a command's first mate follows the same way, and joins at all (`joinable`), only beside the run its starter owns (`ownedRun`): one the window's own run agent started, as that run's own note says.
 While no command runs, the shell accepts a pasted link's join alone (`Shell.join`, `followsAdded`'s `pastes`): that join names no run to stop, so the agent is let go with no stop file and no signal, its Mac or Linux job ending only a run it started itself, and a command started by hand meanwhile keeps going; Join by its address and following along wait for the run the starter owns.

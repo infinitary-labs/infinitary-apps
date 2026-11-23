@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "welcome-follows-waiting-grant",
+      "reason": "Restores automatic follow on reopen after a regression in the unreleased three-choice welcome. No published release had the defect."
+    }
+  ]
+}

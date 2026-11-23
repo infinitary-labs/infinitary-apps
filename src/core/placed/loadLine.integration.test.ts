@@ -570,7 +570,8 @@ describe("the declared heavy-run line through its native command", () => {
         ["C", "running", 0],
         ["D", "waiting", 1],
       ]);
-      expect(d.errors()).toContain("reason: line");
+      // The line holds D before its wrapper has printed the answer it was given.
+      await expect.poll(d.errors).toContain("reason: line");
       // A and C finish: B starts alone, and D fits beside it.
       a.child.stdin.end();
       c.child.stdin.end();
@@ -610,9 +611,12 @@ describe("the declared heavy-run line through its native command", () => {
     );
     expect(await tooBig.ended).not.toBe(0);
     expect(tooBig.output()).toBe("");
-    expect(tooBig.errors()).toContain(
-      `Declare at most ${Math.floor(installedMiB * 0.9)} MiB, its installed memory less the margin; nothing started.`,
-    );
+    // A process's exit can come before the last of its output is read.
+    await expect
+      .poll(tooBig.errors)
+      .toContain(
+        `Declare at most ${Math.floor(installedMiB * 0.9)} MiB, its installed memory less the margin; nothing started.`,
+      );
     const behind = run(channel.grant("behind", { load: line.forTask("behind") }), dir, [
       process.execPath,
       "-e",
@@ -620,7 +624,7 @@ describe("the declared heavy-run line through its native command", () => {
     ]);
     try {
       expect(await behind.ended).toBe(0);
-      expect(behind.output()).toContain("behind admitted");
+      await expect.poll(behind.output).toContain("behind admitted");
       console.info("Too-big refusal proof", JSON.stringify({ refused: tooBig.errors() }));
     } finally {
       channel.close();

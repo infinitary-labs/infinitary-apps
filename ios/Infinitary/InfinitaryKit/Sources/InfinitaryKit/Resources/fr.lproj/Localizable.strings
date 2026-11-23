@@ -2745,6 +2745,7 @@
 "settingsDevicesChangeAddress" = "Changer l’adresse";
 "settingsDevicesChangeAddressFailed" = "Impossible de changer l’adresse où cet ordinateur est joint.";
 "settingsDevicesChangeAddressNamed" = "Changer l’adresse de %1$@";
+"settingsDevicesCheckingRow" = "Vérification de %1$@…";
 "settingsDevicesConfirmThis" = "C’est bien cet ordinateur";
 "settingsDevicesControllingNow" = "Contrôle votre second en ce moment";
 "settingsDevicesCopied" = "Copié";

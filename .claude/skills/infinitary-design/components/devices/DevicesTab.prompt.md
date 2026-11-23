@@ -101,7 +101,7 @@ Its status reads "out of reach", with no time since, because it never was in rea
 The strip's button is a small secondary "Add it by its address".
 It turns the row into one question in place, Change address's shape: "Where to reach Mac mini" over "The address you use with SSH for it, as sam.
 Remote Login must be on there.", a mono `Input` with the placeholder "sam@mini.local", a small primary "Add it" and a ghost "Cancel".
-Add it there is + A computer's address form: the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", and Mac mini stays the same computer on the list, reached over this computer's own SSH from then on (`AddAMac.prompt.md`, "Finding this computer again").
+Add it there is + A computer's address form: the row reads "Checking sam@mini.local…", "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…", and Mac mini stays the same computer on the list, reached over this computer's own SSH from then on (`AddAMac.prompt.md`, "Finding this computer again").
 Once its work reaches this computer, by either way, the line and the button go for good.
 A private network's address, such as Tailscale's, is not the local network, and another user on this computer looks for it on this computer itself, so neither takes the line.
 A computer whose command named an address this computer no longer has takes "Bringing a computer back" instead: the old address is the first thing to mend.
@@ -170,7 +170,7 @@ Under the computers on this network, after a `--line-1` hairline, the question l
   On a Linux home, where the other computer is as likely Linux, the line under the label reads "The one you use with SSH.
   Its SSH server, or Remote Login on a Mac, must be on.", and the same in place of "Remote Login must be on there." on a row's own address question.
   Under the fields, the computers on this network with Remote Login on, under the micro label `ON THIS NETWORK`, each filling in the field when picked (`AddAMac.prompt.md`, "Nearby").
-  While it works, its row stands at the end of the list: the address as its name until the computer says its own, the mono line "a computer · sam@mini.local", an `idle` dot, and the summary "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving, and "Starting Infinitary on Mac mini…" (`AddAMac.prompt.md`, "By its address").
+  While it works, its row stands at the end of the list: the address as its name until the computer says its own, the mono line "a computer · sam@mini.local", an `idle` dot, and the summary "Checking sam@mini.local…" while its key is read, "Reaching sam@mini.local with your SSH key…", then "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving, and "Starting Infinitary on Mac mini…" (`AddAMac.prompt.md`, "By its address").
   After the password typed once (`AddAMac.prompt.md`, "The password, once"), the summary reads "Letting Infinitary's own key in on sam@mini.local…" until "Preparing Infinitary for Mac mini…".
   A refusal keeps the address in the field and shows its two lines in the form, in `--warn`, with a small primary "Try again" and the ghost "Cancel".
   Try again runs the same add.

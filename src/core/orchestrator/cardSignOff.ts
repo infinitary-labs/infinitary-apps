@@ -87,10 +87,13 @@ export type FirstmateSignOffFacts = Pick<
 export function firstmateSignOffRefusal(facts: FirstmateSignOffFacts): string | undefined {
   const { card } = facts;
   if (facts.answersMessage === undefined) {
+    // i18n-exempt: a refusal served only to the first mate's model
     return "signs_off needs answers_message, naming the captain's message that says they are done.";
   }
+  // i18n-exempt: a refusal served only to the first mate's model
   if (facts.interim) return "signs_off ends the card, so it is never an interim line.";
   if (!card || !card.id.startsWith(FIRSTMATE_CARD_PREFIX)) {
+    // i18n-exempt: a refusal served only to the first mate's model
     return "signs_off goes only on your own card while it is on the stack.";
   }
   return sharedRefusal(card, facts);

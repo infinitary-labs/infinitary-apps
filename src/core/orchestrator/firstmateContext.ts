@@ -518,7 +518,8 @@ export class FirstmateContext {
     // its judgment; the host never reads them.
     const signOffGuide =
       asked !== undefined && aboutCard?.id.startsWith(FIRSTMATE_CARD_PREFIX)
-        ? "; when their words, however put, say they need nothing more from this card and ask, correct or approve nothing, pass signs_off true with that reply instead of close_card"
+        ? // i18n-exempt: the about line, served only to the first mate's model
+          "; when their words, however put, say they need nothing more from this card and ask, correct or approve nothing, pass signs_off true with that reply instead of close_card"
         : "";
     const answerGuide =
       asked !== undefined

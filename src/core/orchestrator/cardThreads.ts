@@ -323,6 +323,7 @@ export class CardThreads {
         ? this.host.cardStore.newestCaptainMessage(id)?.id
         : undefined,
     });
+    // i18n-exempt: the first mate's tool answer, served only to a model
     if (refusal || !card) return { text: `Nothing was written: ${refusal}` };
     const mutation = this.replyAs({ actor: "firstmate" }, input);
     if (mutation.effect !== "reply-only" || mutation.answered !== input.answersMessage) {
@@ -334,6 +335,7 @@ export class CardThreads {
       ? "the card is read, and since the captain had seen it, it stays on their screen marked ended until they close it"
       : "the card left the stack as read";
     return {
+      // i18n-exempt: the first mate's tool answer, served only to a model
       text: `Replied in the thread on "${card.title}" (${id}). It answers the captain's message ${mutation.answered} and signs the card off: ${left}, and each message it was shown for counts it as the answer.`,
       mutation,
     };

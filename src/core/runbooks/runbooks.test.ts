@@ -445,6 +445,24 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(off.crew({ ...code, care: "reviewed" }).text).not.toContain(section("careful.json"));
     expect(off.crew(code).skills.map((skill) => skill.name)).not.toContain("careful-change");
   });
+  // Intent: INF-5614, rules against useless comments reach every independent
+  // review through Rigor levels, though a review task carries no care, and
+  // never a builder; Rigor levels' switch removes them.
+  it("serves Rigor levels' comment review section to reviews only", () => {
+    const { books, db } = fixture();
+    const passage = readFileSync(join(root, "care/review.md"), "utf8").trim();
+    for (const backend of ["pi", "claude"]) {
+      expect(books.crewSections({ ...code, backend, kind: "review", care: "none" })).toContain(
+        passage,
+      );
+      for (const care of ["none", "quick", "standard", "reviewed"] as const)
+        for (const kind of ["implement", "fix", "chore", "reproduce", "plan"])
+          expect(books.crewSections({ ...code, backend, kind, care })).not.toContain(passage);
+    }
+    books.set("care", false);
+    const off = new Runbooks(root, new SettingsStore(db));
+    expect(off.crewSections({ ...code, kind: "review", care: "none" })).not.toContain(passage);
+  });
   // Intent: INF-2435 and review INF-2557, a queue-pr crewmate drives its pull request green like direct-pr.
   it("serves delivery judgment only to pull request crew, and its switch removes it", () => {
     const { books, db } = fixture();

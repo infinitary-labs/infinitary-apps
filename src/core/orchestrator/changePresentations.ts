@@ -31,7 +31,9 @@ import {
   type PresentationDestination,
   presentationFormat,
   samePresentationDestination,
+  sameProjectAnyAudience,
   storyAtOrigin,
+  widenedAudience,
 } from "@shared/presentationDestination";
 import { presentationValidation } from "@shared/presentationValidation";
 import type { NamingRule } from "../../shared/runbooks";
@@ -233,13 +235,15 @@ export class ChangePresentations {
           )
             throw new Error("Reconcile the uncertain story write before preparing a replacement.");
           const prior = current?.revisions.at(-1);
+          // The same project at a new visibility starts the next revision at the
+          // audience read now; its identity and Before base still hold, and every
+          // publication check compares the audience again.
           if (
             prior &&
-            (!samePresentationDestination(prior.destination, destination) ||
-              prior.base !== staged.base)
+            (!sameProjectAnyAudience(prior.destination, destination) || prior.base !== staged.base)
           )
             throw new Error(
-              "Keep the original Before base and destination; reconcile changed project identity or visibility before publishing.",
+              "Keep the original Before base and project; reconcile a changed project identity before publishing.",
             );
           const revision = (prior?.revision ?? 0) + 1;
           if (staged.version === 2)
@@ -960,7 +964,7 @@ export class ChangePresentations {
     forge: Forge,
   ): Promise<{ story: ChangePresentation; region: string }> {
     return this.serial(taskId, async () => {
-      const story = this.publishedStory(taskId, branch, head);
+      const story = await this.atWidenedAudience(this.publishedStory(taskId, branch, head), forge);
       if (!hostedPresentation(story.destination))
         throw new Error("A batch needs a host that keeps a description.");
       await this.validatePrepared(story, forge, true);
@@ -1297,10 +1301,13 @@ export class ChangePresentations {
       const story = record.revisions.at(-1);
       if (!ready || !story || ready.head === toHead || !repairedFrom(ready.head)) return;
       if (!hostedPresentation(story.destination)) return;
-      const refreshed = atVersion(
-        story,
-        toHead,
-        `The accepted repair from ${ready.head} to ${toHead} leaves this view unchanged.`,
+      const refreshed = await this.atWidenedAudience(
+        atVersion(
+          story,
+          toHead,
+          `The accepted repair from ${ready.head} to ${toHead} leaves this view unchanged.`,
+        ),
+        forge,
       );
       await this.validateCurrent(refreshed, forge, branch, true);
       await this.save(taskId, branch, (kept) => ({
@@ -1506,6 +1513,22 @@ export class ChangePresentations {
       }),
       branch,
     );
+  }
+  /**
+   * An approved story whose project only became readable by more people
+   * since it was saved, bound to the audience read now: its words were
+   * written for a stranger, so they carry into the wider audience, and its
+   * files upload again under receipts for that audience. Any other change
+   * keeps the saved destination, so the publication check still refuses it.
+   */
+  private async atWidenedAudience(
+    story: ChangePresentation,
+    forge: Forge,
+  ): Promise<ChangePresentation> {
+    const current = await storyDestination(forge);
+    return widenedAudience(story.destination, current)
+      ? changePresentationSchema.parse({ ...story, destination: current })
+      : story;
   }
   private async validateCurrent(
     story: ChangePresentation,

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "actions-event-policy",
+      "reason": "Records the GitHub Actions event policy that keeps the project's own pull request checks running after GitHub's default pull_request_target block, with a test holding it to the workflows; nothing in the app changes."
+    }
+  ]
+}

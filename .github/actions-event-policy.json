@@ -1,0 +1,22 @@
+{
+  "name": "From-main pull request checks",
+  "enforcement": "active",
+  "conditions": {
+    "workflow_path": {
+      "include": [
+        ".github/workflows/careful-review-check.yml",
+        ".github/workflows/check-file-flag.yml",
+        ".github/workflows/contributor-agreement.yml"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "restrict_action_events",
+      "parameters": {
+        "allowed_events": ["issue_comment", "pull_request_target", "workflow_dispatch"]
+      }
+    }
+  ]
+}

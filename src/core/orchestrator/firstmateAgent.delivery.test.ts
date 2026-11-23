@@ -26,6 +26,7 @@ import { seedTask } from "../tasks/seedTask";
 import { taskResolutionBody } from "../tasks/taskQuery";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
 import { ANSWER_MISSING_OPENING } from "./captainWakes";
+import { requiredActionCard } from "./requiredActionCard";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -697,6 +698,7 @@ describe("FirstmateAgent answer delivery", () => {
         answers_message: asked,
         signs_off: true,
       });
+      expect(f.session.prompts.at(-1)).toContain("pass signs_off true with that reply");
       expect(signed?.content[0]?.text).toContain("signs the card off");
       await finish(f, "Signed the card off.");
       await tick();
@@ -722,6 +724,54 @@ describe("FirstmateAgent answer delivery", () => {
       expect(f.supervisor.cards.thread(cardId).messages.map((line) => line.who)).toEqual([
         "captain",
       ]);
+    });
+
+    // INF-6333's review: a mark on a required action's card would drop it
+    // without completing or deferring the action its buttons own.
+    it("neither offers nor accepts the mark on a required action's card", async () => {
+      const f = setup({ silent: true });
+      seedTask(f.tasks, { id: "retire", title: "Retire the job host", status: "completed" });
+      f.tasks.delivery.declareRequiredActions(
+        "retire",
+        {
+          cardId: "card-retire-1",
+          offerId: "offer-1",
+          actions: [
+            {
+              id: "remove-job-host",
+              target: "the shell PC",
+              title: "Remove the job host from the shell PC",
+              consequence: "Until then the old job host keeps taking fleet checks on that PC.",
+              instructions: ["Run the job host remover as an administrator."],
+              criterion: "The PC no longer lists the job host service.",
+              prerequisites: [],
+              completion: { kind: "manual", label: "I removed it" },
+            },
+          ],
+        },
+        true,
+      );
+      const row = f.tasks.listOpen().find((task) => task.delivery?.captainAction);
+      const action = row && f.tasks.delivery.presentCaptainAction(row.id);
+      if (!row || !action) throw new Error("no required action");
+      f.supervisor.cards.put(requiredActionCard(row.id, action, Date.now()));
+      f.supervisor.cardActions.replyToCard(action.cardId, "this card can close now");
+      await drained(f.session, 1);
+      expect(f.session.prompts.at(-1)).toContain("this card can close now");
+      expect(f.session.prompts.at(-1)).not.toContain("signs_off");
+      const asked = f.supervisor.cards.thread(action.cardId).messages.at(-1)?.id ?? 0;
+      const refused = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: action.cardId,
+        reply: "Closing it now.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(refused?.content[0]?.text).toMatch(/^Nothing was written: /);
+      expect(f.supervisor.cards.get(action.cardId)).toBeDefined();
+      expect(f.supervisor.cards.thread(action.cardId).messages.map((line) => line.who)).toEqual([
+        "captain",
+      ]);
+      expect(f.tasks.get(row.id)?.delivery?.captainAction).toBeDefined();
     });
   });
 

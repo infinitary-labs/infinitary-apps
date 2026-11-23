@@ -1220,6 +1220,7 @@ It marks that task with `repairs_batch` in `spawn_crewmate`'s shape, and the app
 The app never guesses a repair from a title or from which task watches the batch's checks.
 A held batch of one is repaired by that change's own crewmate (`batchRepairOf`, `src/shared/batches.ts`).
 The repair stays recorded through every combine of the same batch and is dropped once its task closes (`pruned`); a later hold of the batch names it in its `batch-held` wake, so the first mate steers it instead of starting another.
+The first mate's own close of that task waits while the batch is held for its checks and no answer to the hold is recorded, and names the answers that end it; once one is recorded, or the hold has ended, the task closes as done, and the batch's pull request never counts as its own (`docs/task-record.md`, "One close as done").
 The repair accounts for every failed test against every change in the batch, then answers once with `check_change`'s `batch`.
 Once it has found the cause, it fixes forward by default and chooses by what the fix touches, not by which change caused the failure.
 It fixes forward when the code under test, the code that makes the project do what a change says, is right and the fix is small: changes that meet badly, or one change that left tests, test data, a generated file, a check list, a pinned version or a comment out of date.

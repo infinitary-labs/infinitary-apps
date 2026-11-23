@@ -1,7 +1,10 @@
+import type { BatchRecord } from "@shared/batches";
 import type { DeliveryFact, DoneWhy } from "@shared/deliveryFacts";
 import { type OverridableHold, overridePasses, softHoldWords } from "@shared/holds";
 import { TASK_CARD_VIA } from "@shared/provenance";
+import { repairUnanswered } from "../batches/line";
 import type { ForgePull } from "../forge/forge";
+import { otherChangeRepoId } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskRecords";
 import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
 import { carriedOnClose, TaskService } from "../tasks/taskService";
@@ -98,8 +101,9 @@ function count(n: number, one: string): string {
  * and the delivery proof. The first mate closing on its own meets each,
  * unless his recorded override passes it. The delivery proof holds while
  * the crewmate has not reported, while the task's own pull request is
- * still open, or while its work is not merged and the close names nowhere
- * else it went.
+ * still open, while it is a held batch's recorded repair and the batch
+ * record holds no answer of its to the hold, or while its work is not
+ * merged and the close names nowhere else it went.
  *
  * The task's own pull request is left open where the project lives and
  * the record says so; a close carried on by another task still closes its
@@ -492,8 +496,10 @@ export class DoneClose {
 
   /**
    * The task's own pull requests: the one its record names, and each change
-   * it keeps that has not merged. A pull request it only reviews to merge is
-   * another's, and stays out.
+   * it keeps that has not merged. The open batch's pull request in its
+   * project is the batch's, whichever task read it: a close sends nothing
+   * to it, and only the batch's recorded repair waits on its hold
+   * (`unansweredBatch`).
    */
   private ownPullNumbers(record: TaskRecord): Set<number> {
     const numbers = new Set<number>();
@@ -501,7 +507,28 @@ export class DoneClose {
     for (const change of this.host.tasks.changesFor(record.id))
       if (change.handle?.number !== undefined && change.receipt?.outcome !== "merged")
         numbers.add(change.handle.number);
+    const batch = this.batchOf(record)?.open?.number;
+    if (batch !== undefined && otherChangeRepoId(record, batch) === undefined)
+      numbers.delete(batch);
     return numbers;
+  }
+
+  /** Its project's batch record, as the project's row keeps it. */
+  private batchOf(record: TaskRecord): BatchRecord | undefined {
+    return record.repoId ? this.host.repos.get(record.repoId)?.batch : undefined;
+  }
+
+  /**
+   * The held batch this task is the recorded repair of while the record
+   * holds no answer of its to the hold (`repairUnanswered`), by the words
+   * that name it; undefined otherwise.
+   */
+  private unansweredBatch(record: TaskRecord): string | undefined {
+    const batch = this.batchOf(record);
+    if (!batch?.open || !repairUnanswered(batch, record.id)) return undefined;
+    const number = batch.open.number;
+    // i18n-exempt: served to the first mate inside the close's refusal, never shown to a person
+    return number === undefined ? "the held batch" : `the batch held at pull request #${number}`;
   }
 
   private async readPull(record: TaskRecord, number: number): Promise<ForgePull | undefined> {
@@ -543,6 +570,10 @@ export class DoneClose {
     const open = read.ownOpen[0];
     if (open !== undefined && why !== "carried_on")
       return `its own pull request ${changeName(record, open)} is still open; merge it from its merge card, or close it where the project lives.`;
+    const batch = why === "carried_on" ? undefined : this.unansweredBatch(record);
+    if (batch)
+      // i18n-exempt: served to the first mate as the close's refusal, never shown to a person
+      return `it is the recorded repair of ${batch}, and the batch record holds no answer of its to that hold. Steer its crewmate to answer it with check_change's batch (a fix, a send-back, or a rerun that passed), or try the batch again with app_change's project-batch-answer; the hold also ends once its failed checks pass when run again. Closed now, it leaves the batch held with no repair.`;
     const unmerged = read.work && (read.work.dirty || read.work.unlandedCommits > 0);
     const elsewhere = read.merged !== undefined || why === "released" || carrier !== undefined;
     if (record.status === "open" && !elsewhere)

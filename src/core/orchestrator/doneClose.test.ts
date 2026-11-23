@@ -7,8 +7,15 @@
  * task's own pull request: "Leave it open where the project lives, and say
  * so on the record".
  */
+import {
+  type BatchMember,
+  type BatchRecord,
+  EMPTY_BATCH_RECORD,
+  type OpenBatch,
+} from "@shared/batches";
 import type { Card } from "@shared/cards";
 import { deliveryFactsOf } from "@shared/deliveryFacts";
+import type { MergeReview } from "@shared/mergeReview";
 import { describe, expect, it } from "vitest";
 import {
   HEAD,
@@ -18,6 +25,7 @@ import {
   TASK,
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { combined, hold, repaired, sendBack } from "../batches/line";
 import type { ForgePull } from "../forge";
 import { seedTask } from "../tasks/seedTask";
 
@@ -96,6 +104,161 @@ describe("the task's own pull request", () => {
       basis: "unread",
       text: `Its own pull request #${PR} could not be read`,
     });
+  });
+});
+
+/**
+ * Intent: a held batch's repair whose answer is on the batch record closes
+ * as done, and one that has not answered is told the batch's ways out (the
+ * weekly reach audit's finding, which the captain chose to fix). A repair
+ * reads the batch's pull request, and its close was refused as if that pull
+ * request were its own, naming a merge card the batch does not have and a
+ * close where the project lives that would drop the whole batch.
+ */
+describe("a held batch's repair", () => {
+  const REPAIR = "batch-repair";
+  const BATCH_PR = 1792;
+  const BATCH_BRANCH = "infinitary-batch/5d1e";
+  const BASE = "8".repeat(40);
+  const HELD = "d".repeat(40);
+  const FAILED = ["verify / linux"];
+  const REPORT = "The date parser change breaks two journeys; it went back to its crewmate.";
+  const SENT_BACK = "The parser change reads a date with no time zone as the computer's own.";
+  const members: BatchMember[] = [
+    ["t-parser", "fix(parser): read dates with a time zone"],
+    ["t-meter", "feat(meter): show the hourly rate"],
+    ["t-export", "fix(export): keep the column order"],
+  ].map(([taskId, title], at) => ({
+    taskId: taskId as string,
+    branch: `inf/${taskId}`,
+    head: String(at + 1).repeat(40),
+    title: title as string,
+    body: "",
+    at: 1_000 + at,
+    commit: String(at + 4).repeat(40),
+  }));
+  const pull: ForgePull = {
+    number: BATCH_PR,
+    state: "open",
+    merged: false,
+    headSha: HELD,
+    branch: BATCH_BRANCH,
+    base: "main",
+    readiness: "clean",
+  };
+
+  /** The project's batch of three as its combine opened it, held for its checks, with its repair recorded. */
+  function heldBatch(): BatchRecord {
+    const opened = combined(
+      EMPTY_BATCH_RECORD,
+      { base: BASE, head: HELD, members, leftOut: [] },
+      { branch: BATCH_BRANCH, at: 1_500 },
+    );
+    const confirmed = {
+      ...opened,
+      open: {
+        ...(opened.open as OpenBatch),
+        number: BATCH_PR,
+        url: `https://github.com/o/meter/pull/${BATCH_PR}`,
+      },
+    };
+    const held = hold(confirmed, { at: 2_000, head: HELD, reason: "checks", checks: FAILED });
+    return repaired(held.record, REPAIR);
+  }
+
+  /** The repair, reported and idle, having read the batch's pull request as `check_change` pull leaves it. */
+  function repairWorld(batch: BatchRecord): SettleWorld {
+    const world = settleWorld();
+    seedTask(world.tasks, {
+      id: REPAIR,
+      title: `Repair the held batch #${BATCH_PR}`,
+      status: "idle",
+      repoId: "project",
+      repoDir: "/not-mounted/project",
+      worktreeDir: "/not-mounted/repair",
+      branch: "inf/repair-batch",
+      outcome: REPORT,
+    });
+    const review: MergeReview = {
+      id: "mr-batch-1792",
+      kind: "github",
+      host: "github.com",
+      owner: "o",
+      name: "meter",
+      number: BATCH_PR,
+      headSha: HELD,
+      base: "main",
+      branch: BATCH_BRANCH,
+      method: "squash",
+      title: `Batch of ${members.length} approved changes`,
+      at: 2_100,
+    };
+    seedDelivery(world.tasks, REPAIR, {
+      prNumber: BATCH_PR,
+      headSha: HELD,
+      mergeReviews: [review],
+      checkTarget: review,
+    });
+    world.repos.recordBatch("project", batch);
+    world.live.pull = pull;
+    return world;
+  }
+
+  it.each([
+    {
+      answer: "a send-back the batch was combined again after",
+      batch: () => {
+        const sent = sendBack(heldBatch(), "t-parser", members[0] as BatchMember, SENT_BACK, 3_000);
+        return combined(
+          sent.record,
+          { base: BASE, head: "e".repeat(40), members: members.slice(1), leftOut: [] },
+          { branch: BATCH_BRANCH, at: 3_100 },
+        );
+      },
+    },
+    {
+      answer: "a send-back whose combine has not finished",
+      batch: () =>
+        sendBack(heldBatch(), "t-parser", members[0] as BatchMember, SENT_BACK, 3_000).record,
+    },
+    {
+      answer: "a rerun declared passed at the held version",
+      // As `Batches.declarePassed` writes it: the failed checks are answered at that version.
+      batch: () => {
+        const held = heldBatch();
+        const open = held.open as OpenBatch;
+        return { ...held, open: { ...open, passed: { head: HELD, checks: FAILED } } };
+      },
+    },
+  ])("closes as done once the record holds its answer: $answer", async ({ batch }) => {
+    const world = repairWorld(batch());
+    const closed = await world.done.close(REPAIR, { why: "finished", evidence: REPORT });
+    expect(closed.text).not.toContain(`#${BATCH_PR} is still open`);
+    expect(closed).toMatchObject({ ok: true });
+    expect(world.tasks.get(REPAIR)).toMatchObject({ status: "done", closedReason: "finished" });
+  });
+
+  it("waits while it has not answered the hold, naming the batch's ways out, and the captain's words pass it", async () => {
+    const world = repairWorld(heldBatch());
+    const held = await world.done.close(REPAIR, { why: "finished", evidence: REPORT });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).toContain(
+      `it is the recorded repair of the batch held at pull request #${BATCH_PR}`,
+    );
+    expect(held.text).toContain("check_change's batch");
+    expect(held.text).toContain("project-batch-answer");
+    expect(held.text).not.toContain("merge card");
+    expect(held.text).not.toContain("close it where the project lives");
+    expect(held.text).toContain("Soft hold proof");
+    expect(world.tasks.get(REPAIR)?.status).toBe("active");
+
+    const closed = await world.done.close(REPAIR, {
+      why: "finished",
+      evidence: REPORT,
+      captainWords: "Close the batch repair; I will try the batch again myself.",
+    });
+    expect(closed).toMatchObject({ ok: true });
+    expect(world.tasks.get(REPAIR)).toMatchObject({ status: "done", closedReason: "finished" });
   });
 });
 

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "batch-repair-closes-once-answered",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A held batch's repair closes once it has answered",
+      "body": "On a project with batched pull requests, the task repairing a held batch now closes as done once it has sent the failing change back or found that a rerun passed, instead of staying open because the batch's pull request was still open. While a repair has not answered yet, the first mate is told what ends the hold, rather than to merge or close the batch's pull request, which would have dropped every change in it.",
+      "noPicture": "This changes when a repair task closes; no screen looks different.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1109,8 +1109,9 @@ Plain Git writes also refuse a separate push address that differs from the appro
 A declared repair is reset with the former batch: its declaration, the versions that held and its verified base are dropped, so its whole branch goes as an ordinary change once approved again at the new address.
 A move noticed after a combine's reads or during its push leaves its result unsaved, and nothing is pushed to the former address once the move is seen.
 A change that no longer combines is told whether it clashes with the default branch as it is now, which bringing it up to date answers, or only with an approved change ahead of it in the batch, which the combine names (`ahead` on its left-out entry).
-In the second case nothing can be done yet, since the default branch does not hold that change: its task hears so (`BATCH_WORDS.leftOutAhead`), its kept approval waits quietly on `queue`, and no one is woken to bring it up to date.
-The clash ends once (`clashesEnded`): when the change ahead merges with its batch, the entry turns into a clash with the default branch and the change's merge runs again, so its crewmate is steered to bring it up to date at once; when the change ahead leaves the batch and the line, the entry goes and the change's merge runs again, which puts the same approved version back in line.
+Either way, while the batch stays open its crewmate is told to rebuild the change on that batch's version now ("A change rebuilt on an open batch").
+With no batch left open, or where no approval covers the version any more, the second case says nothing can be done yet, since the default branch does not hold that change: its task hears so (`BATCH_WORDS.leftOutAhead`), its kept approval waits quietly on `queue`, and no one is woken to bring it up to date.
+The clash ends once (`clashesEnded`): when the change ahead merges with its batch, the entry turns into a clash with the default branch and the change's merge runs again, so its crewmate is steered to bring it up to date at once, unless it was already told to rebuild on that batch; when the change ahead leaves the batch and the line, the entry goes and the change's merge runs again, which puts the same approved version back in line.
 Each fetch and the push wait at most `REMOTE_TIMEOUT_MS` on the place the project lives, because every writer of the project's batch waits behind them.
 A call that limit ends fails the pass, so the next one reads again, and a change is never left out for a branch that could not be read in time.
 The combined version is pushed with a lease to a branch the app owns, `infinitary-batch/<id>` (`BATCH_BRANCH_PREFIX`), and opened as one pull request with the captain's sign-in.
@@ -1177,6 +1178,26 @@ Its checks then decide the batch as any version's do, and a failed one holds it.
 A commit that changes any other file, builds on another version, or comes while the batch is held is combined over as any other push, and a batch takes one generated commit per combine.
 After a rebase merge the receipts skip it by its subject, and a squash of a batch of one carries it in that change's commit (`landedCommits`).
 This repository's batch runs the phone's generators this way (`docs/testing.md`, "The swept batch").
+
+### A change rebuilt on an open batch
+
+A change that clashes with the open batch is answered while that batch is checked, rather than after it merges, so a large change is brought up to date once instead of on every batch that leaves it out.
+Two moments find the clash: the combine leaves a change out for a clash (`clash` on its left-out entry), and each pass tries every ordinary change waiting in line once against the open batch's version with `merge-tree`, which writes no ref anyone sees (`clashesWithBatch`, `src/core/batches/combine.ts`; `Batches.tryLine`).
+A fix, a later part built on another part's version, a stacked change and a change already rebuilt keep their own place and are not tried.
+The app keeps what it told on the project's batch record (`BatchRebuild`, `toldRebuild`, `src/core/batches/line.ts`): the change's version, the batch's branch and version, and the changes that version carries, in order.
+Its crewmate hears it once for each version of its change and set of changes in the batch: a batch combined again with the same changes tells nothing new, and one that lost or gained a change tells once more, with its new version.
+The `batch-rebuild` wake names the batch's pull request, branch and version, the changes it carries with their tasks, and asks the crewmate to bring only its own commits onto that version, run its validation again and declare the push with `conflictRepair`, giving the batch's version as `newBase` (`deliveryWakes.ts`).
+It is sent only while the captain's merge approval is kept; otherwise the task's line and its merge card say what follows.
+A left-out change that was told reads `rebuild` in its place while that batch is open, so its merge waits quietly on `queue` and names the version to build on.
+
+A repair declared on a version of the open batch enters the line as built on it (`onBatch`, `builtOnBatch`).
+It goes right behind the changes that version carries: first in the next batch once the batch merges, behind its changes when they go back in line, behind the declared fixes when the line joins a held batch, and right behind them when the open batch is combined again with them still in it (`carried`).
+The combine carries it as its own difference from that version, as a held batch's fix is carried, so it goes onto the default branch after a rebase merge or onto the batch combined again (`combine`).
+It is left out again, with its reason, when a change that version carried is neither ahead of it at the same version nor merged at it, when its branch no longer holds that version, or when its own difference no longer combines.
+Once the batch ends, the told entry no longer reads `rebuild`, and a clash with the default branch is steered as any other.
+Closing the task drops what it was told.
+
+Evidence: `src/core/batches/combine.test.ts` ("a change rebuilt on an open batch's version", real git), `line.test.ts` ("a change rebuilt on an open batch"), `batches.rebuild.test.ts` (a change left out for a clash with the open batch, and the line tried against it), `src/core/orchestrator/ownBatchChange.test.ts` (the merge naming the version to rebuild on) and `wakes.words.batches.test.ts` (the `batch-rebuild` wake's words).
 
 ### A held batch
 

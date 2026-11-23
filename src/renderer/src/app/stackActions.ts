@@ -16,10 +16,12 @@ import {
 import { requestCharacterNotice } from "../character/emoteSignal";
 import { changesOff } from "../devices/viewWords";
 import { leaveCard } from "./cardActions";
+import { forgetConversationVisit } from "./conversationVisit";
 import { pressesSoFar } from "./presses";
 import { focusHoldsBack, heldProjectFocus } from "./projectFocus";
 import {
   type BrowserViewFrom,
+  CONVERSATION_ENTRY_ID,
   type ConversationEntry,
   type ConversationView,
   departureIndex,
@@ -100,6 +102,12 @@ export type StackSlice = {
    */
   setConversationView: (view: ConversationView) => void;
   /**
+   * Opens a card the conversation lists: a live one comes to the front and
+   * its leaving brings the conversation back up; a closed one, or one the
+   * stack does not show, opens as a past card whose Hide returns to it.
+   */
+  openCardFromConversation: (cardId: string) => void;
+  /**
    * Opens or focuses one task's browser view at the front (docs/task-browser.md),
    * from a card's live attachment when `from` names it ("From a card").
    */
@@ -130,7 +138,7 @@ export type StackSlice = {
   aimPanelCard: (panel: string, id: string, taskId: string | null) => void;
   /** Takes every card of a panel off the stack: it was removed, or the panels went off. */
   closePanelCards: (panel: string) => void;
-  /** Hide or Esc: closes the shown record, past card, reply note, browser view, Crewmate tab or panel card, if one is shown. */
+  /** Hide or Esc: closes the shown record, past card, conversation, browser view, Crewmate tab or panel card, if one is shown. */
   closeRecord: () => void;
   /** Closes one task's record wherever it sits; the shown entry stays shown. */
   closeTaskRecord: (taskId: string) => void;
@@ -392,15 +400,41 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
         ),
       ),
     // One conversation: opening it again brings it to the front at the round asked.
-    openConversation: (entry = {}) =>
-      set((s) => toFront(s, { conversation: entry }, (record) => "conversation" in record)),
-    closeConversation: () => set((s) => closeHeld(s, (record) => "conversation" in record)),
+    openConversation: (entry = {}) => {
+      forgetConversationVisit();
+      set((s) => toFront(s, { conversation: entry }, (record) => "conversation" in record));
+    },
+    closeConversation: () => {
+      forgetConversationVisit();
+      set((s) => closeHeld(s, (record) => "conversation" in record));
+    },
     setConversationView: (view) =>
       set((s) => ({
         records: s.records.map((record) =>
           "conversation" in record ? { conversation: { view } } : record,
         ),
       })),
+    openCardFromConversation: (cardId) => {
+      const opened = (card: string | undefined) =>
+        set((s) => ({
+          records: s.records.map((record) =>
+            "conversation" in record
+              ? {
+                  conversation: {
+                    ...(record.conversation.view ? { view: record.conversation.view } : {}),
+                    ...(card ? { opened: card } : {}),
+                  },
+                }
+              : record,
+          ),
+        }));
+      if (get().cards.some((card) => card.id === cardId)) {
+        opened(cardId);
+        if (get().focusCard(cardId)) return;
+        opened(undefined);
+      }
+      get().openPastCard(cardId, { cardId: CONVERSATION_ENTRY_ID });
+    },
     openBrowserView: (taskId, from) =>
       set((s) =>
         toFront(
@@ -487,9 +521,10 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
     aimPanelCard: (panel, id, aim) => set((s) => patchPanelCard(s, panel, id, { aim })),
     closeRecord: () => {
       const entry = shownEntry(get());
-      // A record and a past card each let go of their reading place as they close.
+      // A record, a past card and the conversation each let go of their reading place as they close.
       if (entry?.recordTaskId) get().closeTaskRecord(entry.recordTaskId);
       else if (entry?.pastCardId) get().closePastCard(entry.pastCardId);
+      else if (entry?.conversation) get().closeConversation();
       else if (entry && isHeldEntry(entry)) {
         // A card docked beside the page with a reply waiting on its
         // crewmate goes aside with the view, as any replied-under card is

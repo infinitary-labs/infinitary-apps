@@ -10,19 +10,15 @@ const FOLDED_LINES = 2;
  * expansion state; this component owns measurement and activation. A cut bubble
  * is its own button (click, Enter or Space), never a separate Show all link.
  * INF-1963: "remove the 'show all' link and instead make the bubble expand on click".
- * Shared with the conversation card (INF-2219).
  */
 export function QuestionBubble({
   text,
   open,
   onOpenChange,
-  selectable = false,
 }: {
   text: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Read-only conversation views preserve selecting the question as well as the reply. */
-  selectable?: boolean;
 }) {
   const [cut, setCut] = useState(false);
   const words = useRef<HTMLSpanElement>(null);
@@ -47,20 +43,7 @@ export function QuestionBubble({
       disabled={!interactive}
       aria-expanded={interactive ? open : undefined}
       aria-label={interactive ? (open ? m.cardAskedShowLess() : m.cardAskedShowAll()) : undefined}
-      onClick={(event) => {
-        const selection = event.currentTarget.ownerDocument.getSelection();
-        // Dragging selects the captain's words; a pointer release must not fold them away.
-        if (
-          selectable &&
-          event.detail > 0 &&
-          selection &&
-          !selection.isCollapsed &&
-          selection.anchorNode &&
-          event.currentTarget.contains(selection.anchorNode)
-        )
-          return;
-        onOpenChange(!open);
-      }}
+      onClick={() => onOpenChange(!open)}
       style={{
         alignSelf: "flex-start",
         maxWidth: "100%",
@@ -83,7 +66,6 @@ export function QuestionBubble({
           lineHeight: "var(--leading-body)",
           color: "var(--fg-2)",
           overflowWrap: "anywhere",
-          userSelect: selectable ? "text" : undefined,
           ...(open
             ? { display: "block", whiteSpace: "pre-wrap" }
             : {

@@ -3,6 +3,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { CONVERSATION_HEADING, PICTURE_ONLY_WORDS } from "../../src/renderer/src/app/lastTurnWords";
+import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { seedReplyReading } from "../helpers/replyReading";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
@@ -10,6 +12,8 @@ import {
   bubbleWords,
   conversation,
   conversationReplies,
+  conversationTile,
+  conversationView,
   conversationYou,
   mateBubble,
   olderRound,
@@ -27,6 +31,14 @@ import {
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
+import {
+  BACKLOG_ASK,
+  BACKLOG_CARD_TITLE,
+  BACKLOG_REPLY,
+  conversationRounds,
+  REMINDER_ASK,
+  REMINDER_REPLY,
+} from "./scenarios/conversationRounds";
 import { FILE_TASK_PROMPT_MARKER, fileTask } from "./scenarios/fileTask";
 import {
   lastTurnWords,
@@ -35,7 +47,7 @@ import {
   WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./scenarios/lastTurnWords";
 import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
-import { cardSurface, closeOpenCards } from "./stack";
+import { cardSurface, closeOpenCards, noteDone, shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressKey, runFromSearch } from "./windowKeys";
 
@@ -426,13 +438,6 @@ test("the reply line opens the conversation with the whole reply, by click, Ente
     expect(await newestReply.textContent()).toBe(REPLY_NOTE_WORDS);
     await expect(newestReply).toBeInViewport();
     await regionShot(cardSurface(page), test.info().outputPath("conversation.png"));
-    if (process.env.FM_CONVERSATION_HERO === "1") {
-      await heroShot(launched.app, page, {
-        region: cardSurface(page),
-        anchors: [promptInput(page)],
-        name: "conversation",
-      });
-    }
   });
 
   await test.step("Esc closes it, the strip is back, and nothing was sent", async () => {
@@ -468,6 +473,58 @@ test("the reply line opens the conversation with the whole reply, by click, Ente
     await expect(reopened).toBeVisible();
     expect(await reopened.textContent()).toBe(REPLY_NOTE_WORDS);
     await expect(conversationYou(again).last()).toHaveText(sent);
+  });
+});
+
+// INF-6337, the captain's words: "a thread that has everything the user
+// directly interacted with - their own prompts, first mate's response, cards
+// they interacted etc", which "should become a place for people to find
+// their recent cards"; the approved plan: "A press opens the card in front,
+// and Hide returns to the conversation".
+test("the conversation holds a card the captain answered, lists it under Cards, and its tile opens it and returns", async () => {
+  launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
+  const { page } = launched;
+  await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+  await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
+  await askFirstmate(page, BACKLOG_ASK);
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+  // A first mate's note offers Got it; its words are the press the conversation keeps.
+  const pressed = NOTE_GOT_IT_LABEL;
+  await noteDone(page).click();
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  await askFirstmate(page, REMINDER_ASK);
+  const chose = m.shellConversationChose({ label: pressed });
+
+  await test.step("Everything holds both messages, their replies, and the card with the press", async () => {
+    await mateBubble(page).click();
+    await expect(conversation(page)).toBeVisible();
+    await expect(page.locator("[data-last-turn]")).toHaveCount(0);
+    await expect(conversationYou(page)).toHaveText([BACKLOG_ASK, chose, REMINDER_ASK]);
+    await expect(conversationReplies(page)).toHaveText([BACKLOG_REPLY, REMINDER_REPLY]);
+    await expect(conversationTile(page)).toHaveText([new RegExp(BACKLOG_CARD_TITLE)]);
+    await regionShot(cardSurface(page), test.info().outputPath("everything.png"));
+    if (process.env.FM_CONVERSATION_HERO === "1") {
+      await heroShot(launched.app, page, {
+        region: cardSurface(page),
+        anchors: [promptInput(page)],
+        name: "conversation",
+      });
+    }
+  });
+
+  await test.step("Cards lists it as answered, and its tile opens it and returns to Cards", async () => {
+    await conversationView(page, m.shellConversationCards()).click();
+    const answered = conversation(page).locator('[data-conversation-section="answered"]');
+    await expect(answered.locator("[data-conversation-card]")).toHaveText([
+      new RegExp(BACKLOG_CARD_TITLE),
+    ]);
+    await expect(answered).toContainText(m.shellConversationYouChose({ label: pressed }));
+    await regionShot(cardSurface(page), test.info().outputPath("cards.png"));
+    await answered.locator("[data-conversation-card]").click();
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
+    await expect(conversation(page)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(conversation(page)).toHaveAttribute("data-conversation", "cards");
   });
 });
 

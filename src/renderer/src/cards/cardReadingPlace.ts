@@ -53,7 +53,7 @@ export function useCardReadingPlace(id: string, shown = true) {
 }
 
 /** A place saved under a namespace is for an entry that is not a live stack card. */
-const OWN_PLACE = /^(record|past):/;
+const OWN_PLACE = /^(record|past|conversation):/;
 
 /** A task record's reading place; the stack never retires it. */
 export const recordReadingPlaceId = (taskId: string) => `record:${taskId}`;

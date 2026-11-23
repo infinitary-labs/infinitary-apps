@@ -68,7 +68,10 @@ export const conversationRoundSchema = z.discriminatedUnion("kind", [
     card: conversationCardSchema,
     you: z.string(),
     answer: conversationAnswerSchema.nullable(),
-    /** The first mate's reply line, for a line typed under its own card. */
+    /**
+     * The first mate's reply line, for a line typed under its own card, which
+     * is also a message (null while none was given); absent on any other line.
+     */
     reply: lastTurnReplySchema.nullable().optional(),
   }),
 ]);
@@ -97,4 +100,9 @@ export type ConversationPage = z.infer<typeof conversationPageSchema>;
 export function newerRound(a: ConversationCursor, b: ConversationCursor): number {
   if (a.at !== b.at) return b.at - a.at;
   return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+}
+
+/** A round the captain sent as a message, as the strip's rounds are: one typed under a card included. */
+export function sentAsMessage(round: ConversationRound): boolean {
+  return round.kind === "message" || (round.kind === "reply" && round.reply !== undefined);
 }

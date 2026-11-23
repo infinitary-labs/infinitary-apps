@@ -348,7 +348,7 @@ The main process's own commands, the size keys, are never refused by the page.
   It refuses, as Go to the main message does, while the box is held.
   The Help menu's Send Feedback… tells the page the same command.
 - `firstmate.reply`, Open the conversation, goes home and opens the conversation at the front of the stack at its newest round, as a press on the newest round above the input does, after the lines have faded too and before anything has been said (`docs/composer.md` "The conversation").
-  It works from Settings too, and refuses until a reply is saved ("Your first mate has not replied yet").
+  It works from Settings too, and before anything has been said it opens the conversation empty.
 - `settings.usage`, Open Usage, opens Settings at its Usage tab with focus on the unit switch; it works from Settings too (`docs/usage.md`).
 - `settings.panels`, Arrange panels, opens Settings at its Panels tab with focus on its rows' stop ("Lists and Settings"); it works from Settings too, and on a Mac that controls another it arranges that Mac's own layout (`docs/view.md`, "Settings on a view").
 - `settings.automation`, Open Automation, opens Settings at its Automation tab with focus on New automation; it works from Settings too (`docs/automation.md`).
@@ -578,7 +578,7 @@ A question's radio and checkbox options are not typing ("Keys used when not typi
 ## Finding in the shown card
 
 The words a card shows are found from the keyboard, as a browser finds words in its page (the captain: "cmd + f search functionality within cards").
-One finding runs at a time, in whichever entry the stage shows: a card, a past card, or a task's record or Crewmate tab.
+One finding runs at a time, in whichever entry the stage shows: a card, a past card, the conversation, or a task's record or Crewmate tab.
 
 - ⌘F, or the magnifying glass just before Maximize in the head, opens a find field in the head in place of the meta line, the task's key and the model chip, so nothing under the head moves (`CardFindField.tsx`).
   Focus goes into the field with its words selected; ⌘F while it is open selects them again.

@@ -2,6 +2,7 @@ import type { FmEvent } from "@shared/events";
 import type { LastTurn } from "@shared/lastTurn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { takeCharacterEmote } from "../character/emoteSignal";
+import { keepConversationVisit, keptConversationVisit } from "./conversationVisit";
 import { CONVERSATION_ENTRY_ID, isHeldEntry, shownCard, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import { card, DECIDE, resetShell } from "./storeTestKit";
@@ -235,6 +236,43 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     state().closeRecord();
     expect(state().records).toEqual([]);
     expect(shown()?.id).toBe("decision");
+  });
+
+  // The approved plan: "A press opens the card in front, and Hide returns to the conversation".
+  it("brings the conversation back up when a live card it opened is hidden, ahead of other cards", () => {
+    const other = card({ id: "other", status: "ready", actions: DECIDE });
+    const opened = card({ id: "decision", status: "ready", actions: DECIDE });
+    useShellStore.setState({
+      cards: [other, opened],
+      records: [],
+      cardIndex: 0,
+      cardsSeeded: true,
+    });
+    const shown = () => shownCard(state().cards, state().cardIndex, [], state().records);
+    state().openConversation();
+    state().setConversationView("cards");
+    state().openCardFromConversation("decision");
+    expect(shown()?.id).toBe("decision");
+    state().applyCards([other, { ...opened, minimized: true }]);
+    expect(shown()?.id).toBe(CONVERSATION_ENTRY_ID);
+    expect(state().records).toEqual([{ conversation: { view: "cards" } }]);
+  });
+
+  // INF-6364's review, the captain's choice: "Come back where you were reading, until you close it".
+  it("keeps the conversation's visit through a card opened from it, until it closes or opens afresh", () => {
+    useShellStore.setState({ cards: [], records: [], cardIndex: 0 });
+    const visit = { loaded: { rounds: [], more: true, fallback: false }, atFoot: false };
+    state().openConversation();
+    keepConversationVisit(visit);
+    state().openPastCard("answered", { cardId: CONVERSATION_ENTRY_ID });
+    state().closeRecord();
+    expect(keptConversationVisit()).toBe(visit);
+    state().openConversation({ at: "older" });
+    expect(keptConversationVisit()).toBeNull();
+    keepConversationVisit(visit);
+    state().closeRecord();
+    expect(state().records).toEqual([]);
+    expect(keptConversationVisit()).toBeNull();
   });
 
   it("still ends the first-run hint on the first send", () => {

@@ -41,10 +41,12 @@ export type PanelCardEntry = {
 /**
  * The conversation the window holds (docs/composer.md "The conversation"):
  * which round it opens at - the newest, or the older of the two the strip
- * shows - and which of its views it shows.
+ * shows - which of its views it shows, and the live card it opened, whose
+ * leaving brings the conversation back up. An entry with neither a view nor
+ * an opened card is a fresh open.
  */
 export type ConversationView = "everything" | "cards";
-export type ConversationEntry = { at?: "older"; view?: ConversationView };
+export type ConversationEntry = { at?: "older"; view?: ConversationView; opened?: string };
 
 /**
  * Shell-held views at the front of the stack; never persisted or emitted as
@@ -84,8 +86,6 @@ export type StackEntry = Card & {
   /** Which of the record's views it shows: Info, Cards or Activity (INF-2261); absent is Info. */
   recordView?: RecordView;
   pastCardId?: string;
-  /** The card or held entry a past card was opened from; Hide returns to it while it is up. */
-  pastFrom?: EntryFrom;
   conversation?: ConversationEntry;
   browserTaskId?: string;
   browserFrom?: EntryFrom | BrowserViewFrom;
@@ -109,7 +109,6 @@ type HeldEntry = Pick<StackEntry, "id"> &
       | "recordTaskId"
       | "recordView"
       | "pastCardId"
-      | "pastFrom"
       | "conversation"
       | "browserTaskId"
       | "browserFrom"
@@ -127,12 +126,7 @@ function heldEntry(held: OpenRecord): HeldEntry {
       recordTaskId: held.taskId,
       ...(held.view ? { recordView: held.view } : {}),
     };
-  if ("pastCardId" in held)
-    return {
-      id: `past:${held.pastCardId}`,
-      pastCardId: held.pastCardId,
-      ...(held.from ? { pastFrom: held.from } : {}),
-    };
+  if ("pastCardId" in held) return { id: `past:${held.pastCardId}`, pastCardId: held.pastCardId };
   if ("conversation" in held) return { id: CONVERSATION_ENTRY_ID, conversation: held.conversation };
   if ("browserTaskId" in held)
     // The page is 1280 wide: the view takes the stage's full width.
@@ -413,6 +407,8 @@ export function dismissalSuccessor(
   const leaving = shown[index];
   const rest = shown.filter((entry) => entry !== leaving);
   if (leaving && isHeldEntry(leaving)) return rest[departureIndex(rest, unread, "hide")];
+  const opener = rest.find((entry) => entry.conversation?.opened === leaving?.id);
+  if (opener) return opener;
   const order = shown.map((entry) => entry.id);
   return rest[departureIndex(rest, unread, "depart", neighboursOf(order, leaving?.id))];
 }
@@ -444,6 +440,14 @@ function sameIds(prev: string[], next: string[]): string[] {
  * Legacy snapshots without that projection retain their window-local unread behavior.
  * `typing` says a person is typing in the shown entry, which then keeps the stage.
  */
+function spentOpener({ at, view }: ConversationEntry): ConversationEntry {
+  return { ...(at ? { at } : {}), ...(view ? { view } : {}) };
+}
+
+function openerOf(shown: readonly StackEntry[], cardId: string): number {
+  return shown.findIndex((entry) => entry.conversation?.opened === cardId);
+}
+
 export function reconcileStack(
   prev: StackState,
   cards: Card[],
@@ -513,6 +517,9 @@ export function reconcileStack(
       : prev.cardsSeeded
         ? departureIndex(shown, unseen, "depart", neighboursOf(prevShownIds, active?.id))
         : firstCardIndex(shown);
+  // A live card the conversation opened returns to it as it leaves, once.
+  const opener = stays < 0 && active ? openerOf(shown, active.id) : -1;
+  if (opener >= 0) cardIndex = opener;
   // A card the task raises while its browser view is shown arrives in the
   // view's column, beside the page, and the view keeps the stage
   // (docs/task-browser.md, "A card beside the page").
@@ -524,7 +531,11 @@ export function reconcileStack(
           ? { ...held, arrived: docking.id }
           : held,
       )
-    : undefined;
+    : opener >= 0
+      ? prev.records.map((held) =>
+          "conversation" in held ? { conversation: spentOpener(held.conversation) } : held,
+        )
+      : undefined;
   // A declared continuity card may take the stage only when it arrives,
   // never on an unrelated push or a revision while the reader paged away,
   // and never from a shown entry a person is typing in: it waits as new.

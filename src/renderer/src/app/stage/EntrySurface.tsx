@@ -199,7 +199,9 @@ export function EntrySurface({
     );
   }
   if (entry.conversation) {
-    return <ConversationCard entry={entry.conversation} width="100%" onDrawn={drew} />;
+    return (
+      <ConversationCard entry={entry.conversation} width="100%" onDrawn={drew} shown={active} />
+    );
   }
   if (entry.recordTaskId) {
     return (

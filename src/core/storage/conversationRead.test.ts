@@ -147,6 +147,22 @@ describe("the conversation's read", () => {
     });
   });
 
+  it("gives two lines in a row under one card only the answer that followed each", () => {
+    const { db, cards, crewCard, tick } = fixture();
+    const asked = crewCard("asked", "Which chart reads best?");
+    tick();
+    cards.addMessage(asked.id, "captain", "use bars");
+    tick();
+    cards.addMessage(asked.id, "captain", "and a weekly scale");
+    tick();
+    cards.addMessage(asked.id, "crewmate", "Bars, weekly.");
+
+    expect(readConversation(db).rounds.map(summary)).toEqual([
+      "reply Which chart reads best?: and a weekly scale -> Bars, weekly.",
+      "reply Which chart reads best?: use bars -> none",
+    ]);
+  });
+
   it("pages back from a cursor with no round twice and none skipped", () => {
     const { db, message } = fixture();
     for (let n = 1; n <= 35; n += 1) message(`ask-${String(n).padStart(2, "0")}`, `message ${n}`);

@@ -67,6 +67,16 @@ export function conversationReplies(page: Page): Locator {
   );
 }
 
+/** The conversation's card tiles, oldest first in Everything. */
+export function conversationTile(page: Page): Locator {
+  return conversation(page).locator("[data-conversation-card]");
+}
+
+/** One of the conversation's view pills, by its words. */
+export function conversationView(page: Page, words: string): Locator {
+  return page.locator(`${SHOWN_ENTRY} [data-grouped-pill]`, { hasText: words });
+}
+
 /** INF-2218: select the saved words with the pointer, never by replacing browser selection. */
 export async function selectFirstLine(words: Locator): Promise<string> {
   // Center the words before dragging: minimally exposing them at a scroll edge

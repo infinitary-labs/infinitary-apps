@@ -65,10 +65,16 @@ const LINES = `SELECT * FROM (
 const CARD = `SELECT c.id, c.title, c.author, c.actions_json, c.task_id, t.key AS task_key
   FROM cards AS c LEFT JOIN tasks AS t ON t.id = c.task_id WHERE c.id = ?`;
 
-/** The author's first line after the captain's; the host's own lines are not an answer. */
+/**
+ * The author's first line after the captain's and before the captain's next
+ * one, which has its own answer; the host's own lines are not an answer.
+ */
 // i18n-exempt: SQL, never shown to a person
-const ANSWER = `SELECT who, text, at FROM card_messages
-  WHERE card_id = ? AND id > ? AND who IN ('firstmate', 'crewmate') ORDER BY id LIMIT 1`;
+const ANSWER = `SELECT who, text, at FROM card_messages AS a
+  WHERE a.card_id = ? AND a.id > ? AND a.who IN ('firstmate', 'crewmate')
+  AND NOT EXISTS (SELECT 1 FROM card_messages AS c
+    WHERE c.card_id = a.card_id AND c.who = 'captain' AND c.id > ? AND c.id < a.id)
+  ORDER BY a.id LIMIT 1`;
 
 const ACTIONS_JSON = z.array(cardActionSchema);
 
@@ -215,7 +221,7 @@ function labelOf(payload: string): string | undefined {
 }
 
 function answerOf(db: AppDatabase, cardId: string, line: number): ConversationAnswer | null {
-  const row = prepared(db, ANSWER).get(cardId, line) as ConversationAnswer | undefined;
+  const row = prepared(db, ANSWER).get(cardId, line, line) as ConversationAnswer | undefined;
   return row ? { who: row.who, text: row.text, at: row.at } : null;
 }
 

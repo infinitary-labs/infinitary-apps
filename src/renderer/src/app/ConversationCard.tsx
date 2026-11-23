@@ -1,21 +1,28 @@
-import { type Card, cardPresentation } from "@shared/cards";
+import { type Card, cardPresentation, onStage } from "@shared/cards";
 import type {
   ConversationPage,
   ConversationRound,
   ConversationCard as RoundCard,
 } from "@shared/conversation";
-import { newerRound } from "@shared/conversation";
+import { newerRound, sentAsMessage } from "@shared/conversation";
 import { formatDate, formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { LastTurn } from "@shared/lastTurn";
 import { CAPTAIN_COMMAND } from "@shared/through";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCardReadingPlace } from "../cards/cardReadingPlace";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { Badge, type BadgeTone } from "../design/core/Badge";
 import { GroupedPills } from "../design/core/GroupedPills";
+import {
+  type ConversationLoaded,
+  conversationReadingPlaceId,
+  keepConversationVisit,
+  keptConversationVisit,
+} from "./conversationVisit";
 import { MateMark } from "./LastTurn";
 import { conversationHeading } from "./lastTurnWords";
-import { CONVERSATION_ENTRY_ID, type ConversationEntry, type ConversationView } from "./stack";
+import type { ConversationEntry, ConversationView } from "./stack";
 import { useShellStore } from "./store";
 import "./conversation.css";
 
@@ -33,12 +40,7 @@ import "./conversation.css";
 /** How close to the oldest end a scroll comes before the next page is read. */
 const EDGE_PX = 80;
 
-type Loaded = {
-  rounds: ConversationRound[];
-  more: boolean;
-  /** The core could not be read: the two rounds the strip holds stand in. */
-  fallback: boolean;
-};
+type Loaded = ConversationLoaded;
 
 /** Newer rounds in `page` replace the same ids; rounds read earlier stay. */
 function merged(kept: readonly ConversationRound[], page: readonly ConversationRound[]) {
@@ -81,14 +83,7 @@ const CHIP: Record<RoundCard["presentation"], { tone: BadgeTone; label: () => st
   attention: { tone: "danger", label: () => m.uiCardKindAttention() },
 };
 
-/** Opens a card from the conversation: a live one comes forward, a closed one opens as a past card. */
-function useOpenCard(): (cardId: string) => void {
-  return useCallback((cardId: string) => {
-    const s = useShellStore.getState();
-    if (s.cards.some((card) => card.id === cardId) && s.focusCard(cardId)) return;
-    s.openPastCard(cardId, { cardId: CONVERSATION_ENTRY_ID });
-  }, []);
-}
+const openCard = (cardId: string) => useShellStore.getState().openCardFromConversation(cardId);
 
 /** A card the captain acted on, drawn small: its kind's chip, its title and its task's key. */
 function CardTile({
@@ -203,7 +198,13 @@ function RoundView({
       {answer ? (
         <Mate words={answer.text} who={answer.who} />
       ) : reply ? (
-        <Mate words={reply.words ?? reply.text} problem={reply.problem === true} />
+        <Mate
+          words={reply.words ?? reply.text}
+          problem={reply.problem === true}
+          working={working}
+        />
+      ) : working ? (
+        <Mate words={null} working />
       ) : null}
     </>
   );
@@ -221,7 +222,7 @@ function Everything({
   const now = Date.now();
   // Oldest at the top: the newest round sits at the foot, nearest the message box.
   const shown = [...rounds].reverse();
-  const newestMessage = rounds.find((round) => round.kind === "message")?.id;
+  const newestMessage = rounds.find(sentAsMessage)?.id;
   return (
     <ol className="conversation-rounds" data-conversation-rounds="">
       {shown.map((round, index) => {
@@ -329,35 +330,60 @@ export function ConversationCard({
   entry,
   width,
   onDrawn,
+  shown = true,
 }: {
   entry: ConversationEntry;
   width: number | string;
   onDrawn?: () => void;
+  /** Whether this copy is the one the captain reads, not one the stage prepares unseen. */
+  shown?: boolean;
 }) {
+  // Coming back from a card opened from it, the visit so far stands: the
+  // rounds read, and the place by `useCardReadingPlace`.
+  const [visit] = useState(keptConversationVisit);
   const turn = useShellStore((s) => s.lastTurn);
   const seq = useShellStore((s) => s.lastTurnSeq);
   const replySeq = useShellStore((s) => s.lastTurnReplySeq);
   const busy = useShellStore((s) => s.firstmateBusy);
   const cards = useShellStore((s) => s.cards);
   const [view, setView] = useState<ConversationView>(entry.view ?? "everything");
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(visit?.loaded ?? null);
   const [reading, setReading] = useState(false);
   const body = useRef<HTMLDivElement | null>(null);
-  const onOpen = useOpenCard();
+  const place = useCardReadingPlace(conversationReadingPlaceId, shown);
+  const bodyRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      body.current = element;
+      const release = place(element);
+      return () => {
+        body.current = null;
+        release?.();
+      };
+    },
+    [place],
+  );
   const loadedRef = useRef(loaded);
   loadedRef.current = loaded;
   /** Where the reader stood from the foot before an older page was read in above. */
   const fromFoot = useRef<number | null>(null);
   const drawn = useRef(false);
   /** The round to bring into view once the rounds are drawn: set on each open. */
-  const landing = useRef<ConversationEntry["at"] | "newest" | null>(entry.at ?? "newest");
+  const landing = useRef<ConversationEntry["at"] | "newest" | null>(
+    visit ? null : (entry.at ?? "newest"),
+  );
   const opened = useRef(entry);
   if (opened.current !== entry) {
     opened.current = entry;
-    landing.current = entry.at ?? "newest";
+    // Keeping the view or the card it opened is not a new open.
+    if (entry.view === undefined && entry.opened === undefined)
+      landing.current = entry.at ?? "newest";
   }
   /** Whether the reader stands at the foot, where a new round keeps them. */
-  const atFoot = useRef(true);
+  const atFoot = useRef(visit?.atFoot ?? true);
+
+  useEffect(() => {
+    if (shown && loaded) keepConversationVisit({ loaded, atFoot: atFoot.current });
+  }, [loaded, shown]);
 
   useEffect(() => {
     if (entry.view) setView(entry.view);
@@ -421,8 +447,9 @@ export function ConversationCard({
   // After an older page is read in above, the reader stays where they were.
   useLayoutEffect(() => {
     const element = body.current;
-    if (!element || fromFoot.current === null || view !== "everything") return;
-    element.scrollTop = element.scrollHeight - fromFoot.current;
+    if (!element || fromFoot.current === null) return;
+    // The Cards view reads older cards in below, where the reader's place holds itself.
+    if (view === "everything") element.scrollTop = element.scrollHeight - fromFoot.current;
     fromFoot.current = null;
   });
 
@@ -435,11 +462,13 @@ export function ConversationCard({
       drawn.current = true;
       onDrawn?.();
     }
+    // A page too short to scroll reads the next one now, in either view.
+    if (element.scrollHeight <= element.clientHeight && loaded.more) readEarlier();
     if (view !== "everything") return;
     const land = landing.current;
     landing.current = null;
     if (land === "older") {
-      const older = loaded.rounds.filter((round) => round.kind === "message")[1];
+      const older = loaded.rounds.filter(sentAsMessage)[1];
       const node = older
         ? element.querySelector<HTMLElement>(`[data-conversation-round="${CSS.escape(older.id)}"]`)
         : null;
@@ -448,8 +477,6 @@ export function ConversationCard({
     } else if (land === "newest" || (atFoot.current && fromFoot.current === null)) {
       element.scrollTop = element.scrollHeight;
     }
-    // A page too short to scroll reads the next one now.
-    if (element.scrollHeight <= element.clientHeight && loaded.more) readEarlier();
   }, [loaded, view, onDrawn, readEarlier]);
 
   // A stage that cannot draw an empty card waits on nothing: the card shows
@@ -469,6 +496,8 @@ export function ConversationCard({
     if (!element) return;
     const onScroll = () => {
       atFoot.current = element.scrollHeight - element.scrollTop - element.clientHeight < EDGE_PX;
+      const now = loadedRef.current;
+      if (shown && now) keepConversationVisit({ loaded: now, atFoot: atFoot.current });
       const atOldest =
         view === "everything"
           ? element.scrollTop < EDGE_PX
@@ -477,12 +506,13 @@ export function ConversationCard({
     };
     element.addEventListener("scroll", onScroll, { passive: true });
     return () => element.removeEventListener("scroll", onScroll);
-  }, [view, readEarlier]);
+  }, [view, readEarlier, shown]);
 
-  // Cards waiting on the captain: every live card, those put aside included,
-  // newest first. A card its author ended waits on nothing.
+  // Cards waiting on the captain: every live card the stack shows, those put
+  // aside included, newest first. A card its author ended, or one still
+  // waiting on its author's first close-out, waits on nothing of theirs.
   const waiting = cards
-    .filter((card) => card.ended === undefined)
+    .filter((card) => card.ended === undefined && onStage(card))
     .sort((a, b) => b.createdAt - a.createdAt);
 
   const rounds = loaded?.rounds ?? [];
@@ -509,7 +539,7 @@ export function ConversationCard({
       }
       width={width}
       minHeight={160}
-      bodyRef={body}
+      bodyRef={bodyRef}
     >
       <div className="conversation" data-conversation={view}>
         {loaded?.fallback && <p className="conversation-notice">{m.shellConversationPartial()}</p>}
@@ -520,10 +550,10 @@ export function ConversationCard({
           loaded && rounds.length === 0 ? (
             <p className="conversation-empty">{m.shellConversationEmpty()}</p>
           ) : (
-            <Everything rounds={rounds} busy={busy} onOpen={onOpen} />
+            <Everything rounds={rounds} busy={busy} onOpen={openCard} />
           )
         ) : (
-          <Cards rounds={rounds} waiting={waiting} onOpen={onOpen} />
+          <Cards rounds={rounds} waiting={waiting} onOpen={openCard} />
         )}
         {reading && view === "cards" && (
           <p className="conversation-notice">{m.shellConversationReadingEarlier()}</p>

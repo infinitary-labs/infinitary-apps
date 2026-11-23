@@ -32,7 +32,7 @@ Oldest at the top, the newest at the foot, the body scrolled to the foot on open
 
 - "Waiting on you", a mono `--text-xs` heading in `--fg-3`, over the live cards, those put aside included, newest first, each a tile with its time under it.
 - "Answered" over the cards the captain acted on, newest first, each once: its tile, then "You chose “…”" or "You replied “…”" and when, in `--fg-3` at `--text-xs`.
-- A tile opens its card: a live card comes forward; a closed one opens as a past card, whose minus returns to the conversation in this view.
+- A tile opens its card: a live card comes forward and its Hide returns to the conversation in this view; a closed one opens as a past card, whose minus does the same.
 
 ## Reading on
 

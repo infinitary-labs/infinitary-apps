@@ -288,6 +288,13 @@ export class StandbyStream {
     const before = said(this.read());
     mkdirSync(dirname(this.file()), { recursive: true, mode: 0o700 });
     writePrivate(this.file(), `${JSON.stringify(standbys, null, 2)}\n`);
+    // The list is the home's own save, so it is the next change at once:
+    // a watch on a Mac names a write a second or more later, after a copy
+    // that came back could already read as in sync without it.
+    if (this.active) {
+      this.dirty.add(STANDBYS_FILE);
+      this.schedule();
+    }
     if (said(standbys) === before) return;
     try {
       this.host.addressesChanged?.();

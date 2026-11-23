@@ -4,6 +4,7 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
+  type PathLike,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -46,6 +47,23 @@ import { TAKE_OVER_WORDS } from "./words";
  * database and files, and two computers' copies, the orders crossing as
  * JSON as they do over the connection.
  */
+
+/**
+ * While `silent` names a folder, every watch watches that empty folder
+ * instead, so it names nothing, as a watch on a Mac may for a second or
+ * more after a write.
+ */
+const watching = vi.hoisted(() => ({ silent: null as string | null }));
+
+vi.mock("node:fs", async (load) => {
+  const actual = await load<typeof import("node:fs")>();
+  const watch = ((path: PathLike, ...rest: unknown[]) =>
+    Reflect.apply(actual.watch, actual, [
+      watching.silent ?? path,
+      ...rest,
+    ])) as typeof actual.watch;
+  return { ...actual, watch };
+});
 
 type Home = {
   userData: string;
@@ -106,6 +124,8 @@ function stream(
 ) {
   const listeners = new Set<(deviceId: string) => void>();
   let views: StandbyView[] = [];
+  let gone = false;
+  const underWay = new Set<Promise<unknown>>();
   const stagingDir = join(scratchDir("infinitary-standby-staging-"), "standby-stream");
   const s = new StandbyStream({
     userData: at.userData,
@@ -115,21 +135,27 @@ function stream(
       { path: "firstmate.db", connection: () => at.db },
       { path: "knowledge/knowledge.db", connection: () => at.knowledge },
     ],
-    ask: async (deviceId, channel, args) => {
-      const there = computers.find((each) => each.id === deviceId);
-      if (!there?.reach) throw new DeviceOutOfReachError();
-      there.asks.push(channel);
-      if (there.failing) throw new Error("the computer could not answer");
-      // As over the connection: the order and its answer cross as JSON.
-      const answer = await there.keeper.answer(
-        channel as StandbyOrderChannel,
-        JSON.parse(JSON.stringify(args)),
-      );
-      if (channel === STANDBY_APPLY_ORDER && there.loseApplyAnswer) {
-        there.loseApplyAnswer = false;
-        throw new Error("the answer was lost on the way back");
-      }
-      return JSON.parse(JSON.stringify(answer));
+    ask: (deviceId, channel, args) => {
+      const asked = (async () => {
+        const there = computers.find((each) => each.id === deviceId);
+        if (gone || !there?.reach) throw new DeviceOutOfReachError();
+        there.asks.push(channel);
+        if (there.failing) throw new Error("the computer could not answer");
+        // As over the connection: the order and its answer cross as JSON.
+        const answer = await there.keeper.answer(
+          channel as StandbyOrderChannel,
+          JSON.parse(JSON.stringify(args)),
+        );
+        if (channel === STANDBY_APPLY_ORDER && there.loseApplyAnswer) {
+          there.loseApplyAnswer = false;
+          throw new Error("the answer was lost on the way back");
+        }
+        return JSON.parse(JSON.stringify(answer));
+      })();
+      underWay.add(asked);
+      const landed = () => underWay.delete(asked);
+      asked.then(landed, landed);
+      return asked;
     },
     inReach: (deviceId) => computers.find((each) => each.id === deviceId)?.reach ?? false,
     speaksCopy: (deviceId) => computers.find((each) => each.id === deviceId)?.reach ?? false,
@@ -154,6 +180,12 @@ function stream(
     reach: (there: Computer, reach: boolean) => {
       there.reach = reach;
       for (const listener of listeners) listener(there.id);
+    },
+    /** The home stops as one that dies does: nothing more reaches a copy once each order under way has landed. */
+    stop: async () => {
+      gone = true;
+      s.dispose();
+      await Promise.allSettled([...underWay]);
     },
   };
 }
@@ -260,6 +292,26 @@ describe("keeping a copy on other computers", () => {
     await until(() => readStandbyState(one.workDir).seq > before, "the save in the copy");
     await until(() => state("one")?.state === "in-sync", "in sync again");
     expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
+  });
+
+  it("the home's own write of the list reaches a copy back from away before it reads in sync, though the watch names nothing", async () => {
+    const at = home();
+    const one = computer("one");
+    watching.silent = scratchDir("infinitary-standby-unwatched-");
+    try {
+      const { s, state, reach } = stream(at, [one]);
+      s.start();
+      s.name("one", true);
+      await until(() => state("one")?.state === "in-sync", "in sync");
+      // Going away is a save of the home's own: when that copy is from, in the list every copy holds.
+      reach(one, false);
+      await until(() => state("one")?.state === "away", "away");
+      reach(one, true);
+      await until(() => state("one")?.state === "in-sync", "back in sync");
+      expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
+    } finally {
+      watching.silent = null;
+    }
   });
 
   it("a change too large to send inline ahead of a file's change still sends the file's change", async () => {
@@ -722,7 +774,7 @@ describe("taking over from a copy", () => {
     const at = home();
     const one = computer("one");
     const two = computer("two");
-    const { s, state, reach } = stream(at, [one, two], {
+    const { s, state, reach, stop } = stream(at, [one, two], {
       speaksTakeOver: () => true,
       homeFacts: async () => facts(at),
       nameOf: (deviceId) => (deviceId === "one" ? "Mac mini" : "Mac Studio"),
@@ -736,9 +788,6 @@ describe("taking over from a copy", () => {
     );
     await until(() => existsSync(join(one.workDir, STANDBY_DIR, "home.json")), "told the home");
     // One copy stops hearing the home; the home saves more, which only the other copy holds.
-    // The home keeps when the away copy is from in its list, itself a change
-    // the other copy takes: once that is held, nothing moves the other copy
-    // while it is read from.
     reach(one, false);
     await until(() => state("one")?.state === "away", "away");
     seedTask(at.tasks, {
@@ -751,6 +800,11 @@ describe("taking over from a copy", () => {
       () => readStandbyState(two.workDir).seq > readStandbyState(one.workDir).seq,
       "ahead",
     );
+    // Then the home dies, so nothing moves the other copy while it is read
+    // from. A live home would: a watch on a Mac names writes a second or
+    // more late, writes from before the watch began among them, and the
+    // home sends each as a change.
+    await stop();
 
     // The other copy answers as its link would, the orders and answers crossing as JSON.
     let twoHeard = 2;

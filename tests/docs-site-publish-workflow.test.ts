@@ -413,6 +413,7 @@ describe("the summary of the version serving before a publish", () => {
         { mode: 0o755 },
       );
       const summary = join(folder, "summary");
+      const output = join(folder, "output");
       const env = hostEnv();
       const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", record?.run ?? ""], {
         env: {
@@ -420,25 +421,115 @@ describe("the summary of the version serving before a publish", () => {
           PATH: `${bin}:${env.PATH}`,
           RUNNER_TEMP: folder,
           GITHUB_STEP_SUMMARY: summary,
+          GITHUB_OUTPUT: output,
         },
         encoding: "utf8",
       });
       expect(result.status, result.stderr).toBe(0);
-      return readFileSync(summary, "utf8");
+      return { summary: readFileSync(summary, "utf8"), output: readFileSync(output, "utf8") };
     } finally {
       rmSync(folder, { recursive: true, force: true });
     }
   }
 
   it("names each version and when it went live, never who published it", () => {
-    const summary = summarize(JSON.stringify(deployments, null, 2));
+    const { summary, output } = summarize(JSON.stringify(deployments, null, 2));
     expect(summary).toContain(
       "2026-11-18T02:10:00.000000Z 5e6f7a8b-0000-4000-8000-000000000002 (100%)",
     );
     expect(summary).not.toContain("owner@example.com");
+    expect(output).toBe("earlier=true\n");
   });
 
   it("says when there is no earlier version", () => {
-    expect(summarize(null)).toContain("No earlier version (first publish).");
+    const { summary, output } = summarize(null);
+    expect(summary).toContain("No earlier version (first publish).");
+    expect(output).toBe("earlier=false\n");
+  });
+});
+
+// The site's first publish (INF-4827): the live check asked the runner's
+// resolver about docs.getinfinitary.com 0.1 s after the upload, before its DNS
+// record existed, and every try then failed on the resolver's kept "no such
+// name"; its failure then pointed at restoring an earlier version that a first
+// publish does not have.
+describe("the live check after a publish", () => {
+  const live = job.steps.find((step) => step.name === "Check the live site");
+
+  it("reads whether an earlier version exists from the step that records it", () => {
+    const record = job.steps.find((step) => step.name === "Record the version serving now");
+    expect(live?.env?.EARLIER).toBe(`\${{ steps.${record?.id}.outputs.earlier }}`);
+  });
+
+  /**
+   * The step as a runner runs it, with stand-ins for `node`, answering for the
+   * wait and the live check with the given exit statuses and noting each
+   * script it runs, and for `sleep`.
+   */
+  function check(env: { EARLIER: string; WAIT: number; LIVE: number }) {
+    const folder = scratchDir("infinitary-docs-live-");
+    try {
+      const bin = join(folder, "bin");
+      mkdirSync(bin);
+      const ran = join(folder, "ran");
+      writeFileSync(
+        join(bin, "node"),
+        [
+          "#!/bin/sh",
+          `echo "$1" >> "${ran}"`,
+          'case "$1" in',
+          `  *wait-for-address.mjs) exit ${env.WAIT} ;;`,
+          `  *check-live.mjs) echo "FAIL  home page: answers 200"; exit ${env.LIVE} ;;`,
+          "esac",
+          "exit 9",
+          "",
+        ].join("\n"),
+        { mode: 0o755 },
+      );
+      writeFileSync(join(bin, "sleep"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      const base = hostEnv();
+      const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", live?.run ?? ""], {
+        env: {
+          ...base,
+          PATH: `${bin}:${base.PATH}`,
+          RUNNER_TEMP: folder,
+          GITHUB_STEP_SUMMARY: join(folder, "summary"),
+          EARLIER: env.EARLIER,
+        },
+        encoding: "utf8",
+      });
+      const scripts = readFileSync(ran, "utf8").trim().split("\n");
+      return { status: result.status, stdout: result.stdout, scripts };
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  }
+
+  it("waits for the address at the zone's name servers before the live check's first lookup", () => {
+    const passing = check({ EARLIER: "true", WAIT: 0, LIVE: 0 });
+    expect(passing.status).toBe(0);
+    expect(passing.scripts).toEqual([
+      "docs-site/scripts/wait-for-address.mjs",
+      "docs-site/scripts/check-live.mjs",
+    ]);
+
+    const missing = check({ EARLIER: "false", WAIT: 1, LIVE: 0 });
+    expect(missing.status).toBe(1);
+    expect(missing.scripts).toEqual(["docs-site/scripts/wait-for-address.mjs"]);
+    expect(missing.stdout).toContain(
+      "::error::The wait for docs.getinfinitary.com at its zone's name servers stopped",
+    );
+  });
+
+  it("points a failed first publish at withdrawing the site, and a later one at restoring", () => {
+    const first = check({ EARLIER: "false", WAIT: 0, LIVE: 1 });
+    expect(first.status).toBe(1);
+    expect(first.scripts.filter((script) => script.endsWith("check-live.mjs"))).toHaveLength(10);
+    expect(first.stdout).toContain('"Withdraw the site"');
+    expect(first.stdout).not.toContain("Restore an earlier version");
+
+    const later = check({ EARLIER: "true", WAIT: 0, LIVE: 1 });
+    expect(later.status).toBe(1);
+    expect(later.stdout).toContain('"Restore an earlier version"');
   });
 });

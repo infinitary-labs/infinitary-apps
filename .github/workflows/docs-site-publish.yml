@@ -206,6 +206,7 @@ jobs:
         run: pnpm --dir docs-site preflight
 
       - name: Record the version serving now
+        id: before
         if: steps.newest.outputs.publish == 'true'
         working-directory: docs-site
         env:
@@ -218,6 +219,7 @@ jobs:
             echo "## Before"
             echo '```'
             if pnpm exec wrangler deployments list --json > "$RUNNER_TEMP/deployments.json" 2>/dev/null; then
+              echo "earlier=true" >> "$GITHUB_OUTPUT"
               node -e '
                 const text = require("node:fs").readFileSync(process.argv[1], "utf8");
                 const deployments = JSON.parse(text.slice(text.indexOf("[")));
@@ -225,6 +227,7 @@ jobs:
                   console.log(d.created_on, d.versions.map((v) => `${v.version_id} (${v.percentage}%)`).join(", "));
               ' "$RUNNER_TEMP/deployments.json"
             else
+              echo "earlier=false" >> "$GITHUB_OUTPUT"
               echo "No earlier version (first publish)."
             fi
             echo '```'
@@ -249,7 +252,24 @@ jobs:
 
       - name: Check the live site
         if: steps.newest.outputs.publish == 'true'
+        env:
+          EARLIER: ${{ steps.before.outputs.earlier }}
         run: |
+          incomplete() {
+            if [[ "$EARLIER" == "true" ]]; then
+              echo "::error::$1 The publish is not complete; see docs/docs-site.md, \"Restore an earlier version\"."
+            else
+              echo "::error::$1 The publish is not complete, and this run recorded no earlier version to restore: merge a fix, which publishes again, or take the site offline (docs/docs-site.md, \"Withdraw the site\")."
+            fi
+            exit 1
+          }
+          # A resolver that hears "no such name" keeps that answer for the
+          # zone's negative time, 30 minutes, and a publish that adds the
+          # address gets its DNS record seconds after the upload ends. So
+          # nothing asks this machine's resolver about the address until the
+          # zone's own name servers answer for it; an address that already
+          # answers passes at once.
+          node docs-site/scripts/wait-for-address.mjs --within 600 || incomplete "The wait for docs.getinfinitary.com at its zone's name servers stopped, for the reason above."
           # A new custom domain can take a few minutes to get its certificate.
           # The publish counts only when every check passes; otherwise this fails.
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
@@ -262,5 +282,4 @@ jobs:
             sleep 30
           done
           cat "$RUNNER_TEMP/live.log"
-          echo "::error::The live site did not pass its checks. The publish is not complete; see docs/docs-site.md, \"Restore an earlier version\"."
-          exit 1
+          incomplete "The live site did not pass its checks."

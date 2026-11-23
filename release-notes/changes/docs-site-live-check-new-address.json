@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-live-check-new-address",
+      "reason": "Internal: the docs site's publish run waits for a new address at its zone's own name servers before its live check's first lookup, and names the right next step when a first publish fails; the app and the docs site's pages are unchanged."
+    }
+  ]
+}

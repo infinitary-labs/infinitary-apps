@@ -156,7 +156,7 @@ export class DevicePairing implements PairedDevices {
   private readonly interfaces: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
   /** The port a link names, which the connection listens on. */
   readonly port: number;
-  private readonly ownUid: number | undefined;
+  readonly ownUid: number | undefined;
   private readonly ownSid: () => string | null | undefined;
   private readonly joinsFromAnotherMac: boolean;
   private readonly leaveWithWork: (device: DeviceView) => boolean;
@@ -1011,6 +1011,11 @@ export class DevicePairing implements PairedDevices {
       this.makingOwnKey = null;
     });
     return this.makingOwnKey;
+  }
+
+  /** Whether Firstmate's own key was let in at `address`. */
+  ownKeyPlacedIn(address: string): boolean {
+    return this.ownKeyPlaced.has(address);
   }
 
   /** Remembers that Firstmate's own key is let in at `address`, so later SSH offers it. */

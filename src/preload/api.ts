@@ -319,6 +319,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       onThisMac: (listener) => subscribe("inf:devices:this-mac", listener),
       join: (link) => invoke("inf:devices:join", link),
       joinAt: (address, options) => invoke("inf:devices:join-at", address, options),
+      homeAt: (address, options) => invoke("inf:devices:home-at", address, options),
+      cancelHomeAt: (address) => invoke("inf:devices:home-at-cancel", address),
       joinHeld: (choice) => invoke("inf:devices:join-held", choice),
       leave: () => invoke("inf:devices:leave"),
       takeOver: () => invoke("inf:devices:take-over"),

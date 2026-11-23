@@ -707,6 +707,38 @@
       <string>%1$ld tasks stayed on %2$@, out of reach, so it stays on your list.</string>
     </dict>
   </dict>
+  <key>devicesHomeLeftNothing</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld more step not started · nothing changed on %1$@</string>
+      <key>other</key>
+      <string>%2$ld more steps not started · nothing changed on %1$@</string>
+    </dict>
+  </dict>
+  <key>devicesHomeLeftRunning</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld more step not started · your first mate keeps running on %1$@</string>
+      <key>other</key>
+      <string>%2$ld more steps not started · your first mate keeps running on %1$@</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

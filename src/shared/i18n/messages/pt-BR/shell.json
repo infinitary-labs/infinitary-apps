@@ -21,7 +21,7 @@
   "shellDiagnosticsTurnOff": "Desativar",
   "shellGateBack": "Onde eu moro",
   "shellGateChoiceAnother": "Outro computador",
-  "shellGateChoiceAnotherSub": "Deixe-me rodar em outro computador que você configurar e me controle daqui.",
+  "shellGateChoiceAnotherSub": "Informe o endereço dele e eu me configuro lá por SSH. Você me controla daqui.",
   "shellGateChoiceHere": "Este computador",
   "shellGateChoiceHereSub": "Entre em uma assinatura aqui. Eu moro e trabalho neste computador.",
   "shellGateChoiceRunning": "Um que já está rodando",

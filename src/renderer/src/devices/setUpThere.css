@@ -1,0 +1,43 @@
+/* Set me up on another computer, from the welcome screen (design skill
+   components/devices/SetUpThere): the seven steps in a list, each with its
+   dot, its name and what it found. */
+
+.fm-home-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.fm-home-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  color: var(--fg-1);
+}
+
+.fm-home-step[data-state="next"] {
+  color: var(--fg-3);
+}
+
+.fm-home-step-detail {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-home-way {
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.fm-home-left {
+  margin-top: var(--space-3);
+}
+
+.fm-home-address {
+  font-family: var(--font-mono);
+}

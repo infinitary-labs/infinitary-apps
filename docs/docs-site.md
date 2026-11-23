@@ -24,13 +24,17 @@ Two pages are written from the app's own data, so neither tells a person somethi
   A command that acts in a Settings section some builds do not offer (`section`) is left out.
   Each shipped language has its own Keyboard page, with each command in the words the app's catalog gives it in that language and the page's own sentences from the language's words file ("Languages").
   The pages are committed, and `pnpm check` runs `node scripts/docs-site-keyboard.ts --check`, so a change to a command's words or keys regenerates every language's page in the same pull request.
-- **What's new** (`whats-new.md`) is written by `node scripts/docs-site-whats-new.ts`, which the site's `build` and `dev` run first, from the release-notes ledger (`docs/release-notes.md`).
-  It lists the newest stable releases, each with what it added over the stable before it, grouped by area in the app's order, without backfilled history or maintenance, as the startup note measures them.
-  The page combines local stable tags with the archived stable manifests, newest first, without repeating a version.
-  It is not committed (`docs-site/.gitignore`); unpinned local releases still require full history and tags, and a shallow checkout refuses to build.
+- **What's new** (`whats-new.md`) and each stable's own page (`whats-new/<version with dashes>.md`, such as `/whats-new/0-8-6/`) are written by `node scripts/docs-site-whats-new.ts`, which the site's `build` and `dev` run first, from the release-notes ledger (`docs/release-notes.md`).
+  A release's changes are what it added over the stable before it, grouped by area in the app's order, without backfilled history or maintenance, as the startup note measures them.
+  Each change shows its title, with its detail folded under it in a disclosure, as the app's What's new card folds every change under "All N changes".
+  What's new shows the five newest stables, a release heading each (`## 0.8.7`, whose anchor the release announcement links to), and ends with "Every release", a line linking each stable that changed something to its own page, so a release stays on the site once newer ones push it off What's new.
+  A stable that changed nothing a person sees gets no page of its own.
+  The pages are not in the sidebar; What's new links to them.
+  They combine local stable tags with the archived stable manifests, newest first, without repeating a version.
+  They are not committed (`docs-site/.gitignore`), and the script replaces the whole `whats-new/` folder on each run; unpinned local releases still require full history and tags, and a shallow checkout refuses to build.
   The site therefore shows a new stable's changes only once the site is built again after its tag.
 
-`tests/docs-site-pages.test.ts` holds both: each Keyboard tab shows, first, the key the app's own hint shows for each command, and What's new lists only what a stable added over the one before it, filed under its area.
+`tests/docs-site-pages.test.ts` holds both: each Keyboard tab shows, first, the key the app's own hint shows for each command, and What's new lists only what a stable added over the one before it, filed under its area, each title shown with its detail folded, and every stable with changes on a page of its own listed under "Every release".
 
 ### Pictures
 
@@ -73,7 +77,7 @@ node scripts/docs-site-languages.ts --stamp docs-site/src/content/docs/ar/instal
 ```
 
 Whoever changes an English page writes every shipped language's version in the same pull request, and stamps each once it is re-read.
-Keyboard is generated in each shipped language (`node scripts/docs-site-keyboard.ts`), and What's new stays English in every language under Starlight's notice that the page is not translated yet, since release notes are written in English only; the notes are marked English and the notice, through `src/components/FallbackContentNotice.astro`, the reader's language and direction.
+Keyboard is generated in each shipped language (`node scripts/docs-site-keyboard.ts`), and What's new and each stable's own page stay English in every language under Starlight's notice that the page is not translated yet, since release notes are written in English only; the notes are marked English and the notice, through `src/components/FallbackContentNotice.astro`, the reader's language and direction.
 
 ### The languages check
 

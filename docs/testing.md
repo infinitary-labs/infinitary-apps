@@ -276,8 +276,10 @@ The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`
 CI starts one worker per core, at most ten and always one, and no more than the job's memory holds at 1.5 GiB a worker beside 0.5 GiB for the runner (`ciJourneyWorkers` in `scripts/heavy-run-place.ts`, INF-5216).
 Cores are the job's size when the Mac mini's placement service names one and the whole machine otherwise, and memory is the machine's or the smaller limit its control group sets (`scripts/job-cores.ts`, "Each Mac job's kind and size").
 That share is the estimate a local run declares ("A local heavy run's place"), not a bound on what a journey can use, so it lowers a small machine's memory pressure without ruling it out.
-The full Mac check (`verify.yml`) runs its journeys in its three jobs (INF-2779, INF-2987): the desktop journeys job runs the one-worker desktop lane, and the styles, renderer and application lanes are split between the parallel journeys job and the native tests, replay and package job.
-The split is by measured time ("Journey groups by measured time", below): the native job takes fewer journeys for the work it does besides, so the three jobs end together.
+The full Mac check (`verify.yml`) runs its journeys in four jobs (INF-2779, INF-2987, INF-6249): two desktop journeys jobs each run a group of the one-worker desktop lane, alone on a Mac of its own, and the styles, renderer and application lanes are split between the parallel journeys job and the native tests, replay and package job.
+The split is by measured time ("Journey groups by measured time", below): the native job takes fewer journeys for the work it does besides, so those three jobs end together.
+The desktop lane's two groups (`desktop-1` and `desktop-2`, the jobs named `Desktop journeys (Mac; group N/2)`) are split the same way by the Mac times, with no job of their own work to count, and each runs `scripts/journey-groups.ts --lane desktop`; the lane's files still run one at a time inside each, since they need a quiet machine.
+A round therefore needs four Macs at once, and the desktop lane's time is half what one job took.
 The journeys part of an alpha, with no native job, runs the whole parallel lanes in the parallel journeys job.
 Each passes `--no-deps`, so neither parallel group pulls in desktop, its lanes' teardown.
 Each gives Playwright half the job's cores, because a job on the real Mac shares one processor with the jobs beside it: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
@@ -1147,7 +1149,7 @@ Neither is a task branch's duty, and no listed-versus-run record is kept for one
 INF-2539 removed the pull request selection from `journeys.yml`, its Linux starter job included; a request names its journeys ("Journeys on request").
 A request runs `journeys.yml`'s Linux `choose-journeys` job, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads the journey results from the newest successful `verify.yml` run that kept every one of them unexpired, and sums each journey file's measured Mac durations.
-Since the Mac journeys run in three jobs (INF-2987), those are `e2e-results-parallel`, `e2e-results-desktop` and `e2e-results-mac`, and a run needs all three; a run from before kept the first two (INF-2779), and an older one a single `e2e-results`.
+Since the desktop journeys run in two groups (INF-6249), those are `e2e-results-parallel`, `e2e-results-desktop-1`, `e2e-results-desktop-2` and `e2e-results-mac`, and a run needs all four; a run from before kept `e2e-results-desktop` in place of the two groups, and one from before that (INF-2987) the first two (INF-2779), and an older one a single `e2e-results`.
 Each lands in a folder of its own, and `scripts/journey-budget.ts` reads every `e2e-results.json` under the folder it is given.
 Only a run of every journey keeps those artifacts, so a requested check of the tagged tests alone never becomes the journeys' times.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
@@ -1558,7 +1560,7 @@ These holds are presentation pacing, not readiness checks or performance budgets
 Never take a Playwright screenshot inside the action, a locator's or the page's own; take a whole-window picture with `windowShot` and crop the saved file after recording if a reference is needed.
 Look at the poster and watch the whole recording before attaching them; describe only the states the files actually show.
 
-A journey that records a demo saves it under `testInfo.outputPath("demo")`, and `verify.yml`'s desktop journeys job, the one whose lane records demos, keeps every such folder as the `e2e-demos` artifact for 14 days whether the suite passed or failed ("A red verify's evidence" below).
+A journey that records a demo saves it under `testInfo.outputPath("demo")`, and `verify.yml`'s two desktop journeys jobs, the ones whose lane records demos, each keep every such folder as their `e2e-demos-<lane>` artifact for 14 days whether the suite passed or failed ("A red verify's evidence" below).
 Only a journey that calls `startDemo` records; the suite never records itself.
 
 ## A hero picture
@@ -1614,7 +1616,7 @@ Each Mac job that ran journeys keeps its own, named for its lane, `parallel`, `d
 - **`e2e-failures-<lane>`** is, on a failed run, everything under `test-results/` (the run's own directory under `test-results/runs/`, "Per-run e2e evidence" above): each failed journey's `error-context.md` (the error, its call log and the window's accessibility snapshot), `trace.zip` (the runner's steps, errors and sources) and `test-failed-*.png` (the app window), beside whatever the specs wrote.
   Playwright takes the picture and the snapshot as the app closes - inside the test, or in `afterAll` as it retires the worker after the failure - so a journey that shares one app across its file gets them too.
   The picture costs about 100 ms per app close and is dropped when the test passed.
-- **`e2e-demos`** is every demo a journey recorded (`testInfo.outputPath("demo")`, "Recording a demo" above), kept by the desktop journeys job whenever the suite ran, passed or failed, so a requested demo can be watched from the run's page.
+- **`e2e-demos-desktop-1`** and **`e2e-demos-desktop-2`** are every demo a journey recorded (`testInfo.outputPath("demo")`, "Recording a demo" above), kept by each desktop journeys job whenever the suite ran, passed or failed, so a requested demo can be watched from the run's page.
 - `e2e-failures-<lane>` is kept 7 days, the others 14 days.
   None can fail the job, and none runs when a stage the suite needs kept it from starting.
 - **Every stage reports**: each stage waits only on the stages it needs, never on every stage before it (INF-663).
@@ -1706,7 +1708,7 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 
 | Kind | Jobs | Its queue places it |
 | --- | --- | --- |
-| `split` | `verify.yml`'s three Mac lanes, the full Mac check: native tests, replay and package; parallel journeys; desktop journeys | in a virtual Mac only |
+| `split` | `verify.yml`'s three Mac lanes, the full Mac check: native tests, replay and package; parallel journeys; two desktop journeys groups | in a virtual Mac only |
 | `check` | none of its own: the full Mac check's lanes fall back to it after `split` and `journeys` | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
 | `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |

@@ -203,7 +203,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         inputs: { all_journeys },
         matrix: { lane },
       });
-    for (const lane of ["parallel", "desktop", "mac"]) {
+    for (const lane of ["parallel", "desktop-1", "desktop-2", "mac"]) {
       expect(keptAs(true, lane)).toBe(`e2e-results-${lane}`);
       expect(keptAs(false, lane)).not.toBe(keptAs(true, lane));
     }

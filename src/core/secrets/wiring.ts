@@ -60,6 +60,7 @@ export function startSecrets(options: {
             }),
           ...(host.unlock ? { unlock: host.unlock } : {}),
           ...(host.recovery ? { recovery: host.recovery } : {}),
+          ...(host.clipboard ? { clipboard: host.clipboard } : {}),
         }
       : {}),
     raise: (card) => hostCards.raiseHostCard(card),

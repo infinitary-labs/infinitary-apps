@@ -34,6 +34,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | card | 卡片 | Counter 張. |
 | certificate | 憑證 | Taiwan's word; 證書 reads as mainland in this sense. |
 | check (of a finding) | 查證 | Kept apart from 檢查, which is a pull request's checks. |
+| clipboard | 剪貼簿 | Where Copy value puts a secret's value. |
 | clone | 複製 | Microsoft Taiwan's word for git clone (複製存放庫); 克隆 reads as mainland. |
 | command (run in Terminal) | 指令 | The one-time command run in「終端機」, macOS's own Taiwan name for Terminal. |
 | command search | 指令搜尋 | Taiwan writes 指令 and 搜尋. |

@@ -30,6 +30,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | card | cartão | |
 | Chat (card button) | Chat | The button is shown in English in every language; pages name it as shown. |
 | claim (a recorded relationship) | afirmação | "Afirmação registrada". |
+| clipboard | área de transferência | Where Copy value puts a secret's value. |
 | clone | clonar | "clonado", never "copiado". |
 | command search | busca de comandos | |
 | commit | commit | GitHub's Portuguese docs keep "commit"; masculine. |

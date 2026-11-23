@@ -627,6 +627,11 @@ export type HostCapabilities = {
     unlock?: () => Promise<boolean>;
     recovery?: HostSecretsRecovery;
     /**
+     * The private clipboard writer Copy value uses (docs/secrets.md, "Copying
+     * a value"); absent where the host has none, and then no row offers it.
+     */
+    clipboard?: import("./secrets/clipboard").SecretClipboard;
+    /**
      * This computer's own lock for the secrets kept with a copy of the first
      * mate (docs/devices.md, "Secrets on a computer that keeps a copy"): read
      * when the first mate starts here from that copy; never written here.

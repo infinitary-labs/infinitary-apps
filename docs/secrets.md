@@ -134,7 +134,7 @@ Each value is a record under the selected Secrets home's `values/` directory, se
 The existing home is `<userData>/secrets`; a recovered home is `<userData>/secrets/recovered/<generation>`, selected only by its native custody item.
 Each record's metadata carries a check under a separate derived key, so a relabelled or re-versioned file is left out rather than shown or repaired.
 Adding or replacing a value writes a private temporary file, syncs it, renames it over the old record and syncs the folder, and raises the version.
-There is no reveal: the owner opens a value only to deliver it to an approved recipient.
+There is no reveal: the owner opens a value only to deliver it to an approved recipient, or to the home computer's clipboard on the person's Copy value ("Copying a value").
 The protected owner serializes replacements and compares both the displayed version and an opaque revision derived from the exact sealed record before writing.
 The Settings form and a Forget offer carry that revision, so removing and re-adding the same reference cannot make an old form or offer apply to its replacement.
 The revision is derived when metadata is read, without changing existing records' authenticated encoding.
@@ -176,9 +176,9 @@ While confirmation is in progress, Review request does not open another card.
 Searchable rows lead with each secret's name and its place (the optional environment) in quiet text, and say which task last asked for it and when, or that it is waiting, in use or not used yet.
 The view's `lastTask` carries that task's title: the controller reads it from the task its own coordinator saw, or from the task a crewmate's intent names in the history (`taskIntent`), so it survives a restart; a request no task made, or by a task the home no longer knows, names only when.
 A reference appears only when another secret has the same name and place.
-Opening a row offers Replace, Forget and that secret's saved decisions; a temporary read shows on the row as Reading until a time, beside End access.
+Opening a row offers Copy value, Replace, Forget and that secret's saved decisions; a temporary read shows on the row as Reading until a time, beside End access.
 A hidden entry's row (the view's `kept`, "App sign-ins") instead says Infinitary keeps it for a sign-in made in Integrations and offers Manage in Integrations; the controller refuses Replace and Forget on it.
-A server's key (the view's `kept` with `forProgram`, "Programs that keep running") says Infinitary keeps it for a server added in Integrations and gives it to the server each time it starts, without asking, and offers Manage in Integrations with no saved decisions; the controller refuses Replace and Forget on it too.
+A server's key (the view's `kept` with `forProgram`, "Programs that keep running") says Infinitary keeps it for a server added in Integrations and gives it to the server each time it starts, without asking, and offers Copy value and Manage in Integrations with no saved decisions; the controller refuses Replace and Forget on it too.
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 Both places that take a value, secure entry and an ask's fields, draw it in `SecretField` (`src/renderer/src/design/core/SecretField.tsx`): a password input that holds the value itself, so a pasted key or certificate keeps its line breaks, which a plain password input drops, while the value stays as hidden from accessibility as any password field.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
@@ -208,6 +208,26 @@ It raises app-authored cards for exact uses, and asks in place for forgetting, r
 A card's private offers are spent once through host chrome; a saved card from a previous process is inert, and an agent-written card cannot mint one.
 An Allow click still requires fresh system authentication; a failed or unavailable confirmation leaves the request waiting and reopens its card.
 Remove only proposes a change, and native confirmation covers the exact proposed revision.
+
+### Copying a value
+
+Copy value on a secret's row puts its value on the home computer's clipboard, and only that computer's: it is the one way a person reads a saved value back.
+It covers the person's own secrets and a server's key; a sign-in's hidden entry ("App sign-ins") offers none, and the owner refuses one.
+Each press asks the computer's own confirmation (Touch ID or the password on a Mac, Windows Hello or its password, polkit on Linux), naming the secret; a copy never rides an earlier confirmation, a saved decision or a phone approval.
+Where this computer cannot confirm, the button is off with a line saying why (the view's `copy` `no-confirmation`).
+The owner (`ProtectedSecrets.copyValue`) checks the row's version and revision before and after the confirmation, journals the copy as requested, approved and consumed before it opens the value, and refuses when the journal cannot be written.
+It hands the opened value to the host's writer and zero-fills it after; no answer, view or saved file holds it.
+A writer that throws ends the use `unknown`, since the clipboard may have changed, and one that writes nothing ends it `unavailable`.
+The row then says until when it stays (the view's `copied`), with Clear now; the controller clears it after `SECRET_COPY_SECONDS` (90), on Clear now and when the app quits, and only while the clipboard still holds this copy, so something the person copied since stays.
+A second copy replaces the first and starts the time again.
+The row's status says Copied by you and when, and the history lists the copy as Copied by you, with no program or reason.
+
+The host's writer (`HostCapabilities.secrets.clipboard`, `src/core/secrets/clipboard.ts`) is composed in `src/main/host/electronHost.ts`, for a run on the person's own data folder only.
+On macOS (`darwinSecretClipboard.ts`) it writes through NSPasteboard for this Mac alone (`NSPasteboardContentsCurrentHostOnly`), so Universal Clipboard never carries it, with the nspasteboard.org Concealed and Transient markers that clipboard history tools skip; the clear compares the pasteboard's change count.
+On Windows (`windowsSecretClipboard.ts`) it writes through user32 with the formats that keep the text out of clipboard history and off the cloud clipboard and that clipboard monitors skip; the clear compares the clipboard's sequence number.
+On Linux (`linuxSecretClipboard.ts`) it writes through Electron's clipboard, which carries no such marker, so the row says a clipboard history tool may keep it; the clear compares a keyed digest of the clipboard's text.
+A value that is not UTF-8 text writes nothing on any of them.
+What the person pastes it into can keep it; the clipboard's time limits only how long it waits there.
 
 ### Asking in place
 
@@ -530,6 +550,7 @@ Before it allows, it reads the shared body's prepared environment and computer-o
 ## History
 
 History is the journal read as metadata: what was asked, which secrets, the bound program, the requester's reason shown as theirs, how it was approved and how it ended.
+A copy (`copied`) is the person's own and carries no program or reason.
 It never holds a value, an environment or a full request body.
 It stays until the captain deletes it, and the owner reports its storage use and exports it; deleting it refuses while a use is running.
 It is local evidence, not an immutable audit log.
@@ -542,6 +563,7 @@ These remain unproven in the app:
 - An Allow from a real iPhone or iPad, whose Secure Enclave key and Face ID, Touch ID or passcode only a device has.
 - An Allow from a second Mac's real Touch ID and Keychain, and a program run on a real computer that runs work over its work route.
 - An Allow on a real Windows PC through Windows Hello or the Windows password, which only a person at the PC can answer.
+- Copy value's writers on a real Windows PC and a real Linux desktop: their checks cover the clear's rule with a stand-in clipboard, not user32's formats or a desktop's clipboard.
 - Each consumer migration in the register below.
 
 No real keychain or signing access occurs in a check without the captain's separate consent.
@@ -561,7 +583,8 @@ Settings → Secrets exposes searchable metadata with each secret's last use, sa
 Without that capability, Settings offers no Secrets tab and command search no Open Secrets: nothing a person can open and not use.
 The window asks `inf:secrets:shown` once, which answers from the host seam without opening storage.
 Asked to show a page of Manage, the first mate's `secrets-page` offers a card whose Open Secrets opens Settings → Secrets on that page (`item` `decisions`, `phone`, `history` or `copy`); every act there stays the captain's, and no value reaches the first mate.
-No reveal, partial-value display or clipboard export is planned, and an agent never draws a field for a secret: it asks, and Infinitary draws the field ("Asking to keep a secret").
+Asked to read a saved value back, it names the secret instead: the card opens that secret's row (`item` `secret:` and its name or reference), where Copy value stays the captain's press.
+Copy value is the only way a value comes back out ("Copying a value"): there is no reveal or partial-value display, and an agent never draws a field for a secret: it asks, and Infinitary draws the field ("Asking to keep a secret").
 
 ## Consumer register
 

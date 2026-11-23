@@ -3382,6 +3382,20 @@
 "settingsSecretsBackupNote" = "Enregistrez une copie chiffrée et une clé de récupération séparée. Conservez-les à l’écart l’une de l’autre : quiconque possède les deux peut lire les valeurs enregistrées. Cette clé ne peut pas être réinitialisée.";
 "settingsSecretsBroughtFrom" = "Importé depuis %1$@";
 "settingsSecretsCancel" = "Annuler";
+"settingsSecretsClearNow" = "Effacer maintenant";
+"settingsSecretsCopiedByYou" = "Copiée par vous";
+"settingsSecretsCopiedOn" = "Copiée par vous le %1$@";
+"settingsSecretsCopiedUntil" = "Copiée. Elle quitte le presse-papiers à %1$@.";
+"settingsSecretsCopiedUntilVisible" = "Copiée. Elle quitte le presse-papiers à %1$@. Un outil d’historique du presse-papiers peut tout de même la garder.";
+"settingsSecretsCopyCannotConfirm" = "Cet ordinateur ne peut pas confirmer que c’est vous pour le moment, il ne peut donc pas copier de valeur.";
+"settingsSecretsCopyChanged" = "Ce secret a changé après l’ouverture de sa ligne. Rien n’a été copié.";
+"settingsSecretsCopyCleared" = "La valeur copiée n’est plus dans le presse-papiers.";
+"settingsSecretsCopyReason" = "Copier %1$@ dans le presse-papiers de cet ordinateur.";
+"settingsSecretsCopyRefused" = "Aucune confirmation n’a été acceptée. Rien n’a été copié.";
+"settingsSecretsCopyUnavailable" = "Secrets n’a pas pu copier cette valeur. Rien n’a été copié.";
+"settingsSecretsCopyUnknown" = "Secrets n’a pas pu savoir si la valeur a atteint le presse-papiers, il a donc effacé ce qu’il avait écrit.";
+"settingsSecretsCopyValue" = "Copier la valeur";
+"settingsSecretsCustodyMac" = "Conservés sur cet ordinateur. Votre équipage les utilise sans jamais les voir, sauf si vous en copiez un.";
 "settingsSecretsDeleteHistory" = "Supprimer l’historique";
 "settingsSecretsDeviceCode" = "Code %1$@";
 "settingsSecretsExportFailed" = "L’historique n’a pas pu être exporté.";
@@ -3397,6 +3411,7 @@
 "settingsSecretsNamePlaceholder" = "Par exemple, Déploiement du site web";
 "settingsSecretsNoExport" = "Aucune exportation enregistrée.";
 "settingsSecretsNoHistory" = "Aucun historique enregistré.";
+"settingsSecretsNoReveal" = "La valeur reste masquée après l’enregistrement. Seule une utilisation approuvée la reçoit, sauf si vous la copiez vous-même.";
 "settingsSecretsNotRequested" = "Pas encore demandé";
 "settingsSecretsPermissionsRecovery" = "Autorisations à récupérer";
 "settingsSecretsReading" = "Lecture des Secrets…";
@@ -3406,6 +3421,8 @@
 "settingsSecretsRecoveryNeeded" = "Récupération nécessaire";
 "settingsSecretsRefresh" = "Actualiser";
 "settingsSecretsRestoreNote" = "La restauration remplace les valeurs stockées et efface les décisions enregistrées, les approbations par téléphone et les accès temporaires. L’historique reste, et il n’autorise jamais une utilisation.";
+"settingsSecretsRowOfferSays" = "Copier la valeur, sur sa ligne, met la valeur dans le presse-papiers de cet ordinateur dès que votre ordinateur confirme que c’est vous, et l’efface %1$@ secondes plus tard. Ce que vous y faites reste à vous.";
+"settingsSecretsRowOfferTitle" = "Ouvrir %1$@ dans Secrets";
 "settingsSecretsSaving" = "Enregistrement…";
 "settingsSecretsStorageLocked" = "Stockage verrouillé";
 "settingsSecretsStorageUnavailable" = "Stockage indisponible";

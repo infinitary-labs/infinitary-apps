@@ -3382,6 +3382,20 @@
 "settingsSecretsBackupNote" = "Save an encrypted copy and a separate recovery key. Keep them apart: anyone with both can read the saved values. There is no key reset.";
 "settingsSecretsBroughtFrom" = "Brought from %1$@";
 "settingsSecretsCancel" = "Cancel";
+"settingsSecretsClearNow" = "Clear now";
+"settingsSecretsCopiedByYou" = "Copied by you";
+"settingsSecretsCopiedOn" = "Copied by you on %1$@";
+"settingsSecretsCopiedUntil" = "Copied. It leaves the clipboard at %1$@.";
+"settingsSecretsCopiedUntilVisible" = "Copied. It leaves the clipboard at %1$@. A clipboard history tool may still keep it.";
+"settingsSecretsCopyCannotConfirm" = "This computer cannot confirm it is you right now, so it cannot copy a value.";
+"settingsSecretsCopyChanged" = "This secret changed after its row opened. Nothing was copied.";
+"settingsSecretsCopyCleared" = "The copied value is off the clipboard.";
+"settingsSecretsCopyReason" = "Copy %1$@ to this computer's clipboard.";
+"settingsSecretsCopyRefused" = "No confirmation was accepted. Nothing was copied.";
+"settingsSecretsCopyUnavailable" = "Secrets could not copy this value. Nothing was copied.";
+"settingsSecretsCopyUnknown" = "Secrets could not tell whether the value reached the clipboard, so it cleared what it wrote.";
+"settingsSecretsCopyValue" = "Copy value";
+"settingsSecretsCustodyMac" = "Kept on this computer. Your crew uses them but never sees them, unless you copy one.";
 "settingsSecretsDeleteHistory" = "Delete history";
 "settingsSecretsDeviceCode" = "Code %1$@";
 "settingsSecretsExportFailed" = "History could not be exported.";
@@ -3397,6 +3411,7 @@
 "settingsSecretsNamePlaceholder" = "For example, Website deployment";
 "settingsSecretsNoExport" = "No export saved.";
 "settingsSecretsNoHistory" = "No history recorded.";
+"settingsSecretsNoReveal" = "The value stays hidden after saving. Only an approved use receives it, unless you copy it yourself.";
 "settingsSecretsNotRequested" = "Not requested yet";
 "settingsSecretsPermissionsRecovery" = "Permissions need recovery";
 "settingsSecretsReading" = "Reading Secrets…";
@@ -3406,6 +3421,8 @@
 "settingsSecretsRecoveryNeeded" = "Recovery needed";
 "settingsSecretsRefresh" = "Refresh";
 "settingsSecretsRestoreNote" = "Restoring replaces stored values and clears saved decisions, phone approvals and temporary access. History stays, and it never allows a use.";
+"settingsSecretsRowOfferSays" = "Copy value on its row puts the value on this computer's clipboard once your computer confirms it is you, and clears it %1$@ seconds later. What you do there stays yours.";
+"settingsSecretsRowOfferTitle" = "Open %1$@ in Secrets";
 "settingsSecretsSaving" = "Saving…";
 "settingsSecretsStorageLocked" = "Storage locked";
 "settingsSecretsStorageUnavailable" = "Storage unavailable";

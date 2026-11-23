@@ -3382,6 +3382,20 @@
 "settingsSecretsBackupNote" = "Salve uma cópia criptografada e uma chave de recuperação separada. Guarde as duas em lugares diferentes: quem tiver ambas pode ler os valores salvos. Não há como redefinir a chave.";
 "settingsSecretsBroughtFrom" = "Trazido de %1$@";
 "settingsSecretsCancel" = "Cancelar";
+"settingsSecretsClearNow" = "Limpar agora";
+"settingsSecretsCopiedByYou" = "Copiado por você";
+"settingsSecretsCopiedOn" = "Copiado por você em %1$@";
+"settingsSecretsCopiedUntil" = "Copiado. Ele sai da área de transferência às %1$@.";
+"settingsSecretsCopiedUntilVisible" = "Copiado. Ele sai da área de transferência às %1$@. Uma ferramenta de histórico da área de transferência ainda pode guardá-lo.";
+"settingsSecretsCopyCannotConfirm" = "Este computador não consegue confirmar que é você agora, então não pode copiar um valor.";
+"settingsSecretsCopyChanged" = "Este segredo mudou depois que a linha foi aberta. Nada foi copiado.";
+"settingsSecretsCopyCleared" = "O valor copiado saiu da área de transferência.";
+"settingsSecretsCopyReason" = "Copiar %1$@ para a área de transferência deste computador.";
+"settingsSecretsCopyRefused" = "Nenhuma confirmação foi aceita. Nada foi copiado.";
+"settingsSecretsCopyUnavailable" = "Segredos não conseguiu copiar este valor. Nada foi copiado.";
+"settingsSecretsCopyUnknown" = "Segredos não conseguiu saber se o valor chegou à área de transferência, então limpou o que escreveu.";
+"settingsSecretsCopyValue" = "Copiar valor";
+"settingsSecretsCustodyMac" = "Guardados neste computador. Sua tripulação os usa, mas nunca os vê, a menos que você copie um.";
 "settingsSecretsDeleteHistory" = "Excluir histórico";
 "settingsSecretsDeviceCode" = "Código %1$@";
 "settingsSecretsExportFailed" = "Não foi possível exportar o histórico.";
@@ -3397,6 +3411,7 @@
 "settingsSecretsNamePlaceholder" = "Por exemplo, Publicação do site";
 "settingsSecretsNoExport" = "Nenhuma exportação salva.";
 "settingsSecretsNoHistory" = "Nenhum histórico registrado.";
+"settingsSecretsNoReveal" = "O valor fica oculto depois de salvo. Só um uso aprovado o recebe, a menos que você mesmo o copie.";
 "settingsSecretsNotRequested" = "Ainda não solicitado";
 "settingsSecretsPermissionsRecovery" = "As permissões precisam de recuperação";
 "settingsSecretsReading" = "Lendo Segredos…";
@@ -3406,6 +3421,8 @@
 "settingsSecretsRecoveryNeeded" = "Recuperação necessária";
 "settingsSecretsRefresh" = "Atualizar";
 "settingsSecretsRestoreNote" = "Restaurar substitui os valores guardados e apaga as decisões salvas, as aprovações pelo celular e os acessos temporários. O histórico continua, e ele nunca permite um uso.";
+"settingsSecretsRowOfferSays" = "Copiar valor, na linha dele, coloca o valor na área de transferência deste computador assim que seu computador confirma que é você, e o limpa %1$@ segundos depois. O que você faz lá continua sendo só seu.";
+"settingsSecretsRowOfferTitle" = "Abrir %1$@ em Segredos";
 "settingsSecretsSaving" = "Salvando…";
 "settingsSecretsStorageLocked" = "Armazenamento bloqueado";
 "settingsSecretsStorageUnavailable" = "Armazenamento indisponível";

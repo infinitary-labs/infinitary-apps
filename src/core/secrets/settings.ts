@@ -5,6 +5,8 @@ import {
   decisionWords,
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
+  SECRET_COPY_SECONDS,
+  SECRET_COPY_WORDS,
   SECRET_DEVICE_WORDS,
   SECRET_QUESTION_WORDS,
   SECRETS_RECOVERY_WORDS,
@@ -46,10 +48,10 @@ import type { SecretAskAnswer, SecretAskEnded, SecretAskInput } from "./asks";
 import { SecretAsks } from "./askToKeep";
 import type { ApprovalDevice, Rule } from "./authority";
 import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers";
+import type { SecretClipboard } from "./clipboard";
 import { SecretHandoffs } from "./handoffs";
 import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions, RecoveryRestore } from "./protected";
-import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
 import type { RecipientFacts } from "./recipient";
 import type { RecoveryFiles } from "./recoveryArchive";
 import { newReference } from "./references";
@@ -72,6 +74,8 @@ export type SecretsSettingsOptions = {
   open?: (initialize: boolean) => Promise<ProtectedSecrets>;
   unlock?: () => Promise<boolean>;
   recovery?: HostSecretsRecovery;
+  /** The host's private clipboard writer; absent, no row offers Copy value. */
+  clipboard?: SecretClipboard;
   raise: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => void;
   openCard?: (id: string) => Pick<Card, "actions"> | undefined;
   withdraw: (id: string, reason: string) => void;
@@ -133,6 +137,9 @@ export class SecretsSettings {
   private readonly deciding = new Map<string, Promise<void>>();
   private readonly now: () => number;
   private message: string | null = null;
+  /** The value Copy value last put on the clipboard, while its clearing is still to come. */
+  private copied: { ref: string; clears: number; timer: ReturnType<typeof setTimeout> } | null =
+    null;
   private offeredCard: string | null = null;
   /** The one question waiting on its row in Settings, with the passes that answer it. */
   private question: (Question & { group: string }) | null = null;
@@ -288,10 +295,73 @@ export class SecretsSettings {
         }),
       ),
       phones: this.phoneSetups(),
+      ...(await this.copyView(owner)),
     };
     // Recovery can replace the owner; other changes can invalidate its snapshot
     // while native status or metadata is being read.
     return this.owner === owner && this.viewEpoch === epoch ? snapshot : this.view();
+  }
+
+  /** Whether rows offer Copy value, and the copy still on the clipboard. */
+  private async copyView(owner: Owner): Promise<Pick<SecretsView, "copy" | "copied">> {
+    const clipboard = this.options.clipboard;
+    if (!clipboard) return {};
+    const confirms = await owner.protected.canConfirm();
+    return {
+      copy: confirms ? "ready" : "no-confirmation",
+      ...(this.copied
+        ? {
+            copied: {
+              ref: this.copied.ref,
+              clears: this.copied.clears,
+              concealed: clipboard.concealed,
+            },
+          }
+        : {}),
+    };
+  }
+
+  /**
+   * Copy value on a secret's row (docs/secrets.md, "Copying a value"): the
+   * owner confirms and journals, the host writes, and the clipboard is
+   * cleared after `SECRET_COPY_SECONDS` while it still holds the value. A
+   * second copy replaces the first and starts the time again.
+   */
+  private async copy(owner: Owner, action: Extract<SecretAction, { kind: "copy" }>): Promise<void> {
+    const clipboard = this.options.clipboard;
+    if (!clipboard) {
+      this.message = SECRET_COPY_WORDS.unavailable;
+      return;
+    }
+    const entries = await owner.protected.metadata();
+    const result = await owner.protected.copyValue(
+      action.ref,
+      { version: action.version, revision: action.revision },
+      () => SECRET_COPY_WORDS.reason(nameOf(identitiesOf(entries), action.ref)),
+      (value) => clipboard.write(value),
+    );
+    if (result === "copied") {
+      this.forgetCopy();
+      const timer = setTimeout(() => void this.clearCopy(), SECRET_COPY_SECONDS * 1000);
+      // A pending clear never keeps a quitting process alive; the host clears on quit.
+      timer.unref?.();
+      this.copied = { ref: action.ref, clears: this.now() + SECRET_COPY_SECONDS * 1000, timer };
+      return;
+    }
+    if (result === "unknown") await this.clearCopy();
+    this.message = SECRET_COPY_WORDS[result];
+  }
+
+  private forgetCopy(): void {
+    if (this.copied) clearTimeout(this.copied.timer);
+    this.copied = null;
+  }
+
+  /** Clears the copied value while the clipboard still holds it; its time, or Clear now. */
+  private async clearCopy(): Promise<void> {
+    this.forgetCopy();
+    await this.options.clipboard?.clear().catch(() => undefined);
+    this.options.changed();
   }
 
   private questionView(): SecretsView["question"] {
@@ -339,7 +409,11 @@ export class SecretsSettings {
     if (!item) return { lastRequest: null };
     const task = this.taskOf.get(item.request)?.values().next().value ?? intentTask(item.intent);
     const title = task ? this.options.taskTitle?.(task) : undefined;
-    return { lastRequest: item.requestedAt, ...(title ? { lastTask: title } : {}) };
+    return {
+      lastRequest: item.requestedAt,
+      ...(title ? { lastTask: title } : {}),
+      ...(item.copied ? { lastCopied: true as const } : {}),
+    };
   }
 
   private receiptView(owner: Owner, receipt: UseReceipt): SecretsView["uses"][number] {
@@ -533,6 +607,13 @@ export class SecretsSettings {
         break;
       case "cancel-phone":
         this.cancelPhone(action.paired);
+        break;
+      case "copy":
+        await this.copy(owner, action);
+        break;
+      case "clear-copy":
+        await this.clearCopy();
+        this.message = SECRET_COPY_WORDS.cleared;
         break;
       case "delete-history":
         this.askInPlace(

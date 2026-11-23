@@ -3382,6 +3382,20 @@
 "settingsSecretsBackupNote" = "Sichere eine verschlüsselte Kopie und einen separaten Wiederherstellungsschlüssel. Bewahre sie getrennt auf: Wer beides hat, kann die gespeicherten Werte lesen. Der Schlüssel lässt sich nicht zurücksetzen.";
 "settingsSecretsBroughtFrom" = "Übernommen aus %1$@";
 "settingsSecretsCancel" = "Abbrechen";
+"settingsSecretsClearNow" = "Jetzt entfernen";
+"settingsSecretsCopiedByYou" = "Von dir kopiert";
+"settingsSecretsCopiedOn" = "Von dir kopiert am %1$@";
+"settingsSecretsCopiedUntil" = "Kopiert. Um %1$@ wird er aus der Zwischenablage entfernt.";
+"settingsSecretsCopiedUntilVisible" = "Kopiert. Um %1$@ wird er aus der Zwischenablage entfernt. Ein Verlaufswerkzeug der Zwischenablage kann ihn trotzdem behalten.";
+"settingsSecretsCopyCannotConfirm" = "Dieser Computer kann gerade nicht bestätigen, dass du es bist, und daher keinen Wert kopieren.";
+"settingsSecretsCopyChanged" = "Dieses Geheimnis hat sich geändert, nachdem seine Zeile geöffnet wurde. Nichts wurde kopiert.";
+"settingsSecretsCopyCleared" = "Der kopierte Wert ist nicht mehr in der Zwischenablage.";
+"settingsSecretsCopyReason" = "%1$@ in die Zwischenablage dieses Computers kopieren.";
+"settingsSecretsCopyRefused" = "Es wurde keine Bestätigung angenommen. Nichts wurde kopiert.";
+"settingsSecretsCopyUnavailable" = "Geheimnisse konnte diesen Wert nicht kopieren. Nichts wurde kopiert.";
+"settingsSecretsCopyUnknown" = "Geheimnisse konnte nicht erkennen, ob der Wert in der Zwischenablage ankam, und hat daher entfernt, was es geschrieben hat.";
+"settingsSecretsCopyValue" = "Wert kopieren";
+"settingsSecretsCustodyMac" = "Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.";
 "settingsSecretsDeleteHistory" = "Verlauf löschen";
 "settingsSecretsDeviceCode" = "Code %1$@";
 "settingsSecretsExportFailed" = "Der Verlauf konnte nicht exportiert werden.";
@@ -3397,6 +3411,7 @@
 "settingsSecretsNamePlaceholder" = "Zum Beispiel: Website-Veröffentlichung";
 "settingsSecretsNoExport" = "Kein Export gespeichert.";
 "settingsSecretsNoHistory" = "Kein Verlauf aufgezeichnet.";
+"settingsSecretsNoReveal" = "Der Wert bleibt nach dem Speichern verborgen. Nur eine freigegebene Nutzung erhält ihn, außer du kopierst ihn selbst.";
 "settingsSecretsNotRequested" = "Noch nicht angefragt";
 "settingsSecretsPermissionsRecovery" = "Berechtigungen brauchen eine Wiederherstellung";
 "settingsSecretsReading" = "Geheimnisse werden gelesen …";
@@ -3406,6 +3421,8 @@
 "settingsSecretsRecoveryNeeded" = "Wiederherstellung nötig";
 "settingsSecretsRefresh" = "Aktualisieren";
 "settingsSecretsRestoreNote" = "Wiederherstellen ersetzt die gespeicherten Werte und löscht gespeicherte Entscheidungen, Freigaben per Telefon und befristeten Zugriff. Der Verlauf bleibt und erlaubt nie eine Nutzung.";
+"settingsSecretsRowOfferSays" = "„Wert kopieren“ in seiner Zeile legt den Wert in die Zwischenablage dieses Computers, sobald dein Computer bestätigt, dass du es bist, und entfernt ihn %1$@ Sekunden später. Was du dort tust, bleibt deine Sache.";
+"settingsSecretsRowOfferTitle" = "%1$@ in Geheimnisse öffnen";
 "settingsSecretsSaving" = "Wird gespeichert …";
 "settingsSecretsStorageLocked" = "Speicher gesperrt";
 "settingsSecretsStorageUnavailable" = "Speicher nicht verfügbar";

@@ -37,6 +37,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | card | Karte | |
 | certificate | Zertifikat | "CA-Zertifikat" for an organization certificate. |
 | claim (recorded claim) | Aussage | "Festgehaltene Aussage" |
+| clipboard | Zwischenablage | Where Copy value puts a secret's value. |
 | clone | klonen | "geklont", never "kopiert". |
 | collection | Sammlung | |
 | command search | Befehlssuche | |

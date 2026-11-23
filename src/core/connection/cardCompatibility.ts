@@ -3,6 +3,7 @@ import { CARD_DRAFTS } from "@shared/cardDrafts";
 import { type CardNote, markNumbers, noteText, noteTexts } from "@shared/cardNotes";
 import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import type { Spelling } from "@shared/codeNames";
+import { secretKeepFields } from "@shared/secrets";
 import { contractChange, listsChange } from "./contractChanges";
 import { type JournalEntry, pushFrameIn } from "./journal";
 import { type ActionReads, frameWithoutUnreadActions } from "./taskAllow";
@@ -232,8 +233,10 @@ export function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
       ...(reads.files && files ? { files } : {}),
       ...(reads.liveReads && live ? { reads: live } : {}),
       ...(reads.liveReads && sql ? { sql } : {}),
-      // Such a view draws the card as before, with no reply row.
-      ...(answeredBy && (reads.answeredByCrewmate || answeredBy !== "crewmate")
+      // Such a view draws the card as before, with no reply row: it would put a
+      // plain field beside a secret's masked one, whoever answers.
+      ...(answeredBy &&
+      (reads.answeredByCrewmate || (answeredBy !== "crewmate" && !secretKeepFields(card)))
         ? { answeredBy }
         : {}),
     }),

@@ -205,7 +205,18 @@ describe("crewmate answerer compatibility", () => {
     title: "Keep a secret for Tidy the docs",
     meta: "Tidy the docs",
     body: "<p>The crew asked to keep a secret.</p>",
-    actions: [{ id: "keep", label: "Save", default: true }],
+    actions: [
+      {
+        id: "keep",
+        label: "Save secret",
+        default: true,
+        effect: {
+          kind: "host",
+          op: "secrets-keep",
+          arg: JSON.stringify({ fields: [{ id: "s1", name: "Stripe test key", place: "Test" }] }),
+        },
+      },
+    ],
     status: "ready",
     createdAt: 1,
     answeredBy: "crewmate",
@@ -230,8 +241,21 @@ describe("crewmate answerer compatibility", () => {
   });
 
   it("keeps the first mate as answerer for that view", () => {
-    const stall = { ...card, id: "card-stall-t1", answeredBy: "firstmate" as const };
+    const stall = {
+      ...card,
+      id: "card-stall-t1",
+      title: "Tidy the docs has stopped",
+      actions: [{ id: "restart", label: "Start it again", default: true }],
+      answeredBy: "firstmate" as const,
+    };
     expect(legacyCardSnapshot([stall], { ...reads, answeredByCrewmate: false })).toEqual([stall]);
+  });
+
+  it("leaves the first mate out as answerer of its own secret ask for that view", () => {
+    const own = { ...card, id: "secret-ask-firstmate-0", answeredBy: "firstmate" as const };
+    const older = legacyCardSnapshot([own], { ...reads, answeredByCrewmate: false }) as unknown[];
+    expect(older[0]).not.toHaveProperty("answeredBy");
+    expect(legacyCardSnapshot([own], { ...reads, answeredByCrewmate: true })).toEqual([own]);
   });
 
   it("does the same to a pushed card list", () => {

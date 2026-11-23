@@ -420,6 +420,7 @@ export function setup(ways: MergeWays = EVERY_WAY) {
     pushes: [] as { branch: string; head: string; expected: string | null }[],
     /** The held versions each combine was given (`CombineInput.held`). */
     combinedOn: [] as (readonly string[] | undefined)[],
+    excludedHeads: [] as (readonly string[] | undefined)[],
     landedReads: 0,
     /** Each time the open batch's checks reading changed (`BatchesOptions.checksRead`). */
     checksRead: [] as string[],
@@ -474,6 +475,7 @@ export function setup(ways: MergeWays = EVERY_WAY) {
         duringCombine?.();
         duringCombine = undefined;
         heard.combinedOn.push(input.held);
+        heard.excludedHeads.push(input.excludeHeads);
         const base = host.branches.get(input.defaultBranch) as string;
         let head = base;
         const members: BatchMember[] = [];

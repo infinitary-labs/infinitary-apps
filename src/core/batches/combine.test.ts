@@ -865,6 +865,41 @@ describe("a held batch's fix built on the version that held", () => {
     );
   });
 
+  // Intent: Try again must not clear the hold while leaving the branch at the failed
+  // version. Keep the real Git clock input in the same second, even on a second retry.
+  it("pushes a new version on each same-second retry without changing the approved work", async () => {
+    const at = host();
+    const { held, record } = await heldBatch(at);
+    const excludeHeads = [held];
+    const input = {
+      repoDir: at.home,
+      defaultBranch: "main",
+      changes: carried(release(record), "line"),
+      at: AT + 1,
+      excludeHeads,
+    };
+    let expected = held;
+    const commits = (head: string) =>
+      run(at.home, "log", "--format=%T%n%an%n%ae%n%at%n%B", `main..${head}`);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await combine(input);
+      await pushBatch({ repoDir: at.home, branch: BATCH, head: result.head, expected });
+      const pushed = run(at.bare, "rev-parse", `refs/heads/${BATCH}`);
+      expect(pushed).toBe(result.head);
+      expect(excludeHeads).not.toContain(pushed);
+      expect(result.base).toBe(record.open?.base);
+      expect(result.members).toEqual(
+        record.open?.members.map((member, index, members) => ({
+          ...member,
+          commit: index === members.length - 1 ? pushed : member.commit,
+        })),
+      );
+      expect(commits(pushed)).toBe(commits(held));
+      expected = pushed;
+      excludeHeads.push(pushed);
+    }
+  });
+
   /** The batch record's own combine, as the app runs it, over real git. */
   async function recombined(at: Host, record: BatchRecord, when: number): Promise<BatchRecord> {
     const result = await combine({

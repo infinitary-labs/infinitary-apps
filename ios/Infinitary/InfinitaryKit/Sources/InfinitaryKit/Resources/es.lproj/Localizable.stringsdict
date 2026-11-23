@@ -2541,6 +2541,114 @@
       <string>%1$ld restablecimientos guardados · usa uno en %2$@</string>
     </dict>
   </dict>
+  <key>settingsUsageCostMissingTokens</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Se omite %1$ld tarea que no informó tokens.</string>
+      <key>many</key>
+      <string>Se omiten %1$ld de tareas que no informaron tokens.</string>
+      <key>other</key>
+      <string>Se omiten %1$ld tareas que no informaron tokens.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostMissingUsd</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Se omite %1$ld tarea sin estimación.</string>
+      <key>many</key>
+      <string>Se omiten %1$ld de tareas sin estimación.</string>
+      <key>other</key>
+      <string>Se omiten %1$ld tareas sin estimación.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostNowNote</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld tarea en los últimos %2$@ días</string>
+      <key>many</key>
+      <string>%1$ld de tareas en los últimos %2$@ días</string>
+      <key>other</key>
+      <string>%1$ld tareas en los últimos %2$@ días</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPicked</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld elegido</string>
+      <key>many</key>
+      <string>%1$ld elegidos</string>
+      <key>other</key>
+      <string>%1$ld elegidos</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPoint</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%5$@: mediana %4$@, mitad central %3$@ – %2$@, %1$ld tarea</string>
+      <key>many</key>
+      <string>%5$@: mediana %4$@, mitad central %3$@ – %2$@, %1$ld de tareas</string>
+      <key>other</key>
+      <string>%5$@: mediana %4$@, mitad central %3$@ – %2$@, %1$ld tareas</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPointTooFew</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%3$@: %1$ld tarea, muy pocas para una mediana (al menos %2$@)</string>
+      <key>many</key>
+      <string>%3$@: %1$ld de tareas, muy pocas para una mediana (al menos %2$@)</string>
+      <key>other</key>
+      <string>%3$@: %1$ld tareas, muy pocas para una mediana (al menos %2$@)</string>
+    </dict>
+  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

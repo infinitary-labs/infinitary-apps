@@ -85,10 +85,12 @@ Particles after a filled value are avoided by word order, or written in the pair
 | live validation | 실제 검증 | Trying the change for real; kept apart from the checks |
 | log (a check's kept output) | 로그 | Plain loanword, distinct from the record, 기록. |
 | machine | (not used) | 컴퓨터 instead |
+| median (Usage, Cost per task) | 중앙값 | The middle task of a week's finished tasks; never "average". |
 | merge | 병합, 병합하다 | GitHub's Korean docs; "Cannot merge" is 병합할 수 없어요 |
 | merge queue (the host's own) | 병합 대기열 | |
 | Merges on its own / Asks first | 알아서 병합 / 먼저 물어봄 | |
 | message box / main message | 메시지 상자 / 메인 메시지 칸 | |
+| middle half (Usage, Cost per task) | 가운데 절반 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | 모델 | |
 | Models board | 모델 보드 | The board of models under Intelligence in Settings |
 | Not now | 나중에 | |

@@ -32,9 +32,12 @@ export type UsageQuery = z.infer<typeof usageQuerySchema>;
 /** What Usage opens on: all work, the last 30 days. */
 export const DEFAULT_USAGE_QUERY: UsageQuery = { period: "30d", scope: "all" };
 
-/** How Usage shows every amount; tokens until the captain picks dollars. */
+/** How Usage shows every amount; estimated dollars until the captain picks tokens. */
 export const usageUnitSchema = z.enum(["tokens", "usd"]);
 export type UsageUnit = z.infer<typeof usageUnitSchema>;
+
+/** What Usage opens on before the captain picks a unit. */
+export const DEFAULT_USAGE_UNIT: UsageUnit = "usd";
 
 const categoriesSchema = <T extends z.ZodType>(value: T) =>
   z.object({ input: value, output: value, cacheRead: value, cacheWrite: value });
@@ -223,6 +226,187 @@ export const usageTasksSchema = z.object({
   matching: z.number(),
 });
 export type UsageTasks = z.infer<typeof usageTasksSchema>;
+
+/**
+ * Cost per task (docs/usage.md): the finished tasks a period's chart needs,
+ * each counted with its reviews. The read reaches back one window before
+ * the period starts, so the period's first point has a full window.
+ */
+export const usageTaskCostsQuerySchema = z.strictObject({ period: usagePeriodSchema });
+export type UsageTaskCostsQuery = z.infer<typeof usageTaskCostsQuerySchema>;
+
+/** The days before each point whose finished tasks make its median. */
+export const COST_WINDOW_DAYS = 7;
+
+export const usageTaskCostSchema = z.object({
+  /** When it closed done: where it falls on the chart. */
+  closedAt: z.number(),
+  /** Null when the record no longer has the task's project. */
+  project: z.object({ id: z.string(), name: z.string() }).nullable(),
+  /** Its saved kind; null for none, `unclear` or one the list does not know. Never `review`. */
+  kind: usageWorkKindSchema.nullable(),
+  /** Tokens it and its reviews recorded; null when no record reported any. */
+  tokens: z.number().nullable(),
+  /** Its and its reviews' known estimate in USD; null when nothing was priced. */
+  cost: z.number().nullable(),
+});
+export type UsageTaskCost = z.infer<typeof usageTaskCostSchema>;
+
+export const usageTaskCostsSchema = z.object({
+  query: usageTaskCostsQuerySchema,
+  /** The period's first moment; null for all time with nothing finished. */
+  since: z.number().nullable(),
+  /** When it was read: the chart's last point. */
+  at: z.number(),
+  /** Finished tasks from one window before `since`, oldest closed first. */
+  tasks: z.array(usageTaskCostSchema),
+});
+export type UsageTaskCosts = z.infer<typeof usageTaskCostsSchema>;
+
+/** The points a period's line draws, and the fewest tasks a point needs. */
+export const COST_POINTS = 150;
+export const COST_MIN_TASKS = 5;
+
+/** Which finished tasks the chart counts: every one, or the projects and kinds picked. */
+export type CostSelection = {
+  /** Project ids, `null` standing for a project the record no longer has; null for all. */
+  projects: ReadonlySet<string | null> | null;
+  /** Kinds, `null` standing for other task work; null for all. */
+  kinds: ReadonlySet<UsageWorkKind | null> | null;
+};
+
+/** One point: the window's median, its middle half, and how many tasks it holds. */
+export type CostPoint = {
+  at: number;
+  tasks: number;
+  /** Null when fewer than `COST_MIN_TASKS` finished in the window. */
+  median: number | null;
+  q1: number | null;
+  q3: number | null;
+};
+
+export type CostSeries = {
+  points: CostPoint[];
+  /** The last point: the window ending now. */
+  now: CostPoint;
+  /** The first point with a median, or null when none has one. */
+  start: CostPoint | null;
+  /** Now against the start, as a fraction; null when either lacks a median or the start is 0. */
+  change: number | null;
+  /** Selected tasks in the period left out for want of a value in the unit. */
+  missing: number;
+};
+
+/** A quantile of sorted values, interpolated between the two nearest. */
+export function quantile(sorted: readonly number[], fraction: number): number | null {
+  if (sorted.length === 0) return null;
+  const at = (sorted.length - 1) * fraction;
+  const low = Math.floor(at);
+  const high = Math.min(low + 1, sorted.length - 1);
+  const lower = sorted[low] ?? 0;
+  return lower + ((sorted[high] ?? lower) - lower) * (at - low);
+}
+
+/** Whether a finished task is in the selection. */
+export function inCostSelection(task: UsageTaskCost, selection: CostSelection): boolean {
+  return (
+    (selection.projects === null || selection.projects.has(task.project?.id ?? null)) &&
+    (selection.kinds === null || selection.kinds.has(task.kind))
+  );
+}
+
+/** A task's value in the unit; a zero estimate proves nothing, so it has none. */
+function costValue(task: UsageTaskCost, unit: UsageUnit): number | null {
+  const value = unit === "usd" ? task.cost : task.tokens;
+  return value !== null && value > 0 ? value : null;
+}
+
+/**
+ * The window ending at `at`: the selected tasks that closed in the
+ * `COST_WINDOW_DAYS` before it, sorted by their values.
+ */
+function costWindow(
+  values: readonly { at: number; value: number }[],
+  at: number,
+): { tasks: number; sorted: number[] } {
+  const from = at - COST_WINDOW_DAYS * 86_400_000;
+  const sorted = values
+    .filter((each) => each.at > from && each.at <= at)
+    .map((each) => each.value)
+    .sort((a, b) => a - b);
+  return { tasks: sorted.length, sorted };
+}
+
+/** The point for the window ending at `at`. */
+export function costPoint(values: readonly { at: number; value: number }[], at: number): CostPoint {
+  const { tasks, sorted } = costWindow(values, at);
+  if (tasks < COST_MIN_TASKS) return { at, tasks, median: null, q1: null, q3: null };
+  return {
+    at,
+    tasks,
+    median: quantile(sorted, 0.5),
+    q1: quantile(sorted, 0.25),
+    q3: quantile(sorted, 0.75),
+  };
+}
+
+/** The selected tasks with a value in the unit, and how many in the period have none. */
+export function costValues(
+  costs: UsageTaskCosts,
+  selection: CostSelection,
+  unit: UsageUnit,
+): { values: { at: number; value: number }[]; missing: number } {
+  const values: { at: number; value: number }[] = [];
+  let missing = 0;
+  for (const task of costs.tasks) {
+    if (!inCostSelection(task, selection)) continue;
+    const value = costValue(task, unit);
+    if (value !== null) values.push({ at: task.closedAt, value });
+    else if (costs.since === null || task.closedAt >= costs.since) missing++;
+  }
+  return { values, missing };
+}
+
+/**
+ * The sliding median over the period (INF-6217's plan): `COST_POINTS`
+ * evenly spaced points from the period's first moment to now, each the
+ * median of the selected tasks that closed in the `COST_WINDOW_DAYS`
+ * before it, with the middle half around it. A window with fewer than
+ * `COST_MIN_TASKS` has no median, never a zero.
+ */
+export function costSeries(
+  costs: UsageTaskCosts,
+  selection: CostSelection,
+  unit: UsageUnit,
+): CostSeries {
+  const { values, missing } = costValues(costs, selection, unit);
+  const from = costs.since ?? costs.at;
+  const points: CostPoint[] = [];
+  for (let step = 0; step <= COST_POINTS; step++) {
+    points.push(costPoint(values, Math.round(from + ((costs.at - from) * step) / COST_POINTS)));
+  }
+  const now = points[points.length - 1] ?? costPoint(values, costs.at);
+  const start = points.find((point) => point.median !== null) ?? null;
+  const change =
+    start?.median && now.median !== null && start !== now ? now.median / start.median - 1 : null;
+  return { points, now, start, change, missing };
+}
+
+/** The end of each local day in the period, today ending now: the Values table's rows. */
+export function costDayEnds(costs: UsageTaskCosts): number[] {
+  if (costs.since === null) return [];
+  const ends: number[] = [];
+  const day = new Date(costs.since);
+  day.setHours(0, 0, 0, 0);
+  for (;;) {
+    day.setDate(day.getDate() + 1);
+    const end = day.getTime() - 1;
+    if (end >= costs.at) break;
+    ends.push(end);
+  }
+  ends.push(costs.at);
+  return ends;
+}
 
 export function usageTokens(amount: UsageAmount): number {
   const { input, output, cacheRead, cacheWrite } = amount.tokens;

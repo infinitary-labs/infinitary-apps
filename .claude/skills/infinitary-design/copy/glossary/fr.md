@@ -83,10 +83,12 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | log (a check's kept output) | le journal | Distinct from the task's record, "la fiche". |
 | machine (never said) | ordinateur | "Il fonctionne sur cet ordinateur" in the voice consent line. |
 | main message | message principal | |
+| median (Usage, Cost per task) | médiane | The middle task of a week's finished tasks; never "average". |
 | merge | fusionner, fusion | GitHub's French docs say "fusionner"; "Fusion impossible" for "Cannot merge". |
 | merge queue (the host's own) | file de fusion | |
 | Merges on its own | Fusionne seul | "fusionne seul" in the feed. |
 | message box | zone de message | |
+| middle half (Usage, Cost per task) | moitié centrale | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modèle | |
 | Not now | Pas maintenant | |
 | offline, disconnected (never said) | hors de portée | |

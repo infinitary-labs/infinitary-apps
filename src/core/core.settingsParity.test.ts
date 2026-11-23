@@ -116,9 +116,10 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     expect(sized.lines).toEqual(["cards open wide, keep maximized on"]);
 
     const wasUnit = await appearance();
-    const unit = await asked("usage-unit", { unit: "usd" });
-    expect(await appearance()).toEqual({ ...wasUnit, usageUnit: "usd" });
-    expect(unit.lines).toEqual(["usage shown in usd"]);
+    // Usage shows dollars until the captain picks tokens, so tokens is the change.
+    const unit = await asked("usage-unit", { unit: "tokens" });
+    expect(await appearance()).toEqual({ ...wasUnit, usageUnit: "tokens" });
+    expect(unit.lines).toEqual(["usage shown in tokens"]);
   });
 
   it("switches Pause when you're away off and on, as its Settings switch does", async () => {

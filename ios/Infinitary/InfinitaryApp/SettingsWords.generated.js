@@ -16155,6 +16155,28 @@ ${events}` : prompt;
     /** How many tasks have recorded usage in the period and work. */
     matching: number()
   });
+  const usageTaskCostsQuerySchema = strictObject({ period: usagePeriodSchema });
+  const usageTaskCostSchema = object({
+    /** When it closed done: where it falls on the chart. */
+    closedAt: number(),
+    /** Null when the record no longer has the task's project. */
+    project: object({ id: string(), name: string() }).nullable(),
+    /** Its saved kind; null for none, `unclear` or one the list does not know. Never `review`. */
+    kind: usageWorkKindSchema.nullable(),
+    /** Tokens it and its reviews recorded; null when no record reported any. */
+    tokens: number().nullable(),
+    /** Its and its reviews' known estimate in USD; null when nothing was priced. */
+    cost: number().nullable()
+  });
+  object({
+    query: usageTaskCostsQuerySchema,
+    /** The period's first moment; null for all time with nothing finished. */
+    since: number().nullable(),
+    /** When it was read: the chart's last point. */
+    at: number(),
+    /** Finished tasks from one window before `since`, oldest closed first. */
+    tasks: array(usageTaskCostSchema)
+  });
   function usageTokens(amount) {
     const { input, output, cacheRead, cacheWrite } = amount.tokens;
     return input + output + cacheRead + cacheWrite;

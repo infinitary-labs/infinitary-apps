@@ -2,6 +2,7 @@ import { type FmModelUsage, type FmUsage, usageCostSourceSchema } from "@shared/
 import type { ObserveUsageModel } from "@shared/observe";
 import {
   addUsageAmounts,
+  COST_WINDOW_DAYS,
   EMPTY_USAGE_AMOUNT,
   USAGE_WORK_KINDS,
   type UsageAmount,
@@ -13,6 +14,9 @@ import {
   type UsageQuery,
   type UsageSummary,
   type UsageTask,
+  type UsageTaskCost,
+  type UsageTaskCosts,
+  type UsageTaskCostsQuery,
   type UsageTasks,
   type UsageTasksQuery,
   type UsageWhere,
@@ -507,6 +511,95 @@ export class UsageStore {
         }),
       ),
     };
+  }
+
+  /**
+   * Settings → Usage's Cost per task (docs/usage.md, INF-6217's plan): each
+   * task that finished in the period, or in the window before it, with what
+   * it and its reviews spent over their whole lives. A review is the task
+   * under the one it checks whose saved kind is review; it, and anything
+   * under it, adds to that task and is never a point of its own. Finished is
+   * the summary's rule. Reads the daily totals, never the ledger.
+   */
+  taskCosts(query: UsageTaskCostsQuery, options: { now: number }): UsageTaskCosts {
+    foldUsageDays(this.db);
+    const periodSince = periodStart(query.period, options.now);
+    const reach = periodSince === null ? null : localDayStart(periodSince, -COST_WINDOW_DAYS);
+    // Read the two owners of the fields, not the compatibility view's composed shape.
+    const split = taskReadTable(this.db) === "task_records";
+    const contract = split ? "c.value_json" : "t.shape_json";
+    const routing = split ? "r.value_json" : "t.shape_json";
+    const rows = this.db
+      .prepare(
+        // i18n-exempt: SQL, never shown to a person
+        `WITH RECURSIVE facts AS (
+           SELECT t.id, t.parent_id, t.project_id, p.name AS project, t.status, t.kind AS task_kind,
+                  t.assignee, t.started_at, t.closed_at,
+                  CASE WHEN json_extract(${contract}, '$.deliverable') = 'operation' THEN 'operation'
+                       ELSE json_extract(${routing}, '$.kind') END AS work_kind
+           FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
+           ${
+             split
+               ? `LEFT JOIN task_contracts c ON c.task_id = t.id
+                  LEFT JOIN task_routing_requests r ON r.task_id = t.id`
+               : ""
+}
+         ),
+         reviewing(id) AS (
+           SELECT id FROM facts WHERE work_kind = 'review'
+           UNION
+           SELECT f.id FROM facts f JOIN reviewing ON f.parent_id = reviewing.id
+         ),
+         finished AS (
+           SELECT * FROM facts
+           WHERE status = 'done' AND task_kind <> 'operation'
+             AND assignee IS NOT NULL AND started_at IS NOT NULL AND closed_at IS NOT NULL
+             AND (@reach IS NULL OR closed_at >= @reach)
+             AND id NOT IN (SELECT id FROM reviewing)
+         ),
+         counted(id, owner) AS (
+           SELECT id, id FROM finished
+           UNION
+           SELECT f.id, counted.owner FROM facts f JOIN counted ON f.parent_id = counted.id
+           WHERE counted.id <> counted.owner OR f.work_kind = 'review'
+         ),
+         spent AS (
+           SELECT counted.owner,
+                  SUM(d.counted) AS counted,
+                  SUM(d.input + d.output + d.cache_read + d.cache_write) AS tokens,
+                  SUM(d.cost) AS cost
+           FROM counted JOIN usage_days d ON d.task_id = counted.id
+           GROUP BY counted.owner
+         )
+         SELECT finished.closed_at, finished.project_id, finished.project, finished.work_kind,
+                spent.counted, spent.tokens, spent.cost
+         FROM finished LEFT JOIN spent ON spent.owner = finished.id
+         ORDER BY finished.closed_at, finished.id`,
+      )
+      .all({ reach }) as {
+      closed_at: number;
+      project_id: string | null;
+      project: string | null;
+      work_kind: unknown;
+      counted: number | null;
+      tokens: number | null;
+      cost: number | null;
+    }[];
+    const tasks = rows.map(
+      (row): UsageTaskCost => ({
+        closedAt: row.closed_at,
+        project:
+          row.project_id === null || row.project === null
+            ? null
+            : { id: row.project_id, name: row.project },
+        kind: workKindOf(row.work_kind),
+        tokens: row.counted ? row.tokens : null,
+        cost: row.cost !== null && row.cost > 0 ? row.cost : null,
+      }),
+    );
+    const first = tasks[0];
+    const since = periodSince ?? (first === undefined ? null : localDayStart(first.closedAt));
+    return { query, since, at: options.now, tasks };
   }
 
   /** Latest available ledger reading, not a lifetime total or an inferred price. */

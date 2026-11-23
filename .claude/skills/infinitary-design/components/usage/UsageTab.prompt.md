@@ -5,7 +5,7 @@ What is recorded and how the numbers are summed are the app's `docs/usage.md`; t
 **Header.**
 The micro label `USAGE`, then one row: the `--text-sm --fg-2` line "Your first mate and your crew, across every project." on the left, and on the right a `GroupedPills` named "Show usage as" with Tokens and Estimated $.
 The switch changes every amount in the tab together - readouts, bars, model rows, a model's categories, the daily values - and nothing outside it; counts stay counts.
-The app remembers it; the tab opens in Tokens until the captain picks dollars.
+The app remembers it; the tab opens in Estimated $ until the captain picks tokens.
 
 **Filters.**
 Under the header, a row of two labeled selects in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: Period (Last 7 days, Last 30 days, All recorded time) and Work (All work, Task work, First mate, Other work), then the dates in `--fg-3`: "Sep 6–Oct 5 · Local dates", or "Since Sep 6 · Local dates" for all time.
@@ -25,6 +25,20 @@ A day with nothing recorded has no bar.
 Under it, mono `--text-xs --fg-3` "Sep 6" at the left and "Today" at the right, and one `--fg-3` line: "Open a model to see its recorded usage.", in dollars with something unpriced "Bars show only priced activity.
 Unpriced activity is left out.", and while the pointer rests on a bar that day's value, "Oct 3: 1.24M".
 A `details` "Daily values" holds the same days as a table, Local date and the unit, a day with nothing recorded reading "No activity", its rows apart by space with no rule between them.
+
+**Cost per task.**
+Under the daily bars, when the work is all or task work (INF-6217's plan): an `h3` "Cost per task" with "Estimated USD · Median per task" (or "Tokens · Median per task") on the right, then the `--fg-3` line "Each finished task with its reviews.
+A line that climbs means tasks are taking more work than before."
+Then two filters, Projects and Kinds, each a disclosure row in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: its `--fg-3` name and what it holds, "All projects", one or two names ("Website and Docs") or "3 picked".
+Open, it drops a `--bg-1` panel with `--shadow-2`: an All checkbox, then a checkbox for each project or kind the period's tasks name, its count in mono `--fg-3` at the right, most tasks first; no box ticked is All, and Reviews is never a kind here.
+Escape closes it onto its row.
+Three readouts in the tab's readout shape: "Median now" · "$3.10" · "12 tasks in the last 7 days"; "At the start" · "$2.37" · "Window ending Sep 6"; "Change" · "Up 31%" (or "Down 12%", "No change") · "Over the period shown".
+Then the line, drawn by hand 200 high in the 750 wide frame: three `--line-1` hairlines with mono `--text-xs --fg-3` values on the left, the middle half as an `--accent-dim` band and the median as a 2 px `--accent` line over it, "Sep 6" and "Today" under it.
+A week with fewer than 5 finished tasks has no point: the line and band break there, and a selection with none at all reads "Too few finished tasks in this selection to draw a median.
+Each point needs at least 5." instead of a line.
+Under it one `--fg-3` line: "Each point is the median of the tasks that finished in the 7 days before it.
+The band holds the middle half of them.", adding "3 tasks with no estimate are left out." when some are; while the pointer rests on the line a `--line-2` hairline and an `--accent` dot mark that point and the line reads "Oct 5, 3:00 PM: median $3.10, middle half $1.80 – $5.25, 12 tasks".
+A `details` "Values" holds each local day's window as a table: Local date, Median, Middle half and Tasks, today last, a thin window reading "Not available" and "Too few tasks".
 
 **Tokens per model and Where it went.**
 Two columns, the models wider; in a narrow window they stack.

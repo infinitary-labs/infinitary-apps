@@ -1296,6 +1296,65 @@
   "settingsUsageAttributionServed": "Named by the provider that answered.",
   "settingsUsageBarsPriced": "Bars show only priced activity. Unpriced activity is left out.",
   "settingsUsageCloseDetails": "Close details",
+  "settingsUsageCostAllKinds": "All kinds",
+  "settingsUsageCostAllProjects": "All projects",
+  "settingsUsageCostChange": "Change",
+  "settingsUsageCostChangeNote": "Over the period shown",
+  "settingsUsageCostChartTokens": "Median tokens per finished task over the period shown",
+  "settingsUsageCostChartUsd": "Median estimated dollars per finished task over the period shown",
+  "settingsUsageCostDown": "Down {percent}%",
+  "settingsUsageCostFailed": "Cost per task could not be read just now.",
+  "settingsUsageCostHeading": "Cost per task",
+  "settingsUsageCostKinds": "Kinds",
+  "settingsUsageCostLead": "Each finished task with its reviews. A line that climbs means tasks are taking more work than before.",
+  "settingsUsageCostLegend": "Each point is the median of the tasks that finished in the {days} days before it. The band holds the middle half of them.",
+  "settingsUsageCostLegendWith": "{lead} {missing}",
+  "settingsUsageCostMedian": "Median",
+  "settingsUsageCostMiddleHalf": "Middle half",
+  "settingsUsageCostMissingTokens": {
+    "plural": "count",
+    "one": "{count} task that reported no tokens is left out.",
+    "other": "{count} tasks that reported no tokens are left out."
+  },
+  "settingsUsageCostMissingUsd": {
+    "plural": "count",
+    "one": "{count} task with no estimate is left out.",
+    "other": "{count} tasks with no estimate are left out."
+  },
+  "settingsUsageCostNow": "Median now",
+  "settingsUsageCostNowNote": {
+    "plural": "count",
+    "one": "{count} task in the last {days} days",
+    "other": "{count} tasks in the last {days} days"
+  },
+  "settingsUsageCostPicked": {
+    "plural": "count",
+    "one": "{count} picked",
+    "other": "{count} picked"
+  },
+  "settingsUsageCostPoint": {
+    "plural": "count",
+    "one": "{when}: median {median}, middle half {low} – {high}, {count} task",
+    "other": "{when}: median {median}, middle half {low} – {high}, {count} tasks"
+  },
+  "settingsUsageCostPointTooFew": {
+    "plural": "count",
+    "one": "{when}: {count} task, too few for a median (at least {least})",
+    "other": "{when}: {count} tasks, too few for a median (at least {least})"
+  },
+  "settingsUsageCostProjects": "Projects",
+  "settingsUsageCostRange": "{low} – {high}",
+  "settingsUsageCostReading": "Reading finished tasks…",
+  "settingsUsageCostSame": "No change",
+  "settingsUsageCostStart": "At the start",
+  "settingsUsageCostStartNone": "No window has enough tasks",
+  "settingsUsageCostStartNote": "Window ending {date}",
+  "settingsUsageCostTasks": "Tasks",
+  "settingsUsageCostTooFew": "Too few finished tasks in this selection to draw a median. Each point needs at least 5.",
+  "settingsUsageCostTooFewCell": "Too few tasks",
+  "settingsUsageCostUnit": "{unit} · Median per task",
+  "settingsUsageCostUp": "Up {percent}%",
+  "settingsUsageCostValues": "Values",
   "settingsUsageCoverageUnavailable": "Coverage not available",
   "settingsUsageCreated": "Created {when}",
   "settingsUsageDailyChartTokens": "Daily token totals for the selected period",

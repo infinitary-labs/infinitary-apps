@@ -47,6 +47,7 @@ describe("the read catalog", () => {
       "tasks.search",
       "update.status",
       "usage.summary",
+      "usage.taskCosts",
       "usage.tasks",
     ]);
     expect(isReadName("observe.sessions")).toBe(true);
@@ -67,23 +68,25 @@ describe("the read catalog", () => {
             ? DEFAULT_USAGE_QUERY
             : name === "usage.tasks"
               ? { ...DEFAULT_USAGE_QUERY, limit: USAGE_TASK_PAGE }
-              : name === "knowledge.entry"
-                ? { id: "c-abc123" }
-                : name === "knowledge.refs"
-                  ? { ids: ["f-abc123"] }
-                  : name === "knowledge.uses"
-                    ? { task: "t-1" }
-                    : name === "tasks.keys"
-                      ? { keys: ["INF-1"] }
-                      : name === "settings.current"
-                        ? { names: ["ambient-music"] }
-                        : "scope" in shape
-                          ? { scope: "captain" }
-                          : "query" in shape
-                            ? { query: "x" }
-                            : "id" in shape
-                              ? { id: "x" }
-                              : {};
+              : name === "usage.taskCosts"
+                ? { period: DEFAULT_USAGE_QUERY.period }
+                : name === "knowledge.entry"
+                  ? { id: "c-abc123" }
+                  : name === "knowledge.refs"
+                    ? { ids: ["f-abc123"] }
+                    : name === "knowledge.uses"
+                      ? { task: "t-1" }
+                      : name === "tasks.keys"
+                        ? { keys: ["INF-1"] }
+                        : name === "settings.current"
+                          ? { names: ["ambient-music"] }
+                          : "scope" in shape
+                            ? { scope: "captain" }
+                            : "query" in shape
+                              ? { query: "x" }
+                              : "id" in shape
+                                ? { id: "x" }
+                                : {};
       const args = entry.args.parse(sample);
       const request = (entry.toRequest as (a: unknown, grant: object) => unknown[])(args, {});
       expect(invokeContract[entry.channel].request.safeParse(request).success, name).toBe(true);
@@ -241,7 +244,7 @@ describe("the read catalog", () => {
 });
 
 it("Usage refreshes after separately accounted model-powered tool work", () => {
-  for (const name of ["usage.summary", "usage.tasks"] as const) {
+  for (const name of ["usage.summary", "usage.tasks", "usage.taskCosts"] as const) {
     const invalidate = readCatalog[name].invalidate.events;
     expect(
       invalidate?.(

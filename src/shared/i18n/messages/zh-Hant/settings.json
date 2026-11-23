@@ -1270,6 +1270,59 @@
   "settingsUsageAttributionServed": "由回應的供應商命名。",
   "settingsUsageBarsPriced": "長條只顯示已計價的活動，未計價的活動不列入。",
   "settingsUsageCloseDetails": "關閉詳細資料",
+  "settingsUsageCostAllKinds": "所有類型",
+  "settingsUsageCostAllProjects": "所有專案",
+  "settingsUsageCostChange": "變化",
+  "settingsUsageCostChangeNote": "所示期間內",
+  "settingsUsageCostChartTokens": "所示期間內每個已完成任務的 token 中位數",
+  "settingsUsageCostChartUsd": "所示期間內每個已完成任務的估算美元中位數",
+  "settingsUsageCostDown": "下降 {percent}%",
+  "settingsUsageCostFailed": "暫時無法讀取每個任務的成本。",
+  "settingsUsageCostHeading": "每個任務的成本",
+  "settingsUsageCostKinds": "類型",
+  "settingsUsageCostLead": "每個已完成任務連同其審查。線條上升表示任務比以前需要更多工作。",
+  "settingsUsageCostLegend": "每個點是此前 {days} 天內完成的任務的中位數。色帶表示其中間一半。",
+  "settingsUsageCostLegendWith": "{lead}{missing}",
+  "settingsUsageCostMedian": "中位數",
+  "settingsUsageCostMiddleHalf": "中間一半",
+  "settingsUsageCostMissingTokens": {
+    "plural": "count",
+    "other": "未計入 {count} 個未回報 token 的任務。"
+  },
+  "settingsUsageCostMissingUsd": {
+    "plural": "count",
+    "other": "未計入 {count} 個沒有估算的任務。"
+  },
+  "settingsUsageCostNow": "目前中位數",
+  "settingsUsageCostNowNote": {
+    "plural": "count",
+    "other": "最近 {days} 天內 {count} 個任務"
+  },
+  "settingsUsageCostPicked": {
+    "plural": "count",
+    "other": "已選 {count} 個"
+  },
+  "settingsUsageCostPoint": {
+    "plural": "count",
+    "other": "{when}：中位數 {median}，中間一半 {low} – {high}，{count} 個任務"
+  },
+  "settingsUsageCostPointTooFew": {
+    "plural": "count",
+    "other": "{when}：{count} 個任務，太少，無法得出中位數（至少 {least} 個）"
+  },
+  "settingsUsageCostProjects": "專案",
+  "settingsUsageCostRange": "{low} – {high}",
+  "settingsUsageCostReading": "正在讀取已完成的任務…",
+  "settingsUsageCostSame": "沒有變化",
+  "settingsUsageCostStart": "期初",
+  "settingsUsageCostStartNone": "沒有哪個時間窗有足夠的任務",
+  "settingsUsageCostStartNote": "截至 {date} 的時間窗",
+  "settingsUsageCostTasks": "任務",
+  "settingsUsageCostTooFew": "此選擇中已完成的任務太少，無法繪製中位數。每個點至少需要 5 個。",
+  "settingsUsageCostTooFewCell": "任務太少",
+  "settingsUsageCostUnit": "{unit} · 每個任務的中位數",
+  "settingsUsageCostUp": "上升 {percent}%",
+  "settingsUsageCostValues": "數值",
   "settingsUsageCoverageUnavailable": "無法取得涵蓋範圍",
   "settingsUsageCreated": "建立於 {when}",
   "settingsUsageDailyChartTokens": "所選期間內每日的 token 總計",

@@ -117,6 +117,7 @@ async function keyboardKeys(dispatch: CoreDispatch, host: ReadHost): Promise<unk
 export const APP_READS = {
   "usage.summary": fromCatalog("usage.summary", DEFAULT_USAGE_QUERY),
   "usage.tasks": fromCatalog("usage.tasks", { ...DEFAULT_USAGE_QUERY, limit: USAGE_TASK_PAGE }),
+  "usage.taskCosts": fromCatalog("usage.taskCosts", { period: DEFAULT_USAGE_QUERY.period }),
   "automation.history": fromCatalog("automation.history"),
   "automation.kept": fromCatalog("automation.kept"),
   "update.status": fromCatalog("update.status"),

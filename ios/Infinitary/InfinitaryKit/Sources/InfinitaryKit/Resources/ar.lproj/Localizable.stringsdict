@@ -3387,6 +3387,150 @@
       <string>إعادات تعيين محفوظة: %1$ld · استخدم واحدة على %2$@</string>
     </dict>
   </dict>
+  <key>settingsUsageCostMissingTokens</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لم تُستبعد أي مهمة بلا رموز مُبلَّغ عنها.</string>
+      <key>one</key>
+      <string>استُبعدت مهمة واحدة لم تُبلغ عن رموز.</string>
+      <key>two</key>
+      <string>استُبعدت مهمتان لم تُبلغا عن رموز.</string>
+      <key>few</key>
+      <string>استُبعدت %1$ld مهام لم تُبلغ عن رموز.</string>
+      <key>many</key>
+      <string>استُبعدت %1$ld مهمة لم تُبلغ عن رموز.</string>
+      <key>other</key>
+      <string>استُبعدت %1$ld مهمة لم تُبلغ عن رموز.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostMissingUsd</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لم تُستبعد أي مهمة بلا تقدير.</string>
+      <key>one</key>
+      <string>استُبعدت مهمة واحدة بلا تقدير.</string>
+      <key>two</key>
+      <string>استُبعدت مهمتان بلا تقدير.</string>
+      <key>few</key>
+      <string>استُبعدت %1$ld مهام بلا تقدير.</string>
+      <key>many</key>
+      <string>استُبعدت %1$ld مهمة بلا تقدير.</string>
+      <key>other</key>
+      <string>استُبعدت %1$ld مهمة بلا تقدير.</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostNowNote</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لا مهام في آخر %2$@ أيام</string>
+      <key>one</key>
+      <string>مهمة واحدة في آخر %2$@ أيام</string>
+      <key>two</key>
+      <string>مهمتان في آخر %2$@ أيام</string>
+      <key>few</key>
+      <string>%1$ld مهام في آخر %2$@ أيام</string>
+      <key>many</key>
+      <string>%1$ld مهمة في آخر %2$@ أيام</string>
+      <key>other</key>
+      <string>%1$ld مهمة في آخر %2$@ أيام</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPicked</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لم يُختر شيء</string>
+      <key>one</key>
+      <string>عنصر واحد مختار</string>
+      <key>two</key>
+      <string>عنصران مختاران</string>
+      <key>few</key>
+      <string>%1$ld عناصر مختارة</string>
+      <key>many</key>
+      <string>%1$ld عنصرًا مختارًا</string>
+      <key>other</key>
+      <string>%1$ld عنصر مختار</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPoint</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، بلا مهام</string>
+      <key>one</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، مهمة واحدة</string>
+      <key>two</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، مهمتان</string>
+      <key>few</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، %1$ld مهام</string>
+      <key>many</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، %1$ld مهمة</string>
+      <key>other</key>
+      <string>%5$@: الوسيط %4$@، النصف الأوسط %3$@ – %2$@، %1$ld مهمة</string>
+    </dict>
+  </dict>
+  <key>settingsUsageCostPointTooFew</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%3$@: بلا مهام، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+      <key>one</key>
+      <string>%3$@: مهمة واحدة، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+      <key>two</key>
+      <string>%3$@: مهمتان، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+      <key>few</key>
+      <string>%3$@: %1$ld مهام، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+      <key>many</key>
+      <string>%3$@: %1$ld مهمة، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+      <key>other</key>
+      <string>%3$@: %1$ld مهمة، وهذا أقل من أن يعطي وسيطًا (على الأقل %2$@)</string>
+    </dict>
+  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -1,6 +1,7 @@
 import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { FEEDBACK_REQUEST_NOTE } from "../../../src/core/orchestrator/wakes";
 import { FEEDBACK_COMMAND, FEEDBACK_WORD } from "../../../src/shared/feedback";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import type { Scenario, ScenarioAnswer } from "../mockProvider";
 import { sinceLastUser } from "../providerRequest";
 
@@ -30,9 +31,7 @@ export const FEEDBACK_WORDS = [
 const GOAL = "Draft a problem report for Infinitary's makers and ask the captain before it goes.";
 const BODY_FILE = "feedback-report.md";
 
-const call = (name: string, args: Record<string, unknown>): ScenarioAnswer => ({
-  calls: [{ name, args }],
-});
+const call = (scripted: ScriptedCall): ScenarioAnswer => ({ calls: [scripted] });
 
 export const feedbackReport: Scenario =
   () =>
@@ -43,42 +42,57 @@ export const feedbackReport: Scenario =
       if (!user.includes(FEEDBACK_REQUEST_NOTE) || !user.includes(FEEDBACK_PROBLEM))
         return undefined;
       if (results.length === 0)
-        return call("spawn_crewmate", {
-          title: FEEDBACK_TASK_TITLE,
-          goal: GOAL,
-          user_words: FEEDBACK_TYPED,
-          shape: { rigor_ask: "quick" },
+        return call({
+          name: "spawn_crewmate",
+          args: {
+            title: FEEDBACK_TASK_TITLE,
+            goal: GOAL,
+            user_words: FEEDBACK_TYPED,
+            shape: { rigor_ask: "quick" },
+          },
         });
       return { text: "A crewmate is drafting the report for your review." };
     }
     if (!body.includes(GOAL)) return undefined;
     if (latestUserTail.includes(WRITE_ANSWERED_LEAD)) {
       if (results.length === 0)
-        return call("report", {
-          text: "The captain published the report.",
-          summary: "The captain published the problem report.",
+        return call({
+          name: "report",
+          args: {
+            text: "The captain published the report.",
+            summary: "The captain published the problem report.",
+          },
         });
       return { text: "Published." };
     }
     if (results.length === 0)
-      return call("bash", {
-        command: `cat > ${BODY_FILE} <<'REPORT'\n${FEEDBACK_WORDS}\nREPORT\n${FEEDBACK_COMMAND} draft --kind bug --title "${FEEDBACK_ISSUE_TITLE}" --body-file ${BODY_FILE}`,
+      return call({
+        name: "bash",
+        args: {
+          command: `cat > ${BODY_FILE} <<'REPORT'\n${FEEDBACK_WORDS}\nREPORT\n${FEEDBACK_COMMAND} draft --kind bug --title "${FEEDBACK_ISSUE_TITLE}" --body-file ${BODY_FILE}`,
+        },
       });
     const ask = results[0]?.match(/ask: (wa[0-9a-f]+)/)?.[1];
     if (results.length === 1 && ask)
-      return call("emit_card", {
-        id: "feedback-review",
-        title: FEEDBACK_CARD_TITLE,
-        body: "<p>This is the report as it would appear on Infinitary's public project.</p>",
-        actions: [
-          { id: "publish", effect: { kind: "request_write", ask } },
-          { id: "not-now", label: "Not now", declines: true },
-        ],
+      return call({
+        name: "emit_card",
+        args: {
+          id: "feedback-review",
+          title: FEEDBACK_CARD_TITLE,
+          body: "<p>This is the report as it would appear on Infinitary's public project.</p>",
+          actions: [
+            { id: "publish", effect: { kind: "request_write", ask } },
+            { id: "not-now", label: "Not now", declines: true },
+          ],
+        },
       });
     if (results.length <= 2)
-      return call("report", {
-        text: results.join("\n"),
-        summary: "The report waits on the captain's review.",
+      return call({
+        name: "report",
+        args: {
+          text: results.join("\n"),
+          summary: "The report waits on the captain's review.",
+        },
       });
     return { text: "The report is waiting on the captain." };
   };

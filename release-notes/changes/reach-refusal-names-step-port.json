@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "devices",
       "title": "Adding a computer by its address says where it got stuck",
-      "body": "When a computer added by its address cannot be reached, Devices now says which step stopped and on which port: reading its SSH key, signing in or sending Infinitary. It names the private network between the two computers as a thing to check, and points to Run a command there, which works where SSH from here does not. On a server started by a command, the link command also prints the firewall line Devices shows in a window.",
+      "body": "When a computer added by its address cannot be reached, Devices now says which step stopped and on which port: reading its SSH key, signing in or sending Infinitary. It names the private network between the two computers as a thing to check, and points to Run a command there, which works where SSH from here does not. Joining another computer's first mate by its address at a first launch, which is how a Windows PC reaches another computer, names the same step and port. On a server started by a command, the link command also prints the firewall line Devices shows in a window.",
       "picture": {
         "dark": "reach-refusal-names-step-port-dark.webp",
         "light": "reach-refusal-names-step-port-light.webp",

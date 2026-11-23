@@ -81,6 +81,8 @@ Each stop is one `warn` line in the aside, with the address kept in its field an
 - a Linux computer with no curl: "kun@studio has no curl, which this computer asks Infinitary there for a link with.
   Install curl there, then try again."
 - Remote Login off, no answer, or a refused key with no password allowed: Devices' own two lines, joined in one (`AddAMac.prompt.md`).
+  An address it could not reach names the same step and port as an add, such as "Could not read the SSH key of kun@studio on port 22.", and the private network to check.
+  It ends "Then ask again." and offers no Run a command there, since it joins a first mate that already runs on that computer.
 
 **Confirm.**
 Pairing asks the person once before this computer sends anything.

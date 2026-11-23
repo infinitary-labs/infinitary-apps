@@ -25,13 +25,15 @@ const SETTINGS_READ = "settings.current";
 /** Where devices find a home says when it cannot add a computer by its address (`device-adds-by-address.md`). */
 export const DEVICE_ADDS_BY_ADDRESS = contractChange("device-adds-by-address");
 
+/** A computer the home follows the update of reads updating (`computer-updating.md`). */
+export const COMPUTER_UPDATING = contractChange("computer-updating");
 /** The answers and push of where devices find a home, which an older desktop reads strictly. */
 const ADDRESS_CHANNELS = new Set(["inf:devices:addresses", "inf:devices:address:set"]);
 
 /** A computer that runs work saves its own crew's work before its update (`work-update-saving.md`). */
 export const WORK_UPDATE_SAVING = contractChange("work-update-saving");
 /** A device's fields an older view's strict device list cannot read, by their names in its unread list. */
-const DEVICE_FIELDS = ["updateWork"];
+const DEVICE_FIELDS = ["updateWork", "updating"];
 
 /** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
 export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
@@ -141,7 +143,8 @@ export function threadLinesFor(
  * name; a view keeps its own look and never needs the home's. Where
  * devices find a home is read as strictly, so a Windows home's
  * `addsByAddress` (`device-adds-by-address`) is left out the same way, and
- * so is a device's `updateWork` (`work-update-saving`) on the device list.
+ * so are a device's `updateWork` (`work-update-saving`) and `updating`
+ * (`computer-updating`) on the device list.
  */
 export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
   if (unread.length === 0 || !value || typeof value !== "object") return value;

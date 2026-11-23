@@ -844,6 +844,7 @@ public enum PhoneMessages {
     public static func `devicesAppWhyOwnWindow`() -> String { PhoneWords.format("devicesAppWhyOwnWindow", []) }
     public static func `devicesAppWhyPackageManager`() -> String { PhoneWords.format("devicesAppWhyPackageManager", []) }
     public static func `devicesAppWhyUnpublished`(`version`: String) -> String { PhoneWords.format("devicesAppWhyUnpublished", [`version`]) }
+    public static func `devicesAwayUpdating`() -> String { PhoneWords.format("devicesAwayUpdating", []) }
     public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
     public static func `devicesCarryRunsOn`(`from`: String, `to`: String) -> String { PhoneWords.format("devicesCarryRunsOn", [`from`, `to`]) }
@@ -1523,6 +1524,7 @@ public enum PhoneMessages {
     public static func `nowPanelRowStart`() -> String { PhoneWords.format("nowPanelRowStart", []) }
     public static func `nowPanelRowStarting`() -> String { PhoneWords.format("nowPanelRowStarting", []) }
     public static func `nowPanelRowTryAgain`() -> String { PhoneWords.format("nowPanelRowTryAgain", []) }
+    public static func `nowPanelRowUpdating`() -> String { PhoneWords.format("nowPanelRowUpdating", []) }
     public static func `nowPanelRowWaiting`() -> String { PhoneWords.format("nowPanelRowWaiting", []) }
     public static func `nowPanelSummaryFailed`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryFailed", [`count`]) }
     public static func `nowPanelSummaryWaiting`(`count`: Int) -> String { PhoneWords.format("nowPanelSummaryWaiting", [`count`]) }
@@ -2197,6 +2199,7 @@ public enum PhoneMessages {
     public static func `phoneTaskFactsAwayConnecting`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayConnecting", [`computer`]) }
     public static func `phoneTaskFactsAwayNoNewWork`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayNoNewWork", [`computer`]) }
     public static func `phoneTaskFactsAwayOutOfReach`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayOutOfReach", [`computer`]) }
+    public static func `phoneTaskFactsAwayUpdating`(`computer`: String) -> String { PhoneWords.format("phoneTaskFactsAwayUpdating", [`computer`]) }
     public static func `phoneTaskFactsBlockedByAnother`() -> String { PhoneWords.format("phoneTaskFactsBlockedByAnother", []) }
     public static func `phoneTaskFactsChangeBranch`() -> String { PhoneWords.format("phoneTaskFactsChangeBranch", []) }
     public static func `phoneTaskFactsChangePull`() -> String { PhoneWords.format("phoneTaskFactsChangePull", []) }
@@ -4082,6 +4085,7 @@ public enum PhoneMessages {
     public static func `taskGroupWorking`() -> String { PhoneWords.format("taskGroupWorking", []) }
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
+    public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
     public static func `taskTabActivity`() -> String { PhoneWords.format("taskTabActivity", []) }
     public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
     public static func `taskTabCrewmate`() -> String { PhoneWords.format("taskTabCrewmate", []) }
@@ -5133,6 +5137,7 @@ extension PhoneWords {
         "devicesAppWhyOwnWindow": [],
         "devicesAppWhyPackageManager": [],
         "devicesAppWhyUnpublished": ["version"],
+        "devicesAwayUpdating": [],
         "devicesCarriedOn": ["to"],
         "devicesCarryNotRemoved": ["from", "why"],
         "devicesCarryRunsOn": ["from", "to"],
@@ -5812,6 +5817,7 @@ extension PhoneWords {
         "nowPanelRowStart": [],
         "nowPanelRowStarting": [],
         "nowPanelRowTryAgain": [],
+        "nowPanelRowUpdating": [],
         "nowPanelRowWaiting": [],
         "nowPanelSummaryFailed": ["count"],
         "nowPanelSummaryWaiting": ["count"],
@@ -6486,6 +6492,7 @@ extension PhoneWords {
         "phoneTaskFactsAwayConnecting": ["computer"],
         "phoneTaskFactsAwayNoNewWork": ["computer"],
         "phoneTaskFactsAwayOutOfReach": ["computer"],
+        "phoneTaskFactsAwayUpdating": ["computer"],
         "phoneTaskFactsBlockedByAnother": [],
         "phoneTaskFactsChangeBranch": [],
         "phoneTaskFactsChangePull": [],
@@ -8371,6 +8378,7 @@ extension PhoneWords {
         "taskGroupWorking": [],
         "taskPinPin": [],
         "taskPinUnpin": [],
+        "taskStatusComputerUpdating": ["computer"],
         "taskTabActivity": [],
         "taskTabCards": [],
         "taskTabCrewmate": [],

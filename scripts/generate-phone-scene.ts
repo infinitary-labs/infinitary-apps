@@ -408,7 +408,6 @@ try {
             newWords: fresh > 0 ? newCountWords(fresh) : undefined,
             failedWords: section === "backlog" && failed > 0 ? failedCountWords(failed) : undefined,
             rows: rows.map(({ task, depth, home }) => ({ key: task.key, depth, word: wordOf(task), trailing: rowTrailing(task),
-              // The row's mark and the summary's reason beside it, at this reading's time.
               mark: taskStatusOf(task, now).mark, reason: taskStatusOf(task, now).reason,
               // The group it lists under by its state, where a pinned row would list unpinned: its Start and wait line follow it.
               home: section === "pinned" ? (home ?? undefined) : section === "earlier" ? undefined : section,
@@ -507,7 +506,6 @@ try {
     return { now, cases: cases.map(([name, patch, live]) => {
       const row = { ...base, ...patch } as unknown as TaskDetail;
       const read = taskWaitStatus(row, taskStatusOf(row, now), now);
-      // The record's own reading of a start in flight and a failed start, as RecordCard's facts say it.
       const since = row.startAttempt?.since ?? (row.activity === "starting" ? row.startedAt : null);
       const reason = row.startAttempt?.phase === "checking" ? "Checking whether it started"
         : since != null && now - since >= 15_000 && (row.startAttempt?.phase === "preparing" || row.activity === "starting")
@@ -515,7 +513,6 @@ try {
           : row.startNotice ? `Could not start. ${row.startNotice.reason}` : read.reason;
       const bar = recordBarOf(row);
       const closed = recordClosedLineOf(row);
-      // Drop task's first press, as RecordPaneFooter's `beginDrop` and its confirm line read the record.
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
       const effects = row.dropEffects ?? null;
       const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : null) : null;

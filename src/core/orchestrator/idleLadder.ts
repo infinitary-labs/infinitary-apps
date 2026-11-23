@@ -114,7 +114,6 @@ export function timedWaitOver(
   };
 }
 
-/** The waiting cards a stall wake names, when any are open. */
 function waitingFact(waiting: WakeNote[]): { waiting?: WakeNote[] } {
   return waiting.length > 0 ? { waiting } : {};
 }
@@ -181,13 +180,11 @@ export type IdleLadderHost = {
   now: () => number;
   tasks: TaskService;
   inbox: InboxStore;
-  /** The task's live crewmate, when a runtime holds it. */
   runtime(
     taskId: string,
   ): { turn: CrewTurn; crewmate: string; answeredAt?: number; failedAt?: number } | undefined;
   hasRunningJobs?: (taskId: string) => boolean;
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
-  /** The cards on the stack now. */
   openCards(): Iterable<Card>;
   /** A saved marked answer waits for explicit Done even after it was read. */
   answerNoteForTask?(taskId: string): Card | undefined;
@@ -212,7 +209,6 @@ export type IdleLadderHost = {
   ): void;
   /** The supervisor's own steer on the task's durable lane (actor supervisor). */
   steer(taskId: string, message: TypedWake): Promise<unknown>;
-  /** Put a host card on the stack, or take one down unanswered. */
   raiseCard(card: Card): void;
   withdrawCard(id: string, resolution: string): void;
   /** Whether a captain reply on an open card still waits for its answer. */
@@ -297,8 +293,6 @@ export class IdleLadder {
     this.nextMove = new NextMove(host, STALL_WAKE_MS);
     this.steers = new DependencySteers(host, (record) => this.liveWaits(record));
   }
-
-  // ---- the witnesses ------------------------------------------------------
 
   /**
    * The witness set for a task (docs/report-sort.md): gathered here once, so
@@ -672,8 +666,6 @@ export class IdleLadder {
     return !job || now - job.startedAt < JOB_BOUND_MS;
   }
 
-  // ---- the reconciler -----------------------------------------------------
-
   /**
    * The idle reconciler (captain-approved 2026-09-26; docs/report-sort.md,
    * "The idle ladder"): the one supervisor of every idle crewmate, whatever
@@ -910,7 +902,6 @@ export class IdleLadder {
     since: number | null = null,
   ): void {
     this.host.inbox.endOutage(task.id);
-    // The outage's one feed line says the crewmate answers again.
     if (since !== null)
       this.host.tasks.note(task.id, answeringAgainLine(failures), {
         news: false,
@@ -920,8 +911,6 @@ export class IdleLadder {
     if (failures < 2) return;
     this.host.notifyOp(recoveredWake(task, failures), "agent", task.id);
   }
-
-  // ---- the cut-off on crew lanes -------------------------------------------
 
   /**
    * The one hold predicate (the cut-off contract): a typed cut-off stands
@@ -939,7 +928,6 @@ export class IdleLadder {
     return this.heldBy(record) !== undefined;
   }
 
-  /** The account a cut-off holds a task on, and the cut-off, when one does. */
   heldBy(
     record: TaskAccount,
   ):
@@ -1022,7 +1010,6 @@ export class IdleLadder {
     }
   }
 
-  /** The account a task's turns are served by, read from its record. */
   accountOf(taskId: string): string | undefined {
     const record = this.host.tasks.get(taskId);
     return record ? this.servingAccount(record) : undefined;
@@ -1442,8 +1429,6 @@ export class IdleLadder {
     this.host.withdrawCard(id, "moved");
   }
 
-  // ---- the captain gate ---------------------------------------------------
-
   /**
    * Keep an active task's `captain` gate true to what holds it (the owner's
    * call 3 on the primitives review; docs/task-graph.md "Gates"): the card
@@ -1491,8 +1476,6 @@ export class IdleLadder {
       idleSince: now,
     });
   }
-
-  // ---- the ready sweep ----------------------------------------------------
 
   /**
    * The ready sweep (R1, the ready query since P2). Open rows: a decision
@@ -1636,7 +1619,6 @@ export class IdleLadder {
 /** What a crewmate's last report asked of the Firstmate (`IdleLadder.askOf`). */
 type LadderAsk = FirstmateAsk | { at: number; finished: true };
 
-/** The tasks the waits name, each once. */
 function uniqueTasks(waits: readonly TaskWait[]): TaskRecord[] {
   return [...new Map(waits.map(({ task }) => [task.id, task])).values()];
 }

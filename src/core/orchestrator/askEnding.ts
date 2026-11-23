@@ -19,10 +19,8 @@ import { hasMergeLine } from "./settleWords";
  * it is one chain, with one ending.
  */
 
-/** What the app reads from the stack. */
 export type AskEndingHost = {
   tasks: TaskService;
-  /** The cards on the stack now. */
   openCards: () => Iterable<Card>;
   /** A card's row, open or resolved. */
   storedCard: (id: string) => Card | undefined;
@@ -46,7 +44,6 @@ export type AskChain = {
   root: AskRecord;
   members: AskRecord[];
   ids: string[];
-  /** When the newest message of the chain was sent. */
   newestAt: number;
   work: TaskCoverageFields[];
   /** The tasks of `work` the first mate's own tools attached the chain's messages to. */
@@ -104,7 +101,6 @@ export function answersByShape(card: Card): boolean {
   );
 }
 
-/** The ending over a card stack: its open cards, its rows and when each was offered. */
 export function askEndingOf(
   tasks: TaskService,
   cards: {
@@ -128,7 +124,6 @@ export function askEndingOf(
 export class AskEnding {
   constructor(private readonly host: AskEndingHost) {}
 
-  /** A message's chain: its root, and every message that joined the root's work. */
   chain(askId: string): AskChain | undefined {
     const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return undefined;
@@ -188,17 +183,14 @@ export class AskEnding {
       : undefined;
   }
 
-  /** Whether a message's notice is on the stack now. */
   private noticeUp(askId: string): boolean {
     return this.noticesUp().some((notice) => notice.askId === askId);
   }
 
-  /** When the captain was last offered a card as it stands. */
   offeredAt(card: Card): number {
     return this.host.shownAt(card);
   }
 
-  /** The notices up now, by message, with when each was offered. */
   noticesUp(): { askId: string; shownAt: number }[] {
     const notices: { askId: string; shownAt: number }[] = [];
     for (const card of this.host.openCards()) {
@@ -234,7 +226,6 @@ export class AskEnding {
     return (filed?.kind === "question" ? capture.reportOrigin(filed.id) : undefined) ?? filed?.id;
   }
 
-  /** The cards the first mate showed for the chain's messages, by its own facts. */
   private shownFor(chain: AskChain): Set<string> {
     return new Set(
       chain.members.flatMap((member) =>
@@ -253,14 +244,12 @@ export class AskEnding {
     return this.about(chain, card) && (this.shownFor(chain).has(card.id) || answersByShape(card));
   }
 
-  /** Whether a card is about the chain: shown for its messages, or a card of its work. */
   private about(chain: AskChain, card: Card): boolean {
     if (this.shownFor(chain).has(card.id)) return true;
     const taskId = this.cardTask(card);
     return taskId !== undefined && chain.work.some((task) => task.id === taskId);
   }
 
-  /** The newest card up that answers the chain and was shown since its newest message. */
   waitingCard(chain: AskChain): Card | undefined {
     let newest: Card | undefined;
     for (const card of this.host.openCards()) {
@@ -488,7 +477,6 @@ export class AskEnding {
     const waiting = this.waitingCard(chain);
     if (waiting && this.cardTask(waiting) === taskId)
       return { kind: "revise", card: waiting, open: true };
-    // An answer the captain saw already answers it: nothing comes back.
     if (this.seenAnswer(chain)) return { kind: "quiet" };
     // A card of other work up for the message stays its answer.
     return { kind: "note", answering: waiting === undefined };

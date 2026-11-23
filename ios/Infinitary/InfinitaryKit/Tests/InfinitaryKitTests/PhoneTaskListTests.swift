@@ -35,7 +35,7 @@ struct PhoneTaskListTests {
         let reason: String
     }
     private struct Trailing: Decodable {
-        let name: String; let place: String; let outOfReach: Bool; let connecting: Bool; let reach: String
+        let outOfReach: Bool; let connecting: Bool; let reach: String
     }
 
     private func readings() throws -> [Reading] {
@@ -61,8 +61,7 @@ struct PhoneTaskListTests {
                     #expect(row.depth == want.depth, "\(want.key): its depth")
                     #expect(PhoneTaskList.word(row.task) == want.word, "\(want.key): its word")
                     let trailing = list.trailing(of: row.task)
-                    #expect(trailing == PhoneTaskList.Trailing(name: want.trailing.name, place: want.trailing.place,
-                                                               outOfReach: want.trailing.outOfReach,
+                    #expect(trailing == PhoneTaskList.Trailing(outOfReach: want.trailing.outOfReach,
                                                                connecting: want.trailing.connecting, reach: want.trailing.reach),
                             "\(want.key): its trailing words")
                     #expect(part.waitLine(of: row.task) == want.wait, "\(want.key): its wait line")

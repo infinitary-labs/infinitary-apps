@@ -959,7 +959,6 @@ export function Group({
 }) {
   const collapsible = !OPEN_BY_DEFAULT.has(group);
   const reveal = useInPlaceReveal(open);
-  const singleProject = hasSingleRegisteredRepoProject(board);
   const projects = board.projects;
   // A crew write in another group leaves this group's actual elements
   // untouched, not just the Row components' memoized paints (INF-2221).
@@ -982,7 +981,6 @@ export function Group({
           task={task}
           depth={depth}
           projectName={projectNameOf(names, task)}
-          singleProject={singleProject}
           selected={selectedTaskIds.includes(task.id)}
           lit={litTaskId === task.id}
           isStop={stop === rowNavKey(task.id)}
@@ -1016,7 +1014,6 @@ export function Group({
     board,
     group,
     projects,
-    singleProject,
     selectedTaskIds,
     litTaskId,
     stop,
@@ -1093,7 +1090,6 @@ const Row = memo(function Row({
   task,
   depth,
   projectName,
-  singleProject,
   selected,
   lit,
   isStop,
@@ -1122,9 +1118,8 @@ const Row = memo(function Row({
   home: NowGroup | null;
   task: PanelTaskRow;
   depth: number;
-  /** The project's display name, for the row's label; shown after the title unless one project is meant. */
+  /** The project's display name, for the row's label; the row itself never shows it. */
   projectName: string;
-  singleProject: boolean;
   selected: boolean;
   lit: boolean;
   isStop: boolean;
@@ -1174,7 +1169,7 @@ const Row = memo(function Row({
     return id === null ? null : { index, id };
   };
   const word = wordOf(task);
-  const trailing = rowTrailing(task, singleProject ? "" : projectName);
+  const trailing = rowTrailing(task);
   const place = task.place ? ` · ${task.place.where}` : "";
   const waiting =
     task.blockedBy.length > 0
@@ -1193,7 +1188,7 @@ const Row = memo(function Row({
       data-now-status={task.status}
       data-now-selected={selected ? "" : undefined}
       data-now-lit={lit ? "" : undefined}
-      data-now-trailing={trailing.name || trailing.place ? "" : undefined}
+      data-now-trailing={trailing.outOfReach ? "" : undefined}
       data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
       data-now-connecting={trailing.connecting ? "" : undefined}
       data-now-catching-up={trailing.catchingUp ? "" : undefined}
@@ -1272,26 +1267,12 @@ const Row = memo(function Row({
           ))}
         </span>
       )}
-      {trailing.place ? (
-        // Last first: what does not fit leaves whole, the project's
-        // name before the place, never "out of reach" or "catching up".
-        <span className="key" data-now-project="" data-now-place="">
-          {trailing.outOfReach && (
-            <span className="reach" data-now-reach="">
-              {trailing.reach}
-            </span>
-          )}
-          <span className="place">
-            {trailing.outOfReach ? `${trailing.place} · ` : trailing.place}
-          </span>
-          {trailing.name && <span className="name">{`${trailing.name} · `}</span>}
+      {trailing.outOfReach && (
+        // The row names neither its project nor its computer; it says only
+        // why its computer cannot take work now, and a long title never cuts it.
+        <span className="key reach" data-now-reach="">
+          {trailing.reach}
         </span>
-      ) : (
-        trailing.name && (
-          <span className="key" data-now-project="">
-            {trailing.name}
-          </span>
-        )
       )}
     </button>
   );
@@ -1347,18 +1328,29 @@ function RowFold({
   shut: boolean;
   onFold?: ((ids: readonly string[], on: boolean) => void) | undefined;
 }) {
-  const ref = useRef<HTMLElement | null>(null);
+  // The control is a span until rows list under the task, then a button: each
+  // new element is measured and watched, so the room kept for it follows it,
+  // also when it was first drawn while the panel was not shown (0 wide).
+  const [box, setBox] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => {
-    const box = ref.current;
     if (!box) return;
     const set = () => box.parentElement?.style.setProperty("--now-fold-w", `${box.offsetWidth}px`);
     set();
     const observer = new ResizeObserver(set);
     observer.observe(box);
     return () => observer.disconnect();
-  }, []);
+  }, [box]);
   const label = foldLabel(shut, task.key);
   const rest = useRestLabel(folds ? label : undefined);
+  const restRef = rest.ref;
+  // One stable ref, so a paint hands it no new element to set.
+  const buttonRef = useCallback(
+    (element: HTMLElement | null) => {
+      setBox(element);
+      restRef(element);
+    },
+    [restRef],
+  );
   const count = parts && (
     <span className="n" data-now-parts="">
       {parts}
@@ -1366,13 +1358,7 @@ function RowFold({
   );
   if (!folds || !onFold) {
     return (
-      <span
-        data-now-fold=""
-        aria-hidden="true"
-        ref={(element) => {
-          ref.current = element;
-        }}
-      >
+      <span data-now-fold="" aria-hidden="true" ref={setBox}>
         {count}
       </span>
     );
@@ -1385,10 +1371,7 @@ function RowFold({
       aria-label={label}
       aria-expanded={shut ? "false" : "true"}
       {...rest}
-      ref={(element) => {
-        ref.current = element;
-        rest.ref(element);
-      }}
+      ref={buttonRef}
       onClick={() => onFold([task.id], !shut)}
     >
       {count}

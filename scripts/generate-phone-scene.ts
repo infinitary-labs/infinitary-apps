@@ -19,7 +19,7 @@ type NowRows = {
   rowsOf(board: NowBoard, filter: NowFilter): Map<string, NowRow[]>;
   earlierRowsOf(tasks: NowBoard["tasks"], groups: Map<string, NowRow[]>, filter: NowFilter): NowRow[];
   wordOf(task: PanelTaskRow): string;
-  trailingOf(board: NowBoard, task: PanelTaskRow): unknown;
+  rowTrailing(task: PanelTaskRow): unknown;
   newFilingCount(rows: readonly NowRow[]): number;
   failedStartCount(tasks: readonly PanelTaskRow[]): number;
 };
@@ -62,7 +62,7 @@ try {
   const { reasoningWord } = await runner.import<typeof import("../src/shared/reasoning.ts")>(join(REPO_ROOT, "src/shared/reasoning.ts"));
   const { feedRelativeAge } = await runner.import<typeof import("../src/shared/relativeAge.ts")>(join(REPO_ROOT, "src/shared/relativeAge.ts"));
   const { clipPlanLine, foldPlan, planCounts } = await runner.import<typeof import("../src/shared/taskPlan.ts")>(join(REPO_ROOT, "src/shared/taskPlan.ts"));
-  const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, trailingOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
+  const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, rowTrailing, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
   const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
@@ -407,7 +407,7 @@ try {
           return { section, folds: !OPEN_BY_DEFAULT.has(section), count: rows.length,
             newWords: fresh > 0 ? newCountWords(fresh) : undefined,
             failedWords: section === "backlog" && failed > 0 ? failedCountWords(failed) : undefined,
-            rows: rows.map(({ task, depth, home }) => ({ key: task.key, depth, word: wordOf(task), trailing: trailingOf(panel, task),
+            rows: rows.map(({ task, depth, home }) => ({ key: task.key, depth, word: wordOf(task), trailing: rowTrailing(task),
               // The row's mark and the summary's reason beside it, at this reading's time.
               mark: taskStatusOf(task, now).mark, reason: taskStatusOf(task, now).reason,
               // The group it lists under by its state, where a pinned row would list unpinned: its Start and wait line follow it.

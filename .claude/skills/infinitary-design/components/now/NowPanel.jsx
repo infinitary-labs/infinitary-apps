@@ -5,8 +5,8 @@ import {StatusDot} from "../core/StatusDot.jsx";
 // search icon, then rows for "waiting on you" and "working", and
 // the other groups (queued, backlog, done · 7d) collapsed to a count.
 // A row is a status dot, the task key in dim mono before the title, and
-// the project name in dim mono
-// (ellipsized; trailing track is fit-content(40%) so short names size to content); one dim word
+// nothing after it but, while its computer cannot take work, why (the
+// production row's reach words; this mock leaves them out); one dim word
 // for a blocked or held row; children indent under their parent. Nothing
 // else in the rail: no chips, meters, models, or ages. Clicking a row is a
 // pointing gesture (it opens the task's record card, or brings its decision
@@ -16,7 +16,7 @@ const OPEN_BY_DEFAULT={waiting:true,working:true};
 export function NowRow({task,onOpen}){
   const depth=Math.min(task.depth||0,3);
   return <button type="button" onClick={()=>onOpen&&onOpen(task)} title={`${task.key} · ${task.title}`}
-    style={{display:"grid",gridTemplateColumns:"6px minmax(0,1fr) fit-content(40%)",alignItems:"center",columnGap:8,width:"100%",boxSizing:"border-box",
+    style={{display:"grid",gridTemplateColumns:"6px minmax(0,1fr)",alignItems:"center",columnGap:8,width:"100%",boxSizing:"border-box",
       margin:0,padding:"5px 6px",paddingLeft:6+depth*12,border:"none",borderRadius:"var(--radius-s)",background:"transparent",color:"inherit",font:"inherit",textAlign:"left",cursor:"pointer",
       transition:"background var(--dur-fast) var(--ease-out)"}}
     onMouseEnter={(e)=>{e.currentTarget.style.background="var(--bg-3)";}} onMouseLeave={(e)=>{e.currentTarget.style.background="transparent";}}>
@@ -24,7 +24,6 @@ export function NowRow({task,onOpen}){
     <span style={{fontSize:"var(--text-sm)",color:task.group==="waiting"?"var(--fg-1)":"var(--fg-2)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",lineHeight:"var(--leading-body)"}}>
       <span style={{fontFamily:"var(--font-mono)",fontSize:"var(--text-xs)",color:"var(--fg-3)"}}>{task.key} </span>{task.title}{task.word&&<span style={{color:"var(--fg-3)"}}> · {task.word}</span>}
     </span>
-    <span style={{fontFamily:"var(--font-mono)",fontSize:"var(--text-xs)",color:"var(--fg-3)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{task.projectName}</span>
   </button>;
 }
 export function NowGroup({group,rows,open,onToggle,onOpen}){

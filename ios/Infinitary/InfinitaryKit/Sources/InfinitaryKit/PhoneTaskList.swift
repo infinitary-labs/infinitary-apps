@@ -65,11 +65,9 @@ public struct PhoneTaskList: Sendable {
         }
     }
 
-    /// The trailing words of a row (the Mac's `rowTrailing`): the project's name, where the task runs, and why that
-    /// computer cannot take work now.
+    /// The words a row ends with (the Mac's `rowTrailing`): why its computer cannot take work now, and nothing while it
+    /// can. The row names neither its project nor its computer.
     public struct Trailing: Equatable, Sendable {
-        public let name: String
-        public let place: String
         public let outOfReach: Bool
         public let connecting: Bool
         public let reach: String
@@ -214,11 +212,12 @@ public struct PhoneTaskList: Sendable {
 
     public var isEmpty: Bool { parts.isEmpty }
 
+    /// The project's name for a row's spoken label, where more than one project could be meant; the row never shows it.
+    public func projectName(of task: PhoneTask) -> String { projectNames[task.projectId] ?? "" }
+
     public func trailing(of task: PhoneTask) -> Trailing {
         let connecting = task.place?.reach == "connecting"
         return Trailing(
-            name: projectNames[task.projectId] ?? "",
-            place: task.place?.where ?? "",
             outOfReach: task.place?.reach != nil && task.place?.reach != "in-reach",
             connecting: connecting,
             reach: connecting ? PhoneTaskRowWords.reachConnecting

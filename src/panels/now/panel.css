@@ -180,7 +180,7 @@
 }
 [data-now-row] {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) fit-content(40%);
+  grid-template-columns: 12px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
   width: 100%;
@@ -249,20 +249,9 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
-/* A task another computer runs: its project, where, and that its computer
-   is out of reach, connecting or catching up. Drawn last first from the
-   right, a part that does not fit wraps onto the hidden second line whole -
-   the project's name first, then the place - so the reach words always show. */
-.key[data-now-place] {
-  display: flex;
-  flex-direction: row-reverse;
-  flex-wrap: wrap;
-  height: 1lh;
-}
-.key[data-now-place] > span {
-  flex-shrink: 0;
-  white-space: pre;
-}
+/* The row's only words after its title: that its computer is out of reach,
+   connecting, takes no new work or is catching up. The column is as wide as
+   they are, so a long title gives way and never cuts them. */
 .reach {
   color: var(--warn);
 }
@@ -463,18 +452,4 @@
   color: var(--fg-3);
   border-color: var(--line-1);
   cursor: default;
-}
-/* A narrow panel: the row drops its project name and where it runs, and
-   keeps only that its computer is out of reach. (With one project the
-   panel leaves the name out itself.) After the rows' own rules, which
-   these narrow. */
-@container (max-width: 320px) {
-  [data-now-row]:not([data-now-out-of-reach]) {
-    grid-template-columns: 12px minmax(0, 1fr);
-  }
-  [data-now-row]:not([data-now-out-of-reach]) .key,
-  .name,
-  .place {
-    display: none;
-  }
 }

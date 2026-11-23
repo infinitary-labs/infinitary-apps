@@ -23,7 +23,9 @@ export function resetHandlers(services: CoreServices): ResetHandlers {
 }
 
 export function resetDeps(services: CoreServices): ResetPrepareDeps {
-  const dataDir = services.paths.userData;
+  // Read at each use, as the dispatcher's other handlers do: the dispatcher
+  // is built before, and sometimes without, the folder's paths.
+  const dataDir = () => services.paths.userData;
   return {
     devices: () => services.computers.list(),
     removeDevice: (id) => services.devices.remove(id),
@@ -47,7 +49,7 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
       services.repos
         .list()
         .map((repo) => real(repo.path))
-        .filter((path) => !within(real(dataDir), path)),
-    undoProject: (folder) => undoProjectSettings(folder, dataDir),
+        .filter((path) => !within(real(dataDir()), path)),
+    undoProject: (folder) => undoProjectSettings(folder, dataDir()),
   };
 }

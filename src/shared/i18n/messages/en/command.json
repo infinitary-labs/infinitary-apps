@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "update, restart, stable, alpha",
   "commandUsageUnit": "Switch Usage units",
   "commandUsageUnitWords": "tokens, cost, dollars, estimate",
+  "commandViewerSavePicture": "Save the picture",
+  "commandViewerSavePictureWords": "download, picture, image, viewer",
   "commandWhatsNewShow": "Show what's new",
   "commandWhatsNewShowWords": "release, notes, changes, version"
 }

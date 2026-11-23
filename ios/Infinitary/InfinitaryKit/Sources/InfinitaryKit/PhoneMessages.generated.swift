@@ -746,6 +746,8 @@ public enum PhoneMessages {
     public static func `commandUpdatesShowWords`() -> String { PhoneWords.format("commandUpdatesShowWords", []) }
     public static func `commandUsageUnit`() -> String { PhoneWords.format("commandUsageUnit", []) }
     public static func `commandUsageUnitWords`() -> String { PhoneWords.format("commandUsageUnitWords", []) }
+    public static func `commandViewerSavePicture`() -> String { PhoneWords.format("commandViewerSavePicture", []) }
+    public static func `commandViewerSavePictureWords`() -> String { PhoneWords.format("commandViewerSavePictureWords", []) }
     public static func `commandWhatsNewShow`() -> String { PhoneWords.format("commandWhatsNewShow", []) }
     public static func `commandWhatsNewShowWords`() -> String { PhoneWords.format("commandWhatsNewShowWords", []) }
     public static func `composerFolderNotProject`() -> String { PhoneWords.format("composerFolderNotProject", []) }
@@ -2415,6 +2417,7 @@ public enum PhoneMessages {
     public static func `refuseNoCardThreadIsReadAboveIts`() -> String { PhoneWords.format("refuseNoCardThreadIsReadAboveIts", []) }
     public static func `refuseNoOtherCardIsNew`() -> String { PhoneWords.format("refuseNoOtherCardIsNew", []) }
     public static func `refuseNoPageToPointAt`() -> String { PhoneWords.format("refuseNoPageToPointAt", []) }
+    public static func `refuseNoPictureIsOpen`() -> String { PhoneWords.format("refuseNoPictureIsOpen", []) }
     public static func `refuseNoReleaseNotesYet`() -> String { PhoneWords.format("refuseNoReleaseNotesYet", []) }
     public static func `refuseNoUpdateIsAvailable`() -> String { PhoneWords.format("refuseNoUpdateIsAvailable", []) }
     public static func `refuseNoUpdateIsSavingWorkNow`() -> String { PhoneWords.format("refuseNoUpdateIsSavingWorkNow", []) }
@@ -4134,10 +4137,15 @@ public enum PhoneMessages {
     public static func `uiPercentLeft`(`percent`: String) -> String { PhoneWords.format("uiPercentLeft", [`percent`]) }
     public static func `uiPictureViewerActualSize`() -> String { PhoneWords.format("uiPictureViewerActualSize", []) }
     public static func `uiPictureViewerClose`() -> String { PhoneWords.format("uiPictureViewerClose", []) }
+    public static func `uiPictureViewerCopied`() -> String { PhoneWords.format("uiPictureViewerCopied", []) }
+    public static func `uiPictureViewerCopyFailed`() -> String { PhoneWords.format("uiPictureViewerCopyFailed", []) }
+    public static func `uiPictureViewerCopyPicture`() -> String { PhoneWords.format("uiPictureViewerCopyPicture", []) }
     public static func `uiPictureViewerDemoFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerDemoFrom", [`title`]) }
+    public static func `uiPictureViewerFitToWindow`() -> String { PhoneWords.format("uiPictureViewerFitToWindow", []) }
     public static func `uiPictureViewerHintFitted`(`size`: String) -> String { PhoneWords.format("uiPictureViewerHintFitted", [`size`]) }
     public static func `uiPictureViewerHintOne`(`size`: String) -> String { PhoneWords.format("uiPictureViewerHintOne", [`size`]) }
     public static func `uiPictureViewerHintOwn`(`size`: String) -> String { PhoneWords.format("uiPictureViewerHintOwn", [`size`]) }
+    public static func `uiPictureViewerMenu`() -> String { PhoneWords.format("uiPictureViewerMenu", []) }
     public static func `uiPictureViewerNext`() -> String { PhoneWords.format("uiPictureViewerNext", []) }
     public static func `uiPictureViewerPartFrom`(`title`: String) -> String { PhoneWords.format("uiPictureViewerPartFrom", [`title`]) }
     public static func `uiPictureViewerPause`() -> String { PhoneWords.format("uiPictureViewerPause", []) }
@@ -4145,6 +4153,8 @@ public enum PhoneMessages {
     public static func `uiPictureViewerPlay`() -> String { PhoneWords.format("uiPictureViewerPlay", []) }
     public static func `uiPictureViewerPrevious`() -> String { PhoneWords.format("uiPictureViewerPrevious", []) }
     public static func `uiPictureViewerReplay`() -> String { PhoneWords.format("uiPictureViewerReplay", []) }
+    public static func `uiPictureViewerSaveFailed`() -> String { PhoneWords.format("uiPictureViewerSaveFailed", []) }
+    public static func `uiPictureViewerSaveToDownloads`() -> String { PhoneWords.format("uiPictureViewerSaveToDownloads", []) }
     public static func `uiPictureViewerSeek`() -> String { PhoneWords.format("uiPictureViewerSeek", []) }
     public static func `uiPictureViewerSeekValue`(`length`: String, `time`: String) -> String { PhoneWords.format("uiPictureViewerSeekValue", [`length`, `time`]) }
     public static func `uiPictureViewerShownAtOwnSize`() -> String { PhoneWords.format("uiPictureViewerShownAtOwnSize", []) }
@@ -5041,6 +5051,8 @@ extension PhoneWords {
         "commandUpdatesShowWords": [],
         "commandUsageUnit": [],
         "commandUsageUnitWords": [],
+        "commandViewerSavePicture": [],
+        "commandViewerSavePictureWords": [],
         "commandWhatsNewShow": [],
         "commandWhatsNewShowWords": [],
         "composerFolderNotProject": [],
@@ -6710,6 +6722,7 @@ extension PhoneWords {
         "refuseNoCardThreadIsReadAboveIts": [],
         "refuseNoOtherCardIsNew": [],
         "refuseNoPageToPointAt": [],
+        "refuseNoPictureIsOpen": [],
         "refuseNoReleaseNotesYet": [],
         "refuseNoUpdateIsAvailable": [],
         "refuseNoUpdateIsSavingWorkNow": [],
@@ -8429,10 +8442,15 @@ extension PhoneWords {
         "uiPercentLeft": ["percent"],
         "uiPictureViewerActualSize": [],
         "uiPictureViewerClose": [],
+        "uiPictureViewerCopied": [],
+        "uiPictureViewerCopyFailed": [],
+        "uiPictureViewerCopyPicture": [],
         "uiPictureViewerDemoFrom": ["title"],
+        "uiPictureViewerFitToWindow": [],
         "uiPictureViewerHintFitted": ["size"],
         "uiPictureViewerHintOne": ["size"],
         "uiPictureViewerHintOwn": ["size"],
+        "uiPictureViewerMenu": [],
         "uiPictureViewerNext": [],
         "uiPictureViewerPartFrom": ["title"],
         "uiPictureViewerPause": [],
@@ -8440,6 +8458,8 @@ extension PhoneWords {
         "uiPictureViewerPlay": [],
         "uiPictureViewerPrevious": [],
         "uiPictureViewerReplay": [],
+        "uiPictureViewerSaveFailed": [],
+        "uiPictureViewerSaveToDownloads": [],
         "uiPictureViewerSeek": [],
         "uiPictureViewerSeekValue": ["length", "time"],
         "uiPictureViewerShownAtOwnSize": [],

@@ -402,6 +402,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       picture: (name) => invoke("inf:cards:picture", name),
       saveFile: (cardId, fileId) =>
         readableRequest("inf:cards:save-file", () => invoke("inf:cards:save-file", cardId, fileId)),
+      savePicture: (name, source) => invoke("inf:cards:save-picture", name, source),
       savedFiles: (cardId, fileIds) => invoke("inf:cards:saved-files", cardId, fileIds),
       openSavedFile: (cardId, fileId) => invoke("inf:cards:open-saved-file", cardId, fileId),
       saveFiles: (cardId, fileIds, name) =>

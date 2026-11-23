@@ -2,7 +2,11 @@ import { join } from "node:path";
 import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserViewer } from "@core/browser/browserViews";
 import { setUpHere, setUpStandIns } from "@core/devices/setUpHere";
-import { saveAllIntoDownloads, saveIntoDownloads } from "@core/files/downloadsSave";
+import {
+  saveAllIntoDownloads,
+  saveBytesIntoDownloads,
+  saveIntoDownloads,
+} from "@core/files/downloadsSave";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { hostPlatform } from "@core/platform";
@@ -38,6 +42,7 @@ import { controlWindow, windowState } from "../windowControls";
 import { appWindows } from "../windows";
 import { markDownload } from "./downloadMark";
 import { eventBatch } from "./eventBatch";
+import { pictureFile } from "./pictureSave";
 import { forwardInvoke, handleInvoke } from "./registry";
 import { SavedCardFileStore } from "./savedCardFiles";
 
@@ -267,6 +272,17 @@ export function registerIpc(options: IpcOptions): void {
     });
     await savedCardFiles.remember(cardId, [{ id: fileId, ...saved }]);
     return saved;
+  });
+  // The picture viewer's Save to Downloads: the picture or recording shown, as
+  // its own file named for the card, into this computer's Downloads.
+  handleInvoke("inf:cards:save-picture", rendererSource, async (_event, name, source) => {
+    const file = await pictureFile(source, (channel, args) => shell.dispatch(channel, args));
+    return saveBytesIntoDownloads({
+      folder: app.getPath("downloads"),
+      name: `${name.replace(/[\\/:]/g, "-")}.${file.extension}`,
+      data: file.data,
+      mark: markDownload,
+    });
   });
   // Save all: every file of the card into one new folder in Downloads, named for the task.
   handleInvoke("inf:cards:save-files", rendererSource, async (_event, cardId, fileIds, name) => {

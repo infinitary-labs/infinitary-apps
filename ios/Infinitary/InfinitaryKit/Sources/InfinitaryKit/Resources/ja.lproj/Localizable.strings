@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "アップデート, 再起動, 安定版, アルファ版";
 "commandUsageUnit" = "使用量の単位を切り替える";
 "commandUsageUnitWords" = "トークン, 費用, ドル, 見積もり";
+"commandViewerSavePicture" = "画像を保存";
+"commandViewerSavePictureWords" = "ダウンロード, 画像, ピクチャ, ビューア";
 "commandWhatsNewShow" = "新機能を表示";
 "commandWhatsNewShowWords" = "リリース, ノート, 変更, バージョン";
 "composerFolderNotProject" = "そのフォルダをプロジェクトとして追加できませんでした。";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "最新メッセージより上を読んでいるカードのスレッドはありません";
 "refuseNoOtherCardIsNew" = "ほかに新着カードはありません";
 "refuseNoPageToPointAt" = "指し示せるページが表示されていません";
+"refuseNoPictureIsOpen" = "まずカードの画像を開いてください";
 "refuseNoReleaseNotesYet" = "リリースノートはまだありません";
 "refuseNoUpdateIsAvailable" = "利用可能なアップデートはありません";
 "refuseNoUpdateIsSavingWorkNow" = "作業を保存中のアップデートはありません";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "残り%1$@%%";
 "uiPictureViewerActualSize" = "実際のサイズ";
 "uiPictureViewerClose" = "ビューアを閉じる";
+"uiPictureViewerCopied" = "画像をコピーしました";
+"uiPictureViewerCopyFailed" = "画像をコピーできませんでした";
+"uiPictureViewerCopyPicture" = "画像をコピー";
 "uiPictureViewerDemoFrom" = "%1$@ のデモ";
+"uiPictureViewerFitToWindow" = "ウインドウに合わせる";
 "uiPictureViewerHintFitted" = "%1$@ · 画面に合わせて表示 · クリックまたは Z で 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · ドラッグまたはスクロールで移動";
 "uiPictureViewerHintOwn" = "%1$@ · 元のサイズで表示";
+"uiPictureViewerMenu" = "画像の操作";
 "uiPictureViewerNext" = "次の画像";
 "uiPictureViewerPartFrom" = "%1$@（全画面）";
 "uiPictureViewerPause" = "一時停止";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "再生";
 "uiPictureViewerPrevious" = "前の画像";
 "uiPictureViewerReplay" = "もう一度再生";
+"uiPictureViewerSaveFailed" = "画像を保存できませんでした";
+"uiPictureViewerSaveToDownloads" = "「ダウンロード」に保存";
 "uiPictureViewerSeek" = "再生位置";
 "uiPictureViewerSeekValue" = "%2$@ / %1$@";
 "uiPictureViewerShownAtOwnSize" = "元のサイズで表示";

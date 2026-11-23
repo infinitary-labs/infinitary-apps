@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "atualização, atualizar, reiniciar, estável, alfa";
 "commandUsageUnit" = "Trocar as unidades de Uso";
 "commandUsageUnitWords" = "tokens, custo, dólares, estimativa";
+"commandViewerSavePicture" = "Salvar a imagem";
+"commandViewerSavePictureWords" = "baixar, imagem, foto, visualizador";
 "commandWhatsNewShow" = "Mostrar as novidades";
 "commandWhatsNewShowWords" = "lançamento, notas, novidades, alterações, versão";
 "composerFolderNotProject" = "Não foi possível adicionar essa pasta como projeto.";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "Nenhuma conversa de cartão está sendo lida acima da última mensagem";
 "refuseNoOtherCardIsNew" = "Nenhum outro cartão é novo";
 "refuseNoPageToPointAt" = "Nenhuma página está sendo mostrada para apontar";
+"refuseNoPictureIsOpen" = "Abra primeiro uma imagem de um cartão";
 "refuseNoReleaseNotesYet" = "Ainda não há notas de versão";
 "refuseNoUpdateIsAvailable" = "Nenhuma atualização disponível";
 "refuseNoUpdateIsSavingWorkNow" = "Nenhuma atualização está salvando trabalho agora";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "%1$@%% restante";
 "uiPictureViewerActualSize" = "Tamanho real";
 "uiPictureViewerClose" = "Fechar o visualizador";
+"uiPictureViewerCopied" = "Imagem copiada";
+"uiPictureViewerCopyFailed" = "Não foi possível copiar a imagem";
+"uiPictureViewerCopyPicture" = "Copiar imagem";
 "uiPictureViewerDemoFrom" = "Demonstração de %1$@";
+"uiPictureViewerFitToWindow" = "Ajustar à janela";
 "uiPictureViewerHintFitted" = "%1$@ · ajustada · clique ou Z para 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · arraste ou role para mover";
 "uiPictureViewerHintOwn" = "%1$@ · exibida no próprio tamanho";
+"uiPictureViewerMenu" = "Ações da imagem";
 "uiPictureViewerNext" = "Próxima imagem";
 "uiPictureViewerPartFrom" = "%1$@, tela cheia";
 "uiPictureViewerPause" = "Pausar";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "Reproduzir";
 "uiPictureViewerPrevious" = "Imagem anterior";
 "uiPictureViewerReplay" = "Repetir";
+"uiPictureViewerSaveFailed" = "Não foi possível salvar a imagem";
+"uiPictureViewerSaveToDownloads" = "Salvar em Downloads";
 "uiPictureViewerSeek" = "Avançar ou voltar";
 "uiPictureViewerSeekValue" = "%2$@ de %1$@";
 "uiPictureViewerShownAtOwnSize" = "Exibida no próprio tamanho";

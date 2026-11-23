@@ -35,7 +35,7 @@ The design system's modal-level surface, which command search shares (`component
   The current one is at full opacity with an `--accent` border - the viewer's only accent at rest; the marks of "Pointing at a place" are the other.
   When a group outgrows the row, the row scrolls sideways and keeps the current thumbnail in view.
 
-**Keys**, while it is open: `←` `→` previous and next, `Home` `End` first and last, `Z` `Enter` `Space` toggle 1:1 (`Enter` and `Space` on a focused control press that control instead), `Esc` closes.
+**Keys**, while it is open: `←` `→` previous and next, `Home` `End` first and last, `Z` `Enter` `Space` toggle 1:1 (`Enter` and `Space` on a focused control press that control instead), `⌘C` copies the picture and `⌘S` saves it ("The picture's menu" below), `Shift+F10` or the menu key opens its menu, `Esc` closes.
 They never reach the card stack: the stack's own paging stays a click.
 
 **Leave.**
@@ -61,6 +61,21 @@ Turning Point at on moves focus from its control to the viewer itself, so `Enter
 The picture keys - paging, `Z` - wait until Point at is off; a freehand line needs a pointer.
 When a message already carries its four pictures, Point at on a picture not yet marked is off and says why on rest, as Actual size does.
 A queued note shows a small copy of its marked picture in the thread, at most 220 px wide, with its mark drawn in; a press on the note opens the viewer at that picture with the mark lit.
+
+**The picture's menu.**
+A right-click on the picture, a diagram or a recording opens the row menu's right-click opening at the pointer (`components/core/RowMenu.prompt.md`, "A right-click opening"); a right-click on the dark space around it opens nothing, and a left click there still closes the viewer.
+Its items, in order, each with its key at its end:
+
+- **Copy picture** (`⌘C`, `Ctrl+C` on Windows and Linux): the picture shown now on the clipboard at its own pixels, never the fitted view and never the Point at marks; a diagram is copied as a PNG at twice its own size, on the `--bg-1` it is drawn on in the card.
+  `⌘C` copies the picture whenever no words in the viewer are selected; with the caption selected it copies those words.
+- **Save to Downloads** (`⌘S`): the picture's own file into Downloads, named for the card's title, with its number in a group (`Card title 2.png`); a diagram or a picture the body carries itself is saved as a PNG.
+  It never writes over a file: a name already taken gets the next free one, as a card's files do.
+- a separator, then **Actual size** (`Z`), which reads **Fit to window** at 1:1; where the picture already fits it stays listed, dim, with "Shown at its own size" under it.
+- **Point at**, with its key, only where the header offers it, dim with its reason where it is off.
+
+A recording offers Save to Downloads alone, its own MP4 or GIF.
+What happened shows for a few seconds where the foot's hint is, in the same mono: "Picture copied", "saved in Downloads as Card title.png", or that it could not be done.
+`Esc` closes the menu and leaves the viewer open; the viewer's keys wait while the menu is open, and a right-button press never starts a drag at 1:1.
 
 **A demo.**
 A demo is a recording of the app being used, shown in the body as its poster (`ResponseCard.prompt.md`, "A demo"); the viewer is where it plays.

@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "update, restart, stable, alpha";
 "commandUsageUnit" = "Switch Usage units";
 "commandUsageUnitWords" = "tokens, cost, dollars, estimate";
+"commandViewerSavePicture" = "Save the picture";
+"commandViewerSavePictureWords" = "download, picture, image, viewer";
 "commandWhatsNewShow" = "Show what's new";
 "commandWhatsNewShowWords" = "release, notes, changes, version";
 "composerFolderNotProject" = "That folder could not be added as a project.";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "No card thread is read above its latest message";
 "refuseNoOtherCardIsNew" = "No other card is new";
 "refuseNoPageToPointAt" = "No page is shown to point at";
+"refuseNoPictureIsOpen" = "Open a picture in a card first";
 "refuseNoReleaseNotesYet" = "No release notes yet";
 "refuseNoUpdateIsAvailable" = "No update is available";
 "refuseNoUpdateIsSavingWorkNow" = "No update is saving work now";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "%1$@%% left";
 "uiPictureViewerActualSize" = "Actual size";
 "uiPictureViewerClose" = "Close the viewer";
+"uiPictureViewerCopied" = "Picture copied";
+"uiPictureViewerCopyFailed" = "The picture could not be copied";
+"uiPictureViewerCopyPicture" = "Copy picture";
 "uiPictureViewerDemoFrom" = "Demo from %1$@";
+"uiPictureViewerFitToWindow" = "Fit to window";
 "uiPictureViewerHintFitted" = "%1$@ · fitted · click or Z for 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · drag or scroll to move";
 "uiPictureViewerHintOwn" = "%1$@ · shown at its own size";
+"uiPictureViewerMenu" = "Picture actions";
 "uiPictureViewerNext" = "Next picture";
 "uiPictureViewerPartFrom" = "%1$@, full screen";
 "uiPictureViewerPause" = "Pause";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "Play";
 "uiPictureViewerPrevious" = "Previous picture";
 "uiPictureViewerReplay" = "Replay";
+"uiPictureViewerSaveFailed" = "The picture could not be saved";
+"uiPictureViewerSaveToDownloads" = "Save to Downloads";
 "uiPictureViewerSeek" = "Seek";
 "uiPictureViewerSeekValue" = "%2$@ of %1$@";
 "uiPictureViewerShownAtOwnSize" = "Shown at its own size";

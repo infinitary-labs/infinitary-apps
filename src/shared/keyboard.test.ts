@@ -184,6 +184,8 @@ describe("the command catalog", () => {
       "cards.unanswered-question",
       // The approved annotation plan adds Point at to the shell's command catalog.
       "cards.point-at",
+      // INF-6347's approved plan: Save to Downloads on the picture viewer's picture.
+      "viewer.save-picture",
       "cards.thread",
       "cards.thread-new",
       // INF-4543's plan: the shown card's sound strip.

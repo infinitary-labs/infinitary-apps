@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "تحديث, إعادة تشغيل, مستقر, ألفا";
 "commandUsageUnit" = "تبديل وحدات الاستخدام";
 "commandUsageUnitWords" = "رموز, تكلفة, دولارات, تقدير";
+"commandViewerSavePicture" = "حفظ الصورة";
+"commandViewerSavePictureWords" = "تنزيل, صورة, عارض";
 "commandWhatsNewShow" = "عرض ما الجديد";
 "commandWhatsNewShowWords" = "إصدار, ملاحظات, تغييرات, نسخة";
 "composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "لا توجد سلسلة بطاقة مقروءة حتى ما قبل أحدث رسائلها";
 "refuseNoOtherCardIsNew" = "لا توجد بطاقة جديدة أخرى";
 "refuseNoPageToPointAt" = "لا توجد صفحة معروضة للإشارة إليها";
+"refuseNoPictureIsOpen" = "افتح صورة في بطاقة أولًا";
 "refuseNoReleaseNotesYet" = "لا توجد ملاحظات إصدار بعد";
 "refuseNoUpdateIsAvailable" = "لا يوجد تحديث متاح";
 "refuseNoUpdateIsSavingWorkNow" = "لا يوجد تحديث يحفظ العمل الآن";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "متبقٍّ %1$@%%";
 "uiPictureViewerActualSize" = "الحجم الفعلي";
 "uiPictureViewerClose" = "إغلاق العارض";
+"uiPictureViewerCopied" = "نُسخت الصورة";
+"uiPictureViewerCopyFailed" = "تعذّر نسخ الصورة";
+"uiPictureViewerCopyPicture" = "نسخ الصورة";
 "uiPictureViewerDemoFrom" = "عرض توضيحي من %1$@";
+"uiPictureViewerFitToWindow" = "ملاءمة النافذة";
 "uiPictureViewerHintFitted" = "%1$@ · ملائمة للمساحة · انقر أو اضغط Z لعرض 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · اسحب أو مرّر للتحريك";
 "uiPictureViewerHintOwn" = "%1$@ · معروضة بحجمها الأصلي";
+"uiPictureViewerMenu" = "إجراءات الصورة";
 "uiPictureViewerNext" = "الصورة التالية";
 "uiPictureViewerPartFrom" = "%1$@، ملء الشاشة";
 "uiPictureViewerPause" = "إيقاف مؤقت";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "تشغيل";
 "uiPictureViewerPrevious" = "الصورة السابقة";
 "uiPictureViewerReplay" = "إعادة التشغيل";
+"uiPictureViewerSaveFailed" = "تعذّر حفظ الصورة";
+"uiPictureViewerSaveToDownloads" = "حفظ في التنزيلات";
 "uiPictureViewerSeek" = "التنقل";
 "uiPictureViewerSeekValue" = "%2$@ من %1$@";
 "uiPictureViewerShownAtOwnSize" = "معروضة بحجمها الأصلي";

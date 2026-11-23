@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "actualizar, reiniciar, estable, alfa";
 "commandUsageUnit" = "Cambiar las unidades de Uso";
 "commandUsageUnitWords" = "consumo, costo, dólares, estimación";
+"commandViewerSavePicture" = "Guardar la imagen";
+"commandViewerSavePictureWords" = "descargar, imagen, foto, visor";
 "commandWhatsNewShow" = "Mostrar las novedades";
 "commandWhatsNewShowWords" = "lanzamiento, notas, cambios, versión";
 "composerFolderNotProject" = "No se pudo añadir esa carpeta como proyecto.";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "Ningún hilo de tarjeta está leído por encima de su último mensaje";
 "refuseNoOtherCardIsNew" = "No hay otra tarjeta nueva";
 "refuseNoPageToPointAt" = "No se muestra ninguna página que señalar";
+"refuseNoPictureIsOpen" = "Abre primero una imagen de una tarjeta";
 "refuseNoReleaseNotesYet" = "Aún no hay notas de la versión";
 "refuseNoUpdateIsAvailable" = "No hay ninguna actualización disponible";
 "refuseNoUpdateIsSavingWorkNow" = "Ninguna actualización está guardando trabajo ahora";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "%1$@ %% restante";
 "uiPictureViewerActualSize" = "Tamaño real";
 "uiPictureViewerClose" = "Cerrar el visor";
+"uiPictureViewerCopied" = "Imagen copiada";
+"uiPictureViewerCopyFailed" = "No se pudo copiar la imagen";
+"uiPictureViewerCopyPicture" = "Copiar imagen";
 "uiPictureViewerDemoFrom" = "Demo de %1$@";
+"uiPictureViewerFitToWindow" = "Ajustar a la ventana";
 "uiPictureViewerHintFitted" = "%1$@ · ajustada · haz clic o pulsa Z para 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · arrastra o desplázate para moverla";
 "uiPictureViewerHintOwn" = "%1$@ · se muestra a su propio tamaño";
+"uiPictureViewerMenu" = "Acciones de la imagen";
 "uiPictureViewerNext" = "Imagen siguiente";
 "uiPictureViewerPartFrom" = "%1$@, pantalla completa";
 "uiPictureViewerPause" = "Pausar";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "Reproducir";
 "uiPictureViewerPrevious" = "Imagen anterior";
 "uiPictureViewerReplay" = "Volver a reproducir";
+"uiPictureViewerSaveFailed" = "No se pudo guardar la imagen";
+"uiPictureViewerSaveToDownloads" = "Guardar en Descargas";
 "uiPictureViewerSeek" = "Posición";
 "uiPictureViewerSeekValue" = "%2$@ de %1$@";
 "uiPictureViewerShownAtOwnSize" = "Se muestra a su propio tamaño";

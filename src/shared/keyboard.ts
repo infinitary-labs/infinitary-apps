@@ -731,6 +731,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandCardsPointAtWords());
     },
   },
+  // The picture viewer's Save to Downloads, on the picture it shows (the
+  // design skill's PictureViewer, "The picture's menu").
+  "viewer.save-picture": {
+    get label() {
+      return m.commandViewerSavePicture();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [{ key: "s", meta: true }],
+    get searchWords() {
+      return searchWords(m.commandViewerSavePictureWords());
+    },
+  },
   "cards.thread": {
     get label() {
       return m.commandCardsThread();

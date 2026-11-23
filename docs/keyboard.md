@@ -110,6 +110,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.next-question`, Go to the next question; `cards.previous-question`, Go to the previous question | window, run by the shell page | ⌘J and ⇧⌘J (Ctrl+J and Ctrl+Shift+J on Linux); the shown card's body ("Moving between a card's questions") |
 | `cards.unanswered-question`, Go to the next unanswered question | window, run by the shell page | none: chosen by name, or the footer's picked count clicked |
 | `cards.point-at`, Point at a part of the card | window, run by the shell page | ⇧⌘A (Ctrl+Shift+A on Linux) |
+| `viewer.save-picture`, Save the picture | window, run by the shell page | ⌘S (Ctrl+S on Linux and Windows), while the picture viewer is open |
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
 | `cards.thread-new`, Go to the thread's new messages | window, run by the shell page | none: chosen by name; the shown card's jump down, while the captain reads above the thread's foot (`docs/card-threads.md`, "Keeping your place") |
 | `cards.sound`, Play or pause the card's sound | window, run by the shell page | none: chosen by name (sound, audio, listen and narration find it too); the shown card's sound strip ("Sound clips" in `docs/card-authoring.md`) |
@@ -326,6 +327,9 @@ The main process's own commands, the size keys, are never refused by the page.
   Selecting words keeps their usual Copy behavior; Tab enters the popover's comment field.
   With the picture viewer open it turns Point at on for the shown picture instead, where the arrows show and move a box, Shift with the arrows sizes it and Enter opens the popover (`docs/card-threads.md`, "Pointing at a place").
   On a task's Browser tab it holds the page's picture still, where the arrows step through what the page's outline names, Shift with an arrow makes and sizes a box, Enter opens the popover and Escape ends it (`docs/task-browser.md`, "Pointing at a page"); with no page to point at it refuses in words.
+- `viewer.save-picture`, Save the picture, is the picture viewer's Save to Downloads on the picture or recording it shows, with ⌘S (Ctrl+S on Linux and Windows) or from command search (the design skill's `PictureViewer.prompt.md`, "The picture's menu").
+  It is one of the two window commands the open viewer takes, with Point at, and refuses in words while no viewer is open.
+  The viewer's Copy picture is the system's own Copy key, ⌘C, which copies the picture whenever no words in the viewer are selected.
 - `cards.thread`, Show or hide the card's thread, is the thread head's Collapse thread and the collapsed card's latest line in one key (`docs/card-threads.md`, "Collapsing the thread"), lent by the card layer like the arrows; on a browser view it opens or folds the docked card or Crewmate column (`docs/task-browser.md`, "The request beside the page").
   It refuses on a card that takes no reply or has no thread yet, and while a recording runs; a focused reply field keeps the focus, and otherwise focus lands, ringed, on what undoes it.
 - `cards.thread-new`, Go to the thread's new messages, presses the shown card's jump down in its thread (`docs/card-threads.md`, "Keeping your place"); it is refused while the thread shows its foot.

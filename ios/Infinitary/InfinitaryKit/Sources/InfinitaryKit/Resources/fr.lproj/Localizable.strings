@@ -702,6 +702,8 @@
 "commandUpdatesShowWords" = "mise à jour, redémarrer, stable, alpha";
 "commandUsageUnit" = "Changer les unités d’Utilisation";
 "commandUsageUnitWords" = "jetons, coût, dollars, estimation";
+"commandViewerSavePicture" = "Enregistrer l’image";
+"commandViewerSavePictureWords" = "télécharger, image, photo, visionneuse";
 "commandWhatsNewShow" = "Afficher les nouveautés";
 "commandWhatsNewShowWords" = "version, notes, nouveautés, modifications";
 "composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
@@ -2301,6 +2303,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "Aucun fil de carte n’est lu au-dessus de son dernier message";
 "refuseNoOtherCardIsNew" = "Aucune autre carte n’est nouvelle";
 "refuseNoPageToPointAt" = "Aucune page n’est affichée à désigner";
+"refuseNoPictureIsOpen" = "Ouvre d’abord une image d’une carte";
 "refuseNoReleaseNotesYet" = "Pas encore de notes de version";
 "refuseNoUpdateIsAvailable" = "Aucune mise à jour n’est disponible";
 "refuseNoUpdateIsSavingWorkNow" = "Aucune mise à jour n’enregistre de travail en ce moment";
@@ -3979,10 +3982,15 @@
 "uiPercentLeft" = "%1$@ %% restant";
 "uiPictureViewerActualSize" = "Taille réelle";
 "uiPictureViewerClose" = "Fermer la visionneuse";
+"uiPictureViewerCopied" = "Image copiée";
+"uiPictureViewerCopyFailed" = "Impossible de copier l’image";
+"uiPictureViewerCopyPicture" = "Copier l’image";
 "uiPictureViewerDemoFrom" = "Démo de %1$@";
+"uiPictureViewerFitToWindow" = "Ajuster à la fenêtre";
 "uiPictureViewerHintFitted" = "%1$@ · ajustée · cliquez ou appuyez sur Z pour 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · faites glisser ou défilez pour vous déplacer";
 "uiPictureViewerHintOwn" = "%1$@ · affichée à sa propre taille";
+"uiPictureViewerMenu" = "Actions sur l’image";
 "uiPictureViewerNext" = "Image suivante";
 "uiPictureViewerPartFrom" = "%1$@, plein écran";
 "uiPictureViewerPause" = "Pause";
@@ -3990,6 +3998,8 @@
 "uiPictureViewerPlay" = "Lire";
 "uiPictureViewerPrevious" = "Image précédente";
 "uiPictureViewerReplay" = "Revoir";
+"uiPictureViewerSaveFailed" = "Impossible d’enregistrer l’image";
+"uiPictureViewerSaveToDownloads" = "Enregistrer dans Téléchargements";
 "uiPictureViewerSeek" = "Position";
 "uiPictureViewerSeekValue" = "%2$@ sur %1$@";
 "uiPictureViewerShownAtOwnSize" = "Affichée à sa propre taille";

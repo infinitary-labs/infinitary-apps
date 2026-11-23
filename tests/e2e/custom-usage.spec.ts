@@ -94,8 +94,8 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
       expect(noCounts.amount.counted).toBe(0);
       expect(noCounts.amount.cost).toBeNull();
     }
-    // The whole Usage overview must fit its scrolling region, not just its width.
-    await resizeWindow(app, page, { width: 1200, height: 1400 });
+    // Leave room for Cost per task and keep the whole Usage overview in both captures.
+    await resizeWindow(app, page, { width: 1200, height: 1550 });
     await runFromSearch(app, page, "settings.usage");
     const usage = usageTab(page);
     for (const unit of ["tokens", "usd"] as const) {

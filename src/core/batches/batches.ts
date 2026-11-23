@@ -587,7 +587,7 @@ export class Batches {
           }
           if (now?.hold?.head !== answer.head) return BATCH_WORDS.ended;
         }
-        await this.recombine(repo, release(record), "line");
+        await this.recombine(repo, release(record), "retry");
         this.clashesEnded(repoId);
         this.options.note(BATCH_WORDS.retried(repo.name, label));
         return undefined;
@@ -1208,7 +1208,7 @@ export class Batches {
   private async recombine(
     repo: RepoView,
     record: BatchRecord,
-    join: "none" | "line",
+    join: "none" | "line" | "retry",
     /** The batch branch's version as the host holds it now, where that is not the recorded one. */
     pushed?: string,
   ): Promise<BatchRecord> {
@@ -1218,9 +1218,16 @@ export class Batches {
     if (current !== record) record = this.save(repo.id, current);
     const { merged, unmergedBase } = this.options;
     // A change waits for its base while that task is live; once it closed, merged or not, the combine decides.
-    const changes = carried(record, join, (taskId) => !this.options.live(taskId));
+    const changes = carried(
+      record,
+      join === "retry" ? "line" : join,
+      (taskId) => !this.options.live(taskId),
+    );
     if (changes.length === 0) return record.open ? this.abandon(repo, record, forge) : record;
     const at = this.options.now();
+    const held = heldVersions(record);
+    const retry = join === "retry" ? record.open : undefined;
+    const retryHead = retry ? ((await this.moved(forge, retry)) ?? retry.head) : undefined;
     const result = await (this.options.combine ?? combineChanges)({
       repoDir: repo.path,
       defaultBranch: await forge.defaultBranch(),
@@ -1229,7 +1236,8 @@ export class Batches {
       at,
       ...(merged ? { merged } : {}),
       ...(unmergedBase ? { unmergedBase } : {}),
-      held: heldVersions(record),
+      held,
+      ...(retry && retryHead ? { excludeHeads: [retry.head, retryHead, ...held] } : {}),
     });
     const branch =
       record.open?.branch ??
@@ -1241,6 +1249,7 @@ export class Batches {
     const expected = !result.members.length
       ? null
       : (pushed ??
+        retryHead ??
         (record.open ? ((await this.moved(forge, record.open)) ?? record.open.head) : null));
     // The project may have moved during any read above: nothing goes to a former address.
     if (!this.stillAt(repo)) return record;

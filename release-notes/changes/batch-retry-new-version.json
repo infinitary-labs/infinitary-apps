@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-retry-new-version",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Try again starts fresh checks for a held batch",
+      "body": "Choosing Try again for a held batch starts checks on a new version, even when it is rebuilt in the same second with the same changes.",
+      "noPicture": "The existing Try again control is unchanged; the fix changes which version runs checks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

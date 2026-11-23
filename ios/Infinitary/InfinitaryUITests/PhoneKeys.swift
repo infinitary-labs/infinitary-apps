@@ -124,6 +124,19 @@ let englishPhone = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
     XCTFail("The simulator ignored both taps on \(target): \(ignored)")
 }
 
+/// INF-6231: a list's pull down past its top, to what waits above it such as Tasks' search, as a slow drag that keeps
+/// touching for two seconds or more and rests before the lift. Every touch first waits on SpringBoard, which decides
+/// whether it is a system gesture before the app's own gestures may act, and the list's pull counts only from then.
+/// XCTest's plain swipe moves 200 points in a fifth of a second, so a late decision leaves the list almost none of it:
+/// in phone run 45121433597 SpringBoard decided 0.18 s after the touch went down, the list began scrolling 10 ms before
+/// the lift, and the search, which opens past 48 points of pull, stayed hidden. This drag moves 40% of the list's height
+/// at 150 points a second, so it is still pulling long after SpringBoard decides, as INF-6073 opens a task row.
+@MainActor func pullDownOnPhone(_ list: XCUIElement) {
+    let from = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+    let to = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+    from.press(forDuration: 0.05, thenDragTo: to, withVelocity: XCUIGestureVelocity(rawValue: 150), thenHoldForDuration: 0.3)
+}
+
 /// INF-1477: a part runs with continueAfterFailure off, and once it has recorded a failure XCTest sends no more events:
 /// every later tap checks for interrupting elements and synthesizes nothing, as the phone journeys' logs show after each
 /// failure. No touch screen attaches, so a tap after a failure waits for no target and reads no outcome, which could only

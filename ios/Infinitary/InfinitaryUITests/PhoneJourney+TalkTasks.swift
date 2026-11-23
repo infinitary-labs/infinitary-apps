@@ -200,7 +200,7 @@ extension PhoneJourney {
         // INF-589 item 9: search waits above the list until it is pulled down, and Find a task opens it by key, as on the Mac.
         let search = app.textFields["task-search"]
         XCTAssertFalse(search.exists)
-        app.scrollViews["tasks-list"].swipeDown()
+        pullDownOnPhone(app.scrollViews["tasks-list"])
         XCTAssertTrue(search.waitForPresence(timeout: 10))
         tapOnPhone(app.buttons["close-task-search"])
         XCTAssertTrue(search.waitForAbsence(timeout: 10))
@@ -215,7 +215,7 @@ extension PhoneJourney {
             let proof = try XCTUnwrap(phoneCaretTakenBack(since: pressed),
                 "Find a task did not open the search, and the log shows no caret the system took back")
             print("The system took back the search's caret: \(proof)")
-            app.scrollViews["tasks-list"].swipeDown()
+            pullDownOnPhone(app.scrollViews["tasks-list"])
             focusForPhoneTyping(search, in: app)
         }
         search.typeText("harbour")

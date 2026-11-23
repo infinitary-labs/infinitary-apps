@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { RAIL_CONTENTS_SELECTOR } from "../../src/renderer/src/plugins/railRoom";
 import { SMALLEST_WINDOW } from "../../src/shared/smallestWindow";
-import { agentHoverFixture, HOVER_COUNTS, HOVER_NOTE } from "./agentHoverFixture";
+import { agentHoverFixture, HOVER_COUNTS, HOVER_NOTE, HOVER_PLAN } from "./agentHoverFixture";
 import { nextFrame } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { clearOfLosses, intersects, resizeWindow } from "./layout";
@@ -107,11 +107,57 @@ async function expectAboveSidebar(summary: Locator, obstacles: Locator[]) {
   throw new Error("The overlapping summary has no fact row over a sidebar to inspect");
 }
 
+/** A fully loaded summary crosses the fit threshold when its plan arrives.
+ * Resizing must move that same card, not replace it with board-only facts.
+ */
+async function expectRetainedPlan(
+  launched: LaunchedApp,
+  summary: Locator,
+  size: { width: number; height: number },
+) {
+  const { page, app } = launched;
+  const id = await summary.getAttribute("data-crew-summary");
+  if (!id) throw new Error("The pointed summary has no task");
+  const target = page.locator(`[data-crew-model-name="${id}"]`);
+  // Keyboard focus preserves the same inspected task while the viewport
+  // moves its glyph away from the stationary pointer.
+  await focusOn(target);
+  const plan = summary.locator("[data-task-plan-dots]");
+  await expect(plan).toBeVisible();
+  await expect(plan).toHaveAttribute("data-task-plan-dots", String(HOVER_PLAN.length));
+  const mounted = await summary.elementHandle();
+  if (!mounted) throw new Error("The loaded summary disappeared");
+  try {
+    for (const next of [{ width: 1440, height: 800 }, size]) {
+      await resizeWindow(app, page, next);
+      await nextFrame(page);
+      await expect(summary).toBeVisible();
+      await expect(summary).toHaveAttribute("data-crew-summary", id);
+      expect(
+        await mounted.evaluate((element) => element.isConnected),
+        "Moving between summary holders must retain the loaded card",
+      ).toBe(true);
+      await expect(plan).toBeVisible();
+      await expect(plan).toHaveAttribute("data-task-plan-dots", String(HOVER_PLAN.length));
+    }
+  } finally {
+    await mounted.dispose();
+  }
+  const point = await target.evaluate((element) => {
+    const anchor = element.parentElement;
+    if (!anchor) throw new Error("The crewmate has no model-name anchor");
+    const { x, y } = anchor.getBoundingClientRect();
+    return { x, y: y + 6 };
+  });
+  await page.mouse.move(point.x, point.y);
+  await target.evaluate((element) => element.blur());
+}
+
 async function hoverNearRail(
   launched: LaunchedApp,
   side: "left" | "right",
   size: { width: number; height: number },
-  options: { allowOverlay?: boolean; capture?: string; hero?: boolean } = {},
+  options: { allowOverlay?: boolean; capture?: string; hero?: boolean; retainPlan?: boolean } = {},
 ) {
   const { page, app } = launched;
   await page.mouse.move(20, 50);
@@ -140,6 +186,7 @@ async function hoverNearRail(
     if (options.allowOverlay && losses.length > 0) {
       await expectAboveSidebar(summary, obstacles);
       overlays++;
+      if (options.retainPlan && overlays === 1) await expectRetainedPlan(launched, summary, size);
     } else {
       expect(losses, "A clear-place summary must avoid every visible rail control").toEqual([]);
     }
@@ -220,6 +267,7 @@ test("a tall summary stays above sidebars only when the smallest window leaves n
         overlays += await hoverNearRail(launched, side, SMALLEST_WINDOW, {
           allowOverlay: true,
           capture: `review-after-${choice}-${side}-tall`,
+          retainPlan: true,
         });
         await hoverNearRail(
           launched,

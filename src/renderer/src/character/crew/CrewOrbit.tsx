@@ -391,6 +391,15 @@ export function CrewOrbit({
   const { shown, leaving } = useSummaryPresence(inspecting);
   const summary = shown !== null ? (facts?.[shown] ?? null) : null;
   const layerRef = useRef<HTMLDivElement>(null);
+  // React keeps one portal target, so moving its owned container never
+  // remounts CrewSummary or drops its record, project or relationship facts.
+  const [summaryHost] = useState(() => {
+    if (typeof document === "undefined") return null;
+    const host = document.createElement("div");
+    host.style.display = "contents";
+    return host;
+  });
+  useLayoutEffect(() => () => summaryHost?.remove(), [summaryHost]);
   const [aboveRails, setAboveRails] = useState(false);
   const aboveRailsRef = useRef(false);
   const targetRef = useRef<HTMLDivElement>(null);
@@ -560,7 +569,7 @@ export function CrewOrbit({
     const clearPlace = placeCrewSummary(anchor, reach, clear, size, localRoom);
     const over = clearPlace === null;
     // Only the no-clear-place case moves to the window-wide summary layer.
-    // Hide the old holder until React has moved it, never painting one frame
+    // Hide the old holder until the container moves, never painting one frame
     // at window coordinates inside the formation (or the reverse).
     if (over !== aboveRailsRef.current) {
       layer.removeAttribute("data-placed");
@@ -641,6 +650,10 @@ export function CrewOrbit({
   // size or the window changes; under reduced motion no frame would do it.
   // A first placement slides it in; a new crewmate moves it from where it stood.
   useLayoutEffect(() => {
+    const parent = aboveRails
+      ? document.querySelector("[data-summary-overlay-root]")
+      : wrapRef.current;
+    if (summaryHost && parent && summaryHost.parentNode !== parent) parent.appendChild(summaryHost);
     aboveRailsRef.current = aboveRails;
     const panel = panelRef.current;
     const line = lineRef.current;
@@ -658,7 +671,7 @@ export function CrewOrbit({
       observer.disconnect();
       window.removeEventListener("resize", placeSummary);
     };
-  }, [summary, shown, placeSummary, aboveRails]);
+  }, [summary, shown, placeSummary, aboveRails, summaryHost]);
   useSummaryFade(layerRef, leaving);
 
   useEffect(() => {
@@ -1109,8 +1122,8 @@ export function CrewOrbit({
     pointerEvents: "none",
   };
   const namedClusters = new Set(named.split(",").filter(Boolean));
-  // Both holders draw the same summary, brackets and hairline. Only a
-  // summary with no clear placement uses the overlay root beside PeekSummary.
+  // One mounted summary, brackets and hairline move with their container.
+  // Only a no-clear-placement summary uses the root beside PeekSummary.
   const summaryLayer =
     summary && shown ? (
       <div
@@ -1132,7 +1145,6 @@ export function CrewOrbit({
         </div>
       </div>
     ) : null;
-  const overlayRoot = aboveRails ? document.querySelector("[data-summary-overlay-root]") : null;
   return (
     <div
       ref={wrapRef}
@@ -1346,7 +1358,7 @@ export function CrewOrbit({
         </div>
       )}
       {/* Outside the fitted formation, so the summary's type is never scaled. */}
-      {summaryLayer && overlayRoot ? createPortal(summaryLayer, overlayRoot) : summaryLayer}
+      {summaryLayer && summaryHost ? createPortal(summaryLayer, summaryHost) : null}
     </div>
   );
 }

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "app-card-asker-replies",
+      "kind": "feature",
+      "title": "Talk with the crewmate on a secret or integration card",
+      "body": "The cards that ask you to save a secret, use one, move secrets in, or allow an integration now name the task that asked and take a reply, which reaches that crewmate. On a card with a secret's field, Chat opens the conversation beside the card, so you never type a reply next to a secret. Words left in the field when you press Don't save, Don't allow, Don't bring or Not now reach the crewmate too.",
+      "area": "cards",
+      "picture": {
+        "dark": "app-card-asker-replies-dark.webp",
+        "light": "app-card-asker-replies-light.webp",
+        "alt": "A card asking to save a Stripe test key, naming the task Wire up the checkout, with the conversation open beside it holding a question to the crewmate."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -10,11 +10,12 @@ import type { StackEntry } from "../stack";
  * beside the page").
  */
 export function entryWorking(
-  entry: Pick<StackEntry, "author" | "taskId" | "browserTaskId">,
+  entry: Pick<StackEntry, "author" | "taskId" | "browserTaskId" | "answeredBy">,
   firstmateBusy: boolean,
   crewActivity: Readonly<Record<string, TaskView["activity"]>>,
 ): boolean {
   if (entry.author === "firstmate") return firstmateBusy;
-  const taskId = entry.author === "crewmate" ? entry.taskId : entry.browserTaskId;
+  const crewmate = entry.author === "crewmate" || entry.answeredBy === "crewmate";
+  const taskId = crewmate ? entry.taskId : entry.browserTaskId;
   return taskId !== undefined && crewStatusOf(crewActivity[taskId] ?? null) === "working";
 }

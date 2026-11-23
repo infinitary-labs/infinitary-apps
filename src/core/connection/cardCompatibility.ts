@@ -89,6 +89,9 @@ export function pastCardFor(
 /** A crewmate card's declared live reads and views (`card-live-reads.md`). */
 export const CARD_LIVE_READS = contractChange("card-live-reads");
 
+/** The app's own card answered by the crewmate that asked (`card-answered-by-crewmate.md`). */
+export const CARD_ANSWERED_BY_CREWMATE = contractChange("card-answered-by-crewmate");
+
 /** Strict older desktops need fields removed; readers without annotations keep a readable note. */
 export function threadLinesFor(
   value: unknown,
@@ -202,6 +205,8 @@ export type CardReads = {
   places: boolean;
   /** A card's declared live reads and views (`CARD_LIVE_READS`). */
   liveReads: boolean;
+  /** A card answered by the crewmate that asked (`CARD_ANSWERED_BY_CREWMATE`). */
+  answeredByCrewmate: boolean;
 };
 
 /**
@@ -211,19 +216,32 @@ export type CardReads = {
 export function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
   if (!Array.isArray(value) || readsEveryCardField(reads)) return value;
   return value.map(
-    ({ currentUpdateId, currentUpdateSeen, ended, files, reads: live, sql, ...card }) => ({
+    ({
+      currentUpdateId,
+      currentUpdateSeen,
+      ended,
+      files,
+      reads: live,
+      sql,
+      answeredBy,
+      ...card
+    }) => ({
       ...card,
       ...(reads.updates ? { currentUpdateId, currentUpdateSeen } : {}),
       ...(reads.ended ? { ended } : {}),
       ...(reads.files && files ? { files } : {}),
       ...(reads.liveReads && live ? { reads: live } : {}),
       ...(reads.liveReads && sql ? { sql } : {}),
+      // Such a view draws the card as before, with no reply row.
+      ...(answeredBy && (reads.answeredByCrewmate || answeredBy !== "crewmate")
+        ? { answeredBy }
+        : {}),
     }),
   );
 }
 
 function readsEveryCardField(reads: CardReads): boolean {
-  return reads.updates && reads.ended && reads.files && reads.liveReads;
+  return reads.updates && reads.ended && reads.files && reads.liveReads && reads.answeredByCrewmate;
 }
 
 /**

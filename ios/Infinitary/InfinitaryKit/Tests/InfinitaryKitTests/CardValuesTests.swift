@@ -68,6 +68,20 @@ struct CardValuesTests {
         #expect(!signIn.takesReplies)
     }
 
+    /// INF-6265 piece 1: the Mac's own card for a crewmate's ask takes a reply on the phone as on the Mac, answered by
+    /// the crewmate that asked; without its task nobody can answer it.
+    @Test func appAskTakesAReplyForItsCrewmate() throws {
+        let ask: [String: PhoneJSON] = [
+            "id": .string("card-secrets-ask-a99caa29-key"), "title": .string("Add Analytics API key to Secrets?"),
+            "author": .string("host"), "taskId": .string("a99caa29"), "answeredBy": .string("crewmate"),
+            "body": .string("<p>Asked by the crewmate on the task.</p>"), "actions": .array([])
+        ]
+        #expect(try PhoneCard(.object(ask)).takesReplies)
+        var taskless = ask
+        taskless["taskId"] = nil
+        #expect(try !PhoneCard(.object(taskless)).takesReplies)
+    }
+
     /// INF-1610: the "You asked" line reads the message the Mac sent, folds a long one onto one run of words,
     /// keeps its paragraphs when opened, and names a message of pictures alone.
     /// INF-1958: the bubble adds no quotation marks.

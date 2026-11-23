@@ -28,11 +28,12 @@ export function replyDoing(
  * on a card that is not a crewmate's.
  */
 export function useReplyDoing(
-  card: Pick<Card, "author" | "taskId">,
+  card: Pick<Card, "author" | "taskId" | "answeredBy">,
   messages: readonly CardMessage[],
   working: boolean,
 ): string | undefined {
-  const taskId = card.author === "crewmate" && working ? card.taskId : undefined;
+  const crewmate = card.author === "crewmate" || card.answeredBy === "crewmate";
+  const taskId = crewmate && working ? card.taskId : undefined;
   const [read, setRead] = useState<{ id: string; detail: TaskDetail }>();
   useEffect(() => {
     if (!taskId) return;

@@ -106,6 +106,9 @@ describe("asking to keep a secret", () => {
     expect(answer).toEqual({ ask: "checkout", state: "waiting" });
     const card = f.cards.at(-1);
     expect(card?.taskId).toBe("task-a");
+    // INF-6265 piece 1: the card names the crewmate that asked, which answers its thread.
+    expect(card?.meta).toBe("Wire up the checkout");
+    expect(card?.answeredBy).toBe("crewmate");
     const keep = f.keepOf();
     expect(keep.fields.map((field) => [field.name, field.place])).toEqual([
       ["Stripe test key", "Test"],

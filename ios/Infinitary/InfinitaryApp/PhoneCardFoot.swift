@@ -41,7 +41,9 @@ extension PhoneCardPane {
             // INF-3746: while a note is open the reply and the choices step aside for it; on an iPhone on its side the
             // editor takes their place in the foot.
             if pick != nil && shown && noteInFoot { noteEditor.modifier(PhoneFaceOnly(angle: turnAngle)) }
-            if takesReply && pick == nil {
+            // On an ask to keep a secret no plain field sits beside the masked ones: the reply is on the thread's back,
+            // as on the Mac, where Chat opens the thread beside the card.
+            if takesReply && pick == nil && PhoneSecretAsk.of(card) == nil {
                 replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle))
                     // INF-3468: the field and the margin under it, the place a typing field in a scrolling card rests.
                     .background(alignment: .top) {

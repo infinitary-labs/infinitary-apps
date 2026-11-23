@@ -288,7 +288,9 @@ function fromRow(row: Row): Card | undefined {
     ...(row.holds_place === 1 ? { holdsPlace: true } : {}),
     ...(row.continues === 1 ? { continues: true } : {}),
     ...(row.answering === 1 ? { answering: true } : {}),
-    ...(row.answered_by === "firstmate" ? { answeredBy: "firstmate" as const } : {}),
+    ...(row.answered_by === "firstmate" || row.answered_by === "crewmate"
+      ? { answeredBy: row.answered_by }
+      : {}),
     ...(row.minimized === 1 ? { minimized: true } : {}),
     ...(row.lifecycle_id ? { lifecycleId: row.lifecycle_id } : {}),
     ...(row.offer_id ? { offerId: row.offer_id } : {}),

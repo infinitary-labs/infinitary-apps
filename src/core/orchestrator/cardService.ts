@@ -21,6 +21,7 @@ import {
   type CardObservationActor,
   type CardObservationSource,
   type CardThread,
+  cardAnswerer,
   cardPresentation,
   cardWord,
   compareStack,
@@ -901,7 +902,7 @@ export class CardService {
       const mine =
         author.kind === "firstmate"
           ? this.threads.firstmateAnswers(card)
-          : card.author === "crewmate" && card.taskId === author.taskId;
+          : cardAnswerer(card) === "crewmate" && card.taskId === author.taskId;
       // Someone else's held write - a revision, or an answer it named -
       // moves the stage with its own writer's turn end, never with an
       // unrelated turn of the card's author (docs/card-threads.md, "Shared

@@ -36,10 +36,11 @@ export type ThreadWait =
  * answers.
  */
 export function threadWait(
-  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt">,
+  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt" | "answeredBy">,
   posture: WorkPosture | undefined,
 ): ThreadWait | undefined {
-  if (card.author !== "crewmate" || !card.taskId || !posture) return undefined;
+  if ((card.author !== "crewmate" && card.answeredBy !== "crewmate") || !card.taskId || !posture)
+    return undefined;
   // Answered but still in its close-out wait once its author's turn ended:
   // the core holds a reworked merge card for its new version (INF-6241).
   if (card.awaiting === "close-out" && card.sentBackAt !== undefined) {

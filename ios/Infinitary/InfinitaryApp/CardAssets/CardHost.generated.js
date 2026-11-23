@@ -109561,14 +109561,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     replies: literal(false).optional(),
     /**
-     * Who answers a reply under a card whose author cannot (`cards.answered_by`):
-     * the host sets "firstmate" on its stuck alert (`card-stall-<task>`, INF-1670)
-     * and on every card it raises through `raiseHostCard`, so the chrome draws a
-     * reply row and the first mate answers in the thread, never the task's
-     * crewmate. Absent on every other card, which takes replies as its author
-     * allows.
+     * Who answers a reply under a card whose author cannot (`cards.answered_by`,
+     * read through `cardAnswerer`): "firstmate" on the host's stuck alert
+     * (`card-stall-<task>`, INF-1670) and on every card it raises through
+     * `raiseHostCard` unless the caller names another, so the first mate
+     * answers in the thread, never the task's crewmate; "crewmate" on the
+     * app's own card for a crewmate's ask (a secret to keep or use, secrets to
+     * move in, an integration call), so the crewmate that asked answers in the
+     * thread while its ask stays open. Absent on every other card, which takes
+     * replies as its author allows.
      */
-    answeredBy: literal("firstmate").optional(),
+    answeredBy: _enum(["firstmate", "crewmate"]).optional(),
     /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
     holdsPlace: literal(true).optional(),
     /**

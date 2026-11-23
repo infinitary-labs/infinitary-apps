@@ -537,7 +537,9 @@ export class SecretBrings {
       id: bringCardId(bring.task, bring.id),
       title: bringCardTitle(bring),
       body: bringCardBody(bring, notice),
-      meta: FIRSTMATE_CARD_META,
+      // Its crewmate answers a reply under the card, and the head names its task.
+      meta: this.options.taskTitle?.(bring.task) ?? FIRSTMATE_CARD_META,
+      answeredBy: "crewmate",
       taskId: bring.task,
       actions: [
         {

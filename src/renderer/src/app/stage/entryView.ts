@@ -7,6 +7,7 @@ import {
   takesTaskFacts,
 } from "@shared/cards";
 import type { DefaultCardSize } from "@shared/preferences";
+import { secretKeepFields } from "@shared/secrets";
 import { dockedCardOf } from "../../cards/browserRequest";
 import {
   CONVERSATION_WIDTH,
@@ -44,6 +45,13 @@ export type EntryView = {
    * stands alone, and its latest line sits over the reply row.
    */
   collapsed: boolean;
+  /**
+   * A card with masked fields (an ask to keep a secret) draws no reply row
+   * under them: its Chat opens the thread beside the card, with the field
+   * there, before any message (INF-6265's plan, the captain's pick "Chat
+   * opens the thread").
+   */
+  chatFirst?: true;
   /** The thread's home while it is open; `none` with no thread. */
   home: "beside" | "in-place" | "none";
   folded: boolean;
@@ -70,6 +78,8 @@ export type ViewFacts = {
   threads: Record<string, CardMessage[]>;
   replyNotes?: Record<string, CardNote[]>;
   closedThreadIds: string[];
+  /** Cards whose thread the captain opened, which a Chat-first card opens before any message. */
+  openedThreadIds?: string[];
   cardDrags: Record<string, number>;
   defaultCardSize: DefaultCardSize;
   /** The stack's cards, where a browser view finds the request it docks. */
@@ -99,11 +109,15 @@ export function entryView(
     (facts.threads[entry.id] ?? []).length +
     (facts.replyNotes?.[entry.id]?.length ?? 0) +
     (ended ? 1 : 0);
+  const chatFirst = replyable && !pastCard && secretKeepFields(entry) !== undefined;
+  // A thread is there once it has a message, or on a Chat-first card once
+  // the captain opened it.
+  const there = count > 0 || (chatFirst && (facts.openedThreadIds?.includes(entry.id) ?? false));
   // A past card's thread is always beside it when it has one: read-only, so
   // there is nothing to collapse and no reply row (design skill, "Past card").
   const collapsed =
-    !pastCard && !ended && replyable && count > 0 && facts.closedThreadIds.includes(entry.id);
-  const threadOpen = pastCard ? pastCard.messages.length > 0 : replyable && count > 0 && !collapsed;
+    !pastCard && !ended && replyable && there && facts.closedThreadIds.includes(entry.id);
+  const threadOpen = pastCard ? pastCard.messages.length > 0 : replyable && there && !collapsed;
   const sized = {
     width: openingCardWidth(pastCard?.width ?? entry.width, facts.defaultCardSize),
     dragged: facts.cardDrags[entry.id] ?? (entry.conversation ? CONVERSATION_WIDTH : undefined),
@@ -137,6 +151,7 @@ export function entryView(
       replyable,
       threadOpen,
       collapsed,
+      ...(chatFirst ? { chatFirst } : {}),
       home: at.home,
       folded: false,
       card: at.card,
@@ -158,6 +173,7 @@ export function entryView(
     replyable,
     threadOpen,
     collapsed,
+    ...(chatFirst ? { chatFirst } : {}),
     home: placement?.home ?? "none",
     folded,
     card,

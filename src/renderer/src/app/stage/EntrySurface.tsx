@@ -303,7 +303,18 @@ export function EntrySurface({
           bare={prepared}
           active={active}
           reply={
-            replyable && !beside ? (
+            replyable && !beside && view.chatFirst ? (
+              // No field under masked ones: the collapsed thread's latest
+              // line alone, and Chat opens the thread beside the card.
+              view.collapsed && !inPlace ? (
+                <ThreadCue
+                  cardId={id}
+                  card={entry}
+                  working={working}
+                  onOpen={(byKey) => onThread?.(true, byKey)}
+                />
+              ) : undefined
+            ) : replyable && !beside ? (
               <ReplyRow
                 cardId={id}
                 lead={
@@ -320,6 +331,9 @@ export function EntrySurface({
               />
             ) : undefined
           }
+          {...(replyable && !beside && view.chatFirst
+            ? { chatOpens: () => onThread?.(true, false) }
+            : {})}
           collectRef={collectRef}
           collect={collect}
           size={shownCardSize(view.card)}

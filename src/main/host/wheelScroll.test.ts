@@ -96,12 +96,21 @@ describe("a wheel scroll waits until the page has moved", () => {
   });
 
   it("returns on the host bound when the page never settles the scroll", async () => {
-    const send = async <T>(method: string): Promise<T> => {
+    const calls: Call[] = [];
+    const send = async <T>(method: string, params?: Record<string, unknown>): Promise<T> => {
+      calls.push({ method, params });
       if (method === "Runtime.evaluate") return { result: { objectId: "promise-3" } } as T;
       if (method === "Runtime.awaitPromise") return new Promise(() => undefined) as T;
       return {} as T;
     };
     await wheelScroll(send, "down", size, 0);
+    // It did wait on the page's promise, and the host bound ended that wait.
+    expect(calls.map((call) => call.method)).toEqual([
+      "Runtime.evaluate",
+      "Input.dispatchMouseEvent",
+      "Runtime.awaitPromise",
+    ]);
+    expect(calls[2]?.params?.promiseObjectId).toBe("promise-3");
   });
 });
 

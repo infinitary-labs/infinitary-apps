@@ -254,19 +254,27 @@ function safeUsername(): string {
   }
 }
 
-function parseCredentials(raw: string): ClaudeQuotaAuth | undefined {
+/**
+ * The file's contents as a login, as no login, or as contents this reader
+ * does not understand. The client keeps other entries in the same file and
+ * leaves it behind without a login: signing out leaves the entries it does
+ * not own, and a refused renewal blanks the login's tokens in place. A file
+ * like that holds no login, the same as a missing one.
+ */
+function parseCredentials(raw: string): ClaudeQuotaAuth | "none" | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
     return undefined;
   }
-  if (!parsed || typeof parsed !== "object") return undefined;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
   const oauth = (parsed as Record<string, unknown>).claudeAiOauth;
-  if (!oauth || typeof oauth !== "object") return undefined;
+  if (oauth === undefined || oauth === null) return "none";
+  if (typeof oauth !== "object") return undefined;
   const record = oauth as Record<string, unknown>;
   const accessToken = typeof record.accessToken === "string" ? record.accessToken : undefined;
-  if (!accessToken) return undefined;
+  if (!accessToken) return "none";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : undefined;
   return {
     accessToken,
@@ -288,8 +296,9 @@ function isMissingCredentialsFile(error: unknown): boolean {
 
 /**
  * The plain-file store, with absence kept apart from a read or parse that
- * failed. A missing file is a lookup miss. A directory, a permission error,
- * or contents this reader does not understand is unreadable, not missing.
+ * failed. A missing file, or one that holds no login, is a lookup miss. A
+ * directory, a permission error, or contents this reader does not
+ * understand is unreadable, not missing.
  */
 async function readCredentialsFile(
   configDir: string,
@@ -310,6 +319,7 @@ async function readCredentialsFile(
     }
     fileCredentialCache.delete(configDir);
     const auth = parseCredentials(await readFile(path, "utf8"));
+    if (auth === "none") return { kind: "absent" };
     if (!auth) return { kind: "unreadable", modifiedAt };
     const read = { auth, modifiedAt: info.mtimeMs };
     fileCredentialCache.set(configDir, read);
@@ -517,7 +527,9 @@ async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead>
   }
   clearKeychainLock(configDir);
   const auth = parseCredentials(secret.value.trim());
-  if (!auth) return lockFromFailure(configDir, "keychain_unreadable", persistLock, storeIdentity);
+  if (!auth || auth === "none") {
+    return lockFromFailure(configDir, "keychain_unreadable", persistLock, storeIdentity);
+  }
   rememberCredential(configDir, auth, storeIdentity);
   return { kind: "auth", auth, modifiedAt: keychainModifiedAt };
 }

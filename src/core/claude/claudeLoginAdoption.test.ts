@@ -9,8 +9,8 @@ import type { AuthInteractionBridge } from "../pi/piAuth";
 import {
   CLAUDE_LOGIN_UNFINISHED_TEXT,
   CLAUDE_LOGIN_UNFINISHED_THERE_TEXT,
-  CLAUDE_LOGIN_UNREADABLE_TEXT,
   ClaudeAuthBackend,
+  claudeLoginUnreadableText,
 } from "./claudeAuth";
 import type { RunClaude } from "./claudeCli";
 import { keychainAccountName, readClaudeStore } from "./claudeQuota";
@@ -183,9 +183,48 @@ describe("Claude connect adopts a usable default login", () => {
     const signedOut = client(false);
     await expect(
       loginOf(backendFor(dir, env, keychain({ kind: "absent" }), signedOut.run), bridge()),
-    ).rejects.toThrow(CLAUDE_LOGIN_UNREADABLE_TEXT);
+    ).rejects.toThrow(claudeLoginUnreadableText());
     expect(signedOut.calls.some((args) => args[1] === "login")).toBe(false);
   });
+
+  // INF-6214 reproduced the refusal on Windows 11 with Claude Code's own
+  // leftovers: a sign-out keeps a remote-device key and drops the login (G),
+  // and a refused renewal blanks the login's tokens in place (H). Claude
+  // says it is signed out, so the add starts Claude's sign-in, which saves
+  // its login beside the entries already in the file.
+  for (const [shape, leftover] of [
+    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
+    [
+      "a login Claude blanked",
+      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
+    ],
+  ] as const) {
+    it(`starts Claude's sign-in over a file holding ${shape}`, async () => {
+      const { dir, env } = home();
+      const file = join(dir, ".credentials.json");
+      writeFileSync(file, JSON.stringify(leftover));
+      expect(await readClaudeStore(dir, { keychain: keychain({ kind: "absent" }), env })).toEqual({
+        state: "absent",
+      });
+
+      const claude = client(false);
+      const run: RunClaude = async (args, configDir, options) => {
+        if (args[1] === "login") {
+          writeFileSync(
+            file,
+            JSON.stringify({
+              ...leftover,
+              claudeAiOauth: { accessToken: "fresh", refreshToken: "r", expiresAt: 9e15 },
+            }),
+          );
+        }
+        return claude.run(args, configDir, options);
+      };
+      await loginOf(backendFor(dir, env, keychain({ kind: "absent" }), run), bridge());
+      expect(claude.calls[0]).toEqual(["auth", "status", "--json"]);
+      expect(claude.calls.some((args) => args[1] === "login")).toBe(true);
+    });
+  }
 
   it("treats a directory where the credential file should be as unreadable", async () => {
     const { dir, env } = home();
@@ -343,7 +382,7 @@ describe("Claude connect adopts a usable default login", () => {
     const pending = loginOf(backend, bridge());
     unreadable = true;
     release();
-    await expect(pending).rejects.toThrow(CLAUDE_LOGIN_UNREADABLE_TEXT);
+    await expect(pending).rejects.toThrow(claudeLoginUnreadableText());
     expect(claude.calls.some((args) => args[1] === "login")).toBe(false);
     await blocker;
   });

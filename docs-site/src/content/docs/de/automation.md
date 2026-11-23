@@ -1,5 +1,5 @@
 ---
-source: 3ada960e24611905
+source: 196a49ab4dfdf816
 title: Automatisierung
 description: Gib deinem ersten Offizier eine Nachricht, die nach Zeitplan oder bei einem Ereignis läuft, und pausiere, ändere oder lies jede davon in den Einstellungen nach.
 ---
@@ -32,7 +32,7 @@ Wähl eine Automatisierung aus, um sie zu lesen oder zu ändern.
 3. Wähl unter **Wann**, wie oft sie läuft.
 4. Wähl unter **Projekt** das Projekt, um das es geht, oder lass **Kein Projekt** stehen.
 5. Schreib unter **Sag deinem ersten Offizier** die Nachricht.
-6. Wähl **Entwurf speichern**, um sie für später aufzuheben, oder **Aktivieren …**, um sie zu prüfen und einzuschalten.
+6. Wähl **Entwurf speichern**, um sie für später aufzuheben, oder **Einschalten …**, um sie zu prüfen und einzuschalten.
 
 **Vorschau** zeigt die nächsten drei Zeitpunkte, zu denen sie läuft, und die Nachricht, wie dein erster Offizier sie bekommt.
 Es wird nichts gesendet.
@@ -47,7 +47,7 @@ Es wird nichts gesendet.
 
 Eine tägliche oder wöchentliche Automatisierung behält die **Zeitzone**, die du wählst, und läuft deshalb zur selben Zeit, wo auch immer dein Computer steht.
 
-**Zeitplanangabe einfügen** setzt eine Angabe in deine Nachricht, etwa die Zeit, für die der Lauf geplant war.
+Jede **Einfügen**-Schaltfläche unter der Nachricht setzt eine Angabe hinein, etwa die Zeit, für die der Lauf geplant war.
 Jede Angabe wird ausgefüllt, wenn die Nachricht gesendet wird.
 
 ## Einschalten {#turn-it-on}
@@ -55,7 +55,7 @@ Jede Angabe wird ausgefüllt, wenn die Nachricht gesendet wird.
 Eine neue Automatisierung aus den Einstellungen beginnt als Entwurf.
 Ein Entwurf läuft nie.
 
-Wenn du **Aktivieren …** wählst, zeigt das Blatt, was passieren wird, bevor etwas läuft:
+Wenn du **Einschalten …** wählst, zeigt die Seite, was passieren wird, bevor etwas läuft:
 
 - wann sie läuft und in welcher Zeitzone,
 - das Projekt und die Nachricht genau so, wie dein erster Offizier sie bekommt,
@@ -87,7 +87,7 @@ Wenn ein Zeitpunkt vergeht, während es geschlossen ist, läuft die Automatisier
 
 ## Verlauf {#history}
 
-Unter dem Blatt einer Automatisierung listet **Verlauf** ihre Läufe auf, den neuesten zuerst.
+Auf der Seite einer Automatisierung listet der Tab **Verlauf** ihre Läufe auf, den neuesten zuerst.
 Jeder Lauf zeigt, wo er steht:
 
 - **Wartet**: Dein erster Offizier hat ihn noch nicht bearbeitet.

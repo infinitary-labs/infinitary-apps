@@ -1,5 +1,5 @@
 ---
-source: 3ada960e24611905
+source: 196a49ab4dfdf816
 title: Automação
 description: Dê ao seu imediato um pedido que roda em um horário marcado ou quando algo acontece, e pause, mude ou releia qualquer um deles em Ajustes.
 ---
@@ -47,7 +47,7 @@ Nada é enviado.
 
 Uma automação diária ou semanal mantém o **Fuso horário** que você escolher, então ela roda no mesmo horário onde quer que o seu computador esteja.
 
-**Inserir detalhe do agendamento** põe um detalhe no seu pedido, como o horário para o qual ele estava previsto.
+Cada botão de **Inserir** abaixo do pedido põe um detalhe nele, como o horário para o qual ele estava previsto.
 Cada detalhe é preenchido quando o pedido é enviado.
 
 ## Ativar {#turn-it-on}
@@ -55,7 +55,7 @@ Cada detalhe é preenchido quando o pedido é enviado.
 Uma automação nova criada em Ajustes começa como rascunho.
 Um rascunho nunca roda.
 
-Quando você escolhe **Ativar…**, a folha mostra o que vai acontecer antes que qualquer coisa rode:
+Quando você escolhe **Ativar…**, a página mostra o que vai acontecer antes que qualquer coisa rode:
 
 - quando ela roda e em qual fuso horário,
 - o projeto e o pedido exatamente como o seu imediato o recebe,
@@ -87,7 +87,7 @@ Se um horário passar enquanto ele está fechado, a automação roda uma vez qua
 
 ## Histórico {#history}
 
-Na folha de uma automação, **Histórico** lista as execuções dela, das mais recentes para as mais antigas.
+Na página de uma automação, a aba **Histórico** lista as execuções dela, das mais recentes para as mais antigas.
 Cada execução mostra em que pé está:
 
 - **Aguardando**: seu imediato ainda não a tratou.

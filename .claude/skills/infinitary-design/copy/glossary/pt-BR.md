@@ -156,7 +156,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | this computer | este computador | |
 | thread (a card's) | conversa | "conversa do cartão". |
 | token, credential (avoided) | login, chave | "tokens" stays only where it means billed model text. |
-| Turn on / Turn off | Ativar / Desativar | Also for "Enable…": "Ativar…". |
+| Turn on / Turn off | Ativar / Desativar | Also for "Turn on…": "Ativar…". |
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |

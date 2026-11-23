@@ -83,7 +83,7 @@ The Actions token comments on a locked issue with its issue write access, and no
 Without the issue the check fails on every outside pull request and names what is missing.
 
 It writes on an outside pull request, as the check-file flag does, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
-It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue and status writes, and runs on GitHub's hosted Ubuntu.
+It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue, pull request and status writes (GitHub refuses its comment on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu.
 `tests/contributor-agreement.test.ts` holds each of these.
 
 ## Release environments

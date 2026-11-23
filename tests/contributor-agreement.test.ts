@@ -390,7 +390,7 @@ describe("contributor-agreement.yml", () => {
 
   it("holds only the writes it needs, and no secret", () => {
     expect(Object.values(workflow.jobs).map((job) => job.permissions)).toEqual([
-      { contents: "read", issues: "write", "pull-requests": "read", statuses: "write" },
+      { contents: "read", issues: "write", "pull-requests": "write", statuses: "write" },
     ]);
     expect(text).not.toMatch(/secrets\./);
     // No expression inside the script, so the contributor's words reach it only as data.

@@ -94,6 +94,20 @@ describe.runIf(SSH_SERVER_AVAILABLE)("asking a computer for a link by its addres
     expect(await at.remote.linkAt(sshd.address)).toEqual({ refused: "remote-login-off" });
   });
 
+  // The captain's choice on this change's review: joining by its address names the
+  // step and port it could not reach, as adding a computer by its address does.
+  it("names the step and port it could not reach, only to a program that asks for them", async () => {
+    const sshd = await server();
+    const at = await home({ ssh: sshd.ssh(), bundle: null });
+    // A name that finds no address stops at the key read, at the port its SSH settings name.
+    const address = "sam@no-such-mac.invalid";
+    expect(await at.remote.linkAt(address, { reach: true })).toEqual({
+      refused: "unreachable",
+      reach: { step: "key", port: sshd.port },
+    });
+    expect(await at.remote.linkAt(address)).toEqual({ refused: "unreachable" });
+  });
+
   it("says Infinitary is not open there, and refuses a link this computer made for itself", async () => {
     const sshd = await server();
     const empty = join(scratchDir("infinitary-far-home-"), "data");

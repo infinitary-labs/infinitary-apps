@@ -1859,8 +1859,9 @@ describe("the window beside a command's first mate", () => {
     await expect(at.shell.joinAt("kun@studio", { confirm: "ED25519 SHA256:abc" })).resolves.toEqual(
       expect.objectContaining({ asks: "join" }),
     );
+    // That first mate lists `join-by-address-reach`, so it is asked where a refusal stopped too.
     expect(command.asked("inf:devices:link-at")).toEqual([
-      ["kun@studio", { confirm: "ED25519 SHA256:abc" }],
+      ["kun@studio", { confirm: "ED25519 SHA256:abc", reach: true }],
     ]);
     await expect(at.shell.joinHeld("join")).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");

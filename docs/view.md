@@ -61,7 +61,7 @@ The Mac where the first mate lives takes a second app on its own Mac for a view,
 4. The window asks step 2's question above, naming the computer the typed address names (`kun@studio` asks of `studio`), and `inf:devices:join-held` joins with the held link as step 3 above does, dialing first the host SSH reached; Cancel forgets it.
 
 A Windows PC signs in with Windows' own SSH, `ssh.exe` in `System32\OpenSSH`, which reads the remembered key's file by a path written with forward slashes; it signs in with the person's key alone, so a computer that refuses that key answers that it did, with no password step.
-Each stop is one warning line with the address kept: Infinitary not open there, which starts nothing there; too old; controlling another computer; this computer itself; no curl on Linux; or Remote Login's own refusals.
+Each stop is one warning line with the address kept: Infinitary not open there, which starts nothing there; too old; controlling another computer; this computer itself; no curl on Linux; or Remote Login's own refusals, where one that could not reach the computer names the step and port it stopped at (`docs/devices.md`, "When it could not reach the computer").
 Nothing reaches the feed or the record until the join itself.
 
 ### Set up from your first mate's computer

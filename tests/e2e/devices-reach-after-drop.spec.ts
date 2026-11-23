@@ -150,12 +150,22 @@ test("an update refused while a computer did not answer is not still said once i
     sshd.freeze();
 
     await update.click();
-    const [reachLine, reachTodo] = remoteLoginWords.refused("unreachable", {
-      address: sshd.address,
-      doing: "update",
-    });
-    await expect(problem).toContainText(reachLine, { timeout: 90_000 });
-    await expect(problem).toContainText(reachTodo);
+    // It stops at reading the remembered SSH key on the port its SSH settings name. A Mac
+    // reads only the key; elsewhere the port is dialed too, and the frozen server's system
+    // still takes the connection, so something answered there with no key (hostKey.ts).
+    const said = [undefined, true].map((answered) =>
+      remoteLoginWords.refused("unreachable", {
+        address: sshd.address,
+        doing: "update",
+        reach: { step: "key", port: sshd.port, ...(answered ? { answered } : {}) },
+      }),
+    );
+    const either = (at: 0 | 1) =>
+      new RegExp(
+        said.map((lines) => (lines[at] ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+      );
+    await expect(problem).toContainText(either(0), { timeout: 90_000 });
+    await expect(problem).toContainText(either(1));
 
     sshd.thaw();
     await expect.poll(sshState, { timeout: 180_000, intervals: [1000] }).toEqual({

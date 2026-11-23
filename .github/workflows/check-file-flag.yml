@@ -37,10 +37,13 @@ jobs:
   flag:
     name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Pull request' }} · Check-file flag
     runs-on: ubuntu-24.04
+    # GitHub refuses a label on a pull request to a token without pull
+    # request writes, even with issue writes. Issue writes stay for the
+    # comment and for making the label the first time it is used.
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:

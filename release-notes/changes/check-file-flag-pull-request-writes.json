@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-file-flag-pull-request-writes",
+      "reason": "Internal: the check-file flag's token gains pull request writes, so it can label an outside pull request that edits check files; nothing in the app changes."
+    }
+  ]
+}

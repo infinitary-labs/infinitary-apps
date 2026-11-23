@@ -88,18 +88,19 @@ import {
   REACHED_FILE,
   RETURNING_FILE,
   RETURNING_KEY_FILE,
+  type ReturningIdentity,
   reachedFileSchema,
   returningIdSchema,
   returningKeySchema,
   SEEN_FILE,
   SOURCE_ALLOWED_FILE,
   SSH_FILE,
+  type SshCleanup,
   type SshRecord,
   SYSTEMS_FILE,
   type SystemRecord,
   seenFileSchema,
   sourceAllowedFileSchema,
-  type sshCleanupSchema,
   sshFileSchema,
   systemsFileSchema,
   TAKE_OVER_FILE,
@@ -1747,4 +1748,5 @@ export class DevicePairing implements PairedDevices {
 }
 
 export type { DevicePairingOptions } from "./pairingOptions";
+export type { ReturningIdentity, SshCleanup } from "./pairingRecords";
 export { joinedKind } from "./pairingRules";

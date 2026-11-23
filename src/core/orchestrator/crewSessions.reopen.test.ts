@@ -860,6 +860,45 @@ describe("CrewSupervisor", () => {
         await h.supervisor.disposeAll();
       });
 
+      // This Mac lost the update while a call there still ran, and the
+      // computer's let-go on its return names that stop withdrawn.
+      it("takes back a held turn's pause and row when a computer that lost its update comes back with that stop withdrawn", async () => {
+        const crewmate = fakeCrewmate();
+        const h = setup(crewmate);
+        const { taskId } = await h.supervisor.intake.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        h.tasks.placement.setDevice(taskId, "mac-mini");
+        // The computer drops while it saves and stays away past the update's wait.
+        const away: SaveThere = {
+          save: async () => {
+            throw new Error("That computer is out of reach.");
+          },
+          release: async () => undefined,
+        };
+        await expect(
+          h.supervisor.updates.pauseForUpdate("mac-mini", { there: away }),
+        ).rejects.toThrow();
+        h.supervisor.updates.resumeAfterUpdate("mac-mini");
+        await tick();
+        expect(updateRows(h, taskId)).toHaveLength(1);
+        // Back in reach with its call still running: its let-go names that stop withdrawn.
+        await h.supervisor.updates.letGoReturned("mac-mini", {
+          save: async () => ({ stopped: [] }),
+          release: async () => ({ stopped: [], withdrawn: [taskId] }),
+        });
+        expect(updateRows(h, taskId)).toEqual([]);
+        // The same turn ends with its own words, and nothing carries it on.
+        crewmate.emit({ type: "assistant_delta", taskId, text: "Wrote the notes." });
+        crewmate.finishPrompt();
+        await tick();
+        expect(h.tasks.get(taskId)?.outcome).toBe("Wrote the notes.");
+        expect(crewmate.promptCalls).toHaveLength(1);
+        await h.supervisor.disposeAll();
+      });
+
       it("sends a turn's words again when the update holds it before its model takes it", async () => {
         const crewmate = safelyStoppingCrewmate();
         const h = setup(crewmate);

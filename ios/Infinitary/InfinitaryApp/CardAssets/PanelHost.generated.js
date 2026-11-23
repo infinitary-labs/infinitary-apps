@@ -28202,6 +28202,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Infinitary ${version2} is not a published version, so install it there by hand.`;
   }
+  function devicesAwayUpdating() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قيد التحديث`;
+      case "de":
+        return `in Aktualisierung`;
+      case "es":
+        return `actualizándose`;
+      case "fr":
+        return `en cours de mise à jour`;
+      case "ja":
+        return `更新中`;
+      case "ko":
+        return `업데이트 중`;
+      case "pt-BR":
+        return `atualizando`;
+      case "zh-Hans":
+        return `正在更新`;
+      case "zh-Hant":
+        return `正在更新`;
+      case "en-XA":
+        return `[ûþðáţîñĝ ~~~]`;
+      case "ar-XB":
+        return `‮updating‬`;
+    }
+    return `updating`;
+  }
   function devicesCarriedOn(input2) {
     const to = input2.to;
     switch (currentLanguage()) {
@@ -93296,6 +93323,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Unpin`;
   }
+  function taskStatusComputerUpdating(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${computer} قيد التحديث`;
+      case "de":
+        return `${computer} wird aktualisiert`;
+      case "es":
+        return `${computer} se está actualizando`;
+      case "fr":
+        return `${computer} se met à jour`;
+      case "ja":
+        return `${computer} は更新中`;
+      case "ko":
+        return `${computer} 업데이트 중`;
+      case "pt-BR":
+        return `${computer} está atualizando`;
+      case "zh-Hans":
+        return `${computer} 正在更新`;
+      case "zh-Hant":
+        return `${computer} 正在更新`;
+      case "en-XA":
+        return `[${computer} îš ûþðáţîñĝ ~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ is updating‬`;
+    }
+    return `${computer} is updating`;
+  }
   function taskTabActivity() {
     switch (currentLanguage()) {
       case "ar":
@@ -100119,6 +100174,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesAppWhyOwnWindow,
     devicesAppWhyPackageManager,
     devicesAppWhyUnpublished,
+    devicesAwayUpdating,
     devicesCarriedOn,
     devicesCarryNotRemoved,
     devicesCarryRunsOn,
@@ -102356,6 +102412,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupWorking,
     taskPinPin,
     taskPinUnpin,
+    taskStatusComputerUpdating,
     taskTabActivity,
     taskTabCards,
     taskTabCrewmate,
@@ -103326,6 +103383,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesAppWhyOwnWindow": [],
     "devicesAppWhyPackageManager": [],
     "devicesAppWhyUnpublished": ["version"],
+    "devicesAwayUpdating": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
     "devicesCarryRunsOn": ["from", "to"],
@@ -105563,6 +105621,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupWorking": [],
     "taskPinPin": [],
     "taskPinUnpin": [],
+    "taskStatusComputerUpdating": ["computer"],
     "taskTabActivity": [],
     "taskTabCards": [],
     "taskTabCrewmate": [],
@@ -113191,6 +113250,14 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     updateWork: updateWorkSchema.optional(),
     /**
+     * The home follows its update now (docs/devices.md, "Updating"): from its
+     * crew's pause until the update ends, while it was heard from in the last
+     * `UPDATE_RETURN_MS`. Every place that names it says updating rather than
+     * out of reach. A view that does not list `computer-updating` is sent the
+     * list without it.
+     */
+    updating: literal(true).optional(),
+    /**
      * Out of reach, and this Mac's address changed since it was last in
      * reach: it still looks for this Mac where it found it then, until it
      * hears where this Mac is now (docs/devices.md, "Finding the home again").
@@ -115400,6 +115467,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     user: string().optional(),
     onThisMac: boolean(),
     reach: computerReachSchema,
+    /** It is being updated (`DeviceView.updating`): its words say updating rather than out of reach. */
+    updating: literal(true).optional(),
     /** What it last said, or null before it said anything since this home started. */
     signIns: computerSignInsSchema$1.nullable(),
     /** When it last said it, in ms since the epoch. */
@@ -115567,6 +115636,8 @@ ${FRAME_KEYBOARD_SCRIPT}
         rejections: array(placementRejectionSchema).max(32),
         /** The core's one reach reading when it was compared; absent for this Mac and on a historical row. Out of reach reads connecting while it was connecting. */
         reach: computerReachSchema.optional(),
+        /** It was being updated when it was compared (`DeviceView.updating`); absent otherwise. */
+        updating: literal(true).optional(),
         missingTools: array(string().max(80)).max(RESOLVED_TOOL_LIMIT),
         /** What its fresh reading said it runs; absent when unread and on a historical row. */
         system: deviceSystemSchema.optional(),
@@ -118177,12 +118248,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       reason: reason2 === words[mark] ? "" : reason2
     });
     const connecting = task.place?.reach === "connecting";
-    const catchingUpSince = task.place?.reach === "in-reach" ? task.place.catchingUpSince : void 0;
-    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0) ? task.place.name : null;
-    const awayWords = catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+    const updating = task.place?.reach !== void 0 && task.place.updating === true;
+    const catchingUpSince = task.place?.reach === "in-reach" && !updating ? task.place.catchingUpSince : void 0;
+    const away = task.place?.reach !== void 0 && (task.place.reach !== "in-reach" || catchingUpSince !== void 0 || updating) ? task.place.name : null;
+    const awayWords = updating ? taskStatusComputerUpdating({ computer: away ?? "" }) : catchingUpSince !== void 0 ? `Catching up with ${away} since ${waitRecordedTime(catchingUpSince, now)}` : connecting ? `${away} is connecting` : task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
     const awayReading = (mark, reason2) => ({
       ...reading(mark, reason2 ?? awayWords),
-      ...connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
+      ...updating || connecting || catchingUpSince !== void 0 ? {} : { outOfReach: true }
     });
     if (task.status === "done") {
       return reading(
@@ -118572,6 +118644,11 @@ ${FRAME_KEYBOARD_SCRIPT}
     reach: computerReachSchema.optional(),
     /** Connected on an older app, so it takes no new work until updated. */
     noNewWork: literal(true).optional(),
+    /**
+     * Its computer is being updated (`DeviceView.updating`): the task reads
+     * updating, with its mark as it was, whatever its reach.
+     */
+    updating: literal(true).optional(),
     /**
      * In reach and still catching up with this task, since this time (epoch
      * ms): its computer came back, or its conversation is opening on this Mac.

@@ -558,6 +558,8 @@ export class TaskPlacement {
     // One that has not started waits for a computer that takes no new work, even in reach.
     const older =
       (away || (live && !settled)) && this.options.takesNoWorkUntilUpdated?.(device) === true;
+    // Its computer's update, followed from its crew's pause to its end, reads updating whatever its reach.
+    const updating = live && this.options.updatingOf?.(device) === true;
     return {
       name: label,
       where,
@@ -569,6 +571,7 @@ export class TaskPlacement {
             : "out-of-reach"
           : "in-reach",
       ...(older ? { noNewWork: true as const } : {}),
+      ...(updating ? { updating: true as const } : {}),
       ...(catchingUpSince !== undefined ? { catchingUpSince } : {}),
     };
   }

@@ -6214,6 +6214,28 @@
             "restartedSince": {
               "type": "boolean"
             },
+            "updateWork": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "saving",
+                    "resuming"
+                  ]
+                },
+                "tasks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "state",
+                "tasks"
+              ]
+            },
             "addressChanged": {
               "type": "boolean"
             },
@@ -6692,6 +6714,28 @@
               },
               "restartedSince": {
                 "type": "boolean"
+              },
+              "updateWork": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "saving",
+                      "resuming"
+                    ]
+                  },
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "state",
+                  "tasks"
+                ]
               },
               "addressChanged": {
                 "type": "boolean"
@@ -7234,6 +7278,28 @@
               },
               "restartedSince": {
                 "type": "boolean"
+              },
+              "updateWork": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "saving",
+                      "resuming"
+                    ]
+                  },
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "state",
+                  "tasks"
+                ]
               },
               "addressChanged": {
                 "type": "boolean"
@@ -8337,6 +8403,28 @@
           "restartedSince": {
             "type": "boolean"
           },
+          "updateWork": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "saving",
+                  "resuming"
+                ]
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "state",
+              "tasks"
+            ]
+          },
           "addressChanged": {
             "type": "boolean"
           },
@@ -8781,6 +8869,28 @@
           "restartedSince": {
             "type": "boolean"
           },
+          "updateWork": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "saving",
+                  "resuming"
+                ]
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "state",
+              "tasks"
+            ]
+          },
           "addressChanged": {
             "type": "boolean"
           },
@@ -9184,6 +9294,28 @@
           "restartedSince": {
             "type": "boolean"
           },
+          "updateWork": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "saving",
+                  "resuming"
+                ]
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "state",
+              "tasks"
+            ]
+          },
           "addressChanged": {
             "type": "boolean"
           },
@@ -9314,6 +9446,25 @@
           "name",
           "pairedAt"
         ]
+      }
+    },
+    "inf:devices:update-later": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "boolean"
       }
     },
     "inf:devices:try-again": {
@@ -9828,6 +9979,28 @@
               },
               "restartedSince": {
                 "type": "boolean"
+              },
+              "updateWork": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "saving",
+                      "resuming"
+                    ]
+                  },
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "state",
+                  "tasks"
+                ]
               },
               "addressChanged": {
                 "type": "boolean"
@@ -84743,6 +84916,10 @@
                                 "error": {
                                   "type": "string"
                                 },
+                                "unstarted": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
                                 "undelivered": {
                                   "type": "array",
                                   "items": {
@@ -99465,6 +99642,28 @@
             "restartedSince": {
               "type": "boolean"
             },
+            "updateWork": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "saving",
+                    "resuming"
+                  ]
+                },
+                "tasks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "state",
+                "tasks"
+              ]
+            },
             "addressChanged": {
               "type": "boolean"
             },
@@ -103268,6 +103467,50 @@
           "required": [
             "tasksDir",
             "tasks"
+          ]
+        }
+      },
+      "inf:session:save-for-update": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "stopped": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            }
+          },
+          "required": [
+            "stopped"
+          ]
+        }
+      },
+      "inf:session:release-update": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "stopped": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            }
+          },
+          "required": [
+            "stopped"
           ]
         }
       },

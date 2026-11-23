@@ -21,7 +21,7 @@ import { scratchDir } from "./scratchDirs";
 /**
  * The home's connection with the real event bus, the real pairing over a
  * scratch folder, and a stand-in core behind `dispatch`, for the connection's
- * own tests (src/core/connection/connection.test.ts and localDoor.test.ts):
+ * own tests (src/core/connection/connection.test.ts, its connection.*.test.ts siblings and localDoor.test.ts):
  * each closes when its test ends.
  */
 

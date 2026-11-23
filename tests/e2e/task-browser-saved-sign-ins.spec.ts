@@ -611,6 +611,12 @@ test("a kept sign-in the site turned away is marked by the crewmate, and the nex
       await expect
         .poll(() => pageSays(app, clubUrl, "state").catch(() => null))
         .toBe("Signed in as sam@example.com");
+      // The offer a later task's card makes is the Ask me each time path.
+      await view(page, task.id)
+        .locator("[data-browser-sharing]")
+        .getByRole("group", { name: signInRuleLegend(site) })
+        .getByRole("radio", { name: ASK_EACH_TIME_LABEL })
+        .check();
       await runFromSearch(app, page, "browser.control");
       await expect
         .poll(async () => (await detailTitled(first))?.outcome ?? "", { timeout: 60_000 })

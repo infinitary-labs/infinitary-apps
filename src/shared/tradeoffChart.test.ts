@@ -6,7 +6,8 @@ import { tradeoffProblem, tradeoffTables, withTradeoffCharts } from "./tradeoffC
 // INF-5510's approved plan, piece 2: the app draws a review question's
 // tradeoff table as a chart - a scatter for two headings, a small radar on
 // each option for three or more (the captain's chart_layout radar-each) - and
-// the card check refuses a chart with no as-built row. The question below is
+// the card check refuses a chart missing the row of the option a question
+// marks as built (INF-6293: a question need not offer one). The question below is
 // a real one the captain answered on November 20 (which pages a kept browser
 // sign-in keeps), as a reviewer wrote it under the marked-table rules.
 
@@ -176,6 +177,30 @@ describe("a review question's tradeoff table", () => {
       "Security",
       "Reliability",
       "Ship fast",
+    ]);
+  });
+
+  it("draws a question that offers nothing as built, as a plan question does", () => {
+    // INF-6293's approved plan: any card's question may carry the table, and
+    // most plan questions offer no option for what the project does now. The
+    // question and options are a real plan card's of November 2026 (what a
+    // reset does with the old folder); the table is written under the shared
+    // card rules.
+    const body = `<fieldset><legend>What happens to the old folder after a reset?</legend>
+<label><input type="radio" name="old_folder" value="delete" data-inf-recommended> Delete it right away</label>
+<label><input type="radio" name="old_folder" value="keep-7-days"> Keep it hidden for 7 days, with Undo reset</label>
+<label><input type="radio" name="old_folder" value="something-else" data-inf-write-in> Something else</label>
+<table data-inf-tradeoff>
+<tr><td></td><td>Security</td><td>User experience</td></tr>
+<tr data-inf-option="delete"><td>Delete right away</td><td data-inf-level="high">nothing stays on disk</td><td data-inf-level="low">a mistaken reset is final</td></tr>
+<tr data-inf-option="keep-7-days"><td>Keep 7 days</td><td data-inf-level="medium">sign-ins stay a week</td><td data-inf-level="high">Undo reset for a week</td></tr>
+</table>
+<p>I recommend deleting right away. It gives up undoing a mistaken reset.</p>
+</fieldset>`;
+    expect(tradeoffProblem(body)).toBeUndefined();
+    expect(marks(withTradeoffCharts(body))).toEqual([
+      { pick: "delete", current: false, recommended: true, x: "1", y: "3" },
+      { pick: "keep-7-days", current: false, recommended: false, x: "3", y: "2" },
     ]);
   });
 

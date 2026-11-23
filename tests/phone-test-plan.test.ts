@@ -14,6 +14,7 @@ import {
   firstPhoneLanes,
   keepPhonePasses,
   macTestFilter,
+  PHONE_APP,
   PHONE_DEVICES,
   PHONE_PART_TIMES,
   PHONE_PARTS,
@@ -1079,7 +1080,8 @@ describe("a gate's end", () => {
 // INF-4326 (INF-4241's guard, the captain's "a guard that counts screen reads and launches per part, never seconds"):
 // each pass counts its work from XCTest's own activity lines, and every gate names a part past its recorded amount in
 // scripts/phone-work.json. The log is the iPhone's relaunch-first part in phone run 43667234857, one pair: the fresh
-// launch, then the dark and the light relaunch (a part main has since dropped; the log is still XCTest's own lines).
+// launch, then the dark and the light relaunch (a part main has since dropped; the log is still XCTest's own lines),
+// with the app's identifier changed to the one the app has since its move to the company's Apple team.
 describe("a part's work", () => {
   const log = readFileSync("tests/fixtures/phone-test-plan/relaunch-first-xcodebuild.log", "utf8");
   const lines = log.split("\n");
@@ -1096,6 +1098,19 @@ describe("a part's work", () => {
     expect(phoneWork(lines.filter((_, at) => at !== inTap).join("\n")).reads).toBe(work.reads);
     // Seconds are never read: the same work at another pace counts the same.
     expect(phoneWork(log.replace(/t = +[\d.]+s/g, "t =    99.99s"))).toEqual(work);
+  });
+  // A launch is the tested app's own: a log of an app under another identifier counts none.
+  it("counts the launches of the app the Xcode project builds", () => {
+    const project = readFileSync(
+      "ios/Infinitary/Infinitary.xcodeproj/project.pbxproj",
+      "utf8",
+    ).split("\n");
+    const app = project
+      .filter((line) => line.includes("INFOPLIST_FILE = Info.plist;"))
+      .map((line) => /PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/.exec(line)?.[1]);
+    expect(app.length).toBeGreaterThan(0);
+    expect(new Set(app)).toEqual(new Set([PHONE_APP]));
+    expect(phoneWork(log.replaceAll(PHONE_APP, "com.example.other")).launches).toBe(0);
   });
   it("names each pass past its recorded amount or with none, and nothing for a pass with no work read", () => {
     const work = phoneWork(log);

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { SIGNED_BUILD_STEP } from "../scripts/installer-reuse";
+import { SIGNING_TEAMS } from "../scripts/release-signing-team.ts";
 import { releaseSource } from "../src/core/update/releaseSource";
 import {
   loadYamlFile,
@@ -541,11 +542,18 @@ it("selects Homebrew/Linux-only for a stable before storage setup, refuses an al
 // The trial release in the new project found the signing step's credentials
 // empty: a called workflow reads its job environment's credentials only when
 // its caller hands its secrets on, and the release passed none. The build reads
-// its credentials from mac-installer-signing (docs/public-ci.md).
+// its credentials from mac-installer-signing (docs/public-ci.md), the
+// certificate of the team releases sign with.
 it("signs the installer test copies with its own environment's credentials", () => {
   const installer = loadYamlFile(".github/workflows/mac-installer.yml") as {
     on: { workflow_call: { secrets?: unknown } };
-    jobs: { build: { environment?: string; steps: { env?: Record<string, string> }[] } };
+    jobs: {
+      build: {
+        environment?: string;
+        env: Record<string, string>;
+        steps: { env?: Record<string, string> }[];
+      };
+    };
   };
   expect(installer.on.workflow_call.secrets).toBeUndefined();
   expect(installer.jobs.build.environment).toBe("mac-installer-signing");
@@ -554,7 +562,13 @@ it("signs the installer test copies with its own environment's credentials", () 
       [...value.matchAll(/secrets\.(\w+)/g)].map((m) => m[1]),
     ),
   );
-  expect(read).toContain("MAC_DEVELOPER_ID_CERT_P12");
+  const team =
+    SIGNING_TEAMS[
+      (JSON.parse(readFileSync("packaging/release-identity.json", "utf8")) as { teamId: string })
+        .teamId
+    ];
+  expect(read).toContain(`${team?.secrets}MAC_DEVELOPER_ID_CERT_P12`);
+  expect(installer.jobs.build.env.SIGN_IDENTITY).toBe(team?.identity);
   for (const caller of ["release.yml", "verify.yml"]) {
     const { jobs } = loadYamlFile(`.github/workflows/${caller}`) as {
       jobs: Record<string, { uses?: string; secrets?: unknown }>;

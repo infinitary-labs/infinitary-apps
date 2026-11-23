@@ -16,6 +16,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { ARCHES, manifestEntry } from "../scripts/ensure-bundled-git.ts";
+import { SIGNING_TEAMS } from "../scripts/release-signing-team.ts";
 import { PUBLIC_RELEASE_NAMES } from "../src/core/update/releaseSource";
 import { BUNDLE_ID, HOMEPAGE, renderCask } from "../src/core/update/tapPublication";
 import {
@@ -377,7 +378,16 @@ describe("electron-builder configuration", () => {
       entitlements?: unknown;
     };
     expect(mac.hardenedRuntime).toBe(true);
-    expect(mac.identity).toBe("Kun Chen (9T2J7MNUP9)");
+    // The certificate the release workflow restores for the team is the one
+    // electron-builder signs with and verify-app.sh expects.
+    const release = JSON.parse(read("packaging/release-identity.json")) as {
+      teamId: string;
+      signer: string;
+    };
+    expect(mac.identity).toBe(`${release.signer} (${release.teamId})`);
+    expect(`Developer ID Application: ${mac.identity}`).toBe(
+      SIGNING_TEAMS[release.teamId]?.identity,
+    );
     expect(mac.entitlements).toBe("packaging/entitlements.plist");
   });
 
@@ -607,7 +617,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   it("keeps the local overlay off the hardened runtime and off the release identity", () => {
     expect(mac.hardenedRuntime).toBe(false);
-    expect(read("electron-builder.dev.yml")).not.toContain("9T2J7MNUP9");
+    for (const team of Object.keys(SIGNING_TEAMS)) {
+      expect(read("electron-builder.dev.yml")).not.toContain(team);
+    }
   });
 
   it("wires the local signing setup into install, dev, and packaging", () => {

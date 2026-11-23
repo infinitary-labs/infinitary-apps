@@ -45,7 +45,7 @@ jobs:
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-mac-installer-build', github.run_id, github.run_attempt) }}
     env:
-      SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
+      SIGN_IDENTITY: "Developer ID Application: Infinitary Labs, Inc. (Y44V95NP6K)"
     steps:
       # A refused checkout waits until GitHub takes the job's token again,
       # then runs once more (docs/testing.md, "GitHub refusing a job's token").
@@ -105,9 +105,9 @@ jobs:
           echo "INFINITARY_LOCAL_CODESIGN_DIR=$RUNNER_TEMP/installer-home/local-codesign" >> "$GITHUB_ENV"
       - name: Restore the existing release identity into the disposable Mac
         env:
-          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
-          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.COMPANY_MAC_DEVELOPER_ID_CERT_P12 }}
+          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.COMPANY_MAC_DEVELOPER_ID_CERT_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
         run: node scripts/installer-signing.mjs restore
       - run: pnpm build
       # The disk images' dmgbuild, which electron-builder downloads from GitHub's
@@ -117,8 +117,8 @@ jobs:
       - name: Build and notarize the verification copies without publishing
         id: fixtures
         env:
-          APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
           INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures
           INSTALLER_EVIDENCE: ${{ runner.temp }}/installer-build-evidence
         run: scripts/build-installer-fixtures.sh

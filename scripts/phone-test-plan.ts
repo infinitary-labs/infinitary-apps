@@ -226,11 +226,15 @@ export type PhoneToolSelection = "waits" | "tools";
  * that tap. A launch is each start of the app. Seconds move with the computer's load; these counts move with the tests. */
 export type PhoneWork = { reads: number; launches: number };
 
+/** The app a part tests, as its Xcode project names it (docs/ios.md). */
+export const PHONE_APP = "com.getinfinitary.app";
+
 export function phoneWork(output: string): PhoneWork {
   const lines = output.split("\n");
+  const launch = new RegExp(`^ +t = +[\\d.]+s +Launch ${PHONE_APP.replaceAll(".", "\\.")}$`);
   return {
     reads: lines.filter((line) => /^ {4}t = +[\d.]+s (Find the |Checking existence of |Get all elements |Get number of matches |Requesting snapshot )/.test(line)).length,
-    launches: lines.filter((line) => /^ +t = +[\d.]+s +Launch com\.getinfinitary\.infinitary$/.test(line)).length,
+    launches: lines.filter((line) => launch.test(line)).length,
   };
 }
 

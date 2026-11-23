@@ -191,7 +191,7 @@ public enum PhonePushStore {
     static let service = "com.getinfinitary.infinitary.phone-push"
     /// The team-prefixed push group both parts' entitlements list. It is not the app's own default group, so the
     /// notification part reaches this record alone, never the phone's identity, SSH or approval keys.
-    public static let group = "9T2J7MNUP9.com.getinfinitary.infinitary.push"
+    public static let group = "Y44V95NP6K.com.getinfinitary.app.push"
 
     private static var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,

@@ -662,8 +662,9 @@ export function lintCardShape(card: ShapedCard): string | undefined {
 
   // A product fact: the app draws a tradeoff table only from its structure -
   // two headings or more, a row per option naming it, a level in every cell
-  // and a row for what the code does now (docs/card-authoring.md, "The
-  // tradeoff chart"); no heading's or option's words are read.
+  // and a row for the option marked as what the code does now, when one is
+  // (docs/card-authoring.md, "The tradeoff chart"); no heading's or option's
+  // words and no card kind are read.
   const tradeoffRefusal = tradeoffProblem(card.body);
   if (tradeoffRefusal) return tradeoffRefusal;
 

@@ -567,9 +567,15 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
 
 ### The tradeoff chart
 
-A question whose options each give something up can lay the tradeoff out as a table the app draws (INF-5510's plan, piece 2): a review finding's question does (Review finding attribution, below).
+The tradeoff chart is one block any card's question may carry (INF-5510's plan, piece 2; INF-6293): plan cards, other decision cards, review finding cards and the first mate's own cards alike.
+One text in the shared card rules (`CARD_AUTHORING`, `src/core/prompts/cardContract.ts`) tells every author when it fits and how to write it, so no kind of card keeps a copy of its own.
+A question carries it when its options differ under two or more qualities of the whole product.
+It carries none when the choice is a look, wording or layout, whose drawing or preview is the comparison; when its options differ inside one quality; or for a yes or no, a consent or a plan card's careful-review list.
+A review finding's question always carries it (Review finding attribution, below), as does a question about a pull request comment.
 The author writes a plain table marked `data-inf-tradeoff` inside the question's fieldset, under its options.
-Its first row is an empty cell, then one cell per heading where the options differ, two or more; a heading names a quality of the whole product, such as user experience, security or ship fast, written as the author chose it.
+Its first row is an empty cell, then one cell per heading where the options differ, two or more; a heading names a quality of the whole product the person wants more of, in one or two words that would fit an unrelated change, written as the author chose it.
+The rules suggest user experience, security, privacy, reliability, control, cost, maintainability and ship fast, and the fewest headings that show the difference.
+With a table, each option's label is a dozen words at most, with one line naming the headings on which the options are level and one naming the pick and what it gives up; the reasons sit in the table, folded under the chart.
 Each later row is one option, a `<tr data-inf-option="<value>">` naming the value of the question's own radio or checkbox it stands for, its option's words in a few words in the first cell, then one cell per heading with `data-inf-level` of `high`, `medium` or `low` and a few words for this change.
 High is always the most of what the heading names, so a heading is named for what the person wants more of: ship fast, never work now.
 
@@ -583,7 +589,8 @@ The table as written stays where the author put it, folded as The tradeoff as a 
 The radar tiles wrap to one column and the plane's words wrap in a narrow card, so neither scrolls sideways.
 In a plane too narrow for a pill, the As built and Recommended tags become small words beside the option's, broken only between words.
 There the ring is left out and a picked option shows by its accent border.
-The app reads no heading's or option's words: at the `emit_card` boundary the card checks refuse only a table it could not draw (`tradeoffProblem`): fewer than two headings, a row naming no option of its question, a row without a level in every heading's cell, or no row for the option marked `data-inf-current`.
+The app reads no heading's or option's words: at the `emit_card` boundary the card checks refuse only a table it could not draw (`tradeoffProblem`): fewer than two headings, a row naming no option of its question, a row without a level in every heading's cell, or no row for the option marked `data-inf-current`, or that mark on anything but an option's own input.
+A question need not offer what the project does now: a table in a question with no option marked `data-inf-current` is sound, whatever kind of card holds it.
 A view or phone too old to know the chart shows the table as written.
 
 ### Style
@@ -1397,7 +1404,7 @@ A declaration grants no execution permission; a successful merge creates durable
 ## Review finding attribution
 
 An independent reviewer puts its ask-user findings to the captain on its own decision card (INF-4338, direction D); the host labels any decision card from an independent review Review finding.
-It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a tradeoff table of it, which the app draws as a chart (The tradeoff chart, above): one row per option, as built included, one column per product-level heading where the options differ, and a high, medium or low level in every cell (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
+It asks only a real tradeoff, and each question but a plain yes-or-no approval carries a tradeoff table of it, which the app draws as a chart (The tradeoff chart, above): one row per option, as built included, one column per product-level heading where the options differ, and a high, medium or low level in every cell; the reviewer's rules add only that the table is required with the as-built row, and the shared card rules say the rest (`REVIEW_CARD_RULES`; `docs/delivery-rigor.md`, "Findings and blocked").
 Findings it settled itself are listed in a fold, and again on the builder's merge card.
 Its head names the review task, as every crewmate card's does, and the card's strip beside the buttons names the builder's change alone - its project, change, lines and care - with none of its states (`taskFactsPartOf`, `src/shared/cards.ts`).
 The checks, their causes and the review's own verdict bear on the merge, so they stay on the builder's merge card and never pull the eye from the card's question.

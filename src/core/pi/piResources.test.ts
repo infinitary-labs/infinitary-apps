@@ -163,6 +163,28 @@ describe("selective filing reaches every agent that acts on it", () => {
  * fact must reach every agent that acts on it, wherever its one home is;
  * a fact that stops reaching one is a change of behaviour, not of structure.
  */
+describe("the tradeoff chart's rules reach every card author (INF-6293)", () => {
+  // The captain: "can we make these tradeoff charts a common building block
+  // that can be used in any card". One text in the card rules is the nudge
+  // for plan, decision and review cards alike, the first mate's included.
+  it("serves the one text to the first mate and every crewmate runtime", () => {
+    const facts = [
+      "A question whose options differ under two or more whole-product qualities carries a <table data-inf-tradeoff> under its options",
+      "Headings are qualities wanted more of, in one or two words that fit any change",
+      "Its options' labels are a dozen words at most",
+      "An option for what the project does now marks its input data-inf-current, tagged As built, and has its row.",
+      "No table for a look, wording or layout, one quality, a yes or no, a consent",
+    ];
+    for (const [name, served] of [
+      ["firstmate", buildFirstmateSystemPrompt()],
+      ["crewmate/pi", buildCrewmateSystemPrompt("pi")],
+      ["crewmate/claude", buildCrewmateSystemPrompt("claude")],
+    ] as const) {
+      for (const fact of facts) expect(served, `${name}: ${fact}`).toContain(fact);
+    }
+  });
+});
+
 describe("the plan-to-build handoff reaches every agent that acts on it", () => {
   const builderBasis = renderBasisSection({
     key: "FM3K-7",
@@ -699,9 +721,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // The prompt-budget trim keeps these rules while shortening their wording and examples.
   // INF-5446 (the captain chose to apply synced settings through the preview's own controls) adds inf.stage's apply and the card's unsent draft.
   // A prompt-budget trim says the draft button, the browser, files and risk words, the strip and the closing reply lines in fewer words.
+  // INF-6293's approved plan adds the one tradeoff chart text every author reads; the token list, the write-in row and time and language say the same in fewer words.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "1ea457b4e3251b29f03d716ebd5500e70815843600f1b7e0cae5f307fc52a5ec",
+    "035e35bfd6a4c95b37778976f8a0279939c69805a55653c2e5d8e0c06d7797f6",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
@@ -713,5 +736,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A later prompt-budget trim says the careful-review rule in fewer words, in both halves.
   // A prompt-budget trim after INF-4425 says the first mate's filing of a plan's pieces in fewer words.
   // A later prompt-budget trim drops three restatements: the planner's read-only limit, the closed-answer line and the bounded-work line.
-  expect(hash(HANDOFF)).toBe("7a27c68a2126f477f2298812c18f0b71cd0a5e59613d67e557542b2b581f66c1");
+  // INF-6293's approved plan makes room for the tradeoff chart text: the merge permission line says the same in fewer words.
+  expect(hash(HANDOFF)).toBe("60089ed6f97cdb96a4ce0617e436615551f23720121fab969685c498a935ea8e");
 });

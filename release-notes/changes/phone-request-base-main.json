@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-request-base-main",
+      "reason": "The project's own phone check on request now reads a base named main and refuses an unreadable base with its reason instead of running every part on every device; nothing in the app changes."
+    }
+  ]
+}

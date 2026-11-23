@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { SSH_SERVER_AVAILABLE, startSshServer } from "../helpers/sshServer";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { launchApp } from "./launch";
 import { focusOn } from "./windowKeys";
 
@@ -48,6 +49,7 @@ async function setUpJourney(sshPort: number): Promise<void> {
   });
   try {
     const { page } = app;
+    await chooseWhereFirstMateLives(page, "running");
     const setUp = page.locator("[data-join-set-up-chip]");
     const paste = page.locator("[data-join-chip]");
     await expect(setUp).toHaveText(m.devicesJoinSetUpChip());

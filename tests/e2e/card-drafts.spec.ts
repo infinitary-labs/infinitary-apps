@@ -11,6 +11,7 @@ import {
 } from "../../src/shared/cardNotes";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { scratchDir } from "../helpers/scratchDirs";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { startMockProvider } from "./mockProvider";
@@ -80,6 +81,7 @@ async function join(home: LaunchedApp): Promise<LaunchedApp> {
   const view = await launchApp({ env: AIR_ENV });
   const { page } = view;
   await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
+  await chooseWhereFirstMateLives(page, "running");
   await page.locator("[data-join-chip]").click();
   await page.getByLabel(`The link from your other ${COMPUTER.one}`).fill(invite.link);
   await page.getByRole("button", { name: "Continue" }).click();

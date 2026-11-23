@@ -2,7 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { shown, unansweredOf } from "./devicesTab";
+import { chooseAtWelcome, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -26,6 +26,7 @@ test("while a command the window started is still starting, nothing says a first
   });
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
   await shown("[data-join-set-up-chip]");
   await expect.poll(() => bridge.requests("inf:devices:follow-added").length).toBeGreaterThan(0);
   const paste = await shown("[data-join-chip]");

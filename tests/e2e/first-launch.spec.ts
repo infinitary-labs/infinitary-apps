@@ -15,7 +15,12 @@ import {
   hintOnThisComputer,
   holdPastTheHold,
 } from "./dictation";
-import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
+import {
+  chooseWhereFirstMateLives,
+  committedWelcome,
+  observeWelcomeReadiness,
+  reloadTypingEarly,
+} from "./firstLaunch";
 import { frameGesturesDecided } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -61,6 +66,7 @@ const clients = () => ({
 async function connectThroughGate(page: Page): Promise<void> {
   const gate = page.locator("[data-first-run-gate]");
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
+  await chooseWhereFirstMateLives(page, "here");
   await gate.locator(`[data-connect-provider="${MOCK_KEY_PROVIDER_ID}"]`).click();
   await gate.locator("[data-connect-method]").getByRole("button", { name: "API key" }).click();
   const aside = gate.locator("[data-connect-aside]");
@@ -198,6 +204,7 @@ test("fresh key setup commits the welcome before ready without inference, restor
   );
   await page.keyboard.up(DICTATION_KEY);
   await observeWelcomeReadiness(page);
+  await chooseWhereFirstMateLives(page, "here");
   await gate.locator(`[data-connect-provider="${MOCK_KEY_PROVIDER_ID}"]`).click();
   const choice = gate.locator("[data-connect-method]");
   await choice.getByRole("button", { name: "API key" }).click();
@@ -607,6 +614,7 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
     await observeWelcomeReadiness(page);
 
     // Claude signs in one way: the chip goes straight to the Mac's login.
+    await chooseWhereFirstMateLives(page, "here");
     await gate.locator(`[data-connect-provider="${CLAUDE_PROVIDER_ID}"]`).click();
     // An immediately arriving card can replace the null-state layer before
     // a test samples the caption's transient fade; assert the ready outcome.

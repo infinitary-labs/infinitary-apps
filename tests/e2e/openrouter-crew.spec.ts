@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
-import { putAwayFirstCrewmateNote } from "./firstLaunch";
+import { chooseWhereFirstMateLives, putAwayFirstCrewmateNote } from "./firstLaunch";
 import { gitIdentityHome } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
@@ -64,6 +64,7 @@ test("a crewmate on an install signed in only to OpenRouter runs on an OpenRoute
 
     await test.step("sign in: an OpenRouter key pasted through the gate's chip is the only sign-in", async () => {
       await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
+      await chooseWhereFirstMateLives(page, "here");
       await gate.locator('[data-connect-provider="openrouter"]').click();
       await gate.locator("[data-connect-method]").getByRole("button", { name: "API key" }).click();
       const aside = gate.locator("[data-connect-aside]");

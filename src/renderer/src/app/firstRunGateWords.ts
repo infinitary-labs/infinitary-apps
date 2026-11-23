@@ -27,11 +27,55 @@ export function gateRecoveryTitle(): string {
 
 /**
  * The line under the first-screen heading, in the first mate's voice
- * (captain, INF-417: reword the suggested introduction, keep the always-on ask).
+ * (captain, INF-417); the always-on ask moved to the question under it.
  */
 export function gateIntro(): string {
   return m.shellGateIntro();
 }
+
+/**
+ * Where the first mate lives, asked before anything opens (captain's
+ * approval of INF-6207: ask first, three equal choices).
+ */
+export function gateWhere(): string {
+  return m.shellGateWhere();
+}
+
+/** The three choices, in the order the screen shows them. */
+export type GateChoice = "here" | "another" | "running";
+export const GATE_CHOICES: readonly GateChoice[] = ["here", "another", "running"];
+
+/** Each choice's name and the line under it saying what happens before it is pressed. */
+export function gateChoiceWords(choice: GateChoice): { name: string; line: string } {
+  if (choice === "here") return { name: m.shellGateChoiceHere(), line: m.shellGateChoiceHereSub() };
+  if (choice === "another")
+    return { name: m.shellGateChoiceAnother(), line: m.shellGateChoiceAnotherSub() };
+  return { name: m.shellGateChoiceRunning(), line: m.shellGateChoiceRunningSub() };
+}
+
+/** Under the choices: the move after setup stays the fallback (docs/devices.md). */
+export function gateMoveLater(): string {
+  return m.shellGateMoveLater();
+}
+
+/** The link back to the three choices from an opened one. */
+export function gateBack(): string {
+  return m.shellGateBack();
+}
+
+/** Where a Mac keeps the command that a Linux package puts on the search path as `infinitary`. */
+export const MAC_COMMAND = "/Applications/Infinitary.app/Contents/MacOS/Infinitary";
+
+/**
+ * Another computer by commands (docs/run.md): install, start at boot, make a
+ * link, and paste it in One already running's paste box.
+ */
+export const GATE_COMMANDS = {
+  // i18n-exempt: a command typed in a terminal, never translated
+  start: "infinitary start-at-boot",
+  // i18n-exempt: a command typed in a terminal, never translated
+  link: "infinitary link",
+} as const;
 
 /** The remaining-need line when a connected subscription still cannot answer. */
 export const GATE_STILL_NEEDS = (): string => m.shellGateStillNeeds();

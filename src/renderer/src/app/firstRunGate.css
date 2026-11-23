@@ -68,6 +68,127 @@
   color: var(--fg-2);
 }
 
+/* Where the first mate lives (INF-6207): three equal cards in one row,
+   each a button whose line says what happens before it is pressed. */
+.fm-gate-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: min(720px, 100%);
+}
+
+.fm-gate-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  font: inherit;
+  color: var(--fg-2);
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.fm-gate-choice:hover {
+  background: var(--bg-2);
+  border-color: var(--line-2);
+}
+
+.fm-gate-choice-name {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.fm-gate-choice-line {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+/* The question reads as the introduction's second line, so the choices and
+   the move line fit the band at the usual window size. */
+.fm-gate-sub[data-mac-choice] + .fm-gate-sub[data-gate-where] {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+/* A narrow stage stacks the cards; they stay equal. */
+@media (max-width: 640px) {
+  .fm-gate-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.fm-gate-later {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+/* Back to the three choices from an opened one. */
+.fm-gate-back {
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.fm-gate-back:hover {
+  color: var(--fg-1);
+}
+
+/* Another computer by commands: numbered steps, each command with its Copy. */
+.fm-gate-commands {
+  margin-top: 0;
+}
+
+.fm-gate-steps {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  list-style: none;
+  counter-reset: gate-step;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+/* Each step's words, then its command and Copy, on one row while they fit. */
+.fm-gate-steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.fm-gate-steps li {
+  counter-increment: gate-step;
+}
+
+.fm-gate-steps li::before {
+  content: counter(gate-step) ".";
+  min-width: 1.2em;
+  margin-inline-start: calc(-1 * var(--space-4));
+}
+
+.fm-gate-steps .fm-join-copy {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.fm-gate-mac {
+  margin: var(--space-3) 0 0;
+}
+
 /* A connection's fresh check: what it covers and costs, then the action. */
 .fm-gate-check {
   display: flex;
@@ -89,7 +210,12 @@
   .fm-gate-check {
     gap: var(--space-2);
   }
-  .fm-gate-sub:not([data-connecting], [data-fresh-check-line], [data-mac-choice]) {
+  .fm-gate-sub:not(
+    [data-connecting],
+    [data-fresh-check-line],
+    [data-mac-choice],
+    [data-gate-where]
+  ) {
     display: none;
   }
 }

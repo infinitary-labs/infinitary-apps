@@ -6,6 +6,7 @@ import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../../src/core/orchestrator
 import { FIRSTMATE_FAILURE_CARD_ID } from "../../src/core/orchestrator/hostCards";
 import { chatFrame, customChatText } from "../helpers/customApiDialect";
 import { fillCustomApi, saveCustomApi } from "./customApi";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { regionShot } from "./pictures";
@@ -202,6 +203,7 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
   try {
     launched = await launchApp({ modelsJson: () => JSON.stringify({ providers: {} }) });
     const page = launched.page;
+    await chooseWhereFirstMateLives(page, "here");
     await page.locator("[data-first-run-gate] [data-connect-custom-api]").click();
     await fillCustomApi(page, {
       name: "Small context model",

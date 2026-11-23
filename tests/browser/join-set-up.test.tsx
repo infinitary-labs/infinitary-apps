@@ -3,7 +3,7 @@ import type { SetUpHere } from "@shared/joinByAddress";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { type Answers, fakeBridge } from "./bridge";
-import { button, clipboard, gone, held, shown, unansweredOf } from "./devicesTab";
+import { button, chooseAtWelcome, clipboard, gone, held, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -27,6 +27,7 @@ test("a Mac leads with set up from the first mate's computer, its private addres
   const copied = clipboard();
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
 
   // Section: three chips on their own line, the new one first.
   {

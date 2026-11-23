@@ -1226,6 +1226,38 @@ describe("FirstmateAgent answer delivery", () => {
       );
     });
 
+    // INF-6128, the captain's "what happened to this card's body? why was it
+    // turned empty?": answering meant sending the card again, and the
+    // placeholder body sent beside the answer replaced the card's own.
+    it("keeps the card as it was when the answer leaves its body out (INF-6128)", async () => {
+      const f = setup({ silent: true });
+      const { cardId, asked } = await replyUnderNote(f);
+      const shown = f.supervisor.cards.get(cardId);
+      const receipt = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: cardId,
+        title: card.title,
+        reply: "It is more than cosmetic, but nothing is blocked.",
+        answers_message: asked,
+      });
+      await finish(f, "Answered in the thread.");
+      const kept = f.supervisor.cards.get(cardId);
+      expect([kept?.title, kept?.body, kept?.actions]).toEqual([
+        shown?.title,
+        shown?.body,
+        shown?.actions,
+      ]);
+      // One line, the answer: no revised line, since nothing on the card changed.
+      expect(f.supervisor.cards.thread(cardId).messages.map((line) => line.who)).toEqual([
+        "captain",
+        "firstmate",
+      ]);
+      expect(firstmateLines(f, cardId)[0]?.answersMessage).toBe(asked);
+      expect(states(f)).toEqual(["covered", "covered"]);
+      expect(retries(f)).toEqual([]);
+      expect(receipt?.content[0]?.text).toContain(`it answers the captain's message ${asked}`);
+      expect(receipt?.content[0]?.text).toContain("The card itself is unchanged");
+    });
+
     it("still records a write that revised the card as the card shown again", async () => {
       const f = setup({ silent: true });
       const { cardId, asked } = await replyUnderNote(f);

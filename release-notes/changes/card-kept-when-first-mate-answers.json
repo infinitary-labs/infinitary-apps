@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-kept-when-first-mate-answers",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card keeps what it says when the first mate answers your reply",
+      "body": "When you reply under one of the first mate's cards, its answer now goes in the card's thread and the card stays as it was. Before, an answer could replace everything on the card with a single dash.",
+      "picture": {
+        "dark": "card-kept-when-first-mate-answers-dark.webp",
+        "light": "card-kept-when-first-mate-answers-light.webp",
+        "alt": "A first mate card with its words and diagram still in place, beside a thread holding a question and the first mate's answer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

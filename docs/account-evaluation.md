@@ -81,7 +81,7 @@ The same run-sheet approval and Claude-client requirements apply, with the unuse
 Use `--module scripts/evals/firstmateSignOff.ts` for INF-6317's four first mate cases: the captain writes under the first mate's own card, and the case serves the production turn that line produces, `about:` line included.
 In `answer-close-now` and `answer-thanks` the captain says, in two phrasings, that they need nothing more from the first mate's answer card; the expected reply names the message with `signs_off` true and calls no `close_card`.
 In `answer-correction` the captain corrects the answer, and in `required-action-close` they write under a required action's card; neither should sign off, and the host refuses a mark on the second.
-The model's calls run against the isolated host, so each case's recorded `state` says whether the card ended as read or stayed up, beside its thread.
+The model's calls run against the isolated host, so each case's recorded `state` says whether the card ended or stayed up, beside its thread; read the recorded calls for whether `signs_off` or `close_card` ended it, since a refused mark answers in text the runner records as a success.
 The same run-sheet approval and Claude-client requirements apply, with the unused builder selection named explicitly.
 
 ## The Claude crewmate's client

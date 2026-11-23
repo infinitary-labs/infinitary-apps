@@ -11,7 +11,8 @@ import { approvalHost } from "./host.ts";
  * `close_card`, so the message it answered counts it. Each case shows a real card in the isolated
  * host, has the captain write under it, and serves the first mate the production turn that line
  * produces, `about:` line included. The model's calls run against that isolated host, so its
- * state says whether the card ended as read, stayed up, or was withdrawn.
+ * state says whether the card ended or stayed up; the recorded calls say whether a mark or
+ * close_card ended it, since a refused mark answers in text the runner counts as a success.
  */
 export type SignOffCase = ApprovalCase & {
   card: "answer" | "required-action";

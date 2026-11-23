@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ipad-pencil-message-box",
+      "kind": "feature",
+      "area": "message-box",
+      "title": "On iPad, the message box moves up when you write with Apple Pencil",
+      "body": "When you write with Apple Pencil, Infinitary on iPad moves the message box under the top bar with room for four lines, so your hand rests on the card below. A finger or keyboard puts it back at the foot. Turn it off under Settings, Appearance; the setting stays on that iPad.",
+      "picture": {
+        "dark": "ipad-pencil-message-box-dark.webp",
+        "light": "ipad-pencil-message-box-light.webp",
+        "alt": "Infinitary on an iPad on its side, with the message box at the top of Home above a card and Tasks beside them"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

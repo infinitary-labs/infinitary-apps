@@ -554,6 +554,8 @@
   "phoneSettingsNotificationsOn": "オンです。Infinitary を閉じている間も、{computer} からの新しいカードと返信がこの {device} に届きます。",
   "phoneSettingsNotificationsOpen": "設定で変更",
   "phoneSettingsNotificationsUpdate": "ここでカードごとに通知を受け取るには、{computer} の Infinitary をアップデートしてください。",
+  "phoneSettingsPencilTop": "Apple Pencil 用にメッセージ欄を移動",
+  "phoneSettingsPencilTopScope": "Apple Pencil で書くと、この iPad はメッセージ欄を上部に移動し、書くための余白を空けます。指やキーボードを使うと元に戻ります。この iPad でのみ設定されます。",
   "phoneSettingsSecretsApprovals": "シークレットの承認",
   "phoneSettingsSetUpAgain": "承認をもう一度設定",
   "phoneSettingsTextSize": "テキストサイズ",

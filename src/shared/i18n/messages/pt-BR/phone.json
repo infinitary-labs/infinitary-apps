@@ -594,6 +594,8 @@
   "phoneSettingsNotificationsOn": "Ativadas. Cada cartão e resposta novos de {computer} chegam a este {device} enquanto o Infinitary está fechado.",
   "phoneSettingsNotificationsOpen": "Mudar nos Ajustes",
   "phoneSettingsNotificationsUpdate": "Atualize o Infinitary em {computer} para receber aqui uma notificação para cada cartão.",
+  "phoneSettingsPencilTop": "Mover a caixa de mensagem para o Apple Pencil",
+  "phoneSettingsPencilTopScope": "Com o Apple Pencil, este iPad leva a caixa de mensagem para o topo, com espaço para escrever. Um dedo ou o teclado a devolve ao lugar. Definido só neste iPad.",
   "phoneSettingsSecretsApprovals": "Aprovações de Segredos",
   "phoneSettingsSetUpAgain": "Configurar aprovações de novo",
   "phoneSettingsTextSize": "Tamanho do texto",

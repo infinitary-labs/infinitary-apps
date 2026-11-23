@@ -2116,6 +2116,8 @@ public enum PhoneMessages {
     public static func `phoneSettingsNotificationsOn`(`computer`: String, `device`: String) -> String { PhoneWords.format("phoneSettingsNotificationsOn", [`computer`, `device`]) }
     public static func `phoneSettingsNotificationsOpen`() -> String { PhoneWords.format("phoneSettingsNotificationsOpen", []) }
     public static func `phoneSettingsNotificationsUpdate`(`computer`: String) -> String { PhoneWords.format("phoneSettingsNotificationsUpdate", [`computer`]) }
+    public static func `phoneSettingsPencilTop`() -> String { PhoneWords.format("phoneSettingsPencilTop", []) }
+    public static func `phoneSettingsPencilTopScope`() -> String { PhoneWords.format("phoneSettingsPencilTopScope", []) }
     public static func `phoneSettingsSecretsApprovals`() -> String { PhoneWords.format("phoneSettingsSecretsApprovals", []) }
     public static func `phoneSettingsSetUpAgain`() -> String { PhoneWords.format("phoneSettingsSetUpAgain", []) }
     public static func `phoneSettingsTextSize`() -> String { PhoneWords.format("phoneSettingsTextSize", []) }
@@ -6333,6 +6335,8 @@ extension PhoneWords {
         "phoneSettingsNotificationsOn": ["computer", "device"],
         "phoneSettingsNotificationsOpen": [],
         "phoneSettingsNotificationsUpdate": ["computer"],
+        "phoneSettingsPencilTop": [],
+        "phoneSettingsPencilTopScope": [],
         "phoneSettingsSecretsApprovals": [],
         "phoneSettingsSetUpAgain": [],
         "phoneSettingsTextSize": [],

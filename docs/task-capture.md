@@ -23,6 +23,7 @@ An answer given while the first mate handles a crewmate's report saves that repo
 2. The first mate's attributing tools accept `ask_id`: a message this turn has read, any open message a finished reply has read (INF-2664), or the empty string for operational work unrelated to a captain message.
    Which message work serves is the first mate's to declare: its description tells it to name the message on work that comes from a click on its card or a report on its work.
    The host checks only typed facts (`AskEnding.nameRefusal`): a message still waiting for its own step is refused as unread, and one that has ended - answered, or its notice closed - is refused with a reason saying it ended.
+   `open_work` reading one message reports that unread case as the same `IN_TURN` state the overview uses (`open: in a turn now, or waiting to be read`), never as `no answer yet`, so a step does not treat it as nameable.
    Omission uses the latest read message for ordinary direct-request calls.
    A turn itself runs outside every action's selection (`AskCapture.outsideActions`), so a turn woken by work an earlier action started attaches only the messages it reads.
    The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:

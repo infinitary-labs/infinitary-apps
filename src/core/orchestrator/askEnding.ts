@@ -168,7 +168,7 @@ export class AskEnding {
     const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return "ask_id must name an open message (open_asks id), or be empty.";
     if (ask.turnState === "open") {
-      return "ask_id must name a message a step has read; this one waits for its own step.";
+      return "ask_id must name a message a step has read; this one waits for its own step. Leave ask_id empty for this call, or wait until open_work shows it is no longer in a turn.";
     }
     const ended =
       !ask.followed ||

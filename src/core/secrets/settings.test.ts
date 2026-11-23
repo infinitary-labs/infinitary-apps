@@ -18,6 +18,7 @@ import {
   secretsViewSchema,
 } from "@shared/secrets";
 import { describe, expect, it, vi } from "vitest";
+import { deferred } from "../../../tests/helpers/deferred";
 import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { asAView } from "../askedFromAView";
@@ -822,8 +823,8 @@ describe("trusted Secrets settings", () => {
     const review = () => f.settings.action({ kind: "review-use", request: receipt.request });
     const first = f.cards.at(-1);
     if (!first) throw new Error("No approval card was raised.");
-    const started = Promise.withResolvers<void>();
-    const confirmation = Promise.withResolvers<boolean>();
+    const started = deferred<void>();
+    const confirmation = deferred<boolean>();
     f.confirmation(() => {
       started.resolve();
       return confirmation.promise;

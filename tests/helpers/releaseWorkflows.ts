@@ -122,12 +122,12 @@ export function recordedWorkflowCall(
 }
 
 /** verify.yml's full Mac e2e command, on half the job's cores (scripts/job-cores.ts): the
- * desktop lane alone, or the job's group of the parallel lanes (scripts/journey-groups.ts, INF-2987). */
+ * job's group of the desktop lane alone, or the job's group of the parallel lanes (scripts/journey-groups.ts, INF-2987). */
 export const VERIFY_E2E_RUN = [
   'cores="$(node scripts/job-cores.ts)"',
   'workers="--workers=$(( cores > 1 ? cores / 2 : 1 ))"',
-  'if [ "$LANE" = desktop ]; then',
-  '  pnpm exec playwright test --no-deps --project=desktop "$workers"',
+  'if [ "${LANE#desktop-}" != "$LANE" ]; then',
+  '  node scripts/journey-groups.ts --platform mac --lane desktop --group "${LANE#desktop-}/2" -- --no-deps --project=desktop "$workers"',
   "else",
   "  # shellcheck disable=SC2086 # one word per job name",
   '  node scripts/journey-groups.ts --platform mac --lane parallel --group "$GROUP" $JOBS -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests',

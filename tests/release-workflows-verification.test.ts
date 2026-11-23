@@ -105,7 +105,7 @@ describe("the signed channel workflow", () => {
     });
     // INF-2779 (the captain's three Mac jobs): native tests and the package,
     // the parallel journeys, and the one-worker desktop journeys.
-    const all = ["linux-checks", "mac", "parallel", "desktop"];
+    const all = ["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"];
     expect(lanes("stable")).toEqual(all);
     expect(lanes()).toEqual(all);
     expect(lanes("alpha")).toEqual(all);
@@ -152,7 +152,8 @@ describe("the signed channel workflow", () => {
     const runner = (name: string) =>
       workflowValue(lane["runs-on"] ?? "", { matrix: { lane: name }, inputs: {}, vars: {} });
     expect(runner("linux-checks")).toBe("ubuntu-24.04");
-    for (const mac of ["mac", "parallel", "desktop"]) expect(runner(mac), mac).toBe("macos-15");
+    for (const mac of ["mac", "parallel", "desktop-1", "desktop-2"])
+      expect(runner(mac), mac).toBe("macos-15");
     // What each lane runs, by its own step conditions on a passing run: the
     // linux-checks lane retains the full main gate, replacing the separate
     // cohort sweeps and changed-test repetitions with the full suite; the
@@ -190,15 +191,15 @@ describe("the signed channel workflow", () => {
       expect.arrayContaining([macUnit, "pnpm build", "pnpm replay:gate"]),
     );
     // INF-2987: the mac job runs its group of the parallel lanes' journeys too.
-    for (const journeys of ["mac", "parallel", "desktop"])
+    for (const journeys of ["mac", "parallel", "desktop-1", "desktop-2"])
       expect(runsIn(journeys), journeys).toEqual(
         expect.arrayContaining(["pnpm build", VERIFY_E2E_RUN]),
       );
-    for (const journeys of ["parallel", "desktop"]) {
+    for (const journeys of ["parallel", "desktop-1", "desktop-2"]) {
       expect(runsIn(journeys), journeys).not.toContain(macUnit);
       expect(runsIn(journeys), journeys).not.toContain("pnpm replay:gate");
     }
-    for (const mac of ["mac", "parallel", "desktop"])
+    for (const mac of ["mac", "parallel", "desktop-1", "desktop-2"])
       expect(runsIn(mac), mac).not.toContain("pnpm typecheck");
     // The publication's summary names each profile's lanes and what it
     // omits, from the same profiles.
@@ -303,9 +304,10 @@ describe("the signed channel workflow", () => {
       "linux-checks",
       "mac",
       "parallel",
-      "desktop",
+      "desktop-1",
+      "desktop-2",
     ]);
-    for (const name of ["linux-checks", "mac", "parallel", "desktop"])
+    for (const name of ["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"])
       expect(ran(name, checks), name).toEqual(ran(name, called({})));
     // Every Linux test group, as in the whole check (INF-2646).
     const groupSteps = (inputs: Record<string, unknown>) =>
@@ -320,11 +322,12 @@ describe("the signed channel workflow", () => {
     expect(linuxJourneys(journeys)).toBe(true);
     expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual([
       "parallel",
-      "desktop",
+      "desktop-1",
+      "desktop-2",
     ]);
     expect(verifyLinuxTests(journeys)).toEqual([]);
     expect(only(journeys)).toBe("");
-    for (const name of ["parallel", "desktop"])
+    for (const name of ["parallel", "desktop-1", "desktop-2"])
       expect(ran(name, journeys), name).toEqual([
         "install",
         "build",
@@ -364,7 +367,7 @@ describe("the signed channel workflow", () => {
     const projects = (line: string | undefined) =>
       [...String(line).matchAll(/--project=(\S+)/g)].map(([, project]) => project);
     const desktop = projects(lines.find((line) => line.includes("--project=desktop")));
-    const parallel = projects(lines.find((line) => line.includes("scripts/journey-groups.ts")));
+    const parallel = projects(lines.find((line) => line.includes("--lane parallel")));
     expect([...parallel, ...desktop].toSorted()).toEqual(
       E2E_PROJECTS.map(({ name }) => name).toSorted(),
     );

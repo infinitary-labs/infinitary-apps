@@ -230,7 +230,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
-            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
+            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop-1', 'e2e-results-desktop-2', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
             });

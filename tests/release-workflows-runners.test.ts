@@ -99,7 +99,7 @@ describe("a release's own queues", () => {
     const updateIn = (id: string) =>
       workflowValue(update?.["runs-on"] ?? "", { inputs: { runner: passed(id, "runner") }, vars });
     // Every Mac lane of verify's, each a job of its own (INF-2779), starts in one place.
-    const verify = ["mac", "parallel", "desktop"].map((lane) =>
+    const verify = ["mac", "parallel", "desktop-1", "desktop-2"].map((lane) =>
       workflowValue(verifyLane?.["runs-on"] ?? "", {
         matrix: { lane },
         inputs: { mac_runner: passed("verify", "mac_runner") },
@@ -210,7 +210,7 @@ describe("each Mac job's kind", () => {
   it.each([
     ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "split", "mini-mac-any"],
     ["verify.yml", "lane", { matrix: { lane: "parallel" }, inputs: {} }, "split", "mini-mac-any"],
-    ["verify.yml", "lane", { matrix: { lane: "desktop" }, inputs: {} }, "split", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "desktop-1" }, inputs: {} }, "split", "mini-mac-any"],
     ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
     ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
     ["ios-release.yml", "testflight", {}, "testflight", "mini-mac-real"],
@@ -235,7 +235,7 @@ describe("each Mac job's kind", () => {
   // place can take one): until MAC_QUEUES names the split kind, each of the
   // full check's Mac lanes asks for the journeys kind's queue, a job of the
   // same size, then the full check's old check kind's, then MAC_RUNNER.
-  it.each(["mac", "parallel", "desktop"])(
+  it.each(["mac", "parallel", "desktop-1", "desktop-2"])(
     "falls back from the split kind through the journeys and check kinds for the %s lane",
     (lane) => {
       const runner = (named: Record<string, string>) =>
@@ -322,7 +322,8 @@ describe("each Mac job's kind", () => {
     // The desktop lane, and the parallel lanes' group in each of the parallel
     // and mac jobs, where the worker count tells (INF-2779, INF-2987).
     const lanes = {
-      desktop: "exec playwright test --no-deps --project=desktop",
+      "desktop-1": "exec playwright test --no-deps --project=desktop",
+      "desktop-2": "exec playwright test --no-deps --project=desktop",
       parallel:
         "exec playwright test --no-deps --project=styles --project=renderer --project=application",
       mac: "exec playwright test --no-deps --project=styles --project=renderer --project=application",

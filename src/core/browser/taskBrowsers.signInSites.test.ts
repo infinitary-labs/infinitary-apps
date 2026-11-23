@@ -145,6 +145,20 @@ describe("a kept sign-in covers the whole site its cookies cover", () => {
     expect(h.signIns.records()).toEqual([]);
   });
 
+  it("keeps nothing when the page moved to another port of the host the question named", async () => {
+    const h = onThisComputer();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:3000/account" });
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.requestHelp("t1", { ...request, site: "localhost:3000" });
+    await h.browsers.takeControl("t1", handle);
+    h.kept.cookies.cookies = [{ ...SESSION, domain: "localhost", hostOnly: true, secure: false }];
+    await (h.pages.at(-1) as FakePage).load("http://localhost:4000/account");
+    expect(h.browsers.fact("t1")).not.toHaveProperty("keepAs");
+    await h.browsers.returnControl("t1", handle, { site: "localhost:3000", automatic: true });
+    expect(h.signIns.records()).toEqual([]);
+  });
+
   it("offers it to a later task that stops on the sign-in page, and on a sibling page", async () => {
     const h = onThisComputer();
     await signInOnce(h, false);

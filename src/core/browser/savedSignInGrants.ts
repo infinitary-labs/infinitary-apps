@@ -19,8 +19,8 @@ import {
 } from "./browserRecord";
 import { browserCommand } from "./commandWords";
 import {
-  atOrUnder,
   cookiesOfSite,
+  namesPage,
   type SignedInSite,
   sameSignInSite,
   signedInSiteOf,
@@ -126,7 +126,7 @@ export class SavedSignInGrants {
     if (!isWebAddress(address)) return {};
     const site = signInSite(siteOf(address));
     const keepAs =
-      browser.keepAs && browser.keepAs !== site && atOrUnder(site, browser.keepAs)
+      browser.keepAs && browser.keepAs !== site && namesPage(browser.keepAs, site)
         ? browser.keepAs
         : undefined;
     const record = this.find(browser, site);
@@ -331,7 +331,7 @@ export class SavedSignInGrants {
     if (!store) return "Control returned, but this computer keeps no sign-ins.";
     const pageSite = signInSite(siteOf(addressOf(browser, browser.current)));
     const shown = signInSite(shownSite);
-    if (!atOrUnder(pageSite, shown))
+    if (!namesPage(shown, pageSite))
       return "Control returned, but the page changed sites. Its sign-in was not added to the list.";
     try {
       const page = browser.current.page;

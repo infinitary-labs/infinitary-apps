@@ -1474,7 +1474,13 @@ describe("a held batch", () => {
   // again and a send-back pushed against the version before a push whose record was lost.
   it("lets Try again go over a push whose record was lost while the batch waits for its fix", async () => {
     const home = await heldBatch();
+    const earlier = home.open().head;
+    await home.batches.answer(REPO, { action: "try-again", head: earlier });
+    home.host.report([failed("unit-tests")]);
+    await home.pass();
     const held = home.open();
+    expect(held.head).not.toBe(earlier);
+    expect(held.hold?.head).toBe(held.head);
     await home.batches.answer(
       REPO,
       {
@@ -1491,6 +1497,8 @@ describe("a held batch", () => {
       await home.batches.answer(REPO, { action: "try-again", head: held.head }),
     ).toBeUndefined();
     expect(home.members()).toEqual(["t-parser"]);
+    // A new check run must not reuse any earlier result, even if the clock has not moved.
+    expect(new Set(home.heard.excludedHeads.at(-1))).toEqual(new Set([held.head, lost, earlier]));
     expect(home.heard.pushes.at(-1)).toMatchObject({ branch: held.branch, expected: lost });
   });
 

@@ -23,6 +23,7 @@ import {
 import { Button } from "../design";
 import { focusWithRing } from "../design/focus";
 import { JoinAnotherMac } from "../devices/JoinAnotherMac";
+import { useFollowAdded } from "../devices/useFollowAdded";
 import { isView, leftLine, updateThereWords, waitsForUpdate } from "../devices/viewWords";
 import { useCopied } from "../settings/DevicesLinks";
 import { SettingError } from "../settings/settingRows";
@@ -68,7 +69,7 @@ import "./firstRunGate.css";
  * computer (the chips), Another computer (the commands that set it up
  * there, ending at Paste its link) and One already running (the chips that
  * join it, docs/view.md), with a line that moving it later stays possible.
- * Nothing opens until a press; a subscription connected that cannot answer
+ * No choice opens until a press; a subscription connected that cannot answer
  * yet opens on This computer, where it shows. After this app left a first
  * mate, a line under the choices says which. An app that controls another
  * computer shows that computer's gate with its chips, and the first mate
@@ -264,7 +265,6 @@ export function FirstRunGate() {
     setPrompt(null);
   };
 
-  if (!shown) return null;
   // While a sign-in is under way the band holds the display line and the
   // provider's own flow, nothing else: the caption's sentence and the row
   // return with the next choice. The band never reaches the input below.
@@ -274,6 +274,8 @@ export function FirstRunGate() {
     prompt !== null ||
     notice !== null ||
     expired !== null;
+  const followStatus = useFollowAdded(open && !view && !connecting, firstRun?.untouched === true);
+  if (!shown) return null;
   const connectingName =
     methodChoice?.name ??
     expired?.name ??
@@ -395,6 +397,7 @@ export function FirstRunGate() {
         )}
         {!connecting && (choice === "running" || (choice === null && !view)) && (
           <JoinAnotherMac
+            followStatus={followStatus}
             key={pasteFirst ? "paste" : "chips"}
             {...(pasteFirst ? { opens: "paste" as const } : {})}
             onOpenChange={setJoining}

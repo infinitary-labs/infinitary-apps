@@ -17,6 +17,7 @@ import {
 import { formatBedrockSpend } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { bubbleWords, mateBubble } from "./lastTurn";
 import { launchApp } from "./launch";
@@ -66,6 +67,7 @@ test("a connected Bedrock account serves checked Claude models and shows a refus
   try {
     let { page } = launched;
     expect(aws.calls).toEqual([]);
+    await chooseWhereFirstMateLives(page, "here");
     await pressKey(page.getByRole("button", { name: new RegExp(name), exact: false }), "Enter");
     await pressKey(page.getByRole("button", { name: BEDROCK_SIGN_IN.key, exact: true }), "Enter");
     await page.getByPlaceholder(BEDROCK_SIGN_IN.regionExample).fill(BEDROCK_SIGN_IN.regionExample);
@@ -343,6 +345,7 @@ test("a named Bedrock profile that cannot resolve offers recovery without claimi
   );
   try {
     const { page } = launched;
+    await chooseWhereFirstMateLives(page, "here");
     await pressKey(page.getByRole("button", { name: new RegExp(name) }), "Enter");
     await pressKey(
       page.getByRole("button", { name: BEDROCK_SIGN_IN.profile, exact: true }),

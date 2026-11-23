@@ -14,6 +14,7 @@ import {
   translationsOf,
   wordsOf,
 } from "./languages.ts";
+import { sentenceLines } from "./sentence-lines.mjs";
 
 // The app's own icon, read from the design system rather than copied into this folder.
 const APP_ICON = new URL("../.claude/skills/infinitary-design/assets/app-icon.svg", import.meta.url);
@@ -171,6 +172,22 @@ function headingIds() {
   };
 }
 
+/**
+ * Joins a Chinese or Japanese paragraph's sentence lines with nothing between
+ * them, where a browser would draw each line break as a space; every other
+ * language keeps its space (docs/docs-site.md, "Translated pages").
+ */
+function joinedSentenceLines() {
+  return {
+    name: "infinitary-sentence-lines",
+    hooks: {
+      "astro:config:setup": ({ config }) => {
+        config.markdown.processor.options.mdastPlugins.push(sentenceLines);
+      },
+    },
+  };
+}
+
 /** A sidebar group's or link's label in English and in each language whose words file has it. */
 const label = (key) => ({ label: wordsOf(SOURCE_LANGUAGE)[key], translations: translationsOf(key) });
 
@@ -237,6 +254,7 @@ export default defineConfig({
       ],
     }),
     headingIds(),
+    joinedSentenceLines(),
     appIcon(),
     securityHeaders(),
     languageRedirects(),

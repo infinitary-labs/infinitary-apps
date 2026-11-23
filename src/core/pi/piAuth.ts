@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import {
@@ -65,12 +65,68 @@ export class PiAuthService {
    * its only contribution to availability since the broker landed: catalog
    * provider credentials live in the vault, one store per account, and a
    * leftover legacy credential here must not create a shadow account.
+   *
+   * A provider counts only when models.json defines it or the auth file
+   * saves its key. Pi also serves a built-in provider whose key it finds in
+   * the process environment, and a Windows app keeps its whole environment
+   * (hostEnv.ts): a key such as OPENAI_API_KEY there outlives an uninstall
+   * and a data wipe, and counting it hid the sign-in screen on a fresh
+   * install with no account added (docs/first-launch.md).
    */
   customProviderModels(): { provider: string; id: string }[] {
+    const defined = this.modelsJsonProviders();
+    const counts = (provider: string) => {
+      if (defined.has(provider)) return true;
+      const source = this.modelRuntime.getProviderAuthStatus(provider).source;
+      return source === "stored" || source === "runtime";
+    };
     return this.modelRuntime
       .getAvailableSnapshot()
-      .filter((model) => model.provider !== "anthropic" && !isOfferedProvider(model.provider))
+      .filter(
+        (model) =>
+          model.provider !== "anthropic" &&
+          !isOfferedProvider(model.provider) &&
+          counts(model.provider),
+      )
       .map((model) => ({ provider: model.provider, id: model.id }));
+  }
+
+  private modelsJsonRead: { stamp: string; providers: ReadonlySet<string> } | undefined;
+
+  /**
+   * The provider ids the app's models.json defines, reread only when the
+   * file changes since routing asks on every pass. Pi's own loader is not
+   * exported, so this parses as it does: `//` line comments and trailing
+   * commas allowed. A file Pi could not load defines nothing for it either.
+   */
+  private modelsJsonProviders(): ReadonlySet<string> {
+    let stamp: string;
+    try {
+      const stat = statSync(this.paths.modelsPath);
+      stamp = `${stat.mtimeMs}:${stat.size}`;
+    } catch {
+      return new Set();
+    }
+    if (this.modelsJsonRead?.stamp === stamp) return this.modelsJsonRead.providers;
+    let providers: ReadonlySet<string> = new Set();
+    try {
+      const parsed: unknown = JSON.parse(
+        readFileSync(this.paths.modelsPath, "utf8")
+          .replace(/^\uFEFF/, "")
+          .replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*/g, (match) => (match[0] === '"' ? match : ""))
+          .replace(
+            /"(?:\\.|[^"\\])*"|,(\s*[}\]])/g,
+            (match, tail?: string) => tail ?? (match[0] === '"' ? match : ""),
+          ),
+      );
+      const list =
+        parsed && typeof parsed === "object"
+          ? (parsed as { providers?: unknown }).providers
+          : undefined;
+      if (list && typeof list === "object") providers = new Set(Object.keys(list));
+    } catch {}
+    this.modelsJsonRead = { stamp, providers };
+    return providers;
   }
 
   /**

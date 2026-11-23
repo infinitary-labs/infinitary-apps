@@ -44,7 +44,7 @@ Model changes still require the captain.
 ## App action catalog (4.54, pieces 1–4)
 
 `app_state` reads the shared catalog in `src/shared/actions.ts`: area, strict value schema, current value, tier, and consistent static `captainAllowed` / `firstmateAllowed` flags, plus `allowedNow` for the current code-stamped wake.
-`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, the keyboard keys, and copies and moves.
+`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, one of the person's own ambient styles whole, the keyboard keys, and copies and moves.
 A read the window's read catalog names runs through that entry's own args and request; nothing a read answers joins the context a turn builds.
 `app_change` takes a top-level action enum, value, and evidence.
 The dispatcher enforces actor permissions independently.

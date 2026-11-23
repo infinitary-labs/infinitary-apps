@@ -31,9 +31,13 @@ export const ambientMusicValue = (c: unknown) => ({
   volume: look(c).ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
   style: ambientStyleIn(look(c).ambientStyle, look(c).ambientOwnStyles),
 });
-/** A person's own ambient styles, and which style plays. */
+/**
+ * A person's own ambient styles by id and name, and which style plays: each
+ * style is read whole only on demand (the `ambient.own-style` read), so
+ * however many are saved they cost the first mate's context only their names.
+ */
 export const ambientOwnStylesValue = (c: unknown) => ({
-  saved: look(c).ambientOwnStyles ?? [],
+  saved: (look(c).ambientOwnStyles ?? []).map(({ id, name }) => ({ id, name })),
   playing: ambientStyleIn(look(c).ambientStyle, look(c).ambientOwnStyles),
 });
 /** A saved pause of the music, which a panel reads beside the music's own value. */

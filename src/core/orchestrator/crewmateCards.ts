@@ -794,6 +794,10 @@ export class CrewmateCards {
         throw new Error(
           "The app already presents integration approval cards. Wait for its answer; do not emit another card.",
         );
+      if (ask?.card !== undefined)
+        throw new Error(
+          `Card refused: the app already shows ask ${ask.id} on its own approval card. Wait for its write-answered; do not emit another card.`,
+        );
       if (!ask) {
         throw new Error(
           `Card refused: ask ${writes[0]?.ask} is not on this task. Name the id github_write or an integration's call answered with.`,

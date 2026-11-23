@@ -1,9 +1,10 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
 import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/forgeKinds";
-import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
+import { INTEGRATION_KIND_NAMES, type IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
+import { fencedAnswer } from "@shared/outsideData";
 import type {
   FeedbackAskFacts,
   ForgeWriteAsk,
@@ -76,6 +77,20 @@ type Target = {
   integration?: true;
 };
 
+/** The label an outside reader's answers are fenced with (docs/agents-reach.md, "An outside reader"). */
+export const READER_FENCE_LABEL = "github-data";
+/** Random bytes in each answer's fence value, as the integrations draw theirs. */
+const READER_FENCE_BYTES = 8;
+const READER_READ_REFUSAL =
+  // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+  "Refused: an outside reader reads only its own project, through its own sign-in: a /repos/{owner}/{repo}/... path of the task's project. Nothing was read.";
+const READER_WRITE_REFUSAL =
+  // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+  "Refused: an outside reader writes only to its own project, through its own sign-in, as a JSON request. Nothing was kept or sent.";
+const READER_VALIDATION_REFUSAL =
+  // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+  "Refused: an outside reader's writes carry no validation effect. Nothing was kept or sent.";
+
 /** Whose allowance the first mate's own calls count against: it has no task. */
 const SEAT_CALLS = "seat:firstmate";
 
@@ -133,8 +148,48 @@ export class GithubGatewayService {
         write: ValidationForgeWrite,
       ) => Promise<void>;
       sleep?: (ms: number) => Promise<void>;
+      /**
+       * Put an outside reader's kept write on its task's approval card
+       * (`IntegrationAsks.askForge`), with the waiting asks the cap dropped.
+       */
+      presentReaderAsk?: (taskId: string, ask: ForgeWriteAsk, dropped: WriteAsk[]) => void;
     },
   ) {}
+
+  /** The task is an outside reader (docs/agents-reach.md, "An outside reader"). */
+  private isReader(taskId: string): boolean {
+    return this.options.tasks.get(taskId)?.shape?.outside_reader === true;
+  }
+
+  /**
+   * An outside reader's read: its own project only, through the project's
+   * own sign-in, and the answer fenced whole as data from outside, with a
+   * fresh fence each read so no answer can forge the closing mark.
+   */
+  private readerRead(
+    taskId: string,
+    input: GithubReadInput,
+    through?: "account" | { host: string },
+    propagate: boolean | "transient" = false,
+  ): Promise<string> {
+    return this.answer(
+      taskId,
+      async ({ api, via, integration }) => {
+        if (through || integration || via !== "project")
+          throw new ForgeError("refused", READER_READ_REFUSAL);
+        const route = api.route(input.method ?? "GET", input.path);
+        if (!route.own) throw new ForgeError("refused", READER_READ_REFUSAL);
+        const answer = await this.readOn(taskId, api, input);
+        return fencedAnswer(answer, {
+          label: READER_FENCE_LABEL,
+          value: randomBytes(READER_FENCE_BYTES).toString("hex"),
+          at: this.options.now(),
+        });
+      },
+      through,
+      propagate,
+    );
+  }
 
   /**
    * One read, and an answer past the JSON cap read again at the largest page
@@ -147,11 +202,13 @@ export class GithubGatewayService {
     input: GithubReadInput,
     through?: "account" | { host: string },
   ): Promise<string> {
+    if (this.isReader(taskId)) return this.readerRead(taskId, input, through);
     return this.answer(taskId, ({ api }) => this.readOn(taskId, api, input), through);
   }
 
   /** Transient failures reach the crewmate's bounded retry; refusals remain answers. */
   readForCrew(taskId: string, input: GithubReadInput): Promise<string> {
+    if (this.isReader(taskId)) return this.readerRead(taskId, input, undefined, "transient");
     return this.answer(
       taskId,
       ({ api }) => this.readOn(taskId, api, input),
@@ -296,6 +353,16 @@ export class GithubGatewayService {
       taskId,
       async (target) => {
         const { api, forge } = target;
+        const reader = this.isReader(taskId);
+        // An outside reader writes only to its own project, through its own
+        // sign-in, a JSON request alone: every one waits for the captain.
+        if (
+          reader &&
+          (through || target.integration || target.via !== "project" || input.file !== undefined)
+        )
+          throw new ForgeError("refused", READER_WRITE_REFUSAL);
+        if (reader && input.validationEffect !== undefined)
+          throw new ForgeError("refused", READER_VALIDATION_REFUSAL);
         if (input.file !== undefined) {
           if (input.validationEffect !== undefined)
             throw new ForgeError(
@@ -320,6 +387,7 @@ export class GithubGatewayService {
         );
         if (!route.write)
           throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
+        if (reader && !route.own) throw new ForgeError("refused", READER_WRITE_REFUSAL);
         // Merges and default-branch moves keep the merge card, asked or not (piece 1).
         const kind = apiDialectAt(forge.kind, forge.host);
         if ((route.own || target.via === "account") && kind) {
@@ -327,7 +395,7 @@ export class GithubGatewayService {
         }
         this.guardPresentationWrite(taskId, forge, route, parsed);
         const why =
-          integrationAllowed && target.integration
+          integrationAllowed && target.integration && !reader
             ? undefined
             : this.askReason(taskId, route, target);
         if (why)
@@ -395,8 +463,21 @@ export class GithubGatewayService {
    * every taken ask it is never sent again. Spends one call of the task's
    * budget only when it is sent.
    */
-  async sendAsk(taskId: string, askId: string): Promise<WriteAskSent> {
-    const taken = this.options.tasks.delivery.takeWriteAsk(taskId, askId);
+  sendAsk(taskId: string, askId: string): Promise<WriteAskSent> {
+    return this.sendTaken(taskId, this.options.tasks.delivery.takeWriteAsk(taskId, askId));
+  }
+
+  /**
+   * Send a kept write the captain's click already took (`sendAsk`), or one
+   * row of an approval card that lists an outside reader's writes, whose
+   * click took every row before the first was sent. Not now refuses it;
+   * only Only this time sends it.
+   */
+  async sendTaken(
+    taskId: string,
+    taken: { ask: WriteAsk } | { refused: string },
+    choice: IntegrationApprovalChoice = "once",
+  ): Promise<WriteAskSent> {
     if ("refused" in taken) {
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     }
@@ -422,6 +503,15 @@ export class GithubGatewayService {
         ...(answer !== undefined ? { answer } : {}),
       };
     };
+    if (choice === "deny")
+      // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+      return done({ kind: "refused", why: "The captain chose Not now. Nothing was sent." });
+    if (choice !== "once")
+      return done({
+        kind: "refused",
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        why: "a write where a project lives is sent only once, on Only this time, so it was not sent",
+      });
     let target: Target;
     let route: ApiRoute;
     let located: LocatedReleaseFile | undefined;
@@ -560,6 +650,9 @@ export class GithubGatewayService {
    * (INF-729 way D), or it goes through the github.com sign-in.
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
+    if (this.isReader(taskId))
+      // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+      return "this task reads words strangers can write, so every write it makes, run starts included, waits for the captain";
     if (target.integration) {
       return `it goes through the ${integrationName(target.forge)} integration, and every change there asks the captain`;
     }
@@ -629,7 +722,18 @@ export class GithubGatewayService {
       ...(validationEffect ? { validationEffect } : {}),
       at: this.options.now(),
     };
-    this.options.tasks.delivery.keepWriteAsk(taskId, ask);
+    const dropped = this.options.tasks.delivery.keepWriteAsk(taskId, ask);
+    if (this.isReader(taskId) && this.options.presentReaderAsk) {
+      this.options.presentReaderAsk(taskId, ask, dropped);
+      return [
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        `Not sent: ${why}. Kept as ask ${ask.id}: ${ask.method} ${ask.path} on ${ask.place}.`,
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        "The app put it on its own approval card for the captain, joined with this task's other waiting writes. Do not emit a card for it.",
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        `Only the captain's click sends it, once, and you then hear what came of it (write-answered). Never send it another way.`,
+      ].join("\n");
+    }
     const dialect = apiDialectAt(ask.kind, ask.host);
     const numbered = dialect ? KIND_REST[dialect].numberedProject : undefined;
     const byNumber =

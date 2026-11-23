@@ -32,6 +32,7 @@ import {
   type CodeElsewhere,
   FLEET_STARTED_CHANGE_WORDS,
   joinParts,
+  OUTSIDE_READER_WORDS,
   renderAnswerShapeSection,
   renderBranchFromCarriedLine,
   renderBranchFromLine,
@@ -270,6 +271,7 @@ export class CrewBrief {
         renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
       ]);
     }
+    if (record?.shape?.outside_reader) sections.push([OUTSIDE_READER_WORDS]);
     if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.

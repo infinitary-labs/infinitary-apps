@@ -886,6 +886,8 @@ export async function createServices(
     beforeValidationWrite: (taskId, request, write): Promise<void> =>
       supervisor.reportIntake.consumeValidationEffect(taskId, request, write),
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
+    presentReaderAsk: (taskId, ask, dropped) =>
+      supervisor.integrationAsks.askForge(taskId, ask, dropped),
     now: ticker.now,
   });
   // The panels' own saved data (one plugin vehicle, Phase A), and how long

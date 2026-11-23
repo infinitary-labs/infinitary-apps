@@ -90,3 +90,23 @@ Words that name GitHub's required review pass asking first, and GitHub's rule re
 A crewmate reserves and reruns a failed job a second time, and the host records both reservations with no allowance to refuse the second: no card goes up and no override is asked.
 The weekly audit rule, set to run once, starts one audit task, and the corpus export counts each override per hold.
 Every refusal an agent was served names its hold: a soft hold with its way out, a fixed limit as fixed.
+
+## An outside reader
+
+A task that reads words strangers can write, such as its project's issues and pull requests, starts as an outside reader: a read-only answer task whose shape says `outside_reader` (`src/shared/routingPolicy.ts`).
+Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
+`spawn_crewmate` refuses one with no project, on the personal workspace, or that is not an answer (`OUTSIDE_READER_PROJECT`, `OUTSIDE_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+
+- Its session is fenced (`SessionSpec.fenced`): no shell, no file change, no web and no browser, on both kinds of model session.
+  Pi serves only its read, grep and ls tools, each checking every path it opens (`fencedPiReadTools`), and leaves out find, which runs its own search program unasked.
+  Claude serves only Read, Grep and Glob, and a gate before each call refuses a path outside the working copy (`claudeFenceHook`); no skill is staged, since a plugin can bring hooks and servers of its own.
+  A path's links are followed before the check, and a `~` path is refused whole (`outsideWorkingCopy`, `src/core/session/fencedReads.ts`).
+- None of the app's shell commands reach it, so it has no integrations and no browser, and it gets no task reads, no knowledge, no programs and no workflow logs or artifacts: those would bring outside words in unfenced, or reach past its project.
+- `github_read` reaches only its own project, through the project's own sign-in, and every answer comes fenced whole as `github-data`, the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
+  Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
+- Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
+
+Every other crewmate's shell and the merge card's rules are unchanged; this is a fence for one kind of task, not a general sandbox.
+The brief names the fence to its crewmate (`OUTSIDE_READER_WORDS`).
+Its reports still reach the first mate, and the words it chooses to put there are its own.

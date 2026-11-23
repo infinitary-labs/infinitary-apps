@@ -17660,6 +17660,91 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quick answer`;
   }
+  function cardReaderWritesHow(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تأتي كل الصفوف محددة؛ ألغِ تحديد ما لا تريد إرساله. تُرسَل الصفوف المحددة مرة واحدة لكل منها، الأقدم أولًا، بتسجيل دخولك إلى ${place}.`;
+      case "de":
+        return `Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht gesendet werden sollen. Die angehakten Zeilen gehen je einmal, die älteste zuerst, mit deiner Anmeldung bei ${place}.`;
+      case "es":
+        return `Todas las filas vienen marcadas; desmarca las que no quieras enviar. Las filas marcadas se envían una vez cada una, de la más antigua a la más reciente, con tu inicio de sesión de ${place}.`;
+      case "fr":
+        return `Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas envoyer. Les lignes cochées partent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion ${place}.`;
+      case "ja":
+        return `各行は最初からチェックされています。送りたくない行はチェックを外してください。チェックされた行は古い順に 1 回ずつ、あなたの ${place} のサインインで送信されます。`;
+      case "ko":
+        return `모든 행은 체크된 상태로 옵니다. 보내지 않을 행은 체크를 해제하세요. 체크된 행은 오래된 순서대로 한 번씩, ${place} 로그인으로 보내집니다.`;
+      case "pt-BR":
+        return `Todas as linhas vêm marcadas; desmarque as que você não quer enviar. As linhas marcadas são enviadas uma vez cada, da mais antiga à mais recente, com o seu login do ${place}.`;
+      case "zh-Hans":
+        return `每一行默认已勾选；取消勾选你不想发送的行。勾选的行按从旧到新的顺序各发送一次，使用你的 ${place} 登录。`;
+      case "zh-Hant":
+        return `每一列預設已勾選；取消勾選你不想送出的列。勾選的列依從舊到新的順序各送出一次，使用你的 ${place} 登入。`;
+      case "en-XA":
+        return `[Éṽéŕý ŕöŵ çöɱéš ţîçķéð; ûñţîçķ áñý ýöû ðö ñöţ ŵáñţ šéñţ. Ţĥé ţîçķéð ŕöŵš ĝö öñçé éáçĥ, öļðéšţ ƒîŕšţ, ŵîţĥ ýöûŕ ${place} šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every row comes ticked; untick any you do not want sent. The ticked rows go once each, oldest first, with your ‬${place}‮ sign-in.‬`;
+    }
+    return `Every row comes ticked; untick any you do not want sent. The ticked rows go once each, oldest first, with your ${place} sign-in.`;
+  }
+  function cardReaderWritesLead(input2) {
+    const place = input2.place;
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فرد الطاقم في «${task}» كلامًا يمكن لأي أحد كتابته، لذا تنتظر كل كتابة يجريها على ${place} قرارك. كل صف هو استدعاء واحد والطلب الذي يرسله.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ liest Texte, die jeder schreiben kann, darum wartet jeder Schreibzugriff auf ${place} auf deine Entscheidung. Jede Zeile ist ein Aufruf mit der Anfrage, die er sendet.`;
+      case "es":
+        return `El tripulante de «${task}» lee palabras que cualquiera puede escribir, así que cada escritura que hace en ${place} espera tu decisión. Cada fila es una llamada y la solicitud que envía.`;
+      case "fr":
+        return `L’équipier de « ${task} » lit des mots que tout le monde peut écrire : chaque écriture qu’il fait sur ${place} attend donc votre décision. Chaque ligne est un appel et la requête qu’il envoie.`;
+      case "ja":
+        return `「${task}」の担当の乗組員は誰でも書ける文章を読むため、${place} への書き込みはすべてあなたの判断を待ちます。各行は 1 回の呼び出しと、その送信内容です。`;
+      case "ko":
+        return `"${task}"의 선원은 누구나 쓸 수 있는 글을 읽으므로, ${place}에 하는 모든 쓰기는 결정을 기다립니다. 각 행은 한 번의 호출과 그 요청 내용입니다.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” lê textos que qualquer pessoa pode escrever, então cada escrita que ele faz em ${place} espera a sua decisão. Cada linha é uma chamada e a solicitação que ela envia.`;
+      case "zh-Hans":
+        return `“${task}”上的船员会读取任何人都能写的内容，所以它在 ${place} 上的每次写入都要等你决定。每一行是一次调用及其发送的请求。`;
+      case "zh-Hant":
+        return `「${task}」上的船員會讀取任何人都能寫的內容，所以它在 ${place} 上的每次寫入都要等你決定。每一列是一次呼叫及其送出的請求。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ŕéáðš ŵöŕðš áñýöñé çáñ ŵŕîţé, šö éṽéŕý ŵŕîţé îţ ɱáķéš öñ ${place} ŵáîţš ƒöŕ ýöû. Éáçĥ ŕöŵ îš öñé çáļļ áñð ţĥé ŕéǫûéšţ îţ šéñðš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” reads words anyone can write, so every write it makes on ‬${place}‮ waits for you. Each row is one call and the request it sends.‬`;
+    }
+    return `The crewmate on “${task}” reads words anyone can write, so every write it makes on ${place} waits for you. Each row is one call and the request it sends.`;
+  }
+  function cardReaderWritesTitle(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تسمح بالكتابة على ${place}؟`;
+      case "de":
+        return `Schreibzugriffe auf ${place} erlauben?`;
+      case "es":
+        return `¿Permitir escrituras en ${place}?`;
+      case "fr":
+        return `Autoriser les écritures sur ${place} ?`;
+      case "ja":
+        return `${place} への書き込みを許可しますか？`;
+      case "ko":
+        return `${place}에 쓰기를 허용할까요?`;
+      case "pt-BR":
+        return `Permitir escritas em ${place}?`;
+      case "zh-Hans":
+        return `允许在 ${place} 上写入吗？`;
+      case "zh-Hant":
+        return `允許在 ${place} 上寫入嗎？`;
+      case "en-XA":
+        return `[Åļļöŵ ŵŕîţéš öñ ${place}? ~~~~~~]`;
+      case "ar-XB":
+        return `‮Allow writes on ‬${place}‮?‬`;
+    }
+    return `Allow writes on ${place}?`;
+  }
   function cardRecordBodyTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -103759,6 +103844,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
+    cardReaderWritesHow,
+    cardReaderWritesLead,
+    cardReaderWritesTitle,
     cardRecordBodyTitle,
     cardRecordCare,
     cardRecordChecking,
@@ -107105,6 +107193,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
+    "cardReaderWritesHow": ["place"],
+    "cardReaderWritesLead": ["place", "task"],
+    "cardReaderWritesTitle": ["place"],
     "cardRecordBodyTitle": [],
     "cardRecordCare": ["care"],
     "cardRecordChecking": [],
@@ -121619,6 +121710,17 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     internal_step: boolean().optional(),
     /**
+     * The first mate's declaration that this answer task reads words from
+     * outside its project's own people, such as issues and pull requests
+     * strangers open (docs/agents-reach.md, "An outside reader"): its session
+     * gets no shell, no web, no browser and no subagent, its file reads stay
+     * in its working copy, its reads where the project lives stay in its own
+     * project and arrive fenced, and every write it makes there waits for the
+     * captain's click on one host card. The host refuses it on a task that is
+     * not an answer, and the task runs only on the computer keeping the record.
+     */
+    outside_reader: boolean().optional(),
+    /**
      * The shape this task's report must carry as its typed result (INF-799
      * piece 1): a JSON Schema object with an object at its root, declared by
      * the first mate when it plans or spawns the task. The host prints it in
@@ -121801,6 +121903,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     runs_on_ask: true,
     placement_requirements: true,
     internal_step: true,
+    outside_reader: true,
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,

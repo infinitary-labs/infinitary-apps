@@ -483,6 +483,9 @@ public enum PhoneMessages {
     public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
     public static func `cardPastUnreadable`() -> String { PhoneWords.format("cardPastUnreadable", []) }
     public static func `cardQuickAnswer`() -> String { PhoneWords.format("cardQuickAnswer", []) }
+    public static func `cardReaderWritesHow`(`place`: String) -> String { PhoneWords.format("cardReaderWritesHow", [`place`]) }
+    public static func `cardReaderWritesLead`(`place`: String, `task`: String) -> String { PhoneWords.format("cardReaderWritesLead", [`place`, `task`]) }
+    public static func `cardReaderWritesTitle`(`place`: String) -> String { PhoneWords.format("cardReaderWritesTitle", [`place`]) }
     public static func `cardRecordBodyTitle`() -> String { PhoneWords.format("cardRecordBodyTitle", []) }
     public static func `cardRecordCare`(`care`: String) -> String { PhoneWords.format("cardRecordCare", [`care`]) }
     public static func `cardRecordChecking`() -> String { PhoneWords.format("cardRecordChecking", []) }
@@ -4913,6 +4916,9 @@ extension PhoneWords {
         "cardPastSentLead": [],
         "cardPastUnreadable": [],
         "cardQuickAnswer": [],
+        "cardReaderWritesHow": ["place"],
+        "cardReaderWritesLead": ["place", "task"],
+        "cardReaderWritesTitle": ["place"],
         "cardRecordBodyTitle": [],
         "cardRecordCare": ["care"],
         "cardRecordChecking": [],

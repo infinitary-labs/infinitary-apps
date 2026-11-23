@@ -205,6 +205,8 @@ export function workShape(
     const internalStep = ask?.internal_step ?? inherited?.internal_step;
     // So does working in the project's folder (INF-567).
     const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
+    // A stronger-model retry of an outside reader reads the same strangers' words.
+    const outsideReader = ask?.outside_reader || inherited?.outside_reader;
     return {
       ...(inherited?.deliverable === "operation" ? { deliverable: "operation" as const } : {}),
       ...((ask?.ongoing ?? inherited?.ongoing) !== undefined
@@ -231,6 +233,7 @@ export function workShape(
           }
         : {}),
       ...(internalStep ? { internal_step: true } : {}),
+      ...(outsideReader ? { outside_reader: true } : {}),
       ...(inFolder ? { in_place: { folder: true as const } } : {}),
       ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
       escalate_from: escalation.stamp.from,
@@ -253,6 +256,7 @@ export function workShape(
     ...(ask?.runs_on_ask?.trim() ? { runs_on_ask: ask.runs_on_ask.trim() } : {}),
     ...(ask?.placement_requirements ? { placement_requirements: ask.placement_requirements } : {}),
     ...(ask?.internal_step ? { internal_step: true } : {}),
+    ...(ask?.outside_reader ? { outside_reader: true } : {}),
     ...(ask?.in_folder ? { in_place: { folder: true as const } } : {}),
     ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
   };
@@ -378,14 +382,23 @@ export function withDeliverable(shape: WorkShape, intent: SpawnIntent | undefine
     intent,
     isFolderWork(shape.in_place) || shape.deliverable === "operation",
   );
-  return {
-    ...shape,
-    deliverable:
-      isFolderWork(shape.in_place) || shape.deliverable === "operation"
-        ? "operation"
-        : deliverableFor(intent, shape.kind),
-  };
+  const deliverable =
+    isFolderWork(shape.in_place) || shape.deliverable === "operation"
+      ? "operation"
+      : deliverableFor(intent, shape.kind);
+  if (shape.outside_reader && deliverable !== "answer") throw new Error(OUTSIDE_READER_ANSWERS);
+  return { ...shape, deliverable };
 }
+
+/** Why an outside reader with no project of its own is refused before it starts. */
+export const OUTSIDE_READER_PROJECT =
+  // i18n-exempt: a refusal served to the first mate
+  "An outside reader reads only its own project: name repo_id, a project other than the personal workspace.";
+
+/** Why an outside reader that would deliver anything but an answer is refused before it starts. */
+export const OUTSIDE_READER_ANSWERS =
+  // i18n-exempt: a refusal served to the first mate
+  "An outside reader only answers: give it the read-only constraint, and neither operation nor in_folder. Nothing was started.";
 
 /** What a record's shape says it delivers; a pre-axis row shipped a change. */
 export function deliverableOf(record: TaskRecord | undefined): Deliverable {

@@ -873,6 +873,7 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
       "autonomy_ask",
       "runs_on_ask",
       "internal_step",
+      "outside_reader",
       "in_folder",
       "skipped_plan_because",
       "review_of",

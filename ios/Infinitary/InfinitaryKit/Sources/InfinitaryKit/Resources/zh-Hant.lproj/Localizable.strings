@@ -446,6 +446,9 @@
 "cardPastSentLead" = "隨你的選擇送出：";
 "cardPastUnreadable" = "無法讀取這張卡片";
 "cardQuickAnswer" = "快速回答";
+"cardReaderWritesHow" = "每一列預設已勾選；取消勾選你不想送出的列。勾選的列依從舊到新的順序各送出一次，使用你的 %1$@ 登入。";
+"cardReaderWritesLead" = "「%2$@」上的船員會讀取任何人都能寫的內容，所以它在 %1$@ 上的每次寫入都要等你決定。每一列是一次呼叫及其送出的請求。";
+"cardReaderWritesTitle" = "允許在 %1$@ 上寫入嗎？";
 "cardRecordBodyTitle" = "任務紀錄內文";
 "cardRecordCare" = "謹慎度：%1$@";
 "cardRecordChecking" = "正在確認是否已開始";

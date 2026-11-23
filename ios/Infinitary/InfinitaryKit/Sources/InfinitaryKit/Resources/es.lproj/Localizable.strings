@@ -446,6 +446,9 @@
 "cardPastSentLead" = "Enviado con tu elección:";
 "cardPastUnreadable" = "No se pudo leer esta tarjeta";
 "cardQuickAnswer" = "Respuesta rápida";
+"cardReaderWritesHow" = "Todas las filas vienen marcadas; desmarca las que no quieras enviar. Las filas marcadas se envían una vez cada una, de la más antigua a la más reciente, con tu inicio de sesión de %1$@.";
+"cardReaderWritesLead" = "El tripulante de «%2$@» lee palabras que cualquiera puede escribir, así que cada escritura que hace en %1$@ espera tu decisión. Cada fila es una llamada y la solicitud que envía.";
+"cardReaderWritesTitle" = "¿Permitir escrituras en %1$@?";
 "cardRecordBodyTitle" = "Cuerpo del registro de la tarea";
 "cardRecordCare" = "Cuidado: %1$@";
 "cardRecordChecking" = "Comprobando si se inició";

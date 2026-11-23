@@ -103,6 +103,49 @@ describe("the Claude crewmate's coding session", () => {
     session.dispose();
   });
 
+  // INF-6358's piece 4: an outside reader's client keeps only its reads, and
+  // the app's gate refuses any of them that leaves the working copy.
+  it("hands a fenced session only the client's reads, each gated to its working copy", async () => {
+    const cwd = scratchDir("fm-claude-fenced-");
+    const outside = scratchDir("fm-claude-outside-");
+    writeFileSync(join(cwd, "notes.md"), "inside");
+    const { factory, harness } = scriptedQuery({
+      onInput: answering(() => [result({ cost: 0.01, input: 10, output: 2 })]),
+    });
+    const session = await scriptedClaudeFactory({
+      configDir: baseSpec.configDir,
+      query: factory,
+    }).open({
+      ...codingSpec({ binding: { backend: "claude", accountId: "acct_claude" }, cwd }),
+      fenced: true,
+    });
+    await session.prompt("go");
+    const options = harness().options;
+    expect(options.tools).toEqual(["Read", "Grep", "Glob"]);
+    expect(options.plugins).toBeUndefined();
+    const gates = options.hooks?.PreToolUse?.flatMap((matcher) => matcher.hooks) ?? [];
+    const decide = async (tool_name: string, tool_input: unknown) => {
+      for (const gate of gates) {
+        const answer = (await gate(
+          { hook_event_name: "PreToolUse", tool_name, tool_input } as never,
+          undefined,
+          { signal: new AbortController().signal },
+        )) as { hookSpecificOutput?: { permissionDecision?: string } };
+        if (answer.hookSpecificOutput?.permissionDecision === "deny") return "deny";
+      }
+      return "allow";
+    };
+    expect(await decide("Read", { file_path: join(cwd, "notes.md") })).toBe("allow");
+    expect(await decide("Grep", { pattern: "x" })).toBe("allow");
+    expect(await decide("Glob", { pattern: "**/*.md" })).toBe("allow");
+    expect(await decide("Read", { file_path: join(outside, "notes.md") })).toBe("deny");
+    expect(await decide("Read", { file_path: "~/.ssh/id_rsa" })).toBe("deny");
+    expect(await decide("Grep", { pattern: "x", path: outside })).toBe("deny");
+    expect(await decide("Glob", { pattern: "../**/*" })).toBe("deny");
+    expect(await decide("Glob", { pattern: "/etc/*" })).toBe("deny");
+    session.dispose();
+  });
+
   it("hands the client its task's shell: the channel's variables, and its commands first on the path", async () => {
     const { factory, harness } = scriptedQuery({
       onInput: answering(() => [result({ cost: 0.01, input: 10, output: 2 })]),

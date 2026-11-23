@@ -88,6 +88,29 @@ export const WRITE_ASK_CARD_TITLE = "Send this write for me?";
 /** What the crewmate hears once the captain's click sent it. */
 export const WRITE_ASK_SENT_WAKE = WRITE_ANSWERED_LEAD;
 
+/**
+ * A scripted outside reader (docs/agents-reach.md, "An outside reader"): it
+ * reads its own project and is refused another, then makes two writes to its
+ * own project, an issue and a workflow run start, both kept for the app's one
+ * approval card.
+ */
+export const OUTSIDE_READER_MARKER = "triage the waiting outside issues";
+/** The reads it makes: its own project, then one outside it. */
+export const OUTSIDE_READER_READS = ["/repos/octo/meterlab/pulls", "/repos/octo/website/pulls"];
+/** The writes it makes, in order: an issue, then a run start. */
+export const OUTSIDE_READER_WRITES: GithubWriteInput[] = [
+  {
+    method: "POST",
+    path: "/repos/octo/meterlab/issues",
+    body: JSON.stringify({ title: "Triage: the meter idles on a cold start" }),
+  },
+  {
+    method: "POST",
+    path: "/repos/octo/meterlab/actions/workflows/verify.yml/dispatches",
+    body: JSON.stringify({ ref: "main" }),
+  },
+];
+
 /** The write each kind of ask makes, by the words in its task's title. */
 export function writeAskCall(title: string): GithubWriteInput {
   if (title.includes("publish notebook")) {

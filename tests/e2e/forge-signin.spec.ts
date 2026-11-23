@@ -23,7 +23,12 @@ import {
   GITHUB_ENTERPRISE,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "../../src/shared/forges";
-import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
+import { cardReaderWritesTitle } from "../../src/shared/i18n/messages.generated";
+import {
+  ASK_ROW_WORDS,
+  INTEGRATION_APPROVAL_WORDS,
+  INTEGRATIONS_WORDS,
+} from "../../src/shared/integrations";
 import {
   CHECK_WORDS,
   MERGE_WORDS,
@@ -36,6 +41,8 @@ import { scratchDir } from "../helpers/scratchDirs";
 import {
   API_WRITE_GUARD_MARKER,
   mergeWriteCases,
+  OUTSIDE_READER_MARKER,
+  OUTSIDE_READER_WRITES,
   PAGED_REPOSITORY,
   READS_ANYWHERE_MARKER,
   savedWriteAsks,
@@ -92,6 +99,7 @@ import {
   MOCK_GITHUB_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
+import { outsideReader } from "./scenarios/outsideReader";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, noteDone, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
@@ -242,7 +250,14 @@ async function arrange({
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [githubChange, continueChange, forgeSignin, forgeSigninReads, mergeWriteGuard],
+    scenarios: [
+      githubChange,
+      continueChange,
+      forgeSignin,
+      outsideReader,
+      forgeSigninReads,
+      mergeWriteGuard,
+    ],
     userDataDir,
     env: { ...github.env, ...(githubCli ? { INFINITARY_GITHUB_CLI: githubCli } : {}) },
   });
@@ -918,6 +933,130 @@ test("a task that only answers asks before writing even to its own project, and 
     id,
   );
   expect(detail?.status).toBe("active");
+});
+
+/**
+ * An outside reader (docs/agents-reach.md, "An outside reader"): its
+ * session holds only reads, GitHub answers come fenced, a read of another
+ * project is refused, and both its writes to its own project, an issue and
+ * a run start, wait on the app's one approval card. The captain unticks the
+ * run start, so only the issue is sent, once.
+ */
+test("an outside reader reads only its own project and its writes wait on one approval card", async () => {
+  await arrange({ signedIn: true });
+  const { page } = launched;
+  const title = `meterlab ${OUTSIDE_READER_MARKER}`;
+  const [issue, dispatch] = OUTSIDE_READER_WRITES.map((call) => `${call.method} ${call.path}`);
+  await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+  const cardTitle = cardReaderWritesTitle({ place: "GitHub" });
+  const card = shownCard(page, cardTitle);
+  await expect(card).toBeVisible({ timeout: 45_000 });
+  const rows = cardBody(page, cardTitle).locator("[data-inf-ask-row]");
+  await expect(rows).toHaveCount(2, { timeout: 45_000 });
+  await expect(rows.nth(0)).toContainText(issue as string);
+  await expect(rows.nth(1)).toContainText(dispatch as string);
+  await expect(rows.nth(1)).toContainText(ASK_ROW_WORDS.joined);
+  for (const row of [0, 1]) await expect(rows.nth(row).getByRole("checkbox")).toBeChecked();
+  const shown = (await page.evaluate(() => window.infinitary.cards.list())).filter(
+    (one) => one.meta === "Integration approval",
+  );
+  expect(shown.map((one) => one.author)).toEqual(["host"]);
+  expect(shown[0]?.actions.map((action) => action.label)).toEqual([
+    INTEGRATION_APPROVAL_WORDS.deny,
+    INTEGRATION_APPROVAL_WORDS.once,
+  ]);
+  let id = "";
+  await expect
+    .poll(
+      async () => {
+        const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+          (row) => row.title === title,
+        );
+        id = task?.id ?? "";
+        const detail = id
+          ? await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id)
+          : undefined;
+        return detail?.outcome ?? "";
+      },
+      { timeout: 45_000 },
+    )
+    .toContain("Kept as ask");
+  const firstReport =
+    (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ?? "";
+  // Its own project's answer arrives fenced; another project is never read.
+  expect(firstReport).toContain("github-data");
+  expect(firstReport).toContain("Nothing was read");
+  expect(github.requests()).toContain("GET /repos/octo/meterlab/pulls");
+  expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
+  expect(github.requests()).not.toContain(issue);
+  expect(github.dispatches()).toEqual([]);
+  // Its session held only reads: no shell, no file changes, no web or browser.
+  const tools = (launched.mockProvider?.requestBodies() ?? [])
+    .map((raw) => JSON.parse(raw))
+    .filter((request) => JSON.stringify(request.messages).includes(OUTSIDE_READER_MARKER))
+    .map((request) =>
+      (request.tools ?? []).map(
+        (tool: { name?: string; function?: { name: string } }) => tool.name ?? tool.function?.name,
+      ),
+    )
+    // The crewmate's own turns: the first mate's and the app's tool-less asks are left out.
+    .filter((names: string[]) => names.includes("report") && !names.includes("spawn_crewmate"));
+  expect(tools.length).toBeGreaterThan(0);
+  for (const names of tools) {
+    for (const name of ["read", "grep", "ls", "github_read", "github_write"])
+      expect(names).toContain(name);
+    for (const name of ["bash", "write", "edit", "find", "read_card", "tasks", "knowledge"])
+      expect(names).not.toContain(name);
+  }
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  if (evidence) {
+    await resizeWindow(launched.app, page, { width: 1100, height: 860 });
+    await page.screenshot({ path: join(evidence, "outside-reader-card.png") });
+    await heroShot(launched.app, page, {
+      region: card,
+      anchors: [card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true })],
+      name: "outside-reader",
+    });
+  }
+  await pressKey(rows.nth(1).getByRole("checkbox"), " ");
+  await expect(rows.nth(1).getByRole("checkbox")).not.toBeChecked();
+  await pressKey(
+    card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
+    "Enter",
+  );
+  await expect
+    .poll(() => github.requests().filter((entry) => entry === issue), { timeout: 20_000 })
+    .toEqual([issue]);
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ??
+        "",
+      { timeout: 45_000 },
+    )
+    .toContain("Answered: GitHub answered 201 | sent nothing: The captain did not allow this one.");
+  expect(github.dispatches()).toEqual([]);
+  expect(github.requests().filter((entry) => entry === issue)).toEqual([issue]);
+  const oldestFirst = savedWriteAsks(userDataDir, id).sort((a, b) => a.at - b.at);
+  expect(oldestFirst).toEqual([
+    expect.objectContaining({
+      path: OUTSIDE_READER_WRITES[0]?.path,
+      sentAt: expect.any(Number),
+      outcome: expect.objectContaining({ kind: "answered", status: 201 }),
+    }),
+    expect.objectContaining({
+      path: OUTSIDE_READER_WRITES[1]?.path,
+      outcome: expect.objectContaining({ kind: "refused" }),
+    }),
+  ]);
+  const detail = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
+  const transcript = `First report:\n${firstReport}\n\nAfter the click:\n${detail?.outcome ?? ""}\n\nSaved asks:\n${JSON.stringify(savedWriteAsks(userDataDir, id), null, 2)}\n\nSession tools:\n${JSON.stringify(tools[0])}\n\nRequests:\n${github.requests().join("\n")}`;
+  await test.info().attach("outside-reader", { body: transcript, contentType: "text/plain" });
+  await expect(card).toBeHidden();
+  if (evidence) {
+    await page.screenshot({ path: join(evidence, "outside-reader-after-click.png") });
+    writeFileSync(join(evidence, "outside-reader.txt"), transcript);
+  }
 });
 
 for (const signedIn of [true, false]) {

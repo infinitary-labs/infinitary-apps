@@ -88,6 +88,12 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   thinkingLevel?: ThinkingLevel;
   /** Quick care lowers effort once, after the backend clamps to its model. */
   quick?: boolean;
+  /**
+   * An outside reader (docs/agents-reach.md, "An outside reader"): its
+   * session gets read-only built-ins confined to its working copy, and no
+   * shell, web, browser or subagent.
+   */
+  fenced?: true;
   /** What its shell carries: its task's commands (docs/axi-commands.md). */
   shell?: TaskShell;
   /** This computer supports the declared heavy-run command. */
@@ -325,6 +331,7 @@ export function crewmateSessionSpec(
     },
     instructions: { base: instructions },
     builtins: "coding",
+    ...(spec.fenced ? { fenced: true as const } : {}),
     tools,
     ...(spec.shell ? { shell: spec.shell } : {}),
     ...(spec.load ? { load: true } : {}),

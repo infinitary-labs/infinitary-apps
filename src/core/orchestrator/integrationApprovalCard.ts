@@ -13,6 +13,9 @@ import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import { writeAskStrip } from "./requestStrips";
 
+/** The label every host approval card for a held call carries. */
+export const APPROVAL_CARD_META = "Integration approval";
+
 /**
  * INF-950: only typed held-call facts, with the agent's reason explicitly
  * attributed. A crewmate's card sits on its task; the first mate's has no
@@ -63,7 +66,7 @@ export function integrationApprovalCard(
     title: integrationApprovalTitle(ask.label ?? ask.action, ask.place),
     // Whoever asked answers a reply under the card, and a crewmate's heads
     // with its task; a panel cannot answer one.
-    meta: task ? task.title : "Integration approval",
+    meta: task ? task.title : APPROVAL_CARD_META,
     ...(task
       ? { answeredBy: "crewmate" as const }
       : panel
@@ -181,7 +184,7 @@ function integrationApprovalsCard(
  * line, its name muted and its value as given; anything else on one line,
  * as kept when it does not parse.
  */
-function inputLines(input: string): string {
+export function inputLines(input: string): string {
   const text = escapeCardText;
   let parsed: unknown;
   try {

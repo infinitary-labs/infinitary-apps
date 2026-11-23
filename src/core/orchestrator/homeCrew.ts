@@ -304,7 +304,12 @@ export function startHomeCrew({
       "integration"
         ? integrations.sendAsk(taskId, askId, choice)
         : githubGateway.sendAsk(taskId, askId),
-    sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
+    // An outside reader's write joins the same approval cards and is sent
+    // where its project lives (docs/agents-reach.md, "An outside reader").
+    sendTakenIntegrationAsk: (rowId, taken, choice) =>
+      "ask" in taken && taken.ask.kind !== "integration"
+        ? githubGateway.sendTaken(rowId, taken, choice)
+        : integrations.sendTaken(rowId, taken, choice),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber, mergeTask, place) =>

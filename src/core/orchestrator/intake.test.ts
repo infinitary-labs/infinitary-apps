@@ -9,6 +9,7 @@
  * record.
  */
 
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { HostChildSpawner } from "@core/host";
 import { describe, expect, it } from "vitest";
@@ -20,9 +21,11 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import type { CrewMachines } from "../placed/crewMachines";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
-import { parseSpawnIntent } from "./intentBrief";
+import { OUTSIDE_READER_WORDS, parseSpawnIntent, type SpawnIntent } from "./intentBrief";
+import { OUTSIDE_READER_ANSWERS, OUTSIDE_READER_PROJECT } from "./workShape";
 
 fakeCrewTimersEachTest();
 
@@ -84,6 +87,63 @@ describe("new work", () => {
     );
     // Only the seeded builder is on the record: no refusal left a row behind.
     expect(h.tasks.list().map((row) => row.id)).toEqual(["builder1"]);
+  });
+
+  /**
+   * INF-6388: an outside reader reads words strangers can write, so it only
+   * answers, only in a project of the captain's other than the personal
+   * workspace, and starts on this computer with a fenced session even when
+   * the project's Runs on names another one (docs/agents-reach.md, "An
+   * outside reader").
+   */
+  it("starts an outside reader only as a read-only answer in its own project, on this computer", async () => {
+    const machines = {
+      computers: () => ["mini-device"],
+      ready: () => false,
+      nameOf: () => "Mac mini",
+      placeOf: () => ({ label: "Mac mini", where: "on the Mac mini" }),
+      signInWait: () => undefined,
+    } as unknown as CrewMachines;
+    const crewmate = fakeCrewmate();
+    const h = { ...setup(crewmate, { machines }) };
+    const folder = join(h.paths.fleetDir, "meter");
+    mkdirSync(join(folder, ".git"), { recursive: true });
+    const repo = seedProject(h.db, { id: "meter", name: "meter", path: folder, setupKind: "init" });
+    h.repos.configure(repo.id, { origin: "https://github.com/octo/meter.git" });
+    h.repos.setRunsOn(repo.id, "mini-device");
+    const personal = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    const readOnly = {
+      ...intentOf("read the waiting issues and say which are real"),
+      constraints: [{ kind: "read-only" as const }],
+    };
+    const commission = (repoId: string | undefined, intent: SpawnIntent = readOnly) =>
+      h.supervisor.intake.commission({
+        title: "Read the waiting issues",
+        intent,
+        ...(repoId ? { repoId } : {}),
+        shape: { outside_reader: true },
+      });
+
+    await expect(commission(undefined)).rejects.toThrow(OUTSIDE_READER_PROJECT);
+    await expect(commission(personal.id)).rejects.toThrow(OUTSIDE_READER_PROJECT);
+    await expect(commission(repo.id, intentOf("fix the waiting issues"))).rejects.toThrow(
+      OUTSIDE_READER_ANSWERS,
+    );
+    expect(h.tasks.list()).toEqual([]);
+
+    const { taskId } = await commission(repo.id);
+    await tick();
+    expect(h.tasks.get(taskId)?.shape).toMatchObject({
+      deliverable: "answer",
+      outside_reader: true,
+    });
+    expect(h.tasks.get(taskId)?.deviceId ?? null).toBeNull();
+    const spec = h.specs.at(-1);
+    expect(spec?.fenced).toBe(true);
+    expect(spec?.onReadCard).toBeUndefined();
+    expect(spec?.onQueryTasks).toBeUndefined();
+    expect(h.sessionSpecs.at(-1)?.fenced).toBe(true);
+    expect(crewmate.promptCalls.at(-1)).toContain(OUTSIDE_READER_WORDS);
   });
 
   it("refuses a start_after that names no task, no known allowance or nothing at all", async () => {

@@ -11,6 +11,7 @@ import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { claudeEnvFor } from "./claudeCli";
 import { type ClaudeClientExit, claudeClientSpawn } from "./claudeClientProcess";
+import { CLAUDE_FENCED_TOOLS, claudeFenceHook } from "./claudeFence";
 import {
   type ClaudeProjectResources,
   claudeProjectInstructionsText,
@@ -191,9 +192,11 @@ function toolServer(
 function sessionHooks(
   tools: readonly BoundTool[],
   toolGate?: HookCallback,
+  fence?: HookCallback,
 ): Pick<Options, "hooks"> {
+  const gates = [...(fence ? [fence] : []), ...(toolGate ? [toolGate] : [])];
   const hooks: NonNullable<Options["hooks"]> = {
-    ...(toolGate ? { PreToolUse: [{ hooks: [toolGate] }] } : {}),
+    ...(gates.length > 0 ? { PreToolUse: [{ hooks: gates }] } : {}),
     ...(tools.length > 0 ? { PostToolBatch: [{ hooks: [claudeToolNameHint(tools)] }] } : {}),
   };
   return Object.keys(hooks).length > 0 ? { hooks } : {};
@@ -223,9 +226,13 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
   if (spec.shape.turns === "rolling") {
     if (!attachment) throw new Error("A rolling Claude session attaches with a session.");
     const coding = spec.builtins === "coding";
+    const fenced = coding && spec.fenced === true;
     const project = attachment.project;
+    // A fenced session stages no skill: a plugin can bring hooks and servers
+    // of its own.
     const staged =
       coding &&
+      !fenced &&
       Boolean(
         project?.skillsPlugin ||
           project?.personalSkillsPlugin ||
@@ -288,7 +295,9 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // (none named is all of them). Without it, no built-in tool at all:
       // the session's whole surface is the spec's own typed tools
       // (docs/orchestrator-contract.md).
-      ...(coding ? {} : { tools: [] }),
+      // A fenced session gets only the client's reads, each confined to its
+      // working copy by the fence hook (`claudeFenceHook`).
+      ...(fenced ? { tools: [...CLAUDE_FENCED_TOOLS] } : coding ? {} : { tools: [] }),
       // The spec's tools, served always-load, when it has any; the seat's
       // whole band reaches it, since it has no tool to open a saved result.
       ...(spec.tools.length > 0
@@ -341,7 +350,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       ...(coding || thinks ? {} : { thinking: { type: "disabled" as const } }),
       ...(request?.maxModelTurns !== undefined ? { maxTurns: request.maxModelTurns } : {}),
       ...(attachment.model ? { model: attachment.model } : {}),
-      ...sessionHooks(spec.tools, attachment.toolGate),
+      ...sessionHooks(
+        spec.tools,
+        attachment.toolGate,
+        fenced ? claudeFenceHook(spec.cwd) : undefined,
+      ),
       ...("resume" in attachment.session
         ? { resume: attachment.session.resume }
         : { sessionId: attachment.session.sessionId }),

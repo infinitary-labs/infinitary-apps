@@ -75,7 +75,12 @@ export class CrewToolHooks {
       machine === LOCAL_MACHINE_ID
         ? undefined
         : this.core.options.machines?.folders(machine, task.id);
+    // An outside reader holds strangers' words, so it gets no shell and none
+    // of the commands that ride it, no program, and no read of the captain's
+    // record or saved knowledge (docs/agents-reach.md, "An outside reader").
+    const reader = this.core.options.tasks.get(task.id)?.shape?.outside_reader === true;
     return {
+      ...(reader ? { fenced: true as const } : {}),
       onSpeed: (model, selection) => this.noteSpeed(task.id, model, selection),
       requestedSpeed: (model) =>
         this.core.options.tasks.get(task.id)?.shape?.override_speed ??
@@ -114,7 +119,7 @@ export class CrewToolHooks {
         this.core.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
       onFollowup: (input) => this.core.reportIntake.fileFollowup(task, input),
       // Served only where a program can run (docs/programs.md, "Starting a program").
-      ...(this.programs.servedTo(task.id)
+      ...(!reader && this.programs.servedTo(task.id)
         ? { onStartProgram: (input) => this.programs.start(task, input) }
         : {}),
       onProgress: (text, plan) => this.core.reportIntake.noteProgress(task, text, plan),
@@ -125,12 +130,16 @@ export class CrewToolHooks {
         cardMutationText(
           this.core.cards.reviseRequiredAction({ actor: "crewmate", taskId: task.id }, input),
         ),
-      onReadCard: (cardId) => this.core.crewmateCards.readCard(cardId),
-      onQueryTasks: (input) => this.queryTasks(input),
-      ...this.knowledgeHooks(task, machine),
-      ...this.panelToolHooks(task, personal),
+      ...(reader
+        ? {}
+        : {
+            onReadCard: (cardId: string) => this.core.crewmateCards.readCard(cardId),
+            onQueryTasks: (input: TaskQueryInput) => this.queryTasks(input),
+            ...this.knowledgeHooks(task, machine),
+            ...this.panelToolHooks(task, personal),
+          }),
       ...this.forgeToolHooks(task),
-      ...this.taskCommandHooks(task, machine),
+      ...(reader ? {} : this.taskCommandHooks(task, machine)),
     };
   }
 
@@ -461,6 +470,21 @@ export class CrewToolHooks {
     | "onGithubWrite"
   > {
     if (this.core.facts.isPersonalTask(task.id)) return {};
+    // An outside reader reaches where its project lives only through the
+    // API pair, whose answers the gateway fences and whose writes all wait
+    // for the captain: a workflow log or artifact would bring outside words
+    // in unfenced (docs/agents-reach.md, "An outside reader").
+    if (this.core.options.tasks.get(task.id)?.shape?.outside_reader === true) {
+      const { githubRead, githubWrite } = this.core.options;
+      return {
+        ...(githubRead
+          ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
+          : {}),
+        ...(githubWrite
+          ? { onGithubWrite: (input: GithubWriteInput) => githubWrite(task.id, input) }
+          : {}),
+      };
+    }
     // A task that works in place ships nothing; the one that closes a pull
     // request an abandoned task left open reads and writes where the project
     // lives, and nothing else (INF-549's sibling).

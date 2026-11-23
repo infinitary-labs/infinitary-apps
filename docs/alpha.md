@@ -431,6 +431,21 @@ Do not change `downloadBase` or `releasePage`.
 Rehearse that tree privately; keep the old project paused and archive it before starting live publication from the new project.
 Promote only an alpha built in the new project; finish any intended promotion of an old alpha before the move.
 
+## Moving releases to another Apple team
+
+An installed Mac copy accepts an update only from a signature its own designated requirement allows: Squirrel.Mac checks the downloaded app against the running copy's requirement before staging it.
+A default requirement names the one team that signed the copy, so a release signed by another team is refused and each copy would need a manual reinstall.
+The release therefore gives its app bundle an explicit requirement (`src/shared/releaseRequirement.ts`, applied by `scripts/sign-release-mac.mjs`, electron-builder's `mac.sign` hook): Apple's chain through the Developer ID intermediate, the app identifier, a Developer ID leaf (the parts of codesign's own default) and any team in `acceptedTeamIds` of `packaging/release-identity.json`.
+`teamId` stays the one team that signs the version; the release gate (`scripts/verify-app.sh`) requires that team's signature and the explicit requirement in codesign's normal form.
+The requirement goes on the app bundle alone, because it names the app's identifier, which no helper or nested executable has.
+A copy added over SSH is checked against the same requirement (`docs/devices.md`, "Downloading on a Mac reached by its address").
+
+A move takes two releases.
+The bridge release, still signed by the old team, lists both teams, and copies reach it through ordinary updates.
+Once it has shipped and copies have taken it, the switch changes `teamId`, the signing identity and the release secrets to the new team and drops the old team from `acceptedTeamIds`.
+A copy older than the bridge refuses the switch's update and needs one manual reinstall.
+The Keychain's items are tied to the signing team, so each saved item asks once more after the switch.
+
 ## Download storage
 
 `packaging/release-source.json` owns the production download origin and hidden download-page address.

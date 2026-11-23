@@ -154,6 +154,16 @@ fi
 codesign --verify --deep --strict --verbose=2 "$APP_DIR" 2>&1 \
   || fail "codesign --verify --deep --strict failed"
 
+# The app's designated requirement is what an installed copy holds the next
+# update to (src/shared/releaseRequirement.ts): it must be the explicit one
+# naming every accepted team, compared in codesign's own normal form.
+EXPECTED_DESIGNATED="$(csreq -r "=$(node --input-type=module -e \
+  "import('$SCRIPT_DIR/../src/shared/releaseRequirement.ts').then((m) => process.stdout.write(m.RELEASE_DESIGNATED_REQUIREMENT))")" -t)" \
+  || fail "could not read the release's designated requirement"
+ACTUAL_DESIGNATED="$(codesign -d -r- "$APP_DIR" 2>/dev/null | grep -E '^#? ?designated => ' || true)"
+[[ "$ACTUAL_DESIGNATED" == "$EXPECTED_DESIGNATED" ]] \
+  || fail "the app's designated requirement is '$ACTUAL_DESIGNATED', not '$EXPECTED_DESIGNATED'"
+
 check_signature() {
   local target="$1"
   local INFO

@@ -99,6 +99,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/axi/channel.ts": {
     CAP_MARGIN_MS: physical("the op keeps running; the shell's next command gets its kept answer"),
     REQUEST_MAX: physical("refused in words: arguments too long; the 1 MiB bound is not named"),
+    FEEDBACK_BODY_FILE_MAX: outside(
+      "four of GitHub's issue bodies; refused in words: the body file is too long to read",
+    ),
   },
   "src/core/secrets/bringReaders.ts": {
     BRING_VALUE_MAX_BYTES: outside(
@@ -546,6 +549,15 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       rests: "consent",
       way: "the task asks on its card; the captain allows more, lifts it, or changes it in Settings",
     },
+  },
+  "src/shared/feedback.ts": {
+    FEEDBACK_LINK_MAX: outside(
+      "GitHub refuses longer addresses; the earliest steps go first, then the words are cut with a line saying so",
+    ),
+    GITHUB_ISSUE_TITLE_MAX: outside("GitHub's issue title limit; refused in words: shorten the title"),
+    GITHUB_ISSUE_BODY_MAX: outside(
+      "GitHub's issue body limit; the earliest steps go first, then refused in words: shorten it",
+    ),
   },
   "src/shared/crewTranscript.ts": {
     CREW_RESULT_TEXT_MAX: physical("clipped; the fold names how many characters were cut"),

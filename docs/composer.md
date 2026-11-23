@@ -103,6 +103,7 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 - The room: the shell is at most `promptShellMax(innerHeight)` tall, which puts its top exactly at the first mate's frame bottom once the frame has lifted (8 lines at 800 px, about 6 at the 640 px minimum), less `LAST_TURN_RISE` while the last turn shows, and less what collapsed panel headers lift its foot by.
 - Multi-line means a line break, a wrap, or a chip.
   Then the foot row appears (hint, count, send).
+  A first word that starts with `/` and could still be `/feedback` shows the foot row too, its hint naming the command: "/feedback: tell Infinitary's makers about a problem or an idea" (`typingSlashCommand`; `docs/feedback.md`).
   The text keeps the send control's column clear at every height, so it wraps at the same width in both layouts and cannot flip between them.
 - The input is pinned by its bottom, `--prompt-floor` above the floor: at least `--space-9` in a page 864 px tall or taller.
   A shorter page gives back up to 84 px of it, all of it at 720 px (`docs/renderer.md`, "Short windows").

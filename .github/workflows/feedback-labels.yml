@@ -1,0 +1,42 @@
+name: feedback-labels
+
+# Labels an issue the app's /feedback command filed (docs/feedback.md,
+# "Triage"): an issue whose body carries the hidden mark
+# `<!-- infinitary-feedback v1 kind=bug|idea ... -->` gets the labels
+# "from-app" and its kind, "bug" or "idea". It reads only the issue's body,
+# from the event, as data; it checks out nothing, runs no project code and
+# uses no secret beyond its own token. Anyone can type the mark, so the
+# labels sort issues and grant nothing.
+
+on:
+  issues:
+    types: [opened]
+
+# A read of the project; the job names the write it needs.
+permissions:
+  contents: read
+
+jobs:
+  label:
+    name: New issue · Label app feedback
+    if: ${{ contains(github.event.issue.body, '<!-- infinitary-feedback v1 ') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const body = context.payload.issue?.body ?? "";
+            const mark = /<!-- infinitary-feedback v1 kind=(bug|idea)(?: [^>]*)?-->/.exec(body);
+            if (!mark) {
+              core.info("No feedback mark in the issue's body.");
+              return;
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ["from-app", mark[1]],
+            });
+            core.info(`Labeled from-app and ${mark[1]}.`);

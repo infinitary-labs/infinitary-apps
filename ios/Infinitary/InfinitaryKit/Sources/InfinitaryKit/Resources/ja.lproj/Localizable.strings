@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "前の作業コンピューター";
 "commandDevicesTryAgain" = "コンピューターへの接続を再試行";
 "commandDevicesTryAgainWords" = "デバイス, 再接続, 接続, マック";
+"commandFeedbackStart" = "フィードバックを送信";
+"commandFeedbackStartWords" = "フィードバック, 報告, 問題, バグ, アイデア, 提案, Issue";
 "commandFirstmateReply" = "一等航海士の返信を開く";
 "commandFirstmateReplyWords" = "回答, メッセージ, メモ, 最後";
 "commandFocusCardActions" = "カードのボタンへ移動";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "リリース, ノート, 変更, バージョン";
 "composerFolderNotProject" = "そのフォルダをプロジェクトとして追加できませんでした。";
 "composerFolderProject" = "そのフォルダはすでにプロジェクトに入っています。";
+"composerHintFeedback" = "%1$@：Infinitary の開発者に問題やアイデアを伝えます";
 "composerTooLongShorten" = "長すぎて送信できません。先に短くしてください。";
 "composerWordsOnly" = "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。";
 "crewAPart" = "パート";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "メッセージ未送達：%1$@";
 "feedUpdated" = "更新：%1$@";
 "feedYouChose" = "「%1$@」を選びました";
+"feedbackStripAccount" = "クリックするまで何も送信されません。あなたの GitHub アカウント %1$@ で投稿されます。";
+"feedbackStripBug" = "新しい問題の報告";
+"feedbackStripComment" = "Issue #%1$@ へのコメント";
+"feedbackStripHeading" = "クリックすると %1$@ に一度だけ公開されます";
+"feedbackStripIdea" = "新しいアイデア";
+"feedbackStripNoAccount" = "クリックするまで何も送信されません。あなたの GitHub アカウントで投稿されます。";
 "fileAdd" = "ファイルを追加";
 "fileCancel" = "%1$@ の準備を取り消す";
 "fileDropHere" = "ドロップしてファイルを追加";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "ヘルプ";
 "menuKeyboardSettings" = "キーボード設定…";
 "menuResetAllKeys" = "すべてのキーをリセット…";
+"menuSendFeedback" = "フィードバックを送信…";
 "menuSettings" = "設定…";
 "menuWhatsNew" = "Infinitary の新機能";
 "mergeButtonAfterFixing" = "エラーを修正してからマージ";

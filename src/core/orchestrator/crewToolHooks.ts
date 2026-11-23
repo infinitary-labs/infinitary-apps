@@ -162,8 +162,17 @@ export class CrewToolHooks {
     | "secretUses"
     | "stops"
   > {
-    const { browsers, taskCommands, integrations, machines, load, files, secrets, stops } =
-      this.core.options;
+    const {
+      browsers,
+      taskCommands,
+      integrations,
+      machines,
+      load,
+      files,
+      secrets,
+      stops,
+      feedback,
+    } = this.core.options;
     const hasLoad = load?.available(machine) === true;
     if (machine !== LOCAL_MACHINE_ID) {
       const command =
@@ -197,7 +206,18 @@ export class CrewToolHooks {
     const secretRequests = secrets?.forTask(task.id);
     // Every crewmate here registers how to stop what it leaves running.
     const taskStops = stops?.forTask(task.id);
-    if (!browser && !reach && !hasLoad && !otherFiles && !secretRequests && !taskStops) return {};
+    // Every crewmate here can draft a /feedback report (docs/feedback.md).
+    const taskFeedback = feedback?.forTask(task.id);
+    if (
+      !browser &&
+      !reach &&
+      !hasLoad &&
+      !otherFiles &&
+      !secretRequests &&
+      !taskStops &&
+      !taskFeedback
+    )
+      return {};
     return {
       ...(hasLoad ? { load: true } : {}),
       ...(taskStops ? { stops: true } : {}),
@@ -212,6 +232,7 @@ export class CrewToolHooks {
         ...(otherFiles ? { files: otherFiles } : {}),
         ...(secretRequests ? { secrets: secretRequests } : {}),
         ...(taskStops ? { stops: taskStops } : {}),
+        ...(taskFeedback ? { feedback: taskFeedback } : {}),
       }),
     };
   }

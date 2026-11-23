@@ -1,6 +1,7 @@
 import type { ChangeRequestKind } from "@shared/forgeKinds";
+import * as m from "@shared/i18n/messages.generated";
 import type { MergeReview } from "@shared/mergeReview";
-import type { IntegrationAsk, WriteAsk } from "@shared/writeAsk";
+import type { FeedbackAskFacts, ForgeWriteAsk, IntegrationAsk, WriteAsk } from "@shared/writeAsk";
 import { gitlabReleaseFileCalls } from "../forge";
 import { escapeCardText } from "./cardText";
 
@@ -57,6 +58,7 @@ export function skipRulesStrip(review: MergeReview, place: string): string {
  */
 export function writeAskStrip(ask: WriteAsk): string {
   if (ask.kind === "integration") return integrationAskStrip(ask);
+  if (ask.feedback) return feedbackAskStrip(ask, ask.feedback);
   let body = ask.body;
   if (body !== undefined) {
     try {
@@ -82,6 +84,42 @@ export function writeAskStrip(ask: WriteAsk): string {
     callLine,
     body !== undefined ? `<pre data-inf-call-body>${escapeCardText(body)}</pre>` : file,
     `<p class="inf-muted">Nothing is sent before your click.${through ? ` ${through}` : ""}</p>`,
+    "</div>",
+  ].join("");
+}
+
+/**
+ * A /feedback report's issue or comment (docs/feedback.md, "The review
+ * card"): the exact title and body as readable text, where it is published
+ * and under which account, and the call line beneath them.
+ */
+function feedbackAskStrip(ask: ForgeWriteAsk, feedback: FeedbackAskFacts): string {
+  let text = ask.body ?? "";
+  try {
+    const parsed = JSON.parse(text) as { body?: unknown };
+    if (typeof parsed.body === "string") text = parsed.body;
+  } catch {
+    // Kept as the draft built it; shown as it is.
+  }
+  const where =
+    feedback.commentOn !== undefined
+      ? m.feedbackStripComment({ number: String(feedback.commentOn) })
+      : feedback.kind === "bug"
+        ? m.feedbackStripBug()
+        : m.feedbackStripIdea();
+  const account = feedback.login
+    ? m.feedbackStripAccount({ login: feedback.login })
+    : m.feedbackStripNoAccount();
+  return [
+    '<div class="inf-call" data-inf-call="write" data-inf-call-feedback>',
+    `<div class="inf-call-k">${escapeCardText(m.feedbackStripHeading({ place: ask.place }))}</div>`,
+    `<p>${escapeCardText(where)}</p>`,
+    feedback.commentOn === undefined
+      ? `<p data-inf-call-title><strong>${escapeCardText(feedback.title)}</strong></p>`
+      : "",
+    `<pre data-inf-call-body>${escapeCardText(text)}</pre>`,
+    `<div class="inf-call-line" data-inf-call-line>${escapeCardText(`${ask.method} ${ask.path}`)}</div>`,
+    `<p class="inf-muted">${escapeCardText(account)}</p>`,
     "</div>",
   ].join("");
 }

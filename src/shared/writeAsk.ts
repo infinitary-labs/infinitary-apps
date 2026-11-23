@@ -30,11 +30,25 @@ export type ForgeWriteAsk = {
   /** A release file in the working copy, relative to it. The bytes are read when the click sends it. */
   file?: string;
   validationEffect?: string;
+  /**
+   * A /feedback report's issue or comment (docs/feedback.md): the card's
+   * strip draws its title and body as readable text, never JSON.
+   */
+  feedback?: FeedbackAskFacts;
   at: number;
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;
   /** What came of the click: the host's answer, an outcome nobody knows, or nothing sent. */
   outcome?: WriteAskOutcome;
+};
+
+/** What a feedback write is, beside its exact call: its kind, title, the issue it comments on and whose account sends it. */
+export type FeedbackAskFacts = {
+  kind: "bug" | "idea";
+  title: string;
+  commentOn?: number;
+  /** The GitHub account the sign-in last said it is, as the captain's card names it. */
+  login?: string;
 };
 
 /**

@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "上一組工作電腦";
 "commandDevicesTryAgain" = "再次嘗試連絡你的電腦";
 "commandDevicesTryAgainWords" = "裝置, 重新連線, 連線, 電腦";
+"commandFeedbackStart" = "傳送意見回饋";
+"commandFeedbackStartWords" = "意見回饋, 回報, 問題, 錯誤, 想法, 建議, 議題";
 "commandFirstmateReply" = "開啟大副的回覆";
 "commandFirstmateReplyWords" = "回答, 訊息, 筆記, 最後";
 "commandFocusCardActions" = "前往卡片的按鈕";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "發布, 說明, 變更, 版本";
 "composerFolderNotProject" = "無法將該資料夾加入為專案。";
 "composerFolderProject" = "該資料夾已經是你的專案了。";
+"composerHintFeedback" = "%1$@：向 Infinitary 的開發者回報問題或提出想法";
 "composerTooLongShorten" = "太長了，無法傳送。請先縮短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能傳送文字。請移除圖片和檔案後再傳送。";
 "crewAPart" = "一個部分";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "訊息未送達：%1$@";
 "feedUpdated" = "已更新：%1$@";
 "feedYouChose" = "你選了「%1$@」";
+"feedbackStripAccount" = "按下之前不會傳送任何內容。它會以你的 GitHub 帳號 %1$@ 發布。";
+"feedbackStripBug" = "一份新的問題回報";
+"feedbackStripComment" = "對議題 #%1$@ 的留言";
+"feedbackStripHeading" = "你按下後，這會公開發布到 %1$@，僅一次";
+"feedbackStripIdea" = "一個新想法";
+"feedbackStripNoAccount" = "按下之前不會傳送任何內容。它會以你的 GitHub 帳號發布。";
 "fileAdd" = "加入檔案";
 "fileCancel" = "取消準備 %1$@";
 "fileDropHere" = "放開即可加入檔案";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "說明";
 "menuKeyboardSettings" = "鍵盤設定…";
 "menuResetAllKeys" = "重設所有按鍵…";
+"menuSendFeedback" = "傳送意見回饋…";
 "menuSettings" = "設定…";
 "menuWhatsNew" = "Infinitary 的新功能";
 "mergeButtonAfterFixing" = "修正錯誤後合併";

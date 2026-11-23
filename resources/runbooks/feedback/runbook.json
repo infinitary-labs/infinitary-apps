@@ -1,0 +1,7 @@
+{
+  "id": "feedback",
+  "name": "Feedback",
+  "description": "Turns /feedback into an issue for Infinitary's makers that you review before it is published.",
+  "firstmate": "guide.md",
+  "skills": "skills"
+}

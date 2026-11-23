@@ -73,6 +73,8 @@
   "commandComputersPrevious": "上一組工作電腦",
   "commandDevicesTryAgain": "再次嘗試連絡你的電腦",
   "commandDevicesTryAgainWords": "裝置, 重新連線, 連線, 電腦",
+  "commandFeedbackStart": "傳送意見回饋",
+  "commandFeedbackStartWords": "意見回饋, 回報, 問題, 錯誤, 想法, 建議, 議題",
   "commandFirstmateReply": "開啟大副的回覆",
   "commandFirstmateReplyWords": "回答, 訊息, 筆記, 最後",
   "commandFocusCardActions": "前往卡片的按鈕",

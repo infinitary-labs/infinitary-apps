@@ -1,0 +1,8 @@
+{
+  "feedbackStripAccount": "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub ‏{login}.",
+  "feedbackStripBug": "بلاغ جديد عن مشكلة",
+  "feedbackStripComment": "تعليق على البلاغ #{number}",
+  "feedbackStripHeading": "نقرتك تنشر هذا على {place} علنًا، مرة واحدة",
+  "feedbackStripIdea": "فكرة جديدة",
+  "feedbackStripNoAccount": "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub."
+}

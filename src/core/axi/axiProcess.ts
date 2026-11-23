@@ -1,7 +1,9 @@
+import { FEEDBACK_COMMAND } from "@shared/feedback";
 import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
 import { browserAxi } from "./browserCommands";
 import { captainAxi, withRenamedNotice } from "./captainCommands";
 import { runTaskAxiCli, type TaskAxiCli } from "./cli";
+import { type FeedbackOp, feedbackAxi } from "./feedbackCommands";
 import { type FilesOp, filesAxi } from "./fileCommands";
 import { integrationsAxi } from "./integrationCommands";
 import { type LoadOp, loadAxi } from "./loadCommands";
@@ -67,7 +69,16 @@ function parentPort(): Port {
 type Connection = {
   call: (
     command: string,
-    op: BrowserOp | IntegrationOp | InboxOp | CaptainOp | SecretsOp | LoadOp | FilesOp | StopsOp,
+    op:
+      | BrowserOp
+      | IntegrationOp
+      | InboxOp
+      | CaptainOp
+      | SecretsOp
+      | LoadOp
+      | FilesOp
+      | StopsOp
+      | FeedbackOp,
     input: unknown,
   ) => Promise<never>;
 };
@@ -85,6 +96,7 @@ const TOOLS: Record<
   "infinitary-load-axi": loadAxi as never,
   "infinitary-files-axi": filesAxi as never,
   "infinitary-stops-axi": stopsAxi as never,
+  [FEEDBACK_COMMAND]: feedbackAxi as never,
 };
 
 const port = parentPort();

@@ -22260,6 +22260,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `devices, ssh, reconnect, connect, macs`;
   }
+  function commandFeedbackStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال ملاحظات`;
+      case "de":
+        return `Feedback senden`;
+      case "es":
+        return `Enviar comentarios`;
+      case "fr":
+        return `Envoyer un avis`;
+      case "ja":
+        return `フィードバックを送信`;
+      case "ko":
+        return `피드백 보내기`;
+      case "pt-BR":
+        return `Enviar feedback`;
+      case "zh-Hans":
+        return `发送反馈`;
+      case "zh-Hant":
+        return `傳送意見回饋`;
+      case "en-XA":
+        return `[Šéñð ƒééðƀáçķ ~~~~~]`;
+      case "ar-XB":
+        return `‮Send feedback‬`;
+    }
+    return `Send feedback`;
+  }
+  function commandFeedbackStartWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملاحظات, إبلاغ, مشكلة, خطأ, فكرة, اقتراح, بلاغ`;
+      case "de":
+        return `Feedback, melden, Problem, Fehler, Idee, Vorschlag, Issue`;
+      case "es":
+        return `comentarios, informe, problema, error, idea, sugerencia, incidencia`;
+      case "fr":
+        return `avis, signaler, problème, bug, idée, suggestion, ticket`;
+      case "ja":
+        return `フィードバック, 報告, 問題, バグ, アイデア, 提案, Issue`;
+      case "ko":
+        return `피드백, 신고, 문제, 버그, 아이디어, 제안, 이슈`;
+      case "pt-BR":
+        return `feedback, relatar, problema, bug, ideia, sugestão, issue`;
+      case "zh-Hans":
+        return `反馈, 报告, 问题, 错误, 想法, 建议, 议题`;
+      case "zh-Hant":
+        return `意見回饋, 回報, 問題, 錯誤, 想法, 建議, 議題`;
+      case "en-XA":
+        return `[ƒééðƀáçķ, ŕéþöŕţ, þŕöƀļéɱ, ƀûĝ, îðéá, šûĝĝéšţîöñ, îššûé ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮feedback, report, problem, bug, idea, suggestion, issue‬`;
+    }
+    return `feedback, report, problem, bug, idea, suggestion, issue`;
+  }
   function commandFirstmateReply() {
     switch (currentLanguage()) {
       case "ar":
@@ -25256,6 +25310,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮That folder is already one of your projects.‬`;
     }
     return `That folder is already one of your projects.`;
+  }
+  function composerHintFeedback(input2) {
+    const command = input2.command;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${command}: أخبر صانعي Infinitary بمشكلة أو فكرة`;
+      case "de":
+        return `${command}: den Machern von Infinitary ein Problem oder eine Idee mitteilen`;
+      case "es":
+        return `${command}: cuéntales a los creadores de Infinitary un problema o una idea`;
+      case "fr":
+        return `${command} : signalez un problème ou une idée aux créateurs d’Infinitary`;
+      case "ja":
+        return `${command}：Infinitary の開発者に問題やアイデアを伝えます`;
+      case "ko":
+        return `${command}: Infinitary 제작자에게 문제나 아이디어를 알립니다`;
+      case "pt-BR":
+        return `${command}: conte aos criadores do Infinitary um problema ou uma ideia`;
+      case "zh-Hans":
+        return `${command}：向 Infinitary 的开发者报告问题或提出想法`;
+      case "zh-Hant":
+        return `${command}：向 Infinitary 的開發者回報問題或提出想法`;
+      case "en-XA":
+        return `[${command}: ţéļļ Îñƒîñîţáŕý'š ɱáķéŕš áƀöûţ á þŕöƀļéɱ öŕ áñ îðéá ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${command}‮: tell Infinitary's makers about a problem or an idea‬`;
+    }
+    return `${command}: tell Infinitary's makers about a problem or an idea`;
   }
   function composerLines(input2) {
     const count = formatNumber(input2.count);
@@ -33720,6 +33802,171 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `You chose "${choice}"`;
   }
+  function feedbackStripAccount(input2) {
+    const login = input2.login;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub ‏${login}.`;
+      case "de":
+        return `Vor deinem Klick wird nichts gesendet. Es erscheint unter deinem GitHub-Konto ${login}.`;
+      case "es":
+        return `No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub ${login}.`;
+      case "fr":
+        return `Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub ${login}.`;
+      case "ja":
+        return `クリックするまで何も送信されません。あなたの GitHub アカウント ${login} で投稿されます。`;
+      case "ko":
+        return `클릭하기 전에는 아무것도 보내지 않습니다. GitHub 계정 ${login}(으)로 게시됩니다.`;
+      case "pt-BR":
+        return `Nada é enviado antes do seu clique. Vai com a sua conta do GitHub ${login}.`;
+      case "zh-Hans":
+        return `点击之前不会发送任何内容。它以你的 GitHub 账户 ${login} 发布。`;
+      case "zh-Hant":
+        return `按下之前不會傳送任何內容。它會以你的 GitHub 帳號 ${login} 發布。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ îš šéñţ ƀéƒöŕé ýöûŕ çļîçķ. Îţ ĝöéš ûñðéŕ ýöûŕ ĜîţĤûƀ áççöûñţ ${login}. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing is sent before your click. It goes under your GitHub account ‬${login}‮.‬`;
+    }
+    return `Nothing is sent before your click. It goes under your GitHub account ${login}.`;
+  }
+  function feedbackStripBug() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بلاغ جديد عن مشكلة`;
+      case "de":
+        return `Eine neue Problemmeldung`;
+      case "es":
+        return `Un nuevo informe de problema`;
+      case "fr":
+        return `Un nouveau signalement de problème`;
+      case "ja":
+        return `新しい問題の報告`;
+      case "ko":
+        return `새 문제 신고`;
+      case "pt-BR":
+        return `Um novo relato de problema`;
+      case "zh-Hans":
+        return `一份新的问题报告`;
+      case "zh-Hant":
+        return `一份新的問題回報`;
+      case "en-XA":
+        return `[Å ñéŵ þŕöƀļéɱ ŕéþöŕţ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮A new problem report‬`;
+    }
+    return `A new problem report`;
+  }
+  function feedbackStripComment(input2) {
+    const number2 = input2.number;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعليق على البلاغ #${number2}`;
+      case "de":
+        return `Ein Kommentar zum Issue #${number2}`;
+      case "es":
+        return `Un comentario en la incidencia #${number2}`;
+      case "fr":
+        return `Un commentaire sur le ticket n° ${number2}`;
+      case "ja":
+        return `Issue #${number2} へのコメント`;
+      case "ko":
+        return `이슈 #${number2}에 다는 댓글`;
+      case "pt-BR":
+        return `Um comentário na issue #${number2}`;
+      case "zh-Hans":
+        return `对议题 #${number2} 的评论`;
+      case "zh-Hant":
+        return `對議題 #${number2} 的留言`;
+      case "en-XA":
+        return `[Å çöɱɱéñţ öñ îššûé #${number2} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮A comment on issue #‬${number2}`;
+    }
+    return `A comment on issue #${number2}`;
+  }
+  function feedbackStripHeading(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نقرتك تنشر هذا على ${place} علنًا، مرة واحدة`;
+      case "de":
+        return `Dein Klick veröffentlicht dies auf ${place}, öffentlich, einmal`;
+      case "es":
+        return `Tu clic lo publica en ${place}, públicamente, una vez`;
+      case "fr":
+        return `Votre clic publie ceci sur ${place}, publiquement, une fois`;
+      case "ja":
+        return `クリックすると ${place} に一度だけ公開されます`;
+      case "ko":
+        return `클릭하면 ${place}에 공개적으로 한 번 게시됩니다`;
+      case "pt-BR":
+        return `Seu clique publica isto em ${place}, publicamente, uma vez`;
+      case "zh-Hans":
+        return `你点击后，这会公开发布到 ${place}，仅一次`;
+      case "zh-Hant":
+        return `你按下後，這會公開發布到 ${place}，僅一次`;
+      case "en-XA":
+        return `[Ýöûŕ çļîçķ þûƀļîšĥéš ţĥîš öñ ${place}, þûƀļîçļý, öñçé ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your click publishes this on ‬${place}‮, publicly, once‬`;
+    }
+    return `Your click publishes this on ${place}, publicly, once`;
+  }
+  function feedbackStripIdea() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فكرة جديدة`;
+      case "de":
+        return `Eine neue Idee`;
+      case "es":
+        return `Una nueva idea`;
+      case "fr":
+        return `Une nouvelle idée`;
+      case "ja":
+        return `新しいアイデア`;
+      case "ko":
+        return `새 아이디어`;
+      case "pt-BR":
+        return `Uma nova ideia`;
+      case "zh-Hans":
+        return `一个新想法`;
+      case "zh-Hant":
+        return `一個新想法`;
+      case "en-XA":
+        return `[Å ñéŵ îðéá ~~~~]`;
+      case "ar-XB":
+        return `‮A new idea‬`;
+    }
+    return `A new idea`;
+  }
+  function feedbackStripNoAccount() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub.`;
+      case "de":
+        return `Vor deinem Klick wird nichts gesendet. Es erscheint unter deinem GitHub-Konto.`;
+      case "es":
+        return `No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub.`;
+      case "fr":
+        return `Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub.`;
+      case "ja":
+        return `クリックするまで何も送信されません。あなたの GitHub アカウントで投稿されます。`;
+      case "ko":
+        return `클릭하기 전에는 아무것도 보내지 않습니다. 내 GitHub 계정으로 게시됩니다.`;
+      case "pt-BR":
+        return `Nada é enviado antes do seu clique. Vai com a sua conta do GitHub.`;
+      case "zh-Hans":
+        return `点击之前不会发送任何内容。它以你的 GitHub 账户发布。`;
+      case "zh-Hant":
+        return `按下之前不會傳送任何內容。它會以你的 GitHub 帳號發布。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ îš šéñţ ƀéƒöŕé ýöûŕ çļîçķ. Îţ ĝöéš ûñðéŕ ýöûŕ ĜîţĤûƀ áççöûñţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing is sent before your click. It goes under your GitHub account.‬`;
+    }
+    return `Nothing is sent before your click. It goes under your GitHub account.`;
+  }
   function fileAdd() {
     switch (currentLanguage()) {
       case "ar":
@@ -35552,6 +35799,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Reset All Keys…‬`;
     }
     return `Reset All Keys…`;
+  }
+  function menuSendFeedback() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إرسال ملاحظات…`;
+      case "de":
+        return `Feedback senden …`;
+      case "es":
+        return `Enviar comentarios…`;
+      case "fr":
+        return `Envoyer un avis…`;
+      case "ja":
+        return `フィードバックを送信…`;
+      case "ko":
+        return `피드백 보내기…`;
+      case "pt-BR":
+        return `Enviar feedback…`;
+      case "zh-Hans":
+        return `发送反馈…`;
+      case "zh-Hant":
+        return `傳送意見回饋…`;
+      case "en-XA":
+        return `[Šéñð Ƒééðƀáçķ… ~~~~~]`;
+      case "ar-XB":
+        return `‮Send Feedback…‬`;
+    }
+    return `Send Feedback…`;
   }
   function menuSettings() {
     switch (currentLanguage()) {
@@ -97034,6 +97308,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandComputersPrevious,
     commandDevicesTryAgain,
     commandDevicesTryAgainWords,
+    commandFeedbackStart,
+    commandFeedbackStartWords,
     commandFirstmateReply,
     commandFirstmateReplyWords,
     commandFocusCardActions,
@@ -97145,6 +97421,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandWhatsNewShowWords,
     composerFolderNotProject,
     composerFolderProject,
+    composerHintFeedback,
     composerLines,
     composerTooLongShorten,
     composerWordsOnly,
@@ -97431,6 +97708,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedUndelivered,
     feedUpdated,
     feedYouChose,
+    feedbackStripAccount,
+    feedbackStripBug,
+    feedbackStripComment,
+    feedbackStripHeading,
+    feedbackStripIdea,
+    feedbackStripNoAccount,
     fileAdd,
     fileCancel,
     fileDropHere,
@@ -97495,6 +97778,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     menuHelp,
     menuKeyboardSettings,
     menuResetAllKeys,
+    menuSendFeedback,
     menuSettings,
     menuWhatsNew,
     mergeButtonAfterFixing,
@@ -100151,6 +100435,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandComputersPrevious": [],
     "commandDevicesTryAgain": [],
     "commandDevicesTryAgainWords": [],
+    "commandFeedbackStart": [],
+    "commandFeedbackStartWords": [],
     "commandFirstmateReply": [],
     "commandFirstmateReplyWords": [],
     "commandFocusCardActions": [],
@@ -100262,6 +100548,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandWhatsNewShowWords": [],
     "composerFolderNotProject": [],
     "composerFolderProject": [],
+    "composerHintFeedback": ["command"],
     "composerLines": ["count"],
     "composerTooLongShorten": [],
     "composerWordsOnly": [],
@@ -100548,6 +100835,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedUndelivered": ["why"],
     "feedUpdated": ["text"],
     "feedYouChose": ["choice"],
+    "feedbackStripAccount": ["login"],
+    "feedbackStripBug": [],
+    "feedbackStripComment": ["number"],
+    "feedbackStripHeading": ["place"],
+    "feedbackStripIdea": [],
+    "feedbackStripNoAccount": [],
     "fileAdd": [],
     "fileCancel": ["name"],
     "fileDropHere": [],
@@ -100612,6 +100905,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "menuHelp": [],
     "menuKeyboardSettings": [],
     "menuResetAllKeys": [],
+    "menuSendFeedback": [],
     "menuSettings": [],
     "menuWhatsNew": [],
     "mergeButtonAfterFixing": [],
@@ -103630,6 +103924,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: [],
       get searchWords() {
         return searchWords(commandWhatsNewShowWords());
+      }
+    },
+    // /feedback in the main message box (docs/feedback.md): chosen by name,
+    // and from the Help menu's Send Feedback; a person may give it a key.
+    "feedback.start": {
+      get label() {
+        return commandFeedbackStart();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandFeedbackStartWords());
       }
     },
     // The first mate's newest reply, whole, as a note at the front

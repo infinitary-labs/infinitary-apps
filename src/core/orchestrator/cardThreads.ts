@@ -154,8 +154,8 @@ export class CardThreads {
 
   /**
    * Whether the Firstmate is the one that answers a card's thread: its own
-   * card, a card the host named it the answerer of (the stuck alert,
-   * `Card.answeredBy`), or a note a task closed done kept, whose crewmate
+   * card, a card the host named it the answerer of (the stuck alert and
+   * the app's own offers, `Card.answeredBy`), or a note a task closed done kept, whose crewmate
    * is gone.
    */
   firstmateAnswers(card: Card): boolean {
@@ -322,7 +322,7 @@ export class CardThreads {
    * captain wrote under rather than another of its cards (INF-990 friction 4).
    */
   threadsAwaitingAuthor(taskId: string): { id: string; title: string }[] {
-    // A reply the first mate answers on the host's behalf (the stuck alert)
+    // A reply the first mate answers on the host's behalf (`Card.answeredBy`)
     // is never a thread the task's crewmate owes (INF-1670).
     return [...this.stack.cards.values()]
       .filter(

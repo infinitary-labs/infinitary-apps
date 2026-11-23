@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "app-offer-replies",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "You can reply to the app's own offers, and your first mate answers",
+      "body": "Cards the app puts up itself, such as an offer to add something to the app, set up a project, screen automation events or keep going on credits, now have the reply field. Ask a question or push back there and your first mate answers in the card's thread. Words you leave in the field when you press one of the card's buttons reach your first mate too.",
+      "picture": {
+        "dark": "app-offer-replies-dark.webp",
+        "light": "app-offer-replies-light.webp",
+        "alt": "The Skip events your automation does not need? card with its thread open beside it, showing a question you sent and your first mate's answer above the reply field and the Not now and Turn on buttons."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

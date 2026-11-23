@@ -11,22 +11,26 @@ Settings → Appearance has a Sound group: an Ambient music switch, off on a fre
 Both are part of the window's look (`ambientMusic` and `ambientVolume` in `src/shared/preferences.ts`), which the core keeps in a row of their own, `ambient-music`, so an older build never meets them (`src/core/storage/settingsStore.ts`).
 The style is `ambientStyle`, kept in its own row, `ambient-style`, for the same reason; a style this build does not know, saved by a newer one, is kept and plays as Cold sleep.
 A Mac controlling another keeps its own, as it keeps the rest of its look (`docs/view.md`), and a view from before the change is never sent them (`src/shared/contract-changes/ambient-music.md`, `ambient-style.md`).
-While enabled, a 32 px sound button appears 6 px before Settings on the main screen.
-Press it to pause or resume; the pause survives a restart, and turning the switch off removes the button and clears the pause.
-Rest the pointer on it or Tab to it for its rest pill: the playing style's name, then the shared volume slider; the left and right arrows change the volume by 5 percentage points from the button and the slider.
+A 32 px sound button sits 6 px before Settings on the main screen, on or off; the Settings screen does not show it.
+The button, its key and the switch are one on/off: pressing the button turns the switch on or off, and the switch shows what the button did.
+Off, its mark is four still dots in the muted foreground; on, it is the moving bars below ("How it plays").
+Rest the pointer on it or Tab to it, on or off, for its rest pill: the playing style's name, then the shared volume slider; the left and right arrows change the volume by 5 percentage points from the button and the slider.
 The name is the captain's choice for INF-5610 ("Name in the pill").
 Rest on it for half a second, press it, or press ↓ on it, and the style list drops under the pill: the same names and groups as Settings' Style picker, your own styles under Yours, both read from one list (`src/renderer/src/ambient/styleList.ts`).
-A pick plays at once, as a pick in Settings does, and a pick while paused also resumes; the list stays open, so another style is one more pick.
+A pick plays at once, as a pick in Settings does, and a pick while off turns the music on; the list stays open, so another style is one more pick; a volume change never turns it on.
 The list's foot shows the line of the style under the pointer or focus, the chosen one's otherwise, and its last row is Describe your own, which starts the ask in the message box as Settings' button does; Remove stays in Settings, so no pick in the list deletes a style.
 By keys, Tab goes from the button to the name, the slider and Settings, and the open list is one Tab stop on the chosen style; ↑, ↓, Home and End move in it, Enter and Space play, and Esc closes the list, then the pill, giving focus back to where each opened.
 The list's height stops 8 px short of the window's foot and scrolls inside.
 The top bar drags the window, and on a Mac a pointer over a drag point leaves the page, so the open pill, the gap before it and the list are marked `-webkit-app-region: no-drag` at the button's full height; once the pill closes, that strip drags the window again (`tests/e2e/dragRegions.ts` reads the regions by Electron's rule).
 Choose ambient music (`ambient.style`), with no default key, opens the pill and the list on the chosen style from command search, turning the music on first if it was off.
-Play or pause ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, Ctrl+Alt+P on Linux and Windows, which the button's label shows; command search lists it too.
-It turns the switch on if it was off, and otherwise pauses or resumes without turning the switch off.
-The separate `ambient-paused` row leaves the enable and volume row readable by older builds.
+Play or stop ambient music (`ambient.toggle`, `docs/keyboard.md`) is ⌥⌘P, Ctrl+Alt+P on Linux and Windows, which the button's label shows; command search lists it too.
+It turns the switch on or off, as the button does.
+The button once paused the music without turning the switch off, and kept the pause in an `ambient-paused` row and `ambientPaused` in the look; the captain's choice on INF-6406 made the button the switch's.
+A look still saved paused reads as off, without the pause, wherever a look is read (`foldAmbientPause`, `src/shared/preferences.ts`): the core's saved look and a Mac's own look while it controls another, so music paused before the update stays silent.
+Reading rewrites nothing; the next save of the look writes it off and removes the row, and an older view that sends a pause has it saved as off.
+`ambientPaused` stays in the look's shape so an older build's look still parses, and the panels' `ambient-music` value keeps its `paused` key, now always false.
 On a Mac or a Windows PC the group's last row is a Pause when you're away switch, on until turned off ("When nobody is at the computer" below).
-The first mate switches it, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/ambientActions.ts`), and turns Pause when you're away on or off through `ambient-away` (`src/shared/appearanceActions.ts`), with no tool of its own.
+The first mate turns it on or off, sets its volume or picks its style when asked, through its `ambient-music` setting (`src/shared/ambientActions.ts`), and turns Pause when you're away on or off through `ambient-away` (`src/shared/appearanceActions.ts`), with no tool of its own.
 
 ## The styles
 
@@ -61,11 +65,11 @@ Its piano is three voices per note: a bright strike that fades first, and a pair
 A style may tilt its whole mix darker or brighter above 1.4 kHz (`tilt`); Cold sleep is 6 dB darker, the tone the captain set.
 The window plays it at 24 kHz, half the usual rate, which halves what it costs; the mix is cut at 11 kHz, so nothing it plays is lost.
 A bar whose start already passed, after a stalled window or slowed timers, is skipped, leaving a short gap rather than starting its notes all at once.
-`src/renderer/src/ambient/ambient.ts` follows the switch, the style and the volume and runs the player in the window, marking where it stands on the document as `data-ambient-music`: `off`, `paused`, `away`, `playing` or `hushed`, and `playing` or `hushed` only once its audio context runs; while its player runs, `data-ambient-style` names the style.
+`src/renderer/src/ambient/ambient.ts` follows the switch, the style and the volume and runs the player in the window, marking where it stands on the document as `data-ambient-music`: `off`, `away`, `playing` or `hushed`, and `playing` or `hushed` only once its audio context runs; while its player runs, `data-ambient-style` names the style.
 
 The mark reads four frequency bands from the music before the volume gain and measures each against its own quietest and loudest level of about the last 3.3 seconds, so every bar uses its full height.
 It is the captain's Calm look from INF-5053: on the 24-unit icon a bar rests at 4 units and peaks at 16, rising slowly and falling more slowly, at the same height at any volume above zero, and still at zero.
-It samples up to 30 times a second only while visible, holds still under reduced motion, dims while hushed and becomes four dots while paused.
+It samples up to 30 times a second only while visible, holds still under reduced motion, dims while hushed and becomes four still dots while off.
 
 The crew level is the number of crewmates working on every computer, read from the crew ring (`workingCrew` in `character/crew/crewSignal.ts`):
 
@@ -135,7 +139,7 @@ Nobody is there while the screen is off or locked, the screen saver runs, or ano
 | Windows | the lock and unlock, and the display's own state, which Windows tells only a window that asked: `RegisterPowerSettingNotification` with `GUID_SESSION_DISPLAY_STATUS` through koffi, read in `WM_POWERBROADCAST` (`src/main/windowsDisplay.ts`); a dimmed display still counts as on, and the screen saver has no event of its own |
 | Linux | nothing: Electron hears no lock or screen there, so `watched` is false, the music never stops for this and Settings does not offer the switch |
 
-While nobody is there it ends its player as the pause button does, closing its audio context, and starts a new one on the way back, from a new seed.
+While nobody is there it ends its player as turning it off does, closing its audio context, and starts a new one on the way back, from a new seed.
 A hush would not do: a silent player still keeps the computer from sleeping on its own, and a closed audio context lets it go, so a computer set to sleep when idle sleeps by its own setting once nobody is there.
-This pause is never saved: the `ambient-paused` row stays the pause button's alone.
+This pause is never saved.
 Keep playing is `ambientPlaysWhenAway` in the look, in a row of its own, `ambient-away-plays`, kept only while on, and a view from before the change is never sent it (`src/shared/contract-changes/ambient-away.md`).

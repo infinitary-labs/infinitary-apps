@@ -1,5 +1,5 @@
 ---
-source: ae7178f2ee99eec5
+source: 454b7a23fdc82430
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -88,10 +88,10 @@ Algumas partes do Infinitary ainda aparecem em inglês.
 Ela acompanha a tripulação e soa um sininho quando algo espera por você.
 Ela fica desligada até você ligá-la, e **Volume** define o quanto ela toca alto.
 
-Enquanto ela está ligada, um botão de som fica logo antes de **Ajustes**, no topo da janela.
-Pressione-o para pausar ou retomar.
+Um botão de som fica logo antes de **Ajustes**, no topo da janela, com a música ligada ou desligada.
+Pressione-o para ligar ou desligar a música; a chave **Música ambiente** muda junto.
 Deixe o ponteiro sobre ele e ele mostra o nome da música que está tocando; deixe-o sobre o nome, ou pressione o nome, para escolher outro estilo na lista que aparece abaixo.
-A busca de comandos também tem **Tocar ou pausar a música ambiente** e **Escolher a música ambiente**.
+A busca de comandos também tem **Tocar ou parar a música ambiente** e **Escolher a música ambiente**.
 
 ## Manuais {#runbooks}
 

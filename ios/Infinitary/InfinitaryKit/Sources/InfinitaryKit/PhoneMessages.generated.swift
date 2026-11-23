@@ -4031,9 +4031,9 @@ public enum PhoneMessages {
     public static func `settleMergingChange`(`change`: String) -> String { PhoneWords.format("settleMergingChange", [`change`]) }
     public static func `settleMergingChangeAfterTurn`(`change`: String) -> String { PhoneWords.format("settleMergingChangeAfterTurn", [`change`]) }
     public static func `settleProjectAddressChanged`() -> String { PhoneWords.format("settleProjectAddressChanged", []) }
-    public static func `shellAmbientPause`() -> String { PhoneWords.format("shellAmbientPause", []) }
     public static func `shellAmbientPlay`() -> String { PhoneWords.format("shellAmbientPlay", []) }
     public static func `shellAmbientQuiet`() -> String { PhoneWords.format("shellAmbientQuiet", []) }
+    public static func `shellAmbientStop`() -> String { PhoneWords.format("shellAmbientStop", []) }
     public static func `shellAmbientStyleNamed`(`name`: String) -> String { PhoneWords.format("shellAmbientStyleNamed", [`name`]) }
     public static func `shellCardFoldPanels`() -> String { PhoneWords.format("shellCardFoldPanels", []) }
     public static func `shellCardMateAnswering`() -> String { PhoneWords.format("shellCardMateAnswering", []) }
@@ -8424,9 +8424,9 @@ extension PhoneWords {
         "settleMergingChange": ["change"],
         "settleMergingChangeAfterTurn": ["change"],
         "settleProjectAddressChanged": [],
-        "shellAmbientPause": [],
         "shellAmbientPlay": [],
         "shellAmbientQuiet": [],
+        "shellAmbientStop": [],
         "shellAmbientStyleNamed": ["name"],
         "shellCardFoldPanels": [],
         "shellCardMateAnswering": [],

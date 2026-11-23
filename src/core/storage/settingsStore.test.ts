@@ -16,23 +16,32 @@ describe("SettingsStore preferences", () => {
     return new SettingsStore(openInMemoryDatabase());
   }
 
-  it("keeps a playback pause without changing the older ambient-music row", () => {
+  // INF-6406: the sound button's on/off is the switch's, so music an older
+  // build saved paused reads as off and never starts playing after the update.
+  it("reads music an older build saved paused as off, and the next save drops the pause", () => {
     const db = openInMemoryDatabase();
     const settings = new SettingsStore(db);
     settings.setAppearance({ theme: "dark", ambientMusic: true, ambientVolume: 65 });
-    const readRow = () =>
-      db.prepare("SELECT value FROM settings WHERE key = ?").get("ambient-music");
-    const before = readRow();
-    settings.setAppearance({ theme: "dark", ambientPaused: true });
-    expect(readRow()).toEqual(before);
-    expect(new SettingsStore(db).getAppearance()).toMatchObject({
-      ambientMusic: true,
-      ambientPaused: true,
-      ambientVolume: 65,
-    });
-    settings.setAppearance({ theme: "dark", ambientMusic: false });
-    settings.setAppearance({ theme: "dark", ambientMusic: true });
-    expect(new SettingsStore(db).getAppearance().ambientPaused).toBeUndefined();
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run("ambient-paused", "true");
+    const readRow = (key: string) =>
+      (
+        db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+          | { value: string }
+          | undefined
+      )?.value;
+    const read = new SettingsStore(db).getAppearance();
+    expect(read).toMatchObject({ ambientMusic: false, ambientVolume: 65 });
+    expect(read).not.toHaveProperty("ambientPaused");
+    expect(readRow("ambient-paused")).toBe("true");
+
+    settings.setAppearance({ theme: "light" });
+    expect(readRow("ambient-paused")).toBeUndefined();
+    expect(JSON.parse(readRow("ambient-music") ?? "null")).toEqual({ on: false, volume: 65 });
+
+    // An older view's pause button still sends one; it is saved as off.
+    settings.setAppearance({ theme: "light", ambientMusic: true, ambientPaused: true });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({ ambientMusic: false });
+    expect(readRow("ambient-paused")).toBeUndefined();
   });
 
   // The ambient styles (INF-5056's kept choices): the chosen style lives in

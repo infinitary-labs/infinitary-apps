@@ -1,7 +1,7 @@
 {
-  "shellAmbientPause": "Mettre en pause la musique d’ambiance",
   "shellAmbientPlay": "Lire la musique d’ambiance",
   "shellAmbientQuiet": "En silence pendant que vous parlez",
+  "shellAmbientStop": "Arrêter la musique d’ambiance",
   "shellAmbientStyleNamed": "Style : {name}",
   "shellCardFoldPanels": "Replier les panneaux",
   "shellCardMateAnswering": "Votre second répond sur cette carte",

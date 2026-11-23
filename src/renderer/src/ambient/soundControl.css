@@ -8,11 +8,11 @@
   transform-origin: center;
 }
 
-[data-ambient-control][data-paused] .ambient-mark {
+[data-ambient-control][data-off] .ambient-mark {
   color: var(--fg-3);
 }
 
-[data-ambient-control][data-paused] .ambient-mark line {
+[data-ambient-control][data-off] .ambient-mark line {
   transform: scaleY(0.01);
   transition: transform var(--dur-med) var(--ease-drift);
 }
@@ -265,7 +265,7 @@
   visibility: visible;
 }
 
-[data-ambient-control][data-paused] .ambient-style-on {
+[data-ambient-control][data-off] .ambient-style-on {
   color: var(--fg-3);
 }
 

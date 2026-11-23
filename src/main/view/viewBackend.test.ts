@@ -836,7 +836,6 @@ it("answers a panel's settings read from this Mac's own look, asking the other M
     ...homeLook.appearance,
     theme: "light" as const,
     ambientMusic: true,
-    ambientPaused: true,
     ambientStyle: "quiet-cove" as const,
     ambientVolume: 25,
   };
@@ -847,7 +846,7 @@ it("answers a panel's settings read from this Mac's own look, asking the other M
     await view.dispatch("inf:settings:current", [["theme", "ambient-music", "notifications"]]),
   ).toEqual({
     theme: { theme: "light" },
-    "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+    "ambient-music": { on: true, paused: false, style: "quiet-cove", volume: 25 },
     notifications: { enabled: true },
   });
   expect(asked).toEqual([["inf:settings:current", [["notifications"]]]]);

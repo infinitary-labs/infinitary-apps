@@ -766,6 +766,9 @@ export class Reviews {
     const asks = (typed.findings ?? [])
       .filter((finding) => finding.action === "ask-user")
       .map(renderFinding);
+    // The card opens by reminding the captain what the builder set out to do,
+    // and the brief carries its goal only when no words of the user's stand.
+    const goal = builder.goal?.trim();
     if (asks.length > 0)
       await this.deliverTo(builder, task.id, {
         facts: {
@@ -773,7 +776,8 @@ export class Reviews {
           from: builder.key || builder.id,
           head: sha,
           stage: "card",
-          excerpt: `Your review of "${builder.title}" holds ${asks.length === 1 ? "a finding" : `${asks.length} findings`} for the captain.`,
+          // i18n-exempt: served to the reviewer crewmate in its card handoff, stays English
+          excerpt: `Your review of "${builder.title}" holds ${asks.length === 1 ? "a finding" : `${asks.length} findings`} for the captain.${goal ? ` The builder's goal: ${JSON.stringify(goal)}` : ""}`,
           findings: asks,
           history,
         },

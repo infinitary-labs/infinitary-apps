@@ -32,8 +32,12 @@ export type SaveThere = {
    * aborts, or when the computer could not be asked or did not come back.
    */
   save(signal: AbortSignal): Promise<{ stopped: string[] }>;
-  /** Lets the save there go, naming the tasks whose turn it stopped; undefined when it could not be asked. */
-  release(): Promise<{ stopped: string[] } | undefined>;
+  /**
+   * Lets the save there go, naming the tasks whose turn it stopped and those
+   * whose stop it withdrew, whose turn goes on there; undefined when it
+   * could not be asked.
+   */
+  release(): Promise<{ stopped: string[]; withdrawn: string[] } | undefined>;
 };
 
 /** A computer that runs work while its home updates it (`pauseForUpdate`). */
@@ -51,7 +55,10 @@ type RemoteUpdate = {
 
 /** This computer's own update while it saves the crew's work (`saveForUpdate`). */
 type LocalUpdate = {
+  /** Each task's latest turn the update stops. */
   turns: Map<string, UpdateTurn>;
+  /** How many turns it stopped, a later turn of the same task's included. */
+  asked: number;
   /** Tells the update which tasks' running work it waits for now. */
   report: () => void;
   /** Every turn here has stopped: the copy may be replaced. */
@@ -145,10 +152,30 @@ export class CrewUpdates {
    * A computer that saves its own work (`there`) came back in reach: unless
    * this Mac is updating it now, a save there for an update this Mac no
    * longer follows is let go, so the carry-on turn it would refuse runs
-   * (docs/devices.md, "Saving work before an update").
+   * (docs/devices.md, "Saving work before an update"). A turn whose stop
+   * the let-go withdrew goes on there, so its pause and its lane rows go,
+   * as `letGoThere` takes them.
    */
   async letGoReturned(deviceId: string, there: SaveThere | undefined): Promise<void> {
-    if (!this.isUpdating(deviceId)) await there?.release();
+    if (this.isUpdating(deviceId)) return;
+    const answer = await there?.release();
+    for (const taskId of answer?.withdrawn ?? []) {
+      if (answer?.stopped.includes(taskId) || this.host.machineOf(taskId) !== deviceId) continue;
+      const rows = this.options.inbox
+        .allFor(taskId)
+        .filter(
+          ({ facts }) =>
+            facts?.kind === "turn-resumed" &&
+            facts.stopped === "update" &&
+            facts.computer !== undefined,
+        )
+        .map((row) => row.id);
+      const task = [...this.host.runtimes()].find((runtime) => runtime.id === taskId);
+      const row = task?.turn.pause?.row;
+      if (row !== undefined && rows.includes(row)) task?.turn.takePause();
+      this.options.inbox.withdraw(rows);
+      this.host.restarts.forget(taskId);
+    }
   }
 
   /** This computer's own update is saving its crew's work, or saved it and has not replaced the copy. */
@@ -329,14 +356,19 @@ export class CrewUpdates {
    * that carries it on, and its end is a pause (`turnComplete`) - one that
    * kept what it read, unless the computer quit first or stopped it before
    * its model took it. No interrupt is recorded, so a kept merge approval stands.
+   * A later turn of a task whose earlier one the update already stopped is
+   * held too, carried on by that one's row.
    */
   private holdTurn(task: TaskRuntime, update: RemoteUpdate): void {
-    if (update.turns.has(task.id) || task.turn.pause || task.turn.closing || !task.session) return;
-    const row = this.options.inbox.enqueue(task.id, {
-      facts: { kind: "turn-resumed", stopped: "update", computer: update.computer },
-    });
+    if (task.turn.pause || task.turn.closing || !task.session) return;
+    const kept = this.undelivered(update.turns.get(task.id)?.row);
+    const row =
+      kept ??
+      this.options.inbox.enqueue(task.id, {
+        facts: { kind: "turn-resumed", stopped: "update", computer: update.computer },
+      });
     task.turn.hold({ computer: update.computer, row });
-    this.notePaused(task, update.computer);
+    if (kept === undefined) this.notePaused(task, update.computer);
     update.turns.set(task.id, { task, row });
     void this.host.untilTurnOver(task).then(() => update.report());
   }
@@ -411,6 +443,11 @@ export class CrewUpdates {
     }
   }
 
+  /** The lane row, while no turn was handed it yet. */
+  private undelivered(row: number | undefined): number | undefined {
+    return row !== undefined && this.options.inbox.get(row)?.deliveredAt === null ? row : undefined;
+  }
+
   /** A task paused for its computer's update: its restart record waits, and its timeline says why. */
   private notePaused(task: TaskRuntime, computer: string): void {
     this.host.restarts.observe(task.id);
@@ -447,7 +484,13 @@ export class CrewUpdates {
       options.waiting?.(
         [...turns.values()].filter((turn) => turn.running > 0).map((turn) => turn.task.title),
       );
-    const update: LocalUpdate = { turns, report, saved: false, saving: Promise.resolve("saved") };
+    const update: LocalUpdate = {
+      turns,
+      asked: 0,
+      report,
+      saved: false,
+      saving: Promise.resolve("saved"),
+    };
     this.localUpdate = update;
     for (const task of [...this.host.runtimes()])
       if (task.turn.running && this.heldForUpdate(task.id)) this.stopForUpdate(task, update);
@@ -464,8 +507,8 @@ export class CrewUpdates {
     if (signal?.aborted) letGo();
     else signal?.addEventListener("abort", letGo, { once: true });
     try {
-      for (let asked = -1; asked !== update.turns.size; ) {
-        asked = update.turns.size;
+      for (let asked = -1; asked !== update.asked; ) {
+        asked = update.asked;
         const ended = Promise.all([...update.turns.values()].map((turn) => turn.ended));
         const outcome = await Promise.race([ended.then(() => "saved" as const), withdrawn]);
         if (this.localUpdate !== update) return "withdrawn";
@@ -485,18 +528,27 @@ export class CrewUpdates {
   /**
    * One crewmate's turn here stops for this computer's update: a lane row
    * says why for the turn that carries it on, and its end is a pause
-   * (`turnComplete`). A session that cannot hold its calls is cut.
+   * (`turnComplete`). A session that cannot hold its calls is cut. A later
+   * turn of a task whose earlier one the update already stopped stops too,
+   * carried on by that one's row.
    */
   private stopForUpdate(task: TaskRuntime, update: LocalUpdate): void {
     const session = task.session;
-    if (update.turns.has(task.id) || task.turn.closing || !session) return;
-    const row = this.options.inbox.enqueue(task.id, {
-      facts: { kind: "turn-resumed", stopped: "update" },
-    });
+    const earlier = update.turns.get(task.id)?.row;
+    if (
+      (earlier !== undefined && task.turn.pause?.row === earlier) ||
+      task.turn.closing ||
+      !session
+    )
+      return;
+    const kept = this.undelivered(earlier);
+    const row =
+      kept ??
+      this.options.inbox.enqueue(task.id, { facts: { kind: "turn-resumed", stopped: "update" } });
     task.turn.hold({ row });
     this.host.restarts.observe(task.id);
     this.host.restarts.recordRestartOutcome(task.id, "waiting", "Infinitary is being updated");
-    this.options.tasks.note(task.id, UPDATE_PAUSE_NOTE, { news: true });
+    if (kept === undefined) this.options.tasks.note(task.id, UPDATE_PAUSE_NOTE, { news: true });
     const withdraw = new AbortController();
     const turn: UpdateTurn = { task, row, withdraw, running: 0, ended: Promise.resolve() };
     const stopped = session.stopSafely
@@ -517,14 +569,16 @@ export class CrewUpdates {
       .then((outcome) => {
         turn.running = 0;
         if (outcome === "stopped") return this.host.untilTurnOver(task);
-        // Let go before it was cut: the turn goes on as if never asked.
-        if (task.turn.pause?.row === row) {
+        // Let go before it was cut: the turn goes on as if never asked. A
+        // row an earlier stopped turn carries on with stays, with its pause.
+        if (kept === undefined && task.turn.pause?.row === row) {
           task.turn.takePause();
           this.options.inbox.withdraw([row]);
           this.host.restarts.forget(task.id);
         }
       });
     update.turns.set(task.id, turn);
+    update.asked += 1;
     update.report();
   }
 

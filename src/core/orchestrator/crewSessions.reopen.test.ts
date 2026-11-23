@@ -36,7 +36,7 @@ import { TaskService } from "../tasks/taskService";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import type { AccountAttachment } from "./crewSupervisorOptions";
-import { updatePauseLine } from "./crewUpdates";
+import { type SaveThere, updatePauseLine } from "./crewUpdates";
 import { RESTART_REPLAY_NOTE, renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -773,6 +773,90 @@ describe("CrewSupervisor", () => {
         await tick();
         expect(crewmate.promptCalls).toHaveLength(2);
         expect(crewmate.promptCalls[1]).toContain("One more paragraph");
+        await h.supervisor.disposeAll();
+      });
+
+      // INF-2279 review: a turn a crewmate carries on by itself after the
+      // update stopped its earlier one stops too, and the save waits for it.
+      it("stops a turn a crewmate carries on by itself after its earlier turn stopped, and waits for it before the copy is replaced", async () => {
+        const notes = safelyStoppingCrewmate();
+        const keys = safelyStoppingCrewmate();
+        const h = setup(notes, { crewmates: [keys] });
+        await h.supervisor.intake.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        const second = await h.supervisor.intake.commission({
+          title: "Key list",
+          intent: intentOf("list the keys"),
+        });
+        await tick();
+        let saved = false;
+        const saving = h.supervisor.updates.saveForUpdate();
+        void saving.then(() => {
+          saved = true;
+        });
+        // The key list's call finishes and its turn stops; its client then goes on by itself.
+        keys.stops[0]?.finish();
+        await tick();
+        keys.emit({ type: "continuation_started" });
+        await tick();
+        // The release notes' turn stops too, and the save still waits for the later turn.
+        notes.stops[0]?.finish();
+        await tick();
+        expect(saved).toBe(false);
+        keys.emit({ type: "continuation_ended" });
+        expect(await saving).toBe("saved");
+        // One row carries the key list on after the restart, for both its turns.
+        expect(updateRows(h, second.taskId)).toEqual([{ kind: "turn-resumed", stopped: "update" }]);
+        // Both resume after the restart, in no order of their own.
+        expect(h.supervisor.updates.resumingAfterUpdate().sort()).toEqual([
+          "Key list",
+          "Release notes",
+        ]);
+        await h.supervisor.disposeAll();
+      });
+
+      // The same review: a computer that runs work stops such a turn there,
+      // and this Mac holds it as the update's, carried on by the same row.
+      it("holds a turn a crewmate carries on by itself on a computer whose update stopped its earlier turn", async () => {
+        const crewmate = fakeCrewmate();
+        const h = setup(crewmate);
+        const { taskId } = await h.supervisor.intake.commission({
+          title: "Release notes",
+          intent: intentOf("write the notes"),
+        });
+        await tick();
+        h.tasks.placement.setDevice(taskId, "mac-mini");
+        let save = () => {};
+        const there: SaveThere = {
+          save: () =>
+            new Promise((resolve) => {
+              save = () => resolve({ stopped: [taskId] });
+            }),
+          release: async () => ({ stopped: [taskId], withdrawn: [] }),
+        };
+        const wakes = h.ops.length;
+        const saving = h.supervisor.updates.pauseForUpdate("mac-mini", { there });
+        // The computer stops the turn there, then the one its client carries on by itself.
+        crewmate.failPrompt("The turn was stopped for the update.");
+        await tick();
+        crewmate.emit({ type: "continuation_started" });
+        await tick();
+        crewmate.emit({
+          type: "continuation_ended",
+          error: "The turn was stopped for the update.",
+        });
+        await tick();
+        save();
+        expect(await saving).toBe("saved");
+        // Both ends were the update's pause: nothing failed, nobody was woken, one row carries it on.
+        expect(h.tasks.timeline(taskId).some((event) => event.kind === "failed")).toBe(false);
+        expect(h.ops).toHaveLength(wakes);
+        expect(updateRows(h, taskId)).toEqual([
+          { kind: "turn-resumed", stopped: "update", computer: "mac-mini" },
+        ]);
         await h.supervisor.disposeAll();
       });
 

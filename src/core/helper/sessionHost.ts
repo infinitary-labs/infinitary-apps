@@ -268,16 +268,24 @@ type UpdateSave = {
   readonly withdraw: AbortController;
   /** Each task whose turn the save stopped. */
   readonly stopped: Set<string>;
-  /** Each stop under way, settled once its turn ended here or it was withdrawn. */
+  /** Each task whose stop the let-go withdrew before it cut the turn. */
+  readonly withdrawn: Set<string>;
+  /** Each task's latest stop, settled once its turn ended here or it was withdrawn. */
   readonly stops: Map<string, Promise<void>>;
+  /** Each task whose stop is under way now. */
+  readonly stopping: Set<string>;
+  /** How many stops it asked for, a later turn's of the same task included. */
+  asked: number;
   /** Resolves once every turn here stopped and the home has every end. */
   saving: Promise<void>;
   /** Lets the save go here when the home says nothing for `UPDATE_RETURN_MS` after it saved. */
   timer: NodeJS.Timeout | undefined;
 };
 
-/** What the save and its let-go answer: each task whose turn the save stopped. */
+/** What the save answers: each task whose turn the save stopped. */
 type UpdateSaveAnswer = { stopped: string[] };
+/** What the let-go answers besides: each task whose stop it withdrew. */
+type UpdateReleaseAnswer = UpdateSaveAnswer & { withdrawn: string[] };
 
 type Held = {
   readonly task: string;
@@ -1398,7 +1406,10 @@ export class SessionHost {
       const own: UpdateSave = {
         withdraw: new AbortController(),
         stopped: new Set(),
+        withdrawn: new Set(),
         stops: new Map(),
+        stopping: new Set(),
+        asked: 0,
         saving: Promise.resolve(),
         timer: undefined,
       };
@@ -1429,8 +1440,8 @@ export class SessionHost {
    * for the home to have every event written by then.
    */
   private async saveTurns(save: UpdateSave): Promise<void> {
-    for (let asked = -1; asked !== save.stops.size; ) {
-      asked = save.stops.size;
+    for (let asked = -1; asked !== save.asked; ) {
+      asked = save.asked;
       await Promise.all(save.stops.values());
       if (this.updateSave !== save) return;
       const kept = [...this.held.values()].filter((held) => !held.removed);
@@ -1449,14 +1460,17 @@ export class SessionHost {
   /**
    * One conversation working here stops for the update: safely when its
    * session can hold its calls, cut when it cannot. A turn the stop cut is
-   * the save's, so its home carries it on after the update.
+   * the save's, so its home carries it on after the update. A later turn
+   * of a task whose earlier one the save already stopped stops too.
    */
   private stopForUpdate(held: Held, save: UpdateSave): void {
     const session = held.session;
-    if (!session || held.state.closed || save.stops.has(held.task) || !this.busy(held)) return;
+    if (!session || held.state.closed || save.stopping.has(held.task) || !this.busy(held)) return;
     const stopping = session.stopSafely
       ? session.stopSafely({ signal: save.withdraw.signal })
       : session.abort().then(() => "stopped" as const);
+    save.stopping.add(held.task);
+    save.asked += 1;
     save.stops.set(
       held.task,
       stopping
@@ -1466,10 +1480,14 @@ export class SessionHost {
           return "stopped" as const;
         })
         .then(async (outcome) => {
-          if (outcome !== "stopped") return;
+          if (outcome !== "stopped") {
+            save.withdrawn.add(held.task);
+            return;
+          }
           save.stopped.add(held.task);
           await held.turnOver;
-        }),
+        })
+        .finally(() => save.stopping.delete(held.task)),
     );
   }
 
@@ -1477,16 +1495,17 @@ export class SessionHost {
    * The update did not replace this copy, or was let go: a stop still
    * waiting is withdrawn and its turn goes on as if never asked, and turns
    * start here again. Answers once each stop settled, naming every task
-   * whose turn the save stopped, which its home carries on.
+   * whose turn the save stopped, which its home carries on, and every one
+   * whose stop it withdrew, whose turn its home lets go on.
    */
-  private async releaseUpdate(): Promise<UpdateSaveAnswer> {
+  private async releaseUpdate(): Promise<UpdateReleaseAnswer> {
     const save = this.updateSave;
-    if (!save) return { stopped: [] };
+    if (!save) return { stopped: [], withdrawn: [] };
     this.updateSave = undefined;
     clearTimeout(save.timer);
     save.withdraw.abort();
     await Promise.all(save.stops.values());
-    return { stopped: [...save.stopped] };
+    return { stopped: [...save.stopped], withdrawn: [...save.withdrawn] };
   }
 
   private async closeTask(held: Held): Promise<void> {

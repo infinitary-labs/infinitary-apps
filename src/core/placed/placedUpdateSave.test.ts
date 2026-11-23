@@ -210,4 +210,46 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
     expect(home.inbox.allFor("t-return")).toEqual([]);
   });
+
+  // INF-2279 review: the computer's let-go names a stop it withdrew, whose
+  // turn goes on there, so nothing carries that turn on a second time.
+  it("lets a turn whose stop still waited go on there when its computer comes back after its home restarted, and carries nothing on after it", async () => {
+    const progress = holdingProgress();
+    const at = await world(undefined, { tools: progress.tools });
+    model([
+      { tools: [{ name: "note_progress", args: { text: "Checking the footer." } }] },
+      { text: "Fixed the footer." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-withdrawn");
+    await progress.reached;
+    const there = saveThereFor(at.home().devices, at.deviceId);
+    void at.home().supervisor.updates.pauseForUpdate(at.deviceId, {
+      signal: new AbortController().signal,
+      ...(there ? { there } : {}),
+    });
+    await expect
+      .poll(() =>
+        at
+          .home()
+          .inbox.allFor("t-withdrawn")
+          .map((row) => row.facts?.kind),
+      )
+      .toEqual(["turn-resumed"]);
+
+    // The home quits while the call there still runs, so the save has not answered.
+    await at.restartHome();
+    await at.inReach("t-withdrawn");
+    const home = at.home();
+    // Let go there, the turn is no longer held: its row goes, and its call finishes.
+    await expect.poll(() => home.inbox.allFor("t-withdrawn")).toEqual([]);
+    progress.open();
+
+    await expect.poll(() => home.tasks.get("t-withdrawn")?.outcome).toBe("Fixed the footer.");
+    // The same turn went on: no second turn, and nothing said it stopped.
+    expect(api.requests.length - requests).toBe(2);
+    expect(said(api.requests.at(-1))).not.toContain("turn-resumed");
+    expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+    expect(home.tasks.timeline("t-withdrawn").some((event) => event.kind === "failed")).toBe(false);
+  });
 });

@@ -16,6 +16,8 @@ export const WORK_RELEASE_ORDER = "inf:session:release-update";
 
 /** What either order answers: each task whose turn the save stopped there. */
 const savedTurnsSchema = z.object({ stopped: z.array(placedTaskIdSchema) });
+/** What the let-go answers besides: each task whose stop it withdrew before it cut the turn. */
+const releasedTurnsSchema = savedTurnsSchema.extend({ withdrawn: z.array(placedTaskIdSchema) });
 
 /** The two orders a home asks a computer that runs work around its update, in `workOrders`. */
 export const updateSaveOrders = {
@@ -31,7 +33,8 @@ export const updateSaveOrders = {
   /**
    * The update did not replace this copy, or was let go (Update later): a
    * turn still stopping goes on as if never asked, and turns start here
-   * again. `stopped` names each task whose turn the save stopped.
+   * again. `stopped` names each task whose turn the save stopped, and
+   * `withdrawn` each one whose stop it withdrew, whose turn goes on there.
    */
-  [WORK_RELEASE_ORDER]: { effect: "change", request: z.tuple([]), response: savedTurnsSchema },
+  [WORK_RELEASE_ORDER]: { effect: "change", request: z.tuple([]), response: releasedTurnsSchema },
 } as const;

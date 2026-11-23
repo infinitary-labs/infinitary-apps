@@ -72,7 +72,10 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", outcome: "done" });
     expect(api.requests.length).toBeGreaterThan(asked);
     // Let go already, the release answers that nothing is held.
-    expect(await at.order("inf:session:release-update", [])).toEqual({ stopped: [] });
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [],
+      withdrawn: [],
+    });
   });
 
   // The goal's "the way INF-2245 saves this computer's own": a turn begun by
@@ -97,10 +100,18 @@ describe("a computer that runs work saving its crew's work before its update", (
         answer: "The background check passed.",
       });
       claude.continueTurn();
-      await expect
-        .poll(() => at.home.events.some(({ event }) => event.type === "continuation_ended"))
-        .toBe(true);
-      // Its call was refused before it ran: the home never heard of it.
+      const carriedOn = () =>
+        at.home.events.filter(({ event }) => event.type === "continuation_ended").length;
+      await expect.poll(carriedOn).toBe(1);
+      // It carries on once more after the save stopped it: that turn stops too.
+      claude.answer({
+        tool: "note_progress",
+        args: { text: "Reading the second check." },
+        answer: "The second check passed.",
+      });
+      claude.continueTurn();
+      await expect.poll(carriedOn).toBe(2);
+      // Each call was refused before it ran: the home never heard of either.
       expect(at.home.effects.map((effect) => effect.channel)).not.toContain("inf:work:progress");
 
       // The home asks something more often than the computer's wait, for
@@ -115,9 +126,40 @@ describe("a computer that runs work saving its crew's work before its update", (
       expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", unstarted: true });
 
       // Let go, the save names the turn it stopped, which its home carries on.
-      expect(await at.order("inf:session:release-update", [])).toEqual({ stopped: [TASK] });
+      expect(await at.order("inf:session:release-update", [])).toEqual({
+        stopped: [TASK],
+        withdrawn: [],
+      });
     } finally {
       claude.endClient();
     }
+  });
+
+  // INF-2279 review: a home that comes back to a save it no longer follows
+  // lets it go, and must hear which turn goes on there instead of stopping.
+  it("names the task whose stop it withdrew when let go while its call still runs, and that turn goes on", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Checked the footer." } }] },
+      { text: "Fixed the footer." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+    await report.reached;
+    const saving = at.order("inf:session:save-for-update", []);
+
+    expect(await at.order("inf:session:release-update", [])).toEqual({
+      stopped: [],
+      withdrawn: [TASK],
+    });
+    expect(await saving).toEqual({ stopped: [] });
+    report.open();
+    await at.ended(1);
+    expect(at.home.events.at(-1)?.event).toMatchObject({
+      type: "turn_ended",
+      turn: 1,
+      outcome: "done",
+    });
   });
 });

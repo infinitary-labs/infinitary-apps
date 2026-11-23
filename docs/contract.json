@@ -103507,10 +103507,18 @@
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_-]{1,64}$"
               }
+            },
+            "withdrawn": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
             }
           },
           "required": [
-            "stopped"
+            "stopped",
+            "withdrawn"
           ]
         }
       },

@@ -156,6 +156,14 @@ export function fittedBody(
 }
 
 /**
+ * The issue form the no-sign-in link opens, and the id of its one field the
+ * link fills. The project turns blank issues off, so GitHub's plain new-issue
+ * page shows the form chooser and drops a `body`; a form keeps its fields
+ * filled from the link (.github/ISSUE_TEMPLATE/from-app.yml).
+ */
+export const FEEDBACK_FORM = { file: "from-app.yml", field: "report" } as const;
+
+/**
  * The filled-in new-issue link for a person with no GitHub sign-in, at most
  * `FEEDBACK_LINK_MAX` characters: the task's earliest steps go first, then
  * the crewmate's words are cut with a note saying so.
@@ -168,7 +176,11 @@ export function newIssueLink(
   kind: FeedbackKind,
 ): string {
   const link = (body: string) =>
-    `https://github.com/${repository}/issues/new?${new URLSearchParams({ title, body }).toString()}`;
+    `https://github.com/${repository}/issues/new?${new URLSearchParams({
+      template: FEEDBACK_FORM.file,
+      title,
+      [FEEDBACK_FORM.field]: body,
+    }).toString()}`;
   const keep = stepsThatFit(words, facts, kind, FEEDBACK_LINK_MAX, (body) => link(body).length);
   if (keep !== undefined) return link(feedbackBody(words, facts, kind, keep));
   // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English

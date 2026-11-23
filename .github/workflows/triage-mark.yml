@@ -1,0 +1,51 @@
+name: triage-mark
+
+# The triage mark (scripts/triage-mark.mjs; docs/public-ci.md, "Intake"): a
+# maintainer's reply ending with `<!-- infinitary-triage v1 disposition=... -->`
+# sets that disposition's labels and closes the item where it says so, and an
+# author's reply to an item waiting on them puts it back in triage. A mark
+# from an account that cannot write changes nothing.
+#
+# It runs from this project's default branch on issue_comment, checks out
+# only its two scripts, never a pull request's code, reads the comment as
+# data, uses no secret beyond its own token, and runs on GitHub's own
+# machines.
+
+on:
+  issue_comment:
+    types: [created]
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: triage-mark-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  mark:
+    # The bot's own comments carry no mark and never answer for an author.
+    if: ${{ github.event.comment.user.login != 'github-actions[bot]' }}
+    name: New comment · Triage mark
+    runs-on: ubuntu-24.04
+    # GitHub refuses a label or a close on a pull request to a token without
+    # pull request writes, even with issue writes.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/triage-mark.mjs
+            scripts/intake-labels.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {applyMark} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/triage-mark.mjs`).href);
+            core.info(await applyMark({github, context, core}));

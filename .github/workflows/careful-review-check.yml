@@ -8,11 +8,13 @@ name: careful-review-check
 # newest version, and otherwise fails with one comment saying how to raise it.
 # Started by hand with a pull request number, it reads any pull request of the
 # project, so the check can be proved before an outside copy exists.
+# After it writes the status, it labels an outside pull request "waiting on
+# author" while either required check fails (scripts/intake-labels.mjs).
 #
 # It writes on an outside pull request, as contributor-agreement.yml does, so
 # it runs from this project's default branch (pull_request_target) rather
-# than from the pull request's own files, checks out only its script from
-# that branch, never the pull request's code, reads the description as data,
+# than from the pull request's own files, checks out only its script and
+# intake-labels.mjs from that branch, never the pull request's code, reads the description as data,
 # uses no secret beyond its own token, and runs on GitHub's own machines.
 
 on:
@@ -51,6 +53,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/careful-review-check.mjs
+            scripts/intake-labels.mjs
           sparse-checkout-cone-mode: false
       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         env:
@@ -58,5 +61,8 @@ jobs:
         with:
           script: |
             const {pathToFileURL} = require('node:url');
-            const {check} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/careful-review-check.mjs`).href);
+            const root = process.env.GITHUB_WORKSPACE;
+            const {check} = await import(pathToFileURL(`${root}/scripts/careful-review-check.mjs`).href);
+            const {syncWaiting} = await import(pathToFileURL(`${root}/scripts/intake-labels.mjs`).href);
             core.info(await check({github, context, core, pullNumber: process.env.PULL}));
+            core.info(`Waiting on author: ${await syncWaiting({github, context, pullNumber: process.env.PULL})}`);

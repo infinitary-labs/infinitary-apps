@@ -149,6 +149,8 @@ export type MachineInputs = {
   busy: boolean;
   crystalActive?: boolean;
   folding?: boolean;
+  /** Cards cover the first mate: idle fidgets wait, and a card coming up drops a held stage-cleared fidget. */
+  hidden?: boolean;
 };
 
 export class FirstmateMachine {
@@ -163,6 +165,11 @@ export class FirstmateMachine {
   private variant: FidgetVariant | null = null;
   private lastFidget: FidgetVariant | null = null;
   private fidgetAt: number;
+  /** When the idle fidget delay counts from: entering idle, or the cards leaving. */
+  private fidgetFrom: number;
+  private hidden = false;
+  /** The captain's press cleared the stage while another emote played: the fidget it plays next. */
+  private pendingClearFidget = false;
   private submitGraceUntil = 0;
   /** Normalized emote progress the clock is pinned at, else null (review/test aid). */
   private pinnedT: number | null = null;
@@ -175,6 +182,7 @@ export class FirstmateMachine {
   ) {
     this.enteredAt = now;
     this.clipStart = now;
+    this.fidgetFrom = now;
     this.fidgetAt = this.nextFidgetDelay();
   }
 
@@ -187,7 +195,10 @@ export class FirstmateMachine {
     this.enteredAt = now;
     this.clip = clip;
     this.clipStart = now;
-    if (to === "idle") this.fidgetAt = this.nextFidgetDelay();
+    if (to === "idle") {
+      this.fidgetFrom = now;
+      this.fidgetAt = this.nextFidgetDelay();
+    }
     if (to !== "fidget") this.variant = null;
     if (!isEmote(to)) this.pinnedT = null;
   }
@@ -218,6 +229,14 @@ export class FirstmateMachine {
     // So is folding: the cinch is a look over working, never a state.
     this.folding = inputs.folding ?? false;
     this.listening = inputs.listening;
+    // Cards covering the first mate pause its idle fidgets; the next one
+    // counts from when they leave. A card coming up, or attention, drops a
+    // held stage-cleared fidget.
+    const hidden = inputs.hidden ?? false;
+    if (hidden && !this.hidden) this.pendingClearFidget = false;
+    if (!hidden && this.hidden) this.fidgetFrom = now;
+    this.hidden = hidden;
+    if (inputs.listening) this.pendingClearFidget = false;
 
     if (inputs.listening) {
       if (this.state !== "listening") this.go("listening", "attend", now);
@@ -312,6 +331,19 @@ export class FirstmateMachine {
     this.enteredAt = now - this.pinnedT * this.emoteDurationMs();
   }
 
+  /**
+   * The captain's own press took the last card off the stage: one fidget
+   * from the pool. Attention wins, so nothing plays while listening; another
+   * emote playing finishes first and the fidget follows it, unless attention
+   * or a card coming up drops it meanwhile.
+   */
+  stageCleared(now: number): boolean {
+    if (this.listening) return false;
+    if (this.requestEmote("fidget", now)) return true;
+    this.pendingClearFidget = true;
+    return true;
+  }
+
   /** A tap on the character: fidget when idle, a spin kick otherwise. */
   tap(now: number): "fidget" | "kick" {
     if (this.state === "idle" && this.requestEmote("fidget", now)) return "fidget";
@@ -332,8 +364,12 @@ export class FirstmateMachine {
     if (isEmote(this.state) && now - this.enteredAt >= this.emoteDurationMs()) {
       const home = this.busy || now < this.submitGraceUntil ? "working" : "idle";
       this.go(home, "return", now);
+      if (this.pendingClearFidget) {
+        this.pendingClearFidget = false;
+        this.requestEmote("fidget", now);
+      }
     }
-    if (this.state === "idle" && now - this.enteredAt >= this.fidgetAt) {
+    if (this.state === "idle" && !this.hidden && now - this.fidgetFrom >= this.fidgetAt) {
       this.requestEmote("fidget", now);
     }
     const emoteT = isEmote(this.state)

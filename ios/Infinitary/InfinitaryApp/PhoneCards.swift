@@ -90,6 +90,7 @@ struct PhoneCards<Content: View>: View {
         }
         .onChange(of: card?.value["width"].text, initial: true) { _, width in messageContext.cardWidth = width }
         .onChange(of: stack.map(\.id), initial: true) { _, ids in
+            if ids.isEmpty && CharacterCues.clearedByPress(previousIDs) { CharacterCues.fidgetOnNextSight() } // The last-card fidget.
             // A card closed on another computer mid-swipe: the swipe lets go and the stack's own rule picks the card.
             if swipedFrom != nil && !ids.contains(swipedFrom!) { swipedFrom = nil; withAnimation(PhoneCardRowMotion.fade) { row.settle() } completion: { [moves] in stopped(moves) } }
             // A card a glide moves from or to closed on another computer: the glide stops where the stack's rule picks.
@@ -1684,7 +1685,7 @@ private struct PhoneCardPane: View {
     private func choose(_ action: PhoneJSON) {
         if onMac(action) { host.notice = PhoneMessages.phoneCardsDoThisOn(computer: session.mac.name); return }
         if PhoneSecretAsk.isKeep(action) {
-            if let ask = PhoneSecretAsk.of(card) { keepSecrets(ask) }
+            if let ask = PhoneSecretAsk.of(card) { CharacterCues.pressed(card.id); keepSecrets(ask) }
             return
         }
         let id = action["id"].text
@@ -1797,7 +1798,7 @@ private struct PhoneCardPane: View {
     /// so the pane itself says nothing more; true once the computer accepted it.
     private func send(_ kind: PhoneIntent.Kind, _ channel: PhoneCardRequest, _ args: [PhoneJSON],
                       restore: (@MainActor () -> Void)? = nil) async -> Bool {
-        do { try await session.change(kind, channel, args, restore: restore); return true } catch { return false }
+        do { if channel != .reply { CharacterCues.pressed(card.id) }; try await session.change(kind, channel, args, restore: restore); return true } catch { return false }
     }
 
     private func perform(_ operation: @escaping @MainActor () async throws -> Void) {

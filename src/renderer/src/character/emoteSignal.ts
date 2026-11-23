@@ -9,6 +9,7 @@ const pending: FirstmateEmote[] = [];
 let noticePending = false;
 let sendoffPending: { dx: number; dy: number; strength: number } | null = null;
 let receivePending = false;
+let stageClearedPending = false;
 
 /** A moment the ambient music answers (../ambient/ambient.ts): a notice pulse, or a celebrate emote. */
 export type CharacterCue = "notice" | "celebrate";
@@ -88,5 +89,21 @@ export function requestCharacterReceive(): void {
 export function takeCharacterReceive(): boolean {
   const requested = receivePending;
   receivePending = false;
+  return requested;
+}
+
+/**
+ * The captain's own press in this window took the last card off the stage
+ * (../app/stageCleared.ts): the character plays one fidget
+ * (FirstmateMachine.stageCleared). Several before the next frame are one.
+ */
+export function requestStageClearedFidget(): void {
+  stageClearedPending = true;
+}
+
+/** Whether a stage-cleared fidget was requested since the last take. */
+export function takeStageClearedFidget(): boolean {
+  const requested = stageClearedPending;
+  stageClearedPending = false;
   return requested;
 }

@@ -10,6 +10,7 @@ import {
   takeCharacterNotice,
   takeCharacterReceive,
   takeCharacterSendoff,
+  takeStageClearedFidget,
 } from "./emoteSignal";
 import {
   createSim,
@@ -49,6 +50,8 @@ export type FirstmateProps = {
   folding?: boolean;
   /** Monotonic count of shortenings begun; each increment plays a cinch, even one heard only ending. */
   foldStarts?: number;
+  /** Cards cover the character: its idle fidgets wait until they leave. */
+  hidden?: boolean;
   /** Canvas size in px. Null state is 280-320; docked is 56-72. */
   size?: number;
   /** 0-1 live voice level; scales the structure and spin while listening. */
@@ -83,6 +86,7 @@ export function Firstmate({
   crystalActive = false,
   folding = false,
   foldStarts = 0,
+  hidden = false,
   size = 280,
   level = 0,
   kick = 0,
@@ -102,6 +106,8 @@ export function Firstmate({
   crystalActiveRef.current = crystalActive;
   const foldingRef = useRef(folding);
   foldingRef.current = folding;
+  const hiddenRef = useRef(hidden);
+  hiddenRef.current = hidden;
   const foldStartsRef = useRef(foldStarts);
   foldStartsRef.current = foldStarts;
   const levelRef = useRef(level);
@@ -209,6 +215,7 @@ export function Firstmate({
         busy: busyRef.current,
         crystalActive: crystalActiveRef.current,
         folding: foldingRef.current,
+        hidden: hiddenRef.current,
       },
       now,
     );
@@ -216,6 +223,8 @@ export function Firstmate({
     for (let e = takeCharacterEmote(); e; e = takeCharacterEmote()) {
       machine.requestEmote(e, now);
     }
+    // A still frame plays nothing, so a stage-cleared fidget is let go.
+    if (takeStageClearedFidget() && !prefersReducedMotion()) machine.stageCleared(now);
     if (takeCharacterNotice()) simRef.current.noticeAt = now;
     const sendoff = takeCharacterSendoff();
     if (sendoff) {

@@ -42,6 +42,7 @@ import {
   withoutKey,
   withoutShown,
 } from "./stack";
+import { noteCardPress } from "./stageCleared";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 import { typingInShownCard } from "./typingInCard";
 
@@ -618,6 +619,7 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
       if (changesOff(s.thisMac)) return;
       const cards = stackOf(s).filter((entry) => !isHeldEntry(entry));
       const ids = cards.map((card) => card.id);
+      noteCardPress(ids);
       // Each held view hides as its own Hide does, its reading place let go.
       const heldIds = new Set(s.records.map(heldEntryId));
       for (const record of s.records) {

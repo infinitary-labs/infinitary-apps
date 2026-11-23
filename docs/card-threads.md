@@ -165,6 +165,7 @@ The rules and the click are in `docs/delivery-rigor.md`, "A card behind its chan
 INF-6241, the captain's words on INF-6224: "ideally, i want it to come back only after the update has been made, new checks passed, and the card content is already updated".
 A crewmate's merge card for its task's own change, answered under a captain's reply, stays in its close-out wait while its change is at a newer version than the one the card showed and any of these holds (`reworkHold` in `reworkHold.ts`, `StageHold.forChecks`):
 
+- `job`: a background job of the crewmate's runs, so a push from it is not known until it ends and the turn it wakes is read; this holds before the version is compared;
 - `read`: the change has not been read since the crewmate's turn ended, so a push from its shell is not known yet; the hold starts that read at once (`CheckWatcher.readAfterTurn`), which starts no second read while one is out;
 - `checks`: a check watch or a run watch stands on the task;
 - `turn`: the crewmate's turn is running;

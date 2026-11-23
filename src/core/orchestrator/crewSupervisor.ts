@@ -371,7 +371,8 @@ export class CrewSupervisor {
           tasks: options.tasks,
           cardStore: options.cardStore,
           readOwed: (record) => !this.holdReadable || this.watch.afterTurnReadOwed(record),
-          witnesses: (taskId) => this.ladder.witnesses(taskId, this.now()),
+          witnesses: (taskId) =>
+            this.holdReadable ? this.ladder.witnesses(taskId, this.now()) : undefined,
           stuck: (taskId) => options.inbox.stuck(taskId) !== undefined,
           waitsForUpdate: (taskId) => this.updates.waitsForUpdateThere(taskId),
         }),

@@ -59,6 +59,7 @@ import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
+import type { ReworkHold } from "./reworkHold";
 import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
@@ -1019,9 +1020,12 @@ export class CardService {
     const before = this.stage.of(card).forChecks;
     if (rework) {
       this.stage.hold(card, { forChecks: rework });
-      // "read" is provisional: a reply answered with no push returns once the
-      // read ends, so only a hold on a known newer version is noted.
-      const settled = rework !== "read" && (before === undefined || before === "read");
+      // "job" and "read" come before the version is known: a reply answered
+      // with no push returns once they end, so only a hold on a known newer
+      // version is noted.
+      const known = (hold: ReworkHold | undefined) =>
+        hold === "checks" || hold === "turn" || hold === "wake";
+      const settled = known(rework) && !known(before);
       if (settled && card.taskId && !this.reworkNoted(card.taskId, card))
         this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
           news: false,

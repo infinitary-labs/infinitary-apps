@@ -56,6 +56,8 @@ async function shown(options: { checks?: boolean } = {}) {
   let fail = false;
   /** How long the host takes to answer a read, on the fake clock. */
   let answerAfter = 0;
+  /** Whether a background job of the crewmate's runs, as the job store reports it. */
+  let jobRunning = false;
   const completionPresentation = vi.fn(async (_taskId: string, revision: number) => {
     if (!story) throw new Error("No story yet");
     return {
@@ -107,6 +109,7 @@ async function shown(options: { checks?: boolean } = {}) {
     openChange: async () => "Opened the change.",
     checkChange: async () => "Checks passed.",
     mergeCardSteps,
+    hasRunningJobs: () => jobRunning,
     ...(options.checks === false ? {} : { readCheckWatch }),
   });
   record = at.tasks;
@@ -228,6 +231,9 @@ async function shown(options: { checks?: boolean } = {}) {
     },
     answerReadsAfter: (ms: number) => {
       answerAfter = ms;
+    },
+    runJob: (running: boolean) => {
+      jobRunning = running;
     },
     /** The card as the captain's stage shows it. */
     onStage: () => at.cards().find((entry) => entry.id === card.id),
@@ -366,6 +372,31 @@ describe("a reworked merge card's return (INF-6241)", () => {
     expect(at.reads).toEqual([PUSHED]);
     expect(rechecks).toBeLessThan(10);
     expect(at.held()).toBe(true);
+  });
+
+  // A crewmate may push from a background job that outlives its turn: a
+  // read at that turn's end finds the earlier version, and the push lands
+  // only when the job ends and wakes it.
+  it("stays away while the crewmate's background job runs, then reads the push the job made", async () => {
+    const at = await shown();
+    await at.replyAndAnswer("make it read true at night too", "On it.");
+    at.runJob(true);
+    await endTurn(at.crewmate, at.taskId);
+    await tick();
+    expect(at.held()).toBe(true);
+    expect(at.holdNotes()).toEqual([]);
+    const card = at.supervisor.cards.get(at.cardId) as Card;
+    const posture = at.supervisor.postures.workPosture(at.tasks.get(at.taskId) as TaskRecord);
+    expect(threadWait(card, posture)).toEqual({ on: "rework", checks: false });
+    // The job pushes and ends; the shared tick reads the branch the turn
+    // left unread.
+    at.remote.head = PUSHED;
+    at.remote.checks = "pending";
+    at.runJob(false);
+    await at.minute();
+    expect(at.tasks.get(at.taskId)?.delivery?.headSha).toBe(PUSHED);
+    expect(at.held()).toBe(true);
+    expect(at.holdNotes()).toHaveLength(1);
   });
 
   it("returns at turn end after a reply that pushed nothing, with or without a watch standing", async () => {

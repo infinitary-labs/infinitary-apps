@@ -45,7 +45,9 @@ export function threadWait(
   if (card.awaiting === "close-out" && card.sentBackAt !== undefined) {
     if (posture.reason === "checks" || posture.reason === "access")
       return { on: "rework", checks: true };
-    return posture.reason === "guidance" ? { on: "rework", checks: false } : undefined;
+    return posture.reason === "guidance" || posture.reason === "job"
+      ? { on: "rework", checks: false }
+      : undefined;
   }
   if (card.awaiting !== "answer") return undefined;
   switch (posture.reason) {

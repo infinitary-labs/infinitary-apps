@@ -9,13 +9,15 @@ import type { Witnesses } from "./reportSort";
  * The typed fact that keeps a reworked merge card in its close-out wait
  * (INF-6241; docs/card-threads.md, "A reworked merge card"):
  *
+ * - `job`: a background job of the crewmate's runs, so a push from it is
+ *   not known until it ends and the turn it wakes is read;
  * - `read`: the change has not been read since the crewmate's turn ended,
  *   so a push from its shell is not known yet;
  * - `checks`: a check watch or a run watch stands on the task;
  * - `turn`: the crewmate's turn is running;
  * - `wake`: a wake waits for the crewmate on a lane that can deliver it.
  */
-export type ReworkHold = "read" | "checks" | "turn" | "wake";
+export type ReworkHold = "job" | "read" | "checks" | "turn" | "wake";
 
 export type ReworkHoldHost = {
   tasks: Pick<TaskService, "get">;
@@ -24,7 +26,7 @@ export type ReworkHoldHost = {
   readOwed(record: TaskRecord): boolean;
   witnesses(
     taskId: string,
-  ): Pick<Witnesses, "deliverable" | "accountHeld" | "outOfReach"> | undefined;
+  ): Pick<Witnesses, "deliverable" | "accountHeld" | "outOfReach" | "jobsRunning"> | undefined;
   /** The lane is stuck at its provider until the first mate answers. */
   stuck(taskId: string): boolean;
   /** The task's computer must be updated before it takes a turn. */
@@ -53,13 +55,15 @@ export function reworkHold(card: Card, host: ReworkHoldHost): ReworkHold | undef
   );
   if (!offer || offer.retired) return undefined;
   if (offer.destination && offer.destination.branch !== record.branch) return undefined;
+  // Read before the version: a job still running may push after any read.
+  const lane = host.witnesses(record.id);
+  if (lane?.jobsRunning) return "job";
   if (host.readOwed(record)) return "read";
   if (!delivery.headSha || delivery.headSha === offer.headSha) return undefined;
   if (delivery.ciWatch || (delivery.runWatches?.length ?? 0) > 0) return "checks";
   if (record.activity === "running") return "turn";
   // A wake the lane cannot deliver holds nothing: the card returns showing
   // what it can, and the thread says what holds the crewmate.
-  const lane = host.witnesses(record.id);
   if (
     lane?.deliverable &&
     !lane.accountHeld &&

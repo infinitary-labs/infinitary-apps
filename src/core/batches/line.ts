@@ -878,6 +878,24 @@ export function repaired(record: BatchRecord, taskId: string): BatchRecord {
 }
 
 /**
+ * Whether `taskId` is the recorded repair (`OpenBatch.repair`) of a batch
+ * held for its checks and the record holds no answer to that hold: no fix
+ * of its own declared, no fix awaited after its send-back, no send-back
+ * made since the hold began, and no rerun declared passed at the held
+ * version. A hold for the project's merge setting or a rule where it lives
+ * asks nothing of a repair, and a batch no longer held owes nothing.
+ */
+export function repairUnanswered(record: BatchRecord, taskId: string): boolean {
+  const open = record.open;
+  const hold = open?.hold;
+  if (!open || hold?.reason !== "checks" || open.repair !== taskId) return false;
+  if (record.fixes?.includes(taskId) || open.awaits === taskId) return false;
+  if (open.passed?.head === hold.head) return false;
+  // A send-back is saved before the combine it starts, which may not finish: the hold can outlive it.
+  return !record.sentBack?.some((entry) => entry.number === open.number && entry.at >= hold.at);
+}
+
+/**
  * Drop what only closed tasks still hold: a merged receipt once read, a
  * left-out note, a send-back, a declared fix, and the repair of the open
  * batch (`OpenBatch.repair`). A held batch that waited

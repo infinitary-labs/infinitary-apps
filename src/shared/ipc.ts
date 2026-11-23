@@ -44,6 +44,7 @@ import {
 import { keymapSnapshotSchema, nextKeysSchema } from "./keymap";
 import { keyRemindersSchema } from "./keyReminders";
 import { nearbyMacsViewSchema } from "./nearbyMacs";
+import { appPanelsSchema } from "./personal/appPanels";
 import { personalSnapshotSchema, personalStoreChangeSchema } from "./personal/manifest";
 import { shellPreferencesSchema } from "./preferences";
 import { authNoticeSchema, authPromptSchema } from "./providers";
@@ -344,6 +345,8 @@ export const pushContract = {
   // one notice per store write so a panel re-reads only its own keys.
   "inf:plugins:personal": { payload: personalSnapshotSchema, surface: "core" },
   "inf:plugins:db": { payload: personalStoreChangeSchema, surface: "core" },
+  // The app's own panels a view may draw, whole, when the set whose gate is open changes.
+  "inf:plugins:app-panels": { payload: appPanelsSchema, surface: "core" },
   // Dictation is changed only in Settings; every renderer reads the saved choice.
   "inf:settings:dictation": { payload: dictationSettingsSchema, surface: "core" },
   // The captain's preferences, whole, after every write: the value of the

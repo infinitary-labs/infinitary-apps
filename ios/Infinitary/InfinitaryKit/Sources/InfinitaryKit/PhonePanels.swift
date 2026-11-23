@@ -11,7 +11,8 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public struct Stopped: Decodable, Sendable, Equatable { public let reason: String }
 
     public let id: String
-    /// "personal" for the captain's own, "installed" for an added plugin's.
+    /// "personal" for the captain's own, "installed" for an added plugin's, "app" for one of the app's own
+    /// (`PhoneAppPanelList`).
     public let source: String
     /// An added plugin's name, the header's owner word; nil for the captain's own.
     public let by: String?
@@ -35,10 +36,12 @@ public struct PhonePanel: Decodable, Sendable, Equatable, Identifiable {
     public let cards: [String: PhonePanelCardDeclaration]?
     public let header: [PhonePanelHeaderButton]?
 
-    /// What `inf:plugins:files` names it by.
-    public var filesSource: String { source == "installed" ? "installed" : "yours" }
-    /// The header's owner word: "yours", or the plugin's name.
-    public var owner: String { by ?? PhonePanelWords.yours }
+    /// One of the app's own panels, whose files come from `inf:plugins:app-panel-files`.
+    public var isApp: Bool { source == PhoneAppPanelList.source }
+    /// What `inf:plugins:files` names it by, or "app" for one of the app's own.
+    public var filesSource: String { isApp ? PhoneAppPanelList.source : source == "installed" ? "installed" : "yours" }
+    /// The header's owner word: "yours", or the plugin's name; none for the app's own, as the desktop names no maker.
+    public var owner: String? { isApp ? nil : by ?? PhonePanelWords.yours }
     /// The header's buttons as the desktop's `PanelHeaderButtons` draws them: one that puts up a card in both header
     /// states, one that asks the panel only while it shows its body.
     public func headerButtons(folded: Bool) -> [PhonePanelHeaderButton] {
@@ -171,6 +174,29 @@ public enum PhonePanelList {
     }
 }
 
+/// The app's own panels the computer shows (`inf:plugins:app-panels`), drawn on the Panels tab as the
+/// captain's are, from the desktop's own panel code (docs/ios.md, "Panels"). The computer names every one whose gate is
+/// open; the phone leaves out the ones it already draws as tabs of its own, and any whose id one of the captain's panels
+/// holds, as a rail holds one panel per id.
+public enum PhoneAppPanelList {
+    public static let source = "app"
+    /// The Tasks panel and the Activity panel, which are the phone's own Tasks and Activity tabs.
+    public static let drawnAsTabs: Set<String> = ["now", "activity"]
+
+    public static func decode(_ answer: PhoneJSON, besides personal: [PhonePanel] = []) -> [PhonePanel] {
+        guard case .object(let fields) = answer, case .array(let panels)? = fields["panels"] else { return [] }
+        let taken = Set(personal.map(\.id))
+        return panels.compactMap { value in
+            guard case .object(var panel) = value else { return nil }
+            panel["source"] = .string(source); panel["by"] = .null; panel["present"] = .bool(true)
+            guard let data = try? JSONEncoder().encode(PhoneJSON.object(panel)),
+                  let decoded = try? JSONDecoder().decode(PhonePanel.self, from: data),
+                  !drawnAsTabs.contains(decoded.id), !taken.contains(decoded.id) else { return nil }
+            return decoded
+        }
+    }
+}
+
 /// One file the phone serves a panel's frame: its bytes and the `sha256-<base64>` pin its import map carries.
 public struct PhonePanelFile: Sendable, Equatable {
     public let data: Data
@@ -269,6 +295,23 @@ public struct PhonePanelFiles: Sendable {
             guard case .object(let file) = entry, case .string(let path)? = file["path"], case .string(let base64)? = file["data"],
                   let data = Data(base64Encoded: base64) else { throw .unreadable }
             files[path] = PhonePanelFile(data: data, integrity: PhonePanelFile.pin(data))
+        }
+        guard files["panel.mjs"] != nil else { throw .unreadable }
+        return PhonePanelFiles(builtFor: builtFor, files: files)
+    }
+
+    /// One of the app's own panels' files (`inf:plugins:app-panel-files`): each carries the pin the computer's build made,
+    /// and the answer is refused whole when any file's bytes do not match it, as the library is.
+    public static func readPinned(_ answer: PhoneJSON) throws(PhonePanelFailure) -> PhonePanelFiles {
+        guard case .object(let fields) = answer else { throw .notServed }
+        guard case .string(let builtFor)? = fields["builtFor"], case .array(let entries)? = fields["files"] else { throw .unreadable }
+        var files: [String: PhonePanelFile] = [:]
+        for entry in entries {
+            guard case .object(let file) = entry, case .string(let path)? = file["path"],
+                  case .string(let integrity)? = file["integrity"], case .string(let base64)? = file["data"],
+                  let data = Data(base64Encoded: base64) else { throw .unreadable }
+            guard PhonePanelFile.pin(data) == integrity else { throw .integrity }
+            files[path] = PhonePanelFile(data: data, integrity: integrity)
         }
         guard files["panel.mjs"] != nil else { throw .unreadable }
         return PhonePanelFiles(builtFor: builtFor, files: files)

@@ -66,7 +66,7 @@ type Input = {
   mount: string;
   theme: FrameTheme;
   panel: {
-    id: string; source: "yours" | "installed"; title: string; size: "content" | "fill";
+    id: string; source: "yours" | "installed" | "app"; title: string; size: "content" | "fill";
     reads: string[]; sql: string[]; moves: boolean; server: boolean; decides: boolean;
   };
   /** The library's pins by path, each file checked against its pin by native code before it is served. */
@@ -81,6 +81,16 @@ type Input = {
   /** Set when the page draws one of its cards on Home: the card, as `FramedCard` mounts it. */
   card?: { id: string; view: string; title: string; height: "content" | "fill"; data: unknown; kept: unknown; revision: number };
 };
+
+/**
+ * Whose page the frame controller answers: the captain's own panel's, an added plugin's, or, for one of the app's own,
+ * the app's, which the desktop names its own panels by and which no panel added from elsewhere may take.
+ */
+function pluginIdOf(panel: Input["panel"]): string {
+  if (panel.source === "app") return APP_PLUGIN_ID;
+  return `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`;
+}
+const APP_PLUGIN_ID = "firstmate";
 
 /** The page's one way to native code; the card page declares its own handler on the same `window.webkit`. */
 const native = (message: unknown) =>
@@ -137,7 +147,8 @@ function actionsOf(value: Input): string[] {
     ...(panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : []),
     ...(card ? [] : ["rail.summarize", "rail.show"]),
     ...(panel.server ? [PANEL_SERVER_ACTION] : []),
-    PANEL_INTEGRATIONS_ACTION,
+    // The app's own panels call no integrations, as on the desktop (`FramedPanelBody`).
+    ...(panel.source === "app" ? [] : [PANEL_INTEGRATIONS_ACTION]),
   ];
 }
 
@@ -211,7 +222,7 @@ async function onAction(id: string, value: unknown): Promise<unknown> {
     if (!result.ok) throw new Error(result.error ?? "The panel's background work refused.");
     return result.result;
   }
-  if (id === PANEL_INTEGRATIONS_ACTION) return ask("inf:plugins:integrations", [panel.id, value as PanelIntegrationsRequest]);
+  if (id === PANEL_INTEGRATIONS_ACTION && panel.source !== "app") return ask("inf:plugins:integrations", [panel.id, value as PanelIntegrationsRequest]);
   if (id.startsWith("cards.") || id === "card.keep") return onCardAction(id, value);
   if (id.startsWith("point.")) return onPointAction(id, value);
   if (id === "rail.show") {
@@ -273,7 +284,7 @@ window.phonePanel = {
     frame.style.cssText = `display:block;width:100%;height:${fill ? "100%" : "48px"};border:0;background:transparent`;
     controller = new FrameController(
       {
-        pluginId: `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`,
+        pluginId: pluginIdOf(panel),
         reads: [...panel.reads, ...(panel.sql.length ? ["sql"] : [])],
         grant: { sql: panel.sql },
         actions: actionsOf(value),

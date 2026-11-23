@@ -74049,6 +74049,354 @@
         ]
       }
     },
+    "inf:plugins:app-panels": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "panels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "placement": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right"
+                      ]
+                    },
+                    "y": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "bottom"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "size": {
+                  "type": "string",
+                  "enum": [
+                    "content",
+                    "fill"
+                  ]
+                },
+                "ownPresence": {
+                  "type": "boolean"
+                },
+                "moves": {
+                  "type": "boolean"
+                },
+                "reads": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "computers.resources",
+                      "quota.snapshot",
+                      "tasks.board",
+                      "tasks.detail",
+                      "tasks.search",
+                      "feed.recent",
+                      "forge.changes",
+                      "automation.list",
+                      "automation.kept",
+                      "batches.list",
+                      "knowledge.collections",
+                      "knowledge.graph",
+                      "knowledge.concepts",
+                      "knowledge.directions",
+                      "knowledge.findings",
+                      "knowledge.entry",
+                      "knowledge.direction",
+                      "settings.current"
+                    ]
+                  }
+                },
+                "sql": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$"
+                  }
+                },
+                "cardViews": {
+                  "maxItems": 16,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                  }
+                },
+                "cards": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "view": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "width": {
+                        "type": "string",
+                        "enum": [
+                          "regular",
+                          "wide",
+                          "full"
+                        ]
+                      },
+                      "height": {
+                        "type": "string",
+                        "enum": [
+                          "content",
+                          "fill"
+                        ]
+                      },
+                      "data": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "view",
+                      "title"
+                    ]
+                  }
+                },
+                "header": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "icon": {
+                        "type": "string",
+                        "enum": [
+                          "open",
+                          "search",
+                          "add",
+                          "list",
+                          "note",
+                          "filter",
+                          "clock",
+                          "chart"
+                        ]
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                      },
+                      "emits": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "data": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "icon",
+                      "label"
+                    ]
+                  }
+                },
+                "frame": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{16}$"
+                    }
+                  },
+                  "required": [
+                    "version"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "placement",
+                "order",
+                "size",
+                "ownPresence",
+                "moves",
+                "reads",
+                "sql",
+                "cardViews",
+                "cards",
+                "header",
+                "frame"
+              ]
+            }
+          }
+        },
+        "required": [
+          "panels"
+        ],
+        "$defs": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "inf:plugins:app-panel-files": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 48,
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{16}$"
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "builtFor": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "integrity": {
+                      "type": "string",
+                      "pattern": "^sha256-[A-Za-z0-9+/]+=*$"
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "integrity",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "builtFor",
+              "files"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "inf:plugins:personal:mounts": {
       "effect": "change",
       "reach": "views",
@@ -97117,6 +97465,271 @@
           "extensionId",
           "key"
         ]
+      }
+    },
+    "inf:plugins:app-panels": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "panels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "placement": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right"
+                      ]
+                    },
+                    "y": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "bottom"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "size": {
+                  "type": "string",
+                  "enum": [
+                    "content",
+                    "fill"
+                  ]
+                },
+                "ownPresence": {
+                  "type": "boolean"
+                },
+                "moves": {
+                  "type": "boolean"
+                },
+                "reads": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "computers.resources",
+                      "quota.snapshot",
+                      "tasks.board",
+                      "tasks.detail",
+                      "tasks.search",
+                      "feed.recent",
+                      "forge.changes",
+                      "automation.list",
+                      "automation.kept",
+                      "batches.list",
+                      "knowledge.collections",
+                      "knowledge.graph",
+                      "knowledge.concepts",
+                      "knowledge.directions",
+                      "knowledge.findings",
+                      "knowledge.entry",
+                      "knowledge.direction",
+                      "settings.current"
+                    ]
+                  }
+                },
+                "sql": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$"
+                  }
+                },
+                "cardViews": {
+                  "maxItems": 16,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                  }
+                },
+                "cards": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "view": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "width": {
+                        "type": "string",
+                        "enum": [
+                          "regular",
+                          "wide",
+                          "full"
+                        ]
+                      },
+                      "height": {
+                        "type": "string",
+                        "enum": [
+                          "content",
+                          "fill"
+                        ]
+                      },
+                      "data": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "view",
+                      "title"
+                    ]
+                  }
+                },
+                "header": {
+                  "maxItems": 3,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "icon": {
+                        "type": "string",
+                        "enum": [
+                          "open",
+                          "search",
+                          "add",
+                          "list",
+                          "note",
+                          "filter",
+                          "clock",
+                          "chart"
+                        ]
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                      },
+                      "emits": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "data": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "icon",
+                      "label"
+                    ]
+                  }
+                },
+                "frame": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{16}$"
+                    }
+                  },
+                  "required": [
+                    "version"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "placement",
+                "order",
+                "size",
+                "ownPresence",
+                "moves",
+                "reads",
+                "sql",
+                "cardViews",
+                "cards",
+                "header",
+                "frame"
+              ]
+            }
+          }
+        },
+        "required": [
+          "panels"
+        ],
+        "$defs": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              }
+            ]
+          }
+        }
       }
     },
     "inf:settings:dictation": {

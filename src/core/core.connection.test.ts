@@ -26,6 +26,7 @@ import {
 } from "@shared/ipc";
 import { presetKeymap, type SavedKeymap } from "@shared/keymap";
 import { OWN_WINDOW_WORDS, type OwnWindowAsked } from "@shared/ownWindow";
+import type { AppPanels } from "@shared/personal/appPanels";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import {
   phonePushCardSchema,
@@ -498,6 +499,87 @@ describe("the connection serves the core to paired devices", () => {
 
     // Removed, as each test here leaves the first mate with no device.
     rmSync(join(core.paths.personalWorkspaceDir, "open-items"), { recursive: true, force: true });
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
+  });
+
+  // The captain, on INF-6295: "we should show the built-in panels as custom
+  // panels in the panels tab as well, unless there's a dedicated native tab
+  // for it". The computer names every app panel it shows; the phone leaves
+  // out the ones it draws as tabs of its own.
+  it("serves a phone the app's own panels it shows, their files by version, and a push when one comes or goes", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" }, appVersion: "1.4.0" });
+    expect(phone.welcome.changes).toContain("app-panels-on-the-phone");
+    const home = (await core.dispatch("inf:app:healthcheck", [])).version;
+    const ids = (answer: AppPanels) => answer.panels.map((panel) => panel.id);
+
+    // With no rule saved, Automation's gate is shut, and a panel this build
+    // made no files for is never offered.
+    const before = await phone.invoke("inf:plugins:app-panels", []);
+    expect(ids(before)).toEqual(["activity"]);
+
+    // A rule saved opens Automation's gate, and the phone hears of it.
+    const opened = phone.push(
+      (push) =>
+        push.channel === "inf:plugins:app-panels" &&
+        ids(push.payload as AppPanels).includes("automation"),
+    );
+    const rule = await core.dispatch("inf:automation:save", [
+      {
+        name: "Morning summary",
+        spec: { kind: "daily", hour: 8, minute: 0, timeZone: "America/Los_Angeles" },
+        prompt: "Summarize what changed in the project since yesterday.",
+        enable: true,
+      },
+    ]);
+    const shown = (await opened).payload as AppPanels;
+    const automation = shown.panels.find((panel) => panel.id === "automation");
+    expect(automation).toMatchObject({ title: "Automation", ownPresence: true });
+    expect(await phone.invoke("inf:plugins:app-panels", [])).toEqual(shown);
+
+    // Its files, by the version listed, each with the pin the build gave it.
+    const lib = frameLib as { dir: string; pins: Record<string, string> };
+    const version = automation?.frame.version as string;
+    const files = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "automation", version },
+    ]);
+    expect(files?.builtFor).toBe(home);
+    expect(files?.files.map((file) => file.path)).toEqual(["cards.mjs", "panel.mjs"]);
+    for (const file of files?.files ?? []) {
+      const at = `builtin/automation/${file.path}`;
+      expect(file.integrity).toBe(lib.pins[at]);
+      expect(file.data).toBe(readFileSync(join(lib.dir, at)).toString("base64"));
+    }
+    // Another version, or a panel not shown, answers nothing.
+    expect(
+      await phone.invoke("inf:plugins:app-panel-files", [
+        { id: "automation", version: "0000000000000000" },
+      ]),
+    ).toBeNull();
+    expect(
+      await phone.invoke("inf:plugins:app-panel-files", [{ id: "knowledge", version }]),
+    ).toBeNull();
+    // A file that is no longer the one the build made is never served.
+    const panel = join(lib.dir, "builtin", "automation", "panel.mjs");
+    const built = readFileSync(panel);
+    writeFileSync(panel, "fetch('https://example.com');\n");
+    await expect(
+      phone.invoke("inf:plugins:app-panel-files", [{ id: "automation", version }]),
+    ).rejects.toThrow(/not the file this build made/);
+    writeFileSync(panel, built);
+
+    // The rule gone shuts the gate again.
+    const shut = phone.push(
+      (push) =>
+        push.channel === "inf:plugins:app-panels" &&
+        !ids(push.payload as AppPanels).includes("automation"),
+    );
+    await core.dispatch("inf:automation:delete", [rule.id]);
+    expect(ids((await shut).payload as AppPanels)).toEqual(["activity"]);
+
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
@@ -1709,6 +1791,9 @@ function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, st
     "chunks/runtime-a1b2c3d4.mjs": "export function bootPanel() {}\n",
     "builtin/activity/panel.mjs":
       'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/automation/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/automation/cards.mjs": "export default {};\n",
   };
   const pins: Record<string, string> = {};
   for (const [path, text] of Object.entries(files)) {

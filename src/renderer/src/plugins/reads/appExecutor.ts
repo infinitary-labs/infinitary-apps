@@ -66,6 +66,9 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // (docs/task-browser.md, "The view"): no read names it; the browser view
   // subscribes directly.
   "inf:browser:frame": (_channel, listener) => window.infinitary.browser.onFrame(listener),
+  // The app's own panels a phone draws (docs/view.md, "The app's own panels
+  // on the phone"): a window draws them from its own build, so none hears it.
+  "inf:plugins:app-panels": () => () => {},
   "inf:app:sign-in-page": () => () => {},
   "inf:app:sign-in-ended": () => () => {},
   // What a first mate a command started asks of this computer's window, and

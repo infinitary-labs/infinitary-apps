@@ -9,7 +9,9 @@ extension PhoneJourney {
     /// (tests/fixtures/phone-panels/phone-shy) decides for itself whether it shows. Completion: the tab is absent with no
     /// panel, and appears and leaves as the self-deciding panel says it shows and does not; a library file the build did not make leaves the panel's place saying so; the panel draws, follows a write
     /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop with Retry,
-    /// and the tab leaves once the panel is gone.
+    /// and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
+    /// the app's own Automation panel joins the tab with no owner word and the rule's name, the Tasks and Activity panels
+    /// stay out, and the tab leaves once the rule is deleted.
     func testPanelsTab() async throws {
         try await launchFresh()
         try await join()
@@ -134,6 +136,24 @@ extension PhoneJourney {
         picture("panels-runbook")
         _ = try await home("panel-runbook-off")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once the runbook is off")
+
+        // INF-6295: the app's own panels the computer shows join the tab, drawn from its own panel code, with no owner
+        // word; Tasks and Activity stay their own tabs. A saved rule opens the Automation panel there, and the board's
+        // tasks and the feed's lines open no Tasks or Activity panel here.
+        _ = try await home("panel-automation-on")
+        XCTAssertTrue(panelsTab.waitForPresence(timeout: 30), app.debugDescription)
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let automation = app.buttons["panel-header-automation"]
+        XCTAssertTrue(automation.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(automation.label.contains("AUTOMATION"), "Its title: \(automation.label)")
+        XCTAssertFalse(automation.label.contains("yours"), "No owner word: \(automation.label)")
+        XCTAssertTrue(app.webViews.staticTexts["Morning summary"].waitForPresence(timeout: 60), app.debugDescription)
+        XCTAssertFalse(app.buttons["panel-header-now"].exists, "Tasks stays its own tab")
+        XCTAssertFalse(app.buttons["panel-header-activity"].exists, "Activity stays its own tab")
+        // In light and dark, as the release note's picture pair shows it.
+        try await appearances("panels-app-automation", showing: automation)
+        _ = try await home("panel-automation-off")
+        XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once no rule is saved")
     }
 
     /// INF-3830 piece 3, done when "A panel's title-row buttons draw beside its fold and work", "A card a panel puts up

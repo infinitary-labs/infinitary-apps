@@ -121423,6 +121423,11 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
 svg { ${pinned} }
 `;
   }
+  function pluginIdOf(panel) {
+    if (panel.source === "app") return APP_PLUGIN_ID;
+    return `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`;
+  }
+  const APP_PLUGIN_ID = "firstmate";
   const native = (message) => window.webkit.messageHandlers.panelHost.postMessage(message);
   const ask = (channel, args) => native({ type: "ask", channel, args });
   const reads = phoneReads(ask);
@@ -121458,7 +121463,8 @@ svg { ${pinned} }
       ...panel.reads.includes("feed.recent") ? [PANEL_LINE_PEEK_ACTION] : [],
       ...card ? [] : ["rail.summarize", "rail.show"],
       ...panel.server ? [PANEL_SERVER_ACTION] : [],
-      PANEL_INTEGRATIONS_ACTION
+      // The app's own panels call no integrations, as on the desktop (`FramedPanelBody`).
+      ...panel.source === "app" ? [] : [PANEL_INTEGRATIONS_ACTION]
     ];
   }
   function emitRefusal(error) {
@@ -121521,7 +121527,7 @@ svg { ${pinned} }
       if (!result.ok) throw new Error(result.error ?? "The panel's background work refused.");
       return result.result;
     }
-    if (id2 === PANEL_INTEGRATIONS_ACTION) return ask("inf:plugins:integrations", [panel.id, value]);
+    if (id2 === PANEL_INTEGRATIONS_ACTION && panel.source !== "app") return ask("inf:plugins:integrations", [panel.id, value]);
     if (id2.startsWith("cards.") || id2 === "card.keep") return onCardAction(id2, value);
     if (id2.startsWith("point.")) return onPointAction(id2, value);
     if (id2 === "rail.show") {
@@ -121585,7 +121591,7 @@ svg { ${pinned} }
       frame.style.cssText = `display:block;width:100%;height:${fill ? "100%" : "48px"};border:0;background:transparent`;
       controller = new FrameController(
         {
-          pluginId: `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`,
+          pluginId: pluginIdOf(panel),
           reads: [...panel.reads, ...panel.sql.length ? ["sql"] : []],
           grant: { sql: panel.sql },
           actions: actionsOf(value),

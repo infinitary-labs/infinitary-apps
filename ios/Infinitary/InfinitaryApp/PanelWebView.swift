@@ -104,11 +104,14 @@ import SwiftUI
                 guard let version = panel.frame?.version else { throw .notServed }
                 let answer: PhoneJSON
                 do {
-                    answer = try await session.panelAsk(.pluginsFiles, [.object([
-                        "source": .string(panel.filesSource), "id": .string(panel.id), "version": .string(version),
-                    ])])
+                    answer = panel.isApp
+                        ? try await session.panelAsk(.pluginsAppPanelFiles, [.object(["id": .string(panel.id), "version": .string(version)])])
+                        : try await session.panelAsk(.pluginsFiles, [.object([
+                            "source": .string(panel.filesSource), "id": .string(panel.id), "version": .string(version),
+                        ])])
                 } catch { throw .unreadable }
-                let files = try PhonePanelFiles.read(answer)
+                // The app's own panels come with the pins their computer's build made, each checked here.
+                let files = panel.isApp ? try PhonePanelFiles.readPinned(answer) : try PhonePanelFiles.read(answer)
                 let library = try await self.library(files.builtFor)
                 guard !Task.isCancelled else { return }
                 assets?.serve(library: library.files, files: files.files)
@@ -260,7 +263,7 @@ import SwiftUI
     /// The channels the parent page may ask on: what the panel reads and does, never the files or the list, which
     /// native code asks for itself.
     private static let pageAsks = Set(PhonePanelRequest.allCases).subtracting([
-        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsPersonalList, .shellPreferences,
+        .pluginsFiles, .pluginsLibrary, .pluginsRetry, .pluginsPersonalList, .shellPreferences, .pluginsAppPanels, .pluginsAppPanelFiles,
     ])
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,

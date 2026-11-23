@@ -33,7 +33,6 @@ import type { Layout } from "@shared/preferences";
 import type { RepoPolicyPatch, RepoSetupResult, RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { devicePlace } from "@shared/signIns";
-import { type AppPanelGates, runbookGatesOf } from "@shared/surfaces";
 import {
   isWindowChannel,
   WINDOW_ONLY_CHANNELS,
@@ -42,25 +41,13 @@ import {
 } from "@shared/windowAsks";
 import { addedPrivateSite } from "../browser/privateSites";
 import type { CoreServices } from "../coreServices";
+import { appPanelGatesOf } from "../personal/appPanelsServed";
 import { actionValue } from "../pi/appTools";
 import { listSurfaces, type SurfaceView } from "../pi/personalizeTool";
 import type { ViewWindows } from "../viewWindows";
 import { CHANGES_THERE } from "./accountHandlers";
 import { accountTrail } from "./accountTrail";
 import type { createActionTrail } from "./actionTrail";
-
-/**
- * The gates open now, for the app panels that wait on one: Knowledge's while
- * this build keeps knowledge and there is some to show, Automation's while a
- * rule is saved, and a built-in runbook's while it is on.
- */
-function gatesOf(services: CoreServices): AppPanelGates {
-  return {
-    knowledge: services.knowledge?.held() ?? false,
-    automation: services.scheduler.rules().length > 0,
-    ...runbookGatesOf(services.runbooks.list()),
-  };
-}
 
 /** Each core request's handler, by channel, as `createCoreDispatcher` builds them. */
 export type CoreHandlers = {
@@ -270,7 +257,11 @@ export function createCatalogDispatch({
         isDeepStrictEqual(newLayout.collapsedPanels, oldLayout.collapsedPanels);
       if (actor.kind === "firstmate" && !reset && changed.size > 1)
         throw new Error("Change one panel at a time.");
-      const surfaces = listSurfaces(oldLayout, services.personal.snapshot(), gatesOf(services));
+      const surfaces = listSurfaces(
+        oldLayout,
+        services.personal.snapshot(),
+        appPanelGatesOf(services),
+      );
       // An app panel waiting on its gate has its place too, and Settings → Panels moves it.
       const known = new Set([
         ...surfaces.map((surface) => surface.id),
@@ -383,8 +374,8 @@ export function createCatalogDispatch({
         const old = before.get(name) as Layout;
         const next = after as typeof old;
         const snapshot = services.personal.snapshot();
-        const surfaces = listSurfaces(next, snapshot, gatesOf(services));
-        const prior = listSurfaces(old, snapshot, gatesOf(services));
+        const surfaces = listSurfaces(next, snapshot, appPanelGatesOf(services));
+        const prior = listSurfaces(old, snapshot, appPanelGatesOf(services));
         // The panel the first mate named, by its id or its title, as its
         // request resolves it, or the one the captain's own write moved.
         const target =

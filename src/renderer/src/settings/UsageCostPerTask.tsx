@@ -348,10 +348,30 @@ function CostValues({
   );
 }
 
+/** The app's down chevron (ModelsSection, PanelExpandChevron); turned up while the menu is open. */
+const chevron = (
+  <svg
+    className="fm-usage-cost-filter-chevron"
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
 /**
  * A filter of checkboxes in a disclosure: its name and what it holds on
  * the closed row; All, then each choice with its tasks in the period. No
- * box ticked is All. Escape closes it and leaves focus on its row.
+ * box ticked is All. Escape closes it and leaves focus on its row; a press
+ * anywhere outside it, or focus moving outside it, closes it too, so the
+ * two filters' menus never lie over each other.
  */
 function CostFilter<K extends string | null>({
   filter,
@@ -369,6 +389,23 @@ function CostFilter<K extends string | null>({
   onPick: (next: ReadonlySet<K> | null) => void;
 }) {
   const box = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (target: EventTarget | null) =>
+      target instanceof Node && !box.current?.contains(target);
+    const close = (event: Event) => {
+      if (box.current && outside(event.target)) box.current.open = false;
+    };
+    // A press on a part of the menu that takes no focus moves focus to the
+    // body, which fires no focusin, so the menu stays open for it.
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("focusin", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("focusin", close);
+    };
+  }, [open]);
   const onKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
     if (event.key !== "Escape" || !box.current?.open) return;
     event.stopPropagation();
@@ -387,36 +424,40 @@ function CostFilter<K extends string | null>({
       className="fm-usage-cost-filter"
       data-usage-cost-filter={filter}
       onKeyDown={onKeyDown}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>
         <span className="fm-usage-cost-filter-label">{label}</span>{" "}
         <span data-usage-cost-filter-value="">
           {costFilterValue(options as CostOption<string | null>[], picked, all)}
         </span>
+        {chevron}
       </summary>
       <fieldset className="fm-usage-cost-menu">
         <legend className="fm-usage-cost-menu-legend">{label}</legend>
-        <label>
-          <input
-            type="checkbox"
-            checked={picked === null}
-            onChange={() => onPick(null)}
-            data-usage-cost-all=""
-          />
-          <span>{all}</span>
-        </label>
-        {options.map((option) => (
-          <label key={option.key ?? ""}>
+        <div className="fm-usage-cost-menu-list">
+          <label>
             <input
               type="checkbox"
-              value={option.key ?? ""}
-              checked={picked?.has(option.key) ?? false}
-              onChange={() => toggle(option.key)}
+              checked={picked === null}
+              onChange={() => onPick(null)}
+              data-usage-cost-all=""
             />
-            <span>{option.name}</span>
-            <span className="fm-usage-muted fm-usage-mono">{option.tasks}</span>
+            <span>{all}</span>
           </label>
-        ))}
+          {options.map((option) => (
+            <label key={option.key ?? ""}>
+              <input
+                type="checkbox"
+                value={option.key ?? ""}
+                checked={picked?.has(option.key) ?? false}
+                onChange={() => toggle(option.key)}
+              />
+              <span>{option.name}</span>
+              <span className="fm-usage-muted fm-usage-mono">{option.tasks}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
     </details>
   );

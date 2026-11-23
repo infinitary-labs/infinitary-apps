@@ -153,6 +153,7 @@ It shows whether tasks in a project take more work than before, as complexity or
   Median now is the window ending now, At the start the period's first window with a median, and Change the one against the other as a whole percent.
 - **Filters.**
   Projects and Kinds pick from the projects and kinds the period's tasks name, most tasks first; no box ticked is All.
+  Each opens a solid menu under its row, even on the see-through window, and only one is open at a time: a press anywhere outside it, or focus moving past it, closes it.
   They start at All on every opening of the tab and stay through a new period, work or unit.
 - The section shows when the work is all or task work, since the first mate and other work have no finished tasks.
 - The medians are `costSeries` in `src/shared/usage.ts`, pure math over the read; Values gives each local day's window, today ending now.
@@ -220,7 +221,7 @@ Open Usage (`settings.usage`) opens Settings at Usage from anywhere with focus o
 Neither has a default key.
 In the tab the unit switch takes the arrows, Tab reaches Period, Work, Daily values and each model; Enter or Space on a model opens its details with focus on Close details, and Escape closes them and puts focus back on the model, leaving Settings open.
 Each recent task's key is a link to that task, a Tab stop of its own (FI3-1271; the design skill's core rule "Task keys"): resting on it or focusing it opens the task's summary, and a click or Enter leaves Settings and opens the task on the main view.
-Under the daily bars Tab reaches Cost per task's Projects and Kinds; Enter or Space opens one, Tab moves through All and each choice and Space ticks one, and Escape closes it and leaves focus on its row with Settings open.
+Under the daily bars Tab reaches Cost per task's Projects and Kinds; Enter or Space opens one, Tab moves through All and each choice and Space ticks one, Tab past the last choice closes it, and Escape closes it and leaves focus on its row with Settings open.
 Its Values table, also a Tab stop, gives every day's median, middle half and task count, so nothing the line shows needs a pointer.
 Tab reaches See more under the recent tasks, past their keys; Enter or Space adds the next ten and puts focus on the first of them, and the count under the list is announced.
 
@@ -240,6 +241,7 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 - `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage in dollars, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.
   Over five seeded weeks of finished work, Cost per task opens in dollars, its median matches the read, a project and a kind are picked and Escape closes a filter, Values lists every day, and the filters start at All again, all by keys.
   `tests/e2e/usage.ts` holds its hooks and the seeded ledgers.
+- `tests/browser/usage-cost-filters.test.tsx`: over the same five seeded weeks, Cost per task's Projects and Kinds menus close on a press outside, on opening the other and on Tab past the last choice, stay open for a choice ticked inside, and paint solid where the see-through window gives the section's boxes 55% fills.
 
 ## Historical context-shortening records
 

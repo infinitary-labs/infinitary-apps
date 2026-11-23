@@ -25,6 +25,7 @@ import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import { approvedChangeBase, followBase, recordedBases } from "./baseFollow";
 import type { CardService } from "./cardService";
+import { checkedOutHead } from "./checkedOutHead";
 import { briefCarriesPictures } from "./crewBrief";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
@@ -117,7 +118,12 @@ export class Reviews {
           "The builder's computer is out of reach; the review must wait for it, not run here instead.",
           { deviceId: device },
         );
-      const read = await machines.revision(device, builder.id, undefined, builtOn?.head);
+      const read = await machines.revision(
+        device,
+        builder.id,
+        await checkedOutHead(this.options, builder),
+        builtOn?.head,
+      );
       ({ headSha, changedFiles, changeReading } = read);
       // Named only where that computer read from it: an older one reads from the default branch.
       builtOnHead = read.builtOn;
@@ -125,7 +131,8 @@ export class Reviews {
       evidenceDir = folders.evidence;
     } else {
       headSha = builder.branch
-        ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
+        ? ((await checkedOutHead(this.options, builder)) ??
+          (await this.options.workspace.branchHead(builder.repoDir, builder.branch)))
         : null;
       // A head that holds a newer approved version of the part under it reads from that version.
       if (headSha && builtOn) {

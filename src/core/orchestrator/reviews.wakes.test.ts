@@ -426,6 +426,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           sessions: `/${device}/${id}/sessions`,
           evidence: `/${device}/${id}/evidence`,
         }),
+        // It names no checkout, as a computer older than that answer does.
+        checkedOut: async () => null,
         // The read the connection's cut fails, as connection.ts raises it.
         revision: async () => {
           reading.reads++;

@@ -19,7 +19,7 @@ Nothing else: an alpha build, which opens Observe's tab, does not open this comm
 Never a Settings toggle, never a persisted flag, never a default-on packaged path.
 The gate is checked **before a single file is read**: a blocked run opens no transcript, creates no output directory, and exits 3.
 
-There is no Electron `app` in a script, so packaged-ness is read off where the script actually sits (`detectPackaged`): a packaged build ships filtered git-tracked source (no test fixtures or draft data terms) as `Contents/Resources/self-source/` and its code inside `app.asar`, a checkout does not.
+There is no Electron `app` in a script, so packaged-ness is read off where the script actually sits (`detectPackaged`): a packaged build ships filtered git-tracked source (no test fixtures, draft data terms or README pictures) as `Contents/Resources/self-source/` and its code inside `app.asar`, a checkout does not.
 `INFINITARY_PACKAGED=1` can only ever *tighten* that answer - nothing can declare a build unpackaged.
 
 ## Run it

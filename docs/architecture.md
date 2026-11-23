@@ -219,7 +219,7 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   `seatSessionSpec` (`src/core/orchestrator/seat.ts`) sets `builtins: "none"`; Pi maps that to `noTools: "builtin"` and serves only the spec's typed tools (`openRolling` in `src/core/pi/session.ts`), and the Claude seat passes `tools: []` (`claudeSessionOptions` in `src/core/claude/claudeSessionOptions.ts`).
   There is no `read`, `grep`, `find`, or `ls`.
   Reading is a crewmate's job (`docs/orchestrator-contract.md`). rev-4's Q1 jailed read-only tools are not what production runs.
-  Packaged builds ship the git-tracked tree, excluding test fixtures and the draft data terms, as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources); unpackaged/dev uses the checkout.
+  Packaged builds ship the git-tracked tree, excluding test fixtures, the draft data terms and the README's pictures, as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources); unpackaged/dev uses the checkout.
   The tree is data: nothing executes from it, and its output is generated, never edited by hand.
   The first mate's context distinguishes its own machine-local path from its source facts (`self_source_facts`); the seat has no write tools and no read tools.
   `selfSource/resolve.ts` reads app-relative source facts anew when a conversation opens, checks both installed maps against the running app version and verifies indexed files are readable within the source root.
@@ -1006,7 +1006,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   On macOS a test pins the app's home with `CFFIXED_USER_HOME` - `HOME` alone does not move Electron's appData - and never boots into the real folders.
   Nothing migrates data between the two.
   Infinitary's folders are `infinitary` and `infinitary-dev`, and an app with Infinitary's spelling moves the older folder of its flavor into its own once, before anything opens it (`docs/saved-data-compatibility.md`, "The one-time move"); Firstmate 3000's own folders never move.
-- Packaged self-awareness (P1): the git-tracked tree, excluding test fixtures and the draft data terms, ships as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources).
+- Packaged self-awareness (P1): the git-tracked tree, excluding test fixtures, the draft data terms and the README's pictures, ships as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources).
   Dev uses the checkout.
   The seat does not add that root as a read jail (§4); the system prompt and context block name the path so a crewmate can inspect it.
   User-facing surfaces never mention it.

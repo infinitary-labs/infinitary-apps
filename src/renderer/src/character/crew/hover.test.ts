@@ -381,6 +381,54 @@ describe("where the summary sits", () => {
     };
     expect(place(150, -40, boxed)).toMatchObject({ x: 150 - reach - lead - 240, y: -95 });
   });
+  it("reports no clear place for the minimum-height dependency-and-plan summary", () => {
+    // Inputs read from the real paired-computer fixture at minimum height:
+    // formation-relative boxes and the dependency-and-plan summary's size.
+    const anchor = {
+      x: 130.4091796875,
+      y: 9.787103271484398,
+    };
+    const targetReach = 13.6953125;
+    const clear = {
+      left: 116.7138671875,
+      right: 144.1044921875,
+      top: -14.4200439453125,
+      bottom: 23.482415771484398,
+    };
+    const summary = { width: CREW_HOVER.maxWidthPx, height: 290 };
+    const room: SummaryRoom = {
+      within: {
+        left: -472,
+        right: 472,
+        top: -226,
+        bottom: 282,
+      },
+      avoid: [
+        {
+          left: -476,
+          right: -184,
+          top: -46,
+          bottom: 346,
+        },
+        {
+          left: 184,
+          right: 476,
+          top: -230,
+          bottom: 346,
+        },
+      ],
+    };
+    expect(placeCrewSummary(anchor, targetReach, clear, summary, room)).toBeNull();
+    // The chosen overlay drops only the rail obstacles, keeping the same
+    // window bounds and clearance around the crewmate and its name.
+    const overlay = placeCrewSummary(anchor, targetReach, clear, summary, { ...room, avoid: [] });
+    expect(overlay).not.toBeNull();
+    if (!overlay) throw new Error("The overlay has no window-contained placement");
+    expect(overlay.x).toBeGreaterThanOrEqual(room.within.left);
+    expect(overlay.x + summary.width).toBeLessThanOrEqual(room.within.right);
+    expect(overlay.y).toBeGreaterThanOrEqual(room.within.top);
+    expect(overlay.y + summary.height).toBeLessThanOrEqual(room.within.bottom);
+  });
   it("still lands inside the window when nowhere has room", () => {
     const tiny = { within: { left: -100, top: -60, right: 100, bottom: 60 }, avoid: [] };
     const at = place(40, 0, tiny);

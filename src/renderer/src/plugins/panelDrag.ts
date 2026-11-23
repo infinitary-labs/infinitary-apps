@@ -1,5 +1,6 @@
 import type { PanelMove } from "@shared/panelArrangement";
 import type { RailSide, RailY, SidePanelPlacement } from "@shared/plugins/manifest";
+import { RAIL_CONTENTS_SELECTOR } from "./railRoom";
 
 /**
  * Moving a panel by hand (INF-2344; design skill
@@ -265,11 +266,7 @@ const SIDES: readonly RailSide[] = ["left", "right"];
 
 /** Whether a rail draws anything: an empty rail is zero-wide and paints nothing. */
 function railShown(rail: HTMLElement): boolean {
-  return (
-    rail.querySelector(
-      ":scope > :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden])",
-    ) !== null
-  );
+  return rail.querySelector(RAIL_CONTENTS_SELECTOR) !== null;
 }
 
 function emptyRailZones(rail: HTMLElement, side: RailSide): { area: Box; top: Box; bottom: Box } {

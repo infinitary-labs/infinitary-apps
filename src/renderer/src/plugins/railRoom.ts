@@ -1,3 +1,7 @@
+/** Visible direct rail children that occupy space, including the rail's own controls. */
+export const RAIL_CONTENTS_SELECTOR =
+  "[data-rail] > :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden])";
+
 /** The physical readings of one shown panel, in display order. */
 export type RailRoomPanel = {
   id: string;

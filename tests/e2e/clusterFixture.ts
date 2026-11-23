@@ -5,19 +5,26 @@ import { join } from "node:path";
 import { createKeyIdentity } from "../../src/core/devices/identity";
 import { DevicePairing } from "../../src/core/devices/pairing";
 import { openDatabase } from "../../src/core/storage/db";
-import { seedTask } from "../../src/core/tasks/seedTask";
+import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type DeviceGrant, parsePairingLink } from "../../src/shared/devices";
 import { scratchDir } from "../helpers/scratchDirs";
 /**
  * `counts[m]` idle crewmates on computer `m` (0 is this Mac), as
  * `sample-<m>-<i>`; `relate` then adds rows and relationships among them,
- * given each computer's device id.
+ * given each computer's device id. Optional facts describe each real task
+ * before its normal start; device placement and workspace stay owned here.
+ * @journey-area src/core/devices/pairing.ts
+ * @journey-area src/core/tasks/taskPlacement.ts
  */
 export function clusterFixture(
   counts: number[],
   peers?: DeviceGrant[],
   relate?: (tasks: TaskService, deviceIds: (string | undefined)[]) => void,
+  facts?: (
+    computer: number,
+    index: number,
+  ) => Partial<Pick<TaskSeed, "title" | "model" | "outcome">>,
 ) {
   const dir = scratchDir("fm-cluster-capture-");
   const pairing = new DevicePairing({ dir: join(dir, "devices"), ownUid: 501 });
@@ -65,6 +72,7 @@ export function clusterFixture(
         deviceId: ids[m],
         sessionFile: ids[m] ? `placed-${m}-${i}.jsonl` : undefined,
         outcome: "Waiting for the captain.",
+        ...facts?.(m, i),
       });
     }
   });

@@ -12,6 +12,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { useCommandKeys } from "../../app/keyHints";
 import { motionToken } from "../../design/motion";
 import { litTask, useLitTaskId } from "../../plugins/point/litTask";
@@ -390,6 +391,8 @@ export function CrewOrbit({
   const { shown, leaving } = useSummaryPresence(inspecting);
   const summary = shown !== null ? (facts?.[shown] ?? null) : null;
   const layerRef = useRef<HTMLDivElement>(null);
+  const [aboveRails, setAboveRails] = useState(false);
+  const aboveRailsRef = useRef(false);
   const targetRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -549,32 +552,47 @@ export function CrewOrbit({
       clear.right = Math.max(clear.right, label.right);
       clear.bottom = Math.max(clear.bottom, label.bottom);
     }
-    const at = placeCrewSummary(
-      anchor,
-      reach,
-      clear,
-      { width: panel.offsetWidth, height: panel.offsetHeight },
-      {
-        within: local(room.within, -SUMMARY_MARGIN_PX),
-        avoid: room.avoid.map((box) => local(box, SUMMARY_MARGIN_PX)),
-      },
-    );
-    // No readable placement exists while panels occupy every available
-    // pocket. Keep inspecting the agent, but never paint under a panel.
-    if (!at) {
+    const size = { width: panel.offsetWidth, height: panel.offsetHeight };
+    const localRoom = {
+      within: local(room.within, -SUMMARY_MARGIN_PX),
+      avoid: room.avoid.map((box) => local(box, SUMMARY_MARGIN_PX)),
+    };
+    const clearPlace = placeCrewSummary(anchor, reach, clear, size, localRoom);
+    const over = clearPlace === null;
+    // Only the no-clear-place case moves to the window-wide summary layer.
+    // Hide the old holder until React has moved it, never painting one frame
+    // at window coordinates inside the formation (or the reverse).
+    if (over !== aboveRailsRef.current) {
       layer.removeAttribute("data-placed");
+      setAboveRails(over);
       return;
     }
+    const at =
+      clearPlace ??
+      placeCrewSummary(anchor, reach, clear, size, {
+        ...localRoom,
+        avoid: [],
+      });
+    if (!at) return;
+    const origin = over ? { x: cx, y: cy } : { x: 0, y: 0 };
     const px = (value: number) => `${Math.round(value * 10) / 10}px`;
     writeStyle(target, "width", px(reach * 2));
     writeStyle(target, "height", px(reach * 2));
-    writeStyle(target, "transform", `translate(${px(anchor.x - reach)}, ${px(anchor.y - reach)})`);
-    writeStyle(panel, "transform", `translate(${Math.round(at.x)}px, ${Math.round(at.y)}px)`);
+    writeStyle(
+      target,
+      "transform",
+      `translate(${px(anchor.x - reach + origin.x)}, ${px(anchor.y - reach + origin.y)})`,
+    );
+    writeStyle(
+      panel,
+      "transform",
+      `translate(${Math.round(at.x + origin.x)}px, ${Math.round(at.y + origin.y)}px)`,
+    );
     writeStyle(line, "width", px(at.line.length));
     writeStyle(
       line,
       "transform",
-      `translate(${px(at.line.x)}, ${px(at.line.y)}) rotate(${Math.round(at.line.angle * 1000) / 1000}rad)`,
+      `translate(${px(at.line.x + origin.x)}, ${px(at.line.y + origin.y)}) rotate(${Math.round(at.line.angle * 1000) / 1000}rad)`,
     );
     angleRef.current = at.line.angle;
     if (!layer.hasAttribute("data-placed")) layer.setAttribute("data-placed", "");
@@ -623,6 +641,7 @@ export function CrewOrbit({
   // size or the window changes; under reduced motion no frame would do it.
   // A first placement slides it in; a new crewmate moves it from where it stood.
   useLayoutEffect(() => {
+    aboveRailsRef.current = aboveRails;
     const panel = panelRef.current;
     const line = lineRef.current;
     if (!summary || !panel || !line || !shown) return;
@@ -639,7 +658,7 @@ export function CrewOrbit({
       observer.disconnect();
       window.removeEventListener("resize", placeSummary);
     };
-  }, [summary, shown, placeSummary]);
+  }, [summary, shown, placeSummary, aboveRails]);
   useSummaryFade(layerRef, leaving);
 
   useEffect(() => {
@@ -651,7 +670,7 @@ export function CrewOrbit({
         interactiveRef.current &&
         wrap !== null &&
         target instanceof Element &&
-        (wrap.contains(target) || target.contains(wrap))
+        (wrap.contains(target) || layerRef.current?.contains(target) || target.contains(wrap))
       );
     };
     // The formation's box is re-measured on layout changes and at most every
@@ -1090,6 +1109,30 @@ export function CrewOrbit({
     pointerEvents: "none",
   };
   const namedClusters = new Set(named.split(",").filter(Boolean));
+  // Both holders draw the same summary, brackets and hairline. Only a
+  // summary with no clear placement uses the overlay root beside PeekSummary.
+  const summaryLayer =
+    summary && shown ? (
+      <div
+        ref={layerRef}
+        className={aboveRails ? "fm-row-summary-layer" : "fm-crew-summary-layer"}
+        aria-hidden={leaving || undefined}
+        inert={!interactive || leaving}
+        style={{ "--crew-summary-max": `${CREW_HOVER.maxWidthPx}px` } as React.CSSProperties}
+      >
+        <div ref={targetRef} className="fm-crew-target" data-crew-target={shown} aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div ref={lineRef} className="fm-crew-summary-line" aria-hidden="true" />
+        <div ref={panelRef}>
+          <CrewSummary taskId={shown} facts={summary} />
+        </div>
+      </div>
+    ) : null;
+  const overlayRoot = aboveRails ? document.querySelector("[data-summary-overlay-root]") : null;
   return (
     <div
       ref={wrapRef}
@@ -1303,30 +1346,7 @@ export function CrewOrbit({
         </div>
       )}
       {/* Outside the fitted formation, so the summary's type is never scaled. */}
-      {summary && shown && (
-        <div
-          ref={layerRef}
-          className="fm-crew-summary-layer"
-          aria-hidden={leaving || undefined}
-          style={{ "--crew-summary-max": `${CREW_HOVER.maxWidthPx}px` } as React.CSSProperties}
-        >
-          <div
-            ref={targetRef}
-            className="fm-crew-target"
-            data-crew-target={shown}
-            aria-hidden="true"
-          >
-            <i />
-            <i />
-            <i />
-            <i />
-          </div>
-          <div ref={lineRef} className="fm-crew-summary-line" aria-hidden="true" />
-          <div ref={panelRef}>
-            <CrewSummary taskId={shown} facts={summary} />
-          </div>
-        </div>
-      )}
+      {summaryLayer && overlayRoot ? createPortal(summaryLayer, overlayRoot) : summaryLayer}
     </div>
   );
 }

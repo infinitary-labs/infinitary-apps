@@ -8,6 +8,7 @@ import { requestStageClearedFidget } from "../character/emoteSignal";
 import { Firstmate } from "../character/Firstmate";
 import { setCharacterPaintHidden } from "../character/paintHidden";
 import { motionToken } from "../design/motion";
+import { RAIL_CONTENTS_SELECTOR } from "../plugins/railRoom";
 import { useCardUp } from "./LastTurn";
 import { useProjectFocus } from "./projectFocus";
 import { STAGE_LIFT_EASE, STAGE_TOP } from "./stage/entryView";
@@ -28,7 +29,7 @@ function crewSummaryRoom(): SummaryRoom {
       top: box("[data-topbar]")?.bottom ?? 0,
       bottom: box("[data-prompt-dock]")?.top ?? window.innerHeight,
     },
-    avoid: [...document.querySelectorAll("[data-side-panel]")].map((panel) => {
+    avoid: [...document.querySelectorAll(RAIL_CONTENTS_SELECTOR)].map((panel) => {
       const { left, top, right, bottom } = panel.getBoundingClientRect();
       return { left, top, right, bottom };
     }),

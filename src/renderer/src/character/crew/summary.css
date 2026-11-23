@@ -23,7 +23,7 @@
 }
 :is(.fm-crew-summary-layer, .fm-row-summary-layer) > * {
   position: absolute;
-  inset-inline-start: 0;
+  left: 0; /* physical: placement writes measured window or formation coordinates */
   top: 0;
 }
 :is(.fm-crew-summary-layer, .fm-row-summary-layer):not([data-placed]) {

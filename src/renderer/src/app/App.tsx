@@ -190,6 +190,8 @@ export function App() {
       {home && <HomePrompt />}
       {/* Above the rails, the cards and the input: a Tasks row's summary, or a
           task key's - in Settings too, where its keys rest the same way. */}
+      {/* Crewmate summaries use this level only when the rails leave no clear place. */}
+      <div data-summary-overlay-root="" />
       <PeekSummary />
       {/* Why changes are off on the Mac this one controls (docs/view.md). */}
       {home && <ViewPill />}

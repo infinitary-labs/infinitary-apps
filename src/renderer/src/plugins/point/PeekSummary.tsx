@@ -25,6 +25,7 @@ import {
   useSummaryPresence,
 } from "../../character/crew/summaryMotion";
 import { useBoardTasks } from "../../character/crew/useCrewBoard";
+import { RAIL_CONTENTS_SELECTOR } from "../railRoom";
 import { appReadExecutor } from "../reads/appExecutor";
 import { LineSummary } from "./LineSummary";
 import { panelPeekBox, type TaskPeek, taskPeek, useTaskPeek } from "./taskPeek";
@@ -71,7 +72,7 @@ function summaryRoom(own?: Element | null): SummaryRoom {
   };
   const obstacles = [
     ...document.querySelectorAll("[data-prompt-dock]"),
-    ...[...document.querySelectorAll("[data-side-panel]")].filter((panel) => panel !== own),
+    ...[...document.querySelectorAll(RAIL_CONTENTS_SELECTOR)].filter((panel) => panel !== own),
   ];
   return {
     within: {

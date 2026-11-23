@@ -94,6 +94,8 @@
     // The built-in manifest is pure data; the side-rails e2e reads the
     // Settings tabs it declares here.
     "src/renderer/src/plugins/builtin/manifest.ts",
+    // The hover journey reads the rail's pure content selector.
+    "src/renderer/src/plugins/railRoom.ts",
     // The first turn's label rule is pure too; its e2e reads the label's words here.
     "src/renderer/src/app/firstTurn.ts",
     // The sky fidgets' geometry and the fidget pool are pure too; the sky

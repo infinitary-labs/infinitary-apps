@@ -46,6 +46,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneCardSize.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCardFoot.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCardActions.swift",
     "ios/Infinitary/InfinitaryApp/PhoneFont.swift",
     // The computer's own update under every part's message box and in Settings (MessageComposer.swift).
     "ios/Infinitary/InfinitaryApp/PhoneHomeUpdateViews.swift",

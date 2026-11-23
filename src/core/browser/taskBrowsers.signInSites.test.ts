@@ -244,7 +244,7 @@ describe("a task keeps the sign-ins it may use until the captain stops its brows
     expect(after.browsers.fact("t2")).toMatchObject({ kept: true, saved: ["apple.example"] });
   });
 
-  it("keeps it when the captain closes a page he opened from the project with Return control", async () => {
+  it("keeps it when the captain closes a page they opened from the project with Return control", async () => {
     const h = onThisComputer();
     const browser = await allowedOnT2(h);
     await browser.close({});

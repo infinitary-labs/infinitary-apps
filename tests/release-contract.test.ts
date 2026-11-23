@@ -383,7 +383,7 @@ describe("electron-builder configuration", () => {
 
   it("never lets local signing leak into the release config", () => {
     const mac = parsed.mac as { sign?: unknown };
-    expect(mac.sign).toBeUndefined();
+    expect(mac.sign).toBe("./scripts/sign-release-mac.mjs");
     expect(configText).not.toContain("sign-local-mac");
     expect(configText).not.toContain("local-codesign");
   });

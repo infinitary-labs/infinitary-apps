@@ -463,7 +463,7 @@ describe("the batch's notes step", () => {
     expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
   });
 
-  it("passes the commit the batch's own check regenerated the phone's files in, and nothing that only imitates it", () => {
+  it("passes the batch's generated-files commit, and nothing that only imitates it", () => {
     const { f } = released();
     f.commit("chore: mark the phone's generated files", {
       ".gitattributes": "ios/**/*.generated.* linguist-generated\n",
@@ -479,9 +479,9 @@ describe("the batch's notes step", () => {
     expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 1 change(s)");
     // The words alone pass nothing: one source file beside the generated one is a change of its own.
     f.git("reset", "-q", "--hard", "HEAD^");
-    f.commit(message, { "ios/Words.generated.swift": "2", "src.txt": "2" });
+    const mixedCommit = f.commit(message, { "ios/Words.generated.swift": "2", "src.txt": "2" });
     expect(() => f.cli("batch", "--base", "main")).toThrow(
-      /\(1 of 2\):\n\s+[0-9a-f]{12} chore\(phone\)/,
+      `(1 of 2):\n  ${mixedCommit.slice(0, 12)} `,
     );
     // Nor does a commit that marks its own files generated.
     f.git("reset", "-q", "--hard", "HEAD^");

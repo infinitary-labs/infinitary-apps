@@ -2745,6 +2745,7 @@
 "settingsDevicesChangeAddress" = "Change address";
 "settingsDevicesChangeAddressFailed" = "Could not change where this computer is reached.";
 "settingsDevicesChangeAddressNamed" = "Change the address of %1$@";
+"settingsDevicesCheckingRow" = "Checking %1$@…";
 "settingsDevicesConfirmThis" = "This is the computer";
 "settingsDevicesControllingNow" = "Controlling your first mate now";
 "settingsDevicesCopied" = "Copied";

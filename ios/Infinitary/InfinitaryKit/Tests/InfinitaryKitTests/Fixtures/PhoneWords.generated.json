@@ -1981,6 +1981,7 @@
   {"said":{"m":"settingsDevicesChangeAddress"},"words":"Change address"},
   {"said":{"m":"settingsDevicesChangeAddressFailed"},"words":"Could not change where this computer is reached."},
   {"said":{"m":"settingsDevicesChangeAddressNamed","a":{"device":"‹device›"}},"words":"Change the address of ‹device›"},
+  {"said":{"m":"settingsDevicesCheckingRow","a":{"address":"‹address›"}},"words":"Checking ‹address›…"},
   {"said":{"m":"settingsDevicesConfirmThis"},"words":"This is the computer"},
   {"said":{"m":"settingsDevicesControllingNow"},"words":"Controlling your first mate now"},
   {"said":{"m":"settingsDevicesCopied"},"words":"Copied"},

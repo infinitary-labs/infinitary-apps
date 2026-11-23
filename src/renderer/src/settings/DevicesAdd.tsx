@@ -116,7 +116,9 @@ function AddressForm(props: DevicesTabViewProps) {
   const homeName = useFirstMateName();
   // The address with the port typed beside it, or null while either is not one.
   const typed = addressAtPort(addressDraft, portDraft);
-  const trying = adding.some((mac) => mac.address === typed);
+  // An add of the typed address under way, said beside the field until it answers.
+  const underWay = adding.find((mac) => mac.address === typed);
+  const trying = underWay !== undefined;
   const form = useRef<HTMLFormElement>(null);
   const field = () => form.current?.querySelector<HTMLInputElement>("#device-remote-login");
   // The address a pick just filled in, and how much of it is the user name:
@@ -154,6 +156,15 @@ function AddressForm(props: DevicesTabViewProps) {
           {homeName
             ? m.settingsDevicesAddressKeepsThere({ name: homeName })
             : m.settingsDevicesAddressKeeps()}
+        </div>
+      )}
+      {underWay && (
+        <div
+          className="fm-devices-aside-say"
+          role="status"
+          data-device-address-under-way={underWay.address}
+        >
+          {here(addingWords(underWay, underWay.name ?? underWay.address))}
         </div>
       )}
       {addressRefusal && (

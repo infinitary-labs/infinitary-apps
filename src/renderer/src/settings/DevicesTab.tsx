@@ -11,6 +11,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { NEARBY_OFF, NEARBY_RENEW_MS, type NearbyMacsView } from "@shared/nearbyMacs";
 import {
   addressParts,
+  parseRemoteLoginAddress,
   type RemoteLoginConfirmQuestion,
   type RemoteLoginLeaveQuestion,
   type RemoteLoginPasswordQuestion,
@@ -19,7 +20,7 @@ import {
   remoteLoginRefusalLines,
 } from "@shared/remoteLogin";
 import type { DeviceSignIns } from "@shared/signIns";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../accounts/connectChips.css";
 import { useShellStore } from "../app/store";
 import { thisDesktop } from "../design/core/desktop";
@@ -56,6 +57,7 @@ import {
   type ReachRefusal,
   reachRefusalAfter,
   reachRefusalOf,
+  useAddTry,
   usePanel,
   useSetups,
 } from "./devicesState";
@@ -121,6 +123,9 @@ const plusIcon = (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+
+/** The keys a person scrolls a page with, which end the page following a card's add. */
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
 
 /**
  * The tab: the first mate's devices, and on a computer that controls it,
@@ -196,8 +201,8 @@ function HomeDevicesTab() {
     setPortDraft(parts.port);
   }, []);
   const [addressRefusal, setAddressRefusal] = useState<readonly string[] | null>(null);
-  /** A Cancel during a try ignores that try's refusal, so it does not reopen the aside. */
-  const addressTry = useRef(0);
+  /** A card's Add it, by its address: the page brings its row, then its result, into view. */
+  const [reveal, setReveal] = useState<string | null>(null);
   /** Macs nearby with Remote Login on, looked for while By its address is open. */
   const [nearby, setNearby] = useState<NearbyMacsView>(NEARBY_OFF);
   /** How many pushes of Macs nearby this tab has heard, so an ask's older answer never covers a newer push. */
@@ -243,7 +248,8 @@ function HomeDevicesTab() {
   const arrival = useShellStore((s) => s.pendingDeviceArrival);
   const [selected, setSelected] = useState<string | null>(null);
   const cancelAddress = useCallback(() => {
-    addressTry.current += 1;
+    // A Cancel during a try ignores that try's result, so it does not reopen the aside.
+    useAddTry.getState().ignore();
     setAskingAddress(false);
     setAddressRefusal(null);
     setConfirming(null);
@@ -418,70 +424,127 @@ function HomeDevicesTab() {
     [refresh],
   );
 
-  // Adding a Mac by its address: the row follows each step. A refusal
-  // keeps the address in the field and says its two lines in that aside.
-  // Try again is the captain's own click. A Mac whose user runs another
-  // Firstmate's work asks once; `leave` is the yes. A Mac that did not let
-  // the captain's key in asks for that user's password, which goes on this
-  // one call and is kept nowhere here.
-  const addAt = useCallback(
-    async (address: string, with_: AddWith = {}) => {
-      const { leave, confirm, password } = with_;
-      setProblem(null);
-      setChanging(null);
-      setLeaving(null);
-      setConfirming(null);
-      setPasswording(null);
-      const setups = useSetups.getState();
-      if (setups.adding.some((mac) => mac.address === address)) return;
-      const mine = ++addressTry.current;
-      setAddressRefusal(null);
-      // The reaching row says a key is in use. It waits until the captain has
-      // said this is the Mac, which is the call that carries `confirm`. The
-      // call that carries the password is the one that lets Firstmate's key in.
-      if (password) setups.addFrom(address, "letting-in");
-      else if (confirm) setups.addFrom(address);
-      try {
-        const answer = await window.infinitary.devices.add(address, {
-          ...(leave ? { leave: true as const } : {}),
-          ...(confirm ? { confirm } : {}),
-          ...(password ? { password } : {}),
-        });
-        if (mine !== addressTry.current) return;
-        if ("asks" in answer && answer.asks === "confirm") {
-          keepTyped(address);
-          setAskingAddress(false);
-          setConfirming(answer);
-          return;
-        }
-        if ("asks" in answer && answer.asks === "password") {
-          keepTyped(address);
-          setAskingAddress(false);
-          setPasswording(answer);
-          return;
-        }
-        if ("asks" in answer) {
-          setAskingAddress(false);
-          setLeaving(answer);
-          return;
-        }
-        setAskingAddress(false);
-        setAddressDraft("");
-        setPortDraft("");
-        setAddressRefusal(null);
-      } catch (caught) {
-        if (mine !== addressTry.current) return;
-        const message = caught instanceof Error ? caught.message : m.settingsDevicesAddFailed();
-        const lines = remoteLoginRefusalLines(message);
-        keepTyped(address);
-        setAddressRefusal(lines.length > 0 ? lines : [m.settingsDevicesAddFailed()]);
-        setAskingAddress(true);
-      } finally {
-        useSetups.getState().addDone(address);
-      }
-    },
-    [keepTyped],
-  );
+  // Adding a Mac by its address: the row follows each step from the press
+  // on. A refusal keeps the address in the field and says its two lines in
+  // that aside. Try again is the captain's own click. A Mac whose user runs
+  // another Firstmate's work asks once; `leave` is the yes. A Mac that did
+  // not let the captain's key in asks for that user's password, which goes
+  // on this one call and is kept nowhere here. The answer is kept with the
+  // try (`useAddTry`), so it lands in this tab even when it opened again.
+  const addAt = useCallback(async (typed: string, with_: AddWith = {}) => {
+    const { leave, confirm, password } = with_;
+    const address = parseRemoteLoginAddress(typed) ?? typed;
+    setProblem(null);
+    setChanging(null);
+    setLeaving(null);
+    setConfirming(null);
+    setPasswording(null);
+    const setups = useSetups.getState();
+    // Another press for an add under way waits for that add's answer: the
+    // home is never asked twice, so it never says it is under way already.
+    if (setups.adding.some((mac) => mac.address === address)) return;
+    const mine = useAddTry.getState().start(address);
+    setAddressRefusal(null);
+    // The row says what is under way at once: checking the key that computer
+    // answers with; reaching it with a key once the captain said this is the
+    // computer, the call that carries `confirm`; or letting Firstmate's own
+    // key in, the call that carries the password.
+    setups.addFrom(address, password ? "letting-in" : confirm ? "reaching" : "checking");
+    try {
+      const answer = await window.infinitary.devices.add(address, {
+        ...(leave ? { leave: true as const } : {}),
+        ...(confirm ? { confirm } : {}),
+        ...(password ? { password } : {}),
+      });
+      useAddTry.getState().settle(mine, { address, answer });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : m.settingsDevicesAddFailed();
+      const lines = remoteLoginRefusalLines(message);
+      useAddTry.getState().settle(mine, {
+        address,
+        lines: lines.length > 0 ? lines : [m.settingsDevicesAddFailed()],
+      });
+    } finally {
+      useSetups.getState().addDone(address);
+    }
+  }, []);
+
+  // An add's answer, shown where it was pressed: before the next paint, so
+  // the aside never shows the add ended with nothing in its place.
+  const outcome = useAddTry((s) => s.outcome);
+  useLayoutEffect(() => {
+    if (!outcome) return;
+    useAddTry.getState().shown();
+    const { address } = outcome;
+    if ("lines" in outcome) {
+      keepTyped(address);
+      setAddressRefusal(outcome.lines);
+      setAskingAddress(true);
+      return;
+    }
+    const { answer } = outcome;
+    if ("asks" in answer && answer.asks === "confirm") {
+      keepTyped(address);
+      setAskingAddress(false);
+      setConfirming(answer);
+      return;
+    }
+    if ("asks" in answer && answer.asks === "password") {
+      keepTyped(address);
+      setAskingAddress(false);
+      setPasswording(answer);
+      return;
+    }
+    if ("asks" in answer) {
+      setAskingAddress(false);
+      setLeaving(answer);
+      return;
+    }
+    setAskingAddress(false);
+    setAddressDraft("");
+    setPortDraft("");
+    setAddressRefusal(null);
+  }, [outcome, keepTyped]);
+
+  // After a card's Add it, the page scrolls to its row while it is under
+  // way, then to the question or refusal it ended with.
+  const revealUnderWay = reveal !== null && adding.some((mac) => mac.address === reveal);
+  useEffect(() => {
+    if (!reveal) return;
+    const underWay = revealUnderWay;
+    const target = document.querySelector<HTMLElement>(
+      underWay
+        ? `[data-device-adding="${CSS.escape(reveal)}"]`
+        : "[data-device-confirm-question], [data-device-password-question], [data-device-leave-question], [data-device-address-question]",
+    );
+    // The row sits mid-window, clear of anything along the window's edge.
+    const bring = () => target?.scrollIntoView({ block: underWay ? "center" : "nearest" });
+    bring();
+    if (!underWay) {
+      if (!outcome) setReveal(null);
+      return;
+    }
+    // The tab may still be drawing what it read, such as this computer's
+    // address above the row, which moves the row on after it was brought in.
+    // The person's own scrolling ends that.
+    const tab = document.querySelector("[data-devices]");
+    if (!tab) return;
+    const watch = new ResizeObserver(bring);
+    watch.observe(tab);
+    const stop = () => watch.disconnect();
+    const stopOnKey = (event: KeyboardEvent) => {
+      if (SCROLL_KEYS.has(event.key)) stop();
+    };
+    window.addEventListener("wheel", stop, { passive: true });
+    window.addEventListener("touchmove", stop, { passive: true });
+    window.addEventListener("keydown", stopOnKey);
+    return () => {
+      stop();
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchmove", stop);
+      window.removeEventListener("keydown", stopOnKey);
+    };
+  }, [reveal, revealUnderWay, outcome]);
 
   const update = useCallback(
     async (deviceId: string, options: RemoteLoginUpdateOptions = {}, worker?: DeviceView) => {
@@ -581,18 +644,25 @@ function HomeDevicesTab() {
       setProblem(caught instanceof Error ? caught.message : m.settingsDevicesTryAgainFailed());
     }
   }, []);
-  /** + A computer: its address form, empty, with the caret in the field (captain's pick on INF-4926). */
+  /**
+   * + A computer: its address form, empty, with the caret in the field
+   * (captain's pick on INF-4926). During an add by its address the form
+   * holds that address instead and waits for that add's answer.
+   */
   const openAddressForm = useCallback(() => {
-    addressTry.current += 1;
+    const underWay = useAddTry.getState().adopt();
     setAddressRefusal(null);
     setLeaving(null);
     setConfirming(null);
     setPasswording(null);
     cancelWorkerUpdate();
-    setAddressDraft("");
-    setPortDraft("");
+    if (underWay) keepTyped(underWay);
+    else {
+      setAddressDraft("");
+      setPortDraft("");
+    }
     setAskingAddress(true);
-  }, [cancelWorkerUpdate]);
+  }, [cancelWorkerUpdate, keepTyped]);
 
   // Fix it: the Mac's window checks its work again, and its row says what it found.
   const fixWork = useCallback(async (deviceId: string) => {
@@ -702,7 +772,9 @@ function HomeDevicesTab() {
       return;
     }
     if ("add" in arrival) {
-      if (takeArrival()) void addAt(arrival.add);
+      if (!takeArrival()) return;
+      setReveal(parseRemoteLoginAddress(arrival.add) ?? arrival.add);
+      void addAt(arrival.add);
       return;
     }
     if ("addressForm" in arrival) {
@@ -831,7 +903,7 @@ function HomeDevicesTab() {
         else void addAt(question.address, { confirm: question.line });
       }}
       onCancelConfirm={() => {
-        addressTry.current += 1;
+        useAddTry.getState().ignore();
         setConfirming(null);
         setAskingAddress(true);
       }}
@@ -843,7 +915,7 @@ function HomeDevicesTab() {
         else void addAt(question.address, { password });
       }}
       onCancelPassword={() => {
-        addressTry.current += 1;
+        useAddTry.getState().ignore();
         const updating = passwording?.for === "update";
         setPasswording(null);
         if (!updating && !packageUpdate) setAskingAddress(true);

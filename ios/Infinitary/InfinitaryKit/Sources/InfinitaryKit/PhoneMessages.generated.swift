@@ -2873,6 +2873,7 @@ public enum PhoneMessages {
     public static func `settingsDevicesChangeAddress`() -> String { PhoneWords.format("settingsDevicesChangeAddress", []) }
     public static func `settingsDevicesChangeAddressFailed`() -> String { PhoneWords.format("settingsDevicesChangeAddressFailed", []) }
     public static func `settingsDevicesChangeAddressNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesChangeAddressNamed", [`device`]) }
+    public static func `settingsDevicesCheckingRow`(`address`: String) -> String { PhoneWords.format("settingsDevicesCheckingRow", [`address`]) }
     public static func `settingsDevicesConfirmThis`() -> String { PhoneWords.format("settingsDevicesConfirmThis", []) }
     public static func `settingsDevicesControllingNow`() -> String { PhoneWords.format("settingsDevicesControllingNow", []) }
     public static func `settingsDevicesCopied`() -> String { PhoneWords.format("settingsDevicesCopied", []) }
@@ -7146,6 +7147,7 @@ extension PhoneWords {
         "settingsDevicesChangeAddress": [],
         "settingsDevicesChangeAddressFailed": [],
         "settingsDevicesChangeAddressNamed": ["device"],
+        "settingsDevicesCheckingRow": ["address"],
         "settingsDevicesConfirmThis": [],
         "settingsDevicesControllingNow": [],
         "settingsDevicesCopied": [],

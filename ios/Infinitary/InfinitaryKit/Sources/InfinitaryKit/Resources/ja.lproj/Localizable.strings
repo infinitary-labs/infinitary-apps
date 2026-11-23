@@ -2745,6 +2745,7 @@
 "settingsDevicesChangeAddress" = "アドレスを変更";
 "settingsDevicesChangeAddressFailed" = "このコンピューターへの接続先を変更できませんでした。";
 "settingsDevicesChangeAddressNamed" = "%1$@ のアドレスを変更";
+"settingsDevicesCheckingRow" = "%1$@ を確認しています…";
 "settingsDevicesConfirmThis" = "このコンピューターです";
 "settingsDevicesControllingNow" = "現在、一等航海士を操作中";
 "settingsDevicesCopied" = "コピーしました";

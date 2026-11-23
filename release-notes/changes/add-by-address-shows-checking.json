@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "add-by-address-shows-checking",
+      "kind": "fix",
+      "title": "Adding a computer by its address shows it is under way",
+      "body": "In Settings → Devices, adding a computer by its address now says Checking with its address at once, in the list and beside the address field, instead of showing nothing while that computer's key is read. Pressing Add it again, or the first mate's card, waits for the same add instead of saying it is being set up already. Its result stays in the address form even if you open + A computer or leave Devices meanwhile, and after the card's Add it the page scrolls to it.",
+      "area": "devices",
+      "picture": {
+        "dark": "add-by-address-shows-checking-dark.webp",
+        "light": "add-by-address-shows-checking-light.webp",
+        "alt": "Settings, Devices, with an add under way: the list's row and the line above the address field both say Checking you@100.94.48.29"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

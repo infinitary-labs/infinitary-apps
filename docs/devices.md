@@ -417,6 +417,12 @@ Only a home that reads the tap installs the package; one that reads none (below,
 `inf:devices:add` answers the device once it joined, or the question for another first mate's Mac (below); each step is a `device_setup` feed line, and the row in Settings -> Devices follows them.
 From then on this Mac keeps its own SSH connection to it (below, "Through the home's SSH").
 
+Settings -> Devices says an add is under way from the press on: before the check line is read, its row in the list and a line beside the address field say "Checking sam@mini.local…", which turns to step 1 when the key was checked before (`AddingMac`, `src/renderer/src/settings/devicesWords.ts`).
+Another press of Add it, or a card's Add it, for an address being added waits for that add, so the home is never asked twice and never answers that it is under way already.
+The add's answer is kept with its try until the tab shows it (`useAddTry`, `src/renderer/src/settings/devicesState.ts`): its question or refusal lands in the address aside even when Settings closed and opened again meanwhile.
+Pressing + A computer during an add opens the form on that address and waits for the same answer; only Cancel ignores it.
+After a card's Add it, the page scrolls to the row while the add is under way, then to the question or refusal it ended with.
+
 ### How far the copy has gone
 
 The copy is made as it is sent, so nothing knows its size before its end: the row and the feed say the bytes sent so far, never a share of a total (captain's approval of FI3-1361, piece 5).
@@ -1510,7 +1516,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   Added by its address, this computer reaches it with your SSH key instead.", with a secondary Add it by its address before Remove.
   It opens one question in place: "Where to reach Mac mini" over "The address you use with SSH for it, as sam.
   Remote Login must be on there.", an address field with "sam@mini.local" as its placeholder, Add it and Cancel.
-  Add it asks `inf:devices:add` with that address, as the address form does, and the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
+  Add it asks `inf:devices:add` with that address, as the address form does, and the row reads "Checking sam@mini.local…", "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
 - **A Mac that has not finished setting up**: a Mac whose window is connected and whose work cannot be set up (above, "A Mac that has not finished setting up") adds its reason under its summary, such as "Its work cannot start: Infinitary on iMac is not allowed to run in the background.
   On a Mac, turn it on there in System Settings › General › Login Items.", with a secondary Fix it, which asks its window to check again, before Add it by its address and Remove.
   Held on the local network it keeps that line instead; while its work is starting it reads "Its work on iMac is starting." with "setting up" on the right and no Fix it.
@@ -1531,7 +1537,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   The line then goes on: "starts the next time sam logs in there" while nobody is logged in there, and "could not start" when that user's session holds no background work, which no login mends.
   Stopped, its mono line says since when it is out of reach, the reason's two lines stand under its summary in `--warn`, and a secondary Try again stands before the rest.
   A ghost Change address stands on every such row and opens one question in place: "Where to reach Mac mini", its address in a mono field, Change it and Cancel; while it looks, the row reads "Reaching sam@studio.local with your SSH key…", with no state or Remove.
-  Add it at its address while it is out of reach finds it again on the same row: "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
+  Add it at its address while it is out of reach finds it again on the same row: "Checking sam@mini.local…", "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
 - **Remove** asks once in place, with Keep it focused, so Enter never removes: "Remove MacBook Air?
   It is cut off at once." over "To come back, it needs a new link." for a Mac that controls this first mate; "Remove Mac mini?
   Its unmerged work comes here first." over "Its task on website stops.
@@ -1553,7 +1559,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   A Windows home adds no computer by its address (`addsByAddress: false` on `inf:devices:addresses`), so there + A computer opens the two other ways alone, as before, and never looks for the computers nearby.
   Until that answer arrives, + A computer shows the two other ways alone too, with the link's button focused, and looks for no computer nearby: on a home that adds by its address, the form then takes their place with the caret in its field and the two ways under it; on a Windows home they stay as they are.
   A view on a version from before the address form is never sent `addsByAddress`, on the read or its push (`device-adds-by-address`).
-  While it is reached and set up, a row stands in the list with an idle dot, the address, and "Reaching sam@mini.local with your SSH key…", then the Mac's own name and "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving (above, "How far the copy has gone"), and "Starting Infinitary on Mac mini…".
+  While it is reached and set up, a row stands in the list with an idle dot, the address, and "Checking sam@mini.local…" while its key is read, "Reaching sam@mini.local with your SSH key…", then the Mac's own name and "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving (above, "How far the copy has gone"), and "Starting Infinitary on Mac mini…".
   A refusal keeps the address in the field and shows its two lines in that aside, with Try again and Cancel.
   A Mac whose user runs another first mate's work asks once under the foot, with Cancel focused, before anything is sent there (above, "Another first mate's Mac").
   A computer whose Infinitary is updating reads "Updating Infinitary on Mac mini…" in place of what it runs, with no Update or Remove.

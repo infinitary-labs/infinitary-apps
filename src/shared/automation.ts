@@ -120,6 +120,13 @@ export const automationRuleSchema = z.strictObject({
    * `reconnect` picks what is connected now.
    */
   stopped: z.string().optional(),
+  /**
+   * A turned-on event rule whose every look failed for an hour
+   * (docs/automation.md, "When every look fails"): when the first failed look
+   * was, and what the newest answered, in the integration's own words. It
+   * keeps looking, and this goes once a look answers.
+   */
+  failing: z.strictObject({ since: z.number(), reason: z.string() }).optional(),
 });
 export type AutomationRule = z.infer<typeof automationRuleSchema>;
 

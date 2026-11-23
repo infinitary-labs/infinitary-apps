@@ -12,12 +12,13 @@ import {
 } from "@shared/automation";
 import {
   AUTOMATION_EVENT_UNKNOWN,
-  AUTOMATION_STATE_TONES,
-  AUTOMATION_STATE_WORDS,
   automationDateWords,
   automationEventWords,
+  automationLooksFailingWords,
   automationNextWords,
   automationRuleTitle,
+  automationStateTone,
+  automationStateWords,
   automationWhenWords,
   automationZoneOf,
   automationZoneWords,
@@ -256,8 +257,8 @@ export function AutomationTab() {
               <li key={rule.id} data-automation-row={rule.id}>
                 <Row
                   title={automationRuleTitle(rule)}
-                  tone={AUTOMATION_STATE_TONES[rule.state]}
-                  toneLabel={AUTOMATION_STATE_WORDS[rule.state]}
+                  tone={automationStateTone(rule)}
+                  toneLabel={automationStateWords(rule)}
                   trailing={automationNextWords(rule)}
                   selected={selected === rule.id}
                   onClick={() => {
@@ -475,11 +476,22 @@ function Sheet({
     >
       {rule && (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          {AUTOMATION_STATE_WORDS[rule.state]} ·{" "}
+          {automationStateWords(rule)} ·{" "}
           {rule.stopped
             ? AUTOMATION_SHEET_WORDS.stoppedWhen
             : automationWhenWords(rule.spec, rule.when)}
           {rule.captainRequested ? "" : ` · ${m.settingsAutomationSetUpByFirstMate()}`}
+        </div>
+      )}
+      {rule?.failing && (
+        <div
+          data-automation-failing
+          role="status"
+          style={{ ...NOTE_STYLE, display: "flex", flexDirection: "column", gap: 2 }}
+        >
+          {automationLooksFailingWords(rule.failing).map((line) => (
+            <span key={line}>{line}</span>
+          ))}
         </div>
       )}
       {rule?.stopped && (

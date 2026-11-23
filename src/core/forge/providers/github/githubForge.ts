@@ -29,6 +29,7 @@ import {
   type ForgeComment,
   ForgeError,
   type ForgeLocation,
+  ForgeMovedError,
   type ForgeProject,
   type ForgePull,
   type ForgePullComment,
@@ -1596,6 +1597,12 @@ export class GitHubForge implements Forge {
     if (response.status === 401) this.options.onSignInRejected?.();
     if (response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
+      const moved = this.movedPath(response.headers.get("location"));
+      if (moved)
+        throw new ForgeMovedError(
+          "GitHub answered with a redirect, which the gateway does not follow.",
+          moved,
+        );
       throw new ForgeError(
         "refused",
         "GitHub answered with a redirect, which the gateway does not follow.",
@@ -1620,6 +1627,27 @@ export class GitHubForge implements Forge {
       link: response.headers.get("link"),
       body: new TextDecoder().decode(bytes),
     };
+  }
+
+  /**
+   * Where a redirect points, relative to the API, when it names a repository
+   * by its number on this same API: how GitHub answers the address of a
+   * repository that moved. Any other redirect is undefined.
+   */
+  private movedPath(location: string | null): string | undefined {
+    if (!location) return undefined;
+    const base = new URL(this.base);
+    let url: URL;
+    try {
+      url = new URL(location, `${this.base}/`);
+    } catch {
+      return undefined;
+    }
+    const prefix = base.pathname.replace(/\/+$/, "");
+    if (url.origin !== base.origin || !url.pathname.startsWith(`${prefix}/repositories/`))
+      return undefined;
+    const path = `${url.pathname.slice(prefix.length)}${url.search}`;
+    return /^\/repositories\/\d+(\/|$|\?)/.test(path) ? path : undefined;
   }
 
   private async request(

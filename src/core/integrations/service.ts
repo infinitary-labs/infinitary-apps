@@ -223,6 +223,8 @@ export type IntegrationListen = {
   every: number;
   filters?: readonly IntegrationEventFilter[];
   atOnce?: boolean;
+  /** Paused in Settings → Integrations: it answers no look until resumed. */
+  paused?: boolean;
 };
 
 /** A connection's reference as `referenceConnections` gives it. */
@@ -416,6 +418,7 @@ export class IntegrationsService {
       every: spec.every,
       ...(spec.filters ? { filters: [...spec.filters] } : {}),
       ...(spec.atOnce ? { atOnce: true } : {}),
+      ...(row.settings.paused ? { paused: true } : {}),
     };
   }
 

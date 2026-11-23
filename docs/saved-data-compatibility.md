@@ -553,7 +553,7 @@ No database migration or saved-data format boundary changes.
 
 ## One thread per message
 
-The newest migration adds `ask_thread_carries`, filled once with each followed, unended captain message and the message whose merged thread it was in, read from `captain_asks.continues` (`docs/task-capture.md`, "How a message ends", **The update**).
+A migration adds `ask_thread_carries`, filled once with each followed, unended captain message and the message whose merged thread it was in, read from `captain_asks.continues` (`docs/task-capture.md`, "How a message ends", **The update**).
 The step at the next start attaches each listed message to its old thread's still-running work as `host:carried`, or sets `threadCarried` on the `ask` event it already had there, and marks its row carried; no row is added after the migration.
 `continues` keeps its saved values and is never written again.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
@@ -561,7 +561,7 @@ Dropping the table and removing its history row undoes the migration; the carrie
 
 ## Where a reply was typed
 
-The newest migration adds nullable `captain_asks.typed_card_id` and `captain_asks.typed_line`: the card a captain's message was typed under and its line's number in that card's thread (`docs/task-capture.md`, "Where a reply was typed").
+A migration adds nullable `captain_asks.typed_card_id` and `captain_asks.typed_line`: the card a captain's message was typed under and its line's number in that card's thread (`docs/task-capture.md`, "Where a reply was typed").
 Every existing row and every message typed in the main input keeps both null; such a message names no card in its retry and no line in the first mate's context, as a message whose card the app lost at a restart did before.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 Dropping the two columns and removing the migration's history row undoes it; an older build with the history row removed but the columns kept reads and writes the table as before, since it names its columns and never reads these two.

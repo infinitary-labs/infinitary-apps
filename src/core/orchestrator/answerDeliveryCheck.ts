@@ -160,13 +160,14 @@ export class AnswerDeliveryCheck {
   }
 
   /**
-   * Closing words written into a card's replies count for the messages the
-   * running turn read that were typed under it, as each saved (INF-6115
-   * piece 3): those still open, those a drained batch carried back, and
-   * `read`, the ones its turn end has already closed.
+   * Closing words written into a card's replies count only for the messages
+   * in `read`, the ones the turn's session confirmed it read, that were typed
+   * under that card as each saved. A message open but never read - parked
+   * behind a retry, waiting out a backoff, an unread steer - keeps its own
+   * retry and notice.
    */
-  creditReply(cardId: string, read: readonly string[] = []): void {
-    const askIds = [...new Set([...read, ...this.scope()])].filter(
+  creditReply(cardId: string, read: readonly string[]): void {
+    const askIds = [...new Set(read)].filter(
       (id) => this.host.tasks.capture.getAsk(id)?.typedUnder?.cardId === cardId,
     );
     this.save(askIds, { outcome: "action", kind: "reply", tool: "reply", ref: cardId });

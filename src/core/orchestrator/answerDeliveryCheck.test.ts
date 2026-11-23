@@ -218,9 +218,7 @@ describe("the answer-delivery check across a restart", () => {
     expect(f.retryRows()).toEqual([]);
   });
 
-  // INF-6115 piece 3: a reply remembers where it was typed. Two lines of
-  // the captain's under one card each named the card's newest line, and the
-  // card each was typed under lived only in memory, so a restart lost it.
+  // Each reply keeps the card and line it was typed under, across a restart.
   it.each([
     ["at the turn's own end", false],
     ["after a restart", true],
@@ -254,9 +252,9 @@ describe("the answer-delivery check across a restart", () => {
         ["first", { id: cardId, title: cardId, messageId: 4 }],
         ["second", { id: cardId, title: cardId, messageId: 7 }],
       ]);
-      // The retry turn's closing words under the card count for both replies, not the other message.
+      // The retry turn read all three; its closing words under the card count only for the two typed there.
       const retryTurn = restart ? f.boot() : check;
-      retryTurn.creditReply(cardId);
+      retryTurn.creditReply(cardId, ["first", "second", "elsewhere"]);
       const replied = (id: string) =>
         f.tasks.capture
           .getAsk(id)
@@ -270,6 +268,21 @@ describe("the answer-delivery check across a restart", () => {
       ]);
     },
   );
+
+  it("leaves an open reply under the card that the turn never read uncredited", () => {
+    const f = fixture();
+    const cardId = "card-fm-a1b2c3";
+    f.tasks.capture.openAsk({ id: "read", text: "which build?", typedUnder: { cardId, line: 4 } });
+    f.tasks.capture.openAsk({ id: "parked", text: "and the PC?", typedUnder: { cardId, line: 7 } });
+    f.boot().creditReply(cardId, ["read"]);
+    const replied = (id: string) =>
+      f.tasks.capture
+        .getAsk(id)
+        ?.deliveryFacts.entries.some(
+          (entry) => entry.outcome === "action" && entry.kind === "reply",
+        );
+    expect([replied("read"), replied("parked")]).toEqual([true, false]);
+  });
 
   it("judges nothing in observe mode", () => {
     const f = fixture(true);

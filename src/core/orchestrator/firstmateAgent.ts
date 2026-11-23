@@ -1356,10 +1356,7 @@ export class FirstmateAgent {
       for (const cardId of repliedUnder) {
         try {
           if (this.options.supervisor.cards.recordFirstmateThreadAnswer(cardId, threadAnswer)) {
-            this.delivery.creditReply(cardId, [
-              ...readAsks,
-              ...tookIn.flatMap((steer) => (steer.askId ? [steer.askId] : [])),
-            ]);
+            this.delivery.creditReply(cardId, [...this.turn.read]);
           }
         } catch (caught) {
           console.warn("[firstmate] card-thread answer failed at turn end:", caught);

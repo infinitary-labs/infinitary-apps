@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-phone-cards-file",
+      "reason": "Moves the phone card pane's footer and press handling into their own files to keep PhoneCards.swift under the size warning line, with no behavior change."
+    }
+  ]
+}

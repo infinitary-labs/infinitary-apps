@@ -70,7 +70,7 @@ A page under a section (a rule, a draft's review, a project) leads with its own 
 That last line is the page's only mention of what the phone leaves out; a control the phone does not offer is never drawn dimmed in its place.
 A row's state is the status dot before its name, in the computer's tone for it, never a colored row or a badge.
 A page asks at most one thing of a row: one button, one switch or one choice, at least 44 points tall, with the row's opening beside it where it has a page.
-The filled accent button is the one that moves something forward (Enable… on a draft, Turn on in its review, Resume on a rule's own page); Pause and Pause all are outlined.
+The filled accent button is the one that moves something forward (Turn on… on a draft, Turn on in its review, Resume on a rule's own page); Pause and Pause all are outlined.
 On a phone the computer lets only read, the same rows show with every switch and button off.
 A change shows what the computer kept when it answers; one the computer refused says why in the warning color under the control that asked, in the computer's words.
 A page out of reach keeps its last reading.
@@ -87,12 +87,12 @@ The two marks are explained once under the list, each beside its mark.
 
 Automation leads with what an automation is, then each rule as a row: its dot and name across the row's width with the chevron opposite, then two caption lines under the name, its schedule and its next run.
 The next run is the computer's own words for it, in the rule's time zone, beside its term in the muted color (Next run), and under the term when a date with its zone is too long for the line; a rule with none says its state there instead (Paused, Draft, Done).
-A rule's button sits beside those two lines at the row's trailing edge: Pause on an active rule, Resume on a paused one, Enable… filled on a draft, and none on a finished one.
+A rule's button sits beside those two lines at the row's trailing edge: Pause on an active rule, Resume on a paused one, Turn on… filled on a draft, and none on a finished one.
 Pause all sits alone under the list and asks once in a confirmation that names how many it pauses.
 A rule's page leads with its name, then its dot and state, then its facts as term over value, with the prompt in its own surface box as the first mate gets it, the rule's one button, and its runs.
 A fact whose value is a list, such as a draft's next runs, is drawn one entry a line.
 A run is its dot and outcome, when it ran in mono, what it led to, and a folded "prompt as sent" that opens in a surface box.
-Enable… opens the computer's review: its question as the page's name with the rule's name under it in the secondary color, then the same facts with Back outlined beside Turn on filled; nothing turns on before that page.
+Turn on… opens the computer's review: its question as the page's name with the rule's name under it in the secondary color, then the same facts with Back outlined beside Turn on filled; nothing turns on before that page.
 
 Usage only shows.
 Period and unit are two segmented controls over the reading's label in mono; they are the page's only controls and change nothing on the computer.

@@ -884,12 +884,12 @@ A reading the computer could not refresh is drawn dim, and a computer out of rea
 A row that waits for a sign-in says where to sign in, by the computer's name; the phone starts no sign-in and offers no pause, rename or remove.
 
 Automation lists each rule with its name and two lines: its schedule, then its next run in the rule's own time zone (`automationNextWords`) beside its term, or its state where it has none (Paused, Draft, Done).
-A row's one button is what the phone may do to it: Pause, Resume, or Enable… on a draft; Pause all asks once and names how many it pauses.
+A row's one button is what the phone may do to it: Pause, Resume, or Turn on… on a draft; Pause all asks once and names how many it pauses.
 Pause, Resume and Pause all are the computer's own actions (`inf:automation:state`, `inf:automation:pause-all`).
 A row opens the rule: its name, state, schedule, what an event rule waits for (Only if), project, its next run while it is on, the prompt as the first mate gets it, and its runs, each with what it led to and the prompt as sent.
 A look that sent nothing because every event was kept from the first mate reads Skipped and names the events it skipped in place of a prompt, by the rules the computer's history reads (`runStateWords`, `runPromptTitle`; `docs/automation.md`, "The event screen").
 A rule that runs once fills its prompt with that one time, whether it is still to come or has passed, so a finished rule shows no placeholder.
-Enable… opens the computer's review of the draft (`reviewFacts`): when it runs, what an event rule waits for, where, its next runs one a line, the prompt and what it sends.
+Turn on… opens the computer's review of the draft (`reviewFacts`): when it runs, what an event rule waits for, where, its next runs one a line, the prompt and what it sends.
 A page under a section leads with its own name (`PhonePageName`) and the top bar names only where Back goes, because the bar would cut a long name short.
 Turn on saves the draft through `inf:automation:save` with the save the review showed, and Back leaves it a draft.
 

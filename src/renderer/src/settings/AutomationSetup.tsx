@@ -74,6 +74,7 @@ export function AutomationSetup({
   const [review, setReview] = useState<Review | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const enableRef = useRef<HTMLButtonElement>(null);
   const deleteRef = useRef<HTMLButtonElement>(null);
@@ -222,6 +223,7 @@ export function AutomationSetup({
             {m.settingsAutomationName()}
           </label>
           <Input
+            ref={nameRef}
             id="automation-name"
             value={form.name}
             maxLength={80}
@@ -291,7 +293,7 @@ export function AutomationSetup({
             <span style={NOTE_STYLE}>{spec}</span>
           ) : !form.prompt.trim() ? (
             <span style={NOTE_STYLE}>{m.settingsAutomationWritePrompt()}</span>
-          ) : (
+          ) : spec.kind !== "event" && shownDates === null ? null : (
             <Facts
               preview
               facts={reviewFacts(
@@ -352,7 +354,11 @@ export function AutomationSetup({
                 type="button"
                 variant="ghost"
                 disabled={busy}
-                onClick={() => setForm(initial)}
+                onClick={() => {
+                  setForm(initial);
+                  // The button hides once nothing differs, so focus moves to the first field, not the page body.
+                  if (nameRef.current) focusWithRing(nameRef.current);
+                }}
                 data-automation-discard
               >
                 {m.settingsAutomationDiscard()}

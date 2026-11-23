@@ -150,6 +150,61 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
           Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
           Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
+      # A by-hand request checks only a version a branch of this project holds
+      # (docs/public-ci.md, "A check requested by hand"): GitHub hands out at
+      # this project's address any commit a pull request holds, another copy's
+      # included, and a request carries no pull request for the runners' fork
+      # guard to see. On a request the build runs it in the portable Git's
+      # bash before its checkout, and the clean Windows machine's jobs need
+      # the build. The same step opens each by-hand path that checks out a
+      # named version; tests/requested-version.test.ts holds them equal and
+      # runs it.
+      - name: Check a branch of this project holds the requested version
+        if: github.event_name == 'workflow_dispatch' && github.workflow == 'windows'
+        env:
+          VERSION: ${{ inputs.ref }}
+          SERVER: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+        run: |
+          # The branches' and tags' commits alone: no file of any version, and
+          # nothing more once fetched (GIT_NO_LAZY_FETCH), since GitHub would
+          # hand out the named commit whoever holds it.
+          [ -n "$VERSION" ] || exit 0
+          git init --quiet "$RUNNER_TEMP/requested-version"
+          cd "$RUNNER_TEMP/requested-version"
+          git remote add origin "$SERVER/$REPOSITORY"
+          # The sign-in reaches git in its environment, never its command line.
+          GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.$SERVER/.extraheader" \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')" \
+            git fetch --quiet --filter=tree:0 origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+          export GIT_NO_LAZY_FETCH=1
+          # The name as actions/checkout reads it: a full commit id, a branch
+          # or tag by its full name, or a short name of a branch, else of a
+          # tag. Any other full name, refs/pull/ among them, is no branch's.
+          case "$VERSION" in
+            refs/heads/*) commit="refs/remotes/origin/${VERSION#refs/heads/}" ;;
+            refs/tags/*) commit="$VERSION" ;;
+            [Rr][Ee][Ff][Ss]/*) commit= ;;
+            *)
+              if [[ "$VERSION" =~ ^[0-9a-fA-F]{40}$ ]]; then
+                commit="$VERSION"
+              elif git rev-parse --verify --quiet "refs/remotes/origin/$VERSION" > /dev/null; then
+                commit="refs/remotes/origin/$VERSION"
+              else
+                commit="refs/tags/$VERSION"
+              fi
+              ;;
+          esac
+          holder=
+          if [ -n "$commit" ]; then
+            holder=$(git for-each-ref --contains "$commit" --count=1 --format='%(refname:lstrip=3)' refs/remotes/origin 2> /dev/null) || holder=
+          fi
+          if [ -z "$holder" ]; then
+            echo "::error title=No branch holds the requested version::No branch of $REPOSITORY holds $VERSION, so this run checks nothing. A request checks only a version a branch of the project holds: push its branch, then request again. A pull request from another copy of the project runs its own checks on GitHub's machines (docs/public-ci.md, \"Outside contributors\")."
+            exit 1
+          fi
+          echo "Branch $holder holds $VERSION."
       # A refused checkout waits until GitHub takes the job's token again,
       # then runs once more (docs/testing.md, "GitHub refusing a job's
       # token"); the wait runs in the portable Git's bash with its curl.

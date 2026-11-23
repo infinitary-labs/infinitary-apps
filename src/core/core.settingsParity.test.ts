@@ -140,19 +140,20 @@ describe("the first mate's Settings actions, driven through the whole core", () 
   // (src/renderer/src/ambient/own-samples/), saved under 13 names.
   it("names any number of own ambient styles and reads one whole by its name", async () => {
     const was = await appearance();
-    const samples: OwnStyle[] = ["lofi", "bossa", "bowls", "warm-sleep", "hard-techno"].map(
-      (file) =>
-        JSON.parse(
-          readFileSync(
-            join(process.cwd(), "src/renderer/src/ambient/own-samples", `${file}.json`),
-            "utf8",
-          ),
+    const sample = (file: string): OwnStyle =>
+      JSON.parse(
+        readFileSync(
+          join(process.cwd(), "src/renderer/src/ambient/own-samples", `${file}.json`),
+          "utf8",
         ),
-    );
-    const styles = Array.from({ length: 13 }, (_, i) => {
-      const sample = samples[i % samples.length];
-      return { ...sample, name: `${sample.name} ${Math.floor(i / samples.length) + 1}` };
-    });
+      );
+    const lofi = sample("lofi");
+    const samples = [lofi, ...["bossa", "bowls", "warm-sleep", "hard-techno"].map(sample)];
+    // Three rounds of the five samples, cut at 13: the bowls' third round saves last and plays.
+    const styles = [1, 2, 3]
+      .flatMap((round) => samples.map((style) => ({ ...style, name: `${style.name} ${round}` })))
+      .slice(0, 13);
+    const last = "Still water 3";
     const names = styles.map((style) => style.name);
     const read = async (name: string) => {
       const text = (await tool("app_state").run({ read: "ambient.own-style", args: { name } }))
@@ -170,7 +171,7 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       // The value names each style by id and name alone, in the answer and in app_state.
       const named = {
         saved: names.map((name) => ({ id: ownStyleId(name), name })),
-        playing: ownStyleId(names[12]),
+        playing: ownStyleId(last),
       };
       expect(saved?.reply.current).toEqual(named);
       // The line names every style, which Activity and an operation's title cut short.
@@ -186,20 +187,20 @@ describe("the first mate's Settings actions, driven through the whole core", () 
         (own) => own.name === "Late shift 1",
       );
       expect(await read("late shift 1")).toEqual(lateShift);
-      expect(lateShift).toMatchObject({ words: samples[0].words, bpm: samples[0].bpm });
+      expect(lateShift).toMatchObject({ words: lofi.words, bpm: lofi.bpm });
       expect(await read("Cold rain")).toMatch(
         `could not answer: No own style Cold rain. Saved: ${names.join(", ")}.`,
       );
       // The style playing, read whole and saved again slower under its name,
       // reads the same by name, yet the change leaves its line; saved again
       // the same, nothing does.
-      const { id: _id, bpm, ...playing } = (await read(names[12])) as SavedOwnStyle;
-      if (bpm === undefined) throw new Error(`${names[12]} names no tempo of its own`);
+      const { id: _id, bpm, ...playing } = (await read(last)) as SavedOwnStyle;
+      if (bpm === undefined) throw new Error(`${last} names no tempo of its own`);
       const slower = await asked("ambient-own-style", { save: { ...playing, bpm: bpm - 4 } });
       expect(slower.reply.current).toEqual(named);
       expect(slower.lines).toHaveLength(1);
       expect(ownLines()).toBe(2);
-      expect((await read(names[12])).bpm).toBe(bpm - 4);
+      expect((await read(last)).bpm).toBe(bpm - 4);
       expect(
         (await asked("ambient-own-style", { save: { ...playing, bpm: bpm - 4 } })).lines,
       ).toEqual([]);

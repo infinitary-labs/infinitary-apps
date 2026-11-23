@@ -1,8 +1,106 @@
-/** How a conversation on a computer that runs work opens again, and what it confirmed it opened against what the home asked. */
+/** What the home asks a computer that runs work to open, how a conversation there opens again, and what it confirmed it opened against what the home asked. */
 import { offeringKey } from "@shared/modelSlots";
 import { backendForProvider } from "@shared/providers";
 import { type PlacedSpec, placedSpecSchema } from "@shared/work";
+import type { ContractChangeName } from "../connection/contractChanges";
+import type { SessionBackend, SessionShape, SessionSpec } from "../session/session";
 import { sameNames } from "../session/workRecovery";
+import { FRESH_OPEN, OPEN_NOT_OPENED, REATTACH_ONLY_OPEN } from "./crewMachines";
+
+/** A session spec for a rolling session, the only shape a conversation held on another computer serves. */
+export type HeldSpec = SessionSpec & { shape: Extract<SessionShape, { turns: "rolling" }> };
+
+/** Whether a computer on this contract confirmed it takes crew speed settings: 5.2 and later. */
+export function takesSpeed(version: string | undefined): boolean {
+  return Boolean(
+    version &&
+      (Number(version.split(".")[0]) > 5 ||
+        (Number(version.split(".")[0]) === 5 && Number(version.split(".")[1]) >= 2)),
+  );
+}
+
+/** What a computer takes, as the spec the home asks of it reads it (`PlacedSessions`). */
+export type OpenTakes = {
+  takesStops(machine: string): boolean;
+  takesKeeps(machine: string): boolean | undefined;
+  takesIntegrations(machine: string): boolean;
+  takesFiles(machine: string): boolean;
+  takesSecrets(machine: string): boolean;
+  takesSecretUses(machine: string): boolean;
+  takesSecretAsks(machine: string): boolean;
+  listsChange(machine: string, change: ContractChangeName): boolean;
+};
+
+/** The computer an open is asked of. */
+export type OpenThere = {
+  readonly deviceId: string;
+  /** The conversation's record to resume there, if any. */
+  readonly resume: string | undefined;
+  /** It takes crew speed settings (`takesSpeed`). */
+  readonly speed: boolean;
+  /** Its roster as last read, which says whether it keeps its tasks' own browsers. */
+  readonly roster: { readonly browsers: boolean };
+  readonly takes: OpenTakes;
+};
+
+/**
+ * The spec the home asks a computer to open for a crewmate's session: each
+ * part only as far as that computer takes it, so an older one is never
+ * asked for what it cannot serve.
+ */
+export function askedSpec(backend: SessionBackend, spec: HeldSpec, there: OpenThere): PlacedSpec {
+  const { deviceId, resume, speed: supportsSpeed, roster, takes } = there;
+  return placedSpecSchema.parse({
+    binding: {
+      backend,
+      ...(spec.binding.accountId ? { accountId: spec.binding.accountId } : {}),
+      ...(spec.model?.provider ? { provider: spec.model.provider } : {}),
+    },
+    ...(spec.model ? { model: spec.model } : {}),
+    ...(spec.speed && supportsSpeed ? { speed: true } : {}),
+    thinking: {
+      level: spec.thinking.level,
+      ...(spec.thinking.quick ? { quick: true } : {}),
+    },
+    instructions: spec.instructions.base,
+    ...(spec.homeSource ? { homeSource: spec.homeSource } : {}),
+    ...(spec.runbookSkills ? { runbookSkills: spec.runbookSkills } : {}),
+    ...(spec.personalResources !== undefined ? { personalResources: spec.personalResources } : {}),
+    tools: spec.tools.map((tool) => tool.name),
+    ...(spec.load ? { load: true } : {}),
+    ...(spec.stops && takes.takesStops(deviceId) ? { stops: true } : {}),
+    // Its keeps there, or a refusal naming another user (docs/leftover-programs.md).
+    ...(spec.stops && takes.takesKeeps(deviceId) !== undefined
+      ? { keeps: takes.takesKeeps(deviceId) }
+      : {}),
+    // Its own browser, there beside its shell (docs/task-browser.md, "On another computer").
+    ...(spec.callbacks?.browser && roster.browsers ? { browser: true } : {}),
+    // Its integrations, asked of this Mac (docs/integrations.md, "On a computer that runs work").
+    ...(spec.callbacks?.integrations && takes.takesIntegrations(deviceId)
+      ? { integrations: true }
+      : {}),
+    // Its files on the captain's other computers, asked of this Mac (docs/files.md).
+    ...(spec.callbacks?.files && takes.takesFiles(deviceId) ? { files: true } : {}),
+    ...(spec.callbacks?.secretsCatalog && takes.takesSecrets(deviceId) ? { secrets: true } : {}),
+    // Its uses, decided here and run there (docs/secrets.md, "On a computer that runs work").
+    ...(spec.callbacks?.secretUses && takes.takesSecretUses(deviceId) ? { secretUses: true } : {}),
+    // Its asks to keep a secret, raised on this Mac's own card (docs/secrets.md, "Asking to keep a secret").
+    ...(spec.callbacks?.secretUses?.ask && takes.takesSecretAsks(deviceId)
+      ? { secretAsks: true }
+      : {}),
+    ...(resume ? { resume } : {}),
+    // Only the conversation held there, so a new one routes first (`reattach-only-open.md`).
+    ...(spec.shape.record.reattach && takes.listsChange(deviceId, REATTACH_ONLY_OPEN)
+      ? { reattach: true }
+      : {}),
+    ...(takes.listsChange(deviceId, OPEN_NOT_OPENED) ? { notOpened: true } : {}),
+    // A restart asks for a new conversation there, never the one it replaces (`fresh-open.md`).
+    ...(spec.shape.record.fresh && takes.listsChange(deviceId, FRESH_OPEN) ? { fresh: true } : {}),
+    ...(spec.bounds?.request?.retries !== undefined
+      ? { retries: spec.bounds.request.retries }
+      : {}),
+  });
+}
 
 /**
  * The spec to open there again. Tool names are what the supervisor binds

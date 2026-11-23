@@ -110,7 +110,7 @@ Stops kept in a task's folder here run at its close here whatever computer it ra
 
 A computer that runs work gives its crewmates the command (the placed spec's `stops`) and keeps their stops in each task's folder there.
 Its close order, `inf:session:close`, runs the same sweep there once the conversation, its shell commands and its task channel have closed, and before the home retires the working copy or removes the temporary folder, which both follow that order.
-The home names the task that carries the work on when it runs on that same computer (`carriedTo`), when the task started (`startedAt`), and `keeps: "keep"` for a merged or answered close (`kept-jobs.md`), and the order's answer carries the report (`leftovers`), which the home writes on the task's timeline once (`PlacedSessions.closeThere`).
+The home names the task that carries the work on when it runs on that same computer (`carriedTo`), when the task started (`startedAt`), and `keeps: "keep"` for a merged or answered close (`kept-jobs.md`), and the order's answer carries the report (`leftovers`), which the home writes on the task's timeline once (`PlacedCloses.closeThere`).
 An order that says nothing on keeps, as from a home without the change or for a task that moved off that computer, removes them.
 The report's kept jobs are recorded at the home under that computer, once per kept folder.
 The placed spec's `keeps` grants the command's `keep` there: the home sends true to a computer that lists the change, and false to one that runs as another user on the home's own computer, whose crewmate hears that refusal; a computer the home sent nothing refuses a keep too.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-placed-sessions-owners",
+      "reason": "The placed sessions' close orders, the clearing of words from outside, the state kept for each computer and task, and the spec an open asks moved unchanged into their own files so the file stays under the size warning; nothing a person sees changes."
+    }
+  ]
+}

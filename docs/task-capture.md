@@ -224,6 +224,14 @@ Open-thread reads list every followed, unended message in one query (`TaskServic
 The first mate's turn facts list the open messages (`open_asks`), one per row: each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered; `open_work` lists every one, one per row, with its words.
 They never repeat the captain's words, which are in its conversation.
 
+## Where a reply was typed
+
+A message the captain typed as a reply under a first mate card keeps that card's id and its line's number in the card's thread on its own row (`captain_asks.typed_card_id` and `typed_line`, INF-6115 piece 3); both are empty for a message typed in the main input and for a row an older build saved.
+Every reader of the line a message was typed as reads that saved pair, never the card's newest line of the captain's, so two unanswered replies under one card each keep their own line, across a restart too.
+Those readers are the context line that tells the first mate which message to name (`answers_message`), the one retry's card and message (`aboutCard` on the `answer-missing` wake), the closing words that count as an answer under the card the message was typed under (`AnswerDeliveryCheck.creditReply`), and the reply a `spawn_crewmate` `from_card` line is recorded against (`writeStartedLine`).
+A `from_card` on a card the message was not typed under, such as a crewmate's card, whose replies open no message, still records the captain's newest reply there.
+Words a crewmate's report passes on from a reply under its card keep that line's number beside the copy (`captainWords.line`), and so does the origin of work filed from that report.
+
 ## Pictures stay with the task
 
 A captain message's pictures, however they reached the input (pasted, dropped or chosen), are kept as the message's own copies when it is accepted (`docs/composer.md`, "Files"), and its ask row keeps their references in `images_json` (id, name, type, size, SHA-256 and the copy's path under `<userData>/attachments/`, never the bytes).

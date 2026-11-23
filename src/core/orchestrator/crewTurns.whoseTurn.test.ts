@@ -1004,7 +1004,8 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         captainWordsFrom: ` ${card.id} `,
       });
       await endTurn(crewmate, taskId);
-      const words = { text: APPROVAL, at: typed?.at };
+      // The words keep the number of the line they came from (INF-6115 piece 3).
+      const words = { text: APPROVAL, at: typed?.at, line: typed?.id };
       expect(ledgerFacts.at(-1)).toMatchObject({ kind: "report", captainWords: words });
       expect(
         tasks

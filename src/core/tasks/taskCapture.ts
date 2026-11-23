@@ -21,6 +21,7 @@ import {
   type AskImage,
   type AskRecord,
   type AskTurnState,
+  type AskTypedUnder,
   askReceipt,
 } from "../storage/askStore";
 import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
@@ -52,6 +53,8 @@ export type OpenAskInput = {
   at?: number;
   /** The message this one sends again (Ask again on the answer-delivery notice). */
   retryOf?: string;
+  /** The card the message was typed under and its line there (INF-6115 piece 3). */
+  typedUnder?: AskTypedUnder;
 };
 
 /**
@@ -560,6 +563,7 @@ export class TaskCapture {
       crewmateAskedAt: null,
       // A message the captain's own command sent says so (INF-3898 piece 2).
       ...(throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
+      ...(input.typedUnder ? { typedUnder: input.typedUnder } : {}),
     };
     this.writer.asks.insert(record, input.captainText);
     return record;

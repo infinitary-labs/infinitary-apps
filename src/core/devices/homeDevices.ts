@@ -54,6 +54,7 @@ import { findOnPath } from "../userBin";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { dnsSdAnnounceArgs, HomeAnnouncement } from "./announce";
 import { avahiAnnounceArgs } from "./avahi";
+import { CardAdds } from "./cardAdds";
 import { ownComputerName, ownNetworkNames } from "./computerName";
 import { Computers } from "./computers";
 import { DeviceSetup } from "./deviceSetup";
@@ -114,6 +115,8 @@ export type HomeDevices = {
   /** One reach value, worked out once and handed to every reader. */
   reachOf: (deviceId: string) => ComputerReach;
   remoteLogin: RemoteLogin;
+  /** The adds the first mate's card began, whose end the first mate hears once. */
+  cardAdds: CardAdds;
   nearbyMacs: NearbyMacs;
   homeAnnouncement: HomeAnnouncement;
   phoneDoor?: PhoneDoor;
@@ -459,6 +462,8 @@ export async function startHomeDevices(options: {
       inReach: workDevices.inReach(deviceId),
       ssh: sshConnections.state(deviceId),
     });
+  // The adds the first mate's card began, whose end it hears (docs/devices.md, "Asking the first mate").
+  const cardAdds = new CardAdds();
   const remoteLogin: RemoteLogin = new RemoteLogin({
     pairing: devices,
     ssh,
@@ -469,7 +474,10 @@ export async function startHomeDevices(options: {
     listening: () => workDevices.settled(),
     inReach: (deviceId) => workDevices.inReach(deviceId),
     connections: sshConnections,
-    emit: (event) => broadcastEvent(event),
+    emit: (event) => {
+      cardAdds.heard(event);
+      broadcastEvent(event);
+    },
   });
   const thisUser = () => {
     try {
@@ -584,6 +592,7 @@ export async function startHomeDevices(options: {
     sshConnections,
     reachOf,
     remoteLogin,
+    cardAdds,
     nearbyMacs,
     homeAnnouncement,
     ...(phoneDoor ? { phoneDoor } : {}),

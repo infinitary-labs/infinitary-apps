@@ -8,6 +8,8 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 import { join } from "node:path";
+import { noteDoneOf } from "@shared/cardLeave";
+import { withAnythingElse } from "@shared/cards";
 import { HOME } from "@shared/deviceNames";
 import { placementNamedModelWait } from "@shared/placement";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -99,6 +101,86 @@ describe("the task graph (R1)", () => {
     expect(sessions.open).toHaveBeenCalledTimes(1);
     expect(tasks.get(taskId)?.status).toBe("active");
   });
+
+  it.each(["queue sweep", "direct Start", "Start behind the answer"] as const)(
+    "keeps a saved answer done when %s finishes opening after Done",
+    async (source) => {
+      const taskId = "answer";
+      const cardId = "card-answer-1";
+      const words = "Thanks, use this for the next build.";
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, sessions, events, ops } = setup(crewmate, {
+        savedCards: [
+          {
+            id: cardId,
+            taskId,
+            author: "crewmate",
+            title: "Recent changes and the next build",
+            body: "<p>Two merged changes are not in the newest build.</p>",
+            meta: "crew",
+            status: "ready",
+            priority: 10,
+            createdAt: Date.now(),
+            answering: true,
+            actions: [],
+          },
+        ],
+      });
+      seedTask(tasks, {
+        id: taskId,
+        title: "Check what the next build holds",
+        status: "queued",
+        shape: { kind: "research", kind_source: "classifier:test", deliverable: "answer" },
+      });
+      const heard = vi.fn();
+      supervisor.setFirstmateHooks({
+        notifyOp: (wake) => ops.push(renderWake(wake)),
+        retryConverse: vi.fn(),
+        converseAboutCard: heard,
+      });
+      const opening = deferred<void>();
+      const release = deferred<void>();
+      sessions.open.mockImplementationOnce(async () => {
+        opening.resolve();
+        await release.promise;
+        return crewmate;
+      });
+      const start = (() => {
+        switch (source) {
+          case "queue sweep":
+            return supervisor.starts.dispatchQueuedTask(taskId);
+          case "direct Start":
+            return supervisor.starts.startQueuedNow(taskId, { audience: "captain", direct: true });
+          case "Start behind the answer":
+            return supervisor.starts.startBehind(taskId);
+        }
+      })();
+      await opening.promise;
+      try {
+        expect(supervisor.cards.shown(cardId)?.noteDone).toEqual(
+          noteDoneOf(tasks.get(taskId)?.key ?? "", true),
+        );
+        supervisor.pressNote(cardId, undefined, { answers: withAnythingElse([], words) });
+        await tick();
+        expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+        expect(heard.mock.calls).toEqual([[cardId, words, undefined]]);
+      } finally {
+        release.resolve();
+        await start;
+      }
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(tasks.timeline(taskId).filter((event) => event.kind === "dispatched")).toEqual([]);
+      expect(crewmate.dispose).toHaveBeenCalledTimes(1);
+      expect(crewmate.promptCalls).toEqual([]);
+      if (source === "direct Start") expect(await start).toBe("");
+      expect(ops).toEqual([]);
+      expect(
+        events.some(
+          (event) => event.type === "firstmate_note" && event.text.includes("could not start"),
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("a failed queued start returns without leaving a runtime, and a retry can start", async () => {
     const crewmate = fakeCrewmate();

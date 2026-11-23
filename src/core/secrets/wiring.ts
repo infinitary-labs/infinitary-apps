@@ -12,6 +12,7 @@ import { SecretsSettings } from "./settings";
 
 type SecretsSupervisor = {
   cards: {
+    get(id: string): Card | undefined;
     hostCards: {
       raiseHostCard(card: Omit<Card, "author" | "priority" | "status" | "createdAt">): void;
       withdrawHostCard(id: string, reason: string): void;
@@ -62,6 +63,7 @@ export function startSecrets(options: {
         }
       : {}),
     raise: (card) => hostCards.raiseHostCard(card),
+    openCard: (id) => supervisor.cards.get(id),
     withdraw: (id, reason) => hostCards.withdrawHostCard(id, reason),
     settled: (task, receipt) => supervisor.steer.secretsUseEnded(task, receipt),
     ...(host ? { asksFile: join(userData, "secret-asks.json") } : {}),

@@ -1,9 +1,10 @@
-import releaseIdentity from "../../../packaging/release-identity.json" with { type: "json" };
+import { RELEASE_REQUIREMENT } from "@shared/releaseRequirement";
 import { shellWord } from "./shellWord";
+
+export { RELEASE_REQUIREMENT };
 
 export const UPDATE_STARTING = "infinitary:starting-update";
 export const DOWNLOAD_FETCHED = "infinitary:downloaded";
-export const RELEASE_REQUIREMENT = `anchor apple generic and identifier "${releaseIdentity.bundleId}" and certificate leaf[subject.OU] = "${releaseIdentity.teamId}" and certificate leaf[field.1.2.840.113635.100.6.1.13] exists`;
 export const VERIFY_MAC_APP = `/usr/bin/codesign --verify --deep --strict -R ${shellWord("=" + RELEASE_REQUIREMENT)} "$B" || exit 7`;
 export const DOWNLOAD_READY = "infinitary:ready-to-update";
 export const DOWNLOAD_INSTALL = "install";

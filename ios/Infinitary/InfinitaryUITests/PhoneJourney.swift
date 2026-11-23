@@ -526,8 +526,11 @@ import XCTest
         XCTAssertEqual(allowOnComputer.label, "Allow for 10 minutes")
         XCTAssertFalse(app.buttons["approval-allow"].exists, "Allow once here needs this phone's key first")
         waitUntilEnabled(allowHere)
+        // The note and three choices can leave the body less room than they take, so the whole card scrolls and its
+        // choices sit below the fold until revealed; a picture reads only what is on the screen.
+        reveal(allowHere)
         try await appearances("secrets-use-not-set-up", showing: allowHere)
-        reveal(allowHere); tapOnPhone(allowHere, repeatDiscarded: false)
+        tapOnPhone(allowHere, repeatDiscarded: false)
         XCTAssertTrue(app.staticTexts["To allow here, turn on Approves secret uses in Settings. You can also allow on Test Mac mini."]
             .waitForPresence(timeout: 10), app.debugDescription)
         reveal(allowOnComputer); tapOnPhone(allowOnComputer, repeatDiscarded: false)

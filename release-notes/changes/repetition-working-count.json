@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repetition-working-count",
+      "reason": "The first mate is woken about a repeated call that worked only at its tenth identical completion instead of its third; failed repeats still wake it at three. Nothing a person sees changes."
+    }
+  ]
+}

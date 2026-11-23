@@ -365,7 +365,7 @@ The original payload stays in `keep_open_backfill`; delivery metadata and identi
 
 ## Exact completed-operation observations
 
-A third unchanged completed operation raises one possible-repetition wake through the direct lifecycle route, independently of quiet detection and report sorting.
+A third unchanged failed completion, or a tenth unchanged working one, raises one possible-repetition wake through the direct lifecycle route, independently of quiet detection and report sorting.
 The task owner commits its source checkpoint and repetition record in the same transaction as the inbox's once-identity and queued wake.
 Recovery repeats that identity rather than creating another logical notice; the first mate judges usefulness and any response within the original scope.
 The source-side incremental reader, work-computer delivery and deterministic work checks are documented in [completed-operation repetition](tool-repetition.md).

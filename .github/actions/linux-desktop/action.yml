@@ -9,12 +9,15 @@ runs:
   steps:
     # The machine's own automatic updates may hold apt's locks; the helper
     # takes over from them. On an image that already holds every package, as
-    # the PC's job image does, it downloads nothing, so a slow mirror cannot
-    # run out the step's time (docs/testing.md, "The runner's automatic updates").
+    # GitHub's hosted Ubuntu and the PC's job image do, it downloads nothing,
+    # so a slow or stalled mirror cannot run out the step's time. The pointer
+    # parks through the X library Electron loads (scripts/on-screen.sh), so
+    # the list names no screen tool beyond Xvfb (docs/testing.md, "The
+    # runner's automatic updates").
     - name: Install virtual display and desktop libraries
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: timeout 600 scripts/apt-install.sh xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
+      run: timeout 600 scripts/apt-install.sh xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1
     # An unpacked Electron download has no installer to configure its
     # sandbox helper. Do that only in a disposable Linux job: a hosted
     # machine, or the PC's fresh virtual machine deleted after the job.

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "windows-join-by-address-key",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Joining a first mate by its address from Windows reads the other computer's key",
+      "body": "On a Windows PC, joining a first mate on another computer by its address now shows that computer's check line instead of stopping with \"Could not reach\". Before, Windows' own key reader could not read the key of most Mac and Linux computers.",
+      "noPicture": "The join shows the same check-line question it always did; only how the key is read behind it changed.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "windows-address-join-check",
+      "reason": "Adds a Windows check that joins a home by its address against a loopback OpenSSH server; it changes only how the project is checked."
+    }
+  ]
+}

@@ -159,6 +159,19 @@ describe("a kept sign-in covers the whole site its cookies cover", () => {
     expect(h.signIns.records()).toEqual([]);
   });
 
+  it("keeps nothing when the page moved from the default port to another port of the named host", async () => {
+    const h = onThisComputer();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "https://aurora.example/account" });
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.requestHelp("t1", { ...request, site: "aurora.example" });
+    await h.browsers.takeControl("t1", handle);
+    h.kept.cookies.cookies = [{ ...SESSION, domain: "aurora.example", hostOnly: true }];
+    await (h.pages.at(-1) as FakePage).load("https://aurora.example:8443/account");
+    await h.browsers.returnControl("t1", handle, { site: "aurora.example", automatic: true });
+    expect(h.signIns.records()).toEqual([]);
+  });
+
   it("offers it to a later task that stops on the sign-in page, and on a sibling page", async () => {
     const h = onThisComputer();
     await signInOnce(h, false);

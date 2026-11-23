@@ -138,14 +138,16 @@ export function signedInSiteOf(site: string, cookies: readonly HostCookie[]): st
 
 /**
  * Whether a name Return control's question showed covers the page at
- * `page`: the page's own site, or a name above it that carries no port, as
- * a cookie's domain never does, so another port of the same host is never
- * covered by the site the question named.
+ * `page`: the page's own site, or a name strictly above its host that
+ * carries no port, as a cookie's domain never does, so another port of the
+ * same host is never covered by the site the question named.
  */
 export function namesPage(shown: string, page: string): boolean {
   const name = signInSite(shown);
   const site = signInSite(page);
-  return name === site || (!/:\d+$/.test(name) && atOrUnder(site, name));
+  return (
+    name === site || (!/:\d+$/.test(name) && siteHostname(site).endsWith(`.${siteHostname(name)}`))
+  );
 }
 
 /** Whether a page at `site` lies at an entry's site or under it (`idmsa.apple.com` under `apple.com`). */

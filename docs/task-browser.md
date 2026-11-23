@@ -634,7 +634,7 @@ Return control sends the displayed site and the rule (`inf:browser:return` with 
 The entry is the whole site the sign-in's cookies cover: the widest name among the cookies the page's parent shares with every name under it, such as `apple.com` for a sign-in made at `idmsa.apple.com`, otherwise the page's own host and port (`signedInSiteOf`).
 The engine never accepts a cookie on a public suffix, so this stops at the registrable domain, as a browser groups one site; the page signed in at stays among the pages passed through.
 The entry is never wider than the site the question named: a session cookie that arrived after the question last read the cookies, with no page opened since, keeps the page's own name, as the captain agreed to.
-Return control keeps nothing when the page no longer lies at or under the named site, and a named site other than the page's own covers it only without a port (`namesPage`), so another port of the same host is never kept under the rule chosen for the first.
+Return control keeps nothing when the page no longer lies at or under the named site, and a named site other than the page's own covers it only when the page's host lies strictly under it and the name carries no port (`namesPage`), so another port of the same host is never kept under the rule chosen for the first.
 An entry for a name under the new one, kept before by a page's exact name, folds into it with its id and pages, so a task allowed it keeps its allowance.
 A site that holds nothing is not listed, and the answer says so.
 

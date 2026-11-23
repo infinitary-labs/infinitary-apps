@@ -340,6 +340,7 @@
 "cardBrowserManage" = "Manage";
 "cardBrowserMore" = "More";
 "cardBrowserNone" = "This task has no browser on %1$@.";
+"cardBrowserOpenAgainCaption" = "A fresh browser, with only the sign-ins this task may use";
 "cardBrowserOpenFailed" = "%1$@ could not open a browser for this task right now.";
 "cardBrowserPageWatching" = "The page at %1$@, as the crewmate's browser shows it";
 "cardBrowserPageYours" = "The page at %1$@, under your control";

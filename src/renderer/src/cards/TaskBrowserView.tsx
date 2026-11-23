@@ -11,7 +11,6 @@ import {
   CLOSE_PAGE_LABEL,
   canOpenAgain,
   NOT_NOW_LABEL,
-  OPEN_AGAIN_CAPTION,
   OPEN_AGAIN_LABEL,
   REPORT_PROBLEM_DRAFT,
   RETURN_CONTROL_LABEL,
@@ -742,9 +741,10 @@ export function TaskBrowserView({
   const kept = fact?.state === "open" && fact.kept === true;
   const currentKey = `${fact?.session}:${fact?.generation}:${currentSite}`;
   // The site's rule on the computer the browser runs on, which its fact
-  // carries: Ask me each time leads unless that entry uses it without asking.
+  // carries: a listed site keeps its rule, and a new one starts at Use it
+  // without asking, the captain's chosen default (docs/task-browser.md, "Signed-in sites").
   const listed = fact?.state === "open" ? fact.rule : undefined;
-  const automatic = ruleFor?.key === currentKey ? ruleFor.automatic : listed === "automatic";
+  const automatic = ruleFor?.key === currentKey ? ruleFor.automatic : listed !== "ask";
   // The record keeps the card the view came from, so Hide on it returns there too.
   const openRecord = () =>
     useShellStore.getState().openRecord(taskId, from ? { cardId: from.cardId } : undefined);
@@ -914,7 +914,7 @@ export function TaskBrowserView({
                 </Button>
               </span>
               <div style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>
-                {OPEN_AGAIN_CAPTION}
+                {m.cardBrowserOpenAgainCaption()}
               </div>
             </>
           )}
@@ -954,7 +954,7 @@ export function TaskBrowserView({
       const result =
         which === "return"
           ? await window.infinitary.browser.return(taskId, handle, {
-              ...(kept ? { site: fact.site, automatic } : {}),
+              ...(kept ? { site: fact.keepAs ?? fact.site, automatic } : {}),
               ...(words ? { words } : {}),
             })
           : await window.infinitary.browser.take(taskId, handle);
@@ -1292,12 +1292,12 @@ export function TaskBrowserView({
                   }}
                 >
                   <legend style={{ ...LINE, float: "inline-start", padding: 0, maxWidth: "100%" }}>
-                    {signInRuleLegend(fact.site, place)}
+                    {signInRuleLegend(fact.keepAs ?? fact.site, place)}
                   </legend>
                   {(
                     [
-                      [false, ASK_EACH_TIME_LABEL],
                       [true, USE_WITHOUT_ASKING_LABEL],
+                      [false, ASK_EACH_TIME_LABEL],
                     ] as const
                   ).map(([value, label]) => (
                     <label

@@ -66,6 +66,7 @@
   "cardBrowserManage": "Manage",
   "cardBrowserMore": "More",
   "cardBrowserNone": "This task has no browser on {place}.",
+  "cardBrowserOpenAgainCaption": "A fresh browser, with only the sign-ins this task may use",
   "cardBrowserOpenFailed": "{place} could not open a browser for this task right now.",
   "cardBrowserPageWatching": "The page at {site}, as the crewmate's browser shows it",
   "cardBrowserPageYours": "The page at {site}, under your control",

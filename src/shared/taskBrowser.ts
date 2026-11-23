@@ -102,8 +102,8 @@ export const taskBrowserRequestSchema = z.object({
 });
 export type TaskBrowserRequest = z.infer<typeof taskBrowserRequestSchema>;
 
-/** The most signed-in sites one browser is allowed at once: one per site it was granted or signed in to. */
-export const SAVED_SIGN_INS_PER_BROWSER = 8;
+/** The most signed-in sites one task is allowed at once: one per site it was granted or signed in to. */
+export const SAVED_SIGN_INS_PER_TASK = 8;
 
 /**
  * The signed-in site a request card may offer: its site, when the captain
@@ -245,7 +245,7 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      * one whose rule lets tasks use it without asking, or one the captain
      * signed in to as he held it. Absent while it may use none.
      */
-    saved: z.array(z.string()).min(1).max(SAVED_SIGN_INS_PER_BROWSER).optional(),
+    saved: z.array(z.string()).min(1).max(SAVED_SIGN_INS_PER_TASK).optional(),
     /**
      * Its pages run in the computer's kept profile, where the captain's
      * sign-ins stay (docs/task-browser.md, "Signed-in sites"); absent while
@@ -259,6 +259,13 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      * computer lists no sign-in for the site.
      */
     rule: z.enum(["ask", "automatic"]).optional(),
+    /**
+     * While the captain holds it in the kept profile, the wider site the
+     * page's sign-in would be kept under when its cookies cover a name above
+     * the page's (docs/task-browser.md, "The rule"): the Return control
+     * question names it. Absent while that is the page's own site.
+     */
+    keepAs: z.string().min(1).optional(),
     /**
      * While the captain does not hold it, the signed-in site the computer it
      * runs on keeps for the page's site, which a request card offers;
@@ -770,7 +777,6 @@ export function signInCaption(
   return fact.returned ? RETURNED_CAPTION : SIGN_IN_CAPTION;
 }
 export const OPEN_AGAIN_LABEL = "Open again";
-export const OPEN_AGAIN_CAPTION = "A fresh browser, with nothing signed in";
 /** Report a problem's start in the Firstmate input, which the captain finishes. */
 export const REPORT_PROBLEM_DRAFT = "This task's browser has a problem: ";
 

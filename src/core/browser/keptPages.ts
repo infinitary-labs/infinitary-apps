@@ -10,7 +10,9 @@ import { z } from "zod";
  * registered stops, so a restart still reads the browser as stopped and
  * Open again, or a card's Try it, can start it again. It holds the stopped
  * fact - the address, bare when the captain signed in - and the project
- * folder its page served, if any. The task's close removes it.
+ * folder its page served, if any, and the signed-in sites the task may use,
+ * by entry id, so its next browser keeps them after a restart
+ * (docs/task-browser.md, "Signed-in sites"). The task's close removes it.
  */
 
 export const KEPT_PAGE_FILE_NAME = "browser.json";
@@ -29,9 +31,15 @@ const keptPageSchema = z.object({
       captains: z.literal(true).optional(),
     })
     .optional(),
+  /** The signed-in sites the task may use: site to entry id. */
+  saved: z.record(z.string().min(1), z.string().min(1)).optional(),
 });
 
-export type KeptPage = { fact: StoppedFact; served?: z.infer<typeof keptPageSchema>["served"] };
+export type KeptPage = {
+  fact: StoppedFact;
+  served?: z.infer<typeof keptPageSchema>["served"];
+  saved?: Record<string, string>;
+};
 
 /** Where each task's stopped page is kept; a task with no folder keeps none. */
 export type KeptPages = {
@@ -52,8 +60,8 @@ export function keptPagesIn(folderOf: (taskId: string) => string | undefined): K
       try {
         const parsed = keptPageSchema.safeParse(JSON.parse(readFileSync(path, "utf8")));
         if (!parsed.success) return undefined;
-        const { fact, served } = parsed.data;
-        return { fact, ...(served ? { served } : {}) };
+        const { fact, served, saved } = parsed.data;
+        return { fact, ...(served ? { served } : {}), ...(saved ? { saved } : {}) };
       } catch {
         // A missing or unreadable file keeps no page.
         return undefined;

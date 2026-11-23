@@ -65,7 +65,7 @@ The foot line's caption reads `temporary · returning control shares this page`,
 **Returning control.**
 `Return control` hands back with one press, without another confirmation or Keep control button.
 While the captain holds a crewmate's browser, a violet row under the chrome shows `Returning control lets the crewmate read and use this browser, including signed-in pages.` in `--text-sm --fg-1`, wrapping at narrow widths.
-Below it, a browser in the kept profile (a crewmate's sign-in request) asks the site's rule for later tasks on one wrapping line in `--text-xs --fg-2`: the legend `Your aurora.example sign-in stays on this computer. Later tasks:`, then two radios, `Ask me each time` (checked first) and `Use it without asking`, `--space-3` apart, each radio in `--accent` and `--space-1` from its words, the chosen one's words in `--fg-1`.
+Below it, a browser in the kept profile (a crewmate's sign-in request) asks the site's rule for later tasks on one wrapping line in `--text-xs --fg-2`: the legend `Your aurora.example sign-in stays on this computer. Later tasks:`, naming the whole site the sign-in is kept under (`aurora.example` for a page at `login.aurora.example`), then two radios, `Use it without asking` (first, and checked for a site not yet listed) and `Ask me each time`, `--space-3` apart, each radio in `--accent` and `--space-1` from its words, the chosen one's words in `--fg-1`.
 A site the computer the browser runs on already lists starts at its rule there, and a small ghost `Manage` button follows, which opens Signed-in sites in Settings → Secrets, or Website sign-ins in Settings → General where the Secrets tab is not offered.
 Outside the kept profile the notice is at least as tall as the browser toolbar and site permission row, growing if the text wraps.
 A browser outside the kept profile asks nothing about saved sign-ins: what the captain signs in to there goes when the browser stops.
@@ -197,7 +197,7 @@ While it uses a signed-in site it names it instead: `signed in on aurora.example
 The stopped sentence says what stopped it, in `--fg-1` at `--text-base` weight 500, ending in a full stop: `You stopped this browser`, `The crewmate closed this browser`, `This browser stopped after 30 minutes unused`, `This browser's page stopped working`, `This browser stopped when Infinitary quit`, or `This browser was stopped when the task closed`.
 A browser that was open when Infinitary quit reads `This browser stopped when Infinitary quit` after the restart and keeps Open again.
 The second line is `--text-sm` `--fg-2`: `What you signed in to for a sign-in request stays; nothing else was kept`, or on a closed task `Its pictures are in the task's record`.
-Then comes `Open again` (secondary Button), which starts a fresh browser at the last page with nothing signed in, and under it `A fresh browser, with nothing signed in` in `--text-xs` `--fg-3`; a closed task has no Open again.
+Then comes `Open again` (secondary Button), which starts a fresh browser at the last page, signed in only where the task may still use a kept sign-in, and under it `A fresh browser, with only the sign-ins this task may use` in `--text-xs` `--fg-3`; a closed task has no Open again.
 Unavailable says why in the same place - `Four task browsers are already open on this computer. Stop one, then open this again.` or `This computer could not open a browser for this task right now.` - and keeps Open again for a later try.
 
 **Never.**

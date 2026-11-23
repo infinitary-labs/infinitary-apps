@@ -20,9 +20,11 @@ import {
   loadYamlFile,
   PUBLICATION_TOKEN,
   PUBLISHES,
+  read,
   root,
   type ChannelStep as Step,
   signedChannel,
+  signingOutputs,
   UPLOADS,
   type ChannelWorkflow as Workflow,
   workflowString,
@@ -268,10 +270,14 @@ describe("the signed channel workflow", () => {
     const pem = generateKeyPairSync("ec", { namedCurve: "P-256" })
       .privateKey.export({ format: "pem", type: "pkcs8" })
       .toString();
+    const signing = signingOutputs(
+      (JSON.parse(read("packaging/release-identity.json")) as { teamId: string }).teamId,
+    );
+    const prefix = signing.signing_secrets;
     const secrets = {
-      APP_STORE_CONNECT_KEY_ID: "A1B2C3D4E5",
-      APP_STORE_CONNECT_ISSUER_ID: "69a6de70-03db-47e3-e053-5b8c7c11a4d1",
-      APP_STORE_CONNECT_API_KEY: Buffer.from(pem).toString("base64"),
+      [`${prefix}APP_STORE_CONNECT_KEY_ID`]: "A1B2C3D4E5",
+      [`${prefix}APP_STORE_CONNECT_ISSUER_ID`]: "69a6de70-03db-47e3-e053-5b8c7c11a4d1",
+      [`${prefix}APP_STORE_CONNECT_API_KEY`]: Buffer.from(pem).toString("base64"),
     };
     // A step with no `steps` context is one that runs after the restore
     // stopped before writing its output, as a cancel can leave it.
@@ -280,7 +286,11 @@ describe("the signed channel workflow", () => {
       writeFileSync(output, "");
       const env = Object.entries(found.env ?? {}).map(([name, value]) => [
         name,
-        workflowString(value, { runner: { temp }, secrets }),
+        workflowString(value, {
+          runner: { temp },
+          secrets,
+          needs: { resolve: { outputs: signing } },
+        }),
       ]);
       const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", found.run ?? ""], {
         cwd: scratch,
@@ -339,7 +349,8 @@ describe("the signed channel workflow", () => {
    * writes the files and manifest, the artifact carries them unchanged, and
    * the publication job's step accepts them or refuses before any effect.
    * Readings from release run 40651382197, alpha 0.6.1-alpha.30, whose
-   * Linux files the release's own renderer lays out on the publication side.
+   * Linux files the release's own renderer lays out on the publication side;
+   * the personal team 9T2J7MNUP9 signed it.
    * Where a case reads or writes the record, the release's own steps run
    * against a stand-in `gh` keeping it in a scratch folder.
    */
@@ -361,6 +372,7 @@ describe("the signed channel workflow", () => {
       public_tag: `infinitary-alpha-v${version}`,
       old_public_tag: `firstmate-3000-alpha-v${version}`,
       cask_token: "infinitary@alpha",
+      ...signingOutputs("9T2J7MNUP9"),
       ...overrides,
     });
     // The repository the run records in, as GITHUB_REPOSITORY names it.
@@ -636,6 +648,7 @@ describe("the signed channel workflow", () => {
         const started = stepRun("dmg", {
           steps: { "asc-key": { outputs: { key_path: join(temp, "AuthKey.p8") } } },
           secrets: { APP_STORE_CONNECT_KEY_ID: "KEY", APP_STORE_CONNECT_ISSUER_ID: "ISSUER" },
+          needs: { resolve: { outputs: resolve } },
         });
         expect(started.result.status, started.result.stderr).toBe(0);
         // The start returned while notarization still holds: nothing is built yet.

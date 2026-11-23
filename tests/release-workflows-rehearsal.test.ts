@@ -14,6 +14,7 @@ import {
   recordedWorkflowCall,
   root,
   type ChannelStep as Step,
+  secretRead,
   signedChannel,
   verifyLinuxTests,
   type ChannelWorkflow as Workflow,
@@ -95,16 +96,15 @@ describe("the signed channel workflow", () => {
       .filter((candidate) => !["visibility", "capability"].includes(candidate.id ?? ""));
     expect(afterInstall[0]?.id).toBe("build");
     expect(afterInstall[0]?.run).toBe("pnpm build");
-    const firstSecret = steps.findIndex((candidate) =>
-      /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)/.test(JSON.stringify(candidate)),
-    );
+    const appleSecret = secretRead("MAC_DEVELOPER_ID|APP_STORE_CONNECT");
+    const firstSecret = steps.findIndex((candidate) => appleSecret.test(JSON.stringify(candidate)));
     expect(steps[firstSecret]?.name).toBe("Restore App Store Connect API key");
     expect(steps.indexOf(step("build"))).toBeLessThan(firstSecret);
     // Apple signing material stays in the signing job; the uploads and
     // publication hold none.
     for (const id of ["upload", "publish"])
       expect(JSON.stringify(jobOf(release, id)), id).not.toMatch(
-        /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)|CSC_KEYCHAIN|keychain/,
+        new RegExp(`${appleSecret.source}|CSC_KEYCHAIN|keychain`),
       );
   });
 

@@ -91,13 +91,19 @@ export function linuxChecksPassed(jobs, prefix = "verify / ") {
 // desktop journeys, each a job of its own. A run from before then ran them all
 // in its one `mac` job, whose name the trigger-first rename reads back.
 const MAC_NATIVE = "Native tests, replay and package (Mac)";
-const MAC_JOURNEYS = ["Parallel journeys (Mac)", "Desktop journeys (Mac)"];
+// The desktop journeys are two jobs, one per group of equal measured time; a run
+// from before that split ran them in one job of the first name.
+const MAC_DESKTOP = [["Desktop journeys (Mac)"], ["Desktop journeys (Mac; group 1/2)", "Desktop journeys (Mac; group 2/2)"]];
+const MAC_JOURNEYS = ["Parallel journeys (Mac)", MAC_DESKTOP];
 
 /** Whether `jobs` hold verify.yml's Mac lanes, called as job `prefix`, each
- * passed: `names`, or the one `mac` job of a run from before INF-2779. */
+ * passed: `names`, or the one `mac` job of a run from before INF-2779. An
+ * entry that is a list of alternatives is passed by any one set of jobs. */
 function macPassed(jobs, prefix, names = [MAC_NATIVE, ...MAC_JOURNEYS]) {
   const passed = (name) => jobs.some((job) => job.name === name && green(job));
-  return passed(`${prefix}mac`) || names.every((name) => passed(`${prefix}${name}`));
+  const lane = (name) =>
+    Array.isArray(name) ? name.some((set) => set.every((own) => passed(`${prefix}${own}`))) : passed(`${prefix}${name}`);
+  return passed(`${prefix}mac`) || names.every(lane);
 }
 
 /** The checks an alpha reuses from verify.yml, called as job `prefix`: its

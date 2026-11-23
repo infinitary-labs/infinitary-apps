@@ -1520,7 +1520,8 @@ jobs:
           - verify-lane-linux-checks
           - verify-lane-mac
           - verify-lane-parallel
-          - verify-lane-desktop
+          - verify-lane-desktop-1
+          - verify-lane-desktop-2
           - verify-tests-Unit tests-1
           - verify-tests-Unit tests-2
           - verify-tests-Unit tests-3

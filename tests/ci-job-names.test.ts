@@ -515,7 +515,8 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
         // INF-2779: the Mac lane is three jobs.
         "Main push · Desktop checks / Main push · Native tests, replay and package (Mac)",
         "Main push · Desktop checks / Main push · Parallel journeys (Mac)",
-        "Main push · Desktop checks / Main push · Desktop journeys (Mac)",
+        "Main push · Desktop checks / Main push · Desktop journeys (Mac; group 1/2)",
+        "Main push · Desktop checks / Main push · Desktop journeys (Mac; group 2/2)",
       ]),
     );
     const run = {
@@ -543,13 +544,13 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       runId: 1,
       journeys: false,
     });
-    // A missing Mac lane is still an incomplete check, and so is any one of its three jobs.
-    const short = jobs.filter((job) => !job.name.endsWith("(Mac)"));
+    // A missing Mac lane is still an incomplete check, and so is any one of its four jobs.
+    const short = jobs.filter((job) => !job.name.includes("(Mac"));
     expect(() => verifyMainEvidence(run, short, "infinitary-labs/infinitary-apps", source)).toThrow(
       "every full-check owner",
     );
-    const macJobs = jobs.filter((job) => job.name.endsWith("(Mac)"));
-    expect(macJobs).toHaveLength(3);
+    const macJobs = jobs.filter((job) => job.name.includes("(Mac"));
+    expect(macJobs).toHaveLength(4);
     for (const missing of macJobs)
       expect(
         () =>

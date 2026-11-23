@@ -33,8 +33,8 @@ vi.setConfig({ testTimeout: 10_000 });
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
   /** verify.yml's lanes: the Linux checks and, since INF-2779, three Mac jobs. */
-  type Lane = "linux-checks" | "mac" | "parallel" | "desktop";
-  const JOURNEY_LANES = ["parallel", "desktop"] as const;
+  type Lane = "linux-checks" | "mac" | "parallel" | "desktop-1" | "desktop-2";
+  const JOURNEY_LANES = ["parallel", "desktop-1", "desktop-2"] as const;
   /**
    * Whether Actions runs a step in a lane (the mac lane unless named) once
    * the earlier steps ended with these outcomes: its condition through
@@ -210,10 +210,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         inputs: { all_journeys: true },
       });
     for (const step of [kept, failures])
-      expect(new Set(JOURNEY_LANES.map((lane) => named(step, lane))).size).toBe(2);
+      expect(new Set(JOURNEY_LANES.map((lane) => named(step, lane))).size).toBe(3);
     // A requested demo is kept whether the suite passed or failed, by the
     // desktop job, where the journeys that record one run (tests/e2e/lanes.ts).
-    expect(outcomes.map((outcome) => runsAfter(demos, outcome, "desktop"))).toEqual([
+    expect(outcomes.map((outcome) => runsAfter(demos, outcome, "desktop-1"))).toEqual([
       true,
       true,
       false,
@@ -356,7 +356,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     });
     const failed = summarizeRun(
       summarize,
-      "desktop",
+      "desktop-1",
       { install: "success", build: "success", recorder: "success", e2e: "failure" },
       (dir) => ({ [result]: red(dir) }),
     );

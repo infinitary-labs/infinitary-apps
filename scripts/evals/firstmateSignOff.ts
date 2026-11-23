@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { requiredActionCard } from "../../src/core/orchestrator/requiredActionCard.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
@@ -84,12 +85,6 @@ function showRequiredAction(host: Awaited<ReturnType<typeof approvalHost>>): str
   return action.cardId;
 }
 
-/**
- * What differs between the free preparation and the approved live run of one case - fresh card,
- * task and message ids, clock readings and the scratch folder - named in order of appearance, so
- * the run sheet's turn fingerprint holds while the model still reads the turn as served. An id that
- * reads as a number, such as 1234e567, is served quoted, so its quotes go with it.
- */
 const STAMP = /\d{4}-\d\d-\d\dT[\d:.]+Z/g;
 
 /**
@@ -102,18 +97,28 @@ function atServedTime(turn: string): string {
   return servedAt ? turn.replace(STAMP, servedAt) : turn;
 }
 
+/**
+ * What differs between the free preparation and the approved live run of one case - fresh card,
+ * task and message ids, the clock reading and the scratch folder - named in order of appearance,
+ * so the run sheet's turn fingerprint holds while the model still reads the turn as served.
+ */
 function volatile(turn: string): Record<string, string> {
   const found = turn.match(
-    /card-fm-[\w-]+|"[0-9a-f]{8}"|\b[0-9a-f]{8}\b|\d{4}-\d\d-\d\dT[\d:.]+Z|\/\S*fm-model-eval-\w+/g,
+    /card-fm-[\w-]+|\b[0-9a-f]{8}\b|\d{4}-\d\d-\d\dT[\d:.]+Z|\/\S*fm-model-eval-\w+(?:\/attempt-\d+)?/g,
   );
   return Object.fromEntries([...new Set(found)].map((value, index) => [`VOLATILE_${index + 1}`, value]));
 }
 
-export const signOffHost: typeof approvalHost = async (test, dir, model, protectedDirs) => {
-  const signOff = test as SignOffCase;
+/**
+ * The served frame quotes an id that reads as a number, such as 12345678 or 1234e567, and leaves
+ * every other id bare, so such an id changes the turn's text itself, not only its values.
+ */
+const NUMBER_LIKE_ID = /"\d+(?:e\d+)?"/;
+
+async function showCase(test: SignOffCase, dir: string, model: { provider: string; id: string }, protectedDirs: readonly string[]) {
   const host = await approvalHost(test, dir, model, protectedDirs);
   let cardId: string;
-  if (signOff.card === "answer") {
+  if (test.card === "answer") {
     // Shown as the first mate's own answer to the message it opened the evaluation with.
     const emit = host.spec.tools.find((tool) => tool.name === "emit_card");
     if (!emit) throw new Error("The production first mate has no emit_card");
@@ -123,13 +128,26 @@ export const signOffHost: typeof approvalHost = async (test, dir, model, protect
     cardId = found;
   } else cardId = showRequiredAction(host);
   const before = host.served.length;
-  host.supervisor.cardActions.replyToCard(cardId, signOff.line);
+  host.supervisor.cardActions.replyToCard(cardId, test.line);
   for (let wait = 0; host.served.length === before && wait < 100; wait++)
     await new Promise((resolve) => setTimeout(resolve, 20));
   const served = host.served.at(-1);
-  const turn = served && atServedTime(served);
-  if (host.served.length === before || !turn)
+  if (host.served.length === before || !served) {
+    await host.close();
     throw new Error("The captain's line under the card served the first mate no turn");
+  }
+  return { host, cardId, turn: atServedTime(served) };
+}
+
+export const signOffHost: typeof approvalHost = async (test, dir, model, protectedDirs) => {
+  let shown = await showCase(test as SignOffCase, join(dir, "attempt-1"), model, protectedDirs);
+  // Fresh ids each attempt; five number-like draws in a row are vanishingly rare.
+  for (let attempt = 2; NUMBER_LIKE_ID.test(shown.turn) && attempt <= 5; attempt++) {
+    await shown.host.close();
+    shown = await showCase(test as SignOffCase, join(dir, `attempt-${attempt}`), model, protectedDirs);
+  }
+  if (NUMBER_LIKE_ID.test(shown.turn)) throw new Error("Every attempt drew an id that reads as a number");
+  const { host, cardId, turn } = shown;
   return {
     ...host,
     prompt: turn,

@@ -1013,12 +1013,12 @@ export class DevicePairing implements PairedDevices {
     return this.makingOwnKey;
   }
 
-  /** Remembers that Firstmate's own key is let in at `address`, so later SSH offers it. */
   /** Whether Firstmate's own key was let in at `address`. */
   ownKeyPlacedIn(address: string): boolean {
     return this.ownKeyPlaced.has(address);
   }
 
+  /** Remembers that Firstmate's own key is let in at `address`, so later SSH offers it. */
   ownKeyPlacedAt(address: string): void {
     if (this.ownKeyPlaced.has(address)) return;
     this.ownKeyPlaced.add(address);

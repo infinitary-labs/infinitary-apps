@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-computer-with-no-screen",
+      "reason": "Adds a documentation site page on starting Infinitary by a command on a Linux computer with no screen, making a link there and joining it from another computer, in every shipped language; nothing in the app changes."
+    }
+  ]
+}

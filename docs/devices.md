@@ -1135,6 +1135,7 @@ Every route of `Computers.update` - over Remote Login, over the connection and M
   A computer without the change has its running turns stopped from here, and the update waits for those turns to end there at most `QUIT_SETTLE_MS`.
 - **What saving does here.**
   Each task with a turn running there gets one `turn-resumed` row on its lane, which says its last turn stopped part way while Infinitary there was updated and asks it to check what already took effect before it repeats a step.
+  A later turn its crewmate carries on by itself there meanwhile is held the same way, and the same row carries both on.
   The task's Activity says it paused, and the feed says once that it paused while Infinitary there is updated and carries on once that computer is back.
   No interrupt is recorded, so a kept merge approval stands, and idle, paused or other computers' tasks are not touched.
 - **Settings -> Devices.**
@@ -1148,6 +1149,7 @@ Every route of `Computers.update` - over Remote Login, over the connection and M
 - **When it is over.**
   Whatever came of the update, a computer that saved its own work is asked to let its save go (`inf:session:release-update`); one updated has already let it go by restarting, and one out of reach lets it go by itself `UPDATE_RETURN_MS` after its home last asked it anything.
   A computer that lists the change and comes back in reach while this Mac is not updating it is asked to let any save go before anything waiting goes to it (`PlacedSessions.reach`, `CrewUpdates.letGoReturned`), so a save this Mac no longer follows - after this Mac restarted, or lost that computer or its release - never refuses a carry-on turn.
+  A turn whose stop that let-go withdrew goes on there as if never asked, so its `turn-resumed` row goes and nothing carries it on a second time.
   Each paused crewmate then carries on once that computer is back and caught up, or at once when it never stopped, with its `turn-resumed` row as the turn's first words: one carry-on per task, however many times that computer restarts, the update is asked or the connection drops meanwhile.
 
 ### Downloading on a Mac reached by its address

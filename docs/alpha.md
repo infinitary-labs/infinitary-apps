@@ -438,7 +438,8 @@ An installed Mac copy accepts an update only from a signature its own designated
 A default requirement names the one team that signed the copy, so a release signed by another team is refused and each copy would need a manual reinstall.
 The release therefore gives its app bundle an explicit requirement (`src/shared/releaseRequirement.ts`, applied by `scripts/sign-release-mac.mjs`, electron-builder's `mac.sign` hook): Apple's chain through the Developer ID intermediate, the app identifier, a Developer ID leaf (the parts of codesign's own default) and any team in `acceptedTeamIds` of `packaging/release-identity.json`.
 `teamId` stays the one team that signs the version; the release gate (`scripts/verify-app.sh`) requires that team's signature and the explicit requirement in codesign's normal form.
-The requirement goes on the app bundle alone, because it names the app's identifier, which no helper or nested executable has.
+The requirement goes on the two files signed under the app's identifier: the app bundle and its background file, whose requirement must stay the app's (`docs/run.md`, "Opened while it runs").
+No helper or other nested executable has that identifier, so none takes it.
 A copy added over SSH is checked against the same requirement (`docs/devices.md`, "Downloading on a Mac reached by its address").
 
 A move takes two releases.

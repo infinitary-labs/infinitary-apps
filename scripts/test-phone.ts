@@ -28,7 +28,7 @@ import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { PHONE_BOOT_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePartNames, devicePhotos, endPhoneGate, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, devicePhotos, endPhoneGate, firstPhoneLanes, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -535,15 +535,15 @@ const lanePhotos = (lane: Lane, stopping: AbortSignal, number: number) => device
   () => libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run }));
 let hingeHelper: Promise<string> | undefined;
 // Builds once for any simulator, then runs each device's parts on the lanes `lanePlan` gives it, each lane one
-// simulator it starts once and each part as its own gate from that build with its own test home, at most
-// --simulators lanes at once (INF-4241 piece 3).
+// simulator it starts once and each part as its own gate from that build with its own test home, as many lanes at
+// once as --simulators places hold, an iPhone Duo's lane taking two (INF-4241 piece 3, INF-6407).
 const everyPart = async () => {
   const xcode = await run("xcodebuild", ["-version"]);
   phoneXcode(xcode);
   // INF-2125 piece 3: the simulators the first lanes use start, and wait for their wallpaper prewarm, while Xcode
   // builds, so their first parts begin as the build ends, or as a lane's prewarm finishes when that comes later; a
-  // lane past --simulators starts its own when a place frees.
-  const starting = new Map(lanePlan.lanes.slice(0, simulators)
+  // lane past --simulators' places starts its own when its places free.
+  const starting = new Map(firstPhoneLanes(lanePlan, simulators)
     .map(({ device, number }) => [`${device} ${number}`, startSimulator(device)] as const));
   // A start that fails is heard by its lane's open, and every start settles before the gate's cleanup.
   for (const started of starting.values()) started.catch(() => {});

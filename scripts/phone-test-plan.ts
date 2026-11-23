@@ -552,29 +552,40 @@ export function devicePhotos(watch: () => Promise<void>, add: () => Promise<void
   };
 }
 
-/** Runs each job once, at most `slots` at a time, in order; one job's failure stops none of the others,
- * unless `stopAfter` holds for a job's result or the job throws: then no further job starts and the
- * signal each running job holds aborts. A job that never started leaves its result undefined. */
+/** Runs each job once, in order, as many at a time as `slots` places hold, each job taking its `places` (one unless
+ * it says more, and never more than `slots`); a job waits until its places are free, and no later job starts before
+ * it. One job's failure stops none of the others, unless `stopAfter` holds for a job's result or the job throws: then
+ * no further job starts and the signal each running job holds aborts. A job that never started leaves its result
+ * undefined. */
 export async function runSideBySide<Job, Result>(jobs: Job[], slots: number, run: (job: Job, signal: AbortSignal) => Promise<Result>,
-  stopAfter?: (result: Result) => boolean): Promise<(Result | undefined)[]> {
+  stopAfter?: (result: Result) => boolean, places: (job: Job) => number = () => 1): Promise<(Result | undefined)[]> {
   if (!Number.isInteger(slots) || slots < 1) throw new Error("Run at least one simulator at a time");
   const results: (Result | undefined)[] = jobs.map(() => undefined);
   const errors: unknown[] = [];
   const stopping = new AbortController();
-  let next = 0;
-  const worker = async () => {
-    while (next < jobs.length && !stopping.signal.aborted) {
-      const index = next++;
+  const running: Promise<void>[] = [];
+  let free = slots;
+  // Only this loop ever waits, so one waker serves it; a job that ends while nothing waits wakes nothing.
+  let wake = () => {};
+  for (const [index, job] of jobs.entries()) {
+    const need = Math.min(Math.max(1, places(job)), slots);
+    while (free < need && !stopping.signal.aborted) await new Promise<void>((resolve) => { wake = resolve; });
+    if (stopping.signal.aborted) break;
+    free -= need;
+    running.push((async () => {
       try {
-        results[index] = await run(jobs[index]!, stopping.signal);
+        results[index] = await run(job, stopping.signal);
         if (stopAfter?.(results[index]!)) stopping.abort();
       } catch (error) {
         errors.push(error);
         if (stopAfter) stopping.abort();
+      } finally {
+        free += need;
+        wake();
       }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(slots, jobs.length) }, worker));
+    })());
+  }
+  await Promise.all(running);
   if (errors.length) throw errors[0];
   return results;
 }
@@ -614,18 +625,31 @@ export function phoneLanes({ processors, memoryBytes }: { processors: number; me
     Math.floor(memoryBytes / (PHONE_LANE_NEEDS.memoryMib * 1024 ** 2))));
 }
 
+/** INF-6407: how many of `phoneLanes`' places one simulated device of each kind takes; a kind not named takes one.
+ * On the compute Mac VMs of 10 processor cores and 9 GiB, an iPhone Duo beside another simulated device slowed both
+ * 1.8 to 3.6 times: its fold part's test took 257 to 275 seconds there against 145 alone on a rented Mac's VM, and
+ * the iPad's panels part ran past its three-minute allowance twice, once while the Duo started beside it and once
+ * beside its fold part (runs 45254330437, 45259662836 and 45253503275). An iPad beside an iPhone ran its parts 1.06
+ * to 1.25 times their time alone there, and two iPhones 1.3 times (INF-4308). */
+export const PHONE_DEVICE_PLACES: Readonly<Record<string, number>> = { duo: 2 };
+
 /** One lane: a simulated device of `device`, the `number`th of that device's lanes, counted from one. */
 export type PhoneLane<Device extends string = PhoneDevice> = { device: Device; number: number };
-/** Which lanes a gate runs, in start order, and each device's jobs (by their index in the plan) in the order its
- * lanes take them: a free lane of the device takes the next one. */
-export type PhoneLanePlan<Device extends string = PhoneDevice> = { lanes: PhoneLane<Device>[]; queues: Map<Device, number[]> };
+/** Which lanes a gate runs, in start order, each device's jobs (by their index in the plan) in the order its lanes
+ * take them, a free lane of the device taking the next one, and how many places each device's lanes take. */
+export type PhoneLanePlan<Device extends string = PhoneDevice> = {
+  lanes: PhoneLane<Device>[];
+  queues: Map<Device, number[]>;
+  places: Map<Device, number>;
+};
 
-/** INF-4241 piece 3: shares `simulators` simulated devices among the devices of a gate's jobs, then each device's
- * jobs among its lanes. Every device gets one lane, as before, and each further lane goes to the device with the most
- * recorded work per lane, never more lanes than it has jobs; with fewer simulators than devices the devices run one
- * after another, the device with the most work per lane first. A device with one lane keeps its jobs in plan order. A device with several shares them longest
- * first by the recorded times, a part with no time first, a later round only after every earlier one, so the lanes
- * end close together. */
+/** INF-4241 piece 3: shares `simulators` places among the devices of a gate's jobs, then each device's jobs among
+ * its lanes. Every device gets one lane, as before, and each lane takes its device's places (`PHONE_DEVICE_PLACES`).
+ * A device whose lane takes every place runs alone, after the devices that share the Mac (INF-6407); among those, each
+ * further lane goes to the device with the most recorded work per lane, never more lanes than it has jobs. With fewer
+ * places than devices the devices run one after another, the device with the most work per lane first. A device
+ * with one lane keeps its jobs in plan order. A device with several shares them longest first by the recorded times,
+ * a part with no time first, a later round only after every earlier one, so the lanes end close together. */
 export function phoneLanePlan<Job extends { device: string; part: string; round?: number }>(jobs: readonly Job[], simulators: number,
   times: ReadonlyMap<string, number> = new Map()): PhoneLanePlan<Job["device"]> {
   if (!Number.isInteger(simulators) || simulators < 1) throw new Error("Run at least one simulator at a time");
@@ -634,23 +658,42 @@ export function phoneLanePlan<Job extends { device: string; part: string; round?
   const longest = Math.max(0, ...times.values());
   const work = new Map(devices.map((device) => [device,
     indices(device).reduce((sum, index) => sum + (times.get(jobs[index]!.part) ?? longest), 0)]));
+  const places = new Map(devices.map((device) => [device, Math.min(PHONE_DEVICE_PLACES[device] ?? 1, simulators)]));
+  const sharing = devices.filter((device) => places.get(device)! < simulators);
   const counts = new Map(devices.map((device) => [device, 1]));
-  for (let extra = simulators - devices.length; extra > 0; extra--) {
-    const open = devices.filter((device) => counts.get(device)! < indices(device).length);
+  for (let extra = simulators - sharing.reduce((sum, device) => sum + places.get(device)!, 0); extra > 0;) {
+    const open = sharing.filter((device) => counts.get(device)! < indices(device).length && places.get(device)! <= extra);
     if (!open.length) break;
     const next = open.reduce((best, device) => work.get(device)! / counts.get(device)! > work.get(best)! / counts.get(best)! ? device : best);
     counts.set(next, counts.get(next)! + 1);
+    extra -= places.get(next)!;
   }
   const recorded = (index: number) => times.get(jobs[index]!.part) ?? Number.POSITIVE_INFINITY;
   // INF-4241 piece 8: the device with the most recorded work per lane starts first, so with fewer simulators than
   // devices its long lane never waits behind a short one (the every-device gate on a two-lane Mac).
   const perLane = (device: Job["device"]) => work.get(device)! / counts.get(device)!;
-  const starts = [...devices].sort((a, b) => perLane(b) - perLane(a));
+  const byWork = (a: Job["device"], b: Job["device"]) => perLane(b) - perLane(a);
+  const starts = [...sharing.toSorted(byWork), ...devices.filter((device) => !sharing.includes(device)).toSorted(byWork)];
   return {
     lanes: starts.flatMap((device) => Array.from({ length: counts.get(device)! }, (_, at) => ({ device, number: at + 1 }))),
     queues: new Map(devices.map((device) => [device, counts.get(device) === 1 ? indices(device)
       : indices(device).sort((a, b) => (jobs[a]!.round ?? 1) - (jobs[b]!.round ?? 1) || recorded(b) - recorded(a))])),
+    places,
   };
+}
+
+/** The lanes that start together at the gate's start, in plan order: each takes its device's places until the next
+ * lane's places no longer fit in `simulators`. */
+export function firstPhoneLanes<Device extends string>(plan: PhoneLanePlan<Device>, simulators: number): PhoneLane<Device>[] {
+  let free = simulators;
+  const first: PhoneLane<Device>[] = [];
+  for (const lane of plan.lanes) {
+    const need = Math.min(plan.places.get(lane.device) ?? 1, simulators);
+    if (need > free) break;
+    free -= need;
+    first.push(lane);
+  }
+  return first;
 }
 
 export type DeviceLane<Job extends { device: string }, Device, Result> = {
@@ -665,11 +708,11 @@ export type DeviceLane<Job extends { device: string }, Device, Result> = {
 
 /** INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): runs
  * the jobs of each device on the lanes `plan` gives it, one lane a device unless it says more, each lane on one
- * device it opens once and closes at its end, at most `slots` lanes at a time. A lane takes its device's next job
- * when it is free (INF-4241 piece 3). One job's failure stops none of the others, unless `stopAfter` holds for a
- * job's result or a job throws: then no lane starts another job and the signal each running job holds aborts, while
- * every opened device still closes. A job that never started leaves its result undefined, and the first error is
- * thrown once every lane has ended. */
+ * device it opens once and closes at its end, as many lanes at a time as `slots` places hold, each taking its
+ * device's places in `plan` (INF-6407). A lane takes its device's next job when it is free (INF-4241 piece 3). One
+ * job's failure stops none of the others, unless `stopAfter` holds for a job's result or a job throws: then no lane
+ * starts another job and the signal each running job holds aborts, while every opened device still closes. A job
+ * that never started leaves its result undefined, and the first error is thrown once every lane has ended. */
 export async function runDeviceLanes<Job extends { device: string }, Device, Result>(jobs: Job[], slots: number,
   lane: DeviceLane<Job, Device, Result>, stopAfter?: (result: Result) => boolean,
   plan: PhoneLanePlan<Job["device"]> = phoneLanePlan(jobs.map((job) => ({ ...job, part: "" })), 1)): Promise<(Result | undefined)[]> {
@@ -699,7 +742,7 @@ export async function runDeviceLanes<Job extends { device: string }, Device, Res
     } finally {
       await lane.close(opened).catch((error) => errors.push(error));
     }
-  });
+  }, undefined, ({ device }) => plan.places.get(device) ?? 1);
   if (errors.length) throw errors[0];
   return results;
 }

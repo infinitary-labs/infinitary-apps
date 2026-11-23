@@ -8,10 +8,8 @@ import UIKit.UIGestureRecognizerSubclass
 /// press moment up, for a press and clicked what it went down on as the finger lifted (`FRAME_PRESS_SCRIPT`).
 ///
 /// It only watches: it never recognizes, never delays or cancels a touch, and lets every other gesture go on beside it.
-/// `down` hears each first finger as it goes down, before WebKit turns the press into the page's click.
 final class PressMoveWatch: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private let moved: () -> Void
-    private let down: (() -> Void)?
     /// The first finger down, the one the page takes for its primary pointer, and where it went down in the window.
     private weak var finger: UITouch?
     private var start: CGPoint = .zero
@@ -19,8 +17,7 @@ final class PressMoveWatch: UIGestureRecognizer, UIGestureRecognizerDelegate {
     /// How far UIKit lets a press move and still be one, which WebKit's own press handling keeps too.
     private let tolerance = UILongPressGestureRecognizer().allowableMovement
 
-    init(down: (() -> Void)? = nil, moved: @escaping () -> Void) {
-        self.down = down
+    init(moved: @escaping () -> Void) {
         self.moved = moved
         super.init(target: nil, action: nil)
         cancelsTouchesInView = false
@@ -34,7 +31,6 @@ final class PressMoveWatch: UIGestureRecognizer, UIGestureRecognizerDelegate {
         finger = first
         start = first.location(in: nil)
         told = false
-        down?()
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {

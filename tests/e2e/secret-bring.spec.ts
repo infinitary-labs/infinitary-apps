@@ -12,7 +12,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { savedText } from "./savedText";
 import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
-import { shownCard } from "./stack";
+import { cardReply, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
 const TASK = { id: "secret-bring-proof-task", title: "Move the staging keys" };
@@ -107,10 +107,15 @@ test("a bring from another tool keeps only the ticked secret, by keys alone", as
     await expect(second).not.toBeChecked();
     await expect(card.getByLabel(new RegExp(`^${TOKEN.as}`))).toHaveCount(1);
 
-    // Tab order: the rows sit between the body and the buttons.
+    const { row: reply, field: replyField } = cardReply(page);
+    const addFiles = reply.getByRole("button", { name: "Add files to this reply", exact: true });
     const dontBring = card.getByRole("button", { name: SECRET_BRING_CARD_WORDS.dontBring });
     await focusOn(dontBring);
     await pressKey(dontBring, "Shift+Tab");
+    await expect(addFiles).toBeFocused();
+    await pressKey(addFiles, "Shift+Tab");
+    await expect(replyField).toBeFocused();
+    await pressKey(replyField, "Shift+Tab");
     await expect(second).toBeFocused();
     await pressKey(second, "Space");
     await expect(second).toBeChecked();

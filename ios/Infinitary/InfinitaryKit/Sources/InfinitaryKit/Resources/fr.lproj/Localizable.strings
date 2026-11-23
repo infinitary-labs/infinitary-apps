@@ -704,7 +704,7 @@
 "commandWhatsNewShowWords" = "version, notes, nouveautés, modifications";
 "composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
 "composerFolderProject" = "Ce dossier fait déjà partie de vos projets.";
-"composerHintFeedback" = "%1$@ : signalez un problème ou une idée aux créateurs d’Infinitary";
+"composerHintFeedback" = "%1$@ : signalez un problème ou une idée au créateur d’Infinitary";
 "composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
@@ -1017,6 +1017,7 @@
 "feedbackStripHeading" = "Votre clic publie ceci sur %1$@, publiquement, une fois";
 "feedbackStripIdea" = "Une nouvelle idée";
 "feedbackStripNoAccount" = "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub.";
+"feedbackSubmitButton" = "Envoyer l’avis";
 "fileAdd" = "Ajouter des fichiers";
 "fileCancel" = "Annuler la préparation de %1$@";
 "fileDropHere" = "Déposez des fichiers pour les ajouter";

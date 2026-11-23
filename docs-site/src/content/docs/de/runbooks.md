@@ -1,5 +1,5 @@
 ---
-source: cee1a57585b4bde1
+source: 6d79068a24795b48
 title: Leitfäden
 description: Die geschriebene Anleitung, der dein erster Offizier und deine Crew bei bestimmten Arten von Arbeit folgen – und wie du sie ein- oder ausschaltest, liest und eigene erstellst oder hinzufügst.
 ---
@@ -61,7 +61,7 @@ Drei sind anfangs aus, bis du sie einschaltest: **Gebündelte Pull Requests**, *
 - **Geheimnisse übernehmen**: wie ein Crewmitglied Geheimnisse aus einem anderen Werkzeug in **Geheimnisse** übernimmt, ohne dass ein Agent einen Wert sieht.
   Ein Crewmitglied liest ihn nur bei einer solchen Übernahme.
   Siehe [Geheimnisse](/de/secrets/).
-- **Feedback**: Tippe `/feedback` und ein paar Worte in ein beliebiges Nachrichtenfeld, und ein Crewmitglied entwirft ein Issue für die Macher von Infinitary, das du liest und selbst veröffentlichst.
+- **Feedback**: Tippe `/feedback` und ein paar Worte in ein beliebiges Nachrichtenfeld, und ein Crewmitglied entwirft ein Issue für den Macher von Infinitary, das du liest und selbst veröffentlichst.
   Es enthält Fakten über die App und dein System, nie deine Namen, Pfade oder Projekte.
 - **Erweiterte Architektur**: zeichnet die Teile eines Projekts und ihre Verbindungen und zeigt, was eine Änderung auf dieser Karte verschiebt.
   Sie ist ein Experiment.

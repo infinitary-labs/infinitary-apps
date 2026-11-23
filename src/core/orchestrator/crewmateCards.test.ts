@@ -24,7 +24,7 @@ import type { LiveValidation } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import { presentationValidation } from "@shared/presentationValidation";
 import { PROJECT_PAGE_RULE } from "@shared/projectPage";
-import { MERGE_NOT_NOW_WORDS, sendWriteWords } from "@shared/vocabulary";
+import { MERGE_NOT_NOW_WORDS, sendWriteWords, submitFeedbackWords } from "@shared/vocabulary";
 import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
@@ -289,6 +289,28 @@ describe("a crewmate's card that asks to send a kept write", () => {
     ]);
     expect(card?.body.endsWith(writeAskStrip(ask))).toBe(true);
     expect(card?.body).toContain("The notes project tracks each release");
+  });
+
+  it("names a /feedback report's send Submit feedback, the captain's words for it", async () => {
+    const h = await crewmateOn();
+    const title = "Merge card keeps showing checks that already finished";
+    const ask: ForgeWriteAsk = {
+      ...keptWrite("wa000000000002"),
+      path: "/repos/infinitary-labs/infinitary-apps/issues",
+      body: JSON.stringify({
+        title,
+        body: "## What happened\n\nThe merge card kept showing its checks as running.",
+      }),
+      feedback: { kind: "bug", title, login: "octocat" },
+    };
+    h.tasks.delivery.keepWriteAsk(h.taskId, ask);
+    await h.emitCard.run(sendCard(ask.id));
+    const send = h.own()[0]?.actions.find((action) => action.id === "send");
+    expect(send).toMatchObject({
+      label: submitFeedbackWords(),
+      default: true,
+      effect: { kind: "request_write", ask: ask.id },
+    });
   });
 
   it("refuses a send for an ask that is not this task's, an integration's, one already sent, and two sends on one card", async () => {

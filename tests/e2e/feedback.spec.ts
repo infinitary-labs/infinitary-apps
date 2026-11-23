@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { FEEDBACK_DRAFT, FEEDBACK_WORD } from "../../src/shared/feedback";
 import * as m from "../../src/shared/i18n/messages.generated";
-import { sendWriteWords } from "../../src/shared/vocabulary";
+import { submitFeedbackWords } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { HAS_APP_MENU } from "./desktop";
 import { cardBody } from "./frames";
@@ -109,14 +109,14 @@ test("a /feedback report shows its exact issue for review and publishes it once 
       writeFileSync(join(evidence, "feedback-shown-body.txt"), shown);
       await heroShot(app, page, {
         region: card,
-        anchors: [page.getByRole("button", { name: sendWriteWords("GitHub"), exact: true })],
+        anchors: [page.getByRole("button", { name: submitFeedbackWords(), exact: true })],
         name: "feedback-command",
       });
     }
 
     await test.step("the captain's click publishes exactly what the card showed, once", async () => {
       await pressKey(
-        page.getByRole("button", { name: sendWriteWords("GitHub"), exact: true }),
+        page.getByRole("button", { name: submitFeedbackWords(), exact: true }),
         "Enter",
       );
       await expect.poll(() => issues().length, { timeout: 20_000 }).toBe(1);

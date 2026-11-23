@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "feedback-maker-wording",
+      "reason": "Rewords the /feedback command before its first release: its hint says Infinitary's maker and its review card's button reads Submit feedback. The feedback-command note already describes the feature in these words, with a hero picture of the new button."
+    }
+  ]
+}

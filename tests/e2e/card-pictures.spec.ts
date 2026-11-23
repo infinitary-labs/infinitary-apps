@@ -345,9 +345,10 @@ test("a right-click opens the picture's menu: Copy, Save to Downloads, and Esc c
   const opened = await readViewer(page);
   const menu = page.getByRole("menu", { name: m.uiPictureViewerMenu() });
   const geometry = await pictureGeometry(page);
+  // A press lands on a whole pixel, which is where the window says it was.
   const inside = {
-    x: geometry.button.left + geometry.button.width / 3,
-    y: geometry.button.top + geometry.button.height / 2,
+    x: Math.round(geometry.button.left + geometry.button.width / 3),
+    y: Math.round(geometry.button.top + geometry.button.height / 2),
   };
 
   // The space around the picture opens nothing.
@@ -370,8 +371,8 @@ test("a right-click opens the picture's menu: Copy, Save to Downloads, and Esc c
     await expect(menu.getByRole("menuitem").nth(i)).toHaveAccessibleName(name);
   // It opens where the press was, its first item focused.
   const panel = await menu.boundingBox();
-  expect(Math.round(panel?.x ?? -1)).toBe(Math.round(inside.x));
-  expect(Math.round(panel?.y ?? -1)).toBe(Math.round(inside.y));
+  expect(panel?.x).toBe(inside.x);
+  expect(panel?.y).toBe(inside.y);
   await expect(menu.getByRole("menuitem").first()).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);

@@ -233,6 +233,7 @@ export default defineConfig({
             { slug: "automation" },
             { slug: "panels" },
             { slug: "your-other-computers" },
+            { slug: "a-computer-with-no-screen" },
             { slug: "iphone-and-ipad" },
           ],
         },

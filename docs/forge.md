@@ -1097,7 +1097,7 @@ When the approved address changes, the app retires the former open batch locally
 Its changes stay with their tasks for fresh approval, and eligible approvals can form a new batch at the new address.
 Waiting approvals also stay at the address they named and require fresh approval before joining a batch at the new address.
 The app retires open tasks' active story ledgers that name the former destination, so a crewmate can prepare revision 1 with a new Before base after rebuilding its branch there.
-For an ordinary remote story left behind by an earlier build, preparing against the approved destination starts a new ledger when the old story names another address; this does not relax the same-address base or audience checks.
+For an ordinary remote story left behind by an earlier build, preparing against the approved destination starts a new ledger when the old story names another address; this does not relax the same-address base or project identity checks.
 A story pinned to an unchanged publication address keeps its ledger.
 A story at the new address needs a new merge card and approval, even for a plain Git branch at the same commit and story revision.
 Returning to a former address does not restore a retired offer.
@@ -1585,6 +1585,9 @@ A hosted story is read by everyone who can see the project, and by anyone when t
 `PUBLIC_WRITING` (`src/core/prompts/publicWriting.ts`) is that rule's one home in the crewmate core, served once on Pi and on Claude, and covers everything sent where the project lives: stories, descriptions, commit messages, comments and releases.
 It keeps out the captain's own setup by name, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys and the captain's words; a local-only project's story, shown only on its merge card, is exempt.
 `publishable: true` is the author's declaration that it read the story once as that stranger, and the prepare answer names the destination's visibility it read (`storyAudience`, `src/core/orchestrator/changePublication.ts`).
+When the project's visibility changed since its newest revision was saved, the next revision is prepared at the visibility read now, so the author declares it publishable again for that audience; the host, project identity, full name, format, media and Before base must still match (`sameProjectAnyAudience`, `src/shared/presentationDestination.ts`).
+Every publication check still compares the audience: a saved revision is never published, confirmed or shown at a visibility other than its own.
+The one exception is a change already approved on its pushed branch whose project only became readable by more people: its batch's pull request carries its story at the audience read now, and an accepted repair confirms it again there, since its words were already written for a stranger (`widenedAudience`).
 The saved story is a soft hold (`story`): when the captain's recorded override passes it, a new pull request takes `body` instead.
 The same override passes the story at the merge, ordinary or past the branch rules, at the version it covers (INF-1365): the merge goes without a current published story, while its checks, review, approval, version and the host's rules still hold.
 It marks no story published, uploads, refreshes and rewrites nothing, and is read after the merge's last wait, so an override taken back before the send holds the merge.
@@ -1701,7 +1704,7 @@ GitHub shows an upload's name above its player, so the name is readable and neve
 The digest still owns receipt identity; changing the display name never resends a confirmed attachment, whose original hosted name stays unchanged.
 Recordings always use bare attachment-URL paragraphs, not HTML video elements, so GitHub supplies its native player and rewrites private media to signed, temporary links.
 An HTML `video src` would stay unsigned in a private project and require a signed-in viewer with access; the renderer does not emit that form.
-Internal projects use the same sign-in-gated native media as private projects; the exact visibility remains in receipt identity so audience changes are refused.
+Internal projects use the same sign-in-gated native media as private projects; the exact visibility remains in receipt identity, so a story at a new audience uploads its files again under receipts for that audience.
 Saved receipts keep canonical GitHub attachment URLs, never the temporary links GitHub renders.
 On a native-media host, every selected file must have a confirmed receipt before the PR opens, including a draft, or an existing story is replaced.
 Before uploading, the complete rendered description must fit the host's limit - GitHub's 65,536-character body, GitLab's 1,048,576-character description - including escaped prose, attachment links, project text and preserved human words.

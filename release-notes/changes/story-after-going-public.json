@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "story-after-going-public",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Merge cards keep coming after you make a project public",
+      "body": "When you make a private project public, a crewmate that had already written its change's summary can now write the next one for the new audience and show its merge card. Changes you already approved keep their summaries in the combined pull request. Before, those merge cards were refused until the project was private again.",
+      "noPicture": "This changes when the existing merge card and pull request description appear, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

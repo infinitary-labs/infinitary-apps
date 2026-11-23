@@ -208,11 +208,19 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         expect(
           await service.publication.prepareStory(id, staged(repaired, original)),
         ).toMatchObject({
-          said: expect.stringContaining("Keep the original Before base and destination"),
+          said: expect.stringContaining("Keep the original Before base and project"),
         });
-        where.destination({ ...formerDestination, visibility: "public" });
+        // The project went public at the same address: the next revision is
+        // prepared at the audience read now, with the same base and identity.
+        const publicDestination = { ...formerDestination, visibility: "public" as const };
+        where.destination(publicDestination);
         expect(await service.publication.prepareStory(id, staged(original))).toMatchObject({
-          said: expect.stringContaining("Keep the original Before base and destination"),
+          revision: 2,
+        });
+        expect(tasks.delivery.changePresentation(id, task.branch)?.revisions.at(-1)).toMatchObject({
+          revision: 2,
+          destination: publicDestination,
+          base: original,
         });
         const oldStory = { ...storyFixture(), destination: formerDestination };
         tasks.delivery.updateChangePresentation(

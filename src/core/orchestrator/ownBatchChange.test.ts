@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { BATCH_STATUS_WORDS } from "@shared/batches";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
+import type { HostedPresentationDestination } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, type MockInstance, vi } from "vitest";
 import {
   BATCH_BASE,
   BatchHostForge,
@@ -1023,6 +1024,51 @@ describe("the merge of a change that joins a batch", () => {
         whatChanged: STORY.whatChanged,
       });
       expect(ledger?.completion).toMatchObject({ revision: 2, head: REPAIRED, refreshOf: 1 });
+    });
+
+    // Intent: INF-6160's host fix - an approved change whose story was confirmed while
+    // the project was private still carries that story once the project goes public,
+    // with no new approval: confirmed again at the repaired version for the audience
+    // read now, and shown on the batch's pull request at that audience.
+    it("carries a story confirmed while the project was private once it went public", async () => {
+      const at = home();
+      const audience = vi.spyOn(at.forge.attachments, "destination") as MockInstance<
+        () => Promise<HostedPresentationDestination>
+      >;
+      const privately: HostedPresentationDestination = {
+        ...METER_DESTINATION,
+        visibility: "private",
+      };
+      audience.mockResolvedValue(privately);
+      at.prepare({ ...STORY, destination: privately });
+      await at.service.publication.open(TASK, { title: STORY.title, presentation: 1 });
+      audience.mockResolvedValue(METER_DESTINATION);
+
+      const outcome = await at.service.merges.merge(TASK, repaired(at));
+      expect(outcome).toMatchObject({ ok: false, stop: "queue" });
+      const ledger = at.tasks.delivery.changePresentation(TASK, BRANCH);
+      expect(ledger?.revisions.at(-1)).toMatchObject({
+        revision: 2,
+        head: REPAIRED,
+        destination: METER_DESTINATION,
+        whatChanged: STORY.whatChanged,
+      });
+      expect(ledger?.completion).toMatchObject({ revision: 2, head: REPAIRED, refreshOf: 1 });
+      const { story, region } = await at.presentations.batchRegion(
+        TASK,
+        BRANCH,
+        REPAIRED,
+        at.forge,
+      );
+      expect(story.destination).toEqual(METER_DESTINATION);
+      expect(region).toContain("infinitary-story:ab12cd34:end");
+      expect(region).toMatch(/Dates with a time zone are read as written/);
+
+      // Any other change of the project still holds its story out of the batch.
+      audience.mockResolvedValue({ ...METER_DESTINATION, projectId: 1422452336 });
+      await expect(at.presentations.batchRegion(TASK, BRANCH, REPAIRED, at.forge)).rejects.toThrow(
+        "The publication destination or audience changed.",
+      );
     });
 
     // Intent: INF-5097 piece 1 with the captain's answer Keep: "a repair declared unchanged

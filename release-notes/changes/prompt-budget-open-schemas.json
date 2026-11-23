@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prompt-budget-open-schemas",
+      "reason": "Serves four nested tool schemas as open objects beside descriptions that already name their fields, so the first mate's and crewmates' fixed prompts are back under budget; nothing a person sees changes."
+    }
+  ]
+}

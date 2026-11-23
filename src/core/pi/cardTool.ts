@@ -12,7 +12,6 @@ import type { PutOffUntil } from "@shared/putOff";
 import { type RequiredAction, requiredActionsSchema } from "@shared/requiredActions";
 import {
   RISK_DIMENSIONS,
-  RISK_LEVELS,
   RISK_WHY_MAX,
   type RiskDeclaration,
   riskDeclarationSchema,
@@ -68,7 +67,7 @@ export const CLOSE_CARD_TOOL_NAME = "close_card";
 export const CLOSE_CARD_TOOL_DESCRIPTION = [
   "Withdraw a card of YOUR OWN that is no longer valid or necessary, by the id emit_card returned.",
   "Never withdraw a note emitted as this turn's answer.",
-  "Close a decision only when the choice no longer applies - you are withdrawing it as obsolete, not answering for the captain.",
+  "Close a decision only when the choice no longer applies, as obsolete, never to answer for the captain.",
   // Someone else's card is said by close_card's own refusal, which names
   // revising it or replying on it (docs/card-threads.md, "Shared cards").
 ].join(" ");
@@ -428,14 +427,16 @@ const browserOpenEffectParam = Type.Object({
   sign_in: Type.Optional(Type.String()),
 });
 
-/** A put-off choice's end; its rules ride the actions parameter (`CARD_PARAMS.actions`). */
-const untilParam = Type.Object({
-  kind: stringEnum(["close", "date", "event", "word"]),
-  task: Type.Optional(Type.String()),
-  at: Type.Optional(Type.String()),
-  integration: Type.Optional(Type.String()),
-  event: Type.Optional(Type.String()),
-  filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
+/**
+ * A put-off choice's end. Its fields ride the actions parameter
+ * (`CARD_PARAMS.actions`) and `putOffUntil` reads each with a default, so
+ * the served schema names only `kind`.
+ */
+const untilParam = Type.Unsafe<UntilParam>({
+  type: "object",
+  required: ["kind"],
+  properties: { kind: { type: "string", enum: ["close", "date", "event", "word"] } },
+  additionalProperties: true,
 });
 
 function actionParam<Effect extends TSchema>(effect: Effect) {
@@ -480,8 +481,12 @@ const REQUIRED_ACTIONS_DESCRIPTION =
 
 const sharedCardParams = {
   required_actions: Type.Optional(
-    zodParameter<RequiredAction[]>(requiredActionsSchema, {
-      dropPatterns: true,
+    // The description names every field and the host parses each entry
+    // (`requiredActionsSchema`), so the served schema stays open rather than
+    // repeating that shape.
+    Type.Unsafe<RequiredAction[]>({
+      type: "array",
+      items: { type: "object", additionalProperties: true },
       description: REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
@@ -510,26 +515,14 @@ const sharedCardParams = {
   ),
 };
 
-/** One dimension of a crewmate's risk: its level and one line why. Its rules ride `risk`. */
-const riskRatingParam = Type.Object({ level: stringEnum(RISK_LEVELS), why: Type.String() });
-
 /**
- * A crewmate's risk assessment, on its merge card alone: every
- * dimension, each rated. Only the top-level description is served, so it
- * carries every rule (`CARD_PARAMS.risk`).
+ * A crewmate's risk assessment, on its merge card alone: every dimension,
+ * each rated. Its shape rides the top-level description, which names the
+ * dimensions and the {level, why} each takes; the host refuses a declaration
+ * that does not read and names the field (`RISK_MISSING_REFUSAL`, `labeledActions`'
+ * precedent), so the served schema stays open instead of repeating seven ratings.
  */
-const riskParam = Type.Object(
-  {
-    blast: riskRatingParam,
-    behavior: riskRatingParam,
-    undo: riskRatingParam,
-    evidence: riskRatingParam,
-    sensitivity: riskRatingParam,
-    novelty: riskRatingParam,
-    deps: riskRatingParam,
-  },
-  { description: CARD_PARAMS.risk },
-);
+const riskParam = Type.Object({}, { additionalProperties: true, description: CARD_PARAMS.risk });
 
 /** The Firstmate's attribution and attach-first fields (task-system P1); no crewmate schema carries them. */
 const firstmateCardParams = {
@@ -591,7 +584,7 @@ export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it; the rest applies where it is not served.",
   "Pass the current revision as presentation here and to open_change, with its saved title and one merge action, no body, body_file, risk or required_actions; autonomy on merges from it. A host-identified upstream contribution shows its published presentation as a note without actions.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses it after checks pass.",
-  "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base, title and updated verification, published before the card.",
+  "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base and title, updated verification, published before the card.",
   "After the merge click, a same-version story revision keeps approval: publish it without another merge card; only another commit needs one.",
 ].join(" ");
 
@@ -668,11 +661,7 @@ const crewmateCardParams = Type.Object({
     ),
   ),
   body: Type.Optional(sharedCardParams.body),
-  risk: Type.Optional(
-    Type.Object(riskParam.properties, {
-      description: CARD_PARAMS.risk,
-    }),
-  ),
+  risk: Type.Optional(riskParam),
   asking: Type.Optional(Type.Boolean({ description: CARD_PARAMS.asking })),
   design_only: Type.Optional(Type.Boolean({ description: CARD_PARAMS.design_only })),
   continues: Type.Optional(Type.Boolean({ description: CARD_PARAMS.continues })),
@@ -722,7 +711,7 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens in this task's browser, by its working-copy-relative path, with no .. and no link on the way.",
+  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens, by its working-copy-relative path, with no .. and no link on the way.",
   "The app serves only files inside the project folder; the click opens the current file or says it is not there yet. It needs no open browser; never beside browser_handoff.",
 ].join(" ");
 
@@ -738,12 +727,12 @@ export const BROWSER_PAY_STEP = "Open browser and pay";
  */
 const BROWSER_HANDOFF_DESCRIPTION = [
   "Optional: ask the captain to take over this task's browser for what only a person should do - a sign-in, a code, a payment - never in a card reply.",
-  `Give site (the page's host), reason (why you need the captain) and after (what you will do once control comes back), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
-  `The card is an ordinary decision naming the site and why; give it exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
-  "The app pauses your browser before the card goes up; its commands refuse until the captain returns control. Put the steps and values to copy in the card body. Only the captain's Return control resumes you, once, with your earlier refs gone.",
+  `Give site (the page's host), reason (why you need the captain) and after (what you will do once control returns), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
+  `The card is an ordinary decision naming the site and why, with exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
+  "The app pauses your browser before the card goes up; its commands refuse until the captain returns control, and only their Return control resumes you, once, with your earlier refs gone. Put the steps and values to copy in the card body.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
-  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
+  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
   "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain.",
   UNKNOWN_OUTCOME_WORDS,

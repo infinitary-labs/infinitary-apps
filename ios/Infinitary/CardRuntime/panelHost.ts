@@ -83,8 +83,9 @@ type Input = {
 };
 
 /**
- * Whose page the frame controller answers: the captain's own panel's, an added plugin's, or, for one of the app's own,
- * the app's, which the desktop names its own panels by and which no panel added from elsewhere may take.
+ * The plugin id the frame controller passes on with a fetch: the captain's own panel's, an added plugin's, or, for one of
+ * the app's own, which fetch nothing, the built-in plugin's (`BUILTIN_PLUGIN_ID`), which no panel added from elsewhere
+ * may take.
  */
 function pluginIdOf(panel: Input["panel"]): string {
   if (panel.source === "app") return APP_PLUGIN_ID;

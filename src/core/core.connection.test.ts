@@ -70,6 +70,8 @@ import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { SIGN_IN_RETURN_WORDS } from "./signInReturns";
 import { forkChildProcess } from "./sql/forkChildProcess";
 import type { AskRecord } from "./storage/askStore";
+import type { KeptJobs } from "./tasks/keptJobs";
+import { keptRoot } from "./tasks/taskStops";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -515,6 +517,19 @@ describe("the connection serves the core to paired devices", () => {
     expect(phone.welcome.changes).toContain("app-panels-on-the-phone");
     const home = (await core.dispatch("inf:app:healthcheck", [])).version;
     const ids = (answer: AppPanels) => answer.panels.map((panel) => panel.id);
+    // The next list pushed from now on that the test accepts: `phone.push`
+    // also matches a push already received.
+    const nextList = (accept: (shown: string[]) => boolean) => {
+      const from = phone.pushes.length;
+      return phone
+        .push(
+          (push) =>
+            phone.pushes.indexOf(push) >= from &&
+            push.channel === "inf:plugins:app-panels" &&
+            accept(ids(push.payload as AppPanels)),
+        )
+        .then((push) => push.payload as AppPanels);
+    };
 
     // With no rule saved, Automation's gate is shut, and a panel this build
     // made no files for is never offered.
@@ -522,11 +537,7 @@ describe("the connection serves the core to paired devices", () => {
     expect(ids(before)).toEqual(["activity"]);
 
     // A rule saved opens Automation's gate, and the phone hears of it.
-    const opened = phone.push(
-      (push) =>
-        push.channel === "inf:plugins:app-panels" &&
-        ids(push.payload as AppPanels).includes("automation"),
-    );
+    const opened = nextList((shown) => shown.includes("automation"));
     const rule = await core.dispatch("inf:automation:save", [
       {
         name: "Morning summary",
@@ -535,7 +546,7 @@ describe("the connection serves the core to paired devices", () => {
         enable: true,
       },
     ]);
-    const shown = (await opened).payload as AppPanels;
+    const shown = await opened;
     const automation = shown.panels.find((panel) => panel.id === "automation");
     expect(automation).toMatchObject({ title: "Automation", ownPresence: true });
     expect(await phone.invoke("inf:plugins:app-panels", [])).toEqual(shown);
@@ -572,13 +583,45 @@ describe("the connection serves the core to paired devices", () => {
     writeFileSync(panel, built);
 
     // The rule gone shuts the gate again.
-    const shut = phone.push(
-      (push) =>
-        push.channel === "inf:plugins:app-panels" &&
-        !ids(push.payload as AppPanels).includes("automation"),
-    );
+    const shut = nextList((shown) => !shown.includes("automation"));
     await core.dispatch("inf:automation:delete", [rule.id]);
-    expect(ids((await shut).payload as AppPanels)).toEqual(["activity"]);
+    expect(ids(await shut)).toEqual(["activity"]);
+
+    // A job a close kept running opens it too, though the close records the
+    // job after its own events: the record's change is heard.
+    const kept = (core.services.placed as unknown as { keptJobs: KeptJobs }).keptJobs;
+    const folder = join(keptRoot(core.services.paths.crewmatesDir), "task-9-s1");
+    const keptOpens = nextList((shown) => shown.includes("automation"));
+    kept.record(
+      [
+        {
+          id: "s1",
+          label: "Nightly backup of the notes folder",
+          check: "true",
+          remove: "true",
+          folder,
+          account: "captain",
+        },
+      ],
+      { computer: null, task: "task-9", key: "INF-9" },
+    );
+    await keptOpens;
+    const keptShuts = nextList((shown) => !shown.includes("automation"));
+    kept.forget(null, folder);
+    await keptShuts;
+
+    // The Batches panel shows while its runbook is on, with its own files.
+    const batchesOn = nextList((shown) => shown.includes("batches-panel"));
+    await core.dispatch("inf:settings:runbooks:set", ["batches", true]);
+    const batches = (await batchesOn).panels.find((panel) => panel.id === "batches-panel");
+    expect(batches?.title).toBe("Batches");
+    const batchFiles = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "batches-panel", version: batches?.frame.version as string },
+    ]);
+    expect(batchFiles?.files.map((file) => file.path)).toEqual(["panel.mjs"]);
+    const batchesOff = nextList((shown) => !shown.includes("batches-panel"));
+    await core.dispatch("inf:settings:runbooks:set", ["batches", false]);
+    await batchesOff;
 
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
@@ -1794,6 +1837,8 @@ function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, st
     "builtin/automation/panel.mjs":
       'import React from "../../react.mjs";\nexport default () => null;\n',
     "builtin/automation/cards.mjs": "export default {};\n",
+    "builtin/batches-panel/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
   };
   const pins: Record<string, string> = {};
   for (const [path, text] of Object.entries(files)) {

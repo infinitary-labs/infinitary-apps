@@ -224,6 +224,54 @@ public enum PhonePanelFailure: Error, Equatable, Sendable {
     }
 }
 
+/// Files the phone keeps with their pins, and reads back only while every file still matches its pin: the panel library
+/// and the app's own panels' files.
+enum PhonePinnedFiles {
+    /// An answer's files, each with the pin the computer named, refused whole when any file's bytes do not match it.
+    static func read(_ entries: [PhoneJSON]) throws(PhonePanelFailure) -> [String: PhonePanelFile] {
+        var files: [String: PhonePanelFile] = [:]
+        for entry in entries {
+            guard case .object(let file) = entry, case .string(let path)? = file["path"],
+                  case .string(let integrity)? = file["integrity"], case .string(let base64)? = file["data"],
+                  let data = Data(base64Encoded: base64) else { throw .unreadable }
+            guard PhonePanelFile.pin(data) == integrity else { throw .integrity }
+            files[path] = PhonePanelFile(data: data, integrity: integrity)
+        }
+        return files
+    }
+
+    /// A folder name made only of characters every file system keeps.
+    static func safe(_ name: String) -> String {
+        name.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) || "._-".unicodeScalars.contains($0) ? String($0) : "_" }.joined()
+    }
+
+    /// Writes each file and a list of their pins into the folder, replacing what it held.
+    static func save(_ files: [String: PhonePanelFile], in folder: URL) throws {
+        try? FileManager.default.removeItem(at: folder)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var pins: [String: String] = [:]
+        for (index, (path, file)) in files.sorted(by: { $0.key < $1.key }).enumerated() {
+            try file.data.write(to: folder.appendingPathComponent("\(index).bin"))
+            pins[path] = "\(index) \(file.integrity)"
+        }
+        try JSONEncoder().encode(pins).write(to: folder.appendingPathComponent("pins.json"))
+    }
+
+    /// The files kept in the folder, or nil when none are kept or any kept file no longer matches its pin.
+    static func load(from folder: URL) -> [String: PhonePanelFile]? {
+        guard let pinData = try? Data(contentsOf: folder.appendingPathComponent("pins.json")),
+              let pins = try? JSONDecoder().decode([String: String].self, from: pinData) else { return nil }
+        var files: [String: PhonePanelFile] = [:]
+        for (path, line) in pins {
+            let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let data = try? Data(contentsOf: folder.appendingPathComponent("\(parts[0]).bin")),
+                  PhonePanelFile.pin(data) == parts[1] else { return nil }
+            files[path] = PhonePanelFile(data: data, integrity: parts[1])
+        }
+        return files
+    }
+}
+
 /// The panel library the phone keeps, one copy per version of the app the panels were built for. Every file is
 /// checked against its pin when it arrives and again when it is read back, so a file changed on the way or on disk is
 /// never served to a frame.
@@ -236,48 +284,19 @@ public struct PhonePanelLibrary: Sendable {
         guard case .object(let fields) = answer else { throw .notServed }
         guard case .string(let answered)? = fields["version"], answered == version,
               case .array(let entries)? = fields["files"] else { throw .unreadable }
-        var files: [String: PhonePanelFile] = [:]
-        for entry in entries {
-            guard case .object(let file) = entry, case .string(let path)? = file["path"],
-                  case .string(let integrity)? = file["integrity"], case .string(let base64)? = file["data"],
-                  let data = Data(base64Encoded: base64) else { throw .unreadable }
-            guard PhonePanelFile.pin(data) == integrity else { throw .integrity }
-            files[path] = PhonePanelFile(data: data, integrity: integrity)
-        }
-        return PhonePanelLibrary(version: version, files: files)
+        return PhonePanelLibrary(version: version, files: try PhonePinnedFiles.read(entries))
     }
 
     /// Where the phone keeps libraries: one folder per version, holding each file and a list of their pins.
     public static func folder(in caches: URL, version: String) -> URL {
-        let safe = version.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) || "._-".unicodeScalars.contains($0) ? String($0) : "_" }.joined()
-        return caches.appendingPathComponent("panel-library", isDirectory: true).appendingPathComponent(safe, isDirectory: true)
+        caches.appendingPathComponent("panel-library", isDirectory: true).appendingPathComponent(PhonePinnedFiles.safe(version), isDirectory: true)
     }
 
-    public func save(in caches: URL) throws {
-        let folder = Self.folder(in: caches, version: version)
-        try? FileManager.default.removeItem(at: folder)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        var pins: [String: String] = [:]
-        for (index, (path, file)) in files.sorted(by: { $0.key < $1.key }).enumerated() {
-            try file.data.write(to: folder.appendingPathComponent("\(index).bin"))
-            pins[path] = "\(index) \(file.integrity)"
-        }
-        try JSONEncoder().encode(pins).write(to: folder.appendingPathComponent("pins.json"))
-    }
+    public func save(in caches: URL) throws { try PhonePinnedFiles.save(files, in: Self.folder(in: caches, version: version)) }
 
     /// The kept library for this version, or nil when none is kept or any kept file no longer matches its pin.
     public static func load(from caches: URL, version: String) -> PhonePanelLibrary? {
-        let folder = folder(in: caches, version: version)
-        guard let pinData = try? Data(contentsOf: folder.appendingPathComponent("pins.json")),
-              let pins = try? JSONDecoder().decode([String: String].self, from: pinData) else { return nil }
-        var files: [String: PhonePanelFile] = [:]
-        for (path, line) in pins {
-            let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
-            guard parts.count == 2, let data = try? Data(contentsOf: folder.appendingPathComponent("\(parts[0]).bin")),
-                  PhonePanelFile.pin(data) == parts[1] else { return nil }
-            files[path] = PhonePanelFile(data: data, integrity: parts[1])
-        }
-        return PhonePanelLibrary(version: version, files: files)
+        PhonePinnedFiles.load(from: folder(in: caches, version: version)).map { PhonePanelLibrary(version: version, files: $0) }
     }
 }
 
@@ -305,15 +324,28 @@ public struct PhonePanelFiles: Sendable {
     public static func readPinned(_ answer: PhoneJSON) throws(PhonePanelFailure) -> PhonePanelFiles {
         guard case .object(let fields) = answer else { throw .notServed }
         guard case .string(let builtFor)? = fields["builtFor"], case .array(let entries)? = fields["files"] else { throw .unreadable }
-        var files: [String: PhonePanelFile] = [:]
-        for entry in entries {
-            guard case .object(let file) = entry, case .string(let path)? = file["path"],
-                  case .string(let integrity)? = file["integrity"], case .string(let base64)? = file["data"],
-                  let data = Data(base64Encoded: base64) else { throw .unreadable }
-            guard PhonePanelFile.pin(data) == integrity else { throw .integrity }
-            files[path] = PhonePanelFile(data: data, integrity: integrity)
-        }
+        let files = try PhonePinnedFiles.read(entries)
         guard files["panel.mjs"] != nil else { throw .unreadable }
+        return PhonePanelFiles(builtFor: builtFor, files: files)
+    }
+
+    /// Where the phone keeps an app panel's files: one folder per panel and version. The version names the computer's
+    /// build too (`appPanelsFor`), so the library they import is the same for every computer that lists it.
+    public static func folder(in caches: URL, app id: String, version: String) -> URL {
+        caches.appendingPathComponent("panel-app", isDirectory: true)
+            .appendingPathComponent(PhonePinnedFiles.safe("\(id)-\(version)"), isDirectory: true)
+    }
+
+    public func save(in folder: URL) throws {
+        try PhonePinnedFiles.save(files, in: folder)
+        try Data(builtFor.utf8).write(to: folder.appendingPathComponent("built-for"))
+    }
+
+    /// The kept files in that folder, or nil when none are kept or any kept file no longer matches its pin.
+    public static func load(from folder: URL) -> PhonePanelFiles? {
+        guard let files = PhonePinnedFiles.load(from: folder), files["panel.mjs"] != nil,
+              let data = try? Data(contentsOf: folder.appendingPathComponent("built-for")),
+              let builtFor = String(data: data, encoding: .utf8), !builtFor.isEmpty else { return nil }
         return PhonePanelFiles(builtFor: builtFor, files: files)
     }
 }

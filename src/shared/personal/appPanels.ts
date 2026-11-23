@@ -31,7 +31,7 @@ export const appPanelViewSchema = z.strictObject({
   cardViews: z.array(z.string().regex(PANEL_NAME_PATTERN)).max(PANEL_CARD_VIEWS_MAX),
   cards: panelCardsDeclarationSchema,
   header: panelHeaderSchema,
-  /** The version of its compiled files, which its files answer names: a hash of their pins. */
+  /** The version of its compiled files, which its files answer names: a hash of this build and their pins. */
   frame: z.strictObject({ version: z.string().regex(/^[0-9a-f]{16}$/) }),
 });
 export type AppPanelView = z.infer<typeof appPanelViewSchema>;

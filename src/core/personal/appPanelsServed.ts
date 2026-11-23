@@ -51,13 +51,20 @@ export function appPanelGatesOf(
   });
 }
 
-/** The version of an app panel's files: a hash of their pins, so it moves only when a file does. */
-function filesVersion(pins: Readonly<Record<string, string>>): string {
+/**
+ * The version of an app panel's files: a hash of the build they import the
+ * library of and their pins, so it moves only when a file or that build does,
+ * and a phone that keeps files by version keeps the library they need with
+ * them (`PhonePanelFiles.folder`).
+ */
+function filesVersion(builtFor: string, pins: Readonly<Record<string, string>>): string {
   const lines = Object.keys(pins)
     .sort()
-    .map((path) => `${path} ${pins[path]}`)
-    .join("\n");
-  return createHash("sha256").update(lines).digest("hex").slice(0, 16);
+    .map((path) => `${path} ${pins[path]}`);
+  return createHash("sha256")
+    .update([builtFor, ...lines].join("\n"))
+    .digest("hex")
+    .slice(0, 16);
 }
 
 function viewOf(folder: AppPanelFolder, version: string): AppPanelView {
@@ -84,12 +91,16 @@ function viewOf(folder: AppPanelFolder, version: string): AppPanelView {
  * (docs/view.md, "The app's own panels on the phone"): every one whose gate
  * is open, and whose files this build made, with their version.
  */
-export function appPanelsFor(gates: AppPanelGates, pins: FrameLibPins | undefined): AppPanels {
+export function appPanelsFor(
+  gates: AppPanelGates,
+  pins: FrameLibPins | undefined,
+  builtFor: string,
+): AppPanels {
   if (!pins) return { panels: [] };
   return {
     panels: appPanelFoldersFor(gates).flatMap((folder) => {
       const own = appPanelFilePins(pins, folder.id);
-      return Object.keys(own).length > 0 ? [viewOf(folder, filesVersion(own))] : [];
+      return Object.keys(own).length > 0 ? [viewOf(folder, filesVersion(builtFor, own))] : [];
     }),
   };
 }
@@ -101,9 +112,10 @@ export function appPanelVersion(panels: AppPanels, id: string): string | undefin
 
 /**
  * The events after which an app panel's gate may have moved: knowledge
- * written or any project event, as the window asks again on (Knowledge's), a rule saved, deleted or
- * a job kept or removed (Automation's, on the feed line or a task's close),
- * and a runbook turned on or off.
+ * written or any project event, as the window asks again on (Knowledge's),
+ * a rule saved or deleted (Automation's, on its feed line or trail), and a
+ * runbook turned on or off. A kept job comes or goes on its record's own
+ * change (`keptJobs`), since a task's close records it after its events.
  */
 const GATE_EVENTS = new Set([
   "knowledge_changed",
@@ -111,29 +123,36 @@ const GATE_EVENTS = new Set([
   "runbooks_changed",
   "firstmate_note",
   "personalized",
-  "task_finished",
-  "task_landed",
 ]);
 
 /**
  * Pushes `inf:plugins:app-panels` each time the set of app panels shown
- * changes, read again after each event that may move a gate. Returns the
- * stop function.
+ * changes, read again after each event that may move a gate and each change
+ * to the kept jobs. Returns the stop function.
  */
 export function watchAppPanels(options: {
   subscribe: (sink: CoreEventSink) => () => void;
+  keptJobs: (listener: () => void) => () => void;
   emit: CoreEventSink;
   read: () => AppPanels;
 }): () => void {
   let last = JSON.stringify(options.read());
-  return options.subscribe((channel, payload) => {
-    if (channel !== "inf:event") return;
-    const type = (payload as { type?: unknown } | null)?.type;
-    if (typeof type !== "string" || !(GATE_EVENTS.has(type) || type.startsWith("repo_"))) return;
+  const readAgain = () => {
     const next = options.read();
     const said = JSON.stringify(next);
     if (said === last) return;
     last = said;
     options.emit("inf:plugins:app-panels", next);
+  };
+  const stopEvents = options.subscribe((channel, payload) => {
+    if (channel !== "inf:event") return;
+    const type = (payload as { type?: unknown } | null)?.type;
+    if (typeof type === "string" && (GATE_EVENTS.has(type) || type.startsWith("repo_")))
+      readAgain();
   });
+  const stopKept = options.keptJobs(readAgain);
+  return () => {
+    stopEvents();
+    stopKept();
+  };
 }

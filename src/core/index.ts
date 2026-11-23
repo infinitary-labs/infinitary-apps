@@ -163,8 +163,9 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   services.firstmate.bindAppDispatch(dispatch);
   const stopAppPanels = watchAppPanels({
     subscribe: (sink) => events.subscribe(sink),
+    keptJobs: (listener) => services.keptRunning.onChange(listener),
     emit: events.emit,
-    read: () => appPanelsFor(appPanelGatesOf(services), host.frameLib?.pins),
+    read: () => appPanelsFor(appPanelGatesOf(services), host.frameLib?.pins, host.app.version),
   });
   // What the system starts at login, remembered in the folder for an app
   // that later moves it in (storage/startAtLoginRecord.ts).

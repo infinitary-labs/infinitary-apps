@@ -95,7 +95,7 @@ struct PhonePanelsTests {
         #expect(app.allSatisfy { $0.isApp && $0.owner == nil && $0.filesSource == "app" && $0.present })
     }
 
-    @Test func anAppPanelsFilesAreRefusedWholeWhenOneFailsItsPin() throws {
+    @Test func anAppPanelsFilesAreCheckedAgainstTheirPinsWhenReadAndWhenKept() throws {
         let panel = Data("export default () => null;".utf8), cards = Data("export default {};".utf8)
         let answer = { (cardsPin: String) in PhoneJSON.object(["builtFor": .string("1.0.0"), "files": .array([
             .object(["path": .string("panel.mjs"), "integrity": .string(PhonePanelFile.pin(panel)), "data": .string(panel.base64EncodedString())]),
@@ -106,5 +106,17 @@ struct PhonePanelsTests {
         #expect(files.files["cards.mjs"]?.data == cards)
         #expect(throws: PhonePanelFailure.integrity) { try PhonePanelFiles.readPinned(answer(PhonePanelFile.pin(panel))) }
         #expect(throws: PhonePanelFailure.notServed) { try PhonePanelFiles.readPinned(.null) }
+
+        // Kept on the device by panel and version, and refused when a kept file no longer matches its pin.
+        let caches = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: caches) }
+        let folder = PhonePanelFiles.folder(in: caches, app: "knowledge", version: "89abcdef01234567")
+        try files.save(in: folder)
+        let kept = try #require(PhonePanelFiles.load(from: folder))
+        #expect(kept.builtFor == "1.0.0")
+        #expect(kept.files == files.files)
+        let cardsFile = try #require(FileManager.default.contentsOfDirectory(atPath: folder.path).sorted().first { $0.hasSuffix(".bin") })
+        try Data("tampered".utf8).write(to: folder.appendingPathComponent(cardsFile))
+        #expect(PhonePanelFiles.load(from: folder) == nil)
     }
 }

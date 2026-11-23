@@ -35,6 +35,7 @@ import SwiftUI
     private var app: [PhonePanel] = []
     private var layout = PhonePanelLayout()
     private var libraries: [String: Task<PhonePanelLibrary, Error>] = [:]
+    private var appPanelFiles: [String: Task<PhonePanelFiles, Error>] = [:]
     private let foldsKey: String
 
     init(session: ReadOnlySession, context: PhoneMessageContext) {
@@ -114,7 +115,11 @@ import SwiftUI
     }
 
     private func makeHost(_ panel: PhonePanel, card: PhonePanelCardEntry?) -> PanelWebHost {
-        let host = PanelWebHost(panel: panel, card: card, session: session, collapsed: card == nil && folded.contains(panel.id)) { [weak self] version throws(PhonePanelFailure) in
+        let host = PanelWebHost(panel: panel, card: card, session: session, collapsed: card == nil && folded.contains(panel.id),
+                                appFiles: { [weak self] id, version throws(PhonePanelFailure) in
+            guard let self else { throw .unreadable }
+            return try await self.appFiles(id, version)
+        }) { [weak self] version throws(PhonePanelFailure) in
             guard let self else { throw .unreadable }
             return try await self.library(version)
         }
@@ -238,6 +243,29 @@ import SwiftUI
         do { return try await task.value }
         catch {
             libraries[version] = nil
+            throw error as? PhonePanelFailure ?? .unreadable
+        }
+    }
+
+    /// One of the app's own panels' files, read once a version and kept on this device as the library is: a panel's page
+    /// mounts again each time its card shows and after each stop, and asks no new bytes while its version stands.
+    private func appFiles(_ id: String, _ version: String) async throws(PhonePanelFailure) -> PhonePanelFiles {
+        let key = "\(id) \(version)"
+        let task = appPanelFiles[key] ?? Task { [session] in
+            let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            let folder = PhonePanelFiles.folder(in: caches, app: id, version: version)
+            if let kept = PhonePanelFiles.load(from: folder) { return kept }
+            let answer: PhoneJSON
+            do { answer = try await session.panelAsk(.pluginsAppPanelFiles, [.object(["id": .string(id), "version": .string(version)])]) }
+            catch { throw PhonePanelFailure.unreadable }
+            let files = try PhonePanelFiles.readPinned(answer)
+            try? files.save(in: folder)
+            return files
+        }
+        appPanelFiles[key] = task
+        do { return try await task.value }
+        catch {
+            appPanelFiles[key] = nil
             throw error as? PhonePanelFailure ?? .unreadable
         }
     }

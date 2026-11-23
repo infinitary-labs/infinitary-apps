@@ -27,16 +27,11 @@ Seen means shown on the stage while the window is visible and focused, so revisi
 The line and the bars stay until the next revision or until the card leaves; removed parts are only counted, there is no switch to read the previous version, and there is no setting.
 The comparison ignores the host's own picture-copy names and the host's fact strip and follow-up rows, which the host rewrites on every call.
 
-### Conversation reading view
+### The conversation
 
-The read-only view opened from a conversation reply is a narrow exception to cards-not-chat (INF-2218, A · Open reply).
-It keeps the Note shell, sizing, stack and close behavior, with a quiet Conversation heading beside the Note chip instead of a quoted question title.
-The captain's question sits at the right, below a You label, in the shared question bubble; a long question folds to two lines and the bubble itself opens or folds it by pointer, Enter or Space.
-The first mate's existing hexagonal mark and First mate label introduce the unboxed reply below, at the left.
-Desktop speaker labels use `--font-mono` `--text-xs` `--fg-3`, the question keeps the shared bubble's regular `--text-sm` type, and the reply uses regular `--text-base` `--fg-1`, or `--danger` for a problem.
-The original words stay selectable and literal, with their line breaks; a picture-only question reads A picture, and long replies scroll inside the existing shell.
-The iPhone and iPad adapt this treatment inside their existing Reply sheet, with native type sizes, Done dismissal and unchanged sheet sizes.
-The view adds no timestamp, message field, attachment viewer or saved-data change; ordinary cards, threads and the conversation lane are unchanged.
+The conversation is the one read-only card that reads like a chat, a narrow exception to cards-not-chat for people who still think in threads.
+It keeps the Note shell, stack and close behavior; its own treatment is in `Conversation.prompt.md`.
+The iPhone and iPad keep their own Reply sheet until the phone's part of the conversation is built.
 
 ### The You asked line
 
@@ -54,7 +49,7 @@ A source on another task adds "· through 3 tasks" to the label, in its voice.
 A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
 Only when the words are cut, the bubble itself is the control: click or tap it to open the whole message with its paragraphs as written, and again to fold it; no separate Show all or Show less link is drawn (INF-1963).
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
-`QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line and conversation questions; callers provide the words and expansion state, keeping their own label and time.
+`QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line, and the phone's Reply sheet; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
 Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).
 The shared `src/shared/cardLeave.ts` table owns each kind’s icon, label, rest words and operation; live cards carry the core’s corner and the window’s own panels read their table row.
@@ -263,7 +258,7 @@ Inside the body, prose (paragraphs, lists, headings, captions, summaries) keeps 
 The body's document carries `data-width` (`regular`, `wide`, `full`) for the size it is shown at.
 
 **Find in this card.**
-A card, a past card, a task's record and its Crewmate tab carry a magnifying glass just before Maximize: an `IconButton` with the app's search icon (Lucide `search`), labelled `Find in this card`, with its installed key hint (default ⌘F); a panel's card, the reply note and a task's Browser tab carry none.
+A card, a past card, a task's record and its Crewmate tab carry a magnifying glass just before Maximize: an `IconButton` with the app's search icon (Lucide `search`), labelled `Find in this card`, with its installed key hint (default ⌘F); a panel's card and a task's Browser tab carry none; the conversation carries one, which finds words in the rounds it has read.
 Pressed, or on ⌘F, the head's meta line, the task's key and the model chip give their place to a find field: the search icon, the words, a count such as `2 of 7` or `No matches` in `--font-mono` at `--text-xs`, then Previous (Lucide `chevron-up`), Next (`chevron-down`) and Close (`x`) as 26 px icon buttons with their key hints.
 The field is 28 px tall on `--surface-input` with a `--line-1` hairline and `--radius-m`, and draws the focus ring round all of it; no row is added and nothing under the head moves.
 Every match is lit in `--accent-dim` and the current one in `--accent` with `--bg-0` words, drawn as highlights over the words and never into them, so they never look like Point at's marks.

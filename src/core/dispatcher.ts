@@ -293,6 +293,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
     "inf:conversation:last-turn": () => services.tasks.capture.lastTurn(),
+    "inf:conversation:thread": (request) => services.tasks.capture.conversation(request),
     "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),
     "inf:task:abort": async (taskId) => {
       await services.supervisor.sessions.abort(taskId);

@@ -1085,9 +1085,10 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandFeedbackStartWords());
     },
   },
-  // The first mate's newest reply, whole, as a note at the front
-  // (docs/composer.md "The reply note"): chosen by name, so it opens after
-  // the line above the input has faded too.
+  // The conversation at the front, at its newest round (docs/composer.md
+  // "The conversation"): chosen by name, so it opens after the line above
+  // the input has faded too. Its id is the one the reply note had, so a key
+  // the captain bound to it keeps working.
   "firstmate.reply": {
     get label() {
       return m.commandFirstmateReply();

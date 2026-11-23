@@ -64,8 +64,7 @@ struct PhoneView: View {
     /// INF-5265: the way in the computer sheet's Add another computer picked, opened once that sheet has closed.
     @State private var addWay: PhoneAddWay?
     /// Settings while it shows, and where it opened: a panel's `point.openSettings` names a place, Settings' own button
-    /// none. The sheet takes it as its item: a place kept beside a shown flag reached the sheet's first drawing as the
-    /// place before it, so Settings opened on its list.
+    /// none, so each showing carries its own place.
     @State private var settings: PhoneSettingsOpening?
     @State private var keyboardVisible = false
 

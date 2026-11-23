@@ -78,6 +78,36 @@ export function samePresentationDestination(
     : left.kind === "branch" && right.kind === "branch" && left.origin === right.origin;
 }
 
+/**
+ * The same project at any audience: a hosted story's next revision is
+ * prepared at the visibility read now (docs/forge.md, "Saved change stories").
+ * Every other field still has to match; publication checks keep comparing
+ * the audience with `samePresentationDestination`.
+ */
+export function sameProjectAnyAudience(
+  left: PresentationDestination,
+  right: PresentationDestination,
+): boolean {
+  return hostedPresentation(left) && hostedPresentation(right)
+    ? samePresentationDestination({ ...left, visibility: right.visibility }, right)
+    : samePresentationDestination(left, right);
+}
+
+const AUDIENCE_WIDTH = { private: 0, internal: 1, public: 2 } as const;
+
+/** The same hosted project, now readable by more people than when its story was saved. */
+export function widenedAudience(
+  saved: PresentationDestination,
+  current: PresentationDestination,
+): current is HostedPresentationDestination {
+  return (
+    hostedPresentation(saved) &&
+    hostedPresentation(current) &&
+    sameProjectAnyAudience(saved, current) &&
+    AUDIENCE_WIDTH[current.visibility] > AUDIENCE_WIDTH[saved.visibility]
+  );
+}
+
 /** Match a saved destination to an approved Git address, not to its audience. */
 export function storyAtOrigin(
   destination: PresentationDestination,

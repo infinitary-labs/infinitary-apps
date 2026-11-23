@@ -441,7 +441,12 @@ export function decideValidation(
       permission.decision?.action === input.action &&
       (!checklist || (input.ticked ?? []).includes(permission.request.id));
     if (accepting) {
-      if (permission.request.head !== input.head)
+      // INF-6250 finding 2: a yes to a check covers its later runs and
+      // versions, so the version it was asked at does not bind the click; a
+      // crewmate keeps working while the card waits. Effects and gaps stay
+      // bound to one exact version: an effect others can see is reviewed at
+      // it, and a gap is the current run's.
+      if (permission.request.kind !== "check" && permission.request.head !== input.head)
         throw new StaleValidationDecisionError(
           "The validation request's version changed; ask again.",
         );

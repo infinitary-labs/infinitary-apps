@@ -37,6 +37,7 @@ export type FirstmateWakeKind =
   | "freeze-recorded"
   | "panel-update-asked"
   | "team-queue-left"
+  | "automation-looks-failing"
   | "validation-question-stale"
   | "idle-stall"
   | "backlog-news"

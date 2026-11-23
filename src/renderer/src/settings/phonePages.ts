@@ -7,12 +7,13 @@ import {
   type AutomationSave,
 } from "@shared/automation";
 import {
-  AUTOMATION_STATE_TONES,
-  AUTOMATION_STATE_WORDS,
   automationDateWords,
   automationEventWords,
+  automationLooksFailingWords,
   automationNextWords,
   automationRuleTitle,
+  automationStateTone,
+  automationStateWords,
   automationSummary,
   automationWhenWords,
   automationZoneOf,
@@ -398,7 +399,7 @@ export function automationPage(input: { list: AutomationList; home: string }): P
       return {
         id: rule.id,
         title: automationRuleTitle(rule),
-        tone: AUTOMATION_STATE_TONES[rule.state],
+        tone: automationStateTone(rule),
         when: ruleWhen(rule),
         next: {
           ...(runsNext(rule) ? { term: PHONE_SETTINGS_WORDS.nextRun } : {}),
@@ -510,9 +511,10 @@ export function automationRulePage(input: RuleInput): PhoneRule {
   return {
     id: rule.id,
     title: automationRuleTitle(rule),
-    tone: AUTOMATION_STATE_TONES[rule.state],
-    state: AUTOMATION_STATE_WORDS[rule.state],
+    tone: automationStateTone(rule),
+    state: automationStateWords(rule),
     notes: [
+      ...(rule.failing ? automationLooksFailingWords(rule.failing) : []),
       ...(rule.stopped ? [PHONE_SETTINGS_WORDS.stoppedThere(rule.stopped, home)] : []),
       ...(rule.state === "draft" && !rule.stopped ? [AUTOMATION_SHEET_WORDS.draftNote] : []),
       ...(rule.captainRequested ? [] : [PHONE_SETTINGS_WORDS.byFirstMate]),

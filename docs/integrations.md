@@ -162,6 +162,8 @@ GitHub's row tells two events about GitHub Actions runs (`providers/githubRuns.t
 Each takes three filters: the repository as owner/name, which is required; the workflow, by its name, its file or its file without `.yml`, empty for every one; and the branch, empty for every one.
 A GitHub Enterprise row tells the same two; GitLab's tells none.
 A rule looks every two minutes through the app's GitHub sign-in (`GithubGatewayService.readForLook`), the host's own read on its tick as the run watch's is, so it spends no task's or the first mate's call allowance; a look that cannot read throws, and the rule keeps its place.
+A repository that moved or was renamed is read at its new address: GitHub answers the old one with a redirect to the repository by its number, which the gateway does not follow but names (`ForgeMovedError`), so the look reads that repository's current owner/name and lists its runs there, telling them under the new name.
+The binding keeps where each named repository moved while the app runs, so later looks read the new address at once; the rule keeps the name it was saved with.
 Its cursor is the moment it listens from: each look lists the repository's runs created since then, and the cursor moves to the oldest matching run still going, so a run is read again until it is told, or else to the newest run listed.
 A run that fails is told once by its id, at its first failed job while it still runs or when it ends failed, timed out or unable to start, or cancelled with a failed or timed-out job in its latest attempt, as a run that stops its own jobs at a failure ends; a run cancelled with no failed job is not told; a run that finishes is told once when it ends, whatever its conclusion.
 Runs from a fork are left out.

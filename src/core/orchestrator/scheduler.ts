@@ -65,6 +65,8 @@ export type ListenedEvent = {
   filters?: readonly { name: string; label: string; defaultValue?: string; required?: true }[];
   /** The integration says when something arrives, so a rule finds its place as soon as it listens. */
   atOnce?: boolean;
+  /** The person paused the integration: it answers no look, and its rules wait without looking. */
+  paused?: boolean;
   /** Why a filter's value could never match, refused when the rule is saved; undefined when it can. */
   checkFilter?: (filter: Record<string, string> | undefined) => string | undefined;
 };
@@ -175,6 +177,34 @@ export type SchedulerOptions = {
 };
 
 const TICK_MS = 60 * 1000;
+
+/**
+ * An event rule whose every look failed across this many ticks, an hour on
+ * the minute tick, shows as failing and the first mate hears of it once
+ * (docs/automation.md, "When every look fails"). Counted in ticks, as a
+ * rule's cadence is, so a development run's shortened tick gets there sooner.
+ */
+export const LOOKS_FAILING_TICKS = 60;
+/** At least this many failed looks: one failed look changes nothing, whatever the cadence. */
+const LOOKS_FAILING_LOOKS = 2;
+/** The most of a failed look's answer that is kept as its reason. */
+const FAILURE_EXCERPT = 300;
+
+/** An event rule's failed looks in a row, for the revision it looked as. */
+type FailedLooks = {
+  revision: number;
+  /** The tick of the first failed look in the row, and when it was. */
+  sinceTick: number;
+  since: number;
+  /** The tick of the newest failed look, and the event's cadence in ticks. */
+  lastTick: number;
+  every: number;
+  looks: number;
+  /** What the newest failed look answered, cut short. */
+  reason: string;
+  /** The first mate was told of this row. */
+  told: boolean;
+};
 const PROMPT_EXCERPT = 80;
 const PREVIEW_COUNT = 3;
 
@@ -367,6 +397,8 @@ export class Scheduler {
   private readonly looking = new Map<string, Promise<void>>();
   /** Rules asked to look at once while a look was running: they look again after it. */
   private readonly again = new Set<string>();
+  /** Each event rule's failed looks in a row, cleared by a look that answers. */
+  private readonly failedLooks = new Map<string, FailedLooks>();
 
   constructor(private readonly options: SchedulerOptions) {
     const now = options.now;
@@ -397,6 +429,8 @@ export class Scheduler {
     this.reconcile(now);
     this.retire();
     this.ticks += 1;
+    for (const id of this.failedLooks.keys())
+      if (!this.options.store.get(id)) this.failedLooks.delete(id);
     for (const record of this.options.store.list()) {
       if (record.spec.kind === "event") {
         this.listen(record);
@@ -515,13 +549,20 @@ export class Scheduler {
    */
   private listen(record: ScheduleRecord, now = false): void {
     const events = this.options.events;
-    if (!events || record.state !== "enabled" || record.spec.kind !== "event") return;
+    if (!events || record.state !== "enabled" || record.spec.kind !== "event") {
+      this.failedLooks.delete(record.id);
+      return;
+    }
     if (this.looking.has(record.id)) {
       if (now) this.again.add(record.id);
       return;
     }
     const found = events.find(record.spec.integration, record.spec.event);
-    if (!found || found.connection !== record.connection) return;
+    // A rule that does not look now has no row of failed looks to carry on.
+    if (!found || found.connection !== record.connection || found.paused) {
+      this.failedLooks.delete(record.id);
+      return;
+    }
     const last = this.looked.get(record.id);
     if (!now && last !== undefined && this.ticks - last < found.every) return;
     this.looked.set(record.id, this.ticks);
@@ -568,6 +609,79 @@ export class Scheduler {
       this.listen(record, true);
   }
 
+  /**
+   * One more failed look in the rule's row (docs/automation.md, "When every
+   * look fails"). Once the row spans `LOOKS_FAILING_TICKS` the rule shows as
+   * failing, and the first mate hears of it once: `once` names the rule's
+   * revision and place, so a restart that starts the row again tells nothing
+   * new about a rule that has not moved.
+   */
+  private lookFailed(record: ScheduleRecord, found: ListenedEvent, error: unknown): void {
+    if (record.spec.kind !== "event") return;
+    const kept = this.failedLooks.get(record.id);
+    const row: FailedLooks =
+      kept && kept.revision === record.revision
+        ? kept
+        : {
+            revision: record.revision,
+            sinceTick: this.ticks,
+            since: this.now(),
+            lastTick: this.ticks,
+            every: found.every,
+            looks: 0,
+            reason: "",
+            told: false,
+          };
+    row.looks += 1;
+    row.lastTick = this.ticks;
+    row.reason = cutText(error instanceof Error ? error.message : String(error), FAILURE_EXCERPT);
+    this.failedLooks.set(record.id, row);
+    if (row.told || !this.failingByLooks(row)) return;
+    const current = this.options.store.get(record.id);
+    if (current?.state !== "enabled" || current.revision !== record.revision) return;
+    row.told = true;
+    this.options.notify(
+      {
+        facts: {
+          kind: "automation-looks-failing",
+          rule: { id: record.id, name: label(record) },
+          integration: found.name,
+          event: found.label,
+          since: new Date(row.since).toISOString(),
+          looks: row.looks,
+          reason: row.reason,
+        },
+        once: `automation-looks-failing:${record.id}:${record.revision}:${record.cursor ?? ""}`,
+      },
+      "scheduled",
+    );
+  }
+
+  /**
+   * Each failed look stands for its whole cadence, so thirty looks two ticks
+   * apart are the hour; read at the newest failed look, so the rule turns
+   * failing only when a look fails, the moment the first mate is told.
+   */
+  private failingByLooks(row: FailedLooks): boolean {
+    return (
+      row.looks >= LOOKS_FAILING_LOOKS &&
+      row.lastTick - row.sinceTick + row.every >= LOOKS_FAILING_TICKS
+    );
+  }
+
+  /**
+   * Why a turned-on event rule gets nothing new: every look failed for an
+   * hour, since when and what the newest answered. Undefined for any other
+   * rule, and once a look answers.
+   */
+  lookingFails(
+    record: Pick<ScheduleRecord, "id" | "state" | "revision">,
+  ): { since: number; reason: string } | undefined {
+    const row = this.failedLooks.get(record.id);
+    if (record.state !== "enabled" || !row || row.revision !== record.revision) return undefined;
+    return this.failingByLooks(row) ? { since: row.since, reason: row.reason } : undefined;
+  }
+
   listeners(integration: string): number {
     return this.options.store
       .list()
@@ -600,9 +714,11 @@ export class Scheduler {
         found.connection,
         record.task,
       );
-    } catch {
+    } catch (error: unknown) {
+      this.lookFailed(record, found, error);
       return;
     }
+    this.failedLooks.delete(record.id);
     const unchanged = () => {
       const current = this.options.store.get(record.id);
       return current &&

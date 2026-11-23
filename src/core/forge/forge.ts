@@ -316,6 +316,22 @@ export class ForgeError extends Error {
   }
 }
 
+/**
+ * GitHub answered a read with a redirect to a repository by its number,
+ * which is how it answers an address a repository moved or was renamed
+ * from. The gateway follows no redirect; `path` is where it pointed,
+ * relative to the API, for a caller that may read there itself.
+ */
+export class ForgeMovedError extends ForgeError {
+  constructor(
+    message: string,
+    readonly path: string,
+  ) {
+    super("refused", message);
+    this.name = "ForgeMovedError";
+  }
+}
+
 /** A write's owner distinguishes a definite refusal from a response lost after sending. */
 export class ForgeWriteError extends ForgeError {
   constructor(

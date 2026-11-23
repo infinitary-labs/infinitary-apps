@@ -145,10 +145,15 @@ kbd {
 }
 
 /*
- * Starlight sizes the language menu for seven letters, which fits every
- * language's own name but Brazilian Portuguese's, "Português (Brasil)". Its
- * pages, where the menu shows that name, give the menu room for it.
+ * The language and theme menus show each name whole (docs/docs-site.md,
+ * "Languages"). Starlight gives them fixed widths of seven and six and a
+ * quarter letters, which cut names such as Français, 简体中文, German's System
+ * and French's Sombre short. Where the browser can size a menu to its choice,
+ * each menu fits the name it shows; elsewhere it is as wide as its longest
+ * name, as a menu is on its own.
  */
-:root[lang="pt-BR"] starlight-lang-select label {
-  --sl-select-width: 12em !important;
+starlight-lang-select select,
+starlight-theme-select select {
+  width: auto;
+  field-sizing: content;
 }

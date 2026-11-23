@@ -2017,6 +2017,8 @@
 "phoneSettingsNotificationsOn" = "Activées. Chaque nouvelle carte et réponse de %1$@ arrive sur cet %2$@ quand Infinitary est fermé.";
 "phoneSettingsNotificationsOpen" = "Modifier dans Réglages";
 "phoneSettingsNotificationsUpdate" = "Mettez à jour Infinitary sur %1$@ pour recevoir ici une notification pour chaque carte.";
+"phoneSettingsPencilTop" = "Déplacer la zone de message pour l’Apple Pencil";
+"phoneSettingsPencilTopScope" = "Avec l’Apple Pencil, cet iPad place la zone de message en haut, avec de la place pour écrire. Un doigt ou le clavier la remet en place. Réglé sur cet iPad uniquement.";
 "phoneSettingsSecretsApprovals" = "Approbations des secrets";
 "phoneSettingsSetUpAgain" = "Reconfigurer les approbations";
 "phoneSettingsTextSize" = "Taille du texte";

@@ -46,6 +46,19 @@ import Observation
     /// they come back when the keyboard gets collapsed". On an iPhone or an iPad, upright or on its side, while a text box
     /// in the card holds the keyboard, the pager and the message box with its last turn step aside for the card.
     var composerAside: Bool { keyboardUp && replyFocused }
+    /// The captain's Approve and build on comfortable Apple Pencil input: where the Pencil's move rule puts the message
+    /// box (`PhonePencilPlacement`), and when a touch last came down and whether it was the Pencil, so a field's focus
+    /// knows what gave it. Held only while Infinitary runs.
+    var pencil = PhonePencilPlacement()
+    var lastTouch: (pencil: Bool, at: Date)?
+    /// The message box stands at the top with a Pencil in hand, so it and a card's reply field keep four lines of room.
+    var pencilRoom = false
+    /// Whether the touch that just gave a field focus was the Pencil's: one down under a second ago. A hardware key or a
+    /// trackpad gives focus with no Pencil touch.
+    var focusFromPencil: Bool {
+        guard let lastTouch else { return false }
+        return lastTouch.pencil && Date().timeIntervalSince(lastTouch.at) < 1
+    }
     var fields: [String: String] {
         if let taskID { return ["taskId": taskID] }
         guard cardsVisible else { return [:] }
@@ -184,6 +197,13 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
             && !messageContext.keyboardUp && !composerSeparate
     }
     private var composerSeparate: Bool { composerUnderPanel && !panelsFolded }
+    /// The captain's Approve and build on comfortable Apple Pencil input: with a Pencil in hand and the switch on, the
+    /// message box stands at the top of Home's column, upright or beside the sidebar. A window with a fold, a Duo's, keeps
+    /// today's placement.
+    private var composerOnTop: Bool {
+        PhoneLayout.composerOnTop(pages, pencil: messageContext.pencil.top, chosen: appearance?.pencilTop ?? true,
+                                  folds: window.folds, composerUnderPanel: composerUnderPanel)
+    }
     private var offersPanelToggle: Bool {
         shown == .home && openDuo && messageContext.cardShown && !messageContext.keyboardUp && !maximized
     }
@@ -318,6 +338,24 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
             if paged { rail = .tasks; restoreCard() } else { selection = .tasks }
         }
         .onChange(of: paged, initial: true) { _, paged in messageContext.cardSizeOffered = paged }
+        .onChange(of: composerOnTop, initial: true) { _, top in messageContext.pencilRoom = top }
+        // The Pencil's move rule hears each field's focus and what gave it, and iPadOS's own reading on each return.
+        .onChange(of: messageContext.composerFocused || messageContext.replyFocused) { _, focused in
+            if focused { messageContext.pencil.focused(by: messageContext.focusFromPencil ? .pencil : .other) }
+            else { messageContext.pencil.unfocused() }
+        }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            guard phase == .active else { return }
+            let expected = phonePencilExpected()
+            if expected { appearance?.sawPencil() }
+            messageContext.pencil.expected(expected)
+        }
+        .background {
+            PhonePencilWatch(pencil: { onField in
+                appearance?.sawPencil()
+                messageContext.pencil.pencil(onField: onField)
+            }, touched: { pencil in messageContext.lastTouch = (pencil, Date()) }).frame(width: 0, height: 0)
+        }
         .onChange(of: openDuo, initial: true) { _, enabled in
             messageContext.cardFirst = enabled
             if !enabled { messageContext.replyTucked = false }
@@ -388,7 +426,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
         // turns or folds (`PhonePagesLayout`).
         // INF-4838: the workspace's one reading of Home's room feeds the layout, which keeps the card and the message box
         // off the fold by arithmetic as it places them.
-        PhonePagesLayout(pages: pages, composerUnderPanel: composerUnderPanel, maximized: maximized,
+        PhonePagesLayout(pages: pages, composerUnderPanel: composerUnderPanel, composerOnTop: composerOnTop, maximized: maximized,
                          folds: heeded(room).folds, panelsFolded: panelsFolded, openDuo: openDuo,
                          cardWidth: openDuo && !wide ? nil : PhoneLayout.readingWidth(messageContext.cardWidth)) {
             if paged {

@@ -668,6 +668,16 @@ export class ChangeMerge {
         plain: BATCH_WAITING_WORDS.toLowerCase(),
         stop: "queue",
       };
+    // Its crewmate was told to rebuild it on the open batch's version now: the
+    // rebuilt version goes in line behind that batch once declared, so nothing
+    // else is asked (docs/forge.md, "A change rebuilt on an open batch").
+    if (place?.state === "left-out" && place.rebuild)
+      return {
+        ok: false,
+        text: `Cannot merge yet: the change was left out of its batch because ${place.reason}. Its crewmate was told to rebuild it on its batch's version ${place.rebuild.head} (branch ${place.rebuild.branch}) and declare that push with check_change conflictRepair, giving ${place.rebuild.head} as newBase; the rebuilt version then goes in line right behind that batch's changes and first in the next batch.`,
+        plain: place.reason,
+        stop: "queue",
+      };
     // A clash only with a change ahead that is not merged yet: nothing can be
     // done until that batch merges or that change leaves it, and the batch
     // runs this merge again then.

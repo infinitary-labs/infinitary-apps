@@ -12,6 +12,7 @@ import { type Combined, LEFT_OUT_WORDS } from "./combine";
 import {
   abandoned,
   batchStatus,
+  builtOnBatch,
   carried,
   clashesEnded,
   combined,
@@ -22,11 +23,13 @@ import {
   hold,
   merged,
   pruned,
+  rebuildTold,
   release,
   reopened,
   repaired,
   reworded,
   standing,
+  toldRebuild,
   withdraw,
 } from "./line";
 
@@ -495,6 +498,192 @@ describe("a change built on another change's approved version", () => {
     expect(after.open?.members.map((entry) => entry.taskId)).toEqual(["t-parser"]);
     expect(after.line.map((change) => change.taskId)).toEqual(["t-panel"]);
     expect(carried(after, "line").map((change) => change.taskId)).toEqual(["t-parser"]);
+  });
+});
+
+describe("a change rebuilt on an open batch", () => {
+  // Intent: INF-6147's accepted plan, piece 1, from the captain's ask that batches stop paying
+  // again and again to bring a large change up to date that never gets in: a change that
+  // clashes with the open batch has its crewmate told once to rebuild it on the batch's
+  // version, and the rebuilt version waits right behind that batch's changes and goes first
+  // in the next batch. This reverses INF-4517's quiet wait for a clash with a change ahead.
+  const reason = "it clashes with a change ahead";
+  const BATCH_HEAD = EXPORT_COMMIT;
+  /** PARSER and EXPORT open as #31, with LEGEND left out for a clash with PARSER. */
+  function leftOut(): BatchRecord {
+    const open = openBatch();
+    return {
+      ...open,
+      leftOut: [{ taskId: LEGEND.taskId, head: LEGEND.head, reason, at: 5_000, ahead: "t-parser" }],
+    };
+  }
+  const AXIS_CHANGE: BatchChange = { ...EXPORT, taskId: "t-axis", head: "7".repeat(40), at: 7_000 };
+  const REBUILT: BatchChange = {
+    ...LEGEND,
+    head: "4444444444444444444444444444444444444444",
+    // Approved before both changes in the batch, so approval order alone would put it first.
+    at: 500,
+  };
+
+  it("tells its crewmate once per version of the change and set of changes in the batch", () => {
+    const first = toldRebuild(leftOut(), LEGEND, 6_000);
+    expect(first.fresh).toBe(true);
+    expect(first.told).toEqual({
+      taskId: LEGEND.taskId,
+      head: LEGEND.head,
+      on: BATCH_HEAD,
+      branch: "infinitary-batch/7c41",
+      members: [
+        { taskId: PARSER.taskId, head: PARSER.head },
+        { taskId: EXPORT.taskId, head: EXPORT.head },
+      ],
+      at: 6_000,
+    });
+    expect(rebuildTold(first.record, LEGEND)).toBe(true);
+    // The left-out change reads the version it was told while that batch is open, and waits.
+    const place = standing(first.record, LEGEND.taskId, LEGEND.head);
+    expect(place).toEqual({
+      state: "left-out",
+      reason,
+      ahead: "t-parser",
+      rebuild: { head: BATCH_HEAD, branch: "infinitary-batch/7c41" },
+    });
+    expect(batchStatus(place as NonNullable<typeof place>).kind).toBe("paused");
+    expect(toldRebuild(first.record, LEGEND, 7_000).fresh).toBe(false);
+    // The batch combined again with the same changes tells nothing new.
+    const recombined: BatchRecord = {
+      ...first.record,
+      open: { ...(first.record.open as NonNullable<BatchRecord["open"]>), head: "5".repeat(40) },
+    };
+    expect(toldRebuild(recombined, LEGEND, 8_000).fresh).toBe(false);
+    // A change leaving the batch is a new set: its crewmate hears again.
+    const fewer = withdraw(first.record, EXPORT.taskId);
+    expect(rebuildTold(fewer, LEGEND)).toBe(false);
+    expect(toldRebuild(fewer, LEGEND, 9_000).fresh).toBe(true);
+  });
+
+  it("asks for nothing once the batch it names is no longer open", () => {
+    const told = toldRebuild(leftOut(), LEGEND, 6_000).record;
+    const { open: _open, ...ended } = told;
+    expect(standing(ended, LEGEND.taskId, LEGEND.head)).toEqual({
+      state: "left-out",
+      reason,
+      ahead: "t-parser",
+    });
+    expect(toldRebuild(ended, LEGEND, 7_000)).toEqual({ record: ended, fresh: false });
+  });
+
+  it("enters the line built on the batch version it was told, or on the open batch's version, and on no other", () => {
+    const told = toldRebuild(leftOut(), LEGEND, 6_000).record;
+    const members = [
+      { taskId: PARSER.taskId, head: PARSER.head },
+      { taskId: EXPORT.taskId, head: EXPORT.head },
+    ];
+    expect(builtOnBatch(told, LEGEND.taskId, BATCH_HEAD)).toEqual({ head: BATCH_HEAD, members });
+    expect(builtOnBatch(openBatch(), LEGEND.taskId, BATCH_HEAD)).toEqual({
+      head: BATCH_HEAD,
+      members,
+    });
+    expect(builtOnBatch(told, LEGEND.taskId, BASE)).toBeUndefined();
+    const line = enqueue(told, { ...REBUILT, onBatch: { head: BATCH_HEAD, members } });
+    expect(line.leftOut).toEqual([]);
+    expect(line.line.map((entry) => entry.head)).toEqual([REBUILT.head]);
+  });
+
+  it("joins right behind the batch's changes when the open batch is combined again, and only while they are in it", () => {
+    const record = enqueue(enqueue(openBatch(), LEGEND), {
+      ...REBUILT,
+      taskId: "t-axis",
+      onBatch: {
+        head: BATCH_HEAD,
+        members: [
+          { taskId: PARSER.taskId, head: PARSER.head },
+          { taskId: EXPORT.taskId, head: EXPORT.head },
+        ],
+      },
+    });
+    expect(carried(record).map((entry) => entry.taskId)).toEqual([
+      "t-parser",
+      "t-export",
+      "t-axis",
+    ]);
+    // A change it was built on left the batch: it waits in line for the combine to judge.
+    expect(carried(withdraw(record, EXPORT.taskId)).map((entry) => entry.taskId)).toEqual([
+      "t-parser",
+    ]);
+    // When the line joins a held batch, it goes behind the declared fixes and ahead of the rest.
+    const fix = { ...LEGEND, taskId: "t-fix", fix: true as const, at: 9_000 };
+    expect(carried(enqueue(record, fix), "line").map((entry) => entry.taskId)).toEqual([
+      "t-parser",
+      "t-export",
+      "t-fix",
+      "t-axis",
+      "t-legend",
+    ]);
+  });
+
+  it("goes first in the next batch once the batch merged, and behind its changes when they went back in line", () => {
+    const rebuilt = {
+      ...REBUILT,
+      at: 4_000,
+      onBatch: {
+        head: BATCH_HEAD,
+        members: [
+          { taskId: PARSER.taskId, head: PARSER.head },
+          { taskId: EXPORT.taskId, head: EXPORT.head },
+        ],
+      },
+    };
+    const early = { ...PARSER, taskId: "t-early", head: "6".repeat(40), at: 100 };
+    const withLine = enqueue(enqueue(openBatch(), early), rebuilt);
+    const merged_ = merged(withLine, new Map(), 9_000);
+    expect(carried(merged_).map((entry) => entry.taskId)).toEqual(["t-legend", "t-early"]);
+    // Closed unmerged, the batch's changes go back to the front: it still goes behind them.
+    expect(carried(reopened(withLine)).map((entry) => entry.taskId)).toEqual([
+      "t-parser",
+      "t-export",
+      "t-legend",
+      "t-early",
+    ]);
+  });
+
+  // The captain's answer to the review's question: let the first rebuild stand, so the change
+  // goes first next batch, when the batch merges before the rebuilt version arrives.
+  it("lets the rebuild stand once its batch merged with each change it was told about, and only then", () => {
+    const told = toldRebuild(leftOut(), LEGEND, 6_000).record;
+    const done = merged(told, new Map(), 9_000);
+    expect(done.rebuilds?.[0]?.merged).toBe(true);
+    expect(standing(done, LEGEND.taskId, LEGEND.head)).toMatchObject({
+      state: "left-out",
+      rebuild: { head: BATCH_HEAD, branch: "infinitary-batch/7c41" },
+    });
+    // Its clash with the change ahead ended with that merge, with nothing more to say.
+    expect(clashesEnded(done, "conflict").ended).toEqual([
+      { taskId: LEGEND.taskId, head: LEGEND.head, ahead: "t-parser", how: "merged", rebuilt: true },
+    ]);
+    // Waiting in line at the clashing version, it stays out of every batch until replaced.
+    const waiting = { ...done, leftOut: [], line: [LEGEND, AXIS_CHANGE] };
+    expect(carried(waiting).map((entry) => entry.taskId)).toEqual([AXIS_CHANGE.taskId]);
+    expect(standing(waiting, LEGEND.taskId, LEGEND.head)).toEqual({
+      state: "left-out",
+      reason: LEFT_OUT_WORDS.batchMerged(BATCH_HEAD),
+      rebuild: { head: BATCH_HEAD, branch: "infinitary-batch/7c41" },
+    });
+    expect(carried({ ...waiting, line: [REBUILT] }).map((entry) => entry.head)).toEqual([
+      REBUILT.head,
+    ]);
+
+    // A batch that merged without a change it was told about leaves the rebuild unstood.
+    const fewer = merged(withdraw(told, EXPORT.taskId), new Map(), 9_000);
+    expect(fewer.rebuilds?.[0]?.merged).toBeUndefined();
+    expect(standing(fewer, LEGEND.taskId, LEGEND.head)).not.toHaveProperty("rebuild");
+  });
+
+  it("drops what its crewmate was told once its task closes", () => {
+    const told = toldRebuild(leftOut(), LEGEND, 6_000).record;
+    const record = pruned(told, (taskId) => taskId !== LEGEND.taskId);
+    expect(record.rebuilds).toBeUndefined();
+    expect(pruned(told, () => true)).toBe(told);
   });
 });
 

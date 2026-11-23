@@ -10,6 +10,7 @@
 import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { ReviewVerdict } from "@shared/rigor";
 import type { CardRefusal } from "../storage/taskRecords";
+import type { RelayedWords } from "../tasks/taskOrigin";
 import type { TaskQueryBuiltOn } from "../tasks/taskQuery";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type CiReadingFact, ciFactWords } from "./ciFact";
@@ -93,7 +94,7 @@ export type ReportFacts =
        * its crewmate said he typed them, with when (INF-3202): work filed
        * from this report keeps them as its origin (`turnOriginOf`).
        */
-      captainWords?: { text: string; at: number };
+      captainWords?: RelayedWords;
       builtOn?: WakeBuiltOn[];
       /**
        * The finished programs its crewmate started that returned a branch:

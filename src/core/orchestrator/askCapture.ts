@@ -7,6 +7,7 @@ import {
   type AskAttachedVia,
   type AskImage,
   type AskRecord,
+  type AskTypedUnder,
   askReceipt,
 } from "../storage/askStore";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -50,6 +51,8 @@ export type OpenTurnAsk = {
   hintTaskId?: string | undefined;
   /** The message this one sends again (Ask again on the answer-delivery notice). */
   retryOf?: string | undefined;
+  /** The card the message was typed under and its line there (INF-6115 piece 3). */
+  typedUnder?: AskTypedUnder | undefined;
 };
 
 export type EndTurnInput = {
@@ -131,6 +134,7 @@ export class AskCapture {
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       hintTaskId: hint,
       ...(input.retryOf ? { retryOf: input.retryOf } : {}),
+      ...(input.typedUnder ? { typedUnder: input.typedUnder } : {}),
     });
     this.currentAskId = record.id;
     return record;

@@ -1428,7 +1428,15 @@ export class CrewTurns {
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
         ...(declared?.captainWords
-          ? { captainWords: { text: declared.captainWords.text, at: declared.captainWords.at } }
+          ? {
+              captainWords: {
+                text: declared.captainWords.text,
+                at: declared.captainWords.at,
+                ...(declared.captainWords.line !== undefined
+                  ? { line: declared.captainWords.line }
+                  : {}),
+              },
+            }
           : {}),
         ...(stall ? { stall } : {}),
         ...(recoveryWays ? { recoveryWays } : {}),

@@ -70,7 +70,7 @@ export type ReportIntakeHost = {
   relayedCaptainWords(
     taskId: string,
     from: string,
-  ): { ok: true; words: string; at: number } | { ok: false; text: string };
+  ): { ok: true; words: string; at: number; line?: number } | { ok: false; text: string };
 };
 
 /**
@@ -651,7 +651,12 @@ export class ReportIntake {
       );
     const read = this.host.relayedCaptainWords(task.id, cited);
     if (!read.ok) throw new Error(read.text);
-    return { from: cited, text: read.words, at: read.at };
+    return {
+      from: cited,
+      text: read.words,
+      at: read.at,
+      ...(read.line !== undefined ? { line: read.line } : {}),
+    };
   }
 
   /**

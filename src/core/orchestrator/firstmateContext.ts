@@ -167,6 +167,9 @@ function openCardContextLine(card: {
   }`;
 }
 
+/** The card a turn's message was typed under, and its line there when the message saved one. */
+export type AboutCard = { cardId: string; line?: number };
+
 /**
  * What each first mate input carries besides its words (INF-1712): the
  * context block, complete once per model context and then only what
@@ -217,7 +220,7 @@ export class FirstmateContext {
   forTurn(
     visibleCardId?: string,
     hintTaskId?: string,
-    aboutCardId?: string,
+    about?: AboutCard,
     pastCardId?: string,
     sourceFacts = this.source,
   ): string {
@@ -227,7 +230,7 @@ export class FirstmateContext {
       this.contextParts(
         visibleCardId,
         hintTaskId,
-        aboutCardId,
+        about,
         pastCardId,
         this.captainFocus,
         sourceFacts,
@@ -455,12 +458,12 @@ export class FirstmateContext {
   buildContextBlock(
     visibleCardId?: string,
     hintTaskId?: string,
-    aboutCardId?: string,
+    about?: AboutCard,
     pastCardId?: string,
     focusedProjectId?: string,
   ): string {
     const parts = this.options.tasks.readProjection(() =>
-      this.contextParts(visibleCardId, hintTaskId, aboutCardId, pastCardId, focusedProjectId),
+      this.contextParts(visibleCardId, hintTaskId, about, pastCardId, focusedProjectId),
     );
     const { payload } = new ContextDelivery().render(parts.saved);
     return contextText({ delivery: DELIVERY_COMPLETE, ...payload, ...parts.turn });
@@ -475,7 +478,7 @@ export class FirstmateContext {
   private contextParts(
     visibleCardId?: string,
     hintTaskId?: string,
-    aboutCardId?: string,
+    replied?: AboutCard,
     pastCardId?: string,
     focusedProjectId?: string,
     sourceFacts?: SelfSourceFacts,
@@ -487,8 +490,8 @@ export class FirstmateContext {
       visibleCardId !== undefined
         ? this.options.supervisor.cards.snapshot().find((card) => card.id === visibleCardId)
         : undefined;
-    const aboutCard = aboutCardId
-      ? this.options.supervisor.cards.snapshot().find((card) => card.id === aboutCardId)
+    const aboutCard = replied
+      ? this.options.supervisor.cards.snapshot().find((card) => card.id === replied.cardId)
       : undefined;
     const requiredActionTask =
       aboutCard?.taskId && this.options.tasks.get(aboutCard.taskId)?.delivery?.captainAction
@@ -507,15 +510,13 @@ export class FirstmateContext {
         : "";
     // Only a line naming the captain's message answers it; the closing
     // words are a line that leaves it open (the captain's "Only a line that
-    // says it answers it; a handoff stays open").
-    const asked = aboutCard
-      ? this.options.supervisor.cards
-          .thread(aboutCard.id)
-          .messages.findLast((line) => line.who === "captain")
-      : undefined;
-    const answerGuide = asked
-      ? ` as message ${asked.id}; answer it with an emit_card reply on this id naming answers_message ${asked.id}, since your closing words alone leave it open`
-      : "";
+    // says it answers it; a handoff stays open"). The line is the one the
+    // message was saved as, never the card's newest (INF-6115 piece 3).
+    const asked = aboutCard ? replied?.line : undefined;
+    const answerGuide =
+      asked !== undefined
+        ? ` as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open`
+        : "";
     const aboutCardLine = aboutCard
       ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${answerGuide}${requiredActionGuide}${hostAlertGuide}`
       : undefined;

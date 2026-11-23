@@ -18,7 +18,14 @@ import type { TaskRecord } from "../storage/taskRecords";
 export type SavedOrigin =
   | { kind: "automation"; ruleId: string; name?: string }
   | { kind: "chose"; cardId: string; card: string; choice: string; written?: string }
-  | { kind: "report"; taskId: string; words?: { text: string; at: number } };
+  | { kind: "report"; taskId: string; words?: RelayedWords };
+
+/**
+ * The captain's words a report passed on, when they were typed, and the
+ * number of their line in the card's thread when they were a reply there
+ * (INF-6115 piece 3); a click or a Crewmate tab line has none.
+ */
+export type RelayedWords = { text: string; at: number; line?: number };
 
 export const ORIGIN_NOTE_KEY = "origin";
 
@@ -49,7 +56,13 @@ export function savedOriginOf(event: TaskEvent): SavedOrigin | undefined {
       kind: "report",
       taskId: origin.taskId,
       ...(words && typeof words.text === "string" && typeof words.at === "number"
-        ? { words: { text: words.text, at: words.at } }
+        ? {
+            words: {
+              text: words.text,
+              at: words.at,
+              ...(typeof words.line === "number" ? { line: words.line } : {}),
+            },
+          }
         : {}),
     };
   }

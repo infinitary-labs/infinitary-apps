@@ -40,7 +40,7 @@ import type { ScheduleRecord } from "../storage/scheduleStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { type TaskCardClick, TaskService } from "../tasks/taskService";
-import { cardEmitter } from "./cardEmit";
+import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { ThreadOwed } from "./cardThreads";
 import {
   ContextDelivery,
@@ -513,9 +513,16 @@ export class FirstmateContext {
     // says it answers it; a handoff stays open"). The line is the one the
     // message was saved as, never the card's newest (INF-6115 piece 3).
     const asked = aboutCard ? replied?.line : undefined;
+    // The sign-off is said only where it applies: a reply under the first
+    // mate's own card (INF-6317 part 1). Whether the words say "done" is
+    // its judgment; the host never reads them.
+    const signOffGuide =
+      asked !== undefined && aboutCard?.id.startsWith(FIRSTMATE_CARD_PREFIX)
+        ? "; when their words, however put, say they need nothing more from this card and ask, correct or approve nothing, pass signs_off true with that reply instead of close_card"
+        : "";
     const answerGuide =
       asked !== undefined
-        ? ` as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open`
+        ? ` as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open${signOffGuide}`
         : "";
     const aboutCardLine = aboutCard
       ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${answerGuide}${requiredActionGuide}${hostAlertGuide}`

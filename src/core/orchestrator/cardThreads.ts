@@ -26,7 +26,7 @@ import { TaskService } from "../tasks/taskService";
 import { buildEmittedCard, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
-import { SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
+import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
@@ -287,7 +287,7 @@ export class CardThreads {
    * Done on a saved answer. The past card names its crewmate, never a click
    * of the captain's. Returns whether the task closed.
    */
-  private signOff(id: string): boolean {
+  private signOff(id: string, by: "crewmate" | "firstmate" = "crewmate"): boolean {
     const card = this.stack.cards.get(id);
     if (!card) return false;
     return this.stack.resolve(
@@ -295,11 +295,48 @@ export class CardThreads {
       SIGNED_OFF_ACTION_ID,
       SIGNED_OFF_ACTION_ID,
       undefined,
-      "crewmate",
+      by,
       undefined,
       () => this.host.captainResponded?.(card, "signed-off"),
-      { by: "crewmate" },
+      { by },
     );
+  }
+
+  /**
+   * The first mate's line on its own card that signs it off (INF-6317 part
+   * 1): the captain's words under the card said they need nothing more from
+   * it. The line is written as any thread answer, then the card resolves as
+   * read through the one resolution path, so each message the card is about
+   * takes it as its answer - where close_card would withdraw it and leave
+   * them with none. A refused mark writes nothing.
+   */
+  signOffFromFirstmate(
+    input: Pick<ReplyInput, "cardId" | "text" | "answersMessage" | "operationId">,
+  ): { text: string; mutation?: CardMutation } {
+    const id = input.cardId;
+    const card = this.stack.cards.get(id);
+    const refusal = firstmateSignOffRefusal({
+      card,
+      answersMessage: input.answersMessage,
+      interim: false,
+      waitingOn: this.host.cardStore.awaitingAuthor(id)
+        ? this.host.cardStore.newestCaptainMessage(id)?.id
+        : undefined,
+    });
+    if (refusal || !card) return { text: `Nothing was written: ${refusal}` };
+    const mutation = this.replyAs({ actor: "firstmate" }, input);
+    if (mutation.effect !== "reply-only" || mutation.answered !== input.answersMessage) {
+      return { text: cardMutationText(mutation), mutation };
+    }
+    this.signOff(id, "firstmate");
+    // i18n-exempt: the first mate's tool answer, served only to a model
+    const left = this.stack.ended.has(id)
+      ? "the card is read, and since the captain had seen it, it stays on their screen marked ended until they close it"
+      : "the card left the stack as read";
+    return {
+      text: `Replied in the thread on "${card.title}" (${id}). It answers the captain's message ${mutation.answered} and signs the card off: ${left}, and each message it was shown for counts it as the answer.`,
+      mutation,
+    };
   }
 
   /** Whether a captain reply on this open card still waits for its answer. */

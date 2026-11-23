@@ -873,6 +873,13 @@ export class CardService {
     return this.threads.replyAs(...args);
   }
 
+  /** The first mate's line that signs off its own card (`CardThreads`). */
+  signOffFromFirstmate(
+    ...args: Parameters<CardThreads["signOffFromFirstmate"]>
+  ): ReturnType<CardThreads["signOffFromFirstmate"]> {
+    return this.threads.signOffFromFirstmate(...args);
+  }
+
   /** Correct a required action's words on its card (`CardThreads`). */
   reviseRequiredAction(...args: Parameters<CardThreads["reviseRequiredAction"]>): CardMutation {
     return this.threads.reviseRequiredAction(...args);

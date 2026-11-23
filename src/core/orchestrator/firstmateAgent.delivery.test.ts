@@ -657,7 +657,72 @@ describe("FirstmateAgent answer delivery", () => {
     expect(kept?.content[0]?.text).not.toContain(left);
     const closed = await tools.get("close_card")?.execute("x2", { card_id: second });
     expect(closed?.content[0]?.text).toContain(left);
+    expect(closed?.content[0]?.text).toContain("shows the captain a notice that it has no answer");
     await finish(f);
+  });
+
+  // INF-6317 part 1, the captain's "figure out why it didn't count the
+  // earlier card interactions as answer to my message": the first mate's
+  // answering decision went unchosen, the captain wrote under it that it
+  // could close, and close_card withdrew it, so the notice went up for the
+  // message it answered. A sign-off ends it as read instead.
+  describe("the first mate signs off its own card (INF-6317)", () => {
+    const decision = {
+      title: "The panels plan is already in infinitary-apps",
+      body: "<p>Both panels pieces are planned there.</p>",
+      answering: true,
+      actions: [
+        { id: "ok", label: "That's what I meant", default: true },
+        { id: "other", label: "I meant other work", declines: true },
+      ],
+    };
+    const replyUnderDecision = async (f: Fixture, card: Record<string, unknown> = decision) => {
+      await f.agent.converse("for infinitary-apps repo'");
+      const shown = await toolsOf(f.specs).get("emit_card")?.execute("c0", card);
+      const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+      await finish(f, "Shown on a card.");
+      vi.advanceTimersByTime(60_000);
+      f.supervisor.cardActions.replyToCard(cardId, "this card can close now");
+      await drained(f.session, 2);
+      const asked = f.supervisor.cards.thread(cardId).messages.at(-1)?.id ?? 0;
+      return { cardId, asked, first: f.tasks.capture.listAsks()[0]?.id ?? "" };
+    };
+
+    it("answers the message the card was shown for, with no retry and no notice", async () => {
+      const f = setup({ silent: true });
+      const { cardId, asked, first } = await replyUnderDecision(f);
+      const signed = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: cardId,
+        reply: "Closing it now; both pieces are being built.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(signed?.content[0]?.text).toContain("signs the card off");
+      await finish(f, "Signed the card off.");
+      await tick();
+      expect(f.supervisor.cards.get(cardId)).toBeUndefined();
+      const thread = f.supervisor.askEnding.thread(first);
+      expect(thread && f.supervisor.askEnding.state(thread)).toEqual({ kind: "answered", cardId });
+      expect(states(f)).toEqual(["covered", "covered"]);
+      expect(retries(f)).toEqual([]);
+      expect(noticeOf(f)).toBeUndefined();
+    });
+
+    it("refuses the mark on a card that still asks, writing nothing", async () => {
+      const f = setup({ silent: true });
+      const { cardId, asked } = await replyUnderDecision(f, { ...decision, asking: true });
+      const refused = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: cardId,
+        reply: "Closing it now.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(refused?.content[0]?.text).toContain("Nothing was written: this card still asks");
+      expect(f.supervisor.cards.get(cardId)).toBeDefined();
+      expect(f.supervisor.cards.thread(cardId).messages.map((line) => line.who)).toEqual([
+        "captain",
+      ]);
+    });
   });
 
   // INF-2667 review of INF-2664: a newer message about the same work after

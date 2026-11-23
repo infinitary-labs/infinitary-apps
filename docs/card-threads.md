@@ -24,7 +24,7 @@ Delivery is not awaited, exactly as a card click's round-trip is not: the messag
 A line the captain types in a task's Crewmate tab rides the same lane as the captain's own steer, stamped `via: "crewmate-tab"`, with no card and no thread (`docs/task-card-tabs.md`, "Typing").
 While the captain's kept merge approval stands on the task, the captain's reply, like the captain's line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
 
-A reply resolves nothing, except a line its crewmate signs off ("Signing off" below).
+A reply resolves nothing, except a line its author signs off ("Signing off" below).
 The buttons stay pinned; explicit choices, task endings and author withdrawals retire cards, while minus puts them away.
 
 The captain’s minimize corner is presentation only (INF-1879): a decision or a note stays open, and a note is read only by its own Done or Got it (INF-2794).
@@ -152,6 +152,11 @@ The crewmate judges the words; the rule's one home is the thread steer's preambl
 No code, test or instruction keeps a list of phrases.
 The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.
 The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`, only to a home on the current work major.
+
+The first mate signs off its own card the same way (INF-6317): `emit_card` as a reply alone, naming the message in `answers_message`, with `signs_off` true.
+Its judgment's one home is the `about:` line of the turn the captain wrote under its card, and the parameter says only what the mark does.
+The host refuses it, writing nothing, on anyone else's card and on the same cards it refuses a crewmate's mark on, and beside a body.
+Every message the card was shown for takes it as its answer, where `close_card` would withdraw it and leave them without one.
 
 ## A merge card behind its change
 

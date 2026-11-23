@@ -448,6 +448,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       onReplyAlone: (reply) => {
         const target = supervisor.cards.targetOf({ actor: "firstmate" }, reply.cardId);
         const cardId = target.kind === "new" ? resolveFirstmateCardId(reply.cardId) : target.id;
+        if (reply.signsOff) {
+          const { signsOff: _signsOff, ...line } = reply;
+          const signed = supervisor.cards.signOffFromFirstmate({ ...line, cardId });
+          if (signed.mutation) noteTyped(signed.mutation);
+          else host.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
+          return signed.text;
+        }
         const mutation = supervisor.cards.replyAs({ actor: "firstmate" }, { ...reply, cardId });
         noteTyped(mutation);
         return mutation;
@@ -499,7 +506,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         closed,
         ...left.map(
           (ask) =>
-            `The captain's message ${ask.id} ("${excerptOf(ask.text)}") now has no answering card up and no work running for it.`,
+            `The captain's message ${ask.id} ("${excerptOf(ask.text)}") now has no answering card up and no work running for it. Unless it gets an answer this turn, the app asks you once more when the turn ends, or shows the captain a notice that it has no answer if it already asked.`,
         ),
       ].join("\n");
       host.turn.delivered = true;

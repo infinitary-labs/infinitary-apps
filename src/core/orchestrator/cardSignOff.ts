@@ -1,6 +1,6 @@
 import { type Card, mergeEffectOf, settleEffectOf } from "@shared/cards";
 import type { TaskRecord } from "../storage/taskRecords";
-import { cardEmitter } from "./cardEmit";
+import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 
 /**
  * The action a signed-off answer is recorded under (INF-2845, the captain's
@@ -43,6 +43,14 @@ export function signOffRefusal(facts: SignOffFacts): string | undefined {
   if (record.shape?.deliverable !== "answer" || card.answering !== true) {
     return "signs_off ends only an answer task's answering card; write the line without it.";
   }
+  return sharedRefusal(card, facts);
+}
+
+/** The refusals a crewmate's mark and the first mate's share, read off the card. */
+function sharedRefusal(
+  card: Card,
+  facts: Pick<SignOffFacts, "answersMessage" | "waitingOn">,
+): string | undefined {
   if (card.asking === true || card.continues === true) {
     return "this card still asks or continues, so the captain's choice on it comes first; write the line without signs_off.";
   }
@@ -61,4 +69,29 @@ export function signOffRefusal(facts: SignOffFacts): string | undefined {
       : `signs_off answers only the captain's message this card waits on (${facts.waitingOn}).`;
   }
   return undefined;
+}
+
+/** What the host reads before the first mate's line may sign off its own card. */
+export type FirstmateSignOffFacts = Pick<
+  SignOffFacts,
+  "card" | "answersMessage" | "interim" | "waitingOn"
+>;
+
+/**
+ * Why the first mate's line may not carry `signs_off`, or undefined when it
+ * may (INF-6317 part 1). The same typed facts as a crewmate's mark, read for
+ * the first mate's own card: it answers the message it was shown for, so it
+ * has no answer task to check. Without the mark its only way to end the card
+ * was close_card, a withdrawal that answers nothing.
+ */
+export function firstmateSignOffRefusal(facts: FirstmateSignOffFacts): string | undefined {
+  const { card } = facts;
+  if (facts.answersMessage === undefined) {
+    return "signs_off needs answers_message, naming the captain's message that says they are done.";
+  }
+  if (facts.interim) return "signs_off ends the card, so it is never an interim line.";
+  if (!card || !card.id.startsWith(FIRSTMATE_CARD_PREFIX)) {
+    return "signs_off goes only on your own card while it is on the stack.";
+  }
+  return sharedRefusal(card, facts);
 }

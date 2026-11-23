@@ -866,7 +866,14 @@ describe("CrewSupervisor: the card thread", () => {
     });
     const output = "It failed. Output: error: Cannot build fm-placer-0.1.0.drv";
     h.supervisor.cardActions.replyToCard(card.id, output);
-    expect(converse).toHaveBeenCalledWith(card.id, output, undefined);
+    expect(converse).toHaveBeenCalledWith(
+      card.id,
+      output,
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Number),
+    );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     // Reopening and repeating a refused confirmation must not erase the pending reply.
     h.supervisor.cards.presentRequiredAction(taskId);
@@ -931,7 +938,14 @@ describe("CrewSupervisor: the card thread", () => {
       who: "captain",
       text: `It failed\n\n${output}`,
     });
-    expect(converse).toHaveBeenCalledWith(card.id, `It failed\n\n${output}`, undefined);
+    expect(converse).toHaveBeenCalledWith(
+      card.id,
+      `It failed\n\n${output}`,
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Number),
+    );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     await tick();
   });
@@ -1381,7 +1395,14 @@ describe("CrewSupervisor: the card thread", () => {
 
     // Its author is gone, so the Firstmate takes the captain's reply.
     harness.supervisor.cardActions.replyToCard(note.id, "which build is it?");
-    expect(converseAboutCard).toHaveBeenCalledWith(note.id, "which build is it?", undefined);
+    expect(converseAboutCard).toHaveBeenCalledWith(
+      note.id,
+      "which build is it?",
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Number),
+    );
     expect(crewmate.promptCalls.some((call) => call.includes("which build is it?"))).toBe(false);
   });
 
@@ -1402,7 +1423,15 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     const thread = harness.supervisor.cardActions.replyToCard(cardId, "the second option is wrong");
     expect(thread.messages).toMatchObject([{ who: "captain", text: "the second option is wrong" }]);
-    expect(converseAboutCard).toHaveBeenCalledWith(cardId, "the second option is wrong", undefined);
+    // The turn keeps the line the reply was saved as (INF-6115 piece 3).
+    expect(converseAboutCard).toHaveBeenCalledWith(
+      cardId,
+      "the second option is wrong",
+      undefined,
+      undefined,
+      undefined,
+      thread.messages[0]?.id,
+    );
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
     ];
@@ -1417,6 +1446,9 @@ describe("CrewSupervisor: the card thread", () => {
       cardId,
       expect.stringContaining('"tiltDeg":57'),
       undefined,
+      undefined,
+      undefined,
+      expect.any(Number),
     );
     expect(
       harness.cardStore

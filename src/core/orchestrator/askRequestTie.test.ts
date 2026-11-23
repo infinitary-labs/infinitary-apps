@@ -86,7 +86,7 @@ function fixture() {
       .pending(FIRSTMATE_RECIPIENT, clock.t)
       .filter((row) => row.facts?.kind !== "answer-missing");
     inbox.markDelivered(rows.map((row) => row.id));
-    check.adopt(rows, () => undefined);
+    check.adopt(rows);
     act(check.adoptedAsks());
     check.endTurn({ asks: [], held: false, unread: [] });
     inbox.ack(rows.map((row) => row.id));

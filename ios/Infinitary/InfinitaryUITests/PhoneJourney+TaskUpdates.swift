@@ -8,7 +8,7 @@ extension PhoneJourney {
     }
 
     func testTaskListStartInMiddle() async throws {
-        try await taskListUpdate("M0", working: 3, backlog: 60, done: 3, target: "b-30", openBacklog: true)
+        try await taskListUpdate("M0", working: 3, backlog: 60, done: 3, target: "b-30", openBacklog: true, scrollToEnd: false)
     }
 
     func testTaskListFamilyFinishes() async throws {
@@ -23,9 +23,41 @@ extension PhoneJourney {
                                  target: "b-29", openBacklog: true, operation: "start")
     }
 
+    func testTaskListFamilyFinishesInMiddle() async throws {
+        // Same shrink as F1, but leave more family rows below the viewport instead of pinning it to the end.
+        try await taskListUpdate("F1M", working: 20, backlog: 1, done: 3, family: 30, running: true,
+                                 target: "c-14", operation: "done", scrollToEnd: false)
+    }
+
+    func testTaskListOpensDoneAtBottom() async throws {
+        try await launchJoined()
+        _ = try await home("empty-cards")
+        tab("Tasks", repeatDiscarded: false)
+        _ = try await home("task-list-seed", body: "{\"prefix\":\"D0\",\"working\":3,\"backlog\":60,\"done\":30}")
+        let backlog = app.buttons["group-backlog"]
+        XCTAssertTrue(backlog.waitForPresence(timeout: 20))
+        tapOnPhone(backlog)
+        let list = app.scrollViews["tasks-list"]
+        let done = app.buttons["group-landed"]
+        for _ in 0..<45 {
+            if done.exists && done.isHittable { break }
+            list.swipeUp(velocity: .slow)
+        }
+        for _ in 0..<3 { list.swipeUp(velocity: .fast) }
+        XCTAssertTrue(done.exists && done.isHittable, "Done must be visible at the bottom before opening it")
+        picture("task-list-D0-before")
+        _ = try await home("capture-start")
+        tapOnPhone(done)
+        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "task-task-list-D0-d-"))
+        XCTAssertTrue(rows.firstMatch.waitForPresence(timeout: 20), "Opening Done must load its rows")
+        picture("task-list-D0-after")
+        XCTAssertTrue(done.exists && done.isHittable, "Opening Done must keep its header in view, not follow its oldest rows")
+        _ = try await home("capture-stop")
+    }
+
     private func taskListUpdate(_ name: String, working: Int, backlog: Int, done: Int = 0, family: Int = 0,
                                 running: Bool = false, target: String, openBacklog: Bool = false,
-                                operation: String? = nil) async throws {
+                                operation: String? = nil, scrollToEnd: Bool = true) async throws {
         try await launchJoined()
         _ = try await home("empty-cards")
         tab("Tasks", repeatDiscarded: false)
@@ -48,8 +80,12 @@ extension PhoneJourney {
             else { list.swipeUp(velocity: .slow) }
         }
         XCTAssertTrue(row.exists && row.isHittable, "\(name): the target row must be on screen before its update")
-        if name != "M0" { for _ in 0..<3 { list.swipeUp(velocity: .fast) } }
+        if scrollToEnd { for _ in 0..<3 { list.swipeUp(velocity: .fast) } }
+        if !scrollToEnd, operation != nil {
+            XCTAssertFalse(app.buttons["group-landed"].isHittable, "The shrink case must start away from the list's end")
+        }
         taskListRead("\(name)-before", blanks: &blanks)
+        _ = try await home("capture-start")
         if let operation {
             _ = try await home("task-list-op", body: "{\"ids\":[\"task-list-\(name)-c-0\"],\"op\":\"\(operation)\"}")
         } else {
@@ -64,6 +100,7 @@ extension PhoneJourney {
         // Observe the reported persistent blank after the update, not a transient animation frame.
         try await Task.sleep(for: .seconds(4))
         taskListRead("\(name)-after", blanks: &blanks)
+        _ = try await home("capture-stop")
         XCTAssertTrue(blanks.isEmpty, "The list showed no task row after an update: \(blanks)")
     }
 

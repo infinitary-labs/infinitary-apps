@@ -74,6 +74,8 @@ export const PHONE_PARTS = [
   { name: "task-updates-middle", test: "testTaskListStartInMiddle", photos: false },
   { name: "task-updates-finish", test: "testTaskListFamilyFinishes", photos: false },
   { name: "task-updates-start", test: "testTaskListFamilyStarts", photos: false },
+  { name: "task-updates-finish-middle", test: "testTaskListFamilyFinishesInMiddle", photos: false },
+  { name: "task-updates-open-done", test: "testTaskListOpensDoneAtBottom", photos: false },
   { name: "talk-drafts", test: "testDraftsAcrossHomes", photos: false },
   { name: "cards-merge", test: "testMergeCard", photos: false },
   { name: "cards-form", test: "testCardForm", photos: false },

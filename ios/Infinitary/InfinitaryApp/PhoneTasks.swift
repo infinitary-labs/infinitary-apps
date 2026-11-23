@@ -36,6 +36,7 @@ struct PhoneTasks: View {
     @State private var swiping: (id: String, x: CGFloat)?
     /// The list's width, which a long press's summary takes up to the Mac's own width for it.
     @State private var columnWidth: CGFloat = 0
+    @State private var position = ScrollPosition()
 
     /// INF-2764: whether this list is on screen. The tab controller keeps a tab that is away, so a hidden list keeps
     /// its last reading and reads nothing from the session: a board update while another tab shows rebuilds nothing.
@@ -140,12 +141,15 @@ struct PhoneTasks: View {
                 .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.always, axes: .vertical)
-        // A family moving into a folded group can shorten the content past the current offset.
-        // Keep the viewport in range on size changes without changing where the list initially opens.
-        .defaultScrollAnchor(.bottom, for: .sizeChanges)
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
-        } action: { _, pulled in
+        .scrollPosition($position)
+        .onScrollGeometryChange(for: ScrollGeometry.self) { $0 } action: { old, geometry in
+            // Correct only an out-of-range viewport after a shrink. Following every size change also follows growth
+            // when a group opens, moving its header and newest rows out of view.
+            if geometry.contentSize.height < old.contentSize.height,
+               geometry.visibleRect.maxY > geometry.contentSize.height + geometry.contentInsets.bottom {
+                position.scrollTo(edge: .bottom)
+            }
+            let pulled = geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
             if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
         }
         // While a record covers the list in the panel's place, the key finds nothing it can show, so it rests.

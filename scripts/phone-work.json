@@ -266,5 +266,17 @@
       "reads": 233,
       "launches": 1
     }
+  },
+  "task-updates-finish-middle": {
+    "iphone": {
+      "reads": 160,
+      "launches": 1
+    }
+  },
+  "task-updates-open-done": {
+    "iphone": {
+      "reads": 56,
+      "launches": 1
+    }
   }
 }

@@ -80,6 +80,8 @@ export const PHONE_PARTS = [
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
   // INF-2565: a revision while the thread shows keeps the card on its back.
   { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
+  // INF-6136: only a card's one-line top bar stays in place, its minus on that line, and its choices can be pressed.
+  { name: "cards-top-bar", test: "testCardTopBar", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.
   { name: "cards-place", test: "testThreadKeepsItsPlace", photos: false },
   // INF-3296: notes on a card's parts and selected words, queued and sent as one reply.

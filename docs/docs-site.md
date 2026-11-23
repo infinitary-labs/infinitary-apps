@@ -205,7 +205,11 @@ node docs-site/scripts/check-live.mjs --origin https://docs.getinfinitary.com
 ```
 
 It fails unless the home page and an inner page, in English and in each shipped language, answer 200 over https as the site's own pages, each catalog language not shipped yet moves its home and inner addresses to the same English page on the same site, an unknown address answers 404 with the site's own not-found page, plain http moves to https, every answer carries the security headers, no-transform and no cookie, each of those three pages arrives exactly as `dist/` holds it when asked for as a browser asks, and the browser check (`check-site.mjs --origin`) passes at that address, so no page asks another host for anything.
-A new address can take a few minutes to get its certificate, so the run tries for five minutes.
+A publish that adds the address, the first one or one after the site was withdrawn, gets its DNS record a few seconds after the upload ends, and a resolver asked before then keeps its "no such name" for the zone's negative time, 30 minutes for `getinfinitary.com`.
+So before the live check's first lookup, the run waits up to ten minutes until none of the zone's own name servers still says the address is missing (`docs-site/scripts/wait-for-address.mjs`), asking each of their addresses directly and never the machine's own resolver; an address that already answers passes at once.
+Right after such a publish, run `node docs-site/scripts/wait-for-address.mjs` before the live check on your own computer too.
+A new address can take a few minutes to get its certificate, so the run then tries the live check for five minutes.
+When it still fails, the run's error points at "Restore an earlier version", or at "Withdraw the site" when the run recorded no earlier version.
 A publish whose live check fails is not a published site, whatever the upload said; if a step's outcome is unknown, read the Worker's versions and the live site before running anything again.
 
 The same checks run against Cloudflare's own local runtime serving this Worker, with no key:

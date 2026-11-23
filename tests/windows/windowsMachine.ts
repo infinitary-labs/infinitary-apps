@@ -586,39 +586,107 @@ export function childApps(
   );
 }
 
-/**
- * Presses Ctrl+Q in the process's visible window as a person's keyboard
- * does, once that window is in front: false while it shows none or Windows
- * keeps another in front.
- */
-export function pressQuitKey(pid: number): boolean {
-  return ps<boolean>(
+/** The native input reading distinguishes a disappearing window from a focus failure. */
+export type QuitKeyReading = {
+  readonly status:
+    | "window-missing"
+    | "window-lost"
+    | "caption-unreachable"
+    | "not-foreground"
+    | "sent";
+  readonly target: number;
+  readonly before: { readonly hwnd: number; readonly pid: number };
+  readonly after: { readonly hwnd: number; readonly pid: number };
+  readonly clicked: boolean;
+};
+
+/** Clicks the window's inert drag strip if needed, then sends one real desktop Ctrl+Q. */
+export function pressQuitKey(pid: number): QuitKeyReading {
+  return ps<QuitKeyReading>(
     `
+    $ErrorActionPreference = 'Stop'
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -TypeDefinition @'
     using System;
     using System.Runtime.InteropServices;
-    public static class Front {
-      [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
+    public static class QuitInput {
+      [StructLayout(LayoutKind.Sequential)] public struct Point { public int x, y; }
+      [StructLayout(LayoutKind.Sequential)] struct Rect { public int left, top, right, bottom; }
       [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-      [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window, int how);
-      [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+      [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
+      [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
+      [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out Rect rect);
+      [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point point);
+      [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr window, uint flags);
+      [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr window, uint message, IntPtr w, IntPtr l, uint flags, uint timeout, out UIntPtr result);
+      [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+      [DllImport("user32.dll")] static extern bool GetCursorPos(out Point point);
+      [DllImport("user32.dll")] static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+
+      public static bool IsTarget(IntPtr window, uint pid) {
+        uint owner;
+        return window != IntPtr.Zero && GetWindowThreadProcessId(window, out owner) != 0 &&
+          owner == pid && IsWindowVisible(window);
+      }
+
+      public static bool ClickCaption(IntPtr window) {
+        Rect bounds;
+        if (!GetWindowRect(window, out bounds)) return false;
+        // Look for HTCAPTION in the app's top bar, not its buttons or content.
+        // WindowFromPoint also excludes other windows drawn over the app.
+        foreach (int x in new[] { 25, 50, 75 }) {
+          var p = new Point { x = bounds.left + (bounds.right - bounds.left) * x / 100, y = bounds.top + 24 };
+          if (GetAncestor(WindowFromPoint(p), 2) != window) continue; // GA_ROOT
+          UIntPtr hit;
+          var packed = new IntPtr((p.x & 0xffff) | (p.y << 16));
+          if (SendMessageTimeout(window, 0x84, IntPtr.Zero, packed, 2, 250, out hit) == IntPtr.Zero ||
+              hit.ToUInt64() != 2) continue; // WM_NCHITTEST, HTCAPTION
+          Point cursor;
+          if (!SetCursorPos(p.x, p.y) || !GetCursorPos(out cursor) ||
+              cursor.x != p.x || cursor.y != p.y || GetAncestor(WindowFromPoint(cursor), 2) != window) return false;
+          mouse_event(2, 0, 0, 0, UIntPtr.Zero); // left down
+          mouse_event(4, 0, 0, 0, UIntPtr.Zero); // left up
+          return true;
+        }
+        return false;
+      }
     }
 '@
-    $p = Get-Process -Id ([int]$env:QUIT_PID) -ErrorAction SilentlyContinue
-    if (-not $p -or $p.MainWindowHandle -eq [IntPtr]::Zero) { $false } else {
-      $window = $p.MainWindowHandle
-      [void][Front]::ShowWindow($window, 9)
-      # Windows lets a program bring another window to the front just after a key press of its own.
-      [Front]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
-      [Front]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
-      [void][Front]::SetForegroundWindow($window)
-      Start-Sleep -Milliseconds 300
-      if ([Front]::GetForegroundWindow() -ne $window) { $false } else {
-        [System.Windows.Forms.SendKeys]::SendWait('^q')
-        $true
+    function foreground {
+      $handle = [QuitInput]::GetForegroundWindow()
+      $owner = [uint32]0
+      [void][QuitInput]::GetWindowThreadProcessId($handle, [ref]$owner)
+      @{ hwnd = $handle.ToInt64(); pid = $owner }
+    }
+    $targetPid = [uint32]$env:QUIT_PID
+    $p = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
+    $window = if ($p) { $p.MainWindowHandle } else { [IntPtr]::Zero }
+    $before = foreground
+    $reading = @{ target = $window.ToInt64(); before = $before; after = $before; clicked = $false }
+    if ($window -eq [IntPtr]::Zero) { $reading.status = 'window-missing' }
+    elseif (-not [QuitInput]::IsTarget($window, $targetPid)) { $reading.status = 'window-lost' }
+    else {
+      if ($before.hwnd -ne $window.ToInt64()) {
+        $reading.clicked = [QuitInput]::ClickCaption($window)
+        if ($reading.clicked) {
+          # Wait for Windows to process the one click; never send another.
+          $clock = [Diagnostics.Stopwatch]::StartNew()
+          while ([QuitInput]::GetForegroundWindow() -ne $window -and
+                 [QuitInput]::IsTarget($window, $targetPid) -and $clock.ElapsedMilliseconds -lt 3000) {
+            Start-Sleep -Milliseconds 25
+          }
+        }
       }
-    }`,
+      $reading.after = foreground
+      if (-not [QuitInput]::IsTarget($window, $targetPid)) { $reading.status = 'window-lost' }
+      elseif ($reading.after.hwnd -ne $window.ToInt64()) {
+        $reading.status = if ($reading.clicked) { 'not-foreground' } else { 'caption-unreachable' }
+      } else {
+        [System.Windows.Forms.SendKeys]::SendWait('^q')
+        $reading.status = 'sent'
+      }
+    }
+    $reading`,
     { QUIT_PID: String(pid) },
   );
 }

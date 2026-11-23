@@ -41,6 +41,7 @@ export const DESKTOP_BUILD: readonly string[] = [
   "scripts/build-git-launcher.ts",
   "scripts/git-launcher.c",
   "scripts/after-pack.mjs",
+  "scripts/sign-release-mac.mjs",
   "scripts/place-mac-app-launcher.mjs",
   "scripts/mac-app-launcher.m",
   "scripts/mark-mac-installation.mjs",
@@ -111,6 +112,8 @@ export const SIGNED_INSTALLER_FILES: readonly string[] = [
   "packaging/mac-installation.json",
   "packaging/entitlements.plist",
   "packaging/release-identity.json",
+  "src/shared/releaseRequirement.ts",
+  "scripts/sign-release-mac.mjs",
   "scripts/notarize.ts",
   // App shutdown.
   "src/main/lifecycle.ts",

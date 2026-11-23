@@ -5007,7 +5007,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * app could tell (docs/automation.md, "Events"). Saving it with
      * `reconnect` picks what is connected now.
      */
-    stopped: string().optional()
+    stopped: string().optional(),
+    /**
+     * A turned-on event rule whose every look failed for an hour
+     * (docs/automation.md, "When every look fails"): when the first failed look
+     * was, and what the newest answered, in the integration's own words. It
+     * keeps looking, and this goes once a look answers.
+     */
+    failing: strictObject({ since: number(), reason: string() }).optional()
   });
   discriminatedUnion("state", [
     strictObject({ state: literal("ready"), rules: array(automationRuleSchema) }),
@@ -5127,121 +5134,6 @@ ${events}` : prompt;
     }
     return text.slice(0, end);
   }
-  const AUTOMATION_STATE_WORDS = {
-    draft: "Draft",
-    enabled: "Running",
-    paused: "Paused",
-    completed: "Done"
-  };
-  const AUTOMATION_STATE_TONES = {
-    draft: "ring",
-    enabled: "ok",
-    paused: "idle",
-    completed: "ring"
-  };
-  const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const WEEKDAYS_PLURAL = [
-    "Sundays",
-    "Mondays",
-    "Tuesdays",
-    "Wednesdays",
-    "Thursdays",
-    "Fridays",
-    "Saturdays"
-  ];
-  function hereZone$1() {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
-  function automationClockWords(hour, minute) {
-    return formatTime(new Date(2e3, 0, 1, hour, minute), {
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-  function automationDaysWords(days) {
-    const set = [...new Set(days)].sort((a, b) => a - b);
-    if (set.length === 7) return "Every day";
-    if (set.join() === "1,2,3,4,5") return "Weekdays";
-    if (set.join() === "0,6") return "Weekends";
-    if (set.length === 1) return WEEKDAYS_PLURAL[set[0] ?? 0] ?? "";
-    return set.map((day) => WEEKDAYS_SHORT[day] ?? "").join(", ");
-  }
-  function automationZoneWords(zone) {
-    const parts = zone.split("/");
-    if (parts.length < 2) return zone.replaceAll("_", " ");
-    const city = (parts.at(-1) ?? zone).replaceAll("_", " ");
-    return `${city} (${parts.slice(0, -1).join("/").replaceAll("_", " ")})`;
-  }
-  function automationDateWords(ms, timeZone) {
-    const elsewhere = timeZone !== void 0 && timeZone !== hereZone$1();
-    return formatDateTime(ms, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      ...elsewhere ? { timeZone, timeZoneName: "short" } : {}
-    });
-  }
-  function automationZoneOf(spec) {
-    return spec.kind === "daily" || spec.kind === "weekly" ? spec.timeZone : void 0;
-  }
-  function automationEventWords(label, integration) {
-    return `When ${label.charAt(0).toLowerCase()}${label.slice(1)} in ${integration}`;
-  }
-  const AUTOMATION_EVENT_UNKNOWN = "When something happens in an integration not connected now";
-  function automationWhenWords(spec, when) {
-    switch (spec.kind) {
-      case "event":
-        return when ?? AUTOMATION_EVENT_UNKNOWN;
-      case "every":
-        return spec.minutes % 60 === 0 ? spec.minutes === 60 ? "Every hour" : `Every ${spec.minutes / 60} hours` : `Every ${spec.minutes} minutes`;
-      case "daily":
-        return `Every day at ${automationClockWords(spec.hour, spec.minute)}`;
-      case "weekly":
-        return `${automationDaysWords(spec.days)} at ${automationClockWords(spec.hour, spec.minute)}`;
-      case "once":
-        return `Once, ${automationDateWords(spec.at)}`;
-    }
-  }
-  function automationRuleTitle(rule) {
-    return rule.name || cutText(rule.prompt, 48);
-  }
-  function automationNextWords(rule) {
-    if (rule.state === "enabled" && rule.nextFire !== null) {
-      return automationDateWords(rule.nextFire, automationZoneOf(rule.spec));
-    }
-    return AUTOMATION_STATE_WORDS[rule.state];
-  }
-  const AUTOMATION_UNREADABLE_SUMMARY = "cannot be read";
-  function automationSummary(rules, unreadable = false) {
-    const active = rules.filter((rule) => rule.state === "enabled").length;
-    const paused = rules.filter((rule) => rule.state === "paused").length;
-    return [
-      `${active} active`,
-      ...paused > 0 ? [`${paused} paused`] : [],
-      ...unreadable ? [AUTOMATION_UNREADABLE_SUMMARY] : []
-    ];
-  }
-  const COST_LIMIT_DEFAULT_USD = 50;
-  const costLimitSchema = union([
-    strictObject({ usd: number().positive().finite() }),
-    strictObject({ none: literal(true) })
-  ]);
-  object({
-    limit: costLimitSchema,
-    recent: object({
-      asked: number().int().nonnegative(),
-      tasks: number().int().nonnegative(),
-      days: number().int().positive()
-    })
-  });
-  object({
-    usd: number().nonnegative(),
-    unpriced: number().int().nonnegative(),
-    limit: costLimitSchema,
-    source: _enum(["task", "project", "app"])
-  });
   function automationEventsSkipped() {
     switch (currentLanguage()) {
       case "ar":
@@ -5268,6 +5160,62 @@ ${events}` : prompt;
         return `‮Events skipped‬`;
     }
     return `Events skipped`;
+  }
+  function automationLooksFailing(input) {
+    const since = input.since;
+    switch (currentLanguage()) {
+      case "ar":
+        return `فشلت كل محاولة للبحث عن أحداث جديدة منذ ${since}، لذا لا يصل أي جديد إلى نائب القبطان. ستعمل من جديد تلقائيًا بمجرد نجاح إحدى المحاولات.`;
+      case "de":
+        return `Jede Suche nach neuen Ereignissen schlägt seit ${since} fehl, daher erreicht deinen ersten Offizier nichts Neues. Sie läuft von selbst wieder, sobald eine Suche gelingt.`;
+      case "es":
+        return `Cada consulta de eventos nuevos falla desde ${since}, así que no llega nada nuevo a tu primer oficial. Vuelve a funcionar sola en cuanto una consulta salga bien.`;
+      case "fr":
+        return `Chaque vérification des nouveaux événements échoue depuis ${since}, donc rien de nouveau n’arrive à votre second. Elle reprend d’elle-même dès qu’une vérification réussit.`;
+      case "ja":
+        return `${since} から新しいイベントの確認がすべて失敗しているため、一等航海士には何も届いていません。確認が成功すると自動的に再開します。`;
+      case "ko":
+        return `${since}부터 새 이벤트 확인이 모두 실패해 일등항해사에게 새로운 내용이 전달되지 않습니다. 확인이 성공하면 자동으로 다시 실행됩니다.`;
+      case "pt-BR":
+        return `Toda verificação de novos eventos falha desde ${since}, então nada novo chega ao seu imediato. Ela volta a funcionar sozinha assim que uma verificação der certo.`;
+      case "zh-Hans":
+        return `自 ${since} 起，每次查看新事件都失败了，因此大副收不到任何新内容。一旦查看成功，它会自动恢复运行。`;
+      case "zh-Hant":
+        return `自 ${since} 起，每次查看新事件都失敗了，因此大副收不到任何新內容。一旦查看成功，它會自動恢復執行。`;
+      case "en-XA":
+        return `[Éṽéŕý ļööķ ƒöŕ ñéŵ éṽéñţš ĥáš ƒáîļéð šîñçé ${since}, šö ñöţĥîñĝ ñéŵ ŕéáçĥéš ýöûŕ ƒîŕšţ ɱáţé. Îţ ŕûñš áĝáîñ ƀý îţšéļƒ öñçé á ļööķ ŵöŕķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every look for new events has failed since ‬${since}‮, so nothing new reaches your first mate. It runs again by itself once a look works.‬`;
+    }
+    return `Every look for new events has failed since ${since}, so nothing new reaches your first mate. It runs again by itself once a look works.`;
+  }
+  function automationLooksFailingAnswer(input) {
+    const reason = input.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أحدث رد: ${reason}`;
+      case "de":
+        return `Die neueste Antwort: ${reason}`;
+      case "es":
+        return `La respuesta más reciente: ${reason}`;
+      case "fr":
+        return `La réponse la plus récente : ${reason}`;
+      case "ja":
+        return `最新の応答: ${reason}`;
+      case "ko":
+        return `최근 응답: ${reason}`;
+      case "pt-BR":
+        return `A resposta mais recente: ${reason}`;
+      case "zh-Hans":
+        return `最新的回答：${reason}`;
+      case "zh-Hant":
+        return `最新的回覆：${reason}`;
+      case "en-XA":
+        return `[Ţĥé ñéŵéšţ áñšŵéŕ: ${reason} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The newest answer: ‬${reason}`;
+    }
+    return `The newest answer: ${reason}`;
   }
   function automationRunAlsoSkipped(input) {
     const count = input.count;
@@ -5445,6 +5393,33 @@ ${events}` : prompt;
         return `‮Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.‬`;
     }
     return `Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.`;
+  }
+  function automationStateStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متوقفة`;
+      case "de":
+        return `Angehalten`;
+      case "es":
+        return `Detenida`;
+      case "fr":
+        return `Arrêtée`;
+      case "ja":
+        return `停止中`;
+      case "ko":
+        return `멈춤`;
+      case "pt-BR":
+        return `Parada`;
+      case "zh-Hans":
+        return `已停止`;
+      case "zh-Hant":
+        return `已停止`;
+      case "en-XA":
+        return `[Šţöþþéð ~~~]`;
+      case "ar-XB":
+        return `‮Stopped‬`;
+    }
+    return `Stopped`;
   }
   function automationWaitsFor() {
     switch (currentLanguage()) {
@@ -12271,6 +12246,139 @@ ${events}` : prompt;
     }
     return `Each subtotal includes the model calls made for its tasks.`;
   }
+  const AUTOMATION_STATE_WORDS = {
+    draft: "Draft",
+    enabled: "Running",
+    paused: "Paused",
+    completed: "Done"
+  };
+  const AUTOMATION_STATE_TONES = {
+    draft: "ring",
+    enabled: "ok",
+    paused: "idle",
+    completed: "ring"
+  };
+  function automationStateWords(rule) {
+    return rule.failing ? automationStateStopped() : AUTOMATION_STATE_WORDS[rule.state];
+  }
+  function automationStateTone(rule) {
+    return rule.failing ? "warn" : AUTOMATION_STATE_TONES[rule.state];
+  }
+  function automationLooksFailingWords(failing) {
+    const since = formatDateTime(new Date(failing.since), {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+    return [
+      automationLooksFailing({ since }),
+      automationLooksFailingAnswer({ reason: failing.reason })
+    ];
+  }
+  const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const WEEKDAYS_PLURAL = [
+    "Sundays",
+    "Mondays",
+    "Tuesdays",
+    "Wednesdays",
+    "Thursdays",
+    "Fridays",
+    "Saturdays"
+  ];
+  function hereZone$1() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+  function automationClockWords(hour, minute) {
+    return formatTime(new Date(2e3, 0, 1, hour, minute), {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+  function automationDaysWords(days) {
+    const set = [...new Set(days)].sort((a, b) => a - b);
+    if (set.length === 7) return "Every day";
+    if (set.join() === "1,2,3,4,5") return "Weekdays";
+    if (set.join() === "0,6") return "Weekends";
+    if (set.length === 1) return WEEKDAYS_PLURAL[set[0] ?? 0] ?? "";
+    return set.map((day) => WEEKDAYS_SHORT[day] ?? "").join(", ");
+  }
+  function automationZoneWords(zone) {
+    const parts = zone.split("/");
+    if (parts.length < 2) return zone.replaceAll("_", " ");
+    const city = (parts.at(-1) ?? zone).replaceAll("_", " ");
+    return `${city} (${parts.slice(0, -1).join("/").replaceAll("_", " ")})`;
+  }
+  function automationDateWords(ms, timeZone) {
+    const elsewhere = timeZone !== void 0 && timeZone !== hereZone$1();
+    return formatDateTime(ms, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      ...elsewhere ? { timeZone, timeZoneName: "short" } : {}
+    });
+  }
+  function automationZoneOf(spec) {
+    return spec.kind === "daily" || spec.kind === "weekly" ? spec.timeZone : void 0;
+  }
+  function automationEventWords(label, integration) {
+    return `When ${label.charAt(0).toLowerCase()}${label.slice(1)} in ${integration}`;
+  }
+  const AUTOMATION_EVENT_UNKNOWN = "When something happens in an integration not connected now";
+  function automationWhenWords(spec, when) {
+    switch (spec.kind) {
+      case "event":
+        return when ?? AUTOMATION_EVENT_UNKNOWN;
+      case "every":
+        return spec.minutes % 60 === 0 ? spec.minutes === 60 ? "Every hour" : `Every ${spec.minutes / 60} hours` : `Every ${spec.minutes} minutes`;
+      case "daily":
+        return `Every day at ${automationClockWords(spec.hour, spec.minute)}`;
+      case "weekly":
+        return `${automationDaysWords(spec.days)} at ${automationClockWords(spec.hour, spec.minute)}`;
+      case "once":
+        return `Once, ${automationDateWords(spec.at)}`;
+    }
+  }
+  function automationRuleTitle(rule) {
+    return rule.name || cutText(rule.prompt, 48);
+  }
+  function automationNextWords(rule) {
+    if (rule.state === "enabled" && rule.nextFire !== null) {
+      return automationDateWords(rule.nextFire, automationZoneOf(rule.spec));
+    }
+    return automationStateWords(rule);
+  }
+  const AUTOMATION_UNREADABLE_SUMMARY = "cannot be read";
+  function automationSummary(rules, unreadable = false) {
+    const active = rules.filter((rule) => rule.state === "enabled").length;
+    const paused = rules.filter((rule) => rule.state === "paused").length;
+    return [
+      `${active} active`,
+      ...paused > 0 ? [`${paused} paused`] : [],
+      ...unreadable ? [AUTOMATION_UNREADABLE_SUMMARY] : []
+    ];
+  }
+  const COST_LIMIT_DEFAULT_USD = 50;
+  const costLimitSchema = union([
+    strictObject({ usd: number().positive().finite() }),
+    strictObject({ none: literal(true) })
+  ]);
+  object({
+    limit: costLimitSchema,
+    recent: object({
+      asked: number().int().nonnegative(),
+      tasks: number().int().nonnegative(),
+      days: number().int().positive()
+    })
+  });
+  object({
+    usd: number().nonnegative(),
+    unpriced: number().int().nonnegative(),
+    limit: costLimitSchema,
+    source: _enum(["task", "project", "app"])
+  });
   const saidTimeSchema = strictObject({ time: number() });
   const leafFillSchema = union([string(), number(), saidTimeSchema]);
   const saidPartSchema = strictObject({
@@ -17517,7 +17625,7 @@ ${events}` : prompt;
         return {
           id: rule.id,
           title: automationRuleTitle(rule),
-          tone: AUTOMATION_STATE_TONES[rule.state],
+          tone: automationStateTone(rule),
           when: ruleWhen(rule),
           next: {
             ...runsNext(rule) ? { term: PHONE_SETTINGS_WORDS.nextRun } : {},
@@ -17564,9 +17672,10 @@ ${events}` : prompt;
     return {
       id: rule.id,
       title: automationRuleTitle(rule),
-      tone: AUTOMATION_STATE_TONES[rule.state],
-      state: AUTOMATION_STATE_WORDS[rule.state],
+      tone: automationStateTone(rule),
+      state: automationStateWords(rule),
       notes: [
+        ...rule.failing ? automationLooksFailingWords(rule.failing) : [],
         ...rule.stopped ? [PHONE_SETTINGS_WORDS.stoppedThere(rule.stopped, home)] : [],
         ...rule.state === "draft" && !rule.stopped ? [AUTOMATION_SHEET_WORDS.draftNote] : [],
         ...rule.captainRequested ? [] : [PHONE_SETTINGS_WORDS.byFirstMate]

@@ -222,6 +222,8 @@ public enum PhoneMessages {
     public static func `activityPanelLinesLabel`() -> String { PhoneWords.format("activityPanelLinesLabel", []) }
     public static func `attachCancelled`(`name`: String) -> String { PhoneWords.format("attachCancelled", [`name`]) }
     public static func `automationEventsSkipped`() -> String { PhoneWords.format("automationEventsSkipped", []) }
+    public static func `automationLooksFailing`(`since`: String) -> String { PhoneWords.format("automationLooksFailing", [`since`]) }
+    public static func `automationLooksFailingAnswer`(`reason`: String) -> String { PhoneWords.format("automationLooksFailingAnswer", [`reason`]) }
     public static func `automationPanelActiveCount`(`count`: Int) -> String { PhoneWords.format("automationPanelActiveCount", [`count`]) }
     public static func `automationPanelEmpty`() -> String { PhoneWords.format("automationPanelEmpty", []) }
     public static func `automationPanelKeptCount`(`count`: Int) -> String { PhoneWords.format("automationPanelKeptCount", [`count`]) }
@@ -235,6 +237,7 @@ public enum PhoneMessages {
     public static func `automationRunSkipped`(`count`: Int, `date`: String) -> String { PhoneWords.format("automationRunSkipped", [`count`, `date`]) }
     public static func `automationRunSkippedState`() -> String { PhoneWords.format("automationRunSkippedState", []) }
     public static func `automationScreenedNote`() -> String { PhoneWords.format("automationScreenedNote", []) }
+    public static func `automationStateStopped`() -> String { PhoneWords.format("automationStateStopped", []) }
     public static func `automationWaitsFor`() -> String { PhoneWords.format("automationWaitsFor", []) }
     public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
     public static func `automationWaitsForPlaceholder`() -> String { PhoneWords.format("automationWaitsForPlaceholder", []) }
@@ -4495,6 +4498,8 @@ extension PhoneWords {
         "activityPanelLinesLabel": [],
         "attachCancelled": ["name"],
         "automationEventsSkipped": [],
+        "automationLooksFailing": ["since"],
+        "automationLooksFailingAnswer": ["reason"],
         "automationPanelActiveCount": ["count"],
         "automationPanelEmpty": [],
         "automationPanelKeptCount": ["count"],
@@ -4508,6 +4513,7 @@ extension PhoneWords {
         "automationRunSkipped": ["count", "date"],
         "automationRunSkippedState": [],
         "automationScreenedNote": [],
+        "automationStateStopped": [],
         "automationWaitsFor": [],
         "automationWaitsForNote": [],
         "automationWaitsForPlaceholder": [],

@@ -1,5 +1,7 @@
 {
   "automationEventsSkipped": "已略過的事件",
+  "automationLooksFailing": "自 {since} 起，每次查看新事件都失敗了，因此大副收不到任何新內容。一旦查看成功，它會自動恢復執行。",
+  "automationLooksFailingAnswer": "最新的回覆：{reason}",
   "automationPanelActiveCount": {
     "plural": "count",
     "other": "{count} 個啟用中"
@@ -25,6 +27,7 @@
   },
   "automationRunSkippedState": "已略過",
   "automationScreenedNote": "未傳送給你的大副：判斷模型認為這些事件明顯不符合此自動化的「僅當」條件。",
+  "automationStateStopped": "已停止",
   "automationWaitsFor": "僅當",
   "automationWaitsForNote": "你的大副只會處理符合此條件的事件。在設定中開啟事件篩選時，明顯不符合此條件的事件不會交給你的大副，但仍列在此自動化的紀錄中。",
   "automationWaitsForPlaceholder": "每個事件"

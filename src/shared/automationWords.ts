@@ -1,6 +1,7 @@
 import { cutText } from "@shared/textCut";
 import type { AutomationRule, AutomationSpec, AutomationState } from "./automation";
 import { formatDate, formatDateTime, formatTime } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * What an automation rule says wherever it shows (docs/automation.md):
@@ -22,6 +23,37 @@ export const AUTOMATION_STATE_TONES: Record<AutomationState, "ok" | "idle" | "ri
   paused: "idle",
   completed: "ring",
 };
+
+/**
+ * A rule's state where it shows: a turned-on event rule whose every look
+ * failed for an hour reads as stopped (docs/automation.md, "When every look
+ * fails"), whatever its saved state says.
+ */
+export function automationStateWords(rule: Pick<AutomationRule, "state" | "failing">): string {
+  return rule.failing ? m.automationStateStopped() : AUTOMATION_STATE_WORDS[rule.state];
+}
+
+export function automationStateTone(
+  rule: Pick<AutomationRule, "state" | "failing">,
+): "ok" | "idle" | "ring" | "warn" {
+  return rule.failing ? "warn" : AUTOMATION_STATE_TONES[rule.state];
+}
+
+/** Why a stopped rule gets nothing new, as its sheet says it: since when, then the newest answer. */
+export function automationLooksFailingWords(
+  failing: NonNullable<AutomationRule["failing"]>,
+): [string, string] {
+  const since = formatDateTime(new Date(failing.since), {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return [
+    m.automationLooksFailing({ since }),
+    m.automationLooksFailingAnswer({ reason: failing.reason }),
+  ];
+}
 
 const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const WEEKDAYS_PLURAL = [
@@ -123,12 +155,12 @@ export function automationRuleTitle(rule: Pick<AutomationRule, "name" | "prompt"
 
 /** What a rule's row says at its end: the next run, or why there is none. */
 export function automationNextWords(
-  rule: Pick<AutomationRule, "state" | "nextFire" | "spec">,
+  rule: Pick<AutomationRule, "state" | "nextFire" | "spec" | "failing">,
 ): string {
   if (rule.state === "enabled" && rule.nextFire !== null) {
     return automationDateWords(rule.nextFire, automationZoneOf(rule.spec));
   }
-  return AUTOMATION_STATE_WORDS[rule.state];
+  return automationStateWords(rule);
 }
 
 /**
@@ -137,10 +169,10 @@ export function automationNextWords(
  * 7:00 AM"), the date beyond ("Oct 25"); its state when it has no next run.
  */
 export function automationNextShort(
-  rule: Pick<AutomationRule, "state" | "nextFire">,
+  rule: Pick<AutomationRule, "state" | "nextFire" | "failing">,
   now: number = Date.now(),
 ): string {
-  if (rule.state !== "enabled" || rule.nextFire === null) return AUTOMATION_STATE_WORDS[rule.state];
+  if (rule.state !== "enabled" || rule.nextFire === null) return automationStateWords(rule);
   const ahead = rule.nextFire - now;
   const at = new Date(rule.nextFire);
   if (at.toDateString() === new Date(now).toDateString()) {

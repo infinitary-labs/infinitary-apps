@@ -6,7 +6,7 @@ import type { GithubReadInput, GithubWriteInput } from "../../forge";
 import { type ApiDialect, apiDialectAt } from "../../forge/api";
 import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
 import { forgeScope } from "../scopes";
-import { GITHUB_RUN_EVENTS, lookForRuns } from "./githubRuns";
+import { GITHUB_RUN_EVENTS, lookForRuns, type MovedRepositories } from "./githubRuns";
 
 /**
  * GitHub as an integration (docs/integrations.md, "GitHub"): the app's own
@@ -168,6 +168,7 @@ export function githubIntegration(
         }))
       : [];
   const readForLook = api?.runEvents ? options.gateway.readForLook : undefined;
+  const moved: MovedRepositories = new Map();
   return {
     kind: "github",
     identity: { id, name },
@@ -191,7 +192,7 @@ export function githubIntegration(
             event: string,
             cursor: string | null,
             filter?: Record<string, string>,
-          ) => lookForRuns(readForLook, event, cursor, filter, (options.now ?? Date.now)()),
+          ) => lookForRuns(readForLook, event, cursor, filter, (options.now ?? Date.now)(), moved),
         }
       : {}),
     ...(options.signIns.present ? { saved: () => options.signIns.present?.(host) ?? false } : {}),

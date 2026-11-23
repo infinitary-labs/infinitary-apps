@@ -214,6 +214,8 @@
 "activityPanelLinesLabel" = "动态条目";
 "attachCancelled" = "已取消 %1$@";
 "automationEventsSkipped" = "已跳过的事件";
+"automationLooksFailing" = "自 %1$@ 起，每次查看新事件都失败了，因此大副收不到任何新内容。一旦查看成功，它会自动恢复运行。";
+"automationLooksFailingAnswer" = "最新的回答：%1$@";
 "automationPanelEmpty" = "还没有自动化";
 "automationPanelKeptHeading" = "持续运行";
 "automationPanelKeptRow" = "%2$@ · %1$@ · 在设置中打开";
@@ -223,6 +225,7 @@
 "automationRunFound" = "发现：%1$@";
 "automationRunSkippedState" = "已跳过";
 "automationScreenedNote" = "未发送给你的大副：决定模型认为这些事件明显不符合此自动化的“仅当”条件。";
+"automationStateStopped" = "已停止";
 "automationWaitsFor" = "仅当";
 "automationWaitsForNote" = "你的大副只会处理符合此条件的事件。在设置中开启事件筛选时，明显不符合此条件的事件不会交给你的大副，但仍列在此自动化的记录中。";
 "automationWaitsForPlaceholder" = "每个事件";

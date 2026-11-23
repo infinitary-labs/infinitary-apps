@@ -1,5 +1,7 @@
 {
   "automationEventsSkipped": "건너뛴 이벤트",
+  "automationLooksFailing": "{since}부터 새 이벤트 확인이 모두 실패해 일등항해사에게 새로운 내용이 전달되지 않습니다. 확인이 성공하면 자동으로 다시 실행됩니다.",
+  "automationLooksFailingAnswer": "최근 응답: {reason}",
   "automationPanelActiveCount": {
     "plural": "count",
     "other": "{count}개 실행 중"
@@ -25,6 +27,7 @@
   },
   "automationRunSkippedState": "건너뜀",
   "automationScreenedNote": "일등항해사에게 보내지 않았어요. 결정 모델이 이 이벤트들은 이 자동화의 조건에 분명히 맞지 않는다고 판단했어요.",
+  "automationStateStopped": "멈춤",
   "automationWaitsFor": "조건",
   "automationWaitsForNote": "일등항해사는 이 조건에 맞는 이벤트에만 대응해요. 설정에서 이벤트 선별이 켜져 있는 동안, 이 조건에 분명히 맞지 않는 이벤트는 일등항해사에게 가지 않고 이 자동화의 기록에는 남아요.",
   "automationWaitsForPlaceholder": "모든 이벤트"

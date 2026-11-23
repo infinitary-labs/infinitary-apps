@@ -1,5 +1,7 @@
 {
   "automationEventsSkipped": "Eventos ignorados",
+  "automationLooksFailing": "Toda verificação de novos eventos falha desde {since}, então nada novo chega ao seu imediato. Ela volta a funcionar sozinha assim que uma verificação der certo.",
+  "automationLooksFailingAnswer": "A resposta mais recente: {reason}",
   "automationPanelActiveCount": {
     "plural": "count",
     "one": "{count} ativa",
@@ -33,6 +35,7 @@
   },
   "automationRunSkippedState": "Ignorado",
   "automationScreenedNote": "Não enviado ao seu imediato: o modelo de decisão leu estes eventos como claramente fora da condição Somente se desta automação.",
+  "automationStateStopped": "Parada",
   "automationWaitsFor": "Somente se",
   "automationWaitsForNote": "Seu imediato só age nos eventos que atendem a isto. Enquanto o filtro de eventos estiver ativado nos Ajustes, um evento que claramente não atende a isto não chega ao seu imediato e continua no histórico desta automação.",
   "automationWaitsForPlaceholder": "Todo evento"

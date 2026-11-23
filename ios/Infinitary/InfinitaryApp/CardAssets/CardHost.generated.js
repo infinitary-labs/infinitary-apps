@@ -11220,6 +11220,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Events skipped`;
   }
+  function automationLooksFailing(input2) {
+    const since = input2.since;
+    switch (currentLanguage()) {
+      case "ar":
+        return `فشلت كل محاولة للبحث عن أحداث جديدة منذ ${since}، لذا لا يصل أي جديد إلى نائب القبطان. ستعمل من جديد تلقائيًا بمجرد نجاح إحدى المحاولات.`;
+      case "de":
+        return `Jede Suche nach neuen Ereignissen schlägt seit ${since} fehl, daher erreicht deinen ersten Offizier nichts Neues. Sie läuft von selbst wieder, sobald eine Suche gelingt.`;
+      case "es":
+        return `Cada consulta de eventos nuevos falla desde ${since}, así que no llega nada nuevo a tu primer oficial. Vuelve a funcionar sola en cuanto una consulta salga bien.`;
+      case "fr":
+        return `Chaque vérification des nouveaux événements échoue depuis ${since}, donc rien de nouveau n’arrive à votre second. Elle reprend d’elle-même dès qu’une vérification réussit.`;
+      case "ja":
+        return `${since} から新しいイベントの確認がすべて失敗しているため、一等航海士には何も届いていません。確認が成功すると自動的に再開します。`;
+      case "ko":
+        return `${since}부터 새 이벤트 확인이 모두 실패해 일등항해사에게 새로운 내용이 전달되지 않습니다. 확인이 성공하면 자동으로 다시 실행됩니다.`;
+      case "pt-BR":
+        return `Toda verificação de novos eventos falha desde ${since}, então nada novo chega ao seu imediato. Ela volta a funcionar sozinha assim que uma verificação der certo.`;
+      case "zh-Hans":
+        return `自 ${since} 起，每次查看新事件都失败了，因此大副收不到任何新内容。一旦查看成功，它会自动恢复运行。`;
+      case "zh-Hant":
+        return `自 ${since} 起，每次查看新事件都失敗了，因此大副收不到任何新內容。一旦查看成功，它會自動恢復執行。`;
+      case "en-XA":
+        return `[Éṽéŕý ļööķ ƒöŕ ñéŵ éṽéñţš ĥáš ƒáîļéð šîñçé ${since}, šö ñöţĥîñĝ ñéŵ ŕéáçĥéš ýöûŕ ƒîŕšţ ɱáţé. Îţ ŕûñš áĝáîñ ƀý îţšéļƒ öñçé á ļööķ ŵöŕķš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every look for new events has failed since ‬${since}‮, so nothing new reaches your first mate. It runs again by itself once a look works.‬`;
+    }
+    return `Every look for new events has failed since ${since}, so nothing new reaches your first mate. It runs again by itself once a look works.`;
+  }
+  function automationLooksFailingAnswer(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أحدث رد: ${reason}`;
+      case "de":
+        return `Die neueste Antwort: ${reason}`;
+      case "es":
+        return `La respuesta más reciente: ${reason}`;
+      case "fr":
+        return `La réponse la plus récente : ${reason}`;
+      case "ja":
+        return `最新の応答: ${reason}`;
+      case "ko":
+        return `최근 응답: ${reason}`;
+      case "pt-BR":
+        return `A resposta mais recente: ${reason}`;
+      case "zh-Hans":
+        return `最新的回答：${reason}`;
+      case "zh-Hant":
+        return `最新的回覆：${reason}`;
+      case "en-XA":
+        return `[Ţĥé ñéŵéšţ áñšŵéŕ: ${reason} ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The newest answer: ‬${reason}`;
+    }
+    return `The newest answer: ${reason}`;
+  }
   function automationRunAlsoSkipped(input2) {
     const count = input2.count;
     switch (currentLanguage()) {
@@ -11424,6 +11480,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.‬`;
     }
     return `Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.`;
+  }
+  function automationStateStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متوقفة`;
+      case "de":
+        return `Angehalten`;
+      case "es":
+        return `Detenida`;
+      case "fr":
+        return `Arrêtée`;
+      case "ja":
+        return `停止中`;
+      case "ko":
+        return `멈춤`;
+      case "pt-BR":
+        return `Parada`;
+      case "zh-Hans":
+        return `已停止`;
+      case "zh-Hant":
+        return `已停止`;
+      case "en-XA":
+        return `[Šţöþþéð ~~~]`;
+      case "ar-XB":
+        return `‮Stopped‬`;
+    }
+    return `Stopped`;
   }
   function automationWaitsFor() {
     switch (currentLanguage()) {
@@ -98936,11 +99019,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsUseSavedResetsSignInFirst,
     attachCancelled,
     automationEventsSkipped,
+    automationLooksFailing,
+    automationLooksFailingAnswer,
     automationRunAlsoSkipped,
     automationRunFound,
     automationRunSkipped,
     automationRunSkippedState,
     automationScreenedNote,
+    automationStateStopped,
     automationWaitsFor,
     automationWaitsForNote,
     automationWaitsForPlaceholder,
@@ -102127,11 +102213,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsUseSavedResetsSignInFirst": ["account"],
     "attachCancelled": ["name"],
     "automationEventsSkipped": [],
+    "automationLooksFailing": ["since"],
+    "automationLooksFailingAnswer": ["reason"],
     "automationRunAlsoSkipped": ["count"],
     "automationRunFound": ["words"],
     "automationRunSkipped": ["count", "date"],
     "automationRunSkippedState": [],
     "automationScreenedNote": [],
+    "automationStateStopped": [],
     "automationWaitsFor": [],
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],

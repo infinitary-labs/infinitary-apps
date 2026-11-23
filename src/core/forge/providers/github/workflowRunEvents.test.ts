@@ -180,9 +180,25 @@ afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
 
+/**
+ * The project's address before it moved, and the repository's number,
+ * which GitHub's redirect from the old address names.
+ */
+const OLD_REPO = "infinitary-labs/firstmate-3000";
+const REPO_NUMBER = 1061840823;
+
 async function setup() {
-  /** What GitHub holds now, newest first as it lists runs. */
-  const github = { runs: [BEFORE, PASSING] as StandInRun[], jobs: new Map<number, unknown[]>() };
+  /**
+   * What GitHub holds now, newest first as it lists runs. `moved` answers
+   * the old address with GitHub's redirect to the repository by its number;
+   * `gone` answers every read of the repository's runs with GitHub's 404.
+   */
+  const github = {
+    runs: [BEFORE, PASSING] as StandInRun[],
+    jobs: new Map<number, unknown[]>(),
+    moved: false,
+    gone: false,
+  };
   const sent: string[] = [];
   const server = createServer(async (req, res) => {
     for await (const _ of req);
@@ -203,6 +219,23 @@ async function setup() {
         .slice(0, Number(query.get("per_page") ?? 30));
       json({ total_count: workflow_runs.length, workflow_runs });
     };
+    if (github.moved && url.pathname.startsWith(`/repos/${OLD_REPO}/`)) {
+      const rest = url.pathname.slice(`/repos/${OLD_REPO}`.length);
+      res.writeHead(301, {
+        "Content-Type": "application/json",
+        Location: `http://${req.headers.host}/repositories/${REPO_NUMBER}${rest}${url.search}`,
+      });
+      res.end(JSON.stringify({ message: "Moved Permanently" }));
+      return;
+    }
+    if (github.moved && url.pathname === `/repositories/${REPO_NUMBER}`) {
+      json({ id: REPO_NUMBER, full_name: REPO });
+      return;
+    }
+    if (github.gone && url.pathname.startsWith(`/repos/${REPO}/`)) {
+      json({ message: "Not Found" }, 404);
+      return;
+    }
     const jobs = url.pathname.match(/\/actions\/runs\/(\d+)\/jobs$/);
     const workflow = url.pathname.match(/^\/repos\/[^/]+\/[^/]+\/actions\/workflows\/(\d+)\/runs$/);
     if (url.pathname === `/repos/${REPO}/actions/runs`) listed(github.runs);
@@ -266,18 +299,22 @@ async function setup() {
   });
   const store = new ScheduleStore(db);
   const inbox = new InboxStore(db);
-  const scheduler = new Scheduler({
-    store,
-    notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
-    inbox,
-    broadcastEvent: (_event: FmEvent) => {},
-    now: () => now,
-    events: {
-      find: (integration, event) => integrations.listenable(integration, event),
-      look: (integration, event, cursor, filter, connection) =>
-        integrations.look(integration, event, cursor, filter, connection),
-    },
-  });
+  // The first mate's notices go through the inbox as the app sends them,
+  // so a notice told once is never queued again.
+  const started = () =>
+    new Scheduler({
+      store,
+      notify: (wake, origin) => inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin),
+      inbox,
+      broadcastEvent: (_event: FmEvent) => {},
+      now: () => now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter, connection) =>
+          integrations.look(integration, event, cursor, filter, connection),
+      },
+    });
+  let scheduler = started();
   /** The app's tick, two minutes on (the events' cadence), with its looks answered. */
   const tick = async () => {
     for (const _ of [1, 2]) {
@@ -285,6 +322,11 @@ async function setup() {
       scheduler.tick(now);
       await scheduler.settled();
     }
+  };
+  /** The app starts again: a new scheduler over the same saved rules and inbox. */
+  const restart = () => {
+    scheduler = started();
+    return scheduler;
   };
   const served = () => inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => renderWake(row));
   const rule = (event: string, filter: Record<string, string>) =>
@@ -294,7 +336,19 @@ async function setup() {
       true,
       "Main's full run",
     );
-  return { github, sent, gateway, integrations, scheduler, tick, served, rule };
+  return {
+    github,
+    sent,
+    gateway,
+    integrations,
+    get scheduler() {
+      return scheduler;
+    },
+    tick,
+    restart,
+    served,
+    rule,
+  };
 }
 
 const MAIN_VERIFY = { repository: REPO, workflow: "verify.yml", branch: "main" };
@@ -408,6 +462,52 @@ describe("GitHub's workflow run events (INF-2146)", () => {
     expect(served()[0]).toContain(
       `ended failure, attempt 1, at version ${RED_HEAD}. Failed jobs: mac at step "${MAC.steps[0]?.name}"; linux-e2e / journeys (desktop 3/4) at step "Run the journeys with the sandbox on, and affected resize callers on Mac".`,
     );
+  });
+
+  it("follows a repository that moved, telling its red run under its new name", async () => {
+    const { github, tick, served, rule, scheduler } = await setup();
+    github.moved = true;
+    const record = rule("workflow_run_failed", { ...MAIN_VERIFY, repository: OLD_REPO });
+    await tick();
+    github.runs.unshift(red(true));
+    github.jobs.set(RED_ID, RED_JOBS_ENDED);
+    await tick();
+    expect(served()).toHaveLength(1);
+    expect(served()[0]).toContain(
+      `Run ${RED_ID} of workflow "verify" (.github/workflows/verify.yml) in ${REPO} on branch main`,
+    );
+    expect(scheduler.lookingFails(scheduler.rule(record.id))).toBeUndefined();
+  });
+
+  it("shows a rule as stopped once every look has failed for an hour, and tells the first mate once", async () => {
+    const { github, tick, restart, served, rule, scheduler } = await setup();
+    const record = rule("workflow_run_failed", MAIN_VERIFY);
+    await tick();
+    github.gone = true;
+    // One failed look changes nothing.
+    await tick();
+    expect(scheduler.lookingFails(scheduler.rule(record.id))).toBeUndefined();
+    // Two minutes short of an hour of failed looks: still nothing.
+    for (let look = 1; look < 29; look++) await tick();
+    expect(scheduler.lookingFails(scheduler.rule(record.id))).toBeUndefined();
+    expect(served()).toEqual([]);
+    await tick();
+    const failing = scheduler.lookingFails(scheduler.rule(record.id));
+    expect(failing?.reason).toContain(`GitHub answered 404 for /repos/${REPO}/actions/runs`);
+    expect(served()).toHaveLength(1);
+    expect(served()[0]).toContain(
+      `[fm-op] the automation "Main's full run" (rule id ${record.id}) gets nothing new: every look at GitHub for "A workflow run fails" has failed since ${new Date(failing?.since ?? 0).toISOString()}, 30 looks in a row.`,
+    );
+    // Another hour of failed looks, and a restart that counts them again, tell nothing new.
+    for (let look = 0; look < 30; look++) await tick();
+    const again = restart();
+    for (let look = 0; look < 31; look++) await tick();
+    expect(again.lookingFails(again.rule(record.id))).toBeDefined();
+    expect(served()).toHaveLength(1);
+    // The first look that answers clears it.
+    github.gone = false;
+    await tick();
+    expect(again.lookingFails(again.rule(record.id))).toBeUndefined();
   });
 
   it("refuses a rule that names no repository", async () => {

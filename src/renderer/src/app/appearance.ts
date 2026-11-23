@@ -9,7 +9,7 @@ import {
   type Theme,
   type UiSize,
 } from "@shared/preferences";
-import type { UsageUnit } from "@shared/usage";
+import { DEFAULT_USAGE_UNIT, type UsageUnit } from "@shared/usage";
 import { SettingSave } from "../settings/settingSave";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
@@ -100,7 +100,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
     ambientStyle: appearance.ambientStyle ?? DEFAULT_AMBIENT_STYLE,
     ambientOwnStyles: appearance.ambientOwnStyles ?? NO_OWN_STYLES,
-    usageUnit: appearance.usageUnit ?? "tokens",
+    usageUnit: appearance.usageUnit ?? DEFAULT_USAGE_UNIT,
     language: appearance.language ?? null,
     fonts: appearance.fonts ?? NO_FONTS,
   } satisfies Partial<ShellState>;
@@ -196,7 +196,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
     ambientStyle: DEFAULT_AMBIENT_STYLE,
     ambientOwnStyles: NO_OWN_STYLES,
-    usageUnit: "tokens",
+    usageUnit: DEFAULT_USAGE_UNIT,
     language: null,
     fonts: NO_FONTS,
     appearanceError: null,

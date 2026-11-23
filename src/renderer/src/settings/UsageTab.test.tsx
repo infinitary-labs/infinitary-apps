@@ -1,6 +1,13 @@
-import { EMPTY_USAGE_AMOUNT, type UsageTask, type UsageTasks } from "@shared/usage";
+import {
+  costSeries,
+  EMPTY_USAGE_AMOUNT,
+  type UsageTask,
+  type UsageTaskCosts,
+  type UsageTasks,
+} from "@shared/usage";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { CostBody } from "./UsageCostPerTask";
 import { RecentTasksView, type RecentTasksViewProps } from "./UsageTab";
 
 /**
@@ -80,5 +87,43 @@ describe("Usage's recent tasks", () => {
     expect(rows(all)).toBe(23);
     expect(all).toContain("All 23 tasks shown");
     expect(all).not.toContain("See more");
+  });
+});
+
+describe("Usage's cost per task", () => {
+  const NOW = new Date(2026, 9, 5, 15).getTime();
+  const DAY = 86_400_000;
+  const ALL = { projects: null, kinds: null };
+  const costs = (daysAgo: number[]): UsageTaskCosts => ({
+    query: { period: "30d" },
+    since: NOW - 30 * DAY,
+    at: NOW,
+    tasks: daysAgo.map((ago, index) => ({
+      closedAt: NOW - ago * DAY,
+      project: { id: "repo-fm", name: "firstmate-3000" },
+      kind: "implement",
+      tokens: 2_000_000 + index * 100_000,
+      cost: 2 + index / 10,
+    })),
+  });
+  const renderCost = (value: UsageTaskCosts) =>
+    renderToStaticMarkup(
+      <CostBody costs={value} selection={ALL} series={costSeries(value, ALL, "usd")} unit="usd" />,
+    );
+
+  it("breaks the line and its band where a week has too few finished tasks", () => {
+    // Six tasks a day for the first ten days and the last five, none between.
+    const days = [...Array(10).keys()].map((day) => 29 - day).concat([4, 3, 2, 1, 0]);
+    const markup = renderCost(costs(days.flatMap((day) => [day, day, day, day, day, day])));
+    expect(markup.match(/data-usage-cost-line="/g)?.length).toBe(2);
+    expect(markup.match(/data-usage-cost-band="/g)?.length).toBe(2);
+    expect(markup).not.toContain("data-usage-cost-empty");
+  });
+
+  it("says too few tasks finished instead of drawing a line at zero", () => {
+    const markup = renderCost(costs([3, 2, 1]));
+    expect(markup).toContain("data-usage-cost-empty");
+    expect(markup).not.toContain("data-usage-cost-line");
+    expect(markup).not.toContain("$0.00");
   });
 });

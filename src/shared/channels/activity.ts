@@ -17,6 +17,8 @@ import {
 import {
   usageQuerySchema,
   usageSummarySchema,
+  usageTaskCostsQuerySchema,
+  usageTaskCostsSchema,
   usageTasksQuerySchema,
   usageTasksSchema,
 } from "../usage";
@@ -171,5 +173,14 @@ export const activityChannels = {
     reach: "views",
     request: z.tuple([usageTasksQuerySchema]),
     response: usageTasksSchema,
+  },
+  // Usage's Cost per task: each task finished in a period, and in the window
+  // before it, with what it and its reviews spent.
+  "inf:usage:task-costs": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([usageTaskCostsQuerySchema]),
+    response: usageTaskCostsSchema,
   },
 } as const satisfies Record<string, ChannelDeclaration>;

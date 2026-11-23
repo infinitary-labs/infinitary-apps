@@ -93,11 +93,13 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | log (a check's kept output) | سجل التشغيل | Never "سجل" alone, which reads as the task's record ("سجل المهمة"). |
 | machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
 | main message | الرسالة الرئيسية | |
+| median (Usage, Cost per task) | الوسيط | The middle task of a week's finished tasks; never "average". |
 | merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
 | merge card | بطاقة الدمج | |
 | merge queue (the host's own) | قائمة انتظار الدمج | |
 | Merges on its own | يدمج تلقائيًا | |
 | message box | مربع الرسالة | |
+| middle half (Usage, Cost per task) | النصف الأوسط | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | نموذج | Plural "نماذج"; "نموذج أقوى" for a stronger model. |
 | Models board | جدول النماذج | Not "لوحة", which names a panel. |
 | Observe | المراقبة | |

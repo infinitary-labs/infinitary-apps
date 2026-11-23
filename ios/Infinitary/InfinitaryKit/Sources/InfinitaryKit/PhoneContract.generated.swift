@@ -413,6 +413,7 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `tasksKeys` = "inf:tasks:keys"
     case `tasksSearch` = "inf:tasks:search"
     case `usageSummary` = "inf:usage:summary"
+    case `usageTaskCosts` = "inf:usage:task-costs"
     case `usageTasks` = "inf:usage:tasks"
     public var changes: Bool {
         switch self { case .pluginsDb, .pluginsFetch, .pluginsIntegrations, .pluginsInvoke, .pluginsRetry: true; default: false }

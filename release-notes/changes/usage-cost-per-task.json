@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "usage-cost-per-task",
+      "kind": "feature",
+      "title": "Usage shows what a finished task costs over time",
+      "body": "Settings → Usage has a new Cost per task chart: the median cost of a finished task, with its reviews, over the last seven days at each point. Pick projects or kinds of work to see whether tasks there take more work than they used to. Usage now opens in estimated dollars; you can still switch to tokens.",
+      "area": "settings",
+      "picture": {
+        "dark": "usage-cost-per-task-dark.webp",
+        "light": "usage-cost-per-task-light.webp",
+        "alt": "Settings, Usage, Cost per task filtered to one project's implementation work, its median line climbing from $8.04 to $17.48 over 30 days"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

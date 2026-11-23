@@ -4,7 +4,14 @@ import type { FmEvent } from "@shared/events";
 import type { ForgeChangesView } from "@shared/forges";
 import type { ProviderView } from "@shared/providers";
 import type { SavedResetResult } from "@shared/savedResets";
-import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
+import type {
+  UsageQuery,
+  UsageSummary,
+  UsageTaskCosts,
+  UsageTaskCostsQuery,
+  UsageTasks,
+  UsageTasksQuery,
+} from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
 import type { Batches } from "./batches/batches";
 import type { HomeSource } from "./connection/connection";
@@ -158,6 +165,7 @@ export type CoreServices = {
   usage: {
     summary: (query: UsageQuery) => UsageSummary;
     tasks: (query: UsageTasksQuery) => UsageTasks;
+    taskCosts: (query: UsageTaskCostsQuery) => UsageTaskCosts;
   };
   /** Settings → Intelligence's cost limit row: the app's own limit and what it would have asked about (docs/usage.md). */
   costLimit: {

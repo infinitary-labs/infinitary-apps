@@ -71546,6 +71546,155 @@
         ]
       }
     },
+    "inf:usage:task-costs": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "period": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "all"
+                ]
+              }
+            },
+            "required": [
+              "period"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "properties": {
+              "period": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "all"
+                ]
+              }
+            },
+            "required": [
+              "period"
+            ]
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "at": {
+            "type": "number"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "closedAt": {
+                  "type": "number"
+                },
+                "project": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "kind": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "plan",
+                        "research",
+                        "retrieval",
+                        "reproduce",
+                        "implement",
+                        "fix",
+                        "chore",
+                        "review",
+                        "operation"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tokens": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cost": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "closedAt",
+                "project",
+                "kind",
+                "tokens",
+                "cost"
+              ]
+            }
+          }
+        },
+        "required": [
+          "query",
+          "since",
+          "at",
+          "tasks"
+        ]
+      }
+    },
     "inf:plugins:fetch": {
       "effect": "change",
       "reach": "views",

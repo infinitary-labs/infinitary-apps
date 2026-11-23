@@ -84,11 +84,13 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | link (to add a device) | 链接 | The one-time link that adds a computer or phone. |
 | live validation | 实测验证 | Trying the change for real; kept apart from the checks. |
 | log (a check's kept output) | 日志 | Distinct from the record, 记录. |
+| median (Usage, Cost per task) | 中位数 | The middle task of a week's finished tasks; never "average". |
 | merge | 合并 | |
 | merge queue (the host's own) | 合并队列 | |
 | merged locally | 本地合并 | |
 | Merges on its own / Asks first | 自动合并 / 先询问 | Used instead of autonomy. |
 | message box / main message | 消息框 / 主消息框 | |
+| middle half (Usage, Cost per task) | 中间一半 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | 模型 | |
 | Not now | 暂不 | |
 | note (a card kind) | 便笺 | |

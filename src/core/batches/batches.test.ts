@@ -1497,7 +1497,6 @@ describe("a held batch", () => {
       await home.batches.answer(REPO, { action: "try-again", head: held.head }),
     ).toBeUndefined();
     expect(home.members()).toEqual(["t-parser"]);
-    // A new check run must not reuse any earlier result, even if the clock has not moved.
     expect(new Set(home.heard.excludedHeads.at(-1))).toEqual(new Set([held.head, lost, earlier]));
     expect(home.heard.pushes.at(-1)).toMatchObject({ branch: held.branch, expected: lost });
   });

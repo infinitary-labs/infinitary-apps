@@ -79,6 +79,17 @@ extension PhoneLayout {
         chosen && cardShown && pages != .column && !pages.homeWaits
     }
 
+    /// The captain's Approve and build on comfortable Apple Pencil input: with a Pencil in hand and the switch on, the
+    /// message box stands at the top of Home's column, upright or beside an iPad's sidebar. A window with a fold, a Duo's,
+    /// and the message box under a Duo's sidebar keep today's placement.
+    static func composerOnTop(_ pages: Pages, pencil: Bool, chosen: Bool, folds: [CGRect], composerUnderPanel: Bool) -> Bool {
+        guard pencil, chosen, folds.isEmpty, !composerUnderPanel else { return false }
+        switch pages {
+        case .column, .beside: return true
+        case .panelAbove, .panelBelow, .typing, .panelTyping: return false
+        }
+    }
+
     /// Home's own size and the window's division regions in its space: every one, and the active ones alone.
     struct Room: Equatable {
         var size = CGSize.zero
@@ -100,6 +111,9 @@ struct PhonePagesLayout: Layout {
     let pages: PhoneLayout.Pages
     /// The message box at the foot of the sidebar's page (`PhoneLayout.composerUnderPanel`).
     var composerUnderPanel = false
+    /// The message box and its last turn at the top of Home's column, the stage under it and the pager alone at the foot
+    /// (`PhoneLayout.composerOnTop`).
+    var composerOnTop = false
     /// The card takes all of Home's room (`PhoneLayout.maximized`); the panel and the message box stay mounted
     /// and hidden by the workspace, so their pick and draft stay for Restore.
     var maximized = false
@@ -147,6 +161,24 @@ struct PhonePagesLayout: Layout {
         func column(_ frame: CGRect, keepingStageMinimum: Bool = false) {
             let pagerSize = part(.pager)?.sizeThatFits(.unspecified) ?? .zero
             let gap = PhoneTheme.space3
+            if composerOnTop {
+                // With a Pencil in hand: the message box under the bar, so the palm rests on the card below it.
+                let boxHeight = composerHeight(frame.minX, frame.width)
+                let pagerHeight = pagerSize.height > 0 ? pagerSize.height + gap : 0
+                let top = frame.minY + boxHeight
+                let stageWidth = panelsFolded ? min(frame.width, (cardWidth ?? frame.width) + 2 * PhoneTheme.space4) : frame.width
+                let stageX = frame.midX - stageWidth / 2
+                let least = keepingStageMinimum
+                    ? part(.stage)?.sizeThatFits(.init(width: offFold(stageX, stageWidth).width, height: 0)).height ?? 0 : 0
+                let height = max(max(0, frame.maxY - top - pagerHeight), least)
+                place(.composer, CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: boxHeight))
+                place(.stage, CGRect(x: stageX, y: top, width: stageWidth, height: height))
+                if pagerSize.height > 0 {
+                    place(.pager, CGRect(x: frame.midX - pagerSize.width / 2, y: frame.maxY - pagerSize.height,
+                                         width: pagerSize.width, height: pagerSize.height))
+                }
+                return
+            }
             let content = offFold(frame.minX, frame.width)
             let together = pagerSize.height > 0 && composer != nil
                 && content.width >= pagerSize.width + gap + PhoneColumn.width / 2 + 2 * PhoneTheme.space4

@@ -13,6 +13,52 @@ extension PhoneJourney {
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         try await composeAndSend()
+        if UIDevice.current.userInterfaceIdiom == .pad { try await pencilPlacement() }
+    }
+
+    /// The captain's Approve and build on comfortable Apple Pencil input, on an iPad simulator told at launch that a
+    /// Pencil was seen and is expected, since a simulator has none: the message box stands above the card upright and on
+    /// its side, a finger's tap in it puts it back under the card, and the off switch in Settings → Appearance keeps it
+    /// there after a relaunch. Data: this part's test home and its hero card. Resources: this part's own simulator.
+    private func pencilPlacement() async throws {
+        let hero = try await home("hero-card")
+        let heading = cardHeading(try XCTUnwrap(hero["title"] as? String))
+        let box = app.textFields["message-box"]
+        app.launchEnvironment["INFINITARY_PENCIL_SEEN"] = "1"
+        defer { app.launchEnvironment.removeValue(forKey: "INFINITARY_PENCIL_SEEN") }
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        let above = NSPredicate { _, _ in box.frame.maxY <= heading.frame.minY }
+        let below = NSPredicate { _, _ in box.frame.minY >= heading.frame.maxY }
+        XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
+                       "With a Pencil expected the box stands above the card: \(app.debugDescription)")
+        picture("pencil-top-upright")
+        turnPhone(to: .landscapeLeft, in: app, moving: heading)
+        XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
+                       "On its side the box stands at the top of the card's column: \(app.debugDescription)")
+        try await appearances("pencil-top-on-its-side", showing: heading)
+        turnPhone(to: .portrait, in: app, moving: heading)
+        // A finger's tap gives the box focus, which puts it back at the foot.
+        tapOnPhone(box)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "A finger's focus puts the box back under the card: \(app.debugDescription)")
+        picture("pencil-finger-foot")
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        let pencilSwitch = app.switches["phone-pencil-top"]
+        XCTAssertTrue(pencilSwitch.waitForPresence(timeout: 10), "An iPad that saw a Pencil shows the switch: \(app.debugDescription)")
+        XCTAssertEqual(pencilSwitch.value as? String, "1", "The switch starts on")
+        picture("pencil-switch")
+        tapOnPhone(pencilSwitch)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: pencilSwitch, timeout: 10), .completed)
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "Turned off, the box stays under the card with a Pencil expected: \(app.debugDescription)")
     }
 
     /// INF-2218's approved reading view: the existing saved round opens without sending another message.

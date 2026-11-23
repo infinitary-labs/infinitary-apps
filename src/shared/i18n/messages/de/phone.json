@@ -574,6 +574,8 @@
   "phoneSettingsNotificationsOn": "Ein. Jede neue Karte und Antwort von {computer} erreicht dieses {device}, während Infinitary geschlossen ist.",
   "phoneSettingsNotificationsOpen": "In den Einstellungen ändern",
   "phoneSettingsNotificationsUpdate": "Aktualisiere Infinitary auf {computer}, um hier für jede Karte eine Mitteilung zu erhalten.",
+  "phoneSettingsPencilTop": "Nachrichtenfeld für den Apple Pencil verschieben",
+  "phoneSettingsPencilTopScope": "Mit dem Apple Pencil verschiebt dieses iPad das Nachrichtenfeld nach oben, mit Platz zum Schreiben. Ein Finger oder die Tastatur setzt es zurück. Nur auf diesem iPad eingestellt.",
   "phoneSettingsSecretsApprovals": "Geheimnisfreigaben",
   "phoneSettingsSetUpAgain": "Freigaben neu einrichten",
   "phoneSettingsTextSize": "Textgröße",

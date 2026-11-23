@@ -2000,6 +2000,8 @@
 "phoneSettingsNotificationsOn" = "已打开。即使 Infinitary 没有打开，来自 %1$@ 的每张新卡片和回复也会送到这台 %2$@。";
 "phoneSettingsNotificationsOpen" = "在设置中更改";
 "phoneSettingsNotificationsUpdate" = "在 %1$@ 上更新 Infinitary，才能在这里收到每张卡片的通知。";
+"phoneSettingsPencilTop" = "为 Apple Pencil 移动消息框";
+"phoneSettingsPencilTopScope" = "使用 Apple Pencil 时，这台 iPad 会把消息框移到顶部并留出书写空间。用手指或键盘时会移回原处。仅在这台 iPad 上设置。";
 "phoneSettingsSecretsApprovals" = "机密批准";
 "phoneSettingsSetUpAgain" = "重新设置批准";
 "phoneSettingsTextSize" = "文字大小";

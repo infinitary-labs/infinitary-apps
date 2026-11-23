@@ -2000,6 +2000,8 @@
 "phoneSettingsNotificationsOn" = "Activadas. Cada tarjeta y respuesta nuevas de %1$@ llegan a este %2$@ mientras Infinitary está cerrado.";
 "phoneSettingsNotificationsOpen" = "Cambiar en Ajustes";
 "phoneSettingsNotificationsUpdate" = "Actualiza Infinitary en %1$@ para recibir aquí una notificación por cada tarjeta.";
+"phoneSettingsPencilTop" = "Mover el cuadro de mensaje para el Apple Pencil";
+"phoneSettingsPencilTopScope" = "Con el Apple Pencil, este iPad sube el cuadro de mensaje y le da espacio para escribir. Un dedo o el teclado lo devuelven a su sitio. Solo se aplica en este iPad.";
 "phoneSettingsSecretsApprovals" = "Aprobaciones de Secretos";
 "phoneSettingsSetUpAgain" = "Volver a configurar aprobaciones";
 "phoneSettingsTextSize" = "Tamaño del texto";

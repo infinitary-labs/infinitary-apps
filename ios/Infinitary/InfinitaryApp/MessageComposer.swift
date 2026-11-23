@@ -82,7 +82,8 @@ struct MessageComposer: View {
                         .opacity(session.messagesWhileReading ? 0.35 : 1)
                         .accessibilityIdentifier("add-photos")
                     TextField(PhoneMessages.phoneComposerPlaceholder(), text: $text, axis: .vertical)
-                        .lineLimit(1...(compact ? 2 : 4)).focused($focused)
+                        // With a Pencil in hand the box reserves four lines, as Apple's own handwriting fields do.
+                        .lineLimit(messageContext.pencilRoom ? 4...4 : 1...(compact ? 2 : 4)).focused($focused)
                         .padding(.vertical, PhoneTheme.space3).frame(minHeight: 48)
                         .padding(.leading, 3)
                         .accessibilityIdentifier("message-box")

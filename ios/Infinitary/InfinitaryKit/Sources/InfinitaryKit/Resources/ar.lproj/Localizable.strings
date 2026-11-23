@@ -2000,6 +2000,8 @@
 "phoneSettingsNotificationsOn" = "مشغّلة. تصل كل بطاقة ورد جديدين من %1$@ إلى جهاز %2$@ هذا وInfinitary مغلق.";
 "phoneSettingsNotificationsOpen" = "التغيير في الإعدادات";
 "phoneSettingsNotificationsUpdate" = "حدّث Infinitary على %1$@ لتصلك هنا إشعارات لكل بطاقة.";
+"phoneSettingsPencilTop" = "نقل مربع الرسالة من أجل Apple Pencil";
+"phoneSettingsPencilTopScope" = "عند الكتابة بـ Apple Pencil، ينقل جهاز iPad هذا مربع الرسالة إلى الأعلى مع مساحة للكتابة. يعيده الإصبع أو لوحة المفاتيح إلى مكانه. مضبوط على جهاز iPad هذا فقط.";
 "phoneSettingsSecretsApprovals" = "موافقات الأسرار";
 "phoneSettingsSetUpAgain" = "إعادة إعداد الموافقات";
 "phoneSettingsTextSize" = "حجم النص";

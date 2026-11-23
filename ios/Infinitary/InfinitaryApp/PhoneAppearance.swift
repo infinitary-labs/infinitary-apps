@@ -15,12 +15,18 @@ import UIKit
     var duoPanelsShown: Bool { didSet { UserDefaults.standard.set(duoPanelsShown, forKey: Self.duoPanelsKey) } }
     /// Whether this device has shown a fold, which brings Split at the fold into Settings → Appearance.
     private(set) var foldSeen: Bool
+    /// The captain's off switch for the Pencil's placement (`PhonePencilTop`): off, the message box keeps to the foot.
+    var pencilTop: Bool { didSet { PhonePencilTop.save(pencilTop) } }
+    /// Whether this device has seen an Apple Pencil, which brings that switch into Settings → Appearance.
+    private(set) var pencilSeen: Bool
 
     init() {
         look = PhoneLook.saved()
         splitAtFold = PhoneFoldSplit.saved()
         cardMaximized = PhoneCardMaximized.saved()
         foldSeen = PhoneFoldSplit.foldSeen()
+        pencilTop = PhonePencilTop.saved()
+        pencilSeen = PhonePencilTop.pencilSeen()
         duoPanelsShown = UserDefaults.standard.bool(forKey: Self.duoPanelsKey)
     }
 
@@ -29,6 +35,13 @@ import UIKit
         guard !foldSeen else { return }
         foldSeen = true
         PhoneFoldSplit.saveFoldSeen()
+    }
+
+    /// The window saw an Apple Pencil touch or hover, or iPadOS expects Pencil input.
+    func sawPencil() {
+        guard !pencilSeen else { return }
+        pencilSeen = true
+        PhonePencilTop.savePencilSeen()
     }
 
     /// The next choice to the left (-1) or right (1) of the current one, kept at the ends, as a segmented control's

@@ -16,6 +16,7 @@ struct PhoneSettingsSheet: View {
     @FocusState private var themeFocused: Bool
     @FocusState private var languageFocused: Bool
     @FocusState private var foldFocused: Bool
+    @FocusState private var pencilFocused: Bool
     @Environment(\.openURL) private var openURL
     @State private var section: Section?
     /// The pages opened inside a section, outermost first: an automation, its review, a project.
@@ -418,6 +419,7 @@ struct PhoneSettingsSheet: View {
             textSize
             language
             if appearance.foldSeen { foldSplit(appearance) }
+            if appearance.pencilSeen { pencilTop(appearance) }
         }
     }
 
@@ -449,11 +451,43 @@ struct PhoneSettingsSheet: View {
                     .onKeyPress(.return) { appearance.splitAtFold.toggle(); return .handled }
                     .onKeyPress(.space) { appearance.splitAtFold.toggle(); return .handled }
                     .onKeyPress(.upArrow) { languageFocused = true; return .handled }
+                    .onKeyPress(.downArrow) {
+                        guard appearance.pencilSeen else { return .ignored }
+                        pencilFocused = true; return .handled
+                    }
                     .overlay { if foldFocused { Capsule().strokeBorder(PhoneTheme.accent, lineWidth: 1.5).padding(-3) } }
                     .accessibilityIdentifier("phone-fold-split")
             }
             .padding(.top, PhoneTheme.space3)
             Text(PhoneMessages.phoneSettingsFoldSplitScope())
+                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The captain's Approve and build on comfortable Apple Pencil input, with its off switch: Move the message box for
+    /// Apple Pencil is this device's own switch (`PhonePencilTop`), on by default, shown once the device has seen a Pencil
+    /// and never sent to the computer or another device. Tab, or the down arrow from the row above, reaches it; Return or
+    /// Space turns it, and the up arrow goes back to the row above.
+    private func pencilTop(_ appearance: PhoneAppearance) -> some View {
+        @Bindable var appearance = appearance
+        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            HStack(spacing: PhoneTheme.space3) {
+                Text(PhoneMessages.phoneSettingsPencilTop()).font(PhoneFont.headline)
+                Spacer(minLength: 0)
+                Toggle(PhoneMessages.phoneSettingsPencilTop(), isOn: $appearance.pencilTop)
+                    .labelsHidden().tint(PhoneTheme.accent)
+                    .focusable().focused($pencilFocused)
+                    .onKeyPress(.return) { appearance.pencilTop.toggle(); return .handled }
+                    .onKeyPress(.space) { appearance.pencilTop.toggle(); return .handled }
+                    .onKeyPress(.upArrow) {
+                        if appearance.foldSeen { foldFocused = true } else { languageFocused = true }
+                        return .handled
+                    }
+                    .overlay { if pencilFocused { Capsule().strokeBorder(PhoneTheme.accent, lineWidth: 1.5).padding(-3) } }
+                    .accessibilityIdentifier("phone-pencil-top")
+            }
+            .padding(.top, PhoneTheme.space3)
+            Text(PhoneMessages.phoneSettingsPencilTopScope())
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -477,8 +511,9 @@ struct PhoneSettingsSheet: View {
                 .onKeyPress(.space) { openLanguage(); return .handled }
                 .onKeyPress(.upArrow) { themeFocused = true; return .handled }
                 .onKeyPress(.downArrow) {
-                    guard appearance?.foldSeen == true else { return .ignored }
-                    foldFocused = true; return .handled
+                    if appearance?.foldSeen == true { foldFocused = true; return .handled }
+                    guard appearance?.pencilSeen == true else { return .ignored }
+                    pencilFocused = true; return .handled
                 }
                 .accessibilityIdentifier("phone-language")
             }

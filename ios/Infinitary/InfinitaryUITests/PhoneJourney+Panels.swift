@@ -76,6 +76,9 @@ extension PhoneJourney {
         // The panel's buttons are pressed while its body is drawn on the Panels tab, before an iPad turns: a press
         // before the body draws reaches no page.
         try await verifyPanelCards(header: header)
+        // Before an iPad turns or the page's background work ends: either starts the panel's page again, and an iPad's
+        // accessibility can go on naming the ended page's process, so the test reads none of the new page's words.
+        try await verifyPanelDraftAndSettings()
         try await pressPhoneKey("4", modifiers: .command, in: app)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
@@ -90,12 +93,6 @@ extension PhoneJourney {
             XCUIDevice.shared.orientation = .portrait
             XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
         }
-
-        // Before the page's background work ends: once its page has started again, an iPad's accessibility still names
-        // the ended page's process, so the test reads none of the new page's words.
-        try await verifyPanelDraftAndSettings()
-        try await pressPhoneKey("4", modifiers: .command, in: app)
-        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
         // Background work that ended shows the computer's own line and Retry, which starts it again there.
         _ = try await home("panel-quit")

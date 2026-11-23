@@ -95,7 +95,8 @@ Continue runs seven steps in a list under "Setting up your first mate on studio"
 The first five are one core request, `inf:devices:home-at`, asked again with each answer as Join by its address asks (`src/core/devices/homeAt.ts`, `docs/devices.md`, "Setting the first mate up from a first launch").
 A stop marks its step and says what stopped it and what to try (`homeAtRefusalLines`, `src/shared/homeAt.ts`), with **Ask again**, **Set it up with commands** and **Back** (to the address form, its fields kept), and a footer such as "4 more steps not started · nothing changed on studio", or that the first mate keeps running there once it started; once an account was made or the Ubuntu package went in, the footer no longer says nothing changed.
 After it started, a computer with no private-network address, a firewall that may keep it out, or a port that did not answer says so, with the one command to run there where there is one; a Linux account that does not linger shows the administrator's `loginctl enable-linger` line with its Copy.
-Cancel stops at the next step: before step 5 the copy sent is deleted and nothing was started there; after it, the first mate keeps running there and the stop says so.
+Cancel stops at the next step: before step 5 the copy sent is deleted and nothing was started there; pressed during step 5 or after it, the first mate keeps running there, the stop says so without connecting, and Ask again connects to it.
+Once an account was made or the package went in at that address, no later stop there says nothing changed until Continue asks a new address.
 Leaving the screen while a step runs cancels the same way.
 Every control is a button or field in tab order; the key line's question puts focus on Cancel, so Enter never says yes to a key unread, and each other question and stop puts it on its first button.
 

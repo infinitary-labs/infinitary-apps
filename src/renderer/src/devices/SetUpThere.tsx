@@ -134,6 +134,8 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
   /** What the person agreed to on the way: asked again with every later step. */
   const agreed = useRef<HomeAtOptions>({});
   const cancelled = useRef(false);
+  /** Something changed at the address asked: kept until Continue asks a new one. */
+  const changedThere = useRef(false);
   /** The address a setup request is under way for, until it answers. */
   const underWay = useRef<string | null>(null);
   const live = useRef(true);
@@ -181,8 +183,9 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
 
   const stop = (refused: HomeAtRefused) => {
     const name = refused.name ?? hostOf(asked.current);
+    if (refused.changed) changedThere.current = true;
     const changed =
-      refused.changed === true || HOME_STEPS.indexOf(refused.step) >= HOME_STEPS.indexOf("start");
+      changedThere.current || HOME_STEPS.indexOf(refused.step) >= HOME_STEPS.indexOf("start");
     set({
       at: "stopped",
       step: refused.step,
@@ -211,7 +214,11 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
       if (answer.refused === "not-an-address") return set({ at: "address", refused: answer });
       return stop(answer);
     }
-    if ("started" in answer) return void connect(answer);
+    if ("started" in answer) {
+      // Cancel pressed while it started there: it keeps running, and Ask again still connects.
+      if (cancelled.current) return keepsRunning(answer);
+      return void connect(answer);
+    }
     if (answer.asks === "confirm")
       return set({ at: "key", address: answer.address, line: answer.line });
     if (answer.asks === "password") return set({ at: "password", question: answer });
@@ -219,9 +226,19 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
     set({ at: "runs", address: answer.address, name: answer.name });
   };
 
+  const keepsRunning = (started: HomeAtStarted) =>
+    set({
+      at: "stopped",
+      step: "connect",
+      name: started.name,
+      lines: [m.devicesHomeKeepsRunning({ computer: started.name }), ""],
+      running: true,
+      changed: true,
+      started,
+    });
+
   // 6. Connect from here as Join by its address does, once the first mate there opens.
   const connect = async (started: HomeAtStarted) => {
-    cancelled.current = false;
     const name = started.name;
     const stopped = (lines: [string, string], way?: string) =>
       set({
@@ -242,14 +259,14 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
     const until = Date.now() + OPENS_WITHIN_MS;
     for (;;) {
       if (!live.current) return;
-      if (cancelled.current) return stopped([m.devicesHomeKeepsRunning({ computer: name }), ""]);
+      if (cancelled.current) return keepsRunning(started);
       let answer: JoinAtAnswer;
       try {
         answer = await ask().joinAt(started.address);
       } catch {
         answer = { refused: "failed" };
       }
-      if (cancelled.current) return stopped([m.devicesHomeKeepsRunning({ computer: name }), ""]);
+      if (cancelled.current) return keepsRunning(started);
       if ("refused" in answer) {
         if (answer.refused === "not-open" && (started.waitsForLogin || Date.now() < until)) {
           await new Promise((done) => setTimeout(done, ASK_EVERY_MS));
@@ -281,6 +298,7 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
   const toAddress = () => {
     const at = addressAtPort(address, port);
     agreed.current = {};
+    changedThere.current = false;
     if (!at) return set({ at: "address", refused: { refused: "not-an-address", step: "key" } });
     asked.current = at;
     void setUp();
@@ -318,6 +336,7 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
       onConnect={() => phase.at === "runs" && onConnect(phase.address)}
       onCancel={cancel}
       onAskAgain={() => {
+        cancelled.current = false;
         if (phase.at === "stopped" && phase.started) void connect(phase.started);
         else void setUp();
       }}

@@ -280,7 +280,8 @@ type UpdateSave = {
 
 /**
  * What the save answers: each task whose turn an update's save stopped here
- * since a turn last started there (`updateStop`).
+ * and still marks stopped (`updateStop`): no turn has started there since,
+ * nor a later save once the home had that turn's end.
  */
 type UpdateSaveAnswer = { stopped: string[] };
 /** What the let-go answers besides: each task whose stop it withdrew. */

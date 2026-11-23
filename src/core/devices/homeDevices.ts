@@ -473,7 +473,12 @@ export async function startHomeDevices(options: {
         inReach: workDevices.inReach(deviceId),
         ssh: sshConnections.state(deviceId),
       }),
-      { startedAt, now: Date.now(), seenAt: devices.lastSeen(deviceId) },
+      {
+        startedAt,
+        now: Date.now(),
+        seenAt: devices.lastSeen(deviceId),
+        pairedAt: devices.list().find((device) => device.id === deviceId)?.pairedAt,
+      },
     );
   // The adds the first mate's card began, whose end it hears (docs/devices.md, "Asking the first mate").
   const cardAdds = new CardAdds();

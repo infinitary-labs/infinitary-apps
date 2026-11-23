@@ -9,6 +9,7 @@ import { COMPUTER } from "../../src/shared/deviceNames";
 import { type DeviceView, deviceFoldedLine } from "../../src/shared/devices";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { seedRepo } from "./githubStub";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -76,6 +77,7 @@ test("a Mac joined twice keeps one row, and a Mac on the list twice folds into t
     await test.step("a Mac whose window joined, joined again by its command, stays the same row", async () => {
       air = await launchApp({ env: { INFINITARY_DEVICE_NAME: AIR } });
       const { page } = air;
+      await chooseWhereFirstMateLives(page, "running");
       await page.locator("[data-join-chip]").click();
       await page.getByLabel(`The link from your other ${COMPUTER.one}`).fill(await invite());
       await page.getByRole("button", { name: "Continue" }).click();

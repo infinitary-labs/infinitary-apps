@@ -17,7 +17,7 @@ import { WELCOME_TITLE } from "../../src/shared/welcome";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { firstRunHintOnThisComputer } from "./dictation";
-import { committedWelcome } from "./firstLaunch";
+import { chooseWhereFirstMateLives, committedWelcome } from "./firstLaunch";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow, within } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -316,6 +316,7 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
           })
           .toEqual([]);
         const gate = page.locator("[data-first-run-gate]");
+        await chooseWhereFirstMateLives(page, "here");
         await gate.locator(`[data-connect-provider="${MOCK_KEY_PROVIDER_ID}"]`).click();
         const methods = gate.locator("[data-connect-method]");
         await expect(methods).toBeVisible();
@@ -456,6 +457,7 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         const { page } = first;
         // Connect through the gate with a key: the one sign-in with no browser.
         const gate = page.locator("[data-first-run-gate]");
+        await chooseWhereFirstMateLives(page, "here");
         await gate.locator(`[data-connect-provider="${MOCK_KEY_PROVIDER_ID}"]`).click();
         await page
           .locator("[data-connect-method]")

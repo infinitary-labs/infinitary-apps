@@ -11,13 +11,13 @@ The link comes from that computer's Settings → Devices (`DevicesTab.prompt.md`
 <JoinAnotherMac state="refused" reason="used" address="192.168.1.20"/>
 ```
 **The chip.**
-On the first-launch stage, under the provider chips (`components/core/ConnectChips`), a second group follows a `--line-1` hairline apart: the micro label `YOUR FIRST MATE IS ON ANOTHER COMPUTER`, then on their own line three chips in the provider chips' shape, "+ Set up from your first mate's computer", "+ Paste its link" and "+ Join by its address" (captain's approval of INF-1827, and of INF-4931 for the first), each reached with Tab.
+On the first-launch stage, under the choice One already running (readme, "The first launch"), the group follows a `--line-1` hairline apart: the micro label `YOUR FIRST MATE IS ON ANOTHER COMPUTER`, then on their own line three chips in the provider chips' shape, "+ Set up from your first mate's computer", "+ Paste its link" and "+ Join by its address" (captain's approval of INF-1827, and of INF-4931 for the first), each reached with Tab.
 A Windows PC and a Linux computer with an Arm chip keep the last two alone, since only a Mac and an x64 Linux computer can be added by their address.
 It is not a provider: it never appears on the Intelligence tab's foot, and the existing subscription chips above it remain under "Welcome aboard Infinitary, Captain".
 The caption is the first mate: "I'm your first mate.
-I'll help you manage the rest of the crew.
-Please set me up on a computer that stays on as much as possible.
-Your other computers need me awake."
+I'll help you manage the rest of the crew.", then its question "Where should I live?
+Pick a computer that stays on as much as possible." over the three choices.
+Another computer's last step, "Paste its link", opens this group's paste aside directly; its Cancel leaves the chips.
 The words stay visible in short windows, within the stage's scrolling band.
 
 **Set up from your first mate's computer.**

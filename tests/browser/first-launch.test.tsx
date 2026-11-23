@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunGateWords";
 import { fakeBridge } from "./bridge";
+import { chooseAtWelcome } from "./devicesTab";
 import { seededHome, subscribed } from "./freshHome";
 import { intersects } from "./layout";
 import { openSize, openWindow } from "./window";
@@ -70,6 +71,8 @@ test("a gate that reopens over a conversation keeps its words and chips clear of
   const part = (selector: string) => gate.querySelector<HTMLElement>(selector) as HTMLElement;
   await expect.element(part("[data-gate-title]")).toHaveTextContent(GATE_HOME_TITLE);
   await expect.element(part("[data-mac-choice]")).toHaveTextContent(gateIntro());
+  // The first mate asks where it lives first (INF-6207); This computer opens the chips.
+  await chooseAtWelcome("here");
   await expect
     .poll(() => gate.querySelectorAll("[data-connect-provider]").length)
     .toBeGreaterThan(0);

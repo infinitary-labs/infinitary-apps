@@ -6,6 +6,7 @@ import { COMPUTER } from "../../src/shared/deviceNames";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedMockModelCatalog } from "./accountFixtures";
 import { endCommands, run, runEnv } from "./commandRun";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { mockModelsJson } from "./mockModels";
@@ -205,6 +206,7 @@ test("a window on another computer draws the panels of the first mate it control
     air = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Air" } });
     const { page } = air;
     await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
+    await chooseWhereFirstMateLives(page, "running");
     await page.locator("[data-join-chip]").click();
     await page.getByLabel(`The link from your other ${COMPUTER.one}`).fill(invite.link);
     await page.getByRole("button", { name: "Continue" }).click();

@@ -274,6 +274,8 @@ export type JoinAnotherMacProps = {
   join?: (link: string) => Promise<JoinOutcome>;
   /** Join by its address's two requests; the app's own by default. */
   byAddress?: JoinByAddress;
+  /** Opens at Paste its link instead of the chips: the welcome's commands route ends there. */
+  opens?: "paste";
 };
 
 /**
@@ -303,8 +305,23 @@ function useNearby(open: boolean): NearbyMacsView {
   return nearby;
 }
 
-export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnotherMacProps) {
-  const [step, setStepState] = useState<Step>({ step: "closed" });
+export function JoinAnotherMac({
+  onOpenChange,
+  note,
+  join,
+  byAddress,
+  opens,
+}: JoinAnotherMacProps) {
+  const [step, setStepState] = useState<Step>(
+    opens === "paste" ? { step: "paste", notALink: false } : { step: "closed" },
+  );
+  // Opened at a step: the stage hides its chips from the first frame.
+  const openedAtStep = useRef(opens !== undefined);
+  useEffect(() => {
+    if (!openedAtStep.current) return;
+    openedAtStep.current = false;
+    onOpenChange?.(true);
+  }, [onOpenChange]);
   const [value, setValue] = useState("");
   // Join by its address: what is typed, kept across every step and refusal.
   const [address, setAddress] = useState("");

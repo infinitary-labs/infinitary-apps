@@ -17,6 +17,7 @@ import {
   addressAtPort,
   addressParts,
   type RemoteLoginPasswordQuestion,
+  type RemoteLoginReach,
   remoteLoginWords,
 } from "@shared/remoteLogin";
 import type React from "react";
@@ -57,7 +58,7 @@ type Step =
   | { step: "closed" }
   | { step: "set-up" }
   | { step: "paste"; notALink: boolean }
-  | { step: "address"; refused?: JoinAtRefusal; at?: string }
+  | { step: "address"; refused?: JoinAtRefusal; at?: string; reach?: RemoteLoginReach }
   | { step: "key"; address: string; line: string }
   | { step: "password"; question: RemoteLoginPasswordQuestion }
   | { step: "signing-in"; address: string; lettingIn?: boolean }
@@ -272,7 +273,13 @@ export function JoinAnotherMac({
     } catch {
       answer = { refused: "failed" };
     }
-    if ("refused" in answer) return setStep({ step: "address", refused: answer.refused, at });
+    if ("refused" in answer)
+      return setStep({
+        step: "address",
+        refused: answer.refused,
+        at,
+        ...(answer.reach ? { reach: answer.reach } : {}),
+      });
     if (answer.asks === "confirm")
       return setStep({ step: "key", address: answer.address, line: answer.line });
     if (answer.asks === "password") return setStep({ step: "password", question: answer });
@@ -814,7 +821,7 @@ function AddressStep(
       {step.refused && (
         <p className="fm-join-warn" role="alert" data-join-warn="" data-join-refused={step.refused}>
           <StatusDot tone="warn" label={m.devicesJoinNotJoined()} nativeTitle={false} />
-          <span>{joinAtRefusalWords(step.refused, step.at ?? address.trim())}</span>
+          <span>{joinAtRefusalWords(step.refused, step.at ?? address.trim(), step.reach)}</span>
         </p>
       )}
       {nearby.macs.length > 0 && (

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { COMPUTER, HERE } from "./deviceNames";
 import {
+  type RemoteLoginReach,
   remoteLoginPasswordQuestionSchema,
   remoteLoginRefusalSchema,
   remoteLoginWords,
@@ -20,6 +21,11 @@ import {
 export const joinAtOptionsSchema = z.strictObject({
   confirm: z.string().min(1).max(160).optional(),
   password: z.string().min(1).max(1024).optional(),
+  /**
+   * The asking program reads where an `unreachable` refusal stopped
+   * (`join-by-address-reach`); a first mate answers `reach` only when asked.
+   */
+  reach: z.literal(true).optional(),
 });
 export type JoinAtOptions = z.infer<typeof joinAtOptionsSchema>;
 
@@ -48,7 +54,29 @@ const confirmQuestionSchema = z.strictObject({
   line: z.string().min(1).max(160),
 });
 
-const refusedSchema = z.strictObject({ refused: joinAtRefusalSchema });
+/** `RemoteLoginReach` as an answer carries it, read strictly. */
+const reachSchema: z.ZodType<RemoteLoginReach> = z.discriminatedUnion("step", [
+  z.strictObject({
+    step: z.literal("key"),
+    port: z.number().int().min(1).max(65535),
+    answered: z.boolean().optional(),
+  }),
+  z.strictObject({
+    step: z.literal("sign-in"),
+    port: z.number().int().min(1).max(65535).optional(),
+  }),
+  z.strictObject({ step: z.literal("send") }),
+]);
+
+/**
+ * Why it stopped, with the step and port an `unreachable` refusal stopped at
+ * (`RemoteLoginReach`), answered only to a program that asked for it
+ * (`JoinAtOptions.reach`).
+ */
+const refusedSchema = z.strictObject({
+  refused: joinAtRefusalSchema,
+  reach: reachSchema.optional(),
+});
 
 /**
  * What one step answers: the key line to compare, the password question,
@@ -93,8 +121,12 @@ export function computerOf(address: string): string {
   return at < 0 ? address : address.slice(at + 1);
 }
 
-/** The one warning line for each refusal, naming the address as typed. */
-export function joinAtRefusalWords(refused: JoinAtRefusal, address: string): string {
+/** The warning for each refusal, naming the address as typed, and the step and port `unreachable` stopped at. */
+export function joinAtRefusalWords(
+  refused: JoinAtRefusal,
+  address: string,
+  reach?: RemoteLoginReach,
+): string {
   switch (refused) {
     case "not-an-address":
       return `That is not an address to reach a ${COMPUTER.one} at, such as kun@studio, with a port from 1 to 65535 or none.`;
@@ -117,7 +149,7 @@ export function joinAtRefusalWords(refused: JoinAtRefusal, address: string): str
     case "failed":
       return `Could not ask ${address} for a link. Try again.`;
     default:
-      return remoteLoginWords.refused(refused, { address }).join(" ");
+      return remoteLoginWords.refused(refused, { address, reach }).join(" ");
   }
 }
 

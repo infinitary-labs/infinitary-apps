@@ -357,13 +357,17 @@ test("a right-click opens the picture's menu: Copy, Save to Downloads, and Esc c
 
   await page.mouse.click(inside.x, inside.y, { button: "right" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("menuitem")).toHaveText([
+  // Each item's key is drawn beside it but kept out of its name.
+  const names = [
     m.uiPictureViewerCopyPicture(),
     m.uiPictureViewerSaveToDownloads(),
     m.uiPictureViewerActualSize(),
     // The card takes a reply, so its viewer offers Point at, and its menu does too.
     m.cardNotePointAt(),
-  ]);
+  ];
+  await expect(menu.getByRole("menuitem")).toHaveCount(names.length);
+  for (const [i, name] of names.entries())
+    await expect(menu.getByRole("menuitem").nth(i)).toHaveAccessibleName(name);
   // It opens where the press was, its first item focused.
   const panel = await menu.boundingBox();
   expect(Math.round(panel?.x ?? -1)).toBe(Math.round(inside.x));

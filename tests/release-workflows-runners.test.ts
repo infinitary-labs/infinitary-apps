@@ -434,6 +434,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The batch's release notes check and phone contract flag: plain Node
     // reading the batch's commits, as release.yml's notes job does.
     "batch-checks.yml:notes",
+    // The batch's push of its regenerated phone files, which holds a write
+    // token, and its wait for the app to take that commit.
+    "batch-checks.yml:push-regenerated",
     // The docs site's publish, which holds its publishing key (docs/docs-site.md, "Publishing").
     "docs-site-publish.yml:publish",
     // An outside contributor's pull request reads what its change reaches
@@ -482,6 +485,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "ci.yml:reached-tests",
       "ci.yml:reached-tests-parts",
       "ci.yml:build",
+      // The batch's regeneration of the phone's generated files, which installs as the code checks do.
+      "batch-checks.yml:regenerate",
     ],
   };
   const queued = new Set<string>();

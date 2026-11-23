@@ -94,6 +94,12 @@ function standInHost(ways: MergeWays) {
     carried: new Map<string, Commit[]>(),
     /** The default branch's commits as merges wrote or kept them. */
     main: [] as Commit[],
+    /**
+     * Versions the project's own checks pushed on top of a batch, each one
+     * commit on its parent that changes only files the project marks
+     * generated, as git reads it (combine.test.ts, `generatedOnTop`).
+     */
+    generated: new Map<string, { parent: string; title: string }>(),
     pulls: new Map<number, StandInPull>(),
     checks: new Map<string, ForgeCheck[]>(),
     /** The host's words when it could not list every check, as a partial reading carries them. */
@@ -531,6 +537,18 @@ export function setup(ways: MergeWays = EVERY_WAY) {
           throw new Error(`stale info: ${input.branch} is not at ${input.expected}`);
         host.branches.set(input.branch, input.head);
         heard.pushes.push({ branch: input.branch, head: input.head, expected: input.expected });
+      },
+      // As git answers it (combine.test.ts): the generated commit written again on the
+      // batch's version, carrying the batch's commits and then its own.
+      generated: async (input) => {
+        const pushed = host.generated.get(input.pushed);
+        if (!pushed || pushed.parent !== input.head) return undefined;
+        const written = id(`written ${input.pushed} ${input.at}`);
+        host.carried.set(written, [
+          ...(host.carried.get(input.head) ?? []),
+          { sha: written, title: pushed.title },
+        ]);
+        return written;
       },
       landed: async (input) => {
         heard.landedReads += 1;

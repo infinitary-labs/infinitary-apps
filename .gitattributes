@@ -1,0 +1,6 @@
+# Files a generator writes, which a merge batch's own check may regenerate as
+# its own commit and the app takes only when every file it changes is marked
+# here (docs/forge.md, "A generated commit"). GitHub folds them in a diff.
+ios/**/*.generated.* linguist-generated
+ios/Infinitary/InfinitaryApp/CardAssets/** linguist-generated
+ios/Infinitary/InfinitaryApp/Assets.xcassets/LaunchBackground.colorset/Contents.json linguist-generated

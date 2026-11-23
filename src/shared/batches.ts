@@ -85,7 +85,7 @@ export const openBatchSchema = z.object({
   origin: z.string().nullable().optional(),
   /** The batch branch the app owns. */
   branch: z.string(),
-  /** Its version: the last member's commit. */
+  /** Its version: the last member's commit, or the generated commit on top of it (`generated`). */
   head: z.string(),
   /** The default branch's commit it was combined onto. */
   base: z.string(),
@@ -140,6 +140,13 @@ export const openBatchSchema = z.object({
    * pull request, so a later hold names it; the app judges nothing from it.
    */
   repair: z.string().optional(),
+  /**
+   * The version the project's own checks added on top of the members'
+   * commits, changing only files the project marks generated, as the app
+   * wrote it again under its own push (docs/forge.md, "A generated commit"):
+   * then `head`. Taken once per combine; the next combine starts without it.
+   */
+  generated: z.string().optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
 

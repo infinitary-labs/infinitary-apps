@@ -32,6 +32,12 @@ jobs:
   checks:
     if: ${{ startsWith(github.head_ref, 'infinitary-batch/') && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == github.event.repository.default_branch }}
     name: Merge batch · Batch checks
+    # The batch checks' one writing job pushes the regenerated phone files
+    # onto the batch branch (batch-checks.yml's push-regenerated); every
+    # other job there reads only.
+    permissions:
+      contents: write
+      actions: read
     uses: ./.github/workflows/batch-checks.yml
     with:
       trigger: Merge batch

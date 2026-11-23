@@ -489,7 +489,7 @@ export class Shell {
       return { refused: "failed" };
     const answer =
       mode.kind === "home"
-        ? await mode.core.services.remoteLogin.linkAt(address, options)
+        ? await mode.core.services.remoteLogin.linkAt(address, { ...options, reach: true })
         : await mode.beside.linkAt(address, options);
     if (!("link" in answer)) return answer;
     const link = parsePairingLink(answer.link);

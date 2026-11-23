@@ -513,7 +513,8 @@ Its second line names what to check, the private network among it, and on an add
 
 An update or a change of address to a computer whose key is not remembered reads no key first, so SSH failing there keeps the bare "Could not reach sam@mini.local." with the same second line.
 The port is the one `ssh -G` resolves for the address (`resolveDestination`, `src/core/devices/hostKey.ts`); an address the settings reach through a proxy, or one SSH cannot resolve, keeps the bare "Could not reach sam@mini.local." with the same second line.
-Join by its address on the first launch says the bare lines too (`joinAtRefusalWords`, `src/shared/joinByAddress.ts`), with no command way, since it joins a first mate that already runs there.
+Join by its address on the first launch names the same step and port (`joinAtRefusalWords`, `src/shared/joinByAddress.ts`), ending "Then ask again." with no command way, since it joins a first mate that already runs there; it is the way a Windows PC reaches another computer by its address, so there the key read tells its three cases apart.
+The window asks its first mate for the step with `JoinAtOptions.reach`, and beside a command only of a first mate that lists `join-by-address-reach`, so a first mate from before answers the bare lines.
 
 ### Where a computer joins from
 

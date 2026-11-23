@@ -202,6 +202,8 @@ export class RemoteLoginRefusedError extends Error {
     message: string = lines.join("\n"),
     /** The change there may already have happened, so it is not tried again. */
     readonly uncertain = false,
+    /** The step an `unreachable` refusal stopped at, when known. */
+    readonly reach?: RemoteLoginReach,
   ) {
     super(message);
     this.name = "RemoteLoginRefusedError";
@@ -434,12 +436,15 @@ export class RemoteLogin {
   async linkAt(text: string, options: JoinAtOptions = {}): Promise<LinkAtAnswer> {
     const address = parseRemoteLoginAddress(text);
     if (!address) return { refused: "not-an-address" };
+    // Only a program that reads it hears where it could not reach.
+    const refused = (refusal: JoinAtRefusal, reach: RemoteLoginReach | undefined) =>
+      options.reach && reach ? { refused: refusal, reach } : { refused: refusal };
     return this.once(address, address, async () => {
       const step = this.stepper(address, "add", undefined, true);
       try {
         const gated = await this.confirmHost(address, options.confirm);
         if ("asks" in gated) return gated;
-        if ("refusal" in gated) return { refused: gated.refusal };
+        if ("refusal" in gated) return refused(gated.refusal, gated.reach);
         let asked = await this.askLink(address);
         if ("refusal" in asked && asked.refusal === "key-refused") {
           const methods = asked.methods ?? null;
@@ -454,7 +459,7 @@ export class RemoteLogin {
           if ("refusal" in asked && asked.refusal === "key-refused")
             return { refused: "key-not-taken" };
         }
-        if ("refusal" in asked) return { refused: asked.refusal };
+        if ("refusal" in asked) return refused(asked.refusal, asked.reach);
         if ("none" in asked) return { refused: linkNoneRefusal(asked.none) };
         let key: string;
         try {
@@ -466,7 +471,7 @@ export class RemoteLogin {
         const where = await resolveDestination(this.options.ssh, address);
         return { link: asked.link, host: where?.host ?? null };
       } catch (error) {
-        if (error instanceof RemoteLoginRefusedError) return { refused: error.refusal };
+        if (error instanceof RemoteLoginRefusedError) return refused(error.refusal, error.reach);
         throw error;
       }
     });
@@ -477,7 +482,7 @@ export class RemoteLogin {
     address: string,
   ): Promise<
     | ReturnType<typeof readComputerLinkAnswer>
-    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null }
+    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null; reach?: RemoteLoginReach }
   > {
     const ran = await runSsh({
       ...this.sshFor(address),
@@ -486,9 +491,8 @@ export class RemoteLogin {
     });
     if (ran.code === SSH_FAILED) {
       const refusal = sshRefusal(ran.stderr);
-      return refusal === "key-refused"
-        ? { refusal, methods: passwordMethods(ran.stderr) }
-        : { refusal };
+      if (refusal === "key-refused") return { refusal, methods: passwordMethods(ran.stderr) };
+      return this.refusedOver(address, refusal);
     }
     return readComputerLinkAnswer(ran.stdout);
   }
@@ -1716,7 +1720,7 @@ export class RemoteLogin {
       refuse: (refusal: RemoteLoginRefusal, at: At = {}): never => {
         const said = lines(refusal, at);
         for (const line of said) emit("refused", line, "warn", at.name ? { name: at.name } : {});
-        throw new RemoteLoginRefusedError(refusal, said);
+        throw new RemoteLoginRefusedError(refusal, said, undefined, false, at.reach);
       },
     };
   }

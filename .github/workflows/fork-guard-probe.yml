@@ -1,0 +1,19 @@
+name: fork-guard-probe
+
+# A throwaway check file for one test pull request from another copy of the
+# project. Its one job prints a line and asks for the project's own Linux
+# runners; the fork guard there should refuse it. Never merged.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Fork guard probe
+    runs-on: fleet-linux-pr
+    timeout-minutes: 5
+    steps:
+      - run: echo "This harmless job should never run on the project's own machines."

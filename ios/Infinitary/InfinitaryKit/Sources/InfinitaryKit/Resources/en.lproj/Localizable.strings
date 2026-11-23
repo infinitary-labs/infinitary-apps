@@ -704,7 +704,7 @@
 "commandWhatsNewShowWords" = "release, notes, changes, version";
 "composerFolderNotProject" = "That folder could not be added as a project.";
 "composerFolderProject" = "That folder is already one of your projects.";
-"composerHintFeedback" = "%1$@: tell Infinitary's makers about a problem or an idea";
+"composerHintFeedback" = "%1$@: tell Infinitary's maker about a problem or an idea";
 "composerTooLongShorten" = "Too long to send. Shorten it first.";
 "composerWordsOnly" = "Only words can go until Infinitary is updated. Remove the pictures and files to send this.";
 "crewAPart" = "A part";
@@ -1017,6 +1017,7 @@
 "feedbackStripHeading" = "Your click publishes this on %1$@, publicly, once";
 "feedbackStripIdea" = "A new idea";
 "feedbackStripNoAccount" = "Nothing is sent before your click. It goes under your GitHub account.";
+"feedbackSubmitButton" = "Submit feedback";
 "fileAdd" = "Add files";
 "fileCancel" = "Cancel preparing %1$@";
 "fileDropHere" = "Drop files to add them";

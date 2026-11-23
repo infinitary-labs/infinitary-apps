@@ -4,5 +4,6 @@
   "feedbackStripComment": "Un comentario en la incidencia #{number}",
   "feedbackStripHeading": "Tu clic lo publica en {place}, públicamente, una vez",
   "feedbackStripIdea": "Una nueva idea",
-  "feedbackStripNoAccount": "No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub."
+  "feedbackStripNoAccount": "No se envía nada antes de tu clic. Se publica con tu cuenta de GitHub.",
+  "feedbackSubmitButton": "Enviar comentarios"
 }

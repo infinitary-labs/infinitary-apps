@@ -40,6 +40,7 @@ import {
   REVIEW_CAREFULLY_WORDS,
   SKIP_RULES_MERGE_WORDS,
   sendWriteWords,
+  submitFeedbackWords,
 } from "@shared/vocabulary";
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import type { CaptainPlace } from "../devices/captainPlaces";
@@ -1332,8 +1333,9 @@ export class CrewmateCards {
   private withCompletionActions(taskId: string, input: DeclaredCardInput): EmittedCardInput {
     const actions = input.actions ?? [];
     if (actions.some((action) => requestWriteEffectOf(action))) {
-      // The host names the send, after where it goes (FI3-1571 piece 4); the
-      // crewmate's own Not now stays beside it.
+      // The host names the send, after where it goes (FI3-1571 piece 4), or
+      // Submit feedback for a /feedback report; the crewmate's own Not now
+      // stays beside it.
       const labeled = actions.map((action) => {
         const effect = requestWriteEffectOf(action);
         if (!effect) return action;
@@ -1341,7 +1343,10 @@ export class CrewmateCards {
         return {
           ...action,
           id: action.id || "send",
-          label: sendWriteWords(ask?.place ?? "GitHub"),
+          label:
+            ask?.kind !== "integration" && ask?.feedback
+              ? submitFeedbackWords()
+              : sendWriteWords(ask?.place ?? "GitHub"),
           default: true,
           effect,
         };

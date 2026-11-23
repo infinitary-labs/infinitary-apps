@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-task-list-updates",
+      "kind": "fix",
+      "title": "The iPhone task list keeps its rows when tasks update",
+      "body": "Starting a task while scrolled down, or moving a program's parts between groups, no longer leaves the task list blank.",
+      "area": "tasks",
+      "noPicture": "The list looks unchanged at rest; the fix keeps rows visible after an update instead of leaving an empty scroll position.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

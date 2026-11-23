@@ -81,6 +81,33 @@ struct PhoneTasks: View {
         return notice.words
     }
 
+    /// One stable lazy item per header, task or card, including when a task moves between groups.
+    private enum ListItem: Identifiable {
+        case header(PhoneTaskList.Part)
+        case task(PhoneTaskList.Row, PhoneTaskList.Part)
+        case aside(PhoneCard, last: Bool)
+
+        var id: String {
+            switch self {
+            case .header(let part): "group-\(part.id)"
+            case .task(let row, _): "task-\(row.id)"
+            case .aside(let card, _): "aside-\(card.id)"
+            }
+        }
+    }
+
+    private func listItems(_ list: PhoneTaskList) -> [ListItem] {
+        var items: [ListItem] = []
+        for part in list.parts {
+            items.append(.header(part))
+            if !part.section.folds || searching || expanded.contains(part.section) {
+                items += part.rows.map { .task($0, part) }
+                items += part.aside.map { .aside($0, last: $0.id == part.aside.last?.id) }
+            }
+        }
+        return items
+    }
+
     var body: some View {
         let reading = reading()
         let list = reading.list
@@ -88,23 +115,22 @@ struct PhoneTasks: View {
             VStack(alignment: .leading, spacing: PhoneTheme.space3) {
                 if searchShown { search }
                 if let problem = problem ?? reading.asideLine ?? sideNotice { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("tasks-problem") }
-                LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                LazyVStack(alignment: .leading, spacing: 0) {
                     // INF-3750: In reach comes before the board's first read, so an empty list says nothing until it is read.
                     if list.isEmpty, !query.isEmpty || list.board != nil {
                         Text(query.isEmpty ? PhoneMessages.phoneTasksEmpty() : PhoneMessages.phoneTasksNoMatch()).foregroundStyle(PhoneTheme.secondary)
                     }
                     // INF-2928 piece 1: only the groups with rows show, as on the Mac, and a search opens every one.
-                    ForEach(list.parts) { part in
-                        let open = !part.section.folds || searching || expanded.contains(part.section)
-                        VStack(spacing: 0) {
-                            groupHeader(part, open: open)
-                            if open {
-                                ForEach(part.rows) { row in
-                                    taskRow(row, in: part, list: list, last: part.aside.isEmpty && row.id == part.rows.last?.id)
-                                }
-                                // A card put aside with no task is a row of its own under Waiting on you.
-                                ForEach(part.aside) { card in asideRow(card, last: card.id == part.aside.last?.id) }
-                            }
+                    ForEach(listItems(list)) { item in
+                        switch item {
+                        case .header(let part):
+                            groupHeader(part, open: !part.section.folds || searching || expanded.contains(part.section))
+                                .padding(.top, part.id == list.parts.first?.id ? 0 : PhoneTheme.space2)
+                        case .task(let row, let part):
+                            taskRow(row, in: part, list: list, last: part.aside.isEmpty && row.id == part.rows.last?.id)
+                        case .aside(let card, let last):
+                            // A card put aside with no task is a row of its own under Waiting on you.
+                            asideRow(card, last: last)
                         }
                     }
                 }.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth = $0 }

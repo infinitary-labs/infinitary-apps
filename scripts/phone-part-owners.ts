@@ -241,7 +241,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   { parts: family("pick"), files: [
     "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift",
   ] },
-  { parts: family("talk"), files: [
+  { parts: [...family("talk"), ...family("task")], files: [
     "ios/Infinitary/InfinitaryApp/PhoneTaskRecord.swift",
     "ios/Infinitary/InfinitaryApp/PhoneTasks.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRowMoves.swift",

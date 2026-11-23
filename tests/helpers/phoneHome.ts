@@ -3470,6 +3470,105 @@ export async function startPhoneHome(
           };
           break;
         }
+        case "POST task-list-seed": {
+          const seed = JSON.parse(await controlBody(request)) as {
+            prefix: string;
+            working?: number;
+            backlog?: number;
+            done?: number;
+            startable?: boolean;
+            family?: number;
+            familyRunning?: boolean;
+          };
+          for (let i = 0; i < (seed.working ?? 0); i++)
+            seedTask(core.services.tasks, {
+              id: `task-list-${seed.prefix}-w-${i}`,
+              title: `Working task ${i} checks the harbour charts`,
+              status: "running",
+            });
+          for (let i = 0; i < (seed.done ?? 0); i++) {
+            const done = seedTask(core.services.tasks, {
+              id: `task-list-${seed.prefix}-d-${i}`,
+              title: `Done task ${i} logged the neap tides`,
+              status: "completed",
+            });
+            core.services.tasks.close(done.id, {
+              status: "done",
+              reason: "finished",
+              actor: "host",
+            });
+          }
+          for (let i = 0; i < (seed.backlog ?? 0); i++) {
+            const title = `Backlog task ${i} maps the channel markers near the old pier`;
+            const prompt = `${title} ${CLAUDE_CREW_PROMPT_MARKER}.`;
+            seedTask(core.services.tasks, {
+              id: `task-list-${seed.prefix}-b-${i}`,
+              title,
+              status: "queued",
+              startPolicy: "on-request",
+              ...(seed.startable
+                ? {
+                    prompt,
+                    intent: {
+                      goal: title,
+                      userWords: prompt,
+                      constraints: [{ kind: "read-only" as const }],
+                    },
+                  }
+                : {}),
+            });
+          }
+          if (seed.family) {
+            const parent = seedTask(core.services.tasks, {
+              id: `task-list-${seed.prefix}-p`,
+              title: `Program ${seed.prefix} charts the whole coast`,
+              status: "queued",
+              startPolicy: "on-request",
+            });
+            for (let i = 0; i < seed.family; i++) {
+              const title = `Part ${i} surveys one stretch of the coast`;
+              const prompt = `${title} ${CLAUDE_CREW_PROMPT_MARKER}.`;
+              seedTask(core.services.tasks, {
+                id: `task-list-${seed.prefix}-c-${i}`,
+                title,
+                parentId: parent.id,
+                status: i === 0 && seed.familyRunning ? "running" : "queued",
+                ...(i === 0 && seed.familyRunning ? {} : { startPolicy: "on-request" as const }),
+                ...(seed.startable
+                  ? {
+                      prompt,
+                      intent: {
+                        goal: title,
+                        userWords: prompt,
+                        constraints: [{ kind: "read-only" as const }],
+                      },
+                    }
+                  : {}),
+              });
+            }
+          }
+          result = { ok: true };
+          break;
+        }
+        case "POST task-list-op": {
+          const { ids, op } = JSON.parse(await controlBody(request)) as {
+            ids: string[];
+            op: "start" | "done";
+          };
+          for (const id of ids) {
+            if (op === "start") {
+              core.services.tasks.starts.dispatch(id, {
+                workspace: { repoDir: "", worktreeDir: "", branch: "" },
+                accountId: null,
+                assignee: "crewmate",
+              });
+              core.services.tasks.turns.setActivity(id, "running");
+            } else
+              core.services.tasks.close(id, { status: "done", reason: "finished", actor: "host" });
+          }
+          result = { ok: true };
+          break;
+        }
         case "POST row-moves-fixture":
           result = await seedRowMoves(core.services.tasks, "phone-work", () =>
             core.dispatch("inf:tasks:board", []),

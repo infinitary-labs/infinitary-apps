@@ -672,6 +672,9 @@ The Tasks tab is the Mac's Tasks panel in a phone's hands (INF-2928, the captain
 Its five groups come from `src/shared/nowPanel.ts`, generated as a finite native lookup with seven inputs, so the phone does not own another grouping rule.
 The phone keeps a working parent and its live parts together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
 Only the groups with tasks show.
+The scroll view keeps group headers and rows as individual lazy items, using one flat sequence with stable row identities rather than a single tall stack per group, so an update can remeasure the rows at the current position.
+The `task-updates-bottom`, `task-updates-middle`, `task-updates-finish` and `task-updates-start` parts check that rows remain visible after a real Start at the bottom or middle and after a 31-task family moves between Working and Backlog.
+Each part launches its own home and app; the middle Start fixture includes the folded Done group.
 Pinned comes first, never folds, and holds every task the captain pinned, whatever its state or age, in the order it was pinned, newest last, as on the Mac (INF-3127); a pinned task's parts list under it there and nowhere else, each still unpinned (INF-3512), except a finished part not pinned itself, which stays in Done.
 Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
 On a home on major 16 or later, or one that lists `board-without-closed`, the phone's first board read leaves out the week's closed rows (`docs/task-retention.md`, "A view's first board read"); Done counts the rows left out, and opening Done, a search or a task the light board lacks reads the whole board once (`ReadOnlySession.readClosedRows`).

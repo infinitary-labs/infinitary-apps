@@ -1158,13 +1158,25 @@ An approval that ends takes its change out of the line and the open batch, which
 A batch whose every member left takes the line's changes on the same pull request, or with an empty line is closed and its branch deleted.
 The batch branch is the app's own.
 A pull request can trail its pushed branch for a moment, so a pass that reads the pull request at an older version reads the branch itself, and waits while the branch is where the app pushed it.
-A branch at a version the record never kept, such as a push whose record was lost in a crash or a commit someone else pushed there, is combined over with a lease on the version just read, so nothing but an approved change merges through it.
+A branch at a version the record never kept, such as a push whose record was lost in a crash or a commit someone else pushed there, is combined over with a lease on the version just read, so nothing but an approved change merges through it, less the one generated commit the project's own checks may push on it ("A generated commit").
 The record is local to this home: a batch waits while the app is closed, and nothing merges it meanwhile.
 The first pass after a start reconciles each open batch from the host: a pull request merged meanwhile is recorded with its receipts, one closed without a merge puts its changes back in line, and a branch pushed with no pull request yet is read before one is opened.
 Another person's pull request is untouched: one the captain reviews merges as its own pull request through the merge review ("A requested merge").
 It merges at the captain's click and joins no batch, and so does a contribution through a fork (`ChangeContext.ownBatch`).
 
 Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts`; `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
+
+### A generated commit
+
+Changes combined in one batch can leave a file a generator writes out of step with the sources they changed together, since each change ran its generators from its own base.
+A project's own checks may then add one commit on top of the batch's version that changes only such files, and the app takes it as the batch's version, so the batch's checks run on it rather than fail on the stale file (`Batches.takeGenerated`, `generatedOnTop` in `combine.ts`).
+A file counts as generated when the `.gitattributes` of the batch's version, never the pushed commit's own, marks it `linguist-generated`; the app reads that through a temporary index, so no file of the project's folder moves.
+When a pass finds the batch branch at a version the record never kept, it takes that version only when it has exactly one parent, the batch's own version, and every file it changes is so marked.
+It writes that commit again with the same files, author and words on the version it holds, pushes it with a lease on the version just read and records it as both `head` and `generated` on the open batch, so the checks the project runs on the app's own push read it.
+Its checks then decide the batch as any version's do, and a failed one holds it.
+A commit that changes any other file, builds on another version, or comes while the batch is held is combined over as any other push, and a batch takes one generated commit per combine.
+After a rebase merge the receipts skip it by its subject, and a squash of a batch of one carries it in that change's commit (`landedCommits`).
+This repository's batch runs the phone's generators this way (`docs/testing.md`, "The swept batch").
 
 ### A held batch
 

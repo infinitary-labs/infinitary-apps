@@ -32,6 +32,11 @@ name: Batch checks
 # critical path, the startup fixtures, the release notes check and the
 # confirms end in a few minutes and run on.
 #
+# Before any of that, its first job regenerates the phone's generated files
+# on the batch's version; when they changed, it pushes them as one commit,
+# every check here skips, and the app's push of that commit starts this
+# check again on it (scripts/batch-regenerate.ts).
+#
 # Its jobs lead with the trigger its caller names, Merge batch
 # (scripts/ci-job-names.mjs).
 
@@ -47,12 +52,101 @@ on:
         required: true
         type: string
 
-# verify.yml reads its caller's run, and the failures job reads this run's logs.
+# verify.yml reads its caller's run, and the failures job reads this run's
+# logs. Only push-regenerated writes, the regenerated commit alone.
 permissions:
   contents: read
   actions: read
 
 jobs:
+  # The phone's generated files, regenerated on the batch's version before
+  # any check runs (the captain's pick in the daily velocity review): each
+  # change regenerated them from its own base, so changes combined here can
+  # leave one out of step with the sources they changed together. When the
+  # generators change files, the job after this one pushes them as one
+  # commit on the batch branch, every other job here skips, and the app
+  # takes that commit as the batch's version and pushes it again, which
+  # starts this whole check on it (docs/testing.md, "The swept batch";
+  # docs/forge.md, "A generated commit"). On that version, or when nothing
+  # changed, this job writes nothing and every check runs. Read-only: the
+  # generators are the project's code, and the push runs none of it.
+  regenerate:
+    name: ${{ format('{0} · Regenerate the phone files', inputs.trigger) }}
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.regenerate.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          persist-credentials: false
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - id: regenerate
+        run: node scripts/batch-regenerate.ts --out "$RUNNER_TEMP/regenerated"
+      - if: ${{ steps.regenerate.outputs.changed == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: regenerated-phone-files
+          path: ${{ runner.temp }}/regenerated
+          retention-days: 1
+
+  # The regenerated files as one commit on the batch branch, applied and
+  # pushed with plain git: the one job here that may write, and it runs no
+  # code of the project. A push with this run's sign-in starts no run of its
+  # own, so it then waits while the branch stays at that commit: the app's
+  # push of it starts the next run, which cancels this one, and nothing on
+  # this version reads as passed or failed meanwhile. A branch someone moved
+  # first refuses the push.
+  push-regenerated:
+    needs: regenerate
+    if: ${{ needs.regenerate.outputs.changed == 'true' }}
+    name: ${{ format('{0} · Push the regenerated phone files', inputs.trigger) }}
+    # On GitHub's own machine, so its write token never reaches a place of
+    # the fleet; its wait is the minute or two the app takes to read the batch.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: regenerated-phone-files
+          path: ${{ runner.temp }}/regenerated
+      - env:
+          BRANCH: ${{ github.head_ref }}
+          HEAD: ${{ inputs.head }}
+          FILES: ${{ runner.temp }}/regenerated
+        run: |
+          git apply --index "$FILES/regenerated.patch"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --quiet --file "$FILES/message.txt"
+          pushed=$(git rev-parse HEAD)
+          git push --quiet origin "$pushed:refs/heads/$BRANCH"
+          echo "::notice::The phone's generated files were out of step with this batch's changes, so this run pushed $pushed with them regenerated. The app takes it as the batch's version, and the checks run on it."
+          for _ in $(seq 1 66); do
+            now=$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)
+            if [ "$now" != "$pushed" ]; then
+              echo "The branch moved on to $now."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::notice::The branch is still at $pushed; the app takes it the next time it reads the batch."
+
   # The tree the batch's version holds, which the last job names, and the
   # main version the batch left main at: where the batch's version and main
   # part. Git reads both from the commits alone, fetched without their trees
@@ -60,6 +154,8 @@ jobs:
   # compare answer would build the batch's whole diff first, which it can
   # refuse under heavy load, holding the batch on one reading (INF-4683).
   batch:
+    needs: regenerate
+    if: ${{ needs.regenerate.outputs.changed == 'false' }}
     name: ${{ format('{0} · Read the batch', inputs.trigger) }}
     runs-on: ubuntu-24.04
     outputs:

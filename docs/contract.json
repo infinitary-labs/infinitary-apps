@@ -2463,6 +2463,9 @@
                     },
                     "repair": {
                       "type": "string"
+                    },
+                    "generated": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -3389,6 +3392,9 @@
                         "maximum": 9007199254740991
                       },
                       "repair": {
+                        "type": "string"
+                      },
+                      "generated": {
                         "type": "string"
                       }
                     },
@@ -4646,6 +4652,9 @@
                     "maximum": 9007199254740991
                   },
                   "repair": {
+                    "type": "string"
+                  },
+                  "generated": {
                     "type": "string"
                   }
                 },
@@ -10907,6 +10916,9 @@
                     "maximum": 9007199254740991
                   },
                   "repair": {
+                    "type": "string"
+                  },
+                  "generated": {
                     "type": "string"
                   }
                 },

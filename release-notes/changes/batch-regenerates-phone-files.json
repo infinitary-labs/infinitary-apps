@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-regenerates-phone-files",
+      "reason": "This project's own merge batch check regenerates the phone's generated files as one commit, and the app takes such a commit only when a project's own checks push one, so nobody using the app sees a difference."
+    }
+  ]
+}

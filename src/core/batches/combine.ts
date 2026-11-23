@@ -1,3 +1,5 @@
+import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
 import type { BatchChange, BatchMember } from "@shared/batches";
 import { git, gitFailure, REMOTE_TIMEOUT_MS } from "../workspace/git";
 
@@ -14,6 +16,14 @@ const BASE_REF = "refs/infinitary/batch/base";
 const CHANGE_REF = "refs/infinitary/batch/change";
 const HEAD_REF = "refs/infinitary/batch/head";
 const STACK_REF = "refs/infinitary/batch/stack";
+const GENERATED_REF = "refs/infinitary/batch/generated";
+
+/**
+ * The attribute a project marks its generated files with in `.gitattributes`,
+ * as GitHub reads it to fold their differences away: the one fact that lets a
+ * commit the project's own checks pushed onto a batch stand as its version.
+ */
+const GENERATED_ATTRIBUTE = "linguist-generated";
 
 /** Git's exit code for a merge it could not finish cleanly. */
 const CONFLICT = 1;
@@ -400,22 +410,138 @@ export async function pushBatch(input: {
 }
 
 /**
+ * The project's own generated commit on top of a pushed batch (docs/forge.md,
+ * "A generated commit"): the batch branch where the project lives is at
+ * `pushed`, one commit whose only parent is the batch's version `head`, and
+ * every file it changes is one the project marks generated in the
+ * `.gitattributes` the batch's version holds, so the commit cannot mark
+ * its own files. Such a commit is written again with
+ * the same files, author and words on `head` and answered, so the app's own
+ * push of it starts the checks a push by the project's checks cannot start;
+ * any other version answers undefined, and the batch is combined over it.
+ */
+export async function generatedOnTop(input: {
+  repoDir: string;
+  branch: string;
+  /** The batch's version as the app pushed it. */
+  head: string;
+  /** The version the branch was just read at where the project lives. */
+  pushed: string;
+  /** The commit's date (epoch ms). */
+  at: number;
+  remote?: string;
+  /** Bound on the fetch; a test shortens it. */
+  timeoutMs?: number;
+}): Promise<string | undefined> {
+  const { repoDir, head, pushed } = input;
+  const fetched = await git(
+    repoDir,
+    [
+      "fetch",
+      "--quiet",
+      "--no-tags",
+      input.remote ?? "origin",
+      `+refs/heads/${input.branch}:${GENERATED_REF}`,
+    ],
+    network(input.timeoutMs),
+  )
+    .then(() => git(repoDir, ["rev-parse", "--verify", `${GENERATED_REF}^{commit}`]))
+    .catch(unread);
+  if (fetched !== pushed) return undefined;
+  const [, ...parents] = (await git(repoDir, ["rev-list", "--parents", "-n", "1", pushed])).split(
+    " ",
+  );
+  if (parents.length !== 1 || parents[0] !== head) return undefined;
+  const files = (
+    await git(repoDir, ["diff-tree", "-r", "--no-commit-id", "--name-only", "-z", head, pushed], {
+      trim: false,
+    })
+  )
+    .split("\0")
+    .filter(Boolean);
+  if (files.length === 0 || !(await allGenerated(repoDir, head, files))) return undefined;
+  const [name = "", email = "", ...words] = (
+    await git(repoDir, ["log", "-1", "--format=%an%n%ae%n%B", pushed])
+  ).split("\n");
+  const date = `${Math.floor(input.at / 1000)} +0000`;
+  const written = await git(
+    repoDir,
+    ["commit-tree", `${pushed}^{tree}`, "-p", head, "-m", words.join("\n").trim()],
+    {
+      env: {
+        GIT_AUTHOR_NAME: name,
+        GIT_AUTHOR_EMAIL: email,
+        GIT_AUTHOR_DATE: date,
+        GIT_COMMITTER_NAME: name,
+        GIT_COMMITTER_EMAIL: email,
+        GIT_COMMITTER_DATE: date,
+      },
+    },
+  );
+  // Kept until the next combine, so the written commit outlives a cleanup before its push.
+  await git(repoDir, ["update-ref", HEAD_REF, written]);
+  return written;
+}
+
+/**
+ * Whether the project marks every one of `files` generated, by the
+ * `.gitattributes` the commit `at` holds: read through an index of that
+ * commit alone, kept in the folder's git directory, so no file of the
+ * folder and not its own index moves.
+ */
+async function allGenerated(
+  repoDir: string,
+  at: string,
+  files: readonly string[],
+): Promise<boolean> {
+  const index = resolve(
+    repoDir,
+    await git(repoDir, ["rev-parse", "--git-path", "infinitary-batch-generated.index"]),
+  );
+  const env = { GIT_INDEX_FILE: index };
+  try {
+    await git(repoDir, ["read-tree", at], { env });
+    const answer = (
+      await git(repoDir, ["check-attr", "-z", "--cached", GENERATED_ATTRIBUTE, "--", ...files], {
+        env,
+        trim: false,
+      })
+    ).split("\0");
+    // Each file answers its path, the attribute and its value.
+    const values = answer.filter((_, place) => place % 3 === 2);
+    return (
+      values.length === files.length && values.every((value) => value === "set" || value === "true")
+    );
+  } finally {
+    await rm(index, { force: true });
+  }
+}
+
+/**
  * The rewritten commits ending at `end`, one per member in order, matched
- * by subject: each member whose commit's words name it.
+ * by subject: each member whose commit's words name it. A batch that
+ * carried a generated commit on top (`generated`, its subject) is read one
+ * commit deeper, and that commit is passed over where it was kept as it
+ * was, never where a squash folded it into a member's.
  */
 async function matchRewritten(
   repoDir: string,
   end: string,
   members: readonly BatchMember[],
+  generated?: string,
 ): Promise<Map<string, string>> {
   const found = new Map<string, string>();
-  const rewritten = (
-    await git(repoDir, ["rev-list", "--first-parent", "-n", String(members.length), end])
-  )
+  const read = members.length + (generated === undefined ? 0 : 1);
+  const listed = (await git(repoDir, ["rev-list", "--first-parent", "-n", String(read), end]))
     .split("\n")
-    .filter(Boolean)
-    .reverse();
-  if (rewritten.length !== members.length) return found;
+    .filter(Boolean);
+  if (listed.length !== read) return found;
+  if (generated !== undefined) {
+    const newest = await git(repoDir, ["log", "-1", "--format=%s", listed[0] as string]);
+    if (newest === generated) listed.shift();
+    else listed.pop();
+  }
+  const rewritten = listed.reverse();
   for (const [index, member] of members.entries()) {
     const sha = rewritten[index] as string;
     const subject = await git(repoDir, ["log", "-1", "--format=%s", sha]);
@@ -439,6 +565,8 @@ export async function landedCommits(input: {
   members: readonly BatchMember[];
   /** The commit the host says the merge wrote. */
   merged?: string;
+  /** The generated commit the batch carried on top of its members (`OpenBatch.generated`). */
+  generated?: string;
   remote?: string;
   /** Bound on the fetch; a test shortens it. */
   timeoutMs?: number;
@@ -471,7 +599,13 @@ export async function landedCommits(input: {
       return landed;
     }
     const end = input.merged ?? tip;
-    const matched = await matchRewritten(input.repoDir, end, input.members);
+    // Its subject, from the commit the app wrote; one that cannot be read is passed over unread.
+    const generated = input.generated
+      ? await git(input.repoDir, ["log", "-1", "--format=%s", input.generated]).catch(
+          () => undefined,
+        )
+      : undefined;
+    const matched = await matchRewritten(input.repoDir, end, input.members, generated);
     // A rebase that ends in a merge commit, as Bitbucket's rebase merge
     // makes, keeps the rewritten commits under its second parent.
     const found =
@@ -480,7 +614,7 @@ export async function landedCommits(input: {
         () => true,
         () => false,
       ))
-        ? await matchRewritten(input.repoDir, `${end}^2`, input.members)
+        ? await matchRewritten(input.repoDir, `${end}^2`, input.members, generated)
         : matched;
     for (const [taskId, sha] of found) landed.set(taskId, sha);
   } catch (caught) {

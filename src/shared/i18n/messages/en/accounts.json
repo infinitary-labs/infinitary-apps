@@ -1,6 +1,6 @@
 {
   "accountsClaudeLoginUnreadable": "Infinitary couldn't read the Claude login on {here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock.",
-  "accountsClaudeLoginUnreadableWindows": "Infinitary couldn't read the Claude login on {here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Start menu.",
+  "accountsClaudeLoginUnreadableReopen": "Infinitary couldn't read the Claude login on {here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it again.",
   "accountsConnectAddAnother": "Add another {provider} account",
   "accountsConnectBrowser": "Sign in with your browser",
   "accountsConnectCancel": "Cancel",

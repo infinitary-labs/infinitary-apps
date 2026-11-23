@@ -5105,33 +5105,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Infinitary couldn't read the Claude login on ${here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock.`;
   }
-  function accountsClaudeLoginUnreadableWindows(input2) {
+  function accountsClaudeLoginUnreadableReopen(input2) {
     const here = input2.here;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على Infinitary قراءة تسجيل دخول Claude على ${here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من قائمة ابدأ.`;
+        return `تعذّر على Infinitary قراءة تسجيل دخول Claude على ${here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من جديد.`;
       case "de":
-        return `Infinitary konnte die Claude-Anmeldung auf ${here} nicht lesen und hat deshalb keine neue Anmeldung darüber gestartet. Versuch es noch einmal – wenn es weiter passiert, beende Infinitary und öffne es über das Startmenü.`;
+        return `Infinitary konnte die Claude-Anmeldung auf ${here} nicht lesen und hat deshalb keine neue Anmeldung darüber gestartet. Versuch es noch einmal – wenn es weiter passiert, beende Infinitary und öffne es erneut.`;
       case "es":
-        return `Infinitary no pudo leer el inicio de sesión de Claude en ${here}, así que no inició una nueva sesión encima. Vuelve a intentarlo; si sigue pasando, cierra Infinitary y ábrelo desde el menú Inicio.`;
+        return `Infinitary no pudo leer el inicio de sesión de Claude en ${here}, así que no inició una nueva sesión encima. Vuelve a intentarlo; si sigue pasando, cierra Infinitary y vuelve a abrirlo.`;
       case "fr":
-        return `Infinitary n’a pas pu lire la connexion Claude sur ${here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le depuis le menu Démarrer.`;
+        return `Infinitary n’a pas pu lire la connexion Claude sur ${here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le.`;
       case "ja":
-        return `Infinitary は ${here} の Claude のログインを読み取れなかったため、その上に新しいサインインを始めませんでした。もう一度お試しください。繰り返し起きる場合は、Infinitary を終了して スタートメニューから開いてください。`;
+        return `Infinitary は ${here} の Claude のログインを読み取れなかったため、その上に新しいサインインを始めませんでした。もう一度お試しください。繰り返し起きる場合は、Infinitary を終了してもう一度開いてください。`;
       case "ko":
-        return `Infinitary가 ${here}의 Claude 로그인을 읽지 못해서 그 위에 새 로그인을 시작하지 않았어요. 다시 시도해 주세요. 계속 이러면 Infinitary를 종료하고 시작 메뉴에서 다시 열어 주세요.`;
+        return `Infinitary가 ${here}의 Claude 로그인을 읽지 못해서 그 위에 새 로그인을 시작하지 않았어요. 다시 시도해 주세요. 계속 이러면 Infinitary를 종료하고 다시 열어 주세요.`;
       case "pt-BR":
-        return `O Infinitary não conseguiu ler o login do Claude em ${here}, então não iniciou um novo login por cima dele. Tente de novo; se continuar acontecendo, encerre o Infinitary e abra-o pelo menu Iniciar.`;
+        return `O Infinitary não conseguiu ler o login do Claude em ${here}, então não iniciou um novo login por cima dele. Tente de novo; se continuar acontecendo, encerre o Infinitary e abra-o novamente.`;
       case "zh-Hans":
-        return `Infinitary 无法读取 ${here} 上的 Claude 登录，因此没有在它之上开始新的登录。请再试一次；如果仍然发生，请退出 Infinitary，然后从“开始”菜单打开它。`;
+        return `Infinitary 无法读取 ${here} 上的 Claude 登录，因此没有在它之上开始新的登录。请再试一次；如果仍然发生，请退出 Infinitary，然后重新打开它。`;
       case "zh-Hant":
-        return `Infinitary 無法讀取 ${here} 上的 Claude 登入，因此沒有在它之上開始新的登入。請再試一次；如果持續發生，請結束 Infinitary，然後從「開始」功能表開啟它。`;
+        return `Infinitary 無法讀取 ${here} 上的 Claude 登入，因此沒有在它之上開始新的登入。請再試一次；如果持續發生，請結束 Infinitary，然後重新開啟它。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý çöûļðñ'ţ ŕéáð ţĥé Çļáûðé ļöĝîñ öñ ${here}, šö îţ ðîðñ'ţ šţáŕţ á ñéŵ šîĝñ-îñ öṽéŕ îţ. Ţŕý áĝáîñ - îƒ îţ ķééþš ĥáþþéñîñĝ, ǫûîţ Îñƒîñîţáŕý áñð öþéñ îţ ƒŕöɱ ţĥé Šţáŕţ ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý çöûļðñ'ţ ŕéáð ţĥé Çļáûðé ļöĝîñ öñ ${here}, šö îţ ðîðñ'ţ šţáŕţ á ñéŵ šîĝñ-îñ öṽéŕ îţ. Ţŕý áĝáîñ - îƒ îţ ķééþš ĥáþþéñîñĝ, ǫûîţ Îñƒîñîţáŕý áñð öþéñ îţ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary couldn't read the Claude login on ‬${here}‮, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Start menu.‬`;
+        return `‮Infinitary couldn't read the Claude login on ‬${here}‮, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it again.‬`;
     }
-    return `Infinitary couldn't read the Claude login on ${here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Start menu.`;
+    return `Infinitary couldn't read the Claude login on ${here}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it again.`;
   }
   function accountsConnectAddAnother(input2) {
     const provider = input2.provider;
@@ -96346,7 +96346,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   const MESSAGES = {
     accountsClaudeLoginUnreadable,
-    accountsClaudeLoginUnreadableWindows,
+    accountsClaudeLoginUnreadableReopen,
     accountsConnectAddAnother,
     accountsConnectBrowser,
     accountsConnectCancel,
@@ -99465,7 +99465,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   };
   const MESSAGE_FILLS = {
     "accountsClaudeLoginUnreadable": ["here"],
-    "accountsClaudeLoginUnreadableWindows": ["here"],
+    "accountsClaudeLoginUnreadableReopen": ["here"],
     "accountsConnectAddAnother": ["provider"],
     "accountsConnectBrowser": [],
     "accountsConnectCancel": [],

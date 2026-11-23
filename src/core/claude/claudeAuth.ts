@@ -6,6 +6,7 @@ import { CLAUDE_ACCESS_IN_USE_TEXT } from "@shared/claudeAccess";
 import { CLAUDE_CHIP_INSTALL_NOTE, CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { HERE } from "@shared/deviceNames";
 import * as m from "@shared/i18n/messages.generated";
+import { desktopConventions } from "@shared/platform";
 import {
   type AccountBackend,
   type AccountBinding,
@@ -104,14 +105,15 @@ export function readMadeLogin(file: string): MadeLogin | null {
 
 /**
  * Sign in over a store that could not be read: Infinitary starts no new sign-in
- * that could replace a login it cannot see. Its advice names where this
- * computer reopens Infinitary: the Start menu on Windows, the Dock elsewhere.
+ * that could replace a login it cannot see. Only a desktop with a Dock is told
+ * to reopen Infinitary from it, since a Mac launched another way can be refused
+ * its Keychain item; every other desktop is told to open it again.
  */
 export function claudeLoginUnreadableText(platform: string = hostPlatform()): string {
   const here = m.placeThisComputer();
-  return platform === "win32"
-    ? m.accountsClaudeLoginUnreadableWindows({ here })
-    : m.accountsClaudeLoginUnreadable({ here });
+  return desktopConventions(platform).dock
+    ? m.accountsClaudeLoginUnreadable({ here })
+    : m.accountsClaudeLoginUnreadableReopen({ here });
 }
 
 /**

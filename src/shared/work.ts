@@ -50,6 +50,7 @@ import {
   placedSecretUseAnswerSchema,
   placedSecretUseInputSchema,
 } from "./workSecrets";
+import { updateSaveOrders } from "./workUpdate";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -363,6 +364,8 @@ export const placedEventSchema = z.union([
       turn: z.number().int().positive(),
       outcome: z.enum(["done", "failed", "interrupted"]),
       error: z.string().optional(),
+      /** A failed turn its model never took, stopped by an update's save: its words go again. */
+      unstarted: z.literal(true).optional(),
       undelivered: z.array(z.string()),
       state: placedStateSchema.optional(),
     }),
@@ -1271,6 +1274,7 @@ export const workOrders = {
       personal: personalVersionSchema.optional(),
     }),
   },
+  ...updateSaveOrders,
   /**
    * The home's personal instructions and skills, whole, kept here in place
    * of the version kept before, only when its fingerprint matches what
@@ -1841,14 +1845,6 @@ export type UpdateOrderChannel = keyof typeof updateOrders;
 export const UPDATE_ORDER_CHANNELS = Object.keys(updateOrders) as UpdateOrderChannel[];
 export const WORK_UPDATE_ORDER: UpdateOrderChannel = "fm:firstmate:update";
 export type WorkUpdateAnswer = z.infer<(typeof updateOrders)[typeof WORK_UPDATE_ORDER]["response"]>;
-
-/**
- * How long an update has to come back connected (docs/devices.md, "Updating
- * over the connection"; docs/helper.md, "A copy that does not start"): the
- * home waits this long for the computer on its version, and the computer
- * goes back to the copy it kept when the new one has not connected by then.
- */
-export const UPDATE_RETURN_MS = 3 * 60_000;
 
 /** Where the home's version is published for a Mac, and the SHA-256 it is checked against. */
 export const updateDownloadSchema = z.object({

@@ -46,7 +46,6 @@ import {
   SOURCE_BUILDS_CHANGE,
   type SourceBuildStep,
   sourceOrders,
-  UPDATE_RETURN_MS,
   type UpdateDownload,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
@@ -63,6 +62,7 @@ import {
   WORK_SETUP_ONLY,
   type WorkSetupReport,
 } from "@shared/workSetup";
+import { UPDATE_RETURN_MS } from "@shared/workUpdate";
 import {
   DeviceOutOfReachError,
   type ViewDeviceContact,
@@ -74,7 +74,7 @@ import { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { copyCount } from "./appArchive";
 import type { DevicePairing } from "./pairing";
-import { RemoteLoginRefusedError } from "./remoteLogin";
+import { RemoteLoginRefusedError, type SaveBeforeUpdate } from "./remoteLogin";
 
 /**
  * Your devices as Settings -> Devices lists them, and Remove for a computer
@@ -139,12 +139,24 @@ export type ComputersOptions = {
   /** Every closed task's work there comes here (`PlacedSessions.bringHome`); rejects when some could not. */
   bringHome: (deviceId: string) => Promise<void>;
   /**
-   * The computer's crew pauses for its update, resolving once each running
-   * turn there stopped (`CrewUpdates.pauseForUpdate`); `resumeTasks`
-   * carries it on once the update is over, whatever came of it.
+   * The computer's crew pauses for its update (`CrewUpdates.pauseForUpdate`;
+   * docs/devices.md, "Saving work before an update"), resolving `saved`
+   * once each running turn there stopped and telling `waiting` meanwhile
+   * which tasks' turns it waits for; `withdrawn` once `signal` aborts first
+   * (Update later). `resumeTasks` carries it on once the update is over,
+   * whatever came of it.
    */
-  pauseTasks?: (deviceId: string) => Promise<void>;
+  pauseTasks?: (
+    deviceId: string,
+    options: { signal: AbortSignal; waiting: (tasks: string[]) => void },
+  ) => Promise<"saved" | "withdrawn">;
   resumeTasks?: (deviceId: string) => void;
+  /**
+   * The tasks whose turn an update stopped and which have not started
+   * again, by title, under the id of the computer they run on
+   * (`CrewUpdates.resumingByComputer`), read once per list.
+   */
+  resumingTasks?: () => ReadonlyMap<string, readonly string[]>;
   /**
    * Removes what Firstmate set up on a computer added by its address, over
    * Remote Login (`RemoteLogin.removeThere`): true once nothing is left there
@@ -160,7 +172,7 @@ export type ComputersOptions = {
   /** Updates Firstmate on a computer added by its address, over Remote Login (`RemoteLogin.update`). */
   updateOverRemoteLogin?: (
     deviceId: string,
-    options?: RemoteLoginUpdateOptions & { pause?: () => Promise<void> },
+    options?: RemoteLoginUpdateOptions & { pause?: SaveBeforeUpdate },
   ) => Promise<DeviceView | RemoteLoginPasswordQuestion | RemoteLoginConfirmQuestion>;
   /**
    * Whether this computer has a Firstmate for that computer's system: its own,
@@ -228,12 +240,26 @@ const SOURCE_FAILED_WORDS: Record<SourceBuildStep, (device: string) => string> =
 /** A commit as a copy that did not start is kept: a version is never this. */
 const COMMIT = /^[a-f0-9]{40,64}$/;
 
+/** Update later let a computer's update go while its crew's work was saved: nothing there was replaced. */
+class UpdateLetGo extends Error {
+  constructor() {
+    // i18n-exempt: an internal signal the update route catches, never shown; its feed line is the catalog's.
+    super("The update was let go before anything was replaced.");
+    this.name = "UpdateLetGo";
+  }
+}
+
 export class Computers {
   /** Removals under way, with the projects each computer ran when it began. */
   private readonly removing = new Map<string, Removing>();
   /** Computers out of reach whose tasks are being carried on, with where they go (`carryOn`). */
   private readonly carrying = new Map<string, string>();
   private readonly updating = new Set<string>();
+  /**
+   * Computers whose crew's work is being saved before their update, each
+   * with Update later's control and the tasks it waits for (`saveWork`).
+   */
+  private readonly saving = new Map<string, { controller: AbortController; tasks: string[] }>();
   /** When the connection the row calls connected began, cleared once it is not. */
   private readonly connectedSince = new Map<string, number>();
   /** What each Mac's window last found of its work half, and when (`heardWorkSetup`). */
@@ -280,6 +306,7 @@ export class Computers {
     // leaves them, and Remove now stops them.
     const reviews = working ? tasks.activeReviewCountsByDevice() : new Map<string, number>();
     const projects = working ? repos.list() : [];
+    const resuming = (working && this.options.resumingTasks?.()) || new Map<string, string[]>();
     const booted = this.options.bootedAt();
     const listening = work.listening();
     // What each app open now said of its version, read once for the whole list.
@@ -363,6 +390,7 @@ export class Computers {
           ? { carriesOn: movable }
           : {}),
         ...(carrying ? { carrying } : {}),
+        ...this.updateWorkOf(device.id, resuming),
         ...(ssh ? { ssh } : {}),
         // A Mac that also controls this Firstmate says so while Firstmate is open there.
         ...(deviceControls(device.kind) ? { controlling: work.controlling(device.id) } : {}),
@@ -447,17 +475,25 @@ export class Computers {
       const update = this.options.updateOverRemoteLogin;
       if (!update) throw new Error(`${deviceLabel(device)} cannot be reached over Remote Login.`);
       // Its crew pauses only once the update goes ahead there, past every
-      // refusal and the password question.
+      // refusal and the password question; a save that lost the computer
+      // refuses the update as out of reach there.
       let paused = false;
-      const pause = async () => {
+      const pause: SaveBeforeUpdate = async (lost) => {
         paused = true;
-        await this.options.pauseTasks?.(deviceId);
+        if (!(await this.saveWork(device, lost))) throw new UpdateLetGo();
       };
       const oneTime = !device.remoteLogin && options?.address !== undefined;
       const back = oneTime ? this.backOnThisVersion(device, true) : null;
       this.updating.add(deviceId);
       try {
-        const updated = await update(deviceId, { ...options, pause });
+        let updated: Awaited<ReturnType<typeof update>>;
+        try {
+          updated = await update(deviceId, { ...options, pause });
+        } catch (caught) {
+          if (!(caught instanceof UpdateLetGo)) throw caught;
+          this.sayLetGo(device);
+          return this.viewOf(deviceId) ?? device;
+        }
         if ("asks" in updated) return updated;
         if (back) {
           const running = await back.came();
@@ -501,6 +537,85 @@ export class Computers {
         return { asks: "package-address", address, lines: [...error.lines] };
       throw error;
     }
+  }
+
+  /**
+   * Its crew's work is saved before anything there stops (docs/devices.md,
+   * "Saving work before an update"): once the computer's own save says what
+   * it waits for, its row says Saving work, naming those tasks, and offers
+   * Update later. One whose turns are cut instead says nothing of it. False
+   * once Update later let the update go first. A save that could not finish
+   * - the computer went out of reach and did not come back - is `lost`'s refusal.
+   */
+  private async saveWork(device: DeviceView, lost?: () => never): Promise<boolean> {
+    const pause = this.options.pauseTasks;
+    if (!pause) return true;
+    const own = { controller: new AbortController(), tasks: [] as string[] };
+    let open = true;
+    try {
+      const outcome = await pause(device.id, {
+        signal: own.controller.signal,
+        waiting: (tasks) => {
+          if (!open || own.controller.signal.aborted) return;
+          own.tasks = tasks;
+          this.saving.set(device.id, own);
+          this.changed();
+        },
+      });
+      return outcome === "saved";
+    } catch (caught) {
+      console.warn(`[devices] could not save the work on ${deviceLabel(device)}:`, caught);
+      if (lost) return lost();
+      throw caught;
+    } finally {
+      open = false;
+      if (this.saving.get(device.id) === own) {
+        this.saving.delete(device.id);
+        this.changed();
+      }
+    }
+  }
+
+  /**
+   * Update later (docs/devices.md, "Saving work before an update"): lets a
+   * computer's update go while its crew's work is being saved, so nothing
+   * there is replaced and its work carries on. False when none is being saved.
+   */
+  updateLater(deviceId: string): boolean {
+    const saving = this.saving.get(deviceId);
+    if (!saving) return false;
+    saving.controller.abort();
+    this.saving.delete(deviceId);
+    this.changed();
+    return true;
+  }
+
+  /** The update was let go before anything there stopped: the feed says so, once. */
+  private sayLetGo(device: DeviceView): void {
+    this.options.emitUpdate?.({
+      type: "device_update",
+      deviceId: device.id,
+      name: deviceLabel(device),
+      stage: "done",
+      text: m.devicesUpdateLetGo({ device: deviceLabel(device) }),
+      tone: "info",
+    });
+  }
+
+  /**
+   * What the crew's work is doing around the computer's update, for its row:
+   * saving before it, naming the tasks it waits for, or resuming after it
+   * until each turn it stopped has started again.
+   */
+  private updateWorkOf(
+    deviceId: string,
+    resuming: ReadonlyMap<string, readonly string[]>,
+  ): Pick<DeviceView, "updateWork"> {
+    const saving = this.saving.get(deviceId);
+    if (saving) return { updateWork: { state: "saving", tasks: saving.tasks } };
+    if (this.updating.has(deviceId)) return {};
+    const tasks = resuming.get(deviceId) ?? [];
+    return tasks.length > 0 ? { updateWork: { state: "resuming", tasks: [...tasks] } } : {};
   }
 
   /**
@@ -856,8 +971,11 @@ export class Computers {
     });
     try {
       say("updating", remoteLoginWords.updating(device));
-      // Its crew pauses before anything there stops, and carries on after.
-      await this.options.pauseTasks?.(device.id);
+      // Its crew's work is saved before anything there stops, and carries on after.
+      if (!(await this.saveWork(device, () => refuse("out-of-reach")))) {
+        this.sayLetGo(device);
+        return this.viewOf(device.id) ?? device;
+      }
       let starting = false;
       const start = () => {
         if (starting) return;
@@ -1026,8 +1144,20 @@ export class Computers {
     let settled = false;
     try {
       say("updating", remoteLoginWords.updating(device));
-      // Its crew pauses before anything there stops, and carries on after.
-      await this.options.pauseTasks?.(device.id);
+      // Its crew's work is saved before anything there stops, and carries on after.
+      const lost = () =>
+        refused(
+          "out-of-reach",
+          remoteLoginWords.refused("out-of-reach", {
+            address: label,
+            name: label,
+            doing: "update",
+          }),
+        );
+      if (!(await this.saveWork(device, lost))) {
+        this.sayLetGo(device);
+        return this.viewOf(device.id) ?? device;
+      }
       step("fetching");
       const everyMs = this.options.countEveryMs ?? COUNT_EVERY_MS;
       const ask = async () => {

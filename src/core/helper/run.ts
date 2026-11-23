@@ -883,6 +883,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     },
     onInvoke: async (channel, args) => {
       if (stopped) throw new Error("This computer is stopping.");
+      // Its home is still there: a saved update's wait for it starts over.
+      void conversations?.then((held) => held.host.homeAsked()).catch(() => undefined);
       if (channel === WORK_UPDATE_ORDER) return update(args);
       if (channel === WORK_DOWNLOAD_ORDER) return download(args);
       if (channel === WORK_SOURCE_ORDER) return sourceBuild(args);

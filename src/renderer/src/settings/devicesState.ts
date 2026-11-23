@@ -376,6 +376,12 @@ export type DevicesTabViewProps = {
    * there"); absent where it cannot be asked.
    */
   onUpdateApp?: (deviceId: string) => void;
+  /**
+   * Update later: lets a computer's update go while its crew's work is
+   * being saved (docs/devices.md, "Saving work before an update"); absent
+   * where it cannot be asked.
+   */
+  onUpdateLater?: (deviceId: string) => void;
   onAskChangeAddress: (deviceId: string | null) => void;
   onChangeAddress: (deviceId: string, address: string) => void;
   /** Copy a link or a command from the ways section: makes one, copies it, opens the panel. */

@@ -22,10 +22,11 @@ import {
   deviceUpdateActionId,
   deviceUpdateCardId,
 } from "@shared/deviceUpdateNudge";
+import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import type { UpdateDownload } from "@shared/work";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -147,6 +148,8 @@ async function world(
     nudge?: boolean;
     /** What getting this Mac's Firstmate for that computer's system answers before it is asked. */
     prepare?: NonNullable<ConstructorParameters<typeof Computers>[0]["prepare"]>;
+    /** How the computer's crew's work is saved before its update, in place of a save done at once. */
+    pauseTasks?: NonNullable<ConstructorParameters<typeof Computers>[0]["pauseTasks"]>;
   } = {},
 ) {
   const userData = scratchDir("infinitary-update-home-");
@@ -197,8 +200,9 @@ async function world(
     repos,
     stopTasks: async () => {},
     bringHome: async () => {},
-    pauseTasks: async (deviceId) => {
+    pauseTasks: async (deviceId, pause) => {
       crew.push(`paused ${deviceId}`);
+      return options.pauseTasks ? options.pauseTasks(deviceId, pause) : "saved";
     },
     resumeTasks: (deviceId) => {
       crew.push(`resumed ${deviceId}`);
@@ -223,7 +227,7 @@ async function world(
         overRemoteLogin.push(deviceId);
         if (options.asksPassword && !asked?.password)
           return { asks: "password", address: options.remoteLogin ?? "", for: "update", deviceId };
-        await asked?.pause?.();
+        await asked?.pause?.(() => assert.fail("That computer is out of reach."));
         return pairing.list().find((device) => device.id === deviceId) as DeviceView;
       }),
     emit: (list) => pushed.push(list),
@@ -423,6 +427,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(at.kept()).toBe("the home's own copy");
     // Its crew paused before its run ended, and waits for it to be back (INF-721 friction 9).
     expect(at.crew).toEqual([`paused ${at.deviceId}`]);
+    expect(at.pushed.flat().some((device) => device.updateWork)).toBe(false); // Cut, never saved.
     expect(at.lines).toEqual(
       expect.arrayContaining(helperWords.updated({ thisMac: true, host: "127.0.0.1" }, null, true)),
     );
@@ -451,6 +456,59 @@ describe("a computer that runs work on another version of Firstmate", () => {
     // Nothing of the copy it got is left beside the one it kept.
     expect(readdirSync(at.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
   });
+
+  // The ask: an update over the connection or Remote Login saves the computer's crew work first.
+  it.each(["connection", "remote-login"] as const)(
+    "over %s, says on its row that its crew's work is being saved, naming what it waits for, and Update later lets the update go with nothing replaced there",
+    async (route) => {
+      const replaced: string[] = [];
+      const byAddress: NonNullable<Parameters<typeof world>[0]>["updateByAddress"] = async (
+        deviceId,
+        asked,
+      ) => {
+        // As RemoteLogin does: the save runs once nothing refused, and only then is the copy there replaced.
+        await asked?.pause?.(() => assert.fail("That computer is out of reach."));
+        replaced.push(deviceId);
+        return at.view() as DeviceView;
+      };
+      const at = await world({
+        kept: true,
+        pauseTasks: (_deviceId, { signal, waiting }) =>
+          new Promise((resolve) => {
+            waiting(["Fix the footer"]);
+            signal.addEventListener("abort", () => resolve("withdrawn"), { once: true });
+          }),
+        ...(route === "remote-login"
+          ? { remoteLogin: "sam@mini.local", updateByAddress: byAddress }
+          : {}),
+      });
+      at.start({ appVersion: "0.1.20" });
+      await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe(route);
+
+      const updating = at.computers.update(at.deviceId);
+      await expect
+        .poll(() => at.view()?.updateWork)
+        .toEqual({ state: "saving", tasks: ["Fix the footer"] });
+      expect(at.computers.updateLater(at.deviceId)).toBe(true);
+
+      const answered = await updating;
+      if ("asks" in answered) throw new Error("Update asked a question.");
+      // Nothing there was replaced: it keeps its own copy, its run goes on, and its crew carries on.
+      expect(at.kept()).toBe("the copy it kept");
+      expect(replaced).toEqual([]);
+      expect(at.view()).toMatchObject({ inReach: true, otherVersion: { updateBy: route } });
+      expect(at.view()?.updateWork).toBeUndefined();
+      expect(at.crew).toEqual([`paused ${at.deviceId}`, `resumed ${at.deviceId}`]);
+      // This list says an update over the connection began; RemoteLogin says its own.
+      const builder = { name: "Mac mini", user: "builder", onThisMac: true };
+      expect(at.said.map((event) => event.text)).toEqual([
+        ...(route === "connection" ? [remoteLoginWords.updating(builder)] : []),
+        m.devicesUpdateLetGo({ device: deviceLabel(builder) }),
+      ]);
+      // Nothing is being saved any more, so a second Update later does nothing.
+      expect(at.computers.updateLater(at.deviceId)).toBe(false);
+    },
+  );
 
   it("stopped while it gets this Mac's Firstmate, lets the copy go and leaves no temporary folder beside its work (INF-3307 audit)", async () => {
     const at = await world({ kept: true });

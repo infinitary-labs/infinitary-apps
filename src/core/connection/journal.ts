@@ -42,7 +42,6 @@ export class EventJournal {
 
   constructor(private readonly limits: JournalLimits = DEFAULT_JOURNAL_LIMITS) {}
 
-  /** The newest push's number; 0 before the first. */
   get seq(): number {
     return this.head;
   }

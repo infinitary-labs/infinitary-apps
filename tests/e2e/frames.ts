@@ -75,12 +75,10 @@ export function frameElement(scope: Scope, selector: string): Locator {
   return scope.locator(selector);
 }
 
-/** The iframe element the card titled `title` draws its body in. */
 export function cardBodyElement(page: Scope, title: string): Locator {
   return frameElement(page, cardBodySelector(title));
 }
 
-/** The body of the card titled `title`, once drawn. */
 export function cardBody(page: Scope, title: string): FrameLocator {
   return drawnFrame(page, cardBodySelector(title));
 }
@@ -112,7 +110,6 @@ export function observeElement(page: Page): Locator {
   return frameElement(page, 'iframe[title="Observe"]');
 }
 
-/** The Observe panel's page, once drawn. */
 export function observeBody(page: Page): FrameLocator {
   return drawnFrame(page, 'iframe[title="Observe"]');
 }
@@ -172,7 +169,6 @@ export async function readFrameOnce<T>(
   }
 }
 
-/** The iframe element of a side panel, by its id. */
 export function panelElement(page: Page, panelId: string): Locator {
   return frameElement(page, `[data-side-panel="${panelId}"] iframe`);
 }

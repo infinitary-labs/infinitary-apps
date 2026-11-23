@@ -371,7 +371,6 @@ describe("WorkspaceService", () => {
     expect(repo).toBe(paths.defaultWorkspaceDir);
     expect(await git(repo, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
     expect(await git(repo, ["log", "--oneline"])).toContain("initialize default workspace");
-    // Idempotent.
     await workspace.ensureDefaultRepo();
     expect((await git(repo, ["log", "--oneline"])).split("\n")).toHaveLength(1);
   });
@@ -413,7 +412,6 @@ describe("WorkspaceService", () => {
     expect(a.branch).toBe("fm/task-aaaa1111");
     expect(await git(a.cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("fm/task-aaaa1111");
     expect(await git(b.cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("fm/task-bbbb2222");
-    // Both worktrees share the default repo.
     const list = await git(paths.defaultWorkspaceDir, ["worktree", "list"]);
     expect(list).toContain("aaaa1111");
     expect(list).toContain("bbbb2222");
@@ -479,7 +477,6 @@ describe("WorkspaceService", () => {
     expect(reviewedReading).toMatch(/^[0-9a-f]{64}$/);
     expect(await workspace.reviewChangeReading(repo, "1".repeat(40))).toBeNull();
 
-    // Newer main edits a line away from the change. The change lines are the same.
     await git(repo, ["checkout", "main"]);
     await commit(
       "a.txt",
@@ -492,7 +489,6 @@ describe("WorkspaceService", () => {
     expect(updated).not.toBe(reviewed);
     expect(await workspace.reviewChangeReading(repo, updated)).toBe(reviewedReading);
 
-    // An indentation change of the change itself does not keep the reading.
     const indented = await commit(
       "a.txt",
       `${base.replace("line 1\n", "line 1 main\n").replace("line 20\n", "  line 20 changed\n")}`,
@@ -500,7 +496,6 @@ describe("WorkspaceService", () => {
     );
     expect(await workspace.reviewChangeReading(repo, indented)).not.toBe(reviewedReading);
 
-    // A conflict resolved by editing the change does not keep the reading.
     await git(repo, ["checkout", "main"]);
     await commit(
       "a.txt",
@@ -633,7 +628,6 @@ describe("WorkspaceService", () => {
       deleted: 0,
     });
 
-    // Newer main moves the base; the change still counts only its own lines.
     await git(repo, ["checkout", "main"]);
     writeFileSync(join(repo, "unrelated.ts"), lines(50, "main"));
     await commit("chore: main grows");
@@ -768,7 +762,6 @@ describe("worktree deletion off the settle path (character-jank scout)", () => {
     await workspace.removeTaskWorktree(ws);
     await workspace.deletionsSettled();
     expect(readdirSync(paths.worktreeTrashDir)).toEqual([]);
-    // The repo can hand the same task a fresh worktree afterwards.
     const again = await workspace.createTaskWorktree("eeee5555");
     expect(existsSync(again.cwd)).toBe(true);
   });
@@ -812,7 +805,6 @@ describe("worktree deletion off the settle path (character-jank scout)", () => {
     const held = heldDeletion();
     const workspace = new WorkspaceService(paths, { deleteTree: held.deleteTree, pool: false });
     const ws = await workspace.createTaskWorktree("abab7777");
-    // A file where the trash dir should be: the move aside cannot happen.
     writeFileSync(paths.worktreeTrashDir, "not a directory");
     await workspace.removeTaskWorktree(ws);
     expect(held.started).toEqual([]);
@@ -1370,7 +1362,6 @@ describe("landTaskWork (Q5, forge-agnostic local landing)", () => {
     writeFileSync(join(task.cwd, "feature.txt"), "done\n");
     await git(task.cwd, ["add", "-A"]);
     await git(task.cwd, ["commit", "-m", "feat: branch work"]);
-    // Main advances independently on a different file.
     writeFileSync(join(task.repoDir, "elsewhere.txt"), "moved\n");
     await git(task.repoDir, ["add", "-A"]);
     await git(task.repoDir, ["commit", "-m", "chore: mainline moved"]);

@@ -16,7 +16,6 @@ import { effectiveFromProvider, limitingResetOf } from "./catalog";
  * credits, its credits ran out, or they answer again.
  */
 
-/** The row with its account's switch laid over it: on, or absent. */
 export function stampSwitch(
   row: QuotaProviderView,
   keepsGoing: (accountId: string) => boolean,
@@ -25,7 +24,6 @@ export function stampSwitch(
   return row.accountId && keepsGoing(row.accountId) ? { ...rest, keepGoingOnCredits: true } : rest;
 }
 
-/** Every row of a snapshot with its account's switch laid over it. */
 export function stampSnapshot(
   snapshot: QuotaSnapshotView,
   keepsGoing: (accountId: string) => boolean,
@@ -46,7 +44,6 @@ export type CreditsChange = {
 
 type Seen = { spending: boolean; state: QuotaCreditState | undefined };
 
-/** The account in a feed line: its provider and, where it has one, its label. */
 function nameOf(row: QuotaProviderView): string {
   return row.accountLabel ? `${row.label} · ${row.accountLabel}` : row.label;
 }

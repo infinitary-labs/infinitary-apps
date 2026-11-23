@@ -176,7 +176,6 @@ export class Router {
       quota: QuotaService;
       placedWork?: PlacedWorkScores;
       settings: SettingsStore;
-      /** The decision ledger every routing decision is recorded in. */
       decisions: DecisionStore;
       availableModels: () => PiModelRef[];
       /** Whether this Mac's pool is read, so an empty one is known empty. */

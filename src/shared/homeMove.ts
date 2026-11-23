@@ -61,7 +61,6 @@ export const recordPathSchema = z
     { message: "a path inside the record" },
   );
 
-/** One file of the record as the move sends it. */
 export const recordFileSchema = z.object({
   path: recordPathSchema,
   size: z.number().int().nonnegative(),
@@ -111,7 +110,6 @@ export const homeMoveManifestSchema = z.object({
 });
 export type HomeMoveManifest = z.infer<typeof homeMoveManifestSchema>;
 
-/** The manifest's own place among the move's files. */
 export const HOME_MOVE_MANIFEST = "home-move-manifest.json";
 
 /** What the destination says of itself before a move (`inf:home:ready`). */

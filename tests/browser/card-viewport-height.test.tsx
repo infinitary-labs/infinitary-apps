@@ -104,7 +104,6 @@ test("min-height:100vh stops resizing in a static card, and still grows to be re
   ).toEqual([]);
   const settledHeight = iframe.getBoundingClientRect().height;
 
-  // Settled with all of the content inside the frame, none clipped.
   expect(within(await contentBox(iframe), iframe.getBoundingClientRect())).toEqual([]);
 
   // Taller content still grows the frame, and scrolling the card reaches its

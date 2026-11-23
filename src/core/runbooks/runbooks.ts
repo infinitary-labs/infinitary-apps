@@ -36,7 +36,6 @@ type Entry = {
   source: "builtin" | "installed" | "personal";
 };
 
-/** The Advanced architecture runbook's map part, from its folder. */
 const MAP_PART_FILE = "skills/advanced-architecture/parts/map.html";
 
 /** The captain's common-to-niche order, shared by every reader and joined guidance. */
@@ -412,7 +411,6 @@ export class Runbooks {
   }
 }
 
-/** The choices the enabled runbooks offer under these switches. */
 function offersUnder(entries: Entry[], states: Record<string, boolean>): Set<RunbookOffer> {
   return new Set(
     entries

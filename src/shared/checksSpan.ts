@@ -18,7 +18,6 @@ export type ChecksSpan = {
   joint: "for" | "in" | "after";
 };
 
-/** The span of a reading, or null where no time stands: not started, not read, merged elsewhere. */
 export function checksSpanOf(
   delivery: Pick<TaskDeliveryView, "ci" | "checks" | "headSha" | "ciStartedAt" | "ciFinishedAt">,
 ): ChecksSpan | null {
@@ -76,7 +75,6 @@ export function runChecksSpanOf(run: RunChecks): ChecksSpan | null {
   return { startedAt, finishedAt, joint: run.state === "passed" ? "in" : "after" };
 }
 
-/** Whole minutes, as the checks cell counts: `under 1m`, `15m`, `1h 05m`. */
 export function checksDuration(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 1) return "under 1m";
@@ -84,7 +82,6 @@ export function checksDuration(ms: number): string {
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
-/** The state word with its duration: `running for 15m`, `passed in 14m`. */
 export function checksSpanWords(words: string, span: ChecksSpan, now: number): string {
   return `${words} ${span.joint} ${checksDuration((span.finishedAt ?? now) - span.startedAt)}`;
 }
@@ -98,7 +95,6 @@ export function checksFinishedAgo(finishedAt: number, now: number): string {
   return age === "now" ? "just now" : `${age} ago`;
 }
 
-/** A time of day in the reader's own clock: `9:01 PM`. */
 function clock(at: number): string {
   return formatTime(at, { hour: "numeric", minute: "2-digit" });
 }

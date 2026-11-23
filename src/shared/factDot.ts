@@ -38,7 +38,6 @@ export function factDotSvg(state: FactDotState): string {
   return `<svg class="inf-fact-dot" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">${drawn}</svg>`;
 }
 
-/** A round count in the feed's own words (`checksSentence`): "round 2 of 3". */
 export function roundWords(spent: number, cap: number): string {
   return `round ${spent} of ${cap}`;
 }

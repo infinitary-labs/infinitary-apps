@@ -18,7 +18,6 @@ import {
  */
 
 const NOW = new Date(2026, 9, 4, 15, 0).getTime();
-/** Words as the static markup writes them. */
 const markup = (text: string) => text.replace(/'/g, "&#x27;");
 const noop = () => {};
 

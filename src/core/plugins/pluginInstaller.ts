@@ -109,12 +109,10 @@ export type PluginInstallerOptions = {
   log?: (message: string) => void;
 };
 
-/** The consent card's id for one plugin: a singleton per plugin. */
 export function consentCardId(pluginId: string): string {
   return `card-plugin-${pluginId}`;
 }
 
-/** A checked plugin tree: what its manifest says and what it may be granted. */
 export type CheckedPlugin = {
   manifest: PersonalManifest & { name: string; version: string };
   capabilities: PluginCapabilities;
@@ -571,7 +569,6 @@ function basenameOf(dir: string): string {
   );
 }
 
-/** What a refused grant means, in words. */
 function unservedLine(refused: readonly string[]): string {
   const words = refused.map((grant) => {
     if (grant === "integrations") return "to use your integrations";

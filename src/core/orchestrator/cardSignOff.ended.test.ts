@@ -96,7 +96,6 @@ describe("a signed-off answer the captain had seen", () => {
       answersMessage: f.asked,
       signsOff: true,
     });
-    // The mark was accepted and the task closed as answered (as on INF-5555).
     expect(receipt).toContain("signs the answer off");
     expect(f.tasks.get("carried")).toMatchObject({ status: "done", closedReason: "answered" });
     // The captain was looking at it: the window should still draw it with Close.

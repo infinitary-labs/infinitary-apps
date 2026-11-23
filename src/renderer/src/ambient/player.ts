@@ -429,7 +429,6 @@ export class AmbientPlayer {
       return depth;
     });
     if (pad.wobble) {
-      // A slow sweep of the filter, the drone's buzz moving.
       const lfo = keep(ctx.createOscillator());
       lfo.frequency.value = pad.wobble[0];
       const depth = keep(ctx.createGain());
@@ -631,7 +630,6 @@ export class AmbientPlayer {
     for (const note of this.composer.merged()) this.note(note, beat);
   }
 
-  /** Disconnects every node; nothing plays after it. */
   stop(): void {
     for (const node of this.lasting) {
       if (node instanceof AudioScheduledSourceNode) {
@@ -695,12 +693,10 @@ export class AmbientPlayer {
     const pad = this.style.pad;
     const B = this.barSeconds;
     if (pad.swell) {
-      // The bellows: each bar breathes in and out.
       this.padSwell.gain.setTargetAtTime(1, at, B * 0.16);
       this.padSwell.gain.setTargetAtTime(1 - pad.swell, at + B * 0.55, B * 0.22);
     }
     if (pad.tide && bar.index % 2 === 0) {
-      // The tide: a swell every two bars.
       this.padSwell.gain.setTargetAtTime(1, at, B * 0.4);
       this.padSwell.gain.setTargetAtTime(1 - pad.tide, at + B * 0.95, B * 0.45);
     }
@@ -793,7 +789,6 @@ export class AmbientPlayer {
     }
   }
 
-  /** Connects through a panner. */
   private panned(node: AudioNode, pan: number, to: AudioNode): StereoPannerNode {
     const panner = this.ctx.createStereoPanner();
     panner.pan.value = pan;

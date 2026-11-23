@@ -230,7 +230,6 @@ function scratchWorld(installed: string, version: string) {
     return made;
   };
 
-  // The tap stand-in: a local repository the CLI writes and Homebrew taps.
   git(tap, "init", "--quiet", "--initial-branch=main");
   git(tap, "commit", "--quiet", "--allow-empty", "-m", "tap");
 
@@ -253,7 +252,6 @@ function scratchWorld(installed: string, version: string) {
     return result;
   };
 
-  /** One publication through the real CLI, committed to the tap as one commit. */
   const publish = (channel: "stable" | "alpha", version: string): Run => {
     const { sha256 } = standIn(version);
     const result = run(process.execPath, [
@@ -275,7 +273,6 @@ function scratchWorld(installed: string, version: string) {
     git(tap, "commit", "--quiet", "--all", "-m", "older casks");
   };
 
-  /** The republication through the real CLI, committed to the tap as one commit. */
   const republish = (): Run =>
     commitWritten(
       run(process.execPath, [
@@ -318,7 +315,6 @@ function scratchWorld(installed: string, version: string) {
     return value;
   };
 
-  /** Everything under a data root but the installer's marker, by path and bytes. */
   const savedWork = (root = dataRoot) => {
     const files: string[] = [];
     const walk = (path: string) => {
@@ -693,7 +689,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       const world = scratchWorld(homebrew as string, version);
       const { brew, brewOk } = world;
 
-      // -- Isolation: this Homebrew's prefix, Caskroom and trust store are scratch.
       expect(brewOk("--prefix").trim()).toBe(world.prefix);
       expect(brewOk("--caskroom").trim()).toBe(join(world.prefix, "Caskroom"));
 
@@ -708,7 +703,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       const seeded = world.savedWork();
       expect(seeded).toHaveLength(3);
 
-      // -- First stable publication: both casks, one tap commit.
       expect(JSON.parse(world.publish("stable", "0.1.25").stdout).changed).toEqual([
         "stable",
         "alpha",
@@ -758,14 +752,12 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(resolveUpdateChannel(world.dataRoot, "0.1.25")).toBe("alpha");
       expect(world.savedWork()).toEqual(seeded);
 
-      // -- The stable cask refuses to install beside it.
       world.cacheDownload(CASK_TOKENS.stable);
       const beside = brew("install", "--cask", `${TAP}/${CASK_TOKENS.stable}`);
       expect(beside.status).not.toBe(0);
       expect(`${beside.stdout}${beside.stderr}`).toMatch(/conflicts with/);
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "alpha" });
 
-      // -- An alpha publication moves alpha alone; the alpha installation upgrades to it.
       expect(JSON.parse(world.publish("alpha", "0.1.26-alpha.43").stdout).changed).toEqual([
         "alpha",
       ]);
@@ -782,7 +774,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "alpha" });
       expect(world.savedWork()).toEqual(seeded);
 
-      // -- A late, older alpha is refused and leaves the tap as it was.
       const tapHead = world.git(world.tap, "rev-parse", "HEAD");
       const late = world.publish("alpha", "0.1.26-alpha.42");
       expect(late.status).toBe(1);
@@ -790,7 +781,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(world.git(world.tap, "rev-parse", "HEAD")).toBe(tapHead);
       expect(world.git(world.tap, "status", "--porcelain")).toBe("");
 
-      // -- A newer stable moves both; alpha receives it and stays on alpha.
       expect(JSON.parse(world.publish("stable", "0.1.26").stdout).changed).toEqual([
         "stable",
         "alpha",
@@ -812,7 +802,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "stable" });
       expect(world.savedWork()).toEqual(seeded);
 
-      // -- A newer alpha is never offered to the stable installation.
       expect(JSON.parse(world.publish("alpha", "0.1.28-alpha.50").stdout).changed).toEqual([
         "alpha",
       ]);
@@ -825,7 +814,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       });
       expect(brewOk("outdated", "--cask", "--greedy").trim()).toBe("");
 
-      // -- Back to alpha: the newer alpha installs and records alpha again.
       brewOk("uninstall", "--cask", CASK_TOKENS.stable);
       world.cacheDownload(CASK_TOKENS.alpha);
       brewOk("install", "--cask", `${TAP}/${CASK_TOKENS.alpha}`);
@@ -847,7 +835,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(world.savedWork()).toEqual(seeded);
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "alpha" });
 
-      // -- Stable also upgrades and overwrites a stale channel marker.
       world.cacheDownload(CASK_TOKENS.stable);
       brewOk("install", "--cask", `${TAP}/${CASK_TOKENS.stable}`);
       expect(world.installedVersion()).toBe("0.1.27");
@@ -906,7 +893,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       );
       const seeded = world.savedWork();
 
-      // -- Stable installed; then a newer stable whose casks an older generator wrote.
       expect(world.publish("stable", "0.1.25").status).toBe(0);
       brewOk("tap", TAP, world.tap);
       if (!version.startsWith("5.")) brewOk("trust", TAP);
@@ -928,7 +914,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
         }
       }
 
-      // -- Republished: the same targets, byte for byte; both casks rewritten.
       const targetsFile = join(brewOk("--repository", TAP).trim(), UPDATE_TARGETS_FILE);
       const targets = readFileSync(join(world.tap, UPDATE_TARGETS_FILE), "utf8");
       const republished = world.republish();
@@ -940,7 +925,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
         brewOk("info", "--json=v2", "--cask", `${TAP}/${token}`);
       }
 
-      // -- The held stable upgrades and records stable; saved work stays.
       expect(await world.offered()).toMatchObject({
         channel: "stable",
         latestVersion: "0.1.26",
@@ -952,7 +936,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "stable" });
       expect(world.savedWork()).toEqual(seeded);
 
-      // -- The republished alpha cask installs and records alpha.
       brewOk("uninstall", "--cask", CASK_TOKENS.stable);
       world.cacheDownload(CASK_TOKENS.alpha);
       brewOk("install", "--cask", `${TAP}/${CASK_TOKENS.alpha}`);
@@ -980,7 +963,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       const older = { name: "Firstmate 3000", bundleId: `${STAND_IN_BUNDLE_ID}.older` };
       const oldRoot = join(world.appSupport, "firstmate-3000");
 
-      // -- Firstmate 3000's tap as it stands: its alpha cask installs Firstmate 3000.
       const oldTap = join(world.dir, "old-tap");
       mkdirSync(join(oldTap, "Casks"), { recursive: true });
       world.git(oldTap, "init", "--quiet", "--initial-branch=main");
@@ -1034,7 +1016,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       writeFileSync(join(oldRoot, "firstmate.db"), "seeded database bytes");
       const seeded = world.savedWork(oldRoot);
 
-      // -- The switch publishes Infinitary under Firstmate 3000's alpha cask.
       const next = "0.4.2-alpha.1";
       const switched = world.commitWritten(
         world.run(process.execPath, [
@@ -1051,7 +1032,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       expect(JSON.parse(switched.stdout).changed).toEqual(["alpha"]);
       world.updateTap(OLD);
 
-      // -- The usual command: Firstmate 3000.app goes, Infinitary.app arrives.
       world.cacheDownload(token, OLD);
       brewOk("upgrade", "--cask", token);
       expect(existsSync(join(world.applications, "Firstmate 3000.app"))).toBe(false);
@@ -1064,7 +1044,6 @@ hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install
       // Firstmate 3000's saved work waits, untouched, for Infinitary's first launch to move it.
       expect(world.savedWork(oldRoot)).toEqual(seeded);
 
-      // -- Infinitary's own reader keeps that tap and that command.
       const tapped = brewOk("--repository", OLD).trim();
       const requests: string[] = [];
       const checker = createUpdateChecker({

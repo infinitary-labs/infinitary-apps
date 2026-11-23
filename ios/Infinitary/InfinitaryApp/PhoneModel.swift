@@ -404,13 +404,11 @@ struct AddressJoin: Equatable {
         return true
     }
 
-    /// Ends the shown computer's connection and what was read through it.
     private func close() {
         connection?.stop(); connection = nil; secrets = nil; google = nil; settings = nil
         pushes?.left()
     }
 
-    /// Connects to the computer the list shows now, or to none, and opens a tap that waited for it.
     private func showKept() {
         close()
         if let mac = kept.shown { connect(mac) }

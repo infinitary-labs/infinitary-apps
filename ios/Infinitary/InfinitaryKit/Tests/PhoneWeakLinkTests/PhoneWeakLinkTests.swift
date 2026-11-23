@@ -134,14 +134,12 @@ import XCTest
         }
         deinit { poll?.cancel() }
 
-        /// How many times the words turned to `words` at or after `since`.
         func said(_ words: String, since: Double = 0) -> Int {
             zip([nil] + seen.map(Optional.some), seen).filter { before, now in
                 now.at >= since && now.reach == words && before?.reach != words
             }.count
         }
 
-        /// Waits until `condition` holds, failing after `seconds`.
         func until(_ seconds: Double, _ what: String, _ condition: () -> Bool) async throws {
             let deadline = now + seconds
             while !condition() {

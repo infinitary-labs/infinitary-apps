@@ -124,7 +124,6 @@ describe("createClassifierSession (the adapted decision model's contract)", () =
     expect(call).not.toHaveProperty("tools");
     const loader = call.resourceLoader as { getSystemPrompt: () => string };
     expect(loader.getSystemPrompt()).toBe(buildKindClassifierInstruction());
-    // And it is the caller's text, served verbatim - not the factory's.
     expect(loader.getSystemPrompt()).toBe(SPEC.instruction);
     // A stateless grain records no contract entry: there is no session file
     // for a corpus to read it back from.

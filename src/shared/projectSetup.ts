@@ -101,7 +101,6 @@ export const SETUP_CARD_FIELDS = {
   care: "care",
 } as const;
 
-/** The card's words. */
 export const SETUP_CARD_WORDS = {
   title: (name: string) => `Add ${name} as a project?`,
   /** A repository joining an existing project (INF-4220). */

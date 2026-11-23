@@ -112,7 +112,6 @@ test("a captain turn is answered with a card, on Claude", async ({ seat }) => {
   for (const entry of headers) {
     expect(entry.authorization).toBe(`Bearer ${MOCK_CLAUDE_OAUTH_TOKEN}`);
   }
-  // The seat is bound to the Claude login, on the model the captain picked.
   const bound = await page.evaluate(() => window.infinitary.settings.getFirstmateAccount());
   expect(bound).toBe(CLAUDE_SEAT_ACCOUNT);
   const model = await page.evaluate(() => window.infinitary.settings.getFirstmateModel());
@@ -140,7 +139,6 @@ test("a steer typed while the Firstmate works lands in its running turn", async 
   await expect.poll(() => mockProvider.heldFirstmate(), { timeout: 45_000 }).toBe(1);
 
   await say(page, FM_SEAT_STEER_WORD);
-  // The client queued the steer into the running session.
   await expect
     .poll(() => claudeQueued(homeDir, FM_SEAT_STEER_WORD), { timeout: 30_000 })
     .toBe(true);

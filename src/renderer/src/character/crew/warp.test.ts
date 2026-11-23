@@ -19,7 +19,6 @@ function seeded() {
   };
 }
 
-/** A home formation of `count` working crewmates, settled on their seats. */
 function formation(count: number, projection?: ConstructorParameters<typeof CrewOrbit>[4]) {
   const model = new CrewOrbit(0, { ...DEFAULT_ORBIT }, seeded(), "adaptive", projection);
   for (let i = 0; i < count; i++) model.spawn(`crew-${i}`, "working", 0);
@@ -56,7 +55,6 @@ function fly(model: CrewOrbit, variant: WarpVariant, start: number, until: numbe
   return { lead, largestStep, frames };
 }
 
-/** Run a model with no warp from `from` to `until`, returning its last frame. */
 function calm(model: CrewOrbit, from: number, until: number): OrbitFrame {
   let frame = model.update(from);
   for (let t = from + FRAME_MS; t <= until; t += FRAME_MS) frame = model.update(t);
@@ -71,7 +69,6 @@ describe("the crew's warp", () => {
         const twin = formation(count);
         const end = SETTLE_MS + WARP.durationMs + 1500;
         const { lead, frames } = fly(warped, variant, SETTLE_MS, end);
-        // Mid-warp the riders leave their seats.
         const mid = frames[Math.round(frames.length * 0.45)] as OrbitFrame;
         const seatAtMid = calm(formation(count), SETTLE_MS, SETTLE_MS + WARP.durationMs * 0.45);
         const moved = mid.crew.some((c) => {
@@ -79,7 +76,6 @@ describe("the crew's warp", () => {
           return seat && Math.hypot(c.x - seat.x, c.y - seat.y) > 10;
         });
         expect(moved).toBe(true);
-        // The warp sped the crew along their orbits, and that lead stays.
         expect(lead).toBeGreaterThan(1000);
         const after = frames[frames.length - 1] as OrbitFrame;
         // The twin never warped; ahead by the same lead, its crew sit where

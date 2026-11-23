@@ -218,7 +218,6 @@ describe("INF-1763 journey placement", () => {
     const report = JSON.parse(readFileSync(fixture, "utf8")) as { suites: ReportSuite[] };
     const whole = journeyTimes(report);
     const dir = scratchDir("journey-times-");
-    // The recorded readings, one file's suite in each job's result.
     expect(report.suites).toHaveLength(2);
     report.suites.forEach((suite, index) => {
       const job = join(dir, ["e2e-results-parallel", "e2e-results-desktop"][index] ?? "");
@@ -271,7 +270,6 @@ const capturedBins = () => {
 
 describe("INF-1987 Linux-calibrated placement", () => {
   it("retains conservative execution until adoption is supported, with an explicit verification-only candidate path", () => {
-    // The accepted plan explicitly requires fallback when adoption is unsupported.
     const source = observations();
     const pick = new Map(
       source
@@ -367,7 +365,6 @@ describe("INF-1987 Linux-calibrated placement", () => {
     if (!desktop) throw new Error("missing desktop report");
     const skipped = desktop.report.files.find((file) => file.skipped > 0);
     if (!skipped) throw new Error("captured report contains no skips");
-    // Project the captured skipped attempts as a skip-only selected file.
     skipped.tests = skipped.skipped;
     skipped.elapsedMs = null;
     skipped.startMs = null;

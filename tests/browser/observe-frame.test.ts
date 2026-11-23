@@ -63,7 +63,6 @@ const turns = (count: number): ObserveTurn[] =>
     kind: "assistant",
     text: `Message ${i}\n${"Wrapped evidence. ".repeat(i % 17)}`,
   }));
-/** A session's detail as the host reads it from its file, with no card threads. */
 const detailOf = (session: ObserveSessionSummary, of: ObserveTurn[]): ObserveSessionDetail => ({
   ...session,
   turns: of,
@@ -78,14 +77,12 @@ type ObserveWindow = Window & {
   oldDetail: Callback | undefined;
 };
 
-/** The frame the program runs in, for this test. */
 let frame: HTMLIFrameElement;
 const view = () => frame.contentWindow as ObserveWindow;
 const doc = () => frame.contentDocument as Document;
 const one = (selector: string) => doc().querySelector<HTMLElement>(selector);
 const scroller = () => one("[data-observe-transcript]") as HTMLElement;
 const list = () => one("[data-observe-session-list]") as HTMLElement;
-/** An element's words as a reader sees them, whitespace collapsed. */
 const words = (element: Element | null) => (element?.textContent ?? "").replace(/\s+/g, " ");
 
 /** Windowing measures newly mounted rows, then fills the corrected range. */
@@ -98,7 +95,6 @@ async function publish<N extends ReadName>(read: N, value: ReadResult<N>): Promi
   await settle();
 }
 
-/** Sizes the frame, as the window the program fills. */
 function size(width: number, height: number): void {
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;
@@ -118,7 +114,6 @@ function inViewport(element: Element | null | undefined): Promise<boolean> {
   });
 }
 
-/** The row in the transcript whose words include `text`. */
 function transcriptRow(text: string): HTMLElement | undefined {
   return [...scroller().querySelectorAll<HTMLElement>("[data-observe-turn]")].find((row) =>
     words(row).includes(text),
@@ -270,7 +265,6 @@ test("unchanged pushes and unrelated summary changes leave the reader's text sel
   expect(view().getSelection()?.toString()).toBe(selected);
 });
 
-// Focused copy checks exercise the real frame program, not source strings.
 test("discloses category and price coverage without turning ledger rows into turns", async () => {
   const usage: ObserveUsageTotals = {
     input: 47,

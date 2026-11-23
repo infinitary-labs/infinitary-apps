@@ -200,7 +200,6 @@ describe("createQuotaHttp", () => {
   it("stops reading a body when its caller cancels part way through", async () => {
     const endpoint = await localEndpoint((_request, response) => {
       response.writeHead(200, { "content-type": "application/json" });
-      // Half an answer, then nothing more.
       response.write('{"ok":');
     });
     try {

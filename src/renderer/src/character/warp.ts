@@ -77,7 +77,6 @@ export function warpSpeed(et: number): number {
 
 /** Distance covered per second of warp at full speed. */
 export const TRAVEL_PER_SECOND = 1.15;
-/** Samples of the travel table. */
 const TRAVEL_STEPS = 600;
 /** Distance travelled by each sample, integrated once so a held frame is exact; the phone reads it generated. */
 export const WARP_TRAVEL = (() => {
@@ -93,7 +92,6 @@ export const WARP_TRAVEL = (() => {
   return table;
 })();
 
-/** The distance the warp has covered by `et`. */
 export function warpTravel(et: number): number {
   const f = clamp01(et) * TRAVEL_STEPS;
   const i = Math.floor(f);
@@ -124,8 +122,6 @@ export type WarpFrame = {
   coreR: number;
   heat: number;
 };
-
-// ---- the first mate's own pose -------------------------------------------------
 
 /**
  * How the first mate carries itself through each warp: extra spin on its
@@ -230,8 +226,6 @@ export function placeSphereVertices(
     p[1] = sy + (c + Math.sin(ang) * rs * 1.02 - sy) * bi;
   }
 }
-
-// ---- drawing ------------------------------------------------------------------
 
 export type Rgb = [number, number, number];
 

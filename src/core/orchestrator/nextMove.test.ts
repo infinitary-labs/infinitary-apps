@@ -27,7 +27,6 @@ fakeCrewTimersEachTest();
 describe("the next-move check (INF-3846 piece 2)", () => {
   const { clock, clockedSetup } = idleLadderHarness();
 
-  /** The harness, its first mate live or paused, and a pass of the ladder at `ms` past the start. */
   function harness(firstmate: "live" | "paused" = "live") {
     const h = wakesThroughInbox(clockedSetup(fakeCrewmate()), firstmate);
     const start = clock.now;

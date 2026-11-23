@@ -216,7 +216,6 @@ const BUCKET_RANK: Record<Slot, number> = {
   premium: 3,
 };
 
-/** True when the served slot has less reasoning than the requested one. */
 export function isDowngrade(requested: IntelligenceBucket, served: IntelligenceBucket): boolean {
   return BUCKET_RANK[served] < BUCKET_RANK[requested];
 }
@@ -288,11 +287,6 @@ export function allowanceless(ref: PiModelRef): boolean {
   );
 }
 
-/**
- * Collects `slotted` into the slots each offering sits in - more than one
- * row for the same key (an offering placed in more than one slot) adds to
- * the same list rather than overwriting it.
- */
 function slotMap(slotted: SlottedRef[] | undefined): Map<string, Slot[]> | undefined {
   if (!slotted) return undefined;
   const map = new Map<string, Slot[]>();
@@ -349,7 +343,6 @@ export function route(input: RoutingInput): RoutingDecision {
     return slots.get(`${ref.provider}/${ref.id}`);
   };
 
-  // Pins always win, if Pi can serve them and the provider is offered.
   for (const pin of input.pins) {
     const piProvider = servedProviderOf(pin.provider);
     if (!isOfferedProvider(piProvider) && !isCustomApiProvider(piProvider)) continue;
@@ -370,7 +363,6 @@ export function route(input: RoutingInput): RoutingDecision {
     }
   }
 
-  // A preference goes next, only while it passes the ladder's own checks.
   let preferPassed: string | undefined;
   if (input.prefer) {
     const preferred = `${input.prefer.provider}/${input.prefer.id}`;

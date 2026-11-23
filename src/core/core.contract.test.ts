@@ -30,11 +30,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
 );
 
 /**
- * A client that knows only the published contract, against the whole core
- * served over its connection (tests/helpers/bootedCore.ts).
- */
-
-/**
  * The published contract from outside (docs/contract.md): a client that knows
  * the home only through docs/contract.json, run as its own plain-Node process
  * against the real core and the real connection. Each case answers the stall
@@ -96,14 +91,12 @@ describe("a client that knows only the published contract", () => {
     delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
   });
 
-  /** The captain makes a link on this Mac; a view uses it and keeps the grant. */
   const pairView = async (name: string, where = at) => {
     const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at: where }]);
     await connection.settled();
     return claimLink(link, { ...AT_FIRST_LAUNCH, name });
   };
 
-  /** Answers a task's stall card with Discard, as the scripted client, and reads the feed after. */
   const answerAndRead = async (client: ScriptedClient, taskId: (typeof stuck)[number]) => {
     const cardId = `card-stall-${taskId}`;
     const listed = await client.ask("inf:cards:list", []);

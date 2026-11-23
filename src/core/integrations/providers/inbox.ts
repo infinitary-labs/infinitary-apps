@@ -52,7 +52,6 @@ import { INFINITARY_COMMAND } from "../commandWords";
  * Data section, removes the folder.
  */
 
-/** The one event the inbox tells. */
 export const INBOX_EVENT: IntegrationEventSpec = {
   name: "event_arrived",
   label: "An event arrives",
@@ -96,7 +95,6 @@ export type InboxReceipt = {
   listening: number;
 };
 
-/** One line of the receipts read. */
 export type InboxReceiptLine = {
   seq: number;
   event: string;
@@ -128,7 +126,6 @@ export type InboxWake = {
  */
 export type OldNameWarning = Pick<Card, "id" | "title" | "meta" | "body" | "actions">;
 
-/** The card for a recorded run of the old name: when, where, and what to change. */
 export function oldNameWarning(run: { at: number; cwd: string }): OldNameWarning {
   const words = INBOX_WORDS.oldNameWarning;
   const when = formatDateTime(run.at, { dateStyle: "medium", timeStyle: "short" });
@@ -214,7 +211,6 @@ export class Inbox {
     return this.kept && !this.paused();
   }
 
-  /** Whether the person switched the inbox off, as the integrations' settings say. */
   pausedThrough(paused: () => boolean): void {
     this.paused = paused;
   }
@@ -232,7 +228,6 @@ export class Inbox {
     this.lookOldName();
   }
 
-  /** The Scheduler's look at once after a drop, how many rules listen, and the rule turning on adds. */
   wakeThrough(wake: InboxWake): void {
     this.wake = wake;
   }
@@ -284,7 +279,6 @@ export class Inbox {
     }
   }
 
-  /** What a program asks through its door. */
   readonly door: InboxDoor = {
     note: (input) => this.note(input),
     receipts: (after) => this.receipts(after),
@@ -450,7 +444,6 @@ export class Inbox {
     this.lookOldName();
   }
 
-  /** The newest recorded run, warned about unless its folder already was. */
   private lookOldName(): void {
     const run = this.oldName();
     if (!this.warn || !run || this.warnedFolders().includes(run.cwd)) return;
@@ -568,7 +561,6 @@ export class Inbox {
   }
 }
 
-/** An event in one line: where it came from, when a program named it, and its words. */
 function summaryOf(line: EventLine): string {
   const words = line.text.replace(/\s+/g, " ").trim();
   return line.source ? `from ${line.source}: ${words}` : words;

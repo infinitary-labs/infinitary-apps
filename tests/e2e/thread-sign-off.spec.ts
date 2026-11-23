@@ -75,7 +75,6 @@ test("a crewmate's signed-off line under its answer ends the card in front of th
       contentType: "application/json",
     });
 
-    // Its Close takes it off the stack.
     await closeEndedCard(page, SIGN_OFF_CARD_TITLE);
   } finally {
     await launched.close();

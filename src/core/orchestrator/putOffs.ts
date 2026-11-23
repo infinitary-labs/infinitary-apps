@@ -121,7 +121,6 @@ export class PutOffs {
       });
   }
 
-  /** The put-off kept on a closed card, if any. */
   kept(cardId: string): KeptPutOff | undefined {
     return this.host.cardStore.putOffOf(cardId);
   }
@@ -191,7 +190,6 @@ export class PutOffs {
     this.host.raise(card);
   }
 
-  /** Let go of a closed task's put-offs and their rules, raising nothing. */
   private letGo(taskId: string): void {
     for (const { card, putOff } of this.forTask(taskId)) this.drop(card, putOff);
   }

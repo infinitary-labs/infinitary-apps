@@ -16,7 +16,6 @@ import { placedTaskIdSchema } from "./workIdentity";
 
 const doneSchema = z.object({ ok: z.literal(true) });
 
-/** One order about a task's browser on that computer: the task it names. */
 function aboutBrowser<T extends z.ZodRawShape>(shape: T) {
   return z.tuple([z.object({ task: placedTaskIdSchema, ...shape })]);
 }

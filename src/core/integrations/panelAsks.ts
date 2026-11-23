@@ -64,7 +64,6 @@ export class PanelAsks {
     this.entries = this.read();
   }
 
-  /** The open or turned-down ask for this panel and action, if any. */
   held(panel: string, integration: string, action: string): Entry | undefined {
     return this.entries.find(
       (entry) =>
@@ -142,7 +141,6 @@ export class PanelAsks {
     if (this.entries.length !== before) this.changed();
   }
 
-  /** Hears every change; returns the unsubscribe. */
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {

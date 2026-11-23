@@ -99,7 +99,6 @@ export type RunAgentContext = {
   };
 } & RunManager;
 
-/** Where this user's own systemd reads their services. */
 export function userUnitsDir(env: NodeJS.ProcessEnv, homeDir: string): string {
   const xdg = env.XDG_CONFIG_HOME?.trim();
   return join(xdg && isAbsolute(xdg) ? xdg : join(homeDir, ".config"), "systemd", "user");
@@ -126,7 +125,6 @@ function unitFile(context: Pick<RunAgentContext, "unitsDir" | "label">): string 
   return join(context.unitsDir, `${context.label}.service`);
 }
 
-/** Whether the agent the window set up is in place: either file of a Mac's agent, or the Linux unit. */
 export function runAgentInPlace(context: RunAgentContext): boolean {
   if ("schtasks" in context) return existsSync(runTaskFile(context.dataDir));
   return "launchctl" in context
@@ -159,7 +157,6 @@ function macAgentKept(file: string): { settings?: string; log?: string } {
   };
 }
 
-/** Writes a Mac's agent at `file`, keeping what the agent at `from` kept (`macAgentKept`). */
 function writeMacAgent(context: RunAgentContext, file: string, from = file): void {
   const kept = macAgentKept(from);
   mkdirSync(dirname(file), { recursive: true });
@@ -176,7 +173,6 @@ function writeMacAgent(context: RunAgentContext, file: string, from = file): voi
   );
 }
 
-/** Registers the Windows task for this window's program, its sign-in trigger as asked. */
 function registerWindowsTask(
   context: RunAgentContext & TaskScheduler,
   atLogin: boolean,

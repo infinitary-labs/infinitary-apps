@@ -15,7 +15,6 @@ import { describeStatus } from "./settleService";
 import { decisionDropRefusal, discardedText } from "./settleWords";
 import { type TaskClosing, workspaceOf } from "./taskClose";
 
-/** What one drop is asked: who asks it, and in which of the two words. */
 export type DropInput = {
   /**
    * The captain's own drop (a Drop task, a click on a Discard button)
@@ -38,7 +37,6 @@ export type DropInput = {
 /** A drop the record refused at once, before anything was stopped. */
 type Refused = SettleOutcome & { ok: false };
 
-/** Work that never started: no crewmate ran it and it holds no working copy. */
 function neverStarted(record: TaskRecord): boolean {
   return (
     record.status === "open" &&
@@ -118,7 +116,6 @@ export class TaskDrop {
     return undefined;
   }
 
-  /** Drop the task, by the one set of rules. */
   async drop(taskId: string, input: DropInput): Promise<SettleOutcome> {
     const refused = this.refusal(taskId, input);
     if (refused) return refused;

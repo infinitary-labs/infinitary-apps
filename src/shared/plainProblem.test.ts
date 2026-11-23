@@ -144,7 +144,6 @@ describe("plainProblem", () => {
       ],
       ["GitHub answered 503 to GET /repos/o/r/pulls", unreachable],
       ["could not reach GitHub: fetch failed", unreachable],
-      // GitLab's answers, on gitlab.com and a self-hosted server, as its forge words them.
       [
         "GitLab answered 403 to POST /projects/g%2Fs%2Fapp/merge_requests: 403 Forbidden",
         "the project's host did not allow it - ask the project's owner for access",

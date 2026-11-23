@@ -117,7 +117,6 @@ describe("an old home that returns", () => {
     home.watch.start();
     await vi.waitFor(() => expect(home.steppedDown).toHaveLength(1));
 
-    // It dialed as its own way back, pinned to its own key, at the copy's addresses.
     expect(home.heard[0]).toMatchObject({
       at: "10.0.0.7:4800",
       also: ["studio.local:4800"],
@@ -138,7 +137,6 @@ describe("an old home that returns", () => {
       { task: "After the copy", at: 7_000, text: "Merged" },
       { task: "After the copy", at: 6_000, text: "Pushed the branch" },
     ]);
-    // The same list is kept beside where its record goes aside.
     const kept = JSON.parse(
       readFileSync(
         join(home.userData, MOVED_AWAY_DIR, "took-over-take-1", NEVER_SENT_FILE),
@@ -290,7 +288,6 @@ describe("two homes with one number", () => {
     void home.settled.settled().then(() => {
       acted = true;
     });
-    // Still unreached on the next look, it stays held.
     home.watch.look();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(acted).toBe(false);

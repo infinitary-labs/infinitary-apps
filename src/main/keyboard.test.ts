@@ -187,7 +187,6 @@ describe("shellCommands", () => {
     expect(Object.keys(commands)).toEqual(SHELL_COMMAND_IDS);
     commands["focus.main-message"]();
     expect(sent).toEqual([["inf:keyboard:command", { command: "focus.main-message" }]]);
-    // A panel's command is told the same way, by its id alone.
     panel("panel:reading-list/open");
     expect(sent).toEqual([
       ["inf:keyboard:command", { command: "focus.main-message" }],
@@ -480,7 +479,6 @@ describe("InstalledKeymap", () => {
     expect(snapshot.panels).toEqual([open]);
     expect(keysOf(snapshot.bindings, open.id)).toEqual([{ key: "e", meta: true }]);
     expect(keymap.setPanels([open]).version).toBe(2);
-    // A person's change keeps the panels'.
     keymap.save({ ...DEFAULT_SAVED_KEYMAP, keys: { "settings.open": [] } });
     expect(keymap.panels()).toEqual([open]);
     expect(keysOf(keymap.bindings(), open.id)).toEqual([{ key: "e", meta: true }]);

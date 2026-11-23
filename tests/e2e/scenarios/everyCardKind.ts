@@ -1,14 +1,11 @@
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import type { Scenario } from "../mockProvider";
 
-/** Marker prompt: the mock crewmate answers with emit_card tool calls first. */
 export const EMIT_CARDS_PROMPT_MARKER = "show every card kind";
 
-/** The working preview's own first button and the decision's default action, as the card-kinds crewmate labels them. */
 export const MOCK_PREVIEW_HOLD_LABEL = "Hold course";
 export const MOCK_CHOICE_DEFAULT_LABEL = "Await the queue";
 
-/** The class the preview's own stylesheet lays its row of choices out by. */
 const MOCK_PROTOTYPE_ROW_CLASS = "course-row";
 /**
  * A working preview, which is what a decision body may be: it brings a
@@ -28,12 +25,10 @@ export const MOCK_PROTOTYPE_HTML = [
 export const MOCK_LONG_ACTION_LABEL =
   "Mock the clock while preserving every queued write in its original execution order";
 
-/** The card-kinds crewmate's three cards (`EMIT_CARDS_PROMPT_MARKER`): its decision, its note and its working preview. */
 export const MOCK_CHOICE_CARD_TITLE = "Two ways to fix the flaky test";
 export const MOCK_QUOTA_NOTE_TITLE = "Quota note";
 export const MOCK_PREVIEW_CARD_TITLE = "Course preview";
 
-/** The decision the card-kinds crewmate shows first. */
 const MOCK_CHOICE_CARD = {
   name: "emit_card",
   args: {
@@ -105,7 +100,6 @@ const EVERY_CARD_KIND = [
   },
 ] satisfies ScriptedCall[];
 
-/** The card-kinds crewmate shows its three cards at once, then closes like any crewmate. */
 export const everyCardKind: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

@@ -394,7 +394,6 @@ export class CrewSessions {
     return leading;
   }
 
-  /** A spawn that failed before the crewmate ran leaves nothing behind. */
   async cleanupFailedSpawn(task: TaskRuntime): Promise<void> {
     await task.unsubscribe?.();
     task.session?.dispose();
@@ -410,17 +409,6 @@ export class CrewSessions {
     this.core.facts.broadcastCrewCounts();
   }
 
-  /**
-   * The steer data plane, on the durable inbox: the message is recorded on
-   * the task's lane FIRST, then delivered - into the running turn on a
-   * native-steer backend, as the next turn otherwise. A streaming task on a
-   * `followup-queue` backend keeps the row pending until its turn ends, and
-   * the return value says so - the guidance is neither dropped nor reported
-   * as if the work in flight had heard it. A delivery that fails right now
-   * returns `recorded-retrying`: the row is durable, the tick sweep retries
-   * it, and the ladder escalates loudly if it keeps failing. A message to a
-   * task that has not started yet is `recorded-queued` (INF-3060).
-   */
   /**
    * Delivers one file into a task's hand-over folder on the computer it
    * runs on, verified and 0600, named by its sha256 and its own name
@@ -811,8 +799,6 @@ export class CrewSessions {
     const livePersonal = this.core.facts.isPersonalTask(record.id)
       ? this.core.options.personal
       : undefined;
-    // The model the open asks for: a move's, the one routing picked, or the
-    // task's routed model as it had it.
     const asked: Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> = move
       ? { model: move.model, thinkingLevel: move.thinkingLevel }
       : rerouted
@@ -1291,7 +1277,6 @@ export class CrewSessions {
     void this.core.watch.sweepGates(this.core.now());
   }
 
-  /** Stop a task's live crewmate: its turn aborted, its runtime gone. */
   stopRuntime(taskId: string): Promise<void> | undefined {
     const runtime = this.core.tasks.get(taskId);
     if (!runtime) return undefined;
@@ -1482,7 +1467,6 @@ export class CrewSessions {
   }
 }
 
-/** Why a task on a subscription this build no longer offers cannot be resumed. */
 export function retiredResumeText(taskId: string): string {
   return `Task ${taskId} ran on a subscription Infinitary no longer offers, so its session cannot be resumed. Spawn a follow-up crewmate instead.`;
 }

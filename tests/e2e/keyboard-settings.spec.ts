@@ -13,10 +13,8 @@ import {
   startRecording,
 } from "./windowKeys";
 
-/** The keys this journey records and reads, as this computer draws them. */
 const COMMAND_P = keyWords({ key: "p", meta: true });
 const COMMAND_L = keyWords({ key: "l", meta: true });
-/** The app menu's accelerator for the recorded ⌘P, and for Open Settings' own key. */
 const COMMAND_P_ACCELERATOR = chordAccelerator({ key: "p", meta: true });
 const SETTINGS_OPEN_ACCELERATOR = menuAccelerator("settings.open");
 
@@ -29,7 +27,6 @@ const SETTINGS_OPEN_ACCELERATOR = menuAccelerator("settings.open");
  * keys puts every key back.
  */
 
-/** Opens Keyboard settings the keyboard's way: command search, then its row. */
 async function openKeyboardSettings(app: LaunchedApp["app"], page: Page): Promise<void> {
   await pressWindowKey(app, "k", ["meta"]);
   const search = commandSearch(page);
@@ -105,7 +102,6 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
       await expect(keyboard.verdict("cards.next")).toContainText(
         KEYBOARD_COMMANDS["focus.main-message"].label,
       );
-      // Nothing moved yet: ⌘L still belongs to the main message.
       await expect(keyboard.keys("focus.main-message").locator("kbd")).toHaveText([COMMAND_L]);
       await endRecording(app, page, "Enter");
       await expect(keyboard.keys("cards.next").locator("kbd")).toHaveText([COMMAND_L]);
@@ -160,7 +156,6 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
       await expect(keyboard.keys("focus.main-message").locator("kbd")).toHaveText([COMMAND_L]);
       if (HAS_APP_MENU)
         expect(await menuItemAccelerator(app, "settings-open")).toBe(SETTINGS_OPEN_ACCELERATOR);
-      // Command search reads the same installed keys.
       await pressWindowKey(app, "k", ["meta"]);
       await expect(commandSearch(page).row("focus.main-message").locator("kbd")).toHaveText(
         COMMAND_L,

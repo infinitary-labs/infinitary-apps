@@ -108,7 +108,6 @@ describe("CostLimits", () => {
     h.crewmate.stops[0]?.();
     await tick();
     expect(h.supervisor.costLimits.heldBy(h.taskId)).toBeDefined();
-    // A second response in the held family raises no second card.
     h.respond(1);
     await tick();
     expect(h.cards().filter((each) => each.id === costCardId(h.taskId))).toHaveLength(1);
@@ -133,7 +132,6 @@ describe("CostLimits", () => {
     expect(answer).toContain("passed its $50 cost limit");
     expect(answer).toContain(costCardId(h.taskId));
     expect(answer).not.toContain("account is not answering");
-    // The captain's answer on that card releases it.
     h.supervisor.cardActions.act(costCardId(h.taskId), "allow-more");
     await tick();
     expect(h.supervisor.facts.laneHold(h.taskId)).toBeUndefined();
@@ -163,7 +161,6 @@ describe("CostLimits", () => {
     await tick();
     expect(h.store().limitOf("task", h.taskId)).toEqual({ none: true });
     expect(h.supervisor.costLimits.heldBy(h.taskId)).toBeUndefined();
-    // Spending more asks nothing now.
     h.respond(200);
     await tick();
     expect(h.store().hold(h.taskId)).toBeUndefined();
@@ -214,7 +211,6 @@ describe("CostLimits", () => {
       actor: "host",
     });
     h.respond(40);
-    // The part's own response lands in its parent's family.
     h.usage().record({
       taskId: "part-1",
       usage: { input: 10_000, output: 900, cost: 12 },

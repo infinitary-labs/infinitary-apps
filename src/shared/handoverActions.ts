@@ -19,7 +19,6 @@ import { workSetupWordsInEnglish } from "./workSetupWords";
  * these runs anything from the card; the captain's click in Settings does.
  */
 
-/** A card id's part from an id: lowercase words joined by dashes. */
 function slug(id: string): string {
   return id
     .toLowerCase()
@@ -44,7 +43,6 @@ function devicesValue(current: unknown): Record<string, unknown> {
   };
 }
 
-/** The computer that runs work a line names, or the refusal that says why there is none. */
 function workComputer(current: unknown, deviceId: unknown): { device: DeviceView; label: string } {
   const device = (current as DeviceView[]).find((candidate) => candidate.id === deviceId);
   if (!device) throw new Error("No device with that id is on the list. Look with app_state.");
@@ -84,7 +82,6 @@ const SECRETS_PAGES = SECRETS_AREAS.map((area) => area.value) as [
   ...(typeof SECRETS_AREAS)[number]["value"][],
 ];
 
-/** What each Secrets page holds, as its card says it. */
 const SECRETS_PAGE_SAYS: Record<(typeof SECRETS_PAGES)[number], string> = {
   decisions: "It lists the decisions you saved on secret requests, and removes one.",
   phone: "It lists the phones that approve secret requests, and stops one approving.",

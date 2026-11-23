@@ -182,7 +182,6 @@ test.describe
           await expect
             .poll(() => panelsPreference(safe), { timeout: 30_000 })
             .toEqual({ enabled: false, offReason: "safe-mode" });
-          // Nothing personal is mounted, and nothing personal is on a rail.
           expect(await mountedIds(safe)).toEqual([]);
           await expect(safe.page.locator('[data-side-panel="shaky"]')).toHaveCount(0);
           // The captain is told, in the feed, what happened and where to undo it.

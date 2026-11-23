@@ -239,7 +239,6 @@ function homeAt(
     tasks,
     key,
     deviceId: joined.grant.deviceId,
-    /** This Mac moves to another network. */
     moveTo: (next: string) => {
       interfaces = network(next);
     },
@@ -322,7 +321,6 @@ describe("each copy's version", () => {
       connection.running.push({ deviceId, role: "view", version });
       connection.tellView({ deviceId, contact: "in-reach" });
     };
-    // Nothing open: nothing is said of any app's version.
     expect(row(second)?.appVersion).toBeUndefined();
 
     open(second, "0.8.3");
@@ -330,7 +328,6 @@ describe("each copy's version", () => {
     open(phone, "0.1.0 (212)");
     expect(row(phone)?.appVersion).toEqual({ app: "0.1.0 (212)" });
 
-    // A Mac's work and its window, both on this computer's version.
     connection.tell({ deviceId: imac, contact: "in-reach" });
     connection.tellVersion(imac, { contract: PROTOCOL_VERSION, app: "0.8.4", takesWork: true });
     open(imac, "0.8.4");
@@ -456,7 +453,6 @@ describe("a computer behind a change a turn needs", () => {
     expect(computers.takesNoWorkUntilUpdated(mini)).toBe(true);
     expect(row()?.otherVersion).toMatchObject({ than: "older", takesWork: false });
 
-    // Updated: it lists the change and takes work again.
     connection.tellVersion(mini, {
       contract: PROTOCOL_VERSION,
       app: "0.8.3",
@@ -566,14 +562,12 @@ describe("a Mac on your list twice", () => {
     const listed = () => home.computers.list().map((device) => device.id);
     const before = listed();
 
-    // Signed by the window's own key, not the work's.
     const forged = foldProof(window, { ...work, grant: { ...work.grant, key: window.grant.key } });
     await expect(home.computers.foldAsked([forged], asWindow)).rejects.toThrow(/not signed/);
     // Another user on the same Mac stays its own row.
     await expect(home.computers.foldAsked([foldProof(window, other)], asWindow)).rejects.toThrow(
       /same user|one user/,
     );
-    // Asked by no window at all.
     await expect(
       home.computers.foldAsked([foldProof(window, work)], { kind: "captain" }),
     ).rejects.toThrow(/own window/);
@@ -641,14 +635,12 @@ describe("a Mac whose window is connected and whose work is not in reach", () =>
   it("says why its window could not set up its work, until its work is in reach or its window goes", () => {
     const { connection, computers, deviceId, listed } = joinedMac();
     connection.tellView({ deviceId, contact: "in-reach" });
-    // Nothing is said before its window says what it found.
     expect(listed()).toMatchObject({ inReach: false, controlling: true });
     expect(listed()).not.toHaveProperty("workSetup");
 
     computers.heardWorkSetup(deviceId, { state: "blocked", reason: "background-off" });
     expect(listed()?.workSetup).toEqual({ state: "blocked", reason: "background-off" });
 
-    // Its work reaches this Mac: nothing more to say.
     connection.tell({ deviceId, contact: "in-reach" });
     expect(listed()).not.toHaveProperty("workSetup");
     connection.tell({ deviceId, contact: "gone" });
@@ -695,7 +687,6 @@ describe("a Mac whose window is connected and whose work is not in reach", () =>
     computers.heardWorkSetup(deviceId, { state: "starting", copyGone: true });
     const name = deviceLabel(listed() as DeviceView);
     expect(said()).toEqual([m.devicesWorkCopyGone({ device: name })]);
-    // A later report without it says nothing more.
     computers.heardWorkSetup(deviceId, { state: "running" });
     expect(said()).toEqual([m.devicesWorkCopyGone({ device: name })]);
   });
@@ -739,7 +730,6 @@ describe("your devices while this Mac's network moves", () => {
     // Until the connection listens there, nothing says the address changed.
     expect(mini()).toBeUndefined();
 
-    // It listens where this Mac is now: the list says so, with no link made.
     connection.listensAt([`127.0.0.1:${PORT}`, `192.168.65.77:${PORT}`]);
     expect(mini()).toBe(true);
   });
@@ -766,7 +756,6 @@ describe("your devices while this Mac's network moves", () => {
     connection.listensAt([`127.0.0.1:${PORT}`, `192.168.65.2:${PORT}`]);
     expect(mini()).toMatchObject({ heldOnLocalNetwork: true });
 
-    // Its work reaches this Mac once, and nothing holds it from then on, in reach or not.
     connection.tell({ deviceId, contact: "in-reach" });
     expect(mini()).toMatchObject({ inReach: true });
     expect(mini()).not.toHaveProperty("heldOnLocalNetwork");
@@ -809,7 +798,6 @@ describe("your devices after a task changes", () => {
     const before = measured();
     expect(before.tasks).toBe(2);
 
-    // Twenty more run there and twenty here; ten wait there and ten closed there.
     for (let index = 0; index < 20; index += 1) {
       seed(`more-${index}`, "idle", deviceId);
       seed(`here-${index}`, "idle");
@@ -825,7 +813,6 @@ describe("your devices after a task changes", () => {
     expect(after.rows - before.rows).toBe(20);
     expect(after.parses).toBe(before.parses);
 
-    // A task change pushes the list with the count it moved to.
     seed("started", "idle", deviceId);
     expect(tasksOn(pushed.at(-1))).toBe(23);
     tasks.placement.setDevice("more-0", null);

@@ -81,7 +81,6 @@ describe("the card size check (INF-3887)", () => {
       [...parts.map((part) => part.length)].sort((a, b) => b - a),
     );
     const refusal = cardSizeRefusal(over, "Shorten it.") ?? "";
-    // Six parts by name, largest first, then one count for every other part.
     let at = refusal.indexOf("in characters: ");
     for (const part of parts.slice(0, 6)) {
       const next = refusal.indexOf(part.label, at + 1);

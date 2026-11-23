@@ -81,7 +81,6 @@ export function standbyCopies(
         }
       : undefined;
   };
-  // Whether a computer in reach lists a contract change.
   const speaks = (deviceId: string, change: string) =>
     workDevices.inReach(deviceId) &&
     (workDevices.version(deviceId)?.changes?.includes(change) ?? false);
@@ -254,7 +253,6 @@ export function standbyCopies(
     if (channel === "inf:devices") sweep();
     if (channel === "inf:secrets:changed") void secrets.seal();
   });
-  // What this first mate uses that the computer has no sign-in of its own for.
   const missingSignIns = async (deviceId: string) => {
     const there = await services.deviceSignIns.signInsOf(deviceId).catch(() => null);
     if (!there) return undefined;

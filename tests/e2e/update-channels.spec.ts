@@ -35,7 +35,6 @@ import { pressKey, runFromSearch } from "./windowKeys";
 
 const artifacts = () => test.info().outputPath("update-channels");
 
-/** An HTTP answer. */
 type Reply = { status: number; body?: unknown };
 
 /** The public tap as the update reader sees it: the targets file and the legacy release list. */
@@ -165,7 +164,6 @@ async function expectOffer(
     .toEqual([target(offer.version).releaseUrl]);
 }
 
-/** Nothing is offered: the typed status says so and the indicator stays away. */
 async function expectNoOffer(page: Page, expected: Partial<UpdateStatus>): Promise<void> {
   expect(await updateStatus(page)).toMatchObject({ ...expected, updateAvailable: false });
   await expect(page.getByRole("button", { name: /Update available/ })).toHaveCount(0);
@@ -205,7 +203,6 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
   let air: LaunchedApp | undefined;
   try {
     const invite = await pro.page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
-    // This Mac runs an older alpha, and joins it with the link.
     air = await launchApp({
       env: {
         ...tap.env,
@@ -243,14 +240,12 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
       )
       .toBe(words);
     await expect(promptInput(air.page)).toHaveValue("");
-    // The way to act on it: this Mac's own notice, as the other Mac shows its own.
     await expectOffer(air, {
       version: "0.1.30-alpha.5",
       installed: "0.1.28-alpha.3",
       channel: "alpha",
       picture: "view-newer-there",
     });
-    // That notice is this Mac's, not the other one's: that Mac is offered nothing.
     await expectNoOffer(pro.page, { currentVersion: "0.1.30-alpha.5", channel: "alpha" });
   } finally {
     await air?.close();

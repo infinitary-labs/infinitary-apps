@@ -111,7 +111,6 @@ export type PlacedHome = {
   files?: FileRouter;
   placed: PlacedSessions;
   devices: WorkDevices;
-  /** What each computer said of its own sign-ins. */
   signIns: DeviceSignIns;
   /** Each computer's setup card, and the GitHub card its project raises. */
   setup: DeviceSetup;

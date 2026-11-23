@@ -2,7 +2,6 @@ import { SECRET_BRING_CARD_WORDS, SECRET_BRING_ELSEWHERE_HIDDEN } from "@shared/
 import { escapeCardText } from "../orchestrator/cardText";
 import type { WaitingBring } from "./bring";
 
-/** The card id of a bring, by its asking task and the asker's id. */
 export function bringCardId(task: string, id: string): string {
   return `card-secrets-bring-${task}-${id}`;
 }

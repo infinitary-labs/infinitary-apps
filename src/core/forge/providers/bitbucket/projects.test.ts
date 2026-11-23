@@ -29,7 +29,6 @@ function repository(fullName: string, updatedOn: string, isPrivate = true) {
   };
 }
 
-// The few fields each listing asks Bitbucket for, as the requests carry them.
 const WORKSPACES = "/user/workspaces?pagelen=100&fields=next,values.workspace.slug";
 const repos = (slug: string) =>
   `/repositories/${slug}?role=member&sort=-updated_on&pagelen=100&fields=next,values.full_name,values.is_private,values.updated_on,values.links.html.href`;
@@ -122,7 +121,6 @@ describe("Bitbucket projects", () => {
     expect(listed.complete).toBe(false);
     expect(fetcher).toHaveBeenCalledTimes(10);
     expect(listed.projects[0]?.fullName).toBe("small/newest");
-    // The busy workspace's newest pages are read; only its older ones are left.
     expect(listed.projects.map((project) => project.fullName).slice(1)).toEqual(
       Array.from({ length: 8 }, (_, index) => `busy/app-${index + 1}`),
     );

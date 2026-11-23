@@ -145,7 +145,6 @@ public enum PhoneRecord {
             ?? PhoneMessages.phoneRecordWaitLine(event: event, label: wait.label)
     }
 
-    /// The wait's next event still ahead, by its kind.
     static func waitNext(_ kind: String, time: String) -> String {
         switch kind {
         case "next-read": PhoneMessages.phoneRecordWaitNextRead(time: time)
@@ -156,7 +155,6 @@ public enum PhoneRecord {
         }
     }
 
-    /// The wait's next event already past its time, by its kind.
     static func waitDue(_ kind: String, time: String) -> String {
         switch kind {
         case "next-read": PhoneMessages.phoneRecordWaitDueRead(time: time)
@@ -213,7 +211,6 @@ public enum PhoneRecord {
         public let danger: Bool
     }
 
-    /// What the attention sentence says, or nil when nothing needs saying.
     public static func attention(_ task: PhoneTask, now: Double, zone: TimeZone = .current) -> Attention? {
         let live = task.status != "done" && task.status != "dropped"
         var title = "", guidance = "", urgent = false, danger = false

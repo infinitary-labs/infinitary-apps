@@ -31,7 +31,6 @@ const PANEL = "automation";
 const RUNNING = "Weekly dependency audit";
 const DRAFT = "Release notes reminder";
 
-/** The panel on its rail. */
 function automationPanel(page: Page) {
   return page.locator(`[data-side-panel="${PANEL}"]`);
 }
@@ -41,7 +40,6 @@ function openAutomation(page: Page) {
   return panelHeaderButton(page, PANEL, "open").getByRole("button");
 }
 
-/** Settings → Automation at its full list: a row for each rule, and no sheet. */
 async function expectFullList(page: Page, ids: readonly string[]): Promise<void> {
   const tab = settingsSection(page, PANEL);
   await expect(tab).toBeVisible();

@@ -216,7 +216,6 @@ describe("the app as a view of another Mac", () => {
     expect(await air.shell.dispatch("inf:app:healthcheck", [])).toMatchObject({
       platform: "other-os",
     });
-    // What stays there is refused here, and never sent.
     await expect(air.shell.dispatch("inf:voice:status", [])).rejects.toThrow(
       "answered only on the computer where your first mate lives",
     );
@@ -322,7 +321,6 @@ describe("the app as a view of another Mac", () => {
     await air.until(() => air.view().contact === "in-reach");
 
     await air.shell.leave();
-    // The other Mac heard it, and lists it no more.
     expect(pro.pairing.list()).toEqual([]);
     // This Mac's own Firstmate starts here, the first time this process runs it.
     expect(air.startCore).toHaveBeenCalledTimes(1);
@@ -332,7 +330,6 @@ describe("the app as a view of another Mac", () => {
       role: "home",
       left: { name: "MacBook Pro", reason: "left" },
     });
-    // The grant and its key are gone.
     expect(air.joined.read()).toBeNull();
   });
 
@@ -363,7 +360,6 @@ describe("the app as a view of another Mac", () => {
     expect(studio.pairing.list()).toEqual([]);
     await air.until(() => air.restartWindows.mock.calls.length === 1);
     await air.until(() => air.view().contact === "in-reach");
-    // One view, with its one connection open to the Mac it joined.
     expect(air.sockets.filter((socket) => socket.readyState === socket.OPEN)).toHaveLength(1);
     expect(pro.pairing.list().map((device) => device.name)).toEqual(["MacBook Air"]);
     expect(air.own.dispose).toHaveBeenCalledTimes(1);
@@ -421,7 +417,6 @@ describe("the app as a view of another Mac", () => {
     expect(air.view().heardAt).not.toBeNull();
     await expect(air.shell.dispatch("inf:cards:close", ["card-1"])).rejects.toThrow("out of reach");
     expect(pro.asked).not.toContain("inf:cards:close");
-    // The window hears each change of what this app is.
     expect(
       air.pushes.some(
         (push) =>
@@ -446,7 +441,6 @@ describe("the app as a view of another Mac", () => {
       "malformed request",
     );
     expect(mini.asked).toContain("inf:settings:routing:get");
-    // This Mac's own look stays here, and its devices are asked there.
     await air.shell.dispatch("inf:settings:appearance:set", [{ theme: "dark", size: 110 }]);
     expect(air.shell.preferences.get().appearance).toEqual({ theme: "dark", size: 110 });
     await expect(
@@ -455,7 +449,6 @@ describe("the app as a view of another Mac", () => {
     expect(mini.asked.filter((channel) => /appearance/.test(channel))).toEqual([]);
     expect(mini.asked).toContain("inf:devices:invite");
 
-    // A sign-in's steps reach the window, and its page opens in this Mac's browser.
     const page = "https://auth.openai.com/oauth/authorize?client_id=app";
     mini.events.emit("inf:auth:notice", {
       providerId: "openai-codex",
@@ -575,14 +568,12 @@ describe("the app as a view of another Mac", () => {
     expect(air.view().signInReturn).toEqual({ id: "return-1", caught: true });
     expect(air.pushes.map((push) => push.channel)).not.toContain("inf:app:sign-in-page");
 
-    // The browser here comes back from Google's page.
     const back = await fetch(`http://127.0.0.1:${port}/?state=s1&code=4%2F0Aan&scope=gmail`);
     expect(back.status).toBe(200);
     expect(await back.text()).toBe("Signed in to Google.");
     expect(pro.returns).toEqual([
       { id: "return-1", address: "/?state=s1&code=4%2F0Aan&scope=gmail" },
     ]);
-    // Taken once: nothing more reaches the other computer through here.
     await expect(fetch(`http://127.0.0.1:${port}/?state=s1&code=again`)).rejects.toThrow();
     expect(pro.returns).toHaveLength(1);
 
@@ -605,11 +596,9 @@ describe("the app as a view of another Mac", () => {
     pro.events.emit("inf:app:sign-in-page", { url: page, id: "return-2", port });
     await air.until(() => air.opened.includes(page));
     expect(air.view().signInReturn).toEqual({ id: "return-2", caught: false });
-    // The program that holds it still answers its own, and nothing is handed on.
     expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toBe("someone else");
     expect(pro.returns).toEqual([]);
 
-    // The sign-in's end there clears the ask here.
     pro.events.emit("inf:app:sign-in-ended", { id: "return-2" });
     await air.until(() => air.view().signInReturn === undefined);
   });
@@ -624,7 +613,6 @@ describe("the app as a view of another Mac", () => {
     await air.until(() => air.view().contact === "in-reach");
     expect(air.shell.thisMac()).not.toHaveProperty("browserNeedsUpdateThere");
 
-    // Two windows here watch the same task: the other Mac hears one watch.
     const window = (): BrowserViewer & { seen: string[]; close: () => void } => {
       const gone: (() => void)[] = [];
       const seen: string[] = [];
@@ -667,7 +655,6 @@ describe("the app as a view of another Mac", () => {
     mini.pages.paint("t1", "page-2");
     await air.until(() => second.seen.length === 2);
 
-    // A window that closes stops watching; when the last one goes, the other Mac stops sending.
     first.close();
     mini.pages.paint("t1", "page-3");
     await air.until(() => second.seen.length === 3);
@@ -749,7 +736,6 @@ describe("the app as a view of another Mac", () => {
       upgradeCommand: upgradeCommandFor("alpha"),
       checkedAt: expect.any(Number),
     });
-    // The offered version's link opens that version's page here, though changes there are refused.
     expect(await air.shell.dispatch("inf:update:open-release", [])).toEqual({ ok: true });
     expect(air.ownApp.opened).toEqual([OFFERED.releaseUrl]);
     await expect(air.shell.dispatch("inf:cards:close", ["card-1"])).rejects.toThrow(
@@ -860,7 +846,6 @@ describe("a Mac that controls another and runs its work", () => {
     await expect
       .poll(() => pro.workSetups.at(-1))
       .toEqual({ view: deviceId, report: { state: "blocked", reason: "background-off" } });
-    // The grant was written into the work folder even though the background refused.
     expect(new JoinedHome(dataDir).read()?.grant.deviceId).toBe(deviceId);
 
     expect(pro.fixWork(deviceId as string)).toBe(true);
@@ -887,7 +872,6 @@ describe("a Mac that controls another and runs its work", () => {
     expect(await air.shell.join(await pro.link("mac"))).toEqual({ ok: true });
     await air.until(() => air.view().workSetup?.reason === "background-off");
     const checks = vi.spyOn(air.shell, "checkWork");
-    // Leaving the front checks nothing.
     air.shell.windowFront(false);
     expect(checks).not.toHaveBeenCalled();
 
@@ -895,7 +879,6 @@ describe("a Mac that controls another and runs its work", () => {
     expect(checks).toHaveBeenCalledTimes(1);
     await air.until(() => air.view().workSetup === undefined);
     expect(background).toHaveBeenCalledTimes(2);
-    // Once its work runs, coming back to the front checks nothing more.
     air.shell.windowFront(false);
     air.shell.windowFront(true);
     expect(checks).toHaveBeenCalledTimes(1);
@@ -1063,7 +1046,6 @@ describe("a Mac that controls another and runs its work", () => {
     });
     expect(air.joined.left()).toBeNull();
 
-    // With its work's entry removed too, it returns to its own first launch.
     pro.pairing.remove(works.deviceId);
     await air.until(() => air.shell.thisMac().role === "home");
     expect(air.shell.thisMac()).toMatchObject({ left: { reason: "removed" } });
@@ -1276,7 +1258,6 @@ describe("notifications on a view of another Mac", () => {
     await air.shell.dispatch("inf:app:healthcheck", []);
     return air;
   }
-  /** Until a push of the other Mac's stage holding this card reached the window here. */
   const heard = (air: ReturnType<typeof shell>, id: string) =>
     air.until(() =>
       air.pushes.some(
@@ -1320,7 +1301,6 @@ describe("notifications on a view of another Mac", () => {
     ]);
     expect(air.notified).toEqual(there);
 
-    // A new report arrives ready; later body updates are not new notifications.
     const report = shown("report", { title: "Tests fixed", body: "<p>All green.</p>" });
     pro.show([old, decision, report]);
     home.observe(pro.stage.cards);
@@ -1343,7 +1323,6 @@ describe("notifications on a view of another Mac", () => {
     pro.show([...pro.stage.cards, shown("seen-here")]);
     await heard(air, "seen-here");
     expect(air.notified).toHaveLength(2);
-    // The card that was there before this Mac joined never posts.
     expect(air.notified.map((notification) => notification.body.split("\n")[0])).not.toContain(
       "Already there",
     );

@@ -93,7 +93,6 @@ export function wireRepairImpact(
  */
 export const REPAIR_ASSESSMENT_SOURCE = "host:repair-assessment";
 
-/** Whether a task's shape is an independent repair assessment rather than a code review. */
 export function isRepairAssessment(
   shape: { kind?: string; kind_source?: string } | null | undefined,
 ): boolean {
@@ -111,7 +110,6 @@ export function isRepairAssessment(
 export type MergeRepairDeclaration = {
   /** The head the repair started from: the approved head or the last accepted repair. */
   fromHead: string;
-  /** The pushed head after the repair. */
   toHead: string;
   /** The default branch's commit the repaired change sits on: newer work it took in, or the base it already had. */
   newBase: string;
@@ -185,7 +183,6 @@ export type CheckChangeInput = {
   declaration?: CheckDeclaration;
   diagnosis?: CheckDiagnosis;
   repair?: CheckRepair;
-  /** Record the crew's evidenced rerun judgment. */
   rerun?: CheckRerun;
   /** A repair of a change the captain already approved to merge (FI3-304). */
   conflictRepair?: MergeRepairDeclaration;

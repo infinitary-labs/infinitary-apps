@@ -19,7 +19,6 @@ export const HIDE_RECORD_LABEL = "Hide";
 /** Preset reason. Not a field the captain fills in. */
 export const NO_LONGER_WANTED = "No longer wanted";
 
-/** Activity line for a captain drop of work that never started. */
 export const DROPPED_BEFORE_START_ACTIVITY = "You closed this task before it started.";
 
 /** Typed fact on the close event. Activity reads this, never the sentence. */

@@ -106,7 +106,6 @@ test.describe("the personal extension host (Step 2)", () => {
     await expect(panel.locator("[data-side-panel-attribution]")).toHaveText("yours");
     await expect(body.locator("[data-fixture-item]")).toHaveCount(3);
     await expect(body.getByText("3 open")).toBeVisible();
-    // It sits in the right rail, docked at a real width beside the stage.
     await expect(page.locator('[data-rail="right"] [data-side-panel="open-items"]')).toHaveCount(1);
 
     // The panel's own button calls its server action; the store change hides it.
@@ -222,7 +221,6 @@ function turnCommit(
   return null;
 }
 
-/** The turn's commit note on the task with this key, once the host has written it. */
 async function awaitTurnCommit(
   userDataDir: string,
   key: string,
@@ -584,7 +582,6 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       // Reading it acknowledges the message, not a new task ending.
       await acceptNote(page, mockProvider);
 
-      // The record: done, finished, on the personal repo, with no worktree.
       const tasks = readTasks(userDataDir);
       expect(tasks).toHaveLength(1);
       const task = tasks[0] as TaskRow;

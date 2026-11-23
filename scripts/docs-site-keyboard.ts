@@ -30,7 +30,6 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
  *   node scripts/docs-site-keyboard.ts --check   fails when a page is out of step
  */
 
-/** A language's Keyboard page, from the repository's top. */
 export function keyboardPagePath(tag: string): string {
   return relative(REPO_ROOT, join(pagesFolder(tag), "keyboard.mdx"));
 }
@@ -52,7 +51,6 @@ type PanelCommand = {
 };
 type ManifestCommand = { id: string; label: string; key?: string; words?: string[] };
 
-/** What the page reads from the app's keyboard modules. */
 export type KeyboardModules = {
   keyboard: {
     KEYBOARD_COMMANDS: Record<string, { label: string; scope: Scope; section?: string }>;

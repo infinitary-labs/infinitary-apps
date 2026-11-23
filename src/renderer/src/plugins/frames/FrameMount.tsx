@@ -41,10 +41,8 @@ import { frameStylesheet, panelStylesheet } from "./frameStylesheet";
 
 export const AUTO_MIN_HEIGHT = 48;
 
-/** What a panel mount draws: its module, and the runtime's config for `PanelProps`. */
 export type FramePanelSource = { module: PanelModule; config: PanelFrameConfig };
 
-/** A mount's document: a template, or a panel in the frame realm. */
 type MountSource =
   | { template: FrameTemplate; panel?: undefined }
   | { panel: FramePanelSource; template?: undefined };
@@ -93,7 +91,6 @@ export type FrameMountProps = MountSource & {
   reveal?: boolean;
 };
 
-/** Attaches a controller to an iframe: messages in, posts out. */
 export function useFrameController(
   frameRef: React.RefObject<HTMLIFrameElement | null>,
   spec: FrameMountSpec,

@@ -123,7 +123,6 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: test.info().outputPath("idle-ladder-stall-card.png") });
 
-    // The captain asks under it; the first mate answers in its thread.
     const reply = cardReply(page);
     await expect(reply.field).toBeVisible();
     await reply.field.click();

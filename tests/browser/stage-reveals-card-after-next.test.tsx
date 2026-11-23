@@ -21,7 +21,6 @@ const LATER_NOTE = "A later harbour note";
 const warmFrame = () =>
   document.querySelector<HTMLIFrameElement>('[data-card-layer] [data-stage-entry="warm"] iframe');
 
-/** Whether the stage has prepared the next card: nothing leaves, and its page has drawn or is held. */
 const stagePrepared = () =>
   document.querySelector('[data-card-layer] [data-stage-entry="outgoing"]') === null &&
   document.querySelectorAll(
@@ -67,7 +66,6 @@ test("the card after next is prepared when the height easing finishes ahead of t
   try {
     await userEvent.click(cardLeave());
     await expect.element(shownCard(TALL_NOTE)).toBeVisible();
-    // The close eased the card's height, and the easing finished.
     await expect.poll(() => easings).toContain("finished");
     await expect
       .poll(() =>

@@ -428,7 +428,6 @@ describe("the crewmate's contract across an upgrade", () => {
     const tools = [tool("report", "Report v1."), tool("emit_card", "Show a card v1.")];
     const started = await c.open("Crewmate prompt v1.", tools);
     expect(started.renewal).toBeUndefined();
-    // The same build reopens the same conversation.
     const same = await c.open("Crewmate prompt v1.", tools, { resume: started.id });
     expect(same).toMatchObject({ id: started.id, renewal: undefined, resumed: started.id });
     // A tool the task gains or loses: the client would serve the list it
@@ -455,7 +454,6 @@ describe("the crewmate's contract across an upgrade", () => {
     expect(reworded.id).not.toBe(started.id);
     expect(reworded.renewal).toEqual({ from: started.id, changed: ["prompt"] });
     expect(reworded.resumed).toBeUndefined();
-    // A changed prompt starts over from wherever the conversation now is.
     const upgraded = await c.open(
       "Crewmate prompt v2.",
       [tool("report", "Report v2."), tools[1] as BoundTool],
@@ -596,7 +594,6 @@ describe("the session's own guardrails", () => {
     const stopping = session.stopSafely?.({
       waiting: (calls) => waited.push(calls.map((call) => call.callId)),
     });
-    // A second ask joins the first.
     expect(session.stopSafely?.()).toBe(stopping);
     expect(await ask()).toMatchObject({
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },

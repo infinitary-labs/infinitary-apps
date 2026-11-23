@@ -29,7 +29,6 @@ export function dispatcherHomeUpdates({ services, host, emit, ownWindow }: CoreD
     }),
     asked: (from) => emit("inf:update:asked", { from }),
   });
-  /** The paired view asking now, by the name it joined with. */
   const askingViewName = (): string | undefined => {
     const id = askingView();
     return id ? services.devices.list().find((device) => device.id === id)?.name : undefined;

@@ -14,13 +14,10 @@ export type NowNavItem =
   | { kind: "group"; key: string; group: PanelGroup; open: boolean; taskIds: readonly string[] }
   | { kind: "row"; key: string; group: PanelGroup };
 
-/** A painted group, as the list draws it. */
 export type NavGroup = {
   group: PanelGroup;
   open: boolean;
-  /** Its header opens and closes it. */
   collapsible: boolean;
-  /** The ids of the tasks it lists, in order. */
   taskIds: readonly string[];
 };
 
@@ -55,7 +52,6 @@ export function rovingKey(items: readonly NowNavItem[], last: string | null): st
   return holder?.key ?? items[0]?.key ?? null;
 }
 
-/** What a key does from one stop: move focus to another, open or close a group, or nothing. */
 export type NowNavMove = { focus: string } | { toggle: PanelGroup } | null;
 
 export function nowNavMove(items: readonly NowNavItem[], from: string, key: string): NowNavMove {
@@ -75,12 +71,10 @@ export function nowNavMove(items: readonly NowNavItem[], from: string, key: stri
       return to(0);
     case "End":
       return to(items.length - 1);
-    // → opens a closed group, then steps into it.
     case "ArrowRight":
       if (item.kind !== "group") return null;
       if (!item.open) return { toggle: item.group };
       return items[at + 1]?.kind === "row" ? to(at + 1) : null;
-    // ← closes an open group, and from a row goes up to its group's header.
     case "ArrowLeft":
       if (item.kind === "group") return item.open ? { toggle: item.group } : null;
       return to(items.findIndex((other) => other.kind === "group" && other.group === item.group));

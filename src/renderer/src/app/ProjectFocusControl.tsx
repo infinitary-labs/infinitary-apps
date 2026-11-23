@@ -79,7 +79,6 @@ function arrow(back: boolean) {
   );
 }
 
-/** A pill's counts: the waiting ring and the working dot, nothing for a zero. */
 function Counts({ waiting, working }: { waiting: number; working: number }) {
   return (
     <>
@@ -294,7 +293,6 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
     setPhase("open");
   });
 
-  // Open: focus goes onto the checked pill when a key opened the row.
   useEffect(() => {
     if (phase !== "open" || !byKey.current) return;
     byKey.current = false;
@@ -318,8 +316,6 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
     }
   }, [phase]);
 
-  // A press anywhere outside the open row folds it, as does the window
-  // changing size under it.
   useEffect(() => {
     if (phase !== "open") return;
     const outside = (event: PointerEvent) => {

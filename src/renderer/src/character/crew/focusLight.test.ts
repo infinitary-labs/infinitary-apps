@@ -16,7 +16,6 @@ const seeded = () => {
   };
 };
 
-/** Three crewmates settled on the ring: two on the site, one on the app. */
 function ring(): OrbitFrame {
   const model = new CrewOrbit(0, { ...DEFAULT_ORBIT }, seeded());
   model.spawn("t-site-1", "working", 0);

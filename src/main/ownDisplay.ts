@@ -24,7 +24,6 @@ import { findOnPath } from "@core/userBin";
 /** How long Xvfb may take to say which display it took. */
 const XVFB_START_MS = 10_000;
 
-/** Where the display's key lives, inside the work folder. */
 const AUTH_FILE = "display.auth";
 
 export type OwnDisplay = { display: string; stop: () => void };
@@ -45,7 +44,6 @@ export async function startOwnDisplay(options: {
   chromiumPlatform: string;
   /** The work folder, which keeps the display's key. */
   dataDir: string;
-  /** The Xvfb to run; the search path's by default. */
   xvfb?: string;
 }): Promise<OwnDisplay | null> {
   const { env } = options;

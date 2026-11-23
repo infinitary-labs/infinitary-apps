@@ -174,7 +174,6 @@ public struct PhoneTaskFacts: Sendable {
         return reading("idle", reason, since: since, waitsOn: waits)
     }
 
-    /// What a started task waits on: the one task by its key, or how many.
     public static func dependencyWaitWords(_ blockedBy: [String]) -> String {
         blockedBy.count == 1 ? PhoneMessages.phoneTaskFactsWaitingOnKey(key: blockedBy[0])
             : PhoneMessages.phoneTaskFactsWaitingOnTasks(count: blockedBy.count)

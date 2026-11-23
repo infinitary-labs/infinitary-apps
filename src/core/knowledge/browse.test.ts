@@ -51,7 +51,6 @@ describe("the browser's bounds", () => {
     expect(chosen.concepts[0]?.id).toBe(ids[0]);
     expect(chosen.shown.connections).toBeLessThanOrEqual(KNOWLEDGE_GRAPH_LIMITS.connections);
     expect(chosen.total.connections).toBe(connections.length);
-    // Every connection drawn joins two drawn concepts; claims come before links.
     const drawn = new Set(chosen.concepts.map((concept) => concept.id));
     for (const line of chosen.connections) {
       expect(drawn.has(line.from) && drawn.has(line.to)).toBe(true);

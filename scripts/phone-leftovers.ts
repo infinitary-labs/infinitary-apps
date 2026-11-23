@@ -32,7 +32,6 @@ function processList(env: NodeJS.ProcessEnv): string {
   });
 }
 
-/** Every phone check process in a `processList` reading, with when it began. */
 export function runningGates(listing: string): GateProcess[] {
   return listing.split("\n").flatMap((line) => {
     const read = PROCESS_LINE.exec(line);

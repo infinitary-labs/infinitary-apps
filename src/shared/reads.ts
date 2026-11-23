@@ -44,9 +44,7 @@ import { usageQuerySchema, usageTasksQuerySchema } from "./usage";
  */
 
 export type ReadInvalidation<A> = {
-  /** Re-run when an `inf:event` satisfies this predicate. */
   events?: (event: FmEvent, args: A) => boolean;
-  /** Re-run when the core pushes on one of these channels. */
   pushes?: readonly Exclude<CorePushChannel, "inf:event">[];
   /**
    * A push whose payload IS this read's value: the host hands it to every
@@ -69,7 +67,6 @@ export type ReadInvalidation<A> = {
   };
   /** Reproject held raw values on local presentation changes, without changing the delta base. */
   presentation?: boolean;
-  /** Re-run on a timer while subscribed. */
   pollMs?: number;
   /**
    * When a re-run's value says the same thing as the one the subscriber
@@ -178,7 +175,6 @@ const CREWMATE_LIVE_EVENTS: ReadonlySet<FmEvent["type"]> = new Set([
   "task_changed",
 ]);
 
-/** The task an event is about, when it names one. */
 const taskIdOf = (event: FmEvent): string | undefined =>
   "taskId" in event && typeof event.taskId === "string" ? event.taskId : undefined;
 

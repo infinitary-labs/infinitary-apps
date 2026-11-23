@@ -111,7 +111,6 @@ describe("shared story delivery boundaries", () => {
             // This stand-in forge reads no allowed merges, so none is chosen for it.
             undefined,
           );
-          // Nothing is published, uploaded, refreshed or rewritten on the override's account.
           expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(before);
           expect(at.update).not.toHaveBeenCalled();
         }
@@ -153,7 +152,6 @@ describe("shared story delivery boundaries", () => {
         // This stand-in forge reads no allowed merges, so none is chosen for it.
         undefined,
       );
-      // Marking none: the ledger is exactly as it was before the merge.
       expect(unpublished).toMatchObject({ revisions: [], receipts: [] });
       expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(unpublished);
     });
@@ -307,7 +305,6 @@ describe("shared story delivery boundaries", () => {
     );
     expect(at.forge.change?.body).toBe(`${corrected}\n\n${footer}\n\n${region}`);
     expect(at.update).toHaveBeenCalledTimes(1);
-    // The same passage again is no longer there: nothing is sent, and the answer quotes the words.
     const stale = await at.service.publication.open("ab12cd34", {
       title: "fix: keep the saved story",
       presentation: 1,
@@ -495,7 +492,6 @@ describe("shared story delivery boundaries", () => {
       refreshOf: 1,
       contentHash: presentationContentHash(at.story),
     });
-    // Either revision shows it again, with nothing sent again.
     expect((await at.service.publication.completionPresentation("ab12cd34", 1)).revision).toBe(2);
     expect((await at.service.publication.completionPresentation("ab12cd34", 2)).revision).toBe(2);
     expect(at.update).toHaveBeenCalledTimes(1);
@@ -523,7 +519,6 @@ describe("shared story delivery boundaries", () => {
     );
     expect((await at.service.publication.completionPresentation("ab12cd34", 3)).revision).toBe(3);
 
-    // A commit not yet pushed is named with the way out.
     at.readHead.mockResolvedValue(unpushed);
     await expect(at.service.publication.completionPresentation("ab12cd34", 3)).rejects.toThrow(
       push(unpushed, repaired, 3),
@@ -812,7 +807,6 @@ describe("shared story delivery boundaries", () => {
     });
     expect(at.tasks.delivery.changePresentation("ab12cd34")).toBeUndefined();
     expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
-    // Its story starts at its own first revision, in its own ledger.
     at.readHead.mockResolvedValueOnce(repaired);
     const revision = await at.presentations.prepare(
       "ab12cd34",
@@ -889,7 +883,6 @@ describe("shared story delivery boundaries", () => {
     expect(delivery?.prNumber).toBe(at.forge.opened.number);
     expect(delivery?.prNumber).not.toBe(23);
     expect(delivery?.changeLabel).not.toContain("23");
-    // An open pull request for the branch is still a legacy one.
     seedDelivery(at.tasks, "ab12cd34", { presentation: undefined });
     at.forge.change = open;
     expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
@@ -941,7 +934,6 @@ describe("shared story delivery boundaries", () => {
     const story = own?.revisions[0] as ChangePresentation;
     const hosted = story.destination as HostedPresentationDestination;
     expect(hosted.visibility).toBe("public");
-    // The project is private now; reading-fix has no pull request yet.
     const destination = { ...hosted, visibility: "private" as const };
     Object.assign(at.forge, {
       attachments: {
@@ -959,7 +951,6 @@ describe("shared story delivery boundaries", () => {
       `${hosted.fullName} is private: everyone with access can read this story`,
     );
     expect(answer).not.toContain("anyone can read this story");
-    // The revision went to reading-fix's own ledger; the task's own story is as it was.
     expect(at.tasks.delivery.changePresentation("ab12cd34", otherBranch)?.revisions).toMatchObject([
       { revision: 1, destination },
     ]);
@@ -990,8 +981,6 @@ describe("shared story delivery boundaries", () => {
       branch: phone,
       number: 1413,
     });
-    // An older revision is refused with the branch it read and that branch's
-    // newest, and the refusal leaves the current change where it was.
     const stale = await at.service.publication.open("ab12cd34", {
       title: "feat: share the story",
       presentation: 1,
@@ -1003,7 +992,6 @@ describe("shared story delivery boundaries", () => {
       branch: phone,
       number: 1413,
     });
-    // The card call reads the same change and shows its story.
     const shown = await at.service.publication.completionPresentation("ab12cd34", 2);
     expect(shown).toMatchObject({ revision: 2, title: story.title });
     expect(at.tasks.get("ab12cd34")?.delivery?.presentation?.branch).toBe(phone);
@@ -1167,13 +1155,11 @@ describe("shared story delivery boundaries", () => {
       expect(opened).toContain(
         `Its merge card follows the branch the working copy has checked out: check out ${named}`,
       );
-      // Opened once, from the named branch with the story; the own branch opened nothing.
       expect(at.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([
         `openChange ${named} ${title}`,
       ]);
       expect(at.forge.change?.body).toContain("<!-- infinitary-story:ab12cd34:start -->");
       expect(at.forge.change?.body).toContain("Keep the approved explanation");
-      // The story now belongs to the named branch's change, which is current.
       expect(at.tasks.delivery.changePresentation("ab12cd34", named)).toMatchObject({
         branch: named,
         revisions: [{ revision: 1, head: original }],
@@ -1218,7 +1204,6 @@ describe("shared story delivery boundaries", () => {
         revision: 1,
         title,
       });
-      // And checked out by name, as well.
       checkout.now = { branch: named, head: original };
       expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
         revision: 1,
@@ -1301,11 +1286,9 @@ describe("shared story delivery boundaries", () => {
         branch: phone,
         number: 1413,
       });
-      // The card call reads the same change and shows the story the walk named.
       expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
         revision: 1,
       });
-      // Called again with the same words: no revision, no second publication.
       const again = await at.service.mergeCard.walk("ab12cd34", story);
       expect(again.ready).toEqual({ revision: 1, title: story.title, head: original });
       expect(again.did).toEqual([
@@ -1313,7 +1296,6 @@ describe("shared story delivery boundaries", () => {
       ]);
       expect(at.tasks.delivery.changePresentation("ab12cd34", phone)?.revisions).toHaveLength(1);
       expect(opens(at)).toBe(1);
-      // And with no story, the newest saved one, still with nothing repeated.
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
         ready: { revision: 1, title: story.title, head: original },
@@ -1377,7 +1359,6 @@ describe("shared story delivery boundaries", () => {
         validationRows: [],
         checked: [{ check: "Read the saved publication", result: "It names the story." }],
       };
-      // No proof read judged this version.
       seedDelivery(at.tasks, "ab12cd34", {
         liveValidation: { ...noSurfaceProof(original), reviews: [] },
       });
@@ -1418,7 +1399,6 @@ describe("shared story delivery boundaries", () => {
       await expect(
         at.presentations.completion("ab12cd34", 1, original, phone, 1413),
       ).rejects.toThrow("Live validation is not accepted for this version");
-      // An override for another version passes nothing here.
       const override = {
         words: 'Go on without the proof read, on the card "Proof"',
         holds: ["proof" as const],
@@ -1432,7 +1412,6 @@ describe("shared story delivery boundaries", () => {
         did: [],
         ready: { revision: 1, title: story.title, head: original },
       });
-      // The card opens from that story, its table still awaiting proof.
       const card = await at.presentations.completion("ab12cd34", 1, original, phone, 1413);
       expect(card.title).toBe(story.title);
       expect(card.body).toContain("Awaiting live validation");
@@ -1549,7 +1528,6 @@ describe("shared story delivery boundaries", () => {
         `Recorded the pushed branch ${phone} as the change; where the project lives keeps no pull requests, so the story stays on the merge card.`,
       ]);
       expect(opens(at)).toBe(0);
-      // Called again, it records nothing again.
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
         ready: { revision: 1, title: story.title, head: original },

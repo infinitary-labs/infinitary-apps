@@ -33,7 +33,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: the context block (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 describe("the captain's sequences, served at each idle boundary (docs/sequences.md)", () => {
@@ -58,7 +57,6 @@ describe("the captain's sequences, served at each idle boundary (docs/sequences.
     expect(session.served.at(-1)).toEqual({ text: seed, sha: sequencesSha(seed) });
     expect(notes()).toHaveLength(0);
 
-    // An empty file: the built-in text again, and one line saying so.
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "---\nname: sequences\n---\n");
     await turn("second");
@@ -69,7 +67,6 @@ describe("the captain's sequences, served at each idle boundary (docs/sequences.
     await turn("third");
     expect(notes()).toHaveLength(1);
 
-    // The captain's own words: served as written, the sha moving with them.
     writeFileSync(path, "---\nname: sequences\n---\n# Sequences\n\nAlways plan first.\n");
     utimesSync(path, new Date(), new Date(Date.now() + 60_000));
     await turn("fourth");
@@ -263,7 +260,6 @@ describe("models by intelligence bucket (only shown on change)", () => {
     session.resolveNextPrompt();
     await tick();
 
-    // Nothing changed: the next turn omits the section entirely.
     await agent.converse("and now?");
     expect(decodeContext(session.prompts[1] as string)).not.toHaveProperty(
       "models_by_intelligence_bucket",
@@ -436,7 +432,6 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     expect(first.crew.map((row) => row.task_id).sort()).toEqual(["t1", "t2"]);
     expect(String(first.directions)).toContain("Always squash-merge.");
 
-    // An ordinary wake with nothing saved changed carries none of it.
     const second = await turn(fixture, "and now?");
     expect(second.delivery).toBe(DELIVERY_CHANGES);
     for (const name of SAVED) expect(second).not.toHaveProperty(name);
@@ -568,7 +563,6 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     expect(next).not.toHaveProperty("recovery");
     expect(String(next.directions)).toContain("Always squash-merge.");
     expect(String(next.directions)).not.toContain("Rebase before review.");
-    // Once corrected, an unchanged wake carries nothing saved.
     expect(await turn(fixture, "and now?")).not.toHaveProperty("directions");
   });
 

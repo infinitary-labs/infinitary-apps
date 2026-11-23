@@ -31,7 +31,6 @@ function fixture() {
     clock.t += 1_000;
     return clock.t;
   };
-  /** The captain sends a message; the first mate's tool attaches it to its work. */
   const message = (
     id: string,
     text: string,
@@ -105,7 +104,6 @@ describe("how a captain's message ends", () => {
     f.finish("panels");
     expect(f.state("m1")).toEqual({ kind: "waiting", cardId: answer.id });
 
-    // A closed note is accepted; the ending is final once nothing is left.
     f.ending.captainResponded(answer, "close");
     f.closeCard(answer.id);
     expect(f.state("m1")).toEqual({ kind: "accepted", cardId: answer.id });
@@ -155,7 +153,6 @@ describe("how a captain's message ends", () => {
     });
     f.message("m2", "also the long press", "taps", "tool:steer_crewmate");
     f.finish("taps");
-    // The card predates the second message: it cannot answer it.
     expect(f.state("m1")).toEqual({ kind: "missing" });
     f.ending.captainResponded(early, "close");
     expect(f.tasks.capture.getAsk("m1")?.answerCardId).toBeNull();
@@ -177,7 +174,6 @@ describe("how a captain's message ends", () => {
     f.ending.captainResponded({ ...decision, awaiting: "answer" }, "choice");
     f.ending.captainResponded({ ...decision, asking: true }, "choice");
     expect(f.tasks.capture.getAsk("m1")?.acceptedAt).toBeNull();
-    // Their choice on the decision is the answer.
     f.ending.captainResponded(decision, "choice");
     expect(f.tasks.capture.getAsk("m1")?.answerCardId).toBe(decision.id);
   });

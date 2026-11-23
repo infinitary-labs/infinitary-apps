@@ -98,7 +98,6 @@ const litMatches = (element: Element) => {
 /** A page that lights nothing: one not drawn, or torn down while it was read. */
 const NOTHING_LIT = { every: 0, current: 0, outside: 0 };
 
-/** What the document holding `body` lights. */
 const litIn = (body: Locator) => body.evaluate(litMatches);
 
 /** What the window lights, read against the shown entry: a match outside it would be another card's. */
@@ -157,7 +156,6 @@ async function currentInSight(page: Page, title: string): Promise<boolean> {
   }, box);
 }
 
-/** Whether the folded section's words lie inside the card body's scrolled sight. */
 async function foldedWordsInSight(page: Page): Promise<boolean> {
   const words = await cardBody(page, TITLE)
     .locator("details p")
@@ -274,8 +272,6 @@ test("⌘F finds words across a card's title, body, folded section and thread", 
       await page.keyboard.press("Escape");
       await expect(findButton(page)).toBeFocused();
       if (evidence) await regionShot(cardSurface(page), join(evidence, "card-find-button.png"));
-      // A click on the glass opens it too, and a click on Close closes it
-      // back into the glass, its matches cleared.
       await findButton(page).click();
       await expect(findField(page)).toBeFocused();
       await typeInto(findField(page), "keyboard");
@@ -380,7 +376,6 @@ test("⌘F finds words across a card's title, body, folded section and thread", 
   }
 });
 
-/** The total the shown find field counts, read from its words. */
 async function findTotal(page: Page): Promise<number> {
   const words = (await findCount(page).textContent()) ?? "";
   return Number(/(\d+)\D*$/.exec(words)?.[1] ?? Number.NaN);

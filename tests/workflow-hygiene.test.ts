@@ -108,7 +108,6 @@ function packagesBeyondFolder(script: string, seen = new Set<string>()): boolean
 }
 
 const LOCAL = "./.github/workflows/";
-/** Every job that calls one of this project's workflows, with the token it grants. */
 const calls = workflows.flatMap((file) => {
   const workflow = load(file);
   return Object.entries(workflow.jobs).flatMap(([id, job]) =>

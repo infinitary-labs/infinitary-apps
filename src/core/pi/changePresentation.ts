@@ -156,7 +156,6 @@ export async function stageChangePresentation(
     const add = (asset: PresentationAsset) => {
       if (!assets.some((kept) => kept.id === asset.id)) assets.push(asset);
     };
-    /** Keep a verified picture, and its recording when it is a demo's poster, as story assets. */
     const retain = async (picture: CardPicture): Promise<void> => {
       let image: PresentationAsset | undefined;
       for (const [extension, mediaType] of Object.entries(CARD_PICTURE_TYPES)) {

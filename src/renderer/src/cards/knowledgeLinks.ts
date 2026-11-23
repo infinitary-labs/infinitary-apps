@@ -28,7 +28,6 @@ export type KnowledgeLinks = {
 
 const NONE: readonly KnowledgeRef[] = [];
 
-/** The words a reference is read by: what it is, its id, what it says and where it stands. */
 export function referenceLabel(ref: KnowledgeRef): string {
   const named = { id: ref.id, title: ref.title.replace(/[.\s]+$/, "") };
   const kind =

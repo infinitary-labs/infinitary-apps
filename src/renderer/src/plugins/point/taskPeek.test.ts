@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { litTask } from "./litTask";
 import { taskPeek } from "./taskPeek";
 
-/** The task the pointer rests on: a card body's task key, the window's own key, or a task in a panel's page. */
-
 const box = { top: 10, right: 60, bottom: 26, left: 20 };
 
 describe("the key or task the pointer rests on", () => {

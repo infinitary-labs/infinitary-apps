@@ -48,10 +48,8 @@ const execFileAsync = promisify(execFile);
 
 export type TaskWorkspace = {
   taskId: string;
-  /** The worktree the crewmate runs in. */
   cwd: string;
   branch: string;
-  /** The repo the worktree belongs to. */
   repoDir: string;
   /** How a dispatch got this tree; absent on a tree that was already there. */
   acquired?: WorktreeAcquisition;
@@ -663,8 +661,6 @@ export class WorkspaceService {
           : startAt && "sha" in startAt
             ? startAt
             : await this.dispatchBase(repo, remote ? taskRemoteName(branch) : "origin");
-      // `checkout <branch>` / `checkout -b <branch> <base>` in a pooled tree;
-      // `worktree add <cwd> <branch>` / `worktree add -b <branch> <cwd> <base>` otherwise.
       const checkout = existing ? [branch] : ["-b", branch, base.sha];
       const add = existing ? [cwd, branch] : ["-b", branch, cwd, base.sha];
       let source: WorktreeAcquisition["source"] = "new";
@@ -673,7 +669,6 @@ export class WorkspaceService {
           await git(cwd, ["checkout", "--quiet", ...checkout]);
           source = "pool";
         } catch (caught) {
-          // A warm tree that cannot take the branch goes; a new one instead.
           console.warn(`[workspace] a pooled tree could not take ${branch}:`, caught);
           await this.discardDir(cwd);
           await git(repo, ["worktree", "prune"]);
@@ -1445,7 +1440,6 @@ export class WorkspaceService {
     for (const entry of entries) this.deleteInBackground(join(this.paths.worktreeTrashDir, entry));
   }
 
-  /** Resolves once every background deletion started so far has finished. */
   async deletionsSettled(): Promise<void> {
     await Promise.all([...this.deletions]);
   }
@@ -1653,7 +1647,6 @@ async function branchExists(repo: string, branch: string): Promise<boolean> {
   }
 }
 
-/** How many commits reach from `from` that none of `not` reaches. */
 async function countCommits(repoDir: string, from: string[], not: string[]): Promise<number> {
   const count = await git(repoDir, ["rev-list", "--count", ...from, "--not", ...not]);
   return Number.parseInt(count, 10) || 0;

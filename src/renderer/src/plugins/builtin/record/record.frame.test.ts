@@ -192,7 +192,6 @@ const now = new Date("2026-09-16T14:30:00Z").getTime();
 function event(kind: TaskEventView["kind"], text: string, at = now - 120_000): TaskEventView {
   return { id: at, at, actor: "crewmate", kind, text, data: null, ref: null, feed: false };
 }
-/** The whole text an Activity line opens to, or null when the line is plain. */
 function wholeOf(line: Node | string | undefined): string | null {
   if (!(line instanceof Node)) return null;
   const whole = line.children.find(
@@ -687,7 +686,6 @@ describe("compact task record frame", () => {
       "closed",
       "closed",
     ]);
-    // The title is a button; pressing it asks the host to open that card by id.
     const link = lines[1]?.children[1] as Node;
     expect(link.attrs.type).toBe("button");
     link.listeners.click?.();
@@ -808,7 +806,6 @@ describe("compact task record frame", () => {
       ["branch", "Branch", "fm/task-ab12"],
       ["delivery", "Delivery", "As a pull request · rigor: Default"],
     ]);
-    // The closed More row names what it holds beside its label.
     expect(frame.node("more-preview").text()).toBe("branch · delivery");
     const facts = frame.node("facts").text();
     expect(facts).toContain("Crewmate crewmate 21 on GPT-6 Sol");
@@ -932,7 +929,6 @@ describe("compact task record frame", () => {
         ],
       }),
     );
-    /** Every link a node draws, by its words and its page. */
     const links = (node: Node | string | undefined): [string, string][] =>
       node instanceof Node
         ? [
@@ -954,5 +950,3 @@ describe("compact task record frame", () => {
     expect((first as Node).flat()).toBe(`5m${opened}`);
   });
 });
-
-// Approved INF-2215 reconciles waits into the existing explanation, preserving errors first.

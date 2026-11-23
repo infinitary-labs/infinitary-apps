@@ -558,7 +558,6 @@ test.describe("the real quota sensor, end to end", () => {
     });
     await expect(row.getByText(EMPTY_QUOTA_TEXT.notYet)).toHaveCount(0);
     await expect(row.getByText(EMPTY_QUOTA_TEXT.unread)).toHaveCount(0);
-    // An unreleased vendor codename is never rendered as a meter.
     await expect(row.getByText(claudeWindowLabel(UNRELEASED_WINDOW))).toHaveCount(0);
     // The request really carried the account's own stored token.
     expect(stub.seen).toContain("live-token");
@@ -700,7 +699,6 @@ test.describe("the real quota sensor, end to end", () => {
           reason: "renewal_succeeded",
         });
       await expect(row.getByText(claudeWindowLabel("five_hour"), { exact: true })).toBeVisible();
-      // A recovery needs both the rejected request and the accepted replacement.
       expect(stub.seen).toContain("expired-token");
       expect(stub.seen).toContain("renewed-token");
       await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
@@ -905,7 +903,6 @@ test.describe("the real quota sensor, end to end", () => {
     await expect(row.getByText(EMPTY_QUOTA_TEXT.notYet)).toHaveCount(0);
     await expect(row.getByText(EMPTY_QUOTA_TEXT.unread)).toHaveCount(0);
     await expect(row.getByText(GROK_NO_WINDOW_DETAIL)).toHaveCount(0);
-    // The read was the key's own, at the address the launch named.
     expect(keyRead.seen[0]).toEqual({ method: "GET", bearer: "xai-live-key" });
     expect(readNewestSnapshotRow(userDataDir, "grok")).toMatchObject({ status: "ok" });
   });

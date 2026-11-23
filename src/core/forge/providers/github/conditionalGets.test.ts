@@ -158,7 +158,6 @@ describe("conditional GitHub reads (INF-2149)", () => {
     expect(second).toEqual(first);
     expect(github.state.charged).toBe(afterFirst);
     expect(github.sent.slice(3).every((request) => request.ifNoneMatch !== null)).toBe(true);
-    // Without the store every read is charged in full.
     const plain = standInGitHub(answersFor("in_progress"));
     await forgeOver(plain.fetcher as typeof fetch).checks(CHANGE);
     await forgeOver(plain.fetcher as typeof fetch).checks(CHANGE);

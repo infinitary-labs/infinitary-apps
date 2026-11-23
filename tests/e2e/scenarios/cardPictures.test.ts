@@ -112,7 +112,6 @@ for (const slow of ["one slow write", "two slow writes that end in one wake turn
         args: expect.objectContaining({ title }),
       })),
     );
-    // After the cards, the default close-out answers.
     results(cards.calls.map(() => "Card shown."));
     expect(next()).toBeUndefined();
   });

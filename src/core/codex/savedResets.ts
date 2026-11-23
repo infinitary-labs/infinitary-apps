@@ -43,7 +43,6 @@ export function takesSavedReset(providerId: string): boolean {
   return allowanceProviderOf(providerId) === "codex";
 }
 
-/** A computer's reach for one use, over its own account store. */
 export function savedResetReach(
   vault: SavedResetVault,
   version: string,
@@ -66,7 +65,6 @@ export function savedResetReach(
   };
 }
 
-/** Uses one of this computer's own account's saved resets. */
 export async function redeemOwnSavedReset(
   vault: SavedResetVault,
   reach: SavedResetReach,

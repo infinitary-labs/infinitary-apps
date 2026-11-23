@@ -59,7 +59,6 @@ function oneComputer(options: { takesRepoless?: boolean } = {}) {
   return { machines, reach };
 }
 
-/** The feed's lines, in order. */
 function feed(events: FmEvent[]): string[] {
   return events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
 }
@@ -96,7 +95,6 @@ describe("where a task runs", () => {
       noNewWork: true,
     });
 
-    // A day on, the feed says it once more, with the way to run it here.
     at += PLACED_WAIT_DAY_MS;
     await supervisor.starts.dispatchQueuedTask("t-older");
     await supervisor.starts.dispatchQueuedTask("t-older");
@@ -222,10 +220,8 @@ describe("where a task runs", () => {
     expect(tasks.timeline("t-here").map((event) => event.text)).toContain(
       UNCONFIRMED_START_RETURNED,
     );
-    // A recorded session means it started: it stays where it is.
     expect(tasks.starts.startAttemptOf("t-recorded")).toBeUndefined();
     expect(tasks.get("t-recorded")?.status).toBe("active");
-    // Its computer is out of reach: nothing is known yet.
     expect(tasks.starts.startAttemptOf("t-away")?.phase).toBe("checking");
     expect(tasks.get("t-away")?.status).toBe("active");
 

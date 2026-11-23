@@ -9,7 +9,6 @@ import { type BoundTool, toolContent } from "../session/tools";
  * (`src/core/claude/claudeTaskTools.ts`).
  */
 
-/** The Pi tool for one bound tool. */
 export function piToolOf(tool: BoundTool): ToolDefinition {
   // defineTool is the SDK's parameter-inference identity helper. This adapter
   // already has a concrete return type: declaring data must not boot the SDK.
@@ -25,7 +24,6 @@ export function piToolOf(tool: BoundTool): ToolDefinition {
   };
 }
 
-/** Bound tools as Pi tools, in order. */
 export function piToolsOf(tools: readonly BoundTool[]): ToolDefinition[] {
   return tools.map(piToolOf);
 }

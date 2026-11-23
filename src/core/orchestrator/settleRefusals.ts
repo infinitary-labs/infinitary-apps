@@ -17,12 +17,6 @@ import type { OpenMergeAction, SettleServiceHost } from "./settleHost";
 import { unlandedWorkText } from "./settleWords";
 import { mergesInOwnBatch } from "./workShape";
 
-/**
- * A settle's structured refusals (WI-12): the close gate, unlanded or
- * unreadable work, a missing sign-in and the autonomy hold, each with the
- * ways out the Firstmate turns into effect buttons.
- */
-
 type RefusalHost = Pick<
   SettleServiceHost,
   "tasks" | "taskDelivery" | "taskAutonomy" | "repos" | "cards"
@@ -135,7 +129,6 @@ export function unreadableWorkRefusal(record: TaskRecord): SettleRefusal {
   return { refused: "unlanded-work", task, tasks: [], ways, text };
 }
 
-/** The not-signed-in refusal on a task's settle, with the sign-in's two ways. */
 export function notSignedInRefusal(
   record: TaskRecord,
   fact: { host: string; name: string; repoId?: string },
@@ -202,7 +195,6 @@ export function mergeGate(
   const open = scope
     ? host.cards.openMergeAction(record.id, scope)
     : openCurrentMerge(host, record);
-  // The merge card's own declaration that the captain decides this one.
   const asks = asksFirst ?? open?.asksFirst;
   if (!hold && !asks && host.taskAutonomy(record.id)) return undefined;
   const task = { id: record.id, key: record.key || record.id, title: record.title };

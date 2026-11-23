@@ -158,7 +158,6 @@ function box() {
   return { home, cwd, recordDir, ran, factory, spec, logs };
 }
 
-/** The runbook skills the app serves a Claude crewmate building a change, from the bundle. */
 function servedRunbookSkills() {
   return new Runbooks(
     join(process.cwd(), "resources/runbooks"),
@@ -172,7 +171,6 @@ function servedRunbookSkills() {
   }).skills;
 }
 
-/** The model's side: load a skill, run one command, then answer. */
 function loadsASkillThenRuns(skill: string, command: string): void {
   const first = api.requests.length;
   api.answer((request: StubRequest, res: ServerResponse) => {
@@ -205,13 +203,11 @@ describe("a Claude crewmate's working copy", () => {
     await session.closed();
     const [opening, loaded, ran] = api.requests.slice(first);
 
-    // The instruction file, in the prompt; the skills, listed natively.
     const system = JSON.stringify(opening?.body.system ?? "");
     expect(system).toContain("Rivets are counted in pairs.");
     expect(system).toContain(join(crewmate.cwd, "AGENTS.md"));
     expect(opening?.raw).toContain("project:rivet-design: Planted rivet-design.");
     expect(opening?.raw).toContain("project:rivet-release: Planted rivet-release.");
-    // The Skill tool loads one.
     expect(loaded?.raw).toContain("The body of rivet-design.");
     // The command ran, as the permission bypass lets it, outside the project's
     // environment.
@@ -253,7 +249,6 @@ describe("a Claude crewmate's working copy", () => {
     const link = join(first ?? "", "skills", "rivet-release");
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
     expect(readFileSync(join(link, "SKILL.md"), "utf8")).toContain("The body of rivet-release.");
-    // A second session stages again from nothing; the working copy keeps its skills.
     loadsASkillThenRuns("project:rivet-release", "true");
     const again = await crewmate.factory.open(crewmate.spec);
     await again.prompt("Count them again.");

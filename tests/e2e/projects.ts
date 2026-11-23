@@ -58,7 +58,6 @@ export function setupCard(page: Page, name: string): Locator {
   return shownCard(page, SETUP_CARD_WORDS.title(name));
 }
 
-/** Brings the setup card for `name` forward once the app has put it up. */
 export async function showSetupCard(page: Page, name: string): Promise<void> {
   const title = SETUP_CARD_WORDS.title(name);
   await expect

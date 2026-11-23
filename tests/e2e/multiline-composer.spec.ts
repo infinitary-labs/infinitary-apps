@@ -45,7 +45,6 @@ function sentTexts(): string[] {
   });
 }
 
-/** How many requests carried `text` exactly as typed, line breaks and all. */
 function sentWith(text: string): number {
   return sentTexts().filter((sent) => sent.includes(text)).length;
 }
@@ -54,7 +53,6 @@ async function expectSent(text: string): Promise<void> {
   await expect.poll(() => sentWith(text), { timeout: 30_000 }).toBeGreaterThan(0);
 }
 
-/** Types into the prompt as keystrokes, line by line, adding lines with `newline`. */
 async function typeLines(input: Locator, lines: string[], newline = "Shift+Enter") {
   for (const [i, line] of lines.entries()) {
     if (i > 0) await input.press(newline);
@@ -88,7 +86,6 @@ function spilledPath(sent: string, spill: { before: string; after: string }): st
   return end < 0 ? "" : sent.slice(from, end);
 }
 
-/** Pastes text into the prompt the way the clipboard hands it over. */
 async function pasteText(page: Page, text: string) {
   await promptInput(page).evaluate((field, text) => {
     const clipboardData = new DataTransfer();
@@ -124,7 +121,6 @@ test("a long paste sends as a removable file with exact full text and recalls it
   await expect(chip).toHaveCount(0);
   await input.fill("");
 
-  // A pasted picture comes off the same way.
   await pastePictures(input, [{ name: "shot.png" }]);
   const picture = page.locator("[data-voice-input-attachment]");
   await expect(picture).toHaveCount(1);

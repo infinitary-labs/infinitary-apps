@@ -37,11 +37,9 @@ import { expectNoCard, shownCard } from "./stack";
  */
 type Snapshot = Awaited<ReturnType<Window["firstmate"]["plugins"]["personal"]["list"]>>;
 
-/** The title, maker and version the spec writes into the folder's manifest. */
 const PANEL_TITLE = "Token meter";
 const MAKER = "Acme";
 const VERSION = "1.0.0";
-/** The host's consent card for it. */
 const CARD_TITLE = panelConsentTitle(PANEL_TITLE, MAKER);
 
 let launched: LaunchedApp;
@@ -113,7 +111,6 @@ test.describe
             (card) => card.author !== "host" && `${card.title} ${card.body}`.includes(PANEL_TITLE),
           ),
         ).toEqual([]);
-        // Staged, not added.
         expect((await snapshot(page)).extensions).toEqual([]);
         expect(existsSync(join(userDataDir, "plugins", "token-meter"))).toBe(false);
         await expect(page.locator('[data-side-panel="token-meter"]')).toHaveCount(0);

@@ -42,7 +42,6 @@ export const CR = {
   bandPeriod: 3.0,
   /** Gaussian band width, in units of R. */
   bandWidth: 0.28,
-  /** Band brightness. */
   bandGain: 1.1,
   /** How strongly the apexes carry the halo. */
   apexGlow: 1,
@@ -152,7 +151,6 @@ export function placeCrystalVertices(
   }
 }
 
-/** The crystal light: cool white, and its brighter core. */
 export function crystalColors(acc: Rgb): { cool: Rgb; coolCore: Rgb } {
   const toward = (t: number): Rgb => [
     acc[0] + (255 - acc[0]) * t,

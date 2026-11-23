@@ -48,7 +48,6 @@ export const CLAUDE_SEAT_MODEL = {
   id: starterFor("anthropic-claude", "medium"),
 };
 
-/** The ChatGPT account the Codex seat's dummy sign-in names. */
 export const CODEX_SEAT_CHATGPT_ID = "acct-e2e-codex";
 
 /**
@@ -167,7 +166,6 @@ export type ClaudeSeatLaunch = Pick<
   "userDataDir" | "homeDir" | "prepareHome" | "env"
 > & {
   mockProvider: MockProviderServer;
-  /** A Codex account beside the Claude login, its turns served by the mock. */
   withCodex?: boolean;
   /** Codex's allowance left, in percent (60 unless named). */
   codexPercent?: number;
@@ -296,14 +294,12 @@ export function claudeQueued(homeDir: string, text: string): boolean {
   });
 }
 
-/** The task prompt, once it takes input. */
 export async function taskPrompt(page: Page) {
   const input = page.getByRole("textbox", { name: "Task prompt" });
   await expect(input).toBeEnabled({ timeout: 30_000 });
   return input;
 }
 
-/** Say something to the Firstmate from the task prompt. */
 export async function say(page: Page, text: string): Promise<void> {
   const input = await taskPrompt(page);
   await input.click();

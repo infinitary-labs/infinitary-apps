@@ -129,7 +129,6 @@ export type NoticeFacts =
       panel: { id: string; title: string };
       /** The panel API its manifest names. */
       api: number;
-      /** The panel APIs this version serves. */
       serves: number[];
       /** The personal workspace's repo id, when it is registered. */
       repoId?: string;
@@ -159,7 +158,6 @@ export type NoticeFacts =
       /** The batch's pull request, as it is named where the project lives. */
       change: string;
       url?: string;
-      /** The held version of the batch. */
       head: string;
       /** The failed checks' names. */
       checks: string[];
@@ -287,7 +285,6 @@ export type NoticeFacts =
        * read back (`seatDigest.ts`, bounded there).
        */
       kind: "seat-moved";
-      /** Where it answered before and where it answers now: provider name and model. */
       from: WakeSeat;
       to: WakeSeat;
       /**
@@ -302,7 +299,6 @@ export type NoticeFacts =
       recent: SeatDigestTurn[];
     };
 
-/** The ladder's nudge: finish, or say what blocks you (rung 1, and the stall card's Continue). */
 /** The policy notice's heading over the runbook sections the new facts select that the crewmate's instructions did not carry (INF-1876). */
 export const POLICY_GUIDANCE_HEADING =
   "Guidance the new facts select, which your instructions did not carry:";
@@ -325,14 +321,12 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
   return rule + project;
 }
 
-/** Why a recorded freeze's names may not be where its time went. */
 const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, string> = {
   waited:
     "These names are uncertain: the main thread spent under half the stall on its own processor, so it was likely waiting on something outside JavaScript, such as another program or a file, and the names may come from code that ran after the wait.",
   late: "These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later.",
 };
 
-/** How often the main thread stopped since this run started, from the recorder's own counts. */
 function freezeRate(rate: NonNullable<SavedFreezeFacts["sinceStart"]>): string {
   const minutes = Math.max(0, Date.parse(rate.until) - Date.parse(rate.since)) / 60_000;
   const perMinute = minutes > 0 ? ` (about ${(rate.stalls / minutes).toFixed(1)} a minute)` : "";
@@ -346,13 +340,11 @@ function freezeRate(rate: NonNullable<SavedFreezeFacts["sinceStart"]>): string {
 type FreezeFacts = Extract<WakeFacts, { kind: "freeze-recorded" }>;
 type SavedFreezeFacts = Exclude<FreezeFacts, { summary: VersionSummary }>;
 
-/** What the guidance after a freeze's facts says, for a version's summary and a saved wake alike. */
 const FREEZE_GUIDANCE =
   "Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair.";
 const FREEZE_REPAIR =
   "Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice.";
 
-/** One captured location's line in a version's summary. */
 function freezeLocationLine(location: FreezeLocation, place: number): string {
   const path = location.frames.length
     ? location.frames
@@ -416,10 +408,8 @@ function renderFreezeRecorded(facts: FreezeFacts): string {
   return `[fm-op] ${opening}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). ${FREEZE_GUIDANCE} Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. ${FREEZE_REPAIR} You hear one automatic summary per installed app version; later evidence stays in the local record.`;
 }
 
-/** How the first mate hears the captain's Update panel press opens. */
 export const PANEL_UPDATE_ASKED_OPENING = "[fm-op] the captain pressed Update panel on their panel";
 
-/** The captain's Update panel press, as the first mate hears it: start the update now. */
 function renderPanelUpdateAsked(facts: Extract<WakeFacts, { kind: "panel-update-asked" }>): string {
   const workspace = facts.repoId
     ? `the personal workspace (repo_id ${facts.repoId})`
@@ -427,10 +417,8 @@ function renderPanelUpdateAsked(facts: Extract<WakeFacts, { kind: "panel-update-
   return `${PANEL_UPDATE_ASKED_OPENING} "${facts.panel.title}" (id ${facts.panel.id}). The app refuses its server.ts before it runs, because it is written for panel API ${facts.api} and this version serves panel API ${facts.serves.join(" or ")}, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in ${workspace} now, with no card first: its goal is to update that panel's code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill's "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel's line clears by itself once its code is updated.`;
 }
 
-/** How the first mate hears of the team queue's leftover files opens. */
 export const TEAM_QUEUE_LEFT_OPENING = "[fm-op] the team queue's files are still in project";
 
-/** Files of the team queue the app once shipped: offer their removal once, on a card. */
 function renderTeamQueueLeft(facts: Extract<WakeFacts, { kind: "team-queue-left" }>): string {
   const rule = facts.rule
     ? ` Its ${facts.rule} still requires the status ${BATCH_CHECK}, which nothing writes now, so no pull request there can pass that rule: name the rule on the card and in the task's brief, and say that someone who may change the project's rules has to drop that requirement.`
@@ -438,16 +426,13 @@ function renderTeamQueueLeft(facts: Extract<WakeFacts, { kind: "team-queue-left"
   return `${TEAM_QUEUE_LEFT_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.files.join(", ")}. Infinitary no longer uses a queue workflow in the project: it combines the captain's approved changes into batches of their own, and nothing reads those files.${rule} Offer the captain once, on one decision card, a task in that project that removes them with a pull request: the files named here, any line of the project's own CI that includes or runs them, and the queue's labels and key where the project lives. Not now leaves them where they are; the app offers this once.`;
 }
 
-/** How the first mate hears a held batch of the captain's own opens. */
 export const BATCH_HELD_OPENING =
   "[fm-op] a batch of the captain's approved changes is held in project";
 
-/** How many times, in words: once, twice, then a number. */
 function timesWords(count: number): string {
   return count === 1 ? "once" : count === 2 ? "twice" : `${count} times`;
 }
 
-/** A failed batch of several changes: one repair task answers it. */
 function renderBatchHeld(facts: Extract<WakeFacts, { kind: "batch-held" }>): string {
   const members = facts.members.map((member) => `${member.task} "${member.title}"`).join(", ");
   const history = facts.members
@@ -463,10 +448,8 @@ function renderBatchHeld(facts: Extract<WakeFacts, { kind: "batch-held" }>): str
   return `${BATCH_HELD_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): ${facts.change}${facts.url ? ` (${facts.url})` : ""} at ${facts.head} failed ${facts.checks.length ? facts.checks.join(", ") : "its checks"}. It carries, in order: ${members}.${earlier} Changes approved meanwhile wait in line behind it. ${facts.repair ? `${facts.repair} is recorded as this batch's repair and is still open: steer it with this pull request and version, and start no other task.` : `Start one task in that project now, with no card first and repairs_batch true in its shape, whose brief names the batch-repair skill, that pull request and that version: it accounts for every failed test against every change in the batch, then sends back the change or changes at fault, each with its reason, or fixes forward with a change it declares the batch's fix, or does both in one declaration, or runs the failed checks again when it judges a flake, which still gets an owner. If a task is already repairing this batch, start nothing.`} Put up no card about the hold: the Batches panel and Settings show who is repairing it, and Settings keeps Try again and Send back with a reason.`;
 }
 
-/** How the seat-moved wake opens when the captain moved the seat. */
 export const SEAT_MOVED_OPENING = "Your seat moved on the captain's word";
 
-/** What paused the seat a move left, in the words the seat-moved wake uses. */
 const SEAT_PAUSE_WORDS: Record<SeatPauseClass, string> = {
   signed_out: "needed a new sign-in",
   no_headroom: "had used up its allowance",
@@ -521,7 +504,6 @@ function renderSeatMoved(facts: Extract<WakeFacts, { kind: "seat-moved" }>): str
   return `${head}${truth} ${count}\n${lines.join("\n")}`;
 }
 
-/** The first mate's own notices, worded. */
 export const NOTICE_WORDS: KindWords<NoticeFacts> = {
   "kept-project-direction": (facts) =>
     `The captain kept this instruction for your project (${facts.id}, revision ${facts.revision}). Apply it where it concerns your current work; it grants no new permission.\n${facts.text}`,

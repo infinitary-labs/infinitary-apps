@@ -202,7 +202,6 @@ export type ChromePageReading = {
   cookieNames: () => Promise<string[]>;
 };
 
-/** A download Chrome is writing for one of a browser's pages. */
 type Download = { target: HostDownloadTarget; bytes: number };
 
 /** One task browser: a context of Chrome's, its pages and its downloads. */
@@ -706,7 +705,6 @@ export function createChromeEngine(options: ChromeEngineOptions): ChromeEngine {
     }
   };
 
-  /** A browser's grants, each set in Chrome for its own context's site. */
   const grantsOf = (state: Running, context: () => Context | undefined): AskGrants =>
     new AskGrants(async (permission, origin, granted) => {
       const made = context();
@@ -920,7 +918,6 @@ export function createChromeEngine(options: ChromeEngineOptions): ChromeEngine {
     }
   };
 
-  /** The kept profile's permissions refused and its downloads named, once per Chrome. */
   const keptReady = (state: Running): Promise<void> => {
     state.keptReady ??= (async () => {
       for (const name of PERMISSIONS) {

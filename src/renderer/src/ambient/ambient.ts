@@ -31,7 +31,6 @@ import { STYLES } from "./styles/catalog";
 const TICK_MS = 250;
 /** How far ahead bars are composed, in seconds: under half a bar, so the crew is heard soon. */
 const LOOKAHEAD_SECONDS = 1;
-/** How long it fades out when switched off, in seconds. */
 const FADE_OUT_SECONDS = 0.6;
 /**
  * The music's sample rate, in Hz: half the usual, which halves its cost, and
@@ -87,7 +86,6 @@ function waitsForSomeone(): boolean {
   return usePresence.getState().away && !useShellStore.getState().ambientPlaysWhenAway;
 }
 
-/** Marks where it stands: `playing` or `hushed` only once its audio runs, else `off`. */
 function mark(): void {
   const { ambientMusic, ambientPaused } = useShellStore.getState();
   document.documentElement.dataset.ambientMusic =

@@ -240,7 +240,6 @@ async function sharesHistory(repoDir: string, first: string, second: string): Pr
   }
 }
 
-/** Whether `head` builds on `ancestor`. */
 async function contains(repoDir: string, head: string, ancestor: string): Promise<boolean> {
   return git(repoDir, ["merge-base", "--is-ancestor", ancestor, head]).then(
     () => true,
@@ -275,7 +274,6 @@ export async function fixBase(
   return undefined;
 }
 
-/** Whether this clone holds `version` as a commit. */
 async function readable(repoDir: string, version: string): Promise<boolean> {
   return git(repoDir, ["cat-file", "-e", `${version}^{commit}`]).then(
     () => true,
@@ -338,7 +336,6 @@ async function clashAhead(
   return undefined;
 }
 
-/** The tree of `theirs` merged onto `ours`; null when they do not combine. */
 async function mergedTree(repoDir: string, ours: string, theirs: string): Promise<string | null> {
   try {
     return await git(repoDir, ["merge-tree", "--write-tree", "--no-messages", ours, theirs]);

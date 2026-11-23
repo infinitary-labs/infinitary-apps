@@ -33,7 +33,6 @@ function installed(name: string, from: string): string | undefined {
   }
 }
 
-/** Every package the app depends on at run time, by its folder, the app's own included. */
 function productionPackages(): string[] {
   const seen = new Set<string>([root]);
   const queue = [root];

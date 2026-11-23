@@ -71,7 +71,6 @@ function combineOf(members: BatchMember[], leftOut: Combined["leftOut"] = []): C
   return { base: BASE, head: members.at(-1)?.commit ?? BASE, members, leftOut };
 }
 
-/** Two approved changes combined and opened as pull request #31. */
 function openBatch(): BatchRecord {
   const line = enqueue(enqueue(EMPTY_BATCH_RECORD, PARSER), EXPORT);
   const pushed = combined(
@@ -211,7 +210,6 @@ describe("a combine's result on the record", () => {
       kind: "failed",
       words: BATCH_STATUS_WORDS.leftOut(reason),
     });
-    // A new version of that change joins the line again and its note goes.
     const repaired = enqueue(record, { ...EXPORT, head: LEGEND.head, at: 6_000 });
     expect(repaired.leftOut).toEqual([]);
     expect(repaired.line.map((change) => change.head)).toEqual([LEGEND.head]);
@@ -424,7 +422,6 @@ describe("an approval withdrawn", () => {
     const record = enqueue(openBatch(), next);
     expect(record.open?.members.map((entry) => entry.taskId)).toEqual(["t-export"]);
     expect(record.line).toEqual([next]);
-    // The same approved version is put in line once.
     expect(enqueue(record, next)).toBe(record);
   });
 });
@@ -535,9 +532,7 @@ describe("a story revised at the approved version", () => {
       member(EXPORT, EXPORT_COMMIT),
     ]);
     expect(record.open?.stale).toBe(true);
-    // The next combine carries the same changes in the same order, under the new words.
     expect(carried(record).map((change) => change.title)).toEqual([RETITLED.title, EXPORT.title]);
-    // No change was sent back: each still reads its place in the held batch.
     expect(standing(record, PARSER.taskId, PARSER.head)).toMatchObject({ place: "held" });
     expect(standing(record, EXPORT.taskId, EXPORT.head)).toMatchObject({ place: "held" });
   });
@@ -593,7 +588,6 @@ describe("receipts", () => {
       words: BATCH_STATUS_WORDS.merged,
       link: "https://github.com/acme/meter/pull/31",
     });
-    // The next batch forms from what waited.
     expect(forms(record)).toBe(true);
   });
 

@@ -23,7 +23,6 @@ const cardSelector = `[data-panel-card="${KNOWLEDGE_PANEL}/browser"]`;
 /** Its title, as its manifest names it: its section's name and its header's first words. */
 export const KNOWLEDGE_TITLE = knowledgeManifest.title;
 
-/** The Knowledge panel on its rail. */
 export function knowledgePanel(page: Page): Locator {
   return page.locator(`[data-side-panel="${KNOWLEDGE_PANEL}"]`);
 }
@@ -33,7 +32,6 @@ export function knowledgeHeader(page: Page): Locator {
   return knowledgePanel(page).locator("header");
 }
 
-/** The browser's card while it is the shown entry. */
 export function browserCard(page: Page): Locator {
   return page.locator(`${SHOWN_ENTRY} ${cardSelector}`);
 }
@@ -43,12 +41,10 @@ export function browsersOnStage(page: Page): Locator {
   return page.locator(`[data-card-layer] ${cardSelector}`);
 }
 
-/** The shown browser's own page. */
 export function browserPage(page: Page): FrameLocator {
   return drawnFrame(page, `${SHOWN_ENTRY} ${cardSelector} iframe`);
 }
 
-/** The browser itself, inside its page. */
 export function browser(page: Page): Locator {
   return browserPage(page).locator("[data-knowledge-browser]");
 }
@@ -58,7 +54,6 @@ export function graph(page: Page): Locator {
   return browser(page).locator("[data-knowledge-drawing]");
 }
 
-/** A concept on the graph, by its id. */
 export function concept(page: Page, id: string): Locator {
   return browser(page).locator(`[data-knowledge-node="${id}"]`);
 }
@@ -286,12 +281,10 @@ export function linkedReferences(frame: FrameLocator): Locator {
   return frame.locator("a[data-inf-entry]");
 }
 
-/** One linked reference, by the entry's id. */
 export function reference(frame: FrameLocator, id: string): Locator {
   return frame.locator(`a[data-inf-entry="${id}"]`);
 }
 
-/** The inspector's Ask about this. */
 export function askAboutThis(page: Page): Locator {
   return browser(page).locator("[data-knowledge-ask]");
 }

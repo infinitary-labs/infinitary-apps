@@ -31,7 +31,6 @@ export const PLUGIN_BYTES_CAP = 8 * 1024 * 1024;
 /** How long one fetch step may take before the install is refused. */
 const FETCH_TIMEOUT_MS = 120_000;
 
-/** Directory names a copy leaves behind: version control and installed dependencies. */
 const SKIPPED_DIRS = new Set([".git", "node_modules"]);
 
 export class PluginSourceError extends Error {

@@ -9,7 +9,6 @@ import type { KnowledgeService, SavedCounts } from "./knowledgeService";
  * Standing directions travel separately and completely.
  */
 
-/** What the counts say: how much is saved, nothing, or no collection to read. */
 export type SavedKnowledge =
   | { state: "held"; counts: SavedCounts }
   | { state: "empty" }
@@ -60,7 +59,6 @@ export function contextSavedKnowledge(saved: SavedKnowledge): string | undefined
   return `The captain's collection holds ${holdings(saved.counts)}. None of it is in this context: search it with the knowledge tool when a message may depend on the captain's situation or a source they saved.`;
 }
 
-/** The brief's one saved-knowledge line, or nothing while nothing is saved. */
 export function renderBriefKnowledge(saved: SavedKnowledge): string | undefined {
   if (saved.state === "empty") return undefined;
   if (saved.state === "unavailable") return `Saved knowledge cannot be read now: ${saved.reason}.`;

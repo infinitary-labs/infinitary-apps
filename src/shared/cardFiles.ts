@@ -21,12 +21,10 @@ const CARD_FILE_ID = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})$/;
  */
 export const CARD_FILE_PIECE_BYTES = 1024 * 1024;
 
-/** A file's id on its card, from its task and its own sha256. */
 export function cardFileId(taskId: string, sha256: string): string {
   return `${taskId}-${sha256.slice(0, 32)}`;
 }
 
-/** The task a file's id names, or undefined when it is not a file's id. */
 export function cardFileTask(id: string): string | undefined {
   return CARD_FILE_ID.exec(id)?.[1];
 }

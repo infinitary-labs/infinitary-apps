@@ -30,7 +30,6 @@ function file(name: string, content: Uint8Array | string, type = ""): File {
   });
 }
 
-/** A host that knows where files "live": the path a file name maps to, else none. */
 function hostOf(places: Record<string, DroppedPath>, delay?: () => Promise<void>) {
   return {
     dropped: async (f: File): Promise<DroppedPath> => {
@@ -208,7 +207,6 @@ describe("giving a batch to an input", () => {
     expect(log.paths).toEqual([]);
     expect(useIntakeStore.getState().status.main).toContain("shot.png ready");
     expect(useIntakeStore.getState().status.main).not.toContain("file path");
-    // Folders and shortcuts keep their own words there too.
     const odd = destination({ takesPaths: () => false });
     await giveFiles(odd.dest, [file("dir", "")], hostOf({ dir: { kind: "folder" } }));
     expect(odd.log.notices).toEqual(["file-folder"]);

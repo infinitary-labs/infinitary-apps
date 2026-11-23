@@ -32,7 +32,6 @@ function crewLight(taskId: string): number | null {
   return anchor ? Number(anchor.style.opacity || "1") : null;
 }
 
-/** The part `selector` names, for the pointer to press or move onto; it throws when the window drew none. */
 function part(selector: string) {
   const element = document.querySelector<HTMLElement>(selector);
   if (!element) throw new Error(`The window drew no ${selector}`);
@@ -53,14 +52,8 @@ test("a still click opens the row without dimming any crew, and moving onto a pi
   if (!board || typeof board === "function") throw new Error("The seeded home read no board");
   // The crew's work, and a task for each step that waits on the captain.
   expect(board.tasks).toHaveLength(WORK.length + WAITS_ON.length);
-  // The pill and the crew's model names paint from the board the core
-  // pushes as its tasks change (src/shared/reads.ts, `tasks.board`); this
-  // push stands for the core's. The window's own first read of the board is
-  // dropped when the card stack changes first (INF-2526), so until that is
-  // fixed the push is what paints them here.
   bridge.push("inf:tasks", board);
   for (const work of WORK) await expect.poll(() => crewLight(work.id)).toBeGreaterThan(0.6);
-  // Which row pill the browser says the pointer entered.
   const entered: string[] = [];
   const noteEntered = (event: PointerEvent) => {
     const pill = (event.target as Element).closest("[data-project-focus-option]");

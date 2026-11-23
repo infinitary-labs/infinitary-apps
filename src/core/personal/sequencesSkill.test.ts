@@ -45,7 +45,6 @@ describe("packaged plan steps", () => {
   });
 
   it("recognizes the whole ideation plan paragraph, relayed on one line as the Firstmate does", () => {
-    // The bullet as written: its first line and every indented line under it.
     const from = SEQUENCES_SEED.indexOf("- plan: a read-only step.") + "- ".length;
     const written = SEQUENCES_SEED.slice(from, SEQUENCES_SEED.indexOf("\n- ", from));
     expect(written.split("\n").length).toBeGreaterThan(1);

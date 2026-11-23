@@ -101,7 +101,6 @@ test("a run takes over from an older copy's run, brings the saved work over, and
 
   const ran = run(env);
   await ran.started();
-  // The older run saved and ended by itself on the ordinary stop.
   expect(await older.ended).toEqual({ code: 0, signal: null });
   expect(older.said()).toEqual(["holding", "asked to stop", "saved"]);
   ran.child.kill("SIGTERM");

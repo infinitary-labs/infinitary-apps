@@ -38,7 +38,6 @@ import { MAC_ONLY_TAG } from "./tags";
 
 test.afterEach(endRunWork);
 
-/** This Mac's own network address, as `os.networkInterfaces()` lists it. */
 const ownNetwork = (address: string): NodeJS.Dict<NetworkInterfaceInfo[]> => ({
   en0: [
     {
@@ -121,7 +120,6 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
   });
   const ran = terminal(command, me.env, "yes\n");
   expect(await ran.exited).toBe(0);
-  // Asked once, before anything was fetched; the copy it got joined without asking again.
   expect(ran.lines()).toEqual([
     ...macAsk("MacBook Pro", ME.name),
     "Type yes to agree: Getting Infinitary from MacBook Pro… done.",
@@ -130,7 +128,6 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
   expect(at.pairing.list()).toEqual([
     expect.objectContaining({ kind: "work", name: "Studio Mac", user: ME.name }),
   ]);
-  // It keeps the copy it got, and the background starts that copy.
   const kept = join(me.dataDir, "app", "Firstmate 3000.app");
   const installed = readInstalled(me.dataDir);
   expect(installed.app).toBe(kept);
@@ -142,7 +139,6 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
   );
 });
 
-/** This environment with no screen: neither an X nor a Wayland display. */
 function noScreen(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const { DISPLAY: _x, WAYLAND_DISPLAY: _wayland, ...rest } = env;
   return rest;
@@ -276,7 +272,6 @@ test("the command for another Mac downloads the published version, and the copy 
     expect(at.pairing.list()).toEqual([
       expect.objectContaining({ kind: "work", name: "Studio Mac", user: ME.name }),
     ]);
-    // It keeps the copy it downloaded, and the background starts that copy.
     const kept = join(me.dataDir, "app", "Firstmate 3000.app");
     expect(readInstalled(me.dataDir).app).toBe(kept);
     expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8")).toBe(

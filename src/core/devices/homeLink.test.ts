@@ -65,7 +65,6 @@ function standInCore() {
     // A change the home reads against its real contract, as its dispatcher does.
     if (channel === "inf:accounts:add" || channel === "inf:task:run")
       return { added: parseInvokeRequest(channel, args) };
-    // A work request the home holds until the test lets it answer.
     if (channel === "inf:work:progress") return held.then(() => ({ text: "Noted." }));
     throw new Error(`Rejected ${channel}: malformed request`);
   }) as CoreDispatch;
@@ -77,7 +76,6 @@ function standInCore() {
     dispatch,
     asked,
     events: new CoreEventBus(),
-    /** The held work request answers from now on. */
     answerWork: () => answer(),
     holdWork: () => {
       held = new Promise<void>((resolve) => {
@@ -151,7 +149,6 @@ async function home(
     left,
     listen,
     quit,
-    /** The home as it is listening now. */
     connection: () => {
       if (!connection) throw new Error("The home is not listening.");
       return connection;
@@ -210,7 +207,6 @@ function follow(
   /** How many pushes had been handled each time a replay ended. */
   const replayed: number[] = [];
   const sockets: WebSocket[] = [];
-  /** Every frame on the wire, as the device wrote it and as it heard it. */
   const wire: { sent: Record<string, unknown>[]; heard: Record<string, unknown>[] } = {
     sent: [],
     heard: [],
@@ -609,7 +605,6 @@ describe("the device's side of the connection", () => {
     await expect(air.link.leave()).resolves.toBe(true);
     expect(at.pairing.list()).toEqual([]);
     expect(at.left.map((device) => device.name)).toEqual(["MacBook Air"]);
-    // Leaving is not being removed.
     expect(air.link.state().removed).toBe(false);
   });
 
@@ -937,7 +932,6 @@ describe("a computer that runs work, on its side of the connection", () => {
     const answered = link.ask("inf:work:progress", request);
     await until(() => at.asked.length === 1);
 
-    // Firstmate quits at the home mid-request, and opens again.
     await at.quit();
     await until(() => states.at(-1)?.contact !== "in-reach");
     expect(link.waiting()).toBe(1);
@@ -1018,7 +1012,6 @@ describe("a home and a device on two sides of the Infinitary rename", () => {
     });
     mini.link.start();
     await mini.until(() => mini.link.state().contact === "in-reach");
-    // Its hello said it reads both, and the home's welcome said so too.
     expect(mini.wire.sent[0]).toMatchObject({ t: "hello", spellings: ["fm", "inf"] });
     expect(mini.wire.heard[0]).toMatchObject({ t: "welcome", spellings: ["fm", "inf"] });
 
@@ -1051,7 +1044,6 @@ describe("a home and a device on two sides of the Infinitary rename", () => {
     expect(air.pushes[0]).toEqual({ channel: "inf:models:changed", payload: { ok: true } });
     expect(channelsOf(air.wire.heard, "push")).toEqual(["inf:models:changed"]);
     const heard = await old.push((push) => (push.channel as string) === "fm:models:changed");
-    // Both were sent the same push under the same number.
     expect(heard.seq).toBe(air.wire.heard.find((frame) => frame.t === "push")?.seq);
     await old.close();
   });
@@ -1064,7 +1056,6 @@ describe("a home and a device on two sides of the Infinitary rename", () => {
     await expect(air.link.invoke("inf:app:healthcheck", [])).resolves.toMatchObject({ ok: true });
     await expect(air.link.invoke("inf:cards:close", ["card-1"])).resolves.toEqual({ ok: true });
     expect(channelsOf(air.wire.sent, "invoke")).toEqual(["fm:app:healthcheck", "fm:cards:close"]);
-    // The home's core heard them by its own names.
     expect(at.asked.map(({ channel }) => channel)).toEqual([
       "inf:app:healthcheck",
       "inf:cards:close",

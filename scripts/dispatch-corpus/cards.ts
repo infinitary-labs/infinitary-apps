@@ -39,7 +39,6 @@ export function cardIdFromEmitResult(text: string): string | null {
   return match?.[1] ?? null;
 }
 
-/** The card's declared actions, or an empty list when the row has none. */
 export function declaredActionsOf(actionsJson: string | null | undefined): JsonRecord[] {
   if (!actionsJson) return [];
   try {

@@ -17,7 +17,6 @@ const APP_PANEL_DIRS = BUILTIN_FRAME_PANELS.map((id) => `${builtinPanelDir(id)}/
 /** One library file as the computer answers it. */
 export type PanelLibraryFile = { path: string; integrity: string; data: string };
 
-/** A library file whose bytes no longer match the pin its build baked in. */
 export class PanelLibraryChanged extends Error {
   constructor(path: string) {
     super(`the panel library's ${path} is not the file this build made`);

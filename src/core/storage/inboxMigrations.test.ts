@@ -34,9 +34,6 @@ import { openDatabase } from "./db";
 import { INBOX_GRACE_MS, InboxStore, inboxContentHash } from "./inboxStore";
 import { dropViews } from "./views";
 
-// The durable inbox's migrations (inboxMigrations.ts): content hash, origin, idle recovery, the
-// typed wake envelope, a wake's once-identity and the cut count.
-
 describe("migration 22 (inbox content hash, WI-3)", () => {
   it("stamps queued rows with their content hash, and reverses without losing a row", () => {
     const dir = tmpUserData();

@@ -35,7 +35,6 @@ export function within(inner: Rect, outer: Rect): string[] {
   return escaped;
 }
 
-/** Whether two boxes share any area (touching edges do not). */
 export function intersects(a: Rect, b: Rect): boolean {
   const across = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
   const down = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
@@ -210,7 +209,6 @@ export async function atRest(target: Locator): Promise<void> {
 /** A window's content area in device-independent pixels, before page zoom. */
 export type WindowSize = { width: number; height: number };
 
-/** The narrowest window the app allows, read off the window itself. */
 export function minimumWindowSize(app: ElectronApplication): Promise<WindowSize> {
   // It only reads, so `readInMain` may ask again when its answer is lost to a
   // garbage collection in a busy main process.
@@ -264,7 +262,6 @@ export async function resizeWindow(
 /** A point in the window, px. */
 export type Point = { x: number; y: number };
 
-/** One action of Chromium's own synthetic mouse, at a window point. */
 type PointerAction = { name: "pointerMove" | "pointerDown" | "pointerUp"; button?: 0 } & Point;
 
 /**
@@ -333,7 +330,6 @@ export async function leaveWindow(app: ElectronApplication, page: Page, at: Poin
   );
 }
 
-/** The window point at the centre of `target`, where a press on it goes. */
 async function pressPoint(target: Locator): Promise<Point> {
   const box = await target.boundingBox();
   if (!box) throw new Error("The press target is not on screen");

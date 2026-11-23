@@ -64,7 +64,6 @@ export function acceptedImageFiles(
   return accepted;
 }
 
-/** How many pictures of an accepted type in a paste are over the size cap. */
 export function tooBigImageCount(items: Iterable<ClipboardItemLike> | undefined): number {
   if (!items) return 0;
   let count = 0;
@@ -274,7 +273,6 @@ export type ComposerFieldProps = Omit<
   onPictureTooBig?: () => void;
   /** A paste long enough to become a chip (`shouldChip`), exact clipboard text. */
   onPasteText?: (text: string) => void;
-  /** Where the caret is, reported as it moves. */
   onCaretChange?: (caret: number) => void;
   /** The draft is one line of words that wraps onto more. */
   onWrapChange?: (wrapped: boolean) => void;

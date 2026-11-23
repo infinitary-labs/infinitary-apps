@@ -42,7 +42,6 @@ type AttentionDetail = Pick<
 export const STUCK_GUIDANCE =
   "The provider kept refusing its request the same way, so the app stopped retrying and keeps its message. Your first mate is choosing whether to restart it in a new conversation or move it to another model.";
 
-/** What the record's attention box says for `task` at `now`, or null when nothing needs saying. */
 export function recordAttentionOf(task: AttentionDetail, now: number): RecordAttention | null {
   const closed = task.status === "done" || task.status === "dropped";
   const live = !closed;
@@ -146,7 +145,6 @@ type ClosedDetail = Pick<
   "status" | "closedReason" | "closing" | "closedAt" | "delivery"
 >;
 
-/** The closed task's line, or null while it is open. */
 export function recordClosedLineOf(task: ClosedDetail): RecordClosedLine | null {
   if (task.status !== "done" && task.status !== "dropped") return null;
   const at = task.closing?.at ?? task.closedAt;

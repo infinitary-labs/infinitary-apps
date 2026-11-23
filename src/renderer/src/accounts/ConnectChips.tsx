@@ -128,7 +128,6 @@ function ProviderChip({
 
 export type ProviderGroups = { firstmate: ProviderView[]; crew: ProviderView[] };
 
-/** The two groups, in catalog order: Firstmate-capable first, crew only after. */
 export function groupProviders(providers: readonly ProviderView[]): ProviderGroups {
   const groups: ProviderGroups = { firstmate: [], crew: [] };
   for (const provider of providers) {

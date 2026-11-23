@@ -43,7 +43,6 @@ export function signInUser(ssh: SshProgram, address: string): Promise<string | n
   });
 }
 
-/** The key that Mac answers with, or why it could not be read. */
 export function readHostKey(ssh: SshProgram, address: string): Promise<HostKeyRead> {
   return resolveDestination(ssh, address).then((where) => {
     if (!where) return { refusal: "unreachable" };

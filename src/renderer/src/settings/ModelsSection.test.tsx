@@ -16,12 +16,6 @@ import { removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { REASONING_WORDS } from "./reasoningWords";
 
-/**
- * The multi-slot rendering contract: an offering placed in more than one
- * slot renders once per membership, and the off group is exactly the
- * offerings with no membership at all.
- */
-
 const ROUTING: RoutingSettings = { dynamicRouting: true, pins: [] };
 
 /** A fresh install: the adapter's own walk, and no native model in sight. */
@@ -215,7 +209,6 @@ describe("ModelsSection - lean listing (docs/model-lists.md)", () => {
     expect(allListed).toContain("Every model sits in a level.");
     expect(allListed).not.toContain("Find more from your subscriptions");
 
-    // A lane with a model in it shows the model, not either line.
     const withOff = off(
       render({
         models: [...listed, grok("grok-4.6", "Grok 4.6", [])],
@@ -246,7 +239,6 @@ describe("ModelsSection - where a control sits says how far it reaches", () => {
     expect(group(html, "high")).toContain('aria-label="Remove GPT-6.1 Sol from hard tasks"');
     expect(group(html, "high")).not.toContain("from normal tasks");
     expect(group(html, "medium")).toContain('aria-label="Remove GPT-6.1 Sol from normal tasks"');
-    // A model in no level has nothing to leave.
     expect(group(html, "off")).toContain('data-model-row="openai-codex/gpt-6-luna"');
     expect(group(html, "off")).not.toContain("Remove GPT-6 Luna");
     expect(html).not.toContain("GPT-6.1 Sol actions");
@@ -269,7 +261,6 @@ describe("ModelsSection - where a control sits says how far it reaches", () => {
     expect(banner.indexOf("GPT-6 Luna")).toBeLessThan(banner.indexOf("GPT-6.1 Sol"));
     expect(banner).toContain("unless you name a model for the task");
     expect(html).toContain("2 pinned ✱");
-    // The ✱ stays on the pill, in every level the model sits in.
     expect(group(html, "high")).toContain('aria-label="GPT-6.1 Sol ✱"');
   });
 

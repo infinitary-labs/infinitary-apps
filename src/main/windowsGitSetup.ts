@@ -120,7 +120,6 @@ async function installOnce(
   }
 }
 
-/** Downloads `url` to `to` and answers its SHA-256. */
 export async function downloadFile(url: string, to: string, signal: AbortSignal): Promise<string> {
   const response = await fetch(url, { signal, redirect: "follow" });
   if (!response.ok || !response.body) throw new Error(`the server answered ${response.status}`);
@@ -135,7 +134,6 @@ function systemRoot(env: NodeJS.ProcessEnv): string {
   return env.SystemRoot ?? env.SYSTEMROOT ?? "C:\\Windows";
 }
 
-/** Windows' own reading of a file's signature, through Windows PowerShell. */
 export function readSignature(
   env: NodeJS.ProcessEnv,
 ): (file: string) => Promise<InstallerSignature | undefined> {
@@ -193,7 +191,6 @@ export function runGitInstaller(env: NodeJS.ProcessEnv): (file: string) => Promi
     });
 }
 
-/** The real setup on this PC. */
 export function windowsGitDeps(
   env: NodeJS.ProcessEnv,
   tempDir: string,

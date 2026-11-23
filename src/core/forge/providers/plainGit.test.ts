@@ -23,7 +23,6 @@ const run = (cwd: string, ...args: string[]) =>
     .toString()
     .trim();
 
-/** A bare host, a clone of it with one commit on main, and a task branch with one more. */
 function plainHost() {
   const root = scratchDir("infinitary-plain-host-");
   const bare = join(root, "host.git");
@@ -72,7 +71,6 @@ describe("the forge resolver", () => {
       name: "meter",
       dir: "/r",
     });
-    // GitLab is recognised by name and behaves as a plain host until its file exists.
     expect(
       forgeFor({
         path: "/r",

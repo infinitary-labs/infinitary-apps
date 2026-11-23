@@ -54,7 +54,6 @@ function rebasing(root: string): boolean {
   );
 }
 
-/** One language's messages now, read from its folder. */
 function currentMessages(root: string, tag: string): Messages {
   const { files } = readCatalogFiles(root);
   return joinCatalogFiles({ [tag]: files[tag] ?? {} }).catalogs[tag] ?? {};
@@ -139,13 +138,11 @@ function rebuild(root: string): string {
 
 const unmergedPaths = (root: string) => git(root, ["diff", "--name-only", "--diff-filter=U"]).split("\n").filter(Boolean);
 
-/** A file's bytes in the working copy; undefined where it has none. */
 const bytesOf = (root: string, path: string) =>
   existsSync(join(root, path)) ? readFileSync(join(root, path)) : undefined;
 
 const compiledPaths = () => [COMPILED_PATH, ...Object.keys(APP_PANEL_PREFIXES).map(panelMessagesPath)];
 
-/** Folds every `messages/<tag>.json` in the working copy into its language's folder, then removes it. */
 export function moveCatalogs(root = "."): string[] {
   const moved: string[] = [];
   for (const name of readdirSync(join(root, CATALOG_DIR)).sort(byName)) {

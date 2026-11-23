@@ -68,7 +68,6 @@ function argumentsAt(text: string, open: number): string[] | undefined {
   return undefined;
 }
 
-/** Every hold kind `text` cites by name: the string literals in each call's kind argument. */
 export function citationsIn(path: string, text: string): Citation[] {
   const citations: Citation[] = [];
   for (const match of text.matchAll(/\b(overridePasses|softHoldWords|fixedHoldWords)\(/g)) {
@@ -88,7 +87,6 @@ export function citationsIn(path: string, text: string): Citation[] {
   return citations;
 }
 
-/** The docs table's rows: kind, level and what it rests on, in order. */
 export function docsRows(markdown: string): { kind: string; level: string; restsOn: string }[] {
   const section = markdown.split(/^## The holds$/m)[1]?.split(/^## /m)[0] ?? "";
   return [...section.matchAll(/^\| `([^`]+)` \| ([^|]+?) \| ([^|]+?) \|/gm)].map(
@@ -96,7 +94,6 @@ export function docsRows(markdown: string): { kind: string; level: string; rests
   );
 }
 
-/** Every way the sources and the docs are out of step with the registry. */
 export function holdProblems(
   registry: Registry,
   sources: { path: string; text: string }[],

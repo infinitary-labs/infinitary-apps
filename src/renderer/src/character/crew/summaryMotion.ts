@@ -96,7 +96,6 @@ export function useSummaryPresence<T>(pointed: T | null): SummaryShown<T> {
   return state;
 }
 
-/** Where a placed summary stands: its panel's and its hairline's inline geometry. */
 export type SummaryPose = { panel: string; line: string; width: string };
 
 export function poseOf(panel: HTMLElement, line: HTMLElement): SummaryPose {

@@ -71,7 +71,6 @@ describe("what a window says once its command stops", () => {
     for (const entry of ["linux-unit", "mac-daemon"] as const) {
       expect(entryRestarts(entry, end(RUN_UPDATED_EXIT))).toBe(true);
       expect(entryRestarts(entry, end(null))).toBe(true);
-      // Neither starts a clean stop again.
       expect(entryRestarts(entry, end(0))).toBe(false);
     }
     // A settings file to fix: the Linux unit never retries it, the Mac's entry does.

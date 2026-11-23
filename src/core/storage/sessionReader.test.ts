@@ -51,7 +51,6 @@ const contract = (at: number, version: string) => ({
   tools_sha: `tools-${version}`,
 });
 
-/** The Pi-dialect messages a read session holds, by role and what matters to its readers. */
 function messages(path: string): unknown[] {
   return readSession(path).entries.flatMap((entry): unknown[] => {
     if (entry.type === "custom") return [{ contract: (entry.data as Line).version }];

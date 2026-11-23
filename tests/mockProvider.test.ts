@@ -207,7 +207,6 @@ function anthropicRequest(tools: string[], messages: unknown[]) {
   });
 }
 
-/** The tool_use blocks a streamed Anthropic answer opened. */
 async function toolUses(response: Response): Promise<Array<{ id: string; name: string }>> {
   return (await response.text())
     .split("\n")
@@ -259,7 +258,6 @@ function cardChoice(
   });
 }
 
-/** One Firstmate request in the chat-completions dialect: the calls it answered with, or its text. */
 async function firstmateAnswer(messages: unknown[], system = FIRSTMATE_PERSONA) {
   if (!server) throw new Error("start the mock provider first");
   const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
@@ -410,7 +408,6 @@ const TITLE = "Three findings rounds on the meter fix";
 const RETRY = { id: "retry", label: "Retry with the findings" };
 const NEW_CARD = { id: "card-fm-new", title: TITLE, taskId: "task-new" };
 const OLD_CARD = { id: "card-fm-old", title: TITLE, taskId: "task-old" };
-/** Two live tasks under one title, the older listed first. */
 const SAME_TITLE_CREW = [
   { task_id: "task-old", title: "meterlab builder", status: "idle" },
   { task_id: "task-new", title: "meterlab builder", status: "idle" },
@@ -420,7 +417,6 @@ const STEER: ScriptedCall = {
   args: { task_id: "task-new", message: "Retry with the findings." },
 };
 
-/** A tool loop's two legs after an input: the calls the model made, then their results. */
 function answered(calls: ScriptedCall[], result: string) {
   return [
     {
@@ -742,7 +738,6 @@ describe("browser journeys consume background shell answers", () => {
   );
 });
 
-/** One Firstmate request carrying the captain's served words: the status and what came back. */
 async function captainSays(provider: MockProviderServer, ask: string) {
   const response = await fetch(`http://127.0.0.1:${provider.port}/v1/chat/completions`, {
     method: "POST",

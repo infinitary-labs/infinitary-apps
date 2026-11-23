@@ -43,7 +43,6 @@ export function isLinuxPackage(value: string): value is LinuxPackage {
   return (LINUX_PACKAGES as readonly string[]).includes(value);
 }
 
-/** The file each kind of build a release publishes is, by its asset name's ending. */
 const BUILD_ASSET: Record<string, RegExp> = {
   zip: /\.zip$/,
   dmg: /\.dmg$/,
@@ -165,7 +164,6 @@ export function parseBuilds(payload: unknown, tap: TapNames = TAP): BuildsFile |
   return parsed.data;
 }
 
-/** What one installation is offered: its channel's version and its own build of it, if any. */
 export type BuildOffer = {
   version: string;
   releaseUrl: string;

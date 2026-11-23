@@ -52,7 +52,6 @@ describe("readDemoVideo", () => {
         },
       });
     }
-    // At the limits exactly: 30 seconds, 30 frames a second, 1920 × 1080, or portrait.
     expect(readDemoVideo(mp4({ seconds: 30, fps: 30, width: 1920, height: 1080 })).ok).toBe(true);
     expect(readDemoVideo(mp4({ width: 1080, height: 1920 })).ok).toBe(true);
   });

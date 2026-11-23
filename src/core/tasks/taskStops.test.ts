@@ -129,7 +129,6 @@ describe("task keeps", () => {
     expect(takeKeeps(folder).map((keep) => keep.label)).toEqual([BACKUP.label]);
     expect(takeKeeps(folder)).toEqual([]);
     expect(existsSync(stopsFile(folder))).toBe(false);
-    // Taking it leaves the job's kept folder where it is.
     expect(existsSync(kept?.folder ?? "")).toBe(true);
   });
 

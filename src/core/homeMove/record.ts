@@ -109,7 +109,6 @@ export const DATABASE_SIDECARS = ["-wal", "-shm", "-journal"] as const;
 export type RecordEntry = {
   /** Its place in the record, written with `/`. */
   path: string;
-  /** Where it is on this computer. */
   abs: string;
   size: number;
   mtimeMs: number;
@@ -119,7 +118,6 @@ export type RecordEntry = {
 
 const SQLITE_HEADER = Buffer.from("SQLite format 3\0", "latin1");
 
-/** Whether a file begins with SQLite's header. */
 export function isDatabaseFile(abs: string): boolean {
   let fd: number | undefined;
   try {
@@ -213,7 +211,6 @@ function* recordEntries(
     }
     for (const entry of entries) {
       const child = `${path}/${entry.name}`;
-      // crewmates/<task>/temp and crewmates/<task>/move stay on this computer.
       const parts = child.split("/");
       if (parts[0] === "crewmates" && parts.length === 3 && SKIPPED_IN_TASK.has(entry.name))
         continue;
@@ -268,7 +265,6 @@ export function hashFile(
   });
 }
 
-/** The folder a home keeps its record in once it moved away, by move. */
 export const MOVED_AWAY_DIR = "moved-away";
 
 /**

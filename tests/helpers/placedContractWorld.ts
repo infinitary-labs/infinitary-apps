@@ -115,7 +115,6 @@ export async function placedContractWorld<T extends Pick<ContractWorld, "factory
     conversations?: Parameters<typeof startHelper>[0]["conversations"];
   } = {},
 ) {
-  // The home.
   const db = freshDatabase();
   started.closes.push(() => db.close());
   const now = options.now ?? (() => Date.now());
@@ -255,7 +254,6 @@ export async function placedContractWorld<T extends Pick<ContractWorld, "factory
   };
 }
 
-/** Lets go of everything every world started. */
 export async function placedContractCleanup(): Promise<void> {
   await Promise.all(started.runs.splice(0).map((run) => run.stop()));
   await Promise.all(started.connections.splice(0).map((connection) => connection.close()));

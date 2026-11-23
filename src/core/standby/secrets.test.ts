@@ -140,7 +140,6 @@ function home(custody: DisposableCustody) {
       environment: "Personal",
     });
   };
-  /** One approved use: the request, then Allow once on its card. */
   const use = async (id: string) => {
     const receipt = await settings.broker({
       id,
@@ -155,7 +154,6 @@ function home(custody: DisposableCustody) {
     await settings.decide(effect.arg);
     await settings.takeBrokerResult(receipt.request);
   };
-  /** The captain's pick on the newest card offering this label. */
   const choose = async (label: string) => {
     const action = cards
       .findLast((card) => card.actions.some((a) => a.label === label))
@@ -229,12 +227,10 @@ describe("Secrets on a computer that keeps a copy", () => {
     expect(first?.keys.map((each) => each.device)).toEqual(["mini"]);
     expect(readStandbyLocks(userData).locks.map((each) => each.device)).toEqual(["mini"]);
 
-    // The computer never confirmed holds no lock, and no key opens for it.
     expect(laptop.confirms).toBe(0);
     expect(await readStandbyLock(laptop.lockCustody)).toBeUndefined();
     expect(standbys.state("laptop")).toBe("none");
 
-    // A changed secret is sealed again, still only to the mini's lock.
     await oldHome.put(CHANGED);
     await standbys.seal();
     const changed = readSealedSecrets(userData);
@@ -244,13 +240,10 @@ describe("Secrets on a computer that keeps a copy", () => {
     const key = changed && openKeyWith(held, changed);
     expect(key?.length).toBe(32);
     key?.fill(0);
-    // An unchanged home seals nothing new.
     await standbys.seal();
     expect(readSealedSecrets(userData)?.at).toBe(changed?.at);
     standbys.dispose();
 
-    // The mini takes over from its copy: its first mate opens the values with
-    // its own lock and runs an approved use with the changed value.
     const newRecord = copyRecord(userData);
     const newHome = home(mini.secretsCustody);
     const taken = standbySecrets(newRecord, newHome.settings, [laptop], mini.lockCustody);
@@ -310,7 +303,6 @@ describe("Secrets on a computer that keeps a copy", () => {
       STANDBY_WORDS.whichCopy,
       STANDBY_WORDS.whichOwn,
     ]);
-    // Until the captain answers, this computer uses its own and nothing is sealed over the copy's, even after a change here.
     await newHome.use("own-value");
     expect(newHome.sent).toEqual([`Bearer ${CHANGED}`]);
     await newHome.put(`${CHANGED}-again`);
@@ -373,7 +365,6 @@ describe("Secrets on a computer that keeps a copy", () => {
     await newHome.choose(STANDBY_WORDS.whichOwn);
     await taken.seal();
     expect(readSealedSecrets(record)).toEqual(sealed);
-    // Unlocked, the next change here finishes the choice in the same run, with no restart.
     mini.lockCustody.state = "open";
     await taken.seal();
     expect(readSealedSecrets(record)?.source).not.toBe(sealed?.source);
@@ -399,7 +390,6 @@ describe("Secrets on a computer that keeps a copy", () => {
     const record = copyRecord(userData);
     const sealed = readSealedSecrets(record);
     const newHome = home(mini.secretsCustody);
-    // The keychain holding the mini's lock is locked at this start.
     mini.lockCustody.state = "locked";
     const taken = standbySecrets(record, newHome.settings, [laptop], mini.lockCustody);
     newHome.hooks.changed = () => void taken.seal();
@@ -408,12 +398,10 @@ describe("Secrets on a computer that keeps a copy", () => {
     await taken.seal();
     expect(readSealedSecrets(record)).toEqual(sealed);
 
-    // Unlocked, the next change of Secrets here takes them in the same run, with no restore by hand.
     mini.lockCustody.state = "open";
     await taken.seal();
     await newHome.use("after-retry");
     expect(newHome.sent).toEqual([`Bearer ${TOKEN}`]);
-    // Sealed again by this home, for the laptop alone.
     expect(readSealedSecrets(record)?.source).not.toBe(sealed?.source);
     expect(readSealedSecrets(record)?.keys.map((each) => each.device)).toEqual(["laptop"]);
     taken.dispose();
@@ -506,7 +494,6 @@ describe("Secrets on a computer that keeps a copy", () => {
   it("a home that took one sealed file never takes a later one from the same home as already its own", async () => {
     const mini = computer("mini");
     const laptop = computer("laptop");
-    // The mini is the home and keeps its Secrets; the laptop keeps a copy.
     const miniHome = home(mini.secretsCustody);
     const miniRecord = scratchDir("standby-secrets-record-");
     await miniHome.put(TOKEN);
@@ -514,7 +501,6 @@ describe("Secrets on a computer that keeps a copy", () => {
     await sealing.keep("laptop");
     await kept(sealing, "laptop");
 
-    // The laptop takes over from its copy.
     const laptopRecord = copyRecord(miniRecord);
     const laptopHome = home(laptop.secretsCustody);
     const first = standbySecrets(laptopRecord, laptopHome.settings, [], laptop.lockCustody);

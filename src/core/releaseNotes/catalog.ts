@@ -90,7 +90,6 @@ export type NoteEntry = {
   highlight?: number;
   /** The feature area the full list files it under; absent only on backfilled history. */
   area?: NoteArea;
-  /** Its hero pictures, committed beside the note. */
   picture?: NotePicture;
   /** Why it keeps no picture, in one sentence, instead of `picture`. */
   noPicture?: string;
@@ -117,7 +116,6 @@ export type ReleaseManifest = {
   sourceCommit: string;
   /** The source commit's committer date, `YYYY-MM-DD`. */
   date: string;
-  /** The alpha a stable was promoted from. */
   promotedFrom: string | null;
   /**
    * A stable's highlights as the captain picked them for its promotion, lead
@@ -154,7 +152,6 @@ export type ReleaseArchive = {
   releases: Record<string, string>;
 };
 
-/** Where the record of past releases lives. */
 export const ARCHIVE_FILE = "release-notes/archive.json";
 
 /** One hero file the packaged app carries beside its catalog. */
@@ -269,7 +266,6 @@ function parseEntry(value: unknown, where: string, problems: string[]): NoteEntr
   };
 }
 
-/** `{ dark, light, alt }`, each file named for its entry and theme. */
 function parsePicture(
   value: unknown,
   id: string | null,
@@ -295,7 +291,6 @@ function parsePicture(
   return { dark: value.dark as string, light: value.light as string, alt };
 }
 
-/** The hero file names an entry may use for one theme. */
 function heroFileNames(id: string, theme: "dark" | "light"): string[] {
   return [`${id}-${theme}.webp`, `${id}-${theme}.png`];
 }
@@ -411,7 +406,6 @@ export function parseManifest(
 
 const REPOSITORY = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
 
-/** The record of past releases, closed to unknown fields. */
 export function parseArchive(
   value: unknown,
   where: string,
@@ -689,7 +683,6 @@ export function pictureProblems(
   return problems;
 }
 
-/** The hero files a catalog carries: every highlighted entry's pair. */
 export function heroFiles(entries: NoteEntry[]): string[] {
   return entries.flatMap((entry) =>
     entry.highlight !== undefined && entry.picture ? [entry.picture.dark, entry.picture.light] : [],
@@ -728,7 +721,6 @@ export function unreachableNotes(
   return problems;
 }
 
-/** Entry id -> the commits it speaks for. */
 export function entryCommits(
   files: LedgerFile[],
   addedBy: (path: string) => string | null,
@@ -741,7 +733,6 @@ export function entryCommits(
   return out;
 }
 
-/** The commits a note or exclusion accounts for, across the whole ledger. */
 export function coveredCommits(
   files: LedgerFile[],
   addedBy: (path: string) => string | null,
@@ -867,7 +858,6 @@ export function verifyCatalog(
   return problems;
 }
 
-/** The catalog's hero files: exactly the highlighted entries' pairs, each with its hash and size. */
 function catalogPictureProblems(value: unknown, entries: NoteEntry[]): string[] {
   const problems: string[] = [];
   if (value !== undefined && !isRecord(value)) return ["the catalog's pictures are not a map"];
@@ -947,7 +937,6 @@ function pickProblems(picks: string[], version: string, candidates: NoteEntry[])
   return problems;
 }
 
-/** Why a release's record cannot keep the highlights it names. */
 export function recordedHighlightProblems(
   manifest: ReleaseManifest,
   releases: ReleaseManifest[],

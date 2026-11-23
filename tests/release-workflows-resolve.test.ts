@@ -255,7 +255,6 @@ describe("resolving a release", () => {
     expect(notYetActive.stderr).toContain("Only the configured source repository can publish");
   });
 
-  /** Runs the resolver in a clone, returning its outputs. */
   function resolve(clone: string, env: Record<string, string>) {
     const output = join(scratchDir("infinitary-release-resolve-output-"), "output");
     writeFileSync(output, "");
@@ -326,7 +325,6 @@ describe("resolving a release", () => {
 
   it("releases the reviewed candidate: main's own commit or a notes-only commit off it, never a code change", () => {
     const { clone, commit, head } = fixture();
-    // A main commit.
     const onMain = resolve(clone, { CANDIDATE: head });
     expect(onMain.status, onMain.stderr).toBe(0);
     expect(onMain.outputs.source_commit).toBe(head);

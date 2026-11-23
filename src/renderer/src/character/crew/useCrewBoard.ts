@@ -39,7 +39,6 @@ export function useProjectName(projectId: string | undefined): string {
   return projects.find((project) => project.id === projectId)?.name ?? "";
 }
 
-/** The Project fact of a task's record, read from the board's project list. */
 export function useProjectFact(
   projectId: string | undefined,
   repository: string | undefined,
@@ -84,7 +83,6 @@ export function useCrewBoard(): {
   );
 }
 
-/** The crew in orbit: active work. */
 function inOrbit(task: Pick<TaskView, "kind" | "status">): boolean {
   return task.kind === "work" && task.status === "active";
 }

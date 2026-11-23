@@ -91,7 +91,6 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     out = join(dir, "corpus");
     const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     try {
-      // The real CLI, over the fixture userData.
       expect(main(["--out", out, "--user-data", dir], { isPackaged: false })).toBe(0);
     } finally {
       stderr.mockRestore();
@@ -529,7 +528,6 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
   it("uses the card version each emit turn actually showed", () => {
     const { exitCode, early, current, at } = quietly(() => exportRevisionCaseIn(dir));
     expect(exitCode).toBe(0);
-    // The early version was shown and seen before the current turn, and replaced after it.
     expect(at.early).toBeLessThan(at.earlyObserved);
     expect(at.earlyObserved).toBeLessThan(at.currentTurn);
     expect(at.currentTurn).toBeLessThan(at.replaced);
@@ -995,7 +993,6 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     expect(onDisk - dispatch.length).toBe(BACKUP_TURNS);
     expect(manifest.dispatch.excluded.backup_copies).toHaveLength(1);
     expect(manifest.dispatch.excluded.backup_copies[0]).toContain("sessions-backup");
-    // And no turn is in the corpus twice.
     const ids = dispatch.map((record) => `${record.kind}:${record.user}:${record.ops.join()}`);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -1030,7 +1027,6 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     // reading as a shipment.
     expect(rigor.by_rigor).toEqual({ reviewed: 1 });
     expect(rigor.dispatches).toBe(1);
-    // One verdict, on one change, with the risk it stated.
     expect(rigor.reviews).toBe(1);
     expect(rigor.by_verdict).toEqual({ findings: 1 });
     expect(rigor.by_risk).toEqual({ medium: 1 });

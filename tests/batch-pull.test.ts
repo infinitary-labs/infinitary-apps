@@ -66,7 +66,6 @@ const workflow = (file: string) =>
     jobs: Record<string, Job>;
   };
 
-/** The pull request event as GitHub gives it to the run, for a branch of `from`. */
 const pullRequest = (branch: string, from = REPOSITORY, base = "main") => ({
   event_name: "pull_request",
   head_ref: branch,
@@ -79,7 +78,6 @@ const pullRequest = (branch: string, from = REPOSITORY, base = "main") => ({
 });
 
 const read = { result: "success", outputs: { tree: rehearsal.tree, base: rehearsal.base } };
-/** A batch whose every check passed, so nothing is confirmed. */
 const passedRun: Scenario = {
   github: pullRequest(rehearsal.branch),
   needs: {
@@ -97,7 +95,6 @@ const passedRun: Scenario = {
 };
 const FAILED_JOB =
   "Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)";
-// The file a batch run's sweep named as failed, in its job's own log line.
 const FAILED_FILE = "src/core/freeze/freezeRecorder.integration.test.ts";
 const FAILED_LOG = `2026-11-07T19:12:44.0000000Z  FAIL  |integration| ${FAILED_FILE} > writes the record\n`;
 /**
@@ -122,12 +119,10 @@ const confirmedRun: Scenario = {
     windows: { result: "skipped" },
   },
 };
-/** The full name of the confirm a Linux test group's job of the checks has beside it. */
 const groupConfirmOf = (job: string) =>
   `${BATCH_PULL_CHECKS}${BATCH_PULL_GROUP_CONFIRM}${job.slice(job.lastIndexOf(" · ") + " · ".length)}`;
 
 const PASSED = `${BATCH_PULL_CHECKS}Merge batch · Batch passed (tree ${rehearsal.tree}; base ${rehearsal.base})`;
-/** The run's jobs as GitHub lists them, each passed but `failed`. */
 const jobsOf = (scenario: Scenario, failed: string[] = []) =>
   runJobNames("batch-pull-request.yml", scenario).map((name, index) => ({
     id: index + 1,
@@ -345,7 +340,6 @@ describe("batch-checks.yml", () => {
         PASSED,
       ]),
     );
-    // The failures are read only after a failed check.
     const reads = (needs: Scenario["needs"]) =>
       workflowValue(String(checks.jobs.failures!.if), { needs });
     expect(reads(passedRun.needs)).toBe(false);
@@ -552,7 +546,6 @@ describe("a failed batch pull request's confirm plan", () => {
 
 const playwrightLog = (file: string) =>
   `2026-11-15T02:26:50.0000000Z   1 failed\n2026-11-15T02:26:50.0000000Z     [desktop] › ${file}:12:3 › the journey\n`;
-/** A GitHub client that lists `jobs` and gives each job's log from `logs`, by name; null is a log GitHub cannot give. */
 const githubOf = (
   jobs: { id: number; name: string }[],
   logs: Record<string, string | null>,
@@ -572,7 +565,6 @@ const githubOf = (
   },
   paginate: async () => jobs,
 });
-/** Runs `script` with a core that keeps its outputs, and answers them. */
 async function outputsOf(script: (core: unknown) => Promise<void>) {
   const outputs = new Map<string, string>();
   await script({
@@ -768,7 +760,6 @@ describe("main's check sorting a push that merged a batch pull request", () => {
       expect(read, path).toContain(path);
     for (const path of [".github/workflows/release.yml", ".github/workflows/main.yml"])
       expect(read, path).not.toContain(path);
-    // A file a comment names is not read.
     const named = new Map(checkFiles);
     const checks = ".github/workflows/batch-checks.yml";
     named.set(

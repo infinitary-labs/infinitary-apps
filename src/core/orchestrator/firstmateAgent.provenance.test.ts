@@ -27,7 +27,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: provenance (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**
@@ -133,7 +132,6 @@ describe("FirstmateAgent provenance (R2)", () => {
     expect(record.disposition.asks).toEqual([
       { id: tasks.capture.listAsks()[0]?.id, taskId: "t2", via: "tool:interrupt_crewmate" },
     ]);
-    // The interrupt the decision issued points back at it.
     const interrupted = tasks.timeline("t2").find((event) => event.kind === "interrupted");
     expect(interrupted).toMatchObject({ actor: "firstmate", ref: record.decision, feed: false });
     expect(interrupted?.data).toEqual({
@@ -297,7 +295,6 @@ describe("FirstmateAgent provenance (R2)", () => {
         (event) => event.type === "firstmate_note" && event.text.includes("is not available"),
       ),
     ).toHaveLength(1);
-    // Restored, it is served with its picture.
     writeFileSync(file, bytes);
     agent.pokeInbox();
     await tick();

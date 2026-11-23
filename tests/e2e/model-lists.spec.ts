@@ -37,7 +37,6 @@ import { claudeStarter } from "./starters";
 
 const CLAUDE_ACCOUNT = "acct_claude_lean";
 
-/** The provider's name as the feed's model notes say it. */
 const CLAUDE = catalogEntry(CLAUDE_PROVIDER_ID)?.name ?? CLAUDE_PROVIDER_ID;
 
 /** A feed line holding the product's own words, wherever they fall in it. */
@@ -49,7 +48,6 @@ const rowKey = (id: string) => `${CLAUDE_PROVIDER_ID}/${id}`;
 /** The shipped catalog's rows, by offering key: what serves until a read lands, and after one fails. */
 const SHIPPED_ROWS = CLAUDE_MODELS.map((model) => rowKey(model.id)).sort();
 
-/** The shipped medium starter, which the shipped list serves in medium. */
 const MEDIUM_STARTER = claudeStarter("medium");
 
 type Row = { value: string; displayName: string };
@@ -113,7 +111,6 @@ async function openModels(page: Page) {
   return models;
 }
 
-/** The Claude rows on the board, by offering key. */
 async function claudeRows(page: Page): Promise<string[]> {
   const keys = await page
     .locator("[data-model-row^='anthropic-claude/']")
@@ -157,7 +154,6 @@ test("a catalog read that never answers holds nothing up: the shipped list serve
         .locator('[data-slot-group="medium"]')
         .getByRole("button", { name: MEDIUM_STARTER.name, exact: true }),
     ).toBeVisible();
-    // The shipped list names only the current generations.
     expect(await claudeRows(app.page)).toEqual(SHIPPED_ROWS);
   } finally {
     await app.close();
@@ -186,7 +182,6 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
       await expect(feedLine(app.page, holding(modelAddedLead(CLAUDE)))).toHaveCount(1);
 
       const models = await openModels(app.page);
-      // The new generation is a row, off.
       await expect(
         models
           .locator('[data-slot-group="off"]')

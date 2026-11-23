@@ -68,7 +68,6 @@ const PI_PREFLIGHT_PATTERNS: readonly RegExp[] = [
   /^Authentication failed for "/m,
 ];
 
-/** True when the error carries a real auth signal (needs sign-in). */
 export function isAuthFailureMessage(message: string): boolean {
   return (
     STATUS_PATTERNS.some((pattern) => pattern.test(message)) ||

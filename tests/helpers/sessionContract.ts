@@ -69,7 +69,6 @@ import {
 
 /** How the model answers the next request. */
 export type ContractReply =
-  /** The model answers. */
   | { text: string }
   /** The output cap cut the answer short. */
   | { cutShort: string }
@@ -87,7 +86,6 @@ export type ContractReply =
   /** The model calls the contract tool on every request and never answers. */
   | "loop";
 
-/** What one request asked the model for, as the backend served it. */
 export type ServedRequest = {
   system: string;
   tools: number;
@@ -168,12 +166,10 @@ export const CONTRACT_INSTRUCTION =
 /** The tool every rolling case serves, and the fourth preset's one tool. */
 export const CONTRACT_TOOL = "look_up";
 
-/** What the contract tool answers. */
 export const CONTRACT_TOOL_RESULT = "The record says left.";
 
 const QUESTION = "Which way?";
 
-/** The task a contract crewmate works on. */
 export const CREWMATE_TASK = "task-contract";
 
 /** The built-ins every backend's coding set names, in any case. */
@@ -282,7 +278,6 @@ export function stubReply(reply: ContractReply): Reply {
   };
 }
 
-/** What a request the stub API kept asked the model for. */
 export function servedByStub(request: StubRequest): ServedRequest {
   const tools = new Set((request.body.tools ?? []).map((tool) => tool.name.toLowerCase()));
   return {
@@ -308,7 +303,6 @@ function failures(events: SessionEvent[]): Extract<SessionEvent, { type: "turn_f
   );
 }
 
-/** The closing words of the prompt: the last model turn's. */
 function closingWords(events: SessionEvent[]): string | undefined {
   return events.filter((event) => event.type === "turn_closed").at(-1)?.text;
 }
@@ -323,7 +317,6 @@ function toolEvents(events: SessionEvent[]): unknown[] {
   );
 }
 
-/** The machine a world's sessions open on. */
 function machineOf(world: ContractWorld): string {
   return world.machine ?? LOCAL_MACHINE_ID;
 }
@@ -392,7 +385,6 @@ function gated(): {
   tool: BoundTool;
   entered: Promise<void>;
   open: () => void;
-  /** How many times the tool really ran. */
   runs: () => number;
 } {
   let entered!: () => void;
@@ -416,7 +408,6 @@ function gated(): {
   };
 }
 
-/** A record's conversation, as the one session reader reads it: who said what, in order. */
 function conversationOf(read: SessionRead): { role: string; text: string }[] {
   return read.entries.flatMap((entry) => {
     if (entry.type !== "message") return [];
@@ -446,7 +437,6 @@ async function requestsStarted(events: SessionEvent[], count = 1): Promise<void>
   );
 }
 
-/** Resolves once the session has said a tool started. */
 async function toolStarted(events: SessionEvent[]): Promise<void> {
   await vi.waitFor(() => expect(events.some((event) => event.type === "tool_start")).toBe(true));
 }
@@ -461,7 +451,6 @@ function settled(promise: Promise<unknown>): Promise<void> {
 
 export function describeSessionContract(harness: SessionContractHarness): void {
   const serves = (role: ContractRole) => !harness.roles || harness.roles.includes(role);
-  // Each role's cases run only on a factory that serves its preset.
   const describeQuestion = serves("question") ? describe : describe.skip;
   const describeSeat = serves("seat") ? describe : describe.skip;
   const describeCrewmate = serves("crewmate") ? describe : describe.skip;
@@ -478,7 +467,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
       return session;
     }
 
-    /** The host's one clock, moved on `count` ticks. */
     function ticks(count: number): void {
       for (let tick = 0; tick < count; tick += 1) world.advance(TICK_PERIOD_MS);
     }
@@ -550,7 +538,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
           // the unspecified bound absent. Neither uses Pi's word-only cap.
           expect(request.maxOutputTokens).toBeGreaterThan(CLASSIFIER_MAX_OUTPUT_TOKENS);
         }
-        // One answer, closing the one turn, with the turn's burn.
         expect(events.filter((event) => event.type === "turn_closed")).toEqual([
           { type: "turn_closed", text: "left" },
         ]);
@@ -659,7 +646,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         expect(more).toEqual([]);
         expect(request?.system).toContain(FIRSTMATE_PERSONA);
         expect(request?.system).toContain(SERVED.text);
-        // The role's one tool, and no built-in beside it.
         expect(request?.tools).toBe(1);
         expect(request?.coding).toBe(false);
         // The role's output cap, in the backend's own terms (decision D5).
@@ -758,7 +744,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         await world.holds(session, "Mind the right side too.");
         gate.open();
         await prompting;
-        // One request after the tool, carrying its result and the steer.
         const served = world.served();
         expect(served).toHaveLength(2);
         expect(served[1]?.said).toContain(CONTRACT_TOOL_RESULT);
@@ -873,7 +858,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
           const prompting = session.prompt(QUESTION);
           await gate.entered;
           await toolStarted(events);
-          // Twice the per-inference bound, all of it in the tool.
           ticks((2 * FIRSTMATE_REQUEST_TIMEOUT_MS) / TICK_PERIOD_MS);
           gate.open();
           await prompting;
@@ -922,7 +906,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
           });
           const events = recorder(session);
           await settled(session.prompt(QUESTION));
-          // Three requests, each tool run, and no fourth request.
           expect(runs).toBe(3);
           expect(world.served()).toHaveLength(3);
           // One failed turn naming the cap, in each backend's words; never a cut-off.
@@ -999,7 +982,6 @@ export function describeSessionContract(harness: SessionContractHarness): void {
           await world.holds(session, "Mind the right side too.");
           gate.open();
           await prompting;
-          // One request after the tool, carrying its result and the steer.
           const served = world.served();
           expect(served).toHaveLength(2);
           expect(served[1]?.said).toContain(CONTRACT_TOOL_RESULT);

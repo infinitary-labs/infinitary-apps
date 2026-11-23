@@ -125,7 +125,6 @@ export type PlacementEvaluation = {
   computerId: string | null;
   physicalComputerId: string | null;
   rejections: PlacementRejection[];
-  /** The candidate's reach, as it came. */
   reach?: ComputerReach;
   /** Exact tool identities for the typed missing-tool reasons. */
   missingTools: string[];

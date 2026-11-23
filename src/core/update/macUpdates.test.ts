@@ -414,7 +414,6 @@ describe("saving the crew's work before a Mac update", () => {
     expect(await installing).toEqual({ ok: false, later: true, problem: UPDATE_LATER });
     expect(f.driver.install).not.toHaveBeenCalled();
     expect(await f.checker.getStatus()).toMatchObject({ updateAvailable: true, phase: "idle" });
-    // Chosen again, it saves again and installs.
     const again = f.checker.install();
     await vi.waitFor(() => expect(crew.work.save).toHaveBeenCalledTimes(2));
     crew.finish();

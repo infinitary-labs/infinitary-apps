@@ -171,7 +171,6 @@ export class HostOps {
         return { effect: { kind: "open", target: "subscriptions", useSavedResets: effect.arg } };
       }
       case "restore-account":
-        // The shell lands on Subscriptions with the account to re-sign.
         return {
           effect: {
             kind: "open",
@@ -602,7 +601,6 @@ export class HostOps {
     return undefined;
   }
 
-  /** The wake that tells the Firstmate the captain moved a task toward starting. */
   private tellFirstmate(
     taskId: string,
     move: "start" | "queue",
@@ -663,7 +661,6 @@ export class HostOps {
     );
   }
 
-  /** A pending Start whose waiting is over begins as it is. */
   private startPendingAsIs(taskId: string, why: string): void {
     const pending = this.pendingStarts.get(taskId);
     if (!pending) return;

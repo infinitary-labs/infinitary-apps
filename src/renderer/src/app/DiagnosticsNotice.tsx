@@ -21,7 +21,6 @@ import { NoticeStrip } from "./NoticeStrip";
  * never sees this.
  */
 
-/** Whether the notice is owed: on, somewhere to send, never shown. */
 export function diagnosticsNoticeDue(view: SharingView): boolean {
   return (
     view.diagnostics.enabled &&

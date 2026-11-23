@@ -214,7 +214,6 @@ describe("LocalOrchestratorService", () => {
     expect(seatService.seat()).toBeUndefined();
     expect(seats.at(-1)).toBeUndefined();
     expect(lines.at(-1)).toBe(LOCAL_ORCHESTRATOR_OFF_LINE);
-    // A bad row seats nothing and the view says why.
     const bad = await seatService.set({ ...ROW_ON, model: "" });
     expect(bad.active).toBeNull();
     expect(bad.problem).toMatch(/Name the model/);

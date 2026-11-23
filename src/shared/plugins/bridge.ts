@@ -180,8 +180,6 @@ export const AS_BUILT_WORDS = "As built";
  */
 export const DEFAULT_WORDS = "Default";
 
-// --- the envelope, frame -> host -------------------------------------------
-
 const correlationId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const fmMarker = z.literal(FRAME_BRIDGE_VERSION);
 
@@ -534,8 +532,6 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
   }),
 ]);
 export type FrameMessage = z.infer<typeof frameMessageSchema>;
-
-// --- the envelope, host -> frame -------------------------------------------
 
 /**
  * Why the host refused a request, in a closed vocabulary the template can

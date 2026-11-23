@@ -82,7 +82,6 @@ async function frames(count = 3): Promise<void> {
   for (let i = 0; i < count; i++) await new Promise((done) => requestAnimationFrame(done));
 }
 
-/** The captain reads card `id` down to the place and pages to the next card. */
 async function readAndPageAway(id: string, place: number): Promise<void> {
   const first = copy({ id, shown: true, bare: false }).draw({ words: WORDS });
   await frames();

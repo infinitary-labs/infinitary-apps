@@ -110,8 +110,6 @@ function statusFromFields(fields: Record<string, string>): GrpcWebRead | undefin
   return { kind: "status", code, ...(message ? { message } : {}) };
 }
 
-// ---- protobuf wire format ------------------------------------------------
-
 export type ProtoField =
   | { field: number; wire: "varint"; value: bigint }
   | { field: number; wire: "fixed32" | "fixed64" | "bytes"; value: Uint8Array };
@@ -183,14 +181,12 @@ function readVarint(bytes: Uint8Array, start: number): { value: bigint; next: nu
   throw new ProtoDecodeError();
 }
 
-/** Every length-delimited value of a field, as raw bytes. */
 export function bytesAt(fields: ProtoField[], field: number): Uint8Array[] {
   return fields.flatMap((entry) =>
     entry.field === field && entry.wire === "bytes" ? [entry.value] : [],
   );
 }
 
-/** The first length-delimited value of a field, scanned as a message. */
 export function messageAt(fields: ProtoField[], field: number): ProtoField[] | undefined {
   const first = bytesAt(fields, field)[0];
   return first ? scanProtobuf(first) : undefined;
@@ -229,7 +225,6 @@ export function timestampAt(fields: ProtoField[], field: number): number | undef
   return Number.isSafeInteger(milliseconds) ? milliseconds : undefined;
 }
 
-/** A varint as a plain number, when it fits one. */
 export function safeNumber(value: bigint | undefined): number | undefined {
   if (value === undefined || value > BigInt(Number.MAX_SAFE_INTEGER)) return undefined;
   return Number(value);

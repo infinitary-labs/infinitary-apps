@@ -134,7 +134,6 @@ export function SecretBringPicks({
   );
 }
 
-/** Why a row cannot be ticked, in the person's language. */
 const CANNOT: Record<NonNullable<SecretBringRow["cannot"]>, () => string> = {
   empty: m.secretsBringCannotEmpty,
   "too-large": m.secretsBringCannotTooLarge,

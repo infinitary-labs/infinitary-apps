@@ -188,7 +188,6 @@ export function startHomeForges(options: {
   const forgeFor: ReturnType<typeof createForgeResolver> = beforeAct
     ? (repo, fallbackDir) => settledFirst(resolve(repo, fallbackDir), beforeAct)
     : resolve;
-  /** The forge of a host itself, with no project: listing, lookups and account reads. */
   const forgeOnHost = (
     forgeHost: string,
   ):
@@ -247,7 +246,6 @@ export function startHomeForges(options: {
       const kind = changeRequestKind(kindOfHost(row.host, forgeSignIns.knownHosts()));
       return kind ? [{ host: row.host, kind }] : [];
     });
-    // Each kind's own reading of a host's open changes.
     const openChanges: Record<
       ChangeRequestKind,
       (forgeHost: string, token: string) => Promise<ForgeChangeRow[]>
@@ -334,7 +332,6 @@ export function startHomeForges(options: {
       integrationsChanged = changed;
     },
     attachCrew: ({ supervisor, tasks, broadcastEvent }) => {
-      // How many proposed changes wait on a host: live tasks there with one open.
       const waitingChangesOn = (forgeHost: string): number => {
         const onHost = new Set(
           repos

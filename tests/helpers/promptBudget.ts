@@ -31,13 +31,11 @@ export const CREWMATE_BUDGET = WINDOW_AFTER_RESERVE / 2;
  */
 export const FIRSTMATE_PROMISED_CONVERSATION = 10 * 2_938 + 4_096;
 
-/** The first mate's budget: what the window leaves after the reserve and that conversation. */
 export const FIRSTMATE_BUDGET = WINDOW_AFTER_RESERVE - FIRSTMATE_PROMISED_CONVERSATION;
 
 /** The captain's "exceed budget by a lot (say 50%)". */
 const HARD_LINE_FACTOR = 1.5;
 
-/** Where a budget test fails: one and a half times the budget. */
 export function hardLine(budget: number): number {
   return Math.floor(budget * HARD_LINE_FACTOR);
 }
@@ -62,7 +60,6 @@ export function failingLine(budget: number): number {
 
 export type Reading = { label: string; tokens: number };
 
-/** Prints every reading, and names each one past the line this run holds. */
 export function overLine(seat: string, budget: number, readings: Reading[]): string[] {
   const line = failingLine(budget);
   console.info(`${seat} fixed context`, {

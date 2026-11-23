@@ -46,7 +46,6 @@ const HELD_TITLE = `${REPO_NAME} ${AUTONOMY_PROMPT_MARKER}`;
 const ASKED_TITLE = `${REPO_NAME} ${AUTONOMY_PROMPT_MARKER}, ${AUTONOMY_ASK_MARKER}`;
 const ASKS_FIRST_TITLE = `${REPO_NAME} ${AUTONOMY_ASKS_FIRST_MARKER}, ${AUTONOMY_ASK_MARKER}`;
 
-/** The change GitHub holds for the task's branch, as its crewmate opened it. */
 const CHANGE = {
   number: 61,
   title: "fix: make the meter read on time",
@@ -115,7 +114,6 @@ async function checkedHead(title: string): Promise<string> {
   return head;
 }
 
-/** GitHub's squash of the task's change at exactly that head, with its own title. */
 const squashAt = (sha: string) => [
   { number: CHANGE.number, sha, method: "squash", title: CHANGE.title, message: CHANGE.body },
 ];
@@ -150,8 +148,6 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
   await send(`${MERGE_PROMPT_MARKER}${HELD_TITLE}`);
   await expect(feedLine(page, new RegExp(MERGE_PROMPT_MARKER))).toBeVisible({ timeout: 30_000 });
 
-  // Nothing merged - read off the forge, not off prose - and the decision
-  // is still in front of the captain, on the card, with its own button.
   await expect
     .poll(
       async () => {
@@ -166,8 +162,6 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
   await expect(page.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("autonomy-off-held-card.png") });
 
-  // And the captain's own click on that button is the way out the refusal
-  // named: the same task, the same merge, never held - at the checked head.
   const head = await checkedHead(HELD_TITLE);
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"] }).click();
   await expect.poll(() => github.merges(), { timeout: 30_000 }).toEqual(squashAt(head));
@@ -179,7 +173,6 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
     .toBe("done");
 });
 
-/** The task's record, by its title. */
 async function taskDetail(title: string) {
   const page = launched.page;
   const board = await page.evaluate(() => window.infinitary.tasks.board());
@@ -204,7 +197,6 @@ test("a task the captain said to merge on green merges from its own merge card, 
   const head = (await taskDetail(ASKED_TITLE))?.delivery?.headSha as string;
   expect(head).toMatch(/^[0-9a-f]{40}$/);
   expect(github.merges()).toEqual(squashAt(head));
-  // The merge card shows once, after the merge, with no button left on it.
   const card = shownCard(page, cardTitle);
   await expect(card).toBeVisible({ timeout: 15_000 });
   const frame = cardBody(page, cardTitle);
@@ -231,7 +223,6 @@ test("a merge card that asks first waits for the captain's click on a task that 
   const head = await checkedHead(ASKS_FIRST_TITLE);
   const button = card.getByRole("button", { name: MERGE_WORDS["merge-pr"] });
   await expect(button).toBeVisible();
-  // The app sent nothing on its own, and the task waits for the captain.
   expect(github.merges()).toEqual([]);
   expect(await taskDetail(ASKS_FIRST_TITLE)).toMatchObject({ status: "active" });
   await page.screenshot({ path: test.info().outputPath("autonomy-asks-first-card.png") });
@@ -269,7 +260,6 @@ test("a pull request the captain merged on GitHub himself closes its task as mer
       { timeout: 15_000 },
     )
     .toMatchObject({ status: "done", closedReason: "merged" });
-  // Read off the forge: the app sent no merge of its own.
   expect(github.merges()).toEqual([]);
   expect(github.mergeRequests()).toEqual([]);
   await page.screenshot({ path: test.info().outputPath("merged-by-hand-closed.png") });

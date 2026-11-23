@@ -72,7 +72,6 @@ export class ClaudeSafeStop {
     return promise;
   }
 
-  /** What a raw client message says about the calls it runs. */
   track(message: unknown): void {
     const record = message as {
       type?: unknown;
@@ -117,7 +116,6 @@ export class ClaudeSafeStop {
     this.stop?.end();
   }
 
-  /** The safe stop cuts the turn once no call the client began is still running. */
   private check(): void {
     const stop = this.stop;
     if (!stop || stop.cut) return;

@@ -51,7 +51,6 @@ const dusk = { provider: served, id: "dusk-2" };
 
 type Ref = { provider: string; id: string };
 
-/** The sign-ins the routing reads: one per provider, each serving its listed models. */
 function signIns(models: Ref[]) {
   const providers = [...new Set(models.map((model) => model.provider))];
   return providers.map((providerId) => ({
@@ -118,7 +117,6 @@ function realRouting(models: Ref[] = [sol, terra], offered: Ref[] = models) {
   };
   /** Settings → Intelligence → Models: `model` takes high. */
   const placeHigh = (model: Ref) => board().setSlotMembership(offeringKey(model), "high", true);
-  /** Sol leaves every level, and `to` (Terra unless given) takes high. */
   const takeSolOffEveryLevel = (to: Ref = terra) => {
     takeOffEveryLevel(sol);
     placeHigh(to);
@@ -128,7 +126,6 @@ function realRouting(models: Ref[] = [sol, terra], offered: Ref[] = models) {
 
 type Harness = ReturnType<typeof setup>;
 
-/** The routing rows the task's ledger holds, oldest first. */
 function routedModels(h: Harness, taskId: string): string[] {
   return (
     h.db
@@ -153,7 +150,6 @@ function waitNotes(h: Harness, taskId: string): string[] {
     .map((entry) => entry.text);
 }
 
-/** The account decisions the task's ledger holds, by provider and account, oldest first. */
 function accountPicks(h: Harness, taskId: string): string[] {
   return (
     h.db
@@ -223,7 +219,6 @@ function pausedAccounts(accountId: string | undefined, whilePicking: () => void)
   return { accounts, recorded, release: () => release() };
 }
 
-/** Commission a task on Sol, let its first turn end, and quit. */
 async function startedOnSol(h: Harness, crewmate: ReturnType<typeof fakeCrewmate>) {
   const { taskId } = await h.supervisor.intake.commission({
     title: "Read the project",
@@ -290,7 +285,6 @@ it("opens the context-limit restart's new conversation on a model a level holds"
   await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
   expect(h.sessionSpecs[0]?.model).toEqual(sol);
 
-  // While the task runs, the captain takes Sol off every level.
   routing.takeSolOffEveryLevel();
 
   crewmate.emit({
@@ -578,7 +572,6 @@ it("waits and says so once when no other model can take the task, and its lane h
   ]);
   await swept.disposeAll();
 
-  // The next launch tries once more and finds the same: it says nothing new.
   expect(await relaunchAndSteer(h, taskId, terra, noAccount.accounts)).toBeUndefined();
   expect(waitNotes(h, taskId)).toEqual([words]);
 });
@@ -611,7 +604,6 @@ it("routes again when the defaults standing in for levels leave the model out", 
   const routing = realRouting([sol, terra, luna]);
   const crewmate = fakeCrewmate({ model: luna });
   const h = setup(crewmate, { realRouter: routing.make });
-  // The person places Luna at high in Sol's place, and the task starts on Luna.
   routing.takeOffEveryLevel(sol);
   routing.placeHigh(luna);
   const { taskId } = await h.supervisor.intake.commission({
@@ -683,7 +675,6 @@ it("routes a custom connection's task only among that connection's models, on it
   };
   const crewmate = fakeCrewmate({ model: dawn });
   const h = setup(crewmate, { realRouter: routing.make, accounts });
-  // The person places Dawn at high in Sol's place, and the task starts there.
   routing.takeOffEveryLevel(sol);
   routing.placeHigh(dawn);
   const { taskId } = await h.supervisor.intake.commission({
@@ -697,7 +688,6 @@ it("routes a custom connection's task only among that connection's models, on it
   await tick();
   await h.supervisor.disposeAll();
 
-  // Dawn leaves every level; Sol and Dusk take high.
   routing.takeOffEveryLevel(dawn);
   routing.placeHigh(sol);
   routing.placeHigh(dusk);
@@ -716,7 +706,6 @@ it("waits on a computer that runs work when none of its sign-ins serves a model"
   const taskId = await startedOnSol(h, crewmate);
   h.tasks.placement.setDevice(taskId, "mini");
   routing.takeSolOffEveryLevel();
-  // That computer answers its sign-ins: none serves any model.
   const machines = {
     served: async () => ({
       available: [],
@@ -736,7 +725,6 @@ it("waits on a computer that runs work when none of its sign-ins serves a model"
 
 it("keeps the context-limit restart through a wait for a model, then opens it fresh", async () => {
   const routing = realRouting();
-  // Sol has an account here; Terra has one only once `terraSignedIn`.
   let terraSignedIn = false;
   const accountFor = (crew?: { model?: string }) =>
     crew?.model === terra.id && !terraSignedIn ? undefined : "acct-codex";
@@ -790,7 +778,6 @@ it("keeps the context-limit restart through a wait for a model, then opens it fr
 
 it("waits rather than let the starter map stand in when the only model on the levels has no account", async () => {
   const routing = realRouting([sol, terra, luna, opus]);
-  // Every model has an account here but Opus.
   const accountFor = (provider: string) => (provider === opus.provider ? undefined : "acct-codex");
   const accounts: AccountAttachment = {
     selectForSpawn: vi.fn(async (_task: string, provider: string) => accountFor(provider)),
@@ -806,7 +793,6 @@ it("waits rather than let the starter map stand in when the only model on the le
   };
   const crewmate = fakeCrewmate({ model: luna });
   const h = setup(crewmate, { realRouter: routing.make, accounts });
-  // The person places Luna at high in Sol's place, and the task starts on Luna.
   routing.takeOffEveryLevel(sol);
   routing.takeOffEveryLevel(terra);
   routing.placeHigh(luna);
@@ -876,7 +862,6 @@ it("opens a restart that waited for a model once an account serves one, with no 
   expect(h.sessionSpecs).toHaveLength(1);
   expect(waitNotes(h, taskId)).toHaveLength(1);
 
-  // Terra's sign-in arrives; the lane's next sweep opens the restart fresh.
   terraSignedIn = true;
   await h.supervisor.watch.sweepInbox(Date.now() + 60_000);
   await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
@@ -887,7 +872,6 @@ it("opens a restart that waited for a model once an account serves one, with no 
   expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
   await vi.waitFor(() => expect(fresh.promptCalls).toHaveLength(1));
   expect(fresh.promptCalls[0]).toContain("read every log part and report");
-  // Delivered once.
   await tick();
   expect(fresh.promptCalls).toHaveLength(1);
   await h.supervisor.disposeAll();
@@ -1308,7 +1292,6 @@ it("commits a move on a computer that runs work only for an account there that l
   expect(await commitOn("there-pinned")).toBe("again");
   expect(routedModels(h, taskId)).toEqual([sol.id]);
   expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
-  // It bound the account that lists Luna.
   expect(await commitOn("there-luna")).toBe("committed");
   expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
   await relaunched.disposeAll();

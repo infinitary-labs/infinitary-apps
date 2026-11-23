@@ -109,7 +109,6 @@ function afterReminder(text: string, end: number, label: string, value: string):
   return text.startsWith(reminder, end) ? end + reminder.length : end;
 }
 
-/** Any JSON value with every string's due spans replaced. */
 export function scrubValue(value: unknown, rule: ScrubRule, cutAt: number): Scrubbed<unknown> {
   if (typeof value === "string") return scrubText(value, rule, cutAt);
   if (Array.isArray(value)) {
@@ -158,7 +157,6 @@ function toolCalls(entry: Entry): { id: string; name: string; input: Entry | und
   });
 }
 
-/** Whether a call fetched one of the label's integrations' answers. */
 function fetchedFrom(
   call: { name: string; input: Entry | undefined },
   names: Set<string>,
@@ -175,7 +173,6 @@ function fetchedFrom(
   return false;
 }
 
-/** A tool result line answering one of `ids`, with its words replaced by `note`; undefined otherwise. */
 function replacedResult(entry: Entry, ids: Set<string>, note: string): Entry | undefined {
   const message = record(entry.message);
   if (!message) return undefined;

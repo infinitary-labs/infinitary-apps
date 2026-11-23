@@ -16,7 +16,6 @@ export type CommandVia = "key" | "command-search";
 /** The window command pressing a button right now, while its click runs. */
 let commanded: CardPressInput | null = null;
 
-/** Enter or Space on the focused control, from its keydown until just after its keyup. */
 let heldKey: { key: "Enter" | "Space"; target: EventTarget | null } | null = null;
 
 function heardKeyDown(event: KeyboardEvent): void {
@@ -42,7 +41,6 @@ if (typeof document !== "undefined") {
   document.addEventListener("pointerdown", () => (heldKey = null), true);
 }
 
-/** The keys `command` has installed now, as this computer draws them (⌘1). */
 function installedKeysOf(command: AnyCommandId): string[] {
   const system = thisDesktop().keys;
   return keysOf(installedBindings(), command).map((binding) => bindingLabel(binding, system));

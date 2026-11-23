@@ -39,7 +39,6 @@ export type SettleOwners = {
   done: DoneClose;
 };
 
-/** Compose the settle owners over one host. */
 export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const locks = new SettleLocks(host);
   const approvals = new KeptApproval(host, locks);

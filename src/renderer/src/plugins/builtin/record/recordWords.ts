@@ -9,7 +9,6 @@ import * as m from "@shared/i18n/messages.generated";
  */
 export type RecordWord = string | Partial<Record<Intl.LDMLPluralRule, string>>;
 
-/** The record's words, worded in the window's language, as its template carries them. */
 export interface RecordWords {
   /** The locale the frame picks plural forms and writes counts in. */
   locale: string;

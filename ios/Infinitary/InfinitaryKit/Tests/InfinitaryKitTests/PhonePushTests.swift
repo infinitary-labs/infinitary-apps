@@ -57,7 +57,6 @@ struct PhonePushTests {
     /// The notification then keeps the relay's own words, "A card is ready", and opens no card.
     @Test func opensNothingForAPushItCannotOpen() throws {
         let fixture = try sealed()
-        // Sealed for another key, with no key kept yet, cut short, or with no sealed text at all.
         #expect(PhonePushSeal.notice(relayed(fixture.otherKey.sealed), key: fixture.key) == nil)
         #expect(PhonePushSeal.notice(relayed(fixture.card.sealed), key: nil) == nil)
         #expect(PhonePushSeal.notice(relayed(String(fixture.card.sealed.dropLast(8))), key: fixture.key) == nil)
@@ -68,7 +67,6 @@ struct PhonePushTests {
         let held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
         #expect(!PhonePush.needsGrant(held, token: token, environment: .production, now: now))
         #expect(PhonePush.registration(held, token: token, environment: .production, now: now)?.grant == held.grant)
-        // Nothing held yet, a new push address, the other service, a grant in its last days, and an expired one.
         #expect(PhonePush.needsGrant(PhonePushHeld(key: held.key), token: token, environment: .production, now: now))
         #expect(PhonePush.needsGrant(held, token: String(repeating: "ab", count: 32), environment: .production, now: now))
         #expect(PhonePush.needsGrant(held, token: token, environment: .development, now: now))
@@ -170,13 +168,11 @@ struct PhonePushTests {
         #expect(outside.registered == 1)
         await pushes.tokenArrived(address)
         #expect(outside.posts == [["token": token, "environment": "production"]])
-        // The relay's grant arrives by a background push and goes to the computer at once.
         await pushes.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
         #expect(outside.handed.isEmpty)
         #expect(await pushes.pushArrived(outside.grantPush(grant(expiring: 30))))
         let key = try #require(outside.held?.computers?.first?.key)
         #expect(outside.handed == [PhonePushRegistration(token: token, environment: .production, grant: grant(expiring: 30), key: key)])
-        // The next run's open, address and welcome hand the same grant and ask the relay nothing.
         let next = outside.pushes()
         await next.kept([studio])?.value
         await next.opened()
@@ -228,7 +224,6 @@ struct PhonePushTests {
         await pushes.opened()
         #expect(outside.handed == [nil, nil])
         #expect(outside.posts.isEmpty)
-        // Turned back on in Settings: the next open hands the grant again.
         outside.permission = .on
         await pushes.opened()
         await pushes.tokenArrived(address)
@@ -253,7 +248,6 @@ struct PhonePushTests {
         #expect(outside.askedIOS == 0)
         await pushes.reached(takesPushes: true, hand: outside.hand)
         #expect(!pushes.asking)
-        // Settings' Turn on goes to iOS's own question; a no there hands the computer null.
         outside.allowsWhenAsked = false
         await pushes.turnOn()
         #expect(outside.askedIOS == 1)
@@ -291,7 +285,6 @@ struct PhonePushTests {
         #expect(fresh.key != key && fresh.grant == nil && fresh.token == nil)
         #expect(outside.removed == ["n1", "n2"])
 
-        // The next computer it joins in the same sitting asks iOS for an address, then gets a new grant and key.
         let handedBefore = outside.handed.count
         let registeredBefore = outside.registered
         pushes.kept([office])
@@ -330,7 +323,6 @@ struct PhonePushTests {
         #expect(PhonePush.withdrawal(inPush: silent(fixture.withdrawal.sealed), key: fixture.key)?.cards
                 == fixture.withdrawal.opens.cards)
         #expect(fixture.withdrawal.opens.cards.map(\.cardId) == ["card-2b81d0aa-review-onboarding", "card-7f3a9c1e-plan-launch-week"])
-        // Sealed for another key, a card push, a grant push, and a withdrawal cut short open as no withdrawal.
         #expect(PhonePush.withdrawal(inPush: silent(fixture.otherKeyWithdrawal.sealed), key: fixture.key) == nil)
         #expect(PhonePush.withdrawal(inPush: relayed(fixture.card.sealed), key: fixture.key) == nil)
         #expect(PhonePush.withdrawal(inPush: ["aps": ["content-available": 1], "grant": grant(expiring: 30)], key: fixture.key) == nil)
@@ -354,7 +346,6 @@ struct PhonePushTests {
         #expect(!(await pushes.withdrawArrived(silent(fixture.otherKeyWithdrawal.sealed))))
         #expect(outside.removed.isEmpty)
         #expect(await pushes.withdrawArrived(silent(fixture.withdrawal.sealed)))
-        // The unseen card's notification, one that names no card, and one that names no push stay.
         #expect(outside.removed == ["n1", "n3", "n5"])
     }
 
@@ -483,7 +474,6 @@ struct PhonePushTests {
         #expect(outside.handed.last??.grant == grant(expiring: 20))
         #expect(outside.posts.isEmpty, "One address and grant for every computer: no new ask of the relay")
         #expect(outside.unregistered == 0)
-        // Renamed on the computer: the name follows; the key does not change.
         pushes.kept([(office.pin, "Work laptop"), studio])
         #expect(outside.held?.computers?.first { $0.pin == office.pin } == PhonePushComputer(pin: office.pin, name: "Work laptop", key: officeKey))
     }
@@ -562,7 +552,6 @@ struct PhonePushTests {
         #expect(await pushes.withdrawArrived(silent(fixture.secondWithdrawal.sealed)))
         #expect(outside.removed == ["n1"])
         outside.removed = []
-        // The studio's own withdrawal, under the first key, still removes the studio's pushes it names.
         #expect(await pushes.withdrawArrived(silent(fixture.withdrawal.sealed)))
         #expect(outside.removed == ["n3"])
     }

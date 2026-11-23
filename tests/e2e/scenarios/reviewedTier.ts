@@ -40,7 +40,6 @@ export const MOCK_REVIEWED_CHANGE = {
   title: "fix: make the meter read on time",
   body: "The meter reads on the first paint.",
 };
-/** The host's review brief, recognised by its fixed opening instruction. */
 export const REVIEW_BRIEF_MARKER = REVIEW_BRIEF_OPENING;
 export const MOCK_REVIEWED_BUILDER_REPORT =
   "Intent: the meter test passes ten runs in a row. What changed: the test awaits the job queue flush before it reads the meter. Verified: pnpm test and pnpm test:e2e on the final commit; the PR is green on its head. Risk: low, one test file changed. Not done: nothing.";
@@ -77,7 +76,6 @@ export const MOCK_REVIEW_FINDINGS_RISK = {
   level: "medium",
   why: "one production line moves.",
 } as const;
-/** The risk the passing review declares. */
 export const MOCK_REVIEW_PASS_RISK = { level: "low", why: "one test file changed." } as const;
 export const MOCK_REVIEW_PASS_REPORT = "No findings; the flush is awaited before the read now.";
 export const MOCK_REVIEWED_FIX_REPORT =
@@ -164,7 +162,6 @@ export const reviewedTier: Scenario = () => (request) => {
   return request.isFirstmate ? firstmateMove(request) : crewmateMove(request);
 };
 
-/** The first mate's side, in the contract's order. */
 function firstmateMove({
   body,
   latestUserTail,

@@ -67,7 +67,6 @@ import {
 /** Hard wall clock per decision: a caller waits no longer than this. */
 export const DECIDE_TIMEOUT_MS = QUESTION_TIMEOUT_MS;
 
-/** What one call burned, for the service to attribute. */
 export type DecisionUsage = QuestionUsage;
 
 /** One model's answers to one state, plus what they cost. */
@@ -101,7 +100,6 @@ export function questionVersion(question: DecisionQuestion, served: string): str
   return `${question.version}-${createHash("sha256").update(served).digest("hex").slice(0, 12)}`;
 }
 
-/** The abstention, or the first option when a question declared none. */
 export function abstentionOf(question: DecisionQuestion): string {
   return question.abstain ?? Object.keys(question.criteria)[0] ?? "";
 }
@@ -119,7 +117,6 @@ export function adapterOptions(question: DecisionQuestion): string[] {
   return options;
 }
 
-/** Every failure wears the same coat: the abstention, with the reason on the record. */
 export function failedAnswer(
   question: DecisionQuestion,
   reason: string,
@@ -280,7 +277,6 @@ export class AdaptedDecisionModel implements DecisionModel {
   }
 }
 
-/** The key store as this service needs it: presence and one read, nothing else. */
 export type DecisionKeys = {
   has(id: DecisionModelId): boolean;
   read(id: DecisionModelId): string | undefined;
@@ -319,7 +315,6 @@ export type DecisionModelsOptions = {
    * default" is enforced in code rather than by remembering to check.
    */
   createNative?: (row: DecisionModelCatalogRow, key: string) => DecisionModel;
-  /** Records the decision's burn under the work that caused it. */
   recordUsage?: (input: { taskId: string } & DecisionUsage) => void;
   /**
    * One feed line, when a native model's key is rejected by its own vendor.
@@ -344,7 +339,6 @@ export class DecisionModels {
 
   constructor(private readonly options: DecisionModelsOptions) {}
 
-  /** Which model would answer right now, for a surface that wants to say so. */
   active(): DecisionModel {
     return this.nativeModel() ?? this.options.adapted;
   }

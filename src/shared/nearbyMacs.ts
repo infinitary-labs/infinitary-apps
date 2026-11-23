@@ -22,7 +22,6 @@ export const nearbyUserSchema = z.string().regex(/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,
 export const nearbyMacSchema = z.strictObject({
   /** The name it announces, its own name in System Settings, drawn as text. */
   name: deviceNameSchema,
-  /** Its name on this network. */
   at: nearbyMacNameSchema,
 });
 export type NearbyMac = z.infer<typeof nearbyMacSchema>;
@@ -93,13 +92,10 @@ export const nearbyMacsWords = {
   looking: `Looking for ${COMPUTER.many} on this network with Remote Login on…`,
   /** The same on a Linux home, which also hears a Linux computer's SSH server (Avahi). */
   lookingSsh: `Looking for ${COMPUTER.many} on this network that announce SSH…`,
-  /** A Mac already on Your devices. */
   onList: "on your list",
-  /** macOS did not let this app use the local network. */
   notAllowed: [
     `macOS has not let Infinitary look for ${COMPUTER.many} on this network.`,
     "Allow it in System Settings, under Privacy & Security, Local Network. You can still type an address.",
   ] as const,
-  /** The looking stopped. */
   failed: `Could not look for ${COMPUTER.many} on this network. You can still type an address.`,
 } as const;

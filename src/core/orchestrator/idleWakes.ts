@@ -22,7 +22,6 @@ import type { WaitingMessage } from "./waitingWords";
 import { waitingWords } from "./waitingWords";
 import type { KindWords, TypedWake, WakeTask } from "./wakes";
 
-/** The facts of the idle ladder's wakes. */
 export type IdleFacts =
   | {
       /** The idle ladder's first rung, to the crewmate. */
@@ -78,7 +77,6 @@ export type IdleFacts =
       request?: string;
       /** It declared its work finished with no card of its own up: its close is asked. */
       finished?: boolean;
-      /** How long ago it asked. */
       askedMs: number;
       /** 1 when the captain read its finished crewmate's card; 2 for the first reminder, 3 for the last: the report's own wake was the first. */
       wakes: number;
@@ -97,7 +95,6 @@ export type IdleFacts =
       task: WakeTask;
       /** The task's key, or its id when it has none. */
       key: string;
-      /** How long ago its crewmate declared it finished. */
       finishedMs: number;
       /** The messages still waiting for its crewmate, which hold the first mate's close. */
       waiting: WaitingMessage[];
@@ -110,7 +107,6 @@ export type IdleFacts =
        */
       kind: "backlog-news";
       task: WakeTask;
-      /** How long it has waited in the backlog when the news reached it. */
       waitedMs: number;
       /** The news as its lane holds it, already capped for a wake. */
       news: string;
@@ -130,7 +126,6 @@ export type IdleFacts =
       stands: "on-request" | "backlog";
       /** Why it counts as begun work, and the task that makes it so when another does. */
       begun: NextMoveBegun;
-      /** How long it has stood that way. */
       standingMs: number;
     }
   | {
@@ -144,13 +139,10 @@ export type IdleFacts =
       wakes: number;
     }
   | {
-      /** The CI round cap was reached: its one wake. */
       kind: "ci-cap";
       task: WakeTask;
-      /** Red heads counted, and the cap they reached. */
       rounds: number;
       cap: number;
-      /** The head the cap was reached at. */
       head: string;
     }
   | {
@@ -158,12 +150,9 @@ export type IdleFacts =
       kind: "review-cap";
       /** Missing on queued legacy wakes means captain. */
       owner?: "firstmate" | "captain";
-      /** The task under review, which the cap holds. */
       task: WakeTask;
-      /** Findings rounds counted, and the re-reviews the cap allows. */
       rounds: number;
       cap: number;
-      /** The findings wake that reached it. */
       findings?: ReviewVerdictFacts;
       /**
        * A row the previous build queued (#348) carried the findings wake as
@@ -183,7 +172,6 @@ export const IDLE_NUDGE_TEXT =
 const STEP_ANSWER_WORDS =
   "This task is a step whose answer the next step builds on: your report is that answer, and it takes no merge card - a card is only for something the captain must decide or see before the next step can start.";
 
-/** How the nudge asks a declared internal step to finish: its answer, or what blocks it. */
 const STEP_FINISH_WORDS =
   "report the whole answer, if your report does not carry it yet, or say what blocks you. If it already does, nothing is left for you: say so in one line, and the first mate decides the next step.";
 
@@ -203,7 +191,6 @@ const ANSWER_WORDS =
 const ANSWER_FINISH_WORDS =
   "when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.";
 
-/** The nudge to a task whose deliverable is an answer the captain asked for. */
 export const IDLE_ANSWER_NUDGE_TEXT = `You stopped with nothing running and nothing up for the captain to decide. ${ANSWER_WORDS} Either post that card, or ${ANSWER_FINISH_WORDS}`;
 
 /**
@@ -221,7 +208,6 @@ export function idleNoteNudgeText(note: WakeNote, step = false, answer = false):
   return `${noted} ${waits} Otherwise either finish - report under the five headings and emit your merge card - or say what blocks you.`;
 }
 
-/** The nudge when the captain wrote last under one of this crewmate's cards. */
 export const IDLE_THREAD_NUDGE_TEXT =
   "The captain wrote under your card and you have not answered: answer in the thread with reply, or pass your answer as the reply of your emit_card revision, naming their message in answers_message.";
 
@@ -250,7 +236,6 @@ export type NextMoveBegun =
   | { why: "waited-on"; task: NamedTask; via?: NamedTask }
   | { why: "started" };
 
-/** The begun work a next-move wake names, in words. */
 function begunWords(begun: NextMoveBegun): string {
   if (begun.why === "started") return "it started before";
   const named = `${begun.task.key} "${begun.task.title}"`;
@@ -263,7 +248,6 @@ function begunWords(begun: NextMoveBegun): string {
 /** A note up on a task: a card with no actions, which holds no turn. */
 export type WakeNote = { id: string; title: string };
 
-/** The cards a reminder or refusal names: `card "Title" (id)`, joined. */
 export function waitingCardWords(cards: readonly WakeNote[]): string {
   const named = cards.map((card) => `"${card.title}" (${card.id})`);
   return `card${cards.length === 1 ? "" : "s"} ${named.join(" and ")}`;
@@ -315,8 +299,6 @@ function hold(
   return { held, task: { id: task.id, title: task.title }, ways: ways ?? [], text };
 }
 
-/** The idle ladder's wakes, worded. */
-/** The name the finished-open wake goes out once for: the finish, by when it was declared. */
 export function finishedOpenOnce(finishedAt: number): string {
   return `finished-open:${finishedAt}`;
 }
@@ -353,7 +335,6 @@ export const IDLE_WORDS: KindWords<IdleFacts> = {
       : facts.note
         ? `with nothing running, nothing queued and only the note "${facts.note.title}" (${facts.note.id}) up, which asks the captain nothing`
         : "with nothing running, nothing queued and no card up";
-    // A crewmate whose outcome that note is need only say it waits.
     const noted =
       facts.note && !facts.thread
         ? " If that note is its outcome, steer it to report waiting on the captain naming the note, never to post it again."

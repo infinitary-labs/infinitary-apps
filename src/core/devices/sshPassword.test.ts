@@ -18,7 +18,6 @@ describe("the password, once", () => {
     expect(passwordMethods(said("publickey,keyboard-interactive"))).toEqual([
       "keyboard-interactive",
     ]);
-    // A Mac that lets in keys alone takes no password.
     expect(passwordMethods(said("publickey"))).toEqual([]);
     expect(
       passwordMethods("ssh: connect to host mini.local port 22: Connection refused"),

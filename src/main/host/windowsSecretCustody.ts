@@ -21,16 +21,13 @@ import type {
  * refuses.
  */
 
-/** ERROR_NOT_FOUND: no credential of that name. */
 const ERROR_NOT_FOUND = 1168;
-/** CRED_TYPE_GENERIC */
 const CRED_TYPE_GENERIC = 1;
 /** CRED_PERSIST_LOCAL_MACHINE: this person, this PC, never roamed. */
 const CRED_PERSIST_LOCAL_MACHINE = 2;
 
 /** The two Credential Manager calls custody makes, so the status mapping is testable without Windows. */
 export type WindowsCustodyApi = {
-  /** The credential's bytes, or the Windows error code that refused it. */
   read(target: string): { error: 0; bytes: Buffer } | { error: number };
   /** 0 once stored, else the Windows error code. */
   write(target: string, bytes: Buffer): number;

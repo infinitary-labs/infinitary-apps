@@ -96,20 +96,17 @@ function parseFlags(argv: string[]): Record<string, string> {
 
 type TapNames = TapPublicationModule["TAP"];
 
-/** Whose tap names a command reads and writes: Infinitary's unless `firstmate`. */
 function namesOf(module: TapPublicationModule, value: string | undefined): TapNames {
   if (value === undefined || value === "infinitary") return module.INFINITARY_TAP;
   if (value === "firstmate") return module.FIRSTMATE_TAP;
   throw new Error(`--names ${value} is not infinitary or firstmate`);
 }
 
-/** The tap's current targets file, parsed as stored, or undefined when it has none. */
 function readTargets(names: TapNames, tap: string): unknown | undefined {
   const path = join(tap, names.targetsFile);
   return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as unknown) : undefined;
 }
 
-/** The tap's current builds file, parsed as stored, or undefined when it has none. */
 function readBuilds(names: TapNames, tap: string): unknown | undefined {
   const path = join(tap, names.buildsFile);
   return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as unknown) : undefined;

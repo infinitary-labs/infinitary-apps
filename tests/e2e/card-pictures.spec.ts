@@ -46,7 +46,6 @@ function viewer(page: Page) {
   return page.getByRole("dialog", { name: /^Pictures from / });
 }
 
-/** What the open viewer shows, read off its own chrome. */
 async function readViewer(page: Page) {
   const dialog = viewer(page);
   await expect(dialog).toBeVisible();
@@ -175,7 +174,6 @@ test("the +N tile opens its group at the first picture the strip does not show",
 test("a lone picture and a body's own data: picture each open alone", async () => {
   const { page } = launched;
   const title = PICTURE_CARD_TITLES.mixed;
-  // The body's own data: picture.
   await clickPicture(page, title, 0);
   const inline = await readViewer(page);
   expect(inline.src?.startsWith("data:image/png;base64,")).toBe(true);
@@ -185,7 +183,6 @@ test("a lone picture and a body's own data: picture each open alone", async () =
   expect(inline.thumbnails).toEqual([]);
   await expect(viewer(page).getByRole("button", { name: "Next picture" })).toHaveCount(0);
   await closeWithEscape(page);
-  // A served lone picture beside it.
   await clickPicture(page, title, 2);
   const tall = await readViewer(page);
   expect(tall.caption).toBe(TALL_PICTURE.alt);
@@ -221,7 +218,6 @@ test("keys move within the group and never page the stack", async () => {
   await page.keyboard.press("Home");
   await expect(count).toHaveText(`1 / ${last}`);
   await expect(viewer(page).getByRole("button", { name: "Previous picture" })).toBeDisabled();
-  // The arrows and a thumbnail move it too.
   await viewer(page).getByRole("button", { name: "Next picture" }).click();
   await expect(count).toHaveText(`2 / ${last}`);
   await viewer(page)
@@ -232,7 +228,6 @@ test("keys move within the group and never page the stack", async () => {
   await closeWithEscape(page);
 });
 
-/** The shown picture's box, the picture row's, and the picture's own offset at 1:1. */
 async function pictureGeometry(page: Page) {
   return viewer(page).evaluate((dialog) => {
     const row = dialog.querySelector("[data-picture-row]") as HTMLElement;
@@ -256,12 +251,10 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
   const opened = await readViewer(page);
   expect(opened.hint).toBe(pictureHint(WIDE_PICTURE, "fitted"));
 
-  // Fitted: the whole picture remains inside its viewing area.
   const fitted = await pictureGeometry(page);
   expect(fitted.pressed).toBe("false");
   expect(within(fitted.picture, fitted.row)).toEqual([]);
 
-  // Z enlarges the picture for reading detail.
   await page.keyboard.press("z");
   await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "true");
   await expect(viewer(page).locator("[data-picture-hint]")).toHaveText(
@@ -270,7 +263,6 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
   const one = await pictureGeometry(page);
   expect(one.picture.width).toBeGreaterThan(fitted.picture.width);
 
-  // A drag moves the picture.
   const start = {
     x: one.button.left + one.button.width / 2,
     y: one.button.top + one.button.height / 2,
@@ -285,12 +277,10 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
   expect(dragged.pressed).toBe("true");
   await page.screenshot({ path: test.info().outputPath("card-pictures-wide-1to1-dark.png") });
 
-  // The wheel also moves the picture.
   await page.mouse.wheel(100, 0);
   await expect
     .poll(async () => (await pictureGeometry(page)).offset.x)
     .toBeLessThan(dragged.offset.x);
-  // Enter, Space and a click toggle it too.
   await page.keyboard.press("Enter");
   await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "false");
   await page.keyboard.press(" ");
@@ -320,7 +310,6 @@ test("a click or Enter on a diagram opens it fitted and enlarged, and Z shows it
   expect(opened.caption).toBe(CARD_DIAGRAM.caption);
   expect(opened.count).toBe(pictureSize(CARD_DIAGRAM));
   expect(opened.hint).toBe(pictureHint(CARD_DIAGRAM, "fitted"));
-  // Fitted: whole inside the row.
   const fitted = await pictureGeometry(page);
   expect(within(fitted.picture, fitted.row)).toEqual([]);
   // Its words keep the card's look: the label is in the drawing the viewer shows.
@@ -334,7 +323,6 @@ test("a click or Enter on a diagram opens it fitted and enlarged, and Z shows it
   expect(own.picture.width).toBeLessThan(fitted.picture.width);
   await closeWithEscape(page);
 
-  // The keyboard reaches it too: Enter on the diagram opens it.
   await focusOn(diagram);
   await page.keyboard.press("Enter");
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
@@ -378,7 +366,6 @@ test("under reduced motion the viewer opens without moving", async () => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   try {
     await clickPicture(page, PICTURE_CARD_TITLES.wide, 0);
-    // Opened straight into its final state: nothing in it is animating.
     const running = await viewer(page).evaluate(
       (dialog) =>
         dialog.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,

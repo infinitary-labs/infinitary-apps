@@ -58,7 +58,6 @@ public enum PhoneFormats {
         return items.formatted(.list(type: .and, width: .standard).locale(locale))
     }
 
-    /// The time of day: `3:12 PM`.
     public static func time(_ date: Date, locale: Locale = locale) -> String {
         date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale))
     }
@@ -75,7 +74,6 @@ public enum PhoneFormats {
             : date.formatted(Date.FormatStyle(locale: locale).month(.abbreviated).day().hour().minute())
     }
 
-    /// The month and day alone: `Oct 5`.
     public static func monthDay(_ date: Date, locale: Locale = locale) -> String {
         date.formatted(Date.FormatStyle(locale: locale).month(.abbreviated).day())
     }

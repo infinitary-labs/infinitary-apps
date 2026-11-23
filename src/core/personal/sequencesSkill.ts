@@ -4,18 +4,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { WORKSPACE_SKILLS_DIR } from "./workspaceSkills";
 
-/**
- * How the captain wants work of each kind approached (docs/sequences.md):
- * a document in the personal workspace, `.claude/skills/sequences/SKILL.md`
- * under `userData/fleet/personal/`, that the Firstmate is served after its
- * byte-stable prompt. The host never parses it: the Firstmate reads it and
- * opens an ask of more than one step as a parent task with child steps, with
- * the task tools it already has.
- *
- * App-managed guidance refreshed from this packaged seed on workspace setup
- * and app updates. Local edits are overwritten; a future customization flow
- * is explicitly deferred.
- */
 export const SEQUENCES_SKILL_RELATIVE_PATH = join(WORKSPACE_SKILLS_DIR, "sequences", "SKILL.md");
 
 export const SEQUENCES_SKILL_HEADER = `---
@@ -205,10 +193,6 @@ Something to glance at beside your work on the app's rails is a panel.
 /** A document past this size is not served: the built-in text is, with one feed line. */
 export const SEQUENCES_MAX_BYTES = 16 * 1024;
 
-/**
- * Refresh the packaged seed whenever the file is missing or differs. The
- * workspace seeder commits app-authored updates (./workspace.ts).
- */
 export async function seedSequencesSkill(workspaceDir: string): Promise<boolean> {
   const path = join(workspaceDir, SEQUENCES_SKILL_RELATIVE_PATH);
   const content = `${SEQUENCES_SKILL_HEADER}${SEQUENCES_SEED}`;
@@ -223,7 +207,6 @@ export async function seedSequencesSkill(workspaceDir: string): Promise<boolean>
   return true;
 }
 
-/** The document without its front matter: what the Firstmate is served. */
 export function sequencesBody(markdown: string): string {
   const body = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
   return body.trim();
@@ -232,7 +215,6 @@ export function sequencesBody(markdown: string): string {
 /** Why the file could not be served; the built-in text is served instead. */
 export type SequencesFallback = "unreadable" | "empty" | "oversized";
 
-/** What the Firstmate is served, and its provenance stamp. */
 export type ServedSequences = {
   text: string;
   /** sha256 of `text`: the `instructions_sha` the session records. */

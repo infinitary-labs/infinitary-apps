@@ -47,7 +47,6 @@ import XCTest
             }
             XCTAssertGreaterThan(moved, 20, "\(variant): the home crew ride the warp")
             XCTAssertEqual(riding.warp == nil, true, "\(variant): the warp has ended")
-            // Home again: each rider is back on its own orbit's circle, at its full size, with no trail.
             for glyph in try XCTUnwrap(last).glyphs where glyph.task.id.hasPrefix("home") {
                 let seat = try XCTUnwrap(home.book.crew[glyph.task.id]), orbit = try XCTUnwrap(glyph.orbit)
                 XCTAssertEqual(Int(orbit.plane.rounded()), seat.plane, "\(variant) \(glyph.task.id)'s orbit")
@@ -77,7 +76,6 @@ import XCTest
         for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew] {
             let motion = PhoneSceneMotion(), plain = PhoneSceneMotion()
             let seconds = CharacterCatalog.shared.fidgets[variant.rawValue]! / 1000
-            // Idle orbit first, then the warp, then its release home.
             let idle = 3.0, end = idle + seconds + 2
             var frames: [PhoneSceneMotion.Frame] = [], unmoved: [Bool] = []
             for step in 0...Int(end * fps) {

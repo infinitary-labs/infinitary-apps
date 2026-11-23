@@ -96,12 +96,9 @@ export type StackEntry = Card & {
   panelCard?: PanelCardEntry;
 };
 
-/** The one reply note's stack entry. */
 export const REPLY_NOTE_ENTRY_ID = "reply-note";
-/** A panel's card's stack entry, by its panel and its id there. */
 export const panelCardEntryId = (panel: string, id: string) => `panel-card:${panel}/${id}`;
 
-/** What a held entry carries beyond a card's own fields. */
 type HeldEntry = Pick<StackEntry, "id"> &
   Partial<
     Pick<
@@ -155,13 +152,8 @@ function heldEntry(held: OpenRecord): HeldEntry {
   };
 }
 
-/** A shell-held record's stack entry id. */
 export const heldEntryId = (held: OpenRecord): string => heldEntry(held).id;
 
-/**
- * Whether a stack entry is shell-held (a task record, a past card, the reply
- * note, a browser view, a Crewmate tab or a panel's card), not a card.
- */
 /**
  * Whether words are found in a stage entry: a card, a past card, or a task's
  * record or Crewmate tab (docs/keyboard.md, "Finding in the shown card"). A panel's card, the reply note and a task's
@@ -183,7 +175,6 @@ export const isHeldEntry = (entry: StackEntry | undefined): boolean =>
   entry?.crewmateTaskId !== undefined ||
   entry?.panelCard !== undefined;
 
-/** Whether an open record is one of `taskId`'s tabs: its record, its browser or its Crewmate tab. */
 export const isTaskTab = (held: OpenRecord, taskId: string): boolean =>
   ("taskId" in held && held.taskId === taskId) ||
   ("browserTaskId" in held && held.browserTaskId === taskId) ||
@@ -202,7 +193,6 @@ export function taskEntryFrom(
   return held && "from" in held && held.from ? { cardId: held.from.cardId } : undefined;
 }
 
-/** One of `panel`'s open cards with `patch` applied, where it is; nothing when it is not open. */
 export function patchPanelCard(
   s: Pick<StackState, "records">,
   panel: string,
@@ -218,7 +208,6 @@ export function patchPanelCard(
   };
 }
 
-/** Whether an open record is one of `panel`'s cards (and, given `id`, that one). */
 export function isPanelCard(
   held: OpenRecord,
   panel: string,
@@ -262,21 +251,18 @@ export function visibleCards(cards: Card[], aside: readonly string[] = []): Card
   return cards.filter((card) => onStage(card) && !card.minimized && !aside.includes(card.id));
 }
 
-/** The stack this window shows now: its held entries, then the cards the project focus lets through. */
 export function stackOf(
   s: Pick<StackState, "cards" | "heldBackCardIds" | "records">,
 ): StackEntry[] {
   return visibleStack(s.cards, s.heldBackCardIds, s.records);
 }
 
-/** The entry this window shows now, if the stack is non-empty. */
 export function shownEntry(
   s: Pick<StackState, "cards" | "cardIndex" | "heldBackCardIds" | "records">,
 ): StackEntry | undefined {
   return shownCard(s.cards, s.cardIndex, s.heldBackCardIds, s.records);
 }
 
-/** The card currently on screen, if the stack is non-empty. */
 export function shownCard(
   cards: Card[],
   cardIndex: number,
@@ -441,10 +427,8 @@ export function withoutShown(
   return state.unreadCardIds.filter((id) => id !== card.id);
 }
 
-/** What the project focus holds back: nothing, with no focus. */
 const HOLDS_NOTHING = (_card: Card): boolean => false;
 
-/** `next`, or `prev` when they hold the same ids in the same order. */
 function sameIds(prev: string[], next: string[]): string[] {
   return prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next;
 }
@@ -581,7 +565,6 @@ export function reconcileStack(
   };
 }
 
-/** `values` without `key`, as a new record. */
 export function withoutKey<T>(values: Record<string, T>, key: string): Record<string, T> {
   const next = { ...values };
   delete next[key];

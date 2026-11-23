@@ -105,7 +105,6 @@
     if (stack.length > 1) go(stack.slice(0, -1), stack[stack.length - 1]);
   }
 
-  // ---- input
   const hit = (ev) => {
     for (let t = ev.target; t && t !== svg; t = t.parentNode) if (t._n) return t._n;
     return null;
@@ -430,7 +429,6 @@
   function stateNow() {
     return { place: stack.map(keyOf), changes: cmp, chosen: sel ? sel.key : null, step: at };
   }
-  // goes where a state says: its comparison, its place, its chosen box and the change the arrows stood at
   function goToState(t) {
     if (!t || typeof t !== "object") return;
     const c = Number.isInteger(t.changes) && CMP[t.changes] ? t.changes : -1;

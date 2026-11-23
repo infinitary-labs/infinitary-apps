@@ -64,7 +64,6 @@ export function namedHere(
   return field ? { ...fields, [field]: hereAs(fields[field] as string, name()) } : answer;
 }
 
-/** A request's error, with the home's own refusal named as above and every other error as it was. */
 export function namedHereError(caught: unknown, name: () => string): unknown {
   return caught instanceof HomeRefusalError ? new Error(hereAs(caught.message, name())) : caught;
 }

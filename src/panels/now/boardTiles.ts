@@ -37,7 +37,6 @@ export type BoardColumn = (typeof BOARD_COLUMNS)[number];
  */
 export type BoardLane = "waiting" | BoardColumn | "dropped" | "earlier";
 
-/** Each lane's micro label: the panel's group names, the dropped list's and the earlier matches'. */
 export const BOARD_LANE_LABELS: Readonly<Record<BoardLane, string>> = {
   ...(NOW_GROUP_LABELS as Record<NowGroup, string>),
   get dropped() {
@@ -70,7 +69,6 @@ export const BOARD_WAITING_SHOWN = 3;
  */
 export const EARLIER_SEARCH_LIMIT = 50;
 
-/** What an empty lane says, in place of its tiles. */
 export const BOARD_EMPTY_WORDS: Readonly<Record<BoardLane, string>> = {
   get waiting() {
     return m.nowPanelBoardEmptyWaiting();
@@ -197,7 +195,6 @@ export function boardTilesOf(
   return tiles;
 }
 
-/** One page of a lane: its tiles as drawn, and where the page sits in the whole lane. */
 export type BoardPage = {
   tiles: BoardTile[];
   /** The page shown, clamped to the lane's pages. */
@@ -304,10 +301,6 @@ export function newInBacklog(tiles: ReadonlyMap<BoardLane, readonly BoardTile[]>
 
 export type BoardChip = { id: string | null; label: string };
 
-/**
- * The project chips: All projects, then each project's key, only when two
- * or more projects have tiles on the unfiltered board.
- */
 export function boardChipsOf(board: PanelTaskBoard): BoardChip[] {
   const withTiles = new Set(
     board.tasks
@@ -339,7 +332,6 @@ export type BoardNavLayout = {
 
 const BOARD_NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"]);
 
-/** The tile in `ids` nearest `point` along `axis`, or null when there are none. */
 function nearest(
   ids: readonly string[],
   point: TilePoint,

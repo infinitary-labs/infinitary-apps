@@ -55,7 +55,6 @@ export type TaskQueryInput = {
   projects?: boolean;
 };
 
-/** One project as the `projects` read names it. */
 /** One repository of a project of several, with its folder where it has one. */
 export type TaskQueryRepository = { name: string; folder?: string };
 export type TaskQueryProject = {
@@ -141,7 +140,6 @@ export type TaskQueryRow = {
   blocked_by?: string[];
   blocks?: string[];
   children?: string;
-  /** The task(s) this one was discovered while working on. */
   discovered_from?: string[];
   /** Follow-ups discovered from this task: "1 open of 3". */
   follow_ups?: string;
@@ -167,7 +165,6 @@ export type TaskQueryRow = {
    * here, while a list stays the compact index it has always been.
    */
   outcome?: string;
-  /** Its short form, when the record has one. */
   outcome_summary?: string;
   /** Complete report history, chronological, never treated as inferred approval. By-key only. */
   reports?: { event_id: number; text: string }[];
@@ -610,7 +607,6 @@ function picturesOf(tasks: TaskService, taskId: string): { name: string; path: s
   });
 }
 
-/** The newest card's body as a row field, or nothing when there is none. */
 function body(
   cardBody: (taskId: string) => string | undefined,
   taskId: string,

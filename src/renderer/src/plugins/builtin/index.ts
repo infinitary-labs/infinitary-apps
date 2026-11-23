@@ -96,7 +96,6 @@ const RECORD_KNOWLEDGE_SLOT = "__KNOWLEDGE__";
 /** And the record's words in the window's language (docs/i18n.md, "The task record's frame"). */
 const RECORD_WORDS_SLOT = "__RECORD_WORDS__";
 
-/** Text written into a double-quoted attribute. */
 function attributeEscaped(text: string): string {
   return text.replace(
     /[&<>"']/g,
@@ -224,7 +223,6 @@ export function registerGatedPanels(host: PluginHost, gates: AppPanelGates): () 
   };
 }
 
-/** One gate's folders as their own first-party plugin. */
 function registerGate(host: PluginHost, gate: AppPanelGate): () => void {
   const manifest = gatedManifest(gate);
   if (!manifest) return () => {};

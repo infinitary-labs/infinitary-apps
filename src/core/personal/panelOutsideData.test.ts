@@ -41,11 +41,8 @@ describe("PanelOutsideData", () => {
     const removed = f.outside.sweep(new Map([["Google", 20 * DAY]]));
     expect(removed).toBe(1);
     expect(f.store.list("mail-board").map((entry) => entry.key)).toEqual(["fresh"]);
-    // A panel that read nothing kept is never swept.
     expect(f.store.list("clock").map((entry) => entry.key)).toEqual(["old"]);
-    // A kind with no cutoff this sweep removes nothing.
     expect(f.outside.sweep(new Map())).toBe(0);
-    // What a panel read outlives a restart.
     expect(new PanelOutsideData(f.dir, f.store).panels()).toEqual(["workspace:mail-board"]);
   });
 

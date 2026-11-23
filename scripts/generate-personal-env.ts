@@ -72,7 +72,6 @@ function indent(block: string): string {
     .join("\n");
 }
 
-/** The generated TS module's text: one exported string constant. */
 export function renderGeneratedModule(dts: string): string {
   // A template literal: biome leaves those alone, so `pnpm check` and the
   // freshness test agree on the same bytes.

@@ -126,7 +126,6 @@ export class SavedSignInGrants {
     return record ? { rule: record.automatic ? "automatic" : "ask" } : {};
   }
 
-  /** The signed-in site a request card may offer for the task's browser on `site`. */
   offerFor(taskId: string, site: string): OfferedSignIn | undefined {
     const browser = this.core.browsers.get(taskId);
     const offer = browser ? this.offerOf(browser).offer : undefined;

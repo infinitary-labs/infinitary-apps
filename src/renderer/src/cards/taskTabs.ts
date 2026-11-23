@@ -26,7 +26,6 @@ export type TaskTab =
   | { kind: "crewmate"; label: string }
   | { kind: "browser"; label: string; page: number };
 
-/** Which of a task's tabs is the one on the stage. */
 export type ShownTab = TaskTab["kind"];
 
 export type { RecordView };
@@ -71,7 +70,6 @@ export type TaskTabFacts = {
 
 export const NO_TAB_FACTS: TaskTabFacts = { crewmate: false, cards: 0, activity: false };
 
-/** The tab facts a task's record read gives. */
 export function taskTabFactsOf(
   detail: Pick<TaskDetail, "startedAt" | "cards" | "activityLog" | "timeline">,
 ): TaskTabFacts {
@@ -108,7 +106,6 @@ export function taskTabsOf(
   ];
 }
 
-/** The index of the tab shown: Info, Cards, Activity, Crewmate, or the Browser tab of the browser's current page. */
 export function shownTabIndex(
   tabs: readonly TaskTab[],
   shown: ShownTab,
@@ -184,7 +181,6 @@ export function lendTaskTabs(handle: TaskTabsHandle): () => void {
   };
 }
 
-/** The strip a task's views lent most recently, or none. */
 export const lentTaskTabs = (taskId: string): TaskTabsHandle | undefined => {
   const strips = lent.get(taskId);
   if (!strips) return undefined;
@@ -240,7 +236,6 @@ export function askTabFocus(): void {
   focusTabUntil = performance.now() + TAB_FOCUS_MS;
 }
 
-/** Whether a key's choice of a tab still waits for a strip to take focus. */
 export const tabFocusAsked = (): boolean => performance.now() < focusTabUntil;
 
 /** A strip took the focus a key asked for. */
@@ -258,7 +253,6 @@ export type TabCommand =
   | "cards.next-tab"
   | "cards.previous-tab";
 
-/** The tab a Show command names; null for Next tab and Previous tab. */
 export function tabKindOf(command: TabCommand): ShownTab | null {
   if (command === "cards.show-info") return "info";
   if (command === "cards.show-cards") return "cards";
@@ -268,7 +262,6 @@ export function tabKindOf(command: TabCommand): ShownTab | null {
   return null;
 }
 
-/** Where a tab command goes on `handle`'s strip, or null when it has nowhere to go. */
 export function tabTargetOf(command: TabCommand, handle: TaskTabsHandle): number | null {
   const { tabs, selected, enabled } = handle;
   if (command === "cards.next-tab") return steppedTab(tabs, selected, 1, enabled);
@@ -280,14 +273,12 @@ export function tabTargetOf(command: TabCommand, handle: TaskTabsHandle): number
   return at < 0 ? null : at;
 }
 
-/** The task whose card is the entry `entry`: its record (Info, Cards or Activity), browser view or Crewmate tab. */
 export const tabTaskOf = (entry: {
   recordTaskId?: string | undefined;
   browserTaskId?: string | undefined;
   crewmateTaskId?: string | undefined;
 }): string | undefined => entry.recordTaskId ?? entry.browserTaskId ?? entry.crewmateTaskId;
 
-/** Which tab the entry `entry` is: the record's view, the browser view or the Crewmate tab. */
 export const tabShownOf = (entry: {
   recordTaskId?: string | undefined;
   recordView?: RecordView | undefined;

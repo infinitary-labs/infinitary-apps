@@ -25,7 +25,6 @@ import { scanKnowledgeThreat } from "./threatScan";
  * nothing - and it never writes the file. A new write cannot cite a file.
  */
 
-/** The most text one source keeps. */
 export const SOURCE_TEXT_MAX_BYTES = 32 * 1024;
 /** The largest file the host reads to cite or check. */
 export const SOURCE_FILE_MAX_BYTES = 2 * 1024 * 1024;

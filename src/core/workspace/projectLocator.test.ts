@@ -37,11 +37,9 @@ describe("locateProject", () => {
       isGitRepo: true,
       origin: "git@github.com:kunchenguid/meter-scan.git",
     });
-    // The org-level and repo-level github scan found the substring match.
     expect(results.map((result) => result.path)).toContain(
       join(home, "github", "kunchenguid", "meter-scan-tools"),
     );
-    // Hidden and system directories are never entered.
     expect(results.map((result) => result.path)).not.toContain(join(home, "Library", "meter-scan"));
     expect(results.every((result) => !result.path.includes(".hidden"))).toBe(true);
   });

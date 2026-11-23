@@ -51,10 +51,8 @@ import type { CaptainOpInput } from "./protocol";
  * with `reloaded`.
  */
 
-/** The refusal the crew hears: the command is the captain's alone. */
 export const CREW_REFUSED = `${INFINITARY_COMMAND} is for you, never for the crew, and a program Infinitary started asked, so nothing was sent.`;
 
-/** The refusal when the system could not say which program asked. */
 const CALLER_UNREAD = `Infinitary could not tell which program asked, so nothing was sent.`;
 
 /** A refusal `person` answers: its words, and a help line when there is a next step. */
@@ -79,7 +77,6 @@ function watchSees(channel: string): boolean {
   return !channel.includes("secret") && channel !== "inf:browser:frame";
 }
 
-/** The core requests the command reaches, in the contract's order. */
 export const COMMAND_CHANNELS: readonly CoreInvokeChannel[] =
   CORE_INVOKE_CHANNELS.filter(commandReaches);
 
@@ -95,10 +92,8 @@ const WATCH_PAGE = 100;
 /** How much of a push one change line shows, unless `--channel` asks for it whole. */
 const SUMMARY_CHARS = 160;
 
-/** One kept push as the journal holds it: when it came, and what it carried. */
 type Kept = { at: number; payload: unknown };
 
-/** One argument of a request, in words: its type and the contract's limits. */
 function ruleOf(schema: Record<string, unknown>): { type: string; rule: string } {
   const parts: string[] = [];
   const type = Array.isArray(schema.enum)
@@ -127,7 +122,6 @@ function ruleOf(schema: Record<string, unknown>): { type: string; rule: string }
   return { type, rule: parts.join(" · ") };
 }
 
-/** A request's argument list as the contract publishes it. */
 function argumentsOf(channel: CoreInvokeChannel): {
   required: number;
   rows: { position: number; type: string; rule: string }[];
@@ -149,7 +143,6 @@ function argumentsOf(channel: CoreInvokeChannel): {
   };
 }
 
-/** A zod refusal as one line naming the argument's position. */
 function refusalOf(error: z.ZodError, channel: string): string {
   const issue = error.issues[0];
   if (!issue) return `${channel} refused its arguments`;

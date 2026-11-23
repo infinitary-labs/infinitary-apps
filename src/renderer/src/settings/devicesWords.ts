@@ -95,7 +95,6 @@ export function wayCount(count: number): string {
 /** The phone panel uses the same Mac link; its presentation stays local to Settings. */
 export type DevicePanelMake = DeviceMake | "phone";
 
-/** What each panel says, by what it holds. */
 export const PANEL_WORDS: Record<
   DevicePanelMake,
   { label: string; say: [string, ...string[]]; copy: string; thing: "link" | "command" }
@@ -181,7 +180,6 @@ export const SEEN_WORDS = {
   },
 };
 
-/** The fixed words of a device's row. */
 export const DEVICE_ROW_WORDS = {
   /** What a Mac's summary leads with while Firstmate is open on it, controlling this one. */
   get controllingNow() {
@@ -257,7 +255,6 @@ export function joinedWhen(at: number, now: number): string {
   return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
 }
 
-/** Whether a device answers now, or since when it has not. */
 function seenWords(device: DeviceView, now: number): string {
   // On another version it is connected, whether or not it takes work.
   if (device.inReach || device.otherVersion) return SEEN_WORDS.now;

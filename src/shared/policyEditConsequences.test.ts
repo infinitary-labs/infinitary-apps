@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type EffectiveTaskPolicies, policyEditConsequences } from "./taskPolicies";
 
-/** INF-416 piece H: the host's policy consequences are said only when that edit applies. */
 const now = (autonomy: boolean, rigor: EffectiveTaskPolicies["rigor"]["value"]) => ({
   autonomy: { value: autonomy, source: "task" as const },
   rigor: { value: rigor, source: "task" as const, requested: rigor },

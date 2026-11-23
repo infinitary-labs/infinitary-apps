@@ -18,7 +18,6 @@ import { openWindow } from "./window";
 
 const TITLE = "Pick the release window";
 
-/** The shown card's part `selector`, or null while it draws none. */
 const shown = (selector: string) =>
   document.querySelector<HTMLElement>(`${SHOWN_ENTRY} ${selector}`);
 

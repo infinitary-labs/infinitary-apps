@@ -112,7 +112,6 @@ test("minimize preserves the decision and restores it from its own task row", as
     await expect(answer()).toBeChecked();
     await expect(cardReply(page).field).toHaveValue("Keep the review beside it.");
     await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-    // Explicit record access remains available while the row opens the pending card.
     await page.evaluate(() => window.infinitary.tasks.detail("minimize-launch"));
 
     {
@@ -353,9 +352,6 @@ test("a legacy minimized-note request retains the review's reading place", async
   }
 });
 
-/**
- * Minus preserves an unanswered reply and its draft without a confirmation.
- */
 test("INF-1879: one minus keeps an unanswered reply open without a warning", async () => {
   const userDataDir = scratchDir("infinitary-card-exits-");
   const db = openDatabase(userDataDir);

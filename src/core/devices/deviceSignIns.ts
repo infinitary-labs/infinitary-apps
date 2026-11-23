@@ -371,7 +371,6 @@ export class DeviceSignIns {
     return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_FORGE_SERVERS);
   }
 
-  /** That computer's name, once it is known to offer this kind of server and is in reach; else why not. */
   private offersServers(deviceId: string, kind: string): string {
     this.computer(deviceId);
     const who = this.who(deviceId);
@@ -548,7 +547,6 @@ export class DeviceSignIns {
     return error;
   }
 
-  /** Whether that computer can use a saved reset now: it takes the order and is in reach. */
   canUseSavedReset(deviceId: string): boolean {
     return this.takesSavedReset(deviceId) && this.options.work.inReach(deviceId);
   }

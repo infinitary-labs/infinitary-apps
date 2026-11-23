@@ -184,8 +184,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     expect(h.authorization()?.attempt).toBeDefined();
     expect(h.authorization()?.attempt?.task).toBeUndefined();
     expect(h.forge.sends).toBe(1);
-    // The captain's approval ends and a new one of the same pull request
-    // is given: it reads the earlier merge back and sends nothing.
     const review = h.authorization()?.review?.id;
     h.supervisor.settling.approvals.endAuthorization(
       h.taskId,
@@ -208,7 +206,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
     expect(h.authorization()?.waiting?.on).toBe("outcome");
     expect(h.forge.sends).toBe(1);
-    // Bitbucket finishes the merge it took: the approval is spent once.
     h.forge.merged = true;
     await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
     await vi.waitFor(() =>
@@ -241,7 +238,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     };
     const approve = (review: string) =>
       h.supervisor.settling.approvals.authorizeMerge(h.taskId, approval, false, review);
-    // The captain approves another pull request in its place.
     h.supervisor.settling.approvals.endAuthorization(
       h.taskId,
       "superseded",
@@ -256,7 +252,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     });
     expect(approve("review-other")).toBe("standing");
     expect(h.authorization()?.attempt).toBeUndefined();
-    // Then approves the first pull request again, at a newer version.
     h.supervisor.settling.approvals.endAuthorization(
       h.taskId,
       "superseded",
@@ -273,15 +268,12 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
     expect(h.authorization()?.waiting?.on).toBe("outcome");
     expect(h.forge.sends).toBe(1);
-    // Bitbucket merged the newer version under the original send.
     h.forge.merged = true;
     await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
     await vi.waitFor(() =>
       expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
     );
     expect(h.forge.sends).toBe(1);
-    // The task says GitHub merged the newer version, not the version the
-    // original send was approved at, in the merge path's own words.
     const told = otherMergedFacts("GitHub", "#7", REPAIRED, APPROVED).told.trim();
     expect(told).not.toBe("");
     expect(
@@ -393,7 +385,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
       expect(h.authorization()?.attempt?.head).toBe(APPROVED);
       expect(h.forge.sends).toBe(1);
-      // Bitbucket finishes the merge it took: the approval is spent once.
       h.forge.merged = true;
       h.crewmate.finishPrompt();
       await tick();
@@ -641,8 +632,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await vi.waitFor(() => expect(secondApproval()?.waiting?.on).toBe("outcome"));
     expect(h.forge.sends).toBe(1);
     expect(secondApproval()?.attempt).toBeUndefined();
-    // Bitbucket finishes the first merge: the read settles the closed
-    // task's send, says so on it, and the pull request is reserved no more.
     h.forge.merged = true;
     await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
     expect(h.authorization()?.attempt).toBeUndefined();
@@ -686,7 +675,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
       if (!own) throw new Error("Missing the task's project");
       if (change === "removed") h.repos.unregister(own);
       else h.repos.configure(own, { delivery: change });
-      // Bitbucket merged the pull request at a version pushed after the click.
       h.forge.merged = true;
       h.forge.headSha = REPAIRED;
       await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
@@ -738,7 +726,6 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
     expect(h.authorization()?.attempt).toMatchObject({ head: APPROVED });
     expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).toContain(h.taskId);
-    // The pinned repository reads merged: that read settles it, said on GitHub.
     h.forge.merged = true;
     await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now() + 3_600_000);
     expect(h.authorization()?.attempt).toBeUndefined();

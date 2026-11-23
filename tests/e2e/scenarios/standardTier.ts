@@ -29,11 +29,6 @@ const MOCK_STANDARD_CARD_ACTIONS: ScriptedCardAction[] = [
 
 export const MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE = "The meter test is steady, drawn";
 
-/**
- * The standard tier: a completion card missing a heading is refused and
- * sent again whole, a card that declares its own merge buttons is refused,
- * and the crewmate reports under the five headings.
- */
 export const standardTier: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

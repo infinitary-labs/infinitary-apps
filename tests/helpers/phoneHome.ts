@@ -327,7 +327,6 @@ export async function startPhoneHome(
   const cardRequests: { channel: string; args: unknown }[] = [];
   /** INF-5445 piece 2: each change the phone sent to a card's draft, as it arrived. */
   const draftChanges: unknown[] = [];
-  /** The id the core gave the drafts journey's card. */
   let draftCardId = "";
   let leaks = 0;
   const cardIDs = {
@@ -656,7 +655,6 @@ export async function startPhoneHome(
             homeUpdate = { ...homeUpdate, step: "saving", waitingFor: homeUpdate.stops.tasks };
           if (channel === "inf:home-update:later" && homeUpdate.step === "saving")
             homeUpdate = { ...homeUpdate, step: "offered", waitingFor: [] };
-          // The stand-in answers the update requests in their own shape.
           return homeUpdate as Awaited<ReturnType<typeof core.dispatch<typeof channel>>>;
         }
         const result = await core.dispatch(channel, args, actor);
@@ -1998,7 +1996,6 @@ export async function startPhoneHome(
           await connection.settled();
           result = { ok: true };
           break;
-        // The notes card's thread as the computer keeps it, each captain line with its notes.
         case "GET note-thread":
           result = { messages: core.services.supervisor.cards.thread(cardIDs.notes).messages };
           break;
@@ -2122,7 +2119,6 @@ export async function startPhoneHome(
           result = { title, part, cardId: draftCardId };
           break;
         }
-        // The card's draft as the computer keeps it, and each change the phone sent to it.
         case "GET draft-state": {
           const draft =
             core.services.cardDrafts.read().find((one) => one.cardId === draftCardId) ?? null;

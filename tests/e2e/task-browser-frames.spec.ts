@@ -17,7 +17,6 @@ import { closeSite } from "./taskBrowser";
  * provider's frame runs on a real shop.
  */
 
-/** The shop's page: a heading, the payment frame, and whether it believes it is in front. */
 const shop = (framePort: number) =>
   // biome-ignore lint/plugin/e2e-frame-door: the site's own frame is this journey's subject, read by the crewmate's browser, never by the spec.
   `<!doctype html><title>Shop</title>
@@ -151,7 +150,6 @@ test("a crewmate fills a form in a frame from another site, and a passkey reques
     expect(outline).not.toContain('(title: "Card payment")');
     // The page believes it is in front, though its window is hidden.
     expect(outline).toContain("In front: true");
-    // The crewmate types into the frame's field and sends its form with Enter.
     await call("act", {
       action: "type",
       ref: ref("Name on card"),

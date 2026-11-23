@@ -14,7 +14,6 @@ export const SCROLL_END_MS = 1_000;
  */
 export const SCROLL_END_MARGIN_MS = 50;
 
-/** One command over a page's own protocol, answered as the protocol answers it. */
 export type ProtocolSend = <T = Record<string, unknown>>(
   method: string,
   params?: Record<string, unknown>,

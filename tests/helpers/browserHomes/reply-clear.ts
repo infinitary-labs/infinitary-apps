@@ -6,7 +6,6 @@ import { seedTask } from "../../../src/core/tasks/seedTask";
 import { TaskService } from "../../../src/core/tasks/taskService";
 import type { HomeRead } from "../browserFreshHome";
 
-/** What the reply-clear test's story reads back. */
 type Input = { cardId: string; title: string };
 
 /** The card's thread, empty until the captain replies, read when the card shows. */

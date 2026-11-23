@@ -78,14 +78,12 @@ const says = {
   }),
 };
 
-/** A pushed message's words. */
 function textOf(message: SDKUserMessage): string {
   const content = message.message.content;
   if (typeof content === "string") return content;
   return content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("");
 }
 
-/** One client, as a scripted attachment plays it. */
 type PlayedClient = {
   attachment: ScriptedAttachment;
   /** It reports its session state and acknowledges pushed messages: a rolling session's client. */
@@ -102,7 +100,6 @@ type PlayedClient = {
   mcp: Promise<Client | undefined> | undefined;
 };
 
-/** The words a transcript entry this client wrote carries. */
 function entryText(entry: {
   message?: { content?: unknown };
   attachment?: { prompt?: unknown };
@@ -379,7 +376,6 @@ export async function scriptedClaudeWorld(
     }
   };
 
-  /** One request of the model, as the scripted reply plays it. */
   const request = async (client: PlayedClient): Promise<void> => {
     const { options, emit } = client.attachment;
     const mcp = await mcpOf(client);
@@ -643,7 +639,6 @@ export async function scriptedClaudeWorld(
   };
 }
 
-/** What every world opened that outlives its case, let go. */
 export async function scriptedClaudeCleanup(): Promise<void> {
   resetStoreLeasesForTest();
   await Promise.all(lingering.stores.splice(0).map((store) => store.flushed()));

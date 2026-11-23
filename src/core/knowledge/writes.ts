@@ -657,7 +657,6 @@ export class KnowledgeWrites {
   }
 }
 
-/** An entry's next revision, stamped `at`; a retirement also changes its lifecycle. */
 function nextRevision(entry: EntryRow, at: number, lifecycle = entry.lifecycle): EntryRow {
   return { ...entry, revision: entry.revision + 1, lifecycle, updatedAt: at };
 }

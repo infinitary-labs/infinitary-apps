@@ -14,11 +14,6 @@ import { crewmateTool } from "../session/tools";
 import { PlacedTasks } from "./placedTasks";
 import type { SessionHost } from "./sessionHost";
 
-/**
- * A crewmate's conversation held on a computer that runs work
- * (`tests/helpers/sessionHostWorld.ts`): background jobs and Claude background tasks, and the ends the home is told.
- */
-
 sessionHostHooks();
 
 describe("a conversation held on a computer that runs work", () => {

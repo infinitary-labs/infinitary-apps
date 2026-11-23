@@ -61,7 +61,6 @@ describe("a frozen simulator's command ends at its deadline", () => {
     expect((error as Error).message).toMatch(
       /^xcodebuild test-without-building did not finish within its 0\.0-minute deadline, so the check ended it and retried nothing; what it waited on is in hung-xcodebuild-test-without-building-\d+\.txt$/,
     );
-    // Ended, both of them, and never started again.
     await closed;
     expect(alive(pid)).toBe(false);
     expect(started).toBe(1);

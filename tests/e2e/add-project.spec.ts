@@ -33,7 +33,6 @@ function addedNotice(page: Page): Locator {
   return page.locator("[data-repository-notice]");
 }
 
-/** Back from a project's page to the list, where Add project is. */
 async function backToList(page: Page): Promise<void> {
   await page.locator("[data-project-back]").click();
   await expect(page.locator("[data-add-project]")).toBeVisible();
@@ -70,7 +69,6 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     expect(execFileSync("git", ["-C", folder, "status", "--short"], { encoding: "utf8" })).toBe(
       "?? notes.txt\n",
     );
-    // A folder already added opens its project's page again, saying so.
     await backToList(page);
     await add.getByRole("button", { name: ADD_PROJECT_WORDS.folderHere }).click();
     await expect(addedNotice(page)).toContainText("already added");
@@ -115,13 +113,11 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     await expect(projectSettings(page, created.id)).toBeVisible();
     await assertSettingsFits(page);
     if (evidence) await page.screenshot({ path: join(evidence, "new-project-open.png") });
-    // Back on the list, Add project starts empty, its key field cleared.
     await backToList(page);
     await add.getByRole("button", { name: "New project", exact: true }).click();
     await expect(taskKey).toHaveValue("");
     const keys = () => page.evaluate(() => window.infinitary.projects.list());
     expect((await keys()).find((project) => project.name === "launch-site")?.key).toBe("WEB");
-    // A key another project has is refused, and nothing is started.
     await add.getByLabel("Name", { exact: true }).fill("launch-pad");
     await taskKey.fill("WEB");
     await add.getByRole("button", { name: "Start project" }).click();
@@ -228,7 +224,6 @@ test("lists and adds GitHub repos using the app sign-in, filters and marks added
         JSON.stringify({ repo, requests: github.requests() }, null, 2),
       );
     }
-    // Back on the list, the repo shows as added.
     await backToList(page);
     await add.getByRole("button", { name: "GitHub repo", exact: true }).click();
     await add.getByLabel("Find a repo").fill("field");
@@ -349,7 +344,6 @@ test("adds a second repository to a project by keys, and a task filed in it take
     await pressKey(projectLine(page, wallet.id).getByRole("button"), "Enter");
     await expect(page.locator("[data-project-back]")).toBeFocused();
 
-    // A project of one's page offers Add a repository after its one tab.
     const panel = page.locator('[data-project-repositories="WAL"]');
     await expect(panel.locator("[data-repository-tab]")).toHaveCount(1);
     const addTab = panel.locator("[data-add-repository-tab]");
@@ -366,7 +360,6 @@ test("adds a second repository to a project by keys, and a task filed in it take
     await typeInto(name, "wallet-api");
     await pressKey(name, "Enter");
 
-    // One project now: a tab for each repository, the new one chosen.
     const tabs = panel.locator("[data-repository-tab]");
     await expect(tabs).toHaveCount(2);
     const repos = await page.evaluate(() => window.infinitary.repos.list());
@@ -376,14 +369,12 @@ test("adds a second repository to a project by keys, and a task filed in it take
     await expect(apiTab).toHaveAttribute("aria-selected", "true");
     await expect(apiTab).toBeFocused();
     await expect(projectSettings(page, api.id)).toBeVisible();
-    // The panel confirms the add where the form was.
     await expect(panel.locator("[data-repository-notice]")).toContainText(
       m.settingsAddRepositoryAdded({ name: "wallet-api", project: walletProject.name }),
     );
     await assertSettingsFits(page);
     expect((await projectOf("wallet-api"))?.id).toBe(walletProject.id);
 
-    // The project of several takes a name of its own, by keys.
     const projectName = page
       .locator("[data-project-box]")
       .getByLabel(m.settingsProjectsNameLabel(), { exact: true });
@@ -394,13 +385,11 @@ test("adds a second repository to a project by keys, and a task filed in it take
     await expect(page.locator("[data-project-heading]")).toContainText("Wallet");
     await expect.poll(async () => (await projectOf("wallet-api"))?.name).toBe("Wallet");
 
-    // Escape goes back to the list, where the project is one line.
     await pressKey(projectName, "Escape");
     const line = page.locator('[data-project-group="WAL"]');
     await expect(line.getByRole("button")).toBeFocused();
     await expect(line).toContainText("Wallet");
 
-    // A task filed in the new repository takes the project's key.
     await pressWindowKey(app, "Escape");
     await expect(projectsTab).toHaveCount(0);
     const [planned] = await ask(launched, "File the balance endpoint.", [

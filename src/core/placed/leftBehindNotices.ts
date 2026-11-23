@@ -18,7 +18,6 @@ export type LineBlockedRun = { taskId: string; key: string; id: string; demand: 
 
 type Finished = (taskId: string) => { key: string } | undefined;
 
-/** A task this home records as finished, with its key. */
 export function finishedTask(
   get: (id: string) => Pick<TaskRecord, "status" | "key" | "id"> | undefined,
 ): Finished {

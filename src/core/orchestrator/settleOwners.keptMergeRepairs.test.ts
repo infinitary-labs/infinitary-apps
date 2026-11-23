@@ -123,7 +123,6 @@ describe("CrewSupervisor", () => {
       expect(
         (await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr")).refusal?.refused,
       ).toBe("autonomy-off");
-      // The captain merges #7 on GitHub himself; the branch has no open pull request now.
       forge.merged = true;
       expect(await harness.declare({})).toContain("overall: merged");
       expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "merged", prNumber: 7 });
@@ -187,7 +186,6 @@ describe("CrewSupervisor", () => {
         const held = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
         expect(held.text).toContain("#8 on this task is still open");
         expect(tasks.get(taskId)?.status).not.toBe("done");
-        // #8 merges too: nothing of the task is open, so it closes as merged.
         forge.openNumbers.delete(8);
         const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
         expect(result.text).toBe("#7 is already merged on GitHub.");
@@ -268,7 +266,6 @@ describe("CrewSupervisor", () => {
       const held = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(held.text).toContain("#8 on this task could not be read, so it may still be open");
       expect(tasks.get(taskId)?.status).not.toBe("done");
-      // Read again and closed: nothing of the task is open, so it closes as merged.
       forge.unreadable.delete(8);
       const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
@@ -311,13 +308,11 @@ describe("CrewSupervisor", () => {
       expect(question).toBeDefined();
       h.crewmate.finishPrompt();
       await tick();
-      // The first mate's close waits too while the question is open.
       const held = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(held.text).toContain(
         'the card "Which unit should the meter show?" on this task is still open',
       );
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
-      // The crewmate settles its question; the first mate closes as merged.
       h.supervisor.closeCard(question?.id ?? "", { kind: "crewmate", taskId: h.taskId });
       const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
@@ -365,7 +360,6 @@ describe("CrewSupervisor", () => {
       await tick();
       h.crewmate.finishPrompt();
       await tick();
-      // Its own #7 closed without merging; #65, the carrier's, merged.
       h.forge.changeFor = async () => null;
       h.forge.pull = async (number: number): Promise<ForgePull> =>
         number === 65
@@ -494,7 +488,6 @@ describe("CrewSupervisor", () => {
       expect(h.forge.sends).toBe(0);
       expect(h.authorization()).toBeUndefined();
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
-      // The crewmate's card merges the pull request it was shown for, and closes the task.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       await vi.waitFor(() =>
@@ -626,11 +619,8 @@ describe("CrewSupervisor", () => {
       expect(h.crewmate.promptCalls.join("\n")).toContain(`Your merge card ${again.id}`);
       h.crewmate.finishPrompt();
       await tick();
-      // The first card's offer was kept: its click approves the version it showed of #7.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()).toMatchObject({ target: { prNumber: 7 } }));
-      // Its merge attempt finds #7 moved past the approved version, sends nothing
-      // and waits for its crewmate to declare the repair.
       await vi.waitFor(() =>
         expect(h.authorization()).toMatchObject({ status: "standing", waiting: { on: "repair" } }),
       );
@@ -643,7 +633,6 @@ describe("CrewSupervisor", () => {
     // is of the change the slot names and it merges, keeping the task open.
     it("merges the task's own pull request on a continuing merge card clicked while another pull request was current (INF-2546)", async () => {
       const h = await approved();
-      // GitHub names the own pull request's branch, the task's own.
       h.forge.referencedBranch = h.tasks.get(h.taskId)?.branch;
       expect(await h.checkService.checkTool.checkForCrew(h.taskId, { pull: 7 })).toContain(
         "Merge review",
@@ -760,7 +749,6 @@ describe("CrewSupervisor", () => {
       expect(await harness.declare(repair("none"))).toContain(
         "these paths differ from the approved change and the declaration does not name them: src/billing.ts",
       );
-      // Naming the path the repair needed accounts for it.
       expect(await harness.declare(repair("none", APPROVED, ["src/billing.ts"]))).toContain(
         "Repair accepted",
       );
@@ -1051,7 +1039,6 @@ describe("CrewSupervisor", () => {
           handed: { head: APPROVED },
         }),
       );
-      // Queued is not merged: the task stays open, and no card asks anything.
       expect(harness.tasks.get(harness.taskId)?.status).toBe("active");
       expect(harness.forge.merges).toEqual([]);
       expect(harness.cards()).toEqual([]);
@@ -1060,7 +1047,6 @@ describe("CrewSupervisor", () => {
       );
       // Nothing is asked of the first mate while the queue holds it.
       expect(harness.ops.join("\n")).not.toContain("merge queue");
-      // The tick reads the queue again and sends no second merge request.
       const first = harness.authorization()?.retryAt ?? 0;
       expect(first).toBeGreaterThan(Date.now());
       vi.setSystemTime(first + 1);
@@ -1068,7 +1054,6 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(harness.forge.queueReads).toBe(1));
       await vi.waitFor(() => expect(harness.authorization()?.retryAt).toBeGreaterThan(first));
       expect(harness.forge.sends).toBe(1);
-      // GitHub merges it: the next read closes the task as merged.
       harness.forge.queueMerges();
       vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
       ticker.tick();
@@ -1136,7 +1121,6 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() =>
         expect(harness.authorization()?.waiting).toMatchObject({ on: "host-queue" }),
       );
-      // GitHub removes it: the pull request is open and out of the queue.
       harness.forge.inQueue = false;
       vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
       ticker.tick();
@@ -1154,11 +1138,9 @@ describe("CrewSupervisor", () => {
           `removed ${APPROVED} from the merge queue of its branch without merging it`,
         ),
       );
-      // The crewmate's turn ends with nothing declared: still nothing is sent.
       await repairTurn(harness, async () => {});
       expect(harness.forge.sends).toBe(1);
       expect(harness.authorization()?.waiting).toMatchObject({ on: "host-removed" });
-      // It answers the removal at that version: the version goes once more.
       await repairTurn(harness, async () => {
         const said = await harness.declare({
           declaration: {
@@ -1178,7 +1160,6 @@ describe("CrewSupervisor", () => {
         }),
       );
       expect(harness.authorization()?.handed?.removed).toBeUndefined();
-      // Removed again, the spent answer sends nothing more.
       harness.forge.inQueue = false;
       vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
       ticker.tick();
@@ -1240,7 +1221,6 @@ describe("CrewSupervisor", () => {
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
         await harness.declare(repair("none"));
-        // The captain takes it back while the host-run attempt reads the checks.
         harness.forge.duringChecks = () => {
           harness.forge.duringChecks = () => {};
           harness.supervisor.withdrawMergeApproval(harness.taskId);
@@ -1329,7 +1309,6 @@ describe("CrewSupervisor", () => {
           Promise.resolve().then(() => harness.emit("Ready to merge again")),
         ).rejects.toThrow("The captain's merge approval is kept and covers");
       });
-      // The approval it left standing merges the approved version once the turn ends.
       expect(harness.authorization()).toMatchObject({ status: "consumed" });
       expect(harness.forge.merges).toHaveLength(1);
       const again = await kept();
@@ -1366,16 +1345,12 @@ describe("CrewSupervisor", () => {
       ).toContain(
         "is not yours to do: the captain's merge approval ended because the captain withdrew it",
       );
-      // His own idle boundary runs nothing for a withdrawn approval.
       await repairTurn(harness, async () => {});
       expect(harness.forge.merges).toEqual([]);
     });
 
     it("a steer the Firstmate sends in the captain's turn holds it until the crewmate declares that guidance, then merges once (FI3-662)", async () => {
       const h = await kept();
-      // While his approval stands, the captain asks through the Firstmate.
-      // The crewmate brings the change up to date in that turn but says
-      // nothing about his words.
       await h.supervisor.steer.steerCrewmate(
         h.taskId,
         "Should the meter be renamed?",
@@ -1487,7 +1462,6 @@ describe("CrewSupervisor", () => {
     it("guidance that comes while his own click waits for the crewmate's turn keeps the click instead of merging (FI3-662)", async () => {
       const h = await approved();
       await h.supervisor.steer.steerCrewmate(h.taskId, "polish the docs");
-      // He clicks while the crewmate works, then gives it new guidance.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await tick();
       expect(h.authorization()?.status).toBe("standing");

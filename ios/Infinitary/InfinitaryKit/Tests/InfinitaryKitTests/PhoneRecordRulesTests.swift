@@ -96,7 +96,6 @@ struct PhoneRecordRulesTests {
         // The crewmate answering a reply typed beside the page moves its turn, which reads it again too.
         let answering = try task(["updatedAt": updated + 60_000, "activity": "running"])
         #expect(PhoneRecord.browserLineRead(taken) != PhoneRecord.browserLineRead(answering))
-        // A board push that moved neither reads nothing again.
         #expect(PhoneRecord.browserLineRead(taken) == PhoneRecord.browserLineRead(try task(["updatedAt": updated + 60_000])))
     }
 }

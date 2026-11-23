@@ -57,7 +57,6 @@ function cardWith(files: CardFile[]): Card {
   };
 }
 
-/** A computer that runs work, answering the file orders from its own folder. */
 function workComputer() {
   const asideIds = new Map<string, string>();
   const asked: string[] = [];
@@ -101,7 +100,6 @@ describe("files for the captain on a card", () => {
     });
     expect(sha256(readFileSync(file?.path ?? ""))).toBe(sha256(data));
     expect(statSync(file?.path ?? "").mode & 0o777).toBe(0o600);
-    // The source going away with the temporary folder leaves the kept copy.
     const again = await keepCardFiles([join(worktree, "letter to the landlord.txt")], root);
     expect(again).toEqual([file]);
     expect(readdirSync(dir)).toEqual([`${file?.id}.file`]);
@@ -184,7 +182,6 @@ describe("files for the captain on a card", () => {
       "The captain's own letter.",
     );
     expect(sha256(readFileSync(first.path))).toBe(sha256(data));
-    // Saving again finds the copy it saved and writes nothing more.
     const second = await saveIntoDownloads({ folder: downloads, read });
     expect(second).toEqual(first);
     expect(readdirSync(downloads).sort()).toEqual([
@@ -315,7 +312,6 @@ describe("files for the captain on a card", () => {
       router: workComputer().router,
     });
     const downloads = scratchDir("card-files-downloads-");
-    // The captain already has a folder of that name, with a file of their own in it.
     mkdirSync(join(downloads, "Write to the landlord - heating"));
     writeFileSync(join(downloads, "Write to the landlord - heating", "notes.txt"), "Mine.");
     const all = files.map((file) => ({

@@ -183,7 +183,6 @@ describe("the fixtures replay against the current code", () => {
       Array.from({ length: 4 }, (_, turn) => `8c200001#${145 + turn}`),
     );
     expect(unplayed).toHaveLength(15 + 5 + 4);
-    // Every other recording plays each of its crewmate turns.
     for (const report of [sep14, sep04, sep26Claude, handoffApproval, handoffStart]) {
       expect(report.details.unplayed_crewmate_turns).toEqual([]);
       expect(report.fidelity.played_crewmate_turns).toBe(report.fidelity.recorded_crewmate_turns);
@@ -216,7 +215,6 @@ describe("the fixtures replay against the current code", () => {
       readBaseline(BASELINE).sessions,
     );
     expect(regressions).toEqual([]);
-    // The mixed fleet replays every captain turn.
     expect(mixedFleet.fidelity.replayed_captain_turns).toBe(36);
     expect(mixedFleet.fidelity.recorded_captain_turns).toBe(36);
     expect(captainOnly.fidelity).toMatchObject({
@@ -301,7 +299,6 @@ describe("the plan-to-build handoff", () => {
     const reports = vi.spyOn(TaskTurns.prototype, "recordReport");
     try {
       await replaySession(fixture("handoff-approval"));
-      // The host's own reply path, on the planner's card as the replay showed it.
       expect(replies.mock.calls).toEqual([
         [
           expect.stringMatching(/^card-[0-9a-f]+-rain-outlook-plan$/),
@@ -323,7 +320,6 @@ describe("the plan-to-build handoff", () => {
         // The recording predates answers on revisions, so the replay gives one.
         { who: "crewmate", text: expect.stringMatching(/^\(recorded before/) },
       ]);
-      // And then reported: its second report, after the revision.
       const revisedAt = thread[1]?.order ?? Number.POSITIVE_INFINITY;
       const after = reports.mock.calls.filter(
         (_, index) => (reports.mock.invocationCallOrder[index] ?? 0) > revisedAt,
@@ -357,7 +353,6 @@ describe("the plan-to-build handoff", () => {
         recorded_crewmate_turns: 2,
         played_crewmate_turns: 1,
       });
-      // The planner's answer is listed, named by the reply that never reached it.
       expect(report.details.unplayed_crewmate_turns).toEqual([
         { crewmate: "8c300001", turn: 1, at: expect.any(String), reason: "reply-not-delivered" },
       ]);
@@ -523,7 +518,6 @@ describe("the answer-delivery row (observational)", () => {
 describe("the nine frustration modes (report.md section 2.2)", () => {
   it("F1 ghost crew: no done or dropped row keeps its worktree after boot hygiene and the reconcile", () => {
     const tables = readRecordedTables(join(FIXTURES, "sep14", "tables.json"));
-    // The recording starts with closed rows still holding worktrees.
     expect(
       tables.tasks.filter((row) => row.status === "dropped" && row.workspace_state === "present")
         .length,
@@ -932,7 +926,6 @@ describe("the replay window (--from / --to)", () => {
     ).toBe(0);
     const exported = discoverSources({ name: "sep14", root: target });
     expect(Object.keys(exported.crewmateFiles)).toEqual(["d299b1e5"]);
-    // Every message the fixture kept is inside the window; the session header stays.
     const lines = readAll(target)
       .split("\n")
       .filter(Boolean)
@@ -941,7 +934,6 @@ describe("the replay window (--from / --to)", () => {
     for (const line of lines.filter((entry) => entry.type === "message")) {
       expect(Date.parse(line.timestamp ?? "")).toBeGreaterThanOrEqual(window.from);
     }
-    // Every task row stays; only the window's cards do.
     const tables = readRecordedTables(exported.tablesPath ?? "");
     const all = readRecordedTables(join(SEP14, "tables.json"));
     expect(tables.tasks).toHaveLength(all.tasks.length);
@@ -1024,7 +1016,6 @@ describe("the replay window (--from / --to)", () => {
 });
 
 describe("a Claude-served crewmate's record (the session contract's step 6)", () => {
-  /** A userData holding one crewmate on each backend, where the app keeps them. */
   function userData(): { root: string; pi: string; claude: string } {
     const root = scratchDir("infinitary-replay-crew-");
     return {

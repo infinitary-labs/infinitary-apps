@@ -350,9 +350,7 @@ export type FirstmateApi = {
     remove: (repoId: string) => Promise<{ id: string; name: string }>;
     /** Moves repositories into another project, keeping their settings and their tasks' keys (docs/fleet.md). */
     move: (repoIds: string[], target: RepoMoveTarget) => Promise<RepoMoveResult>;
-    /** Reflection of the managed fleet. */
     list: () => Promise<RepoView[]>;
-    /** Delivery, autonomy, and standing rigor. */
     configure: (repoId: string, changes: RepoPolicyPatch) => Promise<RepoView>;
     /** Answer a held batch of the captain's own approved changes: try again, or send changes back. */
     batchAnswer: (repoId: string, answer: BatchAnswer) => Promise<{ ok: true }>;
@@ -393,7 +391,6 @@ export type FirstmateApi = {
     /** The key reminder's switch and the keys pressed (docs/keyboard.md, "The key reminder"). */
     reminders: () => Promise<import("./keyReminders").KeyReminders>;
     onReminders: (listener: (value: import("./keyReminders").KeyReminders) => void) => () => void;
-    /** Turns every key reminder on or off. */
     setReminders: (on: boolean) => Promise<import("./keyReminders").KeyReminders>;
     /** The two-key shortcuts that may finish the first key the window took, or null once it stopped waiting. */
     onNext: (
@@ -790,7 +787,6 @@ export type FirstmateApi = {
     privateSites: () => Promise<PrivateSitesView>;
     /** Add a name or suffix the captain typed or allowed on the app's card. */
     addPrivateSite: (site: string) => Promise<PrivateSiteChange>;
-    /** Remove an entry from the list. */
     removePrivateSite: (site: string) => Promise<PrivateSiteChange>;
     /** The captain's own pointer, keys and pasted text, while he has control; recorded nowhere. */
     input: (taskId: string, input: TaskBrowserInput) => Promise<TaskBrowserCommandResult>;
@@ -837,7 +833,6 @@ export type FirstmateApi = {
     setCostLimit: (limit: CostLimit) => Promise<AppCostLimitView>;
     getNotifications: () => Promise<boolean>;
     setNotifications: (enabled: boolean) => Promise<boolean>;
-    /** Theme and the rest of how the app looks. */
     getAppearance: () => Promise<Appearance>;
     setAppearance: (appearance: Appearance) => Promise<Appearance>;
     /** How the app is arranged: today, which rail panels are collapsed. */

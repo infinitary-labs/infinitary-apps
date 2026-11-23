@@ -43,7 +43,6 @@ export class OwnWindow {
     });
   }
 
-  /** Whether a window is open to ask. */
   open(): boolean {
     return this.window !== null;
   }

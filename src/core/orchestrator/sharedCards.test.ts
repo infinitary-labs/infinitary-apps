@@ -139,7 +139,6 @@ describe("shared cards", () => {
     expect(f.cards.thread(id).messages).toMatchObject([
       { who: "host", text: "revised: Run the job host remover", contributor: { taskId: "t2" } },
     ]);
-    // The receipt says what was saved and when the captain sees it.
     expect(cardMutationText(result)).toContain(
       `Revised card "Run the job host remover" (${id}) as the crewmate on ${key}.`,
     );
@@ -214,13 +213,11 @@ describe("shared cards", () => {
       text: "Where is the remover?",
     });
 
-    // A comment from someone else ends nothing.
     const comment = f.cards.replyAs(t2, { cardId: id, text: "Looking into it." });
     expect(comment).toMatchObject({ effect: "reply-only" });
     expect(comment.answered).toBeUndefined();
     expect(f.cards.get(id)?.awaiting).toBe("answer");
 
-    // A message id that is no captain message on this card is refused.
     expect(
       f.cards.replyAs(t2, { cardId: id, text: "It is here.", answersMessage: comment.replyId }),
     ).toMatchObject({ effect: "refused" });
@@ -314,7 +311,6 @@ describe("shared cards", () => {
     f.cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(f.cards.get(id)?.awaiting).toBe("close-out");
 
-    // The other writer's turn ends: the card comes back with its newest words.
     f.cards.closeOut({ kind: "crewmate", taskId: "t2" }, "idle");
     expect(f.cards.get(id)?.awaiting).toBeUndefined();
     expect(f.cards.shown(id)?.body).toBe(body);
@@ -411,7 +407,6 @@ describe("shared cards", () => {
         { expectedRevision: before.offerId, reason: "The remover's path was missing" },
       );
       leave(f, id);
-      // The other writer's turn ends while the card is off the stack.
       f.cards.closeOut({ kind: "crewmate", taskId: "t2" }, "idle");
 
       const body = `<p>Run ${REMOVER} as an administrator.</p>`;
@@ -515,7 +510,6 @@ describe("shared cards", () => {
     expect(f.cards.get(quiet.id)).toEqual(quiet);
   });
 
-  // The task's acceptance: a saved change story's words are its own crewmate's.
   it("refuses another writer's words on a card whose task's saved change story owns them", () => {
     const f = setup();
     const head = "5f0c6e2a9b7d4c1e8f3a6b9d2c5e8f1a4b7c0d3e";
@@ -606,7 +600,6 @@ describe("shared cards", () => {
         },
       ],
     });
-    // The card shows the new words at once, under the same id, with no second card.
     const card = f.cards.get(cardId) as Card;
     expect(card.body).toContain("FleetCheckSetup");
     expect(f.cards.snapshot().filter((entry) => entry.taskId === taskId)).toHaveLength(1);
@@ -616,13 +609,10 @@ describe("shared cards", () => {
       ["captain", undefined],
       ["host", "t2"],
     ]);
-    // The captain's question still waits for its named answer.
     expect(f.cards.get(cardId)?.awaiting).toBe("answer");
 
-    // The confirmation offered at generation 1 no longer completes it.
     expect(f.tasks.delivery.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
 
-    // A stale read, the same words again, and the same operation again.
     expect(correct(1, "op-2", ["Something else."])).toMatchObject({
       effect: "refused",
       generation: 2,

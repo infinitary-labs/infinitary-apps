@@ -73,7 +73,6 @@ type ContextObject = Record<string, unknown> & {
   about?: string;
 };
 
-/** A row section's id, the way each row names itself. */
 function rowId(row: Record<string, unknown>): string {
   return String(row.task_id ?? row.repo_id ?? row.card_id ?? row.id);
 }
@@ -133,7 +132,6 @@ export type FakeSession = Omit<ModelSession, "sessionId"> & {
   /** A provider-failed turn: the seat resolves it and says so with turn_failed. */
   emitTurnFailed: (errorMessage: string) => void;
   emitDelta: (text: string) => void;
-  /** Any session event, to every subscriber. */
   emit: (event: SessionEvent) => void;
   /** Every setThinkingLevel call, in order (WI-13). */
   thinkingLevels: string[];
@@ -279,7 +277,6 @@ export function fakeSession(
   return session;
 }
 
-/** A backend's seat factory over a test's own open. */
 export function seatFactory(
   backend: SessionBackend,
   open: (spec: SessionSpec) => Promise<ModelSession>,
@@ -294,7 +291,6 @@ export function seatFactory(
  */
 export interface HarnessDatabase extends AppDatabase {}
 
-/** Where a seat spec resumes from. */
 export function resumeOf(spec: SessionSpec | undefined): SessionResume | undefined {
   return spec?.shape.turns === "rolling" ? spec.shape.record.resume : undefined;
 }
@@ -421,8 +417,6 @@ export function setup(
           projects: { get: (id) => repos.get(id), list: () => repos.list() },
         })
       : undefined;
-  // Talk-to-personalize Step 1: the preferences writer pushes every write;
-  // the personal workspace is a fresh directory under this test's userData.
   const pushes: unknown[] = [];
   const preferences = new ShellPreferencesService(settings, (channel, payload) => {
     pushes.push({ channel, payload });
@@ -518,7 +512,6 @@ export function setup(
   };
 }
 
-/** A connection with one change action, the captain's notes, kept in memory. */
 export function notesBinding(): IntegrationBinding {
   const notes: string[] = [];
   return {

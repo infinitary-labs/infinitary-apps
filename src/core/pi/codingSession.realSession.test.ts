@@ -96,7 +96,6 @@ function openCodingSession(
   );
 }
 
-/** The tools createAgentSession was handed, by name. */
 function customToolNames(options: Record<string, unknown>): string[] {
   return (options.customTools as { name: string }[]).map((tool) => tool.name);
 }

@@ -82,14 +82,12 @@ type LoginDecision =
   | { kind: "refuse" }
   | { kind: "login"; before: ClaudeStoreRead };
 
-/** How a sign-in under the store lease ended. */
 type LoginOutcome =
   | { kind: "adopt" }
   | { kind: "refuse" }
   | { kind: "signed_in" }
   | { kind: "unfinished"; ran: Awaited<ReturnType<RunClaude>> };
 
-/** The record at `file`, or null when there is none or it cannot be read. */
 export function readMadeLogin(file: string): MadeLogin | null {
   try {
     const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
@@ -704,7 +702,6 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 }
 
-/** Claude's own status read, narrowed defensively (`unknown` in, narrow out). */
 export function parseStatus(stdout: string): AccountStatus {
   return parseJsonStatus(stdout) ?? { connected: false };
 }

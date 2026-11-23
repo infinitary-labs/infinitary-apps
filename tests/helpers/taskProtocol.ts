@@ -39,7 +39,6 @@ function afterThisTurn(run: () => void): () => void {
   };
 }
 
-/** What one fixture holds: the record, the protocol over it, and what it pushed and heard. */
 export type TaskProtocolFixture = {
   db: AppDatabase;
   tasks: TaskService;
@@ -147,7 +146,6 @@ export function taskProtocolFixture(
     pushes
       .filter((push) => push.channel === "inf:tasks:delta")
       .map((push) => push.payload as TaskBoardDelta);
-  /** Every board push in order, each tagged with its carrier. */
   const carried = () =>
     pushes
       .filter((push) => push.channel === "inf:tasks" || push.channel === "inf:tasks:delta")

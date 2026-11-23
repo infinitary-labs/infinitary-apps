@@ -111,7 +111,6 @@ const within = (line: FreezeIncident, stretches: Stretch[]) => {
 
 type Slice = { key: string; ts: number; dur: number };
 
-/** Every thread's top-level tasks from a Chromium trace, with each thread's name. */
 async function readTrace(path: string): Promise<{ slices: Slice[]; threads: Map<string, string> }> {
   const threads = new Map<string, string>();
   const slices: Slice[] = [];
@@ -167,7 +166,6 @@ async function tasksProcessId(app: ElectronApplication, page: Page): Promise<num
   }, mountId as string);
 }
 
-/** Frame-to-frame times in the Tasks panel's page for `ms`, as its own animation frames see them. */
 function tasksFrameTimes(page: Page, ms: number): Promise<number[]> {
   return nowFrame(page)
     .locator("[data-now-group-header]")
@@ -247,7 +245,6 @@ async function timedAsk(page: Page, text: string, timeout: number): Promise<numb
   return ms;
 }
 
-/** Scrolls the Tasks dock's list down and back up, a step every frame, for `ms`. */
 function scrollTasks(page: Page, ms: number): Promise<number> {
   return page.locator('[data-side-panel="now"] [data-side-panel-body]').evaluate(
     async (element, { hold, step }) => {
@@ -320,7 +317,6 @@ test("typing and scrolling on a record the captain's size, while six crewmates w
     const tasksPid = await tasksProcessId(app, page);
     expect(tasksPid, "the Tasks panel's process").toBeGreaterThan(0);
 
-    // A core request's round trip from the window's page, back to back.
     const requestMs = await page.evaluate(async (count) => {
       const took: number[] = [];
       for (let n = 0; n < count; n += 1) {
@@ -330,7 +326,6 @@ test("typing and scrolling on a record the captain's size, while six crewmates w
       }
       return took;
     }, ROUND_TRIPS);
-    // Memory with the crew writing: the main process, and every process of the app.
     const memory = await app.evaluate(({ app: electronApp }) => {
       const metrics = electronApp.getAppMetrics();
       const mib = (kb: number) => Math.round(kb / 1024);
@@ -400,7 +395,6 @@ test("typing and scrolling on a record the captain's size, while six crewmates w
     const dropped = frameMs.filter((ms) => ms > DROPPED_FRAME_MS).length;
     const droppedInTwenty = (dropped / Math.max(1, frameMs.length)) * 20;
 
-    // The stalls the recorder saw while the captain typed or scrolled.
     const stalls = readFreezes(recordPath).filter((line) => within(line, [typing, scrolling]));
     for (const line of stalls)
       console.log(`[perf] stall while typing or scrolling: ${described(line)}`);
@@ -622,7 +616,6 @@ const BURST_SPACING_MS = 52;
 const FELT_KEY_MS = 200;
 const BURST_TEXT = "the crew changed the history while i was typing this ";
 
-/** Every process of a program: its own and each it started, by the system's process list. */
 function processTree(root: number): { pids: number[]; rssMiB: number } {
   const rows = execFileSync("ps", ["-A", "-o", "pid=,ppid=,rss="], { encoding: "utf8" })
     .trim()
@@ -641,7 +634,6 @@ function processTree(root: number): { pids: number[]; rssMiB: number } {
   return { pids, rssMiB: Math.round(kb / 1024) };
 }
 
-/** A program's own main process alone, by the system's process list. */
 function ownRssMiB(pid: number): number {
   const kb = Number(execFileSync("ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8" }));
   return Math.round(kb / 1024);
@@ -748,7 +740,6 @@ async function measured(
   return { startMs, memory, answerMs, requestMs, keyMs, typing, writingCrew: await writing() };
 }
 
-/** The measures in words, one `[perf]` line each, under `label`. */
 function printed(label: string, report: Awaited<ReturnType<typeof measured>>): void {
   const sorted = (values: number[]) => [...values].sort((a, b) => a - b);
   const at = (values: number[], share: number) =>

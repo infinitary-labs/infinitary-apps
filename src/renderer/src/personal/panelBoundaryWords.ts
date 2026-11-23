@@ -24,7 +24,6 @@ export const PANEL_STOPPED_LINE = m.panelStoppedLine();
  */
 export const BACKGROUND_STOPPED_LINE = m.panelBackgroundStopped();
 export const BACKGROUND_EXITED_LINE = m.panelBackgroundExited();
-/** The button beside either line that starts the background work again. */
 export const BACKGROUND_RETRY = m.panelRetry();
 /**
  * A panel whose background work the app refused before it ran, because it
@@ -32,7 +31,6 @@ export const BACKGROUND_RETRY = m.panelRetry();
  * Update panel asks the first mate to update its code.
  */
 export const BACKGROUND_PAUSED_LINE = m.panelBackgroundPaused();
-/** The button beside it that starts the update. */
 export const BACKGROUND_UPDATE = m.panelBackgroundUpdate();
 /** The same line for one of a panel's cards on the stack (docs/ui-plugins.md, "A panel's cards"). */
 export const CARD_STOPPED_LINE = m.panelCardStopped();
@@ -47,7 +45,6 @@ export function integrationAskLine(label: string, place: string, state: "asking"
     ? m.panelIntegrationAsking({ action, place })
     : m.panelIntegrationDeclined({ action, place });
 }
-/** The button beside it. */
 export const INTEGRATION_ASK_AGAIN = m.panelIntegrationAskAgain();
 
 function lowerFirst(text: string): string {

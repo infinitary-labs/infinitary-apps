@@ -11,7 +11,6 @@ import type { BrowserNode } from "./outline";
  * and the page's address and title as its crewmate's own reads give them.
  */
 
-/** The sign-up form as the host reads it: each control marked with the box its window shows it in. */
 function shownForm(page: FakePage): BrowserNode[] {
   return formNodes().map((node) => {
     const box = node.target === undefined ? undefined : page.boxes.get(node.target);

@@ -33,7 +33,6 @@ const VIEWS = [
   },
 ];
 
-/** Pages the stack to the card titled `title` and waits until its body has drawn. */
 async function showDrawnCard(title: string): Promise<void> {
   await showCard(title);
   await bodyDrawn(title);
@@ -124,13 +123,11 @@ test("a saved story pairs the states of each view and preserves the old drawing"
     for (const row of view.rows) {
       const [left, right] = row;
       if (!left || !right) throw new Error("A row is missing a picture");
-      // Matching pictures share a row, left beside right, below the header.
       expect(left.top).toBe(right.top);
       expect(left.right).toBeLessThanOrEqual(right.left);
       expect(headerBottom).toBeLessThanOrEqual(left.top);
     }
   }
-  // Before heads the left column and After the right one.
   const [beforeHeader, afterHeader] = changed.headers;
   if (!beforeHeader || !afterHeader) throw new Error("Missing a header");
   for (const [left, right] of changed.rows) {

@@ -184,7 +184,6 @@ describe("a task that runs on a computer that runs work", () => {
     model([{ text: "Rebuilt at the new address." }]);
     await home.supervisor.steer.steerCrewmate("t-rebuilt", "Rebuild the footer there.");
     await expect.poll(() => home.tasks.get("t-rebuilt")?.activity).toBe("idle");
-    // The crewmate rebuilds its branch on the new address's default branch.
     await git(work, ["fetch", "--quiet", current.origin, "main"]);
     await git(work, ["reset", "--quiet", "--hard", "FETCH_HEAD"]);
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
@@ -335,7 +334,6 @@ describe("a task that runs on a computer that runs work", () => {
     const requests = api.requests.length;
     await at.start("t-copy", "Make the footer blue.", repo.id);
 
-    // The computer cloned the project and made the task's working copy there.
     const work = at.folders("t-copy").work;
     await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
     expect(await git(work, ["rev-parse", "HEAD"])).toBe(project.main);
@@ -351,10 +349,8 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.timeline("t-copy").map((event) => event.text)).toContain(
       "a new working copy was made on Mac mini, starting from the latest origin/main",
     );
-    // Its first turn ran there, in that working copy.
     expect(JSON.stringify(api.requests[requests]?.body.system)).toContain(work);
 
-    // The crewmate's work there: one commit, and an edit not yet committed.
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
     writeFileSync(join(work, "notes.txt"), "still thinking\n");
@@ -377,8 +373,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.requests.length - opening).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
 
-    // open_change ran here: the branch came home over the connection, and
-    // this Mac sent it up to where the project lives.
     expect(await git(project.home, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
     expect(said(api.requests.at(-2))).toContain(`Opened the pushed branch ${branch}`);
@@ -392,7 +386,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(said(api.requests.at(-1))).toContain(
       createHash("sha256").update(artifact).digest("hex"),
     );
-    // The selection too: downloaded in parts here, written there beside it.
     const selected = readdirSync(join(work, ".infinitary-artifacts", "run-41")).find((name) =>
       /^artifact-9-[0-9a-f]{12}\.zip$/.test(name),
     );
@@ -406,8 +399,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(said(api.requests.at(-1))).toContain(`.infinitary-artifacts/run-41/${selected}`);
     expect(existsSync(join(project.home, ".infinitary-artifacts"))).toBe(false);
 
-    // The task closes: its work is kept there, comes home, and only then is
-    // the working copy deleted there.
     await home.supervisor.sessions.interruptCrewmate("t-copy", "cancel");
     await expect.poll(() => home.tasks.get("t-copy")?.workspaceState).toBe("removed");
     expect(existsSync(work)).toBe(false);
@@ -480,7 +471,6 @@ describe("a task that runs on a computer that runs work", () => {
       "inf/old-footer",
     );
 
-    // The starting work arrived there under its private ref.
     expect(await git(work, ["rev-parse", to])).toBe(tip);
     // The bundle that crossed needs the commit the task's work started on,
     // which the working copy there holds, so the history before it stayed
@@ -519,7 +509,6 @@ describe("a task that runs on a computer that runs work", () => {
       "release/1.2",
     );
     expect(await git(at.folders("t-release").work, ["rev-parse", to])).toBe(tip);
-    // The stand-in made for the bundle is gone here, and the branch is untouched.
     expect(await git(project.home, ["for-each-ref", "refs/infinitary/kept/"])).toBe("");
     expect(await git(project.home, ["rev-parse", "release/1.2"])).toBe(tip);
   });
@@ -542,7 +531,6 @@ describe("a task that runs on a computer that runs work", () => {
     await at.start("t-other", "Deliver the reading fix on its own branch.", repo.id);
     const work = at.folders("t-other").work;
     await expect.poll(() => home.tasks.get("t-other")?.activity).toBe("idle");
-    // The crewmate checks out another branch there and commits the fix on it.
     await git(work, ["checkout", "--quiet", "-b", "reading-fix"]);
     writeFileSync(join(work, "reading.txt"), "on time\n");
     const tip = await commit(work, "fix: read the meter on time");
@@ -565,7 +553,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.requests.length - opening).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-other")?.activity).toBe("idle");
 
-    // The story is that branch's, at the commit checked out there.
     expect(said(api.requests.at(-2))).toContain("Prepared presentation 1 for");
     expect(
       home.tasks.delivery.changePresentation("t-other", "reading-fix")?.revisions[0]?.head,
@@ -573,7 +560,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(
       home.tasks.delivery.changePresentation("t-other", home.tasks.get("t-other")?.branch),
     ).toBeUndefined();
-    // open_change ran here from the task's own ref for the branch, and sent it up.
     expect(said(api.requests.at(-1))).toContain("for reading-fix");
     expect(await git(project.home, ["rev-parse", checkedOutRefFor("t-other")])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", "refs/heads/reading-fix"])).toBe(tip);
@@ -722,7 +708,6 @@ describe("a task that runs on a computer that runs work", () => {
         .toBeUndefined();
     };
 
-    // Home: the work arrives in a working copy here, and the copy there goes.
     expect(
       await home.supervisor.moves.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
     ).toMatchObject({ ok: true });
@@ -856,8 +841,6 @@ describe("a task that runs on a computer that runs work", () => {
     unregistered.mockRestore();
     attempt.mockRestore();
 
-    // Back: it stops running the task, its copy stays there, and what it
-    // held that never merged is saved here on a ref of its own.
     await home.listen();
     await expect
       .poll(() => home.tasks.get("t-gone")?.shape?.away_copies?.[0]?.kept, { timeout: 15_000 })
@@ -868,7 +851,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["show", `${kept?.ref}:notes.txt`])).toBe("still thinking");
     expect(await git(project.home, ["show", `${kept?.ref}:header.html`])).toBe("<header></header>");
     expect(readFileSync(join(there, "notes.txt"), "utf8")).toBe("still thinking\n");
-    // Its crewmate is told where, once, with nothing else of the task moving.
     expect(home.tasks.get("t-gone")?.shape?.away_copies?.[0]?.told).toBe(true);
     expect(home.tasks.timeline("t-gone").at(-1)?.text).toBe(
       `Mac mini is back: it stopped running this task, and the working copy it left there stays there; what it held that never merged is saved here at ${kept?.ref}`,
@@ -882,8 +864,6 @@ describe("a task that runs on a computer that runs work", () => {
       }),
     ).rejects.toThrow(NO_PLACED_TASK);
 
-    // Moved back there: the copy it left there goes first, its work saved
-    // here, then the task moves in from this Mac's working copy.
     expect(
       await home.supervisor.moves.requestComputerMove("t-gone", at.deviceId, "captain"),
     ).toMatchObject({ ok: true });
@@ -943,10 +923,8 @@ describe("a task that runs on a computer that runs work", () => {
       .toBeUndefined();
     await home.supervisor.sessions.interruptCrewmate("t-closed", "cancel");
     expect(home.tasks.get("t-closed")?.status).toBe("dropped");
-    // Out of reach, its copy there waits.
     expect(existsSync(there)).toBe(true);
 
-    // Back: its work is saved here, then the copy and the task's folder there go.
     await home.listen();
     await expect
       .poll(() => home.tasks.get("t-closed")?.shape?.away_copies?.[0]?.kept?.removed, {
@@ -957,7 +935,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["show", `${kept?.ref}:notes.txt`])).toBe("still thinking");
     expect(existsSync(there)).toBe(false);
     expect(at.holds().workingCopies).not.toContain("t-closed");
-    // Its conversation's record came home whole before its folder there went.
     expect(existsSync(at.folders("t-closed").sessions)).toBe(false);
     const copied = readFileSync(
       join(crewmateSessionsDir(home.paths, "t-closed"), transcript ?? ""),
@@ -1179,7 +1156,6 @@ describe("a task that runs on a computer that runs work", () => {
 
     const moved = await moveProjectFolder(at, repo.path);
     const home = at.home();
-    // The project and the task's record of it both name the new folder.
     expect(home.repos.get(repo.id)?.path).toBe(moved);
     expect(home.tasks.get("t-moved")?.repoDir).toBe(moved);
     // INF-1965: the moved project keeps the same saved-story prerequisite as any plain branch.
@@ -1199,10 +1175,8 @@ describe("a task that runs on a computer that runs work", () => {
       revision: 1,
       head: tip,
     });
-    // The branch came home into the project's folder and went up from there.
     expect(await git(moved, ["rev-parse", ref])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", ref])).toBe(tip);
-    // The older copy still has only the checkpoint from before the move.
     expect(await git(repo.path, ["rev-parse", ref])).toBe(checkpoint);
   });
 
@@ -1348,7 +1322,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.requests.length - requests).toBe(2);
     await expect.poll(() => home.tasks.get("t-run")?.activity).toBe("idle");
 
-    // The home read the run with its own forge, and its short read reached the crewmate there.
     const read = said(api.requests.at(-1));
     expect(read).toContain("state: in_progress");
     expect(read).toContain("116807634269 verify / linux-checks — in_progress");
@@ -1381,7 +1354,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     await home.supervisor.sessions.interruptCrewmate("t-away", "cancel");
     expect(home.tasks.get("t-away")?.status).toBe("dropped");
-    // Nothing is deleted there, and nothing is counted as gone here.
     expect(existsSync(work)).toBe(true);
     expect(home.tasks.get("t-away")?.workspaceState).toBe("present");
 
@@ -1413,7 +1385,6 @@ describe("a task that runs on a computer that runs work", () => {
     writeFileSync(join(work, "notes.txt"), "what the review found\n");
     const checkedOut = await commit(work, "docs: note what the review found");
 
-    // It closes while that computer is out of reach, which then stops.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     await home.supervisor.sessions.interruptCrewmate("t-review", "cancel");

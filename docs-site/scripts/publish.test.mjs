@@ -208,10 +208,8 @@ describe("the wait for a new address", () => {
 const served = JSON.parse(await readFile(new URL("fixtures/served.json", import.meta.url), "utf8"));
 const ORIGIN = "https://docs.getinfinitary.com";
 
-// The build's pages, as the recorded answers carry them.
 const built = { home: served["/"].body, inner: served["/install/"].body, notFound: served["/no-such-page/"].body };
 
-/** A stand-in fetch answering each address with a recorded answer, changed by edit. */
 function servedFetch(edit = (answer) => answer) {
   return async (url) => {
     const { protocol, pathname, search } = new URL(url);

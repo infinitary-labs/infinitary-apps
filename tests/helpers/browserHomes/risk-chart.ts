@@ -15,7 +15,6 @@ const TASK_ID = "task-wide-cards";
 /** The card's thread, which the window reads when the card shows. */
 export const asked: HomeRead[] = [["inf:cards:thread", [CARD_ID]]];
 
-/** What the risk-chart test's story reads back. */
 type Words = { title: string; risk: RiskAssessment; before: string; after: string };
 
 /** A screenshot-sized view as a data picture, so the body needs no file. */

@@ -317,7 +317,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     // Source: INF-1554 F1, "Keep the card for you after the last wake, and fix the wake's wording".
     describe("INF-1554 F1: the captain backstop after ignored recovery", () => {
-      /** A crewmate that reported a typed wait, before the ladder's first rung. */
       async function waited(extras: SetupExtras = {}) {
         const h = await stopped(extras);
         // A verdict from before the wait is not an attempt at it.
@@ -480,7 +479,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       expect(receipt).not.toContain("the app wakes you");
       expect(receipt).toContain("start a background sleep for that long before this turn ends");
-      // The crewmate starts the sleep after its report, before its turn ends.
       sleeping = true;
       await endTurn(h.crewmate, h.taskId);
       const reportedAt = clock.now;
@@ -491,7 +489,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         until: reportedAt + minutes(30),
         reason: "the release to publish",
       });
-      // A second check-back while the sleep runs keeps today's reply.
       await h.supervisor.steer.steerCrewmate(h.taskId, "Any change?");
       await settle();
       expect(
@@ -552,7 +549,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const base = clock.now - h.idleSince;
       const prompts = h.crewmate.promptCalls.length;
 
-      // Where the nudge would go, nothing asks the crewmate again.
       await h.at(base + minutes(10));
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
       expect(h.sorts.map(({ rule }) => rule)).not.toContain("idle-nudge");
@@ -567,7 +563,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(wake).not.toContain("the host's nudge did not move it");
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
 
-      // A change starts a new turn, and a report with no wait is nudged again.
       clock.now += 1;
       await h.supervisor.steer.steerCrewmate(h.taskId, "The license arrived; file Bellevue's.");
       await settle();
@@ -678,7 +673,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await at(minutes(20));
     expect(idleWakes(ops)).toHaveLength(1);
 
-    // However long the pause, the wake waits unread: no repeat, no stall card.
     for (const idle of [50, 80, 200, 600]) await at(minutes(idle));
     expect(idleWakes(ops)).toHaveLength(1);
     expect(cards()).toEqual([]);
@@ -730,7 +724,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // Step two takes five minutes.
     clock.now = idleSince + minutes(85);
     await endTurn(crewmate, taskId, "Step two done.");
-    // A fresh clock, from this idle boundary.
     expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(85));
     expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
   });
@@ -807,7 +800,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await settle();
       const prompts = h.crewmate.promptCalls.length;
       await h.at(minutes(140));
-      // A dependency closed: the host's own steer, held on the lane.
       const first = await h.supervisor.steer.steerInternal(
         h.taskId,
         "The task this one waits on has closed.",
@@ -820,7 +812,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         `task ${h.taskId} "Job" has waited in the backlog for 1h`,
       );
       expect(backlogNews(h.ops)[0]).toContain("The news: The task this one waits on has closed.");
-      // More news in the same stay - a job's exit - is held and wakes nobody again.
       h.supervisor.watch.deliverJobResult(h.taskId, "[job] the background wait ended");
       await h.supervisor.steer.steerInternal(h.taskId, "Checks passed.", SUPERVISOR_STEER);
       await settle();
@@ -867,7 +858,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
     ).toBe("firstmate");
 
-    // The task moves before the first mate answers: the card stays up.
     await supervisor.steer.steerCrewmate(taskId, "carry on with step two");
     await settle();
     expect(cards().some((card) => card.id === stall)).toBe(true);
@@ -882,7 +872,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await settle();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step three done.");
-    // Its answer names their message, in a reply on the app's own card.
     const shown = cards().find((card) => card.id === stall) as Card;
     expect(
       supervisor.contributeAsFirstmate({
@@ -900,7 +889,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       "firstmate",
     ]);
 
-    // Answered, the next move takes it down as before.
     await supervisor.steer.steerCrewmate(taskId, "and step four");
     await settle();
     expect(cards().some((card) => card.id === stall)).toBe(false);
@@ -923,7 +911,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await settle();
     const opsBefore = second.ops.length;
     await second.at(minutes(400));
-    // The keep: no more wakes or cards this episode, the context line stays.
     expect(second.ops).toHaveLength(opsBefore);
     expect(second.cards()).toEqual([expect.objectContaining({ minimized: true })]);
     expect(second.supervisor.facts.crewStatus(second.taskId)[0]?.stalled).toBe(
@@ -1047,7 +1034,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await at(minutes(10));
     expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
     expect(ledgerFacts.at(-1)).toEqual({ kind: "idle-nudge", thread: false, note });
-    // Its nudge's turn ends with no wait declared, and it stays idle.
     await endTurn(crewmate, taskId);
     await at(minutes(20));
     expect(idleWakes(ops).map((wake) => wake.split("\n")[0])).toEqual([
@@ -1055,7 +1041,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     ]);
     expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-stall", note });
 
-    // The stall card's Nudge is the same nudge, naming the same note.
     for (const step of [50, 80]) await at(minutes(step));
     supervisor.cardActions.act(`card-stall-${taskId}`, "nudge");
     await settle();

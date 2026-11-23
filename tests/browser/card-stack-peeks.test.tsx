@@ -15,7 +15,6 @@ import { openWindow } from "./window";
  * the front card, never a peek.
  */
 
-/** What a point on the front card's top edge finds: the front card, a peek, or another element. */
 function topEdgeHits(): Record<string, string> {
   const entry = shownEntry();
   const front = entry?.querySelector("[data-card-surface], [data-response-card]");

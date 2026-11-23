@@ -21,11 +21,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/**
- * The live workspace's git bookkeeping (Step 4), over a real temp repo: what
- * a turn touched, the provenance stamp, the commit with the report as its
- * message, and a removal that git remembers.
- */
 function repo(): string {
   const dir = scratchDir("infinitary-live-ws-");
   execFileSync("git", ["-C", dir, "init", "-q", "-b", "main"]);
@@ -96,7 +91,6 @@ describe("liveWorkspace", () => {
     write("recipes/soup.md", "# Soup, spicier\n");
     expect(await changedExtensionIds(dir)).toEqual([]);
 
-    // Deleted, renamed, and an entry file removed mid-rewrite.
     rmSync(join(dir, "clock"), { recursive: true });
     renameSync(join(dir, "weather"), join(dir, "forecast"));
     expect(await changedExtensionIds(dir)).toEqual(["clock", "forecast", "weather"]);

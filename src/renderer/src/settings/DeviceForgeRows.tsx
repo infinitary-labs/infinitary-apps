@@ -46,7 +46,6 @@ export type DeviceForgeRow = {
   inReach: boolean;
   /** Out of reach only because its connection is being made. */
   connecting: boolean;
-  /** Its sign-in there, or null when it has none. */
   signIn: ComputerForges["signIns"][number] | null;
   /** That computer has GitHub CLI, so its GitHub sign-in may use GitHub CLI's (docs/forge.md, "A computer's own sign-in"). */
   githubCli: boolean;
@@ -54,7 +53,6 @@ export type DeviceForgeRow = {
   server?: ForgeServerView;
 };
 
-/** One row per computer and host it offers, from what each computer last said of itself. */
 export function deviceForgeRows(devices: DeviceSignIns[]): DeviceForgeRow[] {
   return devices.flatMap((device) => {
     const forges = device.signIns?.forges;

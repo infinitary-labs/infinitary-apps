@@ -152,7 +152,6 @@ export function validResourceMemory(memory: ResourceMemory): boolean {
   );
 }
 
-/** The one memory figure, when present, is a whole number of bytes at most installed memory. */
 export function validMemoryUsedBytes(
   totalBytes: number,
   memoryUsedBytes: number | undefined,

@@ -90,7 +90,6 @@ it("lists a model only pi.dev's catalog holds, fetched with no key for the conne
   const source = new CustomApiCatalog({ modelsStorePath, catalogBaseUrl });
   await source.want(["anthropic-messages"]);
   await catalogRefreshesSettled();
-  // Only Anthropic's catalog is asked for, and the ask carries no key.
   expect(asked.map(({ path }) => path.split("?")[0])).toEqual(["/api/models/providers/anthropic"]);
   expect(asked.every(({ authorization }) => authorization === undefined)).toBe(true);
 

@@ -10,7 +10,6 @@ import { expandDock, expectRecordBody, openGroup, pressRow, recordFrame } from "
 
 export const POINTER_TASK = "record-pointer";
 
-/** A real stored report, read through the app before the pointer check. */
 export function pointerRecordHome(options: { revisedBrief?: boolean } = {}): string {
   const userDataDir = scratchDir("infinitary-record-pointer-");
   const db = openDatabase(userDataDir);

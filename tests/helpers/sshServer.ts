@@ -134,7 +134,6 @@ function running(pid: number): boolean {
   }
 }
 
-/** A process and everything under it. */
 function processTree(pid: number): number[] {
   let kids: number[] = [];
   try {

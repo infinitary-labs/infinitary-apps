@@ -107,7 +107,6 @@ export function sinceSeenSection(
   return `<section class="inf-since-seen" data-since-seen>${saidMark(sinceSeenSaid(seen), "h6")}${paragraphs}</section>`;
 }
 
-/** The captain's last act on the earlier card, in the crewmate's answer. */
 function actWords(seen: SeenMerge): string {
   // i18n-exempt: served to the crewmate in the merge card answer, stays English
   if (seen.act?.kind === "approved") return "approved a merge card for this change";

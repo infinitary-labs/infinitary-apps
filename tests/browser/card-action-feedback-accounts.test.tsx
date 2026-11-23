@@ -21,7 +21,6 @@ import { openSize, openWindow } from "./window";
 
 const ACCOUNT_ID = "acct_settings_feedback";
 
-/** The reason a refused request gives in this story. */
 const REQUEST_REASON = "The request could not be completed.";
 
 /** Words that belong to the transport, never to a refusal a person reads. */
@@ -50,7 +49,6 @@ function holdRefusal(bridge: FakeBridge, channel: InvokeChannel, name: string, m
   return probe;
 }
 
-/** A sign-in's refusal, beside the step it belongs to. */
 const feedback = () => document.querySelector<HTMLElement>('[data-settings-error="sign-in"]');
 
 /** The boundary promise: a useful reason survives, transport diagnostics do not. */
@@ -60,10 +58,6 @@ async function expectReadable(reason: string): Promise<void> {
   expect(feedback()?.textContent).not.toMatch(TRANSPORT);
 }
 
-/**
- * Refuses every allowance reading the window asks for, as Electron hands a
- * handler's rejection on, and counts them.
- */
 function refuseReadings(bridge: FakeBridge) {
   const probe = { calls: 0 };
   bridge.answer("inf:quota:refresh", () => {
@@ -105,7 +99,6 @@ test("account connection and sign-in failures keep readable reasons and retryabl
   const reading = home["inf:quota:snapshot"];
   if (reading === undefined || typeof reading === "function")
     throw new Error("The home answers no allowance reading");
-  // Every rejection the window leaves unhandled, the test's own marks aside.
   const unhandled: unknown[] = [];
   const collect = (event: PromiseRejectionEvent) => {
     if (!(event.reason instanceof Mark)) unhandled.push(event.reason);
@@ -140,7 +133,6 @@ test("account connection and sign-in failures keep readable reasons and retryabl
     held.refuse();
     await expectReadable(REQUEST_REASON);
     await expect.element(control()).toBeEnabled();
-    // The first refusal did not strand the control.
     await userEvent.click(control());
     await expect.poll(() => held.calls).toBe(2);
     await expect.poll(feedback).toBeNull();
@@ -167,8 +159,6 @@ test("account connection and sign-in failures keep readable reasons and retryabl
     await expect.element(control()).toBeEnabled();
     await expect.poll(() => readings.calls).toBe(1);
   }
-  // No refused request, the window's own or its allowance reading after it,
-  // is left unhandled.
   await reportedSoFar();
   window.removeEventListener("unhandledrejection", collect);
   expect(unhandled.map(String)).toEqual([]);

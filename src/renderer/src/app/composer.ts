@@ -277,7 +277,6 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
           : undefined;
         if (!text && !imgs && !pastes.length) return undefined;
         if (isPreparing(MAIN_FILES_KEY)) {
-          // A file is still being prepared: nothing leaves, and the draft stays.
           set({ inputText: draft, composerNotice: "files-preparing" });
           return undefined;
         }
@@ -372,7 +371,6 @@ export function composerSlice(set: ShellSet, get: ShellGet): ComposerSlice {
         );
       };
       if (recordingIntoMain(get())) {
-        // Submit straight from the recording: transcribe, then send.
         transcribeRecording(set, get, false, async (text, current) => {
           // A voice send still waits for every file to be ready.
           await whenPrepared(MAIN_FILES_KEY);

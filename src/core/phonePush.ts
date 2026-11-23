@@ -152,7 +152,6 @@ export class PhonePushes {
       });
   }
 
-  /** Whether any paired phone asked for pushes. */
   any(): boolean {
     return this.options.targets().length > 0;
   }
@@ -262,7 +261,6 @@ export class PhonePushes {
     this.inFlight.add(tracked);
   }
 
-  /** Moves a phone's pushed cards that are due onto its withdrawal list, and sends it. */
   private withdrawDue(deviceId: string, phone: PhoneWithdrawals, byId: Map<string, Card>): void {
     const due = [...phone.pushed].filter(([id]) => withdrawable(byId.get(id)));
     if (due.length === 0) return;
@@ -273,7 +271,6 @@ export class PhonePushes {
     this.sendWithdrawal(deviceId);
   }
 
-  /** Puts a card's pushes at the front of a phone's list, beside any withdrawn before. */
   private withdraw(phone: PhoneWithdrawals, cardId: string, pushes: string[]): void {
     const earlier = phone.withdrawn.find((other) => other.cardId === cardId)?.pushes ?? [];
     phone.withdrawn = [
@@ -556,7 +553,6 @@ export function sealCardPush(key: string, card: PhonePushCard): string {
   return seal(key, card);
 }
 
-/** Seals one withdrawal for one phone, as a card push is sealed. */
 export function sealWithdrawal(key: string, withdrawal: PhonePushWithdrawal): string {
   return seal(key, withdrawal);
 }

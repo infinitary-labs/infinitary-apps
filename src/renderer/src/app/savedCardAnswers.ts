@@ -23,7 +23,6 @@ function windowStorage(): Store | null {
   }
 }
 
-/** The picks saved before this window started, by card id. */
 export function savedCardAnswers(
   storage: Store | null = windowStorage(),
 ): Record<string, FrameAnswers> {
@@ -45,10 +44,6 @@ export function savedCardAnswers(
 /** A reading worth keeping holds a pick, written words, or a cleared proposal. */
 const keeps = (reading: FrameAnswers) => reading.picked > 0 || reading.changed > 0;
 
-/**
- * Brings the saved copy in line with the shell's readings: a new or changed
- * reading is written, an empty one or a card the stack retired is removed.
- */
 export function mirrorCardAnswers(
   next: Record<string, FrameAnswers>,
   previous: Record<string, FrameAnswers>,

@@ -129,7 +129,6 @@ export function nowRowSelector(key: string): string {
   return `[data-now-row][data-now-key="${key}"]`;
 }
 
-/** One now-panel row by its task key, as the frame paints it. */
 export function nowRow(page: Page, key: string): Locator {
   return nowFrame(page).locator(nowRowSelector(key));
 }
@@ -267,10 +266,6 @@ export async function expectRailsDrawn(page: Page): Promise<void> {
   ).toHaveCount(0);
 }
 
-/**
- * Rests the pointer on `target` once it has stopped moving: on its middle,
- * or where `at` places it within the target's box.
- */
 export async function restOnStill(
   page: Page,
   target: Locator,
@@ -457,7 +452,6 @@ export const RECORD_FRAME_SELECTOR = `${SHOWN_ENTRY} iframe[title="Task record b
 const REVEALED_RECORD_FRAME_SELECTOR =
   '[data-card-layer] [data-card-presentation][data-card-revealed] > [data-stage-entry="shown"] iframe[title="Task record body"]';
 
-/** The open task-record card's body frame. */
 export function recordFrame(page: Page): FrameLocator {
   return drawnFrame(page, RECORD_FRAME_SELECTOR);
 }
@@ -539,7 +533,6 @@ export function recordAttention(page: Page): Locator {
 /** One of the record's own tabs (INF-2261): Info, Cards or Activity. */
 export type RecordView = "info" | "cards" | "activity";
 
-/** One of the record's own tabs in its tab strip, to press by keys. */
 export function recordTab(page: Page, view: RecordView | "crewmate"): Locator {
   return recordCard(page).locator(`[data-task-tab="${view}"]`);
 }
@@ -704,7 +697,6 @@ export async function expectRecordBar(page: Page): Promise<RecordBar | null> {
   return reading;
 }
 
-/** One feed row by its text, as the frame paints it. */
 export function feedLine(page: Page, text: string | RegExp): Locator {
   return activityFrame(page).locator("[data-feed-row]").getByText(text);
 }
@@ -814,7 +806,6 @@ export function noteLines(page: Page, key: string): Locator {
   return taskLine(page, key, "note");
 }
 
-/** The feed's failure lines, task or not, by their kind. */
 export function failureLines(page: Page): Locator {
   return activityFrame(page).locator('[data-feed-row][data-feed-kind="danger"]');
 }
@@ -838,7 +829,6 @@ export async function expectTaskMark(page: Page, key: string): Promise<void> {
   await expect(nowRow(page, key)).not.toHaveAttribute("title", /.+/);
 }
 
-/** Compare the record's mark and relocated waits with their surface-specific owners. */
 export async function expectRecordTaskStatus(page: Page): Promise<void> {
   const pane = recordCard(page);
   const id = await pane.getAttribute("data-task-record");

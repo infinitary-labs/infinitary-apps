@@ -222,7 +222,6 @@ describe("renderWake", () => {
     expect(waited).toContain(
       'It waits on SCR-3 "Unblock" (not started), SCR-2 "Fix main" (dropped); nothing starts that work by itself.',
     );
-    // No wait, no words: the wake reads as it always did.
     expect(report()).not.toContain("It waits on");
     expect(report([])).toBe(report());
   });
@@ -270,7 +269,6 @@ describe("renderWake", () => {
     ).toContain(
       `through your link: INF-595 "Fix: task board Escape skips the open summary under load", INF-660 "Move phone checks off the Mac check lock". Every wait holds that work until this task closes, except that on batched pull requests work built on this task stops waiting once this task is approved to merge, and merges after it. If this report`,
     );
-    // Nothing held on it, no words: the wake reads as it always did.
     expect(report()).not.toContain("waits on this task");
     expect(report([])).toBe(report());
   });
@@ -332,7 +330,6 @@ describe("renderWake", () => {
     expect(renderWake(jobBoundWake(task, job, 1_000 + 3.25 * 3_600_000))).toContain(
       'a background job running for 3.3 hours: "gh run watch".',
     );
-    // The once names: the outage by when it began, the job by its id and start.
     expect(stillDownWake(task, { since: 1_000, failures: 9 }, 9e6).once).toBe(
       stillDownWake(task, { since: 1_000, failures: 5 }, 2e6).once,
     );
@@ -368,7 +365,6 @@ describe("renderWake", () => {
     expect(spent.facts).toMatchObject({ resetsAt: Date.parse("2026-09-27T18:00:00Z") });
     expect(renderWake(spent)).toContain(paused);
     expect(renderWake(spent)).toContain("before it resets at 2026-09-27T18:00:00.000Z;");
-    // A reset rides only a spent allowance.
     expect(
       providerCutOffWake(account, { class: "refused", since: 5, resetsAt: 9 }, tasks).facts,
     ).not.toHaveProperty("resetsAt");
@@ -383,7 +379,6 @@ describe("renderWake", () => {
     expect(renderWake(providerBackWake(account, 5, []))).toContain(
       "no crewmate is left waiting on it.",
     );
-    // The once names: the cut-off by its account and start, its end by the same.
     const cutOff = providerCutOffWake(account, { class: "refused", since: 5 }, []);
     expect(cutOff.once).toBe(
       providerCutOffWake(account, { class: "refused", since: 5 }, [{ id: "t9", title: "x" }]).once,
@@ -504,7 +499,6 @@ describe("renderWake", () => {
     expect(verdict({ verdict: "blocked" }).endsWith(reviewFindingsNext())).toBe(true);
     // No brief carries the rules any more: every findings steer does.
     expect(reviewFindingsNext()).toContain("The host owns auto-fix handoffs to the builder.");
-    // A builder's report names its open review and the re-review a new head asks for.
     const report = (open?: { key: string; verdict: "findings" | "blocked"; head?: string }) =>
       renderWake({
         facts: {
@@ -539,7 +533,6 @@ describe("renderWake", () => {
       }),
     ).toContain(`so no verdict was recorded: Standing by. ${REVIEWER_IDLE_NEXT}`);
     expect(REVIEWER_IDLE_NEXT).toContain("an idle reviewer needs no stand-by and no status.");
-    // Finding E and F7: the pass goes to the builder, with its own delivery.
     expect(
       renderWake({
         facts: {
@@ -688,12 +681,10 @@ describe("renderWake", () => {
     );
     expect(quit).toContain("it still is: never submit, reload or resend it");
     expect(quit.startsWith(BROWSER_GONE_OPENING)).toBe(true);
-    // A saved sign-in the host offered stays unnamed.
     expect(quit).not.toContain("aurora.example sign-in");
     expect(renderWake({ facts: { ...facts, browserGone: "stopped" } })).toContain(
       "but the browser that card named had stopped, so the captain got no page",
     );
-    // The answers a footer click carried still reach it.
     expect(
       renderWake({
         facts: {
@@ -877,11 +868,9 @@ describe("the answer-delivery wake", () => {
     const wake = answerMissingWake({ askId: "a1b2c3d4", excerpt: "why?" });
     expect(inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, "agent", "answer-missing")).not.toBeNull();
     expect(inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, "agent", "answer-missing")).toBeNull();
-    // Even after it was served and acknowledged.
     const [row] = inbox.pending(FIRSTMATE_RECIPIENT);
     inbox.ack([row?.id as number]);
     expect(inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, "agent", "answer-missing")).toBeNull();
-    // Another message gets its own.
     expect(
       inbox.enqueueWake(
         FIRSTMATE_RECIPIENT,

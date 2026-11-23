@@ -53,8 +53,6 @@ const contributionIdSchema = z.string().min(1).max(64).regex(KEBAB_ID, "kebab-ca
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
-// --- contributions --------------------------------------------------------
-
 /**
  * How a card kind is dressed. The names are the design system's response
  * card kinds displayed by the host.
@@ -295,7 +293,6 @@ export const GRANT_NAMES = [
 ] as const;
 export type GrantName = (typeof GRANT_NAMES)[number];
 
-/** Which grants a manifest actually asks for, by name. */
 export function requestedGrants(capabilities: PluginCapabilities): GrantName[] {
   const names: GrantName[] = [];
   if (capabilities.integrations && capabilities.integrations.length > 0) names.push("integrations");
@@ -385,8 +382,6 @@ export function consentSummary(capabilities: PluginCapabilities): ConsentSummary
   };
 }
 
-// --- the manifest -----------------------------------------------------------
-
 export const pluginManifestSchema = z.strictObject({
   id: pluginIdSchema,
   /** Human name; the host renders it as the attribution on every contribution. */
@@ -408,7 +403,6 @@ export class PluginManifestError extends Error {
   }
 }
 
-/** Parses a manifest, turning zod's issue list into one loud error. */
 export function parsePluginManifest(raw: unknown): PluginManifest {
   const parsed = pluginManifestSchema.safeParse(raw);
   if (parsed.success) return parsed.data;

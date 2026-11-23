@@ -713,7 +713,6 @@ describe("the crewmate tool spec", () => {
           callback: "onCard",
           input: expect.objectContaining({
             actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
-            // Its risk reaches the host whole, through either runtime's schema.
             riskDeclaration: RISK,
           }),
         },

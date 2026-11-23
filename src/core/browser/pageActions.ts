@@ -19,7 +19,6 @@ import { BROWSER_KEYS, type BrowserKey } from "./keys";
 import type { RefEntry } from "./outline";
 import { clip } from "./pageNotices";
 
-/** A list's options, as the page names them and the crewmate reads them (`pageWords`). */
 function optionsOf(browser: Browser, options: readonly string[]): string {
   return options.map((option) => quoted(pageWords(browser, option))).join(", ") || "none";
 }
@@ -151,7 +150,6 @@ export class PageActions {
                 `${labelOf(field.entry)} is not an editable text field; no fields were filled.`,
               );
           }
-          // Preflight visibility; no input is sent when a field is absent.
           for (const field of fields) {
             if (!(await page.box(field.entry.target)))
               return refused(
@@ -292,7 +290,6 @@ export class PageActions {
           );
       }
       await this.awaitAction(page, before, input, entry);
-      // A scroll answers with what the page's window shows now.
       return answer(browser, lead, input.action === "scroll" ? { kind: "screen" } : TOP, {
         entry: actedPage,
         refs,

@@ -109,7 +109,6 @@ function installedVersion(): string | null {
     if ($entry) { [string]$entry.DisplayVersion } else { $null }`);
 }
 
-/** Waits up to a minute until `done` answers true. */
 const within = async (done: () => boolean) => {
   await expect.poll(done, { timeout: 60_000, intervals: [500] }).toBe(true);
 };

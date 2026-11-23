@@ -262,7 +262,6 @@ test("a direction the captain chose on a crewmate's card is saved without him ty
       )
       .toBe(true);
     await showCard(app.page, RELAYED_DIRECTION_CARD);
-    // His one act: the card's default, by key. He types nothing.
     await pressKey(
       shownEntry(app.page).getByRole("button", {
         name: RELAYED_DIRECTION_CHOICE.label,
@@ -308,7 +307,6 @@ test("a direction the captain chose on a crewmate's card is saved without him ty
     await expect.poll(() => focusInBrowser(app.page)).toBe("section:overview");
     await expect(inspector(app.page)).toContainText(RELAYED_DIRECTION);
     await pressKey(section(app.page, "history"), "Enter");
-    // The reason the first mate gave, as the direction's history keeps it.
     await expect(inspector(app.page)).toContainText(RELAYED_DIRECTION_REASON);
     if (evidence) {
       await inspector(app.page).getByText(RELAYED_DIRECTION_REASON).scrollIntoViewIfNeeded();

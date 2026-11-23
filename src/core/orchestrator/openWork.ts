@@ -27,7 +27,6 @@ import type { ThreadOwed } from "./cardThreads";
 export type OpenWorkHost = {
   tasks: TaskService;
   ending: AskEnding;
-  /** The cards on the stack now. */
   openCards: () => Card[];
   /** A card's row, open or closed. */
   storedCard: (cardId: string) => Card | undefined;

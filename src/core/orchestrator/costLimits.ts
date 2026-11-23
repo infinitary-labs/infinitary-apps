@@ -16,12 +16,10 @@ import type { InterruptSource, TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 
-/** The id of the card a task's cost hold puts up. */
 export function costCardId(taskId: string): string {
   return `card-cost-${taskId}`;
 }
 
-/** What the cost limits read: the store beneath them and the app's own limit. */
 export type CostLimitFacts = {
   store: CostLimitStore;
   /** The app's own limit, from Settings → Intelligence. */
@@ -34,7 +32,6 @@ export type CostAnswer = "allow" | "lift" | "stop";
 /** What the cost limits reach of the supervisor beyond its options. */
 export type CostLimitsHost = {
   now(): number;
-  /** Every crewmate open here now. */
   runtimes(): Iterable<TaskRuntime>;
   /** Put the host's card on the stack, or revise it under its id. */
   raiseCard(card: Card): void;
@@ -65,7 +62,6 @@ export class CostLimits {
     private readonly host: CostLimitsHost,
   ) {}
 
-  /** The limit a task follows now, and where it was set. */
   limitFor(record: TaskRecord): { limit: CostLimit; source: CostLimitSource } | undefined {
     const facts = this.options.costLimits;
     if (!facts) return undefined;
@@ -119,7 +115,6 @@ export class CostLimits {
     }
   }
 
-  /** Places the hold on a task whose family passed its limit, and asks the captain. */
   private hold(record: TaskRecord, limit: number, spent: number, unpriced: number): void {
     const store = this.options.costLimits?.store;
     if (!store) return;
@@ -302,7 +297,6 @@ export class CostLimits {
       this.release(taskId);
   }
 
-  /** Lifts a task's hold: its card comes down and every lane of its family carries on. */
   private release(taskId: string): void {
     this.options.costLimits?.store.clearHold(taskId);
     this.host.takeDown(costCardId(taskId), "answered");
@@ -311,7 +305,6 @@ export class CostLimits {
     void this.host.sweepGates(now);
   }
 
-  /** Every turn running in a held task's family stops at a safe point. */
   private stopFamily(rootId: string): void {
     for (const task of [...this.host.runtimes()]) {
       if (!task.turn.running || task.turn.closing || task.turn.pause) continue;
@@ -339,7 +332,6 @@ export class CostLimits {
     });
   }
 
-  /** A task and every task above it, nearest first. */
   private chain(taskId: string): TaskRecord[] {
     const chain: TaskRecord[] = [];
     const seen = new Set<string>();
@@ -352,7 +344,6 @@ export class CostLimits {
     return chain;
   }
 
-  /** A task and every task under it. */
   private family(taskId: string): TaskRecord[] {
     const out: TaskRecord[] = [];
     const seen = new Set<string>();

@@ -97,7 +97,6 @@ function nextGeneration(top: MergeAuthorization | undefined): number {
   return Math.max(0, ...[top, ...(top?.queued ?? [])].map((item) => item?.generation ?? 0)) + 1;
 }
 
-/** Whether two approvals cover the same pull request where the project lives. */
 function samePull(a: MergeAuthorization, b: MergeAuthorization): boolean {
   return (
     a.target.host === b.target.host &&
@@ -582,7 +581,6 @@ export class KeptApproval {
     };
   }
 
-  /** Patch the standing approval, if one stands. */
   patchStanding(taskId: string, patch: Partial<MergeAuthorization>): void {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);

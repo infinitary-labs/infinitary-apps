@@ -72,7 +72,6 @@ function beforePlacedWork(): string {
   return minor ? `${major}.${minor - 1}.0` : `${(major ?? 1) - 1}.99.0`;
 }
 
-/** A clock and a timer list the test moves by hand. */
 function manualClock() {
   let now = 1_000_000;
   const timers: { at: number; run: () => void }[] = [];
@@ -553,7 +552,6 @@ describe("the home's connection", () => {
     it("sends only the newest card list, each earlier one as an empty push under its number", async () => {
       const at = await home({ dispatch: reloadReads });
       const grant = await at.join();
-      // The view's first connection reloads, reading what every reload reads first.
       const first = await connectClient(grant);
       for (const channel of reloads) await first.invoke(channel, []);
       changed(at.events);
@@ -585,7 +583,6 @@ describe("the home's connection", () => {
     it("reads everything again when the replay would weigh more than a reload", async () => {
       const at = await home({ dispatch: reloadReads });
       const grant = await at.join();
-      // The view's first connection reloads, reading what every reload reads first.
       const first = await connectClient(grant);
       for (const channel of reloads) await first.invoke(channel, []);
       changed(at.events);

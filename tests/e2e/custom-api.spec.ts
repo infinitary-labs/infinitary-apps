@@ -421,7 +421,6 @@ test("the server's model list supplies model names and limits nobody typed", asy
   const f = customApiForm(page);
   await fillCustomApi(page, { name: "Synthetic listing", address: api.baseUrl, network: "local" });
   expect(api.requests).toHaveLength(0);
-  // Fetch from server reads the list on the same screen, before any model is entered.
   await f.fetch.click();
   for (const id of ["operator-model", "typed-model", "unlisted-limits"])
     await expect(f.listed(id)).toBeVisible();
@@ -538,15 +537,12 @@ test("a name DNS answers with a reserved address is refused naming the answers, 
     answers,
     exceptionOffered: true,
   }).text;
-  // The line under the address says what DNS answered, and the exception is offered, off.
   await expect(f.answers).toHaveText(refused);
   await expect(f.exception).not.toBeChecked();
-  // Refused by default: Save names the answers and nothing reaches the server.
   expect(await saveCustomApi(page)).toBe("failed");
   await expect(f.error("address")).toHaveText(refused);
   expect(api.requests).toHaveLength(0);
   await page.screenshot({ path: test.info().outputPath("custom-reserved-refused.png") });
-  // The person's own choice, by keys: Space ticks the exception.
   await pressKey(f.exception, "Space");
   await expect(f.exception).toBeChecked();
   await expect(f.sendsTo).toContainText(CUSTOM_EXCEPTION_WORDS.line);
@@ -554,7 +550,6 @@ test("a name DNS answers with a reserved address is refused naming the answers, 
   expect(api.requests[0]?.path).toBe(`${new URL(api.baseUrl).pathname}/models`);
   const saved = await page.evaluate(() => window.infinitary.accounts.custom.list());
   expect(saved).toMatchObject([{ baseUrl: address, mode: "public", addressException: true }]);
-  // The connection shows its exception, and Edit keeps it ticked for that address.
   const accounts = await page.evaluate(() => window.infinitary.accounts.list());
   const account = accounts[0];
   if (!account) throw new Error("Missing account");
@@ -736,7 +731,6 @@ for (const mode of [
       await typeInto(credential.getByLabel("Header value"), headerCredential);
       await expect(credential.getByLabel("Secret")).toBeChecked();
       await expect(org.getByLabel("Header value")).toHaveValue("synthetic-org");
-      // Save names the headers it sends beside the address.
       await expect(f.form).toContainText("X-Org-Id, Authorization");
     }
     await page.screenshot({ path: test.info().outputPath(`custom-${mode}-form.png`) });

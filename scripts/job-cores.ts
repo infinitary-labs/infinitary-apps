@@ -11,7 +11,6 @@
 import { availableParallelism, totalmem } from "node:os";
 import { fileURLToPath } from "node:url";
 
-/** The job's cores: its named size, or `fallback` where none is named. */
 export function jobCores(
   env: NodeJS.ProcessEnv = process.env,
   fallback: number = availableParallelism(),

@@ -26,7 +26,6 @@ function approvalOf(world: SettleWorld): MergeAuthorization | undefined {
   return world.tasks.get(TASK)?.delivery?.mergeAuthorization;
 }
 
-/** The crewmate's completion card with its merge button. */
 function completionCard(): Card {
   return {
     id: "card-done-2",
@@ -44,7 +43,6 @@ function completionCard(): Card {
   };
 }
 
-/** A merge request that runs `change`, then takes the guard's last look at `head`. */
 function lookAfter(world: SettleWorld, change: () => void, head = HEAD) {
   const seen: { guard?: MergeGuard; looked?: string } = {};
   world.merge = async (guard) => {

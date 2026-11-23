@@ -83,7 +83,6 @@ final class ApprovalKeyTests: XCTestCase {
         XCTAssertEqual(try ApprovalKey.load(), fresh)
     }
 
-    /// The approval record's bytes as the simulator's Keychain keeps them.
     private func record() -> Data? {
         var item: CFTypeRef?
         let status = SecItemCopyMatching([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: ApprovalKey.service,

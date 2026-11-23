@@ -14,7 +14,6 @@ export const SEND_UP_PROMPT_MARKER = "send the meter fix up to its host";
 
 export const MOCK_SENT_UP_CARD_TITLE = "The meter fix is ready to go in";
 
-/** The forge seam crewmate commits and pushes its branch, then offers the change on a card. */
 export const sendUp: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {

@@ -83,24 +83,20 @@ test("Close as done on a started task's record asks once, closes it on the capta
     const detail = () => page.evaluate(() => window.infinitary.tasks.detail("meter"));
     const key = (await detail()).key as string;
 
-    // The started task's record offers Close as done beside its other buttons.
     await pressRow(page, key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "meter");
     const closeDone = recordBar(page).locator("[data-record-close-done]");
     await expect(closeDone).toHaveText(CLOSE_DONE_LABEL);
 
-    // Command search reaches it by keys; it asks once, with Cancel focused.
     await runFromSearch(app, page, "task.close-done");
     const confirm = recordBar(page).locator('[data-record-confirm="close-done"]');
     await expect(confirm).toHaveText(closeDoneConfirm(key));
     const cancel = recordBar(page).getByRole("button", { name: DROP_CANCEL_LABEL });
     await expect(cancel).toBeFocused();
-    // Cancel changes nothing.
     await pressKey(cancel, "Enter");
     await expect(confirm).toHaveCount(0);
     expect(await detail()).toMatchObject({ status: "active" });
 
-    // Asked again, the captain confirms: done, on their word.
     await runFromSearch(app, page, "task.close-done");
     await expect(confirm).toBeVisible();
     const yes = recordBar(page).locator("[data-record-close-done-confirm]");
@@ -109,7 +105,6 @@ test("Close as done on a started task's record asks once, closes it on the capta
       .poll(detail, { timeout: 20_000 })
       .toMatchObject({ status: "done", closedReason: "finished", closing: { onWord: true } });
 
-    // The record stays shown and says how it was delivered: the pull request it read, open.
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "meter");
     const delivery = recordCard(page).locator('[data-record-row="delivered"]');
     await expect(delivery.locator("[data-task-fact-label]")).toHaveText(DELIVERY_FACTS_LABEL);
@@ -119,7 +114,6 @@ test("Close as done on a started task's record asks once, closes it on the capta
     await expect(pullFact).toContainText(DELIVERY_BASIS_WORDS.checked);
     await expect(recordBar(page).locator("[data-record-close-done]")).toHaveCount(0);
 
-    // Nothing closed the pull request where the project lives.
     expect(
       github.requests().filter((request) => request.startsWith(`PATCH /repos/o/r/pulls/${PULL}`)),
     ).toEqual([]);

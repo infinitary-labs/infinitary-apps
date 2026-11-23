@@ -49,7 +49,6 @@ type TaskRow = {
   branch: string;
 };
 
-/** Whether the project still has the named branch. */
 function branchListed(repo: string, branch: string): boolean {
   return execFileSync("git", ["-C", repo, "branch", "--list", branch]).toString().trim() !== "";
 }
@@ -151,7 +150,6 @@ test("creates and clones projects inside the app-owned fleet root", async () => 
     .trim();
   expect(head).toMatch(/^[0-9a-f]{40}$/);
 
-  // An existing remote: cloned into the fleet root, shipping direct-pr.
   const origin = initGitRepo();
   await waitForFirstmateIdle(page);
   await input.click();
@@ -200,16 +198,12 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
       startedLine(page, await taskKey(page, `second parallel task in ${repoName}`)),
     ).toBeVisible({ timeout: 30_000 });
 
-    // Two live worktrees, not a card stack.
     await expect(page.locator("[data-card-pager]")).toHaveCount(0);
 
-    // Each task got its own worktree on its own branch, both on the
-    // project.
     const taskLines = taskWorktrees(repo);
     expect(taskLines).toHaveLength(2);
     const worktreeDirs = readdirSync(join(userDataDir, "worktrees"));
     expect(worktreeDirs).toHaveLength(2);
-    // Each working copy is on the branch its task's record names.
     for (const id of worktreeDirs) {
       const branch = taskRow(userDataDir, id)?.branch ?? "";
       expect(branch).not.toBe("");
@@ -251,7 +245,6 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
       workspace_state: "removed",
     });
     expect(taskRow(userDataDir, removed)?.closed_at).toBeGreaterThan(0);
-    // The surviving task's session data stays too.
     const survivor = after[0] as string;
     expect(existsSync(join(userDataDir, "crewmates", survivor, "sessions"))).toBe(true);
     expect(taskRow(userDataDir, survivor)).toMatchObject({ status: "active", closed_reason: null });

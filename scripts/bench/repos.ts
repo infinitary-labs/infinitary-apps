@@ -86,10 +86,6 @@ export async function checkoutTask(task: BenchTask, dest: string): Promise<strin
   return target;
 }
 
-// ---------------------------------------------------------------------------
-// Mirrors
-// ---------------------------------------------------------------------------
-
 /**
  * The mirror's repository name: the upstream repository's own name and a
  * short hash of the task id, e.g. `tomlkit-5c1f0a`. Neither the name nor

@@ -126,7 +126,6 @@ function isDeferred(fn: Fn): boolean {
   return false;
 }
 
-/** A function a test runs as its own body: an argument of a `test…(...)` call. */
 function isTestBody(fn: Fn): boolean {
   const call = fn.parent;
   return (
@@ -146,7 +145,6 @@ function lintSource(source: ts.SourceFile, file: string): WriterDiagnostic[] {
     out.push({ file, line: line + 1, column: character + 1, message: why });
   };
 
-  // Same-file helpers that open a writer, by name.
   const openers = new Map<string, Fn>();
   const containsWriter = (root: ts.Node): boolean => {
     let found = false;
@@ -176,7 +174,6 @@ function lintSource(source: ts.SourceFile, file: string): WriterDiagnostic[] {
   /** Units: each test body, and each top-level function that is not itself a test body. */
   const checkUnit = (unit: Fn) => {
     if (!unit.body) return;
-    // Where the app starts and stops running, in source order.
     const events: { at: number; running: boolean }[] = [];
     const findEvents = (node: ts.Node) => {
       if (isLaunch(node)) events.push({ at: node.getEnd(), running: true });

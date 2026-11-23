@@ -10,9 +10,7 @@ import { socketScratchDir } from "./scratchDirs";
  * OpenSSH forward is src/core/devices/remoteLoginForward.test.ts's.
  */
 export type SocketForward = {
-  /** The socket's path. */
   readonly socket: string;
-  /** How many connections it carried. */
   carried: () => number;
   /** Cuts every connection it carries now, as a dropped SSH connection does; it still listens. */
   cut: () => void;

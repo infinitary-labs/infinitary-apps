@@ -64,7 +64,6 @@ export type EntryView = {
   crewColumn?: true;
 };
 
-/** What decides an entry's view besides the entry itself. */
 export type ViewFacts = {
   layout: ShellLayout;
   threads: Record<string, CardMessage[]>;
@@ -151,7 +150,6 @@ export function entryView(
   const beside = placement?.home === "beside" ? placement : undefined;
   const lone = placement ? undefined : cardPlacement(windowWidth, railsWidth, sized);
   const folded = placement?.folded ?? lone?.folded ?? false;
-  // The card column's width, whichever rung it stands on.
   const card = beside ? beside.card : (placement?.card ?? lone?.card ?? 0);
   // A lone card and a card-and-thread pair share the window's centre.
   // The shell reserves symmetric clearance instead of moving either sideways.

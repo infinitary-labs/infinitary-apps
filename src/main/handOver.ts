@@ -48,7 +48,6 @@ export type HandOverOptions = {
   deps: Omit<MoveDeps, "progress">;
   /** How the window takes over from an older copy holding the older folder; absent, it only says to quit it. */
   takeOver?: TakeOverDeps;
-  /** Turns start at login on for this app. */
   startAtLogin: () => void;
   /** Hands the moved work's background to this app's own label, so the older agent's file starts nothing again (`handBackgroundOver`). */
   handBackground?: () => Promise<unknown>;
@@ -184,7 +183,6 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       void show({ kind: "working", progress: update, clock: clock() });
       return;
     }
-    // A new step always draws; within one, at most every PROGRESS_EVERY_MS.
     const now = Date.now();
     if (!newStep && now - lastDrawn < PROGRESS_EVERY_MS) return;
     lastDrawn = now;

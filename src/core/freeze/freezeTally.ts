@@ -143,14 +143,12 @@ export class FreezeTally {
     return tally;
   }
 
-  /** This run of the current version has started. */
   startRun(): void {
     const tally = this.of(this.current);
     tally.runs += 1;
     if (this.build && !tally.build) tally.build = this.build;
   }
 
-  /** This run was awake `ms` longer. */
   ran(ms: number): void {
     if (ms > 0) this.of(this.current).runningMs += ms;
   }

@@ -69,7 +69,6 @@ import {
 export type SecretsSettingsOptions = {
   /** Waited on before a secret is used, which cannot be taken back (docs/devices.md). */
   beforeUse?: () => Promise<void>;
-  /** Absent in production until native custody and confirmation have been proven. */
   open?: (initialize: boolean) => Promise<ProtectedSecrets>;
   unlock?: () => Promise<boolean>;
   recovery?: HostSecretsRecovery;
@@ -148,7 +147,6 @@ export class SecretsSettings {
   /** The paired device each waiting enrollment offer came from, by its approval device. */
   private readonly offeredFrom = new Map<string, string>();
   private viewEpoch = 0;
-  /** The asks to keep a secret waiting for the captain, and their cards (`askToKeep.ts`). */
   private readonly asks: SecretAsks;
 
   constructor(private readonly options: SecretsSettingsOptions) {
@@ -333,7 +331,6 @@ export class SecretsSettings {
     }
   }
 
-  /** When a secret was last asked for, and the title of the task that asked, when it is known. */
   private lastUse(item: HistoryItem | undefined): {
     lastRequest: number | null;
     lastTask?: string;
@@ -650,7 +647,6 @@ export class SecretsSettings {
     return owner?.protected.availability === "available" ? owner : undefined;
   }
 
-  /** What the values are now; undefined while Secrets are not open here. */
   async sealedState(): Promise<{ home: string; revisions: string[] } | undefined> {
     return (await this.openOwner())?.protected.sealedState();
   }
@@ -1186,7 +1182,6 @@ export class SecretsSettings {
     };
   }
 
-  /** The open question no longer applies: its passes stop working, and nothing changes. */
   private dropQuestion(): void {
     if (!this.question) return;
     const { group } = this.question;
@@ -1387,7 +1382,6 @@ export class SecretsSettings {
     }
   }
 
-  /** An agent's ask to keep secrets, answered at once (`SecretAsks.askToKeep`). */
   askToKeep(task: string | null, input: SecretAskInput): Promise<SecretAskAnswer> {
     return this.asks.askToKeep(task, input);
   }
@@ -1405,7 +1399,6 @@ export class SecretsSettings {
     return { ask: await this.askToKeep(task, ask) };
   }
 
-  /** The first mate's own asks, which no task owns. */
   firstMateAsks() {
     return {
       ask: (input: SecretAskInput) => this.askToKeep(null, input),
@@ -1413,12 +1406,10 @@ export class SecretsSettings {
     };
   }
 
-  /** The asker withdrew its waiting ask (`SecretAsks.cancelAsk`). */
   cancelAsk(task: string | null, id: string): boolean {
     return this.asks.cancelAsk(task, id);
   }
 
-  /** Raises each ask that waited through a restart again (`SecretAsks.resumeAsks`). */
   resumeAsks(): void {
     this.asks.resumeAsks();
   }
@@ -1575,7 +1566,6 @@ export class SecretsSettings {
   }
 }
 
-/** A receipt's exit code, when it has one. */
 function exitOf(receipt: UseReceipt): { exitCode?: number } {
   return receipt.exitCode === undefined ? {} : { exitCode: receipt.exitCode };
 }

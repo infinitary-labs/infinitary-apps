@@ -15,7 +15,6 @@ import type { Scenario } from "../mockProvider";
 export const PERSONAL_PANEL_PROMPT_MARKER = "make me a panel:";
 export const PERSONAL_REMOVE_PROMPT_MARKER = "remove my panel ";
 
-/** The first mate removes a panel, or spawns the crewmate that builds one. */
 export const personalPanels: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

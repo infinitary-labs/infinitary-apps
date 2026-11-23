@@ -69,7 +69,6 @@ async function crewLabel(page: Page): Promise<string> {
   return (await page.locator('canvas[data-crew-layer="near"]').getAttribute("aria-label")) ?? "";
 }
 
-/** Crewmates on the ring as the orbit placed them, every plane together. */
 async function ringSize(page: Page): Promise<number> {
   return (await crewPlaneCounts(page)).reduce((sum, count) => sum + count, 0);
 }
@@ -184,7 +183,6 @@ test("under reduced motion a move to another display redraws the still ring shar
   expect(first.count).toBeGreaterThan(0);
   await evidence(page, "sharper-display");
 
-  // Back on the window's own display, and sharp again.
   await display.moveTo(display.own);
   await expect.poll(() => ringBlur(page)).toEqual([0, 0]);
   expect((await paint(page)).count).toBeGreaterThan(0);

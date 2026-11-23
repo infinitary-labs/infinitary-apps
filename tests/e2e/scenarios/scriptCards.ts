@@ -48,7 +48,6 @@ function scriptCardToolCalls(port: number): ScriptedCall[] {
   ];
 }
 
-/** The model shows cards whose scripts draw, act and reach for the network. */
 export const scriptCards: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults, port }) => {

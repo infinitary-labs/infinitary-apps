@@ -62,7 +62,6 @@ describe("the merge card's live validation table (INF-3887)", () => {
 
   it("names each kept log by one line, its name and size, and writes none of its text", () => {
     for (const item of transcripts) {
-      // A distinctive stretch of each transcript is nowhere in the card.
       expect(section).not.toContain(item.text.slice(1_000, 1_200));
     }
     expect(section).not.toContain("<pre");

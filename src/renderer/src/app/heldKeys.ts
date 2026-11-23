@@ -19,7 +19,6 @@ export function heldPress(event: {
   return typeof target?.closest === "function" && target.closest(PRESSABLE) !== null;
 }
 
-/** Drops a held Enter's repeats on the window's controls, for as long as the shell lives. */
 export function guardHeldPresses(): () => void {
   const down = (event: KeyboardEvent) => {
     if (heldPress(event)) event.preventDefault();

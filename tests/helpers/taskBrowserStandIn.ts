@@ -91,7 +91,6 @@ export function formNodes(): BrowserNode[] {
 /** A browser's cookies, which all its pages share, as the browser keeps them. */
 export class FakeJar implements HostBrowserCookies {
   cookies: HostCookie[] = [];
-  /** Set when the browser should take none of what it is given. */
   refuse = false;
   all = async (): Promise<HostCookie[]> => this.cookies.map((cookie) => ({ ...cookie }));
   set = async (cookies: readonly HostCookie[]): Promise<void> => {
@@ -130,7 +129,6 @@ export class FakeStore {
   origins = new Map<string, Map<string, string>>();
   /** Set when a page should refuse what it is given, as one that moved on would. */
   refuse = false;
-  /** What an origin holds, as a plain record. */
   of(origin: string): Record<string, string> {
     return Object.fromEntries(this.origins.get(origin) ?? []);
   }
@@ -199,7 +197,6 @@ export class FakePage implements HostBrowserPage {
   /** Its own session storage by origin, which no other page shares, as a real page keeps it. */
   sessionStore = new FakeStore();
 
-  /** Its own origin's session storage alone, kept by this page only. */
   session: HostPageStorage = {
     read: async (): Promise<HostOriginStorage | undefined> => {
       const origin = pageOrigin(this.current);
@@ -222,7 +219,6 @@ export class FakePage implements HostBrowserPage {
     },
   };
 
-  /** The page changed while watched: one picture to whoever watches. */
   paint(data = "jpeg"): void {
     this.watcher?.({ data, ...this.size });
   }
@@ -323,8 +319,6 @@ export class FakePage implements HostBrowserPage {
 
 /** Let every step already started run to where it waits next. */
 export const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
-
-/** A promise the test settles by hand. */
 
 /**
  * The browsers' clock: a short wait (the settle after an action, a wait's

@@ -16,7 +16,6 @@ describe("the window on its first mate's own computer while the first mate start
     const window = new LocalWindow({
       door: "/no/door/yet",
       broadcast: () => {},
-      // The real link, dialing a door that is not open yet.
       link: (options) =>
         new HomeLink({
           ...options,

@@ -71,7 +71,6 @@ export type AutomationState = z.infer<typeof automationStateSchema>;
  */
 export const RULE_NOTES_MAX_CHARS = 8000;
 
-/** Why a page of notes was refused for its size, naming both numbers. */
 export function ruleNotesTooLong(length: number): string {
   return `These notes are ${servedNumber(length)} characters; a rule's notes hold at most ${servedNumber(RULE_NOTES_MAX_CHARS)}. Remove or shorten lines that no longer help, then save them again.`;
 }
@@ -141,7 +140,6 @@ export const automationListSchema = z.discriminatedUnion("state", [
 ]);
 export type AutomationList = z.infer<typeof automationListSchema>;
 
-/** What a list that cannot be read says. */
 export const AUTOMATION_UNREADABLE = "Your automations cannot be read right now.";
 
 /**
@@ -160,7 +158,6 @@ export const automationDeliverySchema = z.enum([
 ]);
 export type AutomationDelivery = z.infer<typeof automationDeliverySchema>;
 
-/** Why a delivery was recalled before Firstmate read it. */
 export const automationCancelReasonSchema = z.enum(["edited", "paused", "cleared"]);
 export type AutomationCancelReason = z.infer<typeof automationCancelReasonSchema>;
 

@@ -47,7 +47,6 @@ export type TaskLookup = (label: string) => Promise<"gone" | "there" | "unknown"
 /** The task as it was registered, in the data folder: what `schtasks /Create /XML` reads. */
 export const RUN_TASK_FILE = "run-task.xml";
 
-/** The registered task's file in a data folder. */
 export function runTaskFile(dataDir: string): string {
   return join(dataDir, RUN_TASK_FILE);
 }
@@ -84,7 +83,6 @@ export function windowsWord(word: string): string {
   return `${quoted}${"\\".repeat(slashes * 2)}"`;
 }
 
-/** Text an XML element holds, its markup kept literal. */
 function xmlText(text: string): string {
   if (/[\0\r\n]/.test(text)) throw new Error("A task's file cannot hold a line break.");
   return text
@@ -94,7 +92,6 @@ function xmlText(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Text read back from the file, as `xmlText` wrote it. */
 function fromXml(text: string): string {
   return text
     .replace(/&quot;/g, '"')
@@ -281,7 +278,6 @@ function windowsWords(line: string): string[] {
   return words;
 }
 
-/** The registered task's file, read back; null where there is none or it cannot be read. */
 export function readRunTask(file: string): RunTaskKept | null {
   let text: string;
   try {

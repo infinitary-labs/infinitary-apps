@@ -28,7 +28,6 @@ const ACTIONS = [
 ];
 const REPLY = "Done.";
 
-/** The links of the shown card's newest revision row. */
 const newestLinks = () => {
   const rows = document.querySelectorAll(`${SHOWN_ENTRY} [data-revision-links]`);
   return [...(rows[rows.length - 1]?.querySelectorAll<HTMLElement>("[data-revision-link]") ?? [])];
@@ -57,7 +56,6 @@ test("title and button revision links focus their real regions without choosing"
   const scroller = inShown("[data-card-body]");
   scroller.scrollTop = scroller.scrollHeight;
 
-  // The title's link puts the keyboard on the card's title; Escape comes back.
   const title = newestLinks()[0] as HTMLElement;
   title.focus();
   await userEvent.keyboard("{Enter}");
@@ -65,7 +63,6 @@ test("title and button revision links focus their real regions without choosing"
   await userEvent.keyboard("{Escape}");
   await expect.poll(() => focused(title)).toBe(true);
 
-  // The buttons' link puts it on the card's choices, and Escape comes back.
   const buttons = newestLinks()[1] as HTMLElement;
   buttons.focus();
   await userEvent.keyboard("{Enter}");
@@ -73,7 +70,6 @@ test("title and button revision links focus their real regions without choosing"
   await userEvent.keyboard("{Escape}");
   await expect.poll(() => focused(buttons)).toBe(true);
 
-  // Nothing was chosen: the card is still up, and no choice was sent.
   expect(inShown("[data-card-title]").textContent).toContain(TITLE);
   expect(bridge.requests("inf:cards:act")).toEqual([]);
   expect([...new Set(bridge.unanswered)]).toEqual([]);

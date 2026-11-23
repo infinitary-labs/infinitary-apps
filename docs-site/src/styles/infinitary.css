@@ -48,7 +48,6 @@
   --sl-color-hairline-shade: var(--line-2);
 }
 
-/* The design system's focus ring on every control a key reaches. */
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

@@ -536,7 +536,6 @@ describe("the signed channel workflow", () => {
       expect(consumed.result.status).not.toBe(0);
       expect(consumed.result.stderr).toMatch(/Refusing the handoff: /);
       expect(consumed.result.stderr).toMatch(reason);
-      // Nothing was laid out for publication to read.
       expect(consumed.outputs).toEqual({});
       expect(existsSync(join(consumed.temp, "handoff"))).toBe(false);
     };
@@ -819,7 +818,6 @@ describe("the signed channel workflow", () => {
         expect(result.status, `${id}: ${result.stderr}`).toBe(0);
       return uploaded.outputs;
     };
-    /** Cloudflare's objects, by key, as the disposable storage keeps them. */
     const storageOf = (consumed: ReturnType<typeof consume>) => join(consumed.temp, "storage.json");
     const cloudflare = (consumed: ReturnType<typeof consume>): Record<string, Buffer> =>
       existsSync(storageOf(consumed))
@@ -1378,7 +1376,6 @@ describe("the publication job's fetch-back", () => {
     const { checkout, bin, log, gated } = publicationCheckout(folder);
     const temp = join(folder, "temp");
     mkdirSync(join(temp, "expected"), { recursive: true });
-    // The Linux files the release's own renderer lays out from its packages.
     const packages = join(folder, "packages");
     const linux = join(folder, "linux");
     mkdirSync(packages);
@@ -1527,7 +1524,6 @@ describe("the publication job's fetch-back", () => {
     expect(status, output).toBe(0);
     expect(together.broken, "a place asked only after another place's check ended").toBe(false);
     expect(outcomes).toEqual(every.map((place) => `${place}=passed`));
-    // Every copy on every place was fetched with its sidecar and checked against the list.
     for (const place of every)
       for (const name of heldBy(place)) {
         expect(asked).toContain(`${places[place]}/${name}`);
@@ -1594,7 +1590,6 @@ describe("the publication job's fetch-back", () => {
     ]);
     expect(gatesRun(refused.gated)).toEqual(everyGate.filter((gate) => !gate.includes("homebrew")));
 
-    // A server error past the patience fails, and names the file unchecked.
     asked = [];
     answers = { [deb]: [504, 504] };
     const unanswered = await fetchBack({ FETCH_PATIENCE_SECONDS: "0", FETCH_PAUSE_SECONDS: "0" });

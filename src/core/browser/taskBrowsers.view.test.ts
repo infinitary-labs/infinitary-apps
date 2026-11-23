@@ -547,7 +547,6 @@ describe('a page opens a second page (docs/task-browser.md, "A second page")', (
     expect(closed.text).toContain("Closed page 2 (bank.example); your commands act on page 1.");
     expect(second.closed).toBe(true);
     expect(first.closed).toBe(false);
-    // Stopping the browser closes every page and its guard.
     const again = openPopup(first, "https://bank.example/check") as FakePage;
     browsers.stopByCaptain("t1");
     expect([first.closed, again.closed, guards[0]?.closed]).toEqual([true, true, true]);

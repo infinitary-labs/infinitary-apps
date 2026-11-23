@@ -108,7 +108,6 @@ type Press = {
   stop: () => void;
 };
 
-/** What the board draws while a pill is in the air. */
 type DragView = { key: string; from: LevelTarget; over: LevelTarget | null; keepBoth: boolean };
 
 /** The board's own instruction, which every pill's name points at. */
@@ -449,7 +448,6 @@ export function ModelLevels({
         >
           {model.label}
         </span>
-        {/* Where else it sits, if anywhere. */}
         <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)", flexShrink: 0 }}>
           {model.slots.length > 0 ? levelList(model.slots) : MODELS_WORDS.notInUse}
         </span>
@@ -656,7 +654,6 @@ export function ModelLevels({
   const named = (model: SlotModelView) => (
     <span className="fm-models-mono">{`${providerPrefix(model)} ${model.label}`.trim()}</span>
   );
-  /** A banner sentence with each model's name drawn in its own type where its mark sits. */
   const withModels = (sentence: string) =>
     sentence.split(/(\uE000|\uE001)/).map((part, index) => {
       const model = part === FIRST_MARK ? first : part === SECOND_MARK ? second : undefined;

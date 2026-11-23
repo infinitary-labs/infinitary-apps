@@ -38,7 +38,6 @@ export function spentAllowanceOf(
   };
 }
 
-/** The lowest percent left across a reading's windows; undefined when none shows one. */
 export function lowestLeft(windows: readonly QuotaWindowView[]): number | undefined {
   const lefts = windows.flatMap((window) =>
     window.percentRemaining === undefined ? [] : [window.percentRemaining],
@@ -89,7 +88,6 @@ export function spentAllowanceHold(
   return { cutOff };
 }
 
-/** The lowest percent left in one account's reading, when the sensor read it. */
 export function sensedLeftOf(
   snapshot: QuotaSnapshotView | null | undefined,
   accountId: string,

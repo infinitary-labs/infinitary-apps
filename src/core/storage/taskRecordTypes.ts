@@ -258,7 +258,6 @@ export type MergeAuthorization = {
     actionId: string;
     interactionId?: string;
   };
-  /** Where the change lives and how it merges. */
   target: {
     repoId: string;
     host: string;
@@ -650,7 +649,6 @@ export type FirstmateAsk = { at: number; request: string };
  */
 export type CardRefusalReason = "checks" | "ci-cap" | "review" | "shape" | "other";
 
-/** One refused merge card: the title it was emitted with, when, and why. */
 export type CardRefusal = {
   at: number;
   title: string;

@@ -56,7 +56,6 @@ async function atRest(element: Element): Promise<void> {
   );
 }
 
-/** A bubble's painted text, its fill and its box, once what changes it has ended. */
 async function paint(bubble: HTMLElement) {
   await atRest(bubble);
   const style = getComputedStyle(bubble);
@@ -69,7 +68,6 @@ async function paint(bubble: HTMLElement) {
   };
 }
 
-/** Moves the pointer off every bubble, as the journey's corner move did. */
 async function pointerAway(): Promise<void> {
   await userEvent.hover(messageBoxLocator());
 }
@@ -81,7 +79,6 @@ function focusMessageBox(): void {
   expect(document.activeElement).toBe(box);
 }
 
-/** The whole story in one look: the window, its two rounds, each hover and focus, and the narrowest window. */
 export async function quietMessagesStory(theme: Theme): Promise<void> {
   const home = await seededHome({ theme, rounds: ROUNDS });
   const bridge = fakeBridge(subscribed(home));

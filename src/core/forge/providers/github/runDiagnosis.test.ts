@@ -196,7 +196,6 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr", operati
     read: (taskId, runId) => evidence.readWatched(taskId, runId),
     steer: async () => undefined,
   });
-  // The crewmate's own tools, as its session binds them.
   const readWorkflow = bindTool(READ_WORKFLOW_TOOL, {
     onReadWorkflow: (input) => evidence.read("proof", input),
   });
@@ -251,12 +250,10 @@ describe("a workflow run read without a pull request (INF-688)", () => {
     async (delivery) => {
       const f = await setup(delivery);
 
-      // The crewmate reads the ended run and sees its Linux checks job failed.
       const read = await f.readWorkflow(RUN_ID);
       expect(read).toContain(`version: ${HEAD}`);
       expect(read).toContain(`${LINUX_CHECKS} linux-checks — completed, failure`);
 
-      // Its diagnosis and reservation need no pull request.
       expect(await f.checkChange({ diagnosis: FLAKE })).toContain(
         "Diagnosis recorded with evidence.",
       );

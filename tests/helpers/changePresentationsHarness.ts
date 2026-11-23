@@ -1,4 +1,3 @@
-/** Shared publication fixture; each consumer retains the same data and database cleanup. */
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type {

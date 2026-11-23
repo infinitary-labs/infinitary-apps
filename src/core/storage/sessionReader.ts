@@ -65,11 +65,9 @@ type JsonRecord = Record<string, unknown>;
 
 export type SessionDialect = "pi" | "claude";
 
-/** A session file, read. */
 export type SessionRead = {
   path: string;
   dialect: SessionDialect;
-  /** The session id the file records, when it records one. */
   sessionId: string | null;
   /** The session in the Pi dialect's entries: a Pi file's own lines, parsed. */
   entries: JsonRecord[];
@@ -80,7 +78,6 @@ export type SessionRead = {
 /** The server the Claude seat serves the Firstmate's tools on. */
 export const CLAUDE_SEAT_TOOL_SERVER = "infinitary";
 
-/** How the Claude client names each of those tools: `mcp__infinitary__<name>`. */
 export const CLAUDE_SEAT_TOOL_PREFIX = `mcp__${CLAUDE_SEAT_TOOL_SERVER}__`;
 
 /**
@@ -90,7 +87,6 @@ export const CLAUDE_SEAT_TOOL_PREFIX = `mcp__${CLAUDE_SEAT_TOOL_SERVER}__`;
  */
 const CLAUDE_SEAT_TOOL_PREFIXES = [CLAUDE_SEAT_TOOL_PREFIX, "mcp__firstmate__"] as const;
 
-/** A tool's own name, as a Claude transcript names it under the app's server or not. */
 export function bareToolName(name: string): string {
   const prefix = CLAUDE_SEAT_TOOL_PREFIXES.find((candidate) => name.startsWith(candidate));
   return prefix ? name.slice(prefix.length) : name;
@@ -138,7 +134,6 @@ export function sessionDialect(firstLine: string): SessionDialect | null {
   return null;
 }
 
-/** The dialect a whole session text is written in, by its first line. */
 export function sessionDialectOf(raw: string): SessionDialect | null {
   return sessionDialect(firstLineOf(raw));
 }
@@ -153,7 +148,6 @@ export function sessionDialectAt(path: string): SessionDialect | null {
   return line === null ? null : sessionDialect(line);
 }
 
-/** Read one session file, whichever backend wrote it. */
 export function readSession(path: string): SessionRead {
   const raw = readFileSync(path, "utf8");
   if (sessionDialectOf(raw) !== "claude") {
@@ -182,9 +176,7 @@ export function readSession(path: string): SessionRead {
   };
 }
 
-/** A call a session's own conversation made (`sessionToolCalls`). */
 export type SessionToolCall = {
-  /** When the session recorded it; null when its line names no time. */
   at: number | null;
   /** The tool, as the Pi dialect's `toolCall` names it. */
   name: string;
@@ -211,9 +203,7 @@ export function sessionToolCalls(text: string, dialect: SessionDialect): Session
   return sessionAssistantLines(text, dialect).flatMap((line) => line.calls);
 }
 
-/** One assistant line of a session's own conversation: the words it wrote and the calls it made. */
 export type SessionAssistantLine = {
-  /** When the session recorded it; null when its line names no time. */
   at: number | null;
   /** Its text parts, in order; never its thinking. */
   texts: string[];
@@ -322,7 +312,6 @@ class ClaudeSessionMapper {
     this.contracts = sidecarContracts(sidecar);
   }
 
-  /** The session's entries so far: its `session` header, then the conversation. */
   entries(): JsonRecord[] {
     if (this.sessionId === null) return this.out;
     return [
@@ -472,7 +461,6 @@ export class SessionFollower {
   private dialect: SessionDialect | null = null;
   /** The byte just past the last whole line read. */
   private offset = 0;
-  /** The file read, by its inode. */
   private ino = 0;
   private pi: JsonRecord[] = [];
   private claude: ClaudeSessionMapper | null = null;

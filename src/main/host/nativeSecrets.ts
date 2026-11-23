@@ -117,7 +117,6 @@ export function nativeApprover(input: {
   };
 }
 
-/** What the Mac composition takes from the app besides its custody name. */
 export type DarwinSecretsHost = {
   /**
    * The custody's keychain file in fresh child processes
@@ -130,7 +129,6 @@ export type DarwinSecretsHost = {
   keychainPath?: string;
 };
 
-/** What the Windows composition takes from the app besides its custody name. */
 export type WindowsSecretsHost = {
   /** The window Windows Hello's or the password's dialog belongs to; absent in a run with no window. */
   window?: () => WindowHandle | undefined;

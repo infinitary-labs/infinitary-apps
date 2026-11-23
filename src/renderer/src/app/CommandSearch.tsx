@@ -158,7 +158,6 @@ function SearchPanel({
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open]);
 
-  // The chosen row stays in view as the arrows move through a long list.
   useLayoutEffect(() => {
     if (at < 0) return;
     document.getElementById(optionId(at))?.scrollIntoView({ block: "nearest" });

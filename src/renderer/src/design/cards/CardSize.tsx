@@ -79,7 +79,6 @@ const INWARD = (
   </svg>
 );
 
-/** Maximize card, or Restore card while it is maximized; nothing where the stage lends no size. */
 export function CardSizeToggle() {
   const size = useContext(CardSizeContext);
   if (!size) return null;

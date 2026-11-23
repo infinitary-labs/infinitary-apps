@@ -160,7 +160,6 @@ export class PlacedAccounts
       : undefined;
   }
 
-  /** The row that computer last said of an account `accountOf` keyed. */
   private accountRow(account: string) {
     const key = parseAccountKey(account);
     if (!key) return undefined;
@@ -187,7 +186,6 @@ export function parseAccountKey(
   return { accountId: account.slice(0, at), deviceId: account.slice(at + 1) };
 }
 
-/** A provider as the captain names it. */
 function providerWord(providerId: string | undefined): string {
   return (providerId && catalogEntry(providerId)?.name) || providerId || "its subscription";
 }

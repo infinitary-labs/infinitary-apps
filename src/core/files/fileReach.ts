@@ -104,7 +104,6 @@ const APP_FOLDER_NAMES = Object.values(USER_DATA_FOLDERS).flatMap((flavors) =>
  */
 const PRIVATE_FOLDER_NAMES = ["Desktop", "Documents", "Library", ".ssh"];
 
-/** This computer's user's private folders, as `privatePlaces` takes them. */
 export function privateFolders(home: string): string[] {
   return PRIVATE_FOLDER_NAMES.map((name) => join(home, name));
 }
@@ -312,7 +311,6 @@ export class FileReach {
     return copy.file;
   }
 
-  /** One piece of a set-aside copy, from `offset`. */
   async read(id: string, offset: number): Promise<FileOrderResponse<"inf:files:read">> {
     const file = this.stagedPath(id);
     const handle = await open(file, "r");
@@ -413,7 +411,6 @@ export class FileReach {
     return reachesPlace(path, this.options.protectedPlaces);
   }
 
-  /** Whether a path is one of these places' keys, or inside one. */
   private within(path: string, places: readonly string[]): boolean {
     const key = this.key(path);
     return places.some((place) => key === place || key.startsWith(`${place}${sep}`));

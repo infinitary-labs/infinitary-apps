@@ -32,7 +32,6 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
   });
   seedTask(tasks, { id: "builder", title: "Fix the clipped card", status: "idle" });
   const cards: unknown[] = [];
-  // What a close does to the task's cards, in order.
   const cardCloses: unknown[][] = [];
   const workStatus = vi.fn(async () => ({ dirty: false, unlandedCommits: 0 }));
   const host = {

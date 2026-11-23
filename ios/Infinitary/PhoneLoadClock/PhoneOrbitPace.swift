@@ -71,7 +71,6 @@ struct PhoneOrbitPace: Sendable {
         var atPace: Bool { last.contains { $0.turned <= $0.allowed && $0.drift <= 2 } }
     }
 
-    /// Every orbiting crewmate in the scene, read together, each by its own Watch.
     struct Crew: Sendable {
         let pace: PhoneOrbitPace
         private(set) var watches: [String: Watch] = [:]
@@ -92,7 +91,6 @@ struct PhoneOrbitPace: Sendable {
             return all
         }
 
-        /// The crewmates still off their orbits' pace, with each orbit's last turn, allowance and drift.
         var unsteady: [String: [(turned: Double, allowed: Double, drift: Double)]] {
             watches.filter { !$0.value.atPace }.mapValues(\.last)
         }

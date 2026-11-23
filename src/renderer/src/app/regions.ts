@@ -22,11 +22,9 @@ export type WindowRegion = "panel" | "card" | "main-message" | "settings-tabs" |
 
 export const REGION_ATTRIBUTE = "data-window-region";
 
-/** What can take focus with Tab, in the order Tab reaches it. */
 const TABBABLE =
   'a[href], button, input, select, textarea, iframe, [contenteditable="true"], [tabindex]';
 
-/** The first control in `root` Tab reaches, if any. */
 export function firstTabbable(root: HTMLElement): HTMLElement | null {
   for (const element of root.querySelectorAll<HTMLElement>(TABBABLE)) {
     if (element.tabIndex >= 0 && available(element)) return element;
@@ -34,19 +32,16 @@ export function firstTabbable(root: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** The last control in `root` Tab reaches, if any. */
 export function lastTabbable(root: HTMLElement): HTMLElement | null {
   const elements = [...root.querySelectorAll<HTMLElement>(TABBABLE)];
   return elements.findLast((element) => element.tabIndex >= 0 && available(element)) ?? null;
 }
 
-/** The main message's field, while a person can type in it. */
 function mainMessageField(root: HTMLElement): HTMLElement | null {
   const field = root.querySelector<HTMLElement>('[aria-label="Task prompt"]');
   return field && available(field) ? field : null;
 }
 
-/** Focus a key moved, with its ring (../design/focus.ts). */
 function land(element: HTMLElement, scroll = true): void {
   focusWithRing(element, { preventScroll: !scroll });
 }
@@ -122,7 +117,6 @@ function kindOf(root: Element): WindowRegion | null {
     : null;
 }
 
-/** The parts a person can go to now, in reading order. */
 export function windowRegions(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>(`[${REGION_ATTRIBUTE}]`)].filter(
     (root) =>
@@ -142,10 +136,8 @@ function regionAt(regions: readonly HTMLElement[]): number {
   return regions.findIndex((root) => root.contains(active));
 }
 
-/** A direction across the window, as the directional part commands name it. */
 export type RegionDirection = "left" | "right" | "up" | "down";
 
-/** A part's box on screen, as far as a direction reads it. */
 type Box = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
 
 /**

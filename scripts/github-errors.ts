@@ -45,7 +45,6 @@ export function errorLine(
   return `::error${properties.length ? ` ${properties.join(",")}` : ""}::${escapeMessage(problem)}`;
 }
 
-/** Prints each refusal on standard error, as `errorLine` writes it. */
 export function printErrors(
   problems: readonly string[],
   options: { title?: string } = {},

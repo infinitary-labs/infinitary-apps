@@ -21,7 +21,6 @@ const plain: EnterKeys = {
   recording: false,
 };
 
-/** Every combination of the four modifiers. */
 const MODIFIERS = ["shift", "alt", "meta", "ctrl"] as const;
 const modifierSets: Array<Partial<EnterKeys>> = Array.from(
   { length: 1 << MODIFIERS.length },

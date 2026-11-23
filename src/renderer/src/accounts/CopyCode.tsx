@@ -51,7 +51,6 @@ export function useCopyCode(
   return { state, copy, status };
 }
 
-/** The Copy code button and its status line. */
 export function CopyCode({ code }: { code: string }) {
   const { state, copy, status } = useCopyCode(code);
   return (

@@ -38,7 +38,6 @@ function put(path: string, text: string): void {
   writeFileSync(path, text);
 }
 
-/** The newest model request's system prompt, as the computer's crewmate was served it. */
 function served(): string {
   return JSON.stringify(api.requests.at(-1)?.body?.system ?? "");
 }
@@ -65,7 +64,6 @@ describe("the home's personal set on a computer that runs work", () => {
     await expect.poll(sends).toBe(1);
     expect(kept()).toBe(home_());
 
-    // Two tasks open there with the set unchanged: nothing more is sent.
     model([{ text: "Done." }, { text: "Done." }]);
     await at.start("t-one");
     await at.start("t-two");
@@ -75,7 +73,6 @@ describe("the home's personal set on a computer that runs work", () => {
     expect(served()).toContain("<name>home-rivets</name>");
     expect(served()).not.toContain("The computer's own rule.");
 
-    // An edit on the home is sent once, before the next conversation there opens.
     put(join(home, "AGENTS.md"), "The home's edited rule.\n");
     model([{ text: "Done." }]);
     await at.start("t-three");

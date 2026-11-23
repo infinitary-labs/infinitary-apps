@@ -487,7 +487,6 @@ export async function startApp(
     try {
       handed = await handOverInRun(move, workContext());
     } catch (error) {
-      // A step that throws ends the run as a start that failed, with its reason.
       endRun(1, RUN_WORDS.couldNotStart(error instanceof Error ? error.message : String(error)));
       return;
     }

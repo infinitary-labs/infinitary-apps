@@ -87,7 +87,6 @@ describe("the query process", () => {
     await exitOf(runawayPid);
     expect(logs.some((line) => line.includes("was stopped"))).toBe(true);
 
-    // The next query is answered, by a process started for it.
     const next = await service.query(request("SELECT COUNT(*) AS n FROM v_usage_v1"));
     expect(next).toMatchObject({ rows: [{ n: 1 }] });
     expect(service.processesStarted).toBe(2);

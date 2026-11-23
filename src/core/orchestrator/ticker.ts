@@ -136,7 +136,6 @@ export class Ticker {
     };
   }
 
-  /** Start the one interval; idempotent. */
   start(): void {
     if (this.handle !== undefined) return;
     this.handle = this.timers.repeat(() => {

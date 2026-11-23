@@ -11,7 +11,6 @@ export const mtof = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 /** The highest partial an instrument asks for: under half the window's 24 kHz rate. */
 const TOP_HZ = 10500;
 
-/** An FM pair: the glass piano, a celesta. */
 export type FmPreset = {
   ratio: number;
   idx: number;
@@ -78,7 +77,6 @@ export type Played = Note & { touch?: number };
 /** What every instrument needs from the player. */
 export type Stage = {
   ctx: BaseAudioContext;
-  /** Connects through a panner. */
   panned(node: AudioNode, pan: number, to: AudioNode): StereoPannerNode;
   /** Starts the sources, stops them at `end`, and frees every node once the last one ends. */
   run(sources: AudioScheduledSourceNode[], nodes: AudioNode[], at: number, end: number): void;
@@ -107,7 +105,6 @@ export function fm(s: Stage, note: Played, t: number, length: number, to: AudioN
   s.run([modulator, carrier], [depth, amp, panner], t, t + length + p.tail);
 }
 
-/** A plucked string: a bright start that darkens fast, then rings down. */
 export function pluck(
   s: Stage,
   note: Played,
@@ -279,7 +276,6 @@ export function sus(
   s.run(sources, nodes, t, t + length + p.rel * 6);
 }
 
-/** A bass: a sine and a triangle. */
 export function bass(
   s: Stage,
   note: Played,
@@ -306,7 +302,6 @@ export function bass(
   s.run([sine, triangle], [amp], t, t + length + 0.6);
 }
 
-/** A drum made of a falling sine: a kick, a frame drum, a deep log. */
 export function drum(s: Stage, note: Played, t: number, to: AudioNode, p: DrumPreset) {
   const ctx = s.ctx;
   const base = p.tuned ? mtof(note.midi) : 1;
@@ -363,7 +358,6 @@ export function wood(s: Stage, note: Played, t: number, to: AudioNode, p: WoodPr
   s.run(sources.reverse(), nodes, t, t + longest);
 }
 
-/** A clean tick from two square partials. */
 export function tick(s: Stage, note: Played, t: number, to: AudioNode, p: TickPreset | null) {
   const ctx = s.ctx;
   const decay = p?.decay || 0.03;

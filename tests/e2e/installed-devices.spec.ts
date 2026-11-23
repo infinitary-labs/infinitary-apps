@@ -22,7 +22,6 @@ test("an installed build offers joining at its first launch, Settings -> Devices
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Devices", exact: true }).click();
     await expect(page.locator('[data-device-add="mac"]')).toBeVisible();
-    // Command search lists Devices' own command.
     await pressWindowKey(app.app, "k", ["meta"]);
     const search = commandSearch(page);
     await expect(search.dialog).toBeVisible();

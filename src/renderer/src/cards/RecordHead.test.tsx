@@ -126,7 +126,6 @@ describe("the goal and the fold under it", () => {
     expect(textOf(find(live, "data-record-words-fold"))).toBe("Why it was filed");
     expect(textOf(find(live, "data-record-filed-why"))).toBe(filing.why);
     expect(textOf(find(live, "data-record-filed-verdict"))).toBe("First mate: still real on main");
-    // A closed filing has nothing left to decide: no verdict line.
     const closed = goal(task({ status: "done", closedReason: "finished", filing }));
     expect(find(closed, "data-record-filed-why")).toBeDefined();
     expect(find(closed, "data-record-filed-verdict")).toBeUndefined();
@@ -222,7 +221,6 @@ describe("the head above the goal", () => {
       facts.map((fact) => [fact.basis, `${fact.text}${DELIVERY_BASIS_WORDS[fact.basis]}`]),
     );
 
-    // A closed task with no facts draws no row, and only its line.
     const plain = task({
       status: "done",
       activity: null,

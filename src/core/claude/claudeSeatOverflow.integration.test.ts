@@ -53,7 +53,6 @@ function kindOf(url: string, body: StubRequest["body"], prompt: string): Kind {
   return "other";
 }
 
-/** A Messages API with a hard context window, answering the seat with a scripted reply. */
 async function startOverflowApi(
   seatReply: (request: StubRequest, res: ServerResponse, tokens: number) => void,
 ): Promise<OverflowApi> {

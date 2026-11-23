@@ -98,7 +98,6 @@ export function integrationEvents(
   };
 }
 
-/** The task events first, then whatever else the app listens to. */
 export function withTaskEvents(tasks: TaskReader, others?: SchedulerEvents): SchedulerEvents {
   const own = taskEvents(tasks);
   const across = (theirs: EventFinder | undefined): EventFinder => ({

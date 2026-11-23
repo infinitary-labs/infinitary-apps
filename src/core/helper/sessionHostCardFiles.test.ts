@@ -20,11 +20,6 @@ import {
 } from "../../../tests/helpers/sessionHostWorld";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 
-/**
- * A crewmate's conversation held on a computer that runs work
- * (`tests/helpers/sessionHostWorld.ts`): the files a card sends before it: pictures, recordings, GIFs and fonts.
- */
-
 sessionHostHooks();
 
 const MAP_PART = readFileSync(

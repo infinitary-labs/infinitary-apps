@@ -55,7 +55,6 @@ function planted(organization?: Record<string, unknown>): ResolveClaudeSettings 
   };
 }
 
-/** The library's reader with an organization's settings in its policy tier. */
 function withOrganization(settings: Record<string, unknown>): ResolveClaudeSettings {
   return planted(settings);
 }

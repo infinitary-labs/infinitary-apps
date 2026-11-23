@@ -20,11 +20,6 @@ import {
 } from "../scripts/affected-journeys.ts";
 import { changedMessages } from "../scripts/window-messages.ts";
 
-/**
- * Which journey files a change can break (scripts/affected-journeys.ts):
- * the pull request's Mac check runs those and no others.
- */
-
 const FILES = new Map<string, string>([
   [
     "tests/e2e/a.spec.ts",
@@ -917,7 +912,6 @@ describe("complete journey selection", () => {
       ).toBe(true);
   });
 
-  /** How many journeys import each product module directly. */
   const directReaders = (file: string) =>
     actualSpecs.filter((spec) => importsOf(spec, actualRead(spec) ?? "").includes(file)).length;
 

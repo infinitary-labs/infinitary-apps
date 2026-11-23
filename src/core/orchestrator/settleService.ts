@@ -664,10 +664,6 @@ export class SettleService {
     return this.openChangeAmong(record, merged);
   }
 
-  /**
-   * Every pull request number the task's record keeps: its changes not yet
-   * merged, its slot, its merge reviews and its completion offers.
-   */
   pullNumbersOf(record: TaskRecord): Set<number> {
     const numbers = new Set<number>();
     for (const change of this.host.tasks.changesFor(record.id))
@@ -1176,7 +1172,6 @@ export class SettleService {
       if (pull) return this.closeMergedOutside(taskId, actor, pull);
     }
     if (mode === "merge-pr" || mode === "land") {
-      // The one merge gate, before anything merges or lands.
       const held = this.mergeRefusal(record, mode, actor);
       if (held) return { ok: false, text: held.text, refusal: held };
       // The review's questions wait on the captain, whoever merges: his own
@@ -1416,7 +1411,6 @@ export class SettleService {
     });
   }
 
-  /** The feed's receipt of a settle and the wake that makes a refusal actionable. */
   reportOutcome(
     taskId: string,
     title: string,
@@ -1581,7 +1575,6 @@ export class SettleService {
   }
 }
 
-/** Who a close names: the app's own merge is the host's. */
 function closeActor(actor: MergeActor): TaskClose["actor"] {
   return actor === "app" ? "host" : actor;
 }

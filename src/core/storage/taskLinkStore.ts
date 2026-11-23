@@ -137,7 +137,6 @@ export class TaskLinkStore {
     return rows.map(fromRow);
   }
 
-  /** Every link one task is on, at either end. */
   deleteFor(taskId: string): void {
     this.db.prepare("DELETE FROM task_links WHERE from_id = ? OR to_id = ?").run(taskId, taskId);
   }

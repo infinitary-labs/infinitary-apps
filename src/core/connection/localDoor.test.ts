@@ -70,7 +70,6 @@ describe("the local door", () => {
 
   it("opens with nothing paired, in a folder and files only this account can read", async () => {
     const at = await withDoor();
-    // Nothing paired: no address for devices, only the door.
     expect(at.connection.listening()).toEqual([]);
     expect(await answersAt(at.port)).toBe(false);
     const address = at.connection.localDoor();

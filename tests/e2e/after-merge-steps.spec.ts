@@ -178,15 +178,12 @@ for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
         await expect(listed).toContainText(AFTER_MERGE_DOER_WORDS.crewmate);
       }
       if (variant === "firstmate") {
-        // The step names the first mate as its doer, with no Continue title.
         await expect(listed).toContainText(FIRSTMATE_AFTER_MERGE_STEP.title);
         await expect(listed).toContainText(FIRSTMATE_AFTER_MERGE_STEP.goal);
         await expect(listed).toContainText(AFTER_MERGE_DOER_WORDS.firstmate);
         await expect(listed).not.toContainText(AFTER_MERGE_TITLE_PREFIX);
       }
       if (variant === "waits") {
-        // The existing task leads with its key and its own words, and each
-        // step says what it waits for.
         await expect(listed).toContainText(`${DASHBOARD_EXISTING_KEY} ${DASHBOARD_EXISTING.title}`);
         await expect(listed).toContainText(DASHBOARD_EXISTING.goal);
         await expect(listed.getByText(afterMergeWaitWords([DASHBOARD_FEED_KEY]))).toHaveCount(2);
@@ -221,8 +218,6 @@ for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
       expect(git("-C", dir, "show", "main:meter.txt")).toBe("reads on time");
 
       if (variant === "waits") {
-        // Both steps are set to start on their own, in the dashboard's
-        // project, and the feed task they wait for still holds them.
         await expect
           .poll(
             async () =>
@@ -253,7 +248,6 @@ for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
         expect(detail).toMatchObject(held);
         expect(existing).toMatchObject({ ...held, key: DASHBOARD_EXISTING_KEY });
       } else if (steps) {
-        // The step's task is filed by the merge and started by the app alone.
         await expect
           .poll(
             async () =>

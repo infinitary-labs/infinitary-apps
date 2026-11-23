@@ -24,12 +24,10 @@ import typographyCss from "../../design/tokens/typography.css?raw";
 const FONT_ASSET_PREFIX = "../assets/fonts/";
 const FONT_URL = /url\(\s*['"]?\.\.\/assets\/fonts\/([A-Za-z0-9._-]+)['"]?\s*\)/g;
 
-/** `fonts.css` with every face pointed at the frame scheme. */
 export function frameFontFaces(css: string = fontsCss): string {
   return css.replaceAll(FONT_URL, (_match, file: string) => `url(${frameFontUrl(file)})`);
 }
 
-/** The font files the faces name, in order of first mention. */
 export function frameFontFileNames(css: string = fontsCss): string[] {
   const names: string[] = [];
   for (const match of css.matchAll(FONT_URL)) {
@@ -39,7 +37,6 @@ export function frameFontFileNames(css: string = fontsCss): string[] {
   return names;
 }
 
-/** True when a stylesheet still names a font by the app-relative path. */
 export function hasAppRelativeFontUrl(css: string): boolean {
   return css.includes(FONT_ASSET_PREFIX);
 }
@@ -589,7 +586,6 @@ const PANEL_AUTO_HEIGHT_STYLE = "html { overflow-y: hidden; }";
  */
 const PANEL_FILL_STYLE = `html, body, #${PANEL_ROOT_ID} { height: 100%; }`;
 
-/** The shared panel stylesheet, with the mount's scroll ownership. */
 export function panelStylesheet(autoHeight = false): string {
   cachedPanel ??= [
     colorsCss,

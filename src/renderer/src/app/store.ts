@@ -249,7 +249,6 @@ function readOnceAgain(): void {
   readSecretsShown();
 }
 
-/** Seeds the crew orbit's roster from the board, and each active work task's activity. */
 function readBoard(): Promise<void> {
   // The orbit has no use for closed rows: they never fly.
   return readBoardWithoutClosed()
@@ -361,7 +360,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     const reads: Promise<unknown>[] = [
       readCardsAgain(get, () => set({ cardsSnapshotLoaded: true })).catch(() => {}),
     ];
-    // Every thread this window has read is read again.
     for (const cardId of Object.keys(get().threads))
       reads.push(
         window.infinitary.cards

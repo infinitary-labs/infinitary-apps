@@ -79,7 +79,6 @@ export const REACH_READ_STEER =
 const REACH_READ_REPORT =
   "Read the checks on the pushed fix; they passed, and I revalidated its new version.";
 
-/** The second task: a change GitHub's own rule holds. */
 export const REACH_RULE_MARKER = "trim the meter help copy";
 export const REACH_RULE_CHANGE = {
   number: 56,
@@ -98,7 +97,6 @@ export const REACH_RULE_HOLDS: OverridableHold[] = ["asks-first"];
  */
 export const REACH_RULE_REPLY = "GitHub's rule holds it; merge it there";
 
-/** The third task: a failed check rerun once, then once more on the captain's word. */
 export const REACH_RERUN_MARKER = "steady the meter retry";
 export const REACH_RERUN_CHANGE = {
   number: 57,
@@ -106,7 +104,6 @@ export const REACH_RERUN_CHANGE = {
   body: "The meter retries once on a slow read.",
 };
 export const REACH_RERUN_CHECK = "linux-checks";
-/** The failed job's rerun, on the project's own route. */
 export const REACH_RERUN_PATH = "/repos/o/meterlab/actions/jobs/31/rerun";
 const REACH_RERUN_EVIDENCE =
   "The job timed out in its network step; the same step passed on main an hour earlier.";
@@ -116,7 +113,6 @@ export const REACH_RERUN_CARD_TITLE = "The meter retry check failed again after 
 /** The captain's reply under that card (INF-1216's journey, the plan's own words). */
 export const REACH_RERUN_REPLY = "keep going until the checks pass";
 export const REACH_RERUN_HOLDS: OverridableHold[] = ["checks"];
-/** The crewmate's relay of his reply, naming the card it came under. */
 const REACH_RERUN_RELAY = "Relayed from card";
 const REACH_RERUN_ANSWER = "I passed your words to the first mate to record for this task.";
 export const REACH_RERUN_STEER =
@@ -143,7 +139,6 @@ const MERGE_ACTION = {
   effect: { kind: "merge", after: "close" },
 } as const;
 
-/** The captain's typed words, as the first mate is served them. */
 export function captainWords(words: string) {
   return served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) });
 }
@@ -189,9 +184,6 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
     return { text: "The merge did not go through." };
   }
 
-  // 3. The crewmate relays the captain's reply under its rerun card: the
-  //    first mate records it as his override in this turn, citing the card,
-  //    and steers the crewmate on.
   if (said("reported on task") && said(REACH_RERUN_RELAY)) {
     if (results.length > 0) return { text: "Recorded the captain's words; the rerun goes out." };
     const task = findCrewTaskId(body, REACH_RERUN_MARKER) ?? "missing";
@@ -211,11 +203,9 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
       ],
     };
   }
-  // The crewmate's report of the refused second rerun: its own card asks.
   if (said("reported on task") && said(REACH_RERUN_REPORT))
     return { text: "Its crewmate asked the captain on its card." };
 
-  // 4. The weekly audit rule fired: start its task in the project it names.
   if (said("by automation") && said(JSON.stringify(REACH_AUDIT_RULE.name))) {
     if (results.length > 0) return { text: "Started the weekly reach audit." };
     const repo = contextRepos(body).find(([name]) => name === REACH_AUDIT_PROJECT);
@@ -271,8 +261,6 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   //    steer are both due as the turn starts, the lane serves them as one
   //    message, which still asks for the reading (INF-3627).
   const turn = sinceLastAsked(body, onlyCheckNotices);
-  // 1. The reviewer, told the captain answered its card in his own words,
-  //    withdraws that card and reads nothing again.
   if (body.includes(REVIEW_BRIEF_MARKER) && turn.user.includes(REACH_WITHDRAW_STEER)) {
     if (turn.results.length > 0) return { text: "" };
     const cardId = turn.user.match(/Withdraw your card ([\w-]+)/)?.[1];
@@ -314,7 +302,6 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
     };
   }
 
-  // 1. The reviewed builder, steered with the captain's words.
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_STOP_STEER)) {
     if (turn.results.length > 0) return { text: "done" };
     return {
@@ -332,7 +319,6 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
     };
   }
 
-  // 2. The change GitHub's rule holds: a commit, then the completion card.
   if (body.includes(REACH_RULE_MARKER)) {
     const { user, results, pending } = sinceLastAssignment(body);
     // A commit still running ends the turn with no words: its exit wake is
@@ -366,8 +352,6 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
     return { text: "done" };
   }
 
-  // 3. The failed check: read, diagnose, reserve, rerun once, be refused
-  //    a second, report; then on the captain's relayed word, once more.
   if (body.includes(REACH_RERUN_MARKER)) {
     const { user, results, pending } = sinceLastAssignment(body);
     if (pending) return { text: "" };
@@ -452,7 +436,6 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
     return { text: "done" };
   }
 
-  // 4. The weekly audit's crewmate: its card is the answer.
   if (body.includes("runs the weekly reach audit")) {
     if (hasToolResults) return { text: "done" };
     return {

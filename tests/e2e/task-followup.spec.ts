@@ -102,7 +102,6 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
   await input.fill(`${SPAWN_PROMPT_MARKER} ${FILE_FOLLOWUP_PROMPT_MARKER}`);
   await input.press("Enter");
 
-  // The feed carries the filing as one line, then the crewmate's report.
   const filed = feedLine(page, new RegExp(MOCK_FOLLOWUP_TITLE));
   await expect(filed).toBeVisible({ timeout: 30_000 });
   await expect(reportLine(page, await taskKey(page, FILE_FOLLOWUP_PROMPT_MARKER))).toBeVisible({
@@ -112,7 +111,6 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
 
   await expect.poll(() => readTasks(userDataDir).length, { timeout: 10_000 }).toBe(2);
   const [origin, followup] = readTasks(userDataDir);
-  // Neither task acquired a card just because the follow-up was filed.
   expect(
     (await page.evaluate(() => window.infinitary.cards.list())).some(
       (card) => card.taskId === origin?.id || card.taskId === followup?.id,
@@ -133,9 +131,6 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     project_id: origin?.project_id,
   });
 
-  // The edge and the timelines: discovered-from points at the origin, the
-  // progress line sits on the origin's timeline off the feed, and the
-  // origin still carries its report.
   const links = readSavedData(
     userDataDir,
     (db) =>
@@ -254,7 +249,6 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     );
     expect(filedBrief).toContain("Delivery: ");
 
-    // The captain starts it from its record in the Tasks panel.
     const backlog = nowFrame(page).locator('[data-now-group-header="backlog"]');
     if ((await backlog.getAttribute("aria-expanded")) === "false") {
       await backlog.evaluate((el) => (el as HTMLElement).click());

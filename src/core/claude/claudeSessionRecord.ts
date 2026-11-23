@@ -16,7 +16,6 @@ export type Pushed = {
   uuid: string;
   kind: "prompt" | "steer";
   text: string;
-  /** The client took it into a turn. */
   acked: boolean;
 };
 
@@ -56,7 +55,6 @@ export class ClaudeSessionRecord {
     void this.bringUp(sessionId);
   }
 
-  /** Copy now when the client's file is known; otherwise look it up first, and say when that is done. */
   bringUp(sessionId: string): Promise<void> | undefined {
     const source = this.clientTranscript(sessionId);
     if (!source) return this.refreshMirror(sessionId);
@@ -78,7 +76,6 @@ export class ClaudeSessionRecord {
     return refresh;
   }
 
-  /** Every copy under way has landed. */
   async settled(): Promise<void> {
     await Promise.all(this.mirrors);
   }
@@ -149,13 +146,11 @@ export class ClaudeSessionRecord {
     return changed.length > 0 ? changed : undefined;
   }
 
-  /** The personal resources' digests the session's first served prompt recorded. */
   personalAtStart(sessionId: string): PersonalResourceDigests | undefined {
     const started = this.store.sidecar(sessionId).find((record) => record.kind === "served");
     return started?.kind === "served" ? started.personalResources : undefined;
   }
 
-  /** Write the spec's contract stamp when it differs from the session's newest one. */
   async stampContract(
     sessionId: string,
     stamp: ContractStamp | undefined,

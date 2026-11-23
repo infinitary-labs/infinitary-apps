@@ -60,7 +60,6 @@ test.beforeEach(async () => {
   const userDataDir = scratchDir("infinitary-rigor-standard-");
   const repo = seedRepo(userDataDir);
   github = await startGitHubStub();
-  // The crewmate's change, read at its task branch's own commit.
   github.servePull({ number: 56, title: "fix: the meter reads on the first paint" });
   github.headOf((branch) =>
     execFileSync("git", ["-C", repo.repoDir, "rev-parse", `refs/heads/${branch}`], {
@@ -131,7 +130,6 @@ test("a standard-tier crewmate's completion card renders the completion outline 
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(DEFAULT_WORKSPACE_WORD);
   await expect(facts.care).toHaveCount(0);
-  // The completion decision: the merge action, default, and the discard.
   await expect(page.getByRole("button", { name: MERGE_WORDS.land })).toBeVisible();
   await expect(page.getByRole("button", { name: "Discard" })).toBeVisible();
 
@@ -257,14 +255,12 @@ test("the host attaches completion buttons and facts after the outline", async (
   await expect(page.getByRole("button", { name: "Discard" })).toBeVisible();
   await expect(page.getByRole("button", { name: MOCK_STANDARD_INVENTED_LABEL })).toHaveCount(0);
 
-  // The host still writes its own facts after the body.
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(REPO_NAME);
   await expect(facts.checks).toHaveText(CHECK_WORDS.green);
   await expect(facts.care).toHaveCount(0);
   await facts.strip.screenshot({ path: test.info().outputPath("completion-outline-facts.png") });
 
-  // Nothing was refused on the way: the crewmate never saw a lint error.
   expect((mockProvider?.requestBodies() ?? []).some((body) => body.includes("Card refused"))).toBe(
     false,
   );

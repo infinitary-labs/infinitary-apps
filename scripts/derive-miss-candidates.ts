@@ -71,7 +71,6 @@ export type EvidenceKind =
  * neither. Weak, like everything here: "none" can be a correct call.
  */
 export type EscalationOutcome = {
-  /** The supervision decision that escalated. */
   supervision_decision: string;
   handoff_inbox_id: number;
   /** The Firstmate decision whose wake segment lists that inbox row; null if none was recorded. */
@@ -732,7 +731,6 @@ export function deriveFromTables(tables: Tables, windowMs: number): CandidateMis
   return candidates;
 }
 
-/** Read-only snapshot of the three tables the deriver joins. */
 export function readTables(dbPath: string): Tables {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
@@ -920,10 +918,6 @@ export function deriveMissCandidates(options: DeriveOptions): DeriveResult {
     routineCount: tables.outcomes.filter((row) => row.verdict === "routine").length,
   };
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   userData: string;

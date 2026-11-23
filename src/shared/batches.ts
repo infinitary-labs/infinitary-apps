@@ -180,14 +180,11 @@ export type BatchReceipt = z.infer<typeof batchReceiptSchema>;
  */
 export const batchSendBackSchema = z.object({
   taskId: z.string(),
-  /** The version sent back. */
   head: z.string(),
   reason: z.string(),
   at: z.number(),
-  /** The batch's pull request, where it was opened. */
   number: z.number().int().positive().optional(),
   url: z.string().nullable().optional(),
-  /** The batch's checks that failed at the held version. */
   failed: z.array(z.string()),
   /**
    * The batch's checks that were cancelled, skipped or unfinished there;

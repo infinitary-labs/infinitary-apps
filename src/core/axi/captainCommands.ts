@@ -57,7 +57,6 @@ function invalid(message: string, help: string[] = []): never {
   throw new AxiError(message, "VALIDATION_ERROR", help);
 }
 
-/** The answer's rows, or its refusal as an error with exit 1 or 2. */
 function answerOf(reply: CaptainReply): Record<string, unknown> {
   if (reply.kind !== "answer")
     throw new AxiError("Infinitary is still answering an earlier command; run this again", "BUSY");
@@ -93,7 +92,6 @@ function words(text: string | null | undefined, full: boolean): Record<string, u
   };
 }
 
-/** A card or report body's HTML as plain words: no markup, scripts, styles or drawings. */
 export function plainWords(html: string): string {
   return html
     .replace(/<(script|style|svg)\b[\s\S]*?<\/\1>/gi, " ")
@@ -110,7 +108,6 @@ export function plainWords(html: string): string {
     .trim();
 }
 
-/** The questions a card's body asks: each field's name, kind and options. */
 export function questionsOf(html: string): { name: string; kind: string; options: string }[] {
   const found = new Map<string, { kind: string; options: string[] }>();
   for (const match of html.matchAll(/<(input|select|textarea)\b([^>]*)>/gi)) {
@@ -138,7 +135,6 @@ export function questionsOf(html: string): { name: string; kind: string; options
   }));
 }
 
-/** Rows cut to `--limit` and `--fields`, with a whole count beside them. */
 function listed(
   name: string,
   all: Record<string, unknown>[],
@@ -165,7 +161,6 @@ function listed(
   };
 }
 
-/** What a command prints: TOON, or JSON with `--json`, with its next commands. */
 function printed(args: AxiArguments, data: Record<string, unknown>, help: string[]): string {
   if (args.flags["--json"]) return `${JSON.stringify(data, null, 2)}\n`;
   return `${encode(data)}${help.length > 0 ? `\n${encode({ help })}` : ""}\n`;
@@ -272,7 +267,6 @@ function allowanceRows(snapshot: Snapshot): Record<string, unknown>[] {
   });
 }
 
-/** The noun's first word as a verb, or the noun's own list. */
 function verbOf(args: AxiArguments, verbs: readonly string[], noun: string): string {
   const verb = args.positional[0] ?? "list";
   if (!verbs.includes(verb))
@@ -290,7 +284,6 @@ function one(args: AxiArguments, what: string, usage: string): string {
 const CARD_USAGE =
   "card [list | show <id> | thread <id> | act <id> <action> [--answer name=value]... | reply <id> <words> [--answer name=value]... | close <id>] [--limit <n>] [--fields a,b] [--full] [--json]";
 
-/** A card's answers from `--answer name=value`, each name one of its questions. */
 function answersOf(args: AxiArguments, open: CardRow): CardAnswer[] {
   const raw = args.flags["--answer"];
   const given = Array.isArray(raw) ? raw : [];
@@ -419,7 +412,6 @@ const TASK_BUTTONS = {
   unqueue: "unqueue-task",
 } as const satisfies Record<string, TaskLifecycleOp>;
 type TaskButton = keyof typeof TASK_BUTTONS;
-/** What each button's answer says it did. */
 const TASK_DONE: Record<TaskButton, string> = {
   start: "started",
   stop: "stopped",
@@ -556,10 +548,8 @@ async function task(args: AxiArguments, connection: CaptainConnection): Promise<
   );
 }
 
-/** A card's thread as the app answers it. */
 type Thread = { messages: { who: string; text: string; at: number }[] };
 
-/** Press a card's button, reply in its thread, or close it, as you. */
 async function cardChange(
   verb: "act" | "reply" | "close",
   args: AxiArguments,
@@ -623,7 +613,6 @@ async function cardChange(
   ]);
 }
 
-/** Steer or interrupt a task's crewmate, or press one of its record's buttons, as you. */
 async function taskChange(
   verb: string,
   args: AxiArguments,
@@ -754,7 +743,6 @@ async function say(
       `${C} watch --only cards`,
       `${C} say <words> --wait`,
     ]);
-  // Wait for the first mate's reply line beside these words, reading again on each change.
   const deadline = Date.now() + seconds * 1000;
   let cursor = start;
   let last: LastTurn | null = null;
@@ -1013,7 +1001,6 @@ async function knowledge(args: AxiArguments, connection: CaptainConnection): Pro
   );
 }
 
-/** The push channels each `--only` group watches. */
 const WATCH_GROUPS: Record<string, string[]> = {
   cards: ["inf:cards", "inf:cards:thread"],
   tasks: ["inf:tasks", "inf:tasks:delta"],
@@ -1067,7 +1054,6 @@ async function watch(args: AxiArguments, connection: CaptainConnection): Promise
 const WATCH_USAGE =
   "watch [--after <cursor>] [--for <seconds>] [--only cards,tasks,activity,allowance] [--channel <push>[,<push>]] [--json]";
 
-/** Each positional argument as JSON when it parses, else as words. */
 function argumentOf(raw: string, strings: boolean): unknown {
   if (strings) return raw;
   try {
@@ -1408,9 +1394,7 @@ export function withRenamedNotice(stdout: string, argv: readonly string[]): stri
       const parsed = JSON.parse(stdout) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
         return `${JSON.stringify({ notice: RENAMED_WORDS, ...parsed }, null, 2)}\n`;
-    } catch {
-      // Not JSON: the line goes above it.
-    }
+    } catch {}
   }
   return `notice: ${RENAMED_WORDS}\n${stdout}`;
 }

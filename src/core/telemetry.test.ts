@@ -282,7 +282,6 @@ describe("buildDiagnosticBody", () => {
 });
 
 describe("every body the allowlist can produce", () => {
-  /** Every value a field may take: each enum word, both booleans, a few numbers. */
   function valuesOf(spec: DiagnosticFieldSpec): unknown[] {
     if (spec.type === "enum") return [...spec.values];
     if (spec.type === "boolean") return [true, false];

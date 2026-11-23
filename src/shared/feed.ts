@@ -74,7 +74,6 @@ export function taskFeedKind(kind: string, closedStatus?: string): FeedLine["kin
   return "info";
 }
 
-/** Feed report bodies stay short. */
 export const FEED_REPORT_LIMIT = 120;
 
 /**
@@ -156,7 +155,6 @@ const CARE_SAID: Readonly<Record<string, SaidPart>> = {
   reviewed: saidPart("feedCareReviewed"),
 };
 
-/** A line as its fact, with the fact's English as its text. */
 function line(kind: FeedLine["kind"], fact: Said): Omit<FeedLine, "at"> {
   return { kind, text: englishOf(fact), said: fact };
 }

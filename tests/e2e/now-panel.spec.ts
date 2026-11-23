@@ -161,14 +161,11 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
   await test.step("the first row counts under the collapsed panel, and expanding paints the board", async () => {
     const { page } = launched;
     await send(page, `${SPAWN_PROMPT_MARKER} ${STATUS_NOTE}`);
-    // A row on the board counts in the collapsed header.
     const panel = page.locator('[data-side-panel="now"]');
     await expect
       .poll(() => dockSummaryParts(page, "now"), { timeout: 30_000 })
       .toEqual(["0 waiting", "1 working"]);
 
-    // Search is a button of the panel's header, pressed into the panel: its
-    // click opens the list's search with the caret in it, and closes it again.
     await expandDock(page, "now");
     const frame = nowFrame(page);
     const panelHeader = panel.locator("header");
@@ -180,7 +177,6 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await filterButton.click();
     await expect(frame.locator("[data-now-filters]")).toBeHidden();
 
-    // The crewmate reports and goes idle.
     statusKey = await taskKey(page, STATUS_NOTE);
     await expect(reportLine(page, statusKey)).toBeVisible({
       timeout: 30_000,
@@ -211,7 +207,6 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await expect(pane).toHaveCount(1);
     const paneBox = await pane.boundingBox();
     if (!paneBox) throw new Error("record has no box");
-    // The panel marks the open row, and only that row, as selected.
     await expect(row).toHaveAttribute("data-now-selected", "");
     await expect(nowFrame(page).locator("[data-now-row][data-now-selected]")).toHaveCount(1);
 
@@ -229,7 +224,6 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const words = pane.locator('[data-record-section="words"] > summary');
     await expect(pane.locator("[data-record-goal]")).toBeVisible();
     await pressKey(words, "Enter");
-    // The record holds the task's goal and the captain's own words.
     await expect(pane.locator("[data-record-goal]")).toContainText(STATUS_NOTE);
     await expect(pane.locator("[data-record-words]")).toHaveText(
       `${SPAWN_PROMPT_MARKER} ${STATUS_NOTE}`,
@@ -269,8 +263,6 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
   await test.step("the open record is the turn's hint: a plain turn attaches to its task, and closing reveals the character", async () => {
     const { page } = launched;
     const taskId = (await board(page)).tasks.find((task) => task.key === statusKey)?.id as string;
-    // Keyboard entry keeps the open record as the turn hint; a pointer click
-    // outside the pane dismisses it.
     const record = recordFrame(page);
     // Reopening starts with the fold closed, and a live update preserves it once opened.
     const fold = recordCard(page).locator('[data-record-section="words"]');
@@ -584,8 +576,6 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     });
     const collapsed = await dockHeight();
 
-    // Expanding the group shows its row and grows the dock; collapsing it
-    // again takes both back.
     await clickInFrame(header);
     await expect(header).toHaveAttribute("aria-expanded", "true");
     await expect(backlogRows).toHaveCount(1);

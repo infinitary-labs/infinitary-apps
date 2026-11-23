@@ -54,7 +54,6 @@ function wordsBox(element: Element): Rect {
   return { x, y, width, height };
 }
 
-/** Focuses the card's close, then presses Tab, as the captain reaches the chart. */
 async function tabFromClose(): Promise<void> {
   closeButton().focus();
   await userEvent.keyboard("{Tab}");
@@ -72,7 +71,6 @@ test("a merge card's risk chart sits at its top right, and each dot opens its ow
   const frame = await bodyDrawn(TITLE);
   await stageAtRest();
 
-  // Seven dots, each at the level the crewmate declared; no note at rest.
   for (const dimension of RISK_DIMENSIONS)
     await expect
       .element(dot(dimension))
@@ -132,7 +130,6 @@ test("a merge card's risk chart sits at its top right, and each dot opens its ow
   await expect.element(dot("behavior")).toHaveFocus();
   await expect.element(page.getByRole("region", { name: TITLE, exact: true })).toBeVisible();
 
-  // Read every crewmate-supplied reason with the keyboard.
   for (const dimension of RISK_DIMENSIONS) {
     (dot(dimension).element() as HTMLElement).focus();
     const rating = RISK.declared[dimension];

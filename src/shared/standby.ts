@@ -112,7 +112,6 @@ export const standbyChangeSchema = z.discriminatedUnion("kind", [
 ]);
 export type StandbyChange = z.infer<typeof standbyChangeSchema>;
 
-/** One file of a full copy: its place, size and hash. */
 export const standbyFileSchema = z.object({
   path: recordPathSchema,
   size: z.number().int().nonnegative(),

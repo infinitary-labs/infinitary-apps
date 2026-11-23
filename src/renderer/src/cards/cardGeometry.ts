@@ -33,7 +33,6 @@ export function openingCardWidth(
   return CARD_SIZES[width ?? "wide"] > CARD_SIZES[size] ? width : size;
 }
 
-/** The narrowest the captain's drag takes a card. */
 export const CARD_DRAG_MIN = 480;
 /**
  * A card wider than regular needs this much of the docked stage; under it,
@@ -137,7 +136,6 @@ export function maximizedPlacement(windowWidth: number, threadOpen: boolean): Ma
   return { home, card, thread };
 }
 
-/** Where a request docked beside its browser's page goes, and what each part measures. */
 export type RequestPlacement = {
   /** The column is open beside the page; else it is folded to its latest line under it. */
   open: boolean;

@@ -76,7 +76,6 @@ function computers() {
   return { machines, moveIn };
 }
 
-/** A supervisor over those computers, with "meter", a project of the captain's. */
 async function withComputers() {
   const { machines, moveIn } = computers();
   const h = setup(fakeCrewmate(), { machines });
@@ -186,7 +185,6 @@ describe("a started task's move", () => {
         text,
       });
     }
-    // No refusal wrote a move or reached a computer.
     expect(h.tasks.list().some((record) => record.shape?.computer_move)).toBe(false);
     expect(h.moveIn).not.toHaveBeenCalled();
   });
@@ -224,7 +222,6 @@ describe("a started task's move", () => {
       ok: false,
       text: `${handle(onAway)} stays on Spare MacBook Pro: ${moveOutOfReach("Spare MacBook Pro")} ${HERE.This} holds none of its commits, so nothing could continue elsewhere. Wait for Spare MacBook Pro to be back, or drop the task.`,
     });
-    // The record shows the standing move and its pause, and nothing for a task that cannot move.
     expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("waiting") as TaskRecord)).toEqual({
       computerMove: { from: HERE.this, to: "Studio Mac mini", state: "waiting", waitingFor: [] },
     });
@@ -264,7 +261,6 @@ describe("a started task's move", () => {
       ok: false,
       text: 'Unknown task "nope".',
     });
-    // Nothing was written: the task may still move, and stands on no move.
     expect(h.tasks.get("t1")?.shape?.computer_move).toBeUndefined();
     expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({
       movable: true,
@@ -351,7 +347,6 @@ describe("a started task's move", () => {
     const crewmate = fakeCrewmate({ model: copilot });
     const h = setup(crewmate, {
       routedModel: copilot,
-      // Grok cannot take it, Copilot is where it runs, and anything else picks Codex.
       movePick: (shape) =>
         shape.override_model_id === "xai/grok-5"
           ? undefined
@@ -407,7 +402,6 @@ describe("a started task's move", () => {
     // says then is taskMoves.computer.test.ts's.
     const asked = await h.supervisor.moves.requestMove(taskId, { by: "captain" });
     expect(asked.ok).toBe(true);
-    // Nothing moved: the record keeps its model and the turn was never cut.
     expect(h.tasks.get(taskId)?.model).toBe("github-copilot/gpt-5.1");
     expect(crewmate.aborts).toEqual([]);
     await tick();
@@ -571,7 +565,6 @@ describe("a started task's move", () => {
           reselectForResume: () => ({ changed: false }),
           labelOf: () => "Personal",
         },
-        // The router's pick off the provider it runs on, among the pool it is handed.
         movePick: (_shape, options) =>
           (options.pool?.available ?? [GROK]).find(
             (model) => model.provider !== options.withoutProvider,
@@ -603,7 +596,6 @@ describe("a started task's move", () => {
         text: `Moving ${handle(record)} to claude-fable-5 on Claude; it keeps its key, branch and working copy.`,
       });
       await vi.waitFor(() => expect(opened).toHaveLength(1));
-      // It reopens there, on the new model, bound to the Mac mini's own Claude account.
       expect(opened[0]).toMatchObject({ machine: MINI, model: CLAUDE });
       expect(opened[0]?.binding).toMatchObject({ accountId: "mini-claude" });
       // No account of this Mac's is chosen or recorded for it.

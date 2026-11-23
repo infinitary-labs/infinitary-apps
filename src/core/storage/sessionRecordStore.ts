@@ -36,7 +36,6 @@ import { sidecarPathOf } from "./sessionReader";
  * nothing here deletes.
  */
 
-/** One transcript line as the client wrote it; opaque past its `type` and `uuid`. */
 export type SessionRecordEntry = { type: string; uuid?: string; [key: string]: unknown };
 
 /**
@@ -46,7 +45,6 @@ export type SessionRecordEntry = { type: string; uuid?: string; [key: string]: u
  */
 export type SessionServedMessage = { textSha256: string; uuid: string };
 
-/** One sidecar line. */
 export type SessionSidecarRecord =
   | {
       kind: "contract";
@@ -65,11 +63,9 @@ export type SessionSidecarRecord =
       at: number;
       /** The prompt, when the client took it in. */
       prompt: SessionServedMessage | null;
-      /** Every steer the client took into the prompt's turns. */
       steers: SessionServedMessage[];
     };
 
-/** What one mirror pass did. */
 export type SessionMirrorOutcome =
   /** The copy now holds the client's file up to this many bytes. */
   | { kind: "copied"; bytes: number }
@@ -99,7 +95,6 @@ type ParsedCopy = {
   ino: number;
 };
 
-/** A copy's entries and their index by uuid, as they stand. */
 export type SessionRecordIndex = {
   entries: readonly SessionRecordEntry[];
   byUuid: ReadonlyMap<string, SessionRecordEntry>;
@@ -114,17 +109,14 @@ export class SessionRecordStore {
 
   constructor(private readonly dir: string) {}
 
-  /** The session's transcript copy. */
   transcriptPath(sessionId: string): string {
     return join(this.dir, `${checked(sessionId)}.jsonl`);
   }
 
-  /** The sidecar beside it. */
   sidecarPath(sessionId: string): string {
     return sidecarPathOf(this.transcriptPath(sessionId));
   }
 
-  /** Whether the app holds a copy of a session. */
   has(sessionId: string): boolean {
     const path = this.transcriptPath(sessionId);
     return existsSync(path) && statSync(path).size > 0;
@@ -162,7 +154,6 @@ export class SessionRecordStore {
     }
   }
 
-  /** The copy's recorded entries, as they stand. */
   entries(sessionId: string): readonly SessionRecordEntry[] {
     return this.index(sessionId).entries;
   }
@@ -209,7 +200,6 @@ export class SessionRecordStore {
     this.parsed.delete(this.transcriptPath(sessionId));
   }
 
-  /** Whether the session's entries are held parsed in memory now. */
   holdsParsed(sessionId: string): boolean {
     return this.parsed.has(this.transcriptPath(sessionId));
   }
@@ -248,7 +238,6 @@ export class SessionRecordStore {
     }
   }
 
-  /** One read of the bytes from the copy's offset to `size`, a line per turn of the event loop. */
   private async readLines(path: string, copy: ParsedCopy, size: number): Promise<void> {
     const start = copy.offset;
     const carried = copy.partial;
@@ -290,7 +279,6 @@ export class SessionRecordStore {
     return { copy, size };
   }
 
-  /** Append one sidecar line. */
   stamp(sessionId: string, record: SessionSidecarRecord): Promise<void> {
     const path = this.sidecarPath(sessionId);
     const previous = this.tails.get(path) ?? Promise.resolve();
@@ -306,13 +294,11 @@ export class SessionRecordStore {
     return next;
   }
 
-  /** The sidecar's lines, oldest first. */
   sidecar(sessionId: string): SessionSidecarRecord[] {
     const path = this.sidecarPath(sessionId);
     return existsSync(path) ? (readEntries(path) as unknown as SessionSidecarRecord[]) : [];
   }
 
-  /** Every stamp queued so far has landed. */
   async flushed(): Promise<void> {
     await Promise.all([...this.tails.values()]);
   }
@@ -323,7 +309,6 @@ function checked(sessionId: string): string {
   return sessionId;
 }
 
-/** `length` bytes of an open file from `position`. */
 function readAt(fd: number, position: number, length: number): Buffer {
   const buffer = Buffer.alloc(length);
   const read = readSync(fd, buffer, 0, length, position);
@@ -342,7 +327,6 @@ async function readRange(path: string, position: number, length: number): Promis
   }
 }
 
-/** The last `span` bytes of a file `size` bytes long, read in place. */
 function readTail(path: string, size: number, span: number): Buffer {
   const fd = openSync(path, "r");
   try {

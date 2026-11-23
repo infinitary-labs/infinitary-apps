@@ -11,7 +11,6 @@ type Repository = {
 };
 /** One budget of pages across the workspaces and their projects. */
 const MAX_PAGES = 10;
-/** The fields each listing reads, and the next page's link. */
 const WORKSPACE_FIELDS = "next,values.workspace.slug";
 const REPOSITORY_FIELDS =
   "next,values.full_name,values.is_private,values.updated_on,values.links.html.href";

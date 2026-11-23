@@ -72,7 +72,6 @@ export const crewResultSchema = z.object({
 });
 export type CrewResult = z.infer<typeof crewResultSchema>;
 
-/** One line of a diff: kept for context, removed, or added. */
 export const crewDiffLineSchema = z.object({
   kind: z.enum(["context", "removed", "added", "gap"]),
   text: z.string(),
@@ -89,7 +88,6 @@ export const crewDiffSchema = z.object({
 });
 export type CrewDiff = z.infer<typeof crewDiffSchema>;
 
-/** Who sent a line the crewmate was told: the captain, Firstmate, or the app itself. */
 export const crewSenderSchema = z.enum(["captain", "firstmate", "app"]);
 export type CrewSender = z.infer<typeof crewSenderSchema>;
 
@@ -114,7 +112,6 @@ export const crewLineSchema = z.discriminatedUnion("kind", [
     /** The one line the crewmate wrote with the call, or a plain reading when it wrote none. */
     reading: z.string(),
     result: crewResultSchema.nullable(),
-    /** What an edit or a write changed, from its arguments. */
     diff: crewDiffSchema.optional(),
   }),
   /** A line the crewmate was told, and by whom; queued until its session holds it. */
@@ -134,7 +131,6 @@ export const crewLineSchema = z.discriminatedUnion("kind", [
     text: z.string(),
     items: z.array(z.object({ label: z.string(), state: planItemStateSchema })),
   }),
-  /** A report, its headline and its whole text. */
   z.object({ kind: z.literal("report"), ...line, summary: z.string(), text: z.string() }),
   /** A card it put up; its id when the call named one. */
   z.object({
@@ -145,9 +141,7 @@ export const crewLineSchema = z.discriminatedUnion("kind", [
   }),
   /** The pull request it opened. */
   z.object({ kind: z.literal("change"), ...line, title: z.string() }),
-  /** A turn someone stopped before it finished, and who. */
   z.object({ kind: z.literal("stopped"), ...line, by: crewSenderSchema }),
-  /** Its conversation was shortened to fit. */
   z.object({ kind: z.literal("compacted"), ...line }),
   /** A turn the model could not finish, in its error's words. */
   z.object({ kind: z.literal("failed"), ...line, text: z.string() }),
@@ -192,7 +186,6 @@ export type CrewSendResult = z.infer<typeof crewSendResultSchema>;
 
 /** The tab's words, owned here so the window and its journeys read the same ones. */
 export const CREWMATE_WORDS = {
-  /** The composer's placeholder while a turn runs, and while none does. */
   get placeholderWorking() {
     return m.crewmatePlaceholderWorking();
   },
@@ -250,7 +243,6 @@ export const CREWMATE_WORDS = {
   get fold() {
     return m.crewmateFold();
   },
-  /** The brief's line. */
   get brief() {
     return m.crewmateBrief();
   },
@@ -284,7 +276,6 @@ export const CREWMATE_WORDS = {
   get pictureSmaller() {
     return m.crewmatePictureSmaller();
   },
-  /** Who stopped a turn. */
   stopped: {
     get captain() {
       return m.crewmateStoppedCaptain();

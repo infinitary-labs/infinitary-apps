@@ -92,10 +92,8 @@ export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]
 
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
 
-/** The postures that ship through a pull request: everything but a local land. */
 export type PullRequestDelivery = Exclude<RepoDelivery, "local-only">;
 
-/** Whether a delivery ships through a pull request (`direct-pr` or `queue-pr`). */
 export function opensPullRequest(
   delivery: string | null | undefined,
 ): delivery is PullRequestDelivery {
@@ -112,7 +110,6 @@ export function opensPullRequest(
 export type DeliveryInput = {
   /** The repository's standing posture; undefined = no repo (local-only). */
   repo?: RepoDelivery | undefined;
-  /** The captain asked for a specific posture for this task. */
   ask?: RepoDelivery | undefined;
 };
 
@@ -135,7 +132,6 @@ export function deliveryFor(input: DeliveryInput): DeliveryDecision {
   };
 }
 
-/** The posture a stored task ships at: its ask, else the repo, else local-only. */
 export function deliveryForRecord(
   record: {
     shape?: { delivery_ask?: RepoDelivery; policies?: { delivery?: RepoDelivery | null } } | null;
@@ -237,7 +233,6 @@ export const repoHostSchema = z
   .nullable();
 export type RepoHost = z.infer<typeof repoHostSchema>;
 
-/** Why a project whose host takes no batch pull request cannot choose batched pull requests. */
 export const BATCH_HOST_REFUSAL =
   "Batched pull requests need a host where Infinitary can open and merge a batch pull request, and this project's host has none it can use yet. Choose pull requests or a local merge.";
 
@@ -276,11 +271,9 @@ export function readsPullRequestChecks(
   );
 }
 
-/** Why a project that reads no pull request checks cannot turn Require pull request checks off. */
 export const NO_CHECKS_REFUSAL =
   "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub, GitLab or Bitbucket. This project's changes do not, so no check holds its merge.";
 
-/** Why batched pull requests cannot be chosen while no runbook that is on offers them. */
 export const BATCHES_OFF_REFUSAL =
   "Batched pull requests is off. Turn it on in Settings, under Runbooks, to choose it for a project.";
 
@@ -629,5 +622,4 @@ export function repoPolicyOutcome(repo: RepoView): string {
   }, rigor ${repo.rigor ?? "standard"}.`;
 }
 
-/** The picker's sentinel for the app-managed default workspace. */
 export const DEFAULT_WORKSPACE_ID = "default";

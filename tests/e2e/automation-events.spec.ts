@@ -128,7 +128,6 @@ test("a rule saved by keys fires once for three items that arrive together", asy
   );
   expect(seen.turns[0]).toContain(wake);
 
-  // One run, carrying the three by their ids.
   const runs = () =>
     readSavedData(userDataDir, (db) =>
       (
@@ -138,6 +137,5 @@ test("a rule saved by keys fires once for three items that arrive together", asy
       ).map((run) => (JSON.parse(run.events) as { id: string }[]).map((item) => item.id)),
     );
   await expect.poll(runs).toEqual([ITEMS.map((item) => item.id)]);
-  // Nothing more arrived, so no other turn came.
   expect(seen.turns).toHaveLength(1);
 });

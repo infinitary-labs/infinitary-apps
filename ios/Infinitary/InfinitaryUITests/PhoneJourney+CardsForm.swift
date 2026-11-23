@@ -10,7 +10,6 @@ extension PhoneJourney {
         try await verifyCardForm()
     }
 
-    /// The frames of a body and its first text with this label, from the first snapshot that holds the text.
     private func firstShown(_ label: String, in body: XCUIElement) -> (body: CGRect, text: CGRect) {
         var found: (body: CGRect, text: CGRect)?
         let read = NSPredicate { _, _ in
@@ -168,7 +167,6 @@ extension PhoneJourney {
         }
         XCTAssertEqual(waitForPhonePredicate(moved, object: nil, timeout: 10), .completed, app.debugDescription)
         XCTAssertTrue(cardHeading(choice).exists, "A drag on the body's slider changed cards")
-        // A mostly upward drag scrolls the card and never changes cards.
         let scroll = app.scrollViews["card-scroll"]
         let middle = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
         middle.press(forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: -30, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.2)

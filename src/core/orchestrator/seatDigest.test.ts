@@ -47,7 +47,6 @@ describe("the seat digest (the owner's Q4 b)", () => {
       Array.from({ length: SEAT_DIGEST_TOOLS }, (_, index) => `tool_${index}`),
     );
     expect(entry.failed).toBe(true);
-    // A turn with nothing to quote quotes nothing.
     expect(
       digestEntry({ seat: PI, at: 2, trigger: "operation", tools: [], failed: false }),
     ).toEqual({ seat: PI, at: 2, trigger: "operation", tools: [] });

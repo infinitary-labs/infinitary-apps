@@ -1352,7 +1352,6 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(served).toBeLessThan(50);
     const ids = (runs: { id: number }[]) => runs.map((run) => run.id);
     expect(ids(answer.body.workflow_runs)).toEqual(ids(RUNS.slice(0, served)));
-    // The largest page that fits: one more run would pass the cap.
     const bytes = (count: number) =>
       Buffer.byteLength(JSON.stringify(RUN_LISTING(RUNS.slice(0, count))));
     expect(bytes(served)).toBeLessThanOrEqual(API_RESPONSE_MAX_BYTES);
@@ -1513,7 +1512,6 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       listing,
     ]);
 
-    // A dispatch that returns its run's number needs no listing.
     seen.length = 0;
     await write.run({
       ...dispatch,

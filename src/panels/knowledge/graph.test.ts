@@ -42,7 +42,6 @@ describe("the camera", () => {
     const near = { x: 0, y: 0, z: -200 };
     expect(project(far, turned, W, H).x).toBeLessThan(project(far, flat, W, H).x);
     expect(project(near, turned, W, H).x).toBeGreaterThan(project(near, flat, W, H).x);
-    // The center never moves: the camera orbits it.
     expect(project({ x: 0, y: 0, z: 0 }, turned, W, H)).toMatchObject({ x: W / 2, y: H / 2 });
   });
 

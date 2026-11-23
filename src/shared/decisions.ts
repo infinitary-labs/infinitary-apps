@@ -24,7 +24,6 @@ import { type DecisionUseId, decisionUseViewSchema } from "./decisionUses";
  * record as free-text `detail` - never as a typed answer field.
  */
 
-/** A native decision model's id. One row today. */
 export const decisionModelIdSchema = z.literal("jev");
 export type DecisionModelId = z.infer<typeof decisionModelIdSchema>;
 
@@ -59,7 +58,6 @@ export const decisionQuestionSchema = z.object({
   instructions: z.string().min(1),
   /** option id -> what that option means. Insertion order is serving order. */
   criteria: z.record(z.string().min(1), z.string().min(1)),
-  /** The option that means "I cannot tell". */
   abstain: z.string().min(1).optional(),
   /** The consumer's contract number for this question, e.g. `kc1`. */
   version: z.string().min(1),
@@ -354,7 +352,6 @@ export function decisionOfferingKey(model: { provider: string; id: string }): st
   return `${model.provider}/${model.id}`;
 }
 
-/** Splits an offering key back into its parts; undefined when it is `auto`. */
 export function parseDecisionOffering(
   offering: string,
 ): { provider: string; id: string } | undefined {

@@ -47,7 +47,6 @@ export const PLUGIN_PARTS_LEFT_OUT: ReadonlySet<string> = new Set([
   "node_modules",
 ]);
 
-/** The manifest, by its path inside the plugin. */
 export const PLUGIN_MANIFEST = ".claude-plugin/plugin.json";
 
 /** An id or name the set may hold as a folder name. */
@@ -138,15 +137,12 @@ export function insidePlugin(root: string, path: string): boolean {
   }
 }
 
-/** The plugin's manifest, when it is the plugin's own file. */
 const manifestOf = (root: string) =>
   insidePlugin(root, join(root, PLUGIN_MANIFEST)) ? json(join(root, PLUGIN_MANIFEST)) : undefined;
 
-/** A skill the plugin holds: its folder and its SKILL.md both inside the plugin. */
 const ownSkill = (root: string, dir: string) =>
   insidePlugin(root, dir) && insidePlugin(root, join(dir, "SKILL.md"));
 
-/** A plugin's top-level entries that travel with its skills: everything but its left-out parts. */
 export function carriedPluginEntries(root: string): string[] {
   try {
     return readdirSync(root)
@@ -175,7 +171,6 @@ export function claudePluginAt(
     if (typeof path !== "string") return [];
     const inside = posix.normalize(path.replaceAll("\\", "/"));
     const first = inside.split("/")[0] ?? "";
-    // Inside the plugin, and outside every part that never travels.
     if (posix.isAbsolute(inside) || first === ".." || first === "." || !first) return [];
     return PLUGIN_PARTS_LEFT_OUT.has(first) ? [] : [join(root, inside)];
   });

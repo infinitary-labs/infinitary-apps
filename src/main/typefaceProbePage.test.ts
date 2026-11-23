@@ -6,7 +6,6 @@ import { sanitizerReasons, TYPEFACE_LOAD_MS, typefaceScript } from "./typefacePr
 
 type Load = "loads" | "refused" | "stalls";
 
-/** Runs the probe page's script against stand-ins for the page's font loader and its clock. */
 async function runScript(loads: Record<string, Load>) {
   const timers = new Map<number, () => void>();
   let next = 0;

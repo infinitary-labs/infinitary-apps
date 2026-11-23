@@ -126,7 +126,6 @@ let readings = 0;
 /** A task branch's commit now: the head of its change on GitHub. */
 const branchHead = (branch: string) => git(repoDir, "rev-parse", `refs/heads/${branch}`);
 
-/** The builder pushes its fix: one more commit on its own branch, the change's new head. */
 function pushFix(branch: string, subject: string): string {
   const tip = branchHead(branch);
   const next = git(repoDir, "commit-tree", `${tip}^{tree}`, "-p", tip, "-m", subject);
@@ -170,7 +169,6 @@ async function send(text: string): Promise<void> {
   await input.press("Enter");
 }
 
-/** The first board row that matches, once the board holds one. */
 async function boardRow(match: (task: TaskView) => boolean): Promise<TaskView> {
   const find = async () =>
     (await launched.page.evaluate(() => window.infinitary.tasks.board())).tasks.find(match) ?? null;
@@ -185,7 +183,6 @@ const detail = (id: string) =>
 const stored = (id: string) =>
   readSavedData(userDataDir, (db) => new TaskStore(db).get(id)?.delivery ?? null);
 
-/** The card with this title, once it is up. */
 async function cardTitled(title: string) {
   const find = async () =>
     (await launched.page.evaluate(() => window.infinitary.cards.list())).find(
@@ -291,8 +288,6 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       .poll(() => detail(builder.id), { timeout: 30_000 })
       .toMatchObject({ delivery: expect.objectContaining({ reviewVerdict: "findings" }) });
 
-    // Two re-reviews at two new versions, each answered with findings again.
-    // The branch the app named at the builder's start, which its record keeps.
     const branch = (await detail(builder.id)).repo?.branch;
     if (!branch) throw new Error("The started builder has no branch.");
     let reviewed = "";
@@ -315,7 +310,6 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
         delivery: expect.objectContaining({ reviewSha: reviewed, reviewVerdict: "findings" }),
       });
     const capCard = await cardTitled(MOCK_REVIEW_ASK_CARD_TITLE);
-    // The version the reviewer last read fails its checks too.
     github.setChecks(FAILED);
     await builderReads(builder.id, reviewed, "red");
     await showCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
@@ -351,7 +345,6 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       until: "version",
       head: reviewed,
     });
-    // One override row, and it is the feed's one line for it.
     const rows = await overrideRows(builder.id);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.feed).toBe(true);
@@ -369,13 +362,10 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await closeEndedCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
     await regionShot(dockRegion(page, "activity"), out("1-override-feed-line.png"));
 
-    // The builder's completion card at the reviewed version: the strip
-    // names what his words passed, with his words on the cell.
     await cardTitled(REACH_STOP_CARD_TITLE);
     await showCard(page, REACH_STOP_CARD_TITLE);
     const facts = factsStrip(cardBody(page, REACH_STOP_CARD_TITLE));
     await expect(facts.override).toHaveText(overrideCellWords(REACH_STOP_HOLDS));
-    // His words ride the cell's title.
     await expect(facts.cell("override")).toHaveAttribute("title", rows[0]?.text ?? "");
     await regionShot(shownCard(page, REACH_STOP_CARD_TITLE), out("1-completion-card-override.png"));
 
@@ -415,7 +405,6 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     ).toHaveLength(reviewerSteers + 1);
     await page.screenshot({ path: out("1-merged.png") });
 
-    // The merged task's record: its Activity holds the override row.
     await expandDock(page, "now");
     await openGroup(page, "landed");
     await pressRow(page, builder.key);
@@ -513,7 +502,6 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
   });
 
   await test.step("4. the weekly audit rule, set to run once now, starts its one task", async () => {
-    // The audit's project, by its repository's name on the board.
     const project = (await page.evaluate(() => window.infinitary.tasks.board())).projects.find(
       (entry) => entry.repo?.name === REACH_AUDIT_PROJECT,
     );

@@ -15,7 +15,6 @@ export class SettledBeforeAct {
    */
   private held: { released: Promise<void>; release: () => void } | null = null;
 
-  /** Holds every act from now, or lets them go on. */
   hold(on: boolean): void {
     if (on && !this.held) {
       let release = () => {};

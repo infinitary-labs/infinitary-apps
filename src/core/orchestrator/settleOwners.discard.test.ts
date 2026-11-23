@@ -68,7 +68,6 @@ describe("CrewSupervisor", () => {
     expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, branch: `fm/task-${taskId}` }),
     );
-    // Settled means settled: a second discard has nothing to do.
     expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toContain(
       "already discarded",
     );
@@ -196,7 +195,6 @@ describe("CrewSupervisor", () => {
 
     it("adds nothing when the captain's own click closes the work", async () => {
       const h = await idleTask();
-      // Even with the first mate's sentence pending, their close carries none.
       await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
         h.supervisor.settling.settle.settleTask(h.taskId, "discard", undefined, "captain"),
       );
@@ -541,7 +539,6 @@ describe("CrewSupervisor", () => {
         }),
       ).toContain(`${carrier.key} carries on its work.`);
       expect(tasks.get("planned")).toMatchObject({ status: "done", closedReason: "superseded" });
-      // A drop that names no replacement stays dropped.
       tasks.create({ id: "stopped", title: "Stopped fix", prompt: "p", repoId: null });
       supervisor.intake.dropTask("stopped", { reason: "not needed" });
       expect(tasks.get("stopped")).toMatchObject({ status: "dropped", closedReason: "cancelled" });
@@ -726,7 +723,6 @@ describe("CrewSupervisor", () => {
       closedReason: "landed",
       workspaceState: "removed",
     });
-    // Settled work is history: it leaves crew_status, and a second land refuses.
     expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
     expect(
       await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain"),
@@ -936,7 +932,6 @@ describe("closing an answer task another task builds on", () => {
     constraints: [{ kind: "read-only" }],
   });
 
-  /** A crewmate that reports and goes idle. */
   async function reportAndIdle(crew: FakeCrewmate, taskId: string, text: string) {
     crew.emit({ type: "assistant_delta", taskId, text });
     crew.emit({ type: "turn_end", taskId });
@@ -944,7 +939,6 @@ describe("closing an answer task another task builds on", () => {
     await tick();
   }
 
-  /** An idle answer task, declared a step or not, and a planned task built on it. */
   async function answered(
     harness: ReturnType<typeof setup>,
     crew: FakeCrewmate,
@@ -1135,7 +1129,6 @@ describe("closing an answer task another task builds on", () => {
       expect(refused.text).toContain("the captain asked for its answer");
       expect(tasks.get(asked.taskId)?.status).toBe("active");
     }
-    // His own close is unchanged: his choice on its card closes it answered.
     specs[0]?.onCard?.({
       title: "The dock flicker reproduces",
       body: "<p>The dock flickers on resize.</p><ul><li>Seen three times.</li></ul>",
@@ -1177,7 +1170,6 @@ describe("closing an answer task another task builds on", () => {
     expect(stillWorking).toMatchObject({ ok: false });
     expect(stillWorking.text).toContain("its crewmate is still working");
 
-    // A step that went idle without a report has no answer to close on.
     const lone = await supervisor.intake.commission({
       title: "Plan the rename",
       intent: stepIntent("plan the rename"),
@@ -1227,7 +1219,6 @@ describe("closing an answer task another task builds on", () => {
     expect(waiting).toMatchObject({ ok: false });
     expect(waiting.text).toContain('its card "The flash reproduces" still asks the captain');
 
-    // Every refusal left its task exactly as it was.
     for (const id of [busy.taskId, lone.taskId, shown.taskId]) {
       expect(tasks.get(id)?.status).toBe("active");
     }

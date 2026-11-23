@@ -56,7 +56,6 @@ async function shownOffer(page: Page): Promise<string | undefined> {
   }, CHANGE_MARKS_TITLE);
 }
 
-/** Wait until the mock's request log stops growing so the next turn is a fresh prompt. */
 async function providerQuiet(page: Page, mock: LaunchedApp["mockProvider"]): Promise<void> {
   let last = mock?.requestBodies().length ?? 0;
   for (let i = 0; i < 20; i++) {
@@ -213,7 +212,6 @@ test("each revision keeps its own links and reveals folded current content witho
     REVISION_NOTE_LABEL,
     REVISION_TITLE,
   } = await import("./revisions");
-  // The captain's own unsent words in the card's field.
   const unsent = "My unsent review";
   const fixture = seedRevisionCard();
   const app = await launchApp({

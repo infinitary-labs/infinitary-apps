@@ -19,7 +19,6 @@ export const READER_CARD_TITLE = "Hold the iPad rerun until the failure is read"
 /** What the reader reports: INF-621's finding, the one PR #184 waited on. */
 export const FINDING =
   "The verdict remains the captured native readiness race and a controlled rerun, not an Escape-code rewrite.";
-/** How the rerun's report opens once it carries on with the finding. */
 export const RESUMED = "Resumed with the finding:";
 /** Each crewmate is told apart by its own goal, which only its brief carries. */
 const READER_GOAL = "Read why the iPad phone check failed, for the finding relay journey.";

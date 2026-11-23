@@ -1181,5 +1181,4 @@ function ScriptedCardBody(props: SrcdocProps) {
   );
 }
 
-/** Kept as a compatibility alias for callers outside the renderer bundle. */
 export const PrototypeBody = HtmlCardBody;

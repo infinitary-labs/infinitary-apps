@@ -8,7 +8,6 @@ import { DrawnAtWidth, type FrameWidth } from "./drawnAtWidth";
 const WIDE = 614;
 const NARROW = 599;
 
-/** The card's frame as the card reads it: a width that moves, and its size watchers. */
 function frame(width: number): FrameWidth & { resize(to: number): void; watchers(): number } {
   let now = width;
   const watching = new Set<() => void>();

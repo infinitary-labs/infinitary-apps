@@ -66,10 +66,6 @@ type JsonRecord = Record<string, unknown>;
  */
 export const TURN_TIME_SLACK_MS = 2000;
 
-// --------------------------------------------------------------------------
-// The record
-// --------------------------------------------------------------------------
-
 export type SupervisionTurnJoinBasis = "decision-id" | "text-exact" | "text-prefix" | "unjoined";
 
 export type SupervisionTurnMissReason =
@@ -191,10 +187,6 @@ export type SupervisionTurnRecord = {
     decision_ended_at: number | null;
   };
 };
-
-// --------------------------------------------------------------------------
-// Reading the session files
-// --------------------------------------------------------------------------
 
 export type SessionTurn = {
   file: string;
@@ -406,10 +398,6 @@ export function wakeMatch(
   return null;
 }
 
-// --------------------------------------------------------------------------
-// Reading the database
-// --------------------------------------------------------------------------
-
 export type OutcomeRow = {
   id: number;
   task_id: string;
@@ -591,10 +579,6 @@ export function decisionFromJson(dataJson: string | null): SupervisionDecision |
   };
 }
 
-// --------------------------------------------------------------------------
-// The join
-// --------------------------------------------------------------------------
-
 export type SupervisionJoinResult = {
   records: SupervisionTurnRecord[];
   /** Tripwires: a taskless (`fleet`) outcome row is the deferred-capture case. */
@@ -640,7 +624,6 @@ export function joinSupervisionTurns(
     byEntryId.set(state.turn.entryId, bucket);
   }
 
-  // 1. By id: every R2 supervision decision.
   for (const decision of tables.decisions) {
     const outcomeId = decision.disposition.outcomeId;
     const row = outcomeId !== null ? rowsById.get(outcomeId) : undefined;
@@ -672,7 +655,6 @@ export function joinSupervisionTurns(
     records.push(buildRecord({ basis: "decision-id", miss, row, state, decision }));
   }
 
-  // 2. By text, for history: (task_id, wake payload, at).
   const pool = states.filter((state) => state.claimed === 0);
   for (const row of tables.outcomes) {
     if (consumedRows.has(row.id)) continue;
@@ -704,7 +686,6 @@ export function joinSupervisionTurns(
     );
   }
 
-  // 3. What nothing joined, each with its reason.
   const coverage = states.length
     ? {
         start: Math.min(...states.map((state) => state.turn.at)),
@@ -959,10 +940,6 @@ function servedOf(
   };
 }
 
-// --------------------------------------------------------------------------
-// The extraction
-// --------------------------------------------------------------------------
-
 export type SupervisionExtractOptions = {
   /** Observe's development gate, verbatim. Required: there is no ungated call path. */
   gate: DevObserveGateInput;
@@ -1090,10 +1067,6 @@ function readSessionFile(path: string) {
   return { path, raw, sessionId, at, entries };
 }
 
-// --------------------------------------------------------------------------
-// Small helpers
-// --------------------------------------------------------------------------
-
 function textFromContent(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -1141,10 +1114,6 @@ function stringOr(value: unknown, fallback: string): string {
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 export type CliArgs = {
   userData: string;

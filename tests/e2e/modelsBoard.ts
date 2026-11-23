@@ -63,14 +63,12 @@ export async function openModelPanel(page: Page, lane: Locator, label: string): 
   return panel;
 }
 
-/** Closes whichever model's panel is open; nothing to do when none is. */
 export async function closeModelPanel(models: Locator) {
   const close = models.getByRole("complementary").getByRole("button", { name: /^Close / });
   if ((await close.count()) > 0) await close.click();
   await expect(models.getByRole("complementary")).toHaveCount(0);
 }
 
-/** Ticks or clears one level for the model the panel is open on. */
 export async function setLevelInPanel(panel: Locator, label: string, level: Level, on: boolean) {
   const box = panel.getByRole("checkbox", {
     name: `Use ${label} for ${levelList([level])}`,
@@ -87,7 +85,6 @@ export function alwaysUseSwitch(panel: Locator, label: string): Locator {
   });
 }
 
-/** Takes the panel's model out of every level at once. */
 export async function removeFromAllLevels(panel: Locator, label: string) {
   await panel.getByRole("button", { name: `Remove ${label} from all levels`, exact: true }).click();
 }

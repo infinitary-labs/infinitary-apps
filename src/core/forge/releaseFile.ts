@@ -39,14 +39,12 @@ const TYPES: Record<string, string> = {
   md: "text/markdown",
 };
 
-/** The file's type from its name, or a generic type when the name says none. */
 export function contentTypeOf(filename: string): string {
   const lower = filename.toLowerCase();
   const ext = lower.endsWith(".tar.gz") ? "gz" : (lower.split(".").pop() ?? "");
   return TYPES[ext] ?? "application/octet-stream";
 }
 
-/** Why a file of this size cannot be sent, or undefined when it can. */
 export function releaseUploadSizeRefusal(size: number): string | undefined {
   if (size > RELEASE_UPLOAD_MAX_BYTES) {
     return `The file is ${size} bytes, over the 2 GB release file cap.`;
@@ -120,7 +118,6 @@ export function releaseFileIn(
   return { refusal: `${path} is not a file.` };
 }
 
-/** A relative path a release file may have: no absolute path, no `..`, no link words. */
 function isReleaseFilePath(path: string): boolean {
   if (!path || path.length > PATH_MAX) return false;
   // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this refuses

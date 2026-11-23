@@ -50,7 +50,6 @@ describe("host cards", () => {
     vi.useRealTimers();
   });
 
-  // INF-3292: preserve host-card behavior when splitting the card service.
   it("does not offer an unchanged pause card twice, but revises changed actions in place", () => {
     let clock = 1000;
     const { cardStore, make } = setup(undefined, () => clock);
@@ -76,7 +75,6 @@ describe("host cards", () => {
     cards.dispose();
   });
 
-  // INF-3292: moving host-card handling must keep the original move-back offer.
   it("keeps the first move-back card when the host repeats the offer", () => {
     const { cardStore, make } = setup();
     const cards = make();

@@ -7,7 +7,6 @@ const BH = FIDGET_DURATION_MS.blackhole;
 const WIND = 0.05 * BH;
 const UNWIND = 0.8 * BH;
 
-/** Play a black hole that began at `start`, frame by frame, until `until`. */
 function play(rush: CrewRush, start: number, until: number): void {
   for (let t = start; t <= until; t += 16) rush.playing(start, BH, t);
 }
@@ -27,7 +26,6 @@ describe("the black hole's rush", () => {
     const at = (ms: number) => rush.level(1000 + ms);
     expect(at(0)).toBe(0);
     expect(at(WIND)).toBe(0);
-    // Half way through the ramp, half way up; then the top until the unwind.
     expect(at(WIND + CREW_RUSH.rampMs / 2)).toBeCloseTo(0.5, 12);
     expect(at(WIND + CREW_RUSH.rampMs)).toBe(1);
     expect(at(UNWIND)).toBe(1);
@@ -35,7 +33,6 @@ describe("the black hole's rush", () => {
     expect(at(UNWIND + CREW_RUSH.settleMs / 2)).toBeCloseTo(0.5, 12);
     expect(at(UNWIND + CREW_RUSH.settleMs)).toBe(0);
     expect(at(UNWIND + CREW_RUSH.settleMs + 10_000)).toBe(0);
-    // Never a jump: consecutive frames differ by a small step.
     for (let t = 0; t < UNWIND + CREW_RUSH.settleMs; t += 16) {
       expect(Math.abs(at(t + 16) - at(t))).toBeLessThan(0.02);
     }

@@ -36,7 +36,6 @@ const SECTION_WIDTH: Record<SettingsSectionContribution["width"], number> = {
 
 /** The tab column on the left (design skill `components/core/SettingsTabs.prompt.md`). */
 const TAB_COLUMN_PX = 168;
-/** The room between the tab column and the section. */
 const TAB_GAP_PX = 32;
 /** The column's side gutters, each. */
 const GUTTER_PX = 20;
@@ -64,7 +63,6 @@ export function sectionMaxWidth(width: SettingsSectionContribution["width"] = "w
   return SECTION_WIDTH[width] - GUTTER_PX * 2;
 }
 
-/** Resolves each section's gate; sections without one are always offered. */
 function useOfferedSections(sections: readonly SettingsSectionContribution[]) {
   const [gates, setGates] = useState<Record<string, boolean>>({});
   useEffect(() => {

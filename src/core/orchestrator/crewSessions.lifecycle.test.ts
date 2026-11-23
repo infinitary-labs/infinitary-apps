@@ -365,7 +365,6 @@ describe("CrewSupervisor", () => {
       status: "idle",
       createdAt: Date.now(),
     });
-    // Landing closes it done; a later cancel must not relabel a closed row.
     await supervisor.settling.settle.settleTask("t-done", "land", undefined, "captain");
     await tick();
     expect(tasks.get("t-done")?.status).toBe("done");
@@ -870,12 +869,6 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
   });
 });
 
-/**
- * The captain's pictures stay with the task the captain's message became
- * (`docs/task-capture.md`, "Pictures stay with the task"): the crewmate that
- * takes it is briefed with them, the brief names the app's own copies, and
- * the brief's row keeps them for a retried or re-presented first turn.
- */
 // INF-2466, the captain's approved plan: a saved Gmail attachment lands "in
 // the task's hand-over folder", which goes when the task closes.
 describe("CrewSupervisor: a file from outside lands in the task's hand-over folder", () => {

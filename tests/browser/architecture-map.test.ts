@@ -145,15 +145,12 @@ function install() {
         fill: first ? getComputedStyle(first).fill : "",
       };
     },
-    /** A double-click on the `index`th box, as a reader goes in. */
     open(index: number) {
       boxes()[index]?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     },
-    /** A press on the crumb at `depth`, as a reader climbs back. */
     climb(depth: number) {
       document.querySelectorAll<HTMLButtonElement>("#map [data-crumbs] button")[depth]?.click();
     },
-    /** A press on the comparison button named `label`. */
     compare(label: string) {
       const button = [
         ...document.querySelectorAll<HTMLButtonElement>("#map [data-cmps] button"),
@@ -161,7 +158,6 @@ function install() {
       button?.click();
       return button?.getAttribute("aria-pressed") ?? "";
     },
-    /** A key on the map, as the keyboard reaches it. */
     key(key: string) {
       const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
       svg.dispatchEvent(event);
@@ -315,7 +311,6 @@ const overlap = (a: number[], b: number[]) =>
   (a[1] as number) < (b[3] as number) - 0.5 &&
   (b[1] as number) < (a[3] as number) - 0.5;
 
-/** Everything a reader sees at once stands clear of everything else, and every word fits its box. */
 function expectClear(view: View): void {
   const where = `at ${view.crumbs}`;
   for (const [i, a] of view.boxes.entries()) {
@@ -340,7 +335,6 @@ function expectClear(view: View): void {
   }
 }
 
-/** Every place a reader can go in to, depth first from the top, each read as it is drawn. */
 async function walk(): Promise<View[]> {
   const seen = new Map<string, View>();
   const visit = async (depth: number) => {
@@ -395,7 +389,6 @@ test("every level, group, part and state machine of a real map draws clear, in d
     }
     fills.push((await read()).fill);
   }
-  // The same map takes each theme's own colors.
   expect(fills[0]).not.toBe(fills[1]);
 });
 
@@ -864,7 +857,6 @@ test("Full screen, F and a tap on a touch screen send the whole diagram to the p
   expect(pictures()[0]?.asked).toBe(true);
   expect(still?.src.startsWith(DRAWING_SOURCE_PREFIX)).toBe(true);
   expect(still?.alt.startsWith(place)).toBe(true);
-  // the picture holds every box of the place, and the map in the card stays where it was
   const drawn = decodeURIComponent(still?.src.slice(DRAWING_SOURCE_PREFIX.length) ?? "");
   for (const box of (await read()).boxes) expect(drawn).toContain(`data-box="${box.label}"`);
   expect(await inFrame(viewBox, null)).toBe(before);
@@ -932,7 +924,6 @@ test("the arrows step through each change on this level and wrap, and More lists
   expect(
     await inFrame(() => document.querySelector("#map [data-pos]")?.textContent ?? "", null),
   ).toMatch(/added|changed/);
-  // More opens on its press, and the comparison is a toggle that turns off on a second press
   const more = await inFrame(() => {
     const button = document.querySelector("#map [data-more]") as HTMLButtonElement;
     button.click();
@@ -1037,7 +1028,6 @@ test("the full-screen map opens at the state it was given, fills its window, and
   expect(filled.map).toEqual([0, 0, 1000, 700]);
   expect(filled.svg).toBeGreaterThan(700 - 100);
   expect(filled.fs).toBe("none");
-  // a plain scroll moves the map, and ⌘-scroll still zooms
   const wheel = (init: WheelEventInit) => {
     const svg = document.querySelector("#map svg") as SVGSVGElement;
     const box = svg.getBoundingClientRect();
@@ -1104,12 +1094,10 @@ test("on a touch screen the full-screen map moves under a finger, pinches, and c
     for (const m of moves) fire("pointerup", m.id, m.to);
   };
   const start = await inFrame(viewBox, null);
-  // one finger moves the map, and the size stays
   await inFrame(touches, [{ id: 1, from: [200, 300], to: [140, 240] }]);
   const moved = await inFrame(viewBox, null);
   expect(moved[0]).toBeCloseTo((start[0] as number) + 60 / (390 / (start[2] as number)), 0);
   expect(moved[2]).toBeCloseTo(start[2] as number, 3);
-  // two fingers pinching apart zoom in around their middle
   await inFrame(touches, [
     { id: 2, from: [180, 300], to: [120, 300] },
     { id: 3, from: [220, 300], to: [280, 300] },

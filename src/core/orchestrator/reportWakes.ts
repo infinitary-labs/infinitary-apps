@@ -17,7 +17,6 @@ import { REVIEW_FIX_RULES } from "./intentBrief";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 import type { KindWords, WakeKeyedTask, WakeTask } from "./wakes";
 
-/** The facts of a report, a review and a requested response. */
 export type ReportFacts =
   | {
       /** Host-owned delivery between a review and its builder, through the durable task lane. */
@@ -58,7 +57,6 @@ export type ReportFacts =
       crewmate: string;
       /** The report, already capped for a wake. */
       excerpt: string;
-      /** What it filed this turn. */
       filed: WakeFiled[];
       /** The work its task waits on that nobody has started (FI3-671). */
       waits?: WakeWait[];
@@ -67,7 +65,6 @@ export type ReportFacts =
        * recorded (INF-735): the report may carry what that work waits for.
        */
       waiting?: WakeKeyedTask[];
-      /** Its cards on the captain's screen when it reported. */
       cards: WakeCard[];
       /**
        * The host's refusal of its completion card, standing until one goes
@@ -97,7 +94,6 @@ export type ReportFacts =
        * from this report keeps them as its origin (`turnOriginOf`).
        */
       captainWords?: { text: string; at: number };
-      /** The work built on its task, open or closed, when there is any (INF-976). */
       builtOn?: WakeBuiltOn[];
       /**
        * The finished programs its crewmate started that returned a branch:
@@ -222,7 +218,6 @@ export type WakeOpenReview = {
   currentEvidenceRevision?: number;
   stateRevision?: number;
   currentStateRevision?: number;
-  /** The review task's key. */
   key: string;
   verdict: Exclude<ReviewVerdict, "pass">;
   /** The head that verdict read; absent when none was recorded. */
@@ -245,12 +240,10 @@ export function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): str
   return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${next ? ` ${reviewFindingsNext()}` : ""}`;
 }
 
-/** A builder report's pass at an earlier version, which does not cover the one on offer. */
 export function earlierPassText(pass: { read: string; offered: string }): string {
   return ` Its review passed at ${pass.read.slice(0, 7)} only; that pass does not cover ${pass.offered.slice(0, 7)}, the version now on offer.`;
 }
 
-/** A builder report's open review, and the re-review it may ask for. */
 export function openReviewText(review: WakeOpenReview): string {
   return ` Its open review ${review.key} last returned ${review.verdict} at ${review.head ? review.head.slice(0, 7) : "an unrecorded head"}.${review.evidenceRevision !== undefined ? ` It read evidence revision ${review.evidenceRevision}; the builder now has revision ${review.currentEvidenceRevision}.` : ""} ${review.stateRevision !== undefined ? `Its assigned validation state is ${review.stateRevision}; the builder now has state ${review.currentStateRevision}. ` : ""}${REVIEW_NEW_HEAD_NEXT}`;
 }
@@ -423,7 +416,6 @@ export const REVIEW_HANDOFF_NEXT = {
     "The captain answered your reviewer's question after its review closed; the history carries the answer word for word, and it governs. If it chose a change, make it under the review's fix rules, commit it, then push and follow your brief's delivery for the new version: a new merge card, with a new review as your rigor asks. If it kept the code as built, nothing more is needed. Do not ask the first mate to relay it.",
 } as const;
 
-/** A report, a review and a requested response, worded. */
 export const REPORT_WORDS: KindWords<ReportFacts> = {
   "review-handoff": (facts) => {
     return `Host handoff from ${facts.from} at ${facts.head}: ${facts.excerpt}${facts.findings?.length ? `\n${facts.stage === "card" ? "Findings for the captain" : "Auto-fix findings"}:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}\n${REVIEW_HANDOFF_NEXT[facts.stage]}`;

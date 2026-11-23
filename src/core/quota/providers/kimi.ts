@@ -67,10 +67,8 @@ export type KimiUsageParse =
   | { kind: "windows"; windows: QuotaWindowView[]; plan?: string }
   /** The answer's shape, with nothing Infinitary reads as a window. */
   | { kind: "empty"; plan?: string }
-  /** Not an answer this reader knows. */
   | { kind: "unrecognized" };
 
-/** Read the usages answer into Infinitary windows and the plan's name. */
 export function parseKimiUsage(body: unknown, now: number): KimiUsageParse {
   const root = asRecord(body);
   if (!root || (!("usages" in root) && !("usage" in root) && !("limits" in root)))

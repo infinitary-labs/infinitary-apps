@@ -10,7 +10,6 @@ import { bindTools, type CrewmateToolDelegate } from "../../src/core/session/too
 import { codingSpec } from "./codingSession";
 import { type SDKUserMessage, scriptedClaudeFactory } from "./scriptedClaudeQuery";
 
-/** A crewmate as a case describes it: its facts, its callbacks, and its continuations. */
 export type CrewmateCase = CrewmateToolDelegate & {
   taskId: string;
   cwd: string;
@@ -23,7 +22,6 @@ export type CrewmateCase = CrewmateToolDelegate & {
   onRateLimit?: (reading: ClaudeRateLimit) => void;
   onServed?: (accountId: string) => void;
   log?: (line: string) => void;
-  /** The continuation boundary, as the supervisor follows it. */
   onContinuationStart?: () => void;
   onContinuationEnd?: (error?: string, cutOff?: CutOff) => void;
 };
@@ -115,19 +113,16 @@ export const says = {
 
 export type Emit = (message: unknown) => void;
 
-/** A turn opens on a pushed message: the client runs, and takes the message in. */
 export function opens(emit: Emit, message: SDKUserMessage): void {
   emit(says.running);
   emit(says.ack(message));
 }
 
-/** A turn ends on its result, and the client is idle again. */
 export function closes(emit: Emit, message: unknown): void {
   emit(message);
   emit(says.idle);
 }
 
-/** A client that answers every prompt in one turn, with what `reply` says. */
 export function answering(reply: (message: SDKUserMessage) => unknown[]) {
   return (message: SDKUserMessage, emit: Emit) => {
     if (message.priority === CLAUDE_STEER_PRIORITY) return;

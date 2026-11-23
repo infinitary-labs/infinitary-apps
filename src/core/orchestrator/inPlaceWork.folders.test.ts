@@ -130,7 +130,6 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       startPolicy: "when-ready",
     });
 
-    // It starts on its own, in the folder itself, with a brief that names no delivery.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     const session = h.sessionSpecs.at(-1);
     expect(session?.cwd).toBe(h.folder);
@@ -147,7 +146,6 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     expect(h.specs.at(-1)?.procedure).toEqual({ delivery: "none", rigor: "none" });
     expect(h.specs.at(-1)?.onOpenChange).toBeUndefined();
 
-    // A second refusal while it stands updates it and files nothing new.
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
     h.ship("shipped2", "Ship the shop again");
@@ -155,18 +153,14 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       `${repair.key} "${FOLDER_REPAIR_TITLE}" is already doing it.`,
     );
     expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1);
-    // The standing crewmate is told of the newer version, on a turn of its own.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
     expect(h.crewmate.promptCalls[1]).toContain("Another merge, SHOP-");
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
 
-    // Still behind: the host leaves it open.
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
-    // The crewmate sets the draft aside and fast-forwards; the host sees it
-    // and closes the task as settled, with its own line.
     await run(h.folder, "stash", "push", "-u", "-m", `${repair.key}: the captain's draft`);
     await run(h.folder, "pull", "--ff-only", "origin", "main");
     await h.supervisor.inPlaceWork.closeCurrentFolders();
@@ -337,7 +331,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
     expect(repair.shape?.in_place).toMatchObject({ cause: "missing" });
 
-    // It starts in the folder that held the missing one, with the missing folder's brief.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     const parent = dirname(h.folder);
     expect(h.sessionSpecs.at(-1)?.cwd).toBe(parent);
@@ -351,11 +344,9 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
 
-    // Still missing: it stays open.
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
-    // The crewmate clones it again; the host reads it back and closes the task.
     await git(parent, ["clone", h.remote, h.folder]);
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
@@ -402,7 +393,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
       `When ${header?.key} was starting on this computer`,
     );
 
-    // A second task finds the same repair standing, and nothing new is filed.
     await h.supervisor.starts.dispatchQueuedTask("footer01");
     expect(couldNotStartOf(h.tasks.get("footer01"))).toContain(
       `${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`,
@@ -460,14 +450,12 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     expect(repair).toMatchObject({ title: FOLDER_REPAIR_TITLE });
     expect(repair.shape?.in_place).toMatchObject({ cause: "missing", noticed: "start" });
 
-    // The repair itself still starts, in the folder above the missing one.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.sessionSpecs.at(-1)?.cwd).toBe(dirname(h.folder));
     expect(h.crewmate.promptCalls[0]).toContain(
       `Goal: bring back the folder of shop at ${h.folder}`,
     );
 
-    // Queued folder work waits behind the same words, naming the standing repair.
     await h.supervisor.starts.dispatchQueuedTask(queued.id);
     const waiting = h.tasks.get(queued.id);
     expect(waiting?.status).toBe("open");
@@ -496,13 +484,11 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
       status: "queued",
       repoId: h.repo.id,
     });
-    // The captain moved the folder somewhere else.
     const moved = join(scratchDir("infinitary-moved-"), "shop");
     renameSync(h.folder, moved);
     const unchecked = new Error("This custom connection needs its checked account.");
     h.sessions.open.mockRejectedValueOnce(unchecked);
 
-    // The first start: the repair opens in the folder above, and its crewmate cannot open.
     await h.supervisor.starts.dispatchQueuedTask("header01");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -513,7 +499,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);
     untouched();
 
-    // The captain names the folder's new place and presses Start; it fails again.
     h.repos.configure(h.repo.id, { path: moved });
     h.sessions.open.mockRejectedValueOnce(unchecked);
     await h.supervisor.starts.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
@@ -536,14 +521,12 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
       status: "queued",
       repoId: h.repo.id,
     });
-    // The captain moved the folder somewhere else.
     const moved = join(scratchDir("infinitary-moved-"), "shop");
     renameSync(h.folder, moved);
     h.sessions.open.mockRejectedValueOnce(
       new Error("This custom connection needs its checked account."),
     );
 
-    // The first start opens in the folder above the missing one, and fails.
     await h.supervisor.starts.dispatchQueuedTask("header01");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -553,7 +536,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
     expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);
 
-    // The captain names the folder's new place and presses Start.
     const named = h.repos.configure(h.repo.id, { path: moved }).path;
     await h.supervisor.starts.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
@@ -594,7 +576,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
 
   it("at app start brings a clean folder up to date, files the repair for one with edits, and leaves one on another branch or missing", async () => {
     const h = await project();
-    // Merged on the website: the clean folder moves forward, with one line.
     const first = await h.mergeOnWebsite("feat: merged on the website (#3)");
     await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(await git(h.folder, ["rev-parse", "HEAD"])).toBe(first);
@@ -603,14 +584,12 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     ]);
     expect(h.repairs()).toEqual([]);
 
-    // On another branch: left alone, and nothing is said.
     const second = await h.mergeOnWebsite("feat: another merge (#4)");
     await run(h.folder, "checkout", "-b", "spike");
     await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(await git(h.folder, ["rev-parse", "main"])).toBe(first);
     expect(h.repairs()).toEqual([]);
 
-    // Behind with the captain's edits: the repair, which says the start found it.
     await run(h.folder, "checkout", "main");
     writeFileSync(join(h.folder, "draft.txt"), "the captain's draft\n");
     await h.supervisor.inPlaceWork.checkFoldersAtStart();
@@ -651,7 +630,6 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(h.repairs()).toHaveLength(1);
 
-    // Where the project lives moved on: the repair comes back once.
     const moved = await h.mergeOnWebsite("feat: a later merge (#5)");
     await h.supervisor.inPlaceWork.checkFoldersAtStart();
     const again = h.repairs().filter((row) => row.id !== closed.id);
@@ -755,7 +733,6 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     expect(reply).toContain(`Could not close PR: ${refused}`);
     expect(repair).toMatchObject({ title: PULL_REPAIR_TITLE, startPolicy: "when-ready" });
 
-    // It starts on its own, in the project's folder, with the GitHub pair and nothing that ships.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
     expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.repo.path);
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "active", worktreeDir: "", branch: "" });
@@ -775,11 +752,9 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"));
 
-    // Still open where the project lives: the host leaves it open.
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
-    // Closed on GitHub: the host reads it closed and closes the task, with its own line.
     h.closeOnGitHub();
     await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
@@ -809,7 +784,6 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     const note = h.tasks.timeline(h.taskId).find((event) => event.data?.pullRepair);
     expect(note).toMatchObject({ feed: false });
 
-    // The same pull request again names the standing task.
     const discarded = h.tasks.get(h.taskId);
     if (!discarded) throw new Error("the discarded task is gone");
     expect(h.supervisor.inPlaceWork.filePullRepair(discarded, refused)).toMatchObject({
@@ -876,7 +850,6 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
   it("starts on this computer inside the folder with no delivery line, while an ordinary task of the project waits for the Mac mini", async () => {
     const h = await runsOnTheMini();
 
-    // An ordinary task follows the project's Runs on and waits for that computer.
     const ordinary = await h.supervisor.intake.commission({
       title: "Edit the one-pager",
       intent: intent("Edit the one-pager."),
@@ -886,7 +859,6 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     await ordinary.started;
     expect(h.tasks.get(ordinary.taskId)).toMatchObject({ status: "open", deviceId: MINI });
 
-    // Folder work starts here, in the folder itself.
     const folder = await h.supervisor.intake.commission({
       title: "Bring the business folder up to date",
       intent: intent("Bring the business folder up to date with main."),

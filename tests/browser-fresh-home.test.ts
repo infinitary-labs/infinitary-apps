@@ -35,7 +35,6 @@ function installedClaudeCode(): { ran: string } {
   return { ran };
 }
 
-/** The Claude chip's row as the home's core answers it. */
 function claudeRow(answers: FreshHomeAnswers) {
   const providers = answers.plain["inf:auth:providers"] as InvokeResponse<"inf:auth:providers">;
   return providers.find((provider) => provider.id === "anthropic-claude");

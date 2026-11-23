@@ -132,7 +132,6 @@ export class InstalledKeymap {
     };
   }
 
-  /** Reads what is saved again, installing it when it changed. */
   private reload(): void {
     const read = this.source.keymap();
     const { saved, unreadable } = this.snapshot;
@@ -192,7 +191,6 @@ type Witness = {
  */
 const WITNESSES_MAX = 256;
 
-/** Whether two presses are the same key with the same modifiers, held or not. */
 function samePress(a: KeyPress, b: KeyPress): boolean {
   return (Object.keys(a) as (keyof KeyPress)[]).every((key) => a[key] === b[key]);
 }
@@ -252,7 +250,6 @@ export function pressMoveKey(contents: WebContents, id: MoveCommandId): void {
   if (frame.name) contents.send("inf:keyboard:move", { key, frame: frame.name });
 }
 
-/** The movement commands' handlers for one window. */
 export function moveCommands(contents: WebContents): Readonly<Record<MoveCommandId, () => void>> {
   return Object.fromEntries(
     (Object.keys(MOVE_KEYS) as MoveCommandId[]).map((id) => [id, () => pressMoveKey(contents, id)]),
@@ -554,7 +551,6 @@ export function shellCommands(
     ...(Object.fromEntries(
       SHELL_COMMAND_IDS.map((command) => [command, () => tell(command)]),
     ) as Record<ShellCommandId, () => void>),
-    // A panel's command is the shell page's too, told by its id alone.
     panel: tell,
   };
 }

@@ -30,7 +30,6 @@ import type { HostCookie } from "../host";
  * 1), retires: it is deleted unread the first time the list meets it.
  */
 
-/** One signed-in site: its site, when the captain signed in, which entry it is, its rule and the pages passed through. */
 export type SignedInSite = {
   site: string;
   /** When the captain signed in there, last. */
@@ -186,7 +185,6 @@ export class WebSignIns {
     return true;
   }
 
-  /** Remove a site's entry: what it was, or nothing when none was kept. */
   remove(site: string): SignedInSite | undefined {
     const record = this.get(site);
     rmSync(this.fileFor(signInSite(site)), { force: true });

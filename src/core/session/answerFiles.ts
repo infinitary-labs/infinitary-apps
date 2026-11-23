@@ -24,7 +24,6 @@ const CLAUDE_CLIENT_ANSWER_TOKENS = 25_000;
  */
 export const ANSWER_WHOLE_MAX_CHARACTERS = (CLAUDE_CLIENT_ANSWER_TOKENS / 2) * 4;
 
-/** Where a task's answers too long to read whole are saved: a folder in its temporary folder. */
 export function answersDir(tempDir: string): string {
   return join(tempDir, "answers");
 }
@@ -41,7 +40,6 @@ export function savedAnswerText(path: string, answer: string): string {
   return `This answer is ${count(answer.length)} characters across ${count(lines)} line${lines === 1 ? "" : "s"}, more than the ${count(ANSWER_WHOLE_MAX_CHARACTERS)} a tool answer carries whole, so Infinitary saved it unchanged at \`${path}\`. Read it there in parts with your file tools, or search it with your shell.`;
 }
 
-/** A JSON answer keeps the extension a JSON reader expects; any other is text. */
 function extensionOf(answer: string): string {
   try {
     JSON.parse(answer);

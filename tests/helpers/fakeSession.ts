@@ -53,9 +53,7 @@ export type FakeSession = ModelSession & {
   aborts: (string | undefined)[];
   detaches: number;
   disposed: boolean;
-  /** Any session event, to every subscriber. */
   emit(event: SessionEvent): void;
-  /** Ends the running prompt. */
   settle(): void;
   /** The running prompt throws, as a backend's does when it breaks outright. */
   rejectPrompt(message: string): void;
@@ -176,13 +174,11 @@ export function fakeSession(options: FakeSessionOptions = {}): FakeSession {
   return session;
 }
 
-/** A factory of fakes, with every spec it was opened with and every session it opened. */
 export type FakeSessionFactory = SessionFactory & {
   specs: SessionSpec[];
   sessions: FakeSession[];
 };
 
-/** Opens a fake per spec, carrying the spec's owner and model. */
 export function fakeSessionFactory(
   backend: SessionBackend = "pi",
   options: Omit<FakeSessionOptions, "owner" | "model"> = {},

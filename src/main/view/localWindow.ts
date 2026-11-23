@@ -177,7 +177,6 @@ export class LocalWindow {
     });
   }
 
-  /** Whether the first mate welcomes the window now. */
   inReach(): boolean {
     return this.link.state().contact === "in-reach";
   }
@@ -192,7 +191,6 @@ export class LocalWindow {
     return this.link.state().homeChanges;
   }
 
-  /** One core request the window asked, answered by the first mate over the connection. */
   async dispatch<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown[],

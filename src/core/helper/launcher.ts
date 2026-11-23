@@ -31,7 +31,6 @@ export function appLauncher(options: {
   appDir: string;
   resourcesDir: string;
   env: NodeJS.ProcessEnv;
-  /** The search path's own command, as `findOnPath` finds it. */
   onPath?: (name: string) => string | undefined;
 }): Launcher {
   if (!options.packaged) return { executable: options.execPath, args: [options.appDir] };

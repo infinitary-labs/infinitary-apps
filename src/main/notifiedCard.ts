@@ -9,12 +9,10 @@
  */
 let notified: string | null = null;
 
-/** Notes the card the captain's click on its notification asked for. */
 export function noteNotifiedCard(cardId: string): void {
   notified = cardId;
 }
 
-/** The card a click asked for and no window has taken yet; null for none. */
 export function takeNotifiedCard(): string | null {
   const cardId = notified;
   notified = null;

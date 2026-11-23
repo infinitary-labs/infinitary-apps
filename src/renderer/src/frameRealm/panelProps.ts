@@ -376,7 +376,6 @@ function frameAsks(bridge: FrameBridgeApi): PanelAsks {
   };
 }
 
-/** A card view's data, as the host last pushed it in its view state. */
 export function cardData(state: unknown): StoreValue {
   const card = (state as { card?: { data?: unknown } } | null)?.card;
   return (card?.data ?? null) as StoreValue;
@@ -388,7 +387,6 @@ export function cardRevision(state: unknown): number {
   return typeof revision === "number" ? revision : 0;
 }
 
-/** The place a card kept (`card.keep`), as the host pushed it in its view state. */
 export function cardKept(state: unknown): StoreValue {
   const card = (state as { card?: { kept?: unknown } } | null)?.card;
   return (card?.kept ?? null) as StoreValue;

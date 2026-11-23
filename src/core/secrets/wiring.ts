@@ -10,7 +10,6 @@ import { ProtectedSecrets } from "./protected";
 import type { EndedUseReceipt } from "./requests";
 import { SecretsSettings } from "./settings";
 
-/** What Secrets needs from the supervisor: its host cards, its steer and the shared card decision. */
 type SecretsSupervisor = {
   cards: {
     hostCards: {

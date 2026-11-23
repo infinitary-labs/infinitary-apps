@@ -645,7 +645,6 @@ describe("protected Secrets owner", () => {
         problem,
       })),
     );
-    // Nothing was recorded, approved, kept or run.
     expect(backend.history()).toEqual([]);
     expect(requests.receipts()).toEqual([]);
     expect(readdirSync(join(dir, "runs"))).toEqual([]);

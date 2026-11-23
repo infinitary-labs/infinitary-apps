@@ -18,7 +18,6 @@ import { git } from "./git";
  */
 
 const REPO_ROOT = join(__dirname, "../../..");
-/** The launcher, built from its source for this machine once per file. */
 let SHIM = "";
 beforeAll(() => {
   SHIM = join(scratchDir("infinitary-git-launcher-"), "git");

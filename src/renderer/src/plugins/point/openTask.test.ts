@@ -12,8 +12,6 @@ vi.mock("../reads/appExecutor", () => ({
   searchedTask: () => undefined,
 }));
 
-/** The one way a pointing gesture opens a task: its waiting card forward, or its record. */
-
 const target = () => ({
   focusCard: vi.fn(() => true),
   openRecord: vi.fn(),

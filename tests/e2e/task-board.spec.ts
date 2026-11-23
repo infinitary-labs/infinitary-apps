@@ -254,7 +254,6 @@ test("the task board opens from the Tasks header and ⌘B, and the keyboard driv
       // The tile lights as its own rest does, as the lit task reaches it (INF-237); no other does.
       await expect(boardTile(page, "FM3K-4")).toHaveAttribute("data-board-lit", "");
       await expect(boardTile(page, "FM3K-1")).not.toHaveAttribute("data-board-lit", "");
-      // The summary leaves the tile and input usable.
       await expectClearOf(
         page,
         page.locator("[data-point-summary] > div").last(),

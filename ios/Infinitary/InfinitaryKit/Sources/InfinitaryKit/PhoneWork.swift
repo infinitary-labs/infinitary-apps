@@ -285,7 +285,6 @@ public enum PhoneRowOpening: Equatable, Sendable {
     case card(String)
     /// The card of a required step put off, which the Mac's `show-card` move puts up again.
     case showCard
-    /// The task's record.
     case record
 }
 
@@ -300,7 +299,6 @@ public struct PhoneBoard: Decodable, Sendable {
     public struct ClosedLeftOut: Decodable, Sendable { public let done: [String: [String]] }
     public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
 
-    /// How many Done rows this board left out: zero on a whole board.
     public var leftOutDone: Int { closedLeftOut?.done.values.reduce(0) { $0 + $1.count } ?? 0 }
 
     /// The Mac's `applyTaskBoardDelta` keeps a board read without its closed rows so, less each row the delta brings

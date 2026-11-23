@@ -396,7 +396,6 @@
   };
   const groupCh = (G) => kidsOfGroup(G).reduce((c, P) => c.map((x, j) => x + P.ch[j]), [0, 0, 0]);
 
-  // ---- views: what one diagram shows
   const subOf = (n, plain) => {
     if (cmp < 0 || !n.st) return plain;
     if (n.kind === "file")

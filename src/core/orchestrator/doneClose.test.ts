@@ -24,7 +24,6 @@ import { seedTask } from "../tasks/seedTask";
 const EVIDENCE = "The meter reads on time on the bench.";
 const WORDS = "Close the meter task, the pull request can stay.";
 
-/** The facts the close recorded on its close event. */
 function recorded(world: SettleWorld) {
   const close = world.tasks.timeline(TASK).find((event) => event.data?.deliveryFacts);
   return { data: close?.data ?? undefined, facts: deliveryFactsOf(close?.data ?? undefined) };
@@ -706,7 +705,6 @@ describe("a carried-on close whose carrier was once handed to a task dropped sin
   const CARD = "card-meter-merged";
   const OLD_LINE = "The meter repairs moved to their own pull request, which the carrier offers.";
 
-  /** The captain's message about the meter, answered by the meter's merge card he accepted. */
   async function carriedOnce(world: SettleWorld, handedToDropped: boolean) {
     world.tasks.capture.openAsk({ id: "meter-ask", text: "Make the meter read on time." });
     world.tasks.capture.attachAsk("meter-ask", TASK, "tool:spawn_crewmate");

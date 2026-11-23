@@ -150,7 +150,6 @@ async function harness() {
   });
   const sources = join(root, "sources");
   mkdirSync(sources, { recursive: true });
-  /** A plugin folder as its author ships it. */
   const plugin = (name: string, files: Record<string, string>): string => {
     const dir = join(sources, name);
     for (const [file, text] of Object.entries(files)) {
@@ -218,7 +217,6 @@ describe("PluginInstaller", () => {
       const said = await h.installer.install({ source: "path", spec: source });
       expect(said).toContain("The captain is asked on a card");
 
-      // One host card, whose two answers are host effects.
       const card = h.cards().find((entry) => entry.id === consentCardId("token-watch"));
       expect(card).toMatchObject({
         author: "host",
@@ -235,7 +233,6 @@ describe("PluginInstaller", () => {
       expect(card?.body).toContain("<code>tasks.board</code>, <code>v_usage_v1</code>");
       expect(card?.body).toContain(m.cardConsentPanelNote({ here: m.placeThisComputer() }));
 
-      // Staged, not added: no directory, no record, no panel, no feed line.
       expect(existsSync(join(h.paths.pluginsDir, "token-watch"))).toBe(false);
       expect(h.records.installed()).toEqual([]);
       expect(h.installed()).toEqual([]);
@@ -415,12 +412,10 @@ describe("PluginInstaller", () => {
       await h.settled();
       const first = h.records.get("token-watch");
 
-      // The same folder again, unchanged: nothing to do.
       expect(await h.installer.install({ source: "path", spec: source })).toContain(
         "already added at that version",
       );
 
-      // A new version asking for the same things goes straight in.
       writeFileSync(join(source, "manifest.json"), manifest({ version: "1.1.0" }));
       writeFileSync(join(source, "panel.tsx"), `${PANEL}// a fix\n`);
       expect(await h.installer.install({ source: "path", spec: source })).toContain(
@@ -466,7 +461,6 @@ describe("PluginInstaller", () => {
         'updated "Token watch", a panel by Acme, to 1.2.0',
       ]);
 
-      // Another source may not take an id already added.
       const other = h.plugin(join("elsewhere", "token-watch"), {
         "manifest.json": manifest(),
         "panel.tsx": PANEL,
@@ -557,13 +551,11 @@ describe("PluginInstaller", () => {
       expect(mineDir).toBe(join(h.paths.personalCacheDir, "mine", mineVersion));
       expect(readFileSync(join(mineDir ?? "", "panel.mjs"), "utf8")).toContain("function Panel");
       expect(h.personal.framePanelDir("installed", "mine", mineVersion)).toBeNull();
-      // Off, nothing is handed out; back on, the same version is.
       await h.personal.setEnabled(false);
       expect(h.personal.framePanelDir("installed", "token-watch", version)).toBeNull();
       expect(h.personal.framePanelDir("yours", "mine", mineVersion)).toBeNull();
       await h.personal.setEnabled(true);
       expect(h.personal.framePanelDir("installed", "token-watch", version)).toBe(dir);
-      // Removed, never again.
       await h.installer.uninstall("token-watch");
       expect(h.personal.framePanelDir("installed", "token-watch", version)).toBeNull();
     } finally {
@@ -700,7 +692,6 @@ describe("PluginInstaller", () => {
       writeFileSync(join(h.paths.pluginsStagingDir, path, "panel.tsx"), PANEL);
     };
     try {
-      // One install still waits on the captain's card; one is added.
       await h.installer.install({ source: "path", spec: waiting });
       await h.installer.install({ source: "path", spec: added });
       h.supervisor.cardActions.act(consentCardId("clock"), "add");
@@ -870,7 +861,6 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
       await h.settled();
       expect(h.records.get("pr-checks")?.capabilities).toMatchObject({ integrations: [github] });
 
-      // The same connection with one more action is the captain's call again.
       const wider = { ...github, actions: ["read", "write"] };
       writeFileSync(
         join(source, "manifest.json"),
@@ -1123,7 +1113,6 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(h.installed()).toEqual([]);
         h.books.set(id, true);
         await h.personal.refresh();
-        // A panel whose files changed after the click mounts nothing.
         writeFileSync(
           join(h.paths.pluginsDir, id, "panels/token-watch/manifest.json"),
           manifest({ sql: ["v_usage_v1", "v_tasks_v1"] }),
@@ -1173,7 +1162,6 @@ describe("adding runbooks through the panel installer's consent", () => {
           () => [join(h.paths.pluginsDir, id)],
         );
         expect(reopened.firstmate()).toEqual(h.books.firstmate());
-        // The same folder can still be added as a panel of its own, on its own card.
         await h.installer.install({
           source: "path",
           spec: join(h.paths.pluginsDir, id, "panels/token-watch"),
@@ -1202,7 +1190,6 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(h.books.list().some((book) => book.id === id)).toBe(false);
         expect(h.books.firstmate().text).not.toContain("# Studio workflows");
         expect(h.feed().at(-1)).toBe(runbookRemovedLine(title, "Studio"));
-        // Removing the runbook takes its panel away, and not one added on its own.
         expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
       } finally {
         h.personal.dispose();

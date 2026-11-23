@@ -24,7 +24,6 @@ import { isProfileRetired } from "../storage/retiredProfile";
  */
 
 export type HelperPlace = {
-  /** Whether it runs from a packaged app. */
   readonly packaged: boolean;
   readonly flavor: BuildFlavor;
   /** Whose app this is (`@shared/codeNames`): its own folder is this spelling's. */

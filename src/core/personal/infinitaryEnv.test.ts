@@ -32,7 +32,6 @@ describe("infinitary-env.d.ts", () => {
 
   it("declares every exported contract type inside the @infinitary/contracts module, with its doc", () => {
     expect(INFINITARY_ENV_DTS).toContain('declare module "@infinitary/contracts" {');
-    // Every type the contracts module exports, read from its source.
     const exported = [
       ...readFileSync(CONTRACTS_PATH, "utf8").matchAll(/^export (type|interface) (\w+)/gm),
     ];

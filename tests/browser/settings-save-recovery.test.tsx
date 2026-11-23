@@ -23,7 +23,6 @@ import { openSize, openWindow } from "./window";
  * General first, then Intelligence.
  */
 
-/** The reason a refused Settings write gives in this story. */
 const REFUSAL = "The saved settings are locked. Try again.";
 
 /** What Electron hands the window for a handler that threw `TypeError(reason)`. */
@@ -36,15 +35,10 @@ function refusedAs(channel: InvokeChannel, reason: string): Error {
 /** Words that belong to the transport, never to a refusal a person reads. */
 const TRANSPORT = /Error invoking remote method|\bfm:|(?:Type|Zod)?Error:|\[object Object\]/;
 
-/**
- * The refusals the story has set up, one per channel: the next save on that
- * channel is refused, at once or once the test lets it answer.
- */
 function refusals() {
   const next = new Map<InvokeChannel, { reason: string; held: Promise<void> }>();
   let release = () => {};
   return {
-    /** Refuses the next save on `channel`; `hold` keeps it unanswered until `release`. */
     refuseNext(channel: InvokeChannel, reason = REFUSAL, hold = false) {
       const held = hold
         ? new Promise<void>((resolve) => {
@@ -53,9 +47,7 @@ function refusals() {
         : Promise.resolve();
       next.set(channel, { reason, held });
     },
-    /** Lets the held refusal answer. */
     release: () => release(),
-    /** Refuses this save when one is set up for its channel. */
     async check(channel: InvokeChannel) {
       const refusal = next.get(channel);
       if (!refusal) return;
@@ -68,7 +60,6 @@ function refusals() {
 
 type Refusals = ReturnType<typeof refusals>;
 
-/** A row's feedback, read as a person reads it. */
 async function expectRefusal(feedback: () => HTMLElement | null, reason = REFUSAL) {
   await expect.poll(() => feedback()?.textContent ?? null).not.toBeNull();
   const element = feedback() as HTMLElement;
@@ -79,12 +70,9 @@ async function expectRefusal(feedback: () => HTMLElement | null, reason = REFUSA
   expect(element.textContent).not.toMatch(TRANSPORT);
 }
 
-/** One Settings row, by its id. */
 const row = (id: string) => document.querySelector<HTMLElement>(`[data-setting="${id}"]`);
-/** A row's switch. */
 const switchOf = (id: string) =>
   row(id)?.querySelector<HTMLButtonElement>('[role="switch"]') ?? null;
-/** A row's refusal. */
 const alertOf = (id: string) => row(id)?.querySelector<HTMLElement>('[role="alert"]') ?? null;
 const checked = (id: string) => switchOf(id)?.getAttribute("aria-checked");
 
@@ -123,7 +111,6 @@ function answerGeneral(bridge: FakeBridge, home: Answers, refuse: Refusals) {
   });
 }
 
-/** The one Codex account the Intelligence story holds, and its name. */
 const ACCOUNT_ID = "acct_save_feedback";
 const ACCOUNT_LABEL = "Personal";
 const CODEX = "openai-codex";
@@ -259,7 +246,6 @@ test("a refused Settings save keeps what is saved, says why, and saves when trie
       ["diagnostics", !before],
     ]);
 
-    // Reopening reads what is saved.
     await closeSettings();
     await openSettings();
     await expect.poll(() => checked("your-panels")).toBe("false");

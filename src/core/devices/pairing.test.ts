@@ -66,7 +66,6 @@ function pairingAt(
   return { pairing, dir, clock, problems };
 }
 
-/** One network interface entry, as `os.networkInterfaces()` lists it. */
 const iface = (address: string, internal = false): NetworkInterfaceInfo =>
   ({
     address,
@@ -825,7 +824,6 @@ describe("device pairing", () => {
     const routes = grantRoutes({ at: answered }, answered, offered);
     for (const copy of copies) expect(routes?.also).toContain(copy[0]);
     expect(routes?.also).toHaveLength(PAIRING_LINK_ALSO_MAX);
-    // Every address is still offered.
     for (const at of [...copies.flat(), ...pairing.offerTargets()]) expect(offered).toContain(at);
   });
 
@@ -990,11 +988,9 @@ describe("device pairing", () => {
     expect(pairing.opened({}, shown(mini))).toBeNull();
     // A Mac that controls this Firstmate runs no work to update.
     expect(pairing.opened({}, shown(air))).toBe("kind");
-    // A key the list does not hold, or none, gets nothing.
     expect(pairing.opened({}, shown(createKeyIdentity("Firstmate device")))).toBe("unknown");
     expect(pairing.opened({}, shown(null))).toBe("unknown");
     expect(pairing.opened({})).toBe("unknown");
-    // Removed, it gets nothing either.
     const [listed] = pairing.list().filter((device) => device.kind === "work");
     pairing.remove(listed?.id ?? "");
     expect(pairing.opened({}, shown(mini))).toBe("unknown");
@@ -1097,7 +1093,6 @@ describe("device pairing", () => {
     expect(pairing.setPush(phone.grant.deviceId, registration)).toEqual({ kept: true });
     expect(pairing.pushTargets()).toEqual([{ deviceId: phone.grant.deviceId, registration }]);
     expect(statSync(join(dir, "pushes.json")).mode & 0o777).toBe(0o600);
-    // A computer has no cards pushed to it, and an unknown device is refused.
     expect(() => pairing.setPush(mac.grant.deviceId, registration)).toThrow(
       "Only a paired phone has its cards pushed.",
     );
@@ -1128,7 +1123,6 @@ describe("device pairing", () => {
     expect(again.pushTargets()).toEqual([]);
     expect(again.setPush(phone.grant.deviceId, registration)).toEqual({ kept: true });
 
-    // Null stops it; Remove forgets it with the entry.
     expect(again.setPush(phone.grant.deviceId, null)).toEqual({ kept: false });
     expect(again.pushTargets()).toEqual([]);
     again.setPush(phone.grant.deviceId, registration);
@@ -1312,7 +1306,6 @@ describe("device pairing", () => {
     ).toEqual(["id", "kind", "name", "pairedAt", "user", "onThisMac", "keyPin"]);
     const again = pairingAt(dir, clock).pairing;
     expect(again.list()[0]?.remoteLogin).toBe("sam@mini.local");
-    // Removed, it is forgotten with the device.
     expect(again.remove(id).remoteLogin).toBe("sam@mini.local");
     expect(
       pairingAt(dir, clock)
@@ -1394,7 +1387,6 @@ describe("device pairing", () => {
     expect(pairingAt(dir, clock).pairing.sshConnections()).toEqual([
       { deviceId: id, address: "sam@mini.local" },
     ]);
-    // Removed, it is forgotten with the device.
     pairing.remove(id);
     expect(pairing.sshConnections()).toEqual([]);
     expect(pairingAt(dir, clock).pairing.sshConnections()).toEqual([]);

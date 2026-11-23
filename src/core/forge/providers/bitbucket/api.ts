@@ -15,7 +15,6 @@ const SCOPE =
   // i18n-exempt: served to the crewmate in the gateway's answer
   "A read reaches whatever the key may read through the REST API (the part after /2.0); a write to this task's own repository goes at once, and any other waits on the captain's click.";
 
-/** Bitbucket's name for a page's size. */
 export const BITBUCKET_PAGE_PARAM = "pagelen";
 
 function refuse(why: string): never {
@@ -99,7 +98,6 @@ export function bitbucketDownloadName(file: string): string {
   return (file.split("/").pop() ?? "file").replace(/["\r\n\\/]/g, "") || "file";
 }
 
-/** Bitbucket's next page, under its policy for the task's repository. */
 export function nextBitbucketPagePath(
   link: string | null,
   apiBase: string,

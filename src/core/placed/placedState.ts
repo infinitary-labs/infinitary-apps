@@ -49,7 +49,6 @@ export type Placed = {
   session: PlacedSession | undefined;
   /** The conversation is being opened on this Mac for an ask that came first. */
   adopting: Promise<void> | undefined;
-  /** When that opening began. */
   adoptingSince: number | undefined;
   /** Opens asked there and not yet answered. */
   asking: number;
@@ -77,7 +76,6 @@ export type Placed = {
   openCalls: Set<string>;
   /** Claude calls that ended there this turn, whose results this Mac's copy may still lack. */
   endedCalls: Set<string>;
-  /** This Mac's copy of its conversation's record. */
   readonly record: RecordCopy;
   /** What its session was opened with, to open it there again after that computer restarts. */
   spec: PlacedSpec | undefined;
@@ -187,7 +185,6 @@ export function loadPlaced(
   return placed;
 }
 
-/** The conversation, while this Mac holds it and has not let it go. */
 export function heldSession(placed: Placed): PlacedSession | undefined {
   return placed.session && !placed.session.letGo ? placed.session : undefined;
 }

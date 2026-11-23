@@ -21,7 +21,6 @@ describe("the connection's numbering", () => {
     for (let i = 0; i < 6; i++) journal.record(frame(4));
     expect(journal.since({ epoch: "another-run", seq: 6 })).toBeNull();
     expect(journal.since({ epoch: journal.epoch, seq: 7 })).toBeNull();
-    // Pushes 4 to 6 are kept, so a device that saw 3 still catches up.
     expect(journal.since({ epoch: journal.epoch, seq: 3 })?.map((entry) => entry.seq)).toEqual([
       4, 5, 6,
     ]);

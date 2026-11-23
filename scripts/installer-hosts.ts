@@ -41,7 +41,6 @@ export function routeHostsHere(names: readonly string[], work: string, run: Run,
   rereadHosts(run);
 }
 
-/** Put the original hosts file back and make the resolver read it. */
 export function restoreHosts(work: string, run: Run): void {
   run("/usr/bin/sudo", ["/bin/cp", join(work, "original-hosts"), "/etc/hosts"]);
   rereadHosts(run);
@@ -67,7 +66,6 @@ export async function resolverAnswers(
   return answers;
 }
 
-/** What `resolverAnswers` reads once every name reaches the local feed alone. */
 export function answeredHere(names: readonly string[]): ResolverAnswers {
   return Object.fromEntries(names.map((name) => [name, [LOCAL_FEED_ADDRESS]]));
 }

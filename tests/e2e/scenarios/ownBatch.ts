@@ -140,11 +140,6 @@ function ownBatchMove(body: string, firstmate: boolean): ScenarioAnswer | undefi
   return next ? { calls: [next] } : { text: "Ready." };
 }
 
-/**
- * The crewmate's answer to its change's send-back: a new commit, its story at
- * the new version, the repair declared changed work against the version the
- * captain approved, and a new merge card for the captain.
- */
 function repairMove(change: string, body: string, results: string[]): ScenarioAnswer {
   const title = ownBatchTitle(change);
   const reading = results[0] ?? "";

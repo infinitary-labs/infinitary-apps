@@ -14,7 +14,6 @@ export type FeedLineProps = {
   kind?: string;
   /** Relative age, already formatted ("4m", "2h"). Mono. */
   time?: string;
-  /** A line about a task carries its key as a dim mono prefix. */
   taskKey?: string;
   tone?: FeedLineTone;
   style?: React.CSSProperties;

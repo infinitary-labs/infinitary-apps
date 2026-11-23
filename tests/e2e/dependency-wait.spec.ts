@@ -128,7 +128,6 @@ test("a task waiting on work underway stays waiting past every idle rung and res
         blockedBy: [owner.key],
         workPosture: { state: "idle", reason: "dependency" },
       });
-    // Nothing climbed: no stall card, no card at all, and no nudge.
     expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
     expect(tasks.get(waitingId)?.recoveryRung).toBe(2);
     const steers = () =>
@@ -152,7 +151,6 @@ test("a task waiting on work underway stays waiting past every idle rung and res
     await recordBarButton(page, "next").click();
     await expect.poll(() => tasks.get(owner.id)?.status, { timeout: 30_000 }).toBe("dropped");
     if ((await recordCard(page).count()) > 0) await closeRecord(page);
-    // The waiting crewmate is resumed once, on its own lane, and carries on.
     await expect
       .poll(
         () =>

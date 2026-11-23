@@ -29,7 +29,6 @@ export function prefersReducedMotion(): boolean {
   return osQuery()?.matches ?? false;
 }
 
-/** Called on every change of the effective preference. Returns the unsubscribe. */
 export function onReducedMotionChange(listener: Listener): () => void {
   bindOs();
   listeners.add(listener);

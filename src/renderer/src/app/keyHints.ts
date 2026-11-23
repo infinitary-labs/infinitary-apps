@@ -40,7 +40,6 @@ export function commandKeys(
   };
 }
 
-/** A control's key hint from the installed keys, drawn again when they change; none for no command. */
 export function useCommandKeys(id: AnyCommandId | null): CommandKeys {
   const { bindings } = useInstalledKeymap();
   return id === null

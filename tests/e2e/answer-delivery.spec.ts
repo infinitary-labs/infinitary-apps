@@ -71,7 +71,6 @@ test("a message nothing took effect after gets one retry that shows the answer, 
       .poll(async () => (await cards(page)).map((card) => card.title), { timeout: 30_000 })
       .toEqual([RETRY_ANSWER_TITLE]);
     await barrier(page, "thanks");
-    // One answer, no notice, and the closing words the model said stayed hidden.
     const shown = await cards(page);
     expect(shown.filter((card) => card.title === RETRY_ANSWER_TITLE)).toHaveLength(1);
     expect(await notices(page)).toEqual([]);
@@ -101,7 +100,6 @@ test("a retry that shows nothing raises one notice quoting only the captain's wo
     expect(JSON.stringify(await cards(page))).not.toContain("alert(1)");
     await page.screenshot({ path: test.info().outputPath("notice.png") });
 
-    // No second retry or notice follows by itself.
     const served = retriesServed(app);
     await barrier(page, "hello again");
     expect((await notices(page)).map((card) => card.id)).toEqual([first?.id]);
@@ -123,7 +121,6 @@ test("a retry that shows nothing raises one notice quoting only the captain's wo
     expect(second?.id).not.toBe(first?.id);
     expect(second?.body).toContain("ship &lt;b&gt;it&lt;/b&gt;");
 
-    // Leave it closes the notice and runs nothing.
     const before = retriesServed(app);
     await page.getByRole("button", { name: "Leave it", exact: true }).click();
     await expect.poll(async () => (await notices(page)).length).toBe(0);
@@ -147,7 +144,6 @@ test("the retry only shows an answer: work it tries to start is refused and the 
     await say(page, `${SILENT_ANSWER_MARKER}, ${RETRY_ACTS_MARKER}: look into the meter`);
     await expect.poll(async () => (await notices(page)).length, { timeout: 30_000 }).toBe(1);
     await barrier(page, "thanks");
-    // The refused call put nothing on the record, and nothing was started.
     expect(await workTasks()).toEqual([]);
     expect((await notices(page)).length).toBe(1);
   } finally {

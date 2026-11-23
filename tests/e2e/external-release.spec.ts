@@ -16,7 +16,6 @@ import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRele
 import { noteDone, shownCard } from "./stack";
 import { runFromSearch } from "./windowKeys";
 
-/** The crewmate's note the spec seeds on the stage, and finds there. */
 const RELEASE_NOTE_TITLE = "The release was published";
 
 test("a verified external release closes reported work, not a dismissed note, and saves its unlanded edit", async () => {
@@ -100,7 +99,6 @@ test("a verified external release closes reported work, not a dismissed note, an
       )
       .toBe(true);
     await expect.poll(() => existsSync(worktreeDir)).toBe(false);
-    // The saved edit is on the task's kept ref.
     expect(git("-C", repoDir, "show", `${keptRefFor("released")}:pending.txt`)).toBe(
       "not released\n",
     );

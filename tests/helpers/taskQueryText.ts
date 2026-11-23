@@ -19,7 +19,6 @@ export function readPagedTaskQuery(reads: string[]): TaskQueryRow[] {
   return assembleTasksReads(reads);
 }
 
-/** Follow nextOffset until the named field is complete. */
 export async function pageTaskField(
   run: (args: { key: string; field: string; offset: number }) => Promise<{ text: string }>,
   key: string,

@@ -289,7 +289,6 @@ extension PhoneJourney {
         XCTAssertEqual(split.value as? String, "0", "The choice survives a relaunch")
     }
 
-    /// Command-Comma opens Settings' list and Appearance opens from it.
     private func openAppearanceByKeys() async throws {
         try await pressPhoneKey(",", modifiers: .command, in: app)
         let appearance = app.buttons["phone-settings-appearance"]

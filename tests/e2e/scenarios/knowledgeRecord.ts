@@ -41,21 +41,10 @@ export const MOCK_KNOWLEDGE_RECORD_REPORT = "Recorded how the inbox retries, wit
 export const MOCK_KNOWLEDGE_REUSE_REPORT =
   "Read the inbox finding and its evidence before checking.";
 
-/**
- * One crewmate saves an article as a concept and a sourced finding, then a
- * second save of the same link reuses the concept; a later crewmate finds the
- * concept by searching in other words, follows it to the finding, reads the excerpt and
- * declares its use.
- */
 export const knowledgeRecord: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {
     if (isFirstmate || !wantsStream) return undefined;
-    // The knowledge crewmates (knowledge.spec.ts): one saves an article
-    // as a concept, cites it from a finding, and is refused a second
-    // concept for the same link; a later one finds the concept by a
-    // search in other words, follows it to the finding, reads the excerpt and
-    // declares its use. Each step reads the ids the app answered with.
     if (!isFirstmate && body.includes(KNOWLEDGE_RECORD_PROMPT_MARKER) && wantsStream) {
       const concept = /Recorded concept (c-[a-z0-9]{6})/.exec(latestUserTail)?.[1];
       const article = {

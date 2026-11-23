@@ -3,7 +3,6 @@ import type { SettleServiceHost } from "./settleHost";
 
 type LocksHost = Pick<SettleServiceHost, "runtimeState" | "tasks" | "cards">;
 
-/** How a settle's wait for the crewmate's turn to end came out. */
 export type TurnEndWait = { ended: true } | { ended: false; cancelled: string };
 
 /**
@@ -21,7 +20,6 @@ export class SettleLocks {
   /** What runs a task's kept merge approval; set by the settle owners. */
   runKept: (taskId: string) => void = () => {};
 
-  /** What holds the task's settle now, in words, or nothing. */
   holder(taskId: string): string | undefined {
     return this.leases.get(taskId)?.label;
   }
@@ -83,7 +81,6 @@ export class SettleLocks {
   }
 }
 
-/** One task's settle, from its claim to its release. */
 export class SettleLease {
   /** `waiting` for the turn's end, `sent` once its merge request went out. */
   phase: "claimed" | "waiting" | "sent" = "claimed";

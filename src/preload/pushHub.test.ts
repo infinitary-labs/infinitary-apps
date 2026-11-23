@@ -3,7 +3,6 @@ import { createPushHub, type PushSource } from "./pushHub";
 
 type Handler = (event: unknown, raw: unknown) => void;
 
-/** An ipcRenderer stand-in: records attached handlers and emits pushes to them. */
 function fakeIpc() {
   const handlers = new Map<string, Set<Handler>>();
   const source: PushSource = {

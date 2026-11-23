@@ -40,7 +40,6 @@ export function scopeAppliesToModel(scope: string, modelId: string): boolean {
   return false;
 }
 
-/** The scope that bounds a model on one account row: its model window's, else account-wide. */
 function modelScope(
   provider: QuotaProviderView,
   nowMs: number,

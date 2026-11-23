@@ -20,16 +20,10 @@ export const STALE_OFFER_CHOICE_ID = "retry-flush";
 export const STALE_OFFER_BODY_LINE =
   "Ten runs in a row passed with the retry waiting on the flush.";
 
-/**
- * Card evidence: the card goes up with the report, then a revision of it
- * waits on this crewmate's next close-out while it works on.
- */
 export const staleOffer: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {
     if (isFirstmate || !wantsStream) return undefined;
-    // Card evidence: the card goes up with the report, then a revision
-    // of it waits on this crewmate's next close-out while it works on.
     if (!isFirstmate && body.includes(STALE_OFFER_PROMPT_MARKER) && wantsStream) {
       if (latestUserTail.includes("the user chose")) {
         return { text: "Retrying on the queue flush, as chosen." };

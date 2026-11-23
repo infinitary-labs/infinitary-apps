@@ -232,7 +232,6 @@ describe("a release close rechecks after reading its delivery", () => {
 });
 
 describe("a handed-on answer's close rechecks after reading the working copy", () => {
-  /** A change task whose reported result the captain handed on, with no pull request. */
   function handedOn(): SettleWorld {
     const world = settleWorld();
     seedDelivery(world.tasks, TASK, { prNumber: undefined, headSha: undefined });

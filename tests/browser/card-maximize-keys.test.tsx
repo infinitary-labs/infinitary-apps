@@ -26,7 +26,6 @@ import { openSize, openWindow } from "./window";
 
 const TITLES: [string, string] = ["Compare the two launch plans", "Pick the release window"];
 
-/** The shown card's control named `label`, such as its size control by the words it reads now. */
 const control = (label: string) =>
   page.getByRole("button", { name: label, exact: true }).query() as HTMLElement | null;
 
@@ -36,7 +35,6 @@ const focused = () => document.activeElement;
 const messageShown = () =>
   messageBox()?.checkVisibility({ visibilityProperty: true, opacityProperty: true }) ?? false;
 
-/** Whether the stage holds a maximized card. */
 const maximized = () => document.querySelector("[data-card-layer][data-card-maximized]") !== null;
 
 const rightEdge = () =>

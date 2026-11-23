@@ -259,7 +259,6 @@ describe("the crew's run-out card", () => {
     forgetAnsweredOffers(reread, offered, later);
     expect(creditsOffers(reread, ["openai-codex"], offered, off, later)).toEqual([]);
 
-    // The allowance answers again, then is spent again: one more offer.
     forgetAnsweredOffers(snapshotOf([codexRow("Work", 40)], false), offered, later);
     expect(creditsOffers(reread, ["openai-codex"], offered, off, later)).toHaveLength(1);
   });
@@ -304,7 +303,6 @@ describe("the crew's run-out card", () => {
       redeemSavedResetAction("Work", false),
     ]);
 
-    // Without credits, the saved reset alone raises the card, as its one choice.
     const [resetOnly] = creditsOffers(
       snapshotOf(
         [

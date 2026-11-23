@@ -35,9 +35,7 @@ import type { CoreDispatch } from "../dispatcher";
 type AppRead = {
   /** What it answers, as `area: "reads"` lists it. */
   about: string;
-  /** What a call may pass. */
   args: z.ZodType;
-  /** The args a call without any reads with. */
   defaults?: Record<string, unknown>;
   run: (dispatch: CoreDispatch, args: unknown, host: ReadHost) => Promise<unknown>;
 };

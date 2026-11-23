@@ -221,7 +221,6 @@ export async function branchOfTask(repoDir: string, taskId: string): Promise<str
   return found?.branch ?? defaultTaskBranch(taskId);
 }
 
-/** Every mark in the repository's settings, by branch. */
 async function marks(repoDir: string): Promise<Map<string, string>> {
   const out = await git(
     repoDir,

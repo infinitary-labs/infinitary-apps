@@ -83,7 +83,6 @@ function checkPushOrigin(project: { origin: string; pushOrigin?: string } | unde
  * commit (`retire`).
  */
 
-/** A working copy made or found here, as `inf:working-copy:prepare` answers it when nothing refused. */
 export type PreparedCopy = Extract<WorkOrderResponse<"inf:working-copy:prepare">, { dir: string }>;
 
 export type WorkingCopiesOptions = Pick<WorkspaceServiceOptions, "pnpm" | "pool"> & {
@@ -148,7 +147,6 @@ export class WorkingCopies {
     );
   }
 
-  /** Every task with a working copy here, by the folder it is in. */
   list(): string[] {
     try {
       return readdirSync(this.worktreesDir, { withFileTypes: true })
@@ -161,7 +159,6 @@ export class WorkingCopies {
     }
   }
 
-  /** The task's working copy is here. */
   has(task: string): boolean {
     try {
       lstatSync(this.dir(task));
@@ -172,7 +169,6 @@ export class WorkingCopies {
     }
   }
 
-  /** Where the task's working copy is, whether or not it is there yet. */
   dir(task: string): string {
     return join(this.worktreesDir, checked(task));
   }
@@ -191,8 +187,6 @@ export class WorkingCopies {
   async poolSettled(): Promise<void> {
     await this.workspace.poolSettled();
   }
-
-  // ---- making one -----------------------------------------------------------
 
   /**
    * The task's working copy, made now or found as it was
@@ -468,8 +462,6 @@ export class WorkingCopies {
       throw forgeAuthRequired(origin, caught, this.knownHosts()) ?? caught;
     }
   }
-
-  // ---- what it holds ---------------------------------------------------------
 
   /** A named commit, or the task branch's head, read where the working copy lives. */
   async revision(
@@ -805,8 +797,6 @@ export class WorkingCopies {
       }
     });
   }
-
-  // ---- inside -------------------------------------------------------------------
 
   /** Null only when the folder is absent; unreadable existing work refuses every consumer. */
   private async workspaceOf(task: string): Promise<TaskWorkspace | null> {

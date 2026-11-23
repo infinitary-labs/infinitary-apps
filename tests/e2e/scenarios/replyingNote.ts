@@ -4,7 +4,6 @@ import { answering } from "../providerRequest";
 /** The first mate's seeded harbour note a reply waits under (stage-reveals.spec.ts). */
 export const REPLYING_NOTE = "Reply under this harbour note";
 export const REPLYING_NOTE_BODY = "<p>Answered next.</p>";
-/** The captain's question under it, and the first mate's answer. */
 export const REPLYING_QUESTION = "Which tide is this for?";
 export const REPLYING_ANSWER = "The evening tide.";
 

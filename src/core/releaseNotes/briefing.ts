@@ -83,7 +83,6 @@ export function highlights(entries: NoteEntry[]): NoteEntry[] {
     .map(({ entry }) => entry);
 }
 
-/** An alpha reaching the stable of its own release. */
 function promotion(from: string | null, to: string): boolean {
   if (!from || !isAlphaVersion(from) || !isStableVersion(to)) return false;
   const a = parseSemver(from);
@@ -138,7 +137,6 @@ function highlight(entry: NoteEntry, index: number, picture: HeroPicture | undef
     entry.area ? ` · ${escapeHtml(areaLabel(entry.area))}` : ""
   }`;
   const words = `<h3>${escapeHtml(entry.title)}</h3>${entry.body ? `<p>${escapeHtml(entry.body)}</p>` : ""}`;
-  // The lead's picture follows its words; a side highlight's leads them.
   return index === 0
     ? `<div><h6>${label}</h6>${words}${picture ? heroPair(picture, LEAD_MAT) : ""}</div>`
     : `<div><h6>${label}</h6>${picture ? heroPair(picture, SIDE_MAT) : ""}${words}</div>`;

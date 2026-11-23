@@ -103,7 +103,6 @@ import Testing
         await home.pause()
         #expect(home.sent.count == 1)
         #expect(filled == [.array([Self.answer("size", "large")])])
-        // The body reads the same answers back.
         home.drafts.read("card-1", answers: .array([Self.answer("size", "large")]))
         #expect(!rewritten.happened)
         detach()

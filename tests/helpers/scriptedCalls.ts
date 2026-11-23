@@ -37,13 +37,11 @@ export type FirstmateCall =
   | AppChangeCall;
 export type CrewmateCall = ToolCallOf<CrewmateBoundTool>;
 
-/** The arguments the live tool of this name takes. */
 export type ScriptedArgs<N extends ScriptedCall["name"]> = Extract<
   ScriptedCall,
   { name: N }
 >["args"];
 
-/** One action a scripted card declares, as emit_card takes it. */
 export type ScriptedCardAction = NonNullable<ScriptedArgs<"emit_card">["actions"]>[number];
 
 /** A Firstmate call in Ollama's native wire shape, for a local-model stand-in. */

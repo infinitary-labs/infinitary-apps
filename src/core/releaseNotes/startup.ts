@@ -32,7 +32,6 @@ export type CatalogLoad =
   | {
       kind: "ok";
       catalog: Catalog;
-      /** Where the catalog's hero pictures sit, beside it. */
       picturesDir: string;
     }
   | { kind: "unavailable" };

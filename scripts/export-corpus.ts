@@ -95,10 +95,6 @@ import {
   type HumanSupervisionPack,
 } from "./human-supervision.ts";
 
-// --------------------------------------------------------------------------
-// The supervision dataset (tables only - C1's provenance and C3's label)
-// --------------------------------------------------------------------------
-
 type TaskRow = FleetTables["tasks"] extends Map<string, infer T> ? T : never;
 type CardRow = FleetTables["cards"] extends Map<string, infer T> ? T : never;
 
@@ -465,10 +461,6 @@ export function buildSupervisionRecord(row: OutcomeRow, tables: FleetTables): Su
   };
 }
 
-// --------------------------------------------------------------------------
-// The R2 provenance rows (tables only)
-// --------------------------------------------------------------------------
-
 /** The task-event kinds R2 writes for an offline reader (`docs/provenance-capture.md`). */
 export const PROVENANCE_EVENT_KINDS = ["decided", "steered", "interrupted"] as const;
 
@@ -538,10 +530,6 @@ export function readProvenanceEvents(dbPath: string): ProvenanceEventRecord[] {
     db.close();
   }
 }
-
-// --------------------------------------------------------------------------
-// The routing rollup (intelligence-bucket routing S5)
-// --------------------------------------------------------------------------
 
 /**
  * Every task the host commissioned with a work shape, in the form the one
@@ -721,10 +709,6 @@ export function routingRollup(tables: FleetTables): RoutingRollup {
   };
 }
 
-// --------------------------------------------------------------------------
-// The export
-// --------------------------------------------------------------------------
-
 export type CorpusExportOptions = {
   /** Observe's development gate, verbatim. Required: there is no ungated call path. */
   gate: DevObserveGateInput;
@@ -736,7 +720,6 @@ export type CorpusExportOptions = {
   /** The supervision session's transcripts (G1). */
   supervisionSessionsDir?: string;
   supervisionSessionFiles?: string[];
-  /** Directory the corpus files are written into. */
   outDir: string;
   includeOps?: boolean;
   now?: number;
@@ -772,7 +755,6 @@ export type CorpusManifest = {
     /** Tripwires, e.g. a taskless (`fleet`) outcome row. */
     warnings: string[];
   };
-  /** R2's provenance rows, by kind. */
   provenance_events: { records: number; by_kind: Record<string, number> };
   /**
    * How the fleet's work was routed (S5): the tier distribution, the rules
@@ -1049,10 +1031,6 @@ export function exportCorpus(options: CorpusExportOptions): CorpusExportResult {
 function sha256Of(content: string | Buffer): string {
   return createHash("sha256").update(content).digest("hex");
 }
-
-// --------------------------------------------------------------------------
-// CLI
-// --------------------------------------------------------------------------
 
 /**
  * The script's half of Observe's gate. There is no Electron `app` here, so

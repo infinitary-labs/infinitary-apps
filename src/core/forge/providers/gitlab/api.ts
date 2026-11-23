@@ -87,7 +87,6 @@ export function gitLabReleaseUpload(raw: string, project: string | null): ApiRou
   return route;
 }
 
-/** The file name a release upload stores, after quotes and separators are stripped. */
 export function gitlabReleaseFileName(file: string): string {
   return (file.split("/").pop() ?? "file").replace(/["\r\n\\/]/g, "") || "file";
 }
@@ -120,7 +119,6 @@ export function gitlabReleaseFileCalls(
   };
 }
 
-/** GitLab's next page, under its policy for the task's project. */
 export function nextGitLabPagePath(
   link: string | null,
   apiBase: string,

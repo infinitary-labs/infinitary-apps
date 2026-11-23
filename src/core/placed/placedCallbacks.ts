@@ -44,7 +44,6 @@ export type CallbackReach = {
   takesCheckDeclarations(deviceId: string): boolean;
 };
 
-/** The task a callback is asked for. */
 export type CallingTask = {
   readonly task: string;
   readonly deviceId: string;
@@ -53,7 +52,6 @@ export type CallingTask = {
   live(): Promise<PlacedSession>;
 };
 
-/** Does one callback the task's computer asked, answering what goes back to it. */
 export async function answerCall(
   reach: CallbackReach,
   placed: CallingTask,
@@ -308,7 +306,6 @@ function cardFile(
   return { dir, file: join(dir, `${request.id}.${request.extension}`) };
 }
 
-/** A card picture's bytes, kept where this Mac's cards show their pictures from. */
 function picture(
   paths: AppPaths,
   task: string,

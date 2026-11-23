@@ -30,7 +30,6 @@ function tableReads(...reads: (ProcessReading[] | null)[]): () => Promise<Proces
   return async () => reads[Math.min(next++, reads.length - 1)] ?? null;
 }
 
-/** The signals the stop sends, recorded without reaching any program. */
 function recordSignals(): (string | number | undefined)[] {
   const sent: (string | number | undefined)[] = [];
   vi.spyOn(process, "kill").mockImplementation((_pid, name) => {

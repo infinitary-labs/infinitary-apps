@@ -12,7 +12,6 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
  * steer tells it to, and the first mate puts up a merge card of its own.
  */
 export const STORY_MERGE_MARKER = "publish the meter story for the first mate";
-/** The captain's ask the first mate answers with its own merge card. */
 export const FIRSTMATE_MERGE_ASK = "put your merge card up for ";
 /** The story, pull request and completion card's one title. */
 export const STORY_MERGE_TITLE = "fix: read the meter on the first paint";

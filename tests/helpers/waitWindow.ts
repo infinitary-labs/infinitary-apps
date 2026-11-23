@@ -29,7 +29,6 @@ const REPORTING_MS = 500;
 /** vitest's own window for a wait with no `timeout`. */
 const VITEST_WINDOW_MS = 1_000;
 
-/** What the running test is: its budget and when it started, when there is one. */
 export type RunningTest = { timeout?: number; startedAt?: number } | undefined;
 
 /**

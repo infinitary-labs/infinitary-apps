@@ -33,7 +33,6 @@ export class ContributionRegistry<T extends Contribution> {
 
   constructor(readonly slot: ContributionSlot) {}
 
-  /** Registers one contribution; the returned function removes it again. */
   register(item: T): () => void {
     const existing = this.items.get(item.id);
     if (existing) {

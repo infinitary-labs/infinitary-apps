@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGE_CLOCK, StageClock, stageRateTarget } from "./stageClock";
 
-/** Run frames 16 ms apart from `from` for `ms`; returns the last real time. */
 function run(clock: StageClock, from: number, ms: number): number {
   let real = from;
   for (const end = from + ms; real < end; ) {
@@ -103,7 +102,6 @@ describe("the stage clock", () => {
     expect(clock.rate).toBe(1);
     const resumed = clock.advance(at);
     expect(resumed).toBeGreaterThan(held);
-    // Full speed again: a second of real time is a second of stage time.
     expect(clock.advance(at + 1000) - resumed).toBeCloseTo(1000, 6);
     // An event stamped between frames lands between them on the stage too.
     expect(clock.read(at + 1008) - clock.advance(at + 1000)).toBeCloseTo(8, 6);

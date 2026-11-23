@@ -16,7 +16,6 @@ import {
  * carries never decide its class: the typed fields do.
  */
 
-/** Run one turn's messages through a fresh normalizer; return the result's outcome. */
 function turn(...messages: unknown[]): ClaudeNormalizeResult {
   const state = createNormalizerState();
   let last: ClaudeNormalizeResult = { events: [] };
@@ -224,7 +223,6 @@ describe("fmEventsFromClaudeMessage, a turn's outcome", () => {
       "task-1",
       state,
     );
-    // The next turn answers clean: the earlier error does not follow it.
     const next = fmEventsFromClaudeMessage(successResult(), "task-1", state);
     expect(next.failure).toBeUndefined();
     const after = fmEventsFromClaudeMessage(

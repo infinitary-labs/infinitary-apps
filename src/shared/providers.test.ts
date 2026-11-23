@@ -67,7 +67,6 @@ describe("PROVIDER_CATALOG", () => {
     expect(backendForProvider(CLAUDE_PROVIDER_ID)).toBe("claude");
     expect(isPiProvider("openai-codex")).toBe(true);
     expect(isPiProvider(CLAUDE_PROVIDER_ID)).toBe(false);
-    // An unknown id defaults to Pi but is not offered anywhere.
     expect(backendForProvider("mystery")).toBe("pi");
     expect(isPiProvider("mystery")).toBe(false);
   });
@@ -76,7 +75,6 @@ describe("PROVIDER_CATALOG", () => {
     expect(isPiProvider("github-copilot")).toBe(true);
     expect(isRetiredProvider("github-copilot")).toBe(false);
     expect(providerSignInNote({ tier: "subscription" })).toBeUndefined();
-    // A key carries "API key".
     expect(providerSignInNote({ tier: "key" })).toBe("API key");
   });
 

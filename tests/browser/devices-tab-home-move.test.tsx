@@ -58,7 +58,6 @@ test("Start my first mate here again asks first under a warning, and Enter there
     deviceId: "mini",
     name: label,
     stage: "arriving",
-    // The core's own step line, as its progress push carries it.
     text: `Waiting for ${label} to answer.`,
   } as const;
 

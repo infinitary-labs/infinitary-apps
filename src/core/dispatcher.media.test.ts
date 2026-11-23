@@ -8,7 +8,6 @@ import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { startCore } from "./index";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 
-// The dispatcher split must preserve the card recording reader's EOF behavior.
 it("returns an empty recording piece beyond the end without changing its size", async () => {
   vi.stubEnv("PI_OFFLINE", "1");
   const userData = scratchDir("dispatcher-media-");

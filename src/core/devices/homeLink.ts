@@ -283,7 +283,6 @@ export type HomeLinkOptions = {
 export const HOME_WELCOME_TIMEOUT_MS = 10_000;
 
 const DEFAULT_RETRY_MS = [1_000, 2_000, 3_000, 5_000] as const;
-/** Why a work request ended unanswered. */
 const STOPPED = `This computer stopped working for the other ${COMPUTER.one}, so the request ended unanswered.`;
 /** Two `401` answers in a row mean the home no longer lists this device. */
 const REFUSALS_TO_REMOVED = 2;
@@ -456,7 +455,6 @@ export class HomeLink {
     });
   }
 
-  /** Work requests the home has not answered yet. */
   waiting(): number {
     return this.asked.size;
   }
@@ -491,7 +489,6 @@ export class HomeLink {
     return heard;
   }
 
-  /** Stops dialing and closes the connection; every request still waiting is refused. */
   close(): void {
     if (this.stopped) return;
     this.stopped = true;
@@ -756,7 +753,6 @@ export class HomeLink {
     } catch {
       // As for a push.
     }
-    // Every work request the home has not answered goes again, on this connection.
     for (const asked of this.asked) if (!asked.sentOn) this.sendAsked(socket, asked);
     this.wake();
   }
@@ -846,7 +842,6 @@ export class HomeLink {
     }
   }
 
-  /** Keeps the takeover a welcome said with a number no lower than any heard. */
   private heardTakeOverOf(frame: Extract<HomeFrame, { t: "welcome" }>): void {
     const number = frame.homeNumber ?? FIRST_HOME_NUMBER;
     if (!frame.takeOver || number < this.homeNumber) return;
@@ -859,7 +854,6 @@ export class HomeLink {
     }
   }
 
-  /** Keeps a higher home number than any heard before. */
   private heardNumber(homeNumber: number): void {
     if (homeNumber <= this.homeNumber) return;
     this.homeNumber = homeNumber;
@@ -928,7 +922,6 @@ export class HomeLink {
     if (first) this.grant = { ...this.grant, at: first, also: [...others, at] };
   }
 
-  /** One request the home asked: the answer, or why there is none, on the socket it came on. */
   private async answer(
     socket: WebSocket,
     frame: Extract<HomeFrame, { t: "invoke" }>,

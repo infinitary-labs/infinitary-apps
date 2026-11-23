@@ -22,7 +22,6 @@ import {
  */
 const LONGEST_COMMAND = 128 * 1024 - 1;
 
-/** The bash calls a mock crewmate writes `files` into `shots/` of its working copy with, one file each. */
 export function writeFilesCalls(
   files: ReadonlyArray<{ path: string; bytes: Buffer }>,
 ): ScriptedCall[] {
@@ -99,7 +98,6 @@ const MOCK_STANDARD_SECTIONS: Record<(typeof STANDARD_TIER_HEADINGS)[number], st
   Risk: "Low - one test file changed and no production code.",
   "Not done": "Nothing.",
 };
-/** The completion card's After words. */
 export const MOCK_STANDARD_AFTER = "The read now follows the flush; ten consecutive runs passed.";
 export const MOCK_STANDARD_CARD_BODY = completionCardBody(
   "<p>The meter test sometimes read before the pending write finished.</p>",

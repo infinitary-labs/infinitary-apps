@@ -203,7 +203,6 @@ describe("legacyActionEffect", () => {
       },
       { id: "explain-more", label: "Explain more", variant: "ghost", keepsOpen: true },
     ]);
-    // Idempotent: a card already in P1's vocabulary is untouched.
     expect(migrateLegacyActions(migrated)).toEqual(migrated);
     expect(migrateLegacyActions(card.actions)).toEqual(card.actions);
   });
@@ -230,13 +229,11 @@ describe("isPreviewBody", () => {
   it("keeps a body prose when every script sits inside a figure", () => {
     expect(isPreviewBody(`<p>Press Next run.</p>${MOVING}<p>Ten runs passed.</p>`)).toBe(false);
     expect(isPreviewBody(`<p>Two figures.</p>${MOVING}${MOVING}`)).toBe(false);
-    // Nested inside an inner figure, or inside the drawing itself.
     expect(isPreviewBody(`<FIGURE><figure><script>a()</script></figure></FIGURE>`)).toBe(false);
     expect(isPreviewBody("<figure><svg><script>a()</script></svg></figure>")).toBe(false);
   });
 
   it("still reads a script outside any figure, a style sheet or a canvas as a preview", () => {
-    // The script that drives a figure from outside it.
     expect(
       isPreviewBody(`<p>Press Next run.</p><figure><svg></svg></figure><script>a()</script>`),
     ).toBe(true);
@@ -265,11 +262,9 @@ describe("isPreviewBody", () => {
   });
 
   it("reads tags as the browser does: script text and comments close nothing", () => {
-    // A </figure> inside a script string does not end the figure.
     expect(
       isPreviewBody("<figure><script>s='</figure>'</script><script>b()</script></figure>"),
     ).toBe(false);
-    // Commented-out markup is not markup.
     expect(isPreviewBody("<p>Lead.</p><!-- <script>old()</script> -->")).toBe(false);
     expect(isPreviewBody("<figure><!-- </figure> --><script>a()</script></figure>")).toBe(false);
     // An unclosed figure holds the rest of the body, as the parser reads it.

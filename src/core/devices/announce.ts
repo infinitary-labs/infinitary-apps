@@ -41,7 +41,6 @@ export type HomeAnnouncementOptions = {
   args: (name: string, port: number) => readonly string[];
   /** The name this computer announces under: a Mac's own name in System Settings, a Linux or Windows home's own name on the network. */
   name: () => Promise<string>;
-  /** The port the connection listens on. */
   port: number;
   /** Calls `fire` after `ms`; answers how to cancel it. Tests stand in a clock. */
   later?: (ms: number, fire: () => void) => () => void;

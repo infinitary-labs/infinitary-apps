@@ -55,7 +55,6 @@ export function isMediaProbeWindow(win: BrowserWindow): boolean {
   return probeWindows.has(win);
 }
 
-/** The page a probe runs in: its markup and the policy it is served with. */
 type ProbePage = { html: string; csp: string };
 
 const RECORDING_PAGE: ProbePage = {
@@ -73,7 +72,6 @@ const TYPEFACE_PAGE: ProbePage = {
   csp: `default-src 'none'; font-src ${APP_FRAME_SCHEME}://${HOST}`,
 };
 
-/** One file a probe's page loads: its bytes and what they are. */
 type ProbeFile = { bytes: Buffer; contentType: string };
 
 /**
@@ -216,7 +214,6 @@ const SOUND_PROBE_SCRIPT = `(async () => {
   return { ok: true, width: 0, height: 0, durationMs: Math.round(duration * 1000) };
 })()`;
 
-/** A refusal the probe could not give in time, or at all. */
 type Failed = { ok: false; reason: string };
 
 /** What a probe's page answered, or why it could not, and what the page's engine said meanwhile. */

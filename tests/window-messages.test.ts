@@ -20,7 +20,6 @@ describe("the window messages a change edits, on today's contract", () => {
     }
   };
   const channels = new Set<string>(Object.keys(invokeContract));
-  // Every module under src/shared that writes an entry of a contract channel.
   const entry = /^ {2}"((?:inf|fm):[^"]+)": \{/gm;
   const modules = (readdirSync(new URL("src/shared/", root), { recursive: true }) as string[])
     .map((path) => `src/shared/${path.split("\\").join("/")}`)

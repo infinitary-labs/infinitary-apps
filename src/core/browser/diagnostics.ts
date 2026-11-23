@@ -83,7 +83,6 @@ export class PageDiagnostics {
     }
   }
 
-  /** The kept requests, a key in a known format hidden in each address once `hidden`. */
   private rows(hidden: boolean): { method: string; url: string; type: string; result: string }[] {
     return [...this.network.values()].map((entry) => ({
       ...entry,

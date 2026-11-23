@@ -27,10 +27,8 @@ export type CostLimit = z.infer<typeof costLimitSchema>;
 /** Where the limit a task follows was set. */
 export type CostLimitSource = "task" | "project" | "app";
 
-/** The app's own limit when nothing was saved: the default. */
 export const DEFAULT_COST_LIMIT: CostLimit = { usd: COST_LIMIT_DEFAULT_USD };
 
-/** The limit a task follows: nearest task answer, else its project's, else the app's. */
 export function effectiveCostLimit(levels: {
   task?: CostLimit | null | undefined;
   project?: CostLimit | null | undefined;
@@ -41,7 +39,6 @@ export function effectiveCostLimit(levels: {
   return { limit: levels.app, source: "app" };
 }
 
-/** The amount of a limit, or null when it is no limit. */
 export function limitUsd(limit: CostLimit): number | null {
   return "usd" in limit ? limit.usd : null;
 }
@@ -66,7 +63,6 @@ export function raisedLimit(limit: number, step: number, spent: number): number 
   return next;
 }
 
-/** The hold card's title: the task and the limit it passed. */
 export function costHoldTitle(handle: string, limit: number): string {
   return `${handle} passed its ${formatUsd(limit)} limit`;
 }

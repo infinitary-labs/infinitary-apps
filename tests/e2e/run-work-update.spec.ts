@@ -74,7 +74,6 @@ test("updated over the connection: the copy a command kept gets the home's First
   const inReach = helperWords.inReach(THIS_MAC, "MacBook Pro")[0];
   await expect.poll(before.lines).toContain(inReach);
 
-  // The home's update order: it keeps the home's copy in its place, answers, and ends.
   expect(
     await at.connection().ask(device?.id ?? "", "fm:firstmate:update", [], { anyVersion: true }),
   ).toEqual({ restarts: true });
@@ -86,7 +85,6 @@ test("updated over the connection: the copy a command kept gets the home's First
   expect(readInstalled(me.dataDir).app).toBe(kept);
   expect(readdirSync(me.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
 
-  // Its background starts the same path again, now this Mac's version.
   const after = started();
   await expect.poll(after.lines).toContain(inReach);
 });
@@ -148,7 +146,6 @@ test("updated over the connection, the copy a command kept downloads the publish
       sha256: release.sha256,
     };
 
-    // A download that does not match changes nothing, and it runs on.
     const first = started();
     await expect.poll(first.lines).toContain(inReach);
     release.mode("corrupt");
@@ -164,7 +161,6 @@ test("updated over the connection, the copy a command kept downloads the publish
       state: "mismatch",
     });
 
-    // One that matches is kept in its place; the run answers and ends.
     release.mode("success");
     expect(await ask("fm:firstmate:update-download", [download])).toEqual({
       restarts: true,
@@ -180,7 +176,6 @@ test("updated over the connection, the copy a command kept downloads the publish
     expect(readdirSync(me.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
     expect(release.verifications()).toHaveLength(1);
 
-    // Its background starts the same path again, now the downloaded copy.
     const after = started();
     await expect.poll(after.lines).toContain(inReach);
   } finally {

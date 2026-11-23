@@ -30,7 +30,6 @@ const TAUGHT_TOGETHER: readonly (readonly AnyCommandId[])[] = [
   ["cards.choice-1", "cards.choice-2", "cards.choice-3", "cards.choice-4"],
 ];
 
-/** The commands a press of `id`'s key teaches: itself, and those taught with it. */
 export function taughtBy(id: AnyCommandId): readonly AnyCommandId[] {
   return TAUGHT_TOGETHER.find((group) => group.includes(id)) ?? [id];
 }

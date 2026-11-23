@@ -51,7 +51,6 @@ describe("the task graph (R1)", () => {
       const rows = inbox.allFor(FIRSTMATE_RECIPIENT);
       expect(rows).toHaveLength(1);
       expect(rows[0]?.facts).toMatchObject({ kind: "captain-start", move: "start" });
-      // The sweep leaves a held Start alone; a second press is refused.
       await supervisor.watch.sweepGates(Date.now());
       expect(tasks.get(task.id)?.status).toBe("open");
       expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toContain("already starting");
@@ -242,7 +241,6 @@ describe("the task graph (R1)", () => {
       blockedBy: [blocker.id],
     });
 
-    // A blocked task queues at once and keeps waiting on its blocker.
     expect(supervisor.hostOps.runTaskOp(waits.id, "queue-task")).toBeUndefined();
     await tick();
     expect(tasks.get(waits.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
@@ -254,7 +252,6 @@ describe("the task graph (R1)", () => {
     expect(ops).toHaveLength(1);
     expect(ops[0]).toContain(`the captain queued task ${waits.id}`);
 
-    // Work nothing holds starts on the sweep the queue runs.
     expect(supervisor.hostOps.runTaskOp(later.id, "queue-task")).toBeUndefined();
     await tick();
     expect(tasks.get(later.id)?.status).toBe("active");
@@ -295,7 +292,6 @@ describe("the task graph (R1)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(tasks.get(planned.id)).toMatchObject({ status: "active", activity: "idle" });
-    // Continue is the ladder's nudge with the captain's authority.
     supervisor.hostOps.runTaskOp(planned.id, "continue-task");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
@@ -346,7 +342,6 @@ describe("the task graph (R1)", () => {
       actor: "captain",
       data: { via: "task-card", onWord: true, captainWords: CLOSE_AS_DONE_PRESS, why: "word" },
     });
-    // Closed already: the real limit refuses a second press.
     const again = await supervisor.hostOps.closeDoneFromRecord(planned.id);
     expect(again).toEqual({ ok: false, text: closeDoneClosedRefusal(key2) });
     // The press reads as itself, never as one of the record's other buttons, and woke nobody.
@@ -363,7 +358,6 @@ describe("the task graph (R1)", () => {
     });
     supervisor.hostOps.runTaskOp(planned.id, "start-task");
     await tick();
-    // Start: the history says the captain started it, from the task card.
     expect(tasks.timeline(planned.id).find((event) => event.text === "starting")).toMatchObject({
       actor: "captain",
       data: { via: "task-card" },
@@ -407,7 +401,6 @@ describe("the task graph (R1)", () => {
       { taskId: planned.id, op: "continue-task" },
       { taskId: planned.id, op: "start-task" },
     ]);
-    // None of them woke the Firstmate.
     expect(ops).toEqual([]);
   });
 });

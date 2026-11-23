@@ -58,7 +58,6 @@ const describeWithClaude = executable ? describe : describe.skip;
 /** Long enough for a cold start of a 300MB single-file client, twice over. */
 const PROBE_TIMEOUT_MS = 120_000;
 
-/** Whether the machine's default Claude login is connected right now. */
 async function signedIn(): Promise<boolean> {
   try {
     const result = await runClaude(["auth", "status", "--json"], defaultClaudeConfigDir());

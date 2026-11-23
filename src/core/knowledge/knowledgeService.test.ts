@@ -122,7 +122,6 @@ describe("KnowledgeService", () => {
     expect(finding.committed).toBe(true);
     const findingId = finding.ids[0] as string;
 
-    // A different task on the same project, asking in other words.
     const reader = f.crew("task-b");
     const found = f.service.search(reader, { query: "wake queue retries" });
     expect(found.hits.map((hit) => hit.id)).toContain(inboxId);

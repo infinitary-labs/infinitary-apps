@@ -347,7 +347,6 @@ export class RecordCopy {
     }
   }
 
-  /** One copied stretch written to this Mac's copy, and kept in what it knows it holds. */
   private write(
     dir: string,
     file: { name: string; size: number; offset: number; data: string },
@@ -356,7 +355,6 @@ export class RecordCopy {
       this.wrote(dir, file.name, file.offset + Buffer.byteLength(file.data, "base64"));
   }
 
-  /** A staged file of this Mac's copy now ends at `end`. */
   private wrote(dir: string, name: string, end: number): void {
     const [top, folder] = name.split("/");
     if (top !== STAGED_FOLDER || !folder || this.staged?.dir !== dir) return;
@@ -383,7 +381,6 @@ class CopyNames {
   /** The staged skills that came back in this copy. */
   private readonly back = new Set<string>();
 
-  /** `held` as this order names it, and `also` always. */
   from(
     held: readonly HeldFile[],
     also: readonly { name: string; offset: number }[] = [],
@@ -425,7 +422,6 @@ function stagedSet(name: string): string | undefined {
   return SHARED_STAGING.includes(top) ? top : undefined;
 }
 
-/** The transcripts at the top of this Mac's copy, by their paths, with where each ends. */
 function transcripts(dir: string): { path: string; offset: number }[] {
   let entries: Dirent[];
   try {
@@ -471,7 +467,6 @@ function copiedFiles(dir: string, skip?: string): { name: string; offset: number
   return files;
 }
 
-/** Where the file at `path` ends, when it is a file; none when it is not, or is gone. */
 function fileEnd(path: string): number[] {
   try {
     const stat = statSync(path);
@@ -481,7 +476,6 @@ function fileEnd(path: string): number[] {
   }
 }
 
-/** One copied stretch of a file, written at its offset; the file ends where the stretch does. */
 function writeAt(
   dir: string,
   file: { name: string; size: number; offset: number; data: string },

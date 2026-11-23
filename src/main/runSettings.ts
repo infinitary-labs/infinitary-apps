@@ -11,7 +11,6 @@ import { delimiter, isAbsolute, resolve } from "node:path";
  * command owns the file, as it owns when and as whom the command runs.
  */
 
-/** What a settings file holds once read. */
 export type RunSettings = { path: readonly string[] };
 
 /** The settings, or why the file cannot be used, with the file's full path either way. */

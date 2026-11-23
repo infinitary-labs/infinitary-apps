@@ -23,7 +23,6 @@ import { hostEnv } from "../hostEnv";
  * stop did not work (`stopOlderCopyNow`).
  */
 
-/** A process's program and the arguments after it. */
 export type ProcessCommand = { program: string; args: string[] };
 
 /** The kind of older copy a process is: one with its window, a run a command started, or background work. */
@@ -38,7 +37,6 @@ export type TakeOverDeps = {
   command?: (pid: number) => Promise<ProcessCommand | null>;
   /** The names our programs run under (`OUR_PROGRAMS`). */
   programs?: readonly string[];
-  /** Sends a process a signal (`process.kill`). */
   kill?: (pid: number, signal: NodeJS.Signals) => void;
   /** Lets go of an agent so its service manager does not start its run again (`pauseInBackground`); absent where nothing is set up in the background. */
   unloadAgent?: (service: Service) => Promise<void>;
@@ -57,7 +55,6 @@ export type TakeOverDeps = {
 };
 
 export type TakeOver =
-  /** Nothing holds the older folder now. */
   | { kind: "free" }
   /** The older copy let the folder go; `unloaded` is the agent let go first. */
   | { kind: "stopped"; copy: OlderCopy; unloaded?: Service }

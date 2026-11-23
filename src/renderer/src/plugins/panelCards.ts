@@ -197,8 +197,6 @@ export function cardProp(
   };
 }
 
-// --- the asks ------------------------------------------------------------------
-
 type AskListener = (button: string, via: PanelAskVia) => void;
 
 const askListeners = new Map<string, Set<AskListener>>();

@@ -138,7 +138,6 @@ describe("compilePersonalModule", () => {
     expect(panel).toMatch(/from "app-frame:\/\/lib\/ui\.mjs";\nconst \{ Badge \} = /);
     expect(panel).toMatch(/from "app-frame:\/\/lib\/jsx-runtime\.mjs";/);
     expect(panel).not.toContain("app-plugin:");
-    // The allowlist holds for every panel.
     writeFileSync(
       join(root, "meter", "panel.tsx"),
       'import lodash from "lodash";\nexport default lodash;',
@@ -320,7 +319,6 @@ describe("a panel's card views (docs/ui-plugins.md, \"A panel's cards\")", () =>
     expect(readFileSync(join(compiled.outputDir, "cards", "weekly-review.mjs"), "utf8")).toContain(
       "Panel",
     );
-    // A card view is part of the version: editing it is a new one.
     writeFileSync(join(root, "notes/cards/notes.tsx"), `${VIEW}\n// edited`);
     const edited = await compilePersonalModule({
       extensionId: "notes",
@@ -405,7 +403,6 @@ describe("a panel's own stylesheet (docs/ui-plugins.md, \"A panel's cards\", pie
     const sheet = join(compiled.outputDir, "board.css.mjs");
     expect(readFileSync(sheet, "utf8")).toBe(`export default ${JSON.stringify(css)};\n`);
     expect((await import(pathToFileURL(sheet).href)).default).toBe(css);
-    // An edit to the stylesheet is a new version.
     writeFileSync(join(root, "board/board.css"), ".board { color: var(--fg-2); }\n");
     const edited = await compilePersonalModule({
       extensionId: "board",

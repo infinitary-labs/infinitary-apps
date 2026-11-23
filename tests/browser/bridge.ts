@@ -35,7 +35,6 @@ export class NoAnswer extends Error {}
 
 type Handler = (event: unknown, raw: unknown) => void;
 
-/** A channel's answer: the value itself, or a function of the request that returns it. */
 export type Answer<C extends InvokeChannel> =
   | InvokeResponse<C>
   | ((...request: InvokeRequest<C>) => InvokeResponse<C> | Promise<InvokeResponse<C>>);
@@ -47,7 +46,6 @@ export type FakeBridge = {
   api: FirstmateApi;
   /** Gives, or replaces, one channel's answer. */
   answer<C extends InvokeChannel>(channel: C, answer: Answer<C>): void;
-  /** Pushes one payload to the window, as main does. */
   push<C extends PushChannel>(channel: C, payload: PushPayload<C>): void;
   /** Every request the window sent on a channel, in order. */
   requests<C extends InvokeChannel>(channel: C): InvokeRequest<C>[];

@@ -196,7 +196,6 @@ describe("drawCrewmate's speed streak", () => {
     drawCrewmate(plain.ctx, settled, 0, 0, colors, 5_000);
     const racing = recordingContext();
     drawCrewmate(racing.ctx, { ...settled, streak }, 0, 0, colors, 5_000);
-    // Twelve segments, painted first, then the very same solid.
     const segments = racing.log.slice(0, 12 * 3);
     expect(segments.filter((line) => line.startsWith("S"))).toHaveLength(12);
     expect(segments[0]).toBe("M120,0");

@@ -29,12 +29,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
   (await import("../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/**
- * The whole core booted in a plain Node process (tests/helpers/bootedCore.ts):
- * Intelligence, projects, panels, repository policy, the feed, event sinks
- * and the quota snapshot.
- */
-
 describe("the core, driven with no Electron in the process", () => {
   let userDataDir: string;
   let core: Core;
@@ -283,7 +277,6 @@ describe("the core, driven with no Electron in the process", () => {
         core.services.tasks.list().find((t) => t.kind === "operation" && t.repoId === added.repo.id)
           ?.title,
       ).toBe(`Set up project ${added.repo.name}`);
-      // A project already on the list is named, never carded or added twice.
       const cardsBefore = core.services.supervisor.cards.snapshot().length;
       expect(
         (
@@ -399,7 +392,6 @@ describe("the core, driven with no Electron in the process", () => {
       .spyOn(core.services.repos, "setup")
       .mockRejectedValue(new Error("clone failed"));
     const signedIn = vi.spyOn(core.services.forges, "isSignedIn").mockReturnValue(false);
-    /** Proposes, clicks Add project on the setup card, and reads what Firstmate hears. */
     const addFromCard = async (value: { kind: "clone"; origin: string }) => {
       const calls = told.mock.calls.length;
       await change.run({ action: "project-setup", value, evidence: "clone private" });
@@ -483,7 +475,6 @@ describe("the core, driven with no Electron in the process", () => {
       });
       expect(await keyOf("keyed-setup")).toBe("KYS");
 
-      // A key another project has is refused at the ask, in words, with no card.
       const cards = core.services.supervisor.cards.snapshot().length;
       const inUse = "KYS is already the task key of keyed-setup. Choose another.";
       expect(
@@ -576,7 +567,6 @@ describe("the core, driven with no Electron in the process", () => {
       );
       expect(renamed?.name).toBe("Wallet");
       expect(core.services.repos.get(wallet.repo.id)?.name).toBe("wallet-app");
-      // The first mate names it the same way, on the captain's words, with one feed line.
       await change.run({
         action: "project-name",
         value: { projectId: project?.id ?? "", name: "Harbor Ledger" },
@@ -680,7 +670,6 @@ describe("the core, driven with no Electron in the process", () => {
       const value = { repoIds: [business.id, infra.id], project: "led" };
       const cardId = `card-project-change-project-move-${targetProject}`;
 
-      // The card names what moves and what follows, and Not now moves nothing.
       expect(
         (
           await change.run({
@@ -776,9 +765,6 @@ describe("the core, driven with no Electron in the process", () => {
         }).key,
       ).toBe(`LEI-${Math.max(...[running, finished].map((t) => Number(t.key.split("-")[1]))) + 1}`);
 
-      // What a move can never do is refused in words, and changes nothing: a
-      // repository already alone in its project, a removed project or the
-      // personal workspace as the target, and the personal workspace moved.
       const personal = core.services.repos.list().find((repo) => repo.kind === "personal");
       if (!personal) throw new Error("No personal workspace");
       const personalKey = core.services.repos.projectOf(personal.id)?.key ?? "";
@@ -939,7 +925,6 @@ describe("the core, driven with no Electron in the process", () => {
       });
       expect(JSON.parse(applied.text).action).toBe("project-move");
       expect(core.services.repos.projectOf(kit.id)).toMatchObject({ key: "SHW", repositories: 3 });
-      // Exactly one feed line, and no card raised or changed by the exact words.
       expect(
         events.filter(
           (event) => event.type === "personalized" && event.text === "Moved shop-kit into shop-web",

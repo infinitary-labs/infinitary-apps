@@ -50,7 +50,6 @@ export class DecisionKeyStore {
     }
   }
 
-  /** Writes the user's own key, 0700 directory and 0600 file, replacing any earlier one. */
   set(id: DecisionModelId, key: string): void {
     const trimmed = key.trim();
     if (!trimmed) throw new Error("a decision model's key cannot be empty");

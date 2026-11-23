@@ -267,7 +267,6 @@ describe("the task record (task-system P0)", () => {
     await supervisor.settling.settle.settleTask(first.taskId, "land", undefined, "captain");
     await tick();
     expect(tasks.get(second.taskId)).toMatchObject({ status: "active" });
-    // The accepted start-feed fix identifies finished work by title and key.
     const finished = tasks.get(first.taskId);
     expect(events).toContainEqual({
       type: "firstmate_note",

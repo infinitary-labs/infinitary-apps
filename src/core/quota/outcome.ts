@@ -18,7 +18,6 @@ export type ProviderOutcome = {
   windows: QuotaWindowView[];
   /** Paying past the allowance, when the reading says it. */
   credits?: QuotaCreditsView;
-  /** Saved resets the account holds, when the reading says it. */
   savedResets?: QuotaSavedResetsView;
   plan?: string;
   account?: string;
@@ -93,7 +92,6 @@ export function failureFromResponse(result: QuotaResponse): ProviderOutcome {
   return { status: "unavailable", windows: [], reason: `http_${result.status}` };
 }
 
-/** True when the response carried a usable body. */
 export function succeeded(result: QuotaResponse): boolean {
   return isSuccess(result.status);
 }

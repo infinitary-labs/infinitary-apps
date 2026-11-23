@@ -141,7 +141,6 @@ describe("ShellPreferencesService", () => {
     off();
     service.setPersonalPanels(false, "captain");
     expect(followed).toEqual([false, false, true]);
-    // A write of any preference still pushes the whole value, panels included.
     expect(pushes.at(-1)?.payload).toEqual(service.get());
   });
 

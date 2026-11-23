@@ -89,9 +89,7 @@ export default defineConfig({
           // The process that runs one task command, also a utility process:
           // axi-sdk-js writes process.exitCode (src/core/axi/axiProcess.ts).
           axiProcess: resolve(__dirname, "src/core/axi/axiProcess.ts"),
-          // The process that runs one program's script (src/core/program/).
           programProcess: resolve(__dirname, "src/core/program/programProcess.ts"),
-          // The process that runs one panel's background module (src/core/panels/).
           panelProcess: resolve(__dirname, "src/core/panels/panelProcess.ts"),
           // The process one file the files command copies is set aside in, so
           // its handle's close never drops the app's own locks (src/core/files/).

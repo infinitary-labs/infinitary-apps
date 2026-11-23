@@ -71,7 +71,6 @@ function matches(entry: string, path: string): boolean {
   return new RegExp(`^${pattern.join("[^/]*")}$`).test(path);
 }
 
-/** Whether a repository path is something the desktop app is built from. */
 export function isDesktopPath(path: string): boolean {
   if (TEST_FILE.test(path)) return false;
   return DESKTOP_BUILD.some((entry) => matches(entry, path));
@@ -91,7 +90,6 @@ export function isDesktopPath(path: string): boolean {
  * relaunch waits on. Entries match like DESKTOP_BUILD's.
  */
 export const SIGNED_INSTALLER_FILES: readonly string[] = [
-  // The Mac update code.
   "src/core/update/macUpdates.ts",
   "src/core/update/macInstallation.ts",
   "src/core/update/updateChannels.ts",
@@ -111,7 +109,6 @@ export const SIGNED_INSTALLER_FILES: readonly string[] = [
   "scripts/mac-app-launcher.m",
   "scripts/mark-mac-installation.mjs",
   "packaging/mac-installation.json",
-  // Signing and notarization.
   "packaging/entitlements.plist",
   "packaging/release-identity.json",
   "scripts/notarize.ts",

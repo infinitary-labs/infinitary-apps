@@ -18,7 +18,6 @@ import {
 import { pager } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
-/** The goal this spec seeds, read back whole on the Info tab. */
 const GOAL = "Chart the harbour's soundings.";
 
 /**
@@ -79,7 +78,6 @@ test("a task card's tabs run Info, Cards, Activity, Crewmate, and Info ends in a
     const pane = recordCard(page);
     await expect(pane).toHaveAttribute("data-task-record", task.id);
 
-    // The tabs in the captain's order, Cards with how many and Activity with none.
     const tabs = pane.locator("[data-task-tab]");
     await expect(tabs).toHaveCount(4);
     expect(
@@ -115,7 +113,6 @@ test("a task card's tabs run Info, Cards, Activity, Crewmate, and Info ends in a
     await expect(more).toBeVisible();
     await expect(more).not.toHaveAttribute("open", /.*/);
 
-    // The tabs by keys: the arrow moves along the strip and Enter shows Cards.
     await focusOn(recordTab(page, "info"));
     await pressKey(recordTab(page, "info"), "ArrowRight");
     await pressKey(recordTab(page, "cards"), "Enter");

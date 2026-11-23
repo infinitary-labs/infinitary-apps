@@ -56,7 +56,6 @@ export const SECRETS_CHECK_WORDS = {
   refused: `Nothing was asked: this request did not pass its checks. Run \`${SECRETS_COMMAND} check\` with the same --env and program to see which one, then inject again with a new --id.`,
 } as const;
 
-/** The words beside a check's answer. */
 export function checkWords(check: UseCheck): string {
   return "problem" in check
     ? SECRETS_CHECK_WORDS.problem[check.problem]

@@ -339,7 +339,6 @@ describe("createQuotaFetcher (per-account sensor)", () => {
     const byAccount = Object.fromEntries(
       snapshot.providers.map((provider) => [provider.accountId, provider]),
     );
-    // Two Codex accounts are two independent sensor rows.
     expect(byAccount.acct_c1).toMatchObject({
       provider: "codex",
       accountLabel: "Personal",
@@ -609,7 +608,6 @@ describe("session-pushed quota in the snapshot", () => {
 
     const { snapshot } = await fetcher();
     expect(snapshot.providers.map((row) => row.provider)).toEqual(["codex", "claude"]);
-    // A pushed row is a first-class account row, not a footnote.
     expect(snapshot.providers[1]).toMatchObject({
       accountId: "acct_claude",
       accountLabel: "Personal Max",
@@ -929,7 +927,6 @@ describe("delegated renewal (routine expiry recovers without a sign-in)", () => 
       reason: "rate_limited",
       retryAfter: "60",
     });
-    // The distinction the old pipeline could not make at all.
     expect(timedOut?.status).not.toBe(limited?.status);
   });
 

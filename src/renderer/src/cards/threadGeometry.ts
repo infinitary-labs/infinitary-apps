@@ -35,7 +35,6 @@ export const THREAD_MAX = 360;
 /** Below this the card is not a card any more, and the ladder takes its next rung. */
 export const CARD_MIN = 400;
 
-/** Where the thread sits, and what the pair measures. */
 export type ThreadPlacement = {
   /** `beside` is rungs 1 and 2; `in-place` is rung 3. */
   home: "beside" | "in-place";
@@ -52,7 +51,6 @@ export function cardWidth(stage: number, cardMax: number = THREAD_CARD_MAX): num
   return Math.min(cardMax, stage - THREAD_STAGE_MARGIN);
 }
 
-/** The thread column inside a given stage: 40% of it, held between its widths. */
 export function threadColumnWidth(stage: number): number {
   return Math.round(Math.min(THREAD_MAX, Math.max(THREAD_MIN, 0.4 * stage)));
 }

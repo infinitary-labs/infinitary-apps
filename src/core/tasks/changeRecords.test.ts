@@ -27,7 +27,6 @@ function setup(db = openInMemoryDatabase()) {
   return { db, tasks };
 }
 
-/** A project the app manages, on the host its origin names. */
 function addProject(
   db: AppDatabase,
   id: string,
@@ -633,7 +632,6 @@ describe("the change a task carries after the upgrade", () => {
       repoId: "chart",
       branch: "fm/task-work",
     });
-    // The own pull request opens with no review, and its checks pass.
     const ownSlot: Partial<TaskDelivery> = {
       mode: "direct-pr",
       prNumber: 12,
@@ -759,7 +757,6 @@ describe("the change a task carries after the upgrade", () => {
     const first = "1".repeat(40);
     const second = "2".repeat(40);
 
-    // The crewmate opens its pull request and pushes a first version.
     seedDelivery(tasks, "fresh", {
       prNumber: 12,
       prUrl: "https://github.com/octo/chart/pull/12",
@@ -796,7 +793,6 @@ describe("the change a task carries after the upgrade", () => {
       checks: { state: "green", at: 7_500 },
     });
 
-    // The review, the story and the captain's consent at the first version.
     const approval: MergeAuthorization = {
       ...KEPT,
       id: "approval-12",
@@ -897,7 +893,6 @@ describe("the change a task carries after the upgrade", () => {
       consent: null,
     });
 
-    // The merge, and the task's close: one receipt, the record kept.
     seedDelivery(tasks, "fresh", { ci: "merged", landedMode: "pr", mergedSha: BASE });
     tasks.close("fresh", { status: "done", reason: "merged", actor: "captain" });
     const closed = tasks.get("fresh");
@@ -913,7 +908,6 @@ describe("the change a task carries after the upgrade", () => {
     expect(change?.versions).toHaveLength(2);
     expect(change?.updatedAt).toBe(closed?.updatedAt);
 
-    // A discard records its own receipt.
     tasks.close("plain", { status: "dropped", reason: "discarded", actor: "captain" });
     expect(store.changes.forTask("plain")?.receipt).toEqual({
       outcome: "discarded",
@@ -1299,7 +1293,6 @@ describe("the change a task carries after the upgrade", () => {
       repoId: "chart",
       branch: "fm/task-work",
     });
-    // The own pull request, read while its checks still run.
     seedDelivery(tasks, "work", {
       mode: "direct-pr",
       ...ownChange,
@@ -1575,7 +1568,6 @@ describe("the change a task carries after the upgrade", () => {
       [first, { state: "green", at: 8_000 }],
       [second, { state: "pending", at: 8_100 }],
     ]);
-    // The reviewer reads the first version, the host reads its lines, and a story is prepared at it.
     seedDelivery(tasks, "work", {
       reviewVerdict: "pass",
       reviewSha: first,
@@ -1650,7 +1642,6 @@ describe("the change a task carries after the upgrade", () => {
     expect(checksOf()).toEqual([
       { state: "pending", snapshot: snapshot("pending"), at: 8_000, startedAt: 7_900, lines },
     ]);
-    // The checks finish: the reading names its finish.
     seedDelivery(tasks, "work", {
       ci: "green",
       ciAt: 8_100,
@@ -1679,7 +1670,6 @@ describe("the change a task carries after the upgrade", () => {
     expect(checksOf()).toEqual([
       { state: "pending", snapshot: snapshot("pending"), at: 8_200, startedAt: 8_150, lines },
     ]);
-    // A review with its reading, then one without: the second names no reading.
     seedDelivery(tasks, "work", {
       reviewVerdict: "findings",
       reviewSha: first,

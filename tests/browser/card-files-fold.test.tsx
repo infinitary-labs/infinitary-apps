@@ -115,7 +115,6 @@ test("a note's sixteen files fold to three rows and a counting row; Show all, Sh
   const box = list.getBoundingClientRect();
   expect(sixth.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
   expect(seventh.bottom).toBeGreaterThan(box.bottom);
-  // The counting row stays below the list, in sight, counting every file.
   expect(count().getBoundingClientRect().top).toBeGreaterThanOrEqual(box.bottom);
   expect(count().textContent).toContain(`${cardFilesAllWords(16)} · ${fileSizeWords(sum(FILES))}`);
 

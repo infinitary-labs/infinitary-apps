@@ -72,7 +72,6 @@ describe("forgeAuthRequired", () => {
     expect(
       forgeAuthRequired(origin, error, [{ host: "bitbucket.org", kind: "bitbucket" }]),
     ).toMatchObject({ host: "bitbucket.org", place: "Bitbucket" });
-    // A computer offering no Bitbucket sign-in keeps it a plain failure.
     expect(forgeAuthRequired(origin, error)).toBeUndefined();
     expect(
       forgeAuthRequired(

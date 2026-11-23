@@ -275,7 +275,6 @@ export class SqlEngine {
     return scratch;
   }
 
-  /** A published view's columns as the database has it; null when it is not there. */
   private viewColumns(name: string): string[] | null {
     const kept = this.columnsOf.get(name);
     if (kept) return kept;

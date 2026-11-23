@@ -29,13 +29,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
   (await import("../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/**
- * The whole core booted in a plain Node process (tests/helpers/bootedCore.ts):
- * the handshake, Settings writes and their Activity runs, the app catalog's
- * actions and trails, integrations, presence, the card and What's new doors,
- * and the voice model.
- */
-
 describe("the core, driven with no Electron in the process", () => {
   let userDataDir: string;
   let core: Core;
@@ -88,7 +81,6 @@ describe("the core, driven with no Electron in the process", () => {
     await expect(core.dispatch("inf:work:report", [{ task: "t1" }], device)).rejects.toThrow(
       "Rejected inf:work:report: malformed request",
     );
-    // A computer that runs work is answered nothing else.
     await expect(core.dispatch("inf:app:healthcheck", [], device)).rejects.toThrow(
       "not a request a computer that runs work asks",
     );
@@ -584,7 +576,6 @@ describe("the core, driven with no Electron in the process", () => {
         wash.done({ strength: 45 }),
         words(45, 50),
       ]);
-      // A panel folded and opened again leaves no line and no change.
       const fold = (collapsed: boolean) =>
         core.dispatch("inf:settings:layout:set", [
           { ...layout, collapsedPanels: { ...layout.collapsedPanels, activity: collapsed } },
@@ -1135,7 +1126,6 @@ describe("the core, driven with no Electron in the process", () => {
     });
     expect((await asked({ id: "missing" })).text).toMatch(/No automation missing/);
 
-    // Pause all, and a pause that changes nothing leaves no trail.
     const running = scheduler.rules().filter((rule) => rule.state === "enabled").length;
     await change.run({ action: "automation-pause-all", value: {}, evidence: "Quiet week." });
     expect(scheduler.rules().every((rule) => rule.state !== "enabled")).toBe(true);
@@ -1148,7 +1138,6 @@ describe("the core, driven with no Electron in the process", () => {
     });
     expect(operations()).toHaveLength(quiet);
 
-    // Delete: the first mate's and the captain's.
     await change.run({
       action: "automation-delete",
       value: { id: audit.id },
@@ -1194,7 +1183,6 @@ describe("the core, driven with no Electron in the process", () => {
     });
     const change = tools.find((tool) => tool.name === "app_change");
     if (!change) throw new Error("Missing app_change");
-    // Asked with no words of the captain's, it is refused and runs nothing.
     expect(
       (await change.run({ action: "kept-job-remove", value: { id: "task-9-s1" } })).text,
     ).toMatch(/captain's words/);
@@ -1348,7 +1336,6 @@ describe("the core, driven with no Electron in the process", () => {
       expect(
         listed.find((entry: { read: string }) => entry.read === "automation.history").args.required,
       ).toEqual(["id"]);
-      // A read off the list, or args the read refuses, answers words and reads nothing.
       expect(await read("accounts.list")).toMatch(/^No read "accounts.list"\. Reads: \[/);
       expect(await read("automation.history")).toMatch(/refused its args/);
       // Args left out read with the defaults; args that are not one object are refused.
@@ -1356,11 +1343,9 @@ describe("the core, driven with no Electron in the process", () => {
       expect((await state.run({ read: "usage.summary", args: "30d" as never })).text).toMatch(
         /must be one object/,
       );
-      // A read whose request this first mate cannot answer says so in words.
       expect(await read("devices.move-ready", { id: "no-such-computer" })).toMatch(
         /could not answer: This first mate cannot move to another computer\./,
       );
-      // Without a read, the action list answers as before, and names the placeholders.
       const lines = JSON.parse((await state.run({ area: "automation" })).text);
       const edit = lines.find((line: { action: string }) => line.action === "automation-edit");
       for (const detail of SCHEDULE_DETAILS) expect(edit.line).toContain(detail.token);
@@ -1655,7 +1640,6 @@ describe("the core, driven with no Electron in the process", () => {
       await ask("forge-sign-out", { host: "github.com", deviceId: "mini" });
       expect(signOutForge).toHaveBeenCalledWith("mini", "github.com");
       expect(await feed()).toContain("First mate · GitHub signed out on Mac mini");
-      // This Mac's own accounts were never touched.
       expect(await core.dispatch("inf:accounts:list", [])).toEqual(home);
 
       await core.dispatch("inf:quota:refresh", []);
@@ -1817,7 +1801,6 @@ describe("the core, driven with no Electron in the process", () => {
       expect(past.id).toBe("card-show-past");
       expect(shown()).toHaveLength(2);
       expect(operations()).toHaveLength(operationsBefore + 1);
-      // Nothing about the card changed.
       expect(await core.dispatch("inf:cards:past", ["card-show-past"])).toEqual(pastBefore);
       // INF-476: the asked door now restores an open minimized card, without resolving it.
       await core.dispatch("inf:cards:minimize", ["card-show-open", true]);
@@ -1882,7 +1865,6 @@ describe("the core, driven with no Electron in the process", () => {
       deliveredAt,
     });
     try {
-      // Before any note was shown: refused in words, nothing shown.
       settings.setReleaseTracking({ ...saved, deliveries: {} });
       expect((await core.dispatch("inf:release-notes:list", [])).notes).toEqual([]);
       await expect(core.dispatch("inf:release-notes:show", [null])).rejects.toThrow(
@@ -1923,7 +1905,6 @@ describe("the core, driven with no Electron in the process", () => {
         open: false,
       });
       expect(shown()).toEqual([{ type: "past_card_shown", cardId: "card-note-listed" }]);
-      // A note still open comes to the front instead.
       expect(await core.dispatch("inf:release-notes:show", ["0.0.3"])).toMatchObject({
         open: true,
       });
@@ -1952,7 +1933,6 @@ describe("the core, driven with no Electron in the process", () => {
         [["showed the release note for 0.0.2", "firstmate"]],
       );
       expect(await stack()).toEqual(stackBefore);
-      // A version never shown is refused.
       expect((await ask({ version: "0.0.9" })).text).toContain("No release note for 0.0.9");
       expect(shown()).toHaveLength(3);
       // INF-751: his request, relayed in a crewmate's report, takes the same door.

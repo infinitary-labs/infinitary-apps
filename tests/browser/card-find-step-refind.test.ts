@@ -35,10 +35,8 @@ const BODY =
 const QUESTION = "Does the keyboard map change?";
 const ANSWER = "Only one new row.";
 
-/** The card body's part a person reads, in the window. */
 const bodySight = () => inShown("[data-card-body]").getBoundingClientRect();
 
-/** Where the fold's `selector` lies in the window, read from inside the card's page. */
 async function inWindow(selector: string): Promise<{ top: number; bottom: number }> {
   const box = await inCardBody(
     TITLE,
@@ -54,7 +52,6 @@ async function inWindow(selector: string): Promise<{ top: number; bottom: number
   return { top: frame.top + box.top, bottom: frame.top + box.top + box.height };
 }
 
-/** Whether the folded section's words lie inside the card body's sight. */
 async function foldedWordsInSight(): Promise<boolean> {
   const words = await inWindow("details p");
   const sight = bodySight();
@@ -76,7 +73,6 @@ test("a step's match reaches sight when Find reads the card again before its pag
   await stageAtRest();
   const { FrameController } = await import("../../src/renderer/src/plugins/frames/frameController");
 
-  // At rest the fold is shut and below the body's sight.
   expect(await inCardBody(TITLE, () => document.querySelector("details")?.open)).toBe(false);
   expect((await inWindow("summary")).top).toBeGreaterThan(bodySight().bottom);
 
@@ -137,7 +133,6 @@ test("a step's match reaches sight when Find reads the card again before its pag
     bridge.push("inf:cards:thread", thread);
     await expect.poll(() => holding).toBe(false);
 
-    // The step it was on keeps its place, and its folded words come into sight.
     await expect.poll(count).toBe(m.uiCardFindCount({ current: "3", total: "4" }));
     await expect.poll(foldedWordsInSight).toBe(true);
   } finally {

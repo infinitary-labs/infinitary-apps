@@ -125,7 +125,6 @@ async function choose(map: Locator, body: FrameLocator, label: string): Promise<
   throw new Error(`the arrows never chose ${label}; the map says: ${await said(body)}`);
 }
 
-/** Chooses each box of `labels` in turn and goes into it with Enter. */
 async function goIn(map: Locator, body: FrameLocator, labels: string[]): Promise<void> {
   for (const label of labels) {
     await choose(map, body, label);
@@ -206,7 +205,6 @@ test("the map on a card goes in by keys, opens a state machine and turns on a co
       await expect(
         copy.locator("[data-cmps]").getByRole("button", { name: rebuild.label }),
       ).toHaveAttribute("aria-pressed", "true");
-      // focus is in the copy's map once it is drawn, where its own keys work
       await expect(copy.getByRole("application")).toBeFocused();
     });
 
@@ -225,7 +223,6 @@ test("the map on a card goes in by keys, opens a state machine and turns on a co
       const left = await said(copy);
       await page.keyboard.press("Escape");
       await expect(viewer).toHaveCount(0);
-      // the card's map stands where the full-screen map was left, and Full screen has focus again
       await expect(here(body)).toHaveText(holder.name);
       await expect(body.locator("[data-live]")).toHaveText(left);
       await expect(body.getByRole("button", { name: "Full screen" })).toBeFocused();

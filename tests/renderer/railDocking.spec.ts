@@ -15,7 +15,6 @@ for (const side of ["left", "right"]) {
     const launched = await launchApp();
     const { page } = launched;
     try {
-      // Replace the isolated window's app document with a stylesheet fixture.
       await page.goto("about:blank");
       await page.setContent(`<div data-rail="${side}" style="height: 800px">
         <section data-side-panel="top" data-side-panel-placement-y="top" style="height: 60px"></section>

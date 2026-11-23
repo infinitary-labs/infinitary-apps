@@ -39,12 +39,10 @@ import { giveFocusBack } from "./frameFocus";
 /** How long Chromium counts a click or key as the captain's (its transient activation's lifespan). */
 const ACTIVATION_LIFESPAN_MS = 5_000;
 
-/** Whether the page holds user activation now: a click or key of the captain's not yet spent. */
 function pageActive(): boolean {
   return globalThis.navigator?.userActivation?.isActive === true;
 }
 
-/** When the shell last spent the page's activation, or null. */
 let spentAt: number | null = null;
 
 /**
@@ -73,13 +71,11 @@ export function windowGesture(): boolean {
   return spentAt !== null && performance.now() - spentAt < ACTIVATION_LIFESPAN_MS;
 }
 
-/** The frame that holds the window's focus, or null when the window's own page does. */
 function focusedFrame(): HTMLIFrameElement | null {
   const active = document.activeElement;
   return active instanceof HTMLIFrameElement ? active : null;
 }
 
-/** What a frame's bridge says of its own window's focus: gained, lost, or nothing. */
 function focusNotice(event: MessageEvent): boolean | null {
   const data: unknown = event.data;
   if (typeof data !== "object" || data === null || !("type" in data) || !("focused" in data))

@@ -600,7 +600,6 @@ describe("explicit manual verification scope (INF-2374)", () => {
     expect(Object.keys(verify.jobs).filter((id) => runs(id, mac))).toEqual(["request", "lane"]);
     expect(lanes(mac)).toEqual(["mac", "parallel", "desktop"]);
 
-    // Each lane on a Mac, and with the steps a full request runs there.
     const ran = (lane: string, inputs: Record<string, unknown>) => {
       const outcomes: Record<string, { outcome: string }> = {};
       const commands: string[] = [];

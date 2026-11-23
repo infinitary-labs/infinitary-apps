@@ -137,7 +137,6 @@ export const MOCK_BROWSER_LONG_PASSES = [
   "scrolled past the top",
 ] as const;
 
-/** The first outline line an answer shows, from its `outline:` line. */
 function firstShownLine(answer: string | undefined): number | undefined {
   const line = answer?.match(/^outline: lines (\d+)-\d+ of \d+/m)?.[1];
   return line === undefined ? undefined : Number(line);
@@ -148,7 +147,6 @@ function taskBrowserLongStep(body: string): ScriptedCall[] | undefined {
   if (!ask) return undefined;
   const url = ask[1] as string;
   const answers = toolAnswers(providerMessages(body));
-  // The line the first answer says to read on from, read off its next lines.
   const readOn = answers[0]?.match(/`infinitary-browser-axi snapshot --from (\d+)`/)?.[1];
   switch (answers.length) {
     case 0:
@@ -220,7 +218,6 @@ export const MOCK_PAGES_SAID = { check: "The check:", shop: "The shop:" } as con
 /** The words the bank's check shows once the spec lets the crewmate approve. */
 export const TASK_BROWSER_APPROVE_WORDS = "Ready to approve";
 
-/** The second-page journey's next scripted step, from the browser answers so far. */
 function taskBrowserPagesStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(
     /pay at the shop page at (http:\/\/127\.0\.0\.1:\d+\/) with the bank at (http:\/\/localhost:\d+\/) after (https:\/\/localhost:\d+\/)/,
@@ -285,7 +282,6 @@ export const MOCK_BROWSER_WATCH_REPORT_PREFIX = "The watched sign-up page said";
 /** The words the watched page shows once the spec lets the crewmate go on. */
 export const TASK_BROWSER_READY_WORDS = "Ready to send";
 
-/** The watched check's next scripted step, from the browser answers so far. */
 function taskBrowserWatchStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/watch the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
   if (!ask) return undefined;
@@ -496,7 +492,6 @@ function heldThreadAnswer(
   return [{ name: "reply", args: { card_id: cardId, text, ...answering(steer) } }];
 }
 
-/** The handoff's next scripted step, from the browser answers so far. */
 function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/sign in to the account page at (http:\/\/127\.0\.0\.1:\d+\/)/);
   if (!ask) return undefined;
@@ -693,7 +688,6 @@ const SAVED_WAKES = [
   `The captain let this task use the sign-in kept on ${HERE.this}`,
 ];
 
-/** The saved sign-in journey's next scripted step, from the browser answers so far. */
 function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/use the club page at (http:\/\/127\.0\.0\.1:\d+\/)/);
   if (!ask) return undefined;
@@ -788,13 +782,11 @@ function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
   ];
 }
 
-/** The browser card's next scripted step, from the browser answers so far. */
 function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/show the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
   if (!ask) return undefined;
   const [, url, name] = ask as unknown as [string, string, string];
   const messages = providerMessages(body);
-  // Woken because nothing answers at its page: it reports once.
   const woken = messages.findLastIndex(
     (message) => message.role === "user" && message.text.includes(PAGE_UNANSWERED_OPENING),
   );
@@ -949,7 +941,6 @@ export const TASK_BROWSER_TAKE_MARKER = "keep the account page at ";
 export const MOCK_TAKE_REFUSED_REPORT = "The captain took my browser while I waited on the page.";
 export const MOCK_TAKE_RETURNED_REPORT = "The captain handed my browser back.";
 
-/** The take-in-flight journey's next scripted step, from the wakes and browser answers so far. */
 function taskBrowserTakeStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/keep the account page at (http:\/\/127\.0\.0\.1:\d+\/) open/);
   if (!ask) return undefined;
@@ -1005,7 +996,6 @@ export const MOCK_FENCE_B_SAID = {
   otherPage: "The other task's page:",
 } as const;
 
-/** The fence journey's next scripted step, from the browser answers so far. */
 function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(
     /fence the page at (http:\/\/127\.0\.0\.1:\d+\/) (for task A|beside (http:\/\/127\.0\.0\.1:\d+\/))/,
@@ -1071,7 +1061,6 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
   }
 }
 
-/** Each browser journey's marker, its next step, and whether its report ends it. */
 const JOURNEYS: ReadonlyArray<
   [marker: string, step: (body: string) => ScriptedCall[] | undefined, endsAtReport: boolean]
 > = [

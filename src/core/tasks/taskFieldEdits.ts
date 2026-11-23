@@ -22,7 +22,6 @@ import { referenceRefusal } from "./taskRelationships";
 import type { TaskService, UpdateTaskPatch } from "./taskService";
 import { keyOrId, type TaskWriter, withShapeKey } from "./taskWriter";
 
-/** What a field edit writes through: the task writer, the projects and the service's own moves, parents and policies. */
 export type TaskFieldEditContext = {
   writer: TaskWriter;
   projects: ProjectStore;

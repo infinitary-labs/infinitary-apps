@@ -2,10 +2,8 @@ import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import type { HomeRead } from "../browserFreshHome";
 
-/** The first mate's card the card-threads test replies under. */
 const CARD_ID = "fm-thread-card";
 
-/** What the card-threads test's story reads back: the card's title and its two choices. */
 type Input = { title: string; actions: { id: string; label: string; default?: true }[] };
 
 /** The card's thread, empty until the captain replies, read when the card shows. */

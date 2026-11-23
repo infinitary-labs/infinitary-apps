@@ -111,7 +111,6 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
         return enrolled.key == key?.publicKey ? .enrolled : .replaced
     }
 
-    /// The waiting use the home raised this card for, if it is one.
     public func use(card: String) -> PhoneApprovals.Use? { approvals?.waiting.first { $0.card == card } }
 
     /// The home's Secrets changed, or contact came back: every notice starts a read of its own, and only the newest

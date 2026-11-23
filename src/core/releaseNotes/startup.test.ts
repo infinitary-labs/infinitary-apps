@@ -105,7 +105,6 @@ describe("an upgrade", () => {
   it("commits its note on top of the stack with the answer, baseline and delivery together, then publishes it", () => {
     const f = setup();
     f.seed("0.1.25");
-    // What the captain already has open: a decision, and an earlier note.
     f.cards().addFirstmateCard({
       title: "Which way?",
       body: "<p>Two ways.</p>",
@@ -378,7 +377,6 @@ describe("a first installation", () => {
     });
     expect(f.launch("0.1.27")).toBe("unchanged");
     expect(f.releaseNotes()).toEqual([]);
-    // The next upgrade's note measures from it: only what came after 0.1.27.
     expect(f.launch("0.1.28-alpha.10")).toBe("delivered");
     expect(f.tracking().deliveries["0.1.28-alpha.10"]?.boundary.version).toBe("0.1.27");
   });

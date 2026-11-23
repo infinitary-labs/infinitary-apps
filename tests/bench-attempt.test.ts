@@ -51,7 +51,6 @@ describe("a dry-run attempt", () => {
       reward: { reward: 1, applied: true, check_exit: 0 },
     });
     expect(readFileSync(row.patch.path, "utf8")).toContain("+forty-two");
-    // The graded task's own turns and the Firstmate's, each a usage row.
     const tasks = new Set(row.usage.rows.map((usage) => usage.task_id));
     expect(tasks).toContain("firstmate");
     expect(tasks).toContain(row.graded?.task_id);

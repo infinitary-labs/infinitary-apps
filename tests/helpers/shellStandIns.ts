@@ -80,7 +80,6 @@ export async function otherMac(
     sizeView(taskId: string, _sink: BrowserFrameSink, size: unknown) {
       pages.rooms.push({ taskId, size });
     },
-    /** The page changed: one picture to each watcher. */
     paint(taskId: string, data: string) {
       for (const sink of pages.sinks.get(taskId) ?? [])
         sink({ data, width: 1280, height: 800 } as Parameters<BrowserFrameSink>[0]);
@@ -173,7 +172,6 @@ export async function otherMac(
     /** Fix it on a Mac's row: that Mac's window, connected now, checks its work again. */
     fixWork: (deviceId: string) =>
       connection?.liveToView(deviceId, WORK_SETUP_LIVE, { deviceId }) ?? false,
-    /** Its stage changes, and it tells every window and device. */
     show: (cards: Card[]) => {
       stage.cards = cards;
       events.emit("inf:cards", cards);
@@ -200,7 +198,6 @@ export async function otherMac(
   };
 }
 
-/** This Mac's own core, and the spies a test reads it by. */
 export type OwnCore = {
   core: Core;
   dispatch: Mock<CoreDispatch>;
@@ -268,7 +265,6 @@ export const OFFERED = buildUpdateTarget({
   sourceCommit: "7".repeat(40),
 });
 
-/** This Mac's own installed app, 0.1.28-alpha.3 on alpha, and the pages it opened. */
 export function ownUpdates() {
   const opened: string[] = [];
   const fetched: string[] = [];

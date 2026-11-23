@@ -119,7 +119,6 @@ test("after a restart the record retains its report, and settling works", async 
   launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
   const { page, mockProvider } = launched;
 
-  // The record retains its idle state with no runtime behind it.
   expect(readTasks(userDataDir).find((task) => task.id === taskId)).toMatchObject({
     id: taskId,
     status: "active",

@@ -132,7 +132,6 @@ import XCTest
         }
     }
 
-    /// Inputs replay what the phone hears: firstmate_state busy, folding rising and falling inside the turn, then busy ending.
     func testShorteningDrawsTheWorkingBodyTightWithoutChangingItsState() {
         CharacterCues.greetingPending = false
         let motion = CharacterMotion()

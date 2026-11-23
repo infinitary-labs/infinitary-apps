@@ -24,7 +24,6 @@ export type Behavior = {
   credits?: { id: string; status: string; expiresAt: number | null }[] | null;
   /** How the consume is answered: an outcome, or `crash` to end the process unanswered. */
   consume?: string | "crash";
-  /** How a sign-in ends once it starts. */
   login?: "success" | "failure" | "never";
   /** A kept sign-in that no longer works: Codex says it is signed in and refuses the allowance read until it signs in again. */
   stale?: boolean;

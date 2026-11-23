@@ -32,7 +32,6 @@ function entries(folder: string): string[] {
   }
 }
 
-/** Each package link in one node_modules folder, a scope's packages included, as [name, path]. */
 function packageLinks(folder: string): [string, string][] {
   const found: [string, string][] = [];
   for (const name of entries(folder)) {
@@ -47,7 +46,6 @@ function packageLinks(folder: string): [string, string][] {
   return found;
 }
 
-/** The packages the install in `root` left out, each named once. */
 function droppedPackages(root: string): Dropped[] {
   const modules = join(root, "node_modules");
   const store = join(modules, ".pnpm");

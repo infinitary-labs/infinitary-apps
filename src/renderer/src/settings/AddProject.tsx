@@ -40,7 +40,6 @@ export function AddProject({
    * it was added from a project's Add a repository row.
    */
   onAdded: (repo: RepoView, said: string, intoProject: boolean) => void;
-  /** The existing project the added repository joins. */
   into?: GroupProject;
   /**
    * A confirmation this row starts with: a project of one's own row, where

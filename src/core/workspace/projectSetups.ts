@@ -141,7 +141,6 @@ export class ProjectSetups {
     return { kind: "card", cardId };
   }
 
-  /** Puts up the setup card for what the check read, with the suggestions asked. */
   private raise(
     spec: RepoSetupSpec,
     checked: Exclude<RepoSetupCheck, { existing: RepoView }>,
@@ -324,7 +323,6 @@ function expandHome(path: string, home: string): string {
 const CHOOSE_FOLDER_WORDS =
   "a Choose folder action (effect kind open, target projects, folder true), which opens the system's folder picker on the captain's computer and adds the folder they pick as a project";
 
-/** The refusal of a folder that is not there, naming the folders of a similar name. */
 // i18n-exempt: a tool answer served to the first mate, not shown to a person
 const missingFolderWords = (path: string, found: readonly LocatedProject[]): string =>
   found.length === 0
@@ -382,7 +380,6 @@ function fact(key: string, value: string, mono = false): string {
   return `<div class="inf-fact"><span class="inf-fact-k">${escapeCardText(key)}</span><span class="inf-fact-v${mono ? " inf-mono" : ""}">${escapeCardText(value)}</span></div>`;
 }
 
-/** The setup card itself, from what the check read: words and controls the app writes. */
 function setupCard(
   id: string,
   offer: ProjectSetupOffer,

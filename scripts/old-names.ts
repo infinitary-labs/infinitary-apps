@@ -35,7 +35,6 @@ import { fileURLToPath } from "node:url";
 
 export type OldNameClass = "reader" | "identity" | "words" | "history";
 
-/** One family of old names, by what it is. */
 type Family = { id: string; pattern: RegExp };
 
 export const FAMILIES: readonly Family[] = [
@@ -279,7 +278,6 @@ export const RULES: readonly Rule[] = [
   },
 ];
 
-/** Every old name in one line, with its family. */
 export function oldNamesIn(line: string): { family: string; name: string }[] {
   const found: { family: string; name: string; at: number }[] = [];
   for (const family of FAMILIES) {

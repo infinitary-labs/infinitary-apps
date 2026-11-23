@@ -41,7 +41,6 @@ test(`at the smallest window ${CREW} crew all fit the stage above the prompt, an
   expect((await bridge.api.crew.counts()).idle).toBe(CREW);
   await page.viewport(SMALLEST_WINDOW.width, SMALLEST_WINDOW.height);
   await openWindow(bridge);
-  // Every crewmate is on the stage.
   await expect
     .poll(async () => (await crewPlaneCounts()).reduce((sum, n) => sum + n, 0))
     .toBe(CREW);

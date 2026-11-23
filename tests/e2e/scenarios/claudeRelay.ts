@@ -13,7 +13,6 @@ import { answering } from "../providerRequest";
  */
 export const CLAUDE_RELAY_MARKER = "with a plan to approve";
 export const MOCK_CLAUDE_PLAN_CARD_TITLE = "Raise the rivet threshold";
-/** The plan card's two actions, in their order. */
 export const MOCK_CLAUDE_PLAN_ACTIONS = ["Approve and build", "Not now"] as const;
 export const MOCK_CLAUDE_PLAN_REPORT = "The plan to raise the rivet threshold is on its card.";
 export const CLAUDE_RELAY_APPROVAL =
@@ -23,7 +22,6 @@ export const MOCK_CLAUDE_RELAY_ANSWER =
 export const MOCK_CLAUDE_RELAY_ASK = "start the builder on the approved plan, threshold 32";
 export const MOCK_CLAUDE_RELAY_REPORT = `The captain approved the plan by reply: "${CLAUDE_RELAY_APPROVAL}". The final plan keeps every decision, with the threshold at 32.`;
 
-/** The Claude crewmate's plan card and report, then its relay of the captain's approval by reply. */
 export const claudeRelay: Scenario =
   () =>
   ({ body, isFirstmate, anthropicMessages, wantsStream, latestUserTail, hasToolResults }) => {

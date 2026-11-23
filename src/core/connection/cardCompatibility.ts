@@ -149,7 +149,6 @@ export function lookFor(channel: string, value: unknown, unread: readonly string
   return { ...look, appearance: without(look.appearance, unread) };
 }
 
-/** A panel snapshot without the panels (and drafts) that read settings. */
 function panelsWithoutSettingsRead(value: object): unknown {
   const keep = (panel: { reads?: readonly string[] }) => !panel.reads?.includes(SETTINGS_READ);
   const snapshot = value as {
@@ -202,7 +201,6 @@ export function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
   );
 }
 
-/** Whether a view reads every field a card snapshot may carry, so it needs none left out. */
 function readsEveryCardField(reads: CardReads): boolean {
   return reads.updates && reads.ended && reads.files && reads.liveReads;
 }

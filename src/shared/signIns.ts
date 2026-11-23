@@ -145,7 +145,6 @@ export const SERVED_MODELS_MAX = 2_000;
 /** The longest model id an account's own list may name for the home (`accountList`). */
 export const ACCOUNT_LIST_ID_MAX = 256;
 
-/** The models one account there can serve. */
 export const computerServedAccountSchema = z.object({
   accountId: z.string().min(1).max(256),
   models: z.array(computerServedModelSchema).max(SERVED_MODELS_MAX),
@@ -210,7 +209,6 @@ export const computerSignInsSchema = z.object({
 });
 export type ComputerSignIns = z.infer<typeof computerSignInsSchema>;
 
-/** One step of a sign-in running on a computer. */
 export const signInStepSchema = z.discriminatedUnion("kind", [
   /** It waits for the captain: a choice, a code to paste back, or a key. */
   z.object({ kind: z.literal("prompt"), prompt: authPromptSchema }),

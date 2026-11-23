@@ -37,13 +37,11 @@ import {
  * as a Linux package does.
  */
 
-/** This installation, as the update reader keys the builds file. */
 export type WindowsInstallation = {
   /** `x64`: the builds file's chip. */
   chip: string;
 };
 
-/** One offered installer the app runs: what version, from which channel and where. */
 export type WindowsInstallPlan = {
   version: string;
   channel: UpdateChannel;
@@ -58,7 +56,6 @@ export const WINDOWS_UPDATES_FOLDER = "updates";
 /** The file the hand-over leaves in the data root when it did not finish the update. */
 export const WINDOWS_HAND_OVER_RESULT = "update-result.json";
 
-/** What the hand-over says of an update it did not finish, for the copy it kept. */
 export type WindowsHandOverResult = {
   outcome: "shutdown-timeout" | "install-failed";
   /** The version the hand-over kept, which says it when it opens. */

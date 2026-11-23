@@ -46,7 +46,6 @@ function edited(path: string): TrackedFile[] {
   return FILES.map((file) => (file.path === path ? { path, object: "0".repeat(40) } : file));
 }
 
-/** windows.yml with one line added inside the named job's steps. */
 function workflowWith(job: string, line: string): string {
   const at = WORKFLOW.indexOf(`\n  ${job}:\n`);
   const steps = WORKFLOW.indexOf("\n    steps:\n", at) + "\n    steps:\n".length;

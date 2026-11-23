@@ -81,7 +81,6 @@ export function removeLater(dir: string): string {
   return dir;
 }
 
-/** Removes every registered directory now. */
 export function removeScratchDirs(): void {
   removeAll(registry.dirs);
 }

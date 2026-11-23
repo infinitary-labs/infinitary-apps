@@ -21,7 +21,6 @@ export type SessionBinderOptions = {
 export class SessionBinder {
   constructor(private readonly options: SessionBinderOptions) {}
 
-  /** The account-less binding: the base runtime. */
   base(): SessionBinding {
     if (!this.options.baseRuntime) throw new Error("No Pi base runtime is configured.");
     return { backend: "pi", runtime: this.options.baseRuntime };

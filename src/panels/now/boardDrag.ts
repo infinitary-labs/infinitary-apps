@@ -19,13 +19,10 @@ export const DRAG_START_DISTANCE = 5;
 const EDGE_ZONE = 40;
 const EDGE_STEP = 14;
 
-/** What the board draws while a tile is in the air. */
 export type TileDrag = { taskId: string; from: BoardLane; over: BoardTarget | null };
 
-/** Where the ghost is drawn, and how wide. */
 export type GhostPlace = { left: number; top: number; width: number };
 
-/** The lane or tray under a point, by its `data-board-drop`. */
 export function boardTargetAt(x: number, y: number): BoardTarget | null {
   const drop = document
     .elementFromPoint(x, y)

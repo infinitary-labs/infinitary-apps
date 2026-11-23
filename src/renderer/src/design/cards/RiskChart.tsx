@@ -56,7 +56,6 @@ export function riskBodyInset(): { width: number; height: number } {
   return { width: width + RISK_CHART_GAP, height: height - ONE_LINE_HEADLINE_TO_BODY };
 }
 
-/** The card's own body scroller the chart sits over. */
 function bodyScrollerOf(element: HTMLElement | null): HTMLElement | null {
   return (
     element?.closest("[data-response-card]")?.querySelector<HTMLElement>("[data-card-body]") ?? null

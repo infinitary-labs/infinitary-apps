@@ -109,7 +109,6 @@ function whatsNewItem(bindings: Bindings, actions: AppMenuActions): MenuItemCons
  */
 const NAMED_ROLES = new Set(["appmenu", "about", "hide", "quit"]);
 
-/** The name Electron's own items carry, and the one a person knows the app by. */
 export type AppMenuNames = {
   /** `app.name`, which Electron's own items are worded with. */
   electron: string;

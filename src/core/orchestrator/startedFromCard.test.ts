@@ -66,7 +66,6 @@ describe("the line naming the work a reply started", () => {
       who: "host",
       text: startedLineWords("INF-3022", false),
     });
-    // The reply the line answers is the captain's, under this card.
     expect(answer.reply).toMatchObject({
       who: "captain",
       cardId: card.id,

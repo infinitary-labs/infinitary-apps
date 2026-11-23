@@ -8,18 +8,6 @@ import { type Rect, within } from "./layout";
 import { bodyDrawn, cardBodyFrame, inCardBody, inShown, showCard, stageAtRest } from "./stack";
 import { openSize, openWindow } from "./window";
 
-/**
- * Phase 4 acceptance (docs/architecture.md §17): a crewmate's cards wear
- * the chrome their shape derives (a card with actions is a decision, one
- * without a note), and a decision reads whole at the smallest window - its
- * long footer actions stay whole and usable, a long body reads to its end
- * by scrolling the card, its extra prose opens on demand without deciding
- * anything, and a reply begun on it survives paging away. One window with
- * the crewmate's three cards - a decision, a note and a working preview -
- * in the journey's order: the footer, the long body, then the prose and the
- * draft.
- */
-
 const LONG_ACTION =
   "Mock the clock while preserving every queued write in its original execution order";
 const DEFAULT_ACTION = "Await the queue";
@@ -30,7 +18,6 @@ const LEAD = "Awaiting the job queue removes the race entirely.";
 const DETAIL = "Awaiting the queue adds 40ms to the run.";
 const DISCLOSURE = "Latency trade-off";
 
-/** A figure the decision's body draws, named `label`, from `from` to `to`. */
 const figure = (label: string, from: string, to: string) =>
   `<figure><svg viewBox="0 0 320 62" width="100%" role="img" aria-label="${label}">` +
   '<rect x="4" y="9" width="136" height="44" rx="6" style="fill:var(--bg-1);stroke:var(--line-2)"></rect>' +
@@ -39,7 +26,6 @@ const figure = (label: string, from: string, to: string) =>
   '<g font-size="14" text-anchor="middle" style="fill:var(--fg-1)">' +
   `<text x="72" y="36">${from}</text><text x="248" y="36">${to}</text></g></svg></figure>`;
 
-/** The crewmate's three cards, in the order it showed them. */
 const CARDS: { title: string; body: string; actions: CardAction[] }[] = [
   {
     title: CHOICE_TITLE,
@@ -88,19 +74,15 @@ const CARDS: { title: string; body: string; actions: CardAction[] }[] = [
 const cardSurface = () =>
   document.querySelector<HTMLElement>("[data-card-layer] [data-card-presentation]");
 
-/** The shown card's scrolling body. */
 const cardScroller = () => inShown("[data-card-body]");
 
-/** The pager of a stack of `count`, whatever position it shows. */
 const pager = (count: number) =>
   document.querySelector(`[data-card-pager][data-pager-count="${count}"]`);
 
-/** The shown card's reply field. */
 const replyField = () => inShown("[data-card-reply] textarea") as HTMLTextAreaElement;
 
 const box = (element: Element): Rect => element.getBoundingClientRect();
 
-/** Whether the paragraph of the shown card's body that reads `text` shows. */
 function bodyTextShows(title: string, text: string): Promise<boolean> {
   return inCardBody(
     title,
@@ -130,7 +112,6 @@ test("a decision reads whole at the smallest window: its footer, its long body, 
     await expect.element(action).toBeEnabled();
     await stageAtRest();
     const button = action.element();
-    // A press would land on it: the point at its middle finds the button itself.
     const middle = box(button);
     const hit = document.elementFromPoint(
       middle.x + middle.width / 2,
@@ -157,7 +138,6 @@ test("a decision reads whole at the smallest window: its footer, its long body, 
     ).join("");
     document.body.appendChild(overflow);
   });
-  // Scrolling the card reaches the body's last line.
   await expect
     .poll(async () => {
       const scroller = cardScroller();
@@ -181,7 +161,6 @@ test("a decision reads whole at the smallest window: its footer, its long body, 
   // Section: a decision reveals its extra prose on demand at the smallest
   // window, and keeps a reply draft across paging.
   {
-    // A reply begun on this card is still there after paging away and back.
     const draft = "Keep this draft";
     await userEvent.fill(replyField(), draft);
     await showCard(NOTE_TITLE);

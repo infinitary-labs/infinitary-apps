@@ -153,7 +153,6 @@ function seed(userDataDir: string): Seeded {
   }
 }
 
-/** Whether the summary card's body is what the window shows at `target`'s centre. */
 async function onTop(page: Page, target: Locator): Promise<boolean> {
   const box = await target.boundingBox();
   if (!box) return false;
@@ -193,9 +192,7 @@ test("a task key in a card body opens its task's summary on a rest and the task 
         seeded.author,
         seeded.format,
       ]);
-      // A key in a toggle's summary stays as written.
       await expect(linkedTaskKeys(body.locator("summary"))).toHaveCount(0);
-      // A key-shaped word that names no task, and the author's own link, stay as written.
       await expect(body.getByText("F13-572 and ZZ9-404 name no task")).toBeVisible();
       await expect(body.locator("a", { hasText: "F13-572" })).toHaveCount(0);
       await expect(body.locator("a", { hasText: "ZZ9-404" })).toHaveCount(0);
@@ -229,7 +226,6 @@ test("a task key in a card body opens its task's summary on a rest and the task 
       const summary = keySummary(page).locator("[data-crew-summary]");
       await expect(summary.locator("[data-crew-summary-key]")).toHaveText(seeded.ledger);
       await expect(taskFact(summary, "task")).toHaveText(LEDGER_TITLE);
-      // The same facts, words and order as its Tasks row.
       await expect.poll(() => shownTaskFacts(summary)).toEqual(fromRow);
       await expectClearOf(
         page,
@@ -342,7 +338,6 @@ test("a task key and its Tasks row light each other, and every other key of that
     await expect(nowRow(page, seeded.format)).toBeVisible();
 
     await test.step("a rest on a key lights its row and each key of that task, and no other", async () => {
-      // The format key is written twice in the body.
       await expect(keyLinks(seeded.format)).toHaveCount(2);
       await restOnFramedKey(page, keyLinks(seeded.format).first());
       await expect(nowRow(page, seeded.format)).toHaveAttribute("data-now-lit", "");
@@ -350,7 +345,6 @@ test("a task key and its Tasks row light each other, and every other key of that
       await expect(keyLinks(seeded.ledger).first()).not.toHaveAttribute("data-inf-lit", "");
       await expect(nowRow(page, seeded.ledger)).not.toHaveAttribute("data-now-lit", "");
       await page.screenshot({ path: test.info().outputPath("lit-key-to-row.png") });
-      // Leaving the key clears every mark at once.
       await body.getByText("name no task").dispatchEvent("pointerover");
       await expect(nowRow(page, seeded.format)).not.toHaveAttribute("data-now-lit", "");
       await expect(linkedTaskKeys(body).and(page.locator("[data-inf-lit]"))).toHaveCount(0);
@@ -602,7 +596,6 @@ test("a task key in a thread line or a card's title opens its summary on a rest 
       const key = taskKeyLinks(thread.locator('[data-thread-message="captain"]')).first();
       await restOnTaskKey(page, key);
       await expect(keySummary(page)).toHaveAttribute("data-key-summary", work.ledger.id);
-      // Never over the key it is tied to.
       const [at, summary] = await Promise.all([
         key.boundingBox(),
         keySummary(page).locator("[data-crew-summary]").boundingBox(),
@@ -642,7 +635,6 @@ test("the key in a card's head opens its task's record, and Hide returns to the 
     await test.step("the head leads with the card's own task's key, before the meta line and the model chip", async () => {
       await expect(headKey).toHaveText([work.audit.key]);
       await expect(head.locator("[data-card-meta]")).toHaveText("crewmate 1");
-      // The title links both keys it writes, the card's own task's among them.
       await expect(taskKeyLinks(shownEntry(page).locator("[data-card-title]"))).toHaveText([
         work.format.key,
         work.audit.key,

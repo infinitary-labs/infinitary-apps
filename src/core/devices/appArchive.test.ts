@@ -20,13 +20,11 @@ describe("the copy's count", () => {
     const said: number[] = [];
     const copy = copyCount((sent) => said.push(sent), Number.POSITIVE_INFINITY);
     copy.end();
-    // Nothing sent yet, nothing said.
     expect(said).toEqual([]);
     for (const piece of [65_536, 65_536, 65_536, 1_024]) copy.add(piece);
     expect(said).toEqual([65_536]);
     copy.end();
     expect(said).toEqual([65_536, 197_632]);
-    // Its end said once: nothing new, nothing said again.
     copy.end();
     expect(said).toEqual([65_536, 197_632]);
   });

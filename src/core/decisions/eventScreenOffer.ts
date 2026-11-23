@@ -14,16 +14,13 @@ import type { DecisionModels } from "./decisionModel";
  */
 export const EVENT_SCREEN_OFFER_CARD_ID = "event-screen-offer";
 
-/** The offer card's title. */
 export const EVENT_SCREEN_OFFER_TITLE = "Skip events your automation does not need?";
 
 const NAME_CHARS = 80;
 const CONDITION_CHARS = 240;
 
-/** The rule as the offer reads it. */
 export type OfferedRule = { name?: string; prompt: string; spec: AutomationSpec };
 
-/** The card's words: the rule, what the screen does, what turning it on sends. */
 export function eventScreenOfferCard(input: {
   rule: { label: string; waitsFor: string };
   /** The disclosure the card shows, by version: Turn on agrees to exactly this one. */

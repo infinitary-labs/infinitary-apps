@@ -34,7 +34,6 @@ export function nextMoveCardId(taskId: string): string {
   return `card-next-move-${taskId}`;
 }
 
-/** That card's title: the task's own, and that it stands still. */
 export function nextMoveCardTitle(title: string): string {
   return `${title} is standing still`;
 }
@@ -69,7 +68,6 @@ type Pass = {
   stopped: Map<string, boolean>;
   putOff: Map<string, boolean>;
   putOffs?: PutOffIndex;
-  /** The open cards' ids, read on first need. */
   openCards?: Set<string>;
 };
 
@@ -276,7 +274,6 @@ export class NextMove {
     );
   }
 
-  /** The open cards' ids, read once a pass on first need. */
   private openCardIds(pass: Pass): Set<string> {
     if (!pass.openCards)
       pass.openCards = new Set([...this.host.openCards()].map((card) => card.id));
@@ -302,7 +299,6 @@ export class NextMove {
     return held;
   }
 
-  /** The live tasks whose close put-off waits for this one, and when each was kept. */
   private putOffWaiters(taskId: string, pass: Pass): { waiter: TaskRecord; kept: number }[] {
     return (this.putOffIndex(pass).awaitedBy.get(taskId) ?? []).flatMap(({ task, at }) => {
       const waiter = this.host.tasks.get(task);
@@ -310,7 +306,6 @@ export class NextMove {
     });
   }
 
-  /** Every put-off on a task, read once a pass on first need. */
   private putOffIndex(pass: Pass): PutOffIndex {
     if (pass.putOffs) return pass.putOffs;
     const index: PutOffIndex = { held: new Set(), awaitedBy: new Map() };
@@ -425,7 +420,6 @@ export class NextMove {
   }
 }
 
-/** Building work that started: not a task that delivers an answer, not a delivery step. */
 function startedBuilding(record: TaskRecord): boolean {
   return (
     record.kind === "work" &&

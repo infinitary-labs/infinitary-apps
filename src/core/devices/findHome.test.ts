@@ -11,7 +11,6 @@ import { ANNOUNCED_HOMES_MAX, announcedWithAvahi, announcedWithDnsSd } from "./f
  * the lines those tools print; never the system's own.
  */
 
-/** A stand-in run that prints `lines(args)` and ends, keeping what each run was asked. */
 function standIn(lines: (args: readonly string[]) => readonly string[]) {
   const asked: string[][] = [];
   const run: DnsSdRun = (args, heard) => {

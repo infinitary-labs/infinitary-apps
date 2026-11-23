@@ -9,13 +9,11 @@ import { z } from "zod";
  * a record, declare a use or grant permission.
  */
 
-/** The most a graph read draws: concepts, and the connections among them. */
 export const KNOWLEDGE_GRAPH_LIMITS = { concepts: 75, connections: 200 } as const;
 
 /** Rows a page of the Concepts or Findings list holds. */
 export const KNOWLEDGE_LIST_PAGE = 20;
 
-/** The words a Find narrows by, at most. */
 const QUERY_MAX = 200;
 
 const scopeSchema = z.string().min(1).max(64);
@@ -58,8 +56,6 @@ export const knowledgeAttentionSchema = z.object({
 });
 export type KnowledgeAttention = z.infer<typeof knowledgeAttentionSchema>;
 
-// -- the collections -------------------------------------------------------
-
 export const knowledgeCollectionSchema = z.object({
   /** `captain` for the private collection, else the project's id. */
   scope: scopeSchema,
@@ -80,13 +76,10 @@ export const knowledgeCollectionsSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeCollections = z.infer<typeof knowledgeCollectionsSchema>;
 
-// -- the graph ---------------------------------------------------------------
-
 export const knowledgeGraphArgsSchema = z.strictObject({
   scope: scopeSchema,
   /** A concept whose neighborhood alone is drawn. */
   focus: entryIdSchema.optional(),
-  /** How far from `focus`: one hop or two. */
   hops: z.union([z.literal(1), z.literal(2)]).optional(),
   /** Words that narrow the graph to the concepts they find. */
   query: z.string().max(QUERY_MAX).optional(),
@@ -159,12 +152,9 @@ export const knowledgeGraphSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeGraph = z.infer<typeof knowledgeGraphSchema>;
 
-// -- the lists ---------------------------------------------------------------
-
 export const knowledgeConceptsArgsSchema = z.strictObject({
   scope: scopeSchema,
   query: z.string().max(QUERY_MAX).optional(),
-  /** From 0. */
   page: z.number().int().min(0).max(10_000).optional(),
 });
 export type KnowledgeConceptsArgs = z.infer<typeof knowledgeConceptsArgsSchema>;
@@ -239,8 +229,6 @@ export const knowledgeFindingsSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeFindings = z.infer<typeof knowledgeFindingsSchema>;
 
-// -- standing directions -------------------------------
-
 /** Directions are instructions or advice, never ordinary findings or permissions. */
 export const knowledgeDirectionRowSchema = z.object({
   id: z.string(),
@@ -269,7 +257,6 @@ export const knowledgeDirectionsSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeDirections = z.infer<typeof knowledgeDirectionsSchema>;
 
-/** A standing direction and the edits made in Knowledge. */
 export const knowledgeDirectionArgsSchema = z.strictObject({
   id: z.string().min(1).max(64),
   page: z.number().int().min(0).max(10_000).optional(),
@@ -336,14 +323,11 @@ export const knowledgeDirectionChangeSchema = z.discriminatedUnion("op", [
   }),
 ]);
 export type KnowledgeDirectionChange = z.infer<typeof knowledgeDirectionChangeSchema>;
-/** The direction as the change left it. */
 export const knowledgeDirectionChangedSchema = z.object({
   op: z.enum(["add", "revise", "retire"]),
   direction: knowledgeDirectionRowSchema,
 });
 export type KnowledgeDirectionChanged = z.infer<typeof knowledgeDirectionChangedSchema>;
-
-// -- one entry ---------------------------------------------------------------
 
 export const knowledgeEntryArgsSchema = z.strictObject({
   id: entryIdSchema,
@@ -352,7 +336,6 @@ export const knowledgeEntryArgsSchema = z.strictObject({
 });
 export type KnowledgeEntryArgs = z.infer<typeof knowledgeEntryArgsSchema>;
 
-/** Where a kept source came from: a file, a task's report, a quotation, or a saved article. */
 export const knowledgeOriginSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("file"),
@@ -416,7 +399,6 @@ export const knowledgeRevisionSchema = z.object({
 });
 export type KnowledgeRevision = z.infer<typeof knowledgeRevisionSchema>;
 
-/** A disagreement or replacement between two findings, with its reason. */
 export const knowledgeRelationSchema = z.object({
   type: z.enum(["contradicts", "supersedes", "duplicates"]),
   reason: z.string(),
@@ -530,8 +512,6 @@ export const KNOWLEDGE_STANDING_WORDS: Record<KnowledgeStanding, string> = {
   retired: "Retired",
 };
 
-// -- references in a card body ------------------------------------------------
-
 /**
  * An entry's id as text writes it (docs/knowledge.md, "References in an
  * answer"): `c-` or `f-` and six lowercase letters or digits, a word of its
@@ -547,7 +527,6 @@ export const KNOWLEDGE_ID_EXACT = /^[cf]-[a-z0-9]{6}$/;
 /** The ids one body may link; past this, later ids stay text. */
 export const KNOWLEDGE_REFS_MAX = 32;
 
-/** The distinct entry ids `text` writes, in order of first mention, at most KNOWLEDGE_REFS_MAX. */
 export function knowledgeIdsIn(text: string): string[] {
   const ids: string[] = [];
   for (const match of text.matchAll(new RegExp(KNOWLEDGE_ID_IN_TEXT, "g"))) {
@@ -588,8 +567,6 @@ export const knowledgeRefsSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeRefs = z.infer<typeof knowledgeRefsSchema>;
 
-// -- a task's declared uses ---------------------------------------------------
-
 /** The most declared uses a task record lists; `total` counts them all. */
 export const KNOWLEDGE_TASK_USES = 20;
 
@@ -608,7 +585,6 @@ export const knowledgeTaskUseSchema = z.object({
   /** The revision the work used, and what it said then. */
   revision: z.number().int().positive(),
   title: z.string(),
-  /** The entry's current revision, and what it says now. */
   current: z.number().int().positive(),
   currentTitle: z.string(),
   retired: z.boolean(),

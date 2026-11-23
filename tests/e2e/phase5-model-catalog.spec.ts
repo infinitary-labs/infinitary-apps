@@ -146,7 +146,6 @@ function dropHint(
   return plan.label;
 }
 
-/** Ensure the Models disclosure is open. */
 async function openModels(page: Page) {
   const models = modelsSection(page);
   await expect(models).toBeVisible({ timeout: 20_000 });
@@ -175,7 +174,6 @@ test("the models section offers the connected subscriptions' models only", async
   // behind the section still carries them, the section does not.
   expect(providers).not.toContain("openai-codex");
   expect(providers).not.toContain("openrouter");
-  // The paused Grok account keeps its own row in the list above.
   await expect(page.locator(`[data-account-row="${GROK_DISABLED}"]`)).toHaveAttribute(
     "data-paused",
     "true",
@@ -219,7 +217,6 @@ test("a connected provider's models are pinnable from the section", async () => 
   await expect(banner).toHaveCount(0);
   await alwaysUseSwitch(panel, opus).click();
   await expect(modelName(models, opus, true).first()).toBeVisible();
-  // The board says out loud what that does to every level.
   await expect(banner).toContainText(alwaysUseBanner(opus));
   await alwaysUseSwitch(panel, opus).click();
   await expect(modelName(models, opus, true)).toHaveCount(0);
@@ -250,7 +247,6 @@ test("a model already in a bucket can be added to another from the catalog, and 
   await expect(offer).toContainText(levelList(["high"]));
   await offer.click();
 
-  // In both now: premium gained a row and high kept its own.
   await expect(opusIn(premium)).toBeVisible();
   await expect(opusIn(high)).toBeVisible();
   // The pick closes the picker; reopened, it no longer offers what is here.
@@ -263,7 +259,6 @@ test("a model already in a bucket can be added to another from the catalog, and 
   await premium.getByRole("button", { name: "Add model" }).click();
   await expect(picker).toHaveCount(0);
 
-  // Leaving one bucket leaves the other alone.
   await removeFromLevel(premium, opus, "premium");
   await expect(opusIn(premium)).toHaveCount(0);
   await expect(opusIn(high)).toBeVisible();
@@ -290,7 +285,6 @@ test("a model's panel appears only when its name is clicked, and changes the mod
   const models = await openModels(page);
   const { key, label, from, to } = await modelInOneLevel(page);
 
-  // No panel until someone asks for one model.
   await closeModelPanel(models);
   await expect(models.getByRole("complementary")).toHaveCount(0);
   const panel = await openModelPanel(page, levelLane(models, from), label);
@@ -310,7 +304,6 @@ test("a model's panel appears only when its name is clicked, and changes the mod
   await expect(panel).toContainText(usedLine({ slots: [] }));
   await page.screenshot({ path: test.info().outputPath("dark-models-panel.png") });
 
-  // Put it back where it started and close the panel.
   await setLevelInPanel(panel, label, from, true);
   await expect(modelPill(models, from, key)).toBeVisible();
   await closeModelPanel(models);

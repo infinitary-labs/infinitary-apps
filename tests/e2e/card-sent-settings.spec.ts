@@ -42,7 +42,6 @@ for (const preview of [true, false]) {
     try {
       const { page } = launched;
       const frame = cardBody(page, "Choose your settings");
-      // Picked in the frame, where the captain's click lands (`clickInBody`).
       const choose = async (label: string) => {
         const choice = frame.getByLabel(label, { exact: true });
         await clickInBody(choice);

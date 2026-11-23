@@ -721,7 +721,6 @@ describe.each(["openai-completions", "openai-responses"] as const)(
   },
 );
 
-/** The real transport interface, answering with exactly these chunks. */
 function scripted(chunks: readonly Uint8Array[]): CustomApiTransport {
   return {
     request: async () =>

@@ -255,7 +255,6 @@ test("approved changes of a GitLab project merge in batches of the captain's own
       status: "consumed",
       receipt: { sha: git("rev-parse", "main^2") },
     });
-    // The app deleted each merged batch's branch.
     expect(gitlab.deletedBranches()).toEqual([first?.branch, second?.branch]);
   } finally {
     await launched.close();

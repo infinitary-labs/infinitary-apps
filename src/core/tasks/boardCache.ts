@@ -61,7 +61,6 @@ export type CachedView = { view: TaskView; facts: string; cards: string };
 export type BoardCache = {
   /** Every record the board reads: the shown rows and the rows at the other ends of their edges. */
   records: Map<string, TaskRecord>;
-  /** The rows on the board. */
   shown: Set<string>;
   /** The edges touching a shown row, by `edgeKey`. */
   links: Map<string, TaskLink>;
@@ -69,9 +68,7 @@ export type BoardCache = {
   childCounts: Map<string, PartCounts>;
   /** What replaced each shown dropped or superseded row (`TaskService.graph.replacementsOf`). */
   replacedBy: Map<string, string>;
-  /** The graph around the shown rows, as the last read built it. */
   graph: Graph;
-  /** Each shown row's view. */
   views: Map<string, CachedView>;
   /** The rows in canonical order, as the last board carried them. */
   tasks: TaskView[];
@@ -264,7 +261,6 @@ export function refresh(
         rebuild.add(id);
     }
   }
-  // What replaced the rebuilt dropped rows.
   const replacedIds = [...rebuild].filter((id) => replaced(records.get(id) as TaskRecord));
   const replacements = tasks.graph.replacementsOf(replacedIds);
   for (const id of replacedIds) {

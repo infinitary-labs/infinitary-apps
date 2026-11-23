@@ -42,7 +42,6 @@ export function damagedFontBytes(): Buffer {
   return bytes;
 }
 
-/** One table of an SFNT: its four-letter tag and its bytes. */
 export type FontTable = { tag: string; data: Buffer };
 
 /** A few tables with the tags every font carries, filled to plausible lengths. */
@@ -90,7 +89,6 @@ export function sfnt(
   return Buffer.concat([head, ...data]);
 }
 
-/** The SFNT's tables, read back from its directory. */
 function tablesOf(font: Buffer): { tag: string; data: Buffer }[] {
   const count = font.readUInt16BE(4);
   return Array.from({ length: count }, (_, i) => {

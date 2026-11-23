@@ -126,7 +126,6 @@ case "$SYSTEM" in
   appimage)
     start_box
     APPIMAGE="$(one '*.AppImage')"
-    # A desktop's libraries, and no git.
     in_box "dnf install -y gtk3 nss alsa-lib libXScrnSaver libXtst at-spi2-core mesa-libgbm libsecret libnotify xdg-utils util-linux"
     in_box "! command -v git" || fail "the container already has git"
     in_box "cp '$APPIMAGE' /tmp/person/infinitary.AppImage && chmod 0755 /tmp/person/infinitary.AppImage && chown $(id -u) /tmp/person/infinitary.AppImage"

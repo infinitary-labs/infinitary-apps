@@ -222,7 +222,6 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     const whole = world.timeline.entries("rerun");
     const first = world.timeline.read("rerun", { limit: 4 });
     expect(first.entries).toEqual(whole.slice(0, 4));
-    // Meanwhile: a newer event and a thread line arrive.
     world.tasks.noteProgress("rerun", "Watching the next scheduled run.");
     world.cards.addMessage(cardId, "captain", "thanks");
     const read = [...first.entries];
@@ -233,7 +232,6 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
       cursor = page.cursor;
     }
     expect(read).toEqual(whole);
-    // A fresh read takes a new cut and holds what arrived.
     expect(world.timeline.entries("rerun").length).toBe(whole.length + 2);
     expect(() => world.timeline.read("rerun", { cursor: "not-a-cursor" })).toThrow(
       "That timeline cursor is not one this reader gave.",
@@ -318,7 +316,6 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     expect(
       entries.filter((entry) => entry.content.kind === "card-message").map((e) => e.summary),
     ).toEqual(["does the flush cover windows too?", "Yes: the flush runs on every platform."]);
-    // The same read again is the same timeline.
     expect(world.timeline.entries("rerun")).toEqual(entries);
   });
 

@@ -49,11 +49,9 @@ test("a whole-window picture holds the whole window at every Size and leaves a r
           await expect.poll(() => frames.length).toBeGreaterThan(before + 2);
           const { counts, corners } = await readMarkers(page, picture);
           console.log(`${zoom}% corner markers: ${JSON.stringify({ counts, corners })}`);
-          // Each corner of the picture is the window's own.
           expect(corners, `the ${zoom}% picture is the whole window`).toEqual(
             Object.fromEntries(Object.keys(CORNERS).map((corner) => [corner, corner])),
           );
-          // Every frame recorded around the picture is the whole window too.
           expect(
             new Set(frames),
             `the ${zoom}% recording keeps the whole window while the picture is taken`,

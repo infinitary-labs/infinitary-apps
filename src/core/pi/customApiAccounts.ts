@@ -466,7 +466,6 @@ export class CustomApiAccountOwner {
     if (!live || live.closed) return false;
     return modelId ? this.proofMatches(live.stored, modelId) : this.allChecked(live.stored);
   }
-  /** The saved models whose check no longer counts, in the connection's order. */
   unchecked(accountId: string): string[] {
     const live = this.live.get(accountId);
     if (!live || live.closed) return [];

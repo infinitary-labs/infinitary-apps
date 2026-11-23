@@ -63,7 +63,6 @@ export const DECISION_USES_WORDS = {
   get turnOn() {
     return m.settingsDecisionsUsesTurnOn();
   },
-  /** A turn-on control's title, naming what it turns on. */
   turnOnNamed: (name: string) => m.settingsDecisionsUsesTurnOnNamed({ name }),
 } as const;
 

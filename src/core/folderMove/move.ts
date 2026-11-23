@@ -157,7 +157,6 @@ export type MoveDeps = {
   hostname: string;
   progress?: (progress: MoveProgress) => void;
   pid?: number;
-  /** This process's program file (`process.execPath`). */
   execPath?: string;
   alive?: (pid: number) => boolean;
   now?: () => Date;
@@ -201,9 +200,7 @@ function lastOpened(dir: string): number | undefined {
   for (const name of ["firstmate.db-wal", "firstmate.db"]) {
     try {
       return statSync(join(dir, name)).mtimeMs;
-    } catch {
-      // The next one.
-    }
+    } catch {}
   }
   return undefined;
 }

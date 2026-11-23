@@ -94,11 +94,6 @@ const [FOLD_TOOL] = PROGRESS_TOOL_NAMES;
  */
 
 /**
- * Name the provider and model on a flagship error so the captain can tell
- * a provider fault from a local crash: "Grok grok-4.6: Response incomplete:
- * max_time_limit" rather than a 120-character first sentence.
- */
-/**
  * The running turn, field by field: what it read, did and met. One record
  * for the agent and the owners its tools and context reach; `runTurn`
  * clears what each turn starts afresh, and the wake that begins a turn
@@ -126,7 +121,6 @@ export type FirstmateTurn = {
   /** The closing assistant text of the running turn: its reply line, a card-thread answer, a fallback question's answer. */
   closingText?: string;
   delivered: boolean;
-  /** What the running turn did that can be its reply line (./replyLine). */
   replyFacts: ReplyFacts;
   /** Exact inputs waiting for the backend's read witness, in send order. */
   pendingReads: { sha: string; asks: string[]; inboxIds: number[] }[];
@@ -148,7 +142,6 @@ export type FirstmateTurn = {
   typed: boolean;
   /** The tools the running turn called, for the digest. */
   tools: string[];
-  /** The running turn's typed cut-off, when it ended in one. */
   cutOff?: CutOff;
   /** That cut-off paused the seat: the ladder's card speaks for it. */
   pausing: boolean;
@@ -276,7 +269,6 @@ export class FirstmateAgent {
    * drainability, so a replay coalesces from its own clock alone.
    */
   private coalesceTimer: ReturnType<typeof setTimeout> | undefined;
-  /** The coalescing window in ms (WI-13), from options or `WAKE_COALESCE_MS`. */
   private readonly coalesceMs: number;
   private readonly now: () => number;
   /**
@@ -297,7 +289,6 @@ export class FirstmateAgent {
   private readonly seat: FirstmateSeat;
   /** What each turn's context block carries, and what this model context has read of it. */
   private readonly context: FirstmateContext;
-  /** What the running turn read, did and met (`FirstmateTurn`), field by field. */
   private readonly turn: FirstmateTurn = {
     failed: false,
     contextOverflow: false,
@@ -1000,7 +991,6 @@ export class FirstmateAgent {
     return this.seat.applyAccountSetting();
   }
 
-  /** A model picked in Settings (`FirstmateSeat.applyModelSetting`). */
   applyModelSetting(model: { provider: string; id: string } | null): Promise<void> {
     return this.seat.applyModelSetting(model);
   }
@@ -1025,7 +1015,6 @@ export class FirstmateAgent {
     return this.seat.preflightModel();
   }
 
-  /** What the first mate's tools reach of this agent (`FirstmateToolHost`). */
   private toolHost(): FirstmateToolHost {
     return {
       options: this.options,
@@ -1401,7 +1390,6 @@ export class FirstmateAgent {
       );
   }
 
-  /** Keeps a reply line beside the newest message, when it is one of `read`, and sends it. */
   private keepReplyLine(read: readonly string[], reply: LastTurnReply): void {
     try {
       const latest = this.options.tasks.capture.latestAskId();
@@ -1444,7 +1432,6 @@ export class FirstmateAgent {
     }
   }
 
-  /** A turn ended in a cut-off: admission reads the account now, and pauses or moves on. */
   private async admitAfterCutOff(): Promise<void> {
     const session = await this.seat.ensureSession();
     if (!session || this.running || session.isStreaming()) return;
@@ -1803,7 +1790,6 @@ export class FirstmateAgent {
     }
   }
 
-  /** Stamp origin and writing authority from the wake. */
   private beginOriginTurn(origin: KnowledgeOrigin, canCreate: boolean): void {
     this.turn.origin = origin;
     this.turn.canCreate = canCreate;
@@ -1824,7 +1810,6 @@ function turnFailureReason(error: string | undefined, providerFailed: boolean): 
   return providerFailed ? "provider" : "error";
 }
 
-/** A captain's steer the session accepted: his words, and the card they were about, if any. */
 type AcceptedSteer = {
   words: string;
   attachments?: AttachmentRef[];

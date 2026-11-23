@@ -459,13 +459,11 @@ describe("the task graph (task-system P2)", () => {
       );
       expect(() => tasks.graph.link("b", "a", "blocks", "firstmate")).toThrow(/close a cycle/);
       expect(() => tasks.graph.link("a", "a", "blocks", "firstmate")).toThrow(/linked to itself/);
-      // Nothing was written by the refusals.
       expect(tasks.graph.blockers("a")).toEqual([]);
       expect(tasks.timeline("a").map((e) => e.kind)).toEqual(["created"]);
       // Informational edges never cycle-check: related both ways is fine.
       expect(tasks.graph.link("c", "a", "related", "firstmate")).toBe(true);
       expect(tasks.graph.link("a", "c", "related", "firstmate")).toBe(true);
-      // The refusal at create rolls the whole create back.
       expect(() => work("d", { blockedBy: ["nope"] })).toThrow(/Unknown task/);
       expect(tasks.get("d")).toBeUndefined();
     });
@@ -557,7 +555,6 @@ describe("the task graph (task-system P2)", () => {
       expect(() => tasks.setParent("parent", "parent", "firstmate")).toThrow(/own parent/);
       expect(tasks.get("parent")?.parentId).toBeNull();
       expect(grandchild.parentId).toBe("child");
-      // Re-parenting within the project records a moved event; clearing too.
       tasks.setParent("grandchild", "parent", "firstmate");
       expect(tasks.get("grandchild")?.parentId).toBe("parent");
       expect(tasks.timeline("grandchild").at(-1)).toMatchObject({
@@ -685,13 +682,11 @@ describe("the task graph (task-system P2)", () => {
       });
       const where = (id: string) => [tasks.get(id)?.key, tasks.get(id)?.repoId];
 
-      // Its own repository, when the project holds it.
       work("own", { repoId: "r-api" });
       tasks.updateFields("own", { project: "SCR" }, "firstmate");
       tasks.updateFields("own", { project: "HBL" }, "firstmate");
       expect(where("own")).toEqual(["HBL-2", "r-api"]);
 
-      // From a repository the project does not hold, nothing is guessed.
       work("elsewhere", { repoId: "r1" });
       const before = tasks.get("elsewhere");
       expect(() => tasks.updateFields("elsewhere", { project: "HBL" }, "firstmate")).toThrow(
@@ -704,7 +699,6 @@ describe("the task graph (task-system P2)", () => {
         'Refused: harbor-ledger holds no repository "wallet"; its repositories are harbor-ledger, harbor-ledger-api.',
       );
 
-      // The one named, by name.
       tasks.updateFields(
         "elsewhere",
         { project: "HBL", repository: "harbor-ledger-api" },
@@ -800,7 +794,6 @@ describe("the task graph (task-system P2)", () => {
       expect([tasks.get("site"), tasks.get("ship")]).toEqual(before);
       expect(tasks.timeline("ship").map((event) => event.kind)).toEqual(["created"]);
 
-      // Once its delivery is local-only, the subtree moves.
       tasks.updateFields("ship", { policies: { delivery: "local-only" } }, "firstmate");
       expect(tasks.updateFields("site", { project: "NOTE" }, "firstmate")).toEqual([
         "moved to notes as NOTE-1",
@@ -951,7 +944,6 @@ describe("the task graph (task-system P2)", () => {
         text: QUEUED_ACTIVITY,
         data: { startPolicy: "when-ready", via: "task-card" },
       });
-      // The same move again writes nothing.
       const entries = tasks.timeline(leaf.id).length;
       expect(tasks.starts.setQueued(leaf.id, "queue-task", { actor: "captain" })).toEqual({
         ok: true,
@@ -965,7 +957,6 @@ describe("the task graph (task-system P2)", () => {
       ).toEqual({ ok: true, changed: true });
       expect(tasks.get(leaf.id)?.startPolicy).toBe("on-request");
       expect(tasks.timeline(leaf.id).at(-1)?.text).toBe(UNQUEUED_ACTIVITY);
-      // Both read back as the captain's task card clicks.
       expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual([
         "unqueue-task",
         "queue-task",
@@ -1226,7 +1217,6 @@ describe("the task graph (task-system P2)", () => {
         waiter.key,
         blocking.key,
       ]);
-      // The waited-on work's close, done or dropped, ends its hold.
       tasks.close("waiter", { status: "done", reason: "landed", actor: "captain" });
       tasks.close(blocking.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
       expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();

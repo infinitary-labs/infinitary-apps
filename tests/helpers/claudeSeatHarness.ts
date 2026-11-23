@@ -45,13 +45,11 @@ export function answerTool<N extends ScriptedCall["name"]>(
   finishAnthropicStream(res, "tool_use", 7);
 }
 
-/** The newest message is the client's answer to a tool call. */
 export function answersTool(request: StubRequest): boolean {
   const last = [...(request.body.messages ?? [])].reverse().find((m) => m.role === "user");
   return JSON.stringify(last?.content ?? "").includes('"tool_result"');
 }
 
-/** Everything the model is shown after the assistant's last tool call, as one string. */
 export function afterLastToolCall(request: StubRequest): string {
   const messages = request.body.messages ?? [];
   const at = messages
@@ -60,7 +58,6 @@ export function afterLastToolCall(request: StubRequest): string {
   return JSON.stringify(messages.slice(at + 1));
 }
 
-/** How often the wait reads the client's transcript again. */
 const READ_EVERY_MS = 25;
 
 /**

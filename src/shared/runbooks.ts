@@ -124,7 +124,6 @@ export function runbookPanelSlice(runbookId: string, folder: string): string {
   return `${runbookId}:${folder}`;
 }
 
-/** A manifest's crew sections in order: one section, or several each with its own selector. */
 export function crewSectionsOf(manifest: Pick<RunbookManifest, "crew">): RunbookSection[] {
   if (!manifest.crew) return [];
   return Array.isArray(manifest.crew) ? manifest.crew : [manifest.crew];

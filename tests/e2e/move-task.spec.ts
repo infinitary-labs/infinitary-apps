@@ -85,7 +85,6 @@ test("a signed-out crewmate's task moves to another provider by keys and goes on
   await focusOn(move);
   await pressKey(move, "Enter");
 
-  // The same task goes on: its crewmate reports under its key, on the new provider.
   await expect(
     reportLine(page, key).filter({ hasText: reportSummary(MOVED_TASK_REPORT) }),
   ).toBeVisible({

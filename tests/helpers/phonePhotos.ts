@@ -304,7 +304,6 @@ export async function libraryPhotoAdded({
     adding.catch(() => {});
     return adding;
   };
-  // Whether Photos took the photo within the budget, the add failed, or Photos is still holding it.
   const within = async (adding: Promise<string>) => {
     let budget: DeadlineTimer | undefined;
     const stalled = new Promise<"stalled">((resolve) => {

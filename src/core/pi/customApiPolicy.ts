@@ -238,9 +238,7 @@ export function classifyCustomApiAddresses(addresses: readonly string[]): Custom
     try {
       assertCustomApiAddresses(addresses, mode);
       return mode;
-    } catch {
-      /* The next class. */
-    }
+    } catch {}
   }
   throw new CustomApiError("destination", undefined, undefined, addresses);
 }

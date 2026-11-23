@@ -83,7 +83,6 @@ export type CaptainOpInput = {
   "captain.watch": { after?: string; waitMs: number; channels?: string[]; full?: boolean };
 };
 
-/** An integrations answer: structured rows, a call's words, or a refusal's. */
 export type IntegrationChannelAnswer = {
   data?: Record<string, unknown>;
   text?: string;
@@ -105,9 +104,7 @@ export type ChannelReply<Answer> =
 
 export type BrowserReply = ChannelReply<ChannelAnswer>;
 export type IntegrationReply = ChannelReply<IntegrationChannelAnswer>;
-/** The inbox answers as the integrations do: rows, or a refusal's words. */
 export type InboxReply = ChannelReply<IntegrationChannelAnswer>;
-/** The captain's command answers as the integrations do: rows, or a refusal's words. */
 export type CaptainReply = ChannelReply<IntegrationChannelAnswer>;
 
 /** The app's first and only instruction to a command process. */
@@ -115,7 +112,6 @@ export type AxiRunMessage = {
   type: "run";
   /** The command's name as the shell ran it: `infinitary-browser-axi`. */
   tool: string;
-  /** Its arguments, as typed. */
   argv: string[];
   /** Where the shell found it, for the home view's path. */
   bin: string;
@@ -125,7 +121,6 @@ export type AxiRunMessage = {
   version: string;
 };
 
-/** One operation the command asks of the task's tool. */
 export type AxiCallMessage = {
   type: "call";
   id: number;

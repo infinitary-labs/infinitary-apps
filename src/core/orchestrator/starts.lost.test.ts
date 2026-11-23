@@ -200,9 +200,7 @@ async function placedTask(
   return { ...h, crew, prepare, sourceRef, bringBranchHome, away, repo, source, taskId: task.id };
 }
 
-/** The first mate's wakes that name a failed queued start. */
 const failedWakes = (ops: string[]) => ops.filter((op) => op.includes("could not start"));
-/** Every word the first mate heard of the task. */
 const heardOf = (ops: string[], taskId: string) => ops.filter((op) => op.includes(taskId));
 
 describe("a start that loses its computer", () => {
@@ -227,7 +225,6 @@ describe("a start that loses its computer", () => {
     expect(h.tasks.get(h.taskId)?.status).toBe("active");
     expect(h.prepare).toHaveBeenCalledTimes(2);
     expect(h.crew.promptCalls).toHaveLength(1);
-    // Nothing reached the first mate, neither the loss nor the recovery.
     expect(heardOf(h.ops, h.taskId)).toEqual([]);
   });
 
@@ -292,7 +289,6 @@ describe("a start that loses its computer", () => {
     expect(h.tasks.get(h.taskId)).toMatchObject({ status: "open", gate: null });
     await h.supervisor.starts.dispatchQueuedTask(h.taskId);
     await tick();
-    // It starts, rather than waiting again for the model it was started past.
     expect(h.tasks.get(h.taskId)?.status).toBe("active");
     expect(h.bringBranchHome).toHaveBeenCalledTimes(2);
   });
@@ -302,7 +298,6 @@ describe("a start that loses its computer", () => {
     h.prepare.mockRejectedValueOnce(new DeviceOutOfReachError(WENT));
     await h.supervisor.starts.dispatchQueuedTask(h.taskId);
     h.away.add(MACHINE);
-    // Its Runs on moves to the other computer, which is in reach.
     h.tasks.updateFields(
       h.taskId,
       { runsOn: { ask: SOURCE_MACHINE, words: SOURCE_NAME } },
@@ -402,7 +397,6 @@ describe("a start Automatic placed that loses its computer", () => {
 
     h.prepare.mockRejectedValueOnce(preparationLost());
     await h.supervisor.starts.dispatchQueuedTask(h.taskId).catch(() => {});
-    // The second, at the same step: Could not start, said once, naming it.
     const wakes = failedWakes(h.ops);
     expect(wakes).toHaveLength(1);
     expect(wakes[0]).toContain(`went out of reach twice ${lostStepWords("working-copy")}`);
@@ -411,7 +405,6 @@ describe("a start Automatic placed that loses its computer", () => {
     });
     expect(h.tasks.get(h.taskId)?.placement?.reservation).not.toBe("ended");
 
-    // Start asks that computer again under the same order.
     await h.supervisor.starts.startQueuedNow(h.taskId, {
       audience: "captain",
       from: "task-card",
@@ -480,7 +473,6 @@ describe("a start whose brief reads from another computer", () => {
     await h.supervisor.starts.dispatchQueuedTask(h.taskId);
     expect(h.bringBranchHome).toHaveBeenCalledTimes(1);
     expect(h.tasks.get(h.taskId)?.status).toBe("open");
-    // Back: the next sweep starts it.
     h.away.delete(SOURCE_MACHINE);
     await h.supervisor.starts.dispatchQueuedTask(h.taskId);
     await tick();

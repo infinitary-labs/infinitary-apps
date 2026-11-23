@@ -247,7 +247,6 @@ function crewmateLanguage(): CrewmateLanguage {
   return { name: captainLanguageFact(), ...(headings ? { headings } : {}) };
 }
 
-/** The crewmate preset: its spec for a session on `binding`. */
 export function crewmateSessionSpec(
   paths: AppPaths,
   spec: CrewmateSpec,

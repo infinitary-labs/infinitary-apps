@@ -128,7 +128,6 @@ test("a task held on another's finding carries on when that task reports it with
         ),
       )
       .toMatchObject({ status: "active", blockedBy: [] });
-    // Only the reader's own card is up: the relay raised none of the app's.
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).map((card) => card.title),
     ).toEqual([READER_CARD_TITLE]);

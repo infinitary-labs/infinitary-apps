@@ -69,7 +69,6 @@ export function memorySplit(line: MemoryLine): MemorySplit {
   };
 }
 
-/** The reading the main thread takes of itself now. */
 export async function readMemory(options: {
   now: () => Date;
   footprint?: () => Promise<number | null>;

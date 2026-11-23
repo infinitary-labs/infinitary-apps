@@ -15,7 +15,6 @@
 /** One `url()` an `@font-face` names: the token's range in the sheet, and its value. */
 export type FontFaceUrl = { start: number; end: number; value: string };
 
-/** The index just past a string that opens at `at`, or the sheet's end when it never closes. */
 function stringEnd(css: string, at: number): number {
   const quote = css[at];
   let i = at + 1;
@@ -23,13 +22,11 @@ function stringEnd(css: string, at: number): number {
   return Math.min(i + 1, css.length);
 }
 
-/** The index just past a comment that opens at `at`, or the sheet's end when it never closes. */
 function commentEnd(css: string, at: number): number {
   const end = css.indexOf("*/", at + 2);
   return end === -1 ? css.length : end + 2;
 }
 
-/** The `url()` token that opens at `at`, or undefined when it is not one. */
 function urlToken(css: string, at: number): FontFaceUrl | undefined {
   let i = at + 4;
   while (/\s/.test(css[i] ?? "")) i++;

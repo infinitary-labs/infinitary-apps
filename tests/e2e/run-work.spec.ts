@@ -139,13 +139,11 @@ test("the home's address changes: a new command finds it as the same computer, a
     expect(again.lines()).toEqual(
       helperWords.foundAgain(THIS_MAC, "MacBook Pro", ME.name, "running"),
     );
-    // The run the background started stopped first, and the background started again.
     expect(await first.exited).toBe(0);
     expect(me.managerAsked().slice(asked)).toEqual([
       ...me.background.paused,
       ...me.background.started,
     ]);
-    // The same computer on the home's list, dialing where the home is now.
     expect(at.pairing.list()).toEqual([device]);
     expect(new JoinedHome(me.dataDir).read()?.grant).toMatchObject({
       at: at.at(),
@@ -224,7 +222,6 @@ test("its home gone for good, a new home's command asks to leave it, and on a ye
       ...helperWords.cleanedUp([dir], [], [], { triesAgain: false }),
       ...helperWords.joined(THIS_MAC, "MacBook Pro", ME.name, "running"),
     ]);
-    // The old home's run stopped, its agent went with the removal, and the new one's started.
     expect(await first.exited).toBe(0);
     expect(me.managerAsked().slice(asked)).toEqual([
       ...me.background.paused,

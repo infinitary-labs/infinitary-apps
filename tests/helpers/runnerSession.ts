@@ -12,7 +12,6 @@ function fromRunnerSession(name: string): boolean {
   return name === "AI_AGENT" || name.startsWith("CLAUDE") || name.startsWith("ANTHROPIC_");
 }
 
-/** `env` without the runner's session variables. */
 export function withoutRunnerSession(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(env).filter(([name]) => !fromRunnerSession(name)));
 }

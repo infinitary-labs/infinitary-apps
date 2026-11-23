@@ -100,7 +100,6 @@ describe("the relationship contract", () => {
     ).toThrow('Unknown escalate_from "SCR-999"');
     expect(tasks.get("across")).toBeUndefined();
     expect(tasks.get("nowhere")).toBeUndefined();
-    // Clearing removes the row and the shape field with it.
     tasks.updateFields(step.id, { basis: "" }, "firstmate");
     expect(tasks.get(step.id)?.shape).toEqual({ kind: "fix" });
     expect(tasks.archive.recordedReferences(step.id)).toEqual([]);
@@ -254,14 +253,12 @@ describe("the migration of an older release's relationships", () => {
         recorded_at: null,
       },
     ]);
-    // The shape column no longer holds them.
     const stored = upgraded
       .prepare(
         "SELECT COUNT(*) AS n FROM task_records WHERE json_type(shape_json, '$.basis') IS NOT NULL OR json_type(shape_json, '$.branch_from') IS NOT NULL OR json_type(shape_json, '$.escalate_from') IS NOT NULL",
       )
       .get();
     expect(stored).toEqual({ n: 0 });
-    // Every reader: the shape as read, the published view, readiness, the graph.
     for (const [id, shape] of Object.entries(shapes)) expect(tasks.get(id)?.shape).toEqual(shape);
     expect(view(upgraded)).toEqual(readBefore.view);
     expect(tasks.graph.listReady().map((record) => record.id)).toEqual(readBefore.ready);

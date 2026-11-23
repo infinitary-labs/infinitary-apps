@@ -41,7 +41,6 @@ export function trackFrame(
   };
 }
 
-/** The bridge of a frame the window draws, by its element; null for a frame no controller runs. */
 export function controllerOf(frame: HTMLIFrameElement): FrameController | null {
   for (const entry of tracked) if (entry.frame.current === frame) return entry.controller;
   return null;
@@ -112,7 +111,6 @@ export function focusFrame(frame: HTMLIFrameElement | null): void {
   frame.focus({ preventScroll: true });
 }
 
-/** Whether the window's own page holds focus on nothing: no element of its own, and no frame. */
 function restsOnNothing(): boolean {
   const active = document.activeElement;
   return active === null || active === document.body || active === document.documentElement;
@@ -253,7 +251,6 @@ export function whenFrameHoldsFocus(
   else otherwise?.();
 }
 
-/** Whether the frame holds the window's focus now or within the gesture's few frames. */
 export function frameHoldsFocus(frame: () => HTMLIFrameElement | null): Promise<boolean> {
   return new Promise((resolve) =>
     whenFrameHoldsFocus(

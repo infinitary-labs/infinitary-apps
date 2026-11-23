@@ -13,7 +13,6 @@ export const GROWING_RING = {
   orbitStepPx: 46,
   /** Crew on an orbit before it stops growing and the next one opens. */
   seatsPerOrbit: 24,
-  /** Today's inner plane: tilt 42°, turned −0.42 rad. */
   firstTiltDeg: 42,
   tiltStepDeg: 23,
   firstNode: -0.42,

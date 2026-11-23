@@ -359,7 +359,6 @@ FROM decisions WHERE kind = 'sort'`,
   },
 ];
 
-/** What every connection that reads the views needs: `exec` and scalar functions. */
 export type ViewConnection = {
   exec(sql: string): unknown;
   function(
@@ -482,7 +481,6 @@ function hasTable(db: SchemaReader, name: string): boolean {
   );
 }
 
-/** The published views as this database can read them. */
 function publishedViews(db: SchemaReader): PublishedView[] {
   const basis = hasTable(db, "task_references") ? BASIS_FROM_REFERENCES : BASIS_FROM_SHAPE;
   const executing = hasTable(db, "task_execution");

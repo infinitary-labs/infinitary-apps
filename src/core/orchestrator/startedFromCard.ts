@@ -1,7 +1,6 @@
 import type { CardMessage, CardMessageWho, CardThread } from "@shared/cards";
 import { startedLineWords } from "@shared/threadLines";
 
-/** What writing the line needs of the card service. */
 export type StartedLineCards = {
   thread(cardId: string): CardThread;
   addMessage(cardId: string, who: CardMessageWho, text: string): CardMessage;

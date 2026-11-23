@@ -29,12 +29,10 @@ export type PrivateSiteChange = z.infer<typeof privateSiteChangeSchema>;
 
 const LABEL = /^(?!-)[a-z0-9_-]{1,63}(?<!-)$/;
 
-/** The entry a person typed, checked: a name or a suffix, or why it is not one. */
 export function normalizePrivateSite(
   input: string,
 ): { ok: true; site: string } | { ok: false; text: string } {
   let text = input.trim().toLowerCase();
-  // A pasted address names its host.
   if (text.includes("://")) {
     try {
       text = new URL(text).hostname;

@@ -79,7 +79,6 @@ export type SteerSource = {
   captainText?: string;
 };
 
-/** The host's own steer: the supervisor, through supervision, answering no message or card. */
 export const SUPERVISOR_STEER: SteerSource = {
   actor: "supervisor",
   via: "supervision",
@@ -106,7 +105,6 @@ export type PlacementRecord = {
   shape?: { kind?: string; runs_on_ask?: string; in_place?: object } | null;
 };
 
-/** Who asked for an interrupt or cancel, from where, and under which decision. */
 export type InterruptSource = {
   actor: "firstmate" | "captain";
   via: InterruptEventData["via"];
@@ -132,7 +130,6 @@ export type MoveAsk = {
   offered?: string;
 };
 
-/** Where a moving task reopens: the routed model, its account and effort, and its provider's name. */
 export type MoveTarget = {
   model: { provider: string; id: string };
   accountId?: string;
@@ -164,7 +161,6 @@ export type TaskRuntime = {
    * ones a client end, or the quit, cuts off (`follow`, `disposeAll`).
    */
   clientTasks: Map<string, { description: string; since: number }>;
-  /** Text streamed in the current assistant turn. */
   currentTurnText: string;
   /** The last completed turn's text - the report shown on the task card. */
   lastCompleteText: string;
@@ -263,7 +259,6 @@ export type TaskRuntime = {
    * without this the failure would report as an empty "(no report)".
    */
   lastTurnError?: string;
-  /** The typed cut-off behind `lastTurnError`, when the backend reported one. */
   lastTurnCutOff?: CutOff;
   /** `lastTurnError` is the model's context limit, as the backend typed it. */
   lastTurnContextOverflow?: true;
@@ -278,7 +273,6 @@ export type TaskRuntime = {
 /** A steer handed into a running turn, by its words' digest and when it was handed over. */
 export type UnreadSteer = { sha: string; since: number; woken?: true };
 
-/** A relay the first mate was woken for when its report was made (`TaskRuntime.relayWoken`). */
 export type RelayWoken = {
   request: string;
   report: string;

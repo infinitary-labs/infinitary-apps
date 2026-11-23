@@ -59,7 +59,6 @@ type ChatMessage = {
   tool_calls?: { function: { name: string; arguments: string } }[];
 };
 
-/** The rule of every routing decision recorded for a task, from the app's own ledger. */
 function routingRules(userDataDir: string, taskId: string): string[] {
   return readSavedData(userDataDir, (db) =>
     (
@@ -126,7 +125,6 @@ test("a filed task starts on the model the captain names, keeping its key and pa
         2,
       ),
     );
-    // No replacement: nothing new was filed and nothing was dropped.
     const after = await board(page);
     expect(after).toHaveLength(filedCount);
     expect(after.filter((task) => task.status === "dropped")).toEqual([]);

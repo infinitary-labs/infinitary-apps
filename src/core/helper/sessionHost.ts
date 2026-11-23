@@ -127,7 +127,6 @@ export type SessionHostOptions = {
   secretRunsDir?: string;
   /** Asks the home one work request; asked again after every drop until it answers. */
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
-  /** This computer's own factories. */
   factories: Partial<SessionFactories>;
   /** The binding the home described, resolved with this computer's own sign-ins. */
   bind: (binding: PlacedSpec["binding"]) => Promise<SessionBinding>;
@@ -243,7 +242,6 @@ export type OwnAccounts = {
   noteCutOff(accountId: string, cutOff: CutOff): void;
 };
 
-/** The crewmate tools whose callbacks can ask the home; the home names which a task gets. */
 /** The crewmate tools a conversation here serves by asking its home: the app's own (`APP_TOOL_REQUESTS`). */
 const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 /** A home that draws an ask's how-to (`secret-ask-how.md`). */
@@ -385,7 +383,6 @@ export class SessionHost {
     }
   }
 
-  /** The shell job list changed: each open Pi conversation sends its own count. */
   jobsChanged(): void {
     if (this.stopped) return;
     for (const held of this.held.values()) this.recordJobs(held);
@@ -1246,7 +1243,6 @@ export class SessionHost {
     );
   }
 
-  /** Working, or with work of its client's own running. */
   private working(held: Held): boolean {
     return this.busy(held) || held.clientTasks.size > 0;
   }
@@ -1275,7 +1271,6 @@ export class SessionHost {
     held.renewal = undefined;
     held.backend = null;
     if (!session) return;
-    // Its client ends now, and what it ran in the background with it.
     this.clientEnded(held);
     session.dispose();
     await session.closed().catch(() => undefined);
@@ -1381,7 +1376,6 @@ export class SessionHost {
     tasks.remove(held.task);
   }
 
-  /** The open conversation, or why an order for it cannot be done. */
   private conversation(held: Held): ModelSession {
     if (!held.session) throw new Error("No conversation is open for this task here.");
     return held.session;

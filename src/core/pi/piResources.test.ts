@@ -520,7 +520,6 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
         expect(prompt, `${name}: ${fact}`).toContain(fact);
       }
     }
-    // The old prose-first sentence is gone from every surface.
     for (const text of [CARD_AUTHORING, FIRSTMATE_PROMPT_CORE, buildCrewmateSystemPrompt("pi")]) {
       expect(text).not.toContain("Prefer concise headings");
       expect(text).not.toContain("Prefer headings, paragraphs, lists, tables");

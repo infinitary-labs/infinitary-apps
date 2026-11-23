@@ -16,7 +16,6 @@ vi.mock("../src/core/utilityQos", async (importOriginal) =>
   (await import("./helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The version the merge request's branch is at. */
 const HEAD = "4f1c2a9e8b7d6c5f4e3d2c1b0a9f8e7d6c5b4a39";
 
 // A user's report on a self-hosted GitLab: a merge request from a branch in

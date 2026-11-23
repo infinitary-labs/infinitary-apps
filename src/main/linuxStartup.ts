@@ -8,7 +8,6 @@ import { findOnPath } from "@core/userBin";
  * or open anyway.
  */
 
-/** One question the app asks before it opens, in the words a person reads. */
 export type StartupAsk = {
   readonly id: "git" | "sandbox";
   readonly message: string;
@@ -36,7 +35,6 @@ export type StartupFacts = {
   readonly packaged: boolean;
   /** The search path the app's children will run with. */
   readonly searchPath: string;
-  /** Whether Chromium was started with its sandbox off. */
   readonly sandboxOff: boolean;
 };
 

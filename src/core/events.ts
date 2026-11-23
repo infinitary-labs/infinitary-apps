@@ -14,7 +14,6 @@ export type CoreEventSink = <C extends CorePushChannel>(
 export class CoreEventBus {
   private readonly sinks = new Set<CoreEventSink>();
 
-  /** Attach a listener; the returned function detaches it. */
   subscribe(sink: CoreEventSink): () => void {
     this.sinks.add(sink);
     return () => {

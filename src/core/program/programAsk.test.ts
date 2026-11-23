@@ -21,7 +21,6 @@ describe("a program's ask()", () => {
     expect(parseAnswer('{"ship": "yes"}', VERDICT)).toMatchObject({
       refused: expect.stringContaining("ship"),
     });
-    // With no schema any JSON is the answer.
     expect(parseAnswer("[1, 2]", null)).toEqual({ value: [1, 2] });
   });
 

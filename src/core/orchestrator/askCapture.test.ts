@@ -29,7 +29,6 @@ describe("AskCapture", () => {
     expect(tasks.capture.getAsk(read.id)?.turnState).toBe("closed");
     expect(tasks.capture.getAsk(parked.id)).toMatchObject({ turnState: "open", taskId: null });
 
-    // The next turn adopts it, attaches it through a tool and closes it.
     capture.beginTurn();
     expect(capture.attach("t1", "steer_crewmate")).toBe(true);
     capture.endTurn({ asks: [parked.id], failed: false });

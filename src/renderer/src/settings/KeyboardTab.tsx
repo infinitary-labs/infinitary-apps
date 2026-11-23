@@ -67,14 +67,12 @@ import { ROW_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
  * search and the app menu never disagree.
  */
 
-/** The row being recorded, and the keys pressed so far. */
 /** `typed`: the character the last recorded press types, which an ⌥ key stops typing. */
 type Recording = { id: AnyCommandId; keys: KeyBinding | null; typed?: string };
 
 /** tmux's prefix being recorded (docs/keyboard.md, "Presets"), and the key pressed so far. */
 type PrefixRecording = { chord: KeyChord | null };
 
-/** A command's words, the catalog's or its panel's. */
 function labelOf(id: AnyCommandId, panels: readonly PanelCommand[]): string {
   return commandEntry(id, panels)?.label ?? id;
 }
@@ -573,7 +571,6 @@ function CommandRow({
   );
 }
 
-/** A command's keys as key caps: a two-key shortcut's two side by side, or no key at all. */
 type PlaceControl = {
   label: string;
   busy: boolean;

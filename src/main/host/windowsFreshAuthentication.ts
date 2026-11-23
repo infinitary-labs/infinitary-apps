@@ -480,7 +480,6 @@ function bindPassword(): Pick<WindowsAuthenticationApi, "passwordConfirm"> {
   };
 }
 
-/** A NUL-terminated UTF-16 buffer's text. */
 function wide(buffer: Buffer): string {
   const text = buffer.toString("utf16le");
   const end = text.indexOf("\0");

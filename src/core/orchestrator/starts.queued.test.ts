@@ -42,7 +42,6 @@ describe("the task graph (R1)", () => {
       startAfter: { at },
     });
     expect(name).toBe("queued");
-    // No worktree, no session, no card - a row and a feed line.
     expect(sessions.open).not.toHaveBeenCalled();
     expect(tasks.get(taskId)).toMatchObject({
       status: "open",
@@ -57,11 +56,9 @@ describe("the task graph (R1)", () => {
       status: "queued",
     });
 
-    // Before its time: nothing.
     await supervisor.watch.sweepGates(at - 1000);
     expect(sessions.open).not.toHaveBeenCalled();
 
-    // Its time arrives: the sweep dispatches through the normal start path.
     await supervisor.watch.sweepGates(at + 1000);
     await tick();
     expect(sessions.open).toHaveBeenCalledTimes(1);
@@ -599,7 +596,6 @@ describe("the task graph (R1)", () => {
 
     // Not queued work any more: a plain refusal, nothing thrown.
     expect(await supervisor.starts.startQueuedNow(taskId)).toContain("not queued work");
-    // A live blocker is a real wait; the refusal names it.
     const a = supervisor.intake.plan({
       title: "A",
       intent: intentOf("a"),
@@ -650,7 +646,6 @@ describe("the task graph (R1)", () => {
     expect(captain).not.toContain("link_tasks");
     expect(dead.startsWith(captain)).toBe(true);
 
-    // With only dead edges left, removing them is the whole way out.
     expect(supervisor.intake.dropTask(c.key, { reason: "not wanted either" })).toMatch(/^Dropped/);
     const deadOnly = await supervisor.starts.startQueuedNow(b.key);
     expect(deadOnly).toContain("Dropped work never clears a wait: remove the dead edges");
@@ -658,7 +653,6 @@ describe("the task graph (R1)", () => {
     expect(deadOnly).toContain(`blocks ${c.key} -> ${b.key}`);
     expect(deadOnly).toMatch(/with link_tasks remove\.$/);
 
-    // The way out it names works: with the edges gone, the start goes through.
     expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
     expect(supervisor.intake.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
     expect(await supervisor.starts.startQueuedNow(b.key)).toContain(`${b.key} "B" is starting.`);
@@ -684,7 +678,6 @@ describe("the task graph (R1)", () => {
     supervisor.intake.linkTasks(spec.key, filed.key, "related");
     const before = tasks.list().length;
 
-    // The model the captain named is an edit to the filed row, then the start.
     expect(tasks.updateFields(filed.id, { model: "gpt-6-astra" }, "firstmate")).toEqual([
       "model gpt-6-astra",
     ]);
@@ -770,7 +763,6 @@ describe("the task graph (R1)", () => {
 
     await supervisor.starts.startQueuedNow(filed.key);
     await tick();
-    // It stays open, saying what it waits for, and no crewmate opened.
     expect(tasks.get(filed.id)?.status).toBe("open");
     expect(tasks.get(filed.id)?.shape?.placement_wait).toMatchObject({
       kind: "model",
@@ -788,7 +780,6 @@ describe("the task graph (R1)", () => {
     expect(sessionSpecs).toEqual([]);
     expect(said()).toHaveLength(1);
 
-    // On the captain's words the model is cleared, and the start goes through.
     tasks.updateFields(filed.id, { model: "" }, "firstmate");
     await supervisor.starts.startQueuedNow(filed.key);
     await tick();

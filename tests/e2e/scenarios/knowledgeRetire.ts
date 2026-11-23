@@ -6,7 +6,6 @@ import { MOCK_FM_DONE_TEXT, type Scenario } from "../mockProvider";
  */
 export const KNOWLEDGE_RETIRE_PROMPT_MARKER = "retire these knowledge entries";
 
-/** The first mate retires every knowledge entry the turn names by id and revision. */
 export const knowledgeRetire: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

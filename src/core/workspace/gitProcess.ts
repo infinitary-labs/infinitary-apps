@@ -101,7 +101,6 @@ export function runGitProcess(
   });
 }
 
-/** The error an aborted run rejects with, as Node's own `AbortError`. */
 function abortError(signal: AbortSignal): Error {
   return Object.assign(new Error("The operation was aborted", { cause: signal.reason }), {
     name: "AbortError",

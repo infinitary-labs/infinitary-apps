@@ -128,7 +128,6 @@ describe("Rail", () => {
     expect(html).toContain(
       '<span data-panel-summary-part="" data-strong="" style="color:var(--fg-1)">2 waiting</span> · <span data-panel-summary-part="">1 working</span>',
     );
-    // Expanded, the summary goes and the body shows.
     railStore.toggleCollapsed("board");
     const open = renderToStaticMarkup(
       <Rail
@@ -169,7 +168,6 @@ describe("Rail", () => {
     expect(html).toContain("var(--fg-2)");
     expect(html).toContain('<span data-panel-summary-part="">now</span>');
 
-    // Expanded, the title is back and the line goes.
     railStore.toggleCollapsed("board");
     const open = draw();
     expect(open).toContain(">Panel board</span>");

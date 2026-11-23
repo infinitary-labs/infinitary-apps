@@ -275,7 +275,6 @@ export const railStore = {
   },
 };
 
-/** The asks for one panel's body to take focus, read as they change. */
 export function useBodyFocusAsk(panelId: string): number {
   const read = () => railStore.bodyFocusAsk(panelId);
   return useSyncExternalStore(railStore.subscribe, read, read);

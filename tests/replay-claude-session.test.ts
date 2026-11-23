@@ -217,13 +217,11 @@ function recordingApp(b: ClaudeSeatBox) {
     agent,
     supervisor,
     settled,
-    /** Resolves once the agent has settled this many turns. */
     turnsSettled: (count: number) =>
       new Promise<void>((resolve) => {
         if (settled.length >= count) resolve();
         else waiters.push({ count, resolve });
       }),
-    /** The session the agent attached. */
     session: () => sessions[0],
     /** Every attached client has exited, so its transcript is whole. */
     closed: async () => {
@@ -349,8 +347,6 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
       { trigger: "captain", failed: false }, // the effect-free card choice is the captain's request
     ]);
 
-    // The replay finds the session where the app keeps it, and the one
-    // reader reads it as the turns the captain and the host served.
     const sources = discoverSources({ name: "recorded", root: app.paths.userData });
     expect(sources.orchestratorFiles).toEqual([b.store.transcriptPath(session.sessionId)]);
     const read = readSession(sources.orchestratorFiles[0] as string);

@@ -122,7 +122,6 @@ const PIPED: Array<[name: string, inputs: (dir: string) => string[]]> = [
   ["derive:misses", (dir) => ["--db", laterEscalations(dir, 400)]],
 ];
 
-/** The file a package script runs with plain Node, read from package.json. */
 function scriptFile(name: string): string {
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
     scripts: Record<string, string>;

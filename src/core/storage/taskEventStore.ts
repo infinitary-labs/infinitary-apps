@@ -235,7 +235,6 @@ export class TaskEventStore {
     }
   }
 
-  /** Every event of other tasks that concerns this one, in timeline order. */
   listConcerning(taskId: string): ConcernedTaskEvent[] {
     const rows = this.db
       .prepare(
@@ -458,7 +457,6 @@ export class TaskEventStore {
       .run(eventId);
   }
 
-  /** The newest event of `kind` on a task whose data holds an object under `key`. */
   latestWithObject(taskId: string, kind: TaskEventKind, key: string): TaskEvent | undefined {
     const row = this.db
       .prepare(
@@ -528,7 +526,6 @@ export class TaskEventStore {
     return new Map(rows.map((row) => [row.task_id, row.successor]));
   }
 
-  /** The refs of a task's events of `kind`, oldest first. */
   refsOf(taskId: string, kind: TaskEventKind): string[] {
     const rows = this.db
       .prepare(
@@ -538,7 +535,6 @@ export class TaskEventStore {
     return rows.map((row) => row.ref);
   }
 
-  /** The ref of a task's oldest event of `kind` that names one, if it has one. */
   oldestRef(taskId: string, kind: TaskEventKind): string | undefined {
     const row = this.db
       .prepare(
@@ -548,7 +544,6 @@ export class TaskEventStore {
     return row?.ref;
   }
 
-  /** A task's newest event of `kind`, if it has one. */
   latestOfKind(taskId: string, kind: TaskEventKind): TaskEvent | undefined {
     const row = this.db
       .prepare(
@@ -581,7 +576,6 @@ export class TaskEventStore {
     return row ? fromRow(row) : undefined;
   }
 
-  /** When a task's newest event of `kind` naming `ref` happened, if it has one. */
   latestAtForRef(taskId: string, kind: TaskEventKind, ref: string): number | undefined {
     const row = this.db
       .prepare("SELECT MAX(at) AS at FROM task_events WHERE task_id = ? AND kind = ? AND ref = ?")
@@ -607,7 +601,6 @@ export class TaskEventStore {
     return row?.filed === "true" ? true : row?.filed === "false" ? false : undefined;
   }
 
-  /** When a task's newest event of `kind` naming any ref but `ref` happened, if it has one. */
   latestAtOtherRef(taskId: string, kind: TaskEventKind, ref: string): number | undefined {
     const row = this.db
       .prepare(
@@ -617,7 +610,6 @@ export class TaskEventStore {
     return row?.at ?? undefined;
   }
 
-  /** When a task's newest event of `kind` happened, if it has one. */
   latestAt(taskId: string, kind: TaskEventKind): number | undefined {
     const row = this.db
       .prepare("SELECT MAX(at) AS at FROM task_events WHERE task_id = ? AND kind = ?")
@@ -653,7 +645,6 @@ export class TaskEventStore {
     return row.n;
   }
 
-  /** The oldest `limit` compactable events of a task, in timeline order. */
   oldestCompactable(taskId: string, limit: number): TaskEvent[] {
     const rows = prepared(
       this.db,
@@ -662,7 +653,6 @@ export class TaskEventStore {
     return rows.map(fromRow);
   }
 
-  /** Every compactable event at or before `at`, in timeline order. */
   compactableUpTo(taskId: string, at: number): TaskEvent[] {
     const rows = prepared(
       this.db,
@@ -773,7 +763,6 @@ export class TaskEventStore {
     return rows.map(fromRow);
   }
 
-  /** One task's timeline, and every concern its events name or other events name of it. */
   deleteFor(taskId: string): void {
     this.db
       .prepare(

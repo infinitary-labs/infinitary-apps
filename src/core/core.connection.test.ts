@@ -77,12 +77,6 @@ vi.mock("./utilityQos", async (importOriginal) =>
 );
 
 /**
- * The whole core served over its connection (tests/helpers/bootedCore.ts):
- * paired devices, a first mate started by a command, words typed on a paired
- * Mac, and the development loopback port.
- */
-
-/**
  * The connection over the real core (docs/connection.md, docs/devices.md):
  * the core makes links through its own requests, and devices that know only
  * the wire join with them and use what a paired device may.
@@ -116,7 +110,6 @@ describe("the connection serves the core to paired devices", () => {
     if (frameLib) rmSync(frameLib.dir, { recursive: true, force: true });
   });
 
-  /** The captain makes a link on this Mac; a device uses it. */
   const pairDevice = async (kind: "view" | "work" = "view", name = "Test Mac") => {
     const { link } = await core.dispatch("inf:devices:invite", [
       { kind: kind === "view" ? "mac" : "work", at },
@@ -157,7 +150,6 @@ describe("the connection serves the core to paired devices", () => {
     ]);
     expect(fromA).toEqual(fromB);
 
-    // One device answers; the other sees the card go.
     await a.invoke("inf:cards:note-done", ["card-connection-1"]);
     await b.push(
       (push) =>
@@ -167,7 +159,6 @@ describe("the connection serves the core to paired devices", () => {
       "card-connection-1",
     );
 
-    // B drops; two cards arrive while it is away; it comes back with its cursor.
     const cursor = b.cursor();
     await b.close();
     supervisor.cards.hostCards.addSystemNoteCard("card-connection-2", "While away", "<p>Two</p>");
@@ -330,7 +321,6 @@ describe("the connection serves the core to paired devices", () => {
     // Only a minted name, and never a path.
     for (const asked of ["../task-pic/cards/x.png", `task-pic-${"b".repeat(32)}.png`])
       await expect(view.invoke("inf:cards:picture", [asked])).rejects.toThrow(/card picture/);
-    // A recording, a piece at a time, with the whole file's size; never a picture by that door.
     const recording = `task-pic-${"c".repeat(32)}.mp4`;
     const recorded = Buffer.from(Array.from({ length: 40 }, (_, at) => at));
     writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", recording), recorded);
@@ -370,7 +360,6 @@ describe("the connection serves the core to paired devices", () => {
     for (const asked of [typeface, `task-pic-${"8".repeat(32)}.json`, "../task-pic/cards/x.json"])
       await expect(view.invoke("inf:cards:data", [asked])).rejects.toThrow(/data file/);
 
-    // Leave: the view comes off the list, cut as for a Remove, named in the feed.
     view.sendRaw(JSON.stringify({ t: "leave" }));
     expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
     expect(core.services.devices.list().map((device) => device.id)).not.toContain(grant.deviceId);
@@ -403,7 +392,6 @@ describe("the connection serves the core to paired devices", () => {
     expect(there?.files.map((file) => file.path)).toContain("panel.mjs");
     // The same bytes its own computer's window is answered: no folder is named to either.
     expect(there).toEqual(await core.dispatch("inf:plugins:files", [asked]));
-    // Another version of it is answered nothing.
     expect(
       await view.invoke("inf:plugins:files", [{ ...asked, version: "0123456789abcdef" }]),
     ).toBeNull();
@@ -643,7 +631,6 @@ describe("the connection serves the core to paired devices", () => {
       ),
     ).toBe(true);
 
-    // Nothing the home saved holds the link, its code, or the device's own key.
     const { code } = parsePairingLink(link);
     const saved = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
@@ -1045,7 +1032,6 @@ describe("words typed on a paired Mac are the captain's own words", () => {
     rmSync(userDataDir, { recursive: true, force: true });
   }, 30_000);
 
-  /** One captain turn the view sent: the ask it opened, once the turn ends. */
   async function turnFrom(send: () => Promise<unknown>): Promise<AskRecord> {
     const before = new Set(core.services.tasks.capture.listAsks().map((ask) => ask.id));
     await send();
@@ -1098,7 +1084,6 @@ describe("words typed on a paired Mac are the captain's own words", () => {
         `Removed project ${repo.name}`,
       );
 
-      // A reply under a Firstmate card: inf:cards:reply.
       const moved = await turnFrom(() =>
         view.invoke("inf:cards:reply", [
           cardId,
@@ -1268,7 +1253,6 @@ describe("a phone's usage events reach Diagnostics through its computer", () => 
     expect(phoneEvents().map((body) => body.payload.name)).toEqual(["ios_launch", "ios_opened"]);
     expect(phoneEvents()[1]?.payload.id).not.toBe(launch?.payload.id);
 
-    // Removing the phone drops its ID.
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
     expect((await core.dispatch("inf:settings:sharing:get", [])).diagnostics.phones).toEqual({});
@@ -1441,8 +1425,6 @@ describe("a phone's cards reach it sealed through the push relay", () => {
     });
     for (const word of ["launch", "Three dates", pushes.key]) expect(posted[0]).not.toContain(word);
 
-    // Switch off, then a window in front: nothing; the next card after both
-    // is the only one the relay hears.
     await core.dispatch("inf:settings:notifications:set", [false]);
     await card("card-while-off", "Sent while off");
     await core.dispatch("inf:settings:notifications:set", [true]);
@@ -1494,7 +1476,6 @@ describe("a phone's cards reach it sealed through the push relay", () => {
     for (const listener of gone) listener();
     await next("card-window-closed");
 
-    // A view on another Mac says the same over its connection.
     const macGrant = await claimLink(
       (await core.dispatch("inf:devices:invite", [{ kind: "mac", at }])).link,
       { ...AT_FIRST_LAUNCH, name: "MacBook Air" },

@@ -72,8 +72,6 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
   try {
     const { page } = app;
 
-    // Asked to add the Mac at an address, Firstmate offers one card; its
-    // button opens Devices and adds it there.
     await ask(page, "device-invite", { how: "address", address: sshd.address });
     const add = page.getByRole("button", { name: "Add it", exact: true });
     await expect(add).toBeVisible();
@@ -83,12 +81,10 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
       "aria-selected",
       "true",
     );
-    // The first reach shows the check line and sends nothing until this is the Mac.
     const check = page.locator("[data-device-confirm-question]");
     await expect(check).toBeVisible();
     await expectOnlyCheckWords(check, sshd.address);
     await check.getByRole("button", { name: `This is the ${COMPUTER.one}`, exact: true }).click();
-    // It joins and stands in the list, named as it joined.
     await expect
       .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length)
       .toBe(1);
@@ -216,8 +212,6 @@ test("a Mac whose user runs another Firstmate's work: Add it asks once, Cancel c
       await page.keyboard.press("Enter");
     };
 
-    // The check line comes first. This is the Mac, then the leave question.
-    // Cancel holds the focus, and changes nothing.
     await addByAddress();
     const check = page.locator("[data-device-confirm-question]");
     await expect(check).toBeVisible();
@@ -232,7 +226,6 @@ test("a Mac whose user runs another Firstmate's work: Add it asks once, Cancel c
     expect(started()).toBe("");
     expect(await page.evaluate(() => window.infinitary.devices.list())).toEqual([]);
 
-    // Asked again, the captain's yes by keys: the join there is told to leave the other Firstmate.
     await addByAddress();
     await expect(question).toBeVisible();
     await page.keyboard.press("Shift+Tab");
@@ -258,7 +251,6 @@ test("a Mac whose user runs another Firstmate's work: Add it asks once, Cancel c
   }
 });
 
-/** Whether a process is still running. */
 function running(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -360,7 +352,6 @@ test("adding a Mac by its address says how far the copy has gone: preparing it, 
   try {
     const { page } = app;
     await openDevices(page);
-    // Each step the core says as Settings hears it.
     await page.evaluate(() => {
       const seen = window as Window & { __setup?: unknown[] };
       seen.__setup = [];
@@ -373,7 +364,6 @@ test("adding a Mac by its address says how far the copy has gone: preparing it, 
       () => (window as Window & { __setup?: unknown[] }).__setup ?? [],
     )) as Extract<FmEvent, { type: "device_setup" }>[];
 
-    // Preparing it, then the bytes sent so far, each more than the last, then starting it there.
     const states = said.map((event) => event.copy?.state);
     const sending = said.filter((event) => event.copy?.state === "sending");
     const counts = sending.map((event) => event.copy?.sent ?? 0);
@@ -444,7 +434,6 @@ test("+ A computer’s address form lists Macs nearby but this one, and adds one
     const question = page.locator("[data-device-address-question]");
     const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     const nearby = question.locator("[data-device-nearby-mac]");
-    // This Mac is never a row: only the Mac mini, with your user name.
     await expect(nearby).toHaveCount(1);
     await expect(nearby).toContainText("Mac mini");
     await expect(nearby).toContainText(`${user}@127.0.0.1`);
@@ -483,10 +472,8 @@ test("+ A computer’s address form lists Macs nearby but this one, and adds one
       .toBe(1);
     await expect(page.locator("[data-device-address-question]")).toHaveCount(0);
 
-    // Open again, the Mac just added is marked.
     await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
     await expect(nearby.locator("[data-device-nearby-on-list]")).toHaveText(nearbyMacsWords.onList);
-    // Closed, it stops looking: no run of dns-sd is left.
     await pressKey(question.getByRole("button", { name: "Cancel", exact: true }), "Enter");
     const runs = readFileSync(join(dirname(dnsSd), "pids"), "utf8")
       .split("\n")
@@ -513,7 +500,6 @@ test("+ A computer’s address form says when macOS has not allowed the local ne
     await expect(question.locator("[data-device-nearby-not-allowed]")).toContainText(notAllowed);
     await expect(question.locator("[data-device-nearby-not-allowed]")).toContainText(allowIt);
     await expect(question.locator("[data-device-nearby-mac]")).toHaveCount(0);
-    // A private network's name still goes in, and Add it takes it.
     const field = question.getByLabel(`The other ${COMPUTER.one}'s address`);
     await typeInto(field, "sam@studio.tailnet-1a2b.ts.net");
     await expect(field).toHaveValue("sam@studio.tailnet-1a2b.ts.net");
@@ -566,7 +552,6 @@ test("a Mac that did not let your SSH key in asks for that user's password once,
       "Enter",
     );
 
-    // That Mac did not let the captain's key in: the password is asked, once, in its own field.
     const asked = page.locator("[data-device-password-question]");
     const [found, say] = remoteLoginWords.passwordQuestion(sshd.address);
     await expect(asked).toBeVisible();
@@ -577,7 +562,6 @@ test("a Mac that did not let your SSH key in asks for that user's password once,
     await expect(field).toBeFocused();
     expect(existsSync(record)).toBe(false);
 
-    // A wrong one is said there, and the field is empty again.
     await typeInto(field, WRONG);
     await page.keyboard.press("Enter");
     const [what, todo] = remoteLoginWords.refused("password-wrong", { address: sshd.address });
@@ -595,7 +579,6 @@ test("a Mac that did not let your SSH key in asks for that user's password once,
     await expect(cancel).toBeFocused();
     await pressKey(addIt, "Enter");
 
-    // Firstmate's own key is let in there, and the Mac joins as any Mac added by its address.
     await expect
       .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length)
       .toBe(1);

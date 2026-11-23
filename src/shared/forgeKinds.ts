@@ -16,10 +16,6 @@ export const CHANGE_REQUEST_KINDS = ["github", "gitlab", "bitbucket"] as const;
 
 export type ChangeRequestKind = (typeof CHANGE_REQUEST_KINDS)[number];
 
-/**
- * The kinds the app keeps its own sign-in for: every kind whose changes are
- * numbered requests.
- */
 export const SIGN_IN_KINDS = CHANGE_REQUEST_KINDS;
 
 export type SignInKind = (typeof SIGN_IN_KINDS)[number];
@@ -29,14 +25,12 @@ export const SERVER_INTEGRATION_KINDS = ["gitlab", "github-enterprise", "bitbuck
 
 export type ServerIntegrationKind = (typeof SERVER_INTEGRATION_KINDS)[number];
 
-/** What one kind of host the app signs in to owns about that sign-in. */
 export type SignInHost = {
   kind: SignInKind;
   /** The kind's public host, whose name alone makes it this kind. */
   publicHost: string;
   /** The integration a server of this kind is signed in to as, one row per server. */
   serverIntegration: ServerIntegrationKind;
-  /** The start of a server integration's generated id. */
   serverIdPrefix: string;
   /** Whether the public host itself is a row of the server integration, rather than its own integration. */
   publicHostIsServerRow: boolean;
@@ -62,10 +56,8 @@ export type SignInHost = {
   keyScopes?: readonly string[];
 };
 
-/** What one kind of host whose changes are numbered requests owns. */
 export type ChangeRequestHost = SignInHost & {
   kind: ChangeRequestKind;
-  /** The host's word for a change: a pull request, or a merge request. */
   changeWord: string;
   /** How a saved change handle names its kind. */
   handle: "pr" | "mr";
@@ -239,20 +231,16 @@ export function bitbucketServerProjectPage(owner: string, name: string): string 
   return `projects/${encodeURIComponent(key.toUpperCase())}/repos/${slug}`;
 }
 
-/** Every kind the app signs in to, with what each owns about its sign-in. */
 export const SIGN_IN_HOSTS: Readonly<Record<SignInKind, SignInHost>> = CHANGE_REQUEST_HOSTS;
 
-/** The kind, when it is one whose changes are numbered requests. */
 export function changeRequestKind(kind: string | null | undefined): ChangeRequestKind | undefined {
   return CHANGE_REQUEST_KINDS.find((entry) => entry === kind);
 }
 
-/** The kind, when it is one the app keeps its own sign-in for. */
 export function signInKind(kind: string | null | undefined): SignInKind | undefined {
   return SIGN_IN_KINDS.find((entry) => entry === kind);
 }
 
-/** What a kind the app signs in to owns about that sign-in, or undefined for any other kind. */
 export function signInHost(kind: string | null | undefined): SignInHost | undefined {
   const known = signInKind(kind);
   return known ? SIGN_IN_HOSTS[known] : undefined;
@@ -267,7 +255,6 @@ export function signsInTo(kind: string | null | undefined): boolean {
   return signInKind(kind) !== undefined;
 }
 
-/** The facts of a kind whose changes are numbered requests, or undefined for any other kind. */
 export function changeRequestHost(kind: string | null | undefined): ChangeRequestHost | undefined {
   const known = changeRequestKind(kind);
   return known ? CHANGE_REQUEST_HOSTS[known] : undefined;
@@ -282,7 +269,6 @@ export function changeHostOf(kind: string | null | undefined): ChangeRequestHost
   return changeRequestHost(kind) ?? CHANGE_REQUEST_HOSTS.github;
 }
 
-/** The kind whose public host this is, or undefined. */
 export function changeRequestHostAt(
   host: string | null | undefined,
 ): ChangeRequestHost | undefined {
@@ -296,14 +282,12 @@ export function isServerIntegration(
   return SERVER_INTEGRATION_KINDS.some((entry) => entry === kind);
 }
 
-/** The kind of host a server integration signs in to. */
 export function hostOfServerIntegration(
   integration: string | null | undefined,
 ): SignInHost | undefined {
   return Object.values(SIGN_IN_HOSTS).find((entry) => entry.serverIntegration === integration);
 }
 
-/** The kind of host a server integration signs in to, by its typed kind. */
 export function serverIntegrationHost(integration: ServerIntegrationKind): SignInHost {
   const facts = hostOfServerIntegration(integration);
   if (!facts) throw new Error(`No kind of host signs in as ${integration}.`);

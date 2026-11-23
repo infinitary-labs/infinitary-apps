@@ -34,7 +34,6 @@ const WEEKDAYS_PLURAL = [
   "Saturdays",
 ] as const;
 
-/** The zone this computer's clock follows now. */
 function hereZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
@@ -91,7 +90,6 @@ export function automationEventWords(label: string, integration: string): string
   return `When ${label.charAt(0).toLowerCase()}${label.slice(1)} in ${integration}`;
 }
 
-/** An event rule whose integration is not connected now. */
 export const AUTOMATION_EVENT_UNKNOWN =
   "When something happens in an integration not connected now";
 
@@ -154,7 +152,6 @@ export function automationNextShort(
   return formatDate(at, { month: "short", day: "numeric" });
 }
 
-/** "1 automation", "3 automations". */
 export function automationCount(count: number): string {
   return `${count} ${count === 1 ? "automation" : "automations"}`;
 }

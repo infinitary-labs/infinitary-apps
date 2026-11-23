@@ -33,7 +33,6 @@ function headChip(words: string): Element {
   return chip;
 }
 
-/** The shown card's head parts: its chips, the key, the meta words, the model chip and each corner button. */
 function headParts(): Record<string, Element> {
   const corner = [...inShown("[data-card-corner]").querySelectorAll("button")];
   return {
@@ -58,7 +57,6 @@ async function headSettled(): Promise<void> {
   await stageAtRest();
 }
 
-/** Each pair of head parts drawn over each other. */
 function overlaps(): string[] {
   const parts = Object.entries(headParts());
   return parts.flatMap(([name, part], at) =>
@@ -78,7 +76,6 @@ test("a narrow card keeps its head's model chip whole and clear of the key and b
   await expect.element(page.getByRole("region", { name: CARD, exact: true })).toBeVisible();
   await headSettled();
 
-  // At the usual size the chips, the key, the model chip and the corner share one row.
   const whole = box(inShown("[data-model-chip]"));
   const row = middle(whole);
   for (const [name, part] of Object.entries(headParts())) {
@@ -87,7 +84,6 @@ test("a narrow card keeps its head's model chip whole and clear of the key and b
   }
   expect(overlaps()).toEqual([]);
 
-  // In the smallest window, with the card at its narrowest.
   await page.viewport(SMALLEST_WINDOW.width, SMALLEST_WINDOW.height);
   const edge = document.querySelector<HTMLElement>('[data-card-layer] [data-card-edge="right"]');
   if (!edge) throw new Error("The shown card drew no right edge");

@@ -141,7 +141,6 @@ test("approved changes of a batched project merge in batches of the captain's ow
       board.find((task) => task.title === ownBatchTask("meterlab", change))?.id ?? "";
     const saved = (change: Change) =>
       readSavedData(userDataDir, (savedDb) => new TaskStore(savedDb).get(idOf(change)));
-    /** The captain approves a change's merge card by keys. */
     const approve = async (change: Change) => {
       const title = ownBatchTitle(change);
       await showCard(page, title);
@@ -149,7 +148,6 @@ test("approved changes of a batched project merge in batches of the captain's ow
       await expect.poll(cardTitles, { timeout: 20_000 }).not.toContain(title);
     };
 
-    // Each change is a pushed branch with its story: none has a pull request of its own.
     for (const change of changes) {
       expect(idOf(change)).not.toBe("");
       expect(saved(change)?.delivery?.prNumber).toBeUndefined();
@@ -262,7 +260,6 @@ test("approved changes of a batched project merge in batches of the captain's ow
         timeout: 30_000,
       })
       .toEqual(["merged", "merged"]);
-    // Each task's receipt names its own commit on the default branch.
     expect(saved("export")?.delivery?.mergeAuthorization).toMatchObject({
       status: "consumed",
       receipt: { sha: exportCommit },
@@ -271,7 +268,6 @@ test("approved changes of a batched project merge in batches of the captain's ow
       status: "consumed",
       receipt: { sha: legendCommit },
     });
-    // The app deleted each merged batch's branch.
     expect(github.deletedBranches()).toEqual([first?.branch, second?.branch]);
 
     // The third batch's checks fail: it holds, nothing merges, and the first mate hears of it.
@@ -339,7 +335,6 @@ test("approved changes of a batched project merge in batches of the captain's ow
       ready: inView,
     });
 
-    // Send one change back with its reason, by keys.
     const reason = "its axis file breaks the unit tests";
     const sendBack = panel.getByRole("button", { name: BATCH_HOLD_WORDS.sendBack });
     // Nothing chosen yet: the panel says what it needs and sends nothing.

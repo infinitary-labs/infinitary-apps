@@ -61,7 +61,6 @@ afterEach(async () => {
   server = undefined;
 });
 
-/** A host that challenges for Basic auth and records every Authorization it was sent. */
 async function challengingHost(): Promise<{ port: number; auths: string[] }> {
   const auths: string[] = [];
   server = createServer(tls, (req, res) => {

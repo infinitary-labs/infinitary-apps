@@ -74,7 +74,6 @@ export function overflowFilePath(tag: string, id: string): string {
   return join(dirFor(), `${tag}-${id}.txt`);
 }
 
-/** Append one more chunk to an overflow file, creating it (and its dir) on first write. */
 export function appendOverflow(file: string, chunk: string): void {
   mkdirSync(dirFor(), { recursive: true });
   appendFileSync(file, chunk, "utf8");

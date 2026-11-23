@@ -76,7 +76,6 @@ const facts: PlacementFacts = {
   projectAccess: "available",
 };
 
-/** A project that lives on GitHub, set to Automatic, declared for the Mac above. */
 const ledger: RepoView = {
   id: "repo-ledger",
   name: "ledger",
@@ -203,7 +202,6 @@ describe("AutomaticPlacement's room set aside for starting tasks", () => {
       w.running.add(footer.id);
       w.running.add(totals.id);
 
-      // Two and a half minutes on, with nothing else starting meanwhile.
       await vi.advanceTimersByTimeAsync(150_000);
       const header = w.task("header", "Fix the ledger header");
       expect(await w.start(header)).toMatchObject({ computerId: null });
@@ -374,7 +372,6 @@ describe("AutomaticPlacement's wait for a system no computer runs", () => {
     vi.useRealTimers();
   });
 
-  /** A project whose tasks may declare either system. */
   const either: RepoView = {
     ...ledger,
     placementRequirements: { systems: ["macos", "linux"], chips: ["arm64"] },
@@ -442,7 +439,6 @@ describe("AutomaticPlacement's word on an added computer it leaves out", () => {
 
   /** The project in the report: Automatic, with no computer requirements. */
   const scheduler: RepoView = { ...ledger, placementRequirements: undefined };
-  /** What the Intel Mac mini answers about itself for that project. */
   const intelMini = {
     system: "macos",
     chip: "x64",
@@ -507,9 +503,7 @@ describe("Automatic on a Windows home with a Windows PC that runs work", () => {
     vi.useRealTimers();
   });
 
-  /** A project that lives on GitHub, on Automatic, declaring no computer. */
   const notes: RepoView = { ...ledger, placementRequirements: undefined };
-  /** The home, a Windows PC whose Git for Windows is not installed yet. */
   const homeFacts: PlacementFacts = {
     system: "windows",
     chip: "x64",
@@ -604,7 +598,6 @@ describe("AutomaticPlacement's word on a computer a started task cannot move to"
       hosts: [{ host: "github.com", name: "GitHub" }],
     },
   });
-  /** What the Mac mini answers about itself for the ledger project, able to run it. */
   const mini = {
     system: "macos",
     chip: "arm64",
@@ -1169,7 +1162,6 @@ describe("Automatic asks the decision model which computer starts a new task", (
       pick: async () => ({ computerId: macMini.id, mode }),
     });
     try {
-      // Starts picked onto the Mac mini until it has no room left.
       for (const id of ["one", "two", "three"])
         expect(await w.start(w.task(id, `Preparing ${id}`))).toMatchObject({
           computerId: macMini.id,

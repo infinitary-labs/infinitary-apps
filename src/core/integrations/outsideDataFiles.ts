@@ -166,7 +166,6 @@ export function sessionIdsIn(dir: string): string[] {
     .filter((id) => SESSION_ID.test(id) && !id.includes("_"));
 }
 
-/** A file's words with what is due replaced, by what kind of file it is. */
 function scrubFile(
   file: string,
   content: string,

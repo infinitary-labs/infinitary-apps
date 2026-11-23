@@ -19,7 +19,6 @@ import { sentenceLines } from "./sentence-lines.mjs";
 // The app's own icon, read from the design system rather than copied into this folder.
 const APP_ICON = new URL("../.claude/skills/infinitary-design/assets/app-icon.svg", import.meta.url);
 
-/** Puts the app's icon at /favicon.svg in the built site. */
 function appIcon() {
   return {
     name: "infinitary-app-icon",
@@ -34,7 +33,6 @@ function appIcon() {
 // What Cloudflare's asset server sends on its own: a browser asks again each time.
 const PAGE_CACHE = "public, max-age=0, must-revalidate";
 
-/** Every built HTML file under dir. */
 async function htmlFiles(dir) {
   const entries = await readdir(dir, { recursive: true, withFileTypes: true });
   return entries
@@ -188,7 +186,6 @@ function joinedSentenceLines() {
   };
 }
 
-/** A sidebar group's or link's label in English and in each language whose words file has it. */
 const label = (key) => ({ label: wordsOf(SOURCE_LANGUAGE)[key], translations: translationsOf(key) });
 
 export default defineConfig({

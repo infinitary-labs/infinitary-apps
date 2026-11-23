@@ -205,7 +205,6 @@ function seededReplay(): string {
   return userDataDir;
 }
 
-/** The task's id and key on the board, by its title. */
 async function boardTask(page: Page, title: string): Promise<{ id: string; key: string }> {
   const key = await taskKey(page, title);
   const id = await page.evaluate(
@@ -220,7 +219,6 @@ async function boardTask(page: Page, title: string): Promise<{ id: string; key: 
 const detailOf = (page: Page, id: string): Promise<TaskDetail> =>
   page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
 
-/** From the record, the Crewmate tab by keys: the arrow to it, then Enter. */
 async function crewmateByKeys(page: Page): Promise<void> {
   const { strip, selected } = taskTabs(page);
   await expect(selected).toHaveText(INFO_TAB_LABEL);
@@ -311,7 +309,6 @@ test("a closed task's Crewmate tab replays its crewmate's session: calls, folds,
       await expect(crewBlock(view, "change")).toContainText(CHANGE_TITLE);
       await expect(crewBlock(view, "change").locator("a")).toHaveText("#42");
       await expect(crewBlock(view, "report")).toContainText(REPORT.summary);
-      // A closed task reads as it ran: no prompt to type in.
       await expect(view.locator("[data-crew-closed]")).toBeVisible();
       await expect(crewComposer(view)).toHaveCount(0);
       await shoot(view, "crewmate-closed-dark.png");
@@ -463,7 +460,6 @@ test("a line typed in the Crewmate tab steers a Claude crewmate mid-turn, queued
           (body) => body.includes(CLAUDE_STEER_MARKER) && body.includes("_held"),
         ),
       ).toBe(true);
-      // The record reads the captain's own words on the task's timeline.
       const steered = (await detailOf(page, task.id)).activityLog.find(
         (row) => row.kind === "steered",
       );

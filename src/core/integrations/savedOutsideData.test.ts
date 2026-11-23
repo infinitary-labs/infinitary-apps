@@ -190,7 +190,6 @@ async function world() {
     log: () => {},
   });
 
-  /** A crewmate saves the attachment of a message Lena sent; answers the saved file's path. */
   const crewSaves = async (taskId: string, bytes: Buffer) => {
     const id = google.deliver({
       ...LENA,
@@ -205,7 +204,6 @@ async function world() {
     return path;
   };
 
-  /** A message Lena sent, read by a crewmate through its integrations command. */
   const crewReads = async (taskId: string) => {
     const id = google.deliver(LENA);
     return (await service.forTask(taskId).call("Google", "read_message", { id })).text;
@@ -423,7 +421,6 @@ describe("words from outside in saved conversations", () => {
     const copies = new SessionRecordStore(crewmateSessionsDir(w.paths, "task-2"));
     expect(copies.mirror(SESSION, transcript)).toMatchObject({ kind: "copied" });
 
-    // A rule told the first mate of a new message.
     const rule = createScheduleTools({
       create: (spec, prompt, extra) =>
         w.scheduler.create(spec, prompt, true, extra.name, undefined, { draft: extra.draft }),
@@ -455,7 +452,6 @@ describe("words from outside in saved conversations", () => {
     const [delivered] = w.inbox.allFor(FIRSTMATE_RECIPIENT);
     expect(delivered && renderWake(delivered)).toContain(LENA.subject);
 
-    // The first mate read it too, through its own tool.
     const seat = (await w.service.call({ kind: "firstmate" }, "Google", "read_message", { id }))
       .text;
     const firstmateFile = join(w.paths.firstmateSessionsDir, "2026-09-20T16-09-00-000Z_9c1d.jsonl");
@@ -472,7 +468,6 @@ describe("words from outside in saved conversations", () => {
     const copy = readFileSync(copies.transcriptPath(SESSION), "utf8");
     expect(copy).toBe(readFileSync(transcript, "utf8"));
     expect(copies.mirror(SESSION, transcript)).toMatchObject({ kind: "copied" });
-    // The rule's run keeps its event, by id, with a note for its words.
     const [after] = w.scheduler.history(saved.id);
     expect(after?.events?.[0]).toMatchObject({ id: run?.events?.[0]?.id });
     expect(after?.events?.[0]?.summary).toBe(NOTE);

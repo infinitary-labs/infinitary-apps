@@ -104,7 +104,6 @@ test("a chain of parts starts each part at the approval of the part under it and
     const idOf = (part: Part) => idOfTitle(partTask("meterlab", part));
     const saved = (id: string) =>
       readSavedData(userDataDir, (savedDb) => new TaskStore(savedDb).get(id));
-    /** The captain approves a part's merge card by keys. */
     const approve = async (part: Part) => {
       const title = partTitle(part);
       await showCard(page, title);
@@ -165,7 +164,6 @@ test("a chain of parts starts each part at the approval of the part under it and
     await expect.poll(() => github.pulls().length, { timeout: 30_000 }).toBe(1);
     expect(github.merges()).toEqual([]);
 
-    // The second part starts on the first part's approved version before it merges.
     await startsOn("second", "first", second, first);
     // The third part waits for the second part's approval; the release waits for the merge.
     expect(saved(third)?.status).toBe("open");
@@ -223,7 +221,6 @@ test("a chain of parts starts each part at the approval of the part under it and
       partTitle("second"),
       partTitle("first"),
     ]);
-    // Each part's commit carries only its own difference.
     expect(git("show", "--name-only", "--format=", "main")).toBe("third.txt");
     expect(git("show", "--name-only", "--format=", "main~1")).toBe("second.txt");
     expect(git("show", "--name-only", "--format=", "main~2")).toBe("first.txt");

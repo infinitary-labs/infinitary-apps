@@ -20,10 +20,8 @@ import {
   setup,
 } from "./crewHarness";
 
-/** Minutes in milliseconds. */
 export const minutes = (n: number) => n * 60_000;
 
-/** The idle ladder's wakes among the first mate's served lines. */
 export const idleWakes = (ops: string[]) =>
   ops.filter((line) => line.includes("has been idle for"));
 
@@ -55,7 +53,6 @@ export function wakesThroughInbox<
   return harness;
 }
 
-/** A crewmate's turn that fails at the provider, then ends. */
 export async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
   crewmate.emit({ type: "turn_failed", taskId, error });
   crewmate.emit({ type: "turn_end", taskId });
@@ -93,7 +90,6 @@ export function idleLadderHarness() {
       await endTurn(crewmate, taskId, "Not waiting on it.");
     }
     const idleSince = harness.tasks.get(taskId)?.idleSince ?? 0;
-    /** The tick at `ms` idle minutes past the clock's start. */
     const at = async (ms: number) => {
       clock.now = idleSince + ms;
       harness.supervisor.watch.reconcileIdle(clock.now);
@@ -102,7 +98,6 @@ export function idleLadderHarness() {
     return { ...harness, crewmate, taskId, idleSince, at };
   }
 
-  /** Move the clock to when the lane's first row is due, and sweep it. */
   async function sweepWhenDue(harness: ReturnType<typeof setup>, taskId: string) {
     const due = Math.max(
       clock.now,

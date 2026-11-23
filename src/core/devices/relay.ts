@@ -21,7 +21,6 @@ import { hostPlatform } from "../platform";
  * been granted local network access.
  */
 
-/** macOS's own nc. */
 export const SYSTEM_RELAY = "/usr/bin/nc";
 
 /** At most this much of what the program says on stderr is kept for its error. */

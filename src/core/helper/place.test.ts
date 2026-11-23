@@ -57,7 +57,6 @@ describe("where the work is across the Infinitary rename", () => {
     return scratchDir("infinitary-place-");
   }
 
-  /** A work folder that joined a home. */
   function joined(dataDir: string): void {
     mkdirSync(dataDir, { recursive: true });
     writeFileSync(join(dataDir, "home.json"), "{}\n");

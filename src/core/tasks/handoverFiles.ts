@@ -114,7 +114,6 @@ export async function verifyHandoverFiles(
   }
 }
 
-/** The files kept in `dir` for a task's steer to hand on, by kept name, oldest name order. */
 export async function keptHandoverFiles(
   dir: string,
 ): Promise<{ file: string; path: string; size: number }[]> {

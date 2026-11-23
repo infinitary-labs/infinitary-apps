@@ -29,7 +29,6 @@ const marking: Plugin = {
   },
 };
 
-/** A module runner whose catalog messages answer their marks. */
 export function openMarkingRunner() {
   return openModuleRunner([marking]);
 }

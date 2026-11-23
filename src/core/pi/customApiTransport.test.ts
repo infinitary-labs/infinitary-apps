@@ -197,7 +197,6 @@ describe("opt-in custom transport on actual sockets", () => {
       "CUSTOM_API_KEYLESS",
       JSON.stringify({ path, authorizationAbsent: authorization === undefined }),
     );
-    // An unknown credential kind is still refused.
     expect(() =>
       createCustomApiTransport({
         baseUrl: "https://example.com",
@@ -290,7 +289,6 @@ describe("opt-in custom transport on actual sockets", () => {
     await expect(read("https://api.example.com/v1", ["93.184.216.34"])).resolves.toMatchObject({
       mode: "public",
     });
-    // A literal address needs no lookup.
     const unused = at(["127.0.0.1"]);
     await expect(
       readCustomApiDestination("http://10.0.0.2:4000/v1", unused),
@@ -542,7 +540,6 @@ describe("opt-in custom transport on actual sockets", () => {
     const gap = (CUSTOM_API_TURN_LIMITS.idleMs ?? 0) - MINUTE;
     let bytes = 0;
     let elapsed = 0;
-    // A slow server: a piece, then a silence just short of the idle limit.
     while (elapsed + gap < CUSTOM_API_TURN_LIMITS.totalMs) {
       server.write(piece);
       bytes += await received(reader, piece.length);

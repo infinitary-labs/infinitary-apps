@@ -93,7 +93,6 @@ describe("a past card on the stage", () => {
       "medium",
       "high",
     ]);
-    // A past card that showed none draws none.
     expect(find(column(past), (n) => n.attribs?.["data-risk-chart"] !== undefined)).toEqual([]);
   });
 

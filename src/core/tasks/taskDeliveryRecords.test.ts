@@ -209,7 +209,6 @@ function olderProfile() {
   return { dir, history };
 }
 
-/** What every reader of a task reads of its delivery, in the record's own words. */
 function readDelivery(tasks: TaskService) {
   return Object.fromEntries(
     tasks
@@ -392,7 +391,6 @@ describe("a task's delivery records", () => {
     seedDelivery(tasks, "t", { completionOffers: undefined });
     expect(tasks.get("t")?.delivery).toEqual({ mode: "direct-pr", prNumber: 9, headSha: APPROVED });
     expect(counts()).toEqual([1, 0]);
-    // The whole record is cleared: nothing is left behind.
     new TaskStore(db).update("t", { delivery: null });
     expect(tasks.get("t")?.delivery).toBeNull();
     expect(counts()).toEqual([0, 0]);

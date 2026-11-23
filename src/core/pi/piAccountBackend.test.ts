@@ -201,7 +201,6 @@ describe("PiAccountBackend login hang", () => {
     await expect(v.add("openai-codex", "oauth", bridge())).rejects.toThrow(/timed out/i);
     const providerDir = join(paths.accountsDir, "openai-codex");
 
-    // Let the runaway creation finish and write its store files.
     release();
     await vi.waitFor(() => {
       expect(fakes.createFinished.value).toBe(true);
@@ -239,7 +238,6 @@ describe("PiAccountBackend code sign-in (INF-842)", () => {
     fakes.login = undefined;
   });
 
-  /** Pi's Copilot login: the Enterprise question, then a code GitHub says lasts 900 s. */
   function copilotLogin(asked: string[]): LoginFn {
     return async (_provider, _type, interaction) => {
       asked.push(

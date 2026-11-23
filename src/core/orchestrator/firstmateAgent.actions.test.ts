@@ -72,7 +72,6 @@ describe("FirstmateAgent", () => {
     });
     expect(connect.actions.find((action) => !action.default)).toMatchObject({ label: "Not now" });
     expect(connect.actions.find((action) => !action.default)?.effect).toBeUndefined();
-    // The Firstmate made nothing: no link was asked for, only the list read.
     expect(asked).not.toContain("inf:devices:invite");
 
     expect((await change("device-remove", { deviceId: "mac-1" })).text).toMatch(/offered on/);
@@ -86,7 +85,6 @@ describe("FirstmateAgent", () => {
     });
     expect(asked).not.toContain("inf:devices:remove");
 
-    // The captain's click opens Devices with what to do there.
     const open = connect.actions.find((action) => action.default);
     expect(supervisor.cardActions.act(connect.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", make: "link" },
@@ -266,7 +264,6 @@ describe("FirstmateAgent", () => {
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
     expect(add.actions.find((action) => !action.default)).toMatchObject({ label: "Not now" });
-    // An address that is not one is refused, and nothing is offered for it.
     expect(
       (await change("device-invite", { how: "address", address: "-oProxyCommand=evil" })).text,
     ).not.toMatch(/offered on/);
@@ -289,7 +286,6 @@ describe("FirstmateAgent", () => {
       label: "Update it",
       effect: { kind: "open", target: "devices", update: "studio-1" },
     });
-    // One too old to update from here gets the command to run there instead.
     expect((await change("device-update", { deviceId: "builder-1" })).text).toMatch(/offered on/);
     const byCommand = card("Update Infinitary on Running as Builder");
     expect(byCommand.body).toBe(
@@ -306,11 +302,9 @@ describe("FirstmateAgent", () => {
     expect((await change("device-update", { deviceId: "same-1" })).text).toContain(
       "already runs this computer's version",
     );
-    // The Firstmate reached nothing: it only read the list.
     expect(asked).not.toContain("inf:devices:add");
     expect(asked).not.toContain("inf:devices:update");
 
-    // The captain's click opens Devices with what to do there.
     const open = add.actions.find((action) => action.default);
     expect(supervisor.cardActions.act(add.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
@@ -379,7 +373,6 @@ describe("FirstmateAgent", () => {
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
 
-    // The next computer is a new question on a card of its own.
     expect((await add("sam@studio.local")).text).toMatch(/^Settings button offered on /);
     const studio = card("Add the computer at sam@studio.local");
     expect(studio?.id).not.toBe(mini?.id);
@@ -392,7 +385,6 @@ describe("FirstmateAgent", () => {
       effect: { kind: "open", target: "devices", add: "sam@imac.local" },
     });
 
-    // The captain's Not now answers it too, and a later ask is new again.
     expect((await add("sam@mini.local")).text).toMatch(/^Settings button offered on /);
     const again = card("Add the computer at sam@mini.local");
     expect([mini?.id, imac?.id]).not.toContain(again?.id);
@@ -506,13 +498,11 @@ describe("FirstmateAgent", () => {
     expect(supervisor.cards.snapshot().map((entry) => entry.title)).not.toContain(
       "Sign in to Codex on MacBook Air",
     );
-    // Nothing started: the Firstmate only read the list.
     expect(asked).not.toContain("inf:devices:sign-in");
     expect((await change({ deviceId: "gone", provider: "xai" })).text).toBe(
       "No computer that runs work has that deviceId. Look with app_state.",
     );
 
-    // The captain's click opens Intelligence with that sign-in to start.
     const open = card.actions.find((action) => action.default);
     expect(supervisor.cardActions.act(card.id, open?.id ?? "")).toEqual({
       effect: {
@@ -624,7 +614,6 @@ describe("FirstmateAgent", () => {
     });
     await agent.converse("switch to light");
     const context = decodeContext(agent.buildContextBlock());
-    // Every surface by the id the tool takes, with rail, position and state.
     expect(context.surfaces).toMatchObject({
       description: "app_change panel and personalize remove act on these ids",
       theme: "dark",
@@ -1066,7 +1055,6 @@ describe("FirstmateAgent", () => {
     });
     supervisor.cardActions.act(courseId, "change");
     await tick();
-    // The choice still wakes the Firstmate; its turn carries both resolutions.
     expect(session.prompts).toHaveLength(1);
     const lines = decodeContext(session.prompts[0] as string).captain_resolutions as string[];
     expect(lines[0]).toMatch(
@@ -1086,7 +1074,6 @@ describe("FirstmateAgent", () => {
     session.resolveNextPrompt();
     await tick();
 
-    // Already told: the next turn does not repeat them.
     await agent.converse("what next?");
     expect(session.prompts[1]).not.toContain("what the captain did outside this conversation");
     session.resolveNextPrompt();
@@ -1148,7 +1135,6 @@ describe("FirstmateAgent", () => {
       seedCards: [crewCard("card-t2-1", "t2", "Delivered means stopped", "<p>a</p>")],
     });
     const key = (id: string) => tasks.get(id)?.key;
-    // The captain's command starts a task, replies on a crewmate's card, then picks on a first mate card.
     asTheCommand(() => supervisor.hostOps.runTaskOp("t1", "start-task"));
     await endStartTurn(session);
     const thread = new CardStore(db);
@@ -1326,7 +1312,6 @@ describe("FirstmateAgent", () => {
       via: "task-card",
       decision: null,
     });
-    // Drop task before it started.
     vi.setSystemTime(start + 3 * 60_000);
     supervisor.hostOps.runTaskOp("t4", "drop-task", { parts: [], waiting: [], underway: [] });
     expect(tasks.get("t4")?.status).toBe("dropped");
@@ -1338,7 +1323,6 @@ describe("FirstmateAgent", () => {
     await tick();
     expect(session.prompts).toHaveLength(1);
 
-    // A card choice wakes the Firstmate; its turn lists everything, in one list.
     vi.setSystemTime(start + 4 * 60_000);
     const courseId = supervisor.addFirstmateCard({
       title: "Pick a course",
@@ -1370,7 +1354,6 @@ describe("FirstmateAgent", () => {
     session.resolveNextPrompt();
     await tick();
 
-    // Already told: the next turn lists none of them again.
     await agent.converse("what next?");
     expect(session.prompts[2]).not.toContain("what the captain did outside this conversation");
     session.resolveNextPrompt();

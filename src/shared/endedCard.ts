@@ -8,7 +8,6 @@ import type { CardCornerWords, NoteDone } from "./cardLeave.ts";
  * saved-row facts, never an author's: `CardService` is the one writer.
  */
 export const cardEndedSchema = z.object({
-  /** Who ended it: the card's crewmate or the first mate. */
   by: z.enum(["crewmate", "firstmate"]),
   /** The author's reason, written for the captain; absent when it gave none. */
   reason: z.string().optional(),
@@ -25,7 +24,6 @@ export const ENDED_CLOSE_LABEL = "Close";
 export const ENDED_CLOSE_CARD_LABEL = "Close card";
 const ENDED_CLOSE_REST = `${ENDED_CLOSE_LABEL} · nothing on it waits on you`;
 
-/** Who ended it, as the line names them. */
 function enderWords(by: CardEnded["by"]): string {
   return by === "firstmate" ? "Your first mate" : "Its crewmate";
 }

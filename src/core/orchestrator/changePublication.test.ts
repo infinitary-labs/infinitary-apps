@@ -496,7 +496,6 @@ describe("ChangePublication", () => {
     const change = tasks.changesFor("ab12cd34").find((item) => item.handle?.number === 7);
     expect(change).toMatchObject({ repoId: other.id, head: { branch } });
 
-    // Its checks are read where it lives.
     own.calls.length = 0;
     const reading = await service.checkTool.checkForCrew("ab12cd34");
     expect(reading).toContain(
@@ -509,7 +508,6 @@ describe("ChangePublication", () => {
       headRepo: "octo/dotfiles",
     });
 
-    // check_change pull of that number reviews it in that project.
     expect(await service.checkTool.checkForCrew("ab12cd34", { pull: 7 })).toContain(
       "Merge review mr",
     );
@@ -1000,7 +998,6 @@ describe("the change delivery and the sign-in where the project lives", () => {
         "changeFor fm/task-ab12cd34",
       ]);
 
-      // Asking again with the same words sends nothing more.
       const again = await service.publication.open("ab12cd34", {
         title: "fix: ship it",
         body: CORRECTED,

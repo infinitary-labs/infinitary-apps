@@ -12,7 +12,6 @@ import type { Scenario } from "../mockProvider";
 export const WRITING_CREW_MARKER = "keep writing progress";
 /** The crew the plan names: six crewmates writing at once. */
 export const WRITING_CREW_SIZE = 6;
-/** How long each crewmate takes between one progress line and the next. */
 export const WRITING_CREW_PERIOD_MS = 1_000;
 
 export const writingCrew: Scenario =

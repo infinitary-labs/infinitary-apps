@@ -293,7 +293,6 @@ enum CharacterWarp {
 
     // MARK: the crew
 
-    /// Points in a rider's light trail.
     private static let trailPoints = 6
 
     /// Move one orbiting crewmate for the warp, after the orbit placed it: `index` is its place among the `count`

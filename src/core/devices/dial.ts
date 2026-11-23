@@ -49,7 +49,6 @@ import { relayedStream, relayFor } from "./relay";
 /** The device's own key and certificate, PEM, shown in every handshake. */
 export type DeviceKey = { key: string; cert: string };
 
-/** The home that answered is not the one the link or grant names. */
 export class HomeKeyMismatchError extends Error {
   constructor() {
     super(`The ${COMPUTER.one} at this address is not the one the link names.`);
@@ -165,7 +164,6 @@ export function pinnedSocket(
   device: DeviceKey | null,
   options: DialOptions = {},
 ): Promise<TLSSocket> {
-  // A socket on this Mac is dialed directly; an address maybe through a relay.
   const address = "address" in target ? addressOf(target.address) : null;
   const relay = address && (options.relay === undefined ? relayFor(address.host) : options.relay);
   return new Promise((resolve, reject) => {
@@ -235,7 +233,6 @@ export async function probeHome(
   socket.destroy();
 }
 
-/** The first address that answers with the home's key. A named target is tried alone. */
 async function pinnedFirst(
   reach: { at: string; via?: HomeVia; also?: readonly string[] },
   homeKey: string,
@@ -590,7 +587,6 @@ async function pair(
  */
 function pairedAs(device: PairingDevice, kind: DeviceKind, again: boolean): boolean {
   if (kind === device.kind) return true;
-  // A phone is paired as a view whichever link it used.
   if (isPhone(device)) return kind === "view";
   if (again) return deviceRunsWork(kind) && deviceRunsWork(device.kind);
   return device.kind === "mac" && kind === (device.window ? "view" : "work");

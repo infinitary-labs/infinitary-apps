@@ -58,7 +58,6 @@ export const CHECK_WATCH_FAST_MS = 60_000;
 /** The pause before each later read, through the two-hour bound. */
 export const CHECK_WATCH_SLOW_MS = 2 * 60_000;
 
-/** The pause before the next read: every minute for 10 minutes, then every 2. */
 export function checkWatchDelay(tries: number): number {
   return tries < CHECK_WATCH_FAST_READS ? CHECK_WATCH_FAST_MS : CHECK_WATCH_SLOW_MS;
 }
@@ -83,7 +82,6 @@ function legacyEndOnce(watch: CiWatch): string {
   return `check-watch:${watch.head}:${watch.since}`;
 }
 
-/** One check the watch names: its name and state in the forge's words. */
 /** A check a wake names; `manual` waits for a person to start it and holds. */
 export type WatchedCheck = { name: string; state: string; manual?: boolean };
 

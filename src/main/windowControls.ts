@@ -34,7 +34,6 @@ export function controlWindow(win: BrowserWindow, control: WindowControl): Windo
   return windowState(win);
 }
 
-/** Tells the window's page each time the window fills the screen or stops filling it. */
 export function followWindowState(win: BrowserWindow): void {
   const tell = () => {
     if (!win.isDestroyed() && !win.webContents.isDestroyed())

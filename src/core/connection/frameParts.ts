@@ -15,7 +15,6 @@ export function partsHeader(bytes: number): Buffer {
 /** No header is longer than this, so a longer message is never read as one. */
 const HEADER_BYTES = 64;
 
-/** The length a header names, or undefined when the message is no header. */
 function headerBytes(message: Buffer): number | undefined {
   if (message.length > HEADER_BYTES) return undefined;
   try {
@@ -43,7 +42,6 @@ export class FramePartsReader {
   private owed = 0;
   private have = 0;
   private parts: Buffer[] = [];
-  /** How many frames came in parts and were joined. */
   joined = 0;
 
   /**

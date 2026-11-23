@@ -57,7 +57,6 @@ export class PersonalSync {
     this.kept.delete(deviceId);
   }
 
-  /** The version a computer last said it keeps. */
   keptOn(deviceId: string): PersonalVersion | undefined {
     return this.kept.get(deviceId);
   }

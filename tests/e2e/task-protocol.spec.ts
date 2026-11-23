@@ -18,7 +18,6 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * the board and the Tasks panel.
  */
 
-/** The task the captain commissions. */
 const TITLE = "write a short status note";
 
 let launched: LaunchedApp;
@@ -41,7 +40,6 @@ test("a commissioned crewmate starts, reports, and its task is on the board with
   await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
   await expect(reportLine(page, key)).toBeVisible({ timeout: 30_000 });
 
-  // The crew has it: the task is working, its crewmate idle with the report.
   await expect
     .poll(
       () =>

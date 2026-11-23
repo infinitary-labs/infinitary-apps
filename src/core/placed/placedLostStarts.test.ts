@@ -115,12 +115,10 @@ describe("a start whose computer goes mid-start, over the real connection", () =
       expect(home.tasks.timeline("t-lost").map((event) => event.text)).toContain(
         lostStartLine("Mac mini", step),
       );
-      // A sweep while it is away tries nothing.
       await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
       await home.supervisor.starts.dispatchQueuedTask("t-lost");
       expect(home.tasks.get("t-lost")?.status).toBe("open");
 
-      // The computer is back: the sweep it brings starts the task, with no Start from anyone.
       await home.listen();
       await at.inReach("t-lost");
       await expect.poll(() => home.tasks.get("t-lost")?.status).toBe("active");
@@ -183,7 +181,6 @@ describe("a task that branches from work kept here, over the real connection", (
     await expect.poll(() => home.tasks.get("t-next")?.status).toBe("active");
     await expect.poll(() => home.tasks.get("t-next")?.activity).toBe("idle");
 
-    // The work arrived there under the task's private ref.
     const work = at.folders("t-next").work;
     const carried = await carriedRefs(work);
     expect(carried).toHaveLength(1);
@@ -221,7 +218,6 @@ describe("a task that branches from work kept here, over the real connection", (
     await at.inReach("t-next");
     await expect.poll(() => home.tasks.get("t-next")?.status).toBe("active");
     await expect.poll(() => home.tasks.get("t-next")?.activity).toBe("idle");
-    // The exact commit arrived under the task's private ref.
     const work = at.folders("t-next").work;
     const carried = await carriedRefs(work);
     expect(carried).toHaveLength(1);

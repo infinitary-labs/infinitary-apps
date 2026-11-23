@@ -87,7 +87,6 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
       ),
     ).toBe(false);
     expect(existsSync(join(userDataDir, "plugins", manifest.id))).toBe(false);
-    // Declining by keyboard leaves the built-in untouched.
     await pressKey(at.page.getByRole("button", { name: "Don't add", exact: true }), "Enter");
     await expectNoCard(at.page, title);
     await waitForFirstmateIdle(at.page);
@@ -117,7 +116,6 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     await expect(
       settingRow(at.page, `runbook-${workflows.id}`).getByRole("switch"),
     ).toHaveAttribute("aria-checked", "false");
-    // The built-in remains available, and re-enabling its replacement switches it off in one named line.
     await pressKey(settingRow(at.page, `runbook-${workflows.id}`).getByRole("switch"), "Space");
     await expect(
       settingRow(at.page, `runbook-${workflows.id}`).getByRole("switch"),

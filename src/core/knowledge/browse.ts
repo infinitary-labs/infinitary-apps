@@ -26,7 +26,6 @@ export function standingOf(
   return status.state === "checked" ? "checked" : "unchecked";
 }
 
-/** Connections touching each concept, in the whole collection. */
 export function degreesOf(connections: readonly KnowledgeConnection[]): Map<string, number> {
   const degree = new Map<string, number>();
   for (const connection of connections) {
@@ -127,7 +126,6 @@ export function chooseGraph(
   };
 }
 
-/** One page of a list, clamped to the pages it has, and which page that was. */
 export function pageOf<T>(
   rows: readonly T[],
   page: number | undefined,

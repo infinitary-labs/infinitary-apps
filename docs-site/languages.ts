@@ -17,7 +17,6 @@ export { SOURCE_LANGUAGE, textDirection };
 /** Where the site is published; every page's canonical address and alternates name it. */
 export const SITE_ORIGIN = "https://docs.getinfinitary.com";
 
-/** Every catalog language, English first, then the rest in name order. */
 export function catalogLanguages(): string[] {
   const tags = readdirSync(CATALOG, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -32,17 +31,14 @@ export function segmentOf(tag: string): string {
   return tag.toLowerCase();
 }
 
-/** Whether a language other than English has shipped: its pages folder exists. */
 export function isShipped(tag: string): boolean {
   return tag === SOURCE_LANGUAGE || existsSync(new URL(`${segmentOf(tag)}/`, PAGES));
 }
 
-/** The catalog languages the site serves, English first. */
 export function shippedLanguages(): string[] {
   return catalogLanguages().filter(isShipped);
 }
 
-/** The pages folder of a language, as a path. */
 export function pagesFolder(tag: string): string {
   return fileURLToPath(tag === SOURCE_LANGUAGE ? PAGES : new URL(`${segmentOf(tag)}/`, PAGES));
 }
@@ -80,7 +76,6 @@ export const SCOPE_WORD_KEYS = {
   "main-message": "keyboard.scope.main-message",
 } as const;
 
-/** One of the site's own words. */
 export type SiteWord = (typeof SIDEBAR_WORDS)[number] | (typeof KEYBOARD_WORDS)[number] | (typeof SCOPE_WORD_KEYS)[keyof typeof SCOPE_WORD_KEYS];
 
 /** The words a language's words file must have: the sidebar's always, and once it ships the Keyboard page's. */
@@ -93,7 +88,6 @@ export function siteWords(tag: string, shipped: boolean): SiteWord[] {
   ];
 }
 
-/** A language's own words file (words/<tag>.json), or an empty one when it has none yet. */
 export function wordsOf(tag: string): Partial<Record<SiteWord, string>> {
   const file = new URL(`${tag}.json`, WORDS);
   return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
@@ -126,10 +120,6 @@ export function starlightLocales(
   );
 }
 
-/**
- * Starlight's translations of one of the site's own words, keyed by language
- * tag, from each catalog language's words file that has it.
- */
 export function translationsOf(key: SiteWord): Record<string, string> {
   return Object.fromEntries(
     catalogLanguages()

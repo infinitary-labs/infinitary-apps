@@ -584,7 +584,6 @@ describe("an artifact read in parts through the crewmate tool (INF-1932)", () =>
     ).toBe(true);
     expect(JSON.stringify(receipt)).not.toMatch(/gho_|signed=/);
 
-    // The same selection again is the same file, never written over.
     expect(
       (
         await download.run({

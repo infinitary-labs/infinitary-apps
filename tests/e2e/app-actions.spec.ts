@@ -128,7 +128,6 @@ test("captain clicks and Firstmate catalog changes share persisted settings and 
 test("Intelligence requests persist and show the same account and routing controls with one trail", async () => {
   const userDataDir = scratchDir("intelligence-catalog-");
   const accountId = "acct_catalog_test";
-  // The account's label as seeded, and the one the rename gives it.
   const firstLabel = "Personal";
   const nextLabel = "Work";
 
@@ -366,7 +365,6 @@ test("a setting the captain chose on a crewmate's card applies without him typin
       .toBe(true);
     await showCard(page, RELAYED_SETTING_CARD);
     await windowShot(page, test.info().outputPath("relayed-setting-card.png"));
-    // His one act: the card's default, by key.
     await pressKey(
       shownEntry(page).getByRole("button", { name: RELAYED_SETTING_CHOICE.label, exact: true }),
       "Enter",

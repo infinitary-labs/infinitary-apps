@@ -71,7 +71,6 @@ import XCTest
             let frame = motion.frame(roster: roster, now: 0, settled: true)
             let label = "\(name) step \(index + 1)"
             XCTAssertEqual(Set(computer.book.crew.keys), Set(present), label)
-            // Each crewmate is on the orbit the desktop chose for it.
             for (id, reading) in crew { XCTAssertEqual(computer.book.crew[id]?.plane, Int(reading[0]), "\(label): \(id)'s orbit") }
             let marks = frame.marks.filter { $0.computerID == computer.id }
             XCTAssertEqual(Set(marks.map(\.task.id)), Set((step.marks ?? [:]).keys), label)

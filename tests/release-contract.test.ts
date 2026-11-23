@@ -478,7 +478,6 @@ describe("electron-builder configuration", () => {
       "infinitary-files-axi",
       // INF-1214's inbox command, now infinitary-axi's old name for one release (INF-1894).
       "infinitary-inbox-axi",
-      // INF-1085's command ships even while its production grant remains unavailable.
       "infinitary-secrets-axi",
       // INF-3447 piece 1's stops command, which registers how to stop what a task leaves running.
       "infinitary-stops-axi",
@@ -718,7 +717,6 @@ describe("verify-app single-arch allowance is mac.x64ArchFiles", () => {
 `,
     );
     writeFileSync(join(contents, "Resources", "app.asar"), "");
-    // The app's own git helper ships outside the archive, executable.
     const askpass = join(contents, "Resources", "git-askpass");
     writeFileSync(askpass, readFileSync(join(root, "resources", "git-askpass")));
     chmodSync(askpass, 0o755);
@@ -1042,7 +1040,6 @@ function launchGateApp(): { app: string; version: string } {
   return { app, version };
 }
 
-/** A release gate's run to its end, with what it printed. */
 function runGate(
   script: string,
   args: string[],
@@ -1162,13 +1159,10 @@ describe("the alpha (roadmap 1.2)", () => {
 
   it("refuses a download URL on either product repository, a foreign host, or another release on the tap", () => {
     for (const url of [
-      // The archived and active product repositories.
       "https://github.com/infinitary-labs/infinitary-apps/releases/download/v1.2.3/Infinitary-1.2.3-universal.zip",
       "https://github.com/infinitary-labs/infinitary/releases/download/v1.2.3/Infinitary-1.2.3-universal.zip",
-      // A foreign host.
       "https://example.com/Infinitary-1.2.3-universal.zip",
       "https://example.com/infinitary-labs/homebrew-tap/releases/download/infinitary-v1.2.3/Infinitary-1.2.3-universal.zip",
-      // The tap, but not this app's release of this version.
       "https://github.com/infinitary-labs/homebrew-tap/archive/infinitary-v1.2.3.zip",
       "https://github.com/infinitary-labs/homebrew-tap/releases/download/v1.2.3/Infinitary-1.2.3-universal.zip",
       "https://github.com/infinitary-labs/homebrew-tap/releases/download/other-tool-v1.2.3/Infinitary-1.2.3-universal.zip",
@@ -1178,13 +1172,11 @@ describe("the alpha (roadmap 1.2)", () => {
     ]) {
       expect(() => render(url), url).toThrow(/public release asset/);
     }
-    // The workflow's wrapper refuses the same way, before printing a cask.
     expect(() =>
       generate(
         "https://github.com/infinitary-labs/infinitary/releases/download/v1.2.3/Infinitary-1.2.3-universal.zip",
       ),
     ).toThrow(/public release asset/);
-    // The URL is written with Homebrew's version interpolation and reads back exact.
     expect(stableCask).toContain(
       'url "https://github.com/infinitary-labs/homebrew-tap/releases/download/infinitary-v#{version}/Infinitary-#{version}-universal.zip"',
     );

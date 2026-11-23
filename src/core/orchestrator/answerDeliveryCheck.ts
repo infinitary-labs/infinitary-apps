@@ -34,7 +34,6 @@ export type AnswerDeliveryHost = {
   cardTitle: (cardId: string) => string | undefined;
   /** The newest captain message under a card, which the retry names. Absent, it names none. */
   captainMessage?: (cardId: string) => number | undefined;
-  /** How each message ends (`AskEnding`): its chain, its work and its answer. */
   ending: AskEnding;
   /**
    * Judge nothing: no verdict, no retry, no notice. The replay harness and
@@ -45,7 +44,6 @@ export type AnswerDeliveryHost = {
   observe?: boolean;
 };
 
-/** A turn's scope: the messages it read, with the card each was a reply under. */
 export type DeliveryTurnEnd = {
   /** The messages the turn opened or took in, still open when it ended. */
   asks: readonly string[];
@@ -225,7 +223,6 @@ export class AnswerDeliveryCheck {
     }
   }
 
-  /** Forget the running turn's scope. */
   clear(): void {
     this.adopted.clear();
     this.about.clear();
@@ -332,7 +329,6 @@ export class AnswerDeliveryCheck {
     return this.host.inbox.allFor(FIRSTMATE_RECIPIENT).length === 0;
   }
 
-  /** The accepted answer is final, for every message of the chain. */
   private finalize(chain: AskChain, cardId: string | null): void {
     if (!this.laneEmpty()) return;
     this.host.tasks.capture.markAnswered(chain.ids, cardId);

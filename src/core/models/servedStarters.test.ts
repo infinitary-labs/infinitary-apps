@@ -35,7 +35,6 @@ function account(providerId: string, ids: readonly string[]): AccountModels {
 
 const claude = account("anthropic-claude", Object.keys(STARTER_SLOTS["anthropic-claude"] ?? {}));
 
-/** A stand-in feed: each call answers the next response, or throws when it is an Error. */
 function feed(...answers: (Response | Error)[]) {
   const calls: string[] = [];
   const fetchImpl = (async (input: string | URL | Request) => {

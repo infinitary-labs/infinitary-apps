@@ -25,7 +25,6 @@ export type ScheduleRecord = {
   createdAt: number;
   /** Code-stamped authority; absent legacy provenance never grants permission. */
   captainRequested?: boolean;
-  /** What the captain calls it; absent for a rule nobody named. */
   name?: string;
   /** The project its prompt is about (a project id); absent for none. */
   projectId?: string;
@@ -90,10 +89,8 @@ export type RuleNotesVersion = {
  */
 export type RunDelivery = "waiting" | "handled" | "cancelled" | "screened";
 
-/** Why a waiting delivery was recalled. */
 export type RunCancelReason = "edited" | "paused" | "cleared";
 
-/** One fire of a rule, as the history shows it. */
 export type ScheduleRun = {
   scheduleId: string;
   revision: number;
@@ -107,7 +104,6 @@ export type ScheduleRun = {
   events?: AutomationEventItem[];
 };
 
-/** A run as it is stored: its delivery and what that delivery led to. */
 export type RecordedRun = ScheduleRun & {
   id: number;
   /** The inbox row carrying it while it is not yet handled. */
@@ -323,7 +319,6 @@ export class ScheduleStore {
       );
   }
 
-  /** Replace a rule's editable fields in one write. */
   save(record: ScheduleRecord): void {
     this.db
       .prepare(
@@ -446,7 +441,6 @@ export class ScheduleStore {
     })();
   }
 
-  /** A delivery settles: handled, with what it led to, or cancelled, with why. */
   settle(
     runId: number,
     outcome:
@@ -476,7 +470,6 @@ export class ScheduleStore {
       );
   }
 
-  /** Every delivery not yet handled or cancelled, oldest first; one rule's when named. */
   waiting(scheduleId?: string): RecordedRun[] {
     const rows = (
       scheduleId === undefined
@@ -492,7 +485,6 @@ export class ScheduleStore {
     return rows.map(runOf);
   }
 
-  /** The run an inbox row carries, if any. */
   runByInbox(inboxId: number): RecordedRun | undefined {
     const row = this.db.prepare("SELECT * FROM schedule_runs WHERE inbox_id = ?").get(inboxId) as
       | RunRow
@@ -500,7 +492,6 @@ export class ScheduleStore {
     return row ? runOf(row) : undefined;
   }
 
-  /** A rule's fires, newest first. */
   runs(scheduleId: string, limit = 50): RecordedRun[] {
     const rows = this.db
       .prepare("SELECT * FROM schedule_runs WHERE schedule_id = ? ORDER BY id DESC LIMIT ?")
@@ -556,7 +547,6 @@ export class ScheduleStore {
     })();
   }
 
-  /** The rule's next fire and state, and an event rule's new cursor with them. */
   private advance(id: string, next: Advance): void {
     this.db
       .prepare("UPDATE schedules SET next_fire = ?, state = ? WHERE id = ?")
@@ -580,10 +570,6 @@ export class ScheduleStore {
     return new Set(rows.flatMap((row) => (itemsOf(row.events) ?? []).map((item) => item.id)));
   }
 
-  /**
-   * Settled history past 30 days or beyond 1,000 per rule goes; a delivery
-   * still waiting stays until it settles.
-   */
   private trim(scheduleId: string, now: number): void {
     this.db
       .prepare(
@@ -628,7 +614,6 @@ export class ScheduleStore {
     })();
   }
 
-  /** A rule's notes as they stand: its newest version, or undefined when it has none. */
   notes(scheduleId: string): RuleNotesVersion | undefined {
     const row = this.db
       .prepare("SELECT * FROM schedule_notes WHERE schedule_id = ? ORDER BY version DESC LIMIT 1")
@@ -636,7 +621,6 @@ export class ScheduleStore {
     return row ? notesOf(row) : undefined;
   }
 
-  /** Every version of a rule's notes, newest first. */
   notesHistory(scheduleId: string): RuleNotesVersion[] {
     const rows = this.db
       .prepare("SELECT * FROM schedule_notes WHERE schedule_id = ? ORDER BY version DESC")

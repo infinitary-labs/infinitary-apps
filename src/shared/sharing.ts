@@ -38,7 +38,6 @@ export const DATA_TERMS = {
    * the contribution switch on the General tab and lets the ask fire.
    */
   published: false,
-  /** No contribution terms are published. */
   version: "unpublished",
 } as const;
 
@@ -65,7 +64,6 @@ export const sharingSwitchSchema = z.strictObject({
   enabled: z.boolean(),
   /** When the person was first shown what this channel sends; null = never, so nothing sent. */
   viewedAt: z.number().nullable(),
-  /** When this channel last sent anything; null = never. */
   sentAt: z.number().nullable(),
 });
 export type SharingSwitch = z.infer<typeof sharingSwitchSchema>;

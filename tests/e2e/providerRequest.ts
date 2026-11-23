@@ -114,7 +114,6 @@ export function isTaskRequest(body: string, title: string): boolean {
   );
 }
 
-/** One tool call the model made earlier in a request's conversation, its arguments parsed. */
 export type ProviderToolCall = { name: string; args: Record<string, unknown> };
 
 type CallItem = Item & {
@@ -294,7 +293,6 @@ export function served(segment: ServedSegmentInput): ServedSegment {
   return frameServedInput([segment]).segments[0] as ServedSegment;
 }
 
-/** Whether a served turn holds this exact segment: same kind, same origin, same body. */
 export function holdsSegment(turn: ServedTurn, segment: ServedSegment): boolean {
   return turn.segments.some(
     (part) =>
@@ -418,7 +416,6 @@ export function toolResults(message: { role: string; content?: unknown }): strin
 /** A note Claude's client adds to a message on its own (`<system-reminder>`), never anyone's words. */
 const CLIENT_NOTE = /^\s*<system-reminder>[\s\S]*<\/system-reminder>\s*$/;
 
-/** A message's text, the client's own notes aside. */
 function saidIn(content: unknown): string {
   if (!Array.isArray(content)) return messageText(content);
   return messageText(
@@ -518,7 +515,6 @@ export function answering(served: string): { answers_message?: number } {
   return named ? { answers_message: Number(named) } : {};
 }
 
-/** Whether the conversation so far carries a CALL of the named tool (not its definition). */
 export function calledTool(body: string, name: string): boolean {
   return toolCallCount(body, name) > 0;
 }
@@ -548,7 +544,6 @@ function contextCrew(body: string) {
   return latestContext(body)?.crew ?? [];
 }
 
-/** The context's repos, as name and id pairs. */
 export function contextRepos(body: string): Array<[name: string, id: string]> {
   return (latestContext(body)?.repos ?? []).map((repo) => [repo.name, repo.repo_id]);
 }

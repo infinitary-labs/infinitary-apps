@@ -141,10 +141,6 @@ export const PHONE_SETTINGS_WORDS = {
 
 type DotTone = "ok" | "ring" | "warn" | "danger" | "idle" | "busy" | "captain";
 
-/* ------------------------------------------------------------------ */
-/* Intelligence                                                        */
-/* ------------------------------------------------------------------ */
-
 export type PhoneMeter = {
   id: string;
   label: string;
@@ -345,10 +341,6 @@ export function intelligencePage(input: IntelligenceInput): PhoneIntelligence {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Automation                                                          */
-/* ------------------------------------------------------------------ */
-
 /** What a rule's one button does: pause or resume it, or open a draft's review. */
 export type PhoneRuleAction = { id: "pause" | "resume" | "review"; label: string };
 
@@ -379,7 +371,6 @@ function ruleWhen(rule: AutomationRule): string {
     : automationWhenWords(rule.spec, rule.when);
 }
 
-/** Whether a rule has a next run to name: one that is on and planned. */
 function runsNext(rule: AutomationRule): boolean {
   return rule.state === "enabled" && rule.nextFire !== null;
 }
@@ -607,10 +598,6 @@ export function automationRulePage(input: RuleInput): PhoneRule {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Usage                                                               */
-/* ------------------------------------------------------------------ */
-
 export type PhoneUsage = {
   summary: string;
   periods: { value: UsagePeriod; label: string }[];
@@ -750,10 +737,6 @@ export function usagePage(input: {
 
 /** The period and work the phone's Usage opens on, as the computer's does. */
 export const PHONE_USAGE_QUERY = DEFAULT_USAGE_QUERY;
-
-/* ------------------------------------------------------------------ */
-/* Projects                                                            */
-/* ------------------------------------------------------------------ */
 
 export type PhoneChoice = { value: string; label: string };
 
@@ -924,10 +907,6 @@ export function projectsPage(input: {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Runbooks                                                            */
-/* ------------------------------------------------------------------ */
-
 export type PhoneRunbook = {
   id: string;
   name: string;
@@ -970,10 +949,6 @@ export function runbooksPage(input: { books: RunbookView[]; home: string }): Pho
     foot: m.settingsRunbooksFolderRemote({ computer: home }),
   };
 }
-
-/* ------------------------------------------------------------------ */
-/* The dispatcher the phone calls                                      */
-/* ------------------------------------------------------------------ */
 
 /** Every page by the name the phone asks for it. */
 export const PHONE_PAGES = {

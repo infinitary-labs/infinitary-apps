@@ -97,7 +97,6 @@ export const FULL_PICTURE_PX = 1_600;
 
 type Node = DomNode & { attribs?: Record<string, string> };
 
-/** A row's columns: its cells, each counted by its colspan. */
 function rowColumns(row: Node): number {
   let columns = 0;
   for (const cell of row.children ?? []) {
@@ -118,7 +117,6 @@ function longestLine(node: Node): number {
   );
 }
 
-/** The markup's own facts: the widest table, the longest code line, a picture group. */
 function markupWidth(body: string): CardWidth {
   const document = parseDocument(body, { decodeEntities: true });
   let width: CardWidth = "regular";

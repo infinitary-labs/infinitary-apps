@@ -26,7 +26,6 @@ export const MOVE_LOCK_TITLE = "Infinitary is moving your saved work";
 export const MOVE_LOCK_MESSAGE =
   "Open Infinitary again when the move finishes. Nothing here has been changed.";
 
-/** The lock path for a data folder: its sibling, `<folder>.move-lock`. */
 export function moveLockPathFor(dataRoot: string): string {
   return join(dirname(dataRoot), `${basename(dataRoot)}${MOVE_LOCK_SUFFIX}`);
 }
@@ -139,7 +138,6 @@ function readFileOr(path: string): string {
   }
 }
 
-/** Releases the lock this process holds; a lock another process holds is left alone. */
 export function releaseMoveLock(lockPath: string, pid: number = process.pid): void {
   const lock = parseMoveLock(readFileOr(lockPath));
   if (lock?.pid === pid) unlinkSync(lockPath);

@@ -20,10 +20,6 @@ import { SettingsStore } from "./settingsStore";
 import { UsageStore } from "./usageStore";
 import { dropViews } from "./views";
 
-// The settings and profile migrations: captain messages and their answers, schedules, model
-// slots, quota readings, the usage ledger, the reply line, release tracking, the welcome and
-// personal panels.
-
 it("marks every captain message from before the answer-delivery check legacy, and opens new ones pending", () => {
   const dir = tmpUserData();
   const legacy = openDatabase(dir, 61);
@@ -270,7 +266,6 @@ describe("migration 51 (a pushed reading's status, W1 S3)", () => {
     });
     upgraded.close();
 
-    // An app restart reads the status back from disk.
     const reopened = openDatabase(dir);
     expect(new PushedQuotaStore(reopened).windowsFor("acct_a")).toEqual([
       { windowId: "five_hour", status: "rejected", utilization: 1, resetsAt: 9_000, at: 3_000 },
@@ -377,7 +372,6 @@ describe("migration 66 (an honest usage ledger, the Usage tab)", () => {
         .prepare("SELECT model, model_source, cost_source FROM usage_events WHERE at = 2")
         .get(),
     ).toEqual({ model: "claude-opus-4-1", model_source: "served", cost_source: "claude" });
-    // Reversible: dropping the columns restores the v65 shape with every row.
     dropViews(reopened);
     reopened.exec(REVERSE_MIGRATION_66);
     expect(columnNames(reopened, "usage_events")).toEqual(columnsAt65);
@@ -402,7 +396,6 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
     const upgraded = openDatabase(dir);
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const tasks = new TaskService({ db: upgraded, strict: true, now: () => 2 });
-    // A message written before the column has no reply line.
     expect(tasks.capture.lastTurn()).toEqual({
       you: "before the line",
       reply: null,
@@ -420,7 +413,6 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
       reply: { text: "The alpha is cut" },
       previous: { you: "before the line", reply: null },
     });
-    // Reversible: dropping the column restores the v67 shape with every row.
     dropViews(reopened);
     reopened.exec(REVERSE_MIGRATION_68);
     expect(columnNames(reopened, "captain_asks")).toEqual(columnsAt67);

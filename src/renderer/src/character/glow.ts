@@ -107,7 +107,6 @@ export type HaloOptions = {
   blurPx: number;
   /** Opaque `rgb(...)` tint of the halo. */
   tint: string;
-  /** Alpha the assembled halo is composited at. */
   alpha: number;
 };
 

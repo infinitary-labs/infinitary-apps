@@ -266,17 +266,14 @@ export function starterMap(): StarterMap {
   return served ? { ...STARTER_SLOTS, ...served } : STARTER_SLOTS;
 }
 
-/** The starter slots for one offering. Empty when the map leaves it off. */
 export function starterSlots(providerId: string, id: string): readonly Slot[] {
   return starterMap()[providerId]?.[id] ?? [];
 }
 
-/** The starter-map keys for one provider, as offering keys. */
 export function starterKeys(providerId: string): string[] {
   return Object.keys(starterMap()[providerId] ?? {}).map((id) => `${providerId}/${id}`);
 }
 
-/** Every starter-map key across providers. */
 export function allStarterKeys(): string[] {
   return Object.keys(starterMap()).flatMap((providerId) => starterKeys(providerId));
 }

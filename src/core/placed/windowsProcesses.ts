@@ -409,7 +409,6 @@ export function programName(image: string): string {
   return basename(image.replace(/\\/g, "/"));
 }
 
-/** The birth of a living program, read from its own handle. */
 function birthOf(process: Handle): string | undefined {
   const created = Buffer.alloc(8);
   const ignored = Buffer.alloc(8);
@@ -611,7 +610,6 @@ export class WindowsJobs {
     return this.jobs.get(pid)?.started;
   }
 
-  /** Whether the job led by `pid` still has a program in it. */
   exists(pid: number): boolean {
     const held = this.jobs.get(pid);
     if (!held) return false;
@@ -627,7 +625,6 @@ export class WindowsJobs {
 /** One set of jobs in each app process, read by every process-table reading. */
 export const windowsJobs = new WindowsJobs();
 
-/** The process table with each program's group from the app's jobs, or null when unreadable. */
 export function readWindowsProcesses(jobs: WindowsJobs = windowsJobs): ProcessReading[] | null {
   const lists = jobs.members();
   const rows = readWindowsTable();

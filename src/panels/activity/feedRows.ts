@@ -17,7 +17,6 @@ export function feedKeyOf(line: PanelFeedLine): string {
   return `${line.at}|${line.kind}|${line.taskKey ?? ""}|${line.text}`;
 }
 
-/** One key per line, a repeated line numbered by its order among its twins. */
 export function feedKeysOf(lines: readonly PanelFeedLine[]): string[] {
   const seen = new Map<string, number>();
   return lines.map((line) => {
@@ -65,7 +64,6 @@ export function linesInFocus(
   return lines.filter((line) => line.taskKey === undefined || line.taskKey.startsWith(prefix));
 }
 
-/** The focused project's key from the board's projects, or null when none is focused or listed. */
 export function focusedKeyOf(
   projects: readonly { id: string; key: string }[] | null,
   focusedProjectId: string | null,

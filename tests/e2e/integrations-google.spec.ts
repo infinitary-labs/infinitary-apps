@@ -84,7 +84,6 @@ const NOTICE = (() => {
   return notice;
 })();
 
-/** Accept Google's notice by keys; it closes, and the sign-in starts. */
 async function acceptGoogleNotice(tab: Locator): Promise<void> {
   const notice = tab.locator('[data-integration-notice="google"]');
   await pressKey(notice.getByRole("button", { name: NOTICE.accept, exact: true }), "Enter");
@@ -383,7 +382,6 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     expect(saved()).toContain(subject);
     expect((await runs()).join("\n")).toContain(subject);
 
-    // The delete is the Integrations tab's Data section, under its own label.
     await runFromSearch(app, page, "settings.integrations");
     const data = settingsSection(page, "integrations").locator("[data-integrations-data]");
     await expect(data).toContainText(INTEGRATIONS_WORDS.data);

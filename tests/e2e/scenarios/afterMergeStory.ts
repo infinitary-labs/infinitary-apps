@@ -16,7 +16,6 @@ export const WAITING_AFTER_MERGE_STORY_MARKER = "offer the meter fix with work t
 export const FIRSTMATE_AFTER_MERGE_STORY_MARKER = "offer the meter fix with an app change after";
 export const AFTER_MERGE_STORY_TITLE = "fix: the meter reads on time";
 
-/** The work the meter fix leaves for after its merge: the dashboard corrects for the old lag. */
 export const METER_AFTER_MERGE_STEP = {
   title: "Remove the dashboard's lag correction",
   goal: "The meter dashboard shows readings as they arrive, with no lag correction added.",

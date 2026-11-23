@@ -231,7 +231,6 @@ describe("pointing, moves, the view and the rail in the frame realm", () => {
     ]);
     const blind = framePanelProps({ id: "desk", reads: [], sql: [] }, bridge.api, () => {});
     await expect(blind.point.openTask("t1")).rejects.toThrow('name "tasks.board"');
-    // Only a card view aims the turn.
     const panel = framePanelProps({ id: "desk", reads: ["tasks.board"], sql: [] }, bridge.api);
     await expect(panel.point.aim("t1")).rejects.toThrow("only a card view aims the turn");
   });

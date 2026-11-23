@@ -484,7 +484,6 @@ describe("the signed channel workflow", () => {
         );
         expect(workflowValue(upload.if ?? "", { needs })).toBe(verified);
         expect(workflowValue(publish.if ?? "", { needs })).toBe(verified);
-        // The checks and switches wait for every upload.
         for (const uploaded of ["failure", "cancelled", "skipped"])
           expect(
             workflowValue(publish.if ?? "", { needs: { ...needs, upload: { result: uploaded } } }),

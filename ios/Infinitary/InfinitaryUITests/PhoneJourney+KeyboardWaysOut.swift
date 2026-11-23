@@ -22,7 +22,6 @@ extension PhoneJourney {
         let hide = app.buttons["hide-keyboard"]
         XCTAssertFalse(hide.exists, "The keyboard-down button shows with the keyboard down")
 
-        // The card's face: the button at one line and at two, a pull from the head, a tap on the head.
         revealForProbe(reply, in: app.scrollViews["card-scroll"].firstMatch)
         focusForPhoneTyping(reply, in: app)
         reply.typeText("Hold the four builds")
@@ -40,7 +39,6 @@ extension PhoneJourney {
             tapOnPhone(shownPart(of: heading))
         }
 
-        // The card's thread: the same button, pull and tap on the thread's head.
         let cue = app.buttons["thread-cue"]
         reveal(cue); tapOnPhone(cue)
         let threadTitle = app.staticTexts["thread-title"]
@@ -62,7 +60,6 @@ extension PhoneJourney {
         reveal(back); tapOnPhone(back)
         XCTAssertTrue(cue.waitForPresence(timeout: 10), app.debugDescription)
 
-        // The message box keeps the same button before its own send.
         focusForPhoneTyping(box, in: app)
         box.typeText("Check the north buoy")
         hideButtonBesideSend("message box", send: app.buttons["send-message"], into: &failures)
@@ -85,7 +82,6 @@ extension PhoneJourney {
         }
     }
 
-    /// Records whether a way out closed the keyboard and kept the field's words.
     private func keyboardWayOut(_ situation: String, _ field: XCUIElement, keeps words: String,
                                 into failures: inout [String], close: () -> Void) {
         let keyboard = app.keyboards.firstMatch
@@ -116,7 +112,6 @@ extension PhoneJourney {
         return app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: y))
     }
 
-    /// A slow pull down, as a thumb pulls, starting at the point and ending well below it.
     private func pullDown(from start: XCUICoordinate) {
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 160)), withVelocity: .slow, thenHoldForDuration: 0.1)
     }

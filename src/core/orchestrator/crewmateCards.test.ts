@@ -55,7 +55,6 @@ fakeCrewTimersEachTest();
 
 type Browsers = NonNullable<CrewSupervisorOptions["browsers"]>;
 
-/** A task's own browser as the stand-in holds it: open unless a case says otherwise. */
 function taskBrowser(answers: { state?: "open" | "stopped"; helps?: boolean } = {}) {
   const browsers = {
     forTask: () => ({
@@ -101,7 +100,6 @@ async function crewmateOn(
   return { ...h, crewmate, taskId, emitCard, own };
 }
 
-/** A project folder on this Mac holding the game's page. */
 function projectWithPage(): string {
   const folder = scratchDir("infinitary-page-project-");
   mkdirSync(join(folder, "game"));
@@ -151,7 +149,6 @@ function keptWrite(id: string, at = 1_000): ForgeWriteAsk {
   };
 }
 
-/** A card that asks the captain to send one kept write, beside the crewmate's own Not now. */
 function sendCard(...asks: string[]) {
   return {
     title: "Send the release issue to the notes project",

@@ -130,14 +130,11 @@ function isRepositoryFile(candidate: string): boolean {
   const path = join(ROOT, candidate);
   return existsSync(path) && statSync(path).isFile();
 }
-/** A workflow file's own name, with or without its folder. */
 const WORKFLOW_LIKE = /\b[\w-]+\.ya?ml\b/g;
 /** The app's setting prefixes, as its one reader names them. */
 const PREFIX = `(?:${SETTING_PREFIXES.map((prefix) => prefix.replace(/_$/, "")).join("|")})`;
-/** A setting of the app's, under either of its prefixes. */
 const SETTING_LIKE = new RegExp(`\\b${PREFIX}_([A-Z0-9_]+)\\b`, "g");
 
-/** The app's own sources, outside its tests. */
 function appSources(dir = join(ROOT, "src")): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);

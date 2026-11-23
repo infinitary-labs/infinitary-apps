@@ -110,10 +110,8 @@ export const background = {
     );
     const runtime = await runtimes.start(identity("meter"), entry, servicesFor("meter"));
     expect(runtime.actions).toEqual(["bump", "ask"]);
-    // A cadence under the floor is clamped up to it.
     expect(runtime.background).toEqual([{ id: "tick", everyMs: 50, declaredMs: 1 }]);
     await expect(runtime.invoke("bump", "x")).resolves.toEqual({ calls: 1, got: 1, input: "x" });
-    // Module state lives between calls.
     await expect(runtime.invoke("bump", null)).resolves.toMatchObject({ calls: 2 });
     expect(store.get("meter", "count")).toBe(2);
     await until(() => store.get("meter", "ticked") === true);
@@ -121,8 +119,6 @@ export const background = {
     await expect(runtime.invoke("missing", null)).rejects.toThrow(/no action "missing"/);
   });
 
-  // Moved from the in-app server host's own test when that host was removed:
-  // the same facts, now of the process that runs the module.
   it("refuses an unknown action by name, ignores what is not a function, and never overlaps a task", async () => {
     const { runtimes, store, logs, servicesFor, module } = setup();
     const entry = module(

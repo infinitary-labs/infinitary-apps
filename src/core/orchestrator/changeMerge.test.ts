@@ -43,7 +43,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
  * what was sent.
  */
 
-/** The task's pull request #23, read by its number at the forge's current change. */
 class NumberedForge extends FakeForge {
   readiness: ForgeReadiness = "clean";
   /** What the pull request reads as after a merge request went out. */
@@ -294,7 +293,6 @@ describe("ChangeMerge", () => {
     await service.checks.checkOverall("ab12cd34");
     expect(service.checks.reading("ab12cd34")?.overall).toBe("green");
 
-    // The checks turn red on GitHub after the reading was recorded.
     forge.states = ["failure"];
     const result = await service.merges.merge("ab12cd34");
     expect(result.ok).toBe(false);
@@ -435,7 +433,6 @@ describe("ChangeMerge", () => {
 
       insertTask(tasks, { id: "queued99", branch: "", status: "queued" });
       await expect(service.merges.close("queued99")).resolves.toEqual({ ok: true, text: "" });
-      // A branchless (still-queued) task never asks the host at all.
       expect(forge.calls.length).toBe(callsForOpenTask);
 
       const { repo } = await repos.setup({ kind: "init", name: "local-notes" });
@@ -479,7 +476,6 @@ describe("ChangeMerge", () => {
 });
 
 describe("a merge under the captain's kept approval (FI3-304)", () => {
-  /** The fake forge with the pinned pull request read by its number. */
   class PinnedForge extends FakeForge {
     readiness: ForgeReadiness = "clean";
     merged = false;
@@ -831,7 +827,6 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
           validation: "the unit tests at the repaired head",
         },
       });
-    // A repair that pulled in a file the approved change never touched.
     const drifted = commit("billing.ts", "fix: the meter's billing too");
     expect(await declare(drifted)).toContain(
       "these paths differ from the approved change and the declaration does not name them: billing.ts",
@@ -931,7 +926,6 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
 });
 
 describe("a pull request merged outside the app (FI3-213)", () => {
-  /** The fake forge whose pull request, read by its number, the test settles. */
   class OutsideForge extends FakeForge {
     pullState: "merged" | "closed" | "open" | "unreadable" = "merged";
     async pull(number: number): Promise<ForgePull> {

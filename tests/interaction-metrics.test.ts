@@ -1032,7 +1032,6 @@ describe("delivery rigor observability (phase 4)", () => {
         review({ verdict: "pass", findings: { "auto-fix": 0, "ask-user": 0, "no-op": 0 } }),
       ],
     );
-    // One change, read twice: two rounds.
     expect(scores.review_rounds_per_change.value).toBe(2);
     expect(scores.review_verdict_share_pass.value).toBe(0.5);
     expect(scores.review_verdict_share_findings.value).toBe(0.5);

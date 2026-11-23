@@ -190,7 +190,6 @@ export class StepDownWatch {
       });
   }
 
-  /** While a copy is out of reach, looks again after the next wait. */
   private later(): void {
     if (this.disposed || this.steppedDown) return;
     const copies = this.options.copies();
@@ -246,7 +245,6 @@ export class StepDownWatch {
     }
     // A second home a window reported while this look ran is not this look's to clear.
     if (before && this.second === before && !secondStays && !secondSeen) {
-      // The other no longer answers as a home with this number: nothing waits on the captain.
       this.options.log(`${this.second.copy.name} no longer answers as a second home`);
       this.second = null;
       this.options.twoHomes(null);

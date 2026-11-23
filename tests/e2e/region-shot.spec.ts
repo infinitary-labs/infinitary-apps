@@ -126,7 +126,6 @@ test("a region picture holds the whole region it measured at every Size", async 
             count,
             `the ${zoom}% picture keeps the region's ${corner} corner`,
           ).toBeGreaterThanOrEqual(25);
-        // Cropped to the region itself: each corner of the picture is the region's own.
         expect(corners, `the ${zoom}% picture is cropped to the region`).toEqual(
           Object.fromEntries(Object.keys(CORNERS).map((corner) => [corner, corner])),
         );

@@ -4,7 +4,6 @@ import { actionOf, HAND_OVER_ADDRESS, type HandOverView, handOverBody } from "./
 
 const names = { from: "Firstmate 3000", to: "Infinitary" };
 
-/** The page as a person reads it: its heading, its words, and each button with what it asks. */
 function read(view: HandOverView) {
   const document = parseDocument(handOverBody(view, names));
   const text = (name: string) =>

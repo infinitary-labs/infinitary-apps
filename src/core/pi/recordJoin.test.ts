@@ -19,7 +19,6 @@ const usage = {
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 };
 
-/** A turn as Pi records it: the words it was asked, then its answer. */
 function turn(record: SessionManager, asked: string, answered: string): void {
   record.appendMessage({ role: "user", content: asked, timestamp: Date.now() });
   record.appendMessage({
@@ -34,7 +33,6 @@ function turn(record: SessionManager, asked: string, answered: string): void {
   });
 }
 
-/** The words of the conversation Pi resumes from `file`, in the order it sends them. */
 function resumed(file: string): string[] {
   return SessionManager.open(file)
     .buildSessionContext()
@@ -111,8 +109,6 @@ describe("joinRecord", () => {
     expect(readFileSync(file, "utf8").startsWith(before)).toBe(true);
     expect(readFileSync(olderFile, "utf8")).toBe(older);
 
-    // Joined once: the next open finds nothing to bring, and the next turn
-    // follows the last one.
     const after = readFileSync(file, "utf8");
     expect(joinRecord(olderFile, file)).toBeUndefined();
     expect(readFileSync(file, "utf8")).toBe(after);

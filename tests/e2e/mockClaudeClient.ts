@@ -48,7 +48,6 @@ export type MockClaudeClientOptions = {
    * one is a failed read. Absent, an SDK session is not answered at all.
    */
   listModelsFile?: string;
-  /** Hold the model read open this long without answering. */
   listModelsHangMs?: number;
   /** Run a turn session on a real client against the mock provider (turn mode, above). */
   turns?: MockClaudeTurns;
@@ -93,7 +92,6 @@ export function sdkBundledClaudeClient(): string {
   );
 }
 
-/** Where the Keychain shim records each lookup a turn-mode client made. */
 const STATE_DIR = ".infinitary-claude-stub";
 
 function keychainLog(home: string): string {
@@ -133,12 +131,10 @@ exit 44
   return shimDir;
 }
 
-/** The default Claude config root under a throwaway HOME. */
 export function claudeDefaultStore(homeDir: string): string {
   return join(homeDir, ".claude");
 }
 
-/** Quote one literal for the POSIX launcher's environment and paths. */
 function shellLiteral(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
@@ -507,7 +503,6 @@ export function quotaIdentityHome(
   };
 }
 
-/** Seed the machine's default Claude store as an already-signed-in one. */
 function seedSignedInClaudeStore(accountDir: string): void {
   mkdirSync(accountDir, { recursive: true, mode: 0o700 });
   writeFileSync(join(accountDir, "stub-credential"), "stub", { mode: 0o600 });

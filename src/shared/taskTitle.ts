@@ -15,7 +15,6 @@ export const TASK_TITLE_MAX = 64;
 
 const ELLIPSIS = "…";
 
-/** Why an author's title is refused: its length past the room, both named; none when it fits. */
 export function taskTitleRefusal(title: string): string | undefined {
   const length = title.trim().length;
   if (length <= TASK_TITLE_MAX) return undefined;

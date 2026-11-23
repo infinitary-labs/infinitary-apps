@@ -39,7 +39,6 @@ function sampleWhileItLeaves(node: HTMLElement): Sample[] {
   return samples;
 }
 
-/** Closes the shown note and returns what its drawing did until it left. */
 async function closeShown(bridge: FakeBridge, id: string): Promise<Sample[]> {
   await expect.poll(() => shownEntry()?.dataset.stageEntryId).toBe(id);
   await stageAtRest();
@@ -52,7 +51,6 @@ async function closeShown(bridge: FakeBridge, id: string): Promise<Sample[]> {
   return samples;
 }
 
-/** Whether a closing drawing ever became more opaque before it left. */
 function expectNoRebound(samples: Sample[]): void {
   const outgoing = samples.filter((sample) => sample.connected && sample.role === "outgoing");
   const reversals = outgoing.filter((sample, i) => {
@@ -69,11 +67,9 @@ test("Close never restores the outgoing drawing, with a card behind it or as the
   answerStack(bridge, home);
   await openWindow(bridge);
 
-  // With a card behind it: the next note comes up as the first leaves.
   expectNoRebound(await closeShown(bridge, "flash-0"));
   await expect.poll(() => shownEntry()?.dataset.stageEntryId).toBe("flash-1");
 
-  // As the last card: the stack empties as it leaves.
   expectNoRebound(await closeShown(bridge, "flash-1"));
   expect(document.querySelectorAll(SHOWN_ENTRY)).toHaveLength(0);
   expect([...new Set(bridge.unanswered)]).toEqual([]);

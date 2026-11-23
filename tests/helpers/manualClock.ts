@@ -1,6 +1,5 @@
 import type { SessionClock } from "../../src/core/session/bounds";
 
-/** The host's one clock, moved by hand. */
 export type ManualClock = SessionClock & {
   /** Moves the clock on by `ms`, then runs every registration once: one tick. */
   advance: (ms: number) => void;

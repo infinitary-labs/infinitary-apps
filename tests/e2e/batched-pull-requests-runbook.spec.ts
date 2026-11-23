@@ -32,7 +32,6 @@ import { focusOn, pressKey } from "./windowKeys";
  * Requires desktop Electron and local git; no real sign-in or shared pull
  * request.
  */
-/** The project this spec seeds, named in the refusal it reads back. */
 const PROJECT = "meterlab";
 
 test("batched pull requests appear in a project's settings only once their runbook is turned on by keys", async () => {
@@ -111,7 +110,6 @@ test("batched pull requests appear in a project's settings only once their runbo
       await expect(batches).toHaveAttribute("aria-checked", String(on));
     };
 
-    // Settings → Runbooks: Batched pull requests starts off, and the captain turns it on by keys.
     await onTheRail(0);
     await expect(batches).toHaveAttribute("aria-checked", "false");
     await turn(true);
@@ -121,7 +119,6 @@ test("batched pull requests appear in a project's settings only once their runbo
     await turn(true);
     await onTheRail(1);
 
-    // Back on the project page, batched pull requests are the third choice, picked by keys.
     await openProject();
     await expect(choices()).toHaveCount(3);
     await expect(choices().nth(2)).toHaveAccessibleName(PROJECT_DELIVERY_WORDS["queue-pr"]);

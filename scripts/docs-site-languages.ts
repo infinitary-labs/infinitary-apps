@@ -47,7 +47,6 @@ export function fingerprint(english: string): string {
   return createHash("sha256").update(english).digest("hex").slice(0, 16);
 }
 
-/** A page's frontmatter: its top-level fields and its lines, and its body. */
 export function splitPage(text: string): { fields: Map<string, string>; lines: string[]; body: string } {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
   const lines = match?.[1]?.split("\n") ?? [];
@@ -156,7 +155,6 @@ export function structureOf(text: string, name: string, segment?: string): Struc
   };
 }
 
-/** Where a translated page's structure differs from the English page's, in words. */
 function structureProblems(english: Structure, translated: Structure): string[] {
   const parts: { key: keyof Structure; name: string }[] = [
     { key: "fields", name: "frontmatter (each line, title and description aside)" },
@@ -196,7 +194,6 @@ export type SiteLanguages = {
 /** Every word the site reads from a words file. */
 const KNOWN_WORDS = new Set<string>([...SIDEBAR_WORDS, ...KEYBOARD_WORDS, ...Object.values(SCOPE_WORD_KEYS)]);
 
-/** Every way the site's languages fall short, as one line each. */
 export function languageProblems(site: SiteLanguages): string[] {
   const problems: string[] = [];
   for (const tag of site.catalog) {
@@ -258,7 +255,6 @@ function pagesIn(folder: string, skip: ReadonlySet<string> = new Set()): Map<str
   );
 }
 
-/** The site's languages as the repository holds them. */
 export function readSiteLanguages(): SiteLanguages {
   const catalog = catalogLanguages();
   const shipped = new Set(shippedLanguages());

@@ -56,7 +56,6 @@ const SCRIPTS: Array<{ name: string; pattern: RegExp }> = [
   { name: "thai", pattern: /\p{Script=Thai}/u },
 ];
 
-/** Script pairs that legitimately share one word. */
 const SHARED_WORD_SCRIPTS = new Set(["latin+cjk", "cjk+latin", "latin+greek", "greek+latin"]);
 
 function scriptOf(char: string): string | undefined {

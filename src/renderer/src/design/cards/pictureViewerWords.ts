@@ -13,7 +13,6 @@ export const RECORDING_UNPLAYABLE = m.uiPictureViewerUnplayable();
  */
 export const SHOWN_AT_OWN_SIZE = m.uiPictureViewerShownAtOwnSize();
 
-/** A picture's own size, "1600 × 400". */
 export function pictureSize(size: { width: number; height: number }): string {
   return `${size.width} × ${size.height}`;
 }

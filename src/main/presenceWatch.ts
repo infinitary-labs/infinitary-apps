@@ -22,7 +22,6 @@ export class PresenceWatch {
     return { away: this.#reasons.size > 0, watched: this.watched };
   }
 
-  /** One reason began or ended; listeners hear only a change to `away`. */
   set(reason: AwayReason, on: boolean): void {
     const was = this.#reasons.size > 0;
     if (on) this.#reasons.add(reason);

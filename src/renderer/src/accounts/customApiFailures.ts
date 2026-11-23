@@ -36,7 +36,6 @@ export type FailureContext = {
   address: string;
   /** `address`: preparing or reading the network; `list`: the model list; `check`: a model's test. */
   stage: "address" | "list" | "check";
-  /** The model the check was for. */
   model?: string;
   /** Whether the server's model list answered, which makes a 404 the model's. */
   listed?: boolean;
@@ -65,7 +64,6 @@ export const CUSTOM_EXCEPTION_WORDS = {
   },
 } as const;
 
-/** One DNS answer and the kind of network it points to, in the form's words. */
 function answerWords(answer: CustomApiAnswer, who?: string): string {
   if (answer.kind === "reserved")
     return m.accountsCustomApiAnswerReserved({ address: answer.address });
@@ -108,7 +106,6 @@ function hostAndPath(address: string): { host: string; where: string; base: stri
   }
 }
 
-/** The same address ending in /v1, when it does not end in a version already. */
 function withV1(base: string): string | undefined {
   return /\/v\d+$/i.test(base) ? undefined : `${base}/v1`;
 }

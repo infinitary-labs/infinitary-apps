@@ -131,10 +131,6 @@ export const SAVED_RESETS_PAGE: Readonly<Record<string, string>> = {
   codex: "https://chatgpt.com/settings/usage",
 };
 
-/**
- * How many saved resets an account could use right now, where the provider
- * has a page to use them on; undefined when none applies or nobody knows.
- */
 export function savedResetsNow(
   row: Pick<QuotaProviderView, "provider" | "savedResets"> | undefined,
 ): number | undefined {
@@ -237,7 +233,6 @@ export const quotaProviderViewSchema = z.object({
   windows: z.array(quotaWindowViewSchema),
   /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
   credits: quotaCreditsViewSchema.optional(),
-  /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
   savedResets: quotaSavedResetsViewSchema.optional(),
   /**
    * The account's Keep going on credits switch is on, as the vault holds it
@@ -428,7 +423,6 @@ export function servedProviderOf(provider: string): string {
   return isAllowanceProvider(provider) ? (QUOTA_TO_PI_PROVIDER[provider] ?? provider) : provider;
 }
 
-/** Whether the allowance catalog names a provider by this id (`claude`, `codex`, `grok`, `copilot`). */
 export function isAllowanceProvider(provider: string): boolean {
   return Object.hasOwn(QUOTA_TO_PI_PROVIDER, provider);
 }

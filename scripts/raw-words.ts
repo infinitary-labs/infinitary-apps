@@ -160,7 +160,6 @@ function readsAsCode(text: string): boolean {
   return text.split(/[\s,]+/).every((word) => word === "" || CSS_WORD.test(word));
 }
 
-/** Whether a literal's text reads as words a person reads. */
 export function readsAsWords(text: string): boolean {
   const trimmed = text.replace(/\s+/g, " ").trim();
   if (!/\p{L}/u.test(trimmed)) return false;
@@ -267,10 +266,8 @@ function templateReadsAsWords(text: string): boolean {
   return words.length === 1 && word !== undefined && /^\p{Ll}{3,}[.,]?$/u.test(word) && !TEMPLATE_CODE.test(word);
 }
 
-/** One run of raw words: its line and its text. */
 export type RawWords = { line: number; text: string };
 
-/** Each run of raw words in one file's text. */
 export function rawWordsIn(path: string, text: string): RawWords[] {
   const kind = path.endsWith(".tsx") ? ts.ScriptKind.TSX : path.endsWith(".js") ? ts.ScriptKind.JS : ts.ScriptKind.TS;
   const tree = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
@@ -316,7 +313,6 @@ export function rawWordsIn(path: string, text: string): RawWords[] {
   return found;
 }
 
-/** Whether the check reads this tracked file. */
 export function isCheckedFile(path: string): boolean {
   if (!/\.(tsx?|js)$/.test(path) || /\.(test|spec)\.[jt]sx?$/.test(path) || path.endsWith(".d.ts")) return false;
   if (NOT_SHOWN.some((pattern) => pattern.test(path))) return false;

@@ -33,7 +33,6 @@ export const VOICE_MODEL_FILES = [
 type FetchImpl = (url: string) => Promise<Response>;
 
 type VoiceModelDeps = {
-  /** Injectable for tests; defaults to the global fetch. */
   fetchImpl?: FetchImpl;
 };
 
@@ -63,7 +62,6 @@ export class VoiceModelService {
     return join(this.modelsDir, VOICE_MODEL_ID);
   }
 
-  /** True only when every manifest file exists with non-zero size. */
   async modelReady(): Promise<boolean> {
     for (const file of VOICE_MODEL_FILES) {
       try {
@@ -120,9 +118,7 @@ export class VoiceModelService {
       try {
         const info = await stat(join(this.modelDir(), file));
         if (info.isFile() && info.size > 0) continue;
-      } catch {
-        // Not present - needs downloading.
-      }
+      } catch {}
       missing.push(file);
     }
     if (missing.length === 0) return;
@@ -180,7 +176,6 @@ export class VoiceModelService {
           await handle.close();
         }
       } else {
-        // No streaming body (test doubles): fall back to a single buffer.
         await writeFile(partial, Buffer.from(await response.arrayBuffer()));
       }
       await rename(partial, target);

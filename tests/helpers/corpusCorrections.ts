@@ -74,12 +74,10 @@ function entry(body: Record<string, unknown>): string {
   return JSON.stringify({ id: `e${entryId}`, parentId: null, timestamp: nextStamp(), ...body });
 }
 
-/** Where the transcript clock and entry ids stand, to restart a later session from. */
 export function stamps(): { clock: number; entryId: number } {
   return { clock, entryId };
 }
 
-/** Restart the transcript clock and entry ids from a place `stamps` gave. */
 export function setStamps(next: { clock: number; entryId: number }): void {
   clock = next.clock;
   entryId = next.entryId;
@@ -327,7 +325,6 @@ function bulkSessionPair(): [string, string] {
   return [`${[header, ...lines].join("\n")}\n`, `${[header, ...lines.slice(0, cut)].join("\n")}\n`];
 }
 
-/** A session forked from the main one: it carries the parent's entries verbatim. */
 function forkedSessionJsonl(parentPath: string, parent: string): string {
   const copied = parent
     .split("\n")
@@ -347,10 +344,8 @@ function forkedSessionJsonl(parentPath: string, parent: string): string {
   ].join("\n")}\n`;
 }
 
-/** A plain reply action, the default one. */
 const reply = (id: string, label: string): CardAction => ({ id, label, default: true });
 
-/** A default action that opens a place in the app. */
 const open = (id: string, label: string, target: "settings" | "subscriptions"): CardAction => ({
   id,
   label,
@@ -358,7 +353,6 @@ const open = (id: string, label: string, target: "settings" | "subscriptions"): 
   effect: { kind: "open", target },
 });
 
-/** A default action that merges the work. */
 const merge = (id: string, label: string): CardAction => ({
   id,
   label,
@@ -388,11 +382,9 @@ type FixtureCard = {
   revised?: { body: string; actions: CardAction[] };
   /** The captain's duplicate label. */
   duplicateOf?: { cardId: string; note: string; at: number };
-  /** What the card row stores as chosen. */
   chosen: string;
   /** The `card_resolved` event on its task; its title and action are the card's unless named. */
   resolved?: { title?: string; action?: string; actor: "captain" | "firstmate" };
-  /** A taskless card's decision, and how it closed. */
   decision?: { id: string; close: Parameters<TaskService["close"]>[1] };
   /** Times written after the fact: the revision's window and the resolution's moment. */
   later?: { revisions: { createdAt: number; replacedAt: number }; resolvedAt: number };
@@ -807,7 +799,6 @@ const CARDS: FixtureCard[] = [
   },
 ];
 
-/** The fixture userData, written into `dir`. */
 export function buildFixture(dir: string): void {
   const db = openDatabase(dir);
   db.prepare(
@@ -1077,7 +1068,6 @@ export function buildFixture(dir: string): void {
   db.close();
 }
 
-/** One exported dispatch record, as the tests read it. */
 export type DispatchRow = {
   kind: string;
   kind_basis: string;
@@ -1130,7 +1120,6 @@ export type DispatchRow = {
   };
 };
 
-/** The rows the real export CLI wrote under `caseOut`, none when it failed. */
 function exportedRows(exitCode: number, caseOut: string): DispatchRow[] {
   if (exitCode !== 0) return [];
   return readFileSync(join(caseOut, "dispatch.jsonl"), "utf8")
@@ -1180,7 +1169,6 @@ export function exportCardCaseIn(
   return { exitCode, row };
 }
 
-/** A revised card's case as exported: the CLI's exit code, each turn's record, and when each step happened. */
 export type RevisionCase = {
   exitCode: number;
   early: DispatchRow | undefined;

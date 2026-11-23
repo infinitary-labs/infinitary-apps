@@ -123,7 +123,6 @@ describe("recordCutOff", () => {
       ["refresh"],
     ]);
 
-    // The refused reading, laid over Grok's saved one, reads 0% left until the reset.
     const overlaid = withRejectedReadings(
       reading.providers[0]!,
       [{ windowId: "credits", status: "rejected", resetsAt: RESET, at: NOW }],

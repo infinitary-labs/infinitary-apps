@@ -19,6 +19,5 @@ public enum PhoneAppVersion {
         return version
     }
 
-    /// This app's own.
     public static var current: String? { readBack(Bundle.main.infoDictionary) }
 }

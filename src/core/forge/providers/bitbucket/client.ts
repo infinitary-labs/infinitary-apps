@@ -76,7 +76,6 @@ export class BitbucketClient {
     this.place = forgePlace({ kind: "bitbucket", host }) ?? host;
   }
 
-  /** One read of a path under the API, or of a `next` page link Bitbucket gave on that API. */
   async get<T>(pathOrLink: string): Promise<T> {
     return (await this.request("GET", pathOrLink)).body as T;
   }
@@ -358,7 +357,6 @@ export class BitbucketClient {
     throw new ForgeError("refused", `${this.place} named a page outside its own API.`);
   }
 
-  /** Bitbucket's own words for a refusal, bounded: `error.message`, else the text. */
   private async words(response: Response): Promise<string> {
     let text = "";
     try {
@@ -369,13 +367,10 @@ export class BitbucketClient {
     try {
       const json = JSON.parse(text) as { error?: { message?: unknown } };
       if (typeof json.error?.message === "string") return cutText(json.error.message, 300);
-    } catch {
-      /* not JSON */
-    }
+    } catch {}
     return cutText(text.trim(), 200);
   }
 
-  /** A file's bytes, refused once they pass `maxBytes`. */
   private async boundedBytes(
     response: Response,
     maxBytes: number,
@@ -406,7 +401,6 @@ export class BitbucketClient {
     }
   }
 
-  /** A body read whole, or refused once it passes `maxBytes`. */
   private async bounded(response: Response, maxBytes: number): Promise<string> {
     const tooLarge = () =>
       new ForgeError("refused", `${this.place}'s answer is too large to read.`);
@@ -450,7 +444,6 @@ export class BitbucketRefusal extends ForgeError {
   }
 }
 
-/** A page's `next` link, as a `Link` header names it, or null when the answer names none. */
 function nextLinkOf(text: string): string | null {
   try {
     const parsed = JSON.parse(text) as { next?: unknown };

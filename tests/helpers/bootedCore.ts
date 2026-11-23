@@ -139,7 +139,6 @@ export const AT_FIRST_LAUNCH = {
   user: { name: "captain", uid: process.getuid?.() ?? 0 },
 } as const;
 
-/** Whether anything accepts a connection on a loopback port now. */
 export function listening(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = netConnect({ host: "127.0.0.1", port });

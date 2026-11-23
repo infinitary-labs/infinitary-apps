@@ -49,7 +49,6 @@ type KeysAnswer = { source: string; commands: Command[] };
 const byId = (answer: KeysAnswer, id: string) =>
   answer.commands.find((command) => command.id === id);
 
-/** Opens Keyboard settings the keyboard's way: command search, then its row. */
 async function openKeyboardSettings(app: LaunchedApp["app"], page: Page): Promise<void> {
   await pressWindowKey(app, "k", ["meta"]);
   const search = commandSearch(page);
@@ -60,7 +59,6 @@ async function openKeyboardSettings(app: LaunchedApp["app"], page: Page): Promis
   await expect(keyboardSettings(page).search).toBeFocused();
 }
 
-/** Asks the first mate in `page`'s main message, and returns the read's answer once it came. */
 async function askForKeys(page: Page, answers: string[]): Promise<KeysAnswer> {
   const before = answers.length;
   const input = promptInput(page);

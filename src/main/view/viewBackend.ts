@@ -531,7 +531,6 @@ export class ViewBackend {
     this.link.start();
   }
 
-  /** The other Mac's address, as its grant dials it. */
   private homeAddress(): string {
     const at = this.joined.read()?.grant.at ?? this.record.grant.at;
     return splitDialAddress(at)?.host ?? at;
@@ -544,7 +543,6 @@ export class ViewBackend {
     );
   }
 
-  /** What this app is now, for the window. */
   thisMac(): ThisMac {
     const state = this.link.state();
     return {
@@ -605,7 +603,6 @@ export class ViewBackend {
     return this.taking.takeOver(this.link.state().contact, this.homeName());
   }
 
-  /** Answers one core channel the window asked, as above. */
   async dispatch<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown[],
@@ -822,7 +819,6 @@ export class ViewBackend {
     return this.workFound?.state === "starting" ? { state: "starting" } : undefined;
   }
 
-  /** The other Mac's list: what it says of this Mac's own work. */
   private heardDevices(payload: unknown): void {
     if (!Array.isArray(payload)) return;
     const id = this.record.grant.deviceId;
@@ -953,7 +949,6 @@ export class ViewBackend {
     }
   }
 
-  /** The sign-in there stopped waiting: this computer stops listening for it. */
   private signInEnded(payload: unknown): void {
     const ended = signInEndedSchema.safeParse(payload);
     if (!ended.success || this.signInReturn?.id !== ended.data.id) return;
@@ -1075,7 +1070,6 @@ export class ViewBackend {
   }
 }
 
-/** One of `OWN_LOOK`, answered from this computer's own look. */
 export function answerOwnLook(
   look: ViewLook,
   channel: CoreInvokeChannel,
@@ -1101,7 +1095,6 @@ export function answerOwnLook(
   }
 }
 
-/** One of `OWN_APP`, answered from this computer's own installed app. */
 export async function answerOwnApp(
   updates: UpdateChecker,
   channel: CoreInvokeChannel,

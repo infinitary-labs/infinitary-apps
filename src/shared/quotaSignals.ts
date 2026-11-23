@@ -85,7 +85,6 @@ export function windowSignals(window: QuotaWindowView, nowMs: number): WindowSig
   if (elapsedPercent > 0) {
     burnMultiple = Math.max(0, used) / elapsedPercent;
   } else if (used <= 0) {
-    // Zero elapsed and zero usage: nothing can have been consumed yet.
     burnMultiple = 0;
   } else {
     return { kind: "unmeasurable" };
@@ -125,7 +124,6 @@ export type ScopeSignals = {
   effectivePercentRemaining?: number;
   /** The window supplying that minimum. */
   limitingWindowId?: string;
-  /** Aggregate pace over the bounding windows. */
   pace: PaceStatus | "mixed";
   runway: {
     status: RunwayStatus;
@@ -139,7 +137,6 @@ export type ScopeSignals = {
   unmeasurableWindowIds?: string[];
 };
 
-/** The signals for one scope, over the windows that jointly bound it. */
 export function scopeSignals(input: {
   scope: string;
   windows: QuotaWindowView[];
@@ -415,7 +412,6 @@ export const SPEND_BANDS: readonly SpendBand[] = [
   "credits",
 ];
 
-/** The raw facts a band is read from. */
 export type BandFacts = SpendRank & { effectivePercentRemaining?: number; onCredits?: boolean };
 
 /**

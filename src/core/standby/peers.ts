@@ -129,7 +129,6 @@ type ReadCopyOrder = {
   [K in CopyOrderChannel]: (typeof copyOrders)[K]["effect"] extends "read" ? K : never;
 }[CopyOrderChannel];
 
-/** One ask to another copy, waiting for its answer. */
 type Asked = {
   channel: ReadCopyOrder;
   args: unknown[];
@@ -315,8 +314,6 @@ export class StandbyPeers {
     this.phoneSockets.close();
   }
 
-  // -- listening ------------------------------------------------------------
-
   private want(): void {
     if (this.stopped) return;
     this.active = true;
@@ -444,8 +441,6 @@ export class StandbyPeers {
     return this.active && peer ? { peer } : { refused: "401 Unauthorized" };
   }
 
-  // -- a phone ---------------------------------------------------------------
-
   /**
    * A phone that cannot reach the home (docs/devices.md, "Taking over from a
    * phone"): admitted only when the copy's record lists it as a phone, by
@@ -519,8 +514,6 @@ export class StandbyPeers {
       return false;
     }
   }
-
-  // -- the other copies -----------------------------------------------------
 
   private recordFile(path: string): string {
     return join(this.options.workDir, STANDBY_DIR, STANDBY_COPY, ...path.split("/"));
@@ -664,8 +657,6 @@ export class StandbyPeers {
     redial.timer.unref();
     this.redials.set(deviceId, redial);
   }
-
-  // -- a link ---------------------------------------------------------------
 
   private attach(ws: WebSocket, peer: string, dialedBy: string): void {
     const link: Link = {
@@ -920,13 +911,10 @@ export class StandbyPeers {
     );
   }
 
-  // -- what it says ---------------------------------------------------------
-
   private stateOf(deviceId: string): CopyPeerState {
     return this.states.get(deviceId) ?? "no-address";
   }
 
-  /** Where one other copy stands now. */
   private mark(deviceId: string): void {
     const peer = this.peers.get(deviceId);
     if (!peer) return;

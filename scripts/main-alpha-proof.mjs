@@ -67,7 +67,6 @@ function linuxTestPart(name, prefix) {
   return null;
 }
 
-/** Whether a job of verify.yml, called as job `prefix`, is one of its Linux checks. */
 const linuxCheck = (name, prefix) =>
   name === `${prefix}linux-checks` || name === `${prefix}${LINUX_CODE}` || linuxTestPart(name, prefix) !== null;
 
@@ -170,7 +169,6 @@ export function coveringBatch(named) {
   return job ? Number(COVERED.exec(job.name)[1]) : null;
 }
 
-/** A covered main push: every job passed or skipped, and it names its batch. */
 export function verifyCoveredMain(run, named, repository, source) {
   const jobs = legacy(named);
   checkMainRun(run, jobs, repository, source);
@@ -180,7 +178,6 @@ export function verifyCoveredMain(run, named, repository, source) {
   return coveringBatch(jobs);
 }
 
-/** The jobs under `lead`, named without it and read by their legacy names. */
 const under = (jobs, lead) => legacy(jobs.filter((job) => job.name.startsWith(lead))
   .map((job) => ({ ...job, name: job.name.slice(lead.length) })));
 
@@ -188,7 +185,6 @@ const under = (jobs, lead) => legacy(jobs.filter((job) => job.name.startsWith(le
 const passedOn = (jobs, tree) => jobs.some((job) => green(job) &&
   (job.name === `Batch passed (tree ${tree})` || job.name.startsWith(`Batch passed (tree ${tree}; base `)));
 
-/** A batch pull request's run passed its full check on exactly `tree`. */
 function verifyBatchPullEvidence(run, named, tree) {
   const confirms = named.filter((job) => isConfirmJob(job.name));
   const confirmed = run.conclusion !== "success" && confirms.length > 0 && confirms.every(green);

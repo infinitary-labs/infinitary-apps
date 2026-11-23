@@ -98,7 +98,6 @@ function placements(page: Page, provider: string, id: string): Promise<Slot[]> {
   );
 }
 
-/** The models of one connection that work can run on. */
 async function offered(page: Page, provider: string): Promise<string[]> {
   const models = await page.evaluate(() => window.infinitary.models.available());
   return models.filter((entry) => entry.provider === provider).map((entry) => entry.id);
@@ -595,7 +594,6 @@ test("a task's history an older release saved reads the same after the upgrade",
       await test.step("upgrade: the record and the first mate's read show what the older release saved", async () => {
         if (!app) throw new Error("The app did not launch.");
         const detail = await expectAsSaved(app, KEPT);
-        // The captain opens the record by keys and reads the report's row.
         await openGroup(app.page, "landed");
         await pressRow(app.page, key);
         await expect(recordCard(app.page)).toHaveAttribute("data-task-record", HISTORY_ID);
@@ -767,7 +765,6 @@ const RELATIONSHIP_FIELDS = {
   waiting: ["status", "basis", "blocked_by"],
 } as const;
 
-/** The keys the first mate read the plan is built on by. */
 function builtOnKeys(firstmate: Record<string, Record<string, unknown>>): string[] {
   return ((firstmate.plan?.built_on_by ?? []) as { key: string }[]).map((row) => row.key);
 }
@@ -1109,7 +1106,6 @@ async function runningWorkAsRead(app: LaunchedApp, keys: Record<keyof typeof RUN
   return { window: shown, firstmate };
 }
 
-/** The conversation each session list marks current. */
 function currentConversation(read: Record<string, unknown> | undefined): unknown {
   return ((read?.sessions ?? []) as { conversation: string; current: boolean }[]).find(
     (session) => session.current,

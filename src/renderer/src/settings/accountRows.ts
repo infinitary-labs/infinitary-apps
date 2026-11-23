@@ -391,7 +391,6 @@ export function clockOf(at: number): string {
   return `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
 }
 
-/** What a computer that runs work says about its own sign-ins, under its label. */
 export const DEVICE_SIGN_INS_WORDS = {
   own: (where: string) => m.settingsDevicesSignInsOwn({ where }),
   /** It was asked and did not answer; `home` is the first mate's computer as the reader names it. */

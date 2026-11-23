@@ -70,7 +70,6 @@ export function windowsPath(path: string, own = windowsCheckFiles()): boolean {
   return !lightPath(path) && !otherSystemOnly(path) && !path.startsWith(".github/");
 }
 
-/** Whether these changed paths run the Windows check; an unknown change runs it. */
 export function windowsRuns(paths: readonly string[] | undefined, root = ROOT): boolean {
   if (paths === undefined || paths.length === 0) return true;
   const own = windowsCheckFiles(root);

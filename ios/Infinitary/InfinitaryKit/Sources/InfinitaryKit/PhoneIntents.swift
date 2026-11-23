@@ -12,7 +12,6 @@ public struct PhoneIntent: Sendable, Equatable, Identifiable {
         case choose(card: String, lifecycle: String?, offer: String?)
         /// Put a card aside: it leaves the stage for its task row.
         case putAside(card: String, lifecycle: String?, offer: String?)
-        /// Bring a card put aside back to the stage.
         case bringBack(card: String)
         /// INF-4541: the captain saw this update of the card, so N new and the arrows' dots skip it before the home's
         /// own seen mark comes back.
@@ -66,7 +65,6 @@ public struct PhoneTurnMark: Sendable, Equatable {
     }
 }
 
-/// What one snapshot says of one intent.
 public enum PhoneIntentEvidence: Sendable, Equatable {
     /// The snapshot already holds the change: the intent retires and nothing on screen moves.
     case holds
@@ -343,7 +341,6 @@ extension PhoneIntent {
     }
     public static let messagePlace = "message"
 
-    /// The card an intent changes.
     public var cardID: String? {
         switch kind {
         case let .close(id, _, _), let .choose(id, _, _), let .putAside(id, _, _), let .bringBack(id), let .reply(id, _, _): return id

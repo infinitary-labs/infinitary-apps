@@ -292,8 +292,6 @@ test.describe("the surface", () => {
       await group.getByRole("button", { name: "Decision model actions" }).click();
       await page.getByRole("menuitem", { name: "Use Jev (TypeSafe)" }).click();
 
-      // The one consent dialog: what leaves the machine, then the key, then
-      // the act beside Not now.
       const dialog = page.getByRole("dialog", { name: "Turn on Jev" });
       const native = DECISION_MODEL_CATALOG.find((model) => model.id === "jev");
       if (!native) throw new Error("Jev is missing from the decision catalog");
@@ -453,7 +451,6 @@ test.describe("the calls", () => {
     expect(readReasons(userDataDir, task.id).join("\n")).toContain(
       "shape kind=chore (classifier:jev/jev-1.13.0)",
     );
-    // And it is billed where the work is.
     expect(readUsage(userDataDir)).toContainEqual({ provider: "typesafe", model: "jev-1.13.0" });
   });
 
@@ -593,7 +590,6 @@ for (const world of [
       expect(asked).toEqual([expect.objectContaining({ model: "claude-haiku-5-5" })]);
       expect(asked[0]?.max_tokens).toBeGreaterThan(CLASSIFIER_MAX_OUTPUT_TOKENS);
 
-      // And its burn is billed where the work is, on Claude.
       expect(readUsage(userDataDir)).toContainEqual({
         provider: "anthropic-claude",
         model: "claude-haiku-5-5",
@@ -629,7 +625,6 @@ test("a chosen model answers decisions in use or not, and a chosen model that is
     return page.locator('[data-slot-group="decisions"]');
   };
   try {
-    // A chosen model that is not in use answers.
     const chosen = "claude-sonnet-5-5";
     const before = await page.evaluate(() => window.infinitary.models.slots());
     const row = before.models.find(
@@ -659,7 +654,6 @@ test("a chosen model answers decisions in use or not, and a chosen model that is
     expect(picked.kind_source).toBe(`classifier:anthropic-claude/${chosen}`);
     expect(askedModels().slice(asked)).toEqual([chosen]);
 
-    // A chosen model no account serves any more is never named; the walk answers.
     const gone = "claude-sonnet-4-5";
     await page.evaluate(
       (offering) =>

@@ -39,7 +39,6 @@ vi.setConfig({ testTimeout: 10_000 });
 const WAIT = { timeout: 5_000, interval: 100 };
 const READ = { encoding: "utf8" as const, timeout: 2_000 };
 
-/** The program's state letters, or "" once it is gone. */
 async function stateOf(pid: number): Promise<string> {
   try {
     return (await exec("/bin/ps", ["-o", "stat=", "-p", String(pid)], READ)).stdout.trim();
@@ -748,7 +747,6 @@ describe("a job the captain asked to keep", () => {
       );
       expect(readFileSync(order, "utf8").trim().split("\n")).toEqual(["stop", "remove"]);
       await vi.waitFor(async () => expect(await running(job)).toBe(false), WAIT);
-      // The removed job takes its kept folder; the failed one keeps its folder and its remove.
       expect(existsSync(removed?.folder ?? "")).toBe(false);
       expect(existsSync(failing?.folder ?? "")).toBe(true);
       const left = JSON.parse(readFileSync(join(taskFolder, KEPT_LEFTOVERS_FILE), "utf8"));

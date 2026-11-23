@@ -24,7 +24,6 @@ const ANSWER =
   "Here is a longer answer so the thread grows past its height. " +
   "It names the caption first, the chips second, and why the order matters to someone reading it cold. " +
   "It keeps going for a few more sentences so each message takes several lines in the thread column.";
-/** An answer far taller than the thread column. */
 const TALL_ANSWER = Array.from({ length: 12 }, () => ANSWER).join("\n\n");
 
 /** A macrotask later: what the core sends next reaches the window in a render of its own. */
@@ -144,7 +143,6 @@ test("a thread holds the place read above, counts what arrives below, and follow
   expect(await topInList(firstNew)).toBeGreaterThanOrEqual(0);
   expect(document.activeElement).toBe(list());
 
-  // A pointer press goes there too, and leaves no keyboard ring on the list.
   await expect.poll(entered).toBe(true);
   list().scrollTop = 0;
   await expect.poll(() => jump()?.textContent).toBe(threadJumpWords(0));
@@ -161,7 +159,6 @@ test("a thread holds the place read above, counts what arrives below, and follow
   await expect.poll(atFoot).toBe(true);
   await expect.poll(jump).toBeNull();
 
-  // The captain's own reply, sent from above, takes the list to its foot.
   list().scrollTop = 0;
   await expect.poll(jump).not.toBeNull();
   const field = inShown("[data-card-reply] textarea");

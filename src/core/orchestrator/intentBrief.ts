@@ -26,7 +26,6 @@ import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
  * the template; the crewmate self-briefs from it on its first turn.
  */
 
-/** The constraint kinds a spawn may name today. */
 export type SpawnConstraintKind =
   | "read-only"
   | "operation"
@@ -73,7 +72,6 @@ const RETIRED_CONSTRAINT_TEXT: Record<RetiredConstraintKind, string> = {
     "plan first: present your plan as a decision card with the option you would take as its default, and wait for the choice before changing anything",
 };
 
-/** The typed constraint vocabulary's canonical sentences (v1 seed list). */
 const CONSTRAINT_TEXT: Record<Exclude<SpawnConstraintKind, "free">, string> = {
   "read-only":
     "read-only: find the answer without changing anything - commit nothing, push nothing, open no pull request",
@@ -310,11 +308,9 @@ export type EscalationBriefFacts = {
   previousKey: string;
   /** The tier this attempt runs at - one rung above the rejected one. */
   tier: string;
-  /** The model the rejected attempt ran on, when the record has it. */
   previousModel?: string;
   /** Its last report, when it made one. */
   previousOutcome?: string;
-  /** Its branch, kept because it held unlanded work (O1). */
   /** The hidden ref the rejected attempt's work was saved on when it closed. */
   previousWork?: string;
   /**
@@ -368,7 +364,6 @@ export function renderEscalationBrief(
   return [base, ...lines].join("\n");
 }
 
-/** How a follow-up brief's provenance line opens. */
 export const FOLLOWUP_PROVENANCE_OPENING = "Filed as a follow-up by";
 
 /**
@@ -565,7 +560,6 @@ function pictureWords(count: number): string {
   return count === 1 ? "1 picture" : `${count} pictures`;
 }
 
-/** The brief's pictures section; empty when the task came with none. */
 export function renderPicturesSection(pictures: BriefPictures): string {
   const listed = [...pictures.riding, ...pictures.more];
   const total = listed.length + pictures.missing;
@@ -655,14 +649,11 @@ export const QUICK_ANSWER_MARK = "Quick answer";
 /** What a quick answer may read: what the app reads now, never the web (the captain's "No" to one web page). */
 export const QUICK_ANSWER_REACH_WORDS =
   "Quick answer: this answer reads only what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to - and never the web.";
-/** The answer comes first: the question as asked, with how sure it is. */
 export const QUICK_ANSWER_FIRST_WORDS =
   "The card's first sentence answers the captain's question as asked, with the best answer those sources support, and says how sure it is: a likely cause is stated as likely, with what would confirm it. Read every source the goal names that this reach covers before you answer.";
-/** Where it stops, and the one line that says what Look deeper adds. */
 export const QUICK_ANSWER_LINE_WORDS =
   "Stop at work past that reach - a cause traced across past runs, a reproduction, a measurement, a computer the app does not reach or the web. When the answer stops short, the open card ends with one line that begins " +
   `"${QUICK_ANSWER_MARK}." and says what you did not check and what ${LOOK_DEEPER_LABEL} would add, and makes ${LOOK_DEEPER_LABEL} its default action, which the first mate answers with a research step built on this answer. A complete answer offers no ${LOOK_DEEPER_LABEL}.`;
-/** No meaningful answer from these sources: no card, straight to the research step. */
 export const QUICK_ANSWER_STRAIGHT_DEEPER_WORDS =
   "When these sources cannot give a meaningful answer to the question at all, show no card: report with needs_firstmate what you read, why it cannot answer, and the source the answer needs, and the first mate starts that research step at once, as if the captain had chosen " +
   `${LOOK_DEEPER_LABEL}.`;
@@ -896,13 +887,10 @@ export type BasisBriefFacts = {
 export type CodeElsewhere = {
   /** The repository's name in the fleet, or null when the record has none. */
   repository: string | null;
-  /** Its pull request or pushed branch where that repository lives, and its page. */
   change?: { kind: "pull request" | "branch"; label: string; url?: string };
-  /** Its change merged there. */
   merged?: boolean;
 };
 
-/** The one line naming where a source's code lives, in another repository. */
 export function codeElsewhereLine({ repository, change, merged }: CodeElsewhere): string {
   const where = repository ? `another repository, ${repository}` : "another repository";
   const page = change?.url ? ` (${change.url})` : "";
@@ -924,12 +912,10 @@ export type ServedReport = { taskId: string; eventId: number; text: string };
 /** A brief in pieces: host text, or a report's text off the record. */
 export type BriefPart = string | ServedReport;
 
-/** The text a brief's pieces serve. */
 export function briefText(parts: readonly BriefPart[]): string {
   return parts.map((part) => (typeof part === "string" ? part : part.text)).join("");
 }
 
-/** Groups of pieces with `separator` between them, as `join` joins strings. */
 export function joinParts(
   groups: readonly (readonly BriefPart[])[],
   separator: string,
@@ -1192,10 +1178,8 @@ export type RepairAssessmentFacts = {
   validation: string;
 };
 
-/** How the repair assessment's instruction opens. */
 export const REPAIR_ASSESSMENT_BRIEF_OPENING = "You are assessing a repair, not building";
 
-/** The assessment's checklist: every path either change touches, marked where only one does. */
 function checklist(paths: RepairAssessmentFacts["paths"]): string[] {
   const approved = new Set(paths.approved);
   const repaired = new Set(paths.repaired);

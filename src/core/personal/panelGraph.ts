@@ -8,7 +8,6 @@ export const PANEL_BYTES_CAP = 8 * 1024 * 1024;
 
 const PANEL_FILE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
 
-/** A panel's built files are more than a panel may bring; the message says so. */
 export class PanelGraphTooLarge extends Error {
   constructor() {
     super("this panel's code is larger than a panel may be");

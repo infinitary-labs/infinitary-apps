@@ -204,7 +204,6 @@ describe("nowGroupOf", () => {
   it("maps the live statuses onto working, queued and backlog", () => {
     expect(nowGroupOf(task({ status: "active", activity: "running" }))).toBe("working");
     expect(nowGroupOf(task({ status: "active", activity: "interrupted" }))).toBe("working");
-    // An idle crewmate with no unmerged work is working.
     expect(nowGroupOf(task({ status: "active", activity: "idle" }))).toBe("working");
     // An idle crewmate with unmerged work - an open PR that has not merged ...
     expect(

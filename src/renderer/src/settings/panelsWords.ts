@@ -60,14 +60,12 @@ export const GROUP_WORDS: Record<RailY, string> = {
   },
 };
 
-/** A group's list name: its rail, then its end. */
 export function groupLabel(side: RailSide, y: RailY): string {
   if (side === "left")
     return y === "top" ? m.settingsPanelsLeftTop() : m.settingsPanelsLeftBottom();
   return y === "top" ? m.settingsPanelsRightTop() : m.settingsPanelsRightBottom();
 }
 
-/** What a row says about its panel. */
 export type PanelRowState =
   | "shown"
   | "collapsed"
@@ -101,7 +99,6 @@ export const PANEL_STATE_WORDS: Record<PanelRowState, string> = {
   },
 };
 
-/** What the window knows of one panel, for its row. */
 export type PanelRowFacts = {
   /** Kept off the rails by the captain's Hide. */
   hidden: boolean;

@@ -188,9 +188,7 @@ describe('a card\'s live attachment (docs/task-browser.md, "From a card")', () =
     const record = (browser: TaskDetail["browser"], status = "open") =>
       ({ ...detail(browser), status }) as TaskDetail;
     expect(pressReopens(record(stopped), false)).toBe(true);
-    // Open: the press only opens the view.
     expect(pressReopens(record(OPEN), false)).toBe(false);
-    // Stopped by the task's close, or the task done: nothing is started again.
     expect(pressReopens(record({ ...stopped, stopped: "task-closed" }), false)).toBe(false);
     expect(pressReopens(record(stopped, "done"), false)).toBe(false);
     // Changes on the first mate's computer are off, or the record has not answered.

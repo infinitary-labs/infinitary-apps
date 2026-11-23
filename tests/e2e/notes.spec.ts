@@ -7,11 +7,6 @@ import { latestContext } from "./providerRequest";
 import { FORGET_PROMPT_MARKER, MOCK_NOTE, notes, REMEMBER_PROMPT_MARKER } from "./scenarios/notes";
 import { shownCard } from "./stack";
 
-/**
- * Stage 0 durable notes: remember/forget through the real Firstmate
- * session, a feed line per write, and notes in the next turn's context.
- */
-
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {

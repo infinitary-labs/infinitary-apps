@@ -63,7 +63,6 @@ import { askWords, directionsEverywhere } from "../words";
 /** The width under which the inspector takes the pane's place instead of sitting beside it. */
 const NARROW_PX = 720;
 
-/** How long typing in Find waits before it reads. */
 const FIND_WAIT_MS = 200;
 
 const TAB_WORDS: Readonly<Record<Tab, string>> = {
@@ -137,7 +136,6 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
   // biome-ignore lint/correctness/useExhaustiveDependencies: every move of the place is kept
   useEffect(() => keepPlace.current(), [place]);
 
-  // -- the reads ----------------------------------------------------------------
   const collections = useRead<PanelKnowledgeCollections>("collections", (listener) =>
     reads.subscribe("knowledge.collections", listener),
   );
@@ -519,7 +517,6 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  // -- drawing ----------------------------------------------------------------
   const showInspector = !narrow || place.detail;
   const showPane = !narrow || !place.detail;
 

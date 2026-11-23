@@ -27,7 +27,6 @@ const FEED = [
 const TASK_NAME = [{ name: "resolveKey", file: "index.js", line: 40_118, column: 5 }];
 const OTHER = [{ name: "drainWakes", file: "index.js", line: 41_510, column: 9 }];
 
-/** The stall a watchdog of version `version` hands over, `index` minutes into the day. */
 function stall(index: number, frames: FreezeLine["frames"], wallMs: number): FreezeLine {
   return {
     incidentId: `fz-${index}`,
@@ -96,7 +95,6 @@ describe("the per-version freeze tally", () => {
       late: 0,
     });
 
-    // A second start on the next version sends nothing more for the old one.
     const again = new FreezeTally(path, NEXT, build(NEXT));
     again.startRun();
     expect(again.takeEarlier()).toEqual([]);

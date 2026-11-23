@@ -126,7 +126,6 @@ export function listedIds(
   return listed;
 }
 
-/** The tracked family a served id belongs to, if any. */
 function headFor(id: string, heads: readonly FamilyHead[]): FamilyHead | undefined {
   return heads.find((head) => head.members.includes(id));
 }
@@ -151,7 +150,6 @@ export function staleDefaults(providerId: string, served: readonly string[]): St
   return stale;
 }
 
-/** Ids an `ids` table names that the catalog no longer serves at all. */
 export function vanishedFamilies(providerId: string, served: readonly string[]): string[] {
   const rule = TRACKED_FAMILIES[providerId];
   if (rule === undefined || rule === "every") return [];

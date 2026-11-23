@@ -48,7 +48,6 @@ const DROPPED_SAMPLE = DELIVERY_WORDS["dependency-closed"](
 /** The closed dependency's steer for dropped work it waited on, after its name, from their owner. */
 const DROPPED_WAIT = DROPPED_SAMPLE.slice(DROPPED_SAMPLE.indexOf(`${TITLE}"`) + TITLE.length + 1);
 
-/** The chain of three parts, started, and what a section reads of it. */
 type Chain = Awaited<ReturnType<typeof startChain>>;
 
 /**
@@ -114,7 +113,6 @@ async function startChain(prefix: string) {
       const approval = saved(id)?.delivery?.mergeAuthorization;
       return approval ? candidateHead(approval) : undefined;
     };
-    /** The captain approves a part's merge card by keys. */
     const approve = async (part: ChainPart) => {
       const title = chainTitle(part);
       await showCard(page, title);
@@ -130,7 +128,6 @@ async function startChain(prefix: string) {
       const written = JSON.stringify(words).slice(1, -1);
       return Math.max(0, ...bodies().map((body) => body.split(written).length - 1));
     };
-    /** The base-moved steer a part hears when the part under it, `underId`, moved from `from` to `to`. */
     const moved = (underId: string, under: ChainPart, from: string, to: string) => {
       const base = saved(underId);
       return movedSteer(
@@ -144,7 +141,6 @@ async function startChain(prefix: string) {
       );
     };
 
-    // The first mate starts the first part and files the rest behind it.
     const input = promptInput(page);
     await input.fill(followBasePrompt("meterlab"));
     await input.press("Enter");
@@ -177,7 +173,6 @@ async function startChain(prefix: string) {
   }
 }
 
-/** Run a section on a started chain, closing the app and the disposable GitHub after it. */
 async function onChain(prefix: string, section: (chain: Chain) => Promise<void>) {
   const chain = await startChain(prefix);
   try {
@@ -232,7 +227,6 @@ test("a chained part follows the newer approved version of the part under it", a
       second,
       third,
     } = chain;
-    // The captain approves the first part; the second starts on it, and the third on the second.
     await approve("first");
     const firstApproved = approvedAt(first) ?? "";
     await expect.poll(() => builtOn(second), { timeout: 60_000 }).toBe(firstApproved);
@@ -242,11 +236,9 @@ test("a chained part follows the newer approved version of the part under it", a
     await expect.poll(() => builtOn(third), { timeout: 60_000 }).toBe(secondApproved);
     await expect.poll(cardTitles, { timeout: 120_000 }).toContain(chainTitle("third"));
     const thirdOffered = git("rev-parse", `refs/heads/${saved(third)?.branch}`);
-    // Nothing moved yet: no part is told the part under it moved.
     expect(heard(MOVED_BETWEEN)).toBe(0);
     expect(github.merges()).toEqual([]);
 
-    // The default branch moves, and the first part is brought up to date under its kept approval.
     writeFileSync(join(repoDir, "dial.txt"), "dial\n");
     git("add", "dial.txt");
     git("commit", "-m", "chore: add the dial");
@@ -256,7 +248,6 @@ test("a chained part follows the newer approved version of the part under it", a
     ] as const);
     await expect.poll(() => approvedAt(first), { timeout: 120_000 }).not.toBe(firstApproved);
     const firstRepaired = approvedAt(first) ?? "";
-    // The repaired first part is its own commit on the moved default branch.
     expect(git("rev-parse", `${firstRepaired}~1`)).toBe(git("rev-parse", "main"));
 
     // told-newer and repair-accepts: the second part hears once, replays, and its repair is accepted.
@@ -269,7 +260,6 @@ test("a chained part follows the newer approved version of the part under it", a
     const secondRepaired = approvedAt(second) ?? "";
     expect(saved(second)?.delivery?.mergeAuthorization?.approvedHead).toBe(secondApproved);
     await expect.poll(() => builtOn(second), { timeout: 30_000 }).toBe(firstRepaired);
-    // The repaired second part holds the first part's newer version and only its own commit on it.
     expect(git("rev-parse", `${secondRepaired}~1`)).toBe(firstRepaired);
     expect(git("show", "--name-only", "--format=", secondRepaired)).toBe("second.txt");
 
@@ -282,10 +272,8 @@ test("a chained part follows the newer approved version of the part under it", a
     await expect
       .poll(() => heard(LEFT_OUT_WORDS.behindBase(secondRepaired)), { timeout: 120_000 })
       .toBe(1);
-    // The card at the replayed version goes up after its story, and the third part reports it.
     await expect.poll(() => heard(FOLLOWED("third")), { timeout: 120_000 }).toBeGreaterThan(0);
     expect(git("rev-parse", `refs/heads/${saved(third)?.branch}`)).not.toBe(thirdOffered);
-    // Its recorded base moved with that card.
     expect(builtOn(third)).toBe(secondRepaired);
     expect(await cardTitles()).toContain(chainTitle("third"));
     await approve("third");
@@ -293,7 +281,6 @@ test("a chained part follows the newer approved version of the part under it", a
     expect(heard(moved(first, "first", firstApproved, firstRepaired))).toBe(1);
     expect(heard(moved(second, "second", secondApproved, secondRepaired))).toBe(1);
 
-    // The batches pass and merge the parts in order, each as one commit of its own difference.
     github.setOpenedChecks(PASSED);
     for (const pull of github.pulls())
       if (!pull.merged && !pull.closed) github.setPullChecks(pull.number, PASSED);
@@ -328,7 +315,6 @@ test("a chained part is told once when the part under it closes without merging"
   test.setTimeout(6 * 60_000);
   await onChain("infinitary-follow-base-closed-", async (chain) => {
     const { page, cardTitles, saved, builtOn, approvedAt, approve, heard, first, second } = chain;
-    // The captain approves the first part; the second starts on its approved version.
     await approve("first");
     const firstApproved = approvedAt(first) ?? "";
     await expect.poll(() => builtOn(second), { timeout: 60_000 }).toBe(firstApproved);
@@ -353,7 +339,6 @@ test("a chained part is told once when the part under it closes without merging"
       await hideRecord(page).click();
       await expect(recordCard(page)).toHaveCount(0);
     }
-    // The second part hears it once, and reports instead of building on.
     await expect
       .poll(() => heard(CLOSED_REPORT("second")), { timeout: 120_000 })
       .toBeGreaterThan(0);

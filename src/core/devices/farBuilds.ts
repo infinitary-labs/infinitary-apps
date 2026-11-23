@@ -58,12 +58,10 @@ export type FarBuildsOptions = {
 export class FarBuilds {
   constructor(private readonly options: FarBuildsOptions) {}
 
-  /** Whether it could send anything at all: its own app, or a published one. */
   canSendAny(): boolean {
     return this.ownFor() !== null || this.options.published !== null;
   }
 
-  /** Whether it can send Firstmate to a computer of `far`'s system on `chip`, without getting it first. */
   canSend(far: FarSystem, chip: DeviceChip): boolean {
     return this.ownFor(far, chip) !== null || this.options.published !== null;
   }
@@ -109,7 +107,6 @@ export class FarBuilds {
     }
   }
 
-  /** The copy for a computer of `far`'s system on `chip`, or why there is none. */
   async for(
     far: FarSystem,
     chip: DeviceChip,
@@ -134,7 +131,6 @@ export class FarBuilds {
     }
   }
 
-  /** Its own app, when it suits `far` on `chip` (or, with neither named, any computer of its system). */
   private ownFor(far?: FarSystem, chip?: DeviceChip): OwnBuild | null {
     const own = ownBuildOf(this.options.own());
     if (!own || !far) return own;

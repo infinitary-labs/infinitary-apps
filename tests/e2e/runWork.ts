@@ -97,7 +97,6 @@ export async function home(
     pairing,
     /** The home's connection now, which asks a computer its orders. */
     connection: () => connection,
-    /** Where the home answers now. */
     at: () => `127.0.0.1:${port}`,
     link: async () => {
       const { link } = pairing.invite({ kind: "work", at: `127.0.0.1:${port}` });
@@ -110,7 +109,6 @@ export async function home(
       await connection.settled();
       return link;
     },
-    /** The home's address changes: it stops answering where it was, and answers somewhere else. */
     move: async () => {
       await connection.close();
       port = await claimedPort();
@@ -233,7 +231,6 @@ export function user(model?: MockProviderServer) {
     agentPid,
     /** This user's background as its service manager keeps it. */
     background: backgroundOf(homeDir),
-    /** What the service manager was asked, one call a line. */
     managerAsked: () => (existsSync(asked) ? readFileSync(asked, "utf8").trim().split("\n") : []),
     env: hostEnv({
       HOME: homeDir,

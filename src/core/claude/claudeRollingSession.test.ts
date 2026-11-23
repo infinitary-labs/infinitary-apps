@@ -82,8 +82,6 @@ it.each([undefined, "The turn exceeded its bound."])(
   },
 );
 
-// Intent: preserve attachment failure, startup-steer recovery and safe-stop
-// boundaries while the accepted refactor removes their overlapping flags.
 it("returns early steers after an attachment failure and releases its lease", async () => {
   const { hasActiveSession } = await import("./claudeStoreLease");
   const configDir = "/accounts/attachment-failure";
@@ -232,8 +230,6 @@ it("settles a rejected interrupt at the host tick and remains reusable", async (
   await session.closed();
 });
 
-// Intent: the refactor preserves input-read notifications even when the
-// client's replay acknowledgement arrives just after its idle boundary.
 it("still reports a prompt acknowledgement arriving after idle", async () => {
   const { sha256 } = await import("./claudeSessionRecord");
   const text = "Keep the recorded input notification.";
@@ -261,8 +257,6 @@ it("still reports a prompt acknowledgement arriving after idle", async () => {
   }
 });
 
-// Intent: the accepted refactor preserves quiet interruption of a
-// continuation, including a result already buffered when the tick stops it.
 it("drains a wedged continuation's interrupted result without a new failure", async () => {
   const { TICK_PERIOD_MS } = await import("../orchestrator/ticker");
   let now = 0;

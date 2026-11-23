@@ -458,7 +458,6 @@ function WhereItWent({
 
 const CATEGORIES = ["input", "output", "cacheRead", "cacheWrite"] as const;
 
-/** A category's label as the model's details name it. */
 function categoryLabel(category: (typeof CATEGORIES)[number]): string {
   switch (category) {
     case "input":
@@ -628,7 +627,6 @@ function RecentTasks({ query, unit }: { query: UsageQuery; unit: UsageUnit }) {
 export type RecentTasksViewProps = {
   /** The last list read, kept while a longer one is read or fails. */
   value: UsageTasks | null;
-  /** The latest read failed. */
   failed: boolean;
   unit: UsageUnit;
   listRef?: RefObject<HTMLOListElement | null>;
@@ -636,7 +634,6 @@ export type RecentTasksViewProps = {
   onRetry: () => void;
 };
 
-/** The recent tasks as read: each task's name and five figures, the count and See more. */
 export function RecentTasksView({
   value,
   failed,

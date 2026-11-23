@@ -115,7 +115,6 @@ function dirty(cwd: string): void {
   writeFileSync(join(cwd, "node_modules", "dep", "index.js"), "module.exports = 42;\n");
 }
 
-/** A dispatch then a close the way the supervisor runs them, with the return settled. */
 async function closeTask(workspace: WorkspaceService, ws: TaskWorkspace) {
   const retired = await workspace.retireTaskWorktree(ws);
   await workspace.poolSettled();
@@ -151,7 +150,6 @@ describe("warm worktree pool: a closed task's tree is reused, never dirty", () =
     const kept = keptRefFor("aaaa1111");
     expect(await git(repo, ["show", `${kept}:README.md`])).toBe("# edited by the task");
     expect(await git(repo, ["show", `${kept}:notes.txt`])).toBe("untracked");
-    // git knows the tree at its new path, and the old one is gone.
     const listed = await git(repo, ["worktree", "list", "--porcelain"]);
     expect(listed).toContain("bbbb2222");
     expect(listed).not.toContain("aaaa1111");

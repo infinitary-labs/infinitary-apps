@@ -169,7 +169,6 @@ export class JoinedHome {
     }
   }
 
-  /** Writes the grant without its other addresses, and those beside it. */
   private writeHome(joined: Joined): void {
     const { also, ...grant } = joined.grant;
     this.write(HOME_FILE, { ...joined, grant });
@@ -221,7 +220,6 @@ export class JoinedHome {
     return readHomeNumber(this.dir);
   }
 
-  /** Keeps a higher home number than the one kept; a lower or equal one changes nothing. */
   keepHomeNumber(homeNumber: number): void {
     if (!this.read() || homeNumber <= this.homeNumber()) return;
     writeHomeNumber(this.dir, homeNumber);
@@ -362,7 +360,6 @@ export class JoinedHome {
     this.write(LEFT_FILE, paths.length > 0 ? { ...note, unfinished: paths.slice(0, 64) } : note);
   }
 
-  /** This Mac's own look while it controls another, or null before it has one. */
   look(): OwnLook | null {
     const path = join(this.dir, LOOK_FILE);
     if (!existsSync(path)) return null;

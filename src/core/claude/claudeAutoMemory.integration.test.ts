@@ -137,14 +137,12 @@ function boxed(shape: Shape) {
   return { folders, options };
 }
 
-/** The same options with the client's auto memory left to its own default. */
 function withClientDefault(options: Options): Options {
   const env = { ...options.env };
   delete env.CLAUDE_CODE_DISABLE_AUTO_MEMORY;
   return { ...options, env };
 }
 
-/** Everything the client sent while a session with these options ran one turn. */
 async function served(options: Options): Promise<string> {
   const from = api.requests.length;
   const input = new MessageQueue();

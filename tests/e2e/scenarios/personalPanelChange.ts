@@ -2,7 +2,6 @@ import type { Scenario } from "../mockProvider";
 
 export const PERSONAL_CHANGE_PROMPT_MARKER = "change my panel ";
 
-/** The first mate spawns a personal-panel crewmate to change the panel the captain names. */
 export const personalPanelChange: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {

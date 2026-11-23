@@ -232,7 +232,6 @@ export const PROJECT_ROW_WORDS = {
   },
 } as const;
 
-/** Whether `path` is the projects folder or inside it. */
 export function inProjectsFolder(path: string, folder: string): boolean {
   const root = folder.replace(/\/+$/, "");
   return path === root || path.startsWith(`${root}/`);

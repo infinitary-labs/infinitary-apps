@@ -132,7 +132,6 @@ describe("supervision-turn extractor - the historical-format sessions", () => {
     const byId = new Map(rows.map((row) => [row.id, row]));
     for (const record of records) {
       const row = byId.get(record.outcome_id as number) as OutcomeRow;
-      // The served wake segment is exactly the host's `[wake] <stored payload>`.
       expect(record.served?.frame_basis).toBe("reframed-exact");
       expect(record.served?.segments?.map((segment) => segment.kind)).toEqual(["wake", "context"]);
       expect(record.served?.segments?.[0]?.body).toBe(`[wake] ${row.wake}`);

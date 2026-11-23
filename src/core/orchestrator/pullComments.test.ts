@@ -22,7 +22,6 @@ import type { TypedWake } from "./wakes";
 // reply the crewmate sends during a reading is still its own, and only a
 // crewmate whose conversation was served the guidance is woken.
 
-/** A teammate's line comment, an outside passer-by's comment and a review bot, as GitHub's lists name them. */
 const TEAMMATE: ForgePullComment = {
   id: 2101,
   kind: "line",
@@ -143,11 +142,9 @@ describe("comments on a pull request", () => {
         ],
       },
     ]);
-    // Nothing moved on the pull request: no comment is asked for, no second wake.
     await h.delivery().comments.readTask("invite");
     expect(h.reads).toHaveBeenCalledTimes(1);
     expect(h.wakes()).toHaveLength(1);
-    // It moved, with no new comment by others: still one wake.
     h.state.pull = { ...h.state.pull, updatedAt: "2026-11-15T17:05:00Z" };
     await h.delivery().comments.readTask("invite");
     expect(h.reads).toHaveBeenCalledTimes(2);
@@ -219,7 +216,6 @@ describe("comments on a pull request", () => {
     seedDelivery(h.tasks, "invite", { commentCursor: undefined });
     await h.delivery().comments.readTask("invite");
     expect(h.wakes()).toHaveLength(1);
-    // A later comment is a new round.
     h.state.comments.push(PASSERBY);
     h.state.pull = { ...h.state.pull, updatedAt: "2026-11-15T17:20:00Z" };
     await h.delivery().comments.readTask("invite");

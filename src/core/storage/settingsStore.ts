@@ -118,7 +118,6 @@ const ambientStyleRowSchema = z.strictObject({ style: ambientStyleSchema });
 /** The `ambient-own-styles` row: the person's own styles (docs/ambient-music.md, "Your own styles"). */
 const ambientOwnRowSchema = z.strictObject({ styles: ownStylesSchema });
 
-/** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
   private projection: Map<string, unknown> | undefined;
 
@@ -473,7 +472,6 @@ export class SettingsStore {
     this.set("keyboard", keymap);
   }
 
-  /** The two switches (roadmap 1.4). Absent - every install before them - means both off. */
   /**
    * A missing row is a fresh install (Diagnostics on). A row that is
    * there but unreadable could have been someone's "off", so it reads as

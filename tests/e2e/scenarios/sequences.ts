@@ -62,7 +62,6 @@ export const SEQ_BUG_NO = {
   reproduce: "Reproduce: the dock flicker",
   fix: "Fix: the dock flicker",
 } as const;
-/** The Common workflows runbook's first-mate guide: the step lines the app serves. */
 const workflowRoot = join(process.cwd(), "resources/runbooks/sequences");
 const workflowSection = runbookManifestSchema.parse(
   JSON.parse(readFileSync(join(workflowRoot, "runbook.json"), "utf8")),
@@ -116,7 +115,6 @@ const SEQ_SAVED_PLAN_GOAL = "Propose a calmer about page as one card";
 export const SEQ_SAVED_BUILD_GOAL = "Build the calmer about page the saved plan agreed";
 export const SEQ_SAVED_CARD_TITLE = "A calmer about page";
 export const SEQ_SAVED_CHOICE = SAVE_AND_DEFER;
-/** The saved plan's recommended version line answer. */
 export const SEQ_SAVED_BOTTOM_LABEL = "At the bottom";
 export const SEQ_SAVED_CARD_BODY = `<p>The about page keeps one paragraph and the version line, and the credits list goes.</p><ul><li>One paragraph says what the app is.</li><li>The credits list moves to the project page.</li></ul><fieldset><legend>Where does the version line sit?</legend><label><input type="radio" name="version_line" value="top">At the top</label><label><input type="radio" name="version_line" value="bottom" data-inf-recommended>${SEQ_SAVED_BOTTOM_LABEL}</label><label><input type="radio" name="version_line" value="other" data-inf-write-in>Something else</label></fieldset>`;
 export const SEQ_SAVED_SPEC =
@@ -203,7 +201,6 @@ type SeqAsk = {
 };
 
 const SEQ_ASKS: SeqAsk[] = [
-  // A clear, small ask: one step, so no parent.
   {
     ask: SEQ_SMALL_ASK,
     now: { title: SEQ_SMALL.implement, goal: `${SEQ_SMALL_GOAL}.` },
@@ -256,7 +253,6 @@ const SEQ_ASKS: SeqAsk[] = [
   },
 ];
 
-/** The goal the scripted Firstmate files for the step titled `title`. */
 export function seqGoal(title: string): string {
   for (const ask of SEQ_ASKS) {
     for (const step of [ask.now, ask.later]) if (step?.title === title) return step.goal;
@@ -278,7 +274,6 @@ function sequencesFirstmateMove(
   const script = user.includes("[user]")
     ? SEQ_ASKS.find((entry) => userSegment.includes(entry.ask))
     : undefined;
-  // A plan asked for on its own: one read-only step, no parent.
   if (user.includes("[user]") && userSegment.includes(SEQ_SAVED_ASK)) {
     if (results.length > 0) return { text: "Opened." };
     return {
@@ -407,7 +402,6 @@ function sequencesFirstmateMove(
     return { text: "Started the build and its live check." };
   }
   if (script && !script.parent) {
-    // One step: the implement step is the whole ask, spawned on its own.
     if (results.length > 0) return { text: "Opened." };
     return {
       calls: [
@@ -554,7 +548,6 @@ function sequencesFirstmateMove(
   return undefined;
 }
 
-/** The sequences crewmates, keyed by their step's goal. */
 function sequencesCrewmateMove(
   body: string,
   hasToolResults: boolean,
@@ -693,7 +686,6 @@ function sequencesCrewmateMove(
             name: "reply",
             args: { card_id: shown, text: SEQ_THREAD_ANSWER, ...answering(user) },
           },
-          // The plan changed: the task records the final agreed spec.
           { name: "report", args: { text: SEQ_PLAN_FINAL_SPEC } },
         ],
       };
@@ -720,10 +712,6 @@ function sequencesCrewmateMove(
   return undefined;
 }
 
-/**
- * The sequences asks, for the first mate that opens and hands them off and
- * for the crewmate keyed by its step's goal.
- */
 export const sequences: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, hasToolResults }) => {

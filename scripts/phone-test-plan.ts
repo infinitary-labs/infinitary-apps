@@ -142,7 +142,6 @@ export const PHONE_PARTS = [
 ] as const satisfies readonly PhonePartRow[];
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 
-/** The devices a part runs on, the iPhone first, from its row of PHONE_PARTS. */
 export function partDevices(name: string): PhoneDevice[] {
   const part: PhonePartRow | undefined = PHONE_PARTS.find((each) => each.name === name);
   if (!part) throw new Error(`No phone journey part is named ${name}`);
@@ -161,7 +160,6 @@ export function partHinge(name: string): PhoneHinge {
 /** Every device some part runs on, the iPhone first: the devices phone.yml and ios-release.yml check. */
 export const PHONE_DEVICES: readonly PhoneDevice[] = [...new Set(PHONE_PARTS.flatMap(({ name }) => partDevices(name)))];
 
-/** The parts that run on a device, in the table's order. */
 export function devicePartNames(device: PhoneDevice): string[] {
   return PHONE_PARTS.filter(({ name }) => partDevices(name).includes(device)).map(({ name }) => name);
 }
@@ -410,7 +408,6 @@ export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTim
   const total = ms.reduce((sum, each) => sum + each, 0);
   const deal = (count: number) => {
     const jobs = Array.from({ length: count }, () => ({ load: 0, indices: [] as number[], devices: new Set<PhoneDevice>() }));
-    // What a pass adds to a job: its recorded time, and a device's start when it brings the job another device.
     const adds = (job: (typeof jobs)[number], index: number) => {
       const { device, part } = passes[index]!;
       const starts = !partOnMac(part) && job.devices.size > 0 && !job.devices.has(device);
@@ -524,12 +521,10 @@ export function readPhonePasses(path: string): string[] {
   return passed;
 }
 
-/** The passes of `jobs` an earlier attempt of the run has not passed, in plan order. */
 export function phonePassesLeft(jobs: readonly PhoneJob[], passed: readonly string[]): PhoneJob[] {
   return jobs.filter((job) => !passed.includes(phonePassName(job)));
 }
 
-/** Keeps every pass that has passed in the run so far: the earlier attempts' and this attempt's. */
 export function keepPhonePasses(path: string, earlier: readonly string[], jobs: readonly PhoneJob[],
   ends: readonly (PhonePassEnd | undefined)[]): void {
   const passed = jobs.filter((_, index) => ends[index]?.outcome === "passed").map(phonePassName);
@@ -656,7 +651,6 @@ export function phoneLanePlan<Job extends { device: string; part: string; round?
   };
 }
 
-/** What a device's lane needs from the gate: the device it starts once, each of its jobs on that device, and its end. */
 export type DeviceLane<Job extends { device: string }, Device, Result> = {
   /** Starts the lane's device once, before its first job; a failure here leaves the lane's jobs to the device's other
    * lanes, or unstarted when it has none. `lane` counts the device's lanes from one. */

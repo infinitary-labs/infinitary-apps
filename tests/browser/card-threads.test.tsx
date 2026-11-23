@@ -23,14 +23,11 @@ const ACTIONS = [
   { id: "caption-first", label: "Lead with the caption", default: true as const },
 ];
 
-/** The shown card's reply field. */
 const replyField = () => inShown("[data-card-reply] textarea") as HTMLTextAreaElement;
 
-/** The pictures waiting in the shown card's reply row. */
 const replyPictures = () =>
   document.querySelectorAll(`${SHOWN_ENTRY} [data-card-reply] [data-card-reply-picture]`);
 
-/** The reply row's notice of `kind`, or null while it says nothing of it. */
 const replyNotice = (kind: ComposerNotice) =>
   document.querySelector<HTMLElement>(
     `${SHOWN_ENTRY} [data-card-reply] [data-composer-notice="${kind}"]`,
@@ -55,10 +52,8 @@ test("a card reply refuses pictures past the shared limits with the shared notic
     .poll(() => replyNotice("pictures-max")?.textContent)
     .toContain(COMPOSER_NOTICE_WORDS["pictures-max"]);
   await expect.element(replyNotice("pictures-max") as HTMLElement).toBeVisible();
-  // The row remains capped when another picture is pasted later, too.
   pastePictures(replyField(), png, [{ name: "extra.png" }]);
   await expect.poll(() => replyPictures().length).toBe(TURN_IMAGES_MAX);
-  // A picture past the shared size limit also refuses visibly in this field.
   pastePictures(replyField(), png, [{ name: "oversized.png", bytes: TURN_IMAGE_MAX_BYTES + 1 }]);
   await expect
     .poll(() => replyNotice("picture-too-big")?.textContent)

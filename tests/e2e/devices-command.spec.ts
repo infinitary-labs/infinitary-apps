@@ -52,7 +52,6 @@ import { pressKey } from "./windowKeys";
  * version is updated by itself or gets a new command.
  */
 
-/** A project where it lives - a bare repository on this disk - and the home's clone of it. */
 function projectWithOrigin(): string {
   const root = scratchDir("infinitary-e2e-computer-project-");
   const origin = join(root, "origin.git");
@@ -81,8 +80,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
       return started.run;
     };
 
-    // Asked to run work as another user, Firstmate offers one card; its
-    // button opens Devices and makes the command there.
     await ask(page, "device-invite", { how: "another-user" });
     const make = page.getByRole("button", { name: "Make the command", exact: true });
     await expect(make).toBeVisible();
@@ -98,7 +95,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
       PAIRING_LINK_PREFIX,
     );
 
-    // The command run as that user: it joins, and the panel and the feed say so.
     const joined = await joinHome({
       text: link,
       dataDir,
@@ -108,7 +104,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     });
     if (!joined.ok) throw new Error(joined.reason);
     const deviceId = joined.grant.deviceId;
-    /** The computer as Devices lists it, for the words its row and Remove say. */
     const builder: DeviceView = {
       id: deviceId,
       kind: "work",
@@ -130,7 +125,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
       .poll(() => helper.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
       .toBe("in-reach");
 
-    // Devices lists it with what it runs, its sign-ins, its tasks and when it was seen.
     const row = await selectDevice(page, deviceId);
     await expect(row).toContainText(deviceLabel(builder));
     await expect(reachDot(row)).toHaveAttribute("data-tone", "ok");
@@ -144,11 +138,9 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
       repo.id,
       deviceId,
     ] as const);
-    /** What the row says it runs once the project runs there, from the row's own words. */
     const runsWebsite = deviceSummary({ ...builder, runs: [repo.name] }, undefined);
     await expect(row).toContainText(runsWebsite);
 
-    // Out of reach, Remove asks whether to wait for it; waiting can be taken back.
     await helper.stop();
     await expect(row.locator("[data-device-status]")).toContainText(SEEN_WORDS.since);
     await expect(row).toHaveAttribute("data-device-acts", /\bremove\b/);
@@ -156,7 +148,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     const question = page.locator(`[data-device-removing="${deviceId}"]`);
     await expect(question).toContainText(removeLines({ ...builder, inReach: false })[0]);
     await question.getByRole("button", { name: "Remove when it is back", exact: true }).click();
-    // Its wait is a strip of its own, and Remove leaves the menu until it is kept.
     const removal = row.locator('[data-notice="removal"]');
     await expect(removal).toContainText(m.settingsDevicesRemovedWhenBackLine());
     await expect(row).not.toHaveAttribute("data-device-acts", /\bremove\b/);
@@ -164,8 +155,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     await expect(removal).toHaveCount(0);
     await expect(row).toHaveAttribute("data-device-acts", /\bremove\b/);
 
-    // A new command from here, run as that user, finds this Mac again as the
-    // same computer, as it does once this Mac's address changed.
     await page.locator('[data-device-add="user"]').click();
     const next = (await linkInTab(page).textContent()) ?? "";
     const found = await joinHome({
@@ -191,7 +180,6 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     ).toEqual([deviceId]);
     await expect(row).toContainText(runsWebsite);
 
-    // Back in reach, Remove brings its work here, then takes it off the list.
     const again = run();
     await expect
       .poll(() => again.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
@@ -240,7 +228,6 @@ test("this Mac's address changes: a computer added by a command says how it come
       timeoutMs: 5_000,
     });
   try {
-    // Another user on this Mac joins with a command and runs website.
     await openDevices(app.page);
     await app.page.locator('[data-device-add="user"]').click();
     const joined = await runCommand((await linkInTab(app.page).textContent()) ?? "");
@@ -261,8 +248,6 @@ test("this Mac's address changes: a computer added by a command says how it come
     ] as const);
     await first.stop();
 
-    // This Mac answers somewhere else now: Devices says the computer still
-    // looks for it where it was, and offers the command that brings it back.
     app = await moveThisMac(app);
     const { page } = app;
     await openDevices(page);
@@ -273,7 +258,6 @@ test("this Mac's address changes: a computer added by a command says how it come
     const panel = page.locator('[data-panel-state="open"][data-panel-holds="command"]');
     await expect(panel).toContainText(PANEL_WORDS["user-command"].say[0]);
 
-    // Run as that user, it finds this Mac again as the same computer.
     const found = await runCommand((await linkInTab(page).textContent()) ?? "");
     expect(found).toMatchObject({ ok: true, again: true, grant: { deviceId } });
     await expect(page.locator('[data-panel-state="joined"]')).toContainText(
@@ -325,7 +309,6 @@ test("a computer on another version of Firstmate: the app brings an older one to
       return started.run;
     };
 
-    // Another user on this Mac joins with the command made in Devices.
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Devices", exact: true }).click();
     await page.locator('[data-device-add="user"]').click();
@@ -375,7 +358,6 @@ test("a computer on another version of Firstmate: the app brings an older one to
     await expect(update).toHaveCount(0);
     const devices = await page.evaluate(() => window.infinitary.devices.list());
     expect(devices.find((device) => device.id === deviceId)?.otherVersion).toBeUndefined();
-    // No card asked for it.
     expect(await nudge()).toEqual([]);
 
     // Too old to take the update order: it takes no new work, and Update

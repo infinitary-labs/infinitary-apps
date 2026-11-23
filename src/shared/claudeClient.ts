@@ -24,7 +24,6 @@ export function isClientIssueReason(reason: string | undefined): boolean {
 
 export const CLAUDE_CLIENT_MISSING_TEXT = `Claude Code isn't installed on ${HERE.this}. Install it to use Claude here.`;
 
-/** One plain line naming the fix: the client's own updater (plan.md 1.6). */
 export function claudeClientOutdatedText(version: string, floor: string): string {
   return `Claude Code ${version} is installed; ${floor} or newer is needed. Run "claude update".`;
 }

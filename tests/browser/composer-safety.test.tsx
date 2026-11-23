@@ -15,7 +15,6 @@ import { openWindow } from "./window";
  * One window, as the captain keeps one: each part leaves the box empty.
  */
 
-/** The turns the window sent whose words carry `marker`. */
 function turnsWith(bridge: FakeBridge, marker: string) {
   return bridge
     .requests("inf:converse")
@@ -35,7 +34,6 @@ const send = () =>
     .elementLocator(document.querySelector("[data-voice-input-shell]") as HTMLElement)
     .getByRole("button", { name: "Submit" });
 
-/** Sends a short turn and waits until the window has sent it. */
 async function sendAndAwait(bridge: FakeBridge, marker: string): Promise<void> {
   await userEvent.fill(field(), marker);
   await userEvent.keyboard("{Enter}");
@@ -74,7 +72,6 @@ test("nothing typed or pasted in the message box disappears without being sent",
     await expect.poll(() => hint()?.textContent).toContain(COMPOSER_NOTICE_WORDS["too-long"]);
     await expect.element(hint() as HTMLElement).toBeVisible();
     await expect.element(send()).toBeDisabled();
-    // A later turn is sent; the long draft never was.
     await sendAndAwait(bridge, "composer-safety after the long draft");
     expect(turnsWith(bridge, marker)).toEqual([]);
     expect(notices()).toHaveLength(0);
@@ -90,10 +87,8 @@ test("nothing typed or pasted in the message box disappears without being sent",
     await expect.poll(() => chips().length).toBe(TURN_IMAGES_MAX);
     const notice = () => document.querySelector('[data-composer-notice="pictures-max"]');
     await expect.poll(() => notice()?.textContent).toContain(COMPOSER_NOTICE_WORDS["pictures-max"]);
-    // One more paste on a full row is refused the same way.
     pastePictures(field(), png, [{ name: "shot-6.png" }]);
     await expect.poll(() => chips().length).toBe(TURN_IMAGES_MAX);
-    // The turn leaves with its words and all four pictures.
     const marker = "composer-safety four pictures";
     await sendAndAwait(bridge, marker);
     expect(chips()).toHaveLength(0);
@@ -132,7 +127,6 @@ test("nothing typed or pasted in the message box disappears without being sent",
       expect(field().value).toBe(marker);
       expect(turnsWith(bridge, marker)).toEqual([]);
     }
-    // The captain's own Enter afterwards sends it, once.
     await userEvent.keyboard("{Enter}");
     await expect.poll(() => field().value).toBe("");
     await expect.poll(() => turnsWith(bridge, marker).length).toBe(1);

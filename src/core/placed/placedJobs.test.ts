@@ -80,7 +80,6 @@ describe("a task that runs on a computer that runs work", () => {
   // background job, was asked when it would look again at "background work
   // in the Claude client".
   describe("words about a Pi crewmate's background job there (INF-1536)", () => {
-    /** Its crewmate ends a turn with `sleep 600` running as a job there; the check-back ask it got. */
     async function endTurnWithJob(at: Awaited<ReturnType<typeof world>>, taskId: string) {
       const answered = "I pick up its result when it ends.";
       model([
@@ -113,7 +112,6 @@ describe("a task that runs on a computer that runs work", () => {
       const home = at.home();
       expect(ask).toContain(quoted("sleep 600"));
       expect(home.supervisor.facts.crewStatus("t-job-named")[0]?.job).toMatch(/: sleep 600$/);
-      // Past the bound, the first mate hears of the same job.
       const wakes = home.wakes.length;
       home.supervisor.watch.reconcileIdle(now() + JOB_BOUND_MS);
       expect(
@@ -163,7 +161,6 @@ describe("a task that runs on a computer that runs work", () => {
     expect(job).toBeDefined();
     expect(said(api.requests[requests + 2])).toContain("Report again with check_back");
 
-    // The computer restarts while the crewmate waits: the job ends with that run.
     await at.restartComputer();
     await expect.poll(() => home.tasks.get("t-job")?.outcome).toBe("Running the suite again.");
     const heard = said(api.requests.at(-1));
@@ -201,7 +198,6 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(posture).toEqual({ state: "active", reason: "job" });
     const asked = claude.served().length;
 
-    // The computer restarts while the crewmate waits: the client ends with that run.
     claude.answer({ text: "Running the suite again." });
     await at.restartComputer();
     await expect
@@ -242,7 +238,6 @@ describe("a task that runs on a computer that runs work", () => {
       .toEqual({ state: "active", reason: "job" });
     const asked = claude.served().length;
 
-    // The home restarts while the crewmate waits; that computer runs on.
     claude.answer({ text: "Running the suite again." });
     await at.restartHome();
     const home = at.home();
@@ -453,22 +448,18 @@ describe("a task that runs on a computer that runs work", () => {
       .poll(() => at.home().tasks.get("t-moved")?.outcome)
       .toBe("The header is fixed too.");
 
-    // It resumed from its record's copy in the new folder and wrote this turn there.
     const moved = at.folders("t-moved");
     const file = join(moved.sessions, relative(older.sessions, before));
     const now = readFileSync(file, "utf8");
     expect(now.startsWith(kept)).toBe(true);
     expect(now).toContain("Fix the header too.");
-    // The older folder's record is as the move left it.
     expect(readFileSync(before, "utf8")).toBe(kept);
-    // The task's record names the file there now, and this Mac's copy has the turn.
     await expect.poll(() => at.home().tasks.get("t-moved")?.sessionFile).toBe(file);
     const copy = join(
       crewmateSessionsDir(at.home().paths, "t-moved"),
       relative(moved.sessions, file),
     );
     await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
-    // It was told its folders in the new folder, none in the older one.
     const system = JSON.stringify(api.requests[requests]?.body.system);
     expect(system).toContain(moved.evidence);
     expect(system).toContain(moved.cardBodies);

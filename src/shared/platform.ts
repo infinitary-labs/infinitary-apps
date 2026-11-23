@@ -97,7 +97,6 @@ export function platformArgument(platform: string): string {
   return `${PLATFORM_ARG}${platform}`;
 }
 
-/** The platform an argument names, or null when none does. */
 export function platformFromArgv(argv: readonly string[]): string | null {
   const arg = argv.find((entry) => entry.startsWith(PLATFORM_ARG));
   const platform = arg?.slice(PLATFORM_ARG.length);

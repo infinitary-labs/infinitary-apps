@@ -40,14 +40,12 @@ export function isTimeZone(timeZone: string): boolean {
   }
 }
 
-/** The zone this computer's clock follows now. */
 export function localTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 type Wall = { year: number; month: number; day: number; hour: number; minute: number };
 
-/** The wall clock in `timeZone` at `ms`, to the minute. */
 export function wallAt(ms: number, timeZone: string): Wall {
   const parts: Record<string, number> = {};
   for (const part of formatIn(timeZone).formatToParts(ms)) {

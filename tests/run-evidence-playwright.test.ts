@@ -29,7 +29,6 @@ const runs = join(fixtures, "test-results", "runs");
 const running = new Set<ChildProcess>();
 afterAll(() => {
   for (const child of running) child.kill("SIGKILL");
-  // Where the fixture runs kept their evidence (their working copy).
   rmSync(join(fixtures, "test-results"), { recursive: true, force: true });
 });
 
@@ -88,14 +87,12 @@ function fixtureRuns() {
   return { env, release, lines };
 }
 
-/** The directory a run printed as its evidence, under the repository. */
 function evidenceOf(run: Run): string {
   const printed = /This run's evidence: (.+)\/\n/.exec(run.text())?.[1];
   if (!printed) throw new Error(`no evidence line in:\n${run.text()}`);
   return join(repoRoot, printed);
 }
 
-/** The one test's evidence file in a run directory: `<test dir>/evidence.txt`. */
 function evidenceFile(runDirectory: string): string {
   const test = readdirSync(runDirectory).find((name) =>
     existsSync(join(runDirectory, name, "evidence.txt")),
@@ -115,7 +112,6 @@ describe("each Playwright run's evidence", () => {
     const heldDir = evidenceOf(held);
     expect(readFileSync(evidenceFile(heldDir), "utf8")).toBe("held");
 
-    // A later run starts, writes and finishes while the first is still going.
     const quick = playwright("quick.spec.ts", env);
     expect(await quick.exited).toBe(0);
     const quickDir = evidenceOf(quick);

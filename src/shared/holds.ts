@@ -141,14 +141,12 @@ export type FixedHold = {
   [K in HoldKind]: (typeof HOLDS)[K] extends { level: "fixed" } ? K : never;
 }[HoldKind];
 
-/** Every hold kind, in the registry's order. */
 export const HOLD_KINDS = Object.keys(HOLDS) as HoldKind[];
 
 export const OVERRIDABLE_HOLDS = HOLD_KINDS.filter(
   (kind) => HOLDS[kind].level === "soft" && !("way" in HOLDS[kind]),
 ) as OverridableHold[];
 
-/** Whether the recorded override passes this hold. */
 export function isOverridable(kind: HoldKind): kind is OverridableHold {
   return (OVERRIDABLE_HOLDS as HoldKind[]).includes(kind);
 }
@@ -194,7 +192,6 @@ export function mergeClickRefusal(words: string): string {
   return `Override refused: nothing was recorded. The words cited, "${words}", are the captain's click on a merge: approval of that change at that version, not a general override. The app keeps that scoped approval and its accepted repairs until the checks pass; the click never passes the checks or any other hold. Only separately given words or an explicit exception choice can declare an override.`;
 }
 
-/** The override standing on a task at this version: one for the task's life, or one for this very version. */
 export function standingOverride(
   delivery: { override?: HoldOverride } | null | undefined,
   head?: string,
@@ -206,7 +203,6 @@ export function standingOverride(
     : undefined;
 }
 
-/** Whether a standing override passes this hold at this version. */
 export function overridePasses(
   delivery: { override?: HoldOverride } | null | undefined,
   kind: OverridableHold,

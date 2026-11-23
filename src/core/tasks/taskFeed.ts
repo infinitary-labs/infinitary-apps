@@ -40,7 +40,6 @@ export const DISCARDED_LINE = englishOf(said("feedDiscarded"));
 /** An answered task's own line when its close names no choice and no use. */
 export const ANSWERED_LINE = englishOf(said("feedAnswered"));
 
-/** The checks' state a `ci` event names, as its line says it. */
 const CHECKS_SAID: Record<string, Said> = {
   green: said("feedChecksPassed"),
   red: said("feedChecksFailed"),
@@ -78,7 +77,6 @@ function foldOf(event: TaskEvent): string | undefined {
   return undefined;
 }
 
-/** What a feed line needs from the record beside the event. */
 export type FeedSubject = Pick<TaskRecord, "key" | "assignee" | "delivery">;
 
 function text(value: unknown): string | undefined {
@@ -93,7 +91,6 @@ function retryOf(value: unknown): { failures: number; since: number; stuck?: boo
   return { failures, since, ...(stuck === true ? { stuck: true } : {}) };
 }
 
-/** The feed line for one timeline event, or null when it stays off the feed. */
 export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | null {
   if (!event.feed) return null;
   const data = event.data ?? {};

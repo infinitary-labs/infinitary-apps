@@ -23,7 +23,6 @@ function door(size?: ShellPreferences["appearance"]["size"]) {
   };
 }
 
-/** Every queued step has run: a step waits on the save before it. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe("the size keys, View menu and command search", () => {

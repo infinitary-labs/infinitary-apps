@@ -149,7 +149,6 @@ test("a site's rule survives restart, signs future tasks in by itself, and Ask m
     ]);
     await row().getByRole("button", { name: "Remove", exact: true }).click();
     await expect(row()).toHaveCount(0);
-    // Remove signs the kept profile out of the site, the open browser with it.
     await expect
       .poll(() => pageCookieNames(app, `${url}?visit=first-task`))
       .not.toContain("member");

@@ -570,7 +570,6 @@ export function AddressChange({
   );
 }
 
-/** The name a carry's destination goes by: a computer on the list, or this one. */
 function carryName(devices: readonly DeviceView[], id: string): string {
   const device = devices.find((each) => each.id === id);
   return device ? deviceLabel(device) : HERE.this;

@@ -22,13 +22,11 @@ type Element = ReturnType<typeof DomUtils.getElementsByTagName>[number];
 
 const words = (node: Element) => DomUtils.textContent(node).replace(/\s+/g, " ").trim();
 
-/** The welcome as its frame's document carries it, in one theme. */
 function welcome(theme: "dark" | "light", { script }: { script: boolean }) {
   const body = script ? WELCOME_BODY : WELCOME_BODY.replace(/<script>[\s\S]*?<\/script>/g, "");
   return parseDocument(buildPrototypeSrcdoc(body, theme));
 }
 
-/** Whether nothing on the element or above it in the document hides it. */
 function drawn(element: Element): boolean {
   for (let node: Element | null = element; node; node = node.parent as Element | null) {
     if (node.type !== "tag") continue;
@@ -72,7 +70,6 @@ describe("approved welcome document", () => {
       expect(WELCOME_STARTERS.map((starter) => starter.label)).toEqual(
         starters.map((button) => words(button)),
       );
-      // The picture's labels, and the controls under it.
       expect(DomUtils.getElementsByTagName("text", document).map(words)).toEqual([
         WELCOME_LABELS.box,
         WELCOME_LABELS.activity,

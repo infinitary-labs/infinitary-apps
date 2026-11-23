@@ -20,7 +20,6 @@ export const PICTURE_FORMATS: readonly PictureFormat[] = [
   { extension: "webp", label: "WebP", size: webpSize },
 ];
 
-/** The format and size a file's bytes declare, or undefined when it is none of the three. */
 export function readPicture(
   bytes: Buffer,
 ): { format: PictureFormat; size: PictureSize } | undefined {

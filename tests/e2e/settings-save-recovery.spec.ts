@@ -472,7 +472,6 @@ test("appearance refusals show the saved look again and say why beside the choic
     await expect(settingsFeedback(page, "usage-unit")).toHaveCount(0);
     await expect.poll(async () => (await savedLook(page)).usageUnit).toBe("usd");
 
-    // Reopening reads what is saved.
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Appearance", exact: true }).click();

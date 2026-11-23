@@ -46,7 +46,6 @@ const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
 
 const CONTEXTS: readonly KeyContext[] = [{}, { field: "main-message" }, { field: "reply" }];
 
-/** Two scopes overlap when some place a key is pressed has both. */
 const overlaps = (a: CommandScope, b: CommandScope) =>
   CONTEXTS.some((context) => scopeIsActive(a, context) && scopeIsActive(b, context));
 

@@ -95,7 +95,6 @@ export class PanelOutsideData {
   }
 }
 
-/** A panel key's store slice: its id, the part after its source. */
 function sliceOf(panel: string): string {
   return panel.slice(panel.indexOf(":") + 1);
 }

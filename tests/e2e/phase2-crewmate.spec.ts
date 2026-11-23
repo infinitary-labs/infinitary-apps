@@ -62,7 +62,6 @@ test("chit-chat is answered by Firstmate with zero cards and zero crewmates", as
     "Null state",
   );
 
-  // No worktree, no crewmate session, no task was created for a greeting.
   expect(worktreeCount(userDataDir)).toBe(0);
   expect(existsSync(join(userDataDir, "crewmates"))).toBe(false);
 });
@@ -76,12 +75,10 @@ test("a question yields one answer card from Firstmate", async () => {
 
   await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible({ timeout: 30_000 });
   await expect(cardBody(page, MOCK_ANSWER_TITLE).getByText(MOCK_ANSWER_TEXT)).toBeVisible();
-  // The answer card is Firstmate's own, not a crewmate's.
   await expect(cardMeta(page, MOCK_ANSWER_TITLE)).toHaveText(cardMetaWords(FIRSTMATE_CARD_META));
   expect(worktreeCount(userDataDir)).toBe(0);
 
   await noteDone(page).click();
-  // The stack empties.
   await expect(page.locator("[data-card-layer]")).toHaveCount(0, { timeout: 10_000 });
 });
 

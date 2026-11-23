@@ -58,7 +58,6 @@ export function userDataFolderFor(flavor: BuildFlavor): string {
   return flavor === "dev" ? DEV_USER_DATA_FOLDER : RELEASE_USER_DATA_FOLDER;
 }
 
-/** A spelling's folder for a flavor. */
 export function userDataFolderOf(spelling: Spelling, flavor: BuildFlavor): string {
   return USER_DATA_FOLDERS[spelling][flavor];
 }

@@ -50,7 +50,6 @@ export const TURN_DECLARATION_FIELDS = [
   "checkBack",
 ] as const;
 
-/** The record fields this table holds, and the column each is saved in. */
 export const EXECUTION_COLUMNS = {
   sessionFile: "session_file",
   deviceId: "device_id",
@@ -122,7 +121,6 @@ function fromRow(row: Row): TaskExecution {
   };
 }
 
-/** A delivery split into what its column keeps and the current turn's declarations. */
 export function splitTurn<T extends object>(
   delivery: T | null | undefined,
 ): { delivery: T | null; turn: Record<string, unknown> | null } {
@@ -136,7 +134,6 @@ export function splitTurn<T extends object>(
   return { delivery: kept as T, turn: Object.keys(turn).length > 0 ? turn : null };
 }
 
-/** A delivery as it is read: the stored facts, and the current turn's declarations. */
 export function withTurn<T extends object>(
   delivery: T | null,
   turn: Record<string, unknown> | null,
@@ -182,7 +179,6 @@ export class TaskExecutionStore {
     return row ? row.turn_json : undefined;
   }
 
-  /** The execution of each of these tasks that has one, by task id. */
   listFor(taskIds: readonly string[]): Map<string, TaskExecution> {
     const byTask = new Map<string, TaskExecution>();
     if (taskIds.length === 0 || !this.exists()) return byTask;
@@ -239,7 +235,6 @@ export class TaskExecutionStore {
       .run(...values, taskId);
   }
 
-  /** The conversation a resume token belongs to, when this task records it. */
   private conversationFor(taskId: string, sessionFile: string | null): string | null {
     if (!sessionFile) return null;
     const conversation = conversationOf(sessionFile);

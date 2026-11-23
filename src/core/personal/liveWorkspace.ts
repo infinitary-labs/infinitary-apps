@@ -92,7 +92,6 @@ export function isPanel(id: string, topFiles: Iterable<string>): boolean {
   return false;
 }
 
-/** `isPanel` over a folder on disk: `id` is the panel id it would have, `dir` where its files sit. */
 export async function isPanelFolder(id: string, dir: string): Promise<boolean> {
   const present: string[] = [];
   for (const name of Object.values(PERSONAL_ENTRY_FILES)) {
@@ -164,7 +163,6 @@ export async function stampOrigin(
   return true;
 }
 
-/** The task an extension's working `manifest.json` names (`origin.taskId`), or null. */
 export async function readStamp(workspaceDir: string, extensionId: string): Promise<string | null> {
   try {
     const raw = JSON.parse(
@@ -266,7 +264,6 @@ export async function workingTree(
 
 export type WorkspaceCommit = {
   committed: boolean;
-  /** The new HEAD when a commit was made. */
   sha?: string;
   /** The paths the commit carried, workspace-relative. */
   paths: string[];
@@ -324,7 +321,6 @@ export function splitMessage(message: string): { subject: string; body: string }
   return { subject: subject || "Update the personal workspace", body: rest };
 }
 
-/** Every lintable source of one extension: `.ts`, `.tsx`, `.json`, recursive, relative to the extension. */
 export async function extensionSources(
   workspaceDir: string,
   extensionId: string,

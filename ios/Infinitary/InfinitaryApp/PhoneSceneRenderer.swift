@@ -178,7 +178,6 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         draw(input, pan: pan, size: size, scale: scale, into: layer)
     }
 
-    /// Asks the display link for the rate Low Power Mode calls for, changing it only when the rate changes.
     private func pace(_ link: CADisplayLink) {
         let screen = lock.withLock { screenRate }
         let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled

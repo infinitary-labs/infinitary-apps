@@ -113,7 +113,6 @@ export class PlacedLedger {
     return existsSync(join(this.dir, "refused"));
   }
 
-  /** The answer kept for this call, if it was answered. */
   answered(callId: string): CallLine | undefined {
     return this.read().get(callId);
   }
@@ -189,9 +188,7 @@ export class PlacedLedger {
     let text = "";
     try {
       text = readFileSync(this.callsFile, "utf8");
-    } catch {
-      // Nothing asked yet.
-    }
+    } catch {}
     for (const line of text.split("\n")) {
       if (!line) continue;
       try {

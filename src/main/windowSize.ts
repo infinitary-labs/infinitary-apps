@@ -26,7 +26,6 @@ export type SizeDoor = {
 
 type SizeDirection = "in" | "out" | "reset";
 
-/** The next of the choices, bounded at either end. */
 function steppedSize(current: UiSize, direction: SizeDirection): UiSize {
   if (direction === "reset") return 100;
   const index = UI_SIZES.indexOf(current) + (direction === "in" ? 1 : -1);

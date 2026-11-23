@@ -180,7 +180,6 @@ describe("a task's kept write asks past the cap (INF-2993 piece 2)", () => {
 
   it("drops the oldest answered ask before any waiting one, and answers the waiting ones it dropped", () => {
     const { tasks } = setup();
-    // Two answered, then six waiting: eight kept.
     const kept = [
       ask("answered-1", 1, 2),
       ask("answered-2", 3, 4),

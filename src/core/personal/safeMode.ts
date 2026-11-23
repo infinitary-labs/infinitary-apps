@@ -82,7 +82,6 @@ export class LaunchWatch {
     return { earlyCrashes, safeMode };
   }
 
-  /** The launch is good: clear the marker and the count. */
   settle(): void {
     if (this.settled) return;
     if (!this.write({ pending: false, earlyCrashes: 0 })) return;

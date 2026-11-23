@@ -117,7 +117,6 @@ export const helperWords = {
 
   closedLink: (place: HomePlace) => commandClosed(there(place)),
 
-  /** The copy of Firstmate a command fetched could not be kept here. */
   notKept: [`Could not keep Infinitary on ${HERE.this}.`, NOTHING_CHANGED],
 
   sameUser: [
@@ -403,7 +402,6 @@ export function otherSystem(): string[] {
   ];
 }
 
-/** The command on a Linux computer with no curl, which gets Firstmate from its home. */
 export function needsCurl(home: string): string[] {
   return [
     `This command needs curl to get Infinitary from ${home}.`,
@@ -515,7 +513,6 @@ export function lingerStays(user: string): string[] {
   ];
 }
 
-/** The home has no Infinitary to send for this computer's system. */
 export function commandNothingToSend(home: string): string[] {
   return [
     `${home} cannot send Infinitary for ${HERE.this}.`,
@@ -545,14 +542,12 @@ export function afterLogout(user: string, on: boolean): string[] {
  */
 export const COMMAND_DOWNLOADING = "Downloading Infinitary…";
 
-/** The command could not download Firstmate, or what it downloaded did not match: it gets it from its home. */
 export function commandDownloadFallback(home: string, mismatch: boolean): string {
   return mismatch
     ? `The download did not match, so getting Infinitary from ${home} instead.`
     : `Could not download Infinitary, so getting it from ${home} instead.`;
 }
 
-/** A command used already, named by where it came from. */
 export function commandUsed(home: string): string[] {
   return [`That command was used already. Make a new one on ${home}.`, NOTHING_CHANGED];
 }
@@ -565,7 +560,6 @@ export function commandExpired(home: string, lastsMs: number = PAIRING_LINK_TTL_
   ];
 }
 
-/** A link's lifetime as the words say it: "ten minutes", "thirty minutes". */
 export function minutesWords(ms: number): string {
   const minutes = Math.round(ms / 60_000);
   return `${({ 10: "ten", 30: "thirty" } as Record<number, string>)[minutes] ?? minutes} minutes`;
@@ -595,7 +589,6 @@ function userInBackground(user: string, background: InBackground): string[] {
   }
 }
 
-/** It joined, but nothing will start it at the next login. */
 function notInBackground(where: string): string[] {
   return [
     "It could not set itself to start in the background.",

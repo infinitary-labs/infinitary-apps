@@ -50,7 +50,6 @@ export type RuleForm = {
   reconnect: boolean;
 };
 
-/** The zone this computer's clock follows now: a new rule's default. */
 export function hereZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
@@ -222,7 +221,6 @@ export function runPromptTitle(run: AutomationRun): string {
   return sentNothing(run) ? m.automationEventsSkipped() : m.settingsAutomationPromptAsSent();
 }
 
-/** What a delivery's state means, beside it. */
 export function deliveryNote(run: AutomationRun): string | null {
   switch (run.delivery) {
     case "waiting":

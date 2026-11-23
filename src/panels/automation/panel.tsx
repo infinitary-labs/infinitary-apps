@@ -106,7 +106,6 @@ export default function AutomationPanel({ reads, rail, asks, point }: PanelProps
   );
 
   const shown = rules ?? [];
-  // One roving stop over the rules and then the kept jobs.
   const stops = [...shown.map((rule) => `rule:${rule.id}`), ...kept.map((job) => `kept:${job.id}`)];
   const current = stops.includes(stop ?? "") ? stop : (stops[0] ?? null);
   const onKey = (event: ReactKeyboardEvent<HTMLElement>) => {

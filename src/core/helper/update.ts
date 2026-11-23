@@ -346,7 +346,6 @@ async function keepOnTrial(
 }
 
 export type DownloadHereOptions = UpdateHereOptions & {
-  /** Where the home's version is published, and its SHA-256. */
   download: UpdateDownload;
   /** Each count the download says, about once a second, then that what arrived is being kept. */
   onProgress: (progress: UpdateProgress) => void;
@@ -360,7 +359,6 @@ export type DownloadHereOptions = UpdateHereOptions & {
   verifier?: string;
 };
 
-/** How a download here ended, with its last count. */
 export type DownloadedHere = DownloadCount & (UpdatedHere | { fallback: "failed" | "mismatch" });
 type DownloadCount = { received: number; total?: number };
 

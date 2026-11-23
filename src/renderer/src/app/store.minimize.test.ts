@@ -27,7 +27,6 @@ const AWAY: ThisMac = {
   caughtUp: 0,
 };
 
-/** The shown decision, and the one put away beside it. */
 const WELCOME = card({ id: "card-a", title: "Pick a welcome", status: "ready", actions: DECIDE });
 const FIX = card({ id: "card-b", title: "Merge the fix", status: "ready", actions: DECIDE });
 

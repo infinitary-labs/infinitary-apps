@@ -91,7 +91,6 @@ describe("the task graph (task-system P2)", () => {
     await tick();
     expect(sessions.open).not.toHaveBeenCalled();
 
-    // Behind a blocker (by key) and when-ready: waits, then starts when it lands.
     const step = supervisor.intake.plan({
       title: "Implement the ADR",
       intent: intentOf("implement it"),
@@ -296,7 +295,6 @@ describe("the task graph (task-system P2)", () => {
       type: "firstmate_note",
       text: 'Dropped "Epic" (SCR-1) and 1 child under it - changed course.',
     });
-    // Started work is settle_task's business.
     const running = await supervisor.intake.commission({ title: "Live", intent: intentOf("live") });
     await tick();
     expect(supervisor.intake.dropTask(running.taskId, { reason: "nah" })).toMatch(
@@ -625,7 +623,6 @@ describe("the task graph (task-system P2)", () => {
     seedDelivery(tasks, taskId, {
       override: { words: "merge it, the key can wait", holds: ["waits"], until: "task", at: 1 },
     });
-    // The close gate lets it through, and the revised card says the same.
     expect(tasks.graph.blockerRefusal(taskId)).toBeUndefined();
     expect(await offer()).toEqual(["backlog"]);
   });
@@ -672,7 +669,6 @@ describe("the task graph (task-system P2)", () => {
         `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${MERGE_CLOSES_WORDS.closes}</p>` +
         "</div>",
     );
-    // A card with no settle effect carries no facts line.
     (specs[0] as CrewmateSpec).onCard?.({
       title: "Two ways to silence it",
       body: "<p>Pick the course to take.</p><ul><li>Both work.</li></ul>",
@@ -770,12 +766,10 @@ describe("the task graph (task-system P2)", () => {
         added: 128,
         deleted: 42,
       });
-      // It sits in the reference at the line's far end, after the states.
       const body = cards().find((card) => card.taskId === taskId)?.body ?? "";
       expect(body.indexOf('data-fact="checks"')).toBeLessThan(body.indexOf('data-fact="lines"'));
       expect(body.indexOf('class="inf-foot-ref"')).toBeLessThan(body.indexOf('data-fact="lines"'));
 
-      // The change is revised: the strip shows the new version's counts.
       seedDelivery(tasks, taskId, { headSha: revised, ci: "green", ciAt: Date.now() });
       await tick();
       expect(lines()).toContain(changeLinesWords(1204, 7));
@@ -858,7 +852,6 @@ describe("the task graph (task-system P2)", () => {
     expect(body).not.toContain("claude-fable-5");
     expect(body).not.toContain("Mock 1");
     expect(body).not.toContain("mock-1");
-    // The reference names the project, then the care level.
     const project = body?.indexOf('data-fact="project"') ?? -1;
     const care = body?.indexOf('data-fact="care"') ?? -1;
     expect(project).toBeGreaterThanOrEqual(0);
@@ -884,7 +877,6 @@ describe("the task graph (task-system P2)", () => {
       tasks.timeline(taskId).filter((event) => event.kind === "note" && event.data?.servedModel);
     expect(tasks.get(taskId)?.model).toBe(served(opus55));
 
-    // The client's first word on its model is the routed one: nothing moved.
     crewmate.emit({ type: "model_served", model: opus55 });
     expect(moves()).toEqual([]);
 
@@ -1236,7 +1228,6 @@ describe("parent tasks with planned children", () => {
     expect(brief).toContain("Two directions; B groups the rows into sections.");
     expect(handedCard(brief).body).toContain("<li>B: group into sections.</li>");
     expect(brief).toContain("- captain: B, but keep the gear icon where it is");
-    // The choice that closed the plan is on the record, and the builder is told it.
     expect(brief).toContain('The captain closed it by choosing "Group into sections".');
   });
 
@@ -1489,7 +1480,6 @@ describe("parent tasks with planned children", () => {
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(container.id)?.status).toBe("open");
 
-    // Closed again with its parts, and opened again by a move.
     supervisor.intake.dropTask(build.id, { reason: "not wanted" });
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(container.id)?.status).toBe("done");
@@ -1530,7 +1520,6 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(container.id)?.status).toBe("done");
     const closedAt = tasks.get(container.id)?.closedAt;
 
-    // Waiting on the container directly, and through another task.
     expect(() => planOf("Build it", container.key, [container.key])).toThrow("Circular wait");
     const between = planOf("Agree the layout", undefined, [container.key]);
     expect(() => planOf("Build it", container.key, [between.key])).toThrow("Circular wait");
@@ -1590,7 +1579,6 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(part.id)?.status).toBe("open");
     expect(tasks.get(dropped.id)?.status).toBe("dropped");
     expect(tasks.get(kept.id)?.status).toBe("open");
-    // Nothing more to repair: a second sweep writes nothing.
     const lines = tasks.timeline(stream.id).length;
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.timeline(stream.id)).toHaveLength(lines);
@@ -1612,7 +1600,6 @@ describe("parent tasks with planned children", () => {
       return taskFeedLine(record, event)?.text;
     };
 
-    // Both children done: done, with its one feed line.
     const both = planOf("Declutter the settings page");
     const a = planOf("Plan it", both.id);
     const b = planOf("Build it", both.id);
@@ -1624,21 +1611,18 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(both.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(lineFor(both.id)).toBe("Done: everything under it is finished");
 
-    // One dropped, one done: still done.
     const mixed = planOf("Fix the meter");
     closeAs(planOf("Reproduce it", mixed.id).id, "dropped");
     closeAs(planOf("Fix it", mixed.id).id, "done");
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(mixed.id)).toMatchObject({ status: "done", closedReason: "finished" });
 
-    // Every child dropped: dropped.
     const none = planOf("Rename the dock");
     closeAs(planOf("Plan the rename", none.id).id, "dropped");
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(none.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(lineFor(none.id)).toBe("Stopped: nothing under it went ahead");
 
-    // An open child holds it.
     const waiting = planOf("Tidy the feed");
     closeAs(planOf("Plan the tidy", waiting.id).id, "done");
     planOf("Do the tidy", waiting.id);
@@ -1656,7 +1640,6 @@ describe("parent tasks with planned children", () => {
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(held.id)?.status).toBe("active");
 
-    // A parent with no children is just a planned row.
     const alone = planOf("Someday");
     await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(alone.id)?.status).toBe("open");
@@ -1673,8 +1656,6 @@ describe("parent tasks with planned children", () => {
       supervisor.intake.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
     const finished = (id: string) =>
       tasks.close(id, { status: "done", reason: "merged", actor: "host" });
-    // Parents filed for later: most with no part yet, some with their
-    // first parts merged and the next one planned.
     for (const title of ["Rename the dock", "Tidy the feed", "Move the meter"]) planOf(title);
     const closedParts: string[] = [];
     for (const title of ["Declutter the settings page", "Rebuild the home page"]) {
@@ -1704,7 +1685,6 @@ describe("parent tasks with planned children", () => {
   it("names the basis's branch, or its kept work, and quotes its card's thread", async () => {
     const builder = fakeCrewmate();
     const { supervisor, tasks, cardStore } = setup(builder);
-    // A live working copy: the branch, which the builder's worktree can read.
     seedTask(tasks, {
       id: "rep1",
       title: "Reproduce the meter bug",
@@ -1747,7 +1727,6 @@ describe("parent tasks with planned children", () => {
     expect(onAnswer).toContain("reproduced: yes - the clock drifts a second a minute.");
     expect(onAnswer).not.toContain("fm/task-rep0");
 
-    // Closed with its work saved: the kept ref.
     seedTask(tasks, {
       id: "rep2",
       title: "Reproduce the dock bug",
@@ -1774,7 +1753,6 @@ describe("parent tasks with planned children", () => {
     expect(kept).toContain("its work is saved in the repository at refs/infinitary/kept/rep2");
     expect(kept).not.toContain("Its work is on branch");
 
-    // Neither: no working-copy sentence at all, and a card's thread quoted.
     seedTask(tasks, {
       id: "ans1",
       title: "Why the meter idles",

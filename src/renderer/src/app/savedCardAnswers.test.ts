@@ -13,7 +13,6 @@ import { useShellStore } from "./store";
 
 const state = () => useShellStore.getState();
 
-/** The window's own storage, as the next window would read it. */
 function windowStorage() {
   const items = new Map<string, string>();
   return {
@@ -88,7 +87,6 @@ const picked: FrameAnswers = {
   ],
 };
 
-/** The same card with every pick taken back. */
 const cleared: FrameAnswers = {
   answered: 3,
   of: 6,

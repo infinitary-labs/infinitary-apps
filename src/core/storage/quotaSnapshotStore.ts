@@ -13,7 +13,6 @@ export const QUOTA_SNAPSHOTS_KEPT = 50;
 export class QuotaSnapshotStore {
   constructor(private readonly db: AppDatabase) {}
 
-  /** The newest snapshot's JSON as it was written, or undefined when there is none. */
   latestJson(): string | undefined {
     const row = this.db
       .prepare("SELECT json FROM quota_snapshots ORDER BY id DESC LIMIT 1")
@@ -21,7 +20,6 @@ export class QuotaSnapshotStore {
     return row?.json;
   }
 
-  /** Append one snapshot, then trim to the newest `QUOTA_SNAPSHOTS_KEPT`. */
   record(snapshot: QuotaSnapshotView): void {
     this.db
       .prepare("INSERT INTO quota_snapshots (generated_at, fetched_at, json) VALUES (?, ?, ?)")

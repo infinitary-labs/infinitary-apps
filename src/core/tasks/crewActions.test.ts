@@ -219,7 +219,6 @@ describe("a crewmate's actions, read from its kept session", () => {
       "List the files",
       "Build the app",
     ]);
-    // A task with no kept session has done nothing to read.
     expect(setup().reader.of(task("t5"))).toEqual([]);
   });
 

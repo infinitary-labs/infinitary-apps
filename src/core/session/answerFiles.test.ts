@@ -46,12 +46,10 @@ function served(tempDir: string, text: string) {
 
 const READ = { path: "/repos/acme/shop/actions/runs?per_page=100" };
 
-/** The saved file's path as a reader takes it from the notice: everything between its backticks. */
 function namedPath(text: string): string {
   return /saved it unchanged at `([^`]+)`\. Read it there/.exec(text)?.[1] ?? "";
 }
 
-/** The text a model reads from one tool result's content. */
 function textOf(content: readonly { type: string; text?: string }[]): string {
   return content.map((block) => block.text ?? "").join("\n");
 }

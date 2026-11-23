@@ -144,7 +144,6 @@ test("serves the template over app-frame: with its own hash-pinned CSP, containe
   // row: the read serves what exists, never a placeholder.
   expect(probe.sessions).not.toContain("supervision");
 
-  // Away from the tab and back: the mount is served again and paints.
   await page.getByRole("tab", { name: "General" }).click();
   await expect(iframe).toHaveCount(0);
   await page.getByRole("tab", { name: "Observe" }).click();

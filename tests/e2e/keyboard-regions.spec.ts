@@ -47,7 +47,6 @@ const DRAFT = "ship the login fix today";
 /** The caret after "ship". */
 const CARET = 4;
 
-/** The Tasks row that holds the keyboard's focus, by its task's key. */
 function focusedRowKey(page: Page): Promise<string | null> {
   // A missing focused row is a reading, not a five-second wait that fails.
   return nowFrame(page)
@@ -229,7 +228,6 @@ test("a task the keyboard rests on keeps focus, the Tab stop and its summary as 
     await expect.poll(() => focusedRowKey(page)).not.toBeNull();
 
     await test.step("a row that moves to an open group keeps focus, the Tab stop and its summary there", async () => {
-      // End reaches the backlog's header, → opens it, ↑ rests on the last queued row.
       await page.keyboard.press("End");
       await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
       await page.keyboard.press("ArrowRight");
@@ -248,19 +246,16 @@ test("a task the keyboard rests on keeps focus, the Tab stop and its summary as 
       if (test.info().repeatEachIndex === test.info().project.repeatEach - 1) {
         await windowShot(page, test.info().outputPath("compact-backlog-summary.png"));
       }
-      // The keys go on from the row where it is now.
       await page.keyboard.press("ArrowDown");
       await expect(focused('[data-now-row="icons"]')).toHaveCount(1);
       await page.keyboard.press("ArrowUp");
       await expect(focused('[data-now-row="notes"]')).toHaveCount(1);
-      // One Tab stop: F6 away and back lands on the row in its new group.
       const notes = await row("notes").getAttribute("data-now-key");
       await f6AwayAndBack();
       await expect.poll(() => focusedRowKey(page)).toBe(notes);
     });
 
     await test.step("a row that moves into a closed group leaves focus and the Tab stop on that group's header", async () => {
-      // ← goes up to the backlog's header and ← closes it; ↑ rests on the last queued row.
       await page.keyboard.press("ArrowLeft");
       await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
       await page.keyboard.press("ArrowLeft");
@@ -295,7 +290,6 @@ test("Settings' tabs follow the arrow keys, and F6 moves between the tabs and th
     await page.keyboard.press("ArrowRight");
     await expect(selected).not.toHaveText(first ?? "");
     await expect(selected).toBeFocused();
-    // The open section is the chosen tab's.
     const tabId = await selected.getAttribute("id");
     await expect(page.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", tabId ?? "");
 
@@ -319,7 +313,6 @@ test("a person gives Go to the next part of the window a key of their own", asyn
   const launched = await launchApp();
   try {
     const { app, page } = launched;
-    // The command's own key before anyone changes it, and how this computer draws it.
     const defaultKey = KEYBOARD_COMMANDS["regions.next"].keys[0].key;
     const defaultHint = hintOf("regions.next");
     const keyboard = keyboardSettings(page);

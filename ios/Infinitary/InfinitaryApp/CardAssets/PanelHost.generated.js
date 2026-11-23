@@ -104407,7 +104407,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       reason: _enum(["unresponsive", "exited"]),
       /** When it was noticed, ISO wall time. */
       at: string(),
-      /** The code version that was stopped. */
       version: string()
     }).optional(),
     /**
@@ -104813,7 +104812,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const noteDoneSchema = object({
     label: string(),
     restWords: string(),
-    /** The click closes the note's task as answered. */
     closesTask: boolean()
   });
   function answerWaitWords(since, now) {
@@ -104870,7 +104868,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const CARD_WIDTHS = ["regular", "wide", "full"];
   const cardWidthSchema = _enum(CARD_WIDTHS);
   const cardEndedSchema = object({
-    /** Who ended it: the card's crewmate or the first mate. */
     by: _enum(["crewmate", "firstmate"]),
     /** The author's reason, written for the captain; absent when it gave none. */
     reason: string().optional(),
@@ -105071,7 +105068,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     height: number().int().positive(),
     durationMs: number().int().positive(),
     bytes: number().int().positive(),
-    /** The SHA-256 of the bytes the host verified and copied, in hex. */
     sha256: string().regex(/^[0-9a-f]{64}$/)
   });
   const cardPictureSchema = strictObject({
@@ -105189,7 +105185,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     value: string().max(CARD_ANSWER_TEXT_MAX),
     /** The words bound to the option, when any are. */
     label: string().max(CARD_QUESTION_LABEL_MAX).nullable(),
-    /** Checked or selected as the author wrote the body. */
     authoredDefault: boolean(),
     disabled: boolean(),
     /** Laid out with no box: in the body, but not on screen. */
@@ -105274,7 +105269,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** Higher shows first in the stack. */
     priority: number(),
     title: string(),
-    /** Mono metadata line: relative time, crewmate ref. */
     meta: string(),
     /**
      * The model its author ran on, as a label (a crewmate's card). The chrome
@@ -105488,7 +105482,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     alreadyAnswered: object({ messageId: number().int(), by: string(), text: string() }).optional(),
     /** A closed card's dated note. */
     clarification: literal(true).optional(),
-    /** What the write kept as it was. */
     unchanged: array(string()).optional(),
     display: _enum(["available", "held"]),
     responseId: string().optional(),
@@ -105640,7 +105633,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     signInOn: signInOnSchema.optional(),
     /** Settings -> Projects starts that computer's own sign-in where projects live on arrival. */
     forgeSignInOn: forgeSignInOnSchema.optional(),
-    /** The section, the item it shows and the phone's link, as `settingsPlaceShape` says. */
     ...settingsPlaceShape
   });
   const cardDisplaySchema = strictObject({
@@ -105825,7 +105817,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     scope: scopeSchema,
     /** A concept whose neighborhood alone is drawn. */
     focus: entryIdSchema.optional(),
-    /** How far from `focus`: one hop or two. */
     hops: union([literal(1), literal(2)]).optional(),
     /** Words that narrow the graph to the concepts they find. */
     query: string().max(QUERY_MAX).optional()
@@ -105879,7 +105870,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const knowledgeConceptsArgsSchema = strictObject({
     scope: scopeSchema,
     query: string().max(QUERY_MAX).optional(),
-    /** From 0. */
     page: number().int().min(0).max(1e4).optional()
   });
   const knowledgeConceptRowSchema = object({
@@ -106185,7 +106175,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The revision the work used, and what it said then. */
     revision: number().int().positive(),
     title: string(),
-    /** The entry's current revision, and what it says now. */
     current: number().int().positive(),
     currentTitle: string(),
     retired: boolean(),
@@ -109536,7 +109525,6 @@ ${FRAME_KEYBOARD_SCRIPT}
       /** The one line the crewmate wrote with the call, or a plain reading when it wrote none. */
       reading: string(),
       result: crewResultSchema.nullable(),
-      /** What an edit or a write changed, from its arguments. */
       diff: crewDiffSchema.optional()
     }),
     /** A line the crewmate was told, and by whom; queued until its session holds it. */
@@ -109556,7 +109544,6 @@ ${FRAME_KEYBOARD_SCRIPT}
       text: string(),
       items: array(object({ label: string(), state: planItemStateSchema }))
     }),
-    /** A report, its headline and its whole text. */
     object({ kind: literal("report"), ...line$1, summary: string(), text: string() }),
     /** A card it put up; its id when the call named one. */
     object({
@@ -109567,9 +109554,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     }),
     /** The pull request it opened. */
     object({ kind: literal("change"), ...line$1, title: string() }),
-    /** A turn someone stopped before it finished, and who. */
     object({ kind: literal("stopped"), ...line$1, by: crewSenderSchema }),
-    /** Its conversation was shortened to fit. */
     object({ kind: literal("compacted"), ...line$1 }),
     /** A turn the model could not finish, in its error's words. */
     object({ kind: literal("failed"), ...line$1, text: string() })
@@ -109611,11 +109596,8 @@ ${FRAME_KEYBOARD_SCRIPT}
      * Code the person installed (F14), so a Mac without it says so here.
      */
     unavailable: object({ note: string(), detail: string() }).optional(),
-    /** Whether credentials are currently configured. */
     connected: boolean(),
-    /** Which auth type is active when connected. */
     activeAuthType: _enum(["oauth", "api_key"]).optional(),
-    /** Whether the provider charges by use rather than supplying a subscription allowance. */
     billedPerToken: boolean()
   });
   const authPromptSchema = object({
@@ -110817,14 +110799,11 @@ ${FRAME_KEYBOARD_SCRIPT}
   });
   const batchSendBackSchema = object({
     taskId: string(),
-    /** The version sent back. */
     head: string(),
     reason: string(),
     at: number(),
-    /** The batch's pull request, where it was opened. */
     number: number().int().positive().optional(),
     url: string().nullable().optional(),
-    /** The batch's checks that failed at the held version. */
     failed: array(string()),
     /**
      * The batch's checks that were cancelled, skipped or unfinished there;
@@ -111082,7 +111061,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     label: stopLabelSchema,
     check: stopCommandSchema,
     remove: stopCommandSchema,
-    /** The kept folder for the job's files. */
     folder: string().min(1).max(4096),
     /** The system account the job runs as: the one the crewmate's shell runs as there. */
     account: string().max(256),
@@ -111555,7 +111533,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   const forgeSignInStateSchema = _enum(["ok", "needs_reauth", "unavailable", "unknown"]);
   const forgeServerViewSchema = object({
     kind: string().min(1).max(32),
-    /** What that kind of server is called ("GitHub Enterprise"). */
     name: string().min(1).max(64),
     /** This kind also offers browser sign-in with a registered application. */
     browser: boolean().optional()
@@ -111574,7 +111551,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     since: number().int().nonnegative(),
     /** Public application identifier, never an application secret. */
     applicationId: string().max(256).optional(),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional(),
     /** The sign-in is GitHub CLI's, asked each time it is needed; absent for the app's own. */
     way: _enum(["cli"]).optional()
@@ -111582,7 +111558,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   const forgeHostViewSchema = object({
     host: string().min(1).max(253),
     name: string().min(1).max(64),
-    /** The kind of server and the methods it offers. */
     server: forgeServerViewSchema.optional()
   }).strict();
   const forgeSignInFlowSchema = object({
@@ -111785,7 +111760,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     windows: array(quotaWindowViewSchema),
     /** Paying past the allowance, as the provider reports it (`quotaCreditsViewSchema`). */
     credits: quotaCreditsViewSchema.optional(),
-    /** Saved resets the account holds, as the provider reports them (`quotaSavedResetsViewSchema`). */
     savedResets: quotaSavedResetsViewSchema.optional(),
     /**
      * The account's Keep going on credits switch is on, as the vault holds it
@@ -113494,7 +113468,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     absenceDeclared: boolean()
   });
   object({
-    /** The default branch's version the checks were read on. */
     sha: string(),
     at: number(),
     items: array(object({ name: string(), state: checkStateSchema }))
@@ -114777,7 +114750,6 @@ ${FRAME_KEYBOARD_SCRIPT}
       did: string().optional(),
       /** Who holds it besides the crewmate; absent while it is the crewmate's. */
       control: _enum(TASK_BROWSER_CONTROLS).optional(),
-      /** The crewmate's request for help, while it stands. */
       request: taskBrowserRequestSchema.optional(),
       /** The captain has handed it back: it may hold what he signed in to, until it stops. */
       returned: literal(true).optional(),
@@ -114889,7 +114861,6 @@ ${FRAME_KEYBOARD_SCRIPT}
       key: string().min(1).max(32),
       code: string().max(32),
       keyCode: number().int().min(0).max(255),
-      /** What the key types, for a key that types. */
       text: string().max(4).optional(),
       modifiers,
       /** An editing command the key stands for in the window's own key system: select all, undo, paste. */
@@ -115456,7 +115427,6 @@ ${FRAME_KEYBOARD_SCRIPT}
      * Move to a computer. Absent otherwise, and on an older home.
      */
     movable: literal(true).optional(),
-    /** Its move to another computer, while one stands. */
     computerMove: computerMoveViewSchema.optional(),
     kind: taskKindSchema,
     title: string(),
@@ -115635,7 +115605,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   object({
     /** Monotonic per mutation; a later push with a lower seq is stale. */
     seq: number(),
-    /** When this snapshot was built. */
     at: number(),
     projects: array(projectViewSchema),
     tasks: array(taskViewSchema),
@@ -115876,7 +115845,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     at: number(),
     /** Rows new or changed since the base, whole. */
     upserts: array(taskViewSchema),
-    /** Ids of rows that left the board. */
     removed: array(string()),
     projects: array(projectViewSchema),
     links: object({
@@ -116324,7 +116292,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   const categoriesSchema = (value) => object({ input: value, output: value, cacheRead: value, cacheWrite: value });
   const usageAmountSchema = object({
     tokens: categoriesSchema(number()),
-    /** Records summed here. */
     records: number(),
     /** Records that reported any token count. */
     counted: number(),
@@ -116406,7 +116373,6 @@ ${FRAME_KEYBOARD_SCRIPT}
      * estimate, so either unit can name its own three largest.
      */
     places: array(usagePlaceSchema),
-    /** Where it went, by project and kind of work. */
     where: usageWhereSchema,
     /** Tasks finished in the period and kind of work. */
     finished: number(),
@@ -118017,7 +117983,6 @@ ${FRAME_KEYBOARD_SCRIPT}
           return;
       }
     }
-    /** A data file the body names, by the address it names it with; never another. */
     async dataRequest(asker, request) {
       const name = cardDataName(request.src);
       if (!name || !this.spec.data?.has(name) || !this.deps.data) {
@@ -118113,7 +118078,6 @@ ${FRAME_KEYBOARD_SCRIPT}
         this.inFlight -= 1;
       }
     }
-    /** Counts one async request in, refusing past the cap. */
     admit(asker) {
       if (this.inFlight >= FRAME_MAX_IN_FLIGHT) {
         this.refuse(asker, "too_many_in_flight", `a frame may await ${FRAME_MAX_IN_FLIGHT} requests`);
@@ -118196,7 +118160,6 @@ details[open]::details-content {
 `;
   const colorsCss = `/* Infinitary — color system. Dark ("deep space") is the default theme; light opts in via [data-theme="light"]. */
 :root {
-  /* base */
   --bg-0: #05070d; /* void — the opaque fallback behind --material-tint */
   --material-tint: rgba(5, 7, 13, 1); /* opaque tint mixed toward clear by wash percentage */
   --bg-1: #0a0e18; /* surface — panels, input shell */
@@ -118300,7 +118263,7 @@ details[open]::details-content {
 }
 `;
   const effectsCss = '/* Infinitary — radii, shadows, glow, blur, motion. */\n:root {\n  --radius-xs: 3px; /* small controls: a 14-16px box that must read square, not round */\n  --radius-s: 6px; /* badges, keycaps */\n  --radius-m: 10px; /* buttons, inputs */\n  --radius-l: 16px; /* cards, panels */\n  --radius-pill: 999px; /* voice input shell, pills */\n  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);\n  --shadow-2: 0 8px 30px -12px rgba(0, 0, 0, 0.6);\n  --shadow-card: 0 12px 40px -16px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(150, 180, 255, 0.06) inset;\n  --glow-accent: 0 0 32px -8px var(--accent-glow);\n  /* solid card material (legacy acrylic token names) */\n  --acrylic-bg: var(--bg-2);\n  --acrylic-blur: none; /* @kind other */\n  --acrylic-border: var(--line-1);\n  --acrylic-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 48px -24px rgba(0, 0, 0, 0.6);\n  --blur-overlay: blur(16px); /* @kind other */\n  /* motion — 160 in place, 360 for a surface, 700 for a dissolve; the card\n     stack, popovers, summaries and button labels have their own moves below */\n  --ease-drift: cubic-bezier(0.25, 0.1, 0.25, 1); /* @kind other */\n  --ease-out: cubic-bezier(0.32, 0.72, 0, 1); /* @kind other — the glide */\n  --dur-fast: 160ms; /* @kind other */\n  --dur-med: 360ms; /* @kind other */\n  --dur-slow: 700ms; /* @kind other */\n  --dur-fade: 160ms; /* @kind other — opacity-only opt-in, also under reduced motion */\n  --dur-quick: 200ms; /* @kind other — a popover grows, a summary slides or moves, a closed card drops away */\n  --dur-page: 300ms; /* @kind other — a card pages in, or comes forward after a close */\n  --dur-arrive: 420ms; /* @kind other — a card arrives on an empty stage */\n  --dur-popover-out: 120ms; /* @kind other */\n  --dur-summary-out: 100ms; /* @kind other */\n  --delay-label: 500ms; /* @kind other — the first icon-button label waits this long */\n  --hold-key-reminder: 5000ms; /* @kind other — the key reminder shows this long after a click */\n  --move-page: 32px; /* @kind other — paging slides this far, with the arrow */\n  --move-arrive: 12px; /* @kind other */\n  --move-drop: 10px; /* @kind other — a closed card drops this far */\n  --move-stack: 8px; /* @kind other — the next card comes forward from this far up */\n  --move-summary: 8px; /* @kind other — a summary slides this far from what it describes */\n  --scale-arrive: 0.98; /* @kind other */\n  --scale-stack: 0.97; /* @kind other — a card behind the shown one */\n  --scale-pop: 0.94; /* @kind other — a popover grows from this size */\n}\n[data-theme="light"] {\n  --shadow-1: 0 1px 2px rgba(20, 30, 60, 0.1);\n  --shadow-2: 0 8px 30px -12px rgba(20, 30, 60, 0.18);\n  --shadow-card: 0 12px 40px -16px rgba(20, 30, 60, 0.22);\n  --acrylic-bg: var(--bg-2);\n  --acrylic-blur: none; /* @kind other */\n  --acrylic-border: var(--line-1);\n  --acrylic-shadow:\n    inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 32px -12px rgba(20, 30, 60, 0.28),\n    0 2px 8px -2px rgba(20, 30, 60, 0.1);\n}\n\n/* Shared by the shell and every frame. Character motion has its own guard.\n   Only short, explicitly opted-in opacity fades survive. */\n@media (prefers-reduced-motion: reduce) {\n  :root {\n    --dur-fast: 0ms;\n    --dur-med: 0ms;\n    --dur-slow: 0ms;\n    --dur-quick: 0ms;\n    --dur-page: 0ms;\n    --dur-arrive: 0ms;\n    --dur-popover-out: 0ms;\n    --dur-summary-out: 0ms;\n  }\n}\n';
-  const fontsCss = '/* Infinitary webfonts - Space Grotesk (UI/display) + JetBrains Mono (data/code).\n   Vendored locally from Google Fonts (SIL Open Font License 1.1) so the package is offline-complete.\n   Binaries live in assets/fonts/; regenerate by re-fetching the css2 URL below with a woff2-capable UA.\n   https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap */\n/* JetBrains Mono italic cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono italic cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono italic greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono italic vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono italic latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono italic latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* JetBrains Mono normal cyrillic-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n/* JetBrains Mono normal cyrillic */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n/* JetBrains Mono normal greek */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n/* JetBrains Mono normal vietnamese */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* JetBrains Mono normal latin-ext */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* JetBrains Mono normal latin */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n/* Space Grotesk normal vietnamese */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n/* Space Grotesk normal latin-ext */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n/* Space Grotesk normal latin */\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n';
+  const fontsCss = '/* Infinitary webfonts - Space Grotesk (UI/display) + JetBrains Mono (data/code).\n   Vendored locally from Google Fonts (SIL Open Font License 1.1) so the package is offline-complete.\n   Binaries live in assets/fonts/; regenerate by re-fetching the css2 URL below with a woff2-capable UA.\n   https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap */\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: italic;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-italic-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic-ext.woff2) format("woff2");\n  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-cyrillic.woff2) format("woff2");\n  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-greek.woff2) format("woff2");\n  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n@font-face {\n  font-family: "JetBrains Mono";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/jetbrainsmono-normal-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-vietnamese.woff2) format("woff2");\n  unicode-range:\n    U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;\n}\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin-ext.woff2) format("woff2");\n  unicode-range:\n    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;\n}\n@font-face {\n  font-family: "Space Grotesk";\n  font-style: normal;\n  font-weight: 300 700;\n  font-display: swap;\n  src: url(../assets/fonts/spacegrotesk-latin.woff2) format("woff2");\n  unicode-range:\n    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;\n}\n';
   const spacingCss = "/* Infinitary — spacing scale (4px base). Generous whitespace is the default; density is the exception. */\n:root {\n  --space-1: 4px;\n  --space-2: 8px;\n  --space-3: 12px;\n  --space-4: 16px;\n  --space-5: 24px;\n  --space-6: 32px;\n  --space-7: 48px;\n  --space-8: 64px;\n  --space-9: 96px;\n  /* layout - dock rails are at least one fifth of the window, not resizable */\n  --rail-width: max(300px, 20vw);\n  /* layout - the voice input: one line is the pill, and the radius stays half of it at every height */\n  --prompt-height: calc(var(--space-7) + var(--space-1));\n  --prompt-radius: calc(var(--prompt-height) / 2);\n  /* layout - a card's reply field: one line of --text-sm is the pill (2px is its hairline), and the radius stays half of it at every height */\n  --reply-height: calc(var(--text-sm) * var(--leading-body) + 2 * var(--space-2) + 2px);\n  --reply-radius: calc(var(--reply-height) / 2);\n}\n";
   const typographyCss = `/* Infinitary — typography. Space Grotesk for UI and display, JetBrains Mono for data, keybinds, code. */
 /* Each stack is the chosen face, then the faces for other scripts, then the

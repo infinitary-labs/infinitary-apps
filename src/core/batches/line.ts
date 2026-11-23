@@ -118,7 +118,6 @@ export function sendBack(
   return { record: { ...without, sentBack: [...(without.sentBack ?? []), sent] }, sent };
 }
 
-/** A change's place as its batch check says it (`BatchStatus`). */
 export function batchStatus(place: Standing): BatchStatus {
   const link = (url: string | null | undefined) => (url ? { link: url } : {});
   switch (place.state) {
@@ -332,7 +331,6 @@ export function awaitedJoins(record: BatchRecord): boolean {
   return awaits ? record.line.some((entry) => entry.taskId === awaits) : fixWaits(record);
 }
 
-/** Whether an approved fix waits in line for the held batch. */
 export function fixWaits(record: BatchRecord): boolean {
   return Boolean(record.open?.hold) && record.line.some((entry) => entry.fix);
 }

@@ -81,7 +81,6 @@ export function askLoginShellEarly(
   return true;
 }
 
-/** What the command says to whoever reads its output, and why it ended when it did. */
 export const RUN_WORDS = {
   started: "Infinitary is running here with no window, started by a command.",
   stopped: "Infinitary stopped.",
@@ -136,7 +135,6 @@ export const RUN_WORDS = {
  */
 export const WINDOW_PROFILE_FOLDER = "window-profile";
 
-/** The window's own browser profile beside a run (`WINDOW_PROFILE_FOLDER`). */
 export function windowProfileDir(dataDir: string): string {
   return join(dataDir, WINDOW_PROFILE_FOLDER);
 }

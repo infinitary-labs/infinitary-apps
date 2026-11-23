@@ -21,7 +21,6 @@ function publish(next: Map<string, RailRefusal>): void {
   for (const listener of [...listeners]) listener();
 }
 
-/** The key a refusal is kept under: its kind and its id. */
 export function refusalKey(kind: PanelMountKind, id: string): string {
   return `${kind}:${id}`;
 }

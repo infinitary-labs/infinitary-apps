@@ -138,13 +138,11 @@ describe("a computer's own account that used up its allowance", () => {
     expect(card?.id).toBe("card-credits-offer-mini-acct-codex");
     expect(card?.title).toMatch(/^Codex · Work on Mac mini has used up its allowance until /);
     expect(card?.body).toContain("Crew work on Mac mini drops to a weaker model");
-    // Its button names the account on that computer by its key.
     expect(card?.actions?.[0]?.effect).toEqual({
       kind: "host",
       op: "keep-going-on-credits",
       arg: "acct-codex@mini",
     });
-    // Offered once while the allowance stays spent.
     world.cards.spentAt(["openai-codex"], "mini");
     expect(world.raised).toHaveLength(1);
 

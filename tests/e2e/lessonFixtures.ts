@@ -29,7 +29,6 @@ export const LESSON_FRACTIONS_GOAL_TITLE = "Fractions: what do you want to be ab
 export const LESSON_FRACTIONS_ROUND_TITLE = "Halves and quarters on a number line";
 export const LESSON_LEARNER_LINE = "Likes short steps and pictures.";
 export const LESSON_GOAL_ANSWER = "beat my dad at chess";
-/** The goal card's one field, as both subjects ask it. */
 export const LESSON_GOAL_LABEL = "What do you want to be able to do?";
 /** The footer choices the teacher's cards carry. */
 export const LESSON_CHOICES = {
@@ -83,7 +82,6 @@ export const FRACTION_ITEMS: LessonItem[] = Array.from({ length: 8 }, (_, index)
   worked: "Half of the way from 0 to 1 is 0.5.",
 }));
 
-/** The round card body: the shipped parts in order, with the teacher's items filled in. */
 export function lessonRoundBody(items: LessonItem[], nextGoal: string, aim: string): string {
   const part = (name: string) => readFileSync(join(PARTS, name), "utf8");
   const quiz = part("quiz.html").replace(
@@ -104,7 +102,6 @@ export const LESSON_GOAL_BODY = `<p>Let's find out what you want to do with ches
 
 export const LESSON_FRACTIONS_GOAL_BODY = `<p>Let's find out what you want to do with fractions!</p><p>Tell me in your own words.</p><label for="goal">${LESSON_GOAL_LABEL}</label><input id="goal" name="goal" type="text">`;
 
-/** The welcome-back card: the goal, then each skill as practising, learned or next. */
 export const LESSON_WELCOME_BODY =
   "<p>Your goal: beat my dad at chess.</p><ul><li>Rook slides: practising</li><li>Pawn captures: next</li></ul>";
 

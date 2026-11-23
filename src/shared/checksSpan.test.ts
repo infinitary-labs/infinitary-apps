@@ -28,7 +28,6 @@ describe("the checks cell's time", () => {
   });
 
   it("shows no time where none stands", () => {
-    // Checks that have not started, a reading with no finish, merged elsewhere, not read.
     expect(checksSpanOf({ ci: "pending" })).toBeNull();
     expect(checksSpanOf({ ci: "green", ciStartedAt: started })).toBeNull();
     expect(checksSpanOf({ ci: "merged", ciStartedAt: started, ciFinishedAt: finished })).toBeNull();

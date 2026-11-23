@@ -94,10 +94,8 @@ export const BOARD_PUSH_COALESCE_MS = 40;
 /** Most closed tasks a typed search returns. */
 const SEARCH_LIMIT = 50;
 
-/** How the board reaches clients on one push. */
 export type BoardPushMode = "snapshot" | "delta";
 
-/** The main thread's next turn, through `setImmediate`. */
 function onNextTurn(run: () => void): () => void {
   const handle = setImmediate(run);
   return () => clearImmediate(handle);
@@ -266,9 +264,6 @@ export class TaskProtocol {
     }
   }
 
-  // ---- reads --------------------------------------------------------------
-
-  /** The board; `{ closed: false }` leaves out its closed rows (`boardWithoutClosed`). */
   board(read?: TaskBoardRead): TaskBoard {
     if (read?.closed === false) {
       const cardTasks = new Set<string>();
@@ -430,8 +425,6 @@ export class TaskProtocol {
     // Reading them here must not rebuild every view for the projects subscriber.
     return this.board().projects;
   }
-
-  // ---- the emitter --------------------------------------------------------
 
   private onChange(change: TaskChange): void {
     const publication =

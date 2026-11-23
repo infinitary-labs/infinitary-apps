@@ -98,7 +98,6 @@ function setup(run: () => typeof RUN) {
     now: clock,
     coalesceMs: 0,
   } as never);
-  // The real run reader, answered as GitHub answers.
   const workflows = new GitHubWorkflows(
     () => "/repos/infinitary-labs/infinitary",
     async (path) => {
@@ -149,7 +148,6 @@ describe("checks timing for a hand-started run (INF-594)", () => {
     // GitHub started the run at 7:53:24 PM Pacific; at 11:00 PM that is 3h 06m.
     expect(checksWords()).toBe("running for 3h 06m");
 
-    // The publish job ends the run; the watcher reads its end and stops watching.
     run = {
       ...RUN,
       status: "completed",

@@ -2,8 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useShellStore } from "./store";
 import { resetShell } from "./storeTestKit";
 
-/** The look (./appearance.ts): how its saves are told and applied. */
-
 describe("appearance saves", () => {
   const SAVED = {
     theme: "dark",
@@ -45,7 +43,6 @@ describe("appearance saves", () => {
       throw new Error("Could not save this setting: Locked.");
     });
     useShellStore.getState().setTheme("light");
-    // The choice shows at once, as before.
     expect(useShellStore.getState().theme).toBe("light");
     await vi.waitFor(() =>
       expect(useShellStore.getState().appearanceError).toEqual({

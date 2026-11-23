@@ -42,7 +42,6 @@ export function moveTargetRepository(
   );
 }
 
-/** What a move into another project writes through: the task writer, its graph and the repositories. */
 export type ProjectMoveContext = {
   writer: TaskWriter;
   graph: Pick<TaskGraph, "descendants">;

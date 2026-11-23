@@ -31,7 +31,6 @@ async function activityLines(page: Page): Promise<string[]> {
   return (await page.evaluate(() => window.infinitary.feed.recent())).map((line) => line.text);
 }
 
-/** The titles of the operations on the record, oldest first. */
 async function operations(page: Page): Promise<string[]> {
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   return board.tasks
@@ -66,7 +65,6 @@ test("a drag of the window wash is one Activity line and one change, also after 
   let launched: LaunchedApp = await launchApp({ withMockProvider: true });
   const { userDataDir, homeDir } = launched;
   try {
-    // One drag: one line from where it started to where it settled, and one change.
     const { page } = launched;
     const before = await operations(page);
     await dragWash(page, [20, 35, 50]);
@@ -86,7 +84,6 @@ test("a drag of the window wash is one Activity line and one change, also after 
   launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
   try {
     const { page } = launched;
-    // After a restart: still the one line and the one change.
     await expect(feedLine(page, captainWash(0, 50))).toBeVisible();
     expect((await activityLines(page)).filter((line) => line === captainWash(0, 50))).toHaveLength(
       1,

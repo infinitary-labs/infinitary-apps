@@ -26,7 +26,6 @@ import { noteDone, shownEntry } from "./stack";
  * that the crewmate's session stays readable once its task is settled.
  */
 
-/** The task the captain commissions. */
 const TITLE = "write a short status note";
 
 let launched: LaunchedApp;
@@ -57,7 +56,6 @@ test("exposes the Observe tab in unpackaged settings with the Firstmate row", as
   await expect(frame.locator("[data-observe-banner]")).toBeVisible();
   await expect(frame.locator('[data-observe-session="firstmate"]')).toBeVisible();
   await expect(frame.locator("[data-observe-detail]")).toContainText("First mate");
-  // Nothing has happened yet: the pane says so instead of showing nothing.
   await expect(frame.locator("[data-observe-transcript-note]")).toContainText(NO_SESSION_YET);
   await page.keyboard.press("Escape");
 });

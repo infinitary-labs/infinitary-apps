@@ -180,7 +180,6 @@ struct ApprovalStorageTests {
         keychain.record = valid
         #expect(try ApprovalKey.load(on: .simulator, from: keychain) == kept)
 
-        // A write that fails leaves the damaged bytes.
         keychain.record = damaged
         keychain.writing = errSecInteractionNotAllowed
         let failed = #expect(throws: PhoneError.self) { try ApprovalKey.replace(damage, on: .simulator, in: keychain) }

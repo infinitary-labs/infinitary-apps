@@ -32,7 +32,6 @@ export const EVENT_SCREEN_QUESTION: DecisionQuestion = {
   abstain: "unclear",
 };
 
-/** What the screen sends about one event: the rule's words, the event's kind, and its summary. */
 export function eventScreenState(
   rule: { waitsFor: string; event: string },
   item: AutomationEventItem,
@@ -46,7 +45,6 @@ export function eventScreenState(
   };
 }
 
-/** The decision service as the screen reaches it. */
 export type EventScreenModels = {
   decide(
     caller: DecisionCaller & { use: DecisionUseId },

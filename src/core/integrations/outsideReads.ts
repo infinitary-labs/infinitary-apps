@@ -74,7 +74,6 @@ export class OutsideReads {
     this.write();
   }
 
-  /** The files from outside a task's hand-over folder holds. */
   filesOf(reader: string): readonly OutsideFile[] {
     return this.state.files[reader] ?? [];
   }

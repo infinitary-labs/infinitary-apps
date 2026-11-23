@@ -44,7 +44,6 @@ export function StageEntry({
   style,
   children,
 }: {
-  /** The stack entry it draws. */
   entryId: string;
   role: StageRole;
   /** An unready shown document draws, but cannot receive a choice or focus. */

@@ -13,7 +13,6 @@ import type { AccountBackend } from "./accountBackend";
 export type ProviderViewSources = {
   /** Pi's view of the providers it serves; absent ids are simply not shown. */
   piProviders: () => ProviderView[];
-  /** Registered backends by id, for the non-Pi rows. */
   backends: Map<string, AccountBackend>;
   /**
    * The vault's accounts, which decide a non-Pi row's connected state.

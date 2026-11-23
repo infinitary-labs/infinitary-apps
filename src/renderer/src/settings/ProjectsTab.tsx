@@ -84,7 +84,6 @@ export function drainPendingPolicy(
  */
 type OpenPage = { project: string | null; repo: string };
 
-/** The members of an entry, in the list's order. */
 function membersOf(entry: ProjectEntry): RepoView[] {
   return entry.kind === "several" ? entry.repos : [entry.repo];
 }

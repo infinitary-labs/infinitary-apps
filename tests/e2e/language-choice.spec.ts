@@ -24,7 +24,6 @@ test("Language stays English over the computer's, takes the captain's choice on 
   try {
     const { page } = first;
     const html = page.locator("html");
-    // The computer's German does not switch the window.
     await expect(html).toHaveAttribute("lang", "en");
 
     // Settings by its key, then Appearance, the tab after General, by the arrow.
@@ -52,7 +51,6 @@ test("Language stays English over the computer's, takes the captain's choice on 
       await expect(html).toHaveAttribute("lang", stepped ?? "");
       await expect(picker).toBeFocused();
 
-      // A language stepped to applies when the keyboard leaves the picker too.
       await pressKey(picker, "ArrowUp");
       const left = choosableLanguages().at(-2);
       await expect(picker).toHaveValue(left ?? "");
@@ -88,14 +86,12 @@ test("Language stays English over the computer's, takes the captain's choice on 
   try {
     const { page } = second;
     const html = page.locator("html");
-    // The choice outlives the restart, over the computer's German.
     await expect(html).toHaveAttribute("lang", "ar");
     await pressWindowKey(second.app, ",", ["meta"]);
     await pressKey(page.locator('[data-settings-tabs] [role="tab"]').first(), "ArrowDown");
     const picker = settingRow(page, "language").locator("select");
     await expect(picker).toHaveValue("ar");
 
-    // The default saves no language and speaks English again, not German.
     await focusOn(picker);
     await picker.selectOption("");
     await expect(html).toHaveAttribute("lang", "en");

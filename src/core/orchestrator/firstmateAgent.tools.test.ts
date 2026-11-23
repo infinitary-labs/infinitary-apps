@@ -30,7 +30,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** The first mate agent: the served tool surface and the graph tools (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
 
 /**
@@ -584,7 +583,6 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(moved).toMatch(/^Updated INF-1: moved to infinitary as INF-1, Runs on: /);
     expect(tasks.get(id)).toMatchObject({ key: "INF-1", shape: { runs_on_ask: "this-mac" } });
 
-    // Back to a project that keeps its tasks here: refused there, and nothing moves.
     const before = tasks.get(id);
     expect(
       await text("update_task", { task: "INF-1", project: "NOTE", runs_on: "this-mac" }),
@@ -649,7 +647,6 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       /Unknown task "NOPE-1"/,
     );
 
-    // The query side, with the derived flags.
     const rows = await text("tasks", { status: "open" });
     expect(rows).toContain("2 of 2 matching tasks:");
     expect(readTaskQueryText(rows).find((row) => row.key === impl?.key)?.waiting).toBe(
@@ -874,7 +871,6 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const feature = tasks.byKey("SCR-1")!;
     const docs = tasks.byKey("SCR-2")!;
 
-    // A name that is not one of its waits is refused, and nothing is filed.
     expect(
       await text("create_task", {
         title: "Release",
@@ -1062,7 +1058,6 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       await text("update_task", { task: "SCR-1", start_policy: "on-request", captain_stop: true }),
     ).toContain("SCR-1 is already recorded as stopped by the captain.");
 
-    // Open work it files on request in the same call takes it too.
     await text("create_task", {
       title: "Color tokens",
       goal: "Tokens",

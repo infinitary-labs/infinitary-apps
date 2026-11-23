@@ -41,7 +41,6 @@ function setup() {
     tasks,
     workspace,
     files,
-    /** Moves the clock on by `ms`. */
     pass: (ms: number) => {
       now += ms;
     },
@@ -308,7 +307,6 @@ describe("a closed task's leftover files", () => {
     await workspace.deletionsSettled();
     expect(readdirSync(paths.worktreeTrashDir)).toEqual([]);
 
-    // A later pass finds nothing more and writes nothing more.
     pass(DAY);
     await files.sweep();
     expect(removalNotes(tasks, "done-a")).toHaveLength(1);
@@ -522,7 +520,6 @@ describe("a closed task's leftover files", () => {
     closed("linked");
     symlinkSync(outside, join(paths.crewmatesDir, "linked", "evidence", "out"));
     symlinkSync(join(outside, "precious.txt"), join(paths.crewmatesDir, "linked", "copy.txt"));
-    // A task whose whole folder is a link to somewhere else.
     seedTask(tasks, { id: "aliased", title: "aliased", status: "cancelled" });
     mkdirSync(join(outside, "evidence"));
     symlinkSync(outside, join(paths.crewmatesDir, "aliased"));

@@ -78,14 +78,12 @@ function emptyWhy(view: PersonalExtensionView | undefined): string {
   return "its presence rule finds nothing to show (no data in the store key it names)";
 }
 
-/** Whose a registered panel is, by the plugin that registered it. */
 function kindOfPlugin(pluginId: string): PanelMountKind {
   if (pluginId.startsWith(PERSONAL_PLUGIN_PREFIX)) return "personal";
   if (pluginId.startsWith(INSTALLED_PLUGIN_PREFIX)) return "installed";
   return "app";
 }
 
-/** One registered panel, from the records its rail draws from. */
 function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
   const kind = kindOfPlugin(panel.pluginId);
   // The app's own panels are not in the core's snapshot; a panel of the
@@ -196,7 +194,6 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
   return mounts;
 }
 
-/** The create-your-own-panel slot's four facts, as the window holds them now. */
 function slotNow(layout: Layout): MountFacts["slot"] {
   const thirdCrewmateDoneAt = useShellStore.getState().firstRun?.thirdCrewmateDoneAt;
   const { panelsOn, ownPanel } = createPanelSlot.facts();

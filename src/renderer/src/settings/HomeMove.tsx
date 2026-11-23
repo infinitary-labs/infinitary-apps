@@ -42,7 +42,6 @@ export function useHomeMove(devices: readonly DeviceView[]): {
   };
 }
 
-/** A count the step carries, in the mono beside its sentence. */
 function countOf(progress: HomeMoveProgress): string | null {
   if (progress.total === undefined || progress.done === undefined || progress.total === 0)
     return null;

@@ -31,7 +31,6 @@ export type GmailRequest = (
   init?: { method?: "GET" | "POST"; json?: unknown },
 ) => Promise<{ status: number; body: Record<string, unknown> }>;
 
-/** The one event Gmail tells. */
 export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
   name: "message_received",
   label: "A message arrives",
@@ -155,7 +154,6 @@ function header(message: Message, name: string): string | undefined {
   return message.payload?.headers?.find((entry) => entry.name?.toLowerCase() === wanted)?.value;
 }
 
-/** Gmail's label ids by their names as the person sees them, and back. */
 async function labels(request: GmailRequest): Promise<{ id: string; name: string }[]> {
   const { body } = await request("/labels");
   return ((body.labels as { id?: string; name?: string }[] | undefined) ?? []).flatMap((label) =>
@@ -194,13 +192,11 @@ function decoded(data: string | undefined): string {
   return data ? Buffer.from(data, "base64url").toString("utf8") : "";
 }
 
-/** The parts of a message, depth first. */
 function partsOf(part: Part | undefined): Part[] {
   if (!part) return [];
   return [part, ...(part.parts ?? []).flatMap(partsOf)];
 }
 
-/** A message's words: its plain text, or its HTML read as text. */
 function textOf(message: Message): string {
   const parts = partsOf(message.payload).filter((part) => !part.filename);
   const plain = parts.find((part) => part.mimeType === "text/plain" && part.body?.data);
@@ -223,7 +219,6 @@ function textOf(message: Message): string {
 
 /** Elements whose content is not words a person reads. */
 const UNREAD = new Set(["script", "style", "head"]);
-/** Tags that end a line: a break, or the end of a paragraph, row, item or heading. */
 const LINE_ENDS = new Set([
   "br",
   "/p",

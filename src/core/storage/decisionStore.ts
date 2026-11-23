@@ -123,7 +123,6 @@ export type RoutingCandidateFact = {
   charge?: ChargeFact;
 };
 
-/** One candidate of an account selection, with the reading behind it. */
 export type AccountCandidateFact = {
   accountId: string;
   label: string;
@@ -436,7 +435,6 @@ export class DecisionStore {
     return parseCandidateFacts(row?.facts_json ?? null);
   }
 
-  /** Record one sort: the wake, its facts, the verdict and why. */
   recordSort(input: SupervisionOutcomeInput): number {
     const info = this.db
       .prepare(

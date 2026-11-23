@@ -48,7 +48,6 @@ export function systemSshTool(
   return findOnPath(name, hostEnv()) ?? `/usr/bin/${name}`;
 }
 
-/** The system's own ssh, as the home runs it. */
 export function systemSsh(): SshProgram {
   return { program: systemSshTool("ssh"), args: [] };
 }
@@ -120,7 +119,6 @@ export type RunSshOptions = {
   timeoutMs?: number;
 };
 
-/** The arguments ssh is started with: its options, the address, and the remote command as one line. */
 export function sshArguments(
   ssh: SshProgram,
   address: string,
@@ -267,9 +265,7 @@ const CONTROL_SUFFIX_BYTES = 17;
 export type SshMasterOptions = {
   ssh: SshProgram;
   address: string;
-  /** The remote command the connection's own session runs, word by word. */
   command: readonly string[];
-  /** Each line the remote command prints, as it arrives. */
   onLine: (line: string) => void;
   /** Where its control socket's folder is made; `/tmp` unless a test stands in its own. */
   controlBase?: string;
@@ -359,13 +355,11 @@ export class SshMaster {
     });
   }
 
-  /** Writes one line to the remote command's input; nothing once it is gone. */
   write(line: string): void {
     if (this.gone || !this.child.stdin?.writable) return;
     this.child.stdin.write(line.endsWith("\n") ? line : `${line}\n`);
   }
 
-  /** Whether the master still runs. */
   alive(): boolean {
     return !this.gone;
   }
@@ -448,7 +442,6 @@ function keepEnd(text: string): string {
   return cutTextEnd(text, KEEP_BYTES);
 }
 
-/** Whether `promise` settles within `ms`. */
 function within(promise: Promise<unknown>, ms: number): Promise<boolean> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(false), ms);

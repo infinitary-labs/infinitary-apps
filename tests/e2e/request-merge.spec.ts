@@ -416,7 +416,6 @@ test("a merge card for an adopted pull request waits while GitHub works out whet
     await expect
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))
       .toMatchObject({ status: "active" });
-    // The task notes the merge where the captain reads the activity.
     await expandDock(page, "activity");
     await expect(taskLine(page, await taskKey(page, "Watch the release"), "note")).toBeVisible();
     await regionShot(
@@ -512,7 +511,6 @@ test("one task holds a merge card for each of two pull requests, and each click 
   const launched = await launchApp({ userDataDir, env: github.env });
   try {
     const { page } = launched;
-    // Both merge cards are up for the one task.
     await expect
       .poll(async () =>
         (await page.evaluate(() => window.infinitary.cards.list()))
@@ -603,7 +601,6 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
     for (const words of named) await expect(strip).toContainText(words);
     await expect(strip.locator('[data-inf-skip="check"]')).toHaveCount(1);
     await expect(strip.locator('[data-inf-skip="check"]')).toContainText(SKIP_RULES_FAILED_CHECK);
-    // Nothing is sent before the click: no merge of either kind.
     expect(github.asyncMerges()).toEqual([]);
     expect(github.requests().some((request) => request.startsWith("PUT "))).toBe(false);
     const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;

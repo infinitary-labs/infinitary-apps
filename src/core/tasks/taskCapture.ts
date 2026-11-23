@@ -865,7 +865,6 @@ export class TaskCapture {
     return run();
   }
 
-  /** A fleet/self operation the Firstmate performed, filed done/settled. */
   fileOperation(input: FileOperationInput): TaskRecord {
     const at = this.writer.now();
     const actor = input.actor ?? "firstmate";
@@ -938,7 +937,6 @@ export class TaskCapture {
     return run();
   }
 
-  /** An open decision task waiting on the captain; its card id is the gate ref. */
   fileDecision(input: FileDecisionInput): TaskRecord {
     const at = this.writer.now();
     const actor = input.actor ?? "firstmate";
@@ -1013,12 +1011,10 @@ export class TaskCapture {
     run();
   }
 
-  /** When a card on the task other than `exceptCardId` was last resolved, if one ever was. */
   cardResolvedAt(id: string, exceptCardId: string): number | undefined {
     return this.writer.events.latestAtOtherRef(id, "card_resolved", exceptCardId);
   }
 
-  /** When a card with this id was last raised on the task, if it ever was. */
   cardRaisedAt(id: string, cardId: string): number | undefined {
     return this.writer.events.latestAtForRef(id, "card_raised", cardId);
   }

@@ -143,7 +143,6 @@ describe("command search's list", () => {
         refusal: null,
       },
       { id: "cards.maximize", label: "Maximize or restore card", keys: undefined, refusal: null },
-      // Find in this card: ⌘F opens the find field in the shown card's head.
       { id: "cards.find", label: "Find in this card", keys: "⌘F", refusal: null },
       // The approved desktop annotation plan makes Point at a searchable keyboard command.
       {

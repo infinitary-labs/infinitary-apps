@@ -1340,7 +1340,6 @@ export const MIGRATIONS: readonly Migration[] = [
     AND json_type(merge_authorization_json, '$.queueRemovals') = 'array';`,
   // Contribution routing stores only project identities and the captain's destination choice.
   `ALTER TABLE repos ADD COLUMN contribution_json TEXT;`,
-  // Keyboard presets (`keyboardPresets`).
   keyboardPresets,
   // A task-less feed line's fact beside its English (docs/i18n.md, "Saved facts"); older lines keep their words.
   (db) => addColumn(db, "activity_events", "said_json", "TEXT"),
@@ -1495,7 +1494,6 @@ export const MIGRATIONS: readonly Migration[] = [
   CREATE TRIGGER IF NOT EXISTS card_drafts_removed AFTER DELETE ON cards
     BEGIN DELETE FROM card_drafts WHERE card_id = OLD.id; END;
   `,
-  // A crewmate card's declared live reads and views (`addCardLiveReads`).
   addCardLiveReads,
   // What the captain agreed each panel of an added runbook may do, by its
   // folder (docs/runbooks.md, "Panels"), from the runbook's own add card.

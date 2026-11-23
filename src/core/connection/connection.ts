@@ -681,7 +681,6 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       return client.viewer;
     };
 
-    /** What a connection's hello says it does: what it says, or what its kind does. */
     const roleOf = (client: Client, hello: Extract<ClientFrame, { t: "hello" }>): DeviceRole =>
       // A Mac that does both runs its work unless it says it controls.
       hello.as ?? (client.device.kind === "view" ? "view" : "work");

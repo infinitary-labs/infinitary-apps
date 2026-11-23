@@ -62,12 +62,10 @@ test("records page one per task beside the cards, and the character returns when
     await pressRow(page, chart.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", chart.id);
     await expect(recordCard(page).locator("[data-record-goal]")).toHaveText(CHART_GOAL);
-    // The record takes the stage: the character underneath can be neither seen nor reached.
     await expect(character).toBeHidden();
     await expect(character).toHaveAttribute("inert", "");
     await page.screenshot({ path: test.info().outputPath("dark-record.png") });
 
-    // A second row creates another entry; reopening the first focuses without duplicating it.
     await pressRow(page, crewKey);
     await expect(pagerAt(page, 1, 2)).toBeVisible();
     await pressRow(page, chart.key);
@@ -80,7 +78,6 @@ test("records page one per task beside the cards, and the character returns when
     await page.mouse.click(20, 100);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", chart.id);
 
-    // Actual agent output arrives behind the record and is announced by the pager only.
     await send(page, ANSWER_PROMPT_MARKER);
     await expect(pagerAt(page, 1, 3)).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('[data-unread-dot="after"]')).toBeVisible();
@@ -126,7 +123,6 @@ test("records page one per task beside the cards, and the character returns when
 
     await page.keyboard.press("Escape");
     await expect(nowFrame(page).locator("[data-now-selected]")).toHaveCount(1);
-    // A record leaving now reveals the first card, skipping the remaining record.
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
     await page.getByRole("button", { name: "Previous card" }).click();
     await expect(recordCard(page)).toBeVisible();

@@ -15,7 +15,6 @@ export const ANSWER_READ_MARKER = "I read the answer; finish without starting a 
 export const ANSWER_TASK_PROMPT_MARKER = "find out and answer:";
 export const MOCK_ANSWER_CARD_TITLE = "The meter idles because the claim query filters on repo_id";
 export const MOCK_ANSWER_ACTION_LABEL = "Fix the claim query";
-/** The answer card's second action, beside its default. */
 export const MOCK_ANSWER_LEAVE_LABEL = "Leave it for now";
 const MOCK_ANSWER_CARD_BODY =
   "<p>The meter idles because the claim query filters on repo_id, and seven rows carry none.</p>" +
@@ -37,7 +36,6 @@ export const MOCK_ANSWER_FINISHED_REPORT =
 export const MOCK_ANSWER_FINISHED_AGAIN =
   "My card held the whole answer and the captain explicitly asked me to finish without a build; I have nothing more to show.";
 
-/** The investigation answers on one card and finishes only on the captain's explicit words. */
 export const answerTask: Scenario = () => {
   let saidWhy = false;
   return ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
@@ -92,8 +90,6 @@ export const answerTask: Scenario = () => {
         ],
       };
     }
-    // One decision card carrying the answer, and a report. No completion
-    // card, nothing committed.
     if (latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER)) {
       if (hasToolResults) return { text: "done" };
       return {

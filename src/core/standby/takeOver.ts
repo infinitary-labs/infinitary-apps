@@ -37,7 +37,6 @@ import { TAKE_OVER_WORDS } from "./words";
 
 /** The window's ask, in the work folder, which the work running there answers. */
 export const TAKE_OVER_ASK = "take-over-ask.json";
-/** The work's answer to it, beside it. */
 export const TAKE_OVER_ANSWER = "take-over-answer.json";
 /**
  * How often the ask and its answer are read again beside the folder's
@@ -46,7 +45,6 @@ export const TAKE_OVER_ANSWER = "take-over-answer.json";
  */
 export const TAKE_OVER_LOOK_MS = 1_000;
 
-/** Watches a folder, calling back on any change in it; the system's own by default. */
 export type FolderWatch = (dir: string, changed: () => void) => FSWatcher;
 export const folderWatch: FolderWatch = (dir, changed) => watch(dir, () => changed());
 /** Which takeover made this home, in its record (`standbyTakeOverSchema`). */
@@ -61,7 +59,6 @@ export const returningSchema = z.object({
   deviceId: z.string().min(1).max(64),
 });
 
-/** Reads the takeover kept in a record folder, or null when none made this home. */
 export function readTakeOver(userData: string): StandbyTakeOver | null {
   try {
     return standbyTakeOverSchema.parse(
@@ -72,7 +69,6 @@ export function readTakeOver(userData: string): StandbyTakeOver | null {
   }
 }
 
-/** Reads the window's ask in `workDir`, or null. */
 export function readTakeOverAsk(workDir: string): TakeOverAsk | null {
   try {
     return takeOverAskSchema.parse(JSON.parse(readFileSync(join(workDir, TAKE_OVER_ASK), "utf8")));
@@ -81,7 +77,6 @@ export function readTakeOverAsk(workDir: string): TakeOverAsk | null {
   }
 }
 
-/** Reads the work's answer in `workDir`, or null. */
 export function readTakeOverAnswer(workDir: string): TakeOverAnswer | null {
   try {
     return takeOverAnswerSchema.parse(
@@ -92,7 +87,6 @@ export function readTakeOverAnswer(workDir: string): TakeOverAnswer | null {
   }
 }
 
-/** Writes the window's ask; the work running there takes it up. */
 export function writeTakeOverAsk(workDir: string, ask: TakeOverAsk): void {
   mkdirSync(workDir, { recursive: true, mode: 0o700 });
   writePrivate(join(workDir, TAKE_OVER_ASK), `${JSON.stringify(ask)}\n`);
@@ -205,7 +199,6 @@ export type TakeOverHereOptions = {
   started: (addresses: string[], homeNumber: number) => void;
   log: (line: string) => void;
   now?: () => number;
-  /** The folder's watch; the system's own by default. */
   watch?: FolderWatch;
   /** How often the ask is read again beside the watch (`TAKE_OVER_LOOK_MS`). */
   lookMs?: number;
@@ -467,7 +460,6 @@ export class TakeOverHere {
     return { paths, stream: first.stream, seq: first.seq, name: from.name };
   }
 
-  /** One file of another copy, piece by piece, into `dest`. */
   private async fetch(
     deviceId: string,
     file: { path: string; size: number },

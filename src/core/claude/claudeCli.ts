@@ -87,7 +87,6 @@ export function knownClaudeHomes(env: NodeJS.ProcessEnv = process.env): string[]
   return homes;
 }
 
-/** nvm's installed versions, newest first, or nothing where nvm is absent. */
 function nodeVersionDirs(root: string): string[] {
   let names: string[];
   try {
@@ -254,7 +253,6 @@ function readSdkManifestVersion(): string | undefined {
 
 export type ReadClientVersion = (executable: string) => Promise<string | undefined>;
 
-/** `claude --version`, under the same environment a run gets. */
 export const readClaudeClientVersion: ReadClientVersion = (executable) =>
   new Promise((resolve) => {
     execFile(
@@ -294,7 +292,6 @@ function fileIdentity(path: string): string {
   }
 }
 
-/** What the machine's client can do for a Claude account right now. */
 export type ClaudeClientCheck =
   | { state: "ready"; executable: string; version?: string }
   | { state: "missing" }
@@ -518,7 +515,6 @@ export const runClaude: RunClaude = (args, configDir, options = {}) => {
   });
 };
 
-/** The first https URL in a chunk of client output. */
 export function extractAuthUrl(text: string): string | undefined {
   const match = text.match(/https:\/\/[^\s"'<>]+/);
   return match ? match[0] : undefined;
@@ -533,7 +529,6 @@ export function pasteCodeLink(output: string): string | undefined {
   const whole = [...output.matchAll(/https:\/\/[^\s"'<>]+(?=\s)/g)].map((match) => match[0]);
   return whole.find((link) => {
     try {
-      // Invalid authorize links are still skipped, rather than selected.
       new URL(link);
       return !returnsToLoopback(link, "paste-code");
     } catch {

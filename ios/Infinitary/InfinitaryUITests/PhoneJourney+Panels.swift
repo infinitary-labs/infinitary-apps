@@ -43,7 +43,6 @@ extension PhoneJourney {
             .waitForPresence(timeout: 20), "The panel reads the computer's board: \(app.debugDescription)")
         try await appearances("panels", showing: header)
 
-        // A write on the computer reaches the drawn panel without reopening the tab.
         _ = try await home("panel-write")
         XCTAssertTrue(tally(41).waitForPresence(timeout: 20), app.debugDescription)
 
@@ -53,7 +52,6 @@ extension PhoneJourney {
         _ = try await home("panel-music-on")
         XCTAssertTrue(app.webViews.staticTexts["Music on"].waitForPresence(timeout: 20), app.debugDescription)
 
-        // A press runs on the computer exactly once.
         let add = app.webViews.buttons["Add one"]
         XCTAssertTrue(add.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(add, repeatDiscarded: false)
@@ -61,7 +59,6 @@ extension PhoneJourney {
         let pressed = try await home("panel-state", method: "GET")
         XCTAssertEqual(pressed["tally"] as? Int, 42, "One press, one call on the computer")
 
-        // A fold stays after the app is closed and opened again.
         tapOnPhone(header, repeatDiscarded: false)
         XCTAssertTrue(tally(42).waitForAbsence(timeout: 10), "Folded, the panel's body leaves the column")
         XCTAssertEqual(header.value as? String, "folded")
@@ -105,7 +102,6 @@ extension PhoneJourney {
         let retried = try await home("panel-state", method: "GET")
         XCTAssertTrue(retried["stopped"] is NSNull, "Retry lifted the stop on the computer")
 
-        // Once the computer has no panel to draw, the tab leaves and Home shows.
         _ = try await home("panel-remove")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 20), app.debugDescription)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10),
@@ -159,14 +155,12 @@ extension PhoneJourney {
         picture("panel-title-buttons")
         tapOnPhone(mark, repeatDiscarded: false)
         XCTAssertTrue(app.webViews.staticTexts["Marked 1"].waitForPresence(timeout: 20), app.debugDescription)
-        // Folded, the asking button leaves with the body it asks; the note button stays.
         tapOnPhone(header, repeatDiscarded: false)
         XCTAssertTrue(mark.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertTrue(note.exists, "A button that puts up a card stays while the panel is folded")
         tapOnPhone(header, repeatDiscarded: false)
         XCTAssertTrue(mark.waitForPresence(timeout: 10), app.debugDescription)
 
-        // The note button puts the panel's note up at the front of Home, drawn by the panel's own card view.
         tapOnPhone(note, repeatDiscarded: false)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10),
                        .completed, "The note shows on Home")
@@ -186,7 +180,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts["Put up 1 times"].exists, "The same card, not put up again: \(app.debugDescription)")
         picture("panel-card-hears-push")
 
-        // The card's tap on the seeded task opens its record on Tasks.
         tapOnPhone(app.webViews.buttons["Open the record"], repeatDiscarded: false)
         let recordTitle = app.staticTexts["task-record-title"]
         XCTAssertTrue(recordTitle.waitForPresence(timeout: 20), app.debugDescription)
@@ -196,15 +189,12 @@ extension PhoneJourney {
         tapOnPhone(close)
         XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
 
-        // A second press brings the same note forward, heard as once more.
         try await pressPhoneKey("4", modifiers: .command, in: app)
         tapOnPhone(note, repeatDiscarded: false)
         XCTAssertTrue(app.webViews.staticTexts["Put up 2 times"].waitForPresence(timeout: 60), app.debugDescription)
-        // Hide takes it off Home.
         tapOnPhone(app.buttons["panel-card-hide"], repeatDiscarded: false)
         XCTAssertTrue(card.waitForAbsence(timeout: 10), app.debugDescription)
 
-        // The panel's own press puts up a note of its own, and its tap on the task opens it.
         try await pressPhoneKey("4", modifiers: .command, in: app)
         let raise = app.webViews.buttons["Raise a note"]
         XCTAssertTrue(raise.waitForPresence(timeout: 20), app.debugDescription)

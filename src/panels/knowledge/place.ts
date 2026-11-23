@@ -72,7 +72,6 @@ export const FRESH: Place = {
 };
 
 const ID = /^(?:[cf]-[a-z0-9]{6}|claim:f-[a-z0-9]{6}|context:c-[a-z0-9]{6}:c-[a-z0-9]{6})$/;
-/** A direction's durable identifier. */
 const DIRECTION_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 function number(value: unknown, fallback: number, min: number, max: number): number {

@@ -57,7 +57,6 @@ function namedSpawnFirstmateMove(
   return undefined;
 }
 
-/** The first mate spawns each repair on the model the captain names. */
 export const namedSpawn: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) =>

@@ -948,7 +948,6 @@ describe("a request that names one device", () => {
     expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { jobs: "[]" } } } })).toBe(
       false,
     );
-    // Named parts still run on the named device.
     const named = chooseRequest(["rest"], [], { explicit: true, named: true, device: "ipad" });
     expect(devicesOf(requestJobs(named, TIMES))).toEqual(["ipad"]);
   });

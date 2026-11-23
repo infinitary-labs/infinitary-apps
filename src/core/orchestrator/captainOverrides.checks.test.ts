@@ -115,7 +115,6 @@ describe("CrewSupervisor", () => {
         });
         const row = h.tasks.timeline(h.taskId).find((event) => event.text.includes(words));
         expect(row).toMatchObject({ kind: "note", actor: "firstmate" });
-        // A fix pushed after his words is a version they did not cover.
         h.forge.headSha = "fixed0004";
         expect(
           (await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text,
@@ -202,7 +201,6 @@ describe("CrewSupervisor", () => {
         expect(feed.some((line) => line.includes("Soft hold"))).toBe(false);
       });
 
-      /** The completion card's merge button, as the card shows it now. */
       const mergeLabelOf = (h: Awaited<ReturnType<typeof approved>>) =>
         h
           .cards()
@@ -264,7 +262,6 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS.afterFixing));
       });
 
-      /** The Merge anyway button on the completion card, as the card shows it now. */
       const anywayOf = (h: Awaited<ReturnType<typeof approved>>) =>
         h
           .cards()
@@ -474,16 +471,13 @@ describe("CrewSupervisor", () => {
         expect(h.cards().find((card) => card.id === h.card.id)?.body).toContain(
           CHECKS_NOT_REPORTED_WORDS,
         );
-        // A new offer waits on the empty reading, and the refusal names the declaration.
         const held = h.emit("The no-CI change is ready");
         await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.pending}, not passed`);
         await expect(held).rejects.toThrow("absentChecks");
-        // Another version is refused in words; nothing registers.
         expect(await h.declare({ absentChecks: absence("another-version") })).toContain(
           "Absence declaration refused",
         );
         expect(h.tasks.get(h.taskId)?.delivery?.checks?.absenceDeclared).toBe(false);
-        // This version's declaration registers on the task's own pull request.
         expect(await h.declare({ absentChecks: absence(NO_CI) })).toContain(
           "Absence evidence stored for this version",
         );
@@ -527,17 +521,14 @@ describe("CrewSupervisor", () => {
         const held = h.emit("Skipped checks are not passed");
         await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.pending}, not passed`);
         await expect(held).rejects.toThrow("absentChecks");
-        // The jobs that run register beside the skipped one: still held while they run.
         h.forge.states = ["skipped", "pending"];
         await h.declare({});
         await expect(h.emit("Skipped checks are not passed")).rejects.toThrow(
           `the checks read ${CHECK_WORDS.pending}, not passed`,
         );
-        // Once they pass, a skipped job beside them does not hold the card.
         h.forge.states = ["skipped", "success"];
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("green");
-        // A version whose every check skips goes up once its absence is declared.
         h.forge.states = ["skipped"];
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("pending");
@@ -563,7 +554,6 @@ describe("CrewSupervisor", () => {
       it("completes a kept click on an empty reading exactly once when the crew declares that version's absence, with no checks override (INF-1955, INF-1966)", async () => {
         const h = await approved();
         await noCiVersion(h);
-        // The crew revises its card at the no-CI version; the empty reading holds its merge.
         await repairTurn(h, async () => {
           await expect(
             h.specs[0]?.onCard?.({
@@ -577,7 +567,6 @@ describe("CrewSupervisor", () => {
         });
         expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)?.headSha).toBe(NO_CI);
         expect(mergeLabelOf(h)).toBe(MERGE_WORDS.whenChecksPass);
-        // The captain's conditional click waits on the checks and sends nothing.
         h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         expect(h.authorization()?.approvedHead).toBe(NO_CI);
@@ -592,7 +581,6 @@ describe("CrewSupervisor", () => {
         expect(h.forge.sends).toBe(1);
         expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
         expect(h.authorization()?.status).toBe("consumed");
-        // The conditional click was never turned into a checks waiver.
         expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
       });
 
@@ -612,7 +600,6 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS.whenChecksPass));
         h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
-        // What the first mate cites from the card is his click on its merge.
         const clicked = choiceWords(MERGE_WORDS.whenChecksPass, "Ready to merge");
         expect(h.supervisor.overrides.citedCaptainWords(h.taskId, h.card.id)).toEqual({
           ok: true,
@@ -631,7 +618,6 @@ describe("CrewSupervisor", () => {
         await tick();
         expect(h.forge.sends).toBe(0);
         expect(h.authorization()?.waiting).toMatchObject({ on: "checks" });
-        // His own words that the checks need not pass do, and his kept click merges.
         h.supervisor.overrides.declareOverride(h.taskId, {
           words: "This project has no CI; merge it without the checks.",
           holds: ["checks"],
@@ -686,7 +672,6 @@ describe("CrewSupervisor", () => {
         expect(strip()).toContain(
           'title="Your words pass the waits and the checks for this version: &quot;Merge it past the waits; I tried it myself.&quot;"',
         );
-        // A newer version is one his words did not cover.
         seedDelivery(h.tasks, h.taskId, { headSha: "fixed0004" });
         await vi.waitFor(() => expect(strip()).toBeUndefined());
       });

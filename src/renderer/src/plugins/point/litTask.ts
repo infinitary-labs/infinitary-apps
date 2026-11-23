@@ -7,7 +7,6 @@ import { useSyncExternalStore } from "react";
  */
 export type LitSource = "peek" | "stage";
 
-/** The task lit now, and the source whose rest lit it. */
 export type LitTask = { taskId: string; by: LitSource };
 
 /**
@@ -32,13 +31,11 @@ export const litTask = {
   get(): LitTask | null {
     return lit;
   },
-  /** Lights `taskId` for `by`, in place of whatever was lit. */
   set(taskId: string, by: LitSource): void {
     if (lit?.taskId === taskId && lit.by === by) return;
     lit = { taskId, by };
     for (const listener of listeners) listener();
   },
-  /** Lets go of what `by` lit, and of nothing another source lit. */
   release(by: LitSource): void {
     if (lit?.by !== by) return;
     lit = null;
@@ -46,7 +43,6 @@ export const litTask = {
   },
 };
 
-/** The id of the lit task, or null. */
 export function useLitTaskId(): string | null {
   return useSyncExternalStore(
     litTask.subscribe,

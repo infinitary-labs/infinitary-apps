@@ -7,7 +7,6 @@ import type { BrowserFrameSink } from "./taskBrowsers";
  * controls it. Its pictures go to it alone.
  */
 export type BrowserViewer = {
-  /** One picture of a page it watches, for it alone. */
   show(frame: TaskBrowserFrame): void;
   /**
    * Hears it go once: its window loads another document or closes, its

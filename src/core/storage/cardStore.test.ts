@@ -54,10 +54,8 @@ describe("CardStore", () => {
     };
     store.upsert({ ...card, attachment });
     expect(new CardStore(db).get("card-1")?.attachment).toEqual(attachment);
-    // A revision without it takes it away.
     store.upsert(card);
     expect(new CardStore(db).get("card-1")?.attachment).toBeUndefined();
-    // One that no longer reads as an attachment costs the card nothing else.
     db.prepare("UPDATE cards SET attachment_json = ? WHERE id = ?").run(
       JSON.stringify({ ...attachment, kind: "flight" }),
       "card-1",
@@ -212,7 +210,6 @@ describe("CardStore", () => {
       { revision: 2, title: "Pick one", body: "Two options, explained.", replacedBy: "card-1" },
     ]);
     expect(store.history("card-1")[0]?.actions).toEqual(card.actions);
-    // One card with history, never a second card.
     expect(store.listOpen()).toHaveLength(1);
   });
 
@@ -268,7 +265,7 @@ describe("CardStore", () => {
         const taskId = tasks[(n * 7) % tasks.length] as string;
         const id = `card-${String(n).padStart(2, "0")}-${taskId}`;
         store.upsert({ ...card, id, taskId, title: `Card ${n}`, createdAt: 1000 + n });
-        if (n % 9 === 8) continue; // still open
+        if (n % 9 === 8) continue;
         if (n % 4 !== 0) now += 5;
         store.resolve(id, chosen[n % chosen.length] as string);
       }

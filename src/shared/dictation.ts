@@ -7,7 +7,6 @@ export const dictationSettingsSchema = z.object({ enabled: z.boolean(), key: dic
 export type DictationSettings = z.infer<typeof dictationSettingsSchema>;
 export const DEFAULT_DICTATION: DictationSettings = { enabled: true, key: "AltRight" };
 
-/** The key on its key cap: `⌥` on a Mac, `Alt` on Linux. */
 export function dictationKeyCap(key: DictationKey, words: KeySystem = "mac"): string {
   return words === "mac"
     ? { AltRight: "⌥", MetaRight: "⌘", ControlRight: "⌃" }[key]
@@ -24,7 +23,6 @@ export function dictationKeyHoldsShortcuts(key: DictationKey): boolean {
   return key !== "AltRight";
 }
 
-/** The key in a sentence: "right ⌥" on a Mac, "right Ctrl" on Linux. */
 export function dictationKeyLabel(key: DictationKey, words: KeySystem = "mac"): string {
   return `right ${dictationKeyCap(key, words)}`;
 }

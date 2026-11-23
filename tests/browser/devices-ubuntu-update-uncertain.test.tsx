@@ -57,7 +57,6 @@ test("an Ubuntu update that may already have installed after its typed address, 
   await userEvent.click(button(form, "Update"));
   await expect.poll(() => updates().at(-1)).toEqual([worker.id, { address }]);
 
-  // Its host is confirmed, then its password answered.
   answer.resolve({ asks: "confirm", address, line });
   const confirm = await shown('[data-worker-update="mini"] [data-device-confirm-question]');
   answer = held<UpdateAnswer>();

@@ -274,7 +274,6 @@ function textOfArgs(args: { value?: unknown; description?: string }[] | undefine
     .join(" ");
 }
 
-/** A PNG's own size, from its header: the picture's width and height in pixels. */
 export function pngSize(png: Uint8Array): { width: number; height: number } {
   if (png.length < 24) return { width: 0, height: 0 };
   const view = new DataView(png.buffer, png.byteOffset, png.byteLength);

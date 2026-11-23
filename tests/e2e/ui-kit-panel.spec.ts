@@ -98,8 +98,6 @@ test.describe("the fixture extensions the data skills teach", () => {
       { number: 111, title: "Let a retry unlock the login store", checks: "FAILURE", draft: true },
     ]);
     seedGitHubSignIn(userDataDir);
-    // And a merge request the captain opened on GitLab, whose pipeline
-    // passed, read with the key he made there.
     gitlab = await startGitLabStub("gitlab.com");
     gitlab.headOf(() => "4b825dc642cb6eb9a060e54bf8d69288fbee4904");
     gitlab.openMergeRequest({ branch: "notes-sync", title: "Sync the field notes on time" });

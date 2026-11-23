@@ -47,7 +47,6 @@ import {
 
 const TITLE = "Pick the launch window";
 
-/** The keys a person who moves with their left hand might give the movement commands. */
 const OWN_KEYS: SavedKeymap = {
   ...DEFAULT_SAVED_KEYMAP,
   keys: {
@@ -105,14 +104,12 @@ function seed(userDataDir: string): void {
   }
 }
 
-/** The Tasks row that holds the keyboard's focus, by its task's key. */
 function focusedRowKey(page: Page): Promise<string | null> {
   return nowFrame(page)
     .locator("[data-now-row]:focus")
     .evaluateAll((rows) => rows[0]?.getAttribute("data-now-key") ?? null);
 }
 
-/** The task board's selected tile, by its task's key. */
 function selectedTileKey(page: Page): Promise<string | null> {
   return boardEntry(page)
     .locator("[data-board-tile][data-board-selected]")

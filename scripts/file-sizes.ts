@@ -47,7 +47,6 @@ export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".
  */
 export const OVER_CEILING: readonly string[] = ["tests/helpers/phoneHome.ts"];
 
-/** Whether the check reads this tracked file. */
 export function isCodeFile(path: string): boolean {
   if (!CODE_EXTENSIONS.some((extension) => path.endsWith(extension))) return false;
   const parts = path.split("/");
@@ -61,7 +60,6 @@ export function lineCount(text: string): number {
   return text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
 }
 
-/** Each problem with the code files' sizes against the list, as one line. */
 export function sizeProblems(sizes: Record<string, number>, listed: readonly string[]): string[] {
   const problems: string[] = [];
   const onList = new Set(listed);

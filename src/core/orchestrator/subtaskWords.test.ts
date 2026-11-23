@@ -66,7 +66,6 @@ describe("a sub-task's brief", () => {
     expect(brief).toContain(
       inheritedOverrideWords(override, { key: parent.key, title: "Fix the sign-in check" }),
     );
-    // Never as this task's own ask, and never passing a hold on it.
     expect(brief.startsWith(NO_WORDS_FOR_THIS_TASK)).toBe(true);
     expect(brief).not.toContain("The user's words, verbatim");
     const child = h.tasks.get(taskId);

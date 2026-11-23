@@ -58,12 +58,6 @@ export function startFailureReason(caught: unknown): string {
     .replace(/(^|[\s'"([])(?:~|\/)[^\s'"]*\/([^\s'"/]+)/g, "$1$2");
 }
 
-/**
- * Why a start on request refuses a row that waits on blockers. Only a done
- * blocker clears its wait (`TaskService.blockerCleared`) and a dropped edge
- * keeps blocking until it is removed, so the tool's way out is removing the
- * edge - never dropping the blocker. The captain's refusal leaves it out.
- */
 function readStartNotice(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   try {

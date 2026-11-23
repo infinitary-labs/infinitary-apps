@@ -145,7 +145,6 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
     : { kind: "here", dataDir: now.dataDir };
 }
 
-/** What handing the background over takes: the app's own spelling and flavor, and how to set up its agent. */
 export type BackgroundHandOver = Pick<HelperPlace, "spelling" | "flavor"> &
   Pick<MoveWorkOptions, "background" | "launcher" | "env" | "log">;
 

@@ -297,7 +297,6 @@ public struct PhoneDraftLocal: Equatable, Sendable {
         if !take.isEmpty { deps.apply(cardID, Self.draftParts(take)) }
     }
 
-    /// Whether a draft is of the card's current opening as the phone holds it.
     private func current(_ draft: PhoneCardDraft) -> Bool { deps.opening(draft.cardID) == .known(draft.lifecycle) }
 
     /// The revision a change here is made at: the newest the phone took.
@@ -312,7 +311,6 @@ public struct PhoneDraftLocal: Equatable, Sendable {
         !answer["skipped"].flag && (answer["changed"].flag || answer["written"].text != nil)
     }
 
-    /// Whether a value here is worth sending against the draft's.
     private static func differs(_ part: String, _ value: PhoneJSON, _ heard: Parts) -> Bool {
         guard let there = heard[part] else { return ownAnswer(value) }
         return there != value
@@ -335,7 +333,6 @@ public struct PhoneDraftLocal: Equatable, Sendable {
         return parts
     }
 
-    /// Parts as a change names them, the answers in their names' order.
     private static func draftParts(_ parts: Parts) -> PhoneDraftParts {
         var named = PhoneDraftParts()
         var answers: [PhoneJSON] = []

@@ -69,7 +69,6 @@ export const createPanelSlot = {
   },
 };
 
-/** Whether the slot shows now, from the four facts as they change. */
 export function useCreatePanelSlotShown(): boolean {
   const thirdCrewmateDoneAt = useShellStore((s) => s.firstRun?.thirdCrewmateDoneAt);
   const layout = useRailLayout();

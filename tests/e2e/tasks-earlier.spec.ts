@@ -18,7 +18,6 @@ import { focusOn } from "./windowKeys";
  */
 
 const DAY = 24 * 60 * 60 * 1000;
-/** The eight-day-old task's title: one of its words finds it. */
 const OLD_TITLE = "Reconcile idle answers";
 
 test("typed filter text finds eight-day-old and dropped work and opens its record", async () => {
@@ -48,7 +47,6 @@ test("typed filter text finds eight-day-old and dropped work and opens its recor
         .key;
       return found;
     };
-    // The board holds the live and recent rows, never the eight-day-old one.
     await expect
       .poll(async () => (await board()).tasks.map((task) => task.id))
       .toEqual(expect.arrayContaining(["dropped", "live", "recent"]));
@@ -60,7 +58,6 @@ test("typed filter text finds eight-day-old and dropped work and opens its recor
     const frame = nowFrame(page);
     const panel = page.locator('[data-side-panel="now"]');
     await expect(frame.locator('[data-now-group="landed"]')).toBeVisible();
-    // Nothing earlier is listed until text is typed.
     await expect(frame.locator('[data-now-group="earlier"]')).toHaveCount(0);
     await expect(nowRow(page, oldKey)).toHaveCount(0);
     await expect(nowRow(page, droppedKey)).toHaveCount(0);
@@ -69,20 +66,17 @@ test("typed filter text finds eight-day-old and dropped work and opens its recor
     const query = frame.locator("[data-now-query]");
     await expect(query).toBeFocused();
 
-    // One word of the title finds the eight-day-old task, in the earlier group.
     await query.fill("idle");
     await expect(nowRow(page, oldKey)).toHaveCount(1);
     expect(await nowRowGroup(page, oldKey)).toBe("earlier");
     await expect(nowRow(page, oldKey)).toHaveAttribute("data-now-status", "done");
 
-    // Dropped work is found too; recent done work stays in its own group.
     await query.fill("zebra");
     await expect(nowRow(page, droppedKey)).toHaveCount(1);
     expect(await nowRowGroup(page, droppedKey)).toBe("earlier");
     await expect(nowRow(page, oldKey)).toHaveCount(0);
     await expect(frame.locator('[data-now-count="landed"]')).toHaveText("1");
 
-    // The row is a button the keyboard reaches, and it opens the record.
     await query.fill("idle");
     const row = nowRow(page, oldKey);
     await focusOn(row);
@@ -91,7 +85,6 @@ test("typed filter text finds eight-day-old and dropped work and opens its recor
     await expect(recordCard(page)).toContainText(OLD_TITLE);
     await expect(nowRow(page, oldKey)).toHaveAttribute("data-now-selected", "");
 
-    // Clearing the text removes the earlier results and restores the normal groups.
     await query.fill("");
     await expect(frame.locator('[data-now-group="earlier"]')).toHaveCount(0);
     await expect(nowRow(page, oldKey)).toHaveCount(0);
@@ -125,7 +118,6 @@ test("typing a task key shows that task's row, even in a collapsed group", async
       .toBe(3);
     await expandDock(page, "now");
     const frame = nowFrame(page);
-    // Done and planned work start collapsed to a count.
     await expect(frame.locator('[data-now-group-header="landed"]')).toHaveAttribute(
       "aria-expanded",
       "false",
@@ -143,7 +135,6 @@ test("typing a task key shows that task's row, even in a collapsed group", async
         await expect(nowRow(page, key), `${id} found by "${typed}"`).toBeVisible();
       }
     }
-    // Clearing the text collapses the groups again.
     await query.fill("");
     await expect(frame.locator('[data-now-group-header="landed"]')).toHaveAttribute(
       "aria-expanded",
@@ -200,7 +191,6 @@ test("a plain apostrophe or quote typed finds a title written with a curly one",
     expect(await nowRowGroup(page, noteKey)).toBe("earlier");
     await expect(nowRow(page, plannedKey)).toHaveCount(0);
 
-    // A straight double quote finds a board row whose title has curly ones.
     await query.fill('"later"');
     await expect(nowRow(page, plannedKey)).toBeVisible();
     await expect(nowRow(page, noteKey)).toHaveCount(0);

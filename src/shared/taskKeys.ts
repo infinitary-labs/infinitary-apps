@@ -15,7 +15,6 @@ export const TASK_KEY_EXACT = /^[A-Z0-9]{2,4}-[0-9]{1,9}$/;
 /** The keys one body may link; past this, later keys stay text. */
 export const TASK_KEYS_MAX = 64;
 
-/** The distinct keys `text` writes, in order of first mention, at most TASK_KEYS_MAX. */
 export function taskKeysIn(text: string): string[] {
   const keys: string[] = [];
   for (const match of text.matchAll(new RegExp(TASK_KEY_IN_TEXT, "g"))) {

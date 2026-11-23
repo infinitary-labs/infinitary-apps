@@ -83,8 +83,6 @@ private struct PhoneAccountMark: View {
     }
 }
 
-/// One account: its dot, provider and marks with the verdict opposite, who it is, then each allowance window, or
-/// the one sentence a row with no window says.
 private struct PhoneAccountRow: View {
     let row: PhoneIntelligencePage.Row
 

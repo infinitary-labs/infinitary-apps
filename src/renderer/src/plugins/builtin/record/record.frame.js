@@ -33,7 +33,6 @@
   /** @typedef {import("@shared/tasks").TaskActivityRow} Row */
   /** @typedef {import("@shared/knowledge").KnowledgeUses} Uses */
 
-  /** How many activity rows the tail shows. */
   const TIMELINE_TAIL = 8;
   /**
    * The locale this frame's document names for dates and times
@@ -61,7 +60,6 @@
   })();
   const wordsLocale = recordWords.locale;
   const pluralRules = new Intl.PluralRules(wordsLocale);
-  // The template's fixed headings name their word; the frame writes it.
   for (const el of document.querySelectorAll("[data-record-word]")) {
     el.textContent = word(el.getAttribute("data-record-word") ?? "");
   }
@@ -252,7 +250,6 @@
       if (el) el.hidden = true;
     }
 
-    /** The page's one label, made on its first showing with what takes it away. */
     function label() {
       if (el) return el;
       el = document.createElement("div");
@@ -1025,7 +1022,6 @@
     factsEl.replaceChildren(...facts);
     const validation = Boolean(current.liveValidation);
     const used = uses?.state === "ready" ? uses.total : 0;
-    // What the closed More row holds, named beside it.
     morePreviewEl.textContent = [
       ...(used > 0 ? [word("recordMoreKnowledge", { count: used })] : []),
       ...(validation ? [word("recordMoreValidation")] : []),

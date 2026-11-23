@@ -145,7 +145,6 @@ export class PersonalStore {
     })();
   }
 
-  /** Every slice that holds a key. */
   slices(): string[] {
     return (
       this.db
@@ -168,7 +167,6 @@ export class PersonalStore {
     };
   }
 
-  /** The core's view of one slice: synchronous and pre-bound. */
   forExtension(extensionId: string): StoreSlice {
     return {
       get: (key) => this.get(extensionId, key),

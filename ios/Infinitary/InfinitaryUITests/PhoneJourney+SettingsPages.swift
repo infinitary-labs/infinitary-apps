@@ -62,8 +62,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
     }
 
-    /// Intelligence: every account in the computer's order with its allowance and its one verdict, nothing to change,
-    /// and a new reading on the computer reaching the open page.
     private func settingsIntelligence(from row: XCUIElement) async throws {
         tapOnPhone(row, repeatDiscarded: false)
         let summary = app.staticTexts["intelligence-summary"]
@@ -78,7 +76,6 @@ extension PhoneJourney {
         XCTAssertTrue(session.label.hasPrefix("session, 74%"), session.label)
         XCTAssertTrue(settingsPart("intelligence-meter-weekly").label.hasPrefix("weekly, 62%"))
         XCTAssertTrue(settingsPart("intelligence-verdict-acct_phone_personal").exists, "The row's one verdict")
-        // An account that waits for a sign-in says where it happens: on the computer.
         XCTAssertEqual(settingsPart("intelligence-sign-in-acct_phone_work").label, "Sign in on Test Mac mini.")
         // A stale reading keeps its last figure.
         XCTAssertTrue(settingsPart("intelligence-meter-credits").label.hasPrefix("credits, 57%"))
@@ -88,15 +85,12 @@ extension PhoneJourney {
         for account in accounts { XCTAssertEqual(account.buttons.count, 0, "An account's row has nothing to press") }
         settingsShows(settingsPart("intelligence-foot"), "Sign-ins stay on Test Mac mini.")
 
-        // The computer reads its allowance again; the open page follows it with nothing pressed here.
         let later = try await home("settings-allowance")
         let left = try XCTUnwrap(later["session"] as? Int)
         let follows = NSPredicate { _, _ in session.exists && session.label.hasPrefix("session, \(left)%") }
         XCTAssertEqual(waitForPhonePredicate(follows, object: nil, timeout: 30), .completed, session.label)
     }
 
-    /// Automation: each rule's state, Pause by keys, Resume and Pause all by touch, a rule's own page with its run, and
-    /// a draft turned on by keys after its review.
     private func settingsAutomation(morning: String, weekly: String, draft: String, once: String) async throws {
         let pauseAll = app.buttons["automation-pause-all"]
         XCTAssertTrue(pauseAll.waitForPresence(timeout: 10), app.debugDescription)
@@ -127,7 +121,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.buttons["automation-pause-\(weekly)"].waitForPresence(timeout: 20), app.debugDescription)
         try await settingsKeeps("rules.weekly.state", "enabled")
 
-        // Pause all asks once, then pauses what runs.
         waitForSteadyTarget(pauseAll)
         tapOnPhone(pauseAll, repeatDiscarded: false)
         let confirm = app.buttons["automation-pause-all-confirm"].firstMatch
@@ -139,8 +132,6 @@ extension PhoneJourney {
         try await settingsKeeps("rules.weekly.state", "paused")
         try await settingsKeeps("rules.morning.state", "paused")
 
-        // A rule's own page: its whole name, its state, its project as the computer names it, and the prompt as the
-        // first mate gets it.
         let state = app.staticTexts["rule-state"], name = app.staticTexts["phone-settings-page-name"]
         waitForSteadyTarget(app.buttons["automation-rule-\(morning)"])
         tapOnPhone(app.buttons["automation-rule-\(morning)"], repeatDiscarded: false)
@@ -158,7 +149,6 @@ extension PhoneJourney {
         try await pressPhoneKey("[", modifiers: .command, in: app)
         XCTAssertTrue(pauseAll.waitForPresence(timeout: 10), app.debugDescription)
 
-        // A rule that ran shows the run, and the prompt as it was sent.
         waitForSteadyTarget(app.buttons["automation-rule-\(once)"])
         tapOnPhone(app.buttons["automation-rule-\(once)"], repeatDiscarded: false)
         XCTAssertTrue(state.waitForPresence(timeout: 10), app.debugDescription)
@@ -185,7 +175,6 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["automation-review-\(draft)"], repeatDiscarded: false)
         let turnOn = app.buttons["review-turn-on"]
         XCTAssertTrue(turnOn.waitForPresence(timeout: 10), app.debugDescription)
-        // The review leads with its question, then the rule it is about.
         XCTAssertEqual(name.label, "Turn on this automation?")
         XCTAssertEqual(app.staticTexts["review-rule"].label, "Friday wrap-up")
         XCTAssertTrue(settingsFact("Next runs").waitForPresence(timeout: 20), app.debugDescription)
@@ -203,7 +192,6 @@ extension PhoneJourney {
         for words in ["New automation", "Edit", "Delete"] { XCTAssertFalse(app.buttons[words].exists, words) }
     }
 
-    /// Usage: the period's figures in either unit and the period by keys, with nothing to change on the computer.
     private func settingsUsage() async throws {
         let total = settingsPart("usage-total")
         XCTAssertTrue(total.waitForPresence(timeout: 10), app.debugDescription)
@@ -227,7 +215,6 @@ extension PhoneJourney {
         settingsShows(total, "$29.54")
     }
 
-    /// Projects: the list, then one project's standing choices, each kept by the computer as it is chosen.
     private func settingsProjects() async throws {
         let website = app.buttons["project-phone-website"]
         XCTAssertTrue(website.waitForPresence(timeout: 10), app.debugDescription)
@@ -284,7 +271,6 @@ extension PhoneJourney {
         XCTAssertTrue(website.waitForPresence(timeout: 10), app.debugDescription)
     }
 
-    /// Runbooks: each runbook's switch is the computer's own, by touch and by keys.
     private func settingsRunbooks() async throws {
         let first = app.switches["runbook-sequences"], second = app.switches["runbook-delivery"]
         XCTAssertTrue(second.waitForPresence(timeout: 10), app.debugDescription)
@@ -306,7 +292,6 @@ extension PhoneJourney {
         try await settingsBackToList()
     }
 
-    /// Command-[ from a section's page, back to the list of sections.
     private func settingsBackToList() async throws {
         let back = app.buttons["phone-settings-back"]
         XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
@@ -316,7 +301,6 @@ extension PhoneJourney {
         XCTAssertTrue(back.waitForAbsence(timeout: 10), "Back leaves the page once its transition finishes")
     }
 
-    /// A part of a page by its name, whatever kind of element draws it.
     private func settingsPart(_ id: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
@@ -328,13 +312,11 @@ extension PhoneJourney {
         return app.descendants(matching: .any).matching(says).firstMatch
     }
 
-    /// Every word a part shows: its own and those of the texts inside it.
     private func settingsEveryWord(_ element: XCUIElement) -> String {
         guard element.exists else { return "" }
         return ([element.label] + element.descendants(matching: .staticText).allElementsBoundByIndex.map(\.label)).joined(separator: "\n")
     }
 
-    /// The part says these words, now or once the computer's answer reaches it.
     private func settingsShows(_ element: XCUIElement, _ words: String, file: StaticString = #filePath, line: UInt = #line) {
         let says = NSPredicate { _, _ in self.settingsEveryWord(element).contains(words) }
         XCTAssertEqual(waitForPhonePredicate(says, object: nil, timeout: 20), .completed,

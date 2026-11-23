@@ -14,7 +14,6 @@ export type CaptainAllowance = {
   words: string;
   /** What the yes covers, as its card said it: the crewmate's words, or a check's declared resources and cost (`checkYesCovers`). */
   covers: string;
-  /** The card the click was on. */
   card: string;
   at: number;
 };

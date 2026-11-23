@@ -12,23 +12,19 @@ import type { Answers, FakeBridge } from "./bridge";
 /** A selector for the shown stack entry, once it is ready to read. */
 export const SHOWN_ENTRY = '[data-card-layer] [data-stage-entry="shown"]:not([aria-hidden])';
 
-/** The shown stack entry, or null while none is ready. */
 export const shownEntry = () => document.querySelector<HTMLElement>(SHOWN_ENTRY);
 
-/** The shown card's part `selector`; it throws when the shown card drew none. */
 export function inShown(selector: string): HTMLElement {
   const part = document.querySelector<HTMLElement>(`${SHOWN_ENTRY} ${selector}`);
   if (!part) throw new Error(`The shown card drew no ${selector}`);
   return part;
 }
 
-/** The shown card's frame titled `frameTitle` - its body's or its facts' - or null before it mounts. */
 const shownFrame = (frameTitle: string) =>
   document.querySelector<HTMLIFrameElement>(
     `${SHOWN_ENTRY} iframe[title=${JSON.stringify(frameTitle)}]`,
   );
 
-/** The shown card's body frame, by its card's title, or null before it mounts. */
 export const cardBodyFrame = (title: string) => shownFrame(`${title} body`);
 
 /** The frame the shown card's settle facts draw in beside its buttons, or null when it has none. */
@@ -60,7 +56,6 @@ export function inFrameTitled<T, A = null>(
   >;
 }
 
-/** Runs `read` inside the body of the card titled `title`, as `inFrameTitled` does. */
 export const inCardBody = <T, A = null>(title: string, read: (argument: A) => T, argument?: A) =>
   inFrameTitled(`${title} body`, read, argument);
 

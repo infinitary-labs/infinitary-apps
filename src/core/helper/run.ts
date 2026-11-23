@@ -120,7 +120,6 @@ export type HelperEnded = "removed" | "updated" | "stopped";
 
 export type HelperRun = {
   state: () => HomeLinkState;
-  /** Resolves once it stopped, saying how. */
   readonly ended: Promise<HelperEnded>;
   /**
    * Lets every conversation it holds go, stops dialing, lets the folder go,
@@ -882,8 +881,6 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       void conversations?.then((held) => held.host.reached());
       void signIns?.then((held) => held.host.reached());
     },
-    // What the home asks: the orders about the conversations it holds here,
-    // its own sign-ins, and an update.
     onInvoke: async (channel, args) => {
       if (stopped) throw new Error("This computer is stopping.");
       if (channel === WORK_UPDATE_ORDER) return update(args);

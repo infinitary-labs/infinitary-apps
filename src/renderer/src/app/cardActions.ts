@@ -41,6 +41,7 @@ import { pickProjectFolder } from "./projectFolder";
 import { savedCardAnswers } from "./savedCardAnswers";
 import { withoutKey } from "./stack";
 import { readCardsAgain } from "./stackActions";
+import { noteCardPress } from "./stageCleared";
 import type { ShellGet, ShellSet } from "./store";
 
 /** What the captain does on a card: its actions, its answers, its close, and its thread with the replies under it. */
@@ -330,6 +331,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         if (source === "frame") throw new Error(changesOffWords(thisMac));
         return;
       }
+      noteCardPress([cardId]);
       const chosen = get()
         .cards.find((card) => card.id === cardId)
         ?.actions.find((action) => action.id === actionId);
@@ -551,6 +553,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         }));
         return;
       }
+      noteCardPress([cardId]);
       const card = get().cards.find((entry) => entry.id === cardId);
       // An ended card's minus is Close, like its button: words in the field go
       // with it, through the same press, rather than be lost.
@@ -573,6 +576,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         }));
         return;
       }
+      noteCardPress([cardId]);
       // What else waits in the field goes too, as the reply under the note, to a home that takes it.
       let held = heldIn(cardId);
       if (held && !heldCanGo(cardId, held)) return;
@@ -811,6 +815,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       const mac = get().thisMac;
       try {
         if (changesOff(mac) && isView(mac)) throw new Error(changesOffWords(mac));
+        noteCardPress([cardId]);
         await window.infinitary.cards.minimize(cardId, true);
       } catch (error) {
         set((s) => ({

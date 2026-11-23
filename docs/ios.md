@@ -523,6 +523,8 @@ It plays the desktop repertoire natively: greet, celebrate, ponder, confused and
 The first character a person sees after opening or joining greets once (`CharacterCues.greetOnNextSight`).
 A turn that starts mid-greeting lets the greeting play on as the ember eases in, then the character works, as on the Mac.
 A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive, hands the greeting on to the next one shown.
+The last-card fidget matches the desktop's (`docs/renderer.md`): when this phone's own choice, Done, Got it, Put aside or Keep takes the last card off Home, `PhoneCards` asks `CharacterCues.fidgetOnNextSight`, and the crew scene shown next plays one fidget from the pool, after any greeting (`CharacterMachine.stageCleared`).
+A card that leaves within 15 s of this phone's press on it counts (`CharacterCues.pressed` and `clearedByPress`); a withdrawal, a close on another computer and a reply leave the scene still, and a request not taken within 3 s is dropped, so a card coming up first leaves the next scene still.
 A live `firstmate_emote` reaches the characters on screen; reply reactions wait for the turn to finish, with the first request winning as on the desktop.
 A reaction replayed while reconnecting is not played, even when a caught-up welcome already says In reach, and a character off screen does not keep one for later.
 The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.

@@ -351,6 +351,70 @@ describe("FirstmateMachine reply emotes (captain's board verdict, 2026-09-22)", 
   });
 });
 
+describe("FirstmateMachine last-card fidget (the captain's ask: close the last card, a random fidget)", () => {
+  const off = { listening: false, busy: false };
+  const covered = { listening: false, busy: false, hidden: true };
+
+  it("fidgets at once from idle, drawn from the pool", () => {
+    const m = machine(() => 0.5);
+    m.setInputs(off, 0);
+    expect(m.stageCleared(10)).toBe(true);
+    const snap = m.update(10);
+    expect(snap.state).toBe("fidget");
+    expect(Object.keys(FIDGET_DURATION_MS)).toContain(snap.variant);
+  });
+
+  it("fidgets in the working glow and returns to working", () => {
+    const m = machine();
+    m.setInputs({ listening: false, busy: true }, 0);
+    m.stageCleared(10);
+    expect(m.update(10)).toMatchObject({ state: "fidget", busy: true });
+    const end = 10 + FIDGET_DURATION_MS[m.update(10).variant as FidgetVariant];
+    expect(m.update(end).state).toBe("working");
+  });
+
+  it("plays right after another emote instead of cutting it", () => {
+    const m = machine();
+    m.setInputs(off, 0);
+    m.requestEmote("celebrate", 0);
+    m.stageCleared(500);
+    expect(m.update(500).state).toBe("celebrate");
+    expect(m.update(EMOTE_DURATION_MS.celebrate).state).toBe("fidget");
+  });
+
+  it("plays nothing while the captain types, and attention drops a waiting one", () => {
+    const m = machine();
+    m.setInputs({ listening: true, busy: false }, 0);
+    expect(m.stageCleared(10)).toBe(false);
+    m.setInputs(off, 20);
+    m.requestEmote("celebrate", 20);
+    m.stageCleared(30);
+    m.setInputs({ listening: true, busy: false }, 40);
+    m.setInputs(off, 50);
+    // The next emote ends with nothing after it: the dropped fidget is gone.
+    m.requestEmote("ponder", 60);
+    expect(m.update(60 + EMOTE_DURATION_MS.ponder).state).toBe("idle");
+  });
+
+  it("drops a waiting fidget when a card comes up first", () => {
+    const m = machine();
+    m.setInputs(off, 0);
+    m.requestEmote("celebrate", 0);
+    m.stageCleared(100);
+    m.setInputs(covered, 200);
+    expect(m.update(EMOTE_DURATION_MS.celebrate).state).toBe("idle");
+  });
+
+  it("starts no idle fidget behind cards; the next counts 9-16 s from when they leave", () => {
+    const m = machine(() => 0);
+    m.setInputs(covered, 0);
+    expect(m.update(60_000).state).toBe("idle");
+    m.setInputs(off, 60_000);
+    expect(m.update(60_000 + 8_999).state).toBe("idle");
+    expect(m.update(60_000 + 9_000).state).toBe("fidget");
+  });
+});
+
 describe("FirstmateMachine review aids", () => {
   it("fires a named fidget variant on request and remembers it as the last pick", () => {
     const m = machine(() => 0);

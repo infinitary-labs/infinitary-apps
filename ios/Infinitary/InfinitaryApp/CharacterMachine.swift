@@ -16,6 +16,9 @@ struct CharacterMachine {
     private var enteredAt: Double
     private var fidgetAfter: Double
     private var heldReply: Emote?
+    private var listening = false
+    /// The captain's press cleared the stage while another emote played: the fidget it plays next.
+    private var heldClearFidget = false
     private let random: () -> Double
 
     init(now: Double, random: @escaping () -> Double = { Double.random(in: 0..<1) }) {
@@ -31,6 +34,8 @@ struct CharacterMachine {
         self.busy = busy
         let reply = fell ? heldReply : nil
         if fell { heldReply = nil }
+        self.listening = listening
+        if listening { heldClearFidget = false }
         if listening { if mode != .listening { go(.listening, now) }; return }
         if mode == .listening { go(busy ? .working : .idle, now); return }
         if Self.seconds(mode) != nil { return }
@@ -52,12 +57,21 @@ struct CharacterMachine {
         }
         go(emote, now); return true
     }
+    /// The captain's own press took the last card off the stage: one fidget, after any emote playing; attention wins.
+    @discardableResult mutating func stageCleared(now: Double) -> Bool {
+        if listening { return false }
+        if request(.fidget, now: now) { return true }
+        heldClearFidget = true; return true
+    }
     private var duration: Double? {
         if mode == .fidget { return (CharacterCatalog.shared.fidgets[(variant ?? .roll).rawValue] ?? 2300) / 1000 }
         return Self.seconds(mode)
     }
     mutating func update(now: Double) -> (mode: Mode, progress: Double) {
-        if let duration, now - enteredAt >= duration { go(busy ? .working : .idle, now) }
+        if let duration, now - enteredAt >= duration {
+            go(busy ? .working : .idle, now)
+            if heldClearFidget { heldClearFidget = false; request(.fidget, now: now) }
+        }
         if mode == .idle && now - enteredAt >= fidgetAfter { request(.fidget, now: now) }
         return (mode, duration.map { min(1, max(0, now - enteredAt) / $0) } ?? 0)
     }

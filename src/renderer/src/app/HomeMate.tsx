@@ -4,12 +4,14 @@ import { CrewOrbit } from "../character/crew/CrewOrbit";
 import { crewOrbit } from "../character/crew/crewSignal";
 import type { SummaryRoom } from "../character/crew/hover";
 import { useCrewBoard } from "../character/crew/useCrewBoard";
+import { requestStageClearedFidget } from "../character/emoteSignal";
 import { Firstmate } from "../character/Firstmate";
 import { setCharacterPaintHidden } from "../character/paintHidden";
 import { motionToken } from "../design/motion";
 import { useCardUp } from "./LastTurn";
 import { useProjectFocus } from "./projectFocus";
 import { STAGE_LIFT_EASE, STAGE_TOP } from "./stage/entryView";
+import { cardPresses, clearedByPress } from "./stageCleared";
 import { useShellStore } from "./store";
 
 /**
@@ -65,6 +67,20 @@ export const HomeMate = memo(function HomeMate() {
     );
     return off;
   }, [orbit, homeName]);
+  // The captain's own press cleared the stage: the first mate plays a fidget.
+  useEffect(
+    () =>
+      useShellStore.subscribe((s, prev) => {
+        if (
+          s.cards === prev.cards &&
+          s.records === prev.records &&
+          s.heldBackCardIds === prev.heldBackCardIds
+        )
+          return;
+        if (clearedByPress(prev, s, cardPresses(), Date.now())) requestStageClearedFidget();
+      }),
+    [],
+  );
   const listening = useListening();
   const submitted = useShellStore((s) => s.submitted);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
@@ -149,6 +165,7 @@ export const HomeMate = memo(function HomeMate() {
             busy={firstmateBusy}
             folding={firstmateFolding}
             foldStarts={firstmateFoldStarts}
+            hidden={showCards}
             size={300}
             kick={readKick}
             submitSignal={submitted}

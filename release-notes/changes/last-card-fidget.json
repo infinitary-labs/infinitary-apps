@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "last-card-fidget",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Your first mate does a little trick when you clear the last card",
+      "body": "When you close, answer or put aside the last card on the screen, your first mate plays one of its fidgets at random as it comes back into view, on your Mac and on iPhone and iPad. A card your crew takes away by itself leaves it still.",
+      "noPicture": "A still picture of the empty screen looks the same as before; the change is a short animation.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

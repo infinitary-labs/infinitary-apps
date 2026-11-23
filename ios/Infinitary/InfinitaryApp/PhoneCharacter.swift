@@ -78,6 +78,24 @@ private struct CharacterDrawing: View {
 
     static func greetOnNextSight() { greetingPending = true }
 
+    /// This phone's own presses on cards, by card id; a card leaving within 15 s of one counts as the captain's.
+    private static var pressedAt: [String: Date] = [:]
+    static func pressed(_ cardID: String, at now: Date = Date()) {
+        pressedAt = pressedAt.filter { now.timeIntervalSince($0.value) <= 15 }
+        pressedAt[cardID] = now
+    }
+    /// Whether every card that left a stage now empty was this phone's own press within 15 s.
+    static func clearedByPress(_ left: [String], at now: Date = Date()) -> Bool {
+        !left.isEmpty && left.allSatisfy { pressedAt[$0].map { now.timeIntervalSince($0) <= 15 } ?? false }
+    }
+    /// The last-card fidget: the crew scene Home shows next plays one fidget, after any greeting. It waits a few
+    /// seconds at most, so a card coming up first leaves the next scene still.
+    private nonisolated static let clearFidget = Mutex<Date?>(nil)
+    static func fidgetOnNextSight(at now: Date = Date()) { clearFidget.withLock { $0 = now } }
+    nonisolated static func takeClearFidget(at now: Date = Date()) -> Bool {
+        clearFidget.withLock { at in defer { at = nil }; return at.map { now.timeIntervalSince($0) <= 3 } ?? false }
+    }
+
     /// A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive,
     /// hands the greeting on to the next one a person sees.
     static func left(_ motion: CharacterMotion) {
@@ -253,6 +271,7 @@ final class CharacterMotion: @unchecked Sendable {
         if machine == nil {
             machine = CharacterMachine(now: time)
             if CharacterCues.takeGreeting() { machine?.request(.greet, now: time) }
+            if CharacterCues.takeClearFidget() { machine?.stageCleared(now: time) }
         }
         // The cinch keeps its own clock beside the machine, which never hears it: a starting count from before the
         // character was drawn plays nothing.

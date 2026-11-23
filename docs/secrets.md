@@ -172,6 +172,7 @@ The Protected secrets section counts the secrets when storage is available, and 
 Where storage needs recovery, the notice says Infinitary can no longer read what this computer keeps and offers Recovery options, which opens Backup and restore, and Start over ("Starting over").
 A line under its buttons says what Start over clears and that it cannot be undone, because a platform's own confirmation may not say: Linux's polkit shows only the installed policy's message.
 A waiting request shows as one line naming its secrets, with Review request, which brings the exact-use card forward without replacing its live choices.
+While confirmation is in progress, Review request does not open another card.
 Searchable rows lead with each secret's name and its place (the optional environment) in quiet text, and say which task last asked for it and when, or that it is waiting, in use or not used yet.
 The view's `lastTask` carries that task's title: the controller reads it from the task its own coordinator saw, or from the task a crewmate's intent names in the history (`taskIntent`), so it survives a restart; a request no task made, or by a task the home no longer knows, names only when.
 A reference appears only when another secret has the same name and place.

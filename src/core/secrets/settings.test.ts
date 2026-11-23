@@ -60,9 +60,10 @@ function fixture() {
   const custody = disposableCustody();
   const dir = scratchDir("secrets-settings-");
   const cards: Raised[] = [];
+  const openCards = new Map<string, Raised>();
   const withdrawn: string[] = [];
   const ended: { task: string; receipt: EndedUseReceipt }[] = [];
-  let confirmation = true;
+  let confirmation: () => boolean | Promise<boolean> = () => true;
   let confirms = 0;
   let now = 1000;
   const sent: string[] = [];
@@ -101,7 +102,7 @@ function fixture() {
         available: async () => true,
         confirm: async () => {
           confirms += 1;
-          return confirmation;
+          return confirmation();
         },
       },
     });
@@ -113,9 +114,11 @@ function fixture() {
       ...(recovery ? { recovery } : {}),
       raise: (card) => {
         cards.push(card);
+        openCards.set(card.id, card);
       },
-      openCard: (id) => cards.findLast((card) => card.id === id),
+      openCard: (id) => openCards.get(id),
       withdraw: (id) => {
+        openCards.delete(id);
         withdrawn.push(id);
       },
       settled: (task, receipt) => {
@@ -183,8 +186,8 @@ function fixture() {
       return protectedOwner;
     },
     confirms: () => confirms,
-    confirmation: (value: boolean) => {
-      confirmation = value;
+    confirmation: (value: boolean | (() => Promise<boolean>)) => {
+      confirmation = typeof value === "boolean" ? () => value : value;
     },
     advance: (ms: number) => {
       now += ms;
@@ -807,6 +810,49 @@ describe("trusted Secrets settings", () => {
     expect(f.sent).toEqual([]);
     await Promise.all([f.click(SECRETS_WORDS.once, offer), f.click(SECRETS_WORDS.once, offer)]);
     expect(f.confirms()).toBe(1);
+    expect(f.sent).toEqual([`Bearer ${TOKEN}`]);
+    expect((await f.settings.view()).uses[0]?.state).toBe("completed");
+  });
+
+  it("does not reopen a use during confirmation and keeps the new choices if confirmation is refused", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    const receipt = await f.request("review-during-confirmation");
+    expect(receipt.state).toBe("waiting");
+    const review = () => f.settings.action({ kind: "review-use", request: receipt.request });
+    const first = f.cards.at(-1);
+    if (!first) throw new Error("No approval card was raised.");
+    const started = Promise.withResolvers<void>();
+    const confirmation = Promise.withResolvers<boolean>();
+    f.confirmation(() => {
+      started.resolve();
+      return confirmation.promise;
+    });
+    const approving = f.click(SECRETS_WORDS.once, first);
+    await Promise.race([started.promise, approving]);
+    try {
+      expect(f.confirms()).toBe(1);
+      const count = f.cards.length;
+      expect((await review()).offeredCard).toBeNull();
+      expect(f.cards).toHaveLength(count);
+    } finally {
+      confirmation.resolve(false);
+      await approving;
+    }
+    expect(f.sent).toEqual([]);
+    expect((await f.settings.view()).uses[0]?.state).toBe("waiting");
+    const reoffered = f.cards.at(-1);
+    expect(reoffered?.id).toBe(first.id);
+    expect(reoffered?.actions).not.toEqual(first.actions);
+    expect((await review()).offeredCard).toBe(first.id);
+    expect(f.cards.at(-1)?.actions).toEqual(reoffered?.actions);
+
+    f.confirmation(true);
+    await f.click(SECRETS_WORDS.once, first);
+    expect(f.confirms()).toBe(1);
+    expect(f.sent).toEqual([]);
+    await f.click(SECRETS_WORDS.once, reoffered);
+    expect(f.confirms()).toBe(2);
     expect(f.sent).toEqual([`Bearer ${TOKEN}`]);
     expect((await f.settings.view()).uses[0]?.state).toBe("completed");
   });

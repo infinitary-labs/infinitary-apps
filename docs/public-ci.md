@@ -77,6 +77,8 @@ An outside pull request merges only once its author accepted the Contributor Lic
 - until then it fails and leaves one comment saying how to accept.
 
 The record is a locked issue of the project titled "Contributor License Agreement record", opened by a maintainer; each entry is a comment the Actions token writes there, naming the login, numeric id, pull request, the box or reply, the version and the time, and the check reads back only those comments.
+A maintainer is an account with write or admin permission on the project, which the check reads through GitHub's collaborator permission API.
+It never reads the issue's author association, because GitHub tells the Actions token that an organization member whose membership is private is only a contributor.
 The Actions token comments on a locked issue with its issue write access, and no one outside the project's collaborators can.
 Without the issue the check fails on every outside pull request and names what is missing.
 

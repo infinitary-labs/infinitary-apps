@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -191,17 +192,38 @@ describe("linux-packages.yml's virtual screen", () => {
     strategy: { matrix: { include: Array<{ system: string }> } };
   };
   const systems = [...new Set(check.strategy.matrix.include.map((entry) => entry.system))];
-  const install = check.steps.find((step) => step.name === "Install the virtual screen");
-  /** The packages the step names for one leg, with the check's source at `ref`. */
-  const named = (system: string, ref: string) =>
-    workflowString(String(install?.run), {
-      ...contexts,
-      matrix: { system },
-      inputs: { ...contexts.inputs, ref },
-    })
-      .split(/\s+/)
-      .slice(1)
-      .filter((arg) => !arg.startsWith("-"));
+  const install = check.steps.find((step) => step.name === "Install the virtual screen") as
+    | (Step & { env?: Record<string, string> })
+    | undefined;
+  /**
+   * The packages the step's shell asks the apt helper for on one leg, with
+   * the check's source at `ref`: its environment as GitHub evaluates it, and
+   * a stand-in helper that prints what it is given.
+   */
+  const named = (system: string, ref: string) => {
+    const workspace = scratchDir("linux-packages-screen-");
+    mkdirSync(join(workspace, "scripts"));
+    writeFileSync(join(workspace, "scripts/apt-install.sh"), 'printf "%s\\n" "$@"\n', {
+      mode: 0o755,
+    });
+    const env = Object.fromEntries(
+      Object.entries(install?.env ?? {}).map(([name, value]) => [
+        name,
+        workflowString(value, {
+          ...contexts,
+          matrix: { system },
+          inputs: { ...contexts.inputs, ref },
+        }),
+      ]),
+    );
+    const result = spawnSync("bash", ["-e", "-c", String(install?.run)], {
+      cwd: workspace,
+      env: { PATH: process.env.PATH, ...env },
+      encoding: "utf8",
+    });
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout.split("\n").filter((arg) => arg !== "" && !arg.startsWith("-"));
+  };
 
   it("asks the runner for Xvfb alone when the check is the workflow's own", () => {
     expect(systems).toContain("appimage");

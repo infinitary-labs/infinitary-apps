@@ -344,7 +344,14 @@ jobs:
       # "The runner's automatic updates").
       - name: Install the virtual screen
         timeout-minutes: 10
-        run: scripts/apt-install.sh ${{ matrix.system == 'appimage' && inputs.ref && inputs.ref != github.sha && '--no-install-recommends xvfb xdotool imagemagick' || 'xvfb' }}
+        env:
+          OLDER_APPIMAGE_CHECK: ${{ matrix.system == 'appimage' && inputs.ref != '' && inputs.ref != github.sha }}
+        run: |
+          if [ "$OLDER_APPIMAGE_CHECK" = true ]; then
+            scripts/apt-install.sh --no-install-recommends xvfb xdotool imagemagick
+          else
+            scripts/apt-install.sh xvfb
+          fi
       - if: matrix.system == 'nix'
         uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086
       # Xvfb writes its display's number to -displayfd once it takes clients,

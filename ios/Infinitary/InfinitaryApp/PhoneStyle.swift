@@ -261,6 +261,20 @@ struct PhoneChoiceRow: Layout {
     }
 }
 
+/// A caption with small links after it on the same line when they fit, or on the line below when they do not,
+/// so a choice made elsewhere stays in view without a second row of full-size choices.
+struct PhoneCaptionLinks<Caption: View, Links: View>: View {
+    @ViewBuilder let caption: Caption
+    @ViewBuilder let links: Links
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) { caption.fixedSize(); Spacer(minLength: 0); links.fixedSize() }
+            VStack(alignment: .leading, spacing: PhoneTheme.space2) { caption; HStack(spacing: PhoneTheme.space3) { links } }
+        }
+    }
+}
+
 /// INF-1312: a list of rows where a choice is a way in or a thing to pick rather than a decision.
 /// The rows sit on the panel fill inside a hairline, as the Mac draws a list, with a hairline between them.
 struct PhoneList<Content: View>: View {

@@ -8,7 +8,7 @@ import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
 import type { IdleLadderHost } from "./idleLadder";
 import type { NextMoveBegun } from "./idleWakes";
-import { asksAbout } from "./reviewCard";
+import { asksAbout, questionsNaming } from "./reviewCard";
 import type { TypedWake } from "./wakes";
 
 /**
@@ -144,7 +144,7 @@ export class NextMove {
       found.at,
       tasks.graph.latestBlockerClose(record.id) ?? 0,
       tasks.capture.cardResolvedAt(record.id, nextMoveCardId(record.id)) ?? 0,
-      ...this.questionsNaming(record).map((asking) => asking.closedAt ?? 0),
+      ...questionsNaming(record.id, tasks).map((asking) => asking.closedAt ?? 0),
     );
     return { record, stands: open ? "on-request" : "backlog", begun: found.begun, since };
   }
@@ -267,25 +267,13 @@ export class NextMove {
    * for it, so the work is held as a card of its own would hold it.
    */
   private namedByQuestion(record: TaskRecord, pass: Pass): boolean {
-    return this.questionsNaming(record).some(
+    return questionsNaming(record.id, this.host.tasks).some(
       (asking) =>
         asking.status === "open" &&
         asking.gate?.kind === "captain" &&
         asking.gate.ref !== undefined &&
         this.openCardIds(pass).has(asking.gate.ref),
     );
-  }
-
-  /**
-   * The first mate's own decisions whose `related` names this work, open or
-   * answered: each closes when its card leaves the stack.
-   */
-  private questionsNaming(record: TaskRecord): TaskRecord[] {
-    return this.host.tasks.graph.linksTo(record.id).flatMap((link) => {
-      if (link.type !== "related") return [];
-      const asking = this.host.tasks.get(link.fromId);
-      return asking?.kind === "decision" ? [asking] : [];
-    });
   }
 
   /** The open cards' ids, read once a pass on first need. */

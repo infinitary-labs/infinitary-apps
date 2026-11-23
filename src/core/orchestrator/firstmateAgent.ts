@@ -140,6 +140,12 @@ export type FirstmateTurn = {
   aboutCardId?: string;
   /** The captain's words the running turn answers, for the digest. */
   asked: string[];
+  /**
+   * The running turn carries words the captain typed - a message, parked or
+   * live, or a steer - never only a card choice's label or a choice the app
+   * carried out (INF-6091; the hold `card-question` reads it).
+   */
+  typed: boolean;
   /** The tools the running turn called, for the digest. */
   tools: string[];
   /** The running turn's typed cut-off, when it ended in one. */
@@ -156,7 +162,7 @@ export type FirstmateTurn = {
 };
 
 /** What each turn starts afresh: its origin, wake, card and live words were stamped before it. */
-function beginTurn(turn: FirstmateTurn, asked: readonly string[]): void {
+function beginTurn(turn: FirstmateTurn, asked: readonly string[], typed: boolean): void {
   Object.assign(turn, {
     failed: false,
     contextOverflow: false,
@@ -168,6 +174,7 @@ function beginTurn(turn: FirstmateTurn, asked: readonly string[]): void {
     pendingReads: [],
     originsRead: [],
     asked: [...asked],
+    typed,
     tools: [],
     cutOff: undefined,
     pausing: false,
@@ -235,6 +242,11 @@ type TurnPayload =
       focusedProjectId?: string;
     };
 
+/** Whether a batch of inbox rows carries a message the captain typed, not only a choice. */
+function captainTypedIn(rows: readonly InboxRow[]): boolean {
+  return rows.some((row) => row.origin === "captain" && row.facts?.kind === "captain-turn");
+}
+
 /** The captain's words a batch of inbox rows carries, oldest first. */
 function captainWordsOf(rows: readonly InboxRow[]): string[] {
   return rows.flatMap((row) => {
@@ -298,6 +310,7 @@ export class FirstmateAgent {
     read: new Set<string>(),
     originsRead: [],
     asked: [],
+    typed: false,
     tools: [],
     pausing: false,
   };
@@ -655,6 +668,7 @@ export class FirstmateAgent {
         ? pending.map((row) => ({ id: row.id, attempts: row.attempts }))
         : undefined,
       [...captainWordsOf(pending), trimmed],
+      true,
     );
   }
 
@@ -786,6 +800,7 @@ export class FirstmateAgent {
       this.decisions.noteSteer(input);
       this.acceptedSteers.push({ words, attachments: kept, aboutCardId, askId });
       this.turn.asked.push(words);
+      this.turn.typed = true;
     } catch {
       // The row stays pending; the next drain delivers it as a turn, and that
       // turn reads the message, so this one does not judge it.
@@ -1072,9 +1087,10 @@ export class FirstmateAgent {
     images?: Array<{ mimeType: string; data: string }>,
     inboxRows?: { id: number; attempts: number }[],
     asked: readonly string[] = [],
+    typed = false,
   ): Promise<void> {
     this.running = true;
-    beginTurn(this.turn, asked);
+    beginTurn(this.turn, asked, typed);
     // A parent whose last part this turn closes waits for the turn's end (INF-4509).
     this.options.supervisor.intake.firstmateTurnBegan();
     this.lastEventAt = Date.now();
@@ -1617,6 +1633,7 @@ export class FirstmateAgent {
       batchImages,
       batch.map((row) => ({ id: row.id, attempts: row.attempts })),
       captainWordsOf(batch),
+      captainTypedIn(batch),
     );
   }
 

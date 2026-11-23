@@ -3,6 +3,7 @@ import { standingOverride } from "@shared/holds";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { cutText } from "@shared/textCut";
 import type { TaskToolsDelegate } from "../pi/taskTools";
+import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasksAsync } from "../tasks/taskQuery";
@@ -10,6 +11,8 @@ import { TaskService } from "../tasks/taskService";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
 import { captainWordsIn } from "./captainOverrides";
+import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
+import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { startedReply } from "./replyLine";
@@ -33,6 +36,25 @@ export type FirstmateTaskToolsHost = {
 export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDelegate {
   const supervisor = host.options.supervisor;
   const tasks = host.options.tasks;
+  /** What the card-question hold reads (./cardHeldStart). */
+  const cardHold = (taskId: string) => ({
+    open: supervisor.cards,
+    tasks,
+    // The captain's choices on the first mate's own cards, not yet handed to a
+    // turn; a row set aside is never delivered, so it holds nothing.
+    unreadChoices: () =>
+      host.options.inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .flatMap((row) =>
+          row.escalatedAt === null &&
+          row.facts?.kind === "card-choice" &&
+          row.facts.card.id?.startsWith(FIRSTMATE_CARD_PREFIX)
+            ? [row.facts.card]
+            : [],
+        ),
+    captainWords: host.turn.typed,
+    captainPressedStart: supervisor.hostOps.pendingStarts.has(taskId),
+  });
   /**
    * The open parts under a task whose override changed (INF-1939 friction 5):
    * a part does not carry its parent's override, so the captain's words reach
@@ -208,6 +230,15 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             ...(input.repository !== undefined ? { repository: input.repository } : {}),
             ...(input.parent !== undefined ? { parent: input.parent } : {}),
           };
+          // INF-6091 finding 1: when-ready would let the ready sweep start
+          // what the first mate's own open card still asks about.
+          if (input.startPolicy === "when-ready" && record.status !== "active") {
+            const held = cardHeldStartRefusal(record, {
+              ...cardHold(record.id),
+              edit: "when-ready",
+            });
+            if (held) throw new TaskGraphRefusal(held);
+          }
           // A program's bound is the captain's consent (INF-799): raised only on the captain's turn.
           if (input.programBound !== undefined && host.turn.origin !== "captain-turn")
             throw new TaskGraphRefusal(
@@ -243,6 +274,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           };
           const changes = tasks.atomic(
             () => {
+              const waited = tasks.graph.waitingOn(record.id).length > 0;
               const moved =
                 Object.keys(moves).length > 0
                   ? tasks.updateFields(record.id, moves, "firstmate")
@@ -273,11 +305,29 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
                       },
                     }
                   : {};
-              return [
+              const changed = [
                 ...moved,
                 ...tasks.updateFields(record.id, { ...rest, ...where }, "firstmate"),
                 ...added,
               ];
+              // INF-6091 finding 1: an edit that leaves when-ready work waiting
+              // on nothing - needs_merge, start_at_approval or a move that lets
+              // an approved base answer its wait - lets the ready sweep start
+              // what the first mate's own open card still asks about; refusing
+              // here rolls the whole edit back.
+              const now = tasks.get(record.id);
+              if (
+                waited &&
+                now?.startPolicy === "when-ready" &&
+                tasks.graph.waitingOn(record.id).length === 0
+              ) {
+                const held = cardHeldStartRefusal(now, {
+                  ...cardHold(record.id),
+                  edit: "waits-ended",
+                });
+                if (held) throw new TaskGraphRefusal(held);
+              }
+              return changed;
             },
             () => {},
           );
@@ -527,6 +577,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     startNow: async (input) => {
       const record = resolve(input.task);
       host.asks.attach(record.id, "update_task", true, "tie");
+      // INF-6091 finding 1: the first mate's own open card still asks.
+      const held = cardHeldStartRefusal(record, cardHold(record.id));
+      if (held) return held;
       const text = await supervisor.starts.startQueuedNow(record.id);
       // A refusal comes back as text; a start now running behind the
       // answer (INF-3060), or a task a crewmate now holds, took effect.
@@ -544,6 +597,17 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       // About both tasks even when refused; their work once the edge changes.
       host.asks.attach(to.id, "link_tasks", undefined, "tie");
       host.asks.attach(from.id, "link_tasks", undefined, "tie");
+      // INF-6091 finding 1: removing the last wait of when-ready work lets
+      // the ready sweep start what the first mate's own open card asks about.
+      if (input.remove && input.type === "blocks" && to.startPolicy === "when-ready") {
+        // The ready sweep's own rule: an approved base answers a wait too.
+        const others = tasks.graph.waitingOn(to.id).filter((blocker) => blocker.id !== from.id);
+        const held =
+          others.length === 0
+            ? cardHeldStartRefusal(to, { ...cardHold(to.id), edit: "wait-removal" })
+            : undefined;
+        if (held) return held;
+      }
       const linked = () =>
         tasks.graph
           .linksTo(to.id)

@@ -1,4 +1,6 @@
 import { type Card, mergeEffectOf } from "@shared/cards";
+import type { TaskRecord } from "../storage/taskRecords";
+import type { TaskService } from "../tasks/taskService";
 
 type ParentReader = { get(id: string): { parentId?: string | null } | undefined };
 
@@ -24,6 +26,24 @@ export function asksAbout(
   tasks: ParentReader,
 ): boolean {
   return card.taskId === taskId || reviewedTaskOf(card, tasks) === taskId;
+}
+
+/**
+ * The first mate's own decisions whose `related` names this work, open or
+ * answered (INF-4165 finding 3): a decision filed for a card with no task
+ * links to the work it asks about, and closes when its card leaves the
+ * stack. The whose-turn sort and the first mate's start hold read this one
+ * rule (`NextMove`, `cardHeldStart.ts`).
+ */
+export function questionsNaming(
+  taskId: string,
+  tasks: Pick<TaskService, "get" | "graph">,
+): TaskRecord[] {
+  return tasks.graph.linksTo(taskId).flatMap((link) => {
+    if (link.type !== "related") return [];
+    const asking = tasks.get(link.fromId);
+    return asking?.kind === "decision" ? [asking] : [];
+  });
 }
 
 /**

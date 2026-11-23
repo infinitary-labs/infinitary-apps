@@ -5,6 +5,7 @@
 // - a page that does not name its language and direction, itself as its
 //   canonical address, and its version in every shipped language and
 //   x-default as alternates (docs/docs-site.md, "Languages"),
+// - a shipped language's home page whose language menu cuts its name short,
 // - a request to any other host,
 // - a cookie,
 // - a link between pages, or to a heading, that leads nowhere,
@@ -337,6 +338,43 @@ try {
       for (const { from, href } of linked.get(hash)) fail(`${from} links to ${href}, but that page has no ${hash}`);
     }
   });
+
+  // The language menu shows the whole name of each page's language, never cut short with an
+  // ellipsis (docs/docs-site.md, "Languages"): the name, in the menu's own type, fits inside it.
+  // A select draws only its chosen name, so that name is measured in a span set in the same type.
+  if (LANGUAGES.length > 1) {
+    await sideBySide(LANGUAGES, async (tab, language) => {
+      await tab.goto(`${origin}${language.prefix}`, { waitUntil: "load" });
+      await tab.evaluate(() => document.fonts.ready);
+      const menu = await tab.evaluate(() => {
+        const select = [...document.querySelectorAll("starlight-lang-select select")].find((each) => each.checkVisibility());
+        if (!select) return null;
+        const style = getComputedStyle(select);
+        const name = select.selectedOptions[0]?.textContent.trim() ?? "";
+        const probe = document.createElement("span");
+        probe.textContent = name;
+        probe.style.position = "absolute";
+        probe.style.visibility = "hidden";
+        probe.style.whiteSpace = "pre";
+        for (const property of ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontStretch", "letterSpacing", "wordSpacing"]) {
+          probe.style[property] = style[property];
+        }
+        select.after(probe);
+        const needs = probe.getBoundingClientRect().width;
+        probe.remove();
+        const sides = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"];
+        const holds = select.getBoundingClientRect().width - sides.reduce((sum, side) => sum + parseFloat(style[side]), 0);
+        return { name, needs, holds };
+      });
+      if (!menu) {
+        fail(`${language.prefix} draws no language menu`);
+      } else if (menu.needs > menu.holds + 0.05) {
+        fail(
+          `${language.prefix}'s language menu cuts "${menu.name}" short: it needs ${menu.needs.toFixed(1)}px and the menu holds ${menu.holds.toFixed(1)}px`,
+        );
+      }
+    });
+  }
 
   const unknown = await page.goto(`${origin}/no-such-page/`);
   if (unknown?.status() !== 404 || !(await page.locator("main h1").count())) {

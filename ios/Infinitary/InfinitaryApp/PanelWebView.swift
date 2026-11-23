@@ -90,7 +90,13 @@ import SwiftUI
         view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
         view.accessibilityIdentifier = card.map { "panel-card-body-\(panel.id)-\($0.id)" } ?? "panel-body-\(panel.id)"
         // INF-1337: the column's scroller moves this whole view with the finger, which the page cannot tell.
-        view.addGestureRecognizer(PressMoveWatch { [weak self] in self?.pressMoved() })
+        // A press on the panel gives its page the keyboard's focus as the finger goes down, as a click on the Mac's panel
+        // does. The page's own gate for a press that leaves it (`pressed` in CardRuntime/panelHost.ts) needs the page
+        // focused at its click; while a field elsewhere, such as the message box a panel's draft fills, held the focus,
+        // WebKit's own focus on the tap could reach the page after its click, and the press did nothing.
+        view.addGestureRecognizer(PressMoveWatch(down: { [weak view] in
+            if let view, view.phoneFirstResponder() == nil { _ = view.becomeFirstResponder() }
+        }, moved: { [weak self] in self?.pressMoved() }))
         self.view = view
         load()
         return view

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "automation-start-names-its-run",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Work from automations that run together stays tied to its automation",
+      "body": "When two automations run at the same time, each task your first mate starts for them now stays tied to the automation it came from. Its run history in Settings lists the task, and the crewmate gets the notes earlier runs left. Before, a task started for one of two runs could belong to neither.",
+      "noPicture": "This changes which automation a task belongs to behind the scenes, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

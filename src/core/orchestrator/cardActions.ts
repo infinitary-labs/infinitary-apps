@@ -14,7 +14,6 @@ import {
   cardAnswersBytes,
   cardAnswersSchema,
   cardMessageText,
-  cardSubmissionSchema,
   cardTakesReplies,
   mergeEffectOf,
   onStage,
@@ -31,7 +30,6 @@ import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { heldMerges } from "@shared/mergeHeld";
 import { SECRET_BRING_CARD_WORDS } from "@shared/secretBring";
 import { SECRET_ASK_CARD_WORDS } from "@shared/secrets";
-import { z } from "zod";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { askedFromAView } from "../askedFromAView";
 import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
@@ -48,6 +46,7 @@ import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import {
   chromeValue,
+  gestureSchema,
   interactionOf,
   type KeptCarried,
   keepCarried,
@@ -62,17 +61,9 @@ import { standingAuthorization } from "./mergeAuthorization";
 import { MergeCardActions } from "./mergeCardActions";
 import { reviewedTaskOf } from "./reviewCard";
 import { reviewHistory } from "./reviewHistory";
-import { holdsMerge, type MergeBehind, mergeBehindRefusal } from "./settleCardFacts";
+import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
-
-/**
- * A gesture as the consequential checks below read it: its offer, lifecycle
- * and remount decide, and what pressed the button (`input`) is never part
- * of that reading, so an input this home cannot read never refuses a press
- * (docs/card-evidence.md, "What a click carries").
- */
-const gestureSchema = cardSubmissionSchema.extend({ input: z.unknown().optional() });
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
 export class CardChoiceUnavailableError extends Error {
@@ -103,6 +94,19 @@ export class CardChoiceUnavailableError extends Error {
                   : "This choice is not ready. Wait for the card to return.",
     );
   }
+}
+
+/**
+ * The refused click on a merge card behind its change (INF-4031): what
+ * changed, and that the card now shows it, since the refusal holds or
+ * redraws the card at once.
+ */
+function mergeBehindRefusal(behind: MergeBehind | undefined): string {
+  if (behind?.why === "earlier") return m.mergeRefusedEarlier();
+  if (behind?.why === "other")
+    return "Another pull request became this task's current change after this card went up, so I did not merge. The card now says so.";
+  const version = behind?.current ? `, ${behind.current.slice(0, 7)},` : "";
+  return `A newer version${version} was pushed after this card went up, so I did not merge. The card now shows it.`;
 }
 
 /**

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-sentence-lines",
+      "reason": "The documentation site's Chinese and Japanese pages no longer show a space between sentences, where the source breaks a line after each one; nothing in the app changes."
+    }
+  ]
+}

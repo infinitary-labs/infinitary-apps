@@ -38,10 +38,13 @@ jobs:
     if: ${{ github.event_name == 'pull_request_target' || github.event.issue.pull_request }}
     name: ${{ github.event_name == 'issue_comment' && 'Pull request comment' || 'Pull request' }} · Contributor agreement
     runs-on: ubuntu-24.04
+    # GitHub refuses a comment on a pull request to a token without pull
+    # request writes, even with issue writes. Issue writes stay for the
+    # entries on the record issue.
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
       statuses: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

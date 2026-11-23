@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agreement-check-pull-request-writes",
+      "reason": "Internal: the contributor agreement check's token gains pull request writes, so it can ask an outside pull request's author to accept and set its failed status; nothing in the app changes."
+    }
+  ]
+}

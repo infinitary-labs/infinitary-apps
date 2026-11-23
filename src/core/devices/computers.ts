@@ -266,7 +266,7 @@ export class Computers {
    */
   private readonly saving = new Map<string, { controller: AbortController; tasks: string[] }>();
   /**
-   * Each update whose crew paused, by device id, until it ends: when that
+   * Each update whose crew's work was saved, by device id, until it ends: when that
    * computer or its update was last heard from (`updatingOf`), and how to
    * cancel the read once it would go quiet. Kept only in memory, so a
    * restart here forgets it.
@@ -1763,7 +1763,7 @@ export class Computers {
 
   /**
    * Whether the home follows a computer's update now (docs/devices.md,
-   * "Updating"): from its crew's pause until the update ends, done, refused,
+   * "Updating"): from when its crew's work is saved until the update ends, done, refused,
    * failed or not back, while it is in reach or was heard from - a
    * connection coming or going, a count of its copy or a step said - within
    * `UPDATE_RETURN_MS`, after which it goes back to the copy it ran before.

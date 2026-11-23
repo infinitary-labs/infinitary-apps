@@ -1120,7 +1120,7 @@ Its crew's work is saved before the update and carries on after, with no message
 While its update goes on, the computer reads updating, never out of reach (`updating` on its entry, `Computers.updatingOf`; contract change `computer-updating`):
 
 - **From when to when.**
-  From its crew's pause (`Computers.pauseFor`) until the update's route ends, whatever came of it.
+  From the moment its crew's work is saved and the update goes ahead (`Computers.follow`) until the update's route ends, whatever came of it.
   The fact lives only in this Mac's memory, so a restart of the app here forgets it.
 - **What says so.**
   In Devices its row follows the update's own step, even when Devices opened part way, with an idle dot while it is out of reach, and the Map reads "Updating" on a dotted edge, never Out of reach.

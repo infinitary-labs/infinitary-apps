@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "هذه البطاقة قيد العمل";
 "refuseThisCardTakesNoReply" = "هذه البطاقة لا تقبل ردًا";
 "refuseThisIsTheOnlyCard" = "هذه البطاقة الوحيدة";
+"resetConfirmReason" = "إعادة تعيين Infinitary على هذا الكمبيوتر.";
+"resetConfirmReasonMac" = "إعادة تعيين Infinitary على هذا الكمبيوتر";
 "resetHeldDetail" = "برنامج آخر يستخدم مجلد Infinitary. أغلقه ثم حاول مرة أخرى.";
 "resetHeldMessage" = "تعذّر على Infinitary إكمال إعادة التعيين";
 "resetHeldQuit" = "إنهاء";

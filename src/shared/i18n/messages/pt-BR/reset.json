@@ -1,4 +1,6 @@
 {
+  "resetConfirmReason": "Redefinir o Infinitary neste computador.",
+  "resetConfirmReasonMac": "redefinir o Infinitary neste computador",
   "resetHeldDetail": "Outro programa está usando a pasta do Infinitary. Feche-o e tente de novo.",
   "resetHeldMessage": "O Infinitary não conseguiu terminar a redefinição",
   "resetHeldQuit": "Sair",

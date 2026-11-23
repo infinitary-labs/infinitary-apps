@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "Cette carte est en cours de traitement";
 "refuseThisCardTakesNoReply" = "Cette carte n’accepte pas de réponse";
 "refuseThisIsTheOnlyCard" = "C’est la seule carte";
+"resetConfirmReason" = "Réinitialiser Infinitary sur cet ordinateur.";
+"resetConfirmReasonMac" = "réinitialiser Infinitary sur cet ordinateur";
 "resetHeldDetail" = "Un autre programme utilise le dossier d’Infinitary. Fermez-le, puis réessayez.";
 "resetHeldMessage" = "Infinitary n’a pas pu terminer sa réinitialisation";
 "resetHeldQuit" = "Quitter";

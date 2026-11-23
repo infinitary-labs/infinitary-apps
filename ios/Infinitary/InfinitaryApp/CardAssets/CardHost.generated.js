@@ -47664,6 +47664,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This is the only card`;
   }
+  function resetConfirmReason() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على هذا الكمبيوتر.`;
+      case "de":
+        return `Infinitary auf diesem Computer zurücksetzen.`;
+      case "es":
+        return `Restablecer Infinitary en este ordenador.`;
+      case "fr":
+        return `Réinitialiser Infinitary sur cet ordinateur.`;
+      case "ja":
+        return `このコンピュータの Infinitary をリセットします。`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary를 재설정합니다.`;
+      case "pt-BR":
+        return `Redefinir o Infinitary neste computador.`;
+      case "zh-Hans":
+        return `在这台电脑上重置 Infinitary。`;
+      case "zh-Hant":
+        return `在這台電腦上重設 Infinitary。`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary on this computer.‬`;
+    }
+    return `Reset Infinitary on this computer.`;
+  }
+  function resetConfirmReasonMac() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على هذا الكمبيوتر`;
+      case "de":
+        return `Infinitary auf diesem Computer zurückzusetzen`;
+      case "es":
+        return `restablecer Infinitary en este ordenador`;
+      case "fr":
+        return `réinitialiser Infinitary sur cet ordinateur`;
+      case "ja":
+        return `このコンピュータの Infinitary をリセット`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary 재설정`;
+      case "pt-BR":
+        return `redefinir o Infinitary neste computador`;
+      case "zh-Hans":
+        return `在这台电脑上重置 Infinitary`;
+      case "zh-Hant":
+        return `在這台電腦上重設 Infinitary`;
+      case "en-XA":
+        return `[ŕéšéţ Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮reset Infinitary on this computer‬`;
+    }
+    return `reset Infinitary on this computer`;
+  }
   function resetHeldDetail() {
     switch (currentLanguage()) {
       case "ar":
@@ -103935,6 +103989,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThisCardIsWorking,
     refuseThisCardTakesNoReply,
     refuseThisIsTheOnlyCard,
+    resetConfirmReason,
+    resetConfirmReasonMac,
     resetHeldDetail,
     resetHeldMessage,
     resetHeldQuit,
@@ -107257,6 +107313,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThisCardIsWorking": [],
     "refuseThisCardTakesNoReply": [],
     "refuseThisIsTheOnlyCard": [],
+    "resetConfirmReason": [],
+    "resetConfirmReasonMac": [],
     "resetHeldDetail": [],
     "resetHeldMessage": [],
     "resetHeldQuit": [],

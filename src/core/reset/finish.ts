@@ -16,13 +16,13 @@ import {
  * Finishing a reset at the start after it (docs/reset.md, "At the next
  * start"): before anything reads or holds the data folder, the folder is
  * renamed aside in one step, the renamed folder and the older copies beside
- * it are deleted, the outside kinds the mark lists are cleared, and the mark
- * goes last. Every step can run twice, so a start cut off at any of them
+ * it are deleted, the outside kinds the mark lists are cleared once, and the
+ * mark goes last. Every step can run twice, so a start cut off at any of them
  * carries on at the next.
  */
 
-/** Starts that may leave an outside kind before the mark goes anyway. */
-export const OUTSIDE_TRIES = 3;
+/** Starts that may leave a renamed-aside folder before the mark goes anyway. */
+export const ASIDE_TRIES = 3;
 
 export type ResetFinishSeams = {
   /** Renames the folder; a Windows folder another program holds throws EBUSY or EPERM. */
@@ -77,16 +77,27 @@ export async function finishReset(
       mark = advance(dataDir, mark, { stage: "moved" });
     }
     if (mark.stage === "moved") {
-      for (const path of [...renamedAside(dataDir), ...seams.olderCopies()]) seams.remove(path);
-      mark = advance(dataDir, mark, { stage: "outside" });
+      const kept = renamedAside(dataDir).filter((path) => !seams.remove(path));
+      for (const path of seams.olderCopies()) seams.remove(path);
+      const asideTries = (mark.asideTries ?? 0) + 1;
+      mark = advance(
+        dataDir,
+        mark,
+        kept.length > 0 && asideTries < ASIDE_TRIES ? { asideTries } : { stage: "outside" },
+      );
     }
+    // The outside kinds are cleared once, at the start that wipes the folder:
+    // a later start may already run the fresh install, whose own Secrets,
+    // start entries and preferences a retry would delete.
     const left: ResetOutsideKind[] = [];
     for (const kind of mark.outside) {
       const cleared = seams.clearOutside ? await seams.clearOutside(kind).catch(() => false) : true;
       if (!cleared) left.push(kind);
     }
-    if (left.length > 0 && mark.outsideTries + 1 < OUTSIDE_TRIES) {
-      advance(dataDir, mark, { outside: left, outsideTries: mark.outsideTries + 1 });
+    // A mark still at `moved` stays for the folder it could not delete; only
+    // the renamed-aside folders are tried again, never the fresh one.
+    if (mark.stage === "moved") {
+      if (mark.outside.length > 0) advance(dataDir, mark, { outside: [] });
       return { kind: "done", left };
     }
     removeResetMark(dataDir);

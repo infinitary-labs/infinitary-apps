@@ -19,24 +19,51 @@ function seams(overrides: Partial<RunningResetSeams> = {}) {
   const base: RunningResetSeams = {
     dataDir,
     atStart: [],
+    confirm: async () => true,
     prepare: async () => steps.push("prepare"),
     stopFirstMate: async () => {
       steps.push(existsSync(`${dataDir}.reset`) ? "stop after mark" : "stop before mark");
     },
-    restart: () => steps.push("restart"),
+    endLeftovers: async () => steps.push("end leftovers"),
+    restart: () => {
+      steps.push("restart");
+    },
     within: (work) => work,
   };
   return { steps, dataDir, seams: { ...base, ...overrides } };
 }
 
 describe("running a reset", () => {
-  it("undoes the first mate's side, writes the mark, then stops and restarts", async () => {
+  it("undoes the first mate's side, writes the mark, stops, ends leftovers, then restarts", async () => {
     const { steps, dataDir, seams: s } = seams();
     expect(await runReset(s)).toEqual({ outcome: "restarting" });
-    expect(steps).toEqual(["prepare", "stop after mark", "restart"]);
-    expect(readResetMark(dataDir)).toMatchObject({ stage: "asked", outside: [], outsideTries: 0 });
+    expect(steps).toEqual(["prepare", "stop after mark", "end leftovers", "restart"]);
+    expect(readResetMark(dataDir)).toMatchObject({ stage: "asked", outside: [] });
     // The folder itself stays for the next start, which this start still holds.
     expect(existsSync(dataDir)).toBe(true);
+  });
+
+  it("changes nothing when the system's own confirmation is not given", async () => {
+    for (const confirm of [async () => false, () => Promise.reject(new Error("no prompt"))]) {
+      const cleared: string[] = [];
+      const {
+        steps,
+        dataDir,
+        seams: s,
+      } = seams({
+        confirm,
+        clear: {
+          "password-store": async () => {
+            cleared.push("password-store");
+            return true;
+          },
+        },
+      });
+      expect(await runReset(s)).toEqual({ outcome: "kept" });
+      expect(steps).toEqual([]);
+      expect(cleared).toEqual([]);
+      expect(existsSync(`${dataDir}.reset`)).toBe(false);
+    }
   });
 
   it("leaves each kind it could not clear now, and each start-only kind, on the mark", async () => {
@@ -69,6 +96,6 @@ describe("running a reset", () => {
     });
     await runReset(s);
     expect(readResetMark(dataDir)?.outside).toEqual(["password-store"]);
-    expect(steps).toEqual(["stop after mark", "restart"]);
+    expect(steps).toEqual(["stop after mark", "end leftovers", "restart"]);
   });
 });

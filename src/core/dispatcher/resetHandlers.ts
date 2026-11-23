@@ -1,9 +1,7 @@
-import { realpathSync } from "node:fs";
-import { isAbsolute, relative } from "node:path";
 import type { CoreInvokeChannel, InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type { CoreServices } from "../coreServices";
 import { prepareReset, type ResetPrepareDeps, resetScope } from "../reset/prepare";
-import { undoProjectSettings } from "../reset/projectGit";
+import { real, undoProjectSettings, within } from "../reset/projectGit";
 
 type ResetHandlers = {
   [C in Extract<CoreInvokeChannel, "inf:app:reset-scope" | "inf:app:reset-prepare">]: (
@@ -33,7 +31,7 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
     signOut: (id) => services.vault.remove(id),
     integrations: () => services.integrations.view().integrations,
     removeIntegration: (id) => services.integrations.remove(id),
-    openTasks: () => services.tasks.listOpen(),
+    openTasks: () => services.tasks.listLive(),
     discardTask: (id) =>
       services.supervisor.settling.closing.closeTask(id, {
         status: "dropped",
@@ -49,20 +47,7 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
       services.repos
         .list()
         .map((repo) => real(repo.path))
-        .filter((path) => !inside(real(dataDir), path)),
+        .filter((path) => !within(real(dataDir), path)),
     undoProject: (folder) => undoProjectSettings(folder, dataDir),
   };
-}
-
-function inside(folder: string, path: string): boolean {
-  const from = relative(folder, path);
-  return from === "" || (!from.startsWith("..") && !isAbsolute(from));
-}
-
-function real(path: string): string {
-  try {
-    return realpathSync(path);
-  } catch {
-    return path;
-  }
 }

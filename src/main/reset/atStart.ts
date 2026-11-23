@@ -8,10 +8,19 @@ import type { ResetOutsideKind } from "@core/reset/mark";
 import { MOVE_LOCK_SUFFIX } from "@core/storage/moveLock";
 import { OWN_IDENTITY } from "@shared/codeNames";
 import { type BuildFlavor, olderUserDataFolders } from "@shared/userDataFolders";
+import { app } from "electron";
 import { handOverProfileDir } from "../handOver";
 import { answerBootCommand } from "../startAtBootContext";
 import type { UserDataChoice } from "../userDataDir";
-import { clearAppFiles, clearPasswordStore, passwordStoreCustodies } from "./outside";
+import {
+  clearAppFiles,
+  clearCommandLink,
+  clearPasswordStore,
+  clearPhoneKeys,
+  clearSafeStorage,
+  ownCommand,
+  passwordStoreCustodies,
+} from "./outside";
 
 /**
  * Finishes a reset asked before the app quit (docs/reset.md, "At the next
@@ -66,7 +75,8 @@ export function olderCopies(dataDir: string, flavor: BuildFlavor): string[] {
 /**
  * One outside kind, cleared at a start: the password store's items, the
  * start-at-boot entry, and the app's own files a Mac keeps outside the
- * folder, which only now, with the old app gone, stay deleted.
+ * folder and Chromium's key for the window's saved data, which only now,
+ * with the old app gone and before this one's window opens, stay deleted.
  */
 async function clearAtStart(
   kind: ResetOutsideKind,
@@ -78,5 +88,17 @@ async function clearAtStart(
     );
   if (kind === "start-entries")
     return (await answerBootCommand({ boot: ["--off"], help: null }, place.dataDir)).code === 0;
+  if (kind === "safe-storage") return clearSafeStorage({ ...place, appName: app.getName() });
+  if (kind === "phone-keys") return clearPhoneKeys({ ...place, homeDir: homedir() });
+  if (kind === "command-link")
+    return clearCommandLink({
+      ...place,
+      homeDir: homedir(),
+      command: ownCommand({
+        packaged: app.isPackaged,
+        appDir: app.getAppPath(),
+        resourcesDir: process.resourcesPath,
+      }),
+    });
   return clearAppFiles({ platform: place.platform, flavor: place.flavor, homeDir: homedir() });
 }

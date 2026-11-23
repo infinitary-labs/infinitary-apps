@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "這張卡片正在處理中";
 "refuseThisCardTakesNoReply" = "這張卡片不接受回覆";
 "refuseThisIsTheOnlyCard" = "這是唯一一張卡片";
+"resetConfirmReason" = "在這台電腦上重設 Infinitary。";
+"resetConfirmReasonMac" = "在這台電腦上重設 Infinitary";
 "resetHeldDetail" = "另一個程式正在使用 Infinitary 的資料夾。請關閉它，然後再試一次。";
 "resetHeldMessage" = "Infinitary 無法完成重設";
 "resetHeldQuit" = "結束";

@@ -1,4 +1,6 @@
 {
+  "resetConfirmReason": "Restablecer Infinitary en este ordenador.",
+  "resetConfirmReasonMac": "restablecer Infinitary en este ordenador",
   "resetHeldDetail": "Otro programa está usando la carpeta de Infinitary. Ciérralo y vuelve a intentarlo.",
   "resetHeldMessage": "Infinitary no pudo terminar de restablecerse",
   "resetHeldQuit": "Salir",

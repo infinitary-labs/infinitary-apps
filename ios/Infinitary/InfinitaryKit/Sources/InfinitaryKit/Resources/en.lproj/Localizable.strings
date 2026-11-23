@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "This card is working";
 "refuseThisCardTakesNoReply" = "This card takes no reply";
 "refuseThisIsTheOnlyCard" = "This is the only card";
+"resetConfirmReason" = "Reset Infinitary on this computer.";
+"resetConfirmReasonMac" = "reset Infinitary on this computer";
 "resetHeldDetail" = "Another program is using Infinitary's folder. Close it, then try again.";
 "resetHeldMessage" = "Infinitary could not finish its reset";
 "resetHeldQuit" = "Quit";

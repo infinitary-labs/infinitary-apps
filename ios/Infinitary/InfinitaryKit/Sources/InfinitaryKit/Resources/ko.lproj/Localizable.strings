@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "이 카드는 처리 중이에요";
 "refuseThisCardTakesNoReply" = "이 카드에는 답장할 수 없어요";
 "refuseThisIsTheOnlyCard" = "카드가 이것뿐이에요";
+"resetConfirmReason" = "이 컴퓨터의 Infinitary를 재설정합니다.";
+"resetConfirmReasonMac" = "이 컴퓨터의 Infinitary 재설정";
 "resetHeldDetail" = "다른 프로그램이 Infinitary의 폴더를 사용하고 있어요. 그 프로그램을 닫은 다음 다시 시도하세요.";
 "resetHeldMessage" = "Infinitary가 재설정을 마치지 못했어요";
 "resetHeldQuit" = "종료";

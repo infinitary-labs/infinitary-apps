@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "settings",
       "title": "Reset Infinitary on this computer from Settings",
-      "body": "Settings → General now ends with Reset Infinitary. It stops every task, deletes everything Infinitary keeps on this computer, including sign-ins, Secrets, settings and paired devices, and opens on the welcome screen as if just installed. Projects in your own folders keep every file and commit. Purge task data now says that your projects, sign-ins and settings stay.",
+      "body": "Settings → General now ends with Reset Infinitary. After your computer's own confirmation, such as Touch ID or Windows Hello, it stops every task, deletes everything Infinitary keeps on this computer, including sign-ins, Secrets, settings and paired devices, leaves a computer this one works for, and opens on the welcome screen as if just installed. Projects in your own folders keep every file and commit, including work a task never merged. Purge task data now says that your projects, sign-ins and settings stay.",
       "picture": {
         "dark": "reset-infinitary-dark.webp",
         "light": "reset-infinitary-light.webp",

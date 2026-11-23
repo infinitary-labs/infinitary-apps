@@ -2513,6 +2513,8 @@ public enum PhoneMessages {
     public static func `refuseThisCardIsWorking`() -> String { PhoneWords.format("refuseThisCardIsWorking", []) }
     public static func `refuseThisCardTakesNoReply`() -> String { PhoneWords.format("refuseThisCardTakesNoReply", []) }
     public static func `refuseThisIsTheOnlyCard`() -> String { PhoneWords.format("refuseThisIsTheOnlyCard", []) }
+    public static func `resetConfirmReason`() -> String { PhoneWords.format("resetConfirmReason", []) }
+    public static func `resetConfirmReasonMac`() -> String { PhoneWords.format("resetConfirmReasonMac", []) }
     public static func `resetHeldDetail`() -> String { PhoneWords.format("resetHeldDetail", []) }
     public static func `resetHeldMessage`() -> String { PhoneWords.format("resetHeldMessage", []) }
     public static func `resetHeldQuit`() -> String { PhoneWords.format("resetHeldQuit", []) }
@@ -6919,6 +6921,8 @@ extension PhoneWords {
         "refuseThisCardIsWorking": [],
         "refuseThisCardTakesNoReply": [],
         "refuseThisIsTheOnlyCard": [],
+        "resetConfirmReason": [],
+        "resetConfirmReasonMac": [],
         "resetHeldDetail": [],
         "resetHeldMessage": [],
         "resetHeldQuit": [],

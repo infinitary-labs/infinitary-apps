@@ -2,16 +2,28 @@ import { homedir, userInfo } from "node:os";
 import { basename } from "node:path";
 import { readInstalled, type ServiceManager, stopInBackground } from "@core/helper/background";
 import type { ResetOutsideKind } from "@core/reset/mark";
+import { withinMs } from "@core/reset/prepare";
+import type { FreshAuthentication } from "@core/secrets/approvals";
 import type { Spelling } from "@shared/codeNames";
+import * as m from "@shared/i18n/messages.generated";
 import type { ResetAnswer } from "@shared/reset";
 import type { BuildFlavor } from "@shared/userDataFolders";
+import { app } from "electron";
 import type { CommandStarter } from "../commandStarter";
 import { startAtLoginFor } from "../host/electronHost";
 import type { Shell } from "../shell";
 import { answerBootCommand } from "../startAtBootContext";
 import type { UserDataChoice } from "../userDataDir";
-import { clearPasswordStore, passwordStoreCustodies } from "./outside";
+import { endLeftoverPrograms } from "./leftovers";
+import {
+  clearCommandLink,
+  clearPasswordStore,
+  clearPhoneKeys,
+  ownCommand,
+  passwordStoreCustodies,
+} from "./outside";
 import { runReset } from "./running";
+import { leaveWorkHome } from "./workHome";
 
 /**
  * Reset Infinitary as this app composes it (./running.ts). A run on the
@@ -33,8 +45,19 @@ export function resetInApp(input: {
     spelling: Spelling;
     serviceManager: ServiceManager | null;
   };
+  /**
+   * The system's own confirmation the app's Secrets use: Touch ID or the
+   * password, Windows Hello, polkit. None on an isolated or chosen folder.
+   */
+  authentication: FreshAuthentication | undefined;
   /** Starts the app again once it quits. */
   relaunch: () => void;
+  /**
+   * On Windows, starts the app again only once this program has ended, so
+   * the next start finds the folder free (./windowsRestart.ts); false
+   * leaves it to `relaunch`.
+   */
+  restartAfterExit?: () => Promise<boolean>;
   quit: () => void;
 }): () => Promise<ResetAnswer> {
   const { choice, platform } = input;
@@ -44,28 +67,65 @@ export function resetInApp(input: {
         "password-store": () =>
           clearPasswordStore(passwordStoreCustodies({ platform, flavor: own.flavor })),
         "start-entries": () => clearStartEntries(input, own.dir),
+        "phone-keys": async () =>
+          clearPhoneKeys({
+            platform,
+            flavor: own.flavor,
+            dataDir: input.dataDir,
+            homeDir: homedir(),
+          }),
+        "command-link": async () =>
+          clearCommandLink({
+            flavor: own.flavor,
+            dataDir: input.dataDir,
+            homeDir: homedir(),
+            command: ownCommand({
+              packaged: app.isPackaged,
+              appDir: app.getAppPath(),
+              resourcesDir: process.resourcesPath,
+            }),
+          }),
       }
     : {};
   return () =>
     runReset({
       prepare: () => input.shell.dispatch("inf:app:reset-prepare", []),
       clear,
-      atStart: own ? ["app-files"] : [],
+      atStart: own ? ["app-files", "safe-storage"] : [],
       dataDir: input.dataDir,
       stopFirstMate: () => input.shell.stopForReset(),
-      restart: () => {
-        input.relaunch();
+      endLeftovers: () => endLeftoverPrograms(input.dataDir),
+      restart: async () => {
+        if (!(await input.restartAfterExit?.().catch(() => false))) input.relaunch();
         input.quit();
       },
-      within,
+      within: withinMs,
+      confirm: () => confirmPerson(input.authentication, platform),
     });
+}
+
+/**
+ * The system's own confirmation, after the row's question: only the person at
+ * this computer can give it. Where the system has none to ask (an isolated or
+ * chosen folder, or no polkit agent), the row's question alone confirms, as
+ * only the window's own page reaches the reset.
+ */
+async function confirmPerson(
+  authentication: FreshAuthentication | undefined,
+  platform: NodeJS.Platform,
+): Promise<boolean> {
+  if (!authentication || !(await authentication.available().catch(() => false))) return true;
+  // macOS puts its own "Infinitary is trying to" before the reason.
+  const reason = platform === "darwin" ? m.resetConfirmReasonMac() : m.resetConfirmReason();
+  return authentication.confirm(reason).catch(() => false);
 }
 
 /**
  * Everything that would start this app or its work again by itself: the
  * command's starter, the start-at-boot entry, the start-at-login item, and
- * the background agent of work this computer runs for another home. Each is
- * tried; true once every one is gone.
+ * the background agent of work this computer runs for another home, whose
+ * home then hears this computer leave (./workHome.ts). Each is tried; true
+ * once every one is gone.
  */
 async function clearStartEntries(
   input: Parameters<typeof resetInApp>[0],
@@ -86,28 +146,20 @@ async function clearStartEntries(
   });
   await attempt(() => startAtLoginFor(basename(folder)).set(false));
   const { serviceManager } = input.work;
+  const background = serviceManager
+    ? {
+        flavor: input.work.flavor,
+        dataDir: input.work.dataDir,
+        spelling: input.work.spelling,
+        homeDir: homedir(),
+        uid: process.getuid?.() ?? userInfo().uid,
+        ...serviceManager,
+      }
+    : null;
   const service = readInstalled(input.work.dataDir).service;
-  if (service && serviceManager)
-    await attempt(() =>
-      stopInBackground(
-        {
-          flavor: input.work.flavor,
-          dataDir: input.work.dataDir,
-          spelling: input.work.spelling,
-          homeDir: homedir(),
-          uid: process.getuid?.() ?? userInfo().uid,
-          ...serviceManager,
-        },
-        service,
-      ),
-    );
-  return cleared;
-}
-
-function within<T>(work: Promise<T>, ms: number): Promise<T | "timed-out"> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<"timed-out">((done) => {
-    timer = setTimeout(() => done("timed-out"), ms);
+  if (service && background) await attempt(() => stopInBackground(background, service));
+  await attempt(async () => {
+    if (!(await leaveWorkHome({ dataDir: input.work.dataDir, background }))) cleared = false;
   });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+  return cleared;
 }

@@ -166,7 +166,7 @@
     {
       "from": "reset",
       "to": "core",
-      "why": "asks the first mate to undo its side and finishes the mark at the next start"
+      "why": "asks the first mate to undo its side, leaves the home it works for, ends leftover programs and finishes the mark"
     },
     {
       "from": "reset",
@@ -181,7 +181,7 @@
     {
       "from": "reset",
       "to": "the system",
-      "why": "removes start entries, preferences and caches"
+      "why": "removes start entries, preferences, caches, phone keys, the command link and Chromium's key"
     }
   ]
 }

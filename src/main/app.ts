@@ -92,6 +92,7 @@ import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import { resetInApp } from "./reset/inApp";
+import { restartOnWindows } from "./reset/windowsRestart";
 import {
   answerLaunch,
   bringWindowForward,
@@ -519,6 +520,8 @@ export async function startApp(
     if (!isolatedUserDataDir) app.relaunch({ args, ...(execPath ? { execPath } : {}) });
     else if (relaunchNote) writeFileSync(relaunchNote, JSON.stringify(args));
   };
+  const resetArgs = () =>
+    process.argv.slice(1).filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG);
   // The e2e that launches from source without an isolated dir still keeps
   // its window hidden (captain directive: e2e runs are windowless).
   const hideWindow =
@@ -1745,6 +1748,7 @@ export async function startApp(
         voice: { place: voicePlace, helper: voiceHelper },
         reset: resetInApp({
           shell,
+          authentication: secrets?.authentication,
           dataDir,
           choice: userDataChoice,
           platform: hostPlatform(),
@@ -1755,13 +1759,17 @@ export async function startApp(
             spelling: work.place.folderSpelling,
             serviceManager,
           },
-          relaunch: () =>
-            relaunchWith(
-              process.argv
-                .slice(1)
-                .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG),
-              besideRun ? process.env.APPIMAGE : undefined,
-            ),
+          relaunch: () => relaunchWith(resetArgs(), besideRun ? process.env.APPIMAGE : undefined),
+          ...(hostPlatform() === "win32" && !isolatedUserDataDir
+            ? {
+                restartAfterExit: () =>
+                  restartOnWindows({
+                    pid: process.pid,
+                    executable: process.execPath,
+                    args: resetArgs(),
+                  }),
+              }
+            : {}),
           quit: () => app.quit(),
         }),
       });

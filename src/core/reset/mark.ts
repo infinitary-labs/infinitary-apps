@@ -21,7 +21,7 @@ export const RESETTING_SUFFIX = ".resetting-";
 /**
  * The kinds of state outside the folder a reset clears. The running app
  * clears what it can before it quits and writes the rest here; the start
- * that finishes the reset clears these again, so a kind is never left only
+ * that wipes the folder clears these once more, so a kind is never left only
  * because the running app could not reach it.
  */
 export const RESET_OUTSIDE_KINDS = [
@@ -31,13 +31,19 @@ export const RESET_OUTSIDE_KINDS = [
   "start-entries",
   /** What a Mac keeps for the app outside the folder: preferences, caches, saved window state, logs. */
   "app-files",
+  /** The key Chromium keeps in the password store for the window's saved data. */
+  "safe-storage",
+  /** The key lines phones placed in this account's `authorized_keys`. */
+  "phone-keys",
+  /** The command's link Settings made and the agent skill it wrote. */
+  "command-link",
 ] as const;
 export type ResetOutsideKind = (typeof RESET_OUTSIDE_KINDS)[number];
 
 /**
  * Where a reset stands, each step resumable: `asked` until the folder is
  * renamed aside, `moved` until the renamed folder and the older copies are
- * gone, `outside` until the outside kinds are cleared. The mark is deleted
+ * gone, `outside` while the outside kinds are cleared. The mark is deleted
  * last, so a start cut off at any step carries on from it.
  */
 export const RESET_STAGES = ["asked", "moved", "outside"] as const;
@@ -50,8 +56,11 @@ export const resetMarkSchema = z.strictObject({
   askedAt: z.string().min(1).max(64),
   /** Outside kinds still to clear. */
   outside: z.array(z.enum(RESET_OUTSIDE_KINDS)).max(RESET_OUTSIDE_KINDS.length),
-  /** Starts that tried the outside kinds and left some; the mark goes after a few. */
-  outsideTries: z.number().int().min(0).max(100),
+  /**
+   * Starts that could not delete a folder renamed aside, which still holds
+   * the old sign-ins and records; the mark stays at `moved` for a few.
+   */
+  asideTries: z.number().int().min(0).max(100).optional(),
 });
 export type ResetMark = z.infer<typeof resetMarkSchema>;
 
@@ -92,7 +101,6 @@ function unreadable(): ResetMark {
     stage: "asked",
     askedAt: new Date(0).toISOString(),
     outside: [...RESET_OUTSIDE_KINDS],
-    outsideTries: 0,
   };
 }
 
@@ -115,6 +123,5 @@ export function askedResetMark(outside: readonly ResetOutsideKind[], now = new D
     stage: "asked",
     askedAt: now.toISOString(),
     outside: RESET_OUTSIDE_KINDS.filter((kind) => outside.includes(kind)),
-    outsideTries: 0,
   };
 }

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { removeAll } from "../removeWhole";
 import { acquireMoveLock, releaseMoveLock } from "../storage/moveLock";
-import { finishReset, OUTSIDE_TRIES, type ResetFinishSeams } from "./finish";
+import { ASIDE_TRIES, finishReset, type ResetFinishSeams } from "./finish";
 import {
   askedResetMark,
   type ResetMark,
@@ -98,22 +98,71 @@ describe("finishing a reset at the next start", () => {
     expect(existsSync(resetMarkPath(dataDir))).toBe(false);
   });
 
-  it("keeps a kind it could not clear on the mark for a few starts, then lets the mark go", async () => {
+  it("clears each outside kind once, at the start that wipes the folder", async () => {
     const { dataDir } = place();
     writeResetMark(dataDir, askedResetMark(["password-store", "app-files"]));
-    const locked = seams({ clearOutside: async (kind) => kind !== "password-store" });
-    for (let start = 1; start < OUTSIDE_TRIES; start++) {
-      expect(await finishReset(dataDir, locked)).toEqual({
-        kind: "done",
-        left: ["password-store"],
-      });
-      expect(readResetMark(dataDir)).toMatchObject({
-        stage: "outside",
-        outside: ["password-store"],
-        outsideTries: start,
-      });
-    }
+    const cleared: ResetOutsideKind[] = [];
+    const locked = seams({
+      clearOutside: async (kind) => {
+        cleared.push(kind);
+        return kind !== "password-store";
+      },
+    });
     expect(await finishReset(dataDir, locked)).toEqual({ kind: "done", left: ["password-store"] });
+    expect(existsSync(resetMarkPath(dataDir))).toBe(false);
+    // The fresh install's next start finds no mark, so nothing of its own is cleared.
+    mkdirSync(dataDir);
+    expect(await finishReset(dataDir, locked)).toEqual({ kind: "none" });
+    expect(cleared).toEqual(["password-store", "app-files"]);
+  });
+
+  it("never clears an outside kind again at a start that only retries the renamed folder", async () => {
+    const { dataDir } = place();
+    writeResetMark(dataDir, askedResetMark(["start-entries"]));
+    const cleared: ResetOutsideKind[] = [];
+    const stuck = seams({
+      remove: (path) => !path.includes(".resetting-") && removeAll(path),
+      clearOutside: async (kind) => {
+        cleared.push(kind);
+        return true;
+      },
+    });
+    await finishReset(dataDir, stuck);
+    expect(readResetMark(dataDir)).toMatchObject({ stage: "moved", outside: [] });
+    await finishReset(dataDir, stuck);
+    expect(cleared).toEqual(["start-entries"]);
+  });
+
+  it("tries a folder renamed aside again at later starts while it cannot be deleted, never the fresh one", async () => {
+    const { parent, dataDir } = place();
+    writeResetMark(dataDir, askedResetMark([]));
+    const stuck = (path: string) => !path.includes(".resetting-") && removeAll(path);
+    expect(await finishReset(dataDir, seams({ remove: stuck }), { pid: 4242 })).toEqual({
+      kind: "done",
+      left: [],
+    });
+    expect(readResetMark(dataDir)).toMatchObject({ stage: "moved", asideTries: 1 });
+    // The fresh install's folder, made after that start, is never touched.
+    mkdirSync(dataDir);
+    writeFileSync(join(dataDir, "fresh.txt"), "new\n");
+    expect(await finishReset(dataDir, seams({ remove: stuck }))).toEqual({
+      kind: "done",
+      left: [],
+    });
+    expect(readResetMark(dataDir)).toMatchObject({ stage: "moved", asideTries: 2 });
+    expect(await finishReset(dataDir, seams())).toEqual({ kind: "done", left: [] });
+    expect(existsSync(resetMarkPath(dataDir))).toBe(false);
+    expect(readdirSync(parent)).toEqual(["Infinitary"]);
+    expect(existsSync(join(dataDir, "fresh.txt"))).toBe(true);
+  });
+
+  it("lets the mark go after a few starts that could not delete the renamed folder", async () => {
+    const { dataDir } = place();
+    writeResetMark(dataDir, askedResetMark([]));
+    const stuck = seams({ remove: (path) => !path.includes(".resetting-") && removeAll(path) });
+    for (let start = 1; start < ASIDE_TRIES; start++) await finishReset(dataDir, stuck);
+    expect(readResetMark(dataDir)?.stage).toBe("moved");
+    await finishReset(dataDir, stuck);
     expect(existsSync(resetMarkPath(dataDir))).toBe(false);
   });
 

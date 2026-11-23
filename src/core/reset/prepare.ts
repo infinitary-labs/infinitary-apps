@@ -1,4 +1,4 @@
-import type { ResetPrepared, ResetScope } from "@shared/reset";
+import type { ResetScope } from "@shared/reset";
 
 /**
  * What the first mate's own side undoes before a reset wipes its folder
@@ -20,7 +20,7 @@ export type ResetPrepareDeps = {
   integrations: () => readonly { id: string }[];
   /** Removes one, revoking its sign-in where its service offers that. */
   removeIntegration: (id: string) => Promise<unknown>;
-  /** Open tasks, by id. */
+  /** Open and started tasks, by id. */
   openTasks: () => readonly { id: string }[];
   /** Closes one as discarded, so its registered stops and keeps run. */
   discardTask: (id: string) => Promise<unknown>;
@@ -47,10 +47,9 @@ export function resetScope(deps: ResetPrepareDeps): ResetScope {
   return { tasks: deps.openTasks().length };
 }
 
-/** Undoes each kind in turn; what failed is counted, never thrown. */
-export async function prepareReset(deps: ResetPrepareDeps): Promise<ResetPrepared> {
+/** Undoes each kind in turn; a step that fails or times out never stops the next. */
+export async function prepareReset(deps: ResetPrepareDeps): Promise<{ ok: true }> {
   const within = deps.within ?? withinMs;
-  let left = 0;
   const attempt = async (work: () => unknown, ms: number): Promise<boolean> => {
     try {
       const outcome = await within(Promise.resolve().then(work), ms);
@@ -63,38 +62,31 @@ export async function prepareReset(deps: ResetPrepareDeps): Promise<ResetPrepare
   // Devices first, while the connection still runs: a phone or computer
   // that hears it was removed stops dialing a first mate that is going.
   for (const device of deps.devices())
-    if (!(await attempt(() => deps.removeDevice(device.id), RESET_STEP_MS))) left++;
+    await attempt(() => deps.removeDevice(device.id), RESET_STEP_MS);
 
   // Tasks close as discarded, so each one's stops end what it started and
   // each keep's remove runs, before the folder holding their records goes.
   const tasks = deps.openTasks().map((task) => task.id);
-  const closing = tasks.map((id) => attempt(() => deps.discardTask(id), RESET_PROGRAMS_MS));
-  for (const closed of await Promise.all(closing)) if (!closed) left++;
-  const swept = await attempt(
-    () => Promise.all(tasks.map((id) => deps.leftoversSettled(id))),
-    RESET_PROGRAMS_MS,
-  );
-  if (!swept) left++;
+  await Promise.all(tasks.map((id) => attempt(() => deps.discardTask(id), RESET_PROGRAMS_MS)));
+  await attempt(() => Promise.all(tasks.map((id) => deps.leftoversSettled(id))), RESET_PROGRAMS_MS);
 
   for (const job of deps.keptJobs()) {
-    const removed = await attempt(async () => {
-      if (!(await deps.removeKeptJob(job.id)).removed) throw new Error("kept");
-    }, RESET_PROGRAMS_MS);
-    if (!removed) left++;
+    await attempt(() => deps.removeKeptJob(job.id), RESET_PROGRAMS_MS);
   }
 
   for (const folder of deps.projects())
-    if (!(await attempt(() => deps.undoProject(folder), RESET_STEP_MS))) left++;
+    await attempt(() => deps.undoProject(folder), RESET_STEP_MS);
 
   for (const account of deps.accounts())
-    if (!(await attempt(() => deps.signOut(account.id), RESET_STEP_MS))) left++;
+    await attempt(() => deps.signOut(account.id), RESET_STEP_MS);
   for (const integration of deps.integrations())
-    if (!(await attempt(() => deps.removeIntegration(integration.id), RESET_STEP_MS))) left++;
+    await attempt(() => deps.removeIntegration(integration.id), RESET_STEP_MS);
 
-  return { left };
+  return { ok: true };
 }
 
-function withinMs<T>(work: Promise<T>, ms: number): Promise<T | "timed-out"> {
+/** Waits up to `ms` for `work`, then answers "timed-out" and goes on. */
+export function withinMs<T>(work: Promise<T>, ms: number): Promise<T | "timed-out"> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<"timed-out">((done) => {
     timer = setTimeout(() => done("timed-out"), ms);

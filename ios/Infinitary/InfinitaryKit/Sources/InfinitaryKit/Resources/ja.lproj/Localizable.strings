@@ -2397,6 +2397,8 @@
 "refuseThisCardIsWorking" = "このカードは処理中です";
 "refuseThisCardTakesNoReply" = "このカードは返信を受け付けません";
 "refuseThisIsTheOnlyCard" = "カードはこれだけです";
+"resetConfirmReason" = "このコンピュータの Infinitary をリセットします。";
+"resetConfirmReasonMac" = "このコンピュータの Infinitary をリセット";
 "resetHeldDetail" = "別のプログラムが Infinitary のフォルダを使用しています。そのプログラムを閉じてから、もう一度お試しください。";
 "resetHeldMessage" = "Infinitary はリセットを完了できませんでした";
 "resetHeldQuit" = "終了";

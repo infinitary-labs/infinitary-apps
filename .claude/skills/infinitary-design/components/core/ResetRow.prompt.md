@@ -3,6 +3,7 @@ The shared `SettingRow` shape: the title "Reset Infinitary" at weight 500, the `
 A window that controls another computer's first mate never shows the row.
 Reset asks on the row, never on a card, as Secrets' Forget does: the button goes, and under the description the question "Reset Infinitary on this computer?" at `--text-sm` weight 500 `--fg-1`, then its sentences in `--text-sm --fg-2`: what it deletes, "{count} open tasks stop." only when tasks are open, and what stays with "To clear tasks only, use Purge task data." last.
 Then a small secondary "Keep everything", which has focus so Enter never resets, and a small danger "Reset Infinitary" that waits as "Resetting…" while the app quits.
+Reset Infinitary then asks the system's own confirmation (Touch ID or the password, Windows Hello, the Linux prompt) before anything changes; cancelling it puts the row back with focus on Reset, as Keep everything does.
 Keep everything changes nothing and gives focus back to Reset.
 Purge task data's own description ends "Your projects, sign-ins and settings stay.", so each of the two rows says what it keeps.
 Never a confirm-by-typing field, a countdown or a card for this question.

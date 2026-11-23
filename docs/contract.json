@@ -39187,14 +39187,13 @@
       "response": {
         "type": "object",
         "properties": {
-          "left": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+          "ok": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
-          "left"
+          "ok"
         ]
       }
     },

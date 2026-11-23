@@ -52,7 +52,7 @@ describe("the first mate's side of a reset", () => {
 
   it("removes devices while connected, closes tasks before their records go, then the rest", async () => {
     const { steps, deps: d } = deps();
-    expect(await prepareReset(d)).toEqual({ left: 0 });
+    expect(await prepareReset(d)).toEqual({ ok: true });
     expect(steps).toEqual([
       "remove device phone",
       "discard t1",
@@ -66,7 +66,7 @@ describe("the first mate's side of a reset", () => {
     ]);
   });
 
-  it("counts what failed, timed out or stayed, and still tries every later step", async () => {
+  it("still tries every later step after one failed, timed out or stayed", async () => {
     const { steps, deps: d } = deps({
       removeDevice: () => {
         throw new Error("offline");
@@ -77,7 +77,7 @@ describe("the first mate's side of a reset", () => {
       within: (work) =>
         Promise.race([work, new Promise<"timed-out">((done) => setTimeout(done, 20, "timed-out"))]),
     });
-    expect(await prepareReset(d)).toEqual({ left: 3 });
+    expect(await prepareReset(d)).toEqual({ ok: true });
     expect(steps).toContain("remove integration github");
   });
 });

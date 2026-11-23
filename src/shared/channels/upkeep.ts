@@ -3,7 +3,7 @@ import { decisionModelIdSchema, decisionsSettingsSchema, decisionsViewSchema } f
 import { decisionUseRequestSchema } from "../decisionUses";
 import { homeUpdateSchema } from "../homeUpdate";
 import { releaseNotesViewSchema, shownReleaseNoteSchema } from "../releaseTracking";
-import { resetPreparedSchema, resetScopeSchema } from "../reset";
+import { resetScopeSchema } from "../reset";
 import { keptOutsideDataSchema, outsideDataDeletedSchema } from "../savedOutsideData";
 import {
   presenceSettingsSchema,
@@ -202,7 +202,7 @@ export const upkeepChannels = {
     surface: "core",
     reach: "home",
     request: z.tuple([]),
-    response: resetPreparedSchema,
+    response: okSchema,
   },
   "inf:retention:purge": {
     effect: "change",

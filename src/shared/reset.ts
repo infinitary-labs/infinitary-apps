@@ -12,14 +12,11 @@ export const resetScopeSchema = z.strictObject({
 });
 export type ResetScope = z.infer<typeof resetScopeSchema>;
 
-/** What the first mate's own side undid before the wipe: how many steps it could not finish. */
-export const resetPreparedSchema = z.strictObject({
-  left: z.number().int().nonnegative(),
-});
-export type ResetPrepared = z.infer<typeof resetPreparedSchema>;
-
-/** What the row hears back: the app quits now and starts again on the welcome screen. */
+/**
+ * What the row hears back: the app quits now and starts again on the welcome
+ * screen, or the system's own confirmation was not given and nothing changed.
+ */
 export const resetAnswerSchema = z.strictObject({
-  outcome: z.literal("restarting"),
+  outcome: z.enum(["restarting", "kept"]),
 });
 export type ResetAnswer = z.infer<typeof resetAnswerSchema>;

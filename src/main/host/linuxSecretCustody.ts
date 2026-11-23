@@ -16,6 +16,13 @@ import type {
  * Potentially blocking native calls use Koffi's worker pool, not the main thread.
  * Nothing falls back to a file, another backend or another collection.
  */
+// i18n-exempt: a C type name koffi reads
+const C_STRING = "const char *";
+// i18n-exempt: Chromium's own Secret Service schema name for its key
+const CHROMIUM_KEY_SCHEMA = "chrome_libsecret_os_crypt_password_v2";
+// i18n-exempt: Chromium's own attribute name for its key
+const CHROMIUM_KEY_ATTRIBUTE = "application";
+
 export type LibsecretAnswer =
   | { kind: "value"; bytes: Buffer }
   | { kind: "absent" }
@@ -34,11 +41,18 @@ export type LibsecretApi = {
   unlock(store: string): Promise<boolean>;
   /** Deletes every item of the slot; only a reset asks it (docs/reset.md). */
   remove(store: string, slot: CustodySlot): Promise<"removed" | "absent" | LibsecretAnswer>;
+  /**
+   * Deletes the key Chromium keeps for the app's saved window data, found by
+   * the app's name; only a reset asks it (docs/reset.md).
+   */
+  removeSafeStorage(application: string): Promise<"removed" | "absent" | LibsecretAnswer>;
 };
 
 /** The low-level service operations: none but unlock may invoke Secret Service Unlock/Prompt. */
 export type LibsecretService = {
   search(store: string, slot: CustodySlot): Promise<{ unlocked: string[]; locked: string[] }>;
+  /** Chromium's own safe-storage key items for the application name. */
+  searchSafeStorage(application: string): Promise<{ unlocked: string[]; locked: string[] }>;
   read(path: string): Promise<Buffer | undefined>;
   replace(path: string, password: Buffer): Promise<void>;
   collection(): Promise<{ path: string; locked: boolean } | undefined>;
@@ -144,6 +158,20 @@ export function libsecretFromService(service: LibsecretService): LibsecretApi {
     tail = next.catch(() => {});
     return next;
   };
+  const removeFound = async (
+    found: Promise<{ unlocked: string[]; locked: string[] }>,
+  ): Promise<"removed" | "absent" | LibsecretAnswer> => {
+    try {
+      const { unlocked, locked } = await found;
+      if (locked.length) return { kind: "error", locked: true };
+      if (unlocked.length === 0) return "absent";
+      for (const path of unlocked)
+        if (!(await service.delete(path))) return { kind: "error", locked: false };
+      return "removed";
+    } catch (error) {
+      return failure(error);
+    }
+  };
   return {
     lookup: (store, slot) =>
       run(async () => {
@@ -192,19 +220,9 @@ export function libsecretFromService(service: LibsecretService): LibsecretApi {
           return failure(error);
         }
       }),
-    remove: (store, slot) =>
-      run(async () => {
-        try {
-          const found = await service.search(store, slot);
-          if (found.locked.length) return { kind: "error", locked: true };
-          if (found.unlocked.length === 0) return "absent";
-          for (const path of found.unlocked)
-            if (!(await service.delete(path))) return { kind: "error", locked: false };
-          return "removed";
-        } catch (error) {
-          return failure(error);
-        }
-      }),
+    remove: (store, slot) => run(() => removeFound(service.search(store, slot))),
+    removeSafeStorage: (application) =>
+      run(() => removeFound(service.searchSafeStorage(application))),
     unlock: (store) =>
       run(async () => {
         try {
@@ -381,6 +399,20 @@ function bindLibsecret(): LibsecretService {
     null,
   );
   if (isNull(schema)) throw new LibsecretFailure(false);
+  // Chromium's own schema for the key that encrypts a window's saved data
+  // (its cookies), kept under the app's name. Searching with it matches the
+  // schema name too, so another Chromium app's key is never found.
+  const safeStorageSchema = schemaNew(
+    CHROMIUM_KEY_SCHEMA,
+    0,
+    C_STRING,
+    CHROMIUM_KEY_ATTRIBUTE,
+    "int",
+    0,
+    "void *",
+    null,
+  );
+  if (isNull(safeStorageSchema)) throw new LibsecretFailure(false);
 
   const checked = (error: unknown) => {
     if (isNull(error)) return;
@@ -432,6 +464,30 @@ function bindLibsecret(): LibsecretService {
       typeFree(type);
     }
   };
+  const searchWith = async (service: unknown, which: unknown, attributes: unknown) => {
+    const unlocked: [unknown] = [null];
+    const locked: [unknown] = [null];
+    const error: [unknown] = [null];
+    try {
+      const ok = await secretNativeCall(
+        search,
+        service,
+        which,
+        attributes,
+        null,
+        unlocked,
+        locked,
+        error,
+      );
+      checked(error[0]);
+      if (!ok) throw new LibsecretFailure(false);
+      return { unlocked: strings(unlocked[0]), locked: strings(locked[0]) };
+    } finally {
+      hashUnref(attributes);
+      if (!isNull(unlocked[0])) strvFree(unlocked[0]);
+      if (!isNull(locked[0])) strvFree(locked[0]);
+    }
+  };
   const rpc = async (
     service: unknown,
     path: string,
@@ -470,43 +526,41 @@ function bindLibsecret(): LibsecretService {
 
   return {
     search: (store, slot) =>
-      withService(async (service) => {
-        const attributes = attributesBuild(
+      withService((service) =>
+        searchWith(
+          service,
           schema,
-          "const char *",
-          "store",
-          "const char *",
-          store,
-          "const char *",
-          "slot",
-          "const char *",
-          slot,
-          "void *",
-          null,
-        );
-        const unlocked: [unknown] = [null];
-        const locked: [unknown] = [null];
-        const error: [unknown] = [null];
-        try {
-          const ok = await secretNativeCall(
-            search,
-            service,
+          attributesBuild(
             schema,
-            attributes,
+            "const char *",
+            "store",
+            "const char *",
+            store,
+            "const char *",
+            "slot",
+            "const char *",
+            slot,
+            "void *",
             null,
-            unlocked,
-            locked,
-            error,
-          );
-          checked(error[0]);
-          if (!ok) throw new LibsecretFailure(false);
-          return { unlocked: strings(unlocked[0]), locked: strings(locked[0]) };
-        } finally {
-          hashUnref(attributes);
-          if (!isNull(unlocked[0])) strvFree(unlocked[0]);
-          if (!isNull(locked[0])) strvFree(locked[0]);
-        }
-      }),
+          ),
+        ),
+      ),
+    searchSafeStorage: (application) =>
+      withService((service) =>
+        searchWith(
+          service,
+          safeStorageSchema,
+          attributesBuild(
+            safeStorageSchema,
+            C_STRING,
+            CHROMIUM_KEY_ATTRIBUTE,
+            C_STRING,
+            application,
+            "void *",
+            null,
+          ),
+        ),
+      ),
     read: (path) =>
       withService(async (service) => {
         await session(service);

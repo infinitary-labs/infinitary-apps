@@ -1,32 +1,19 @@
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { removeAll } from "../removeWhole";
-import { clearManagedOriginPush, git, releaseTaskRemote, taskRemoteName } from "../workspace/git";
+import { clearManagedOriginPush, git } from "../workspace/git";
 
 /**
  * What a reset undoes in a project that lives outside the data folder
- * (docs/reset.md, "Your projects"): only the settings Infinitary wrote into
- * it - its task remotes, the push address it set on origin, its config keys,
- * the links to working copies inside the folder and its kept references.
- * Every branch, commit and file of the person's stays.
+ * (docs/reset.md, "Your projects"): the push address it set on origin and
+ * the links to working copies inside the folder. Discarding each open task
+ * already released its own remote and branch; every branch, commit and file
+ * of the person's stays, and so does each task's saved work under
+ * `refs/infinitary/`, which another run of the app on the same project may
+ * also hold.
  */
 export async function undoProjectSettings(repo: string, dataDir: string): Promise<void> {
   await clearManagedOriginPush(repo);
-  const remotes = (await git(repo, ["remote"])).split("\n").filter(Boolean);
-  const ownRemote = taskRemoteName("");
-  for (const remote of remotes)
-    if (remote.startsWith(ownRemote)) await releaseTaskRemote(repo, remote.slice(ownRemote.length));
-  const taskKeys = await git(repo, [
-    "config",
-    "--local",
-    "--name-only",
-    "--get-regexp",
-    "^branch\\..*\\.infinitarytask$",
-  ]).catch(() => "");
-  for (const key of taskKeys.split("\n").filter(Boolean))
-    await git(repo, ["config", "--local", "--unset-all", key]).catch(() => "");
-  const refs = await git(repo, ["for-each-ref", "--format=%(refname)", "refs/infinitary/"]);
-  for (const ref of refs.split("\n").filter(Boolean)) await git(repo, ["update-ref", "-d", ref]);
   const common = resolve(
     repo,
     await git(repo, ["rev-parse", "--path-format=absolute", "--git-common-dir"]),
@@ -59,12 +46,19 @@ function worktreeLinksInside(commonDir: string, dataDir: string): string[] {
       } catch {
         return false;
       }
-      const from = relative(inside, real(resolve(link, gitdir)));
-      return from !== "" && !from.startsWith("..") && !isAbsolute(from);
+      const copy = real(resolve(link, gitdir));
+      return copy !== inside && within(inside, copy);
     });
 }
 
-function real(path: string): string {
+/** True when `path` is `folder` or lies inside it. */
+export function within(folder: string, path: string): boolean {
+  const from = relative(folder, path);
+  return from === "" || (!from.startsWith("..") && !isAbsolute(from));
+}
+
+/** The path with its links resolved, or as given when it does not exist. */
+export function real(path: string): string {
   try {
     return realpathSync(path);
   } catch {

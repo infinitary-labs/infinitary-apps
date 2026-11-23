@@ -47,6 +47,16 @@ function fixture() {
         locked: selected.filter(([, item]) => item.locked).map(([path]) => path),
       };
     }),
+    // Chromium's own key items stand here under the store "safe-storage:<application>".
+    searchSafeStorage: vi.fn(async (application: string) => {
+      const selected = [...items].filter(
+        ([, item]) => item.store === `safe-storage:${application}`,
+      );
+      return {
+        unlocked: selected.filter(([, item]) => !item.locked).map(([path]) => path),
+        locked: selected.filter(([, item]) => item.locked).map(([path]) => path),
+      };
+    }),
     read: vi.fn(async (path: string) => {
       const item = items.get(path);
       if (item?.locked) throw new LibsecretFailure(true);
@@ -91,8 +101,10 @@ function fixture() {
         if (paths.includes(COLLECTION) || paths.includes(path)) item.locked = false;
     }),
   } satisfies LibsecretService;
-  const custody = createLinuxSecretCustody(libsecretFromService(service), { store: STORE });
+  const api = libsecretFromService(service);
+  const custody = createLinuxSecretCustody(api, { store: STORE });
   return {
+    api,
     service,
     custody,
     items,
@@ -123,6 +135,19 @@ describe("noninteractive Linux custody", () => {
     f.add("authority-head");
     f.lock();
     expect(await f.custody.remove?.("authority-head")).toBe("locked");
+    expect(f.service.unlock).not.toHaveBeenCalled();
+  });
+
+  it("removes only the app's own window key, and leaves a locked one", async () => {
+    const f = fixture();
+    f.add("root", ROOT, "safe-storage:infinitary");
+    f.add("root", ROOT, "safe-storage:another-app");
+    expect(await f.api.removeSafeStorage("infinitary")).toBe("removed");
+    expect([...f.items.values()].map((item) => item.store)).toEqual(["safe-storage:another-app"]);
+    expect(await f.api.removeSafeStorage("infinitary")).toBe("absent");
+    f.add("root", ROOT, "safe-storage:infinitary");
+    f.lock();
+    expect(await f.api.removeSafeStorage("infinitary")).toEqual({ kind: "error", locked: true });
     expect(f.service.unlock).not.toHaveBeenCalled();
   });
 

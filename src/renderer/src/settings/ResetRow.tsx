@@ -6,8 +6,9 @@ import { SettingRow } from "./settingRows";
 /**
  * Reset Infinitary, in Settings → General (docs/reset.md): the row asks on
  * itself, as Secrets' Forget does, with Keep everything focused so Enter
- * never resets. Confirming quits the app; its next start wipes this
- * computer's Infinitary and opens on the welcome screen.
+ * never resets. Then the system's own confirmation (Touch ID, a password,
+ * Windows Hello) follows; once given, the app quits, and its next start
+ * wipes this computer's Infinitary and opens on the welcome screen.
  */
 export function ResetRow() {
   const [asking, setAsking] = useState(false);
@@ -40,11 +41,19 @@ export function ResetRow() {
   };
   const confirm = () => {
     setResetting(true);
-    void window.infinitary.app.reset().catch((caught: unknown) => {
-      setResetting(false);
-      setAsking(false);
-      setError(caught instanceof Error ? caught.message : String(caught));
-    });
+    void window.infinitary.app.reset().then(
+      ({ outcome }) => {
+        // The system's own confirmation was not given: nothing changed.
+        if (outcome !== "kept") return;
+        setResetting(false);
+        keepEverything();
+      },
+      (caught: unknown) => {
+        setResetting(false);
+        setAsking(false);
+        setError(caught instanceof Error ? caught.message : String(caught));
+      },
+    );
   };
 
   return (

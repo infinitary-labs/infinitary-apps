@@ -1,4 +1,6 @@
 {
+  "resetConfirmReason": "Infinitary auf diesem Computer zurücksetzen.",
+  "resetConfirmReasonMac": "Infinitary auf diesem Computer zurückzusetzen",
   "resetHeldDetail": "Ein anderes Programm verwendet den Ordner von Infinitary. Schließe es und versuche es dann erneut.",
   "resetHeldMessage": "Infinitary konnte das Zurücksetzen nicht abschließen",
   "resetHeldQuit": "Beenden",

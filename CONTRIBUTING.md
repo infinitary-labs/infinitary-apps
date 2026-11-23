@@ -21,6 +21,13 @@ Material that is not your own work goes in a separate submission (section 3 of t
 A maintainer approves each run of the project's checks on an outside pull request before it starts, and every one of them runs on GitHub's machines; how an outside pull request is checked and merged is in `docs/public-ci.md`, "Outside contributors".
 A pull request adds a release note under `release-notes/changes/` when people using the app will notice the change, or an exclusion with a reason when they will not; the release-note check fails until it has one (`docs/release-notes.md`).
 
+## Infinitary's Careful review
+
+Raise an outside pull request with Infinitary at the Careful care level: an independent review, and live validation that the review accepted, of the pull request's newest version.
+Open it from your own copy of the project with Infinitary, which writes its story and a record at the end of the description; after each later push, let Infinitary review and validate that version too, so the record names it.
+The pull request's "PR raised with Infinitary's Careful review" check reads that record and passes; until then it fails and leaves one comment saying why.
+A record written by another tool does not count (`docs/public-ci.md`, "The Careful review check").
+
 ## How the code is worked on
 
 `AGENTS.md` and the pages under `docs/` it points to (`docs/README.md`) are the project's own account of how it is built, tested and released, and they apply to people as much as to agents. The short version:

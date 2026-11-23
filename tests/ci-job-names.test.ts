@@ -344,6 +344,18 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // The Careful review check (careful-review-check.yml, docs/public-ci.md
+  // "The Careful review check"): an outside pull request, and a run started by hand.
+  {
+    file: "careful-review-check.yml",
+    trigger: "Pull request",
+    scenario: { github: { event_name: "pull_request_target" } },
+  },
+  {
+    file: "careful-review-check.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
   // The feedback labels (feedback-labels.yml, docs/feedback.md "Triage"): a
   // new issue whose body carries the app's feedback mark.
   {

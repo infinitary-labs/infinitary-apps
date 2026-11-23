@@ -22,6 +22,7 @@ import {
   phoneRepeatPlan,
   placeParts,
   type RequestSelection,
+  readableBase,
   requestBase,
   requestDevicePlan,
   requestedParts,
@@ -1003,6 +1004,29 @@ describe("INF-3379's recorded phone requests", () => {
     expect(requested("inf-1109-requested-base").repeats).toEqual(
       expect.arrayContaining(fromPoint.repeats),
     );
+  });
+
+  // INF-6223: a request that named its base main dealt 19 jobs, every part on every device, because the check's clone
+  // holds main only as origin/main and the unreadable comparison counted every part.
+  it("reads a base named main from the clone's origin/main and refuses a base it cannot read", () => {
+    const { cases } = recorded("requests");
+    const point = cases["inf-1109-merge-point"]!.base;
+    // git's answers in the check's clone: branches exist only as their origin/ copies.
+    const commits: Record<string, string> = {
+      [`origin/main^{commit}`]: point,
+      [`${point}^{commit}`]: point,
+    };
+    const git = (args: string[]) => {
+      const commit = args[0] === "rev-parse" ? commits[args.at(-1)!] : undefined;
+      if (commit === undefined) throw new Error(`git ${args.join(" ")} failed`);
+      return `${commit}\n`;
+    };
+    expect(readableBase("main", git)).toEqual({ base: "origin/main" });
+    expect(readableBase("refs/heads/main", git)).toEqual({ base: "origin/main" });
+    expect(readableBase("origin/main", git)).toEqual({ base: "origin/main" });
+    expect(readableBase(point, git)).toEqual({ base: point });
+    const refused = readableBase("no-such-base", git);
+    expect(refused).toEqual({ refused: expect.stringContaining("no-such-base") });
   });
 
   it("places INF-3137's edit to the overloaded verifyPhoneReadingColumn on its callers", () => {

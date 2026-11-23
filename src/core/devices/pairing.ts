@@ -5,7 +5,6 @@ import { type NetworkInterfaceInfo, networkInterfaces } from "node:os";
 import { join } from "node:path";
 import {
   CONNECTION_PORT,
-  type DeviceUser,
   type FetchAppRefusal,
   type FoundTools,
   fetchAppRequestSchema,
@@ -14,27 +13,20 @@ import {
 } from "@shared/connection";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
-  automaticStartupSchema,
   buildPairingLink,
   type DeviceAddresses,
   type DeviceChip,
   type DeviceInvite,
   type DeviceInviteRequest,
-  type DeviceKind,
   type DeviceSystem,
   type DeviceView,
-  deviceChipSchema,
   deviceLabel,
   deviceRunsWork,
-  deviceSystemSchema,
-  deviceViewSchema,
   type HomeFirewall,
   isPhone,
-  KEY_TEXT_PATTERN,
   PAIRING_LINK_ALSO_MAX,
   PAIRING_LINK_TTL_MS,
   splitDialAddress,
-  systemRunsWork,
 } from "@shared/devices";
 import type {
   PhonePushAnswer,
@@ -42,10 +34,9 @@ import type {
   PhonePushRegistration,
   PhonePushTarget,
 } from "@shared/phonePush";
-import { remoteLoginAddressSchema } from "@shared/remoteLogin";
 import { devicePlace } from "@shared/signIns";
 import type { PhoneStandby } from "@shared/standbyPhone";
-import { z } from "zod";
+import type { z } from "zod";
 import {
   isThisMachine,
   LOOPBACK_ADDRESS,
@@ -56,31 +47,6 @@ import {
 } from "../connection/addresses";
 import type { PairedDevice, PairedDevices, PairOutcome } from "../connection/connection";
 import { readHomeNumber, writeHomeNumber } from "./homeNumber";
-import { type LetterTaken, PairingPushRecords, type PhoneLetterBox } from "./pairingPushRecords";
-
-/** Which takeover made this home, in its record (`TAKE_OVER_RECORD`, src/core/standby/takeOver.ts). */
-const TAKE_OVER_FILE = "take-over.json";
-const takeOverIdSchema = z.object({ id: z.string().uuid() });
-
-/**
- * The way back of a home whose record is copied (docs/devices.md, "An old
- * home that returns"): a Mac on its own list whose id the record names
- * (`returning.json`, copied with it), and whose key only this home keeps
- * (`returning-key.json`, never copied), so a computer that takes over from
- * a copy already lets the old home in when it returns.
- */
-const RETURNING_FILE = "returning.json";
-/** Its file name in the devices folder; `WAY_BACK_KEY` in the record's terms (src/core/homeMove/record.ts). */
-const RETURNING_KEY_FILE = "returning-key.json";
-const returningKeySchema = z.object({
-  version: z.literal(1),
-  deviceId: z.string().min(1).max(64),
-  key: z.string().min(1),
-  cert: z.string().min(1),
-});
-export type ReturningIdentity = { deviceId: string; key: string; cert: string };
-const returningIdSchema = z.object({ deviceId: z.string().min(1).max(64) });
-
 import {
   HOST_TRUST_FILE,
   HOST_TRUST_KNOWN_HOSTS,
@@ -106,6 +72,42 @@ import {
   ownKeySshOptions,
   readOwnKey,
 } from "./ownKey";
+import type { DevicePairingOptions, Link } from "./pairingOptions";
+import { type LetterTaken, PairingPushRecords, type PhoneLetterBox } from "./pairingPushRecords";
+import {
+  type Entry,
+  FAILED_UPDATES_FILE,
+  FAREWELL_FILE,
+  failedUpdatesFileSchema,
+  farewellFileSchema,
+  LIST_FILE,
+  LIST_VERSION,
+  listSchema,
+  PACKAGE_UPDATE_ADDRESSES,
+  packageUpdateAddressesSchema,
+  REACHED_FILE,
+  RETURNING_FILE,
+  RETURNING_KEY_FILE,
+  reachedFileSchema,
+  returningIdSchema,
+  returningKeySchema,
+  SEEN_FILE,
+  SOURCE_ALLOWED_FILE,
+  SSH_FILE,
+  type SshRecord,
+  SYSTEMS_FILE,
+  type SystemRecord,
+  seenFileSchema,
+  sourceAllowedFileSchema,
+  type sshCleanupSchema,
+  sshFileSchema,
+  systemsFileSchema,
+  TAKE_OVER_FILE,
+  takeOverIdSchema,
+  WHEN_BACK_FILE,
+  whenBackFileSchema,
+} from "./pairingRecords";
+import { joinedKind, REASONS, reachedOn, sameUser } from "./pairingRules";
 
 /**
  * Pairing (docs/devices.md): the one writer over `userData/devices/`, and
@@ -117,212 +119,12 @@ import {
  * every address this computer has; the saved choice of one is read no more.
  */
 
-const LIST_FILE = "devices.json";
-const LIST_VERSION = 1;
-/**
- * When each device was last in reach, and the computers that run work the
- * captain chose to remove once they are back (docs/devices.md, "Remove"):
- * files of their own beside the list, so a list an older app reads is
- * still the list it knows.
- */
-const SEEN_FILE = "seen.json";
-const seenFileSchema = z.strictObject({
-  version: z.literal(1),
-  seen: z.record(z.string(), z.number().int().nonnegative()),
-});
-/**
- * The version of Firstmate that did not start on each computer that runs
- * work, which went back to the copy it kept (docs/helper.md, "A copy that
- * does not start"): never sent there again.
- */
-const FAILED_UPDATES_FILE = "failed-updates.json";
-const failedUpdatesFileSchema = z.strictObject({
-  version: z.literal(1),
-  devices: z.record(z.string(), z.string().min(1).max(64)),
-});
-/** Computers the captain let run this Mac's source, asked once each (docs/devices.md). */
-const SOURCE_ALLOWED_FILE = "source-builds.json";
-const sourceAllowedFileSchema = z.strictObject({
-  version: z.literal(1),
-  devices: z.array(z.string().min(1).max(64)),
-});
-const WHEN_BACK_FILE = "removing.json";
-const whenBackFileSchema = z.strictObject({
-  version: z.literal(1),
-  devices: z.array(z.string().min(1).max(64)),
-});
-/**
- * A computer removed while out of reach has not heard it was removed
- * (docs/devices.md, "Remove"): its key's pin is kept, so the home listens for
- * it and refuses it, which it reads as removed, and then removes what
- * Firstmate set up there. Kept until it has been refused `FAREWELL_TELLS`
- * times - a device needs two refusals in a row - or for `FAREWELL_MS`.
- */
-const FAREWELL_FILE = "removed.json";
-const farewellFileSchema = z.strictObject({
-  version: z.literal(1),
-  removed: z.array(
-    z.strictObject({
-      keyPin: z.string().regex(KEY_TEXT_PATTERN),
-      at: z.number().int().nonnegative(),
-      told: z.number().int().nonnegative(),
-    }),
-  ),
-});
-/**
- * How this Mac reaches each computer it set up over Remote Login
- * (docs/devices.md, "Kept with the device"): the address it was added at,
- * which the home updates Firstmate at and removes what it set up there
- * through, and its connection - `ssh` when that computer reaches this Mac
- * only through this Mac's own SSH connection to the address, `network` when
- * it dials this Mac's network address itself.
- */
-const SSH_FILE = "ssh.json";
-const PACKAGE_UPDATE_ADDRESSES = "package-update-addresses.json";
-const packageUpdateAddressesSchema = z.record(z.string(), remoteLoginAddressSchema);
-const sshConnectionSchema = z.enum(["ssh", "network"]);
-const sshRecordSchema = z.strictObject({
-  address: remoteLoginAddressSchema,
-  connection: sshConnectionSchema,
-});
-type SshRecord = z.infer<typeof sshRecordSchema>;
-/**
- * A computer this Mac removed while what Firstmate set up there could not be
- * removed over SSH yet (docs/devices.md, "Removing it there"): bound to the
- * removed computer's id, never an active connection, and tried again until
- * thirty days after `at`. `name` is how the list named it, for the words.
- */
-const sshCleanupSchema = z.strictObject({
-  address: remoteLoginAddressSchema,
-  name: z.string().min(1).max(160),
-  at: z.number().int().nonnegative(),
-});
-export type SshCleanup = z.infer<typeof sshCleanupSchema> & { deviceId: string };
-const sshFileSchema = z.strictObject({
-  version: z.literal(1),
-  devices: z.record(z.string(), sshRecordSchema),
-  cleanups: z.record(z.string(), sshCleanupSchema).optional(),
-});
-/**
- * Where each device last reached this Mac: the address and port it dialed,
- * as its connection's socket says (docs/devices.md, "Finding the home
- * again"), so Devices can say when this Mac's address changed since.
- */
-const REACHED_FILE = "reached.json";
-const reachedFileSchema = z.strictObject({
-  version: z.literal(1),
-  reached: z.record(z.string(), z.string().min(1).max(64)),
-});
-/**
- * What each device said it is in its hello (docs/devices.md, "What a device
- * is"): its system and chip, kept beside the list in a file of their own, so
- * a list an older app reads is still the list it knows.
- */
-const SYSTEMS_FILE = "systems.json";
-const systemRecordSchema = z.strictObject({
-  automaticStartup: automaticStartupSchema.optional(),
-  system: deviceSystemSchema.optional(),
-  chip: deviceChipSchema.optional(),
-});
-type SystemRecord = z.infer<typeof systemRecordSchema>;
-const systemsFileSchema = z.strictObject({
-  version: z.literal(1),
-  devices: z.record(z.string(), systemRecordSchema),
-});
 const FAREWELL_TELLS = 3;
 const FAREWELL_MS = 30 * 24 * 60 * 60 * 1000;
 /** How often pairing looks at this Mac's own addresses while it follows the network. */
 const NETWORK_LOOK_MS = 5_000;
 /** How long a spent or expired link is still remembered, to say which it was. */
 const REMEMBER_LINK_MS = 24 * 60 * 60 * 1000;
-
-// What the list keeps of a device: never what the home reads of it live.
-const entrySchema = deviceViewSchema
-  .pick({ id: true, kind: true, name: true, pairedAt: true, user: true, onThisMac: true })
-  .extend({ keyPin: z.string().regex(KEY_TEXT_PATTERN) });
-type Entry = z.infer<typeof entrySchema>;
-const listSchema = z.strictObject({
-  version: z.literal(LIST_VERSION),
-  devices: z.array(entrySchema),
-});
-
-type Link = {
-  id: string;
-  kind: DeviceKind;
-  expiresAt: number;
-  spent: boolean;
-  /** The address the home reached the device at to have it use this link, over Remote Login. */
-  remoteLogin?: string;
-  /** The device reaches this Mac only through this Mac's SSH connection to `remoteLogin`. */
-  via?: "ssh";
-  /**
-   * Where the device joins from, as the home found it over SSH before the
-   * link existed (`./locality.ts`); absent, where its socket dialed from.
-   */
-  locality?: Locality;
-  /** The device that used it. */
-  deviceId?: string;
-};
-
-export type DevicePairingOptions = {
-  /** `userData/devices`: 0700, every file in it 0600. */
-  dir: string;
-  now?: () => number;
-  /** Runs `run` after `ms`; answers its own cancel. Tests pass a manual clock. */
-  schedule?: (ms: number, run: () => void) => () => void;
-  /** Where pairing says what it could not do; never given a link or a code. */
-  onProblem?: (text: string) => void;
-  /**
-   * A device used its link and is on the list; told after the list is
-   * written, with what a computer that runs work said it found there.
-   * `again` when one already on the list used it to find this Mac again.
-   */
-  onJoined?: (device: DeviceView, found: FoundTools | undefined, again: boolean) => void;
-  /** A device's person chose Leave and it is off the list; told after the list is written. */
-  onLeft?: (device: DeviceView) => void;
-  /** This Mac's network interfaces right now; tests stand in their own. */
-  interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
-  /** The port a link names; the connection's own unless a test moves it. */
-  port?: number;
-  /**
-   * The number of the macOS user the home runs as, which a computer that
-   * runs work on this Mac may not run as (docs/helper.md). This process's
-   * own unless a test, which has one user to run as, stands in another.
-   */
-  ownUid?: number;
-  /**
-   * The security identifier of the Windows user the home runs as, which a
-   * computer that runs work on this PC may not run as: Windows gives a user
-   * no number. Undefined until the home has read it, and null when it could
-   * not; either refuses a join from this PC that says an identifier, since
-   * it might be the home's own.
-   */
-  ownSid?: () => string | null | undefined;
-  /**
-   * A development run's stand-in for another Mac (`INFINITARY_JOINS_FROM_ANOTHER_MAC`):
-   * every device joins as from another Mac, so two apps on one Mac read as
-   * two Macs, as `INFINITARY_DEVICE_NAME` makes them say.
-   */
-  joinsFromAnotherMac?: boolean;
-  /**
-   * Leave from a Mac that runs work (docs/devices.md, "Leave"): its work
-   * comes here before it is off the list, so the removal is Remove's
-   * (`Computers`); answers whether it took it over.
-   */
-  leaveWithWork?: (device: DeviceView) => boolean;
-  /**
-   * A Linux or Windows home's look at its own firewall (`firewallKeepsOut`,
-   * `windowsFirewallKeepsOut`, `./firewall.ts`), which Devices says may keep
-   * devices out; none on a Mac.
-   */
-  firewall?: () => Promise<HomeFirewall | null>;
-  /**
-   * False on a home that cannot set a computer up by its address (a Windows
-   * PC, whose own ssh keeps no control connection): Devices and the first
-   * mate offer the link and the command there instead.
-   */
-  addsByAddress?: false;
-};
 
 /** How long a look at the firewall holds before the next read looks again. */
 const FIREWALL_LOOK_MS = 10_000;
@@ -331,56 +133,6 @@ const FIREWALL_LOOK_MS = 10_000;
 const FIREWALL_ANSWER_WAIT_MS = 2_000;
 
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
-
-const REASONS: Record<PairRefusal, string> = {
-  malformed: "The request to join is not one this home reads.",
-  unknown: "This home has no open link with that code. Ask for a new link.",
-  unproven: "The device showed no key of its own.",
-  kind: "This link is for another kind of device.",
-  paired: "This device is paired with this home already.",
-  removed: "This home removed this device. Use the link again to join anew.",
-  "same-user": `This is the user Infinitary already runs as. Log in as another user on ${HERE.this}, and run it there.`,
-  used: "This link was used already. Ask for a new one.",
-  expired: "This link has expired. Ask for a new one.",
-};
-
-/**
- * Whether a user joining from this computer is the one the home runs as: the
- * same number on a Mac or Linux, or on Windows the same security identifier,
- * or one the home could not compare with its own, which might be it.
- */
-function sameUser(user: DeviceUser, ownUid: number | undefined, ownSid: string | null | undefined) {
-  if ("uid" in user) return user.uid === ownUid;
-  return !ownSid || user.sid === ownSid;
-}
-
-/**
- * The kind a device joins as (docs/devices.md, "Joining"): what its link
- * was made for, but a link for a Mac used from this Mac itself - as another
- * macOS user by its command, or by a second app at its first launch - joins
- * as another user here, which only runs work, or as a second app, which
- * only controls. A phone only controls.
- */
-export function joinedKind(
-  link: DeviceKind,
-  onThisMac: boolean,
-  window: boolean,
-  system?: DeviceSystem,
-): DeviceKind {
-  // A phone only controls, whichever link it used.
-  if (isPhone({ system })) return "view";
-  // A device whose system runs no work only controls (`systemRunsWork`).
-  if (window && !systemRunsWork(system) && link === "mac") return "view";
-  if (link !== "mac" || !onThisMac) return link;
-  return window ? "view" : "work";
-}
-
-/** Where a device reached this Mac on a socket: the address and port it dialed. */
-function reachedOn(socket: { localAddress?: string; localPort?: number }): string | undefined {
-  const host = socket.localAddress?.replace(/^::ffff:/, "");
-  if (!host || !socket.localPort) return undefined;
-  return `${host.includes(":") ? `[${host}]` : host}:${socket.localPort}`;
-}
 
 function defaultSchedule(ms: number, run: () => void): () => void {
   const timer = setTimeout(run, ms);
@@ -1993,3 +1745,6 @@ export class DevicePairing implements PairedDevices {
     }
   }
 }
+
+export type { DevicePairingOptions } from "./pairingOptions";
+export { joinedKind } from "./pairingRules";

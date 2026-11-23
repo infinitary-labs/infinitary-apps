@@ -310,6 +310,8 @@ function lookStop(
   chip: Parameters<FarBuilds["canSend"]>[1],
   builds: FarBuilds,
 ): [HomeAtRefusal, Partial<Omit<HomeAtRefused, "refused" | "step">>] | null {
+  // A first mate started beside a work grant, or a closed window's, would share that account's record with another first mate.
+  if (look.joined || look.windowHome) return ["already-joined", {}];
   if (!ubuntuPackage) {
     if (look.needs.length > 0)
       return ["needs-tools", { missing: look.needs, installs: look.installs }];

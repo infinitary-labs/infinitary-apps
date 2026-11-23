@@ -309,6 +309,31 @@ describe("a root sign-in on a Linux computer", () => {
     expect(installs).toEqual([]);
   });
 
+  it("stops where an account runs work for another first mate, or its closed window joined one", async () => {
+    const other = "ssh-ed25519 AAAAother";
+    const { reach, installs } = reachFor(
+      {
+        [ROOT]: linuxLook({ uid: 0, user: "root" }),
+        [ACCOUNT]: linuxLook({ uid: 1001, user: "infinitary", joined: true, home: other }),
+        "kun@box": linuxLook({ uid: 1000, user: "kun", windowHome: other, windowDevice: "d1" }),
+      },
+      false,
+    );
+    expect(await homeAt(reach, "kun@box")).toEqual({
+      refused: "already-joined",
+      step: "look",
+      name: "vps",
+    });
+    // An infinitary account already there is checked again after root makes it.
+    expect(await homeAt(reach, ROOT, { account: true })).toEqual({
+      refused: "already-joined",
+      step: "look",
+      name: "vps",
+      changed: true,
+    });
+    expect(installs).toEqual([]);
+  });
+
   it("stops with the key not taken when the account it made would ask a password it does not have", async () => {
     const { reach } = reachFor({ [ROOT]: linuxLook({ uid: 0, user: "root" }) }, false);
     const signIn = reach.withPassword;

@@ -537,14 +537,16 @@ describe("a held batch", () => {
 
   // Intent: issue #55, a bug being fixed: a repair declared its change the held batch's fix,
   // another task took that work over and was approved at the same commit, and the batch stayed
-  // held because the fix mark followed the declaring task alone.
+  // held because the fix mark followed the declaring task alone. Its review's findings: the
+  // takeover carries the repair's one declaration, with the base that repair is measured from,
+  // and the batch that merges with it answers that declaration.
   it("lets another task's change approved at the declared fix's exact commit join the held batch and end the hold", async () => {
     const home = await heldBatch();
     const held = home.open();
-    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
-    // The repair pushes its fix and is never approved; the task that takes its work over
-    // delivers that commit from a branch of its own.
-    home.pushed(FIX);
+    home.builtOn.set(FIX.head, held.head);
+    // The repair declares the commit it has committed and is never approved; the task that
+    // takes its work over delivers that commit from a branch of its own.
+    expect(await home.batches.declareFix(REPO, FIX.taskId, FIX.head)).toBeUndefined();
     const delivered = { ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 };
 
     home.approve(delivered);
@@ -554,34 +556,93 @@ describe("a held batch", () => {
     expect(home.open().hold).toBeUndefined();
     expect(home.open().head).not.toBe(held.head);
     expect(home.record().line).toEqual([]);
-    // It is carried as the fix is: from the version that held.
+    // Still the repair's one declaration, carried from the version it was verified on.
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+    expect(home.record().fixBases).toEqual({ [FIX.taskId]: held.head });
     expect(home.heard.combinedOn.at(-1)).toEqual([held.head]);
+
+    home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.place(delivered)).toMatchObject({ state: "merged" });
+    expect(home.record().fixes).toBeUndefined();
+    expect(home.record().fixHeads).toBeUndefined();
+    expect(home.record().held).toBeUndefined();
   });
 
-  // Intent: issue #55's control: only the declared fix's exact commit carries its mark, so an
-  // unrelated approval, or the same work in a commit of its own, never releases the hold.
+  // Intent: issue #55's control: only the exact commit a repair declared carries its
+  // declaration, so an unrelated approval, or an earlier commit of that repair delivered by
+  // another task, never releases the hold.
   it("keeps the batch held when changes at other commits are approved beside a declared fix", async () => {
     const home = await heldBatch();
     const held = home.open();
-    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
-    home.pushed(FIX);
-    // The fix's own title and words, committed again: another commit, so another change.
-    const rewritten = {
-      ...FIX,
-      taskId: "t-rewrite",
-      branch: "fm/task-rewrite",
-      head: "4d3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2",
-      at: 8_000,
-    };
+    // The repair declared an earlier commit of its fix, then the one it has now.
+    const earlier = "4d3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2";
+    await home.batches.declareFix(REPO, FIX.taskId, earlier);
+    expect(await home.batches.declareFix(REPO, FIX.taskId, FIX.head)).toBeUndefined();
+    const older = { ...FIX, taskId: "t-older", branch: "fm/task-older", head: earlier, at: 8_000 };
 
     home.approve(LEGEND);
-    home.approve(rewritten);
+    home.approve(older);
     await home.pass();
     expect(home.open()).toEqual({ ...held, repair: FIX.taskId });
-    expect(home.record().line).toEqual([LEGEND, rewritten]);
+    expect(home.record().line).toEqual([LEGEND, older]);
     expect(home.record().fixes).toEqual([FIX.taskId]);
+    expect(home.record().fixHeads).toEqual({ [FIX.taskId]: FIX.head });
     expect(home.heard.pushes.at(-1)?.head).toBe(held.head);
     expect(home.host.merges).toEqual([]);
+  });
+
+  // Intent: the same issue, its review's finding: the task that delivers a declared commit
+  // holds no declaration of its own, so a later version of its change is an ordinary change.
+  it("leaves a later version of the takeover's change an ordinary change", async () => {
+    const home = await heldBatch();
+    await home.batches.declareFix(REPO, FIX.taskId, FIX.head);
+    const delivered = { ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 };
+    home.approve(delivered);
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-takeover"]);
+
+    const moved = { ...delivered, head: "4d3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2" };
+    home.approve(moved);
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export"]);
+    expect(home.record().line).toEqual([moved]);
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+  });
+
+  // Intent: the same issue, its review's finding, a bug being fixed: a batch that waited for
+  // the fix its repair declared beside a send-back stayed held when another task delivered
+  // that fix's exact commit, since the wait knew the declaring task alone. The existing rule
+  // stands: no other change, another repair's declared fix included, ends that wait.
+  it("ends the wait for a fix declared beside a send-back when another task delivers its exact commit", async () => {
+    const home = await heldBatch();
+    home.approve(LEGEND);
+    await home.pass();
+    const held = home.open();
+    const combines = home.heard.combinedOn.length;
+    await home.batches.answer(
+      REPO,
+      {
+        action: "send-back",
+        head: held.head,
+        changes: [{ taskId: "t-export", reason: "its export test fails on the batch's version" }],
+      },
+      FIX.taskId,
+      FIX.taskId,
+      FIX.head,
+    );
+    await home.batches.declareFix(REPO, AXIS.taskId, AXIS.head);
+    home.approve(AXIS);
+    await home.pass();
+    expect(home.open().hold?.head).toBe(held.head);
+    expect(home.heard.combinedOn).toHaveLength(combines);
+
+    home.approve({ ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 });
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-axis", "t-takeover", "t-legend"]);
+    expect(home.open().hold).toBeUndefined();
+    expect(home.heard.combinedOn.slice(combines)).toEqual([[held.head]]);
   });
 
   // Intent: INF-4421's finding, a bug being fixed: Try again rebuilt the held batch from its

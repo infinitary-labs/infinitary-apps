@@ -133,9 +133,6 @@ export function createOwnBatches(owners: {
       const record = tasks.get(taskId);
       return record !== undefined && !TaskService.isClosed(record);
     },
-    // The task's own change, as its record keeps the versions the host saw pushed.
-    versionOf: (taskId, head) =>
-      tasks.changeFor(taskId)?.versions.some((version) => version.head === head) ?? false,
     merged: (taskId) => {
       const record = tasks.get(taskId);
       return record ? TaskGraph.mergedAt(record) : undefined;

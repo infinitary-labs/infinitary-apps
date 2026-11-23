@@ -10,7 +10,7 @@ import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repo
 import type { NamingRule } from "../../shared/runbooks";
 import type { Batches } from "../batches/batches";
 import { fixBase } from "../batches/combine";
-import { heldVersions } from "../batches/line";
+import { declarationOf, heldVersions } from "../batches/line";
 import {
   type Forge,
   type ForgeChange,
@@ -417,12 +417,18 @@ export class ChangeContext {
     const entry = [...(record?.line ?? []), ...(record?.open?.members ?? [])].find(
       (change) => change.taskId === fixOf,
     );
+    // Another task's branch at the exact commit a repair declared carries that repair's
+    // declaration, and is measured from the version that repair was verified on.
+    const at = record?.fixHeads
+      ? await git(dir, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]).catch(() => head)
+      : head;
+    const repair = record && fixOf ? declarationOf(record, { taskId: fixOf, head: at }) : undefined;
     const found =
-      record && fixOf && record.fixes?.includes(fixOf)
+      record && repair
         ? await fixBase(
             dir,
             head,
-            record.fixBases?.[fixOf] ?? entry?.heldBase,
+            record.fixBases?.[repair] ?? entry?.heldBase,
             heldVersions(record),
           )
         : undefined;

@@ -181,12 +181,10 @@ export function enqueue(record: BatchRecord, approved: BatchChange): BatchRecord
   // The held version an approval verified a declared fix on goes with its repair as it enters
   // the line, before any combine, so a version approved in its place is carried from it too.
   const { heldBase, ...change } = approved;
+  const repair = declarationOf(record, change);
   const bound =
-    change.fix &&
-    heldBase &&
-    record.fixes?.includes(change.taskId) &&
-    !record.fixBases?.[change.taskId]
-      ? { ...record, fixBases: { ...record.fixBases, [change.taskId]: heldBase } }
+    change.fix && heldBase && repair && !record.fixBases?.[repair]
+      ? { ...record, fixBases: { ...record.fixBases, [repair]: heldBase } }
       : record;
   if (standing(bound, change.taskId, change.head)?.state === "waiting")
     return change.fix ? markFix(bound, change.taskId) : bound;
@@ -199,26 +197,20 @@ export function enqueue(record: BatchRecord, approved: BatchChange): BatchRecord
 }
 
 /**
- * Put an approved change in line (`enqueue`), marked the held batch's fix
- * when a declaration covers it. A change a repair declared the fix is marked
- * so, still after its batch was closed and put back in line, until a batch
- * merges or ends. So is another task's change approved at the exact commit
- * of a declared fix, as when that task took the repair's delivery over:
- * `pushed` says whether a declared repair's own change holds the approved
- * version, as the host saw it pushed, while that repair's task is open. It is
- * declared the fix for the task that delivers it. Only that commit carries
- * the declaration, and only the delivered version's own approval puts it here.
+ * The declared fix a change carries, by the task that declared it: its own
+ * task's, or the one whose task had committed exactly this commit as it
+ * declared it (`fixHeads`), as when another task takes that repair's delivery
+ * over. No other commit of another task carries a declaration, and only the
+ * change's own approval puts it in line.
  */
-export function enqueueApproved(
-  record: BatchRecord,
-  approved: BatchChange,
-  pushed: (repair: string) => boolean,
-): BatchRecord {
+export function declarationOf(
+  record: Pick<BatchRecord, "fixes" | "fixHeads">,
+  change: Pick<BatchChange, "taskId" | "head">,
+): string | undefined {
   const fixes = record.fixes ?? [];
-  if (fixes.includes(approved.taskId)) return enqueue(record, { ...approved, fix: true });
-  return fixes.some(pushed)
-    ? enqueue(declared(record, approved.taskId), { ...approved, fix: true })
-    : enqueue(record, approved);
+  return fixes.includes(change.taskId)
+    ? change.taskId
+    : fixes.find((taskId) => record.fixHeads?.[taskId] === change.head);
 }
 
 /**
@@ -325,36 +317,45 @@ export function markFix(record: BatchRecord, taskId: string): BatchRecord {
  */
 export function unfixed(record: BatchRecord, joined: readonly string[]): BatchRecord {
   const left = (record.fixes ?? []).filter((taskId) => !joined.includes(taskId));
-  const { fixes: _fixes, held, fixBases, ...rest } = record;
-  const bases = Object.entries(fixBases ?? {}).filter(([taskId]) => left.includes(taskId));
+  const { fixes: _fixes, held, fixBases, fixHeads, ...rest } = record;
+  const kept = (by: Record<string, string> = {}) =>
+    Object.fromEntries(Object.entries(by).filter(([taskId]) => left.includes(taskId)));
+  const [bases, heads] = [kept(fixBases), kept(fixHeads)];
   return {
     ...rest,
     ...(left.length ? { fixes: left, ...(held ? { held } : {}) } : {}),
-    ...(bases.length ? { fixBases: Object.fromEntries(bases) } : {}),
+    ...(Object.keys(bases).length ? { fixBases: bases } : {}),
+    ...(Object.keys(heads).length ? { fixHeads: heads } : {}),
     line: record.line.map(({ fix, ...entry }) =>
-      fix && left.includes(entry.taskId) ? { ...entry, fix } : entry,
+      fix && declarationOf({ fixes: left, fixHeads: heads }, entry) ? { ...entry, fix } : entry,
     ),
   };
 }
 
 /**
  * The record with `taskId` declared the held batch's fix: the declaration,
- * the mark on its change in line, and the held version kept among those that
- * held, so the repair's base outlives the hold until the repair merges or
- * its task closes.
+ * the commit its task had committed as it declared it (`at`, `fixHeads`), the
+ * mark on each change in line that carries the declaration, and the held
+ * version kept among those that held, so the repair's base outlives the hold
+ * until the repair merges or its task closes. Declared again, the commit it
+ * names now is the one bound: a change at the earlier one carries it no more.
  */
-export function declared(record: BatchRecord, taskId: string): BatchRecord {
+export function declared(record: BatchRecord, taskId: string, at?: string): BatchRecord {
   const fixes = record.fixes ?? [];
   const head = record.open?.hold?.head;
   const held = record.held ?? [];
-  return markFix(
+  const next = unfixed(
     {
       ...record,
       fixes: fixes.includes(taskId) ? fixes : [...fixes, taskId],
+      ...(at ? { fixHeads: { ...record.fixHeads, [taskId]: at } } : {}),
       ...(head && !held.includes(head) ? { held: [head, ...held] } : {}),
     },
-    taskId,
+    [],
   );
+  return next.line
+    .filter((entry) => declarationOf(next, entry) === taskId)
+    .reduce((marked, entry) => markFix(marked, entry.taskId), next);
 }
 
 /**
@@ -369,12 +370,15 @@ export function heldVersions(record: BatchRecord): string[] {
 
 /**
  * Whether the held batch's wait for its repair's fix ends now: the awaited
- * change is approved, or, once that repair's task closed (`awaits` empty),
- * any declared fix is.
+ * change is approved, its task's own or another task's that carries that
+ * same declaration (`declarationOf`), or, once that repair's task closed
+ * (`awaits` empty), any declared fix is.
  */
 export function awaitedJoins(record: BatchRecord): boolean {
   const awaits = record.open?.awaits;
-  return awaits ? record.line.some((entry) => entry.taskId === awaits) : fixWaits(record);
+  const awaited = (entry: BatchChange) =>
+    entry.taskId === awaits || declarationOf(record, entry) === awaits;
+  return awaits ? record.line.some(awaited) : fixWaits(record);
 }
 
 export function fixWaits(record: BatchRecord): boolean {
@@ -397,7 +401,7 @@ export function carried(
 ): BatchChange[] {
   // A declared fix goes with the base its repair was verified on, whichever version of it this is.
   const based = (change: BatchChange): BatchChange => {
-    const heldBase = record.fixBases?.[change.taskId];
+    const heldBase = record.fixBases?.[declarationOf(record, change) ?? change.taskId];
     return heldBase ? { ...change, heldBase } : change;
   };
   // A change rebuilt on an open batch goes right behind the changes it was built on: first
@@ -493,15 +497,15 @@ function asChange(member: BatchMember): BatchChange {
  * the fix joined or was left out. It is saved before the batch is pushed, so
  * a push that never comes back still keeps the base the repair was checked on.
  */
-export function withBases<T extends Pick<BatchRecord, "fixes" | "fixBases">>(
+export function withBases<T extends Pick<BatchRecord, "fixes" | "fixBases" | "fixHeads">>(
   record: T,
   result: Combined,
 ): T {
   const verified = [...result.members, ...result.leftOut.map((entry) => entry.change)].flatMap(
-    (change) =>
-      change.heldBase && record.fixes?.includes(change.taskId)
-        ? [[change.taskId, change.heldBase]]
-        : [],
+    (change) => {
+      const repair = change.heldBase ? declarationOf(record, change) : undefined;
+      return repair ? [[repair, change.heldBase]] : [];
+    },
   );
   return verified.length
     ? { ...record, fixBases: { ...record.fixBases, ...Object.fromEntries(verified) } }

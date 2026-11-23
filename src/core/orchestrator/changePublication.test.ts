@@ -709,119 +709,140 @@ describe("the route a held batch's fix is published on", () => {
   // Intent: the same piece, the independent review's fourth finding, a bug being fixed: the
   // held version's shorter range was chosen before the route, so a call that opened a pull
   // request of its own, which merges the branch whole, skipped the members' commit names.
-  it("confirms the fix's story on its branch measured from the held version, and measures a pull request of its own from the default branch", async () => {
-    const dir = scratchDir("infinitary-held-fix-");
-    const run = (...args: string[]) =>
-      execFileSync("git", ["-C", dir, "-c", "user.name=T", "-c", "user.email=t@l", ...args])
-        .toString()
-        .trim();
-    const commit = (file: string, subject: string) => {
-      writeFileSync(join(dir, file), `${subject}\n`);
-      run("add", file);
-      run("commit", "-m", subject);
-      return run("rev-parse", "HEAD");
-    };
-    const title = "fix(parser): read dates with a time zone";
-    run("init", "--quiet", "--initial-branch=main");
-    const origin = "https://github.com/acme/meter.git";
-    run("config", `url.${dir}.insteadOf`, origin);
-    run("remote", "add", "origin", origin);
-    commit("README.md", "chore: start the meter");
-    run("update-ref", "refs/remotes/origin/main", "main");
-    // The held batch carries a member whose commit name predates the naming rule.
-    run("checkout", "--quiet", "-b", "infinitary-batch/5e1d");
-    const held = commit("report.md", "Generate the report's column page");
-    run("checkout", "--quiet", "-b", "fm/task-ab12cd34");
-    const fix = commit("parser.ts", title);
+  // Intent: upstream issue #55's review, a bug being fixed: a task that delivers the exact
+  // commit another task's repair declared was published and approved as an ordinary branch,
+  // so the repair's own measure, and the base it is carried from, never reached it.
+  it.each([
+    ["its own task declared", "ab12cd34"],
+    ["another task's repair declared at this exact commit", "repair09"],
+  ])(
+    "confirms the story of the fix %s on its branch measured from the held version, and measures a pull request of its own from the default branch",
+    async (_declared, repair) => {
+      const dir = scratchDir("infinitary-held-fix-");
+      const run = (...args: string[]) =>
+        execFileSync("git", ["-C", dir, "-c", "user.name=T", "-c", "user.email=t@l", ...args])
+          .toString()
+          .trim();
+      const commit = (file: string, subject: string) => {
+        writeFileSync(join(dir, file), `${subject}\n`);
+        run("add", file);
+        run("commit", "-m", subject);
+        return run("rev-parse", "HEAD");
+      };
+      const title = "fix(parser): read dates with a time zone";
+      run("init", "--quiet", "--initial-branch=main");
+      const origin = "https://github.com/acme/meter.git";
+      run("config", `url.${dir}.insteadOf`, origin);
+      run("remote", "add", "origin", origin);
+      commit("README.md", "chore: start the meter");
+      run("update-ref", "refs/remotes/origin/main", "main");
+      // The held batch carries a member whose commit name predates the naming rule.
+      run("checkout", "--quiet", "-b", "infinitary-batch/5e1d");
+      const held = commit("report.md", "Generate the report's column page");
+      run("checkout", "--quiet", "-b", "fm/task-ab12cd34");
+      const fix = commit("parser.ts", title);
 
-    let record: BatchRecord = { ...EMPTY_BATCH_RECORD, fixes: ["ab12cd34"], held: [held] };
-    const enqueued: BatchChange[] = [];
-    const at = setup({
-      forge: new BatchHostForge(fix),
-      realRange: true,
-      batches: () =>
-        ({
-          record: () => record,
-          revise: async () => {},
-          standing: () => undefined,
-          status: () => undefined,
-          sentBack: () => [],
-          enqueue: async (_repo: string, change: BatchChange) => {
-            enqueued.push(change);
-          },
-        }) as unknown as Batches,
-    });
-    seedProject(at.db, {
-      id: "repo-meter",
-      name: "meter",
-      path: dir,
-      origin,
-      delivery: "queue-pr",
-    });
-    insertTask(at.tasks, { repoId: "repo-meter" });
-    at.readHead.mockImplementation(async () => fix);
-    const story: ChangePresentation = {
-      version: 1,
-      taskId: "ab12cd34",
-      revision: 1,
-      title,
-      base: BATCH_BASE,
-      head: fix,
-      destination: METER_DESTINATION,
-      why: ["A date with a time zone was read an hour off."],
-      whatChanged: ["Dates with a time zone are read as written."],
-      before: ["A date with a zone lost its offset."],
-      after: ["The date keeps the offset it was written with."],
-      noPicture: "The change is in how a date is read, which no screen shows.",
-      views: [],
-      assets: [],
-      pictures: [],
-      verification: ["Ran the parser's date tests."],
-      risk: Object.fromEntries(
-        RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "One function." }]),
-      ) as RiskDeclaration,
-      requiredActions: [],
-      unfinished: [],
-      projectText: "",
-    };
-    at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
-      revisions: [story],
-      receipts: [],
-    }));
+      let record: BatchRecord = {
+        ...EMPTY_BATCH_RECORD,
+        fixes: [repair],
+        fixHeads: { [repair]: fix },
+        held: [held],
+      };
+      const enqueued: BatchChange[] = [];
+      const at = setup({
+        forge: new BatchHostForge(fix),
+        realRange: true,
+        batches: () =>
+          ({
+            record: () => record,
+            revise: async () => {},
+            standing: () => undefined,
+            status: () => undefined,
+            sentBack: () => [],
+            enqueue: async (_repo: string, change: BatchChange) => {
+              enqueued.push(change);
+            },
+          }) as unknown as Batches,
+      });
+      seedProject(at.db, {
+        id: "repo-meter",
+        name: "meter",
+        path: dir,
+        origin,
+        delivery: "queue-pr",
+      });
+      insertTask(at.tasks, { repoId: "repo-meter" });
+      at.readHead.mockImplementation(async () => fix);
+      const story: ChangePresentation = {
+        version: 1,
+        taskId: "ab12cd34",
+        revision: 1,
+        title,
+        base: BATCH_BASE,
+        head: fix,
+        destination: METER_DESTINATION,
+        why: ["A date with a time zone was read an hour off."],
+        whatChanged: ["Dates with a time zone are read as written."],
+        before: ["A date with a zone lost its offset."],
+        after: ["The date keeps the offset it was written with."],
+        noPicture: "The change is in how a date is read, which no screen shows.",
+        views: [],
+        assets: [],
+        pictures: [],
+        verification: ["Ran the parser's date tests."],
+        risk: Object.fromEntries(
+          RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "One function." }]),
+        ) as RiskDeclaration,
+        requiredActions: [],
+        unfinished: [],
+        projectText: "",
+      };
+      at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
+        revisions: [story],
+        receipts: [],
+      }));
 
-    // The review's later finding, a bug being fixed: a verified version the branch no longer
-    // builds on is refused on the route that carries the fix from it, and on no other.
-    run("checkout", "--quiet", "-b", "elsewhere", "main");
-    const elsewhere = commit("other.md", "chore: an unrelated version");
-    run("checkout", "--quiet", "fm/task-ab12cd34");
-    record = { ...record, fixBases: { ab12cd34: elsewhere } };
-    expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toContain(
-      "its branch no longer builds on the batch's version",
-    );
-    const inherited = 'Received: "Generate the report\'s column page"';
-    expect(
-      await at.service.publication.open("ab12cd34", { title, presentation: 1, base: "main" }),
-    ).toContain(inherited);
-    record = { ...record, fixBases: { ab12cd34: held } };
+      // The review's later finding, a bug being fixed: a verified version the branch no longer
+      // builds on is refused on the route that carries the fix from it, and on no other.
+      run("checkout", "--quiet", "-b", "elsewhere", "main");
+      const elsewhere = commit("other.md", "chore: an unrelated version");
+      run("checkout", "--quiet", "fm/task-ab12cd34");
+      record = { ...record, fixBases: { [repair]: elsewhere } };
+      expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toContain(
+        "its branch no longer builds on the batch's version",
+      );
+      const inherited = 'Received: "Generate the report\'s column page"';
+      expect(
+        await at.service.publication.open("ab12cd34", { title, presentation: 1, base: "main" }),
+      ).toContain(inherited);
+      // Another task's repair declared at another commit: this branch carries no declaration,
+      // and names every commit past the default branch.
+      const declared = record;
+      record = { ...record, fixes: ["repair09"], fixHeads: { repair09: held } };
+      expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toContain(
+        inherited,
+      );
+      record = { ...declared, fixBases: { [repair]: held } };
 
-    expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toBe(
-      BATCH_OPEN_WORDS.confirmed("fm/task-ab12cd34"),
-    );
-    // Approved, it enters the line with the held version its approval measured it from.
-    await at.service.checks.checkOverall("ab12cd34");
-    const approved = await at.service.merges.merge("ab12cd34", {
-      head: fix,
-      unattended: false,
-      beforeDispatch: () => undefined,
-    });
-    expect(approved.stop, approved.text).toBe("queue");
-    expect(enqueued).toEqual([expect.objectContaining({ head: fix, heldBase: held })]);
-    // Opened as a pull request of its own against a branch it names, it merges whole: every
-    // commit past the default branch is its own.
-    expect(
-      await at.service.publication.open("ab12cd34", { title, presentation: 1, base: "main" }),
-    ).toContain(inherited);
-  });
+      expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toBe(
+        BATCH_OPEN_WORDS.confirmed("fm/task-ab12cd34"),
+      );
+      // Approved, it enters the line with the held version its approval measured it from.
+      await at.service.checks.checkOverall("ab12cd34");
+      const approved = await at.service.merges.merge("ab12cd34", {
+        head: fix,
+        unattended: false,
+        beforeDispatch: () => undefined,
+      });
+      expect(approved.stop, approved.text).toBe("queue");
+      expect(enqueued).toEqual([expect.objectContaining({ head: fix, heldBase: held })]);
+      // Opened as a pull request of its own against a branch it names, it merges whole: every
+      // commit past the default branch is its own.
+      expect(
+        await at.service.publication.open("ab12cd34", { title, presentation: 1, base: "main" }),
+      ).toContain(inherited);
+    },
+  );
 });
 
 /**

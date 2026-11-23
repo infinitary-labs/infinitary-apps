@@ -15,6 +15,7 @@ import {
   type Located,
   projectOf,
 } from "./changeContext";
+import type { ChangePublication } from "./changePublication";
 import { declareCheckAction } from "./checkRepair";
 import {
   candidateHead,
@@ -104,6 +105,8 @@ export class CheckChangeTool {
     private readonly context: ChangeContext,
     private readonly checks: ChangeChecks,
     private readonly reviews: MergeReviews,
+    /** Reads the commit a task's working copy holds, for a fix it declares (`declareBatch`). */
+    private readonly publication: Pick<ChangePublication, "presentationHead">,
   ) {
     this.options = context.options;
   }
@@ -399,6 +402,12 @@ export class CheckChangeTool {
     const back = batch.sendBack ?? [];
     const passed = batch.passed?.trim();
     if (batch.fix !== true && back.length === 0 && !passed) return BATCH_DECLARATION_WORDS.one;
+    // A declared fix is bound to the exact commit its task has committed now, so another task
+    // that delivers that commit carries the declaration; one that cannot be read binds none.
+    const at =
+      batch.fix === true
+        ? await this.publication.presentationHead(record.id).catch(() => undefined)
+        : undefined;
     if (passed) {
       if (back.length) return BATCH_DECLARATION_WORDS.passedSentBack;
       const refused = await batches.declarePassed(
@@ -406,12 +415,13 @@ export class CheckChangeTool {
         passed,
         batch.fix === true ? record.id : undefined,
         record.id,
+        at,
       );
       if (refused) return BATCH_DECLARATION_WORDS.passed[refused];
       return BATCH_DECLARATION_WORDS.passedRecorded(batch.fix === true);
     }
     if (batch.fix === true && back.length === 0) {
-      const refused = await batches.declareFix(repoId, record.id);
+      const refused = await batches.declareFix(repoId, record.id, at);
       if (refused) return `Batch declaration refused: ${refused}`;
       this.options.tasks.note(
         record.id,
@@ -441,6 +451,7 @@ export class CheckChangeTool {
       { action: "send-back", head: open.hold.head, changes },
       batch.fix === true ? record.id : undefined,
       record.id,
+      at,
     );
     if (refused) return `Batch declaration refused: ${refused}`;
     const sent = changes.length === 1 ? "one change" : `${changes.length} changes`;

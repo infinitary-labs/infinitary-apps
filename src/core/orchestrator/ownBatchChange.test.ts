@@ -1459,6 +1459,73 @@ describe("a repair's answer to its project's held batch", () => {
     expect(at.forge.batchHead).not.toBe(before);
   });
 
+  // Intent: upstream issue #55, "Held batch does not resume when a takeover delivers the
+  // approved repair commit", a bug being fixed, and its review's findings: the declaration is
+  // bound to the exact commit the repair's working copy holds as it declares, not to a version
+  // the host read on its branch before, and another task approved at that commit ends the hold.
+  it("binds a declared fix to the commit its task has committed: another task approved there ends the hold, and at an earlier version does not", async () => {
+    const at = await held();
+    const before = at.forge.batchHead;
+    // The host read an earlier version of the repair's branch where the project lives.
+    at.tasks.delivery.recordChangeEvidence(TASK, { headSha: AXIS_HEAD });
+    vi.spyOn(at.service.publication, "presentationHead").mockResolvedValue(HEAD);
+    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
+      BATCH_DECLARATION_WORDS.fix,
+    );
+    expect(at.batches.record(REPO).fixHeads).toEqual({ [TASK]: HEAD });
+
+    at.other("earlier05", STORY.title, AXIS_HEAD);
+    await at.pass();
+    expect(at.open()?.hold).toBeDefined();
+    expect(at.forge.batchHead).toBe(before);
+
+    at.other("deliver06", STORY.title, HEAD);
+    await at.pass();
+    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
+      "parser01",
+      "export02",
+      "legend03",
+      "deliver06",
+      "earlier05",
+    ]);
+    expect(at.open()?.hold).toBeUndefined();
+    expect(at.forge.batchHead).not.toBe(before);
+    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
+  });
+
+  // Intent: the same issue's review: every declaration of a fix binds that commit, and one
+  // whose working copy still holds edits to commit binds none.
+  it.each([
+    ["alone", () => ({ fix: true, evidence })],
+    [
+      "beside a send-back",
+      () => ({
+        fix: true,
+        sendBack: [{ task: "parser01", reason: "its date test fails on the batch's version" }],
+        evidence,
+      }),
+    ],
+    [
+      "beside a version that passed on a rerun",
+      (version: string) => ({ passed: version, fix: true, evidence }),
+    ],
+  ])(
+    "binds the commit of a fix declared %s, and none while its edits are not committed",
+    async (_way, batch) => {
+      const at = await held();
+      const committed = vi.spyOn(at.service.publication, "presentationHead");
+      committed.mockRejectedValue(new Error("Commit the task's changes first."));
+      await at.service.checkTool.checkForCrew(TASK, { batch: batch(at.forge.batchHead) });
+      expect(at.batches.record(REPO).fixes).toEqual([TASK]);
+      expect(at.batches.record(REPO).fixHeads).toBeUndefined();
+
+      const again = await held();
+      vi.spyOn(again.service.publication, "presentationHead").mockResolvedValue(HEAD);
+      await again.service.checkTool.checkForCrew(TASK, { batch: batch(again.forge.batchHead) });
+      expect(again.batches.record(REPO).fixHeads).toEqual({ [TASK]: HEAD });
+    },
+  );
+
   it("declares its own change the batch's fix: once approved it joins the held batch and ends the hold", async () => {
     const at = await held();
     const before = at.forge.batchHead;

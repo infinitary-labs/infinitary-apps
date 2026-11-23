@@ -3002,6 +3002,15 @@
                     "type": "string"
                   }
                 },
+                "fixHeads": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
                 "formed": {
                   "type": "number"
                 },
@@ -4052,6 +4061,15 @@
                     }
                   },
                   "fixBases": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "fixHeads": {
                     "type": "object",
                     "propertyNames": {
                       "type": "string"
@@ -5440,6 +5458,15 @@
                 }
               },
               "fixBases": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "fixHeads": {
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -12457,6 +12484,15 @@
                 }
               },
               "fixBases": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "fixHeads": {
                 "type": "object",
                 "propertyNames": {
                   "type": "string"

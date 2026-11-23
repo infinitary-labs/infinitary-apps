@@ -198,9 +198,16 @@ async function started(page: Page, title: string): Promise<{ key: string; id: st
 test("Automatic continues beside its basis, while explicit choice and unavailable-basis fallback stay authoritative", async () => {
   test.setTimeout(240_000);
   const { app, page, deviceId, dataDir } = await homeAndComputer();
+  // Both computers read this one computer's real memory, beside the app, the helper and the
+  // suite: a standard task asks 2 GiB above the margin, which GitHub's 7 GB Mac did not have
+  // spare (INF-6336), so the project declares tasks of the smallest size, which every computer
+  // the suite runs on has room for.
   const { repo } = await page.evaluate(async (path) => {
     const result = await window.infinitary.repos.setup({ kind: "adopt", path, name: "website" });
     await window.infinitary.devices.runsOn(result.repo.id, "automatic");
+    await window.infinitary.repos.configure(result.repo.id, {
+      placementRequirements: { profile: "conversation" },
+    });
     return result;
   }, projectWithOrigin());
   const detail = (id: string) => page.evaluate((id) => window.infinitary.tasks.detail(id), id);

@@ -321,6 +321,7 @@ The first reach of an address reads the check line and sends nothing until the c
 `ssh -G` says where the captain's own SSH would connect, and `ssh-keyscan` reads the key there.
 An address their settings reach through a `ProxyCommand` or `ProxyJump` has no name `ssh-keyscan` can dial, so their own ssh reads the key through that proxy instead.
 Windows' own `ssh-keyscan.exe` offers a key exchange it cannot finish (sntrup761x25519), which every OpenSSH server from 8.5 on picks, so when it stops there Windows' own `ssh.exe` reads the key: with no SSH settings, a known-hosts file of its own that only takes the key it was offered, and no key or password offered, it stops before it signs in.
+A Mac's `ssh-keyscan` can end on a refused port without a word, so when it reads no key and names no refusal, the Mac's own `ssh` reads the key the same way, and its own "Connection refused" says Remote Login is off there.
 It reads no known hosts, its known-hosts command only writes down the key it was offered and vouches for none, so SSH stops with "Host key verification failed" before it signs in to that Mac.
 A jump host is signed in to as their settings say, as any reach of that address does.
 The aside asks "Is this sam@mini.local?" and "Compare this line with the one that computer shows.", with the line, "This is the computer" and "Cancel".

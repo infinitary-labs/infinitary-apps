@@ -1,5 +1,5 @@
 ---
-source: e53def040de764b3
+source: cee1a57585b4bde1
 title: Manuales
 description: La guía escrita que siguen tu primer oficial y tu tripulación para tipos de trabajo, y cómo activarla o desactivarla, leerla y crear o agregar la tuya.
 ---
@@ -61,6 +61,8 @@ Tres empiezan desactivados hasta que los activas: **Batched pull requests**, **P
 - **Moving secrets in**: cómo un tripulante pasa secretos de otra herramienta a **Secretos** sin que ningún agente vea un valor.
   Un tripulante solo lo lee durante ese traslado.
   Consulta [Secretos](/es/secrets/).
+- **Feedback**: escribe `/feedback` y unas palabras en cualquier cuadro de mensaje, y un tripulante redacta una incidencia para los creadores de Infinitary que tú lees y publicas.
+  Lleva datos sobre la app y tu sistema, nunca tus nombres, rutas ni proyectos.
 - **Advanced architecture**: traza un mapa de las partes de un proyecto y de cómo se conectan, y muestra lo que un cambio mueve en ese mapa.
   Es un experimento.
 

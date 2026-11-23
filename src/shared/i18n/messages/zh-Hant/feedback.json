@@ -1,0 +1,8 @@
+{
+  "feedbackStripAccount": "按下之前不會傳送任何內容。它會以你的 GitHub 帳號 {login} 發布。",
+  "feedbackStripBug": "一份新的問題回報",
+  "feedbackStripComment": "對議題 #{number} 的留言",
+  "feedbackStripHeading": "你按下後，這會公開發布到 {place}，僅一次",
+  "feedbackStripIdea": "一個新想法",
+  "feedbackStripNoAccount": "按下之前不會傳送任何內容。它會以你的 GitHub 帳號發布。"
+}

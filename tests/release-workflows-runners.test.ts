@@ -448,6 +448,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The check-file flag, which holds a write token for an outside pull
     // request (docs/public-ci.md, "Outside contributors").
     "check-file-flag.yml:flag",
+    // The feedback labels, which hold a write token on any new issue
+    // (docs/feedback.md, "Triage").
+    "feedback-labels.yml:label",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

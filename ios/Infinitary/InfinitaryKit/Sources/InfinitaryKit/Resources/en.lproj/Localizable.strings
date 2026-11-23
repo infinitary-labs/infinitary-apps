@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "Previous work computers";
 "commandDevicesTryAgain" = "Try again to reach your computers";
 "commandDevicesTryAgainWords" = "devices, ssh, reconnect, connect, macs";
+"commandFeedbackStart" = "Send feedback";
+"commandFeedbackStartWords" = "feedback, report, problem, bug, idea, suggestion, issue";
 "commandFirstmateReply" = "Open the first mate's reply";
 "commandFirstmateReplyWords" = "answer, message, note, last";
 "commandFocusCardActions" = "Go to the card's buttons";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "release, notes, changes, version";
 "composerFolderNotProject" = "That folder could not be added as a project.";
 "composerFolderProject" = "That folder is already one of your projects.";
+"composerHintFeedback" = "%1$@: tell Infinitary's makers about a problem or an idea";
 "composerTooLongShorten" = "Too long to send. Shorten it first.";
 "composerWordsOnly" = "Only words can go until Infinitary is updated. Remove the pictures and files to send this.";
 "crewAPart" = "A part";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "Message undelivered: %1$@";
 "feedUpdated" = "Updated: %1$@";
 "feedYouChose" = "You chose \"%1$@\"";
+"feedbackStripAccount" = "Nothing is sent before your click. It goes under your GitHub account %1$@.";
+"feedbackStripBug" = "A new problem report";
+"feedbackStripComment" = "A comment on issue #%1$@";
+"feedbackStripHeading" = "Your click publishes this on %1$@, publicly, once";
+"feedbackStripIdea" = "A new idea";
+"feedbackStripNoAccount" = "Nothing is sent before your click. It goes under your GitHub account.";
 "fileAdd" = "Add files";
 "fileCancel" = "Cancel preparing %1$@";
 "fileDropHere" = "Drop files to add them";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "Help";
 "menuKeyboardSettings" = "Keyboard Settings…";
 "menuResetAllKeys" = "Reset All Keys…";
+"menuSendFeedback" = "Send Feedback…";
 "menuSettings" = "Settings…";
 "menuWhatsNew" = "What’s New in Infinitary";
 "mergeButtonAfterFixing" = "Merge after fixing errors";

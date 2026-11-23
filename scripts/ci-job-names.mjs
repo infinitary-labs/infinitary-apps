@@ -21,6 +21,7 @@
 export const TRIGGERS = Object.freeze([
   "Pull request",
   "Pull request comment",
+  "New issue",
   "Branch push",
   "Main push",
   "Manual request",

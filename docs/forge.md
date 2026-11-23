@@ -686,6 +686,7 @@ The merge guard runs first: a merge or default-branch move on the task's own pro
 The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path, the JSON body, and for a release file the path of that file in the working copy - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).
 An integration's action that changes or sends is kept in the same list as an ask of kind `integration`, carried by the same `request_write` card and taken once by the same click, which runs it through its integration rather than this gateway (`docs/integrations.md`, "The rules").
 A release file's bytes are read when the click sends it, not when the ask is kept.
+A `/feedback` draft is kept the same way by its own command, never by `github_write`: `GithubGatewayService.keepFeedback` keeps it through the github.com sign-in even for a task in the destination project, and its strip draws the title and body as readable text (`docs/feedback.md`, "The review card").
 The answer names the ask's id and tells the crewmate to put it on a card.
 `emit_card` takes an action whose effect is `{ kind: "request_write", ask }`, beside the crewmate's own Not now and its words on why.
 The emit refuses an ask that is not the task's or was already taken, two asks on one card, and an ask beside a merge or discard; only a crewmate's card on its own task may carry one.

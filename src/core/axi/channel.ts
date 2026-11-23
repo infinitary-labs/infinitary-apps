@@ -1,8 +1,17 @@
 import { createHash, randomBytes } from "node:crypto";
-import { chmodSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
+import { FEEDBACK_COMMAND, GITHUB_ISSUE_BODY_MAX } from "@shared/feedback";
 import { FILES_COMMAND, type FilesAnswer } from "@shared/files";
 import { STOPS_COMMAND } from "@shared/leftoverPrograms";
 import { LOAD_COMMAND } from "@shared/load";
@@ -10,6 +19,7 @@ import { RESOURCE_REFRESH_MS } from "@shared/resources";
 import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import type { FeedbackAnswer, TaskFeedback } from "../feedback/feedbackCommand";
 import type { TaskFiles } from "../files/taskFiles";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import {
@@ -39,6 +49,7 @@ import {
   type UseCheckInput,
 } from "../secrets/requests";
 import type { TaskStopsAnswer, TaskStopsCommand } from "../tasks/taskStops";
+import type { FeedbackOpInput } from "./feedbackCommands";
 import type { FilesOpInput } from "./fileCommands";
 import { CREW_SHELL_PROGRAM, ownTaskCommand } from "./names";
 import {
@@ -122,6 +133,11 @@ export type TaskTools = {
    */
   stops?: TaskStopsCommand;
   /**
+   * A /feedback report's command (`infinitary-feedback-axi`,
+   * docs/feedback.md), for a task on this Mac.
+   */
+  feedback?: TaskFeedback;
+  /**
    * The Secrets catalog alone, for a task on another computer: its command
    * lists and shows, and every use answers unavailable (docs/secrets.md).
    */
@@ -152,7 +168,8 @@ type OpAnswer =
   | IntegrationChannelAnswer
   | SecretsAnswer
   | FilesAnswer
-  | TaskStopsAnswer;
+  | TaskStopsAnswer
+  | FeedbackAnswer;
 
 export type AxiChannelOptions = {
   /** Starts the process that runs one command: a utility process in the app, a fork in tests. */
@@ -191,6 +208,9 @@ const CAP_MARGIN_MS = 750;
 const PROCESS_BOUND_MS = 60_000;
 /** The largest request a command sends: its arguments and working folder. */
 const REQUEST_MAX = 1024 * 1024;
+
+/** A feedback draft's body file at most, in bytes: GitHub's longest issue body at four bytes a character (docs/feedback.md). */
+const FEEDBACK_BODY_FILE_MAX = 4 * GITHUB_ISSUE_BODY_MAX;
 /** The loopback address the channel listens on; a shell reaches it by this name only. */
 const LOOPBACK = "127.0.0.1";
 
@@ -505,7 +525,8 @@ export class AxiChannel {
         (grant.tools.secrets !== undefined || grant.tools.secretsCatalog !== undefined)) ||
       (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
       (tool === FILES_COMMAND && grant.tools.files !== undefined) ||
-      (tool === STOPS_COMMAND && grant.tools.stops !== undefined);
+      (tool === STOPS_COMMAND && grant.tools.stops !== undefined) ||
+      (tool === FEEDBACK_COMMAND && grant.tools.feedback !== undefined);
     if (!has) {
       answer(
         failed(
@@ -656,7 +677,9 @@ export class AxiChannel {
                 ? this.files(grant, message)
                 : tool === STOPS_COMMAND
                   ? this.stops(grant, message, command.cwd)
-                  : this.operate(grant, message, command.cwd);
+                  : tool === FEEDBACK_COMMAND
+                    ? this.feedback(grant, message, command.cwd)
+                    : this.operate(grant, message, command.cwd);
     // A copy may outlast the command's process: it is kept for the next
     // command before the process is stopped, rather than lost with it.
     const settled = await within(
@@ -771,6 +794,63 @@ export class AxiChannel {
       const reason = error instanceof Error ? error.message : String(error);
       return {
         text: `The files command could not do that: ${reason.replace(/\.$/, "")}.`,
+        refused: "refused",
+      };
+    }
+  }
+
+  /**
+   * One of the feedback command's operations, for this task alone: a
+   * draft's body is read from the file the crewmate named, relative to the
+   * folder its shell was in.
+   */
+  private async feedback(
+    grant: Grant,
+    message: AxiCallMessage,
+    cwd: string,
+  ): Promise<FeedbackAnswer> {
+    const feedback = grant.tools.feedback;
+    // i18n-exempt: the feedback command's answers are read by a crewmate, in English
+    if (!feedback) return { text: "This task has no feedback command.", refused: "refused" };
+    try {
+      switch (message.op) {
+        case "feedback.diagnostics": {
+          const { task } = (message.input ?? {}) as FeedbackOpInput["feedback.diagnostics"];
+          return await feedback.diagnostics(typeof task === "string" ? { task } : {});
+        }
+        case "feedback.similar": {
+          const { words } = (message.input ?? {}) as FeedbackOpInput["feedback.similar"];
+          return await feedback.similar({ words: String(words ?? "") });
+        }
+        case "feedback.draft": {
+          const input = (message.input ?? {}) as FeedbackOpInput["feedback.draft"];
+          const named = String(input.bodyFile ?? "");
+          const path = isAbsolute(named) ? named : resolve(cwd || ".", named);
+          let body: string;
+          try {
+            if (statSync(path).size > FEEDBACK_BODY_FILE_MAX)
+              // i18n-exempt: the feedback command's answers are read by a crewmate, in English
+              return { text: "The body file is too long for an issue.", refused: "invalid" };
+            body = readFileSync(path, "utf8");
+          } catch {
+            // i18n-exempt: the feedback command's answers are read by a crewmate, in English
+            return { text: `Cannot read the body file ${named}.`, refused: "invalid" };
+          }
+          return await feedback.draft({
+            kind: String(input.kind ?? ""),
+            title: String(input.title ?? ""),
+            body,
+            ...(typeof input.commentOn === "number" ? { commentOn: input.commentOn } : {}),
+            ...(typeof input.task === "string" ? { task: input.task } : {}),
+          });
+        }
+        default:
+          // i18n-exempt: the feedback command's answers are read by a crewmate, in English
+          return { text: "The feedback command does not do that.", refused: "invalid" };
+      }
+    } catch (caught) {
+      return {
+        text: caught instanceof Error ? caught.message : String(caught),
         refused: "refused",
       };
     }

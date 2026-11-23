@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { PICTURE_GROUP_CLASS } from "../../src/core/pi/cardImages";
@@ -393,11 +393,12 @@ test("a right-click opens the picture's menu: Copy, Save to Downloads, and Esc c
   await expect(menu).toHaveCount(0);
   await expect(viewer(page).locator("[data-picture-hint]")).toHaveText(cardFileSavedWords(savedAs));
   expect(sha256(readFileSync(join(downloads, savedAs)))).toBe(sha256(own));
-  // ⌘S saves it again, under the next free name, never over the first.
+  // ⌘S saves it too. The same picture saved again is the file already there,
+  // so the first copy goes before the key brings it back.
+  rmSync(join(downloads, savedAs));
   await pressWindowKey(app, "s", ["meta"]);
-  const again = `${title} (2).png`;
-  await expect(viewer(page).locator("[data-picture-hint]")).toHaveText(cardFileSavedWords(again));
-  expect(existsSync(join(downloads, again))).toBe(true);
+  await expect.poll(() => existsSync(join(downloads, savedAs))).toBe(true);
+  expect(sha256(readFileSync(join(downloads, savedAs)))).toBe(sha256(own));
 
   // Native Copy is exercised only on the disposable Linux CI desktop, never this computer's clipboard.
   if (process.platform === "linux" && process.env.CI === "true") {

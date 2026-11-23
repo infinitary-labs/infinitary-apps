@@ -58538,6 +58538,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Change the address of ${device}`;
   }
+  function settingsDevicesCheckingRow(input2) {
+    const address = input2.address;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ التحقق من ${address}…`;
+      case "de":
+        return `${address} wird geprüft …`;
+      case "es":
+        return `Comprobando ${address}…`;
+      case "fr":
+        return `Vérification de ${address}…`;
+      case "ja":
+        return `${address} を確認しています…`;
+      case "ko":
+        return `${address} 확인 중…`;
+      case "pt-BR":
+        return `Verificando ${address}…`;
+      case "zh-Hans":
+        return `正在检查 ${address}…`;
+      case "zh-Hant":
+        return `正在檢查 ${address}…`;
+      case "en-XA":
+        return `[Çĥéçķîñĝ ${address}… ~~~~]`;
+      case "ar-XB":
+        return `‮Checking ‬${address}‮…‬`;
+    }
+    return `Checking ${address}…`;
+  }
   function settingsDevicesConfirmThis() {
     switch (currentLanguage()) {
       case "ar":
@@ -100701,6 +100729,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesChangeAddress,
     settingsDevicesChangeAddressFailed,
     settingsDevicesChangeAddressNamed,
+    settingsDevicesCheckingRow,
     settingsDevicesConfirmThis,
     settingsDevicesControllingNow,
     settingsDevicesCopied,
@@ -103892,6 +103921,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesChangeAddress": [],
     "settingsDevicesChangeAddressFailed": [],
     "settingsDevicesChangeAddressNamed": ["device"],
+    "settingsDevicesCheckingRow": ["address"],
     "settingsDevicesConfirmThis": [],
     "settingsDevicesControllingNow": [],
     "settingsDevicesCopied": [],

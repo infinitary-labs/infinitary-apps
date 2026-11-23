@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-background-file-requirement",
+      "reason": "Release signing: the Mac app's background file now carries the same signing requirement as the app, so the release's app check passes again and alphas ship. Nothing a person sees changes."
+    }
+  ]
+}

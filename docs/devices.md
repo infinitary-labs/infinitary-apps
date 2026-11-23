@@ -849,6 +849,7 @@ While any computer is named the home folds the log back itself, right after read
 A log that began again unread anyway starts a new stream.
 So does a change the home cannot keep on its disk, or a turn that could not read the record's changes: every copy then takes a full copy rather than miss one.
 Any other file of the record is a change when the watch on the record's folders names it, or when the look over the whole record each minute finds it changed: a file that only grew sends what it added, any other its whole content, and another database its own consistent copy, taken with SQLite's backup.
+`devices/standbys.json` is the stream's own write, so it is a change the moment the home writes it, never only once the watch names it: a watch on a Mac names a write as much as a second or more later, when a copy that came back could already read as in sync without it.
 That look, and a full copy's list of files, walk the record a few hundred files at a time, giving the rest of the home its turn between them.
 The home keeps the changes on its own disk, in `standby-stream/` beside the record and never part of it, until every copy has them, but never more than a full copy's size.
 

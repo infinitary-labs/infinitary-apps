@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { undeclaredReadMessage } from "../../src/shared/personal/manifest";
+import { DEFAULT_AMBIENT_STYLE } from "../../src/shared/preferences";
 import { scratchDir } from "../helpers/scratchDirs";
 import { panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -115,7 +116,7 @@ test("a panel shows the music and the theme as Settings changes them, and is ref
   page.on("console", (message) => said.push(message.text()));
   const music = panelBody(page, PANEL);
   await expect(
-    music.getByText("Music off, not paused, star-cruise at 40%, dark theme"),
+    music.getByText(`Music off, not paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
   ).toBeVisible({ timeout: 30_000 });
 
   // The window's own Settings writes, one at a time, each read back live.
@@ -126,10 +127,12 @@ test("a panel shows the music and the theme as Settings changes them, and is ref
     }, change);
   await setLook({ ambientMusic: true, ambientPaused: false });
   await expect(
-    music.getByText("Music on, not paused, star-cruise at 40%, dark theme"),
+    music.getByText(`Music on, not paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
   ).toBeVisible();
   await setLook({ ambientPaused: true });
-  await expect(music.getByText("Music on, paused, star-cruise at 40%, dark theme")).toBeVisible();
+  await expect(
+    music.getByText(`Music on, paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
+  ).toBeVisible();
   await setLook({ ambientStyle: "quiet-cove", ambientVolume: 25 });
   await expect(music.getByText("Music on, paused, quiet-cove at 25%, dark theme")).toBeVisible();
   await setLook({ theme: "light" });

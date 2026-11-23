@@ -5,7 +5,7 @@ import type { DeviceView } from "@shared/devices";
 import type { IntegrationsView } from "@shared/integrations";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { knownPanels } from "@shared/panelArrangement";
-import type { Appearance, Layout } from "@shared/preferences";
+import { type Appearance, DEFAULT_AMBIENT_STYLE, type Layout } from "@shared/preferences";
 import type { SecretsView } from "@shared/secrets";
 import type { StandbyViews } from "@shared/standby";
 import type { UpdateStatus } from "@shared/update";
@@ -99,9 +99,9 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     const played = await asked("ambient-music", { on: true });
     // INF-5347: on true plays music the sound button paused, as the Settings switch does.
     expect(await appearance()).toEqual({ ...paused, ambientPaused: undefined });
-    expect(played.lines).toEqual(["ambient music on, volume 40%, style star-cruise"]);
+    expect(played.lines).toEqual([`ambient music on, volume 40%, style ${DEFAULT_AMBIENT_STYLE}`]);
     expect((await asked("ambient-music", { on: true, paused: true })).lines).toEqual([
-      "ambient music paused, volume 40%, style star-cruise",
+      `ambient music paused, volume 40%, style ${DEFAULT_AMBIENT_STYLE}`,
     ]);
     expect((await appearance()).ambientPaused).toBe(true);
 

@@ -16,4 +16,4 @@ export const AMBIENT_STYLES = [
 ] as const;
 export type AmbientStyle = (typeof AMBIENT_STYLES)[number];
 /** The style that plays until someone picks another. */
-export const DEFAULT_AMBIENT_STYLE: AmbientStyle = "star-cruise";
+export const DEFAULT_AMBIENT_STYLE: AmbientStyle = "cold-sleep";

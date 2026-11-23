@@ -1,5 +1,5 @@
 // The ambient music's styles by name (docs/ambient-music.md): the ten the
-// captain kept from the prototypes, Star cruise first heard.
+// captain kept from the prototypes, Cold sleep first heard.
 
 import type { AmbientStyle } from "@shared/preferences";
 import type { Style } from "../player";

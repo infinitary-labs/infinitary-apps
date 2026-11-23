@@ -188,7 +188,7 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 ## Checks
 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
-It exercises queue order, the room the first in line prints, a run too big for its computer refused at once, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
+It exercises queue order, a fitting run passing a blocked first in line only during its window, the room the first in line prints, a run too big for its computer refused at once, unchanged streams and exit status, pressure admission, unknown and stale readings, interrupted claim commands retaining their identity and hold, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
 `src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
 `src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, the journal's entries and size, a run too big for its computer refused and released, the passing window and its bound under a stream of small runs, and what "ahead" counts.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.

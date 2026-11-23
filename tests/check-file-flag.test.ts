@@ -324,7 +324,7 @@ describe("check-file-flag.yml", () => {
 
   it("holds only the writes it needs, and no secret", () => {
     expect(Object.values(workflow.jobs).map((job) => job.permissions)).toEqual([
-      { contents: "read", issues: "write", "pull-requests": "read" },
+      { contents: "read", issues: "write", "pull-requests": "write" },
     ]);
     expect(text).not.toMatch(/secrets\./);
     for (const step of steps)

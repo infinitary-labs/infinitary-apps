@@ -62,6 +62,54 @@ import XCTest
         XCTAssertFalse(machine.request(.nod, now: 3.3), "No emote plays over listening")
     }
 
+    /// The captain's ask: closing the last card plays a random fidget, on the phone as on the Mac (machine.ts stageCleared).
+    func testStageClearedFidgetsNowOrRightAfterAnEmoteAndAttentionWins() {
+        var machine = CharacterMachine(now: 0, random: { 0.5 })
+        XCTAssertTrue(machine.stageCleared(now: 1))
+        XCTAssertEqual(machine.update(now: 1).mode, .fidget, "An idle first mate fidgets at once")
+        XCTAssertNotNil(machine.variant)
+
+        var greeting = CharacterMachine(now: 0)
+        greeting.request(.greet, now: 0)
+        greeting.stageCleared(now: 0.5)
+        XCTAssertEqual(greeting.update(now: 0.5).mode, .greet, "The greeting is not cut")
+        XCTAssertEqual(greeting.update(now: 2.1).mode, .fidget, "The fidget follows the greeting")
+
+        var typing = CharacterMachine(now: 0)
+        typing.setInputs(listening: true, busy: false, now: 0)
+        XCTAssertFalse(typing.stageCleared(now: 0.1), "Nothing plays while the captain types")
+        typing.setInputs(listening: false, busy: false, now: 0.2)
+        typing.request(.greet, now: 0.2)
+        typing.stageCleared(now: 0.3)
+        typing.setInputs(listening: true, busy: false, now: 0.4)
+        typing.setInputs(listening: false, busy: false, now: 0.5)
+        typing.request(.ponder, now: 0.5)
+        XCTAssertEqual(typing.update(now: 3.31).mode, .idle, "Attention dropped the waiting fidget")
+    }
+
+    func testThisPhonesPressOnTheLastCardFidgetsTheNextSceneAfterAnyGreeting() {
+        let now = Date()
+        CharacterCues.pressed("last", at: now)
+        XCTAssertTrue(CharacterCues.clearedByPress(["last"], at: now.addingTimeInterval(15)), "A card leaving within 15 s is the captain's")
+        XCTAssertFalse(CharacterCues.clearedByPress(["last"], at: now.addingTimeInterval(15.1)))
+        XCTAssertFalse(CharacterCues.clearedByPress(["withdrawn"], at: now), "A card withdrawn or closed elsewhere stays still")
+        XCTAssertFalse(CharacterCues.clearedByPress([], at: now), "A stage that held no card stays still")
+
+        CharacterCues.greetingPending = false
+        CharacterCues.fidgetOnNextSight()
+        XCTAssertEqual(CharacterMotion().advance(to: 0, state: .idle).mode, .fidget, "The scene shown next fidgets")
+        XCTAssertEqual(CharacterMotion().advance(to: 0, state: .idle).mode, .idle, "Only once")
+
+        CharacterCues.greetingPending = true
+        CharacterCues.fidgetOnNextSight()
+        let greeted = CharacterMotion()
+        XCTAssertEqual(greeted.advance(to: 0, state: .idle).mode, .greet)
+        XCTAssertEqual(greeted.advance(to: 2.15, state: .idle).mode, .fidget, "The greeting first, then the fidget")
+
+        CharacterCues.fidgetOnNextSight(at: Date().addingTimeInterval(-3.1))
+        XCTAssertEqual(CharacterMotion().advance(to: 0, state: .idle).mode, .idle, "A scene shown long after, past a card, stays still")
+    }
+
     func testEveryApprovedEmoteReachesOnlyCharactersOnScreen() {
         CharacterCues.greetingPending = false
         for emote in CharacterMachine.Emote.allCases where CharacterMachine.seconds(emote) != nil {

@@ -87,10 +87,9 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
       mkdirSync(bin);
       const commands: Record<string, string> = {
         "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
-        xdotool:
-          '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
         pnpm: '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n',
-        node: '#!/bin/sh\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
+        // The pointer's park answers as on the screen's last pixel.
+        node: '#!/bin/sh\ncase "$1" in */park-pointer.ts) exit 0 ;; esac\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
       };
       for (const [name, body] of Object.entries(commands)) {
         const path = join(bin, name);
@@ -157,9 +156,8 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
       mkdirSync(bin);
       const commands: Record<string, string> = {
         "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
-        xdotool:
-          '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
-        node: '#!/bin/sh\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
+        // The pointer's park answers as on the screen's last pixel.
+        node: '#!/bin/sh\ncase "$1" in */park-pointer.ts) exit 0 ;; esac\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
         pnpm: '#!/bin/sh\nprintf "pnpm %s\\n" "$*" >> "$COMMAND_LOG"\n',
       };
       for (const [name, body] of Object.entries(commands)) {

@@ -73,6 +73,8 @@
   "commandComputersPrevious": "上一组工作电脑",
   "commandDevicesTryAgain": "再次尝试连接你的电脑",
   "commandDevicesTryAgainWords": "设备, 重新连接, 连接, 电脑",
+  "commandFeedbackStart": "发送反馈",
+  "commandFeedbackStartWords": "反馈, 报告, 问题, 错误, 想法, 建议, 议题",
   "commandFirstmateReply": "打开大副的回复",
   "commandFirstmateReplyWords": "回答, 消息, 便笺, 最后",
   "commandFocusCardActions": "前往卡片的按钮",

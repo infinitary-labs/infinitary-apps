@@ -32,6 +32,7 @@ import {
 } from "@shared/cards";
 import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
+import { isFeedbackRequest } from "@shared/feedback";
 import { inLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { heldMerges } from "@shared/mergeHeld";
@@ -1256,15 +1257,24 @@ export class CardStore {
     return row ? messageOf(row) : undefined;
   }
 
-  /** The card's newest captain line, the question its answer hold is about. */
+  /**
+   * The card's newest captain line that asks its author something, the
+   * question its answer hold is about. A /feedback line is the first mate's
+   * feedback request and owes the author nothing (docs/feedback.md), so it
+   * is passed over, read from the words the captain typed.
+   */
   newestCaptainMessage(cardId: string): CardMessage | undefined {
-    const row = this.db
+    const rows = this.db
       .prepare(
-        `SELECT ${MESSAGE_COLUMNS} FROM card_messages m
-         WHERE m.card_id = ? AND m.who = 'captain' ORDER BY m.id DESC LIMIT 1`,
+        `SELECT ${MESSAGE_COLUMNS}, COALESCE(m.captain_text, m.text) AS typed FROM card_messages m
+         WHERE m.card_id = ? AND m.who = 'captain' ORDER BY m.id DESC`,
       )
-      .get(cardId) as MessageRow | undefined;
-    return row ? messageOf(row) : undefined;
+      .iterate(cardId) as IterableIterator<MessageRow & { typed: string }>;
+    for (const row of rows) {
+      if (isFeedbackRequest(row.typed)) continue;
+      return messageOf(row);
+    }
+    return undefined;
   }
 
   /** A contribution's saved result by its operation identity (major 15). */

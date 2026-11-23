@@ -119,6 +119,8 @@ export type GitHubStub = {
   env: Record<string, string>;
   /** Every request, `METHOD /path` (query dropped). */
   requests: () => string[];
+  /** Every issue GitHub opened, with the repository's path and the JSON body as it came. */
+  openedIssues: () => Array<{ path: string; body: string }>;
   /** Every merge GitHub accepted, in order; a refused one is only a request. */
   merges: () => StubMerge[];
   /**
@@ -308,6 +310,7 @@ export async function startGitHubStub(
 ): Promise<GitHubStub> {
   const webHost = options.host ?? "github.com";
   const log: string[] = [];
+  const openedIssues: Array<{ path: string; body: string }> = [];
   const evidenceProjects = new Set<number>();
   const evidence = new Map<string, { bytes: Buffer; mediaType: string }>();
   const merges: StubMerge[] = [];
@@ -888,6 +891,7 @@ export async function startGitHubStub(
           return;
         }
         if (method === "POST" && rest === "/issues") {
+          openedIssues.push({ path, body: raw });
           const body = JSON.parse(raw || "{}") as { title?: string };
           send(201, {
             number: 12,
@@ -1356,6 +1360,7 @@ export async function startGitHubStub(
       INFINITARY_GITHUB_ENTERPRISE_API_URL: `${base}/api/v3`,
     },
     requests: () => [...log],
+    openedIssues: () => [...openedIssues],
     merges: () => [...merges],
     mergeRequests: () =>
       log.filter((request) => /^PUT \S+\/pulls\/\d+\/merge(?:-async)?$/.test(request)),

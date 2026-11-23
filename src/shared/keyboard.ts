@@ -1055,6 +1055,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandWhatsNewShowWords());
     },
   },
+  // /feedback in the main message box (docs/feedback.md): chosen by name,
+  // and from the Help menu's Send Feedback; a person may give it a key.
+  "feedback.start": {
+    get label() {
+      return m.commandFeedbackStart();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandFeedbackStartWords());
+    },
+  },
   // The first mate's newest reply, whole, as a note at the front
   // (docs/composer.md "The reply note"): chosen by name, so it opens after
   // the line above the input has faded too.

@@ -60,6 +60,8 @@ Three start off until you turn them on: **Batched pull requests**, **Pull reques
 - **Moving secrets in**: how a crewmate moves secrets from another tool into **Secrets** without any agent seeing a value.
   A crewmate reads it only during such a move.
   See [Secrets](/secrets/).
+- **Feedback**: type `/feedback` and a few words in any message box, and a crewmate drafts an issue for Infinitary's makers that you read and publish yourself.
+  It carries facts about the app and your system, never your names, paths or projects.
 - **Advanced architecture**: maps a project's parts and how they connect, and shows what a change moves on that map.
   It is an experiment.
 

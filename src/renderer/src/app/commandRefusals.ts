@@ -422,6 +422,8 @@ const REFUSALS: Readonly<
     isView(s.thisMac) && s.thisMac.homeUpdates ? null : m.refuseNoUpdateIsAvailable(),
   "whats-new.show": (s) =>
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : m.refuseNoReleaseNotesYet(),
+  // Only while the main message box takes words.
+  "feedback.start": mainMessageRefusal,
   // From anywhere, Settings included: it goes home to the note.
   "firstmate.reply": (s) => (s.lastTurn?.reply ? null : m.refuseYourFirstMateHasNotRepliedYet()),
   "settings.runbooks": () => null,

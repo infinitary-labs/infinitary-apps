@@ -111,7 +111,7 @@ With no turn running it refuses.
 Esc still hides the card; every other key in the prompt but the dictation key is the prompt's own.
 The dictation key records into the prompt while it has focus, at its caret, with the mark row and microphone lines under it, and Esc while it records abandons the recording before it hides anything (`docs/composer.md`, "Where the words go").
 The prompt's limit is a card reply's 4,000 characters: from 80% the count shows under it, and past it the too-long words show and Enter sends nothing.
-There are no slash commands, no shell and no file editing.
+The one slash command is `/feedback`, which goes to the first mate, never to the crewmate (`docs/feedback.md`); there is no shell and no file editing.
 
 ## Keys
 

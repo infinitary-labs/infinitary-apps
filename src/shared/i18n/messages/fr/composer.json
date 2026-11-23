@@ -1,6 +1,7 @@
 {
   "composerFolderNotProject": "Impossible d’ajouter ce dossier comme projet.",
   "composerFolderProject": "Ce dossier fait déjà partie de vos projets.",
+  "composerHintFeedback": "{command} : signalez un problème ou une idée aux créateurs d’Infinitary",
   "composerLines": {
     "plural": "count",
     "one": "{count} ligne",

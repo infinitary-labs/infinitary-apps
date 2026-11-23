@@ -73,6 +73,8 @@
   "commandComputersPrevious": "Computadoras de trabajo anteriores",
   "commandDevicesTryAgain": "Volver a intentar llegar a tus computadoras",
   "commandDevicesTryAgainWords": "dispositivos, reconectar, conectar, computadoras",
+  "commandFeedbackStart": "Enviar comentarios",
+  "commandFeedbackStartWords": "comentarios, informe, problema, error, idea, sugerencia, incidencia",
   "commandFirstmateReply": "Abrir la respuesta del primer oficial",
   "commandFirstmateReplyWords": "respuesta, mensaje, nota, última",
   "commandFocusCardActions": "Ir a los botones de la tarjeta",

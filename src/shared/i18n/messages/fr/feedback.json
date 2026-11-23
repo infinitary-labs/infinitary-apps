@@ -1,0 +1,8 @@
+{
+  "feedbackStripAccount": "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub {login}.",
+  "feedbackStripBug": "Un nouveau signalement de problème",
+  "feedbackStripComment": "Un commentaire sur le ticket n° {number}",
+  "feedbackStripHeading": "Votre clic publie ceci sur {place}, publiquement, une fois",
+  "feedbackStripIdea": "Une nouvelle idée",
+  "feedbackStripNoAccount": "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub."
+}

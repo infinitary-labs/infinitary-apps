@@ -29,7 +29,7 @@ The manifest may declare a replacement; enabling it turns the named runbook off 
 Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
-They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Rigor levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Pull request comments, Computer cleanup, Moving secrets in, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
+They are joined in list order - the shared `BUILTIN_RUNBOOK_ORDER` (Common workflows, Delivery judgment, Testing rules, Rigor levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, Pull request comments, Computer cleanup, Moving secrets in, Feedback, Advanced architecture), then added and personal ones - so a section names the runbook that holds a rule it relies on, never a place above or below it.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
@@ -172,6 +172,7 @@ Computer cleanup supplies the first mate’s ask-first procedure and the `comput
 The skill owns measurement, the leftovers card and stopping only the captain’s picks; the runbook’s `guide.md` owns the first mate’s response to pressure and line-blocked notices, including one offer per memory warning ID and when to offer again (`docs/heavy-runs.md`).
 Disabling it removes both guides through the existing instruction-refresh and new-session doors; pressure facts and the unconditional no-kill instruction remain, and already running conversations keep what they received.
 Moving secrets in holds only the `bring-secrets` skill, with no first-mate or crew section, so no session is served its guidance: a crewmate opens it when its task moves secrets from another tool into Secrets, and reads only the recipe file for that tool (`docs/secrets.md`, "How a move starts").
+Feedback supplies the first mate's guide for a `/feedback` request, which starts one feedback task at once with no card, and the `feedback-report` skill, the crewmate's drafting procedure (`docs/feedback.md`).
 Advanced architecture is an experiment and starts off (`startsOff`).
 It maps a project as flat diagrams of its parts, the links between them and the state machines inside them, and shows what a change moves on that map.
 A project's map lives in its own `.architecture.json` files, one per mapped folder, holding names, groups, links and machines but never files, lines or counts, which come from git each time the map is drawn.

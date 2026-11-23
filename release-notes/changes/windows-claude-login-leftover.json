@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "windows-claude-login-leftover",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Adding a Claude account no longer stops at a login Claude Code left empty",
+      "body": "When Claude Code had signed out or its login had lapsed, adding a Claude account could refuse every time, saying Infinitary couldn't read the Claude login. It now goes on to Claude's own sign-in. A Claude account already added in that state now shows as signed out with a Sign in button, instead of a login that couldn't be read. If the login really can't be read, the advice on Windows and Linux now says to open Infinitary again instead of pointing to the Dock, and the message is in your language.",
+      "noPicture": "The change is in how Claude Code's login file is read; it shows only when that file holds no login, which could not be set up and photographed on this Mac.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

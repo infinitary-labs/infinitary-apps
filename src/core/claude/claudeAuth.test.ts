@@ -15,9 +15,9 @@ import { readClaudeAccess } from "./claudeAccess";
 import {
   CLAUDE_LOGIN_UNFINISHED_TEXT,
   CLAUDE_LOGIN_UNFINISHED_THERE_TEXT,
-  CLAUDE_LOGIN_UNREADABLE_TEXT,
   CLAUDE_LOGIN_UNREADABLE_THERE_TEXT,
   ClaudeAuthBackend,
+  claudeLoginUnreadableText,
   MADE_LOGIN_FILE,
   parseStatus,
 } from "./claudeAuth";
@@ -263,11 +263,17 @@ describe("ClaudeAuthBackend", () => {
         type: "oauth",
         bridge: relay,
       }),
-    ).rejects.toThrow(CLAUDE_LOGIN_UNREADABLE_TEXT);
+    ).rejects.toThrow(claudeLoginUnreadableText());
     // A new vendor sign-in would replace the login it cannot see.
     expect(client.calls.some((call) => call.args[1] === "login")).toBe(false);
     expect(relay.notices.map((notice) => notice.message).join(" ")).not.toMatch(/browser/i);
-    expect(CLAUDE_LOGIN_UNREADABLE_TEXT).not.toMatch(/harness|keychain|cli|claude code/i);
+    for (const platform of ["darwin", "win32", "linux"] as const) {
+      expect(claudeLoginUnreadableText(platform)).not.toMatch(/harness|keychain|cli|claude code/i);
+    }
+    // Only the Mac has a Dock to reopen Infinitary from.
+    expect(claudeLoginUnreadableText("darwin")).toMatch(/Dock/);
+    expect(claudeLoginUnreadableText("win32")).not.toMatch(/dock/i);
+    expect(claudeLoginUnreadableText("linux")).not.toMatch(/dock/i);
   });
 
   it("signs in again when the saved login is absent and the client confirms it", async () => {

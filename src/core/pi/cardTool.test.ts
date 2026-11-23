@@ -215,6 +215,7 @@ describe("createEmitCardTool", () => {
       "operation_id",
       "answers_message",
       "actions",
+      "signs_off",
       "task_id",
       "review_task_id",
       "related",

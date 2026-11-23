@@ -123,7 +123,7 @@ export class CardService {
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
   private readonly evidence: CardEvidence;
-  private readonly threads: CardThreads;
+  readonly threads: CardThreads;
   private readonly emits: CardEmits;
   readonly hostCards: HostCardStack;
   /** The put-off choices the host keeps and raises again (INF-3846 piece 3). */

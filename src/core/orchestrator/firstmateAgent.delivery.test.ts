@@ -26,6 +26,7 @@ import { seedTask } from "../tasks/seedTask";
 import { taskResolutionBody } from "../tasks/taskQuery";
 import { ANSWER_NOTICE_TITLE, ANSWER_ONLY_REFUSAL } from "./answerDelivery";
 import { ANSWER_MISSING_OPENING } from "./captainWakes";
+import { requiredActionCard } from "./requiredActionCard";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -657,7 +658,121 @@ describe("FirstmateAgent answer delivery", () => {
     expect(kept?.content[0]?.text).not.toContain(left);
     const closed = await tools.get("close_card")?.execute("x2", { card_id: second });
     expect(closed?.content[0]?.text).toContain(left);
+    expect(closed?.content[0]?.text).toContain("shows the captain a notice that it has no answer");
     await finish(f);
+  });
+
+  // INF-6317 part 1, the captain's "figure out why it didn't count the
+  // earlier card interactions as answer to my message": the first mate's
+  // answering decision went unchosen, the captain wrote under it that it
+  // could close, and close_card withdrew it, so the notice went up for the
+  // message it answered. A sign-off ends it as read instead.
+  describe("the first mate signs off its own card (INF-6317)", () => {
+    const decision = {
+      title: "The panels plan is already in infinitary-apps",
+      body: "<p>Both panels pieces are planned there.</p>",
+      answering: true,
+      actions: [
+        { id: "ok", label: "That's what I meant", default: true },
+        { id: "other", label: "I meant other work", declines: true },
+      ],
+    };
+    const replyUnderDecision = async (f: Fixture, card: Record<string, unknown> = decision) => {
+      await f.agent.converse("for infinitary-apps repo'");
+      const shown = await toolsOf(f.specs).get("emit_card")?.execute("c0", card);
+      const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+      await finish(f, "Shown on a card.");
+      vi.advanceTimersByTime(60_000);
+      f.supervisor.cardActions.replyToCard(cardId, "this card can close now");
+      await drained(f.session, 2);
+      const asked = f.supervisor.cards.thread(cardId).messages.at(-1)?.id ?? 0;
+      return { cardId, asked, first: f.tasks.capture.listAsks()[0]?.id ?? "" };
+    };
+
+    it("answers the message the card was shown for, with no retry and no notice", async () => {
+      const f = setup({ silent: true });
+      const { cardId, asked, first } = await replyUnderDecision(f);
+      const signed = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: cardId,
+        reply: "Closing it now; both pieces are being built.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(f.session.prompts.at(-1)).toContain("pass signs_off true with that reply");
+      expect(signed?.content[0]?.text).toContain("signs the card off");
+      await finish(f, "Signed the card off.");
+      await tick();
+      expect(f.supervisor.cards.get(cardId)).toBeUndefined();
+      const thread = f.supervisor.askEnding.thread(first);
+      expect(thread && f.supervisor.askEnding.state(thread)).toEqual({ kind: "answered", cardId });
+      expect(states(f)).toEqual(["covered", "covered"]);
+      expect(retries(f)).toEqual([]);
+      expect(noticeOf(f)).toBeUndefined();
+    });
+
+    it("refuses the mark on a card that still asks, writing nothing", async () => {
+      const f = setup({ silent: true });
+      const { cardId, asked } = await replyUnderDecision(f, { ...decision, asking: true });
+      const refused = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: cardId,
+        reply: "Closing it now.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(refused?.content[0]?.text).toContain("Nothing was written: this card still asks");
+      expect(f.supervisor.cards.get(cardId)).toBeDefined();
+      expect(f.supervisor.cards.thread(cardId).messages.map((line) => line.who)).toEqual([
+        "captain",
+      ]);
+    });
+
+    // INF-6333's review: a mark on a required action's card would drop it
+    // without completing or deferring the action its buttons own.
+    it("neither offers nor accepts the mark on a required action's card", async () => {
+      const f = setup({ silent: true });
+      seedTask(f.tasks, { id: "retire", title: "Retire the job host", status: "completed" });
+      f.tasks.delivery.declareRequiredActions(
+        "retire",
+        {
+          cardId: "card-retire-1",
+          offerId: "offer-1",
+          actions: [
+            {
+              id: "remove-job-host",
+              target: "the shell PC",
+              title: "Remove the job host from the shell PC",
+              consequence: "Until then the old job host keeps taking fleet checks on that PC.",
+              instructions: ["Run the job host remover as an administrator."],
+              criterion: "The PC no longer lists the job host service.",
+              prerequisites: [],
+              completion: { kind: "manual", label: "I removed it" },
+            },
+          ],
+        },
+        true,
+      );
+      const row = f.tasks.listOpen().find((task) => task.delivery?.captainAction);
+      const action = row && f.tasks.delivery.presentCaptainAction(row.id);
+      if (!row || !action) throw new Error("no required action");
+      f.supervisor.cards.put(requiredActionCard(row.id, action, Date.now()));
+      f.supervisor.cardActions.replyToCard(action.cardId, "this card can close now");
+      await drained(f.session, 1);
+      expect(f.session.prompts.at(-1)).toContain("this card can close now");
+      expect(f.session.prompts.at(-1)).not.toContain("signs_off");
+      const asked = f.supervisor.cards.thread(action.cardId).messages.at(-1)?.id ?? 0;
+      const refused = await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+        id: action.cardId,
+        reply: "Closing it now.",
+        answers_message: asked,
+        signs_off: true,
+      });
+      expect(refused?.content[0]?.text).toMatch(/^Nothing was written: /);
+      expect(f.supervisor.cards.get(action.cardId)).toBeDefined();
+      expect(f.supervisor.cards.thread(action.cardId).messages.map((line) => line.who)).toEqual([
+        "captain",
+      ]);
+      expect(f.tasks.get(row.id)?.delivery?.captainAction).toBeDefined();
+    });
   });
 
   // INF-2667 review of INF-2664: a newer message about the same work after

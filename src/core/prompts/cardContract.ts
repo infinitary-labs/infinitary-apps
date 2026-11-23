@@ -372,6 +372,8 @@ export const CARD_PARAMS = {
    * writes under is the about line's; the refusal names it when missing.
    */
   firstmateBody: "Leave it out to write only reply; the card stays as it is.",
+  firstmateSignsOff:
+    "With reply alone and answers_message on your own card: ends it as read, as Done does, so the message it answers counts it. close_card withdraws it and answers nothing.",
   id: "Stable kebab-case id",
   holds_place:
     "Leave unset unless the card needs continuous attention: true brings it forward on arrival. Choices close at once.",

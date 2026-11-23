@@ -528,7 +528,7 @@
 "commandAllowanceRecheckWords" = "額度, 重新整理, 用量, 上限, 帳號, 切換";
 "commandAmbientStyle" = "選擇環境音樂";
 "commandAmbientStyleWords" = "音樂, 風格, lofi, 聲音, 氛圍, 選擇, 更換";
-"commandAmbientToggle" = "播放或暫停環境音樂";
+"commandAmbientToggle" = "播放或停止環境音樂";
 "commandAmbientToggleWords" = "音樂, lofi, 聲音, 背景音, 停止";
 "commandAutomationPauseAll" = "暫停所有自動化";
 "commandAutomationPauseAllWords" = "排程, 已排程, 定期, 停止";
@@ -3808,9 +3808,9 @@
 "settleMergingChange" = "正在合併 %1$@";
 "settleMergingChangeAfterTurn" = "等負責的船員做完手邊的事，就合併 %1$@";
 "settleProjectAddressChanged" = "專案位址已變更。請顯示一張新的合併卡片。";
-"shellAmbientPause" = "暫停環境音樂";
 "shellAmbientPlay" = "播放環境音樂";
 "shellAmbientQuiet" = "說話時靜音";
+"shellAmbientStop" = "停止環境音樂";
 "shellAmbientStyleNamed" = "風格：%1$@";
 "shellCardFoldPanels" = "摺疊面板";
 "shellCardMateAnswering" = "你的大副正在這張卡片上回覆";

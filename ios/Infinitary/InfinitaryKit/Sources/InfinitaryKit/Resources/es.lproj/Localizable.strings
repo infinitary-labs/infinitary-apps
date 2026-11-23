@@ -528,7 +528,7 @@
 "commandAllowanceRecheckWords" = "asignación, actualizar, uso, límite, cuenta, cambiar";
 "commandAmbientStyle" = "Elegir la música ambiental";
 "commandAmbientStyleWords" = "música, estilo, lofi, sonido, ambiente, elegir, cambiar";
-"commandAmbientToggle" = "Reproducir o pausar la música ambiental";
+"commandAmbientToggle" = "Reproducir o detener la música ambiental";
 "commandAmbientToggleWords" = "música, lofi, sonido, ambiente, detener";
 "commandAutomationPauseAll" = "Pausar todas las automatizaciones";
 "commandAutomationPauseAllWords" = "programar, programada, periódica, detener";
@@ -3808,9 +3808,9 @@
 "settleMergingChange" = "Fusionando %1$@";
 "settleMergingChangeAfterTurn" = "Fusionando %1$@ cuando su tripulante termine lo que está haciendo";
 "settleProjectAddressChanged" = "La dirección del proyecto cambió. Muestra una nueva tarjeta de fusión.";
-"shellAmbientPause" = "Pausar música ambiental";
 "shellAmbientPlay" = "Reproducir música ambiental";
 "shellAmbientQuiet" = "En silencio mientras hablas";
+"shellAmbientStop" = "Detener música ambiental";
 "shellAmbientStyleNamed" = "Estilo: %1$@";
 "shellCardFoldPanels" = "Plegar paneles";
 "shellCardMateAnswering" = "Tu primer oficial está respondiendo en esta tarjeta";

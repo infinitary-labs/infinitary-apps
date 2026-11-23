@@ -414,7 +414,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     useShellStore.setState({ view: "settings", settingsSection: "devices" });
     void window.infinitary.devices.tryAgain().catch(() => {});
   },
-  "ambient.toggle": () => useShellStore.getState().toggleAmbientPlayback(),
+  "ambient.toggle": () => {
+    const s = useShellStore.getState();
+    s.setAmbientMusic(!s.ambientMusic);
+  },
   "ambient.style": () => openStyleList(),
   // The other unit, saved by the core, seen in Usage.
   "usage.unit": () => {

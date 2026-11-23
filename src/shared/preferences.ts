@@ -112,7 +112,12 @@ export const appearanceSchema = z.strictObject({
    * `ambientVolume` in a row of their own, so an older build never meets them.
    */
   ambientMusic: z.boolean().optional(),
-  /** Whether enabled ambient music is manually paused. */
+  /**
+   * The sound button's pause from before its on/off became the switch's
+   * (docs/ambient-music.md): no build writes it true any more, and a look
+   * that still has it reads through `foldAmbientPause`. It stays in the
+   * shape so an older build's look and a view's still parse.
+   */
   ambientPaused: z.boolean().optional(),
   /**
    * Whether the ambient music keeps playing while nobody is at the computer;
@@ -149,6 +154,16 @@ export const appearanceSchema = z.strictObject({
   fonts: fontChoicesSchema.optional(),
 });
 export type Appearance = z.infer<typeof appearanceSchema>;
+
+/**
+ * A look saved paused reads as off, without the pause, so music paused
+ * before the update stays silent; its next save writes it off.
+ */
+export function foldAmbientPause(look: Appearance): Appearance {
+  if (look.ambientPaused === undefined) return look;
+  const { ambientPaused, ...rest } = look;
+  return ambientPaused && rest.ambientMusic ? { ...rest, ambientMusic: false } : rest;
+}
 
 /** Dark is the app's own look; light is the choice. */
 export const DEFAULT_APPEARANCE: Appearance = {

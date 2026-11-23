@@ -528,7 +528,7 @@
 "commandAllowanceRecheckWords" = "上限, 更新, 使用量, 制限, アカウント, 切り替え";
 "commandAmbientStyle" = "アンビエント音楽を選ぶ";
 "commandAmbientStyleWords" = "音楽, スタイル, ローファイ, サウンド, 環境音, 選ぶ, 変更";
-"commandAmbientToggle" = "アンビエント音楽を再生または一時停止";
+"commandAmbientToggle" = "アンビエント音楽を再生または停止";
 "commandAmbientToggleWords" = "音楽, lofi, サウンド, 環境音, 停止";
 "commandAutomationPauseAll" = "すべての自動化を一時停止";
 "commandAutomationPauseAllWords" = "スケジュール, 予定, 定期, 停止";
@@ -3808,9 +3808,9 @@
 "settleMergingChange" = "%1$@ をマージ中";
 "settleMergingChangeAfterTurn" = "担当の乗組員が今の作業を終えたら %1$@ をマージします";
 "settleProjectAddressChanged" = "プロジェクトのアドレスが変更されました。新しいマージカードを表示してください。";
-"shellAmbientPause" = "環境音楽を一時停止";
 "shellAmbientPlay" = "環境音楽を再生";
 "shellAmbientQuiet" = "話している間は消音";
+"shellAmbientStop" = "環境音楽を停止";
 "shellAmbientStyleNamed" = "スタイル: %1$@";
 "shellCardFoldPanels" = "パネルをたたむ";
 "shellCardMateAnswering" = "一等航海士がこのカードで回答中です";

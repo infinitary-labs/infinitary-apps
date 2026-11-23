@@ -3,7 +3,7 @@
   "commandAllowanceRecheckWords": "Kontingent, aktualisieren, Nutzung, Limit, Konto, wechseln",
   "commandAmbientStyle": "Ambient-Musik auswählen",
   "commandAmbientStyleWords": "Musik, Stil, Lofi, Klang, Ambiente, wählen, ändern",
-  "commandAmbientToggle": "Ambient-Musik abspielen oder pausieren",
+  "commandAmbientToggle": "Ambient-Musik abspielen oder stoppen",
   "commandAmbientToggleWords": "Musik, Lofi, Ton, Klang, stoppen",
   "commandAutomationPauseAll": "Alle Automatisierungen pausieren",
   "commandAutomationPauseAllWords": "Zeitplan, geplant, wiederkehrend, anhalten, stoppen",

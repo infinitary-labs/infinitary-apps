@@ -33,19 +33,11 @@ const FORGET = 0.01;
 const NARROWEST_RANGE = 0.15;
 
 /** Only the icon's transforms change on a sample, never the top bar's React tree. */
-function SoundMark({
-  paused,
-  hushed,
-  silent,
-}: {
-  paused: boolean;
-  hushed: boolean;
-  silent: boolean;
-}) {
+function SoundMark({ off, hushed, silent }: { off: boolean; hushed: boolean; silent: boolean }) {
   const icon = useRef<SVGSVGElement>(null);
   const reduced = useSyncExternalStore(onReducedMotionChange, prefersReducedMotion);
   useEffect(() => {
-    if (paused || hushed || reduced || silent || !icon.current) return;
+    if (off || hushed || reduced || silent || !icon.current) return;
     const bars = Array.from(icon.current.querySelectorAll("line"));
     const levels = X.map(() => 0);
     const low = X.map(() => 1);
@@ -84,7 +76,7 @@ function SoundMark({
       document.removeEventListener("visibilitychange", sync);
       for (const bar of bars) bar.style.removeProperty("transform");
     };
-  }, [paused, hushed, reduced, silent]);
+  }, [off, hushed, reduced, silent]);
   return (
     <svg
       ref={icon}
@@ -111,21 +103,20 @@ function SoundMark({
   );
 }
 
+/**
+ * The sound button, shown whether the music is on or off: a press turns
+ * Settings' Ambient music switch on or off (docs/ambient-music.md).
+ */
 export function AmbientSoundControl() {
-  const on = useShellStore((s) => s.ambientMusic);
-  return on ? <EnabledSoundControl /> : null;
-}
-
-function EnabledSoundControl() {
-  const paused = useShellStore((s) => s.ambientPaused);
+  const off = !useShellStore((s) => s.ambientMusic);
+  const setMusic = useShellStore((s) => s.setAmbientMusic);
   const volume = useShellStore((s) => s.ambientVolume);
   const setVolume = useShellStore((s) => s.setAmbientVolume);
-  const toggle = useShellStore((s) => s.toggleAmbientPlayback);
   const recording = useShellStore((s) => s.recording);
   const sound = useCardSound((s) => s.playing || s.demo);
-  const hushed = !paused && (recording || sound);
+  const hushed = !off && (recording || sound);
   const error = useShellStore((s) =>
-    s.appearanceError?.choice === "ambientPaused" ||
+    s.appearanceError?.choice === "ambientMusic" ||
     s.appearanceError?.choice === "ambientVolume" ||
     s.appearanceError?.choice === "ambientStyle"
       ? s.appearanceError.message
@@ -180,14 +171,14 @@ function EnabledSoundControl() {
     setDismissed(false);
     setListed(true);
   };
-  const label = paused ? m.shellAmbientPlay() : m.shellAmbientPause();
+  const label = off ? m.shellAmbientPlay() : m.shellAmbientStop();
   const keys = useCommandKeys("ambient.toggle");
   const styleName = styleWords(style, own).name;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: The group only delegates keys from the focusable button and slider.
     <div
       data-ambient-control=""
-      data-paused={paused || undefined}
+      data-off={off || undefined}
       data-hushed={hushed || undefined}
       onPointerEnter={(event) => {
         if (event.pointerType !== "mouse") return;
@@ -239,9 +230,9 @@ function EnabledSoundControl() {
         label={label}
         {...keys}
         restWords={error ?? (hushed ? m.shellAmbientQuiet() : undefined)}
-        onClick={toggle}
+        onClick={() => setMusic(off)}
       >
-        <SoundMark paused={paused} hushed={hushed} silent={volume === 0} />
+        <SoundMark off={off} hushed={hushed} silent={volume === 0} />
       </IconButton>
       <div className="ambient-volume-reveal" data-open={open || undefined} inert={!open}>
         <div className="ambient-volume-pill">
@@ -283,7 +274,7 @@ function EnabledSoundControl() {
               />
             </svg>
           </button>
-          {listOpen && <StyleList ref={list} chosen={style} own={own} paused={paused} />}
+          {listOpen && <StyleList ref={list} chosen={style} own={own} off={off} />}
           <span className="ambient-pill-rule" aria-hidden="true" />
           <input
             type="range"
@@ -320,22 +311,22 @@ function PlayingMark() {
 /**
  * The sound button's style list (docs/ambient-music.md): Settings' groups
  * and names, the line of the style under the pointer or focus at its foot,
- * and Describe your own last. A pick plays at once, resuming a pause, and
- * the list stays open for the next try.
+ * and Describe your own last. A pick plays at once, turning the music on
+ * if it was off, and the list stays open for the next try.
  */
 function StyleList({
   ref,
   chosen,
   own,
-  paused,
+  off,
 }: {
   ref: React.Ref<HTMLDivElement>;
   chosen: string;
   own: readonly SavedOwnStyle[];
-  paused: boolean;
+  off: boolean;
 }) {
   const setStyle = useShellStore((s) => s.setAmbientStyle);
-  const toggle = useShellStore((s) => s.toggleAmbientPlayback);
+  const setMusic = useShellStore((s) => s.setAmbientMusic);
   const refusal = useShellStore(mainMessageRefusal);
   const [shown, setShown] = useState<string | null>(null);
   const groups: [string, { id: string; name: string }[]][] = STYLE_GROUPS.map(([group, styles]) => [
@@ -353,7 +344,7 @@ function StyleList({
       : styleWords(shown ?? chosen, own).description;
   const pick = (id: string) => {
     if (id !== chosen) setStyle(id);
-    if (paused) toggle();
+    if (off) setMusic(true);
   };
   return (
     <div

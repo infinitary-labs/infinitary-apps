@@ -93,19 +93,16 @@ describe("the first mate's Settings actions, driven through the whole core", () 
   };
   const appearance = () => core.dispatch("inf:settings:appearance:get", []);
 
-  it("resumes paused music, and sets card size, language and usage units, each alone", async () => {
-    await core.dispatch("inf:settings:appearance:set", [
-      { ...(await appearance()), ambientMusic: true, ambientPaused: true },
-    ]);
-    const paused = await appearance();
+  it("plays and stops music, and sets card size, language and usage units, each alone", async () => {
+    const off = await appearance();
     const played = await asked("ambient-music", { on: true });
-    // INF-5347: on true plays music the sound button paused, as the Settings switch does.
-    expect(await appearance()).toEqual({ ...paused, ambientPaused: undefined });
+    // INF-6406: on true and on false turn the same switch the sound button turns.
+    expect(await appearance()).toEqual({ ...off, ambientMusic: true, ambientVolume: 40 });
     expect(played.lines).toEqual([`ambient music on, volume 40%, style ${DEFAULT_AMBIENT_STYLE}`]);
-    expect((await asked("ambient-music", { on: true, paused: true })).lines).toEqual([
-      `ambient music paused, volume 40%, style ${DEFAULT_AMBIENT_STYLE}`,
+    expect((await asked("ambient-music", { on: false })).lines).toEqual([
+      `ambient music off, volume 40%, style ${DEFAULT_AMBIENT_STYLE}`,
     ]);
-    expect((await appearance()).ambientPaused).toBe(true);
+    expect((await appearance()).ambientMusic).toBe(false);
 
     const wasCards = await appearance();
     const sized = await asked("card-size", { size: "wide", keepMaximized: true });
@@ -971,13 +968,13 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       expect(atForty.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientVolume"]));
       expect(atForty.lines).toEqual([]);
       expect(theirs.appearance).toMatchObject({ ambientMusic: false, ambientVolume: 70 });
-      // Asked to resume paused music it switched off there: nothing changes there.
-      theirs.appearance = { ...theirs.appearance, ambientMusic: true, ambientPaused: true };
-      theirs.editsAfterRead = (look) => ({ ...look, ambientMusic: false, ambientPaused: false });
+      // Asked to keep playing music it switched off there: nothing changes there.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: true };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientMusic: false });
       const resumed = await playThere({ on: true });
       expect(resumed.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientMusic"]));
       expect(resumed.lines).toEqual([]);
-      expect(theirs.appearance).toMatchObject({ ambientMusic: false, ambientPaused: false });
+      expect(theirs.appearance).toMatchObject({ ambientMusic: false });
       // Asked to play music it already started there: that part is done, and the volume is set.
       theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
       theirs.editsAfterRead = (look) => ({ ...look, ambientMusic: true });

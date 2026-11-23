@@ -45,67 +45,73 @@ const sound = (page: Page) => page.locator("[data-ambient-control] > button");
 const appearance = (page: Page) =>
   page.getByRole("tab", { name: m.panelSettingsAppearance(), exact: true });
 
-// INF-4911: command search enables music, then pauses and resumes it without
-// removing the control. Keyboard pause survives closing and reopening the app.
-// INF-5053: ⌥⌘P (Ctrl+Alt+P elsewhere) pauses and resumes it from anywhere.
-test("ambient music can be paused from the toolbar and stays paused after reopening", async () => {
+// INF-6406: the sound button shows on the main screen while the music is
+// off, and it, ⌥⌘P (Ctrl+Alt+P elsewhere, INF-5053) and Settings' switch are
+// one on/off, which survives closing and reopening the app.
+test("the sound button shows while off and turns the music on and off with Settings' switch", async () => {
   let launched = await launchApp({ withMockProvider: true });
   const { userDataDir, homeDir } = launched;
   try {
     const { app, page } = launched;
     await expect.poll(() => player(page)).toBe("off");
-    await expect(sound(page)).toHaveCount(0);
+    await expect(sound(page)).toHaveAccessibleName(m.shellAmbientPlay());
+    await sound(page).click();
+    await expect.poll(() => player(page)).toBe("playing");
+    await expect(sound(page)).toHaveAccessibleName(m.shellAmbientStop());
+
     await settings(page).click();
     await appearance(page).click();
     const music = settingRow(page, "ambient-music").getByRole("switch");
     const volume = settingRow(page, "ambient-volume").getByRole("slider");
-    await expect(music).toHaveAttribute("aria-checked", "false");
-    await expect(volume).toHaveValue(String(DEFAULT_AMBIENT_VOLUME));
-
-    await runFromSearch(app, page, "ambient.toggle");
-    await expect.poll(() => player(page)).toBe("playing");
     await expect(music).toHaveAttribute("aria-checked", "true");
+    await expect(volume).toHaveValue(String(DEFAULT_AMBIENT_VOLUME));
     await expect(sound(page)).toHaveCount(0);
     await pressWindowKey(app, "P", ["alt", "meta"]);
-    await expect.poll(() => player(page)).toBe("paused");
+    await expect.poll(() => player(page)).toBe("off");
+    await expect(music).toHaveAttribute("aria-checked", "false");
     await pressWindowKey(app, "P", ["alt", "meta"]);
     await expect.poll(() => player(page)).toBe("playing");
+    await expect(music).toHaveAttribute("aria-checked", "true");
     await pressKey(appearance(page), "Escape");
     await focusOn(settings(page), { focusVisible: true });
     await pressKey(settings(page), "Shift+Tab");
     await expect(sound(page)).toBeFocused();
     await pressKey(sound(page), "Enter");
+    await expect.poll(() => player(page)).toBe("off");
     await expect(sound(page)).toHaveAccessibleName(m.shellAmbientPlay());
-    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: true, paused: true });
+    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: false, paused: false });
     await launched.close();
 
     launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
     const reopened = launched.page;
-    await expect.poll(() => player(reopened)).toBe("paused");
+    await expect.poll(() => player(reopened)).toBe("off");
     await pressKey(sound(reopened), "Space");
     await expect.poll(() => player(reopened)).toBe("playing");
+    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: true, paused: false });
     await settings(reopened).click();
     await appearance(reopened).click();
-    await settingRow(reopened, "ambient-music").getByRole("switch").click();
+    const reopenedMusic = settingRow(reopened, "ambient-music").getByRole("switch");
+    await expect(reopenedMusic).toHaveAttribute("aria-checked", "true");
+    await reopenedMusic.click();
     await pressKey(appearance(reopened), "Escape");
-    await expect(sound(reopened)).toHaveCount(0);
     await expect.poll(() => player(reopened)).toBe("off");
+    await expect(sound(reopened)).toHaveAccessibleName(m.shellAmbientPlay());
   } finally {
     await launched.close();
   }
 });
 
-// INF-5347: the first mate, asked to play the music, plays it even after the
-// pause key paused it, and the saved pause goes, as the Settings switch does.
-test("the first mate plays ambient music the pause key paused", async () => {
+// INF-5347 as INF-6406 left it: the first mate, asked to play the music,
+// plays it after the sound button turned it off, and saves it on.
+test("the first mate plays ambient music the sound button turned off", async () => {
   const launched = await launchApp({ withMockProvider: true });
   try {
-    const { app, page, userDataDir } = launched;
-    await runFromSearch(app, page, "ambient.toggle");
+    const { page, userDataDir } = launched;
+    await sound(page).click();
     await expect.poll(() => player(page)).toBe("playing");
-    await pressWindowKey(app, "P", ["alt", "meta"]);
-    await expect.poll(() => player(page)).toBe("paused");
-    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: true, paused: true });
+    await sound(page).click();
+    await expect.poll(() => player(page)).toBe("off");
+    await expect.poll(() => savedSound(userDataDir)).toMatchObject({ on: false });
 
     await askFirstmate(
       page,
@@ -362,7 +368,7 @@ test("the sound button's list picks the ambient music by pointer and keys", asyn
     await expect(option("harbor-dawn")).toHaveAttribute("aria-checked", "true");
 
     await sound(page).click();
-    await expect.poll(() => player(page)).toBe("paused");
+    await expect.poll(() => player(page)).toBe("off");
     await name.hover();
     await option(own).click();
     await expect.poll(() => player(page)).toBe("playing");

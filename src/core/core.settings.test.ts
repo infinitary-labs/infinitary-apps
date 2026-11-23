@@ -127,7 +127,6 @@ describe("the core, driven with no Electron in the process", () => {
         ...look,
         theme: "light",
         ambientMusic: true,
-        ambientPaused: true,
         ambientStyle: "quiet-cove",
         ambientVolume: 25,
       },
@@ -140,7 +139,7 @@ describe("the core, driven with no Electron in the process", () => {
       ["ambient-music", "theme", "panels-switch"],
     ]);
     expect(read).toEqual({
-      "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+      "ambient-music": { on: true, paused: false, style: "quiet-cove", volume: 25 },
       theme: { theme: "light" },
       "panels-switch": {
         enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
@@ -172,7 +171,7 @@ describe("the core, driven with no Electron in the process", () => {
       "window-wash": { strength: 30 },
       "window-size": { size: 110 },
       "crew-model-names": { visible: false },
-      "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+      "ambient-music": { on: true, paused: false, style: "quiet-cove", volume: 25 },
       notifications: { enabled: false },
       "cost-limit": { limit: { usd: 75 } },
       "personal-resources": { enabled: true },

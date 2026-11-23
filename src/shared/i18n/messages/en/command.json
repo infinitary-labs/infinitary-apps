@@ -3,7 +3,7 @@
   "commandAllowanceRecheckWords": "quota, refresh, usage, limit, account, switch",
   "commandAmbientStyle": "Choose ambient music",
   "commandAmbientStyleWords": "music, style, lofi, sound, ambience, pick, change",
-  "commandAmbientToggle": "Play or pause ambient music",
+  "commandAmbientToggle": "Play or stop ambient music",
   "commandAmbientToggleWords": "music, lofi, sound, ambience, stop",
   "commandAutomationPauseAll": "Pause all automations",
   "commandAutomationPauseAllWords": "schedule, scheduled, recurring, stop",

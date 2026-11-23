@@ -528,7 +528,7 @@
 "commandAllowanceRecheckWords" = "配额, 刷新, 用量, 限制, 账户, 切换";
 "commandAmbientStyle" = "选择环境音乐";
 "commandAmbientStyleWords" = "音乐, 风格, lofi, 声音, 氛围, 选择, 更换";
-"commandAmbientToggle" = "播放或暂停环境音乐";
+"commandAmbientToggle" = "播放或停止环境音乐";
 "commandAmbientToggleWords" = "音乐, lofi, 声音, 背景音, 停止";
 "commandAutomationPauseAll" = "暂停所有自动化";
 "commandAutomationPauseAllWords" = "计划, 定时, 重复, 停止";
@@ -3808,9 +3808,9 @@
 "settleMergingChange" = "正在合并 %1$@";
 "settleMergingChangeAfterTurn" = "等它的船员做完手头的事，就合并 %1$@";
 "settleProjectAddressChanged" = "项目地址已更改。请显示一张新的合并卡片。";
-"shellAmbientPause" = "暂停环境音乐";
 "shellAmbientPlay" = "播放环境音乐";
 "shellAmbientQuiet" = "说话时静音";
+"shellAmbientStop" = "停止环境音乐";
 "shellAmbientStyleNamed" = "风格：%1$@";
 "shellCardFoldPanels" = "折叠面板";
 "shellCardMateAnswering" = "你的大副正在这张卡片上回答";

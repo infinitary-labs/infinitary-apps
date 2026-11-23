@@ -1,7 +1,7 @@
 {
-  "shellAmbientPause": "環境音楽を一時停止",
   "shellAmbientPlay": "環境音楽を再生",
   "shellAmbientQuiet": "話している間は消音",
+  "shellAmbientStop": "環境音楽を停止",
   "shellAmbientStyleNamed": "スタイル: {name}",
   "shellCardFoldPanels": "パネルをたたむ",
   "shellCardMateAnswering": "一等航海士がこのカードで回答中です",

@@ -1,7 +1,7 @@
 {
-  "shellAmbientPause": "배경 음악 일시 정지",
   "shellAmbientPlay": "배경 음악 재생",
   "shellAmbientQuiet": "말하는 동안 음소거",
+  "shellAmbientStop": "배경 음악 정지",
   "shellAmbientStyleNamed": "스타일: {name}",
   "shellCardFoldPanels": "패널 접기",
   "shellCardMateAnswering": "일등항해사가 이 카드에서 답하는 중이에요",

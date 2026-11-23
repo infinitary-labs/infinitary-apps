@@ -528,7 +528,7 @@
 "commandAllowanceRecheckWords" = "رصيد, حصة, تحديث, استخدام, حد, حساب, تبديل";
 "commandAmbientStyle" = "اختيار الموسيقى الهادئة";
 "commandAmbientStyleWords" = "موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير";
-"commandAmbientToggle" = "تشغيل الموسيقى الهادئة أو إيقافها مؤقتًا";
+"commandAmbientToggle" = "تشغيل الموسيقى الهادئة أو إيقافها";
 "commandAmbientToggleWords" = "موسيقى, lofi, صوت, أجواء, إيقاف";
 "commandAutomationPauseAll" = "إيقاف كل عمليات الأتمتة مؤقتًا";
 "commandAutomationPauseAllWords" = "جدولة, مجدولة, متكررة, إيقاف";
@@ -3808,9 +3808,9 @@
 "settleMergingChange" = "جارٍ دمج %1$@";
 "settleMergingChangeAfterTurn" = "سيُدمج %1$@ بعد أن ينهي فرد الطاقم ما يفعله";
 "settleProjectAddressChanged" = "تغيّر عنوان المشروع. اعرض بطاقة دمج جديدة.";
-"shellAmbientPause" = "إيقاف الموسيقى المحيطية مؤقتًا";
 "shellAmbientPlay" = "تشغيل الموسيقى المحيطية";
 "shellAmbientQuiet" = "هدوء أثناء حديثك";
+"shellAmbientStop" = "إيقاف الموسيقى المحيطية";
 "shellAmbientStyleNamed" = "النمط: %1$@";
 "shellCardFoldPanels" = "طي اللوحات";
 "shellCardMateAnswering" = "نائب القبطان يجيب في هذه البطاقة";

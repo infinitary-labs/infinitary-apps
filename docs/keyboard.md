@@ -132,7 +132,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `settings.panels`, Arrange panels | window, run by the shell page | none: chosen by name (rails, layout, order, move, hide and show find it too) |
 | `settings.automation`, Open Automation | window, run by the shell page | none: chosen by name (schedule, recurring, reminder and pause find it too) |
 | `automation.pause-all`, Pause all automations | window, run by the shell page | none: chosen by name (schedule, recurring and stop find it too) |
-| `ambient.toggle`, Play or pause ambient music | window, run by the shell page | ⌥⌘P |
+| `ambient.toggle`, Play or stop ambient music | window, run by the shell page | ⌥⌘P |
 | `ambient.style`, Choose ambient music | window, run by the shell page | none: chosen by name (music, style, lofi, sound, ambience, pick and change find it too) |
 | `usage.unit`, Switch Usage units | window, run by the shell page | none: chosen by name (tokens, cost, dollars and estimate find it too) |
 | `allowance.recheck`, Recheck allowance | window, run by the shell page | none: chosen by name (quota, refresh, usage, limit, account and switch find it too) |
@@ -358,7 +358,7 @@ The main process's own commands, the size keys, are never refused by the page.
 - Open Keyboard settings, Open Usage, Open Automation and Open Integrations put focus there once the tab draws it, which a window that paints late does many frames after the command (`openSettingsAt`).
   Focus a person has moved into the tab by then stays where they put it (INF-963).
 - `automation.pause-all`, Pause all automations, opens the same tab and pauses every running automation, as its Pause all button does; drafts, paused and done ones stay as they are.
-- `ambient.toggle`, Play or pause ambient music (⌥⌘P, INF-5053), turns Settings → Appearance's Ambient music switch on when off, and otherwise pauses or resumes playback (`docs/ambient-music.md`).
+- `ambient.toggle`, Play or stop ambient music (⌥⌘P, INF-5053), turns Settings → Appearance's Ambient music switch on or off, as the top bar's sound button does (`docs/ambient-music.md`).
 - `ambient.style`, Choose ambient music (INF-5610), turns the music on if it was off and opens the sound button's style list with focus on the chosen style (`docs/ambient-music.md`, "Turning it on").
 - `usage.unit`, Switch Usage units, switches every amount in Usage between tokens and estimated dollars, which the core keeps, and opens Usage the same way.
 - `allowance.recheck`, Recheck allowance, reads which login each account's store names and its allowance again, the way the spent-allowance card's button does, so a switched Claude login is heard at once (`docs/quota.md`, "A changed login").

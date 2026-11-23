@@ -255,11 +255,12 @@ function safeUsername(): string {
 }
 
 /**
- * The file's contents as a login, as no login, or as contents this reader
- * does not understand. The client keeps other entries in the same file and
- * leaves it behind without a login: signing out leaves the entries it does
- * not own, and a refused renewal blanks the login's tokens in place. A file
- * like that holds no login, the same as a missing one.
+ * The file's or Keychain item's contents as a login, as no login, or as
+ * contents this reader does not understand. The client keeps other entries
+ * in the same store and leaves it behind without a login: signing out leaves
+ * the entries it does not own, and a refused renewal blanks the login's
+ * tokens in place. A store like that holds no login, the same as a missing
+ * one.
  */
 function parseCredentials(raw: string): ClaudeQuotaAuth | "none" | undefined {
   let parsed: unknown;
@@ -527,7 +528,11 @@ async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead>
   }
   clearKeychainLock(configDir);
   const auth = parseCredentials(secret.value.trim());
-  if (!auth || auth === "none") {
+  if (auth === "none") {
+    credentialCache.delete(configDir);
+    return { kind: "absent" };
+  }
+  if (!auth) {
     return lockFromFailure(configDir, "keychain_unreadable", persistLock, storeIdentity);
   }
   rememberCredential(configDir, auth, storeIdentity);

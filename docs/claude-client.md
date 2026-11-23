@@ -91,7 +91,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
     `ClaudeAuthBackend.status` and the allowance use the same `readClaudeStore` result (`claudeQuota.ts`): the file in `~/.claude` or the bare Keychain item `Claude Code-credentials`, with its token, advisory expiry and current config identity.
     Health reads silently and shares the modification-date cache with allowance; it has no client status poll, proactive renewal, separate evidence, expiry peek or stamp read.
     Only an absent credential is a sign-out; saved access and refresh expiry dates never establish one.
-    A file that cannot be read is not absent, but a file that parses and holds no login is: Claude Code leaves one behind when its sign-out keeps other entries or a refused renewal blanks its tokens.
+    A file that cannot be read is not absent, but a file that parses and holds no login is, and so is a Keychain item that parses and holds none: Claude Code leaves one behind when its sign-out keeps other entries or a refused renewal blanks its tokens.
     A client that answers signed in is a login, including over an expired file.
     Connect asks the client before it treats a lookup miss as a sign-out, on the store lease it already holds, and reads the store again after the wait.
     The row's Sign in over a store that holds or may hold a login runs the client's login without that question, since Anthropic already refused the login there.

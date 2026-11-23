@@ -1339,8 +1339,6 @@ export class SessionHost {
       ...held.state,
       turn,
       running: { turn, orderId },
-      // A turn that reaches its model here: what an update's save did is over.
-      ...(this.updateSave ? {} : { updateStop: undefined }),
     };
     this.record(held, { type: "turn_started", turn, orderId });
     this.writeOut(held);
@@ -1518,8 +1516,8 @@ export class SessionHost {
 
   /**
    * Keeps what an update's save did to this task's turn here, through a
-   * restart and after the save is let go, until a turn reaches its model
-   * here (`prompt`): a let-go asked again, by a home that came back after
+   * restart and after the save is let go, until a turn starts here while
+   * no save holds (`record`): a let-go asked again, by a home that came back after
    * either, names it as the first would have. A stop the save made stays
    * one when a later turn's stop is withdrawn. A stop that settles after
    * this computer stopped writes nothing: its next start reads the stop it
@@ -1806,6 +1804,12 @@ export class SessionHost {
       seq,
       ...(event.type === "continuation_started" ? { continuing: true as const } : {}),
       ...(event.type === "continuation_ended" ? { continuing: undefined } : {}),
+      // A turn starts here, from the home's prompt or by itself, while no
+      // save holds: what an update's save did is over (`markStop`).
+      ...((event.type === "turn_started" || event.type === "continuation_started") &&
+      !this.updateSave
+        ? { updateStop: undefined }
+        : {}),
     };
     const record: PlacedEventRecord = { seq, at: this.now(), event: event as PlacedEvent };
     held.outbox.push(record);

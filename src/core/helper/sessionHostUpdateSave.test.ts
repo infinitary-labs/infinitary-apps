@@ -83,7 +83,7 @@ describe("a computer that runs work saving its crew's work before its update", (
   // Saved the way this computer's own update saves its work: a turn begun by
   // itself during the save stops too, and the save holds while its home keeps
   // asking, as during a long download for the update.
-  it("stops a turn its crewmate carries on by itself while the save holds, and keeps the save while its home keeps asking", async () => {
+  it("stops a turn its crewmate carries on by itself while the save holds, keeps the save while its home keeps asking, and forgets that stop once it carries on after the let-go", async () => {
     const claude = await scriptedClaudeWorld();
     const at = await placed({ claude, updateReturnMs: 1_000 });
     const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
@@ -130,6 +130,16 @@ describe("a computer that runs work saving its crew's work before its update", (
       // Let go, the save names the turn it stopped, which its home carries on.
       expect(await at.order("inf:session:release-update", [])).toEqual({
         stopped: [TASK],
+        withdrawn: [],
+      });
+
+      // From review: once it carries on by itself with no save held, what the
+      // save stopped is over, and a later update's let-go no longer names it.
+      claude.answer({ text: "Picked the background check up again." });
+      claude.continueTurn();
+      await expect.poll(carriedOn).toBe(3);
+      expect(await at.order("inf:session:release-update", [])).toEqual({
+        stopped: [],
         withdrawn: [],
       });
     } finally {

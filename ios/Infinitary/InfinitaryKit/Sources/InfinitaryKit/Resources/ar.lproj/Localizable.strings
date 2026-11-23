@@ -2745,6 +2745,7 @@
 "settingsDevicesChangeAddress" = "تغيير العنوان";
 "settingsDevicesChangeAddressFailed" = "تعذّر تغيير العنوان الذي يُوصل منه إلى هذا الحاسوب.";
 "settingsDevicesChangeAddressNamed" = "تغيير عنوان %1$@";
+"settingsDevicesCheckingRow" = "جارٍ التحقق من %1$@…";
 "settingsDevicesConfirmThis" = "هذا هو الحاسوب";
 "settingsDevicesControllingNow" = "يتحكم في نائب القبطان الآن";
 "settingsDevicesCopied" = "نُسخ";

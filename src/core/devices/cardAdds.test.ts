@@ -90,7 +90,12 @@ describe.runIf(SSH_SERVER_AVAILABLE)("the first mate hears how an add its card b
       status: "rejected",
       reason: new Error(`${address} is being set up already.`),
     });
-    const lines = remoteLoginWords.refused("unreachable", { address, doing: "add" });
+    // It stopped reading the SSH key, at the port the SSH settings name.
+    const lines = remoteLoginWords.refused("unreachable", {
+      address,
+      doing: "add",
+      reach: { step: "key", port: sshd.port },
+    });
     expect(first).toMatchObject({ status: "rejected", reason: { lines } });
     expect(told).toEqual([
       { facts: { kind: "device-add", address, outcome: "refused", lines: [...lines] } },

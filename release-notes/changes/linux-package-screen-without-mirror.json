@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-package-screen-without-mirror",
+      "reason": "The Linux package checks stop downloading their virtual screen's tools from Ubuntu's mirrors on GitHub's hosted machines, so a stalled mirror no longer fails a release; it changes only how the project's checks prepare their machines, not the app."
+    }
+  ]
+}

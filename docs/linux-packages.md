@@ -145,12 +145,14 @@ They take the action and its script from the workflow's own commit, as they take
 - the Ubuntu package with apt in clean `ubuntu:24.04` and `ubuntu:26.04` containers;
 - the Fedora package with dnf in a clean `fedora:latest` container;
 - the Arch recipe, built with `makepkg` and installed with `pacman`, in a clean `archlinux:latest` container;
-- the AppImage in a clean `fedora:latest` container with a desktop's libraries and no git, where it must ask for git and quit when told to, and then, with git installed, the journey below;
+- the AppImage in a clean `fedora:latest` container with a desktop's libraries and no git, where it must ask for git and quit when told to, and then, with git installed, the journey below; the check finds, photographs and answers that question with xdotool and ImageMagick from the same container's packages;
 - the Nix package, built with `nix-build` against nixos-26.05 and run from the Nix store on the runner.
 
 Every job runs on the label the repository variable `LINUX_RUNNER` names, the PC's fresh virtual machines, and the 26.04 machine on that label with `-2604` (`shell-pc-linux-2604`); with the variable unset, each runs on GitHub's hosted Ubuntu of its release (`docs/testing.md`, "Notes").
 A publishing release uses `RELEASE_LINUX_PACKAGES_RUNNER` for the build and checks when set, adding `-2604` for the Ubuntu 26.04 host check.
 A rehearsal or an unset release variable keeps every job on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says (`docs/testing.md`, "A release's hosted machines").
+
+The runner itself needs only Xvfb for the virtual screen, which GitHub's hosted Ubuntu images hold, so on them no check downloads anything from the runner's own mirrors for it (`docs/testing.md`, "The runner's automatic updates").
 
 A container stands in for a clean copy of its system.
 It runs privileged so Chromium can make its sandbox's namespaces, and the runner lifts Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS have none; the Ubuntu machine jobs keep the restriction and the package's own profile.

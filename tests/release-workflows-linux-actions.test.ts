@@ -179,3 +179,40 @@ describe("linux-packages.yml's local actions in a stable built from an older alp
     }
   });
 });
+
+// The runner's virtual screen is Xvfb alone, which GitHub's hosted Ubuntu
+// images hold, so a check downloads nothing for it from the runner's own
+// mirrors: an alpha's Arch check failed when Ubuntu's mirror stalled three
+// list refreshes for xdotool and ImageMagick. An older check, as a stable
+// built from its alpha's commit runs, works the AppImage's screen from the
+// runner with both, so that leg still gets them there.
+describe("linux-packages.yml's virtual screen", () => {
+  const check = jobs.check as Job & {
+    strategy: { matrix: { include: Array<{ system: string }> } };
+  };
+  const systems = [...new Set(check.strategy.matrix.include.map((entry) => entry.system))];
+  const install = check.steps.find((step) => step.name === "Install the virtual screen");
+  /** The packages the step names for one leg, with the check's source at `ref`. */
+  const named = (system: string, ref: string) =>
+    workflowString(String(install?.run), {
+      ...contexts,
+      matrix: { system },
+      inputs: { ...contexts.inputs, ref },
+    })
+      .split(/\s+/)
+      .slice(1)
+      .filter((arg) => !arg.startsWith("-"));
+
+  it("asks the runner for Xvfb alone when the check is the workflow's own", () => {
+    expect(systems).toContain("appimage");
+    for (const system of systems) expect([system, named(system, OWN)]).toEqual([system, ["xvfb"]]);
+  });
+
+  it("gives an older source's AppImage check the screen tools it runs on the runner", () => {
+    for (const system of systems)
+      expect([system, named(system, SOURCE)]).toEqual([
+        system,
+        system === "appimage" ? ["xvfb", "xdotool", "imagemagick"] : ["xvfb"],
+      ]);
+  });
+});

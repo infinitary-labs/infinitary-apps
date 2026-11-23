@@ -263,7 +263,7 @@ Inside the body, prose (paragraphs, lists, headings, captions, summaries) keeps 
 The body's document carries `data-width` (`regular`, `wide`, `full`) for the size it is shown at.
 
 **Find in this card.**
-A card, a past card, a task's record and its Crewmate tab carry a magnifying glass just before Maximize: an `IconButton` with the app's search icon (Lucide `search`), labelled `Find in this card`, with its installed key hint (default ⌘F); a panel's card, the reply note and a task's Browser tab carry none.
+A card, a past card, a task's record and its Crewmate tab carry a magnifying glass just before Maximize: an `IconButton` with the app's search icon (Lucide `search`), labelled `Find in this card`, with its installed key hint (default ⌘F); a panel's card and a task's Browser tab carry none; the conversation carries one, which finds words in the rounds it has read.
 Pressed, or on ⌘F, the head's meta line, the task's key and the model chip give their place to a find field: the search icon, the words, a count such as `2 of 7` or `No matches` in `--font-mono` at `--text-xs`, then Previous (Lucide `chevron-up`), Next (`chevron-down`) and Close (`x`) as 26 px icon buttons with their key hints.
 The field is 28 px tall on `--surface-input` with a `--line-1` hairline and `--radius-m`, and draws the focus ring round all of it; no row is added and nothing under the head moves.
 Every match is lit in `--accent-dim` and the current one in `--accent` with `--bg-0` words, drawn as highlights over the words and never into them, so they never look like Point at's marks.

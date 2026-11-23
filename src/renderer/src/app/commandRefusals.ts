@@ -424,8 +424,9 @@ const REFUSALS: Readonly<
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : m.refuseNoReleaseNotesYet(),
   // Only while the main message box takes words.
   "feedback.start": mainMessageRefusal,
-  // From anywhere, Settings included: it goes home to the note.
-  "firstmate.reply": (s) => (s.lastTurn?.reply ? null : m.refuseYourFirstMateHasNotRepliedYet()),
+  // From anywhere, Settings included: it goes home to the conversation,
+  // which says so while it holds nothing yet.
+  "firstmate.reply": () => null,
   "settings.runbooks": () => null,
   "runbooks.open-folder": (s) =>
     isView(s.thisMac) ? m.refuseRunbooksFolderOn({ computer: s.thisMac.name }) : null,

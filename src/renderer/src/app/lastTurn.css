@@ -9,9 +9,10 @@
  * newest 10 px above the input's top edge, in the slot hung from that edge,
  * so it never moves the input. Each line is one line, cut after its last
  * whole word with an ellipsis (LastTurn's useWholeWords narrows .words to
- * it). The captain's words are plain text: no pointer, underline or
- * focus ring. A reply line is a button (docs/composer.md "The reply note"):
- * the pointer, a Tab stop and the focus ring, and no other chrome, so it
+ * it). The captain's words are plain text: no underline or focus ring. A
+ * press anywhere on a round opens the conversation there, so the round
+ * takes the pointer. A reply line is a button (docs/composer.md "The
+ * conversation"): a Tab stop and the focus ring, and no other chrome, so it
  * still reads as a line of type.
  *
  * A round enters with a 6 px rise over --dur-med; on a new message the
@@ -56,6 +57,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: pointer;
   transition:
     opacity var(--dur-med) var(--ease-out),
     transform var(--dur-med) var(--ease-out);
@@ -118,7 +120,7 @@
   color: var(--fg-1);
   font-size: var(--text-sm);
   line-height: 18px;
-  cursor: default;
+  cursor: inherit;
   pointer-events: auto;
 }
 /* The captain's words in a soft grey bubble, its tail corner toward the input's end. */

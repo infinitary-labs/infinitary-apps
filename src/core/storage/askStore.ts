@@ -119,7 +119,7 @@ type Row = {
   typed_line?: number | null;
 };
 
-function replyOf(json: string | null): LastTurnReply | null {
+export function replyOf(json: string | null): LastTurnReply | null {
   if (!json) return null;
   try {
     const parsed = lastTurnReplySchema.safeParse(JSON.parse(json));

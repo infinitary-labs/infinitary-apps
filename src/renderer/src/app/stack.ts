@@ -39,28 +39,28 @@ export type PanelCardEntry = {
 };
 
 /**
- * The Firstmate's reply, read whole on a note the window holds
- * (docs/composer.md "The reply note"): the captain's message it answered
- * and the reply's words, as they stood when the line was opened.
+ * The conversation the window holds (docs/composer.md "The conversation"):
+ * which round it opens at - the newest, or the older of the two the strip
+ * shows - and which of its views it shows.
  */
-export type ReplyNote = { you: string; words: string; problem: boolean };
+export type ConversationView = "everything" | "cards";
+export type ConversationEntry = { at?: "older"; view?: ConversationView };
 
 /**
  * Shell-held views at the front of the stack; never persisted or emitted as
  * cards. A task's record, a closed card read again as a past card
- * (FI3-579), the Firstmate's reply read whole (docs/composer.md "The reply
- * note"), a task's own browser (docs/task-browser.md, "The view"), a
+ * (FI3-579), the conversation (docs/composer.md "The conversation"), a task's own browser (docs/task-browser.md, "The view"), a
  * task's Crewmate tab (docs/task-card-tabs.md), or a panel's card - the
  * task board is the Tasks panel's (docs/task-board.md): one entry per task,
- * whichever of its tabs it shows, one per saved card, one reply note, and
+ * whichever of its tabs it shows, one per saved card, one conversation, and
  * any number of each panel's cards, one per card id.
  */
 /** The views of a task's record entry: Info, Cards and Activity share its one frame (INF-2261). */
 export type RecordView = "info" | "cards" | "activity";
 export type OpenRecord =
   | { taskId: string; from?: EntryFrom; view?: RecordView }
-  | { pastCardId: string }
-  | { replyNote: ReplyNote }
+  | { pastCardId: string; from?: EntryFrom }
+  | { conversation: ConversationEntry }
   | { browserTaskId: string; from?: EntryFrom | BrowserViewFrom; arrived?: string }
   | { crewmateTaskId: string; from?: EntryFrom }
   | { panelCard: PanelCardEntry };
@@ -84,7 +84,9 @@ export type StackEntry = Card & {
   /** Which of the record's views it shows: Info, Cards or Activity (INF-2261); absent is Info. */
   recordView?: RecordView;
   pastCardId?: string;
-  replyNote?: ReplyNote;
+  /** The card or held entry a past card was opened from; Hide returns to it while it is up. */
+  pastFrom?: EntryFrom;
+  conversation?: ConversationEntry;
   browserTaskId?: string;
   browserFrom?: EntryFrom | BrowserViewFrom;
   /**
@@ -96,7 +98,7 @@ export type StackEntry = Card & {
   panelCard?: PanelCardEntry;
 };
 
-export const REPLY_NOTE_ENTRY_ID = "reply-note";
+export const CONVERSATION_ENTRY_ID = "conversation";
 export const panelCardEntryId = (panel: string, id: string) => `panel-card:${panel}/${id}`;
 
 type HeldEntry = Pick<StackEntry, "id"> &
@@ -107,7 +109,8 @@ type HeldEntry = Pick<StackEntry, "id"> &
       | "recordTaskId"
       | "recordView"
       | "pastCardId"
-      | "replyNote"
+      | "pastFrom"
+      | "conversation"
       | "browserTaskId"
       | "browserFrom"
       | "browserArrived"
@@ -124,8 +127,13 @@ function heldEntry(held: OpenRecord): HeldEntry {
       recordTaskId: held.taskId,
       ...(held.view ? { recordView: held.view } : {}),
     };
-  if ("pastCardId" in held) return { id: `past:${held.pastCardId}`, pastCardId: held.pastCardId };
-  if ("replyNote" in held) return { id: REPLY_NOTE_ENTRY_ID, replyNote: held.replyNote };
+  if ("pastCardId" in held)
+    return {
+      id: `past:${held.pastCardId}`,
+      pastCardId: held.pastCardId,
+      ...(held.from ? { pastFrom: held.from } : {}),
+    };
+  if ("conversation" in held) return { id: CONVERSATION_ENTRY_ID, conversation: held.conversation };
   if ("browserTaskId" in held)
     // The page is 1280 wide: the view takes the stage's full width.
     return {
@@ -156,21 +164,20 @@ export const heldEntryId = (held: OpenRecord): string => heldEntry(held).id;
 
 /**
  * Whether words are found in a stage entry: a card, a past card, or a task's
- * record or Crewmate tab (docs/keyboard.md, "Finding in the shown card"). A panel's card, the reply note and a task's
- * browser are not.
+ * record or Crewmate tab, or the conversation (docs/keyboard.md, "Finding in
+ * the shown card"). A panel's card and a task's browser are not.
  */
 export function cardFindable(entry: {
   panelCard?: unknown;
   browserTaskId?: string | undefined;
-  replyNote?: unknown;
 }): boolean {
-  return !entry.panelCard && !entry.browserTaskId && !entry.replyNote;
+  return !entry.panelCard && !entry.browserTaskId;
 }
 
 export const isHeldEntry = (entry: StackEntry | undefined): boolean =>
   entry?.recordTaskId !== undefined ||
   entry?.pastCardId !== undefined ||
-  entry?.replyNote !== undefined ||
+  entry?.conversation !== undefined ||
   entry?.browserTaskId !== undefined ||
   entry?.crewmateTaskId !== undefined ||
   entry?.panelCard !== undefined;

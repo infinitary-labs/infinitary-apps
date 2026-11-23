@@ -20,6 +20,8 @@ import { pressesSoFar } from "./presses";
 import { focusHoldsBack, heldProjectFocus } from "./projectFocus";
 import {
   type BrowserViewFrom,
+  type ConversationEntry,
+  type ConversationView,
   departureIndex,
   type EntryFrom,
   heldEntryId,
@@ -35,7 +37,6 @@ import {
   passedAfterNew,
   patchPanelCard,
   type RecordView,
-  type ReplyNote,
   reconcileStack,
   shownEntry,
   stackOf,
@@ -80,16 +81,24 @@ export type StackSlice = {
    * Activity tab was chosen (INF-2261).
    */
   openRecord: (taskId: string, from?: EntryFrom, view?: RecordView) => void;
-  /** Opens or focuses a closed card's front stack entry, read-only (FI3-579). */
-  openPastCard: (cardId: string) => void;
   /**
-   * Opens the Firstmate's newest reply whole, or the older round's with
-   * `"older"`, as a note the window holds at the front (docs/composer.md
-   * "The reply note"); false while no such reply is kept, and nothing opens.
+   * Opens or focuses a closed card's front stack entry, read-only (FI3-579),
+   * from the entry `from` names, which Hide returns to while it is up.
    */
-  openReplyNote: (round?: "older") => boolean;
-  /** Closes the reply note wherever it sits; the shown entry stays shown. */
-  closeReplyNote: () => void;
+  openPastCard: (cardId: string, from?: EntryFrom) => void;
+  /**
+   * Opens the conversation at the front (docs/composer.md "The
+   * conversation"), at its newest round or, with `at: "older"`, the older
+   * round the strip shows. Opening it tells the Firstmate nothing.
+   */
+  openConversation: (entry?: ConversationEntry) => void;
+  /** Closes the conversation wherever it sits; the shown entry stays shown. */
+  closeConversation: () => void;
+  /**
+   * Keeps which view the conversation shows, so a card opened from it
+   * returns to that view; the round it opened at is spent.
+   */
+  setConversationView: (view: ConversationView) => void;
   /**
    * Opens or focuses one task's browser view at the front (docs/task-browser.md),
    * from a card's live attachment when `from` names it ("From a card").
@@ -374,28 +383,24 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
           (record) => isTaskTab(record, taskId),
         ),
       ),
-    openPastCard: (cardId) =>
+    openPastCard: (cardId, from) =>
       set((s) =>
         toFront(
           s,
-          { pastCardId: cardId },
+          { pastCardId: cardId, ...(from ? { from } : {}) },
           (record) => "pastCardId" in record && record.pastCardId === cardId,
         ),
       ),
-    openReplyNote: (round) => {
-      const newest = get().lastTurn;
-      const turn = round === "older" ? newest?.previous : newest;
-      if (!turn?.reply) return false;
-      const replyNote: ReplyNote = {
-        you: turn.you,
-        words: turn.reply.words ?? turn.reply.text,
-        problem: turn.reply.problem === true,
-      };
-      // One reply note: opening it again shows the newest reply at the front.
-      set((s) => toFront(s, { replyNote }, (record) => "replyNote" in record));
-      return true;
-    },
-    closeReplyNote: () => set((s) => closeHeld(s, (record) => "replyNote" in record)),
+    // One conversation: opening it again brings it to the front at the round asked.
+    openConversation: (entry = {}) =>
+      set((s) => toFront(s, { conversation: entry }, (record) => "conversation" in record)),
+    closeConversation: () => set((s) => closeHeld(s, (record) => "conversation" in record)),
+    setConversationView: (view) =>
+      set((s) => ({
+        records: s.records.map((record) =>
+          "conversation" in record ? { conversation: { view } } : record,
+        ),
+      })),
     openBrowserView: (taskId, from) =>
       set((s) =>
         toFront(

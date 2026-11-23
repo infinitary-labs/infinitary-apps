@@ -259,8 +259,9 @@ The shared show-card door reaches it: `inf:cards:show` (catalog action `show-car
 Only the shown entry supplies the turn hint, as `pastCardId`; the core adds one `about` line saying the card is history.
 Nothing is stored, no effect is reachable, and a past card never becomes a card.
 
-The reply note (INF-1103, `docs/composer.md` "The reply note") is one more shell-held entry: `records` holds at most one `{ replyNote }`, the captain's message and the first mate's reply words as they stood when it opened, projected as `reply-note` and drawn by `ReplyNote.tsx` through `ResponseCard` as a plain-text note with no actions or reply row.
-`openReplyNote` is its one opener, from the reply line's click and the `firstmate.reply` command, and Hide/Esc closes it through `closeRecord`; it supplies no turn hint, and nothing about it is stored or sent.
+The conversation (INF-6337, `docs/composer.md` "The conversation") is one more shell-held entry: `records` holds at most one `{ conversation }`, the round it opens at and the view it shows, projected as `conversation` and drawn by `ConversationCard.tsx` through `ResponseCard` as a note with no actions or reply row, 720 px wide until dragged (`CONVERSATION_WIDTH`).
+`openConversation` is its one opener, from a press on a round above the message box and the `firstmate.reply` command, and Hide/Esc closes it through `closeRecord`; it supplies no turn hint, and nothing about it is stored or sent.
+A past card opened from it carries `from` naming it, so that card's Hide returns to it, as a task's tab returns to the card it was opened from.
 
 Both effect-token homes paint `--bg-2`, no blur, `--line-1` and the previous shadow; peeks also drop their old element opacity, which would otherwise make even opaque paint translucent.
 The record reports its initialized draw to the shared presentation shell and lets its frame take the full intrinsic height, leaving ResponseCard as the only scroller.

@@ -171,6 +171,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     conversation: {
       send: (text) => invoke("inf:converse", text),
       lastTurn: () => invoke("inf:conversation:last-turn"),
+      thread: (request) => invoke("inf:conversation:thread", request),
     },
     task: {
       abort: (taskId) => invoke("inf:task:abort", taskId),

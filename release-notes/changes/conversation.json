@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "conversation",
+      "kind": "feature",
+      "area": "message-box",
+      "title": "Read your whole conversation in one card",
+      "body": "Press a message above the message box to open the conversation: your messages, your first mate's whole replies, and each card you chose on or replied under, by day. Scroll up for earlier rounds. Its Cards view lists the cards waiting on you, then the ones you answered, and a press opens any of them. Open the conversation in command search opens it too. Opening it tells your first mate nothing.",
+      "picture": {
+        "dark": "conversation-dark.webp",
+        "light": "conversation-light.webp",
+        "alt": "The conversation card above the message box, with the captain's messages on the right, the first mate's replies on the left and a card's tile before the choice made on it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

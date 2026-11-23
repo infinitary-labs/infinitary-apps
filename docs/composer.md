@@ -135,8 +135,8 @@ A round is one message of the captain's and the reply line kept beside it.
   Neither carries quotation marks.
   Each line is one line; a line too long for its row ends on the last whole word that fits beside an ellipsis, never part way through a word, and resting on a cut line shows its whole text.
   The cut follows the row's width as the window or a side rail changes it, the line keeps all its words for a reader, and only a first word too wide for the row is cut part way (`src/renderer/src/design/core/wholeWords.ts`).
-  The captain's words are not a control: a click does nothing, Tab passes over them, and they draw no underline or focus ring.
-  Each reply line, the older one included, is a button that opens that reply as the reply note (below): it takes the pointer, a Tab stop and the focus ring, and no other chrome; the working words are not a button.
+  A press anywhere on a round opens the conversation (below) at that round, unless it ended a drag that selected words; the captain's words take no Tab stop and draw no underline or focus ring.
+  Each reply line, the older one included, is a button that opens the conversation at its round: it takes a Tab stop and the focus ring, and no other chrome; the working words are not a button.
   While a card or another stack entry is up, only the newest round shows, so a card keeps about the room it had with one round.
 - **Working.**
   While the first mate's busy signal is up (`firstmate_state`), the newest round's mark turns `--hot`, the ember the app uses for work in flight, over `--dur-fast` and spins one steady turn every 2 seconds; no dots show.
@@ -163,7 +163,7 @@ A round is one message of the captain's and the reply line kept beside it.
   A failed or paused turn's line is `plainProblem`'s words for it, in `--danger`.
   A message the paused seat keeps says so at once: its receipt (`keptMessageWords`) is the reply line as well as a feed line.
   The core sends it as `firstmate_reply` before the busy signal falls, so the working words turn straight into it as it arrives, and an operational wake never sends one.
-  When the closing words are the line and differ from it, the core keeps them as written beside it (`replyWords`, the reply's optional `words`), line breaks included, for the reply note.
+  When the closing words are the line and differ from it, the core keeps them as written beside it (`replyWords`, the reply's optional `words`), line breaks included, for the conversation.
 - **What stays.**
   A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
   The older round comes back as the older round on a new message even after it dissolved.
@@ -178,17 +178,22 @@ A round is one message of the captain's and the reply line kept beside it.
   Reduced motion cuts the dissolve to an instant and does not shorten the 15 seconds.
   Fading does not move focus, change the draft, or read the reply out again.
   The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.capture.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
-- **The reply note.**
-  A click on the reply line, or Enter or Space on it, opens the whole reply as a note at the front of the stack, in front of any open card (INF-1102's plan, the captain's Approve and build, reversing "neither line is a control" for the reply line only).
-  The window holds it, as it holds a past card (`{ replyNote }` in `OpenRecord`, `stack.ts`): nothing is saved or sent, and the first mate is not told.
-  The Note shell carries a quiet Conversation heading, then that round's question in the shared grey bubble at the right under You, and the first mate's mark and First mate label above the unboxed reply at the left (INF-2218, A · Open reply).
-  `QuestionBubble` owns the question's two-line fold, overflow measurement and pointer/Enter/Space activation; its caller owns expansion state, reset for another opened round, and a message that was only pictures reads A picture.
-  This read-only view opts into selecting question text through that same owner, so a drag selects words without folding them; ordinary asked lines retain their existing activation.
-  The reply stays as the first mate wrote it, selectable with line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
-  It has the Note chip and no buttons or reply row; the shared minus or Esc puts it away.
-  There is one reply note: opening it again brings it to the front with the reply whose line was pressed, and it stays until it is closed, even after a new message.
-  Opening it hides the older round and pauses its clock; closing it resumes the remaining reading time.
-  Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.
+- **The conversation.**
+  Pressing a round, or Enter or Space on its reply line, opens the conversation at the front of the stack, in front of any open card (INF-6337's plan, the captain's Approve and build: "a thread that has everything the user directly interacted with", "a place for people to find their recent cards"); it lands on the round pressed.
+  The window holds it, as it holds a past card (`{ conversation }` in `OpenRecord`, `stack.ts`, `ConversationCard.tsx`): opening and reading it tell the first mate nothing.
+  It is 720 px wide until dragged, carries the Note chip, a quiet Conversation heading and two views, Everything and Cards, and has no buttons or reply row; the shared minus or Esc puts it away.
+  While it is the shown entry the lines above the input are not drawn, and the message box is its field: a message sent there joins its foot as it is sent, and the first mate's reply follows.
+  There is one conversation: opening it again brings it to the front at the round asked.
+  Everything holds the captain's acts oldest at the top and the newest at the foot: their messages with the first mate's whole reply as written, unboxed beside its mark; a press of a card's own button as a small tile naming the card, then "Chose" and the button's words; and a line typed under a card as its tile, the line, and the card author's first answer under it.
+  A day line separates days, a time shows where the minute changes, the captain's words are whole in the grey bubble, and a problem reads in `--danger`.
+  Cards lists the cards waiting on the captain first, those put aside included, newest first, then the cards they answered, newest first, each once with what they last did and when.
+  A tile opens its card: a live card comes forward, and a closed one opens as a past card whose minus or Esc returns to the conversation, in the view it showed.
+  The rounds come from the core a page at a time (`inf:conversation:thread`, `src/core/storage/conversationRead.ts`): the newest 30, and the 30 before the oldest one shown as a reader scrolls to the oldest end; Find in this card searches the rounds read so far.
+  A round is a `captain_asks` row, a `card_observations` action whose actor is the captain, or a `card_messages` line of the captain's; a choice a card's own script made, a card put aside or taken down, and anything an agent did alone are not rounds.
+  A line typed under the first mate's own card is saved both as a message and as a card line that message names (`typed_card_id`, `typed_line`), and it draws once, as a line under that card; one saved before that link existed draws twice.
+  A card deleted with its task takes its tile rounds with it, and a message typed under a card now gone draws as a plain message.
+  A home that cannot answer the read shows the two rounds the strip holds and says only those could be read.
+  Open the conversation (`firstmate.reply`, `docs/keyboard.md`) opens it at its newest round from command search, after the lines have faded too, and comes home from Settings first; it keeps the reply note's id, so a key bound to it keeps working.
 - **Motion.**
   A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.
   Under reduced motion the durations are zero, so every move is a cut, and the working mark turns ember and stands still.

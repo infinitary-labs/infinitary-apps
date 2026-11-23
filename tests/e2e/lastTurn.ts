@@ -4,6 +4,7 @@ import { atRest } from "./layout";
 import { appOf, readInMain } from "./mainProcess";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
+import { SHOWN_ENTRY } from "./stack";
 
 declare global {
   interface Window {
@@ -49,13 +50,21 @@ export function bubbleWords(bubble: Locator): Locator {
   return bubble.locator("[data-last-turn-words]");
 }
 
-/** The opened conversation's shared question bubble, separate from the saved reply words. */
-export function replyQuestion(page: Page): Locator {
-  return page.locator("[data-reply-note-question] [data-question-bubble]");
+/** The shown conversation (docs/composer.md "The conversation"). */
+export function conversation(page: Page): Locator {
+  return page.locator(`${SHOWN_ENTRY} [data-conversation]`);
 }
 
-export function replyQuestionWords(page: Page): Locator {
-  return replyQuestion(page).locator("[data-question-bubble-words]");
+/** The captain's words in the shown conversation, oldest first. */
+export function conversationYou(page: Page): Locator {
+  return conversation(page).locator("[data-conversation-you]");
+}
+
+/** The first mate's words in the shown conversation, oldest first. */
+export function conversationReplies(page: Page): Locator {
+  return conversation(page).locator(
+    '[data-conversation-mate="firstmate"] [data-conversation-words]',
+  );
 }
 
 /** INF-2218: select the saved words with the pointer, never by replacing browser selection. */

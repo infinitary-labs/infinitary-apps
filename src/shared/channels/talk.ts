@@ -10,6 +10,7 @@ import {
   taskMoveFromSchema,
   turnImageSchema,
 } from "../cards";
+import { conversationPageRequestSchema, conversationPageSchema } from "../conversation";
 import { crewSendResultSchema } from "../crewTranscript";
 import { lastTurnSchema } from "../lastTurn";
 import {
@@ -91,6 +92,17 @@ export const talkChannels = {
     reach: "views",
     request: z.tuple([]),
     response: lastTurnSchema.nullable(),
+  },
+  // The conversation (docs/composer.md "The conversation"): one page of the
+  // captain's messages, their presses of a card's buttons and their lines under
+  // cards, each with what answered it, newest first. A window reads it when
+  // the conversation card opens and again as it scrolls back.
+  "inf:conversation:thread": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([conversationPageRequestSchema.optional()]),
+    response: conversationPageSchema,
   },
   "inf:task:abort": {
     effect: "change",

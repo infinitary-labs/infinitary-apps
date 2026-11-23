@@ -2,17 +2,17 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CONVERSATION_HEADING } from "../../src/renderer/src/app/lastTurnWords";
-import { askedWords } from "../../src/renderer/src/cards/askedWords";
+import { CONVERSATION_HEADING, PICTURE_ONLY_WORDS } from "../../src/renderer/src/app/lastTurnWords";
 import { seedReplyReading } from "../helpers/replyReading";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
   askFirstmate,
   bubbleWords,
+  conversation,
+  conversationReplies,
+  conversationYou,
   mateBubble,
   olderRound,
-  replyQuestion,
-  replyQuestionWords,
   selectFirstLine,
   yourBubble,
 } from "./lastTurn";
@@ -35,7 +35,7 @@ import {
   WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./scenarios/lastTurnWords";
 import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
-import { cardSurface, closeOpenCards, SHOWN_ENTRY } from "./stack";
+import { cardSurface, closeOpenCards } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressKey, runFromSearch } from "./windowKeys";
 
@@ -390,12 +390,12 @@ test("filing work with no closing words replies with the filed task instead of a
 });
 
 // INF-1103, the captain's words on INF-1102: "we should allow the first mate
-// response message here to be clickable, and clicking opens up a card that
-// shows the message as a note", built as the plan's approved answers: a
-// reading card the window holds, the words as the first mate wrote them,
-// INF-2218 replaces the quoted title with a shared question bubble and speaker labels;
-// all reading, saved-word and no-send guarantees stay.
-test("the reply line opens the whole reply as a note, by click, Enter, Space and command search, and Esc closes it", async () => {
+// response message here to be clickable", which opened the reply as a note.
+// INF-6337's plan, the captain's Approve and build, opens the conversation
+// instead: "clicking would open up a full card with something more like a
+// chat UX", with the reply as the first mate wrote it beside the captain's
+// own words, and the strip hidden while it is shown. Opening it sends nothing.
+test("the reply line opens the conversation with the whole reply, by click, Enter, Space and command search, and Esc closes it", async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [replyNote, fileTask] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
@@ -408,45 +408,47 @@ test("the reply line opens the whole reply as a note, by click, Enter, Space and
   expect(kept?.reply?.text).not.toContain("\n");
   await expect(bubbleWords(mateBubble(page))).toHaveText(kept?.reply?.text ?? "");
 
-  const note = page.locator(`${SHOWN_ENTRY} [data-reply-note]`);
-  const question = replyQuestionWords(page);
-  const noteWords = () => note.evaluate((body) => body.textContent);
+  const shown = conversation(page);
+  const newestReply = conversationReplies(page).last();
+  const newestYou = conversationYou(page).last();
   const turnsSent = () =>
     page.evaluate(async () => (await window.infinitary.conversation.lastTurn())?.you);
 
-  await test.step("a click opens the note at the front, with your question and the reply as written", async () => {
+  await test.step("a click opens the conversation at the front, with your words and the reply as written", async () => {
     await mateBubble(page).click();
-    await expect(note).toBeVisible();
-    await expect(question).toHaveText(askedWords(sent, false));
+    await expect(shown).toBeVisible();
+    await expect(newestYou).toHaveText(sent);
     await expect(
       page.getByRole("heading", { name: CONVERSATION_HEADING, exact: true }),
     ).toBeVisible();
-    await expect(replyQuestion(page)).toBeDisabled();
-    expect(await selectFirstLine(question)).not.toBe("");
-    expect(await noteWords()).toBe(REPLY_NOTE_WORDS);
-    await regionShot(cardSurface(page), test.info().outputPath("reply-note.png"));
-    if (process.env.FM_REPLY_NOTE_HERO === "1") {
+    await expect(page.locator("[data-last-turn]")).toHaveCount(0);
+    expect(await selectFirstLine(newestYou)).not.toBe("");
+    expect(await newestReply.textContent()).toBe(REPLY_NOTE_WORDS);
+    await expect(newestReply).toBeInViewport();
+    await regionShot(cardSurface(page), test.info().outputPath("conversation.png"));
+    if (process.env.FM_CONVERSATION_HERO === "1") {
       await heroShot(launched.app, page, {
         region: cardSurface(page),
-        anchors: [mateBubble(page)],
-        name: "reply-note",
+        anchors: [promptInput(page)],
+        name: "conversation",
       });
     }
   });
 
-  await test.step("Esc closes it, and nothing was sent", async () => {
+  await test.step("Esc closes it, the strip is back, and nothing was sent", async () => {
     await page.keyboard.press("Escape");
-    await expect(note).toHaveCount(0);
+    await expect(shown).toHaveCount(0);
+    await expect(mateBubble(page)).toBeVisible();
     expect(await turnsSent()).toBe(sent);
   });
 
   await test.step("Enter and Space on the focused line open it too", async () => {
     for (const key of ["Enter", " "]) {
       await pressKey(mateBubble(page), key);
-      await expect(note).toBeVisible();
-      expect(await noteWords()).toBe(REPLY_NOTE_WORDS);
+      await expect(shown).toBeVisible();
+      expect(await newestReply.textContent()).toBe(REPLY_NOTE_WORDS);
       await page.keyboard.press("Escape");
-      await expect(note).toHaveCount(0);
+      await expect(shown).toHaveCount(0);
     }
   });
 
@@ -462,21 +464,23 @@ test("the reply line opens the whole reply as a note, by click, Enter, Space and
     const again = launched.page;
     await expect(mateBubble(again)).toHaveAttribute("data-state", "reply");
     await runFromSearch(launched.app, again, "firstmate.reply");
-    const reopened = again.locator(`${SHOWN_ENTRY} [data-reply-note]`);
+    const reopened = conversationReplies(again).last();
     await expect(reopened).toBeVisible();
-    expect(await reopened.evaluate((body) => body.textContent)).toBe(REPLY_NOTE_WORDS);
-    await expect(replyQuestionWords(again)).toHaveText(askedWords(sent, false));
+    expect(await reopened.textContent()).toBe(REPLY_NOTE_WORDS);
+    await expect(conversationYou(again).last()).toHaveText(sent);
   });
 });
 
-// Intent: INF-2218's accepted A/open, all-device plan preserves saved words,
-// picture-only/problem replies and keyboard/pointer question expansion.
+// Intent: INF-2218's accepted plan keeps saved words and picture-only and
+// problem replies; INF-6337's plan, the captain's Approve and build, draws
+// the captain's words whole in the conversation, so a long question no
+// longer folds, and the older round's line opens the conversation there.
 // Fixture: the captain's actual long request and existing screenshot reply,
 // saved by TaskService beside a picture-only failed round. Completion is the
-// drawn shared bubble, selected literal reply text and unchanged saved rounds.
+// drawn words, selected literal reply text and unchanged saved rounds.
 // Hidden desktop and private data only; no account or device prerequisite.
 for (const theme of ["dark", "light"] as const) {
-  test(`the conversation reading view preserves picture problems and expands a long question in ${theme}`, async () => {
+  test(`the conversation keeps picture problems and shows a long question whole in ${theme}`, async () => {
     const userDataDir = scratchDir("infinitary-reply-reading-");
     const db = openDatabase(userDataDir);
     const fixture = seedReplyReading(new TaskService({ db, strict: true }));
@@ -488,11 +492,12 @@ for (const theme of ["dark", "light"] as const) {
     const saved = await page.evaluate(() => window.infinitary.conversation.lastTurn());
     expect(saved?.reply?.text).toBe(fixture.problemWords);
     await mateBubble(page).click();
-    const note = page.locator(`${SHOWN_ENTRY} [data-reply-note]`);
-    await expect(replyQuestionWords(page)).toHaveText(askedWords("", false));
-    await expect(replyQuestion(page)).toBeDisabled();
-    await expect(note).toHaveText(saved?.reply?.text ?? "");
-    const colors = await note.evaluate((element) => {
+    const yours = conversationYou(page);
+    const replies = conversationReplies(page);
+    await expect(yours).toHaveCount(2);
+    await expect(yours.last()).toHaveText(PICTURE_ONLY_WORDS);
+    await expect(replies.last()).toHaveText(saved?.reply?.text ?? "");
+    const colors = await replies.last().evaluate((element) => {
       const probe = document.createElement("span");
       probe.style.color = "var(--danger)";
       element.append(probe);
@@ -505,34 +510,16 @@ for (const theme of ["dark", "light"] as const) {
     });
     expect(colors.actual).toBe(colors.expected);
     await page.keyboard.press("Escape");
-    await expect(note).toHaveCount(0);
+    await expect(conversation(page)).toHaveCount(0);
     await mateBubble(page, "older").click();
-    const question = replyQuestion(page);
-    const words = replyQuestionWords(page);
-    await expect(question).toBeEnabled();
-    await expect(question).toHaveAttribute("aria-expanded", "false");
-    const folded = await question.boundingBox();
-    await pressKey(question, "Enter");
-    await expect(question).toHaveAttribute("aria-expanded", "true");
-    await expect(words).toHaveText(askedWords(saved?.previous?.you ?? "", true));
-    const expanded = await question.boundingBox();
-    if (!folded || !expanded) throw new Error("The question is not drawn");
-    expect(expanded.height).toBeGreaterThan(folded.height);
-    await pressKey(question, " ");
-    await expect(question).toHaveAttribute("aria-expanded", "false");
-    await question.click();
-    await expect(question).toHaveAttribute("aria-expanded", "true");
-    expect(await note.textContent()).toBe(saved?.previous?.reply?.words);
-    await expect(note.locator("li")).toHaveCount(0);
-    expect(await selectFirstLine(note)).not.toBe("");
-    expect(await selectFirstLine(words)).not.toBe("");
-    await expect(question).toHaveAttribute("aria-expanded", "true");
-    await pressKey(question, " ");
-    await expect(question).toHaveAttribute("aria-expanded", "false");
-    await pressKey(question, "Enter");
-    await expect(question).toHaveAttribute("aria-expanded", "true");
+    await expect(yours.first()).toBeInViewport();
+    await expect(yours.first()).toHaveText(saved?.previous?.you ?? "");
+    expect(await replies.first().textContent()).toBe(saved?.previous?.reply?.words);
+    await expect(replies.first().locator("li")).toHaveCount(0);
+    expect(await selectFirstLine(replies.first())).not.toBe("");
+    expect(await selectFirstLine(yours.first())).not.toBe("");
     await page.keyboard.press("Escape");
-    await expect(note).toHaveCount(0);
+    await expect(conversation(page)).toHaveCount(0);
     expect(await page.evaluate(() => window.infinitary.conversation.lastTurn())).toEqual(saved);
   });
 }

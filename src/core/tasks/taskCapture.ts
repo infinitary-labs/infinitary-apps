@@ -5,6 +5,7 @@ import {
   type ChoiceCarriedRecord,
   choiceCarriedRecordSchema,
 } from "@shared/cards";
+import type { ConversationPage, ConversationPageRequest } from "@shared/conversation";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
 import { savedTaskTitle } from "@shared/taskTitle";
@@ -24,6 +25,7 @@ import {
   type AskTypedUnder,
   askReceipt,
 } from "../storage/askStore";
+import { readConversation } from "../storage/conversationRead";
 import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
 import type { TaskCoverageFields, TaskRecord } from "../storage/taskRecords";
 import { AskThreads, CARRIED_VIA, type ThreadCoverage } from "./askThreads";
@@ -414,6 +416,11 @@ export class TaskCapture {
   /** The last turn above the input: the newest message and its reply line. */
   lastTurn(): LastTurn | null {
     return this.writer.asks.lastTurn();
+  }
+
+  /** One page of the conversation, newest first (docs/composer.md "The conversation"). */
+  conversation(request?: ConversationPageRequest): ConversationPage {
+    return readConversation(this.writer.db, request);
   }
 
   /** The Firstmate's reply line beside a message, kept for the next launch. */

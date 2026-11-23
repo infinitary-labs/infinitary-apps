@@ -580,7 +580,7 @@ The crewmate may take its request back with `infinitary-browser-axi withdraw`, w
 Once the captain has taken control, both are refused like every other command.
 
 The open-browser action is the captain's own click on the card's chrome: `CardActions.act` refuses it from a body's frame, takes control of the browser the card's attachment names - a newer or older one is never taken - and hands the shell an effect that opens the view, where the row reads `finishing the crewmate's current action…` and then the captain's control.
-It is the one action that does not answer its card: the request stays with the page (`CardActions.openBrowserBesideCard`), and its crewmate is told nothing until the captain returns control.
+It is the one action that does not answer its card: the request stays with the page (`CardBrowserClicks.openBrowserBesideCard`), and its crewmate is told nothing until the captain returns control.
 An app controlling this Mac from another never sends that click: the card stays on both Macs and says to do it on this Mac (`docs/view.md`, "A task's browser on a view").
 When the browser the card names is gone - it stopped, a newer one followed it, or it ended when the app quit - the click answers the card and opens the view, whose line says so over whatever the task's browser is now ("From a card").
 `CrewSupervisor` reads that off the task's browser fact (`attachmentStanding`) at the click, and again once the take or the signed-in site's grant is refused, never off the refusal's words; a request the click left up leaves then.

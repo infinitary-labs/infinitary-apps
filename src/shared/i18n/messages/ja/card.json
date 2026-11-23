@@ -308,6 +308,8 @@
   },
   "cardThreadSettingsNote": "参考として作成者に送られます。返信で作成が承認されることはありません。",
   "cardThreadSettingsSent": "{time} に返信と一緒に設定を送信",
+  "cardThreadWaitReworkAuthor": "回答済みです。{who} が新しいバージョンに合わせてこのカードを更新中で、終わるとあなたのもとに戻ります。",
+  "cardThreadWaitReworkChecks": "回答済みです。新しいバージョンのチェックが実行中で、終わるとこのカードがあなたのもとに戻ります。",
   "cardThreadWhoCaptain": "あなた",
   "cardThreadWhoCrewmate": "乗組員",
   "cardThreadWhoFirstmate": "航海士",

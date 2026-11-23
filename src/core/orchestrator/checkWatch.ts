@@ -155,6 +155,25 @@ export type CheckWatcherHost = {
    * version it covers send the crewmate no wake, so no turn's end runs it.
    */
   runKept?(taskId: string): void;
+  /**
+   * The task's change is its own pushed branch with no pull request, in a
+   * project that merges in batches of its own (INF-6241): the watch reads it
+   * after a turn, when a run watch starts and while its merge card waits on
+   * the version. Absent = no branch-only change is read.
+   */
+  readsBranch?(record: TaskRecord): boolean;
+  /**
+   * A merge card of the task's own change waits under a captain's reply or
+   * is held for its new version's checks (INF-6241): its branch is read on
+   * every tick. Absent = none waits.
+   */
+  versionAwaited?(record: TaskRecord): boolean;
+  /**
+   * The crewmate's turn or one of its background jobs runs (INF-6241): a
+   * read taken then can miss a push that work still makes, so the read
+   * after that work ends is owed again. Absent = never working.
+   */
+  working?(record: TaskRecord): boolean;
 };
 
 type SettledWakeFacts = Extract<WakeFacts, { kind: "checks-settled" }>;
@@ -171,38 +190,104 @@ export class CheckWatcher {
    * one clock the quiet refresh counts from.
    */
   private readonly refreshAfter = new Map<string, number>();
+  /**
+   * Tasks whose newest read started while their crewmate still worked
+   * (`working`): that read settles nothing about a push, so one is owed
+   * once the work ends. In memory: a restart ends every job and turn.
+   */
+  private readonly readWhileWorking = new Set<string>();
 
   constructor(private readonly host: CheckWatcherHost) {}
 
   /** One pass on the shared tick: every watch that is due reads once. */
   async poll(now: number): Promise<void> {
-    const due = this.host.tasks.listLive().filter((record) => {
-      if (this.reading.has(record.id)) return false;
-      const delivery = record.delivery;
-      if (delivery?.ciWatch) return delivery.ciWatch.nextAt <= now;
-      // A named pull request stays monitored until the task closes. Only
-      // its checks skip refresh behind another task (INF-721 friction 6);
-      // its merge can still be confirmed without starting a model turn.
-      if (delivery?.prNumber === undefined) return false;
-      const lastRead = Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0);
-      // A crewmate's turn that ended after the last read may have pushed a
-      // new version from its shell, which tells the app nothing (INF-3092):
-      // the next tick reads it, so an open merge card never stands on the
-      // earlier version's checks until the quiet refresh comes due.
-      const turnSince = record.idleSince != null && record.idleSince > lastRead;
+    const due = this.host.tasks.listLive().filter((record) => this.due(record, now));
+    await Promise.all(due.map((record) => this.pollGuarded(record, now)));
+  }
+
+  /**
+   * Read the task now when the read after its crewmate's turn is still owed
+   * (`afterTurnReadOwed`): a merge card held for that read (INF-6241) then
+   * waits for one forge read, not for the next tick. Answers whether this
+   * call read: a read already out answers false at once, and the pass that
+   * started it rechecks when it ends, so a caller that rechecks on true
+   * never loops on a read that has not come back.
+   */
+  async readAfterTurn(taskId: string, now: number): Promise<boolean> {
+    const record = this.host.tasks.get(taskId);
+    if (!record || TaskService.isClosed(record) || this.reading.has(taskId)) return false;
+    if (!this.afterTurnReadOwed(record)) return false;
+    await this.pollGuarded(record, now);
+    return true;
+  }
+
+  /**
+   * Whether the read after the crewmate's newest turn has not finished
+   * (INF-3092, INF-6241): that turn may have pushed a new version from its
+   * shell, which tells the app nothing until the change is read. A read
+   * that failed counts as done, so a failure holds nothing.
+   */
+  afterTurnReadOwed(record: TaskRecord): boolean {
+    if (this.reading.has(record.id)) return true;
+    if (!this.watchesChange(record) || !this.refreshesChecks(record)) return false;
+    return this.turnSince(record);
+  }
+
+  private due(record: TaskRecord, now: number): boolean {
+    if (this.reading.has(record.id)) return false;
+    const delivery = record.delivery;
+    // A standing watch also reads at once after a turn, which may have
+    // pushed past the head it watches.
+    if (delivery?.ciWatch)
       return (
-        (turnSince || now >= lastRead + CHECK_REFRESH_MS) &&
-        (this.host.reconcileMerged !== undefined || this.refreshesChecks(record))
+        delivery.ciWatch.nextAt <= now || (this.turnSince(record) && this.refreshesChecks(record))
       );
-    });
-    await Promise.all(
-      due.map((record) =>
-        this.pollRecord(record, now).catch((caught: unknown) => {
-          // One task's bookkeeping failing never stops the others' reads.
-          console.warn("[crew] check watch could not read a task:", caught);
-        }),
-      ),
+    if (delivery?.prNumber === undefined) {
+      // A branch-only change has no merge to confirm and no quiet refresh:
+      // it is read when a turn ends, when a run starts on it, and each tick
+      // while its merge card waits on the version.
+      if (!this.watchesChange(record) || !this.refreshesChecks(record)) return false;
+      const lastRead = this.lastRead(record);
+      return (
+        this.turnSince(record) ||
+        (delivery?.runWatches ?? []).some((watch) => watch.since > lastRead) ||
+        (this.host.versionAwaited?.(record) === true && now >= lastRead + CHECK_WATCH_FAST_MS)
+      );
+    }
+    // A named pull request stays monitored until the task closes. Only
+    // its checks skip refresh behind another task (INF-721 friction 6);
+    // its merge can still be confirmed without starting a model turn.
+    // A crewmate's turn that ended after the last read is read on the next
+    // tick (INF-3092), so an open merge card never stands on the earlier
+    // version's checks until the quiet refresh comes due.
+    return (
+      (this.turnSince(record) || now >= this.lastRead(record) + CHECK_REFRESH_MS) &&
+      (this.host.reconcileMerged !== undefined || this.refreshesChecks(record))
     );
+  }
+
+  /** A named pull request, or a branch-only change the app reads (`readsBranch`). */
+  private watchesChange(record: TaskRecord): boolean {
+    const delivery = record.delivery;
+    if (delivery?.ciWatch || delivery?.prNumber !== undefined) return true;
+    return this.host.readsBranch?.(record) === true;
+  }
+
+  private lastRead(record: TaskRecord): number {
+    return Math.max(record.delivery?.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0);
+  }
+
+  /** The crewmate's turn ended, or its work ended, after the newest read. */
+  private turnSince(record: TaskRecord): boolean {
+    if (record.idleSince != null && record.idleSince > this.lastRead(record)) return true;
+    return this.readWhileWorking.has(record.id) && this.host.working?.(record) !== true;
+  }
+
+  private pollGuarded(record: TaskRecord, now: number): Promise<void> {
+    return this.pollRecord(record, now).catch((caught: unknown) => {
+      // One task's bookkeeping failing never stops the others' reads.
+      console.warn("[crew] check watch could not read a task:", caught);
+    });
   }
 
   private refreshesChecks(record: TaskRecord): boolean {
@@ -217,6 +302,8 @@ export class CheckWatcher {
   private async pollRecord(record: TaskRecord, now: number): Promise<void> {
     this.reading.add(record.id);
     this.refreshAfter.set(record.id, now);
+    if (this.host.working?.(record) === true) this.readWhileWorking.add(record.id);
+    else this.readWhileWorking.delete(record.id);
     try {
       if (record.delivery?.prNumber !== undefined && this.host.reconcileMerged) {
         try {
@@ -254,7 +341,14 @@ export class CheckWatcher {
       return;
     }
     // A new push whose checks are running gets the existing bounded watch.
-    if (read.kind === "pending" && read.head !== head) {
+    // On a branch-only change a reading with nothing running - no check
+    // started, or each waiting for a person - arms none (INF-6241): nothing
+    // would end it but its bound.
+    if (
+      read.kind === "pending" &&
+      read.head !== head &&
+      (after.delivery?.prNumber !== undefined || runningCheck(read))
+    ) {
       this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ciWatch: armWatch(undefined, read.head, now),
       });
@@ -564,6 +658,11 @@ export class CheckWatcher {
   private watchOf(taskId: string): CiWatch | undefined {
     return this.host.tasks.get(taskId)?.delivery?.ciWatch;
   }
+}
+
+/** A check the reading saw running or queued, not one waiting for a person to start it. */
+function runningCheck(read: Extract<WatchedReading, { kind: "pending" }>): boolean {
+  return !read.noneStarted && read.pending.some((check) => check.manual !== true);
 }
 
 function sameWatch(a: CiWatch | undefined, b: CiWatch): boolean {

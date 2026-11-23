@@ -1,4 +1,5 @@
 import type { Card } from "@shared/cards";
+import type { ReworkHold } from "./reworkHold";
 
 /**
  * What the stage holds back on one open card for its current lifecycle,
@@ -20,6 +21,12 @@ export type StageHold = {
   answering?: true;
   /** A story note held for its task's merge, not its author (INF-2533). */
   forMerge?: true;
+  /**
+   * A reworked merge card held until its new version's checks end
+   * (INF-6241): the fact that held it last. Derived again from the record
+   * at every close-out, so a restart holds it the same way.
+   */
+  forChecks?: ReworkHold;
 };
 
 type Part = keyof StageHold;
@@ -61,6 +68,11 @@ export class CardStage {
 
   heldBy(writer: string): string[] {
     return [...this.holds].filter(([, hold]) => hold.writer === writer).map(([id]) => id);
+  }
+
+  /** The merge cards held for their new version's checks. */
+  forChecks(): string[] {
+    return [...this.holds].filter(([, hold]) => hold.forChecks).map(([id]) => id);
   }
 
   /** The story notes held for their task's merge. */

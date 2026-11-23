@@ -60,7 +60,9 @@ A refused reply moves nothing and keeps the draft.
 Captain-approved on a board in two rounds on 2026-09-27 ("ship it", verdict "Ship it as recommended"; the decided design is sections 0, 6 and R2 of `fm3000-card-return-closeout-r1/design-excerpt.md`).
 **One rule for every crewmate card** (the captain's Q1 A and Q5 A): a crewmate's card - new, revised, or answered in its thread - reaches the stage at the crewmate's CLOSE-OUT after its last write.
 A new card's close-out is its next `report`, or its idle (its resumable turn ending), whichever comes first.
-The one exception waits for a merge, not its crewmate: the story note of a task that merges on its own stays in its close-out wait until the merge has a result, and shows once with its merged or close line (INF-2533; `docs/card-authoring.md`, "Work that closed without the captain's click").
+Two exceptions wait for something other than their crewmate.
+The story note of a task that merges on its own stays in its close-out wait until the merge has a result, and shows once with its merged or close line (INF-2533; `docs/card-authoring.md`, "Work that closed without the captain's click").
+A merge card the captain replied under whose change moved to a newer version stays in its close-out wait until that version's checks end ("A reworked merge card" below).
 A card the stage has already shown in its lifecycle - one the captain replied under, put aside, or is reading while its crewmate revises it - waits for its crewmate's idle, so it comes back or redraws once, with the last write, never at a report while its crewmate works on (INF-926; INF-797: "it should come back when the crewmate's turn is finished").
 Cancellation and terminal session failure close the task and retire all its open cards, including hidden replies and pending revisions, without releasing them onto the stage.
 Card rows, revisions and threads remain on the record; they do not return after restart.
@@ -159,12 +161,38 @@ The card keeps its place, its thread and its other choices.
 When a published story at the new version exists, the app redraws the same card from it and Merge returns; otherwise the card's author is woken once and its next merge card revises the same card.
 The rules and the click are in `docs/delivery-rigor.md`, "A card behind its change".
 
+## A reworked merge card
+
+INF-6241, the captain's words on INF-6224: "ideally, i want it to come back only after the update has been made, new checks passed, and the card content is already updated".
+A crewmate's merge card for its task's own change, answered under a captain's reply, stays in its close-out wait while its crewmate still works on it, and then while its change is at a newer version than the one the card showed and a fact below holds (`reworkHold` in `reworkHold.ts`, `StageHold.forChecks`):
+
+- `job`: a background job of the crewmate's runs;
+- `turn`: the crewmate's turn is running;
+- `read`: the change has not been read since the crewmate's turn and background jobs ended, so a push from its shell is not known yet; the hold starts that read at once (`CheckWatcher.readAfterTurn`), which starts no second read while one is out;
+- `checks`: a check watch or a run watch stands on the task;
+- `wake`: a wake waits for the crewmate on a lane that can deliver it.
+
+`job` and `turn` hold before the version is compared: a push may still come from that work, and a read taken while it runs can miss it, so only the read after that work ends decides whether the change moved.
+The job hold ends at the background-job bound (`JOB_BOUND_MS`, two hours), as the idle ladder's does: past it, a card with no newer version returns while the job still runs.
+
+The version the card showed is the offer the stage last showed (`CardStore.lastAvailableOffer`); a revision written while the card is held, which INF-834 still takes while checks run, reaches the stage only with its return.
+While held, the stage keeps that version beside its thread, with the host's live facts: Merge off and the line saying a newer version was pushed ("A merge card behind its change"), and the fact strip reading the new version's checks.
+`CardService.recheckHeld` returns the card once nothing holds it - after a record change, after the read, and on every tick - once, unread, with no crewmate turn needed; its `card_raised` event carries `heldFor`, the fact that last held it, and the task's timeline carries one note once the record shows the newer version with its checks watched, never for the crewmate's work or the read alone.
+A reply that pushed nothing returns once the crewmate's turn and background jobs end, within one read of the change.
+A wake the lane cannot deliver holds nothing: a held account, a lane stuck at its provider, a computer out of reach or waiting for its update.
+A project with no checks, or only checks a person starts, arms no watch, so the card returns when the crewmate's turn and background jobs end.
+A failed read holds nothing.
+No words hold or release the card: every fact is typed and read from the record, so a restart derives the same hold.
+Only that card waits: a question card the rework raises arrives at its own close-out, and a second captain reply under the held card waits for its answer as any reply does.
+A merge card with no captain reply, a merge card of a pull request the task reviews, and a card whose offer names another branch never wait this way.
+
 ## The waiting line
 
 FI3-592, grounded on FI3-643 (the captain folded a waiting line for every reason into FI3-592).
 While the captain's line is the newest on a crewmate's card (`awaiting: "answer"`) and its author's turn is not running, the thread's message list ends with one quiet sentence in the app's voice where `working` would be: that the reply is saved, what holds it, who goes next and the way on - for a held account the way back, otherwise "Put the card aside to go on; it comes back when the answer lands."
 (INF-770).
 It is derived, never a message, and the card keeps showing what it showed.
+A reworked merge card the core holds after its author answered (`awaiting: "close-out"` with its reply stamp, and no turn running) ends its thread with its own line: that the reply is answered and the card comes back when the new version's checks finish, or, with no checks running, once its author has updated it ("A reworked merge card" above).
 
 The line reads the task's work posture, the typed state the Tasks dot reads (`WorkPostures.workPosture` in `workPosture.ts`; `threadWait` and `threadWaitWords` in `src/shared/threadWait.ts`), and the task's assignee, both off the sequenced board (`useThreadWait`).
 Nothing reads anyone's words.

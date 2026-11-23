@@ -27,6 +27,7 @@ import { ModelWaitError, NotAcceptedError } from "./taskMoves";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
 import { laneText, laneTurnText, renderWake, type WakeBody } from "./wakes";
+import { mergesInOwnBatch } from "./workShape";
 
 /**
  * The quiet-crewmate watchdog (P4): conservative thresholds, no settings
@@ -108,6 +109,12 @@ export class CrewWatch {
               console.warn("[crew] kept merge after passed checks failed:", caught);
             });
           },
+          readsBranch: (record) => readsOwnBranch(record, this.core),
+          versionAwaited: (record) => this.core.cards.awaitsVersion(record.id),
+          working: (record) =>
+            record.activity === "running" ||
+            this.core.options.hasRunningJobs?.(record.id) === true ||
+            this.core.starts.clientJobStart(record.id) !== undefined,
         })
       : undefined;
     const readMainChecks = options.readMainChecks;
@@ -880,5 +887,49 @@ export class CrewWatch {
       this.mainCheckWake?.poll(now),
     ]);
     this.core.cards.refreshSettleFacts();
+    // A hold whose end writes nothing - a failed read, a lane that can no
+    // longer deliver - ends on the tick (INF-6241).
+    this.core.cards.recheckHeld();
   }
+
+  /**
+   * Whether the read after the task's crewmate's newest turn has not
+   * finished (`CheckWatcher.afterTurnReadOwed`); none is owed where the app
+   * reads no checks.
+   */
+  afterTurnReadOwed(record: TaskRecord): boolean {
+    return this.checkWatch?.afterTurnReadOwed(record) === true;
+  }
+
+  /**
+   * Read the task's change now when its after-turn read is owed, then
+   * return any merge card that read set free (INF-6241).
+   */
+  readAfterTurn(taskId: string): void {
+    const watch = this.checkWatch;
+    if (!watch) return;
+    void watch
+      .readAfterTurn(taskId, this.core.now())
+      .then((read) => {
+        if (!read) return;
+        this.core.cards.refreshSettleFacts([taskId]);
+        this.core.cards.recheckHeld();
+      })
+      .catch((caught: unknown) => {
+        // The tick rechecks every held card, so a failed recheck here holds nothing.
+        console.warn("[crew] could not recheck a held merge card after its read:", caught);
+      });
+  }
+}
+
+/**
+ * The task's own pushed branch with no pull request, in a project that
+ * merges in batches of its own, once a reading has named its version: the
+ * check watch reads it as it reads a pull request (INF-6241).
+ */
+function readsOwnBranch(record: TaskRecord, core: CrewCore): boolean {
+  const delivery = record.delivery;
+  if (!delivery?.headSha || delivery.prNumber !== undefined || delivery.checkTarget) return false;
+  const repo = record.repoId ? core.options.repos.get(record.repoId) : undefined;
+  return mergesInOwnBatch(record, repo);
 }

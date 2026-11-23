@@ -14,7 +14,7 @@ export type ThreadWaitLine = { on: ThreadWait["on"]; hold?: string; text: string
  * change the line with no thread message.
  */
 export function threadWaitLine(
-  card: Pick<Card, "author" | "awaiting" | "taskId">,
+  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt">,
   task: Pick<TaskView, "workPosture" | "assignee"> | undefined,
   now: number,
 ): ThreadWaitLine | undefined {
@@ -28,7 +28,7 @@ export function threadWaitLine(
 }
 
 export function useThreadWait(
-  card: Pick<Card, "author" | "awaiting" | "taskId">,
+  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt">,
 ): ThreadWaitLine | undefined {
   const tasks = useBoardTasks();
   const task = card.taskId ? tasks.find((row) => row.id === card.taskId) : undefined;

@@ -16,6 +16,7 @@
   "taskGroupQueued": "في قائمة الانتظار",
   "taskGroupWaiting": "بانتظارك",
   "taskGroupWorking": "قيد العمل",
+  "taskNoteReworkHeld": "أبقيتُ بطاقة الدمج «{title}» عندي حتى تنتهي فحوصات نسختها الجديدة.",
   "taskPinPin": "تثبيت",
   "taskPinUnpin": "إلغاء التثبيت",
   "taskStatusComputerUpdating": "{computer} قيد التحديث",

@@ -356,6 +356,8 @@
   },
   "cardThreadSettingsNote": "Enviado ao autor como contexto. Uma resposta nunca aprova a construção.",
   "cardThreadSettingsSent": "Ajustes enviados com sua resposta às {time}",
+  "cardThreadWaitReworkAuthor": "Respondido. {who} ainda está atualizando este cartão para a nova versão, e ele volta para você quando terminar.",
+  "cardThreadWaitReworkChecks": "Respondido. As verificações estão em execução na nova versão, e este cartão volta para você quando terminarem.",
   "cardThreadWhoCaptain": "você",
   "cardThreadWhoCrewmate": "tripulante",
   "cardThreadWhoFirstmate": "imediato",

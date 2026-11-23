@@ -506,6 +506,8 @@
 "cardThreadSettingChanged" = "changed";
 "cardThreadSettingsNote" = "Sent to the author as context. A reply never approves building.";
 "cardThreadSettingsSent" = "Settings sent with your reply at %1$@";
+"cardThreadWaitReworkAuthor" = "Answered. %1$@ is still updating this card for the new version, and it comes back to you when that is done.";
+"cardThreadWaitReworkChecks" = "Answered. Checks are running on the new version, and this card comes back to you when they finish.";
 "cardThreadWhoCaptain" = "you";
 "cardThreadWhoCrewmate" = "crew";
 "cardThreadWhoFirstmate" = "mate";
@@ -3934,6 +3936,7 @@
 "taskGroupQueued" = "queued";
 "taskGroupWaiting" = "waiting on you";
 "taskGroupWorking" = "working";
+"taskNoteReworkHeld" = "Kept the merge card “%1$@” from you until its new version's checks end.";
 "taskPinPin" = "Pin";
 "taskPinUnpin" = "Unpin";
 "taskStatusComputerUpdating" = "%1$@ is updating";

@@ -16,6 +16,7 @@
   "taskGroupQueued": "en attente",
   "taskGroupWaiting": "en attente de vous",
   "taskGroupWorking": "en cours",
+  "taskNoteReworkHeld": "Carte de fusion « {title} » gardée de côté jusqu’à la fin des vérifications de sa nouvelle version.",
   "taskPinPin": "Épingler",
   "taskPinUnpin": "Désépingler",
   "taskStatusComputerUpdating": "{computer} se met à jour",

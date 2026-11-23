@@ -16,6 +16,7 @@
   "taskGroupQueued": "na fila",
   "taskGroupWaiting": "aguardando você",
   "taskGroupWorking": "trabalhando",
+  "taskNoteReworkHeld": "Segurei o cartão de mesclagem “{title}” até as verificações da nova versão terminarem.",
   "taskPinPin": "Fixar",
   "taskPinUnpin": "Desafixar",
   "taskStatusComputerUpdating": "{computer} está atualizando",

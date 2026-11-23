@@ -332,6 +332,8 @@
   },
   "cardThreadSettingsNote": "Sent to the author as context. A reply never approves building.",
   "cardThreadSettingsSent": "Settings sent with your reply at {time}",
+  "cardThreadWaitReworkAuthor": "Answered. {who} is still updating this card for the new version, and it comes back to you when that is done.",
+  "cardThreadWaitReworkChecks": "Answered. Checks are running on the new version, and this card comes back to you when they finish.",
   "cardThreadWhoCaptain": "you",
   "cardThreadWhoCrewmate": "crew",
   "cardThreadWhoFirstmate": "mate",

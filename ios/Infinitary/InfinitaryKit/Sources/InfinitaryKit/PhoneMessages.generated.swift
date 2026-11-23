@@ -550,6 +550,8 @@ public enum PhoneMessages {
     public static func `cardThreadSettingsCount`(`count`: Int) -> String { PhoneWords.format("cardThreadSettingsCount", [`count`]) }
     public static func `cardThreadSettingsNote`() -> String { PhoneWords.format("cardThreadSettingsNote", []) }
     public static func `cardThreadSettingsSent`(`time`: String) -> String { PhoneWords.format("cardThreadSettingsSent", [`time`]) }
+    public static func `cardThreadWaitReworkAuthor`(`who`: String) -> String { PhoneWords.format("cardThreadWaitReworkAuthor", [`who`]) }
+    public static func `cardThreadWaitReworkChecks`() -> String { PhoneWords.format("cardThreadWaitReworkChecks", []) }
     public static func `cardThreadWhoCaptain`() -> String { PhoneWords.format("cardThreadWhoCaptain", []) }
     public static func `cardThreadWhoCrewmate`() -> String { PhoneWords.format("cardThreadWhoCrewmate", []) }
     public static func `cardThreadWhoFirstmate`() -> String { PhoneWords.format("cardThreadWhoFirstmate", []) }
@@ -4088,6 +4090,7 @@ public enum PhoneMessages {
     public static func `taskGroupQueued`() -> String { PhoneWords.format("taskGroupQueued", []) }
     public static func `taskGroupWaiting`() -> String { PhoneWords.format("taskGroupWaiting", []) }
     public static func `taskGroupWorking`() -> String { PhoneWords.format("taskGroupWorking", []) }
+    public static func `taskNoteReworkHeld`(`title`: String) -> String { PhoneWords.format("taskNoteReworkHeld", [`title`]) }
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
     public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
@@ -4848,6 +4851,8 @@ extension PhoneWords {
         "cardThreadSettingsCount": ["count"],
         "cardThreadSettingsNote": [],
         "cardThreadSettingsSent": ["time"],
+        "cardThreadWaitReworkAuthor": ["who"],
+        "cardThreadWaitReworkChecks": [],
         "cardThreadWhoCaptain": [],
         "cardThreadWhoCrewmate": [],
         "cardThreadWhoFirstmate": [],
@@ -8386,6 +8391,7 @@ extension PhoneWords {
         "taskGroupQueued": [],
         "taskGroupWaiting": [],
         "taskGroupWorking": [],
+        "taskNoteReworkHeld": ["title"],
         "taskPinPin": [],
         "taskPinUnpin": [],
         "taskStatusComputerUpdating": ["computer"],

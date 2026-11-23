@@ -1,5 +1,7 @@
 {
   "automationEventsSkipped": "Events skipped",
+  "automationLooksFailing": "Every look for new events has failed since {since}, so nothing new reaches your first mate. It runs again by itself once a look works.",
+  "automationLooksFailingAnswer": "The newest answer: {reason}",
   "automationPanelActiveCount": {
     "plural": "count",
     "one": "{count} active",
@@ -29,6 +31,7 @@
   },
   "automationRunSkippedState": "Skipped",
   "automationScreenedNote": "Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.",
+  "automationStateFailing": "Failing",
   "automationWaitsFor": "Only if",
   "automationWaitsForNote": "Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.",
   "automationWaitsForPlaceholder": "Every event"

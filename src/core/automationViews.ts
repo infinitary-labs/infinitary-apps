@@ -39,6 +39,7 @@ export function automationRuleOf(
   const scheduler = services.scheduler;
   const listened = scheduler.listening(record, events);
   const stopped = scheduler.stopped(record, events);
+  const failing = scheduler.lookingFails(record);
   return {
     id: record.id,
     ...(record.name ? { name: record.name } : {}),
@@ -53,5 +54,6 @@ export function automationRuleOf(
     captainRequested: record.captainRequested === true,
     ...(listened ? { when: automationEventWords(listened.label, listened.name) } : {}),
     ...(stopped ? { stopped } : {}),
+    ...(failing ? { failing } : {}),
   };
 }

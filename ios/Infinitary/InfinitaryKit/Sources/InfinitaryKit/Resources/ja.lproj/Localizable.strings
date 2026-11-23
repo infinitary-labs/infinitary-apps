@@ -216,6 +216,8 @@
 "activityPanelLinesLabel" = "アクティビティの行";
 "attachCancelled" = "%1$@ を取り消しました";
 "automationEventsSkipped" = "スキップしたイベント";
+"automationLooksFailing" = "%1$@ から新しいイベントの確認がすべて失敗しているため、一等航海士には何も届いていません。確認が成功すると自動的に再開します。";
+"automationLooksFailingAnswer" = "最新の応答: %1$@";
 "automationPanelEmpty" = "自動化はまだありません";
 "automationPanelKeptHeading" = "継続中のジョブ";
 "automationPanelKeptRow" = "%2$@ · %1$@ · 設定で開く";
@@ -225,6 +227,7 @@
 "automationRunFound" = "見つかったこと: %1$@";
 "automationRunSkippedState" = "スキップ";
 "automationScreenedNote" = "一等航海士には送っていません。判断モデルが、これらのイベントはこの自動化の条件に明らかに当てはまらないと判断しました。";
+"automationStateFailing" = "失敗中";
 "automationWaitsFor" = "条件";
 "automationWaitsForNote" = "一等航海士はこの条件に当てはまるイベントにだけ対応します。設定でイベントの選別がオンのあいだ、この条件に明らかに当てはまらないイベントは一等航海士に届かず、この自動化の履歴には残ります。";
 "automationWaitsForPlaceholder" = "すべてのイベント";

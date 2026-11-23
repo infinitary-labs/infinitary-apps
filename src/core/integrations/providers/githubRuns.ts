@@ -1,4 +1,4 @@
-import type { GithubReadInput } from "../../forge";
+import { ForgeMovedError, type GithubReadInput } from "../../forge";
 import type { IntegrationEventItem, IntegrationEventSpec, IntegrationLook } from "../binding";
 
 /**
@@ -39,6 +39,13 @@ export const GITHUB_RUN_EVENTS: readonly IntegrationEventSpec[] = [
 
 /** A read through the sign-in, answered as the gateway renders it. */
 export type GithubLookRead = (input: GithubReadInput) => Promise<string>;
+
+/**
+ * Where a repository a rule names has moved, by the name as the rule saved
+ * it in lower case: found once from GitHub's redirect, so later looks read
+ * the new address at once rather than being redirected again.
+ */
+export type MovedRepositories = Map<string, string>;
 
 type Run = {
   id: number;
@@ -125,6 +132,8 @@ function workflowMatches(run: Run, workflow: string | undefined): boolean {
  * since the cursor; the cursor moves to the oldest matching run still
  * going, so it is read again until it is told, or else to the newest run
  * listed. A run is told by its id, so the rule's own record never sends it twice.
+ * A repository that moved or was renamed is read at its new address, which
+ * GitHub's redirect names by number (docs/integrations.md, "GitHub's events").
  */
 export async function lookForRuns(
   read: GithubLookRead,
@@ -132,9 +141,10 @@ export async function lookForRuns(
   cursor: string | null,
   filter: Record<string, string> | undefined,
   now: number,
+  moved: MovedRepositories = new Map(),
 ): Promise<IntegrationLook> {
-  const repository = filter?.repository?.trim() ?? "";
-  if (!REPOSITORY.test(repository))
+  const named = filter?.repository?.trim() ?? "";
+  if (!REPOSITORY.test(named))
     throw new Error("Name the repository as owner/name to listen to its workflow runs.");
   const workflow = filter?.workflow?.trim() || undefined;
   const branch = filter?.branch?.trim() || undefined;
@@ -145,18 +155,30 @@ export async function lookForRuns(
       items: [],
       ...(cursor === null ? {} : { resynced: true }),
     };
-  const base = `/repos/${repository}`;
   const query = new URLSearchParams({
     per_page: "10",
     exclude_pull_requests: "true",
     created: `>=${since}`,
   });
   if (branch) query.set("branch", branch);
-  const runs = await every<Run>(
-    read,
-    `${base}/actions/runs?${query}`,
-    (body) => (body as { workflow_runs?: Run[] })?.workflow_runs,
-  );
+  const list = (repository: string) =>
+    every<Run>(
+      read,
+      `/repos/${repository}/actions/runs?${query}`,
+      (body) => (body as { workflow_runs?: Run[] })?.workflow_runs,
+    );
+  let repository = moved.get(named.toLowerCase()) ?? named;
+  let runs: Run[];
+  try {
+    runs = await list(repository);
+  } catch (error) {
+    const current = error instanceof ForgeMovedError ? await movedTo(read, error.path) : undefined;
+    if (!current || current.toLowerCase() === repository.toLowerCase()) throw error;
+    moved.set(named.toLowerCase(), current);
+    repository = current;
+    runs = await list(repository);
+  }
+  const base = `/repos/${repository}`;
   const items: IntegrationEventItem[] = [];
   const going: string[] = [];
   for (const run of runs) {
@@ -195,6 +217,15 @@ export async function lookForRuns(
   const listed = runs.map((run) => run.created_at).sort();
   const next = going.sort()[0] ?? listed.at(-1) ?? since;
   return { cursor: cursorOf(next), items };
+}
+
+/** A moved repository's owner/name now, read from the number its redirect named. */
+async function movedTo(read: GithubLookRead, path: string): Promise<string | undefined> {
+  const number = path.match(/^\/repositories\/(\d+)/)?.[1];
+  if (!number) return undefined;
+  const page = await get(read, `/repositories/${number}`);
+  const name = (page.body as { full_name?: unknown })?.full_name;
+  return typeof name === "string" && REPOSITORY.test(name) ? name : undefined;
 }
 
 async function failedJobs(read: GithubLookRead, base: string, runId: number): Promise<Job[]> {

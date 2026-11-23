@@ -67965,6 +67965,21 @@
                     },
                     "stopped": {
                       "type": "string"
+                    },
+                    "failing": {
+                      "type": "object",
+                      "properties": {
+                        "since": {
+                          "type": "number"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "since",
+                        "reason"
+                      ]
                     }
                   },
                   "required": [
@@ -68201,6 +68216,21 @@
                     },
                     "stopped": {
                       "type": "string"
+                    },
+                    "failing": {
+                      "type": "object",
+                      "properties": {
+                        "since": {
+                          "type": "number"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "since",
+                        "reason"
+                      ]
                     }
                   },
                   "required": [
@@ -68949,6 +68979,21 @@
           },
           "stopped": {
             "type": "string"
+          },
+          "failing": {
+            "type": "object",
+            "properties": {
+              "since": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "since",
+              "reason"
+            ]
           }
         },
         "required": [
@@ -69188,6 +69233,21 @@
           },
           "stopped": {
             "type": "string"
+          },
+          "failing": {
+            "type": "object",
+            "properties": {
+              "since": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "since",
+              "reason"
+            ]
           }
         },
         "required": [

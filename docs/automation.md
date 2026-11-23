@@ -164,7 +164,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   A run keeps the events it carried by their ids (`schedule_runs.events`), and an event a run of the rule already carried is never sent again, even when a look overlaps.
 - While the rule's delivery waits unsent, new events fold into it as scheduled occurrences do: the message is rewritten with every event and says more arrived while it waited.
 - A cursor the integration lost (a mail history that expired, a file cut short) answers `resynced`: the rule listens again from now, sends nothing for the gap, and the feed says so.
-- A paused, signed-out or removed integration answers no look; the rule keeps its place and waits.
+- A paused, signed-out or removed integration answers no look; the rule keeps its place and waits without looking, and none of that time counts as failed looks ("When every look fails").
 - A rule keeps which connection its integration's id stood for when it was pointed there (`schedules.event_connection`; `docs/integrations.md`, "Which connection"), and looks only while the id still stands for it.
   Once that connection is removed or replaced - the same id signed in as another account, or another server added under the same name - the rule waits, and Settings and the rule's `stopped` say why; a rule saved before rules kept a connection waits the same way.
   An edit that keeps the integration and event keeps the connection, so nothing moves a rule onto a replacement unasked.
@@ -176,6 +176,17 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 - Settings → Automation's When offers "When something happens" while a connected integration declares an event, with a second choice listing each one; the first mate passes `on_event` (`integration/event`) to `schedule_prompt`.
   Its description tells it to wait on an event when an integration's event announces what the captain asked to hear about, such as a workflow run finishing, rather than make a clock rule that checks.
   A recurring rule the first mate makes outside a captain's turn waits as a draft, as any does.
+
+### When every look fails
+
+A look that fails, because the integration answered with an error, changes nothing on its own: the rule keeps its place and looks again at its cadence.
+The Scheduler counts each turned-on rule's failed looks in a row, and the first look that answers clears them (`lookFailed` and `lookingFails` on the Scheduler).
+Once a rule's row spans an hour of ticks (`LOOKS_FAILING_TICKS`, counted in ticks as the cadence is) and holds at least two failed looks, the rule shows as failing: `automation.list` carries `failing` on it, with when the first failed look was and what the newest one answered, cut short.
+Settings → Automation and the phone's Settings read it as Failing, with a red dot and a line in the rule's sheet saying since when nothing new has reached the first mate, the newest answer, and that it runs again by itself once a look works.
+The rule's saved state stays `enabled` and it keeps looking, so a source that answers again needs nothing from the person.
+The first mate hears of it once, in an `automation-looks-failing` wake naming the rule, the integration and event, since when, how many looks failed and the newest answer as words from outside; it tells the captain on a note, or offers a fix it can make itself.
+The wake's `once` names the rule's revision and place, so a restart, which starts the count again, tells nothing new about a rule that has neither changed nor moved.
+Pausing, editing, deleting or signing out ends the row.
 
 ### The event screen
 

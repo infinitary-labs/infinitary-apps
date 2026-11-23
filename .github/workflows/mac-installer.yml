@@ -98,6 +98,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Isolate the signing home
         run: |
+          echo "INSTALLER_RUNNER_HOME=$HOME" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/installer-home"
           echo "HOME=$RUNNER_TEMP/installer-home" >> "$GITHUB_ENV"
           echo "CFFIXED_USER_HOME=$RUNNER_TEMP/installer-home" >> "$GITHUB_ENV"
@@ -114,6 +115,7 @@ jobs:
       # GitHub's release server").
       - uses: ./.github/actions/electron-builder-tools
       - name: Build and notarize the verification copies without publishing
+        id: fixtures
         env:
           APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -125,12 +127,6 @@ jobs:
         uses: ./.github/actions/electron-builder-tools
         with:
           save: 'true'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: signed-installer-fixtures
-          path: ${{ runner.temp }}/installer-fixtures
-          retention-days: 1
-          compression-level: 0
       - name: Remove the disposable signing material
         if: always() && steps.isolation.outcome == 'success'
         run: node scripts/installer-signing.mjs clean
@@ -141,14 +137,51 @@ jobs:
           name: installer-build-evidence
           path: ${{ runner.temp }}/installer-build-evidence
           if-no-files-found: ignore
+      # A fresh build checks its copies here, on the Mac that built them,
+      # once the signing material is gone. Handing them to another job meant
+      # uploading 3.7 GB over the Mac mini's 4.5 MB/s uplink and downloading
+      # them back, about 23 minutes a check, while the build's place kept
+      # the release's signing job waiting (docs/alpha.md, "Isolated signed
+      # verification").
+      - name: Confirm the native architecture
+        run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'
+      - name: Verify native updates without Homebrew, then signed cask updates
+        id: installed
+        timeout-minutes: 60
+        env:
+          INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/installer-evidence
+        # The runner's own home again, without the signing home's variables:
+        # the check makes its own scratch home for the installed app.
+        run: >-
+          env -u CFFIXED_USER_HOME -u INFINITARY_LOCAL_CODESIGN_DIR -u CSC_KEYCHAIN -u APPLE_API_KEY
+          HOME="$INSTALLER_RUNNER_HOME" node scripts/check-installed-updates.mjs
+      - name: Keep the observed results
+        if: ${{ always() && steps.fixtures.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: installer-evidence-arm64
+          path: ${{ runner.temp }}/installer-evidence
+          if-no-files-found: error
+      # Only a failed check needs the copies again: its repair may reuse them
+      # without another signing (scripts/installer-reuse.ts).
+      - name: Keep the signed copies for a reuse
+        if: ${{ failure() && steps.fixtures.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: signed-installer-fixtures
+          path: ${{ runner.temp }}/installer-fixtures
+          retention-days: 1
+          compression-level: 0
 
   # Apple silicon only (INF-5571, the captain's choice): no Intel Mac runs
   # the installed check; Intel stays a best-effort side effect of the
   # universal build, as for the release's update check (docs/alpha.md).
+  # A fresh build checks its own copies; this job checks reused ones.
   installed:
     name: ${{ format('{0} · Install and update (Mac; Apple silicon)', inputs.trigger) }}
     needs: build
-    if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.reuse != '' && needs.build.result == 'skipped')) }}
+    if: ${{ !cancelled() && inputs.reuse != '' && needs.build.result == 'skipped' }}
     runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 60
     # The cut's stop's group, as the build's.
@@ -182,18 +215,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Confirm the native architecture
         run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-        # Version 8.0.2 gives up on a transfer that stalls for 30 seconds and
-        # fetches it again, and fails on a differing digest. The older pin cut
-        # a stalled transfer off without failing, so its step passed with the
-        # copies half unpacked (alpha from main run 18's second try).
-        if: ${{ inputs.reuse == '' }}
-        with:
-          name: signed-installer-fixtures
-          path: ${{ runner.temp }}/installer-fixtures
       - name: Verify and reuse the original signed copies without signing
         id: reuse
-        if: ${{ inputs.reuse != '' }}
         env:
           INSTALLER_REUSE: ${{ inputs.reuse }}
           INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures

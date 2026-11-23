@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "installer-check-on-build-mac",
+      "reason": "This change makes the signed installer release check verify its copies on the Mac that built them; it does not change the app."
+    }
+  ]
+}

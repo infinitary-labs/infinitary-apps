@@ -109,6 +109,17 @@ It checks out only its script from the default branch, never the pull request's 
 Started by hand with a pull request number, it reads any pull request of the project; on one of the project's own it writes its verdict to the job summary alone, so the reading can be proved without changing that pull request's status.
 `tests/careful-review-check.test.ts` holds each of these.
 
+### The pull request event policy
+
+GitHub blocks `pull_request_target` in every public project from December 2, 2026 unless an Actions event policy allows it, and a blocked run fails without starting its job.
+The check-file flag, the agreement check and the Careful review check all start on it, and the branch rule on `main` requires the statuses of the last two, so without a policy every merge to `main` would wait, the swept batch's included.
+The project keeps one repository Actions policy, "From-main pull request checks", whose body is `.github/actions-event-policy.json`: active, targeting those three workflow files by exact path, and allowing only the events they start on, `pull_request_target`, `issue_comment` and `workflow_dispatch`.
+A policy is an allowlist: a workflow it targets starts only on an event it names, and every other start fails at GitHub with nothing in the workflow file to show why.
+So a new trigger on one of those files, or a new workflow on `pull_request_target`, changes the file and the policy on GitHub in the same change; `tests/actions-event-policy.test.ts` holds the file to the workflows.
+Update the policy from the file with `PUT /repos/{owner}/{repo}/actions/policies/{policy_id}`, or under Settings, Actions, Policies, and read it back with `GET /repos/{owner}/{repo}/actions/policies`, which also lists any policy set above the project.
+GitHub's evaluate mode, which only records what a policy would block, is for Enterprise plans alone, so the policy is active from its creation.
+Workflows the policy does not target stay unrestricted, and none of them starts on `pull_request_target`.
+
 ## Release environments
 
 At the destination, configure branch rules allowing only `main` on `desktop-release`, `mac-installer-signing`, `ios-release`, `docs-site` and `release-announcement`, and on `windows-signing` if Windows signing is enabled.

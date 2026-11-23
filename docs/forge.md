@@ -1164,7 +1164,7 @@ The first pass after a start reconciles each open batch from the host: a pull re
 Another person's pull request is untouched: one the captain reviews merges as its own pull request through the merge review ("A requested merge").
 It merges at the captain's click and joins no batch, and so does a contribution through a fork (`ChangeContext.ownBatch`).
 
-Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts`; `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
+Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` (real git against a bare repository) and `batches.test.ts` and `batches.held.test.ts`; `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
 
 ### A generated commit
 

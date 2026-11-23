@@ -235,7 +235,7 @@
   {"said":{"m":"automationRunSkipped","a":{"count":1234,"date":"‹date›"}},"words":"1,234 events, ‹date›"},
   {"said":{"m":"automationRunSkippedState"},"words":"Skipped"},
   {"said":{"m":"automationScreenedNote"},"words":"Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition."},
-  {"said":{"m":"automationStateStopped"},"words":"Stopped"},
+  {"said":{"m":"automationStateFailing"},"words":"Failing"},
   {"said":{"m":"automationWaitsFor"},"words":"Only if"},
   {"said":{"m":"automationWaitsForNote"},"words":"Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history."},
   {"said":{"m":"automationWaitsForPlaceholder"},"words":"Every event"},

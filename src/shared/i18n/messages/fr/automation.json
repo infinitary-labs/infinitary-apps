@@ -35,7 +35,7 @@
   },
   "automationRunSkippedState": "Ignoré",
   "automationScreenedNote": "Non envoyé à votre second : le modèle de décision a lu ces événements comme ne remplissant clairement pas la condition Seulement si de cette automatisation.",
-  "automationStateStopped": "Arrêtée",
+  "automationStateFailing": "En échec",
   "automationWaitsFor": "Seulement si",
   "automationWaitsForNote": "Votre second n’agit que sur les événements qui remplissent cette condition. Tant que le tri des événements est activé dans les Réglages, un événement qui ne remplit clairement pas cette condition ne passe pas par votre second et reste listé dans l’historique de cette automatisation.",
   "automationWaitsForPlaceholder": "Chaque événement"

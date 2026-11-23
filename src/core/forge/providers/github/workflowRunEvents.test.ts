@@ -479,7 +479,7 @@ describe("GitHub's workflow run events (INF-2146)", () => {
     expect(scheduler.lookingFails(scheduler.rule(record.id))).toBeUndefined();
   });
 
-  it("shows a rule as stopped once every look has failed for an hour, and tells the first mate once", async () => {
+  it("shows a rule as failing once every look has failed for an hour, and tells the first mate once", async () => {
     const { github, tick, restart, served, rule, scheduler } = await setup();
     const record = rule("workflow_run_failed", MAIN_VERIFY);
     await tick();

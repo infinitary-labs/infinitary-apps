@@ -31,7 +31,7 @@
   },
   "automationRunSkippedState": "Skipped",
   "automationScreenedNote": "Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.",
-  "automationStateStopped": "Stopped",
+  "automationStateFailing": "Failing",
   "automationWaitsFor": "Only if",
   "automationWaitsForNote": "Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.",
   "automationWaitsForPlaceholder": "Every event"

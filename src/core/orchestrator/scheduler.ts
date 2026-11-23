@@ -180,7 +180,7 @@ const TICK_MS = 60 * 1000;
 
 /**
  * An event rule whose every look failed across this many ticks, an hour on
- * the minute tick, shows as stopped and the first mate hears of it once
+ * the minute tick, shows as failing and the first mate hears of it once
  * (docs/automation.md, "When every look fails"). Counted in ticks, as a
  * rule's cadence is, so a development run's shortened tick gets there sooner.
  */
@@ -612,7 +612,7 @@ export class Scheduler {
   /**
    * One more failed look in the rule's row (docs/automation.md, "When every
    * look fails"). Once the row spans `LOOKS_FAILING_TICKS` the rule shows as
-   * stopped, and the first mate hears of it once: `once` names the rule's
+   * failing, and the first mate hears of it once: `once` names the rule's
    * revision and place, so a restart that starts the row again tells nothing
    * new about a rule that has not moved.
    */
@@ -636,7 +636,7 @@ export class Scheduler {
     row.lastTick = this.ticks;
     row.reason = cutText(error instanceof Error ? error.message : String(error), FAILURE_EXCERPT);
     this.failedLooks.set(record.id, row);
-    if (row.told || !this.stoppedByLooks(row)) return;
+    if (row.told || !this.failingByLooks(row)) return;
     const current = this.options.store.get(record.id);
     if (current?.state !== "enabled" || current.revision !== record.revision) return;
     row.told = true;
@@ -660,9 +660,9 @@ export class Scheduler {
   /**
    * Each failed look stands for its whole cadence, so thirty looks two ticks
    * apart are the hour; read at the newest failed look, so the rule turns
-   * stopped only when a look fails, the moment the first mate is told.
+   * failing only when a look fails, the moment the first mate is told.
    */
-  private stoppedByLooks(row: FailedLooks): boolean {
+  private failingByLooks(row: FailedLooks): boolean {
     return (
       row.looks >= LOOKS_FAILING_LOOKS &&
       row.lastTick - row.sinceTick + row.every >= LOOKS_FAILING_TICKS
@@ -679,7 +679,7 @@ export class Scheduler {
   ): { since: number; reason: string } | undefined {
     const row = this.failedLooks.get(record.id);
     if (record.state !== "enabled" || !row || row.revision !== record.revision) return undefined;
-    return this.stoppedByLooks(row) ? { since: row.since, reason: row.reason } : undefined;
+    return this.failingByLooks(row) ? { since: row.since, reason: row.reason } : undefined;
   }
 
   listeners(integration: string): number {

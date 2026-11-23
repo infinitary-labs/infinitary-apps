@@ -31,7 +31,7 @@
   },
   "automationRunSkippedState": "Übersprungen",
   "automationScreenedNote": "Nicht an deinen ersten Offizier gesendet: Das Entscheidungsmodell hat diese Ereignisse als eindeutig nicht passend zur Nur-wenn-Bedingung dieser Automatisierung gelesen.",
-  "automationStateStopped": "Angehalten",
+  "automationStateFailing": "Schlägt fehl",
   "automationWaitsFor": "Nur wenn",
   "automationWaitsForNote": "Dein erster Offizier handelt nur bei Ereignissen, die dies erfüllen. Solange die Ereignisprüfung in den Einstellungen an ist, überspringt ein Ereignis, das dies eindeutig nicht erfüllt, deinen ersten Offizier und steht weiter im Verlauf dieser Automatisierung.",
   "automationWaitsForPlaceholder": "Jedes Ereignis"

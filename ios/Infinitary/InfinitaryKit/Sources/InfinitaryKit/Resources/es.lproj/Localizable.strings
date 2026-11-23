@@ -225,7 +225,7 @@
 "automationRunFound" = "Encontrado: %1$@";
 "automationRunSkippedState" = "Omitido";
 "automationScreenedNote" = "No se envió a tu primer oficial: el modelo de decisión leyó estos eventos como claramente fuera de la condición Solo si de esta automatización.";
-"automationStateStopped" = "Detenida";
+"automationStateFailing" = "Con fallos";
 "automationWaitsFor" = "Solo si";
 "automationWaitsForNote" = "Tu primer oficial solo actúa ante los eventos que cumplen esto. Mientras el filtro de eventos esté activado en Configuración, un evento que claramente no cumple esto no llega a tu primer oficial y sigue en el historial de esta automatización.";
 "automationWaitsForPlaceholder" = "Cada evento";

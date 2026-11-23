@@ -181,8 +181,8 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 
 A look that fails, because the integration answered with an error, changes nothing on its own: the rule keeps its place and looks again at its cadence.
 The Scheduler counts each turned-on rule's failed looks in a row, and the first look that answers clears them (`lookFailed` and `lookingFails` on the Scheduler).
-Once a rule's row spans an hour of ticks (`LOOKS_FAILING_TICKS`, counted in ticks as the cadence is) and holds at least two failed looks, the rule shows as stopped: `automation.list` carries `failing` on it, with when the first failed look was and what the newest one answered, cut short.
-Settings → Automation and the phone's Settings read it as Stopped, with a warning dot and a line in the rule's sheet saying since when nothing new has reached the first mate, the newest answer, and that it runs again by itself once a look works.
+Once a rule's row spans an hour of ticks (`LOOKS_FAILING_TICKS`, counted in ticks as the cadence is) and holds at least two failed looks, the rule shows as failing: `automation.list` carries `failing` on it, with when the first failed look was and what the newest one answered, cut short.
+Settings → Automation and the phone's Settings read it as Failing, with a red dot and a line in the rule's sheet saying since when nothing new has reached the first mate, the newest answer, and that it runs again by itself once a look works.
 The rule's saved state stays `enabled` and it keeps looking, so a source that answers again needs nothing from the person.
 The first mate hears of it once, in an `automation-looks-failing` wake naming the rule, the integration and event, since when, how many looks failed and the newest answer as words from outside; it tells the captain on a note, or offers a fix it can make itself.
 The wake's `once` names the rule's revision and place, so a restart, which starts the count again, tells nothing new about a rule that has neither changed nor moved.

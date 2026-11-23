@@ -11481,32 +11481,32 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.`;
   }
-  function automationStateStopped() {
+  function automationStateFailing() {
     switch (currentLanguage()) {
       case "ar":
-        return `متوقفة`;
+        return `تفشل`;
       case "de":
-        return `Angehalten`;
+        return `Schlägt fehl`;
       case "es":
-        return `Detenida`;
+        return `Con fallos`;
       case "fr":
-        return `Arrêtée`;
+        return `En échec`;
       case "ja":
-        return `停止中`;
+        return `失敗中`;
       case "ko":
-        return `멈춤`;
+        return `실패 중`;
       case "pt-BR":
-        return `Parada`;
+        return `Com falha`;
       case "zh-Hans":
-        return `已停止`;
+        return `失败中`;
       case "zh-Hant":
-        return `已停止`;
+        return `失敗中`;
       case "en-XA":
-        return `[Šţöþþéð ~~~]`;
+        return `[Ƒáîļîñĝ ~~~]`;
       case "ar-XB":
-        return `‮Stopped‬`;
+        return `‮Failing‬`;
     }
-    return `Stopped`;
+    return `Failing`;
   }
   function automationWaitsFor() {
     switch (currentLanguage()) {
@@ -99026,7 +99026,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     automationRunSkipped,
     automationRunSkippedState,
     automationScreenedNote,
-    automationStateStopped,
+    automationStateFailing,
     automationWaitsFor,
     automationWaitsForNote,
     automationWaitsForPlaceholder,
@@ -102220,7 +102220,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "automationRunSkipped": ["count", "date"],
     "automationRunSkippedState": [],
     "automationScreenedNote": [],
-    "automationStateStopped": [],
+    "automationStateFailing": [],
     "automationWaitsFor": [],
     "automationWaitsForNote": [],
     "automationWaitsForPlaceholder": [],

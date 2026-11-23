@@ -237,7 +237,7 @@ public enum PhoneMessages {
     public static func `automationRunSkipped`(`count`: Int, `date`: String) -> String { PhoneWords.format("automationRunSkipped", [`count`, `date`]) }
     public static func `automationRunSkippedState`() -> String { PhoneWords.format("automationRunSkippedState", []) }
     public static func `automationScreenedNote`() -> String { PhoneWords.format("automationScreenedNote", []) }
-    public static func `automationStateStopped`() -> String { PhoneWords.format("automationStateStopped", []) }
+    public static func `automationStateFailing`() -> String { PhoneWords.format("automationStateFailing", []) }
     public static func `automationWaitsFor`() -> String { PhoneWords.format("automationWaitsFor", []) }
     public static func `automationWaitsForNote`() -> String { PhoneWords.format("automationWaitsForNote", []) }
     public static func `automationWaitsForPlaceholder`() -> String { PhoneWords.format("automationWaitsForPlaceholder", []) }
@@ -4513,7 +4513,7 @@ extension PhoneWords {
         "automationRunSkipped": ["count", "date"],
         "automationRunSkippedState": [],
         "automationScreenedNote": [],
-        "automationStateStopped": [],
+        "automationStateFailing": [],
         "automationWaitsFor": [],
         "automationWaitsForNote": [],
         "automationWaitsForPlaceholder": [],

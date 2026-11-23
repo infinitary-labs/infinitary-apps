@@ -47,7 +47,7 @@
   },
   "automationRunSkippedState": "متخطّى",
   "automationScreenedNote": "لم تُرسل إلى نائب القبطان: قرأ نموذج القرارات هذه الأحداث على أنها بوضوح لا تحقق شرط «فقط إذا» في هذه الأتمتة.",
-  "automationStateStopped": "متوقفة",
+  "automationStateFailing": "تفشل",
   "automationWaitsFor": "فقط إذا",
   "automationWaitsForNote": "لا يتصرف نائب القبطان إلا في الأحداث التي تحقق هذا الشرط. ما دام فرز الأحداث مفعّلًا في الإعدادات، فإن الحدث الذي لا يحقق هذا الشرط بوضوح لا يصل إلى نائب القبطان ويبقى مدرجًا في سجل هذه الأتمتة.",
   "automationWaitsForPlaceholder": "كل حدث"

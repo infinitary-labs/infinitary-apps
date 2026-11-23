@@ -26,20 +26,20 @@ export const AUTOMATION_STATE_TONES: Record<AutomationState, "ok" | "idle" | "ri
 
 /**
  * A rule's state where it shows: a turned-on event rule whose every look
- * failed for an hour reads as stopped (docs/automation.md, "When every look
+ * failed for an hour reads as failing (docs/automation.md, "When every look
  * fails"), whatever its saved state says.
  */
 export function automationStateWords(rule: Pick<AutomationRule, "state" | "failing">): string {
-  return rule.failing ? m.automationStateStopped() : AUTOMATION_STATE_WORDS[rule.state];
+  return rule.failing ? m.automationStateFailing() : AUTOMATION_STATE_WORDS[rule.state];
 }
 
 export function automationStateTone(
   rule: Pick<AutomationRule, "state" | "failing">,
-): "ok" | "idle" | "ring" | "warn" {
-  return rule.failing ? "warn" : AUTOMATION_STATE_TONES[rule.state];
+): "ok" | "idle" | "ring" | "danger" {
+  return rule.failing ? "danger" : AUTOMATION_STATE_TONES[rule.state];
 }
 
-/** Why a stopped rule gets nothing new, as its sheet says it: since when, then the newest answer. */
+/** Why a failing rule gets nothing new, as its sheet says it: since when, then the newest answer. */
 export function automationLooksFailingWords(
   failing: NonNullable<AutomationRule["failing"]>,
 ): [string, string] {

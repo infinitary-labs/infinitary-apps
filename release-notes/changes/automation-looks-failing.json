@@ -3,13 +3,13 @@
     {
       "id": "automation-looks-failing",
       "kind": "improvement",
-      "title": "An automation that cannot check for events shows as stopped",
-      "body": "When every check an automation makes for new events has failed for an hour, Settings shows it as Stopped with the newest answer, and your first mate tells you once. It runs again by itself once a check works. Automations that watch GitHub also follow a repository that was renamed or moved.",
+      "title": "An automation that cannot check for events shows as failing",
+      "body": "When every check an automation makes for new events has failed for an hour, Settings shows it as Failing in red with the newest answer, and your first mate tells you once. It runs again by itself once a check works. Automations that watch GitHub also follow a repository that was renamed or moved.",
       "area": "settings",
       "picture": {
         "dark": "automation-looks-failing-dark.webp",
         "light": "automation-looks-failing-light.webp",
-        "alt": "Settings, Automation tab, with an automation marked Stopped and a note saying every look for new events has failed since a time, followed by the newest answer"
+        "alt": "Settings, Automation tab, with an automation marked Failing in red and a note saying every look for new events has failed since a time, followed by the newest answer"
       },
       "provenance": { "origin": "change" }
     }

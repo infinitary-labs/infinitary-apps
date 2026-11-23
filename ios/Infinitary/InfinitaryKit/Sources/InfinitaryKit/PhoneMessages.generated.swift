@@ -635,6 +635,8 @@ public enum PhoneMessages {
     public static func `commandComputersPrevious`() -> String { PhoneWords.format("commandComputersPrevious", []) }
     public static func `commandDevicesTryAgain`() -> String { PhoneWords.format("commandDevicesTryAgain", []) }
     public static func `commandDevicesTryAgainWords`() -> String { PhoneWords.format("commandDevicesTryAgainWords", []) }
+    public static func `commandFeedbackStart`() -> String { PhoneWords.format("commandFeedbackStart", []) }
+    public static func `commandFeedbackStartWords`() -> String { PhoneWords.format("commandFeedbackStartWords", []) }
     public static func `commandFirstmateReply`() -> String { PhoneWords.format("commandFirstmateReply", []) }
     public static func `commandFirstmateReplyWords`() -> String { PhoneWords.format("commandFirstmateReplyWords", []) }
     public static func `commandFocusCardActions`() -> String { PhoneWords.format("commandFocusCardActions", []) }
@@ -746,6 +748,7 @@ public enum PhoneMessages {
     public static func `commandWhatsNewShowWords`() -> String { PhoneWords.format("commandWhatsNewShowWords", []) }
     public static func `composerFolderNotProject`() -> String { PhoneWords.format("composerFolderNotProject", []) }
     public static func `composerFolderProject`() -> String { PhoneWords.format("composerFolderProject", []) }
+    public static func `composerHintFeedback`(`command`: String) -> String { PhoneWords.format("composerHintFeedback", [`command`]) }
     public static func `composerLines`(`count`: Int) -> String { PhoneWords.format("composerLines", [`count`]) }
     public static func `composerTooLongShorten`() -> String { PhoneWords.format("composerTooLongShorten", []) }
     public static func `composerWordsOnly`() -> String { PhoneWords.format("composerWordsOnly", []) }
@@ -1032,6 +1035,12 @@ public enum PhoneMessages {
     public static func `feedUndelivered`(`why`: String) -> String { PhoneWords.format("feedUndelivered", [`why`]) }
     public static func `feedUpdated`(`text`: String) -> String { PhoneWords.format("feedUpdated", [`text`]) }
     public static func `feedYouChose`(`choice`: String) -> String { PhoneWords.format("feedYouChose", [`choice`]) }
+    public static func `feedbackStripAccount`(`login`: String) -> String { PhoneWords.format("feedbackStripAccount", [`login`]) }
+    public static func `feedbackStripBug`() -> String { PhoneWords.format("feedbackStripBug", []) }
+    public static func `feedbackStripComment`(`number`: String) -> String { PhoneWords.format("feedbackStripComment", [`number`]) }
+    public static func `feedbackStripHeading`(`place`: String) -> String { PhoneWords.format("feedbackStripHeading", [`place`]) }
+    public static func `feedbackStripIdea`() -> String { PhoneWords.format("feedbackStripIdea", []) }
+    public static func `feedbackStripNoAccount`() -> String { PhoneWords.format("feedbackStripNoAccount", []) }
     public static func `fileAdd`() -> String { PhoneWords.format("fileAdd", []) }
     public static func `fileCancel`(`name`: String) -> String { PhoneWords.format("fileCancel", [`name`]) }
     public static func `fileDropHere`() -> String { PhoneWords.format("fileDropHere", []) }
@@ -1322,6 +1331,7 @@ public enum PhoneMessages {
     public static func `menuHelp`() -> String { PhoneWords.format("menuHelp", []) }
     public static func `menuKeyboardSettings`() -> String { PhoneWords.format("menuKeyboardSettings", []) }
     public static func `menuResetAllKeys`() -> String { PhoneWords.format("menuResetAllKeys", []) }
+    public static func `menuSendFeedback`() -> String { PhoneWords.format("menuSendFeedback", []) }
     public static func `menuSettings`() -> String { PhoneWords.format("menuSettings", []) }
     public static func `menuWhatsNew`() -> String { PhoneWords.format("menuWhatsNew", []) }
     public static func `mergeButtonAfterFixing`() -> String { PhoneWords.format("mergeButtonAfterFixing", []) }
@@ -4835,6 +4845,8 @@ extension PhoneWords {
         "commandComputersPrevious": [],
         "commandDevicesTryAgain": [],
         "commandDevicesTryAgainWords": [],
+        "commandFeedbackStart": [],
+        "commandFeedbackStartWords": [],
         "commandFirstmateReply": [],
         "commandFirstmateReplyWords": [],
         "commandFocusCardActions": [],
@@ -4946,6 +4958,7 @@ extension PhoneWords {
         "commandWhatsNewShowWords": [],
         "composerFolderNotProject": [],
         "composerFolderProject": [],
+        "composerHintFeedback": ["command"],
         "composerLines": ["count"],
         "composerTooLongShorten": [],
         "composerWordsOnly": [],
@@ -5232,6 +5245,12 @@ extension PhoneWords {
         "feedUndelivered": ["why"],
         "feedUpdated": ["text"],
         "feedYouChose": ["choice"],
+        "feedbackStripAccount": ["login"],
+        "feedbackStripBug": [],
+        "feedbackStripComment": ["number"],
+        "feedbackStripHeading": ["place"],
+        "feedbackStripIdea": [],
+        "feedbackStripNoAccount": [],
         "fileAdd": [],
         "fileCancel": ["name"],
         "fileDropHere": [],
@@ -5522,6 +5541,7 @@ extension PhoneWords {
         "menuHelp": [],
         "menuKeyboardSettings": [],
         "menuResetAllKeys": [],
+        "menuSendFeedback": [],
         "menuSettings": [],
         "menuWhatsNew": [],
         "mergeButtonAfterFixing": [],

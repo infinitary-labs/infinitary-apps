@@ -1,6 +1,7 @@
 {
   "composerFolderNotProject": "تعذّرت إضافة هذا المجلد كمشروع.",
   "composerFolderProject": "هذا المجلد من مشاريعك بالفعل.",
+  "composerHintFeedback": "{command}: أخبر صانعي Infinitary بمشكلة أو فكرة",
   "composerLines": {
     "plural": "count",
     "zero": "{count} سطر",

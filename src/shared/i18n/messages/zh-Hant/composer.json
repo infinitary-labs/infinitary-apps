@@ -1,6 +1,7 @@
 {
   "composerFolderNotProject": "無法將該資料夾加入為專案。",
   "composerFolderProject": "該資料夾已經是你的專案了。",
+  "composerHintFeedback": "{command}：向 Infinitary 的開發者回報問題或提出想法",
   "composerLines": {
     "plural": "count",
     "other": "{count} 行"

@@ -1,3 +1,4 @@
+import { FEEDBACK_DRAFT } from "@shared/feedback";
 import {
   isPanelCommandId,
   isShellCommand,
@@ -28,6 +29,7 @@ import { startSecretsMove } from "../settings/secretsMove";
 import { signInsInSecrets } from "../settings/WebsiteSignInsSection";
 import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
+import { mainMessageRefusal } from "./composer";
 import { landLostFocus, typingWhereFocusRested } from "./focusLanding";
 import { available, modalOpen } from "./focusRecovery";
 import { type CommandVia, pressForCommand } from "./pressInput";
@@ -374,6 +376,13 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   // Settings → General, with focus on the first mate's computer's update row.
   "updates.home": () => openSettingsAt("general", HOME_UPDATE_ROW),
   "whats-new.show": () => showReleaseNote(null),
+  // Home, with /feedback started in the message box for the person's words.
+  "feedback.start": () => {
+    const shell = useShellStore.getState();
+    if (mainMessageRefusal(shell) !== null) return;
+    shell.focusMainMessage();
+    shell.beginDraft(FEEDBACK_DRAFT);
+  },
   "firstmate.reply": () => {
     const s = useShellStore.getState();
     if (s.view !== "home") s.setView("home");

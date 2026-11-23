@@ -73,6 +73,8 @@
   "commandComputersPrevious": "Ordinateurs de travail précédents",
   "commandDevicesTryAgain": "Réessayer de joindre vos ordinateurs",
   "commandDevicesTryAgainWords": "appareils, ssh, reconnecter, connecter, ordinateurs",
+  "commandFeedbackStart": "Envoyer un avis",
+  "commandFeedbackStartWords": "avis, signaler, problème, bug, idée, suggestion, ticket",
   "commandFirstmateReply": "Ouvrir la réponse du second",
   "commandFirstmateReplyWords": "réponse, message, note, dernière",
   "commandFocusCardActions": "Aller aux boutons de la carte",

@@ -73,6 +73,8 @@
   "commandComputersPrevious": "前の作業コンピューター",
   "commandDevicesTryAgain": "コンピューターへの接続を再試行",
   "commandDevicesTryAgainWords": "デバイス, 再接続, 接続, マック",
+  "commandFeedbackStart": "フィードバックを送信",
+  "commandFeedbackStartWords": "フィードバック, 報告, 問題, バグ, アイデア, 提案, Issue",
   "commandFirstmateReply": "一等航海士の返信を開く",
   "commandFirstmateReplyWords": "回答, メッセージ, メモ, 最後",
   "commandFocusCardActions": "カードのボタンへ移動",

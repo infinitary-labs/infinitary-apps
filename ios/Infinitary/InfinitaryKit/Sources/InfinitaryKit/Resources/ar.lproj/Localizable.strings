@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "حواسيب العمل السابقة";
 "commandDevicesTryAgain" = "محاولة الوصول إلى حواسيبك مجددًا";
 "commandDevicesTryAgainWords" = "أجهزة, إعادة الاتصال, اتصال, حواسيب";
+"commandFeedbackStart" = "إرسال ملاحظات";
+"commandFeedbackStartWords" = "ملاحظات, إبلاغ, مشكلة, خطأ, فكرة, اقتراح, بلاغ";
 "commandFirstmateReply" = "فتح رد نائب القبطان";
 "commandFirstmateReplyWords" = "إجابة, رسالة, ملاحظة, أخير";
 "commandFocusCardActions" = "الانتقال إلى أزرار البطاقة";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "إصدار, ملاحظات, تغييرات, نسخة";
 "composerFolderNotProject" = "تعذّرت إضافة هذا المجلد كمشروع.";
 "composerFolderProject" = "هذا المجلد من مشاريعك بالفعل.";
+"composerHintFeedback" = "%1$@: أخبر صانعي Infinitary بمشكلة أو فكرة";
 "composerTooLongShorten" = "النص أطول من أن يُرسل. اختصره أولًا.";
 "composerWordsOnly" = "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة.";
 "crewAPart" = "جزء";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "لم تُسلَّم الرسالة: %1$@";
 "feedUpdated" = "تحديث: %1$@";
 "feedYouChose" = "اخترت «%1$@»";
+"feedbackStripAccount" = "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub ‏%1$@.";
+"feedbackStripBug" = "بلاغ جديد عن مشكلة";
+"feedbackStripComment" = "تعليق على البلاغ #%1$@";
+"feedbackStripHeading" = "نقرتك تنشر هذا على %1$@ علنًا، مرة واحدة";
+"feedbackStripIdea" = "فكرة جديدة";
+"feedbackStripNoAccount" = "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub.";
 "fileAdd" = "إضافة ملفات";
 "fileCancel" = "إلغاء تجهيز %1$@";
 "fileDropHere" = "أفلت الملفات لإضافتها";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "المساعدة";
 "menuKeyboardSettings" = "إعدادات لوحة المفاتيح…";
 "menuResetAllKeys" = "إعادة تعيين كل المفاتيح…";
+"menuSendFeedback" = "إرسال ملاحظات…";
 "menuSettings" = "الإعدادات…";
 "menuWhatsNew" = "ما الجديد في Infinitary";
 "mergeButtonAfterFixing" = "الدمج بعد إصلاح الأخطاء";

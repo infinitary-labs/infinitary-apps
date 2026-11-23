@@ -529,12 +529,13 @@ describe("runbooks over existing prompt and skill doors", () => {
       readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
     );
     books.set("lessons", false);
-    // A skill rides its runbook, not a care: the care runbook's, the programs' and the cleanup's stay.
+    // A skill rides its runbook, not a care: the care runbook's, the programs', the cleanup's and the feedback report's stay.
     expect(books.crew(code).skills.map((skill) => skill.name)).toEqual([
       "careful-change",
       "programs",
       "computer-cleanup",
       "bring-secrets",
+      "feedback-report",
     ]);
   });
   // Intent: the accepted ask-first cleanup plan bundles its guide on the computer running the look.

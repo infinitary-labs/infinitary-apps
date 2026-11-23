@@ -476,6 +476,8 @@ describe("electron-builder configuration", () => {
       "infinitary-integrations-axi",
       // INF-2468's files command, which reads a file on another of the captain's computers.
       "infinitary-files-axi",
+      // INF-6172's feedback command, which drafts a /feedback report for the captain's click.
+      "infinitary-feedback-axi",
       // INF-1214's inbox command, now infinitary-axi's old name for one release (INF-1894).
       "infinitary-inbox-axi",
       "infinitary-secrets-axi",

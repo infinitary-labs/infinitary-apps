@@ -66,6 +66,7 @@ describe("the Help menu", () => {
         enabled: false,
         accelerator: undefined,
       }),
+      expect.objectContaining({ id: "feedback-start", label: "Send Feedback…" }),
     ]);
     expect(submenu(menu[0]).map((entry) => entry.id ?? entry.role)).toEqual([
       "about",
@@ -90,6 +91,18 @@ describe("the Help menu", () => {
     expect(shell).toHaveBeenCalledWith("whats-new.show");
   });
 
+  // The captain's INF-6172 answer: Send Feedback in the Help menu starts /feedback.
+  it("tells the page to start /feedback from Send Feedback", () => {
+    const { shell, menuActions } = actions(false);
+    const [, feedback] = submenu(
+      appMenuTemplate(ELECTRON_MENU, DEFAULT_BINDINGS, menuActions).at(-1),
+    );
+    const click = feedback?.click as (() => void) | undefined;
+    if (!click) throw new Error("Send Feedback runs nothing");
+    click();
+    expect(shell).toHaveBeenCalledWith("feedback.start");
+  });
+
   it("shows a key a person gave it in Keyboard settings", () => {
     const bindings = resolveBindings({
       ...DEFAULT_SAVED_KEYMAP,
@@ -112,6 +125,7 @@ describe("the Help menu", () => {
     expect(menu.filter((entry) => entry.role === "help")).toHaveLength(1);
     expect(submenu(menu.at(-1)).map((entry) => entry.id ?? entry.type ?? entry.label)).toEqual([
       "whats-new",
+      "feedback-start",
       "separator",
       "normal",
     ]);

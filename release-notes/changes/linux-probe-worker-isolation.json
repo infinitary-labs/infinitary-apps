@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-probe-worker-isolation",
+      "reason": "Runs one Linux probe file at a time to avoid contention between test subprocesses; app behavior is unchanged."
+    }
+  ]
+}

@@ -59,7 +59,6 @@ import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
-import type { ReworkHold } from "./reworkHold";
 import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
@@ -1016,22 +1015,20 @@ export class CardService {
     }
     // A reworked merge card waits for its new version's checks, not its
     // author (INF-6241): `recheckHeld` returns it once nothing holds it.
-    const rework = card.awaiting === "close-out" ? this.host.reworkHold?.(card) : undefined;
+    const verdict = card.awaiting === "close-out" ? this.host.reworkHold?.(card) : undefined;
     const before = this.stage.of(card).forChecks;
-    if (rework) {
-      this.stage.hold(card, { forChecks: rework });
-      // "job" and "read" come before the version is known: a reply answered
-      // with no push returns once they end, so only a hold on a known newer
-      // version is noted.
-      const known = (hold: ReworkHold | undefined) =>
-        hold === "checks" || hold === "turn" || hold === "wake";
-      const settled = known(rework) && !known(before);
-      if (settled && card.taskId && !this.reworkNoted(card.taskId, card))
+    if (verdict) {
+      const { hold, checking } = verdict;
+      this.stage.hold(card, { forChecks: hold });
+      // The note says the card waits for its new version's checks: a reply
+      // answered with no push, or a push with no checks to run, returns once
+      // the crewmate's work ends, unnoted.
+      if (checking && card.taskId && !this.reworkNoted(card.taskId, card))
         this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
           news: false,
-          data: { cardId: card.id, sentBackAt: card.sentBackAt, held: rework },
+          data: { cardId: card.id, sentBackAt: card.sentBackAt, held: hold },
         });
-      if (rework === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
+      if (hold === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
       return false;
     }
     this.stage.release(card, "forMerge", "forChecks");

@@ -9,15 +9,25 @@ import type { Witnesses } from "./reportSort";
  * The typed fact that keeps a reworked merge card in its close-out wait
  * (INF-6241; docs/card-threads.md, "A reworked merge card"):
  *
- * - `job`: a background job of the crewmate's runs, so a push from it is
- *   not known until it ends and the turn it wakes is read;
+ * - `job`: a background job of the crewmate's runs;
+ * - `turn`: the crewmate's turn is running;
  * - `read`: the change has not been read since the crewmate's turn ended,
  *   so a push from its shell is not known yet;
  * - `checks`: a check watch or a run watch stands on the task;
- * - `turn`: the crewmate's turn is running;
  * - `wake`: a wake waits for the crewmate on a lane that can deliver it.
+ *
+ * `job` and `turn` hold before the version is compared: a push may still
+ * come from that work, and a read taken while it runs can miss it, so only
+ * the read after the turn's end decides whether the change moved.
  */
-export type ReworkHold = "job" | "read" | "checks" | "turn" | "wake";
+export type ReworkHold = "job" | "turn" | "read" | "checks" | "wake";
+
+/**
+ * What holds the card, and whether the record already shows the newer
+ * version with its checks watched: the timeline's note says the card waits
+ * for those checks, whatever the crewmate's work holds it for meanwhile.
+ */
+export type ReworkVerdict = { hold: ReworkHold; checking: boolean };
 
 export type ReworkHoldHost = {
   tasks: Pick<TaskService, "get">;
@@ -40,7 +50,7 @@ export type ReworkHoldHost = {
  * than the one the card showed, is ever held; every fact is read from the
  * record, never from anyone's words, so a restart derives the same hold.
  */
-export function reworkHold(card: Card, host: ReworkHoldHost): ReworkHold | undefined {
+export function reworkHold(card: Card, host: ReworkHoldHost): ReworkVerdict | undefined {
   if (card.author !== "crewmate" || !card.taskId || !card.lifecycleId) return undefined;
   if (card.sentBackAt === undefined || !ownMerge(card)) return undefined;
   const record = host.tasks.get(card.taskId);
@@ -55,13 +65,24 @@ export function reworkHold(card: Card, host: ReworkHoldHost): ReworkHold | undef
   );
   if (!offer || offer.retired) return undefined;
   if (offer.destination && offer.destination.branch !== record.branch) return undefined;
-  // Read before the version: a job still running may push after any read.
+  const newer = delivery.headSha !== undefined && delivery.headSha !== offer.headSha;
+  const watched = delivery.ciWatch !== undefined || (delivery.runWatches?.length ?? 0) > 0;
+  const hold = holdOf(record, newer, watched, host);
+  return hold ? { hold, checking: newer && watched } : undefined;
+}
+
+function holdOf(
+  record: TaskRecord,
+  newer: boolean,
+  watched: boolean,
+  host: ReworkHoldHost,
+): ReworkHold | undefined {
   const lane = host.witnesses(record.id);
   if (lane?.jobsRunning) return "job";
-  if (host.readOwed(record)) return "read";
-  if (!delivery.headSha || delivery.headSha === offer.headSha) return undefined;
-  if (delivery.ciWatch || (delivery.runWatches?.length ?? 0) > 0) return "checks";
   if (record.activity === "running") return "turn";
+  if (host.readOwed(record)) return "read";
+  if (!newer) return undefined;
+  if (watched) return "checks";
   // A wake the lane cannot deliver holds nothing: the card returns showing
   // what it can, and the thread says what holds the crewmate.
   if (

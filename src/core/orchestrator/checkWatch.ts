@@ -168,6 +168,12 @@ export type CheckWatcherHost = {
    * every tick. Absent = none waits.
    */
   versionAwaited?(record: TaskRecord): boolean;
+  /**
+   * The crewmate's turn or one of its background jobs runs (INF-6241): a
+   * read taken then can miss a push that work still makes, so the read
+   * after that work ends is owed again. Absent = never working.
+   */
+  working?(record: TaskRecord): boolean;
 };
 
 type SettledWakeFacts = Extract<WakeFacts, { kind: "checks-settled" }>;
@@ -184,6 +190,12 @@ export class CheckWatcher {
    * one clock the quiet refresh counts from.
    */
   private readonly refreshAfter = new Map<string, number>();
+  /**
+   * Tasks whose newest read started while their crewmate still worked
+   * (`working`): that read settles nothing about a push, so one is owed
+   * once the work ends. In memory: a restart ends every job and turn.
+   */
+  private readonly readWhileWorking = new Set<string>();
 
   constructor(private readonly host: CheckWatcherHost) {}
 
@@ -265,8 +277,10 @@ export class CheckWatcher {
     return Math.max(record.delivery?.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0);
   }
 
+  /** The crewmate's turn ended, or its work ended, after the newest read. */
   private turnSince(record: TaskRecord): boolean {
-    return record.idleSince != null && record.idleSince > this.lastRead(record);
+    if (record.idleSince != null && record.idleSince > this.lastRead(record)) return true;
+    return this.readWhileWorking.has(record.id) && this.host.working?.(record) !== true;
   }
 
   private pollGuarded(record: TaskRecord, now: number): Promise<void> {
@@ -288,6 +302,8 @@ export class CheckWatcher {
   private async pollRecord(record: TaskRecord, now: number): Promise<void> {
     this.reading.add(record.id);
     this.refreshAfter.set(record.id, now);
+    if (this.host.working?.(record) === true) this.readWhileWorking.add(record.id);
+    else this.readWhileWorking.delete(record.id);
     try {
       if (record.delivery?.prNumber !== undefined && this.host.reconcileMerged) {
         try {

@@ -1404,6 +1404,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   A settled result or same-head rerun updates displays without a diagnosis wake; a new head whose checks are running arms the ordinary bounded watch.
 - **A branch-only change** (INF-6241), the pushed branch of a project that merges in batches of its own, once a reading has named its version (`readsBranch`), has no quiet refresh: it is read on the first tick after the crewmate's turn ends, when a run watch starts on it, and every minute while its merge card waits under a captain's reply or is held for its new version (`versionAwaited`).
   A merge card held for the read after the turn starts it at once (`CheckWatcher.readAfterTurn`), and a failed read counts as done (`afterTurnReadOwed`).
+  A read that starts while the crewmate's turn or one of its background jobs runs (`working`) can miss a push that work still makes, so the read after that work ends is owed again.
   A reading at a new version arms a watch only when a check there is running or queued: none started, or only checks a person starts, arms none.
 - **Bound to the head**: a new head where the project lives re-arms the watch for it, and only the head it last saw is woken about.
   A reading the crewmate takes itself that finds the checks finished ends the watch (it already knows); the merge card gate's does not, so the crewmate still hears.

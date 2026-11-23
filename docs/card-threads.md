@@ -163,17 +163,19 @@ The rules and the click are in `docs/delivery-rigor.md`, "A card behind its chan
 ## A reworked merge card
 
 INF-6241, the captain's words on INF-6224: "ideally, i want it to come back only after the update has been made, new checks passed, and the card content is already updated".
-A crewmate's merge card for its task's own change, answered under a captain's reply, stays in its close-out wait while its change is at a newer version than the one the card showed and any of these holds (`reworkHold` in `reworkHold.ts`, `StageHold.forChecks`):
+A crewmate's merge card for its task's own change, answered under a captain's reply, stays in its close-out wait while its crewmate still works on it, and then while its change is at a newer version than the one the card showed and a fact below holds (`reworkHold` in `reworkHold.ts`, `StageHold.forChecks`):
 
-- `job`: a background job of the crewmate's runs, so a push from it is not known until it ends and the turn it wakes is read; this holds before the version is compared;
+- `job`: a background job of the crewmate's runs;
+- `turn`: the crewmate's turn is running;
 - `read`: the change has not been read since the crewmate's turn ended, so a push from its shell is not known yet; the hold starts that read at once (`CheckWatcher.readAfterTurn`), which starts no second read while one is out;
 - `checks`: a check watch or a run watch stands on the task;
-- `turn`: the crewmate's turn is running;
 - `wake`: a wake waits for the crewmate on a lane that can deliver it.
+
+`job` and `turn` hold before the version is compared: a push may still come from that work, and a read taken while it runs can miss it, so only the read after the turn's end decides whether the change moved.
 
 The version the card showed is the offer the stage last showed (`CardStore.lastAvailableOffer`); a revision written while the card is held, which INF-834 still takes while checks run, reaches the stage only with its return.
 While held, the stage keeps that version beside its thread, with the host's live facts: Merge off and the line saying a newer version was pushed ("A merge card behind its change"), and the fact strip reading the new version's checks.
-`CardService.recheckHeld` returns the card once nothing holds it - after a record change, after the read, and on every tick - once, unread, with no crewmate turn needed; its `card_raised` event carries `heldFor`, the fact that last held it, and the task's timeline carries one note when the hold first rests on a newer version, never for the provisional `read` hold alone.
+`CardService.recheckHeld` returns the card once nothing holds it - after a record change, after the read, and on every tick - once, unread, with no crewmate turn needed; its `card_raised` event carries `heldFor`, the fact that last held it, and the task's timeline carries one note once the record shows the newer version with its checks watched, never for the crewmate's work or the read alone.
 A reply that pushed nothing returns at its turn's end, within one read of the change.
 A wake the lane cannot deliver holds nothing: a held account, a lane stuck at its provider, a computer out of reach or waiting for its update.
 A project with no checks, or only checks a person starts, arms no watch, so the card returns when the crewmate's turn ends.

@@ -111,6 +111,10 @@ export class CrewWatch {
           },
           readsBranch: (record) => readsOwnBranch(record, this.core),
           versionAwaited: (record) => this.core.cards.awaitsVersion(record.id),
+          working: (record) =>
+            record.activity === "running" ||
+            this.core.options.hasRunningJobs?.(record.id) === true ||
+            this.core.starts.clientJobStart(record.id) !== undefined,
         })
       : undefined;
     const readMainChecks = options.readMainChecks;

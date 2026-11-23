@@ -13,7 +13,7 @@ import type { AskEnding } from "./askEnding";
 import type { CardEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import type { CardStage } from "./cardStage";
-import type { ReworkHold } from "./reworkHold";
+import type { ReworkVerdict } from "./reworkHold";
 import type { MergeBehind } from "./settleCardFacts";
 
 export type CardActor = "captain" | "firstmate" | "crewmate";
@@ -73,7 +73,7 @@ export type CardServiceHost = {
    * `reworkHold`), or undefined when it returns as every card does. Read
    * from typed facts, never the card's words.
    */
-  reworkHold?(card: Card): ReworkHold | undefined;
+  reworkHold?(card: Card): ReworkVerdict | undefined;
   /** Read the task's change now if the read after its crewmate's turn is still owed (INF-6241). */
   readAfterTurn?(taskId: string): void;
   /**

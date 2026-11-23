@@ -388,12 +388,18 @@ describe("a reworked merge card's return (INF-6241)", () => {
     const card = at.supervisor.cards.get(at.cardId) as Card;
     const posture = at.supervisor.postures.workPosture(at.tasks.get(at.taskId) as TaskRecord);
     expect(threadWait(card, posture)).toEqual({ on: "rework", checks: false });
-    // The job pushes and ends; the shared tick reads the branch the turn
-    // left unread.
+    // The shared tick reads the branch while the job still runs: the push
+    // has not landed, and that read settles nothing.
+    await at.minute();
+    expect(at.reads).toContain(HEAD);
+    expect(at.held()).toBe(true);
+    // The job pushes and ends, and a record change rechecks the card before
+    // any later read: the read after the work is owed, and it finds the push.
     at.remote.head = PUSHED;
     at.remote.checks = "pending";
     at.runJob(false);
-    await at.minute();
+    at.supervisor.cards.recheckHeld();
+    await tick();
     expect(at.tasks.get(at.taskId)?.delivery?.headSha).toBe(PUSHED);
     expect(at.held()).toBe(true);
     expect(at.holdNotes()).toHaveLength(1);

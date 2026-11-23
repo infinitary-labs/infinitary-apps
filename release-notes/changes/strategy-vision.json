@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "strategy-vision",
+      "reason": "Documentation only: adds the project's vision as STRATEGY.md and a rule in AGENTS.md that the file changes only on the captain's deliberate ask or approval; nothing in the apps changes."
+    }
+  ]
+}

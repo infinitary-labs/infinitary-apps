@@ -30,6 +30,7 @@ Product vision and interaction model: `.claude/skills/infinitary-design/readme.m
 - **Tests.** Weakening, skipping or deleting a test waits for the captain's approval. Never run the full journey suite locally. Never call a test your change edited a flake.
 - **Pictures.** Photograph each changed view before the first edit and again after it (`docs/testing.md`, "Capturing pictures of a change").
 - **Architecture.** It is decided (`docs/architecture.md` §14): if reality contradicts a recorded decision, escalate with `needs-decision` instead of improvising.
+- **Vision.** `STRATEGY.md` holds the captain's approved vision, which says what a change should align with or resist: never change that file without the captain's deliberate ask or approval.
 - **Served text.** What the app serves to every user's first mate and crew speaks for every project, never for this repository's own setup (`docs/orchestrator-contract.md`, "What the served text may name").
 - **Seams.** Every child process gets its environment from `hostEnv()`, every `ModelRuntime` comes from `src/core/pi/modelRuntime.ts` and every model session from a `SessionFactory`. Never spawn a path inside app.asar; never read `~/.pi`.
 - **One writer.** Each store has one writer; find it on its page before writing to its files (`primitives/`, `docs/architecture.md`).

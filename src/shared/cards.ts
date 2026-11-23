@@ -932,10 +932,11 @@ export const cardSchema = z.strictObject({
   replies: z.literal(false).optional(),
   /**
    * Who answers a reply under a card whose author cannot (`cards.answered_by`):
-   * the host sets "firstmate" on its stuck alert (`card-stall-<task>`, INF-1670),
-   * so the chrome draws a reply row and the first mate answers in the thread,
-   * never the task's crewmate. Absent on every other card, which takes replies
-   * as its author allows.
+   * the host sets "firstmate" on its stuck alert (`card-stall-<task>`, INF-1670)
+   * and on every card it raises through `raiseHostCard`, so the chrome draws a
+   * reply row and the first mate answers in the thread, never the task's
+   * crewmate. Absent on every other card, which takes replies as its author
+   * allows.
    */
   answeredBy: z.literal("firstmate").optional(),
   /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
@@ -1262,7 +1263,7 @@ export const CONVERSE_TEXT_MAX_CHARS = 20_000;
  * (cards-as-threads phase 2). The host's own agent-down cards answer to
  * nobody, and neither does a card the host marked as taking no reply (the
  * welcome, `Card.replies`), unless the host named the first mate as its
- * answerer (the stuck alert, `Card.answeredBy`).
+ * answerer (the stuck alert and the app's own offers, `Card.answeredBy`).
  */
 export function cardTakesReplies(
   card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,

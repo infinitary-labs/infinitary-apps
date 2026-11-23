@@ -183,6 +183,36 @@ describe("a card button carries what waits in the card's field", () => {
     expect(told[0]).toContain("[attached: 1 picture: screen.png]");
   });
 
+  it("tells the first mate the words left in an app offer's field when its button is pressed", () => {
+    // INF-6265's plan, piece 2: an app offer's field is the first mate's, so
+    // words beside a press reach it rather than drop with the click.
+    const h = setup(fakeCrewmate());
+    const plugins = { add: vi.fn(), decline: vi.fn() };
+    h.supervisor.hostOps.setPluginConsent(plugins as never);
+    h.supervisor.cards.hostCards.raiseHostCard({
+      id: "card-plugin-weather",
+      title: "Add the weather plugin?",
+      meta: "the app",
+      body: "<p>It asks to read your tasks.</p>",
+      actions: [
+        {
+          id: "decline",
+          label: "Not now",
+          effect: { kind: "host", op: "decline-plugin", arg: "weather" },
+        },
+      ],
+    });
+    const before = h.ops.length;
+    h.supervisor.cardActions.act("card-plugin-weather", "decline", "chrome", {
+      answers: withAnythingElse([], "Why does it need my tasks?"),
+    });
+    expect(plugins.decline).toHaveBeenCalledWith("weather");
+    const told = h.ops.slice(before);
+    expect(told).toHaveLength(1);
+    expect(told[0]).toContain(CARRIED_OUT_WORDS);
+    expect(told[0]).toContain("Why does it need my tasks?");
+  });
+
   it("keeps what went with an answer's closing choice for the first mate's notice and the builder", async () => {
     prepared();
     const crewmate = fakeCrewmate();

@@ -4,6 +4,8 @@ import Foundation
 
 /// The catalog's messages on the phone: one function per message, in the phone's language.
 public enum PhoneMessages {
+    public static func `accountsClaudeLoginUnreadable`(`here`: String) -> String { PhoneWords.format("accountsClaudeLoginUnreadable", [`here`]) }
+    public static func `accountsClaudeLoginUnreadableWindows`(`here`: String) -> String { PhoneWords.format("accountsClaudeLoginUnreadableWindows", [`here`]) }
     public static func `accountsConnectAddAnother`(`provider`: String) -> String { PhoneWords.format("accountsConnectAddAnother", [`provider`]) }
     public static func `accountsConnectBrowser`() -> String { PhoneWords.format("accountsConnectBrowser", []) }
     public static func `accountsConnectCancel`() -> String { PhoneWords.format("accountsConnectCancel", []) }
@@ -4204,6 +4206,8 @@ public enum PhoneMessages {
 extension PhoneWords {
     /// What each message fills, its count included, in the order its Apple format numbers them: the Mac's `MESSAGE_FILLS`.
     static let fills: [String: [String]] = [
+        "accountsClaudeLoginUnreadable": ["here"],
+        "accountsClaudeLoginUnreadableWindows": ["here"],
         "accountsConnectAddAnother": ["provider"],
         "accountsConnectBrowser": [],
         "accountsConnectCancel": [],

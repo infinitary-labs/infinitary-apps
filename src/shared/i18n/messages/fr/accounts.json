@@ -1,4 +1,6 @@
 {
+  "accountsClaudeLoginUnreadable": "Infinitary n’a pas pu lire la connexion Claude sur {here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le depuis le Dock.",
+  "accountsClaudeLoginUnreadableWindows": "Infinitary n’a pas pu lire la connexion Claude sur {here} et n’a donc pas lancé de nouvelle connexion par-dessus. Réessayez ; si cela continue, quittez Infinitary et rouvrez-le depuis le menu Démarrer.",
   "accountsConnectAddAnother": "Ajouter un autre compte {provider}",
   "accountsConnectBrowser": "Se connecter avec votre navigateur",
   "accountsConnectCancel": "Annuler",

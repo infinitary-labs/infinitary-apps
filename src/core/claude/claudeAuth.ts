@@ -5,6 +5,7 @@ import type { MachineLoginOutcome } from "@shared/accounts";
 import { CLAUDE_ACCESS_IN_USE_TEXT } from "@shared/claudeAccess";
 import { CLAUDE_CHIP_INSTALL_NOTE, CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import {
   type AccountBackend,
   type AccountBinding,
@@ -17,6 +18,7 @@ import {
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
 import { askedFromAView } from "../askedFromAView";
 import { absentKeychain, type HostKeychain } from "../host";
+import { hostPlatform } from "../platform";
 import { type ClaudeAccess, type ClaudeAccessRead, readClaudeAccess } from "./claudeAccess";
 import {
   CLAUDE_AUTH_STATUS_ARGS,
@@ -102,9 +104,15 @@ export function readMadeLogin(file: string): MadeLogin | null {
 
 /**
  * Sign in over a store that could not be read: Infinitary starts no new sign-in
- * that could replace a login it cannot see.
+ * that could replace a login it cannot see. Its advice names where this
+ * computer reopens Infinitary: the Start menu on Windows, the Dock elsewhere.
  */
-export const CLAUDE_LOGIN_UNREADABLE_TEXT = `Infinitary couldn't read the Claude login on ${HERE.this}, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock.`;
+export function claudeLoginUnreadableText(platform: string = hostPlatform()): string {
+  const here = m.placeThisComputer();
+  return platform === "win32"
+    ? m.accountsClaudeLoginUnreadableWindows({ here })
+    : m.accountsClaudeLoginUnreadable({ here });
+}
 
 /**
  * The same refusal on a computer that runs work (`pasteCode`), read at its
@@ -430,7 +438,7 @@ export class ClaudeAuthBackend implements AccountBackend {
         this.finishAdopted(request);
         return;
       }
-      if (outcome.kind === "refuse") throw new Error(CLAUDE_LOGIN_UNREADABLE_TEXT);
+      if (outcome.kind === "refuse") throw new Error(claudeLoginUnreadableText());
       if (outcome.kind === "unfinished") {
         throw new Error(unfinishedWords(outcome.ran, CLAUDE_LOGIN_UNFINISHED_TEXT));
       }

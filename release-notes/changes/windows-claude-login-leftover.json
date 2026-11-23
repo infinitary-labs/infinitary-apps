@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "windows-claude-login-leftover",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Adding a Claude account on Windows no longer stops at a login it can't read",
+      "body": "When Claude Code had signed out or its login had lapsed on a Windows PC, adding a Claude account could refuse every time, saying Infinitary couldn't read the Claude login. It now goes on to Claude's own sign-in. If the login really can't be read, the advice now points to the Start menu instead of the Dock.",
+      "noPicture": "The change is in how the login file is read during an account add; the window looks the same except on a Windows PC where the add now reaches Claude's sign-in.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

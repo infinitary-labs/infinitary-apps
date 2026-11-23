@@ -1,4 +1,6 @@
 [
+  {"said":{"m":"accountsClaudeLoginUnreadable","a":{"here":"‹here›"}},"words":"Infinitary couldn't read the Claude login on ‹here›, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock."},
+  {"said":{"m":"accountsClaudeLoginUnreadableWindows","a":{"here":"‹here›"}},"words":"Infinitary couldn't read the Claude login on ‹here›, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Start menu."},
   {"said":{"m":"accountsConnectAddAnother","a":{"provider":"‹provider›"}},"words":"Add another ‹provider› account"},
   {"said":{"m":"accountsConnectBrowser"},"words":"Sign in with your browser"},
   {"said":{"m":"accountsConnectCancel"},"words":"Cancel"},
@@ -3384,7 +3386,7 @@
   {"said":{"m":"welcomeStartersLead"},"words":"To begin, press one and finish the sentence:"},
   {"said":{"m":"welcomeTasks"},"words":"Every ask gets a record here."},
   {"said":{"m":"welcomeTitle"},"words":"How we work"},
-  {"said":{"m":"accountsConnectAddAnother","a":{"provider":{"m":"accountsConnectBrowser"}}},"words":"Add another Sign in with your browser account"},
-  {"said":{"m":"accountsConnectAddAnother"},"words":null},
+  {"said":{"m":"accountsClaudeLoginUnreadable","a":{"here":{"m":"accountsConnectBrowser"}}},"words":"Infinitary couldn't read the Claude login on Sign in with your browser, so it didn't start a new sign-in over it. Try again - if it keeps happening, quit Infinitary and open it from the Dock."},
+  {"said":{"m":"accountsClaudeLoginUnreadable"},"words":null},
   {"said":{"m":"notInTheCatalog"},"words":null}
 ]

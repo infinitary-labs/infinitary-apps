@@ -1,4 +1,6 @@
 {
+  "accountsClaudeLoginUnreadable": "تعذّر على Infinitary قراءة تسجيل دخول Claude على {here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من شريط Dock.",
+  "accountsClaudeLoginUnreadableWindows": "تعذّر على Infinitary قراءة تسجيل دخول Claude على {here}، لذا لم يبدأ تسجيل دخول جديدًا فوقه. حاول مرة أخرى، وإذا تكرر ذلك، فأغلق Infinitary وافتحه من قائمة ابدأ.",
   "accountsConnectAddAnother": "إضافة حساب {provider} آخر",
   "accountsConnectBrowser": "تسجيل الدخول عبر متصفحك",
   "accountsConnectCancel": "إلغاء",

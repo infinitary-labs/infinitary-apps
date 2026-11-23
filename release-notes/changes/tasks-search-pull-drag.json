@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tasks-search-pull-drag",
+      "reason": "Internal: the iPhone, iPad and Duo phone journeys pull the Tasks list down to its search with a slow drag instead of a short swipe, so a busy simulator's system gesture gate no longer leaves the search hidden; no app behavior changes."
+    }
+  ]
+}

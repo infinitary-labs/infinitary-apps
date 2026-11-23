@@ -1267,6 +1267,7 @@ The tap check (`scripts/phone-taps.ts`, in `pnpm check`) refuses a plain XCTest 
 A swipe, a drag or a key is sent once, as before.
 SpringBoard decides whether each touch is a system gesture before the app's own gestures may act on it, and XCTest takes its virtual touch screen away about a tenth of a second after the lift; a touch SpringBoard has not handed over by then is cancelled for the app, so a plain swipe, a fifth of a second long, can do nothing on a busy simulator.
 The talk-tasks part therefore opens a task row's actions with a slow drag that rests before the lift, which is still touching when SpringBoard decides and opens the row by its distance (INF-6073).
+A list's pull counts only from SpringBoard's decision, so even a handed-over swipe can leave Tasks too little of its 200 points to pass the 48 that open search; the talk-tasks and fold parts pull Tasks down to its search with `pullDownOnPhone`, a slow drag across 40% of the list that rests before the lift (INF-6231).
 On the open Duo the fold part's Tab, Return and Escape go through the test home instead ("The Duo's hinge"), and each must come back with backboardd naming Infinitary's process as its keyboard-focus destination before the journey reads what the app did with it.
 A key-command registration, typed text or a key with no destination does not prove delivery.
 As for crew browsing's unmodified keys, BackBoard publishes no registration to wait for, so the journey reads Show panels' own selection before each press that expects a command and its result on screen after.

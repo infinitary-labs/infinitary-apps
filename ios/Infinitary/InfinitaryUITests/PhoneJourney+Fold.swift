@@ -198,7 +198,7 @@ extension PhoneJourney {
     private func cardArrivesWhileTyping() async throws {
         let panel = phoneSidebar(app)
         let search = panel.textFields["task-search"]
-        panel.scrollViews["tasks-list"].swipeDown()
+        pullDownOnPhone(panel.scrollViews["tasks-list"])
         XCTAssertTrue(search.waitForPresence(timeout: 10), "Tasks search opens in the panel")
         focusForPhoneTyping(search, in: app)
         search.typeText("connection")

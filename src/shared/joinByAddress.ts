@@ -55,7 +55,7 @@ const confirmQuestionSchema = z.strictObject({
 });
 
 /** `RemoteLoginReach` as an answer carries it, read strictly. */
-const reachSchema: z.ZodType<RemoteLoginReach> = z.discriminatedUnion("step", [
+export const reachSchema: z.ZodType<RemoteLoginReach> = z.discriminatedUnion("step", [
   z.strictObject({
     step: z.literal("key"),
     port: z.number().int().min(1).max(65535),

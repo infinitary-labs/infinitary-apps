@@ -677,6 +677,15 @@ The link stays in the main process (`Shell.joinAt`, `inf:devices:join-at`): the 
 Beside a command the window started, the command's first mate runs `RemoteLogin.linkAt` and answers the link over the local door with `inf:devices:link-at`, which only the window's program asks: the window's page is served no such request, and `infinitary-axi` reaches none (`PROGRAM_ONLY_CHANNELS`, `src/shared/ipc.ts`; `docs/run.md`, "Joining another computer").
 No log, feed line, record entry or file carries it.
 
+## Setting the first mate up from a first launch
+
+The welcome screen's Another computer sets the first mate up on a computer by its address (`docs/first-launch.md`, "Setting it up from here"), as one core request on this computer alone, `inf:devices:home-at` (`reach: "home"`), asked again with each answer: the key line, the password once, the yes to an `infinitary` account after a root sign-in on Linux, Infinitary already running there, a stop at a step, or the first mate started there.
+`RemoteLogin.homeAt` (`src/core/devices/homeAt.ts`) reuses adding a computer's key read, sign-in, look, Ubuntu package and copies; the look also says whether a Linux computer runs systemd (`farSystems.ts`).
+The copy goes into that account's `~/Applications` (`homeReceive`, `src/core/devices/farHome.ts`), then `HOME_START` runs its `start-at-boot` and says whether that computer has a private-network address, the firewall `firewallKeepsOut` would name there, whether a Mac account is logged in and whether a Linux account lingers.
+`MAKE_ACCOUNT` makes the ordinary account with root's authorized keys, keeps an existing one, and turns linger on; the key line said yes to is remembered under the new address too.
+`inf:devices:home-at-cancel` asks it to stop at the next step, deleting the copy it sent when nothing started yet.
+It adds no computer here: the window then joins by its address (above), and the feed carries the same setup lines adding a computer does.
+
 ## One computer, one entry
 
 A Mac that both controls the first mate and runs its work is one entry on the list, with one key (`docs/helper.md`, "A Mac that also controls").

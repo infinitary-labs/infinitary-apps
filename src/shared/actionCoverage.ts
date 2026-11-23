@@ -135,6 +135,14 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "credential",
     `Adds a ${COMPUTER.one} over Remote Login on the captain's click in Settings; device-invite only offers the card, and the feed says each step`,
   ],
+  "inf:devices:home-at": [
+    "credential",
+    `Sets the first mate up on another ${COMPUTER.one} over the person's own SSH from the welcome screen, on their click, with their password once`,
+  ],
+  "inf:devices:home-at-cancel": [
+    "consent",
+    "The person's own Cancel on the welcome screen's setup on another computer",
+  ],
   "inf:devices:link-at": [
     "credential",
     `One step of joining another ${COMPUTER.one} by its address on the captain's click, asked only by the window's own program of the command it started; the link it answers never reaches a page or a command`,

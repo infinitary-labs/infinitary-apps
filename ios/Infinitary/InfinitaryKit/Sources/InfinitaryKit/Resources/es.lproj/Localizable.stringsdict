@@ -795,6 +795,42 @@
       <string>%1$ld tareas se quedaron en %2$@, fuera de alcance, así que sigue en tu lista.</string>
     </dict>
   </dict>
+  <key>devicesHomeLeftNothing</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld paso más sin empezar · no cambió nada en %1$@</string>
+      <key>many</key>
+      <string>%2$ld pasos más sin empezar · no cambió nada en %1$@</string>
+      <key>other</key>
+      <string>%2$ld pasos más sin empezar · no cambió nada en %1$@</string>
+    </dict>
+  </dict>
+  <key>devicesHomeLeftRunning</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%2$ld paso más sin empezar · tu primer oficial sigue funcionando en %1$@</string>
+      <key>many</key>
+      <string>%2$ld pasos más sin empezar · tu primer oficial sigue funcionando en %1$@</string>
+      <key>other</key>
+      <string>%2$ld pasos más sin empezar · tu primer oficial sigue funcionando en %1$@</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

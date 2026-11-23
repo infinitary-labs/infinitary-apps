@@ -156,7 +156,7 @@ export class DevicePairing implements PairedDevices {
   private readonly interfaces: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
   /** The port a link names, which the connection listens on. */
   readonly port: number;
-  private readonly ownUid: number | undefined;
+  readonly ownUid: number | undefined;
   private readonly ownSid: () => string | null | undefined;
   private readonly joinsFromAnotherMac: boolean;
   private readonly leaveWithWork: (device: DeviceView) => boolean;

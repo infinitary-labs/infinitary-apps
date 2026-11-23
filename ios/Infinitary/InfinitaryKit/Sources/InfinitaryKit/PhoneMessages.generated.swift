@@ -851,6 +851,49 @@ public enum PhoneMessages {
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
     public static func `devicesCarryRunsOn`(`from`: String, `to`: String) -> String { PhoneWords.format("devicesCarryRunsOn", [`from`, `to`]) }
     public static func `devicesCarryStayed`(`count`: Int, `from`: String) -> String { PhoneWords.format("devicesCarryStayed", [`count`, `from`]) }
+    public static func `devicesHomeAccountAsk`() -> String { PhoneWords.format("devicesHomeAccountAsk", []) }
+    public static func `devicesHomeAccountMake`() -> String { PhoneWords.format("devicesHomeAccountMake", []) }
+    public static func `devicesHomeAddressHead`() -> String { PhoneWords.format("devicesHomeAddressHead", []) }
+    public static func `devicesHomeAskAgain`() -> String { PhoneWords.format("devicesHomeAskAgain", []) }
+    public static func `devicesHomeAt`(`address`: String, `port`: String) -> String { PhoneWords.format("devicesHomeAt", [`address`, `port`]) }
+    public static func `devicesHomeBack`() -> String { PhoneWords.format("devicesHomeBack", []) }
+    public static func `devicesHomeCancelled`(`computer`: String) -> String { PhoneWords.format("devicesHomeCancelled", [`computer`]) }
+    public static func `devicesHomeCommands`() -> String { PhoneWords.format("devicesHomeCommands", []) }
+    public static func `devicesHomeCommandsInstead`() -> String { PhoneWords.format("devicesHomeCommandsInstead", []) }
+    public static func `devicesHomeFirewall`(`computer`: String) -> String { PhoneWords.format("devicesHomeFirewall", [`computer`]) }
+    public static func `devicesHomeInstallWay`() -> String { PhoneWords.format("devicesHomeInstallWay", []) }
+    public static func `devicesHomeKeepsRunning`(`computer`: String) -> String { PhoneWords.format("devicesHomeKeepsRunning", [`computer`]) }
+    public static func `devicesHomeKeyWay`() -> String { PhoneWords.format("devicesHomeKeyWay", []) }
+    public static func `devicesHomeLeftNothing`(`computer`: String, `count`: Int) -> String { PhoneWords.format("devicesHomeLeftNothing", [`computer`, `count`]) }
+    public static func `devicesHomeLeftRunning`(`computer`: String, `count`: Int) -> String { PhoneWords.format("devicesHomeLeftRunning", [`computer`, `count`]) }
+    public static func `devicesHomeLinger`(`computer`: String) -> String { PhoneWords.format("devicesHomeLinger", [`computer`]) }
+    public static func `devicesHomeNoPrivate`(`computer`: String) -> String { PhoneWords.format("devicesHomeNoPrivate", [`computer`]) }
+    public static func `devicesHomeNoPrivateWay`() -> String { PhoneWords.format("devicesHomeNoPrivateWay", []) }
+    public static func `devicesHomeNoSystemd`(`computer`: String) -> String { PhoneWords.format("devicesHomeNoSystemd", [`computer`]) }
+    public static func `devicesHomeNotOpen`(`address`: String) -> String { PhoneWords.format("devicesHomeNotOpen", [`address`]) }
+    public static func `devicesHomeNotStarted`(`computer`: String) -> String { PhoneWords.format("devicesHomeNotStarted", [`computer`]) }
+    public static func `devicesHomeOrCommands`() -> String { PhoneWords.format("devicesHomeOrCommands", []) }
+    public static func `devicesHomePort`(`port`: String) -> String { PhoneWords.format("devicesHomePort", [`port`]) }
+    public static func `devicesHomeRoot`(`computer`: String) -> String { PhoneWords.format("devicesHomeRoot", [`computer`]) }
+    public static func `devicesHomeRuns`(`computer`: String) -> String { PhoneWords.format("devicesHomeRuns", [`computer`]) }
+    public static func `devicesHomeRunsAsk`() -> String { PhoneWords.format("devicesHomeRunsAsk", []) }
+    public static func `devicesHomeRunsConnect`() -> String { PhoneWords.format("devicesHomeRunsConnect", []) }
+    public static func `devicesHomeSandboxWay`() -> String { PhoneWords.format("devicesHomeSandboxWay", []) }
+    public static func `devicesHomeSentMb`(`mb`: String) -> String { PhoneWords.format("devicesHomeSentMb", [`mb`]) }
+    public static func `devicesHomeSetUpFrom`() -> String { PhoneWords.format("devicesHomeSetUpFrom", []) }
+    public static func `devicesHomeSignsIn`() -> String { PhoneWords.format("devicesHomeSignsIn", []) }
+    public static func `devicesHomeStartOn`() -> String { PhoneWords.format("devicesHomeStartOn", []) }
+    public static func `devicesHomeStepConnect`() -> String { PhoneWords.format("devicesHomeStepConnect", []) }
+    public static func `devicesHomeStepKey`(`port`: String) -> String { PhoneWords.format("devicesHomeStepKey", [`port`]) }
+    public static func `devicesHomeStepLook`() -> String { PhoneWords.format("devicesHomeStepLook", []) }
+    public static func `devicesHomeStepSend`() -> String { PhoneWords.format("devicesHomeStepSend", []) }
+    public static func `devicesHomeStepSignIn`() -> String { PhoneWords.format("devicesHomeStepSignIn", []) }
+    public static func `devicesHomeStepSignUp`() -> String { PhoneWords.format("devicesHomeStepSignUp", []) }
+    public static func `devicesHomeStepStart`() -> String { PhoneWords.format("devicesHomeStepStart", []) }
+    public static func `devicesHomeTitle`(`computer`: String) -> String { PhoneWords.format("devicesHomeTitle", [`computer`]) }
+    public static func `devicesHomeUnreachable`(`computer`: String, `port`: String) -> String { PhoneWords.format("devicesHomeUnreachable", [`computer`, `port`]) }
+    public static func `devicesHomeUnreachableWay`() -> String { PhoneWords.format("devicesHomeUnreachableWay", []) }
+    public static func `devicesHomeWaitsLogin`(`computer`: String) -> String { PhoneWords.format("devicesHomeWaitsLogin", [`computer`]) }
     public static func `devicesJoinAddressChip`() -> String { PhoneWords.format("devicesJoinAddressChip", []) }
     public static func `devicesJoinAddressSub`(`computer`: String, `mustBeOn`: String) -> String { PhoneWords.format("devicesJoinAddressSub", [`computer`, `mustBeOn`]) }
     public static func `devicesJoinCancel`() -> String { PhoneWords.format("devicesJoinCancel", []) }
@@ -5146,6 +5189,49 @@ extension PhoneWords {
         "devicesCarryNotRemoved": ["from", "why"],
         "devicesCarryRunsOn": ["from", "to"],
         "devicesCarryStayed": ["count", "from"],
+        "devicesHomeAccountAsk": [],
+        "devicesHomeAccountMake": [],
+        "devicesHomeAddressHead": [],
+        "devicesHomeAskAgain": [],
+        "devicesHomeAt": ["address", "port"],
+        "devicesHomeBack": [],
+        "devicesHomeCancelled": ["computer"],
+        "devicesHomeCommands": [],
+        "devicesHomeCommandsInstead": [],
+        "devicesHomeFirewall": ["computer"],
+        "devicesHomeInstallWay": [],
+        "devicesHomeKeepsRunning": ["computer"],
+        "devicesHomeKeyWay": [],
+        "devicesHomeLeftNothing": ["computer", "count"],
+        "devicesHomeLeftRunning": ["computer", "count"],
+        "devicesHomeLinger": ["computer"],
+        "devicesHomeNoPrivate": ["computer"],
+        "devicesHomeNoPrivateWay": [],
+        "devicesHomeNoSystemd": ["computer"],
+        "devicesHomeNotOpen": ["address"],
+        "devicesHomeNotStarted": ["computer"],
+        "devicesHomeOrCommands": [],
+        "devicesHomePort": ["port"],
+        "devicesHomeRoot": ["computer"],
+        "devicesHomeRuns": ["computer"],
+        "devicesHomeRunsAsk": [],
+        "devicesHomeRunsConnect": [],
+        "devicesHomeSandboxWay": [],
+        "devicesHomeSentMb": ["mb"],
+        "devicesHomeSetUpFrom": [],
+        "devicesHomeSignsIn": [],
+        "devicesHomeStartOn": [],
+        "devicesHomeStepConnect": [],
+        "devicesHomeStepKey": ["port"],
+        "devicesHomeStepLook": [],
+        "devicesHomeStepSend": [],
+        "devicesHomeStepSignIn": [],
+        "devicesHomeStepSignUp": [],
+        "devicesHomeStepStart": [],
+        "devicesHomeTitle": ["computer"],
+        "devicesHomeUnreachable": ["computer", "port"],
+        "devicesHomeUnreachableWay": [],
+        "devicesHomeWaitsLogin": ["computer"],
         "devicesJoinAddressChip": [],
         "devicesJoinAddressSub": ["computer", "mustBeOn"],
         "devicesJoinCancel": [],
@@ -8637,6 +8723,8 @@ extension PhoneWords {
         "crewmateEarlier": "count",
         "crewmateMoreLines": "count",
         "devicesCarryStayed": "count",
+        "devicesHomeLeftNothing": "count",
+        "devicesHomeLeftRunning": "count",
         "feedBatchFormedMany": "count",
         "feedBatchMergedMany": "count",
         "feedRepairsCapped": "rounds",

@@ -619,6 +619,34 @@
       <string>작업 %1$ld개가 연락 닿지 않는 %2$@에 남아 있어 목록에 남습니다.</string>
     </dict>
   </dict>
+  <key>devicesHomeLeftNothing</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>남은 %2$ld단계는 시작하지 않음 · %1$@에서 바뀐 것은 없습니다</string>
+    </dict>
+  </dict>
+  <key>devicesHomeLeftRunning</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>남은 %2$ld단계는 시작하지 않음 · 일등항해사는 %1$@에서 계속 실행됩니다</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

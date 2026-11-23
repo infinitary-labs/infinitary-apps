@@ -9,6 +9,7 @@ import {
   parsePairingLink,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import type { HomeAtAnswer, HomeAtOptions } from "@shared/homeAt";
 import type { JoinAtOptions, JoinAtRefusal, LinkAtAnswer } from "@shared/joinByAddress";
 import {
   COMPUTER_LINK_COMMAND,
@@ -50,6 +51,7 @@ import {
   LOOK,
   REMOVE,
 } from "./farSystems";
+import { type HomeReach, homeAt } from "./homeAt";
 import { readHostKey, resolveDestination, signInUser } from "./hostKey";
 import { sameHostKey } from "./hostTrust";
 import { type Locality, type LocalityChallenge, placeLocalityChallenge } from "./locality";
@@ -215,7 +217,7 @@ export class RemoteLoginRefusedError extends Error {
  * the Firstmate that user runs work for and the id it gave it, when its
  * grant says them.
  */
-type Look = {
+export type Look = {
   os: string;
   /** What `uname -m` answered there. */
   arch?: string;
@@ -248,6 +250,8 @@ type Look = {
   windowDevice?: string;
   /** What it read at the path this Mac left its token at, when it could read one. */
   here?: string;
+  /** systemd runs there, on Linux (docs/run.md, "Starting at boot"). */
+  systemd?: boolean;
 };
 
 /**
@@ -273,6 +277,8 @@ export class RemoteLogin {
   private readonly underWay = new Set<string>();
   /** Which Firstmate each system gets: this app's own, or the one published for it. */
   private readonly builds: FarBuilds;
+  /** Setups from the welcome screen the person cancelled, by address, until they stop. */
+  private readonly homeCancels = new Set<string>();
 
   constructor(private readonly options: RemoteLoginOptions) {
     this.builds =
@@ -475,6 +481,38 @@ export class RemoteLogin {
         throw error;
       }
     });
+  }
+
+  /**
+   * Sets a first mate up on the computer at `text`, from the welcome
+   * screen's Another computer (`homeAt`, ./homeAt.ts): one step each call,
+   * as Join by its address asks, the first five of seven.
+   */
+  homeAt(text: string, options: HomeAtOptions = {}): Promise<HomeAtAnswer> {
+    return homeAt(this.homeReach(), text, options);
+  }
+
+  /** Cancel on that screen: the setup at `text` stops at its next step. */
+  cancelHomeAt(text: string): void {
+    const address = parseRemoteLoginAddress(text);
+    if (address && this.underWay.has(address)) this.homeCancels.add(address);
+  }
+
+  /** What a setup from the welcome screen reaches of this class. */
+  private homeReach(): HomeReach {
+    return {
+      options: this.options,
+      builds: this.builds,
+      cancels: this.homeCancels,
+      confirmHost: (address, confirm) => this.confirmHost(address, confirm),
+      look: (address, here) => this.look(address, here),
+      letIn: (address, methods, typed, step) => this.letIn(address, methods, typed, step),
+      installUbuntu: (look, at) => this.installUbuntu(look, at),
+      askLink: (address) => this.askLink(address),
+      sshFor: (address) => this.sshFor(address),
+      stepper: (address) => this.stepper(address, "add"),
+      once: (key, run) => this.once(key, key, run),
+    };
   }
 
   /** One run of the fixed command there: its answer, or why SSH did not sign in. */
@@ -1469,6 +1507,7 @@ export class RemoteLogin {
       ...(windowHome && KEY_TEXT_PATTERN.test(windowHome) ? { windowHome } : {}),
       ...(windowDevice && windowDevice.length <= 64 ? { windowDevice } : {}),
       ...(read ? { here: read } : {}),
+      ...(said.get("systemd") === "yes" ? { systemd: true } : {}),
     };
   }
 

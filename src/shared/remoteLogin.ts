@@ -432,8 +432,9 @@ function unreachableLines(
   name: string,
   doing: RemoteLoginDoing | undefined,
   reach: RemoteLoginReach | undefined,
+  ending?: string,
 ): [string, string] {
-  const next = doing === "add" ? m.devicesReachOrCommand() : m.devicesReachAskAgain();
+  const next = ending ?? (doing === "add" ? m.devicesReachOrCommand() : m.devicesReachAskAgain());
   if (!reach) return [m.devicesReachNone({ address }), `${m.devicesReachCheck()} ${next}`];
   switch (reach.step) {
     case "key": {
@@ -821,6 +822,8 @@ export const remoteLoginWords = {
       installs?: LinuxInstalls | undefined;
       /** The step an `unreachable` refusal stopped at, when known. */
       reach?: RemoteLoginReach | undefined;
+      /** What an `unreachable` refusal ends with, in place of an add's or another step's own. */
+      ending?: string | undefined;
     },
   ): [string, string] {
     const { address } = at;
@@ -867,7 +870,7 @@ export const remoteLoginWords = {
           "Turn on Remote Login there, in System Settings under General, Sharing, or start the SSH server on a Linux computer. Then ask again.",
         ];
       case "unreachable":
-        return unreachableLines(address, name, at.doing, at.reach);
+        return unreachableLines(address, name, at.doing, at.reach, at.ending);
       case "host-unknown":
         return [
           `${HERE.This} has not checked ${address} yet, so it cannot tell it is your ${COMPUTER.one}.`,

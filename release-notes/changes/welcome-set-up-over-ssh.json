@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "welcome-set-up-over-ssh",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Set your first mate up on another computer from the welcome screen",
+      "body": "At the first launch, Another computer now asks for that computer's address and sets your first mate up there over SSH: it checks the key line, signs in, checks its system, sends Infinitary, starts your first mate to run at every restart, and connects to it. Each step shows what it found, and a stop says what to try, with Ask again, Set it up with commands and Back. Where Infinitary already runs there, it offers to connect to it instead.",
+      "picture": {
+        "dark": "welcome-set-up-over-ssh-dark.webp",
+        "light": "welcome-set-up-over-ssh-light.webp",
+        "alt": "The welcome screen's Another computer setting up the first mate on a computer named studio, with seven steps listed, the first two done, a stop at checking its system, and Ask again, Set it up with commands and Back."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

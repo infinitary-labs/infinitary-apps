@@ -690,7 +690,7 @@ A `/feedback` draft is kept the same way by its own command, never by `github_wr
 The answer names the ask's id and tells the crewmate to put it on a card.
 `emit_card` takes an action whose effect is `{ kind: "request_write", ask }`, beside the crewmate's own Not now and its words on why.
 The emit refuses an ask that is not the task's or was already taken, two asks on one card, and an ask beside a merge or discard; only a crewmate's card on its own task may carry one.
-The host names the button "Send it to GitHub", after the host's own name ("Send it to GitLab", or a server's address), and draws the exact call at the end of the body (`.inf-call`, `writeAskStrip`): the method and path, the JSON body as kept, and whether it goes through the github.com sign-in.
+The host names the button "Send it to GitHub", after the host's own name ("Send it to GitLab", or a server's address), or "Submit feedback" for a `/feedback` draft (`submitFeedbackWords`), and draws the exact call at the end of the body (`.inf-call`, `writeAskStrip`): the method and path, the JSON body as kept, and whether it goes through the github.com sign-in.
 A card that asks is never a task's answer: the captain's click on it leaves an answer task open.
 Only the captain's click from the card's own controls sends it (`GithubGatewayService.sendAsk`); a script on the card, a reply, the who-merges setting and the first mate never do.
 `TaskService.delivery.takeWriteAsk` marks the ask taken in one transaction before anything is sent, so a second click, a restart or a revised card naming it sends nothing again, and the emit refuses it.

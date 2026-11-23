@@ -39,7 +39,7 @@ export type FeedbackConnection = {
 
 // i18n-exempt: the feedback command's answers are read by a crewmate, in English
 const DESCRIPTION =
-  "A /feedback report for Infinitary's makers: the diagnostics it carries, similar issues on Infinitary's own public project, and a draft kept for the captain's click. Nothing is published before that click.";
+  "A /feedback report for Infinitary's maker: the diagnostics it carries, similar issues on Infinitary's own public project, and a draft kept for the captain's click. Nothing is published before that click.";
 
 // i18n-exempt: the feedback command's answers are read by a crewmate, in English
 const HELP = [

@@ -80,7 +80,7 @@ Databases predating `started_at` keep their historical shape-based reading.
 
 ### The rigor rollup
 
-`manifest.rigor` is its twin for how carefully the fleet shipped (delivery rigor phase 4): `by_rigor`, `reviews` with `by_verdict` and `by_risk`, `reviewed_changes`, `cap_hits`, `overrides_by_hold` (each override the captain's words declared, counted under each hold kind it passed; `docs/agents-reach.md`), and `metrics` - the phase-4 numbers scored by the same `scripts/interaction-metrics.ts`, so a dogfood export and a replay report cannot disagree about what a review round or a cap hit is.
+`manifest.rigor` is its twin for how carefully the fleet shipped (delivery rigor phase 4): `by_rigor`, `reviews` with `by_verdict` and `by_risk`, `reviewed_changes`, `cap_hits`, `overrides_by_hold` (each override the captain's words declared, counted under each hold kind it passed; `docs/agents-reach.md`), `overrides` (the same overrides one by one, oldest first, each with its task, time, holds, span, route and the one it replaced; `docs/agents-reach.md`), and `metrics` - the phase-4 numbers scored by the same `scripts/interaction-metrics.ts`, so a dogfood export and a replay report cannot disagree about what a review round or a cap hit is.
 `docs/delivery-rigor.md` "Numbers" is the one home of what each row counts.
 The inputs are records the app already writes: the work shape's `rigor`, the delivery facts (the PR, `ciRounds`, the caps), the `review` and `cap_reset` timeline events, the `note` rows that carry an override, a review task's own recorded report, and the merge cards.
 A database older than the tiers exports the same way - its shaped rows read as `quick`, it has no reviews, and every review number is `null` rather than zero.
@@ -112,7 +112,7 @@ See `docs/dispatch-extractor.md`.
 
 ## Tests
 
-`tests/export-corpus-corrections.test.ts` drives this **real CLI** over a fixture userData written in today's host shapes and asserts on the exported files: operational turns stay operational, a captain turn that carried wakes keeps both halves, the current decision joins its work, a settle effect is not a steer, a withdrawal is not a dismissal, a card-shape class stays explicitly unknown, backup copies are excluded, history keeps its own contract version, and no planted credential survives in any field.
+`tests/export-corpus-corrections.test.ts` drives this **real CLI** over a fixture userData written in today's host shapes and asserts on the exported files: operational turns stay operational, a captain turn that carried wakes keeps both halves, the current decision joins its work, a settle effect is not a steer, a withdrawal is not a dismissal, a card-shape class stays explicitly unknown, backup copies are excluded, history keeps its own contract version, each override is listed with its route and the one it replaced, and no planted credential survives in any field.
 
 `tests/export-corpus.test.ts` builds a fixture userData with the app's **own** migrations and stores (`openDatabase`, `TaskStore`, `CardStore`, `DecisionStore`) plus a fixture Pi JSONL, and proves the gate both ways: a packaged build with the flag unset (or set to anything but exactly `1`) exports nothing and creates no directory, and an unpackaged build - or a packaged one with `INFINITARY_DEV_OBSERVE=1` - writes the expected JSONL.
 

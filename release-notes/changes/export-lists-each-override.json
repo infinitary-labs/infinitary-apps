@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "export-lists-each-override",
+      "reason": "The developer-only corpus export's manifest now lists each recorded override with its task, time, holds, span, route and the override it replaced, for the weekly reach audit; nothing in the app changes."
+    }
+  ]
+}

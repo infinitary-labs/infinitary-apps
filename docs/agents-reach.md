@@ -39,6 +39,17 @@ Each declaration is a `note` row on the task's timeline that carries the overrid
 `scripts/interaction-metrics.ts` reads them as each dispatch's `overrides`, off the same rows in the replay (`scripts/replay/observations.ts`) and in the corpus export (`scripts/dispatch-corpus/fleetTables.ts`).
 `hold_overrides` counts the overrides declared, an observational row nobody grades.
 The corpus export's manifest counts them per hold kind in `rigor.overrides_by_hold` (`docs/corpus-export.md`), where an override that names two holds counts once under each.
+`rigor.overrides` lists the same overrides one by one, oldest first, so the counts per hold kind are its tally:
+
+- `task` and `task_id`: the task's key, null on a task with none, and its id.
+- `at`: when its row was written, in ISO 8601 UTC.
+- `holds`: the soft holds it named.
+- `until` and `head`: `version` with the version it covers, or `task` with no version.
+- `route`: `merge-anyway` for the captain's Merge anyway click, recorded in the captain's name, or `relayed-words` for update_task override, recorded by the first mate relaying the captain's words; a row anyone else wrote reads null.
+- `merge_click`: the words were the captain's click on a merge, an override the app no longer records and that never stands.
+- `replaces`: the time and holds of the override the task's record held when it was written, null when none stood or a take-back came between.
+  One override stands on a task at a time, so a widened one counts again under each hold it repeats; `replaces` shows the repeat.
+
 A hold the captain's words pass often is the signal that it rests on a verdict: it should drop a level, or its judgment should go to the agent.
 
 ## The weekly audit
@@ -65,8 +76,8 @@ It runs five steps.
    For a limit or hold that stays, it checks that the agent can read it, that its refusal names the fact it rests on, and that a way out is typed beside it.
 4. **The counts.**
    It runs `node scripts/limits.ts --counts` for the baseline's size and names each baseline entry the window added with its pull request's reason.
-   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold` and `rigor.metrics.hold_overrides`, and deletes the export.
-   It compares each count with the last audit's report.
+   It runs `pnpm export:corpus --out` into its own temporary folder, reads `manifest.json`'s `rigor.overrides_by_hold`, `rigor.overrides` and `rigor.metrics.hold_overrides`, and deletes the export.
+   It compares each count with the last audit's report, and reads the window's entries in `rigor.overrides` for which tasks passed each hold, by which route, and which overrides replaced one that named the same hold.
 5. **The answer.**
    Its card leads with the verdicts it found in code, each with its file, its line and the move it suggests, then the holds the captain's words passed most with the level each suggests, then the counts beside last week's, and what it could not read.
    It files each verdict in code as a follow-up, after searching the tasks for one already filed, so the first mate decides on it with the report.

@@ -1,8 +1,15 @@
 import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { CaptainOverrides, type CaptainOverridesHost } from "@core/orchestrator/captainOverrides";
 import { FIRSTMATE_CONTRACT_VERSION } from "@core/pi/piResources";
+import { openDatabase } from "@core/storage/db";
+import { InboxStore } from "@core/storage/inboxStore";
+import { seedTask } from "@core/tasks/seedTask";
+import { TaskService } from "@core/tasks/taskService";
+import { choiceWords, type HoldOverride, overrideWords } from "@shared/holds";
+import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { main } from "../scripts/export-corpus.ts";
+import { main, type OverrideEntry } from "../scripts/export-corpus.ts";
 import { main as extractDispatchMain } from "../scripts/extract-dispatch-corpus.ts";
 import {
   BACKUP_TURNS,
@@ -21,6 +28,7 @@ import {
   WHITESPACE_WAKE,
 } from "./helpers/corpusCorrections";
 import { scratchDir } from "./helpers/scratchDirs";
+import { seedDelivery } from "./helpers/taskDelivery";
 
 /**
  * The corrected offline export, proven the way the captain's own evidence
@@ -74,6 +82,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       reviewed_changes: number;
       cap_hits: number;
       overrides_by_hold: Record<string, number>;
+      overrides: OverrideEntry[];
       metrics: Record<string, number | null>;
     };
     exporter_contract_version: string;
@@ -1054,6 +1063,168 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     // No completion card settled anything here, so the evidence question
     // has nothing to answer - never a zero share.
     expect(rigor.metrics.evidence_headings_share).toBeNull();
+  });
+
+  it("lists each override with its task, time, holds, span, route and the one it replaced", () => {
+    // One shipped change on which the captain's words passed the checks both
+    // ways: the first mate relayed them through update_task override and
+    // widened them on the same version, the captain clicked Merge anyway on
+    // a later version, the first mate took that back, and a merge click was
+    // then recorded as an override, as the app did before it refused them.
+    let clock = Date.parse("2026-11-02T17:00:00.000Z");
+    const db = openDatabase(dir);
+    const tasks = new TaskService({ db, strict: true, now: () => clock });
+    seedTask(tasks, {
+      id: "t-ship",
+      title: "Ship the gauge fix",
+      prompt: "brief",
+      repoId: "repo-nimbus",
+      status: "idle",
+      difficulty: "medium",
+      shape: { kind: "fix", kind_source: "classifier:test", rigor: "standard" },
+    });
+    const key = tasks.get("t-ship")?.key;
+    expect(key).toBeTruthy();
+    const prUrl = "https://github.com/acme/nimbus-api/pull/12";
+    const first = "4f9c2d7e1b8a6c3d5e0f7a9b2c4d6e8f0a1b3c5d";
+    const second = "9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d";
+    seedDelivery(tasks, "t-ship", { mode: "direct-pr", prNumber: 12, prUrl, headSha: first });
+    // The first mate's own writer, so its rows and its take-back carry the
+    // actor and the shape the app writes.
+    const overrides = new CaptainOverrides(
+      { tasks, inbox: new InboxStore(db, { now: () => clock }) },
+      {
+        now: () => clock,
+        settling: { kept: { runMergeAuthorization: async () => undefined } },
+        runtime: () => undefined,
+        syncCaptainGate: () => undefined,
+      } as unknown as CaptainOverridesHost,
+    );
+    const words = "Ship this version; the lint failure is a known one.";
+    const relayed = clock;
+    expect(
+      overrides.declareOverride("t-ship", { words, holds: ["checks"], until: "version" }).ok,
+    ).toBe(true);
+    clock += 60_000;
+    const widened = clock;
+    expect(
+      overrides.declareOverride("t-ship", {
+        words,
+        holds: ["checks", "asks-first"],
+        until: "version",
+      }).ok,
+    ).toBe(true);
+    clock += 3_600_000;
+    seedDelivery(tasks, "t-ship", { headSha: second });
+    // The captain's Merge anyway click, as `passChecksFromCard` records it.
+    const anyway: HoldOverride = {
+      words: choiceWords(MERGE_ANYWAY_WORDS, "Ready to merge"),
+      holds: ["checks"],
+      until: "version",
+      head: second,
+      prNumber: 12,
+      prUrl,
+      at: clock,
+    };
+    tasks.delivery.recordPermissionRecords(
+      "t-ship",
+      { override: anyway },
+      {
+        kind: "note",
+        actor: "captain",
+        feed: true,
+        text: overrideWords(anyway),
+        data: { news: true },
+      },
+    );
+    clock += 60_000;
+    expect(overrides.withdrawOverride("t-ship").ok).toBe(true);
+    clock += 60_000;
+    const clicked: HoldOverride = {
+      words: choiceWords("Merge when checks pass", "Ready to merge"),
+      holds: ["waits"],
+      until: "task",
+      mergeClick: true,
+      at: clock,
+    };
+    tasks.delivery.recordPermissionRecords(
+      "t-ship",
+      { override: clicked },
+      {
+        kind: "note",
+        actor: "firstmate",
+        feed: true,
+        text: overrideWords(clicked),
+        data: { news: true },
+      },
+    );
+    db.close();
+
+    const caseOut = join(dir, "corpus-overrides");
+    expect(quietly(() => main(["--out", caseOut, "--user-data", dir], { isPackaged: false }))).toBe(
+      0,
+    );
+    const rigor = (
+      JSON.parse(readFileSync(join(caseOut, "manifest.json"), "utf8")) as typeof manifest
+    ).rigor;
+    const iso = (at: number) => new Date(at).toISOString();
+    const entry = { task: key, task_id: "t-ship", merge_click: false };
+    expect(rigor.overrides.filter((listed) => listed.task_id === "t-ship")).toEqual([
+      {
+        ...entry,
+        at: iso(relayed),
+        holds: ["checks"],
+        until: "version",
+        head: first,
+        route: "relayed-words",
+        replaces: null,
+      },
+      {
+        ...entry,
+        at: iso(widened),
+        holds: ["checks", "asks-first"],
+        until: "version",
+        head: first,
+        route: "relayed-words",
+        replaces: { at: iso(relayed), holds: ["checks"] },
+      },
+      {
+        ...entry,
+        at: iso(anyway.at),
+        holds: ["checks"],
+        until: "version",
+        head: second,
+        route: "merge-anyway",
+        replaces: { at: iso(widened), holds: ["checks", "asks-first"] },
+      },
+      {
+        ...entry,
+        at: iso(clicked.at),
+        holds: ["waits"],
+        until: "task",
+        head: null,
+        route: "relayed-words",
+        merge_click: true,
+        replaces: null,
+      },
+    ]);
+    // The fixture's own change: two overrides with a take-back between, so
+    // the second replaced nothing.
+    expect(
+      rigor.overrides
+        .filter((listed) => listed.task_id === "t-build")
+        .map(({ holds, until, route, replaces }) => ({ holds, until, route, replaces })),
+    ).toEqual([
+      { holds: ["checks", "waits"], until: "task", route: "relayed-words", replaces: null },
+      { holds: ["checks"], until: "task", route: "relayed-words", replaces: null },
+    ]);
+    // The list is oldest first, and it itemizes exactly what the totals count.
+    const times = rigor.overrides.map((listed) => listed.at);
+    expect(times).toEqual([...times].sort());
+    const perHold: Record<string, number> = {};
+    for (const listed of rigor.overrides)
+      for (const hold of listed.holds) perHold[hold] = (perHold[hold] ?? 0) + 1;
+    expect(perHold).toEqual(rigor.overrides_by_hold);
   });
 
   it("redacts database joins in the standalone dispatch export", () => {

@@ -586,7 +586,7 @@ export function routingDispatches(tables: FleetTables): ObservedDispatch[] {
             ? 0
             : null,
       capHits: caps,
-      overrides: tables.overrides.get(taskId) ?? [],
+      overrides: (tables.overrides.get(taskId) ?? []).map((override) => override.holds),
       evidence:
         rigorRequiresEvidence(rigor as Rigor | undefined) && completion.has(taskId)
           ? carriesEvidenceHeadings(reportEvidenceHeadings(task.outcome))
@@ -645,9 +645,62 @@ export type RigorRollup = {
    * `hold_overrides` metric.
    */
   overrides_by_hold: Record<string, number>;
+  /** The same overrides one by one, oldest first, so the audit can read each (docs/agents-reach.md). */
+  overrides: OverrideEntry[];
   /** The phase-4 numbers, scored by the one home so the replay agrees with this. */
   metrics: Record<string, number | null>;
 };
+
+/** One override as `manifest.rigor.overrides` lists it; times are ISO 8601 in UTC. */
+export type OverrideEntry = {
+  task: string | null;
+  task_id: string;
+  at: string;
+  holds: string[];
+  until: "version" | "task" | null;
+  head: string | null;
+  route: OverrideRoute | null;
+  merge_click: boolean;
+  replaces: { at: string; holds: string[] } | null;
+};
+
+/**
+ * How the captain's words reached the override. Each of its two writers
+ * stamps its own actor on the row: the captain's Merge anyway click
+ * (`passChecksFromCard`) writes as the captain, and update_task override
+ * (`declareOverride`), the first mate relaying the captain's words, writes
+ * as the first mate. Any other actor is no known route, so it reads null.
+ */
+export type OverrideRoute = "merge-anyway" | "relayed-words";
+
+function overrideRoute(actor: string): OverrideRoute | null {
+  if (actor === "captain") return "merge-anyway";
+  if (actor === "firstmate") return "relayed-words";
+  return null;
+}
+
+/** Each override the rollup counts, from the tasks it counts them on, oldest first. */
+function overrideEntries(tables: FleetTables, taskIds: readonly string[]): OverrideEntry[] {
+  const iso = (at: number): string => new Date(at).toISOString();
+  return taskIds
+    .flatMap((taskId) =>
+      (tables.overrides.get(taskId) ?? []).map((override) => ({ taskId, override })),
+    )
+    .sort((a, b) => a.override.at - b.override.at)
+    .map(({ taskId, override }) => ({
+      task: tables.tasks.get(taskId)?.key || null,
+      task_id: taskId,
+      at: iso(override.at),
+      holds: override.holds,
+      until: override.until,
+      head: override.head,
+      route: overrideRoute(override.actor),
+      merge_click: override.mergeClick,
+      replaces: override.replaces
+        ? { at: iso(override.replaces.at), holds: override.replaces.holds }
+        : null,
+    }));
+}
 
 export function rigorRollup(tables: FleetTables): RigorRollup {
   const dispatches = routingDispatches(tables);
@@ -663,6 +716,7 @@ export function rigorRollup(tables: FleetTables): RigorRollup {
     reviewed_changes: new Set(reviews.map((review) => review.taskId)).size,
     cap_hits: dispatches.reduce((sum, dispatch) => sum + dispatch.capHits, 0),
     overrides_by_hold: overridesByHold(dispatches),
+    overrides: overrideEntries(tables, dispatches.map((dispatch) => dispatch.taskId)),
     metrics: Object.fromEntries(
       Object.entries(scores).map(([id, value]) => [id, (value as MetricValue).value]),
     ),

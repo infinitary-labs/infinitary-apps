@@ -33,6 +33,8 @@ describe("clearing the answers interim lines kept", () => {
     // INF-3898 piece 2's command marks, read by today's card store, lent the same way.
     older.exec("ALTER TABLE card_messages ADD COLUMN through TEXT");
     older.exec("ALTER TABLE cards ADD COLUMN resolved_through TEXT");
+    // The current answer lookup reads the original captain text to distinguish /feedback.
+    older.exec("ALTER TABLE card_messages ADD COLUMN captain_text TEXT");
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

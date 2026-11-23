@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-thread-migration-fixture",
+      "reason": "Update the historical card-thread test fixture to work with the current card service; no app behavior changes."
+    }
+  ]
+}

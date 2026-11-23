@@ -199,6 +199,29 @@ export function enqueue(record: BatchRecord, approved: BatchChange): BatchRecord
 }
 
 /**
+ * Put an approved change in line (`enqueue`), marked the held batch's fix
+ * when a declaration covers it. A change a repair declared the fix is marked
+ * so, still after its batch was closed and put back in line, until a batch
+ * merges or ends. So is another task's change approved at the exact commit
+ * of a declared fix, as when that task took the repair's delivery over:
+ * `pushed` says whether a declared repair's own change holds the approved
+ * version, as the host saw it pushed, while that repair's task is open. It is
+ * declared the fix for the task that delivers it. Only that commit carries
+ * the declaration, and only the delivered version's own approval puts it here.
+ */
+export function enqueueApproved(
+  record: BatchRecord,
+  approved: BatchChange,
+  pushed: (repair: string) => boolean,
+): BatchRecord {
+  const fixes = record.fixes ?? [];
+  if (fixes.includes(approved.taskId)) return enqueue(record, { ...approved, fix: true });
+  return fixes.some(pushed)
+    ? enqueue(declared(record, approved.taskId), { ...approved, fix: true })
+    : enqueue(record, approved);
+}
+
+/**
  * Take a task's change out of the line and the open batch: its approval was
  * withdrawn, or it was sent back. An open batch that carried it combines
  * again without it (`stale`).

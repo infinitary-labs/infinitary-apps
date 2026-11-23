@@ -69,7 +69,7 @@ import {
   clashesEnded,
   combined,
   declared,
-  enqueue,
+  enqueueApproved,
   fixWaits,
   forms,
   heldVersions,
@@ -263,11 +263,7 @@ export type BatchesOptions = {
   runsNoChecks: (taskId: string, head: string) => boolean;
   /** Whether a task is still open: a closed task's receipts and notes are dropped. */
   live: (taskId: string) => boolean;
-  /**
-   * Whether `head` is a version of the change a task carries on its own
-   * branch, as the project's host saw it pushed: another task approved at
-   * that exact commit delivers that change. Absent, none is.
-   */
+  /** Whether the host saw `head` pushed as a version of a task's own change (`enqueueApproved`). Absent, none is. */
   versionOf?: (taskId: string, head: string) => boolean;
   /**
    * The approved version a task's work merged at, once it closed done. A
@@ -454,24 +450,13 @@ export class Batches {
 
   /**
    * Put an approved change in line and start a pass. A change a repair
-   * declared the held batch's fix is marked so, whichever came first. So is
-   * another task's change approved at the exact commit of a declared fix, as
-   * when that task took the repair's work over: it is declared the fix for
-   * the task that delivers it. Only that commit carries the declaration, and
-   * only the delivered version's own approval puts it here.
+   * declared the held batch's fix is marked so, whichever came first, and so
+   * is another task's change approved at a declared fix's exact commit.
    */
   async enqueue(repoId: string, change: BatchChange): Promise<void> {
-    await this.write(repoId, (record) => {
-      // Still a fix after its batch was closed and put back in line, until a batch merges or ends.
-      const fixes = record.fixes ?? [];
-      if (fixes.includes(change.taskId)) return enqueue(record, { ...change, fix: true });
-      const delivers = fixes.some(
-        (taskId) => this.options.live(taskId) && this.options.versionOf?.(taskId, change.head),
-      );
-      return delivers
-        ? enqueue(declared(record, change.taskId), { ...change, fix: true })
-        : enqueue(record, change);
-    });
+    const pushed = (repair: string) =>
+      this.options.live(repair) && (this.options.versionOf?.(repair, change.head) ?? false);
+    await this.write(repoId, (record) => enqueueApproved(record, change, pushed));
     void this.pass(repoId);
   }
 

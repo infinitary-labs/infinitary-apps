@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { releaseSlug } from "../scripts/docs-site-whats-new.ts";
 import {
   announce,
   CLAIM_PREFIX,
@@ -12,6 +13,7 @@ import {
   readLedger,
   renderMessage,
   type WebhookMessage,
+  WHATS_NEW_URL,
 } from "../scripts/release-announce.ts";
 
 /**
@@ -59,7 +61,9 @@ function network(discord: DiscordAnswer, { claimRule = false } = {}) {
       return discord();
     }
     if (url.startsWith("https://docs.getinfinitary.com/whats-new/"))
-      return new Response('<h2 id="087">0.8.7</h2><h2 id="086">0.8.6</h2>');
+      return new URL(url).pathname === `/whats-new/${releaseSlug("0.8.7")}/`
+        ? new Response("<h1>What's new in 0.8.7</h1>")
+        : new Response("<h1>Not found</h1>", { status: 404 });
     const path = url.slice(`${API}/repos/${REPOSITORY}`.length);
     const jobs = /^\/actions\/runs\/(\d+)\/jobs\?/.exec(path);
     if (jobs) {
@@ -142,6 +146,10 @@ describe("which release runs post", () => {
     const at = titles.map((title) => description.indexOf(`**${title}**`));
     expect(at.every((index) => index >= 0)).toBe(true);
     expect(at).toEqual(at.toSorted((a, b) => a - b));
+    // The captain's ask: link the release's own page, which stays once newer stables push it off What's new.
+    const ownPage = `${WHATS_NEW_URL}${releaseSlug("0.8.7")}/`;
+    expect(post!.embeds[0]!.url).toBe(ownPage);
+    expect(description).toContain(`(${ownPage})`);
     expect(post!.embeds[0]!.image?.url).toBe(
       `https://raw.githubusercontent.com/${REPOSITORY}/v0.8.7/release-notes/pictures/${LEDGER.get("feedback-command")!.picture!.dark}`,
     );

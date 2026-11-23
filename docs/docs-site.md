@@ -27,8 +27,9 @@ Two pages are written from the app's own data, so neither tells a person somethi
 - **What's new** (`whats-new.md`) and each stable's own page (`whats-new/<version with dashes>.md`, such as `/whats-new/0-8-6/`) are written by `node scripts/docs-site-whats-new.ts`, which the site's `build` and `dev` run first, from the release-notes ledger (`docs/release-notes.md`).
   A release's changes are what it added over the stable before it, grouped by area in the app's order, without backfilled history or maintenance, as the startup note measures them.
   Each change shows its title, with its detail folded under it in a disclosure, as the app's What's new card folds every change under "All N changes".
-  What's new shows the five newest stables, a release heading each (`## 0.8.7`, whose anchor the release announcement links to), and ends with "Every release", a line linking each stable that changed something to its own page, so a release stays on the site once newer ones push it off What's new.
+  What's new shows the five newest stables, a release heading each (`## 0.8.7`), and ends with "Every release", a line linking each stable that changed something to its own page, so a release stays on the site once newer ones push it off What's new.
   A stable that changed nothing a person sees gets no page of its own.
+  The Discord announcement of a stable links to its own page and waits for the site to serve it (`docs/alpha.md`, "Announcing a stable").
   The pages are not in the sidebar; What's new links to them.
   They combine local stable tags with the archived stable manifests, newest first, without repeating a version.
   They are not committed (`docs-site/.gitignore`), and the script replaces the whole `whats-new/` folder on each run; unpinned local releases still require full history and tags, and a shallow checkout refuses to build.

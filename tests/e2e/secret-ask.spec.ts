@@ -111,7 +111,10 @@ test("a crewmate's ask is kept from Infinitary's own card by keys alone", async 
     await expect(addFiles).toBeFocused();
     await pressKey(addFiles, "Shift+Tab");
     await expect(replyField).toBeFocused();
+    const pointAt = reply.getByRole("button", { name: "Point at", exact: true });
     await pressKey(replyField, "Shift+Tab");
+    await expect(pointAt).toBeFocused();
+    await pressKey(pointAt, "Shift+Tab");
     await expect(hookField).toBeFocused();
     await pressKey(hookField, "Shift+Tab");
     await expect(keyField).toBeFocused();

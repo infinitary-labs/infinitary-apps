@@ -115,7 +115,10 @@ test("a bring from another tool keeps only the ticked secret, by keys alone", as
     await expect(addFiles).toBeFocused();
     await pressKey(addFiles, "Shift+Tab");
     await expect(replyField).toBeFocused();
+    const pointAt = reply.getByRole("button", { name: "Point at", exact: true });
     await pressKey(replyField, "Shift+Tab");
+    await expect(pointAt).toBeFocused();
+    await pressKey(pointAt, "Shift+Tab");
     await expect(second).toBeFocused();
     await pressKey(second, "Space");
     await expect(second).toBeChecked();

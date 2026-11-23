@@ -2,14 +2,14 @@
 
 The desktop window can play calm music it composes itself, following the crew, in one of ten styles or a style of the person's own ("Your own styles" below).
 It is the captain's choice from INF-4741: rules in the app, off until someone turns it on, and the desktop app only.
-Nine styles are the ones the captain kept from INF-5056's prototypes, with Star cruise the default; the tenth, Cold sleep, is the piano style the captain kept from INF-4749's.
+Nine styles are the ones the captain kept from INF-5056's prototypes; the tenth, Cold sleep, is the piano style the captain kept from INF-4749's, and the default.
 Nothing is downloaded and no recorded sample plays: every sound is an oscillator made on the computer, and nothing leaves it.
 
 ## Turning it on
 
-Settings → Appearance has a Sound group: an Ambient music switch, off on a fresh install, a Style picker on Star cruise, and a Volume slider at 40%.
+Settings → Appearance has a Sound group: an Ambient music switch, off on a fresh install, a Style picker on Cold sleep, and a Volume slider at 40%.
 Both are part of the window's look (`ambientMusic` and `ambientVolume` in `src/shared/preferences.ts`), which the core keeps in a row of their own, `ambient-music`, so an older build never meets them (`src/core/storage/settingsStore.ts`).
-The style is `ambientStyle`, kept in its own row, `ambient-style`, for the same reason; a style this build does not know, saved by a newer one, is kept and plays as Star cruise.
+The style is `ambientStyle`, kept in its own row, `ambient-style`, for the same reason; a style this build does not know, saved by a newer one, is kept and plays as Cold sleep.
 A Mac controlling another keeps its own, as it keeps the rest of its look (`docs/view.md`), and a view from before the change is never sent them (`src/shared/contract-changes/ambient-music.md`, `ambient-style.md`).
 While enabled, a 32 px sound button appears 6 px before Settings on the main screen.
 Press it to pause or resume; the pause survives a restart, and turning the switch off removes the button and clears the pause.
@@ -34,9 +34,9 @@ The picker lists them under the four kinds of journey they come from (`src/rende
 
 | Kind | Style | Sound |
 | --- | --- | --- |
-| Space | Star cruise | A soft repeating pattern echoing left and right over a slow low pulse; the default |
+| Space | Star cruise | A soft repeating pattern echoing left and right over a slow low pulse |
 | Space | Deep drift | No drums: slow wide chords and high pings with long echoes |
-| Space | Cold sleep | Mostly piano: a felt piano in a vast, cold room over a low drone and soft wind; a slow heartbeat and a broken chord as the crew works, a high answer with three or more |
+| Space | Cold sleep | Mostly piano: a felt piano in a vast, cold room over a low drone and soft wind; a slow heartbeat and a broken chord as the crew works, a high answer with three or more; the default |
 | Pirate | Quiet cove | A slow rocking rhythm: concertina, plucked lute, a whistle tune |
 | Pirate | Tavern embers | A quiet minor-key waltz: plucked strings, accordion, a fiddle tune, soft rain outside |
 | Pirate | Moonlit deck | A low drone, a music box tune, a slow harp, a distant whistle, a night wind |
@@ -104,7 +104,7 @@ The app sets the loudness, never the model (`src/renderer/src/ambient/balance.ts
 The first time a style plays in a session, the window renders it silently, faster than it plays: each layer alone at the crew level where it plays loudest, moved to that layer's median across the shipped styles, and then the whole mix at level 1 moved to theirs and lowered if its loudest moment at level 2 would pass -1 dB.
 A style that brings no voices of its own keeps the shipped style's layers and has only its whole mix measured.
 The meter is the broadcast standard's (ITU-R BS.1770, `loudness.ts`), so each crew level plays within about 1 LUFS of the shipped medians, -18.1, -16.8 and -16.0.
-The measurement takes one to nine seconds in the window, and the music starts once it ends; a style that cannot be read or measured plays Star cruise.
+The measurement takes one to nine seconds in the window, and the music starts once it ends; a style that cannot be read or measured plays Cold sleep.
 The person's own `mix` tilts a layer louder or quieter on top of the balance, and -60 silences it.
 
 Rain is a dark, pink hush with many faint, rounded drops, some ringing as they land in water, kept between 250 Hz and 4.2 kHz, and wind a band of noise whose pitch and loudness drift in slow gusts (`player.ts`).
@@ -113,7 +113,7 @@ At its fullest each reads about -32.5 LUFS alone, 2 dB above the sea's waves, an
 The styles are `ambientOwnStyles` in the look, at most 12, kept in a row of their own, `ambient-own-styles`, so an older build never meets them, and a view from before the change is never sent them (`src/shared/contract-changes/ambient-own-styles.md`).
 Each has an id made from its name, `own-` and a few lowercase words, which `ambientStyle` names while it plays.
 Settings lists them under Yours in the Style picker, with the person's own words as the chosen style's description.
-The Your own music row below it has Describe your own, which goes home and starts the ask to the first mate in the message box, and Remove while a style of the person's own is chosen, which deletes it and plays Star cruise.
+The Your own music row below it has Describe your own, which goes home and starts the ask to the first mate in the message box, and Remove while a style of the person's own is chosen, which deletes it and plays Cold sleep.
 
 ## When it goes quiet
 

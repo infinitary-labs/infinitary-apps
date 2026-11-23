@@ -195,10 +195,10 @@ function savedStyle(userDataDir: string) {
   });
 }
 
-// INF-5056's kept choices: Star cruise plays until someone picks another of
-// the nine styles; the Style picker is the next stop after the switch, a
-// pick plays at once, and it is kept across a relaunch.
-test("the ambient music plays Star cruise first and keeps the style picked in Settings", async () => {
+// INF-5056's kept choices, with Cold sleep the default since: it plays until
+// someone picks another style; the Style picker is the next stop after the
+// switch, a pick plays at once, and it is kept across a relaunch.
+test("the ambient music plays Cold sleep first and keeps the style picked in Settings", async () => {
   let launched = await launchApp({ withMockProvider: true });
   const { userDataDir, homeDir } = launched;
   try {
@@ -211,7 +211,7 @@ test("the ambient music plays Star cruise first and keeps the style picked in Se
     });
     await expect(style).toHaveValue(DEFAULT_AMBIENT_STYLE);
     await expect(settingRow(page, "ambient-style")).toContainText(
-      m.settingsSoundStyleStarCruiseDescription(),
+      m.settingsSoundStyleColdSleepDescription(),
     );
     await music.click();
     await expect.poll(() => player(page)).toBe("playing");

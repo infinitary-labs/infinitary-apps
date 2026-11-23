@@ -115419,7 +115419,8 @@ ${FRAME_KEYBOARD_SCRIPT}
         problem: `a <table data-inf-tradeoff> names ${headings.length} heading${headings.length === 1 ? "" : "s"} in its first row; it draws two or more: an empty first cell, then one cell per heading where the options differ.`
       };
     }
-    const choices = choicesIn(questionOf(table, root));
+    const question = questionOf(table, root);
+    const choices = choicesIn(question);
     const rows = [];
     const labels2 = [];
     for (const row of body) {
@@ -115476,16 +115477,17 @@ ${FRAME_KEYBOARD_SCRIPT}
         } : {}
       });
     }
-    if (!rows.some((row) => row.current)) {
-      if (!choices.some((choice) => hasHook(choice.attribs, "current"))) {
+    if (choices.some((choice) => hasHook(choice.attribs, "current"))) {
+      if (!rows.some((row) => row.current)) {
         return {
           // i18n-exempt: a card check refusal served to the author model, never shown
-          problem: "a <table data-inf-tradeoff> sits in a question with no option marked data-inf-current: put data-inf-current on the <input> of what the code does now, never on its label, and give that option its own row."
+          problem: "a <table data-inf-tradeoff> has no row for what the code does now: give the question's option marked data-inf-current its own row, so the captain sees what each way gains or gives up against it."
         };
       }
+    } else if (descendants(question, (each) => hasHook(each.attribs, "current")).length > 0) {
       return {
         // i18n-exempt: a card check refusal served to the author model, never shown
-        problem: "a <table data-inf-tradeoff> has no row for what the code does now: give the question's option marked data-inf-current its own row, so the captain sees what each way gains or gives up against it."
+        problem: "a <table data-inf-tradeoff> sits in a question with no option marked data-inf-current: put data-inf-current on the <input> of what the code does now, never on its label, and give that option its own row."
       };
     }
     return {

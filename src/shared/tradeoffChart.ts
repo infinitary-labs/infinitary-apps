@@ -158,7 +158,8 @@ function readTable(table: Node, root: Node, html: string): Read {
       problem: `a <table data-inf-tradeoff> names ${headings.length} heading${headings.length === 1 ? "" : "s"} in its first row; it draws two or more: an empty first cell, then one cell per heading where the options differ.`,
     };
   }
-  const choices = choicesIn(questionOf(table, root));
+  const question = questionOf(table, root);
+  const choices = choicesIn(question);
   const rows: TradeoffRow[] = [];
   const labels: Node[] = [];
   for (const row of body) {
@@ -218,18 +219,21 @@ function readTable(table: Node, root: Node, html: string): Read {
         : {}),
     });
   }
-  if (!rows.some((row) => row.current)) {
-    if (!choices.some((choice) => hasHook(choice.attribs, "current"))) {
+  // A question need not offer what the project does now; one that does, by
+  // marking an option's own input, gives that option its row.
+  if (choices.some((choice) => hasHook(choice.attribs, "current"))) {
+    if (!rows.some((row) => row.current)) {
       return {
         // i18n-exempt: a card check refusal served to the author model, never shown
         problem:
-          "a <table data-inf-tradeoff> sits in a question with no option marked data-inf-current: put data-inf-current on the <input> of what the code does now, never on its label, and give that option its own row.",
+          "a <table data-inf-tradeoff> has no row for what the code does now: give the question's option marked data-inf-current its own row, so the captain sees what each way gains or gives up against it.",
       };
     }
+  } else if (descendants(question, (each) => hasHook(each.attribs, "current")).length > 0) {
     return {
       // i18n-exempt: a card check refusal served to the author model, never shown
       problem:
-        "a <table data-inf-tradeoff> has no row for what the code does now: give the question's option marked data-inf-current its own row, so the captain sees what each way gains or gives up against it.",
+        "a <table data-inf-tradeoff> sits in a question with no option marked data-inf-current: put data-inf-current on the <input> of what the code does now, never on its label, and give that option its own row.",
     };
   }
   return {
@@ -282,8 +286,9 @@ export function tradeoffTables(html: string): TradeoffTable[] {
  * What is wrong with a body's tradeoff tables, for the card checks to refuse
  * (a product fact: the app draws only what it can place). It reads structure
  * alone - two headings or more, a row per option naming it, a level in every
- * cell, a row for what the code does now - and never a heading's or option's
- * words. Undefined when every table is sound.
+ * cell, and a row for the option marked as what the code does now when the
+ * question marks one - and never a heading's or option's words, nor which
+ * kind of card holds it. Undefined when every table is sound.
  */
 export function tradeoffProblem(body: string): string | undefined {
   return readAll(body).find((read) => read.problem)?.problem;

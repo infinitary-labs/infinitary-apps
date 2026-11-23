@@ -10,7 +10,6 @@ import {
   type HomeStep,
   homeAtRefusalLines,
   homeConnectLines,
-  homeLingerWay,
   homeStepsLeft,
 } from "@shared/homeAt";
 import * as m from "@shared/i18n/messages.generated";
@@ -19,6 +18,7 @@ import { NEARBY_OFF, NEARBY_RENEW_MS, type NearbyMacsView } from "@shared/nearby
 import {
   addressAtPort,
   addressParts,
+  lingerWay,
   type RemoteLoginPasswordQuestion,
   remoteLoginWords,
 } from "@shared/remoteLogin";
@@ -134,14 +134,25 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
   /** What the person agreed to on the way: asked again with every later step. */
   const agreed = useRef<HomeAtOptions>({});
   const cancelled = useRef(false);
+  /** The address a setup request is under way for, until it answers. */
+  const underWay = useRef<string | null>(null);
   const live = useRef(true);
+  const ask = (): HomeRequests => requests ?? window.infinitary.devices;
+  const askRef = useRef(ask);
+  askRef.current = ask;
   useEffect(() => {
     live.current = true;
     return () => {
       live.current = false;
+      // Leaving the screen mid-setup stops it there at its next step, as Cancel does.
+      const at = underWay.current;
+      if (at)
+        void askRef
+          .current()
+          .cancelHomeAt(at)
+          .catch(() => undefined);
     };
   }, []);
-  const ask = (): HomeRequests => requests ?? window.infinitary.devices;
   const set = (next: HomePhase) => {
     if (live.current) setPhase(next);
   };
@@ -171,14 +182,13 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
   const stop = (refused: HomeAtRefused) => {
     const name = refused.name ?? hostOf(asked.current);
     const changed =
-      Boolean(agreed.current.account) ||
-      HOME_STEPS.indexOf(refused.step) >= HOME_STEPS.indexOf("start");
+      refused.changed === true || HOME_STEPS.indexOf(refused.step) >= HOME_STEPS.indexOf("start");
     set({
       at: "stopped",
       step: refused.step,
       name,
       lines: homeAtRefusalLines(refused, asked.current),
-      running: refused.running === true,
+      running: false,
       changed,
     });
   };
@@ -189,10 +199,13 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
     const at = asked.current;
     set({ at: "working", step: password ? "sign-in" : "key", name: hostOf(at) });
     let answer: HomeAtAnswer;
+    underWay.current = at;
     try {
       answer = await ask().homeAt(at, { ...agreed.current, ...(password ? { password } : {}) });
     } catch {
       answer = { refused: "failed", step: "key" };
+    } finally {
+      underWay.current = null;
     }
     if ("refused" in answer) {
       if (answer.refused === "not-an-address") return set({ at: "address", refused: answer });
@@ -442,15 +455,13 @@ export function SetUpThereView(props: SetUpThereViewProps) {
   );
 }
 
-/** The SSH port the address names: SSH's own unless one was typed. */
-function sshPort(asked: string): string {
-  return addressParts(asked).port || "22";
-}
-
 function stepLabel(step: HomeStep, asked: string): string {
   switch (step) {
-    case "key":
-      return m.devicesHomeStepKey({ port: sshPort(asked) });
+    case "key": {
+      // Only a typed port is known here; the person's SSH settings may name another.
+      const port = addressParts(asked).port;
+      return port ? m.devicesHomeStepKey({ port }) : m.devicesHomeStepKeyAny();
+    }
     case "sign-in":
       return m.devicesHomeStepSignIn();
     case "look":
@@ -560,7 +571,7 @@ function Steps(
       {started?.lingerOff && started.user && (
         <div data-home-linger="">
           <p className="fm-join-sub">{m.devicesHomeLinger({ computer: phase.name })}</p>
-          <WayLine text={homeLingerWay(started.user)} />
+          <WayLine text={lingerWay(started.user)} />
         </div>
       )}
       {phase.at === "working" && (

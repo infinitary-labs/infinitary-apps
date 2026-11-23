@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "Anlegen";
 "devicesHomeAddressHead" = "Richte mich auf einem anderen Computer ein";
 "devicesHomeAskAgain" = "Erneut fragen";
-"devicesHomeAt" = "%1$@ · Port %2$@";
 "devicesHomeBack" = "Zurück";
 "devicesHomeCancelled" = "Angehalten. Auf %1$@ wurde nichts gestartet.";
 "devicesHomeCommands" = "Mit Befehlen einrichten";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "läuft nach einem Neustart";
 "devicesHomeStepConnect" = "Von hier aus verbinden";
 "devicesHomeStepKey" = "Seinen SSH-Schlüssel auf Port %1$@ lesen";
+"devicesHomeStepKeyAny" = "Seinen SSH-Schlüssel lesen";
 "devicesHomeStepLook" = "Sein System prüfen";
 "devicesHomeStepSend" = "Infinitary senden";
 "devicesHomeStepSignIn" = "Mit deinem SSH-Schlüssel anmelden";

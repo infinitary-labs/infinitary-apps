@@ -4,7 +4,7 @@ import { type CopyForm, type FarSystem, LINUX_APP_FILE } from "./farSystems";
 /**
  * The shell that sets a first mate up on another computer over SSH, from
  * the welcome screen's Another computer (docs/first-launch.md, "Setting it
- * up on another computer"): the copy kept where this account keeps its
+ * up from here"): the copy kept where this account keeps its
  * apps, then the copy's own `start-at-boot`, which starts a first mate
  * there with the record that account already has, or a fresh one. Each
  * script is fixed and names no value: values are quoted words after it.

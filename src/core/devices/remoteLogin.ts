@@ -451,20 +451,12 @@ export class RemoteLogin {
         const gated = await this.confirmHost(address, options.confirm);
         if ("asks" in gated) return gated;
         if ("refusal" in gated) return refused(gated.refusal, gated.reach);
-        let asked = await this.askLink(address);
-        if ("refusal" in asked && asked.refusal === "key-refused") {
-          const methods = asked.methods ?? null;
-          if (methods?.length === 0) return { refused: "password-off" };
-          if (hostPlatform() === "win32") return { refused: "key-refused" };
-          const user = await signInUser(this.options.ssh, address);
-          const question = { asks: "password" as const, address, ...(user ? { user } : {}) };
-          if (!options.password) return question;
-          const letIn = await this.letIn(address, methods, options.password, step);
-          if (letIn === "wrong") return { ...question, wrong: true };
-          asked = await this.askLink(address);
-          if ("refusal" in asked && asked.refusal === "key-refused")
-            return { refused: "key-not-taken" };
-        }
+        const signed = await this.withPassword(address, options.password, step, () =>
+          this.askLink(address),
+        );
+        if ("asks" in signed) return signed;
+        if ("keyStop" in signed) return { refused: signed.keyStop };
+        const asked = signed.ran;
         if ("refusal" in asked) return refused(asked.refusal, asked.reach);
         if ("none" in asked) return { refused: linkNoneRefusal(asked.none) };
         let key: string;
@@ -506,13 +498,47 @@ export class RemoteLogin {
       cancels: this.homeCancels,
       confirmHost: (address, confirm) => this.confirmHost(address, confirm),
       look: (address, here) => this.look(address, here),
-      letIn: (address, methods, typed, step) => this.letIn(address, methods, typed, step),
+      withPassword: (address, password, step, attempt) =>
+        this.withPassword(address, password, step, attempt),
+      refusedOver: (address, refusal, sending) => this.refusedOver(address, refusal, sending),
       installUbuntu: (look, at) => this.installUbuntu(look, at),
       askLink: (address) => this.askLink(address),
       sshFor: (address) => this.sshFor(address),
       stepper: (address) => this.stepper(address, "add"),
       once: (key, run) => this.once(key, key, run),
     };
+  }
+
+  /**
+   * Runs `attempt` signed in with the person's own SSH. Where that computer
+   * did not let their key in, the password asked once lets Infinitary's own
+   * key in and `attempt` runs again; a Windows PC asks no password yet.
+   */
+  private async withPassword<R extends object>(
+    address: string,
+    password: string | undefined,
+    step: ReturnType<RemoteLogin["stepper"]>,
+    attempt: () => Promise<R>,
+  ): Promise<
+    | { ran: R }
+    | { asks: "password"; address: string; user?: string; wrong?: true }
+    | { keyStop: "password-off" | "key-refused" | "key-not-taken" }
+  > {
+    const keyRefused = (ran: R): ran is R & { methods?: PasswordMethod[] | null } =>
+      "refusal" in ran && ran.refusal === "key-refused";
+    let ran = await attempt();
+    if (!keyRefused(ran)) return { ran };
+    const methods = ran.methods ?? null;
+    if (methods?.length === 0) return { keyStop: "password-off" };
+    if (hostPlatform() === "win32") return { keyStop: "key-refused" };
+    const user = await signInUser(this.options.ssh, address);
+    const question = { asks: "password" as const, address, ...(user ? { user } : {}) };
+    if (!password) return question;
+    const letIn = await this.letIn(address, methods, password, step);
+    if (letIn === "wrong") return { ...question, wrong: true };
+    ran = await attempt();
+    if (keyRefused(ran)) return { keyStop: "key-not-taken" };
+    return { ran };
   }
 
   /** One run of the fixed command there: its answer, or why SSH did not sign in. */

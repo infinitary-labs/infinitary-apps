@@ -42,12 +42,23 @@ export type HomeAtOptions = z.infer<typeof homeAtOptionsSchema>;
  * - `root`: a root sign-in on a Mac, where no account is made for it.
  * - `no-systemd`: a Linux computer with no systemd, which starts nothing at boot.
  * - `no-curl`: a Linux computer with no curl, which this computer asks for a link with.
+ * - `controls`: the Infinitary open there controls a first mate on another computer.
+ * - `no-link`: something there answered the link request but made no link, so one may run there.
  * - `not-started`: the copy's `start-at-boot` did not start it there.
  * - `cancelled`: the person pressed Cancel; it stopped at the next step.
  */
 export const homeAtRefusalSchema = z.union([
   remoteLoginRefusalSchema,
-  z.enum(["not-an-address", "root", "no-systemd", "no-curl", "not-started", "cancelled"]),
+  z.enum([
+    "not-an-address",
+    "root",
+    "no-systemd",
+    "no-curl",
+    "controls",
+    "no-link",
+    "not-started",
+    "cancelled",
+  ]),
 ]);
 export type HomeAtRefusal = z.infer<typeof homeAtRefusalSchema>;
 
@@ -100,8 +111,8 @@ export const homeAtAnswerSchema = z.union([
     missing: z.array(z.string().min(1).max(16)).max(16).optional(),
     installs: linuxInstallsSchema.optional(),
     reach: reachSchema.optional(),
-    /** The first mate there was started before it stopped, and keeps running. */
-    running: z.literal(true).optional(),
+    /** Something there changed before it stopped: an account made, or the Ubuntu package going in. */
+    changed: z.literal(true).optional(),
   }),
   z.strictObject({
     started: z.literal(true),
@@ -135,6 +146,8 @@ export function homeAtRefusalLines(refused: HomeAtRefused, address: string): [st
   switch (refused.refused) {
     case "not-an-address":
     case "no-curl":
+    case "controls":
+    case "no-link":
       return [joinAtRefusalWords(refused.refused, address), ""];
     case "root":
       return [m.devicesHomeRoot({ computer }), m.devicesHomeCommandsInstead()];
@@ -143,9 +156,7 @@ export function homeAtRefusalLines(refused: HomeAtRefused, address: string): [st
     case "not-started":
       return [m.devicesHomeNotStarted({ computer }), m.devicesHomeCommandsInstead()];
     case "cancelled":
-      return refused.running
-        ? [m.devicesHomeKeepsRunning({ computer }), ""]
-        : [m.devicesHomeCancelled({ computer }), ""];
+      return [m.devicesHomeCancelled({ computer }), ""];
     case "password-off":
       return [remoteLoginWords.refused("password-off", { address })[0], m.devicesHomeOrCommands()];
     case "key-not-taken":
@@ -194,11 +205,6 @@ export function homeConnectLines(
       m.devicesHomeUnreachableWay(),
     ],
   };
-}
-
-/** The one line an administrator runs there so its first mate keeps running after a restart. */
-export function homeLingerWay(user: string): string {
-  return `sudo loginctl enable-linger ${user}`;
 }
 
 /** Where a stop leaves the steps after it. */

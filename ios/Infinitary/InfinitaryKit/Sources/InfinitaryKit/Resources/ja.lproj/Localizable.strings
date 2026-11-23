@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "作成する";
 "devicesHomeAddressHead" = "別のコンピューターに私を準備する";
 "devicesHomeAskAgain" = "もう一度頼む";
-"devicesHomeAt" = "%1$@ · ポート %2$@";
 "devicesHomeBack" = "戻る";
 "devicesHomeCancelled" = "停止しました。%1$@ では何も起動していません。";
 "devicesHomeCommands" = "コマンドで準備する";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "再起動後も動作";
 "devicesHomeStepConnect" = "ここから接続する";
 "devicesHomeStepKey" = "ポート %1$@ で SSH 鍵を読む";
+"devicesHomeStepKeyAny" = "SSH 鍵を読む";
 "devicesHomeStepLook" = "システムを確認する";
 "devicesHomeStepSend" = "Infinitary を送る";
 "devicesHomeStepSignIn" = "SSH 鍵でサインインする";

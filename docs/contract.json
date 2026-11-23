@@ -7545,6 +7545,8 @@
                       "root",
                       "no-systemd",
                       "no-curl",
+                      "controls",
+                      "no-link",
                       "not-started",
                       "cancelled"
                     ]
@@ -7648,7 +7650,7 @@
                   }
                 ]
               },
-              "running": {
+              "changed": {
                 "type": "boolean",
                 "const": true
               }

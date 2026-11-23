@@ -38,10 +38,7 @@ describe("a stop's words", () => {
     );
   });
 
-  it("says the first mate keeps running when Cancel came after it started", () => {
-    expect(
-      homeAtRefusalLines({ refused: "cancelled", step: "start", running: true }, "sam@studio")[0],
-    ).toBe(m.devicesHomeKeepsRunning({ computer: "sam@studio" }));
+  it("says nothing was started there after Cancel", () => {
     expect(homeAtRefusalLines({ refused: "cancelled", step: "send" }, "sam@studio")[0]).toBe(
       m.devicesHomeCancelled({ computer: "sam@studio" }),
     );

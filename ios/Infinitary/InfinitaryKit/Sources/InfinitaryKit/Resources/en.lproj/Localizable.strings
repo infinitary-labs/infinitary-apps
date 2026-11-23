@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "Make it";
 "devicesHomeAddressHead" = "Set me up on another computer";
 "devicesHomeAskAgain" = "Ask again";
-"devicesHomeAt" = "%1$@ · port %2$@";
 "devicesHomeBack" = "Back";
 "devicesHomeCancelled" = "Stopped. Nothing was started on %1$@.";
 "devicesHomeCommands" = "Set it up with commands";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "on after a restart";
 "devicesHomeStepConnect" = "Connect from here";
 "devicesHomeStepKey" = "Read its SSH key on port %1$@";
+"devicesHomeStepKeyAny" = "Read its SSH key";
 "devicesHomeStepLook" = "Check its system";
 "devicesHomeStepSend" = "Send Infinitary";
 "devicesHomeStepSignIn" = "Sign in with your SSH key";

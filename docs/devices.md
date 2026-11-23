@@ -682,8 +682,10 @@ No log, feed line, record entry or file carries it.
 The welcome screen's Another computer sets the first mate up on a computer by its address (`docs/first-launch.md`, "Setting it up from here"), as one core request on this computer alone, `inf:devices:home-at` (`reach: "home"`), asked again with each answer: the key line, the password once, the yes to an `infinitary` account after a root sign-in on Linux, Infinitary already running there, a stop at a step, or the first mate started there.
 `RemoteLogin.homeAt` (`src/core/devices/homeAt.ts`) reuses adding a computer's key read, sign-in, look, Ubuntu package and copies; the look also says whether a Linux computer runs systemd (`farSystems.ts`).
 The copy goes into that account's `~/Applications` (`homeReceive`, `src/core/devices/farHome.ts`), then `HOME_START` runs its `start-at-boot` and says whether that computer has a private-network address, the firewall `firewallKeepsOut` would name there, whether a Mac account is logged in and whether a Linux account lingers.
-`MAKE_ACCOUNT` makes the ordinary account with root's authorized keys, keeps an existing one, and turns linger on; the key line said yes to is remembered under the new address too.
-`inf:devices:home-at-cancel` asks it to stop at the next step, deleting the copy it sent when nothing started yet.
+`MAKE_ACCOUNT` makes the ordinary account with root's authorized keys, keeps an existing one, and turns linger on; the key line said yes to is remembered under the new address too, the look's checks run again as that account, and the Ubuntu package is installed over root's sign-in, since the new account has no `sudo`.
+The link request that finds Infinitary already running there lets the setup go on only when it answers that none is open; one that controls another computer, an answer with no link or one it cannot read stops it.
+An SSH failure while making the account, sending the copy or starting it names its step and port as adding a computer's does (`refusedOver`), and a stop after an account was made or the package went in says so (`changed`), so the window does not say nothing changed there.
+`inf:devices:home-at-cancel` asks it to stop at the next step, deleting the copy it sent when nothing started yet; the window sends it too when the screen goes away mid-setup, and only the run under way clears it.
 It adds no computer here: the window then joins by its address (above), and the feed carries the same setup lines adding a computer does.
 
 ## One computer, one entry

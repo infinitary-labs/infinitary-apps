@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "Le créer";
 "devicesHomeAddressHead" = "Installez-moi sur un autre ordinateur";
 "devicesHomeAskAgain" = "Redemander";
-"devicesHomeAt" = "%1$@ · port %2$@";
 "devicesHomeBack" = "Retour";
 "devicesHomeCancelled" = "Arrêté. Rien n'a été lancé sur %1$@.";
 "devicesHomeCommands" = "L'installer avec des commandes";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "actif après un redémarrage";
 "devicesHomeStepConnect" = "Se connecter d'ici";
 "devicesHomeStepKey" = "Lire sa clé SSH sur le port %1$@";
+"devicesHomeStepKeyAny" = "Lire sa clé SSH";
 "devicesHomeStepLook" = "Vérifier son système";
 "devicesHomeStepSend" = "Envoyer Infinitary";
 "devicesHomeStepSignIn" = "Se connecter avec votre clé SSH";

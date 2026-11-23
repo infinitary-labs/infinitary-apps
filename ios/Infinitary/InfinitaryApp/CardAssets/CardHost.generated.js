@@ -28382,35 +28382,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Ask again`;
   }
-  function devicesHomeAt(input2) {
-    const address = input2.address;
-    const port = input2.port;
-    switch (currentLanguage()) {
-      case "ar":
-        return `${address} · المنفذ ${port}`;
-      case "de":
-        return `${address} · Port ${port}`;
-      case "es":
-        return `${address} · puerto ${port}`;
-      case "fr":
-        return `${address} · port ${port}`;
-      case "ja":
-        return `${address} · ポート ${port}`;
-      case "ko":
-        return `${address} · 포트 ${port}`;
-      case "pt-BR":
-        return `${address} · porta ${port}`;
-      case "zh-Hans":
-        return `${address} · 端口 ${port}`;
-      case "zh-Hant":
-        return `${address} · 連接埠 ${port}`;
-      case "en-XA":
-        return `[${address} · þöŕţ ${port} ~~~]`;
-      case "ar-XB":
-        return `${address}‮ · port ‬${port}`;
-    }
-    return `${address} · port ${port}`;
-  }
   function devicesHomeBack() {
     switch (currentLanguage()) {
       case "ar":
@@ -29342,6 +29313,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Read its SSH key on port ‬${port}`;
     }
     return `Read its SSH key on port ${port}`;
+  }
+  function devicesHomeStepKeyAny() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `قراءة مفتاح SSH الخاص به`;
+      case "de":
+        return `Seinen SSH-Schlüssel lesen`;
+      case "es":
+        return `Leer su clave SSH`;
+      case "fr":
+        return `Lire sa clé SSH`;
+      case "ja":
+        return `SSH 鍵を読む`;
+      case "ko":
+        return `SSH 키 읽기`;
+      case "pt-BR":
+        return `Ler a chave SSH dele`;
+      case "zh-Hans":
+        return `读取它的 SSH 密钥`;
+      case "zh-Hant":
+        return `讀取它的 SSH 金鑰`;
+      case "en-XA":
+        return `[Ŕéáð îţš ŠŠĤ ķéý ~~~~~~]`;
+      case "ar-XB":
+        return `‮Read its SSH key‬`;
+    }
+    return `Read its SSH key`;
   }
   function devicesHomeStepLook() {
     switch (currentLanguage()) {
@@ -101365,7 +101363,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesHomeAccountMake,
     devicesHomeAddressHead,
     devicesHomeAskAgain,
-    devicesHomeAt,
     devicesHomeBack,
     devicesHomeCancelled,
     devicesHomeCommands,
@@ -101395,6 +101392,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesHomeStartOn,
     devicesHomeStepConnect,
     devicesHomeStepKey,
+    devicesHomeStepKeyAny,
     devicesHomeStepLook,
     devicesHomeStepSend,
     devicesHomeStepSignIn,
@@ -104619,7 +104617,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesHomeAccountMake": [],
     "devicesHomeAddressHead": [],
     "devicesHomeAskAgain": [],
-    "devicesHomeAt": ["address", "port"],
     "devicesHomeBack": [],
     "devicesHomeCancelled": ["computer"],
     "devicesHomeCommands": [],
@@ -104649,6 +104646,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesHomeStartOn": [],
     "devicesHomeStepConnect": [],
     "devicesHomeStepKey": ["port"],
+    "devicesHomeStepKeyAny": [],
     "devicesHomeStepLook": [],
     "devicesHomeStepSend": [],
     "devicesHomeStepSignIn": [],

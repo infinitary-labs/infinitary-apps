@@ -466,6 +466,11 @@ function unreachableLines(
   }
 }
 
+/** The one line an administrator runs on a Linux computer so `user`'s work keeps running after they log out. */
+export function lingerWay(user: string): string {
+  return `sudo loginctl enable-linger ${user}`;
+}
+
 /** The program that installs software on a Linux computer, as the look tells it. */
 export const LINUX_INSTALLERS = ["apt", "dnf", "pacman", "zypper"] as const;
 export type LinuxInstaller = (typeof LINUX_INSTALLERS)[number];
@@ -757,7 +762,7 @@ export const remoteLoginWords = {
    */
   afterLogout: (device: Named, user: string): [string, string] => [
     `To keep ${deviceLabel(device)} running work after ${user} logs out, an administrator runs this there once:`,
-    `sudo loginctl enable-linger ${user}`,
+    lingerWay(user),
   ],
 
   /**

@@ -80,11 +80,12 @@ The gate itself stays derived; the line only says what happened.
 Another computer opens "Set me up on another computer" (the captain's approval of INF-6207, part 2; design skill `components/devices/SetUpThere`, `src/renderer/src/devices/SetUpThere.tsx`): the address form Join by its address has, with its port field and the computers nearby, and "Set it up with commands" under it.
 Continue runs seven steps in a list under "Setting up your first mate on studio", the one under way lit, each done step with what it found beside it:
 
-1. **Read its SSH key on port 22** - the key line to compare, asked once before any sign-in, as Join by its address asks it.
+1. **Read its SSH key** - the key line to compare, asked once before any sign-in, as Join by its address asks it; the step names the port where one was typed, and its stop names the port the person's SSH settings resolve.
 2. **Sign in with your SSH key** - the person's own SSH, or that account's password once where the computer did not let the key in, which lets Infinitary's own key in.
 3. **Check its system** - what it is, what it lacks, whether a Linux computer has systemd to start it at every restart, and who signed in.
-   A root sign-in on Linux asks once whether to make an ordinary account named `infinitary` there; a yes makes it with root's SSH keys and linger on, and the setup goes on as that account.
+   A root sign-in on Linux asks once whether to make an ordinary account named `infinitary` there; a yes makes it with root's SSH keys and linger on, and the setup goes on as that account, whose system is checked again as that account; the Ubuntu package still goes in over root's sign-in, since the new account may not install software.
    Infinitary open there already for that account stops the setup with "Infinitary already runs on studio." and **Connect to it instead**, which opens Join by its address with that address.
+   Only an account where no Infinitary is open goes on: one that controls another computer, or an answer with no link, stops the setup, so a second copy never starts beside it.
 4. **Send Infinitary** - the Ubuntu package where it applies (24.04 and 26.04), otherwise the copy for its system, kept in that account's own `~/Applications`, with the megabytes sent beside the step.
 5. **Start your first mate there** - the kept copy's own `start-at-boot` (`docs/run.md`, "Starting at boot"), which starts the record that account already has, never a new one in its place.
 6. **Connect from here** - port 47623: Join by its address's two requests, asked again every two seconds for up to a minute while the first mate there opens, or for as long as a Mac account that is not logged in waits for its login, which a line says.
@@ -92,10 +93,11 @@ Continue runs seven steps in a list under "Setting up your first mate on studio"
 7. **Connect a subscription for it** - joined, the window starts over as that computer's, whose own first launch signs in from here.
 
 The first five are one core request, `inf:devices:home-at`, asked again with each answer as Join by its address asks (`src/core/devices/homeAt.ts`, `docs/devices.md`, "Setting the first mate up from a first launch").
-A stop marks its step and says what stopped it and what to try (`homeAtRefusalLines`, `src/shared/homeAt.ts`), with **Ask again**, **Set it up with commands** and **Back** (to the address form, its fields kept), and a footer such as "4 more steps not started · nothing changed on studio", or that the first mate keeps running there once it started.
+A stop marks its step and says what stopped it and what to try (`homeAtRefusalLines`, `src/shared/homeAt.ts`), with **Ask again**, **Set it up with commands** and **Back** (to the address form, its fields kept), and a footer such as "4 more steps not started · nothing changed on studio", or that the first mate keeps running there once it started; once an account was made or the Ubuntu package went in, the footer no longer says nothing changed.
 After it started, a computer with no private-network address, a firewall that may keep it out, or a port that did not answer says so, with the one command to run there where there is one; a Linux account that does not linger shows the administrator's `loginctl enable-linger` line with its Copy.
 Cancel stops at the next step: before step 5 the copy sent is deleted and nothing was started there; after it, the first mate keeps running there and the stop says so.
-Every control is a button or field in tab order, and each step's first control takes focus.
+Leaving the screen while a step runs cancels the same way.
+Every control is a button or field in tab order; the key line's question puts focus on Cancel, so Enter never says yes to a key unread, and each other question and stop puts it on its first button.
 
 ## The Diagnostics notice
 

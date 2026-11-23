@@ -16,7 +16,7 @@ Infinitary already open there reads "Infinitary already runs on studio." over "C
 
 **The steps.**
 "Setting up your first mate on studio" at `--text-base --fg-1` weight 500, the address under it in mono `--fg-2`, then seven rows at `--text-sm`, each a 6px `StatusDot` and its name, with what the step found beside it in mono `--text-xs --fg-3`:
-1. "Read its SSH key on port 22"
+1. "Read its SSH key on port 2222" where a port was typed, otherwise "Read its SSH key"
 2. "Sign in with your SSH key" - the address it signed in to
 3. "Check its system" - the computer's own name
 4. "Send Infinitary" - "42 MB sent" while it sends
@@ -31,8 +31,8 @@ Your first mate starts then, and this goes on."; a Linux account that does not l
 
 **A stop.**
 The row it stopped at takes a `warn` dot, and under the rows one `warn` line says what stopped it, with a `--fg-2` line of what to try and a mono box with Copy where there is one command to run there.
-Then a small primary "Ask again", a small secondary "Set it up with commands" and a ghost "Back", Ask again holding focus, and a `--text-sm --fg-3` footer: "5 more steps not started · nothing changed on studio", or "1 more step not started · your first mate keeps running on studio" once it started.
+Then a small primary "Ask again", a small secondary "Set it up with commands" and a ghost "Back", Ask again holding focus, and a `--text-sm --fg-3` footer: "5 more steps not started · nothing changed on studio", or "1 more step not started · your first mate keeps running on studio" once it started; no footer once an account was made or the Ubuntu package went in.
 Cancel's stop says "Stopped.
-Nothing was started on studio." or "Stopped.
+Nothing was started on studio." or, once connecting, "Stopped.
 Your first mate keeps running on studio."
 Every control is reached with Tab and draws the focus ring; no spinner.

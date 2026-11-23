@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "만들기";
 "devicesHomeAddressHead" = "다른 컴퓨터에 나를 설정하기";
 "devicesHomeAskAgain" = "다시 요청";
-"devicesHomeAt" = "%1$@ · 포트 %2$@";
 "devicesHomeBack" = "뒤로";
 "devicesHomeCancelled" = "멈췄습니다. %1$@에서 아무것도 시작하지 않았습니다.";
 "devicesHomeCommands" = "명령으로 설정하기";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "재시작 후에도 실행";
 "devicesHomeStepConnect" = "여기서 연결하기";
 "devicesHomeStepKey" = "포트 %1$@에서 SSH 키 읽기";
+"devicesHomeStepKeyAny" = "SSH 키 읽기";
 "devicesHomeStepLook" = "시스템 확인하기";
 "devicesHomeStepSend" = "Infinitary 보내기";
 "devicesHomeStepSignIn" = "SSH 키로 로그인하기";

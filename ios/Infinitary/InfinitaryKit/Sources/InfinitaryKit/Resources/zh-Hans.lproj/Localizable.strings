@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "建立";
 "devicesHomeAddressHead" = "把我设置在另一台电脑上";
 "devicesHomeAskAgain" = "再请求一次";
-"devicesHomeAt" = "%1$@ · 端口 %2$@";
 "devicesHomeBack" = "返回";
 "devicesHomeCancelled" = "已停止。%1$@ 上没有启动任何东西。";
 "devicesHomeCommands" = "用命令设置";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "重启后仍运行";
 "devicesHomeStepConnect" = "从这里连接";
 "devicesHomeStepKey" = "在端口 %1$@ 读取它的 SSH 密钥";
+"devicesHomeStepKeyAny" = "读取它的 SSH 密钥";
 "devicesHomeStepLook" = "检查它的系统";
 "devicesHomeStepSend" = "发送 Infinitary";
 "devicesHomeStepSignIn" = "用你的 SSH 密钥登录";

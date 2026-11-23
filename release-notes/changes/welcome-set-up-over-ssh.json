@@ -9,7 +9,7 @@
       "picture": {
         "dark": "welcome-set-up-over-ssh-dark.webp",
         "light": "welcome-set-up-over-ssh-light.webp",
-        "alt": "The welcome screen's Another computer setting up the first mate on a computer named studio, with seven steps listed, the first two done, a stop at checking its system, and Ask again, Set it up with commands and Back."
+        "alt": "The welcome screen's Another computer setting up the first mate on a computer named studio: seven steps listed, the SSH key read, signing in to sam@studio under way, the rest not started, and Cancel."
       },
       "provenance": {
         "origin": "change"

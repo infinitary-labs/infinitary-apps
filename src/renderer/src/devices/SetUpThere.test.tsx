@@ -55,7 +55,8 @@ describe("setting the first mate up on another computer", () => {
       "connect:next",
       "sign-up:next",
     ]);
-    expect(sending).toContain(m.devicesHomeStepKey({ port: "22" }));
+    // With no port typed, the step names none: the person's SSH settings may name another.
+    expect(sending).toContain(m.devicesHomeStepKeyAny());
     expect(sending).toContain(m.devicesHomeSentMb({ mb: "42" }));
     expect(sending).toContain(m.devicesHomePort({ port: String(CONNECTION_PORT) }));
     expect(sending).toContain(`>${m.devicesJoinCancel()}<`);

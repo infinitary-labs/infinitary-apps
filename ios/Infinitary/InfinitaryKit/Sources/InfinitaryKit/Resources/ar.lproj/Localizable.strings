@@ -806,7 +806,6 @@
 "devicesHomeAccountMake" = "أنشئه";
 "devicesHomeAddressHead" = "أعدّني على حاسوب آخر";
 "devicesHomeAskAgain" = "اطلب مجددًا";
-"devicesHomeAt" = "%1$@ · المنفذ %2$@";
 "devicesHomeBack" = "رجوع";
 "devicesHomeCancelled" = "توقف. لم يبدأ شيء على %1$@.";
 "devicesHomeCommands" = "أعدّه بالأوامر";
@@ -834,6 +833,7 @@
 "devicesHomeStartOn" = "يعمل بعد إعادة التشغيل";
 "devicesHomeStepConnect" = "الاتصال من هنا";
 "devicesHomeStepKey" = "قراءة مفتاح SSH الخاص به على المنفذ %1$@";
+"devicesHomeStepKeyAny" = "قراءة مفتاح SSH الخاص به";
 "devicesHomeStepLook" = "فحص نظامه";
 "devicesHomeStepSend" = "إرسال Infinitary";
 "devicesHomeStepSignIn" = "تسجيل الدخول بمفتاح SSH الخاص بك";

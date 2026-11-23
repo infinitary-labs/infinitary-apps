@@ -855,7 +855,6 @@ public enum PhoneMessages {
     public static func `devicesHomeAccountMake`() -> String { PhoneWords.format("devicesHomeAccountMake", []) }
     public static func `devicesHomeAddressHead`() -> String { PhoneWords.format("devicesHomeAddressHead", []) }
     public static func `devicesHomeAskAgain`() -> String { PhoneWords.format("devicesHomeAskAgain", []) }
-    public static func `devicesHomeAt`(`address`: String, `port`: String) -> String { PhoneWords.format("devicesHomeAt", [`address`, `port`]) }
     public static func `devicesHomeBack`() -> String { PhoneWords.format("devicesHomeBack", []) }
     public static func `devicesHomeCancelled`(`computer`: String) -> String { PhoneWords.format("devicesHomeCancelled", [`computer`]) }
     public static func `devicesHomeCommands`() -> String { PhoneWords.format("devicesHomeCommands", []) }
@@ -885,6 +884,7 @@ public enum PhoneMessages {
     public static func `devicesHomeStartOn`() -> String { PhoneWords.format("devicesHomeStartOn", []) }
     public static func `devicesHomeStepConnect`() -> String { PhoneWords.format("devicesHomeStepConnect", []) }
     public static func `devicesHomeStepKey`(`port`: String) -> String { PhoneWords.format("devicesHomeStepKey", [`port`]) }
+    public static func `devicesHomeStepKeyAny`() -> String { PhoneWords.format("devicesHomeStepKeyAny", []) }
     public static func `devicesHomeStepLook`() -> String { PhoneWords.format("devicesHomeStepLook", []) }
     public static func `devicesHomeStepSend`() -> String { PhoneWords.format("devicesHomeStepSend", []) }
     public static func `devicesHomeStepSignIn`() -> String { PhoneWords.format("devicesHomeStepSignIn", []) }
@@ -5193,7 +5193,6 @@ extension PhoneWords {
         "devicesHomeAccountMake": [],
         "devicesHomeAddressHead": [],
         "devicesHomeAskAgain": [],
-        "devicesHomeAt": ["address", "port"],
         "devicesHomeBack": [],
         "devicesHomeCancelled": ["computer"],
         "devicesHomeCommands": [],
@@ -5223,6 +5222,7 @@ extension PhoneWords {
         "devicesHomeStartOn": [],
         "devicesHomeStepConnect": [],
         "devicesHomeStepKey": ["port"],
+        "devicesHomeStepKeyAny": [],
         "devicesHomeStepLook": [],
         "devicesHomeStepSend": [],
         "devicesHomeStepSignIn": [],

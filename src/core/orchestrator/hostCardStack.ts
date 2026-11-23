@@ -162,13 +162,20 @@ export class HostCardStack {
    * priority; the caller's actions carry host effects only the captain's
    * click can run. A note (no choice to make) sits below every decision,
    * so a question it accompanies - signing in again - stays in front.
+   * The first mate answers a reply under it unless the caller names
+   * another answerer or none (docs/card-threads.md, "A host card's reply
+   * row"); the agent-down set and the welcome never come through here.
    */
   raiseHostCard(
     card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
     options: { note?: boolean } = {},
   ): void {
     const previous = this.cards.get(card.id);
-    this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
+    const answered =
+      card.answeredBy === undefined && card.replies !== false
+        ? { ...card, answeredBy: "firstmate" as const }
+        : card;
+    this.put({ ...hostCard(answered, options), createdAt: previous?.createdAt ?? this.host.now() });
   }
 
   /** Takes a host card down without an answer: the question it asked is gone. */

@@ -5,6 +5,7 @@ import { FEEDBACK_DRAFT, FEEDBACK_WORD } from "../../src/shared/feedback";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { sendWriteWords } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { HAS_APP_MENU } from "./desktop";
 import { cardBody } from "./frames";
 import { type GitHubStub, STUB_LOGIN, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -19,11 +20,12 @@ import {
   feedbackReport,
 } from "./scenarios/feedbackReport";
 import { shownCard } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * /feedback, the way a person meets it (docs/feedback.md): Send feedback
- * from command search starts the message with /feedback and the message
+ * from command search, or from the Help menu on a Mac, starts the message with /feedback and the message
  * box's hint names it; the first mate starts a crewmate, whose draft comes
  * back as the exact issue on a card; nothing reaches GitHub before the
  * captain's click, and the click publishes exactly the text the card showed,
@@ -31,24 +33,27 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * sign-in already made; the models are the scripted stand-in.
  */
 
-let launched: LaunchedApp;
-let github: GitHubStub;
+let launched: LaunchedApp | undefined;
+let github: GitHubStub | undefined;
 
 test.afterEach(async () => {
   await launched?.close();
   await github?.close();
+  launched = undefined;
+  github = undefined;
 });
 
 test("a /feedback report shows its exact issue for review and publishes it once on the captain's click", async () => {
   test.setTimeout(180_000);
   const userDataDir = scratchDir("infinitary-feedback-");
   seedGitHubSignIn(userDataDir);
-  github = await startGitHubStub();
+  const stub = await startGitHubStub();
+  github = stub;
   launched = await launchApp({
     withMockProvider: true,
     scenarios: [feedbackReport],
     userDataDir,
-    env: github.env,
+    env: stub.env,
   });
   const { app, page } = launched;
   const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
@@ -85,7 +90,7 @@ test("a /feedback report shows its exact issue for review and publishes it once 
     }
   });
 
-  const issues = () => github.openedIssues();
+  const issues = () => stub.openedIssues();
   await test.step("the draft comes back as the exact issue on a card, and nothing is sent", async () => {
     await input.pressSequentially(FEEDBACK_PROBLEM);
     await input.press("Enter");
@@ -126,8 +131,33 @@ test("a /feedback report shows its exact issue for review and publishes it once 
       if (evidence)
         writeFileSync(
           join(evidence, "feedback-requests.txt"),
-          `${github.requests().join("\n")}\n\nOpened:\n${JSON.stringify(issues(), null, 2)}\n`,
+          `${stub.requests().join("\n")}\n\nOpened:\n${JSON.stringify(issues(), null, 2)}\n`,
         );
     });
   });
+});
+
+test("Send Feedback in the Help menu starts the message with /feedback", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
+  // A desktop whose window draws its own controls has no app menu, so no Help menu.
+  expect(HAS_APP_MENU).toBe(true);
+  launched = await launchApp({ withMockProvider: true });
+  const { app, page } = launched;
+  const input = promptInput(page);
+  await expect(input).toBeVisible();
+  // As a click on the item does: the item sits in the Help menu and runs the window command.
+  await app.evaluate(({ Menu }) => {
+    const menu = Menu.getApplicationMenu();
+    const item = menu?.getMenuItemById("feedback-start");
+    const help = menu?.items.find((entry) => entry.role === "help");
+    if (!item || !help?.submenu?.items.includes(item))
+      throw new Error("No Send Feedback in the Help menu");
+    item.click();
+  });
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(FEEDBACK_DRAFT);
+  await expect(page.locator('[data-voice-input-hint="command"]')).toHaveText(
+    m.composerHintFeedback({ command: FEEDBACK_WORD }),
+  );
 });

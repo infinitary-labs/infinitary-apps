@@ -680,7 +680,7 @@ export class HostOps {
       })
       .finally(() => this.starting.delete(taskId))
       .then((result) => {
-        if (this.core.options.tasks.get(taskId)?.status === "active") return;
+        if (!result || this.core.options.tasks.get(taskId)?.status === "active") return;
         this.core.options.broadcastEvent({ type: "firstmate_note", text: result, taskId });
       })
       .catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
@@ -787,6 +787,7 @@ export class HostOps {
       })
       .then((result) => {
         if (
+          !result ||
           this.core.options.tasks.get(taskId)?.status === "active" ||
           this.pendingStarts.has(taskId)
         )

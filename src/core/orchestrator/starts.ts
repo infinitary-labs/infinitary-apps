@@ -600,6 +600,8 @@ export class CrewStarts {
         task.workspace?.repoDir ??
         repoDir ??
         (elsewhere ? await this.core.options.workspace.ensureDefaultRepo() : "");
+      // A close during the workspace lookup must not send an open to another computer.
+      this.core.sessions.endIfLetGo(task);
       step = "conversation";
       const session = await this.core.sessions.openCrewmate(
         task,

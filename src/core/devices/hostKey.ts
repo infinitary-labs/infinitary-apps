@@ -309,7 +309,12 @@ function portAnswer(
 ): Promise<"refused" | "open" | "silent" | "unknown"> {
   return new Promise((resolve) => {
     // A refusal comes at once; anything slower is no answer, which the scan already waited out.
-    const socket = createConnection({ host, port, timeout: PROBE_TIMEOUT_MS });
+    const socket = createConnection({
+      host,
+      port,
+      timeout: PROBE_TIMEOUT_MS,
+      autoSelectFamily: false,
+    });
     const done = (answer: "refused" | "open" | "silent" | "unknown") => {
       socket.destroy();
       resolve(answer);

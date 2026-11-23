@@ -443,6 +443,7 @@
         "!src/main/personWord.integration.test.ts",
         "!tests/serviceManagerStandIn.test.ts",
         "!src/core/helper/fromHome.test.ts",
+        "!src/core/devices/hostKey.test.ts",
         "!src/core/devices/joinCommand.test.ts",
         "!src/core/devices/remoteLogin.test.ts",
         "!src/core/devices/remoteLoginDownload.test.ts",

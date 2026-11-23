@@ -82,7 +82,7 @@
   "devicesReachAskAgain": "그런 다음 다시 요청하세요.",
   "devicesReachCheck": "주소와 전원이 켜져 있는지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.",
   "devicesReachCheckNoKey": "포트 {port}가 다른 서비스가 아니라 그 컴퓨터의 SSH 서버인지 확인하세요.",
-  "devicesReachCheckPort": "주소와 그 SSH 서버가 포트 {port}에서 대기 중인지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.",
+  "devicesReachCheckPort": "주소와 전원이 켜져 있는지, 그 SSH 서버가 포트 {port}에서 대기 중인지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.",
   "devicesReachCheckSilent": "주소와 전원이 켜져 있는지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 하고, 그 방화벽이 SSH를 허용해야 해요.",
   "devicesReachCheckStay": "두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 계속 있는지 확인하세요.",
   "devicesReachKeyNoKey": "{address}의 포트 {port}에서 무언가 응답했지만 SSH 키를 보내지 않았어요.",

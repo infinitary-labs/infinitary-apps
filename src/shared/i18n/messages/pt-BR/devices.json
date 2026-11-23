@@ -84,7 +84,7 @@
   "devicesReachAskAgain": "Depois peça de novo.",
   "devicesReachCheck": "Verifique o endereço dele e se ele está ligado. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale.",
   "devicesReachCheckNoKey": "Verifique se a porta {port} é o servidor SSH dele e não outro serviço.",
-  "devicesReachCheckPort": "Verifique o endereço dele e se o servidor SSH dele escuta na porta {port}. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale.",
+  "devicesReachCheckPort": "Verifique o endereço dele, se ele está ligado e se o servidor SSH dele escuta na porta {port}. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale.",
   "devicesReachCheckSilent": "Verifique o endereço dele e se ele está ligado. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale, e o firewall dele precisa deixar o SSH passar.",
   "devicesReachCheckStay": "Verifique se os dois computadores continuam na mesma rede ou rede privada, como a Tailscale.",
   "devicesReachKeyNoKey": "Algo respondeu em {address} na porta {port}, mas não enviou nenhuma chave SSH.",

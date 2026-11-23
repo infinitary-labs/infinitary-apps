@@ -29592,11 +29592,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "de":
         return `Prüfe seine Adresse und ob er eingeschaltet ist. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.`;
       case "es":
-        return `Revisa su dirección y que esté encendido. Ambos computadores necesitan la misma red o red privada, como Tailscale.`;
+        return `Revisa su dirección y que esté encendida. Ambas computadoras necesitan la misma red o red privada, como Tailscale.`;
       case "fr":
         return `Vérifiez son adresse et qu’il est allumé. Les deux ordinateurs doivent partager un réseau ou un réseau privé, comme Tailscale.`;
       case "ja":
-        return `アドレスと、電源が入っていることを確認してください。両方のコンピュータが同じネットワーク、または Tailscale などの同じプライベートネットワークにある必要があります。`;
+        return `アドレスと、電源が入っていることを確認してください。両方のコンピューターが同じネットワーク、または Tailscale などの同じプライベートネットワークにある必要があります。`;
       case "ko":
         return `주소와 전원이 켜져 있는지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.`;
       case "pt-BR":
@@ -29644,29 +29644,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const port = input2.port;
     switch (currentLanguage()) {
       case "ar":
-        return `تحقق من عنوانه ومن أن خادم SSH الخاص به يستمع على المنفذ ${port}. يحتاج الحاسوبان إلى الشبكة نفسها أو الشبكة الخاصة نفسها، مثل Tailscale.`;
+        return `تحقق من عنوانه ومن أنه قيد التشغيل ومن أن خادم SSH الخاص به يستمع على المنفذ ${port}. يحتاج الحاسوبان إلى الشبكة نفسها أو الشبكة الخاصة نفسها، مثل Tailscale.`;
       case "de":
-        return `Prüfe seine Adresse und ob sein SSH-Server an Port ${port} lauscht. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.`;
+        return `Prüfe seine Adresse, ob er eingeschaltet ist und ob sein SSH-Server an Port ${port} lauscht. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.`;
       case "es":
-        return `Revisa su dirección y que su servidor SSH escuche en el puerto ${port}. Ambos computadores necesitan la misma red o red privada, como Tailscale.`;
+        return `Revisa su dirección, que esté encendida y que su servidor SSH escuche en el puerto ${port}. Ambas computadoras necesitan la misma red o red privada, como Tailscale.`;
       case "fr":
-        return `Vérifiez son adresse et que son serveur SSH écoute sur le port ${port}. Les deux ordinateurs doivent partager un réseau ou un réseau privé, comme Tailscale.`;
+        return `Vérifiez son adresse, qu’il est allumé et que son serveur SSH écoute sur le port ${port}. Les deux ordinateurs doivent partager un réseau ou un réseau privé, comme Tailscale.`;
       case "ja":
-        return `アドレスと、その SSH サーバーがポート ${port} で待ち受けていることを確認してください。両方のコンピュータが同じネットワーク、または Tailscale などの同じプライベートネットワークにある必要があります。`;
+        return `アドレスと、電源が入っていること、その SSH サーバーがポート ${port} で待ち受けていることを確認してください。両方のコンピューターが同じネットワーク、または Tailscale などの同じプライベートネットワークにある必要があります。`;
       case "ko":
-        return `주소와 그 SSH 서버가 포트 ${port}에서 대기 중인지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.`;
+        return `주소와 전원이 켜져 있는지, 그 SSH 서버가 포트 ${port}에서 대기 중인지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 해요.`;
       case "pt-BR":
-        return `Verifique o endereço dele e se o servidor SSH dele escuta na porta ${port}. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale.`;
+        return `Verifique o endereço dele, se ele está ligado e se o servidor SSH dele escuta na porta ${port}. Os dois computadores precisam da mesma rede ou rede privada, como a Tailscale.`;
       case "zh-Hans":
-        return `请检查它的地址，并确认它的 SSH 服务器在端口 ${port} 上监听。两台电脑需要在同一网络或同一私有网络上，例如 Tailscale。`;
+        return `请检查它的地址，确认它已开机，并确认它的 SSH 服务器在端口 ${port} 上监听。两台电脑需要在同一网络或同一私有网络上，例如 Tailscale。`;
       case "zh-Hant":
-        return `請檢查它的位址，並確認它的 SSH 伺服器在連接埠 ${port} 上接聽。兩台電腦需要在同一個網路或同一個私人網路上，例如 Tailscale。`;
+        return `請檢查它的位址，確認它已開機，並確認它的 SSH 伺服器在連接埠 ${port} 上接聽。兩台電腦需要在同一個網路或同一個私人網路上，例如 Tailscale。`;
       case "en-XA":
-        return `[Çĥéçķ îţš áððŕéšš áñð ţĥáţ îţš ŠŠĤ šéŕṽéŕ ļîšţéñš öñ þöŕţ ${port}. Ɓöţĥ çöɱþûţéŕš ñééð ţĥé šáɱé ñéţŵöŕķ öŕ þŕîṽáţé ñéţŵöŕķ, šûçĥ áš Ţáîļšçáļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Çĥéçķ îţš áððŕéšš, ţĥáţ îţ îš öñ, áñð ţĥáţ îţš ŠŠĤ šéŕṽéŕ ļîšţéñš öñ þöŕţ ${port}. Ɓöţĥ çöɱþûţéŕš ñééð ţĥé šáɱé ñéţŵöŕķ öŕ þŕîṽáţé ñéţŵöŕķ, šûçĥ áš Ţáîļšçáļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Check its address and that its SSH server listens on port ‬${port}‮. Both computers need the same network or private network, such as Tailscale.‬`;
+        return `‮Check its address, that it is on, and that its SSH server listens on port ‬${port}‮. Both computers need the same network or private network, such as Tailscale.‬`;
     }
-    return `Check its address and that its SSH server listens on port ${port}. Both computers need the same network or private network, such as Tailscale.`;
+    return `Check its address, that it is on, and that its SSH server listens on port ${port}. Both computers need the same network or private network, such as Tailscale.`;
   }
   function devicesReachCheckSilent() {
     switch (currentLanguage()) {
@@ -29675,11 +29675,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "de":
         return `Prüfe seine Adresse und ob er eingeschaltet ist. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale, und seine Firewall muss SSH durchlassen.`;
       case "es":
-        return `Revisa su dirección y que esté encendido. Ambos computadores necesitan la misma red o red privada, como Tailscale, y su cortafuegos debe dejar pasar SSH.`;
+        return `Revisa su dirección y que esté encendida. Ambas computadoras necesitan la misma red o red privada, como Tailscale, y su cortafuegos debe dejar pasar SSH.`;
       case "fr":
         return `Vérifiez son adresse et qu’il est allumé. Les deux ordinateurs doivent partager un réseau ou un réseau privé, comme Tailscale, et son pare-feu doit laisser passer SSH.`;
       case "ja":
-        return `アドレスと、電源が入っていることを確認してください。両方のコンピュータが同じネットワーク、または Tailscale などの同じプライベートネットワークにあり、そのファイアウォールが SSH を通す必要があります。`;
+        return `アドレスと、電源が入っていることを確認してください。両方のコンピューターが同じネットワーク、または Tailscale などの同じプライベートネットワークにあり、そのファイアウォールが SSH を通す必要があります。`;
       case "ko":
         return `주소와 전원이 켜져 있는지 확인하세요. 두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 있어야 하고, 그 방화벽이 SSH를 허용해야 해요.`;
       case "pt-BR":
@@ -29702,11 +29702,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "de":
         return `Prüfe, ob beide Computer im selben Netzwerk oder privaten Netzwerk bleiben, etwa Tailscale.`;
       case "es":
-        return `Revisa que ambos computadores sigan en la misma red o red privada, como Tailscale.`;
+        return `Revisa que ambas computadoras sigan en la misma red o red privada, como Tailscale.`;
       case "fr":
         return `Vérifiez que les deux ordinateurs restent sur le même réseau ou réseau privé, comme Tailscale.`;
       case "ja":
-        return `両方のコンピュータが同じネットワーク、または Tailscale などの同じプライベートネットワークにあり続けることを確認してください。`;
+        return `両方のコンピューターが同じネットワーク、または Tailscale などの同じプライベートネットワークにあり続けることを確認してください。`;
       case "ko":
         return `두 컴퓨터가 같은 네트워크나 Tailscale 같은 같은 사설 네트워크에 계속 있는지 확인하세요.`;
       case "pt-BR":

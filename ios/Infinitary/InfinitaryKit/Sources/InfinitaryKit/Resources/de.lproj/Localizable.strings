@@ -845,7 +845,7 @@
 "devicesReachAskAgain" = "Frag dann erneut.";
 "devicesReachCheck" = "Prüfe seine Adresse und ob er eingeschaltet ist. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.";
 "devicesReachCheckNoKey" = "Prüfe, ob an Port %1$@ sein SSH-Server läuft und kein anderer Dienst.";
-"devicesReachCheckPort" = "Prüfe seine Adresse und ob sein SSH-Server an Port %1$@ lauscht. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.";
+"devicesReachCheckPort" = "Prüfe seine Adresse, ob er eingeschaltet ist und ob sein SSH-Server an Port %1$@ lauscht. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale.";
 "devicesReachCheckSilent" = "Prüfe seine Adresse und ob er eingeschaltet ist. Beide Computer brauchen dasselbe Netzwerk oder private Netzwerk, etwa Tailscale, und seine Firewall muss SSH durchlassen.";
 "devicesReachCheckStay" = "Prüfe, ob beide Computer im selben Netzwerk oder privaten Netzwerk bleiben, etwa Tailscale.";
 "devicesReachKeyNoKey" = "Unter %1$@ hat an Port %2$@ etwas geantwortet, aber keinen SSH-Schlüssel gesendet.";

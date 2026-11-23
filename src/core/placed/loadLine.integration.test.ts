@@ -558,8 +558,10 @@ describe("the declared heavy-run line through its native command", () => {
       started.push(c);
       await expect.poll(c.output).toContain("started");
       expect(b.output()).toBe("");
+      // The recorded reading again: 1.16 processors beside A and C, so D fits and
+      // only the closed window holds it.
       now = 10 * 60_000;
-      line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 0.7 } }, null);
+      line.observe(reading, null);
       const d = start("D", "1");
       started.push(d);
       await expect.poll(states).toEqual([

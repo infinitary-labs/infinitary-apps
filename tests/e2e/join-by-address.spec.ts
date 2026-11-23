@@ -4,7 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { JOIN_RUNS_WORK } from "../../src/renderer/src/devices/viewWords";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { COMPUTER } from "../../src/shared/deviceNames";
-import { computerOf } from "../../src/shared/joinByAddress";
+import { computerOf, joinAtRefusalWords } from "../../src/shared/joinByAddress";
 import { addressParts, remoteLoginWords } from "../../src/shared/remoteLogin";
 import { scratchDir } from "../helpers/scratchDirs";
 import { SSH_SERVER_AVAILABLE, type SshServer, startSshServer } from "../helpers/sshServer";
@@ -35,7 +35,18 @@ async function joinByItsAddress(page: Page, sshd: SshServer): Promise<void> {
   await expect(byAddress).toBeFocused();
   await page.keyboard.press("Enter");
   const aside = page.locator('[data-join-another-mac="address"]');
-  await typeInto(aside.locator("#join-address"), sshd.address);
+  const field = aside.locator("#join-address");
+  // An address whose name finds no address stops at reading its SSH key, at the port its
+  // SSH settings name; the warning says so, with the private network to check.
+  const nowhere = "sam@no-such-mac.invalid";
+  await typeInto(field, nowhere);
+  await page.keyboard.press("Enter");
+  await expect(aside.locator("[data-join-warn]")).toContainText(
+    joinAtRefusalWords("unreachable", nowhere, { step: "key", port: sshd.port }),
+  );
+  await focusOn(field);
+  await page.keyboard.press("ControlOrMeta+A");
+  await typeInto(field, sshd.address);
   await page.keyboard.press("Tab");
   await typeInto(aside.locator("#join-port"), String(sshd.port));
   await page.keyboard.press("Enter");

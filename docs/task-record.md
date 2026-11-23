@@ -231,6 +231,11 @@ The one card and note, and a review, belong to the change by its id; the deliver
 ## Specification delivery and history
 
 `update_task` applies combined edits before `start_now`; a typed graph refusal prevents that start.
+The first mate's `start_now` also waits while its own open decision still asks the captain about the task, and so do its `start_policy` when-ready on queued work, its `link_tasks remove` of the last wait of when-ready work, and any other `update_task` edit that leaves when-ready work waiting on nothing, such as `needs_merge` or `start_at_approval` letting an approved base answer its last wait, each of which would let the ready sweep start it (INF-6091; the soft hold `card-question`, `docs/delivery-rigor.md` "The holds"; `src/core/orchestrator/cardHeldStart.ts`).
+The decision is one kept on the task, or one filed as its own record that names the task in `related`.
+The captain's click takes the card off the stack at once, but the choice reaches the first mate on its next turn, so the hold stays while that choice waits unread on the first mate's lane.
+It holds only a start not yet made - queued work, or started work in the backlog - and only on a turn that carries no words the captain typed - a message or a steer, never only a click on another card; the first mate's read of the captain's choice on that card, their typed words, their Start on the task, or the first mate's withdrawal of the card lifts it, the refusal names the card, and the first mate then starts the task again.
+A decision kept on another task, which names this one only for context, holds nothing, and work already set to start when ready before the card went up still starts when its wait ends.
 Goal edits atomically update `tasks.goal`, the structured intent and the host-rendered goal in the stored template.
 The captain's verbatim words, constraints, delivery and escalation context are not rewritten.
 Queued intent tasks render from saved intent at dispatch (escalations retain their host-authored context).

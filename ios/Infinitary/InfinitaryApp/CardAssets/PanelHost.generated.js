@@ -113557,6 +113557,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       name: "a start's waits",
       way: "the first mate removes the wait on the captain's words"
     },
+    // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+    "card-question": {
+      level: "soft",
+      restsOn: "consent",
+      name: "the open question card",
+      way: "the first mate has read the captain's answer on that card, the captain types their own words, or the first mate withdraws the card, and the first mate starts the task again"
+    },
     "load-line": {
       level: "soft",
       restsOn: "record",

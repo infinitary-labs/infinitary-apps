@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "env-key-hides-sign-in",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "The sign-in screen comes back once no subscription is connected, even with an AI key in your environment",
+      "body": "An AI provider key set in your computer's environment variables no longer counts as a connected subscription. Before, such a key could hide the sign-in screen on a fresh install, most often on Windows, and the screen stayed hidden after an uninstall or after removing every subscription.",
+      "noPicture": "The existing sign-in screen now appears when it should; the screen itself does not change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

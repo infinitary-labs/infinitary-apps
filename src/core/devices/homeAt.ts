@@ -161,9 +161,7 @@ export async function homeAt(
       // The key line said yes to is that computer's, whichever account signs in.
       const remembered = pairing.rememberedHost(address);
       if (!remembered) return stop("host-unknown");
-      const ownKey =
-        (pairing.sshOptions(address)?.length ?? 0) >
-        (pairing.hostTrustOptions(address)?.length ?? 0);
+      const ownKey = pairing.ownKeyPlacedIn(address);
       try {
         pairing.rememberHost(moved, remembered);
         if (ownKey) pairing.ownKeyPlacedAt(moved);
@@ -173,7 +171,8 @@ export async function homeAt(
       address = moved;
       step = reach.stepper(address);
       const again = await signIn(reach, address, undefined, step);
-      if (!("os" in again)) return "asks" in again ? again : stop(...again.stop);
+      // The account made has no password: a question here would only ask again.
+      if (!("os" in again)) return "asks" in again ? stop("key-not-taken") : stop(...again.stop);
       if (again.uid === 0) return stop("failed");
       // What root may do there says nothing of what the account may: check it again as the account.
       const recheck = lookStop(again, packageRelease !== null, far, chip, reach.builds);
@@ -181,12 +180,12 @@ export async function homeAt(
       look = again;
     }
     // Infinitary open there already answers this computer with a link: connect to it instead.
-    const asked = await reach.askLink(address);
-    if ("refusal" in asked) return stop(asked.refusal, reachOf(asked.reach));
-    if ("link" in asked || asked.none === COMPUTER_LINK_NONE.tooOld)
+    const link = await reach.askLink(address);
+    if ("refusal" in link) return stop(link.refusal, reachOf(link.reach));
+    if ("link" in link || link.none === COMPUTER_LINK_NONE.tooOld)
       return { asks: "runs", address, name: computer };
     // Only an account with no Infinitary open goes on: any other answer means one may run there.
-    if (asked.none !== COMPUTER_LINK_NONE.notOpen) return stop(linkNoneStop(asked.none));
+    if (link.none !== COMPUTER_LINK_NONE.notOpen) return stop(linkNoneStop(link.none));
     if (cancelled()) return stop("cancelled");
     // 4. Infinitary: the Ubuntu package, or the copy for its system kept in its Applications folder.
     at = "send";

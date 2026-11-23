@@ -38,6 +38,18 @@ describe("a stop's words", () => {
     );
   });
 
+  it("ends with the commands way, not nothing changed, once something there changed", () => {
+    const failed = { refused: "failed", step: "send", name: "studio" } as const;
+    expect(homeAtRefusalLines(failed, "sam@studio")[1]).toContain("Nothing changed there.");
+    expect(homeAtRefusalLines(failed, "sam@studio", true)).toEqual([
+      homeAtRefusalLines(failed, "sam@studio")[0],
+      m.devicesHomeOrCommands(),
+    ]);
+    expect(homeAtRefusalLines({ ...failed, changed: true }, "sam@studio")[1]).toBe(
+      m.devicesHomeOrCommands(),
+    );
+  });
+
   it("says nothing was started there after Cancel", () => {
     expect(homeAtRefusalLines({ refused: "cancelled", step: "send" }, "sam@studio")[0]).toBe(
       m.devicesHomeCancelled({ computer: "sam@studio" }),

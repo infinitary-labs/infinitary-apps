@@ -954,7 +954,11 @@ export function PasswordStep(props: {
 }) {
   const { question } = props;
   const [typed, setTyped] = useState("");
-  const [found, say] = remoteLoginWords.passwordQuestion(question.address);
+  // The welcome's setup asks it for sudo to install there too, as Settings' add does.
+  const [found, say] =
+    question.for === "install"
+      ? remoteLoginWords.passwordInstallQuestion(question.address)
+      : remoteLoginWords.passwordQuestion(question.address);
   const field = remoteLoginWords.passwordField(question.user);
   return (
     <form

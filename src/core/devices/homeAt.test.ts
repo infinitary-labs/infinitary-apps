@@ -218,8 +218,7 @@ describe("a root sign-in on a Linux computer", () => {
           ownUid: 501,
           rememberedHost: (address: string) => remembered.get(address),
           rememberHost: (address: string, key: unknown) => remembered.set(address, key),
-          sshOptions: () => undefined,
-          hostTrustOptions: () => undefined,
+          ownKeyPlacedIn: () => false,
           ownKeyPlacedAt: () => {},
         },
         here: () => ({ path: "/tmp/here", localityOf: () => "elsewhere", dispose: () => {} }),
@@ -308,6 +307,24 @@ describe("a root sign-in on a Linux computer", () => {
       changed: true,
     });
     expect(installs).toEqual([]);
+  });
+
+  it("stops with the key not taken when the account it made would ask a password it does not have", async () => {
+    const { reach } = reachFor({ [ROOT]: linuxLook({ uid: 0, user: "root" }) }, false);
+    const signIn = reach.withPassword;
+    reach.withPassword = ((
+      address: string,
+      ...rest: Parameters<typeof signIn> extends [string, ...infer R] ? R : never
+    ) =>
+      address === ACCOUNT
+        ? Promise.resolve({ asks: "password", address })
+        : signIn(address, ...rest)) as typeof signIn;
+    expect(await homeAt(reach, ROOT, { account: true })).toEqual({
+      refused: "key-not-taken",
+      step: "look",
+      name: "vps",
+      changed: true,
+    });
   });
 
   it("stops where something already answers there with no link, so no second copy starts", async () => {

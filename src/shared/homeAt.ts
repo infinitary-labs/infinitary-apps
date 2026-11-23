@@ -134,15 +134,36 @@ export type HomeAtAnswer = z.infer<typeof homeAtAnswerSchema>;
 export type HomeAtStarted = Extract<HomeAtAnswer, { started: true }>;
 export type HomeAtRefused = Extract<HomeAtAnswer, { refused: unknown }>;
 
+/** Stops whose second line, as Remote Login or this screen words it, says nothing changed there. */
+const SAYS_NOTHING_CHANGED: ReadonlySet<HomeAtRefusal> = new Set<HomeAtRefusal>([
+  "other-system",
+  "sandbox-off",
+  "cannot-install",
+  "no-build",
+  "build-unverified",
+  "in-reach",
+  "not-set-up",
+  "another-computer",
+  "current",
+  "failed",
+]);
+
 /**
  * A stop's two lines, the second empty where the first says it all:
  * Remote Login's own words for adding a computer, with this screen's ending
  * where they send the person to add it with a command, or this setup's own.
- * `address` is the address as typed.
+ * `address` is the address as typed; `changed`, that something there
+ * changed on the way, which the window keeps for that address.
  */
-export function homeAtRefusalLines(refused: HomeAtRefused, address: string): [string, string] {
+export function homeAtRefusalLines(
+  refused: HomeAtRefused,
+  address: string,
+  changed = refused.changed === true,
+): [string, string] {
   const name = refused.name ?? address;
-  const computer = name;
+  // Once something there changed, a stop whose words say nothing changed ends with this screen's ways instead.
+  if (changed && SAYS_NOTHING_CHANGED.has(refused.refused))
+    return [homeAtRefusalLines(refused, address, false)[0], m.devicesHomeOrCommands()];
   switch (refused.refused) {
     case "not-an-address":
     case "no-curl":
@@ -150,13 +171,13 @@ export function homeAtRefusalLines(refused: HomeAtRefused, address: string): [st
     case "no-link":
       return [joinAtRefusalWords(refused.refused, address), ""];
     case "root":
-      return [m.devicesHomeRoot({ computer }), m.devicesHomeCommandsInstead()];
+      return [m.devicesHomeRoot({ computer: name }), m.devicesHomeCommandsInstead()];
     case "no-systemd":
-      return [m.devicesHomeNoSystemd({ computer }), m.devicesHomeCommandsInstead()];
+      return [m.devicesHomeNoSystemd({ computer: name }), m.devicesHomeCommandsInstead()];
     case "not-started":
-      return [m.devicesHomeNotStarted({ computer }), m.devicesHomeCommandsInstead()];
+      return [m.devicesHomeNotStarted({ computer: name }), m.devicesHomeCommandsInstead()];
     case "cancelled":
-      return [m.devicesHomeCancelled({ computer }), ""];
+      return [m.devicesHomeCancelled({ computer: name }), ""];
     case "password-off":
       return [remoteLoginWords.refused("password-off", { address })[0], m.devicesHomeOrCommands()];
     case "key-not-taken":

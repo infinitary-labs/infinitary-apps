@@ -13,8 +13,9 @@ import { openSize, openWindow } from "./window";
  * Review findings on the welcome screen's setup over SSH (INF-6207's plan,
  * part 2): leaving the screen while a step runs cancels the setup there,
  * as Cancel does; a stop after something there changed does not say
- * nothing changed, even after Ask again; and Cancel pressed while the first
- * mate there starts ends on it keeping running, with no join until Ask again.
+ * nothing changed, even after Ask again; Cancel pressed while the first
+ * mate there starts ends on it keeping running, with no join until Ask again;
+ * and a start with no private address still tries to join, again on Ask again.
  */
 
 const STARTED: HomeAtAnswer = {
@@ -33,6 +34,7 @@ test("leaving or cancelling the setup stops it there, and a stop after a change 
     { refused: "failed", step: "send", name: "studio", changed: true },
     { refused: "unreachable", step: "look", name: "studio", reach: { step: "sign-in", port: 22 } },
     "wait",
+    { ...STARTED, private: false },
   ];
   const bridge = fakeBridge({
     ...freshHome(),
@@ -45,7 +47,12 @@ test("leaving or cancelling the setup stops it there, and a stop after a change 
       });
     },
     "inf:devices:home-at-cancel": { ok: true },
-    "inf:devices:join-at": (): JoinAtAnswer => ({ refused: "self" }),
+    "inf:devices:join-at": (): JoinAtAnswer => ({
+      asks: "join",
+      runsWork: false,
+      alsoPrivate: false,
+    }),
+    "inf:devices:join-held": { ok: false, refused: "unreachable" },
     "inf:devices:nearby": NEARBY_OFF,
   });
   await openSize();
@@ -82,5 +89,17 @@ test("leaving or cancelling the setup stops it there, and a stop after a change 
   await expect
     .poll(() => bridge.requests("inf:devices:join-at").map(([at]) => at))
     .toEqual(["sam@studio"]);
+  await shown('[data-home-steps="connect"] [data-home-stopped]');
+
+  // Section: with no private address it still tries to join, and Ask again tries again.
+  await userEvent.click(button(await shown("[data-home-stopped]"), m.devicesHomeBack()));
+  await userEvent.click(await shown('[data-home-at="address"] button[type="submit"]'));
+  const noPrivate = await shown('[data-home-steps="connect"] [data-home-stopped]');
+  await expect
+    .poll(() => noPrivate.textContent)
+    .toContain(m.devicesHomeNoPrivate({ computer: "studio" }));
+  expect(bridge.requests("inf:devices:join-at")).toHaveLength(2);
+  await userEvent.click(button(noPrivate, m.devicesHomeAskAgain()));
+  await expect.poll(() => bridge.requests("inf:devices:join-at")).toHaveLength(3);
   expect(unansweredOf(bridge)).toEqual([]);
 });

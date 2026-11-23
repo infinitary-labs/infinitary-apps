@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONNECTION_PORT } from "../../../shared/connection";
 import * as m from "../../../shared/i18n/messages.generated";
 import { NEARBY_OFF } from "../../../shared/nearbyMacs";
+import { remoteLoginWords } from "../../../shared/remoteLogin";
 import { type HomePhase, SetUpThereView, type SetUpThereViewProps } from "./SetUpThere";
 
 /**
@@ -60,6 +61,15 @@ describe("setting the first mate up on another computer", () => {
     expect(sending).toContain(m.devicesHomeSentMb({ mb: "42" }));
     expect(sending).toContain(m.devicesHomePort({ port: String(CONNECTION_PORT) }));
     expect(sending).toContain(`>${m.devicesJoinCancel()}<`);
+  });
+
+  it("asks for the password to install the Ubuntu package with the install question", () => {
+    const asked = draw({
+      at: "password",
+      question: { asks: "password", address: "sam@studio", user: "sam", for: "install" },
+    });
+    expect(asked).toContain(remoteLoginWords.passwordInstallQuestion("sam@studio")[0]);
+    expect(asked).not.toContain(remoteLoginWords.passwordQuestion("sam@studio")[0]);
   });
 
   it("stops with Ask again, Set it up with commands and Back, and says nothing changed there", () => {

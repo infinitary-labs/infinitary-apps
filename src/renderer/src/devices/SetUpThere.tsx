@@ -190,7 +190,7 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
       at: "stopped",
       step: refused.step,
       name,
-      lines: homeAtRefusalLines(refused, asked.current),
+      lines: homeAtRefusalLines(refused, asked.current, changed),
       running: false,
       changed,
     });
@@ -251,10 +251,7 @@ export function SetUpThere({ onCommands, onConnect, requests, ...props }: SetUpT
         started,
         ...(way ? { way } : {}),
       });
-    if (!started.private) {
-      const said = homeConnectLines(started, name);
-      return stopped(said.lines, said.way);
-    }
+    // A start that found no private address still tries: its words only say why a join failed.
     set({ at: "working", step: "connect", name, started });
     const until = Date.now() + OPENS_WITHIN_MS;
     for (;;) {

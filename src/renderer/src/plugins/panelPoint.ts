@@ -1,6 +1,11 @@
 import { feedLineSchema } from "@shared/feed";
 import { PANEL_DRAFT_MAX, type PanelPoint, type PanelView } from "@shared/personal/contracts";
 import { pointNeedsBoardMessage } from "@shared/personal/manifest";
+import {
+  PANEL_DRAFT_ACTION,
+  PANEL_OPEN_SETTINGS_ACTION,
+  panelDraftSchema,
+} from "@shared/plugins/panelActionIds";
 import { settingsShowSchema } from "@shared/showActions";
 import { useMemo } from "react";
 import { z } from "zod";
@@ -43,12 +48,12 @@ import { boardOnScreen, feedOnScreen, searchedTask, searchedTaskByKey } from "./
  * show (`settingsItem`), from his own click or key.
  */
 
-export { PANEL_LINE_PEEK_ACTION, PANEL_POINT_ACTIONS } from "@shared/plugins/panelActionIds";
-
-/** The one pointing every panel's page has, whatever it reads: `point.draft`. */
-export const PANEL_DRAFT_ACTION = "point.draft";
-/** And the other: `point.openSettings`. */
-export const PANEL_OPEN_SETTINGS_ACTION = "point.openSettings";
+export {
+  PANEL_DRAFT_ACTION,
+  PANEL_LINE_PEEK_ACTION,
+  PANEL_OPEN_SETTINGS_ACTION,
+  PANEL_POINT_ACTIONS,
+} from "@shared/plugins/panelActionIds";
 
 export type PointPage = {
   /** The reads the panel declared: pointing needs `tasks.board`. */
@@ -82,10 +87,6 @@ const boxSchema = z.strictObject({
 });
 const linePeekSchema = z.strictObject({ line: feedLineSchema.strict(), box: boxSchema }).nullable();
 const peekSchema = z.strictObject({ taskId: taskIdSchema, box: boxSchema }).nullable();
-const draftSchema = z
-  .string()
-  .max(PANEL_DRAFT_MAX)
-  .refine((text) => text.trim().length > 0 && !/[\r\n]/.test(text));
 
 /**
  * A task the board on screen lists, by id, or one a search found for a
@@ -197,7 +198,7 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       return true;
     },
     draft: async (text) => {
-      const parsed = draftSchema.safeParse(text);
+      const parsed = panelDraftSchema.safeParse(text);
       if (!parsed.success) {
         throw new Error(`point.draft: words on one line, at most ${PANEL_DRAFT_MAX} characters`);
       }

@@ -64,6 +64,8 @@ struct PhoneView: View {
     /// INF-5265: the way in the computer sheet's Add another computer picked, opened once that sheet has closed.
     @State private var addWay: PhoneAddWay?
     @State private var settings = false
+    /// Where a panel's `point.openSettings` opens Settings; Settings' own button opens its list.
+    @State private var settingsPlace: PhoneSettingsPlace?
     @State private var keyboardVisible = false
 
     var body: some View {
@@ -100,7 +102,7 @@ struct PhoneView: View {
                     }
                 } else if model.connection != nil, !model.removed {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button { settings = true } label: { PhoneSymbol.settings.image }
+                        Button { settingsPlace = nil; settings = true } label: { PhoneSymbol.settings.image }
                             .accessibilityLabel(PhoneMessages.phoneCommonSettings()).accessibilityIdentifier("phone-settings")
                             .keyboardShortcut(",", modifiers: .command)
                     }
@@ -141,7 +143,7 @@ struct PhoneView: View {
                 }
             }
             .sheet(isPresented: $settings) {
-                if let session = model.connection { PhoneSettingsSheet(session: session).environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes) }
+                if let session = model.connection { PhoneSettingsSheet(session: session, opening: settingsPlace).environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes) }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
                 if phoneKeyboardArrives(note) { keyboardVisible = true }
@@ -286,6 +288,7 @@ struct PhoneView: View {
         PhoneWorkspace(session: session,
             tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
             .environment(model.secrets)
+            .environment(\.phoneOpenSettings) { place in settingsPlace = place; settings = true }
             .id(session.mac.deviceID)
             // INF-589 item 12: a soft tap when the computer comes back after it was lost.
             .sensoryFeedback(.phone, trigger: session.returns)

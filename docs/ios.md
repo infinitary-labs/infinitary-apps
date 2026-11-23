@@ -653,6 +653,9 @@ Each card shows its title, its owner word and a Hide minus (Shift-Command-M) ove
 The shown card's page hears the same pushes and reloads as a drawn panel, so its reads and its panel's store follow the computer while it shows, as a card view does on the desktop.
 The computer never hears of these cards: Home names no panel card as the card being read.
 A panel that reads the board may point at the phone's own things only from the captain's own tap in its page, read as the card page reads one (the page has focus and the browser's user activation): `openTask` opens the task as a Tasks row's tap does, `openRecord` opens its record, and `showCard` brings one of the computer's cards forward on Home; the phone keeps no pointer rest, aim or project focus, so those answer nothing.
+Every panel, whatever it reads, also has the two pointings every desktop panel has, from the captain's own tap in its page or one of its cards: `draft` puts its words, checked by the desktop's rule (`panelDraftSchema`), at the start of Home's message box, unsent, and shows Home, as a card's draft button does; `openSettings` opens the phone's Settings on a section it has, by the desktop's section id, `subscriptions` opening Intelligence (`PhoneSettingsPlace`).
+An item opens an automation's own page in Automation or a project's in Projects; any other item, a kept job's included, is ignored and the section opens, as a desktop section ignores an item it does not know; a section the phone's Settings does not have, such as Secrets, Keyboard or a plugin's, opens nothing and answers false.
+A section opened this way before Settings has read the computer's pages waits for its answer instead of falling back to the list.
 Task moves (`moves`) are not offered to a panel on the phone yet, so its page refuses them as actions it was not given.
 
 ## Talk and tasks

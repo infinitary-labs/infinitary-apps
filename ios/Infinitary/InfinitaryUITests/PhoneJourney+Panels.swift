@@ -9,7 +9,7 @@ extension PhoneJourney {
     /// (tests/fixtures/phone-panels/phone-shy) decides for itself whether it shows. Completion: the tab is absent with no
     /// panel, and appears and leaves as the self-deciding panel says it shows and does not; a library file the build did not make leaves the panel's place saying so; the panel draws, follows a write
     /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop with Retry,
-    /// and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
+    /// starts a message and opens Settings from its own presses, and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
     /// the app's own Automation panel joins the tab with no owner word and the rule's name, the Tasks and Activity panels
     /// stay out, an iPad on its side draws it from the sidebar's Panels choice, and the tab leaves once the rule is deleted.
     func testPanelsTab() async throws {
@@ -103,6 +103,9 @@ extension PhoneJourney {
         XCTAssertTrue(retry.waitForAbsence(timeout: 30), app.debugDescription)
         let retried = try await home("panel-state", method: "GET")
         XCTAssertTrue(retried["stopped"] is NSNull, "Retry lifted the stop on the computer")
+
+        // Last on this panel, since the draft's words then wait in Home's message box.
+        try await verifyPanelDraftAndSettings()
 
         _ = try await home("panel-remove")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 20), app.debugDescription)
@@ -242,5 +245,34 @@ extension PhoneJourney {
         XCTAssertEqual(recordTitle.label, "Check the phone connection")
         tapOnPhone(close)
         XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+    }
+
+    /// INF-6295's piece B, the captain's "Build them now as a second piece": `point.draft` and `point.openSettings` work
+    /// on the phone for every panel, the captain's own included. Data: the fixture panel's two presses, a draft's words and
+    /// Settings' Automation, on the test home's real core. Completion: the draft's words wait unsent in Home's message box,
+    /// and Settings opens on Automation, its section's own page with Back.
+    private func verifyPanelDraftAndSettings() async throws {
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let draft = app.webViews.buttons["Start a message"]
+        XCTAssertTrue(draft.waitForPresence(timeout: 20), app.debugDescription)
+        tapOnPhone(draft, repeatDiscarded: false)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10),
+                       .completed, "The draft starts the message on Home")
+        let box = keyboardInput("message-box")
+        let drafted = NSPredicate(format: "value == %@", "Tell me about the tally")
+        XCTAssertEqual(waitForPhonePredicate(drafted, object: box, timeout: 10), .completed, "\(String(describing: box.value))")
+        picture("panel-draft-message")
+
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let settings = app.webViews.buttons["Open Automation"]
+        XCTAssertTrue(settings.waitForPresence(timeout: 20), app.debugDescription)
+        tapOnPhone(settings, repeatDiscarded: false)
+        let back = app.buttons["phone-settings-back"]
+        XCTAssertTrue(back.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Automation"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.buttons["phone-settings-general"].exists, "Settings opens on the section, not its list")
+        picture("panel-opens-settings")
+        tapOnPhone(app.buttons["close-phone-settings"])
+        XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10), app.debugDescription)
     }
 }

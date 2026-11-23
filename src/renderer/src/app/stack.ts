@@ -372,9 +372,10 @@ export function neighboursOf(ids: readonly string[], left: string | undefined): 
  * card was (`neighbours`, from `neighboursOf`), else the nearest before it,
  * else the first card; a task record or past card only when no card is
  * left. A reply never moves a card (INF-770). The one rule for the stack
- * and for the successor the stage prepares (`dismissalSuccessor`). Hide
- * instead uses the first live card regardless of unread state, then the
- * first held entry.
+ * and for the successor the stage prepares (`dismissalSuccessor`), but for
+ * a live card the conversation opened, whose leaving brings the
+ * conversation up instead (`ConversationEntry.opened`). Hide instead uses
+ * the first live card regardless of unread state, then the first held entry.
  */
 export function departureIndex(
   shown: StackEntry[],
@@ -436,18 +437,20 @@ function sameIds(prev: string[], next: string[]): string[] {
   return prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next;
 }
 
-/** Keep local selection and project holds while applying the owner's current-update seen marks.
- * Legacy snapshots without that projection retain their window-local unread behavior.
- * `typing` says a person is typing in the shown entry, which then keeps the stage.
- */
+/** The conversation entry with the live card it opened let go: that card's return is spent. */
 function spentOpener({ at, view }: ConversationEntry): ConversationEntry {
   return { ...(at ? { at } : {}), ...(view ? { view } : {}) };
 }
 
+/** Where the conversation that opened `cardId` sits on the stack; -1 when none did. */
 function openerOf(shown: readonly StackEntry[], cardId: string): number {
   return shown.findIndex((entry) => entry.conversation?.opened === cardId);
 }
 
+/** Keep local selection and project holds while applying the owner's current-update seen marks.
+ * Legacy snapshots without that projection retain their window-local unread behavior.
+ * `typing` says a person is typing in the shown entry, which then keeps the stage.
+ */
 export function reconcileStack(
   prev: StackState,
   cards: Card[],

@@ -121,6 +121,7 @@ The stage keeps its ordinary pair of documents mounted (`stageSlots.ts`, a pure 
 - **Shown**: the selected entry, in flow; the shell measures only it.
 - **Prepared successor** (`warm`): the entry a close would bring up - `dismissalSuccessor`, the same action-specific `departureIndex` rule the stack uses, never the next arrow - drawn invisibly at its own final width once its thread history is read, with only its body (no chrome), inert and hidden from assistive technology.
   Hide on a task record or past card prepares the first live card, even if already read; ordinary departure prepares the first unread card, falling back to the live card after the shown one, then the one before it, then a held entry.
+  A live card opened from the conversation names the conversation as its successor instead; as a held entry it is not prepared, and draws when shown.
   Any ordinary ready card is prepared, with a script or without: its page is born held (below), so nothing of its own runs before it is shown.
   Task records and past cards are read when shown, since opening a record marks its filing opened, and a card still being written waits until it is ready.
   Nothing is prepared behind a hidden window, and preparing marks nothing read, folds no rail and moves nothing on screen.
@@ -259,9 +260,11 @@ The shared show-card door reaches it: `inf:cards:show` (catalog action `show-car
 Only the shown entry supplies the turn hint, as `pastCardId`; the core adds one `about` line saying the card is history.
 Nothing is stored, no effect is reachable, and a past card never becomes a card.
 
-The conversation (INF-6337, `docs/composer.md` "The conversation") is one more shell-held entry: `records` holds at most one `{ conversation }`, the round it opens at and the view it shows, projected as `conversation` and drawn by `ConversationCard.tsx` through `ResponseCard` as a note with no actions or reply row, 720 px wide until dragged (`CONVERSATION_WIDTH`).
+The conversation (INF-6337, `docs/composer.md` "The conversation") is one more shell-held entry: `records` holds at most one `{ conversation }`, the round it opens at, the view it shows and the live card it opened (`opened`), projected as `conversation` and drawn by `ConversationCard.tsx` through `ResponseCard` as a note with no actions or reply row, 720 px wide until dragged (`CONVERSATION_WIDTH`).
 `openConversation` is its one opener, from a press on a round above the message box and the `firstmate.reply` command, and Hide/Esc closes it through `closeRecord`; it supplies no turn hint, and nothing about it is stored or sent.
 A past card opened from it carries `from` naming it, so that card's Hide returns to it, as a task's tab returns to the card it was opened from.
+A live card opened from it is named by `opened`: when that card leaves the stage, by Hide or an answer, `reconcileStack` brings the conversation up ahead of other cards, once, and clears the mark.
+Coming back, it shows the rounds read and the reading place of its visit (`conversationVisit.ts`), until it closes or opens afresh.
 
 Both effect-token homes paint `--bg-2`, no blur, `--line-1` and the previous shadow; peeks also drop their old element opacity, which would otherwise make even opaque paint translucent.
 The record reports its initialized draw to the shared presentation shell and lets its frame take the full intrinsic height, leaving ResponseCard as the only scroller.

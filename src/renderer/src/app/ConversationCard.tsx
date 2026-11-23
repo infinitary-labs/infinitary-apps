@@ -335,7 +335,7 @@ export function ConversationCard({
   entry: ConversationEntry;
   width: number | string;
   onDrawn?: () => void;
-  /** Whether this copy is the one the captain reads, not one the stage prepares unseen. */
+  /** Whether this copy is the one the captain reads, not an unseen one, such as a drawing on its way out. */
   shown?: boolean;
 }) {
   // Coming back from a card opened from it, the visit so far stands: the

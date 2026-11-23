@@ -5,8 +5,8 @@ import { forgetReadingPlace } from "../cards/cardReadingPlace";
  * One visit to the conversation, kept while it stays open (INF-6364's
  * review, the captain's choice "Come back where you were reading, until you
  * close it"): the rounds read so far and whether the reader stood at the
- * foot. Opening a card from it unmounts it while the stage keeps a live
- * card ready instead, so the card keeps neither itself. Its scroll place is
+ * foot. Opening a card from it unmounts it, since the stage never prepares
+ * a shell-held entry behind the shown one, so the card keeps neither itself. Its scroll place is
  * the reading place `conversationReadingPlaceId` names. Like reading places,
  * it lives for this session only.
  */

@@ -13923,6 +13923,12 @@ ${events}` : prompt;
        * mate's computer").
        */
       homeUpdates: literal(true).optional(),
+      /**
+       * The first mate's computer resets itself when this Mac's Reset
+       * Infinitary row asks (`inf:home-reset:start`, the `home-reset` contract
+       * change), so Settings → General offers that row (docs/reset.md).
+       */
+      homeResets: literal(true).optional(),
       heardAt: number().int().nonnegative().nullable(),
       caughtUp: number().int().nonnegative(),
       /**

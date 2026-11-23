@@ -1,11 +1,23 @@
 {
+  "resetCommandDone": "Infinitary est réinitialisé. Il s’ouvrira sur l’écran d’accueil la prochaine fois.",
+  "resetCommandHelp": "Supprime tout ce qu’Infinitary garde ici, une fois que vous avez confirmé que c’est bien vous.",
+  "resetCommandKept": "Vous n’avez pas confirmé, rien n’a donc été réinitialisé.",
+  "resetCommandNoConfirmation": "Cet ordinateur ne peut pas confirmer ici que c’est bien vous, rien n’a donc été réinitialisé. Utilisez Réinitialiser Infinitary dans Réglages → Général, ou sur l’écran qu’Infinitary affiche quand il ne peut pas s’ouvrir.",
+  "resetCommandRunning": "Infinitary est ouvert sur cet ordinateur, rien n’a donc été réinitialisé. Utilisez Réinitialiser Infinitary dans Réglages → Général, ou quittez Infinitary et relancez cette commande.",
   "resetConfirmReason": "Réinitialiser Infinitary sur cet ordinateur.",
+  "resetConfirmReasonBoth": "Réinitialiser Infinitary sur {home} et sur cet ordinateur.",
+  "resetConfirmReasonBothMac": "réinitialiser Infinitary sur {home} et sur cet ordinateur",
   "resetConfirmReasonMac": "réinitialiser Infinitary sur cet ordinateur",
+  "resetCouldNotStartMessage": "Il s’est arrêté deux fois avant d’avoir fini de démarrer. Votre travail enregistré n’a pas été modifié.",
+  "resetCouldNotStartNext": "Réessayez, ou réinitialisez Infinitary pour repartir comme s’il venait d’être installé.",
+  "resetCouldNotStartTitle": "Infinitary n’a pas pu démarrer",
   "resetHeldDetail": "Un autre programme utilise le dossier d’Infinitary. Fermez-le, puis réessayez.",
   "resetHeldMessage": "Infinitary n’a pas pu terminer sa réinitialisation",
   "resetHeldQuit": "Quitter",
   "resetHeldTryAgain": "Réessayer",
   "resetKeysAsk": "Rétablir tous les raccourcis du préréglage {preset} ?",
   "resetKeysConfirm": "Réinitialiser tous les raccourcis",
-  "resetKeysDetail": "Chaque raccourci modifié dans les réglages du clavier reprend celui que lui donne le préréglage {preset}."
+  "resetKeysDetail": "Chaque raccourci modifié dans les réglages du clavier reprend celui que lui donne le préréglage {preset}.",
+  "resetScreenKeeps": "Les projets dans vos propres dossiers gardent tous leurs fichiers et commits.",
+  "resetScreenKept": "Rien n’a été réinitialisé."
 }

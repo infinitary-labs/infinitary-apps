@@ -2513,8 +2513,18 @@ public enum PhoneMessages {
     public static func `refuseThisCardIsWorking`() -> String { PhoneWords.format("refuseThisCardIsWorking", []) }
     public static func `refuseThisCardTakesNoReply`() -> String { PhoneWords.format("refuseThisCardTakesNoReply", []) }
     public static func `refuseThisIsTheOnlyCard`() -> String { PhoneWords.format("refuseThisIsTheOnlyCard", []) }
+    public static func `resetCommandDone`() -> String { PhoneWords.format("resetCommandDone", []) }
+    public static func `resetCommandHelp`() -> String { PhoneWords.format("resetCommandHelp", []) }
+    public static func `resetCommandKept`() -> String { PhoneWords.format("resetCommandKept", []) }
+    public static func `resetCommandNoConfirmation`() -> String { PhoneWords.format("resetCommandNoConfirmation", []) }
+    public static func `resetCommandRunning`() -> String { PhoneWords.format("resetCommandRunning", []) }
     public static func `resetConfirmReason`() -> String { PhoneWords.format("resetConfirmReason", []) }
+    public static func `resetConfirmReasonBoth`(`home`: String) -> String { PhoneWords.format("resetConfirmReasonBoth", [`home`]) }
+    public static func `resetConfirmReasonBothMac`(`home`: String) -> String { PhoneWords.format("resetConfirmReasonBothMac", [`home`]) }
     public static func `resetConfirmReasonMac`() -> String { PhoneWords.format("resetConfirmReasonMac", []) }
+    public static func `resetCouldNotStartMessage`() -> String { PhoneWords.format("resetCouldNotStartMessage", []) }
+    public static func `resetCouldNotStartNext`() -> String { PhoneWords.format("resetCouldNotStartNext", []) }
+    public static func `resetCouldNotStartTitle`() -> String { PhoneWords.format("resetCouldNotStartTitle", []) }
     public static func `resetHeldDetail`() -> String { PhoneWords.format("resetHeldDetail", []) }
     public static func `resetHeldMessage`() -> String { PhoneWords.format("resetHeldMessage", []) }
     public static func `resetHeldQuit`() -> String { PhoneWords.format("resetHeldQuit", []) }
@@ -2522,6 +2532,8 @@ public enum PhoneMessages {
     public static func `resetKeysAsk`(`preset`: String) -> String { PhoneWords.format("resetKeysAsk", [`preset`]) }
     public static func `resetKeysConfirm`() -> String { PhoneWords.format("resetKeysConfirm", []) }
     public static func `resetKeysDetail`(`preset`: String) -> String { PhoneWords.format("resetKeysDetail", [`preset`]) }
+    public static func `resetScreenKeeps`() -> String { PhoneWords.format("resetScreenKeeps", []) }
+    public static func `resetScreenKept`() -> String { PhoneWords.format("resetScreenKept", []) }
     public static func `riskBehavior`() -> String { PhoneWords.format("riskBehavior", []) }
     public static func `riskBehaviorHigh`() -> String { PhoneWords.format("riskBehaviorHigh", []) }
     public static func `riskBehaviorLow`() -> String { PhoneWords.format("riskBehaviorLow", []) }
@@ -3243,11 +3255,15 @@ public enum PhoneMessages {
     public static func `settingsGeneralReset`() -> String { PhoneWords.format("settingsGeneralReset", []) }
     public static func `settingsGeneralResetButton`() -> String { PhoneWords.format("settingsGeneralResetButton", []) }
     public static func `settingsGeneralResetDeletes`() -> String { PhoneWords.format("settingsGeneralResetDeletes", []) }
+    public static func `settingsGeneralResetDeletesBoth`() -> String { PhoneWords.format("settingsGeneralResetDeletesBoth", []) }
     public static func `settingsGeneralResetDescription`() -> String { PhoneWords.format("settingsGeneralResetDescription", []) }
+    public static func `settingsGeneralResetDescriptionBoth`(`home`: String) -> String { PhoneWords.format("settingsGeneralResetDescriptionBoth", [`home`]) }
     public static func `settingsGeneralResetKeep`() -> String { PhoneWords.format("settingsGeneralResetKeep", []) }
     public static func `settingsGeneralResetKeeps`() -> String { PhoneWords.format("settingsGeneralResetKeeps", []) }
     public static func `settingsGeneralResetOpenTasks`(`count`: Int) -> String { PhoneWords.format("settingsGeneralResetOpenTasks", [`count`]) }
     public static func `settingsGeneralResetQuestion`() -> String { PhoneWords.format("settingsGeneralResetQuestion", []) }
+    public static func `settingsGeneralResetQuestionBoth`(`home`: String) -> String { PhoneWords.format("settingsGeneralResetQuestionBoth", [`home`]) }
+    public static func `settingsGeneralResetUnreached`(`home`: String) -> String { PhoneWords.format("settingsGeneralResetUnreached", [`home`]) }
     public static func `settingsGeneralResetting`() -> String { PhoneWords.format("settingsGeneralResetting", []) }
     public static func `settingsGeneralShowInDock`() -> String { PhoneWords.format("settingsGeneralShowInDock", []) }
     public static func `settingsGeneralShowInDockDescription`() -> String { PhoneWords.format("settingsGeneralShowInDockDescription", []) }
@@ -6921,8 +6937,18 @@ extension PhoneWords {
         "refuseThisCardIsWorking": [],
         "refuseThisCardTakesNoReply": [],
         "refuseThisIsTheOnlyCard": [],
+        "resetCommandDone": [],
+        "resetCommandHelp": [],
+        "resetCommandKept": [],
+        "resetCommandNoConfirmation": [],
+        "resetCommandRunning": [],
         "resetConfirmReason": [],
+        "resetConfirmReasonBoth": ["home"],
+        "resetConfirmReasonBothMac": ["home"],
         "resetConfirmReasonMac": [],
+        "resetCouldNotStartMessage": [],
+        "resetCouldNotStartNext": [],
+        "resetCouldNotStartTitle": [],
         "resetHeldDetail": [],
         "resetHeldMessage": [],
         "resetHeldQuit": [],
@@ -6930,6 +6956,8 @@ extension PhoneWords {
         "resetKeysAsk": ["preset"],
         "resetKeysConfirm": [],
         "resetKeysDetail": ["preset"],
+        "resetScreenKeeps": [],
+        "resetScreenKept": [],
         "riskBehavior": [],
         "riskBehaviorHigh": [],
         "riskBehaviorLow": [],
@@ -7651,11 +7679,15 @@ extension PhoneWords {
         "settingsGeneralReset": [],
         "settingsGeneralResetButton": [],
         "settingsGeneralResetDeletes": [],
+        "settingsGeneralResetDeletesBoth": [],
         "settingsGeneralResetDescription": [],
+        "settingsGeneralResetDescriptionBoth": ["home"],
         "settingsGeneralResetKeep": [],
         "settingsGeneralResetKeeps": [],
         "settingsGeneralResetOpenTasks": ["count"],
         "settingsGeneralResetQuestion": [],
+        "settingsGeneralResetQuestionBoth": ["home"],
+        "settingsGeneralResetUnreached": ["home"],
         "settingsGeneralResetting": [],
         "settingsGeneralShowInDock": [],
         "settingsGeneralShowInDockDescription": [],

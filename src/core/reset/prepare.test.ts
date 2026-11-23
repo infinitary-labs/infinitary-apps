@@ -66,6 +66,13 @@ describe("the first mate's side of a reset", () => {
     ]);
   });
 
+  it("leaves the computer that asked for this reset on the list, since it resets itself next", async () => {
+    const { steps, deps: d } = deps({ devices: () => [{ id: "phone" }, { id: "laptop" }] });
+    await prepareReset(d, { keep: "laptop" });
+    expect(steps).toContain("remove device phone");
+    expect(steps).not.toContain("remove device laptop");
+  });
+
   it("still tries every later step after one failed, timed out or stayed", async () => {
     const { steps, deps: d } = deps({
       removeDevice: () => {

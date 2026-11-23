@@ -234,14 +234,16 @@ export const WORK_INVOKE_CHANNELS = CORE_INVOKE_CHANNELS.filter(isWorkInvokeChan
 /**
  * Core channels only the window's own program asks, never its page nor the
  * captain's command: Join by its address's link, which stays in the main
- * process (docs/view.md, "Joining by its address"), and a reset's undoing,
- * which only follows the system's own confirmation (docs/reset.md). The desktop adapter
+ * process (docs/view.md, "Joining by its address"), and a reset's undoing
+ * and a reset asked by a computer that controls this one, which each only
+ * follow the system's own confirmation (docs/reset.md). The desktop adapter
  * serves the page none of them (`src/main/ipc/index.ts`), and
  * `infinitary-axi` reaches none (`commandReaches`).
  */
 export const PROGRAM_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<CoreInvokeChannel>([
   "inf:devices:link-at",
   "inf:app:reset-prepare",
+  "inf:home-reset:start",
 ]);
 
 /**

@@ -1,11 +1,23 @@
 {
+  "resetCommandDone": "Infinitary をリセットしました。次に開くとようこそ画面が表示されます。",
+  "resetCommandHelp": "本人であることを確認すると、Infinitary がここに保存しているものをすべて削除します。",
+  "resetCommandKept": "確認されなかったため、何もリセットしていません。",
+  "resetCommandNoConfirmation": "このコンピュータではここであなた本人かを確認できないため、何もリセットしていません。設定 → 一般の「Infinitary をリセット」か、Infinitary が開けないときに表示される画面を使ってください。",
+  "resetCommandRunning": "このコンピュータで Infinitary が開いているため、何もリセットしていません。設定 → 一般の「Infinitary をリセット」を使うか、Infinitary を終了してからもう一度実行してください。",
   "resetConfirmReason": "このコンピュータの Infinitary をリセットします。",
+  "resetConfirmReasonBoth": "{home} とこのコンピュータの Infinitary をリセットします。",
+  "resetConfirmReasonBothMac": "{home} とこのコンピュータの Infinitary をリセット",
   "resetConfirmReasonMac": "このコンピュータの Infinitary をリセット",
+  "resetCouldNotStartMessage": "起動が終わる前に 2 回停止しました。保存した作業は変更されていません。",
+  "resetCouldNotStartNext": "もう一度試すか、Infinitary をリセットしてインストール直後の状態からやり直してください。",
+  "resetCouldNotStartTitle": "Infinitary を起動できませんでした",
   "resetHeldDetail": "別のプログラムが Infinitary のフォルダを使用しています。そのプログラムを閉じてから、もう一度お試しください。",
   "resetHeldMessage": "Infinitary はリセットを完了できませんでした",
   "resetHeldQuit": "終了",
   "resetHeldTryAgain": "もう一度試す",
   "resetKeysAsk": "すべてのキーを {preset} プリセットの割り当てに戻しますか？",
   "resetKeysConfirm": "すべてのキーをリセット",
-  "resetKeysDetail": "キーボード設定で変更したショートカットは、すべて {preset} プリセットの割り当てに戻ります。"
+  "resetKeysDetail": "キーボード設定で変更したショートカットは、すべて {preset} プリセットの割り当てに戻ります。",
+  "resetScreenKeeps": "ご自身のフォルダにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。",
+  "resetScreenKept": "何もリセットしていません。"
 }

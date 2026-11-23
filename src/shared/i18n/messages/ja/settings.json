@@ -648,7 +648,9 @@
   "settingsGeneralReset": "Infinitary をリセット",
   "settingsGeneralResetButton": "リセット",
   "settingsGeneralResetDeletes": "Infinitary は、タスク、サインイン、シークレット、設定、ペアリングしたデバイスなど、ここに保存しているものをすべて削除し、インストール直後と同じ状態で開きます。",
+  "settingsGeneralResetDeletesBoth": "Infinitary は、タスク、サインイン、シークレット、設定、ペアリングしたデバイスなど、両方に保存しているものをすべて削除し、それぞれインストール直後と同じ状態で開きます。",
   "settingsGeneralResetDescription": "このコンピューターの Infinitary を、インストールした直後の状態に戻します。",
+  "settingsGeneralResetDescriptionBoth": "{home} とこのコンピューターの Infinitary を、インストールした直後の状態に戻します。",
   "settingsGeneralResetKeep": "すべて残す",
   "settingsGeneralResetKeeps": "ご自身のフォルダにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。タスクだけを消すには「タスクのデータを消去」を使ってください。",
   "settingsGeneralResetOpenTasks": {
@@ -656,6 +658,8 @@
     "other": "進行中の{count}件のタスクが停止します。"
   },
   "settingsGeneralResetQuestion": "このコンピューターの Infinitary をリセットしますか？",
+  "settingsGeneralResetQuestionBoth": "{home} とこのコンピューターの Infinitary をリセットしますか？",
+  "settingsGeneralResetUnreached": "{home} から応答がなかったため、何もリセットしていません。接続できるようになってからもう一度試してください。",
   "settingsGeneralResetting": "リセット中…",
   "settingsGeneralShowInDock": "Dock に表示",
   "settingsGeneralShowInDockDescription": "オフにすると、ウインドウはそのままで Dock のアイコンが非表示になります。",

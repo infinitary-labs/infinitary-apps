@@ -51,6 +51,7 @@ import {
 import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
+import type { ResetAnswer } from "@shared/reset";
 import { SMALLEST_WINDOW } from "@shared/smallestWindow";
 import { checksUpdates } from "@shared/update";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
@@ -90,7 +91,11 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
-import { resetInApp } from "./reset/inApp";
+import { couldNotStartYet } from "./reset/couldNotStart";
+import { freshAuthenticationFor } from "./reset/freshAuthentication";
+import { type ResetAsk, type ResetPlace, resetInApp, restartForReset } from "./reset/inApp";
+import { clearStartAttempts } from "./reset/startAttempts";
+import { resetWithoutFirstMate } from "./reset/withoutFirstMate";
 import {
   answerLaunch,
   bringWindowForward,
@@ -842,6 +847,43 @@ export async function startApp(
     // a run clears it once it noted that it holds the folder (below), in the
     // same step as it took the lock.
     if (privacy?.temp && !besideRun && !windowless) await clearPrivateTemp(privacy.temp);
+    // A reset starts the app again and quits this one.
+    const restartAfterReset = restartForReset({
+      isolated: Boolean(isolatedUserDataDir),
+      relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
+      quit: () => app.quit(),
+    });
+    // Where Reset Infinitary works, whichever screen or row starts it.
+    const resetSpot: Omit<ResetPlace, "authentication"> = {
+      dataDir,
+      choice: userDataChoice,
+      starter,
+      work: {
+        dataDir: work.place.dataDir,
+        flavor: work.place.flavor,
+        spelling: work.place.folderSpelling,
+        serviceManager: work.serviceManager,
+      },
+    };
+    // Starts that keep stopping before Infinitary started show Infinitary
+    // could not start instead (./reset/couldNotStart.ts).
+    const countsStarts = !windowless && !move && !besideRun && app.getPath("userData") === dataDir;
+    if (
+      countsStarts &&
+      couldNotStartYet({
+        hidden: hideWindow,
+        restart: restartAfterReset,
+        place: {
+          ...resetSpot,
+          authentication: freshAuthenticationFor(
+            userDataChoice,
+            hostPlatform(),
+            confirmationWindow,
+          ),
+        },
+      })
+    )
+      return;
     // What a launch on an accepted folder recovers once it is known to open its own first mate there
     // (`recover`, below).
     const recoveries: (() => void)[] = [];
@@ -1228,7 +1270,21 @@ export async function startApp(
         (ownSecrets && standbyLock
           ? { ...ownSecrets, standbyLock: standbyLock.custody }
           : ownSecrets);
+      // Reset Infinitary as this program runs it, made once the shell's window
+      // side is wired below; a computer that controls this one asks it too.
+      let resetHere: ((ask?: ResetAsk) => Promise<ResetAnswer>) | undefined;
       const host = createElectronHost({
+        // The answer goes back to the asking computer first: the reset stops
+        // the first mate that answers it.
+        resetForController: async () => {
+          const reset = resetHere;
+          if (!reset) throw new Error("Infinitary is still starting.");
+          setImmediate(() => {
+            reset({ kind: "for-controller" }).catch((error: unknown) =>
+              console.warn(`[reset] the reset another computer asked failed: ${String(error)}`),
+            );
+          });
+        },
         // Beside a command's first mate, that first mate ends first, with its
         // crew's work saved, before this window's update replaces the copy.
         prepareUpdateRestart: async () => {
@@ -1612,10 +1668,19 @@ export async function startApp(
       configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
       // A folder that moved to Infinitary, or one a move holds, is never opened
       // here: nothing is started on it (./savedDataRefusal.ts).
+      const resetPlace: ResetPlace = { ...resetSpot, authentication: secrets?.authentication };
+      // A screen shown when this folder cannot open offers Reset Infinitary
+      // too, with no first mate running (docs/reset.md, "Where a reset can start").
+      const startOver = resetWithoutFirstMate({
+        ...resetPlace,
+        questionConfirms: true,
+        restart: restartAfterReset,
+      });
       const refusal = dataFolderRefusal(dataDir, privacy);
       if (refusal) {
         if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
-        else await showDataRefusal(hideWindow, refusal);
+        else
+          await showDataRefusal(hideWindow, refusal, refusal.offersReset ? startOver : undefined);
         return;
       }
       // A run quits cleanly from here on: its core's disposal waits for a start still going on
@@ -1647,6 +1712,7 @@ export async function startApp(
       }
       try {
         await shell.start();
+        if (countsStarts) clearStartAttempts(dataDir);
       } catch (error) {
         if (windowless && stopping) return;
         if (!(error instanceof UnsupportedSavedDataError)) throw error;
@@ -1654,7 +1720,7 @@ export async function startApp(
           endRun(1, RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: error.message }));
           return;
         }
-        await showSavedDataRefusal(hideWindow);
+        await showSavedDataRefusal(hideWindow, startOver);
         return;
       }
       if (windowless && stopping) return;
@@ -1693,6 +1759,7 @@ export async function startApp(
       const reminders = new KeyReminderStore(join(app.getPath("userData"), "key-reminders.json"));
       keyReminders = reminders;
       reminders.subscribe((value) => broadcast("inf:keyboard:reminders", value));
+      resetHere = resetInApp({ ...resetPlace, shell, restart: restartAfterReset });
       registerIpc({
         rendererSource,
         dataDir,
@@ -1701,17 +1768,7 @@ export async function startApp(
         host,
         frameMounts,
         voice: { place: voicePlace, helper: voiceHelper },
-        reset: resetInApp({
-          shell,
-          authentication: secrets?.authentication,
-          dataDir,
-          choice: userDataChoice,
-          isolated: Boolean(isolatedUserDataDir),
-          starter,
-          work: { ...work.place, spelling: work.place.folderSpelling, serviceManager },
-          relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
-          quit: () => app.quit(),
-        }),
+        reset: resetHere,
       });
       handleVoiceModelProtocol(voiceModel);
       handleFrameProtocol({

@@ -334,6 +334,15 @@ export class Shell {
   }
 
   /**
+   * Whether this window controls another computer's first mate, whose own
+   * reset its Reset Infinitary row asks before this computer resets itself
+   * (docs/reset.md, "From a computer that controls the first mate").
+   */
+  controlsAnother(): boolean {
+    return this.mode?.kind === "view";
+  }
+
+  /**
    * Reset Infinitary's last step before the app starts again: this
    * computer's first mate stops - beside a command, whichever run holds
    * the folder, with its starter let go for good - so nothing writes the

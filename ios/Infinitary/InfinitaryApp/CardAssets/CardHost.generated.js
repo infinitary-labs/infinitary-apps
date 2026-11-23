@@ -47664,6 +47664,141 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This is the only card`;
   }
+  function resetCommandDone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُعيد تعيين Infinitary. سيفتح على شاشة الترحيب في المرة القادمة.`;
+      case "de":
+        return `Infinitary ist zurückgesetzt. Beim nächsten Mal öffnet es sich mit dem Willkommensbildschirm.`;
+      case "es":
+        return `Infinitary se restableció. La próxima vez se abre en la pantalla de bienvenida.`;
+      case "fr":
+        return `Infinitary est réinitialisé. Il s’ouvrira sur l’écran d’accueil la prochaine fois.`;
+      case "ja":
+        return `Infinitary をリセットしました。次に開くとようこそ画面が表示されます。`;
+      case "ko":
+        return `Infinitary를 재설정했어요. 다음에 열면 환영 화면이 나와요.`;
+      case "pt-BR":
+        return `O Infinitary foi redefinido. Na próxima vez, ele abre na tela de boas-vindas.`;
+      case "zh-Hans":
+        return `Infinitary 已重置。下次打开时会显示欢迎界面。`;
+      case "zh-Hant":
+        return `Infinitary 已重設。下次開啟時會顯示歡迎畫面。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš ŕéšéţ. Îţ öþéñš öñ ţĥé ŵéļçöɱé šçŕééñ ñéẋţ ţîɱé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is reset. It opens on the welcome screen next time.‬`;
+    }
+    return `Infinitary is reset. It opens on the welcome screen next time.`;
+  }
+  function resetCommandHelp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحذف كل ما يحتفظ به Infinitary هنا، بعد أن تؤكد أنك أنت.`;
+      case "de":
+        return `Löscht alles, was Infinitary hier aufbewahrt, sobald du bestätigst, dass du es bist.`;
+      case "es":
+        return `Elimina todo lo que Infinitary guarda aquí, una vez que confirmes que eres tú.`;
+      case "fr":
+        return `Supprime tout ce qu’Infinitary garde ici, une fois que vous avez confirmé que c’est bien vous.`;
+      case "ja":
+        return `本人であることを確認すると、Infinitary がここに保存しているものをすべて削除します。`;
+      case "ko":
+        return `본인임을 확인하면 Infinitary가 여기에 보관한 모든 것을 지워요.`;
+      case "pt-BR":
+        return `Apaga tudo o que o Infinitary guarda aqui, depois que você confirmar que é você.`;
+      case "zh-Hans":
+        return `确认是你本人后，删除 Infinitary 在这里保存的一切。`;
+      case "zh-Hant":
+        return `確認是你本人後，刪除 Infinitary 在這裡保存的一切。`;
+      case "en-XA":
+        return `[Ðéļéţéš éṽéŕýţĥîñĝ Îñƒîñîţáŕý ķééþš ĥéŕé, öñçé ýöû çöñƒîŕɱ îţ îš ýöû. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Deletes everything Infinitary keeps here, once you confirm it is you.‬`;
+    }
+    return `Deletes everything Infinitary keeps here, once you confirm it is you.`;
+  }
+  function resetCommandKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تؤكد، لذا لم يُعَد تعيين أي شيء.`;
+      case "de":
+        return `Du hast nicht bestätigt, also wurde nichts zurückgesetzt.`;
+      case "es":
+        return `No lo confirmaste, así que no se restableció nada.`;
+      case "fr":
+        return `Vous n’avez pas confirmé, rien n’a donc été réinitialisé.`;
+      case "ja":
+        return `確認されなかったため、何もリセットしていません。`;
+      case "ko":
+        return `확인하지 않아서 아무것도 재설정하지 않았어요.`;
+      case "pt-BR":
+        return `Você não confirmou, então nada foi redefinido.`;
+      case "zh-Hans":
+        return `你没有确认，所以没有重置任何内容。`;
+      case "zh-Hant":
+        return `你沒有確認，所以沒有重設任何內容。`;
+      case "en-XA":
+        return `[Ýöû ðîð ñöţ çöñƒîŕɱ, šö ñöţĥîñĝ ŵáš ŕéšéţ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You did not confirm, so nothing was reset.‬`;
+    }
+    return `You did not confirm, so nothing was reset.`;
+  }
+  function resetCommandNoConfirmation() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع هذا الكمبيوتر التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
+      case "de":
+        return `Dieser Computer kann hier nicht bestätigen, dass du es bist, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein oder auf dem Bildschirm, den Infinitary zeigt, wenn es sich nicht öffnen kann.`;
+      case "es":
+        return `Este ordenador no puede confirmar aquí que eres tú, así que no se restableció nada. Usa Restablecer Infinitary en Configuración → General, o en la pantalla que muestra Infinitary cuando no puede abrirse.`;
+      case "fr":
+        return `Cet ordinateur ne peut pas confirmer ici que c’est bien vous, rien n’a donc été réinitialisé. Utilisez Réinitialiser Infinitary dans Réglages → Général, ou sur l’écran qu’Infinitary affiche quand il ne peut pas s’ouvrir.`;
+      case "ja":
+        return `このコンピュータではここであなた本人かを確認できないため、何もリセットしていません。設定 → 一般の「Infinitary をリセット」か、Infinitary が開けないときに表示される画面を使ってください。`;
+      case "ko":
+        return `이 컴퓨터는 여기서 본인인지 확인할 수 없어서 아무것도 재설정하지 않았어요. 설정 → 일반의 Infinitary 재설정이나, Infinitary가 열리지 않을 때 보이는 화면을 사용하세요.`;
+      case "pt-BR":
+        return `Este computador não consegue confirmar aqui que é você, então nada foi redefinido. Use Redefinir o Infinitary em Ajustes → Geral, ou na tela que o Infinitary mostra quando não consegue abrir.`;
+      case "zh-Hans":
+        return `这台电脑无法在这里确认是你本人，所以没有重置任何内容。请使用“设置 → 通用”中的“重置 Infinitary”，或 Infinitary 无法打开时显示的界面。`;
+      case "zh-Hant":
+        return `這台電腦無法在這裡確認是你本人，所以沒有重設任何內容。請使用「設定 → 一般」中的「重設 Infinitary」，或 Infinitary 無法開啟時顯示的畫面。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ çáññöţ çöñƒîŕɱ îţ îš ýöû ĥéŕé, šö ñöţĥîñĝ ŵáš ŕéšéţ. Ûšé Ŕéšéţ Îñƒîñîţáŕý îñ Šéţţîñĝš → Ĝéñéŕáļ, öŕ öñ ţĥé šçŕééñ Îñƒîñîţáŕý šĥöŵš ŵĥéñ îţ çáññöţ öþéñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer cannot confirm it is you here, so nothing was reset. Use Reset Infinitary in Settings → General, or on the screen Infinitary shows when it cannot open.‬`;
+    }
+    return `This computer cannot confirm it is you here, so nothing was reset. Use Reset Infinitary in Settings → General, or on the screen Infinitary shows when it cannot open.`;
+  }
+  function resetCommandRunning() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary مفتوح على هذا الكمبيوتر، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
+      case "de":
+        return `Infinitary ist auf diesem Computer geöffnet, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein, oder beende Infinitary und führe dies erneut aus.`;
+      case "es":
+        return `Infinitary está abierto en este ordenador, así que no se restableció nada. Usa Restablecer Infinitary en Configuración → General, o cierra Infinitary y vuelve a ejecutar esto.`;
+      case "fr":
+        return `Infinitary est ouvert sur cet ordinateur, rien n’a donc été réinitialisé. Utilisez Réinitialiser Infinitary dans Réglages → Général, ou quittez Infinitary et relancez cette commande.`;
+      case "ja":
+        return `このコンピュータで Infinitary が開いているため、何もリセットしていません。設定 → 一般の「Infinitary をリセット」を使うか、Infinitary を終了してからもう一度実行してください。`;
+      case "ko":
+        return `이 컴퓨터에 Infinitary가 열려 있어서 아무것도 재설정하지 않았어요. 설정 → 일반의 Infinitary 재설정을 사용하거나, Infinitary를 종료한 뒤 다시 실행하세요.`;
+      case "pt-BR":
+        return `O Infinitary está aberto neste computador, então nada foi redefinido. Use Redefinir o Infinitary em Ajustes → Geral, ou feche o Infinitary e execute isto de novo.`;
+      case "zh-Hans":
+        return `Infinitary 正在这台电脑上运行，所以没有重置任何内容。请使用“设置 → 通用”中的“重置 Infinitary”，或退出 Infinitary 后再运行一次。`;
+      case "zh-Hant":
+        return `Infinitary 正在這台電腦上開啟，所以沒有重設任何內容。請使用「設定 → 一般」中的「重設 Infinitary」，或結束 Infinitary 後再執行一次。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý îš öþéñ öñ ţĥîš çöɱþûţéŕ, šö ñöţĥîñĝ ŵáš ŕéšéţ. Ûšé Ŕéšéţ Îñƒîñîţáŕý îñ Šéţţîñĝš → Ĝéñéŕáļ, öŕ ǫûîţ Îñƒîñîţáŕý áñð ŕûñ ţĥîš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary is open on this computer, so nothing was reset. Use Reset Infinitary in Settings → General, or quit Infinitary and run this again.‬`;
+    }
+    return `Infinitary is open on this computer, so nothing was reset. Use Reset Infinitary in Settings → General, or quit Infinitary and run this again.`;
+  }
   function resetConfirmReason() {
     switch (currentLanguage()) {
       case "ar":
@@ -47691,6 +47826,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Reset Infinitary on this computer.`;
   }
+  function resetConfirmReasonBoth(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر.`;
+      case "de":
+        return `Infinitary auf ${home} und diesem Computer zurücksetzen.`;
+      case "es":
+        return `Restablecer Infinitary en ${home} y en este ordenador.`;
+      case "fr":
+        return `Réinitialiser Infinitary sur ${home} et sur cet ordinateur.`;
+      case "ja":
+        return `${home} とこのコンピュータの Infinitary をリセットします。`;
+      case "ko":
+        return `${home}와 이 컴퓨터의 Infinitary를 재설정합니다.`;
+      case "pt-BR":
+        return `Redefinir o Infinitary em ${home} e neste computador.`;
+      case "zh-Hans":
+        return `在 ${home} 和这台电脑上重置 Infinitary。`;
+      case "zh-Hant":
+        return `在 ${home} 和這台電腦上重設 Infinitary。`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý öñ ${home} áñð ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary on ‬${home}‮ and this computer.‬`;
+    }
+    return `Reset Infinitary on ${home} and this computer.`;
+  }
+  function resetConfirmReasonBothMac(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر`;
+      case "de":
+        return `Infinitary auf ${home} und diesem Computer zurückzusetzen`;
+      case "es":
+        return `restablecer Infinitary en ${home} y en este ordenador`;
+      case "fr":
+        return `réinitialiser Infinitary sur ${home} et sur cet ordinateur`;
+      case "ja":
+        return `${home} とこのコンピュータの Infinitary をリセット`;
+      case "ko":
+        return `${home}와 이 컴퓨터의 Infinitary 재설정`;
+      case "pt-BR":
+        return `redefinir o Infinitary em ${home} e neste computador`;
+      case "zh-Hans":
+        return `在 ${home} 和这台电脑上重置 Infinitary`;
+      case "zh-Hant":
+        return `在 ${home} 和這台電腦上重設 Infinitary`;
+      case "en-XA":
+        return `[ŕéšéţ Îñƒîñîţáŕý öñ ${home} áñð ţĥîš çöɱþûţéŕ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮reset Infinitary on ‬${home}‮ and this computer‬`;
+    }
+    return `reset Infinitary on ${home} and this computer`;
+  }
   function resetConfirmReasonMac() {
     switch (currentLanguage()) {
       case "ar":
@@ -47717,6 +47908,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮reset Infinitary on this computer‬`;
     }
     return `reset Infinitary on this computer`;
+  }
+  function resetCouldNotStartMessage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف مرتين قبل أن يكتمل تشغيله. لم يتغير عملك المحفوظ.`;
+      case "de":
+        return `Es wurde zweimal beendet, bevor es fertig gestartet war. Deine gespeicherte Arbeit wurde nicht verändert.`;
+      case "es":
+        return `Se detuvo dos veces antes de terminar de iniciarse. Tu trabajo guardado no ha cambiado.`;
+      case "fr":
+        return `Il s’est arrêté deux fois avant d’avoir fini de démarrer. Votre travail enregistré n’a pas été modifié.`;
+      case "ja":
+        return `起動が終わる前に 2 回停止しました。保存した作業は変更されていません。`;
+      case "ko":
+        return `시작을 마치기 전에 두 번 멈췄어요. 저장된 작업은 바뀌지 않았어요.`;
+      case "pt-BR":
+        return `Ele parou duas vezes antes de terminar de iniciar. Seu trabalho salvo não foi alterado.`;
+      case "zh-Hans":
+        return `它在完成启动前停止了两次。你保存的工作没有被更改。`;
+      case "zh-Hant":
+        return `它在完成啟動前停止了兩次。你儲存的工作沒有被變更。`;
+      case "en-XA":
+        return `[Îţ šţöþþéð ţŵîçé ƀéƒöŕé îţ ƒîñîšĥéð šţáŕţîñĝ. Ýöûŕ šáṽéð ŵöŕķ ĥáš ñöţ ƀééñ çĥáñĝéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It stopped twice before it finished starting. Your saved work has not been changed.‬`;
+    }
+    return `It stopped twice before it finished starting. Your saved work has not been changed.`;
+  }
+  function resetCouldNotStartNext() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعد المحاولة، أو أعد تعيين Infinitary لتبدأ من جديد كأنه ثُبّت للتو.`;
+      case "de":
+        return `Versuche es erneut, oder setze Infinitary zurück, um wie frisch installiert neu anzufangen.`;
+      case "es":
+        return `Vuelve a intentarlo, o restablece Infinitary para empezar de nuevo como recién instalado.`;
+      case "fr":
+        return `Réessayez, ou réinitialisez Infinitary pour repartir comme s’il venait d’être installé.`;
+      case "ja":
+        return `もう一度試すか、Infinitary をリセットしてインストール直後の状態からやり直してください。`;
+      case "ko":
+        return `다시 시도하거나, Infinitary를 재설정해 처음 설치한 것처럼 새로 시작하세요.`;
+      case "pt-BR":
+        return `Tente de novo, ou redefina o Infinitary para recomeçar como se tivesse acabado de ser instalado.`;
+      case "zh-Hans":
+        return `请重试，或重置 Infinitary，像刚安装时一样重新开始。`;
+      case "zh-Hant":
+        return `請再試一次，或重設 Infinitary，像剛安裝時一樣重新開始。`;
+      case "en-XA":
+        return `[Ţŕý áĝáîñ, öŕ ŕéšéţ Îñƒîñîţáŕý ţö šţáŕţ öṽéŕ áš îƒ ĵûšţ îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Try again, or reset Infinitary to start over as if just installed.‬`;
+    }
+    return `Try again, or reset Infinitary to start over as if just installed.`;
+  }
+  function resetCouldNotStartTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر تشغيل Infinitary`;
+      case "de":
+        return `Infinitary konnte nicht starten`;
+      case "es":
+        return `Infinitary no pudo iniciarse`;
+      case "fr":
+        return `Infinitary n’a pas pu démarrer`;
+      case "ja":
+        return `Infinitary を起動できませんでした`;
+      case "ko":
+        return `Infinitary를 시작하지 못했어요`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu iniciar`;
+      case "zh-Hans":
+        return `Infinitary 无法启动`;
+      case "zh-Hant":
+        return `Infinitary 無法啟動`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ šţáŕţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not start‬`;
+    }
+    return `Infinitary could not start`;
   }
   function resetHeldDetail() {
     switch (currentLanguage()) {
@@ -47908,6 +48180,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Every shortcut you changed in Keyboard settings goes back to the one the ‬${preset}‮ preset gives it.‬`;
     }
     return `Every shortcut you changed in Keyboard settings goes back to the one the ${preset} preset gives it.`;
+  }
+  function resetScreenKeeps() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها.`;
+      case "de":
+        return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.`;
+      case "es":
+        return `Los proyectos en tus propias carpetas conservan todos sus archivos y commits.`;
+      case "fr":
+        return `Les projets dans vos propres dossiers gardent tous leurs fichiers et commits.`;
+      case "ja":
+        return `ご自身のフォルダにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。`;
+      case "ko":
+        return `내 폴더에 있는 프로젝트는 모든 파일과 커밋이 그대로 남아요.`;
+      case "pt-BR":
+        return `Os projetos nas suas próprias pastas mantêm todos os arquivos e commits.`;
+      case "zh-Hans":
+        return `你自己文件夹中的项目会保留所有文件和提交。`;
+      case "zh-Hant":
+        return `你自己資料夾中的專案會保留所有檔案和提交。`;
+      case "en-XA":
+        return `[Þŕöĵéçţš îñ ýöûŕ öŵñ ƒöļðéŕš ķééþ éṽéŕý ƒîļé áñð çöɱɱîţ. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Projects in your own folders keep every file and commit.‬`;
+    }
+    return `Projects in your own folders keep every file and commit.`;
+  }
+  function resetScreenKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُعَد تعيين أي شيء.`;
+      case "de":
+        return `Es wurde nichts zurückgesetzt.`;
+      case "es":
+        return `No se restableció nada.`;
+      case "fr":
+        return `Rien n’a été réinitialisé.`;
+      case "ja":
+        return `何もリセットしていません。`;
+      case "ko":
+        return `아무것도 재설정하지 않았어요.`;
+      case "pt-BR":
+        return `Nada foi redefinido.`;
+      case "zh-Hans":
+        return `没有重置任何内容。`;
+      case "zh-Hant":
+        return `沒有重設任何內容。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ ŵáš ŕéšéţ. ~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing was reset.‬`;
+    }
+    return `Nothing was reset.`;
   }
   function riskBehavior() {
     switch (currentLanguage()) {
@@ -68972,6 +69298,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Infinitary deletes everything it keeps here, including tasks, sign-ins, Secrets, settings and paired devices, then opens as if just installed.`;
   }
+  function settingsGeneralResetDeletesBoth() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحذف Infinitary كل ما يحتفظ به على الجهازين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
+      case "de":
+        return `Infinitary löscht alles, was es auf beiden aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und beide öffnen sich dann wie frisch installiert.`;
+      case "es":
+        return `Infinitary elimina todo lo que guarda en ambos, incluidas las tareas, los inicios de sesión, los Secretos, la configuración y los dispositivos vinculados, y después cada uno se abre como recién instalado.`;
+      case "fr":
+        return `Infinitary supprime tout ce qu’il garde sur les deux, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés, puis chacun s’ouvre comme s’il venait d’être installé.`;
+      case "ja":
+        return `Infinitary は、タスク、サインイン、シークレット、設定、ペアリングしたデバイスなど、両方に保存しているものをすべて削除し、それぞれインストール直後と同じ状態で開きます。`;
+      case "ko":
+        return `Infinitary가 작업, 로그인, 비밀 정보, 설정, 연결된 기기를 포함해 두 컴퓨터에 보관한 모든 것을 지우고, 각각 처음 설치한 것처럼 열려요.`;
+      case "pt-BR":
+        return `O Infinitary apaga tudo o que guarda nos dois, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados, e depois cada um abre como se tivesse acabado de ser instalado.`;
+      case "zh-Hans":
+        return `Infinitary 会删除它在两台电脑上保存的一切，包括任务、登录、机密、设置和已配对的设备，然后两台都像刚安装时一样打开。`;
+      case "zh-Hant":
+        return `Infinitary 會刪除它在兩台電腦上保存的一切，包括任務、登入、機密、設定和已配對的裝置，然後兩台都像剛安裝時一樣開啟。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ðéļéţéš éṽéŕýţĥîñĝ îţ ķééþš öñ ƀöţĥ, îñçļûðîñĝ ţášķš, šîĝñ-îñš, Šéçŕéţš, šéţţîñĝš áñð þáîŕéð ðéṽîçéš, ţĥéñ éáçĥ öþéñš áš îƒ ĵûšţ îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary deletes everything it keeps on both, including tasks, sign-ins, Secrets, settings and paired devices, then each opens as if just installed.‬`;
+    }
+    return `Infinitary deletes everything it keeps on both, including tasks, sign-ins, Secrets, settings and paired devices, then each opens as if just installed.`;
+  }
   function settingsGeneralResetDescription() {
     switch (currentLanguage()) {
       case "ar":
@@ -68998,6 +69351,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Takes Infinitary on this computer back to how it was just installed.‬`;
     }
     return `Takes Infinitary on this computer back to how it was just installed.`;
+  }
+  function settingsGeneralResetDescriptionBoth(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُعيد Infinitary على ${home} وعلى هذا الحاسوب إلى ما كان عليه بعد تثبيته مباشرة.`;
+      case "de":
+        return `Setzt Infinitary auf ${home} und diesem Computer in den Zustand direkt nach der Installation zurück.`;
+      case "es":
+        return `Devuelve Infinitary en ${home} y en esta computadora al estado en que quedó al instalarlo.`;
+      case "fr":
+        return `Remet Infinitary sur ${home} et sur cet ordinateur dans l’état où il était juste après l’installation.`;
+      case "ja":
+        return `${home} とこのコンピューターの Infinitary を、インストールした直後の状態に戻します。`;
+      case "ko":
+        return `${home}와 이 컴퓨터의 Infinitary를 처음 설치했을 때의 상태로 되돌려요.`;
+      case "pt-BR":
+        return `Deixa o Infinitary em ${home} e neste computador como estava logo depois de instalado.`;
+      case "zh-Hans":
+        return `让 ${home} 和这台电脑上的 Infinitary 回到刚安装时的样子。`;
+      case "zh-Hant":
+        return `讓 ${home} 和這台電腦上的 Infinitary 回到剛安裝時的樣子。`;
+      case "en-XA":
+        return `[Ţáķéš Îñƒîñîţáŕý öñ ${home} áñð ţĥîš çöɱþûţéŕ ƀáçķ ţö ĥöŵ îţ ŵáš ĵûšţ îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Takes Infinitary on ‬${home}‮ and this computer back to how it was just installed.‬`;
+    }
+    return `Takes Infinitary on ${home} and this computer back to how it was just installed.`;
   }
   function settingsGeneralResetKeep() {
     switch (currentLanguage()) {
@@ -69173,6 +69554,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Reset Infinitary on this computer?‬`;
     }
     return `Reset Infinitary on this computer?`;
+  }
+  function settingsGeneralResetQuestionBoth(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تريد إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب؟`;
+      case "de":
+        return `Infinitary auf ${home} und diesem Computer zurücksetzen?`;
+      case "es":
+        return `¿Restablecer Infinitary en ${home} y en esta computadora?`;
+      case "fr":
+        return `Réinitialiser Infinitary sur ${home} et sur cet ordinateur ?`;
+      case "ja":
+        return `${home} とこのコンピューターの Infinitary をリセットしますか？`;
+      case "ko":
+        return `${home}와 이 컴퓨터의 Infinitary를 재설정할까요?`;
+      case "pt-BR":
+        return `Redefinir o Infinitary em ${home} e neste computador?`;
+      case "zh-Hans":
+        return `要重置 ${home} 和这台电脑上的 Infinitary 吗？`;
+      case "zh-Hant":
+        return `要重設 ${home} 和這台電腦上的 Infinitary 嗎？`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý öñ ${home} áñð ţĥîš çöɱþûţéŕ? ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary on ‬${home}‮ and this computer?‬`;
+    }
+    return `Reset Infinitary on ${home} and this computer?`;
+  }
+  function settingsGeneralResetUnreached(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يستجب ${home}، لذا لم يُعَد تعيين أي شيء. أعد المحاولة عندما يصبح في المتناول.`;
+      case "de":
+        return `${home} hat nicht geantwortet, also wurde nichts zurückgesetzt. Versuche es erneut, sobald er erreichbar ist.`;
+      case "es":
+        return `${home} no respondió, así que no se restableció nada. Vuelve a intentarlo cuando esté a tu alcance.`;
+      case "fr":
+        return `${home} n’a pas répondu, rien n’a donc été réinitialisé. Réessayez quand il sera joignable.`;
+      case "ja":
+        return `${home} から応答がなかったため、何もリセットしていません。接続できるようになってからもう一度試してください。`;
+      case "ko":
+        return `${home}에서 응답이 없어서 아무것도 재설정하지 않았어요. 연결되면 다시 시도하세요.`;
+      case "pt-BR":
+        return `${home} não respondeu, então nada foi redefinido. Tente de novo quando ele estiver ao alcance.`;
+      case "zh-Hans":
+        return `${home} 没有回应，所以没有重置任何内容。等它能连上后再试一次。`;
+      case "zh-Hant":
+        return `${home} 沒有回應，所以沒有重設任何內容。等它能連上後再試一次。`;
+      case "en-XA":
+        return `[${home} ðîð ñöţ áñšŵéŕ, šö ñöţĥîñĝ ŵáš ŕéšéţ. Ţŕý áĝáîñ öñçé îţ îš îñ ŕéáçĥ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${home}‮ did not answer, so nothing was reset. Try again once it is in reach.‬`;
+    }
+    return `${home} did not answer, so nothing was reset. Try again once it is in reach.`;
   }
   function settingsGeneralResetting() {
     switch (currentLanguage()) {
@@ -103989,8 +104426,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThisCardIsWorking,
     refuseThisCardTakesNoReply,
     refuseThisIsTheOnlyCard,
+    resetCommandDone,
+    resetCommandHelp,
+    resetCommandKept,
+    resetCommandNoConfirmation,
+    resetCommandRunning,
     resetConfirmReason,
+    resetConfirmReasonBoth,
+    resetConfirmReasonBothMac,
     resetConfirmReasonMac,
+    resetCouldNotStartMessage,
+    resetCouldNotStartNext,
+    resetCouldNotStartTitle,
     resetHeldDetail,
     resetHeldMessage,
     resetHeldQuit,
@@ -103998,6 +104445,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     resetKeysAsk,
     resetKeysConfirm,
     resetKeysDetail,
+    resetScreenKeeps,
+    resetScreenKept,
     riskBehavior,
     riskBehaviorHigh,
     riskBehaviorLow,
@@ -104719,11 +105168,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsGeneralReset,
     settingsGeneralResetButton,
     settingsGeneralResetDeletes,
+    settingsGeneralResetDeletesBoth,
     settingsGeneralResetDescription,
+    settingsGeneralResetDescriptionBoth,
     settingsGeneralResetKeep,
     settingsGeneralResetKeeps,
     settingsGeneralResetOpenTasks,
     settingsGeneralResetQuestion,
+    settingsGeneralResetQuestionBoth,
+    settingsGeneralResetUnreached,
     settingsGeneralResetting,
     settingsGeneralShowInDock,
     settingsGeneralShowInDockDescription,
@@ -107313,8 +107766,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThisCardIsWorking": [],
     "refuseThisCardTakesNoReply": [],
     "refuseThisIsTheOnlyCard": [],
+    "resetCommandDone": [],
+    "resetCommandHelp": [],
+    "resetCommandKept": [],
+    "resetCommandNoConfirmation": [],
+    "resetCommandRunning": [],
     "resetConfirmReason": [],
+    "resetConfirmReasonBoth": ["home"],
+    "resetConfirmReasonBothMac": ["home"],
     "resetConfirmReasonMac": [],
+    "resetCouldNotStartMessage": [],
+    "resetCouldNotStartNext": [],
+    "resetCouldNotStartTitle": [],
     "resetHeldDetail": [],
     "resetHeldMessage": [],
     "resetHeldQuit": [],
@@ -107322,6 +107785,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "resetKeysAsk": ["preset"],
     "resetKeysConfirm": [],
     "resetKeysDetail": ["preset"],
+    "resetScreenKeeps": [],
+    "resetScreenKept": [],
     "riskBehavior": [],
     "riskBehaviorHigh": [],
     "riskBehaviorLow": [],
@@ -108043,11 +108508,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsGeneralReset": [],
     "settingsGeneralResetButton": [],
     "settingsGeneralResetDeletes": [],
+    "settingsGeneralResetDeletesBoth": [],
     "settingsGeneralResetDescription": [],
+    "settingsGeneralResetDescriptionBoth": ["home"],
     "settingsGeneralResetKeep": [],
     "settingsGeneralResetKeeps": [],
     "settingsGeneralResetOpenTasks": ["count"],
     "settingsGeneralResetQuestion": [],
+    "settingsGeneralResetQuestionBoth": ["home"],
+    "settingsGeneralResetUnreached": ["home"],
     "settingsGeneralResetting": [],
     "settingsGeneralShowInDock": [],
     "settingsGeneralShowInDockDescription": [],
@@ -121279,6 +121748,12 @@ ${startersHtml()}`;
        * mate's computer").
        */
       homeUpdates: literal(true).optional(),
+      /**
+       * The first mate's computer resets itself when this Mac's Reset
+       * Infinitary row asks (`inf:home-reset:start`, the `home-reset` contract
+       * change), so Settings → General offers that row (docs/reset.md).
+       */
+      homeResets: literal(true).optional(),
       heardAt: number().int().nonnegative().nullable(),
       caughtUp: number().int().nonnegative(),
       /**

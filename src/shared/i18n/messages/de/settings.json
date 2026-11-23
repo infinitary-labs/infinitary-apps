@@ -662,7 +662,9 @@
   "settingsGeneralReset": "Infinitary zurücksetzen",
   "settingsGeneralResetButton": "Zurücksetzen",
   "settingsGeneralResetDeletes": "Infinitary löscht alles, was es hier aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und öffnet sich dann wie frisch installiert.",
+  "settingsGeneralResetDeletesBoth": "Infinitary löscht alles, was es auf beiden aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und beide öffnen sich dann wie frisch installiert.",
   "settingsGeneralResetDescription": "Setzt Infinitary auf diesem Computer in den Zustand direkt nach der Installation zurück.",
+  "settingsGeneralResetDescriptionBoth": "Setzt Infinitary auf {home} und diesem Computer in den Zustand direkt nach der Installation zurück.",
   "settingsGeneralResetKeep": "Alles behalten",
   "settingsGeneralResetKeeps": "Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit. Um nur Aufgaben zu löschen, nutze Aufgabendaten endgültig löschen.",
   "settingsGeneralResetOpenTasks": {
@@ -671,6 +673,8 @@
     "other": "{count} offene Aufgaben werden beendet."
   },
   "settingsGeneralResetQuestion": "Infinitary auf diesem Computer zurücksetzen?",
+  "settingsGeneralResetQuestionBoth": "Infinitary auf {home} und diesem Computer zurücksetzen?",
+  "settingsGeneralResetUnreached": "{home} hat nicht geantwortet, also wurde nichts zurückgesetzt. Versuche es erneut, sobald er erreichbar ist.",
   "settingsGeneralResetting": "Wird zurückgesetzt …",
   "settingsGeneralShowInDock": "Im Dock anzeigen",
   "settingsGeneralShowInDockDescription": "Aus blendet das Dock-Symbol aus, das Fenster bleibt.",

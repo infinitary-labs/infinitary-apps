@@ -66,6 +66,13 @@ describe("running a reset", () => {
     }
   });
 
+  it("changes nothing on this computer when the first mate it controls did not answer", async () => {
+    const { steps, dataDir, seams: s } = seams({ askHome: async () => false });
+    expect(await runReset(s)).toEqual({ outcome: "unreached" });
+    expect(steps).toEqual([]);
+    expect(existsSync(`${dataDir}.reset`)).toBe(false);
+  });
+
   it("leaves each kind it could not clear now, and each start-only kind, on the mark", async () => {
     const cleared: string[] = [];
     const { dataDir, seams: s } = seams({

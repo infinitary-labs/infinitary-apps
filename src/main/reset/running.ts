@@ -17,6 +17,12 @@ export type RunningResetSeams = {
    * row's question; false changes nothing.
    */
   confirm: () => Promise<boolean>;
+  /**
+   * On a computer that controls another's first mate, asks that computer to
+   * reset itself once the person here confirmed; false when it did not
+   * answer, and nothing changes here either.
+   */
+  askHome?: () => Promise<boolean>;
   /** The first mate's own undoing (`inf:app:reset-prepare`). */
   prepare: () => Promise<unknown>;
   /**
@@ -47,6 +53,7 @@ export const RESET_LEFTOVERS_MS = 45_000;
 
 export async function runReset(seams: RunningResetSeams): Promise<ResetAnswer> {
   if (!(await seams.confirm().catch(() => false))) return { outcome: "kept" };
+  if (seams.askHome && !(await seams.askHome().catch(() => false))) return { outcome: "unreached" };
   await seams.within(seams.prepare(), RESET_PREPARE_MS).catch(() => undefined);
   const left = new Set<ResetOutsideKind>(seams.atStart);
   for (const [kind, clear] of Object.entries(seams.clear ?? {}) as [

@@ -601,6 +601,14 @@ export type HostCapabilities = {
    * view's update has a window to install it. Absent where none can open.
    */
   openOwnWindow?: () => void;
+  /**
+   * Resets this computer's Infinitary for a computer that controls it, whose
+   * person confirmed it there (docs/reset.md, "From a computer that controls
+   * the first mate"): the program that holds this first mate runs its own
+   * reset, leaving `asker` on its list of devices, since that computer resets
+   * itself. Resolves once the reset started. Absent where no program can.
+   */
+  resetForController?: (asker: string) => Promise<void>;
   /** Signed Mac update effects; absent outside an installed release. */
   macUpdates?: MacUpdateDriver;
   readonly notifications: HostNotifications;

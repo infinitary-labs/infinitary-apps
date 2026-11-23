@@ -332,6 +332,8 @@
   },
   "cardThreadSettingsNote": "Als Kontext an den Verfasser gesendet. Eine Antwort gibt nie das Bauen frei.",
   "cardThreadSettingsSent": "Einstellungen um {time} mit deiner Antwort gesendet",
+  "cardThreadWaitReworkAuthor": "Beantwortet. {who} aktualisiert diese Karte noch für die neue Version, und sie kommt zu dir zurück, sobald das erledigt ist.",
+  "cardThreadWaitReworkChecks": "Beantwortet. Die Überprüfungen laufen für die neue Version, und diese Karte kommt zu dir zurück, sobald sie fertig sind.",
   "cardThreadWhoCaptain": "du",
   "cardThreadWhoCrewmate": "Crew",
   "cardThreadWhoFirstmate": "Offizier",

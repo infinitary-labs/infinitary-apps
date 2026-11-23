@@ -501,6 +501,8 @@
 "cardThreadSettingChanged" = "変更";
 "cardThreadSettingsNote" = "参考として作成者に送られます。返信で作成が承認されることはありません。";
 "cardThreadSettingsSent" = "%1$@ に返信と一緒に設定を送信";
+"cardThreadWaitReworkAuthor" = "回答済みです。%1$@ が新しいバージョンに合わせてこのカードを更新中で、終わるとあなたのもとに戻ります。";
+"cardThreadWaitReworkChecks" = "回答済みです。新しいバージョンのチェックが実行中で、終わるとこのカードがあなたのもとに戻ります。";
 "cardThreadWhoCaptain" = "あなた";
 "cardThreadWhoCrewmate" = "乗組員";
 "cardThreadWhoFirstmate" = "航海士";
@@ -3910,6 +3912,7 @@
 "taskGroupQueued" = "待機中";
 "taskGroupWaiting" = "あなた待ち";
 "taskGroupWorking" = "作業中";
+"taskNoteReworkHeld" = "新しいバージョンのチェックが終わるまで、マージカード「%1$@」をあなたに戻さずにおきました。";
 "taskPinPin" = "固定";
 "taskPinUnpin" = "固定を解除";
 "taskTabActivity" = "アクティビティ";

@@ -16,6 +16,7 @@
   "taskGroupQueued": "en cola",
   "taskGroupWaiting": "esperándote",
   "taskGroupWorking": "trabajando",
+  "taskNoteReworkHeld": "Retuve la tarjeta de fusión «{title}» hasta que terminen las comprobaciones de su nueva versión.",
   "taskPinPin": "Fijar",
   "taskPinUnpin": "Desfijar",
   "taskTabActivity": "Actividad",

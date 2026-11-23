@@ -1,4 +1,5 @@
 import type { Card } from "./cards";
+import * as m from "./i18n/messages.generated.ts";
 import { formatResetText } from "./quota";
 import type { AccountHold, WorkPosture } from "./workPosture";
 
@@ -20,7 +21,13 @@ export type ThreadWait =
   /** The task is being merged or discarded. */
   | { on: "finishing" }
   /** Nothing else holds the author: the answer is its to give. */
-  | { on: "author" };
+  | { on: "author" }
+  /**
+   * The author answered and pushed a new version: the card comes back once
+   * that version's checks end (`checks`), or once the author has updated it
+   * (INF-6241; docs/card-threads.md, "A reworked merge card").
+   */
+  | { on: "rework"; checks: boolean };
 
 /**
  * The wait, or none: on a crewmate's card the captain replied under last,
@@ -29,12 +36,18 @@ export type ThreadWait =
  * answers.
  */
 export function threadWait(
-  card: Pick<Card, "author" | "awaiting" | "taskId">,
+  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt">,
   posture: WorkPosture | undefined,
 ): ThreadWait | undefined {
-  if (card.author !== "crewmate" || card.awaiting !== "answer" || !card.taskId || !posture) {
-    return undefined;
+  if (card.author !== "crewmate" || !card.taskId || !posture) return undefined;
+  // Answered but still in its close-out wait once its author's turn ended:
+  // the core holds a reworked merge card for its new version (INF-6241).
+  if (card.awaiting === "close-out" && card.sentBackAt !== undefined) {
+    if (posture.reason === "checks" || posture.reason === "access")
+      return { on: "rework", checks: true };
+    return posture.reason === "guidance" ? { on: "rework", checks: false } : undefined;
   }
+  if (card.awaiting !== "answer") return undefined;
   switch (posture.reason) {
     case "access":
       return posture.hold ? { on: "account", hold: posture.hold } : { on: "account" };
@@ -83,6 +96,10 @@ export function threadWaitWords(
       return `Saved. ${Who} has not answered yet. ${PUT_ASIDE_WAY_ON}`;
     case "account":
       return heldWords(wait.hold, who, now);
+    case "rework":
+      return wait.checks
+        ? m.cardThreadWaitReworkChecks()
+        : m.cardThreadWaitReworkAuthor({ who: Who });
   }
 }
 

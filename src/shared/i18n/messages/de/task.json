@@ -16,6 +16,7 @@
   "taskGroupQueued": "eingereiht",
   "taskGroupWaiting": "wartet auf dich",
   "taskGroupWorking": "in Arbeit",
+  "taskNoteReworkHeld": "Die Karte zum Zusammenführen „{title}“ zurückgehalten, bis die Überprüfungen ihrer neuen Version fertig sind.",
   "taskPinPin": "Anheften",
   "taskPinUnpin": "Nicht mehr anheften",
   "taskTabActivity": "Aktivität",

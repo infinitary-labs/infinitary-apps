@@ -19823,6 +19823,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Settings sent with your reply at ${time2}`;
   }
+  function cardThreadWaitReworkAuthor(input2) {
+    const who = input2.who;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تمّ الرد. لا يزال ${who} يحدّث هذه البطاقة للنسخة الجديدة، وتعود إليك عندما ينتهي.`;
+      case "de":
+        return `Beantwortet. ${who} aktualisiert diese Karte noch für die neue Version, und sie kommt zu dir zurück, sobald das erledigt ist.`;
+      case "es":
+        return `Respondido. ${who} todavía está actualizando esta tarjeta para la nueva versión, y vuelve a ti cuando termine.`;
+      case "fr":
+        return `Réponse donnée. ${who} met encore cette carte à jour pour la nouvelle version, et elle vous revient quand c’est fait.`;
+      case "ja":
+        return `回答済みです。${who} が新しいバージョンに合わせてこのカードを更新中で、終わるとあなたのもとに戻ります。`;
+      case "ko":
+        return `답변했어요. ${who}이(가) 새 버전에 맞춰 이 카드를 업데이트하고 있고, 끝나면 다시 돌아와요.`;
+      case "pt-BR":
+        return `Respondido. ${who} ainda está atualizando este cartão para a nova versão, e ele volta para você quando terminar.`;
+      case "zh-Hans":
+        return `已回答。${who} 仍在为新版本更新这张卡片，完成后它会回到你面前。`;
+      case "zh-Hant":
+        return `已回答。${who} 仍在為新版本更新這張卡片，完成後它會回到你面前。`;
+      case "en-XA":
+        return `[Åñšŵéŕéð. ${who} îš šţîļļ ûþðáţîñĝ ţĥîš çáŕð ƒöŕ ţĥé ñéŵ ṽéŕšîöñ, áñð îţ çöɱéš ƀáçķ ţö ýöû ŵĥéñ ţĥáţ îš ðöñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Answered. ‬${who}‮ is still updating this card for the new version, and it comes back to you when that is done.‬`;
+    }
+    return `Answered. ${who} is still updating this card for the new version, and it comes back to you when that is done.`;
+  }
+  function cardThreadWaitReworkChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تمّ الرد. الفحوصات قيد التشغيل على النسخة الجديدة، وتعود إليك هذه البطاقة عندما تنتهي.`;
+      case "de":
+        return `Beantwortet. Die Überprüfungen laufen für die neue Version, und diese Karte kommt zu dir zurück, sobald sie fertig sind.`;
+      case "es":
+        return `Respondido. Las comprobaciones se están ejecutando en la nueva versión, y esta tarjeta vuelve a ti cuando terminen.`;
+      case "fr":
+        return `Réponse donnée. Les vérifications sont en cours sur la nouvelle version, et cette carte vous revient quand elles se terminent.`;
+      case "ja":
+        return `回答済みです。新しいバージョンのチェックが実行中で、終わるとこのカードがあなたのもとに戻ります。`;
+      case "ko":
+        return `답변했어요. 새 버전의 검사가 실행 중이고, 끝나면 이 카드가 다시 돌아와요.`;
+      case "pt-BR":
+        return `Respondido. As verificações estão em execução na nova versão, e este cartão volta para você quando terminarem.`;
+      case "zh-Hans":
+        return `已回答。新版本的检查正在运行，检查结束后这张卡片会回到你面前。`;
+      case "zh-Hant":
+        return `已回答。新版本的檢查執行中，檢查結束後這張卡片會回到你面前。`;
+      case "en-XA":
+        return `[Åñšŵéŕéð. Çĥéçķš áŕé ŕûññîñĝ öñ ţĥé ñéŵ ṽéŕšîöñ, áñð ţĥîš çáŕð çöɱéš ƀáçķ ţö ýöû ŵĥéñ ţĥéý ƒîñîšĥ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Answered. Checks are running on the new version, and this card comes back to you when they finish.‬`;
+    }
+    return `Answered. Checks are running on the new version, and this card comes back to you when they finish.`;
+  }
   function cardThreadWhoCaptain() {
     switch (currentLanguage()) {
       case "ar":
@@ -92796,6 +92851,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `working`;
   }
+  function taskNoteReworkHeld(input2) {
+    const title = input2.title;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أبقيتُ بطاقة الدمج «${title}» عندي حتى تنتهي فحوصات نسختها الجديدة.`;
+      case "de":
+        return `Die Karte zum Zusammenführen „${title}“ zurückgehalten, bis die Überprüfungen ihrer neuen Version fertig sind.`;
+      case "es":
+        return `Retuve la tarjeta de fusión «${title}» hasta que terminen las comprobaciones de su nueva versión.`;
+      case "fr":
+        return `Carte de fusion « ${title} » gardée de côté jusqu’à la fin des vérifications de sa nouvelle version.`;
+      case "ja":
+        return `新しいバージョンのチェックが終わるまで、マージカード「${title}」をあなたに戻さずにおきました。`;
+      case "ko":
+        return `새 버전의 검사가 끝날 때까지 병합 카드 “${title}”을(를) 보내지 않고 두었어요.`;
+      case "pt-BR":
+        return `Segurei o cartão de mesclagem “${title}” até as verificações da nova versão terminarem.`;
+      case "zh-Hans":
+        return `在新版本的检查结束前，暂不把合并卡片“${title}”交给你。`;
+      case "zh-Hant":
+        return `在新版本的檢查結束前，暫不把合併卡片「${title}」交給你。`;
+      case "en-XA":
+        return `[Ķéþţ ţĥé ɱéŕĝé çáŕð “${title}” ƒŕöɱ ýöû ûñţîļ îţš ñéŵ ṽéŕšîöñ'š çĥéçķš éñð. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Kept the merge card “‬${title}‮” from you until its new version's checks end.‬`;
+    }
+    return `Kept the merge card “${title}” from you until its new version's checks end.`;
+  }
   function taskPinPin() {
     switch (currentLanguage()) {
       case "ar":
@@ -99374,6 +99457,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardThreadSettingsCount,
     cardThreadSettingsNote,
     cardThreadSettingsSent,
+    cardThreadWaitReworkAuthor,
+    cardThreadWaitReworkChecks,
     cardThreadWhoCaptain,
     cardThreadWhoCrewmate,
     cardThreadWhoFirstmate,
@@ -101892,6 +101977,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupQueued,
     taskGroupWaiting,
     taskGroupWorking,
+    taskNoteReworkHeld,
     taskPinPin,
     taskPinUnpin,
     taskTabActivity,
@@ -102565,6 +102651,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardThreadSettingsCount": ["count"],
     "cardThreadSettingsNote": [],
     "cardThreadSettingsSent": ["time"],
+    "cardThreadWaitReworkAuthor": ["who"],
+    "cardThreadWaitReworkChecks": [],
     "cardThreadWhoCaptain": [],
     "cardThreadWhoCrewmate": [],
     "cardThreadWhoFirstmate": [],
@@ -105083,6 +105171,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupQueued": [],
     "taskGroupWaiting": [],
     "taskGroupWorking": [],
+    "taskNoteReworkHeld": ["title"],
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskTabActivity": [],

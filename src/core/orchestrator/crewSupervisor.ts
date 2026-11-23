@@ -78,6 +78,7 @@ import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
+import { reworkHold } from "./reworkHold";
 import { RuleNotes, type RuleNotesRules } from "./ruleNotes";
 import { type MergeBehind, SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
@@ -118,6 +119,12 @@ export class CrewSupervisor {
 
   /** The facts a settle card's task writes on the card: its fact strip and its follow-ups. */
   private readonly settleFacts: SettleFacts;
+  /**
+   * Every part a reworked merge card's hold reads is built (INF-6241): the
+   * card stack restores before the watch's postures and the ladder exist,
+   * so a card it restores is held for the read until then.
+   */
+  private holdReadable = false;
   /** The card stack: the open cards and every write to them. */
   readonly cards: CardService;
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
@@ -359,6 +366,18 @@ export class CrewSupervisor {
       mergeBehind: (card) => this.cardActions.mergeBehind(card),
       mergeFellBehind: (cardId, behind) => this.mergeFellBehind(cardId, behind),
       holdsUntilMerge: (card) => this.holdsUntilMerge(card),
+      reworkHold: (card) =>
+        reworkHold(card, {
+          tasks: options.tasks,
+          cardStore: options.cardStore,
+          readOwed: (record) => !this.holdReadable || this.watch.afterTurnReadOwed(record),
+          witnesses: (taskId) => this.ladder.witnesses(taskId, this.now()),
+          stuck: (taskId) => options.inbox.stuck(taskId) !== undefined,
+          waitsForUpdate: (taskId) => this.updates.waitsForUpdateThere(taskId),
+        }),
+      readAfterTurn: (taskId) => {
+        if (this.holdReadable) this.watch.readAfterTurn(taskId);
+      },
       mergedLine: (card) => this.mergedLineOf(card),
       otherChangeOpen: (taskId) => this.otherChangeOpen(taskId),
       followupNotice: (taskId) => this.settleFacts.followupNotice(taskId),
@@ -704,6 +723,8 @@ export class CrewSupervisor {
       heldBy: (record) => this.ladder.heldBy(record),
       runtime: (taskId) => this.tasks.get(taskId),
     });
+    this.holdReadable = true;
+    this.cards.recheckHeld("restart");
   }
 
   /**

@@ -16,6 +16,7 @@
   "taskGroupQueued": "대기열",
   "taskGroupWaiting": "선장님을 기다림",
   "taskGroupWorking": "작업 중",
+  "taskNoteReworkHeld": "새 버전의 검사가 끝날 때까지 병합 카드 “{title}”을(를) 보내지 않고 두었어요.",
   "taskPinPin": "고정",
   "taskPinUnpin": "고정 해제",
   "taskTabActivity": "활동",

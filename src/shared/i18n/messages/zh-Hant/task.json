@@ -16,6 +16,7 @@
   "taskGroupQueued": "排入佇列",
   "taskGroupWaiting": "等你處理",
   "taskGroupWorking": "進行中",
+  "taskNoteReworkHeld": "在新版本的檢查結束前，暫不把合併卡片「{title}」交給你。",
   "taskPinPin": "釘選",
   "taskPinUnpin": "取消釘選",
   "taskTabActivity": "動態",

@@ -27,9 +27,11 @@ import {
   firstmateOwnCard,
   isPreviewBody,
   keepsTaskOpen,
+  mergeEffectOf,
   onStage,
   type PastCard,
 } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
 import { isQuickAnswer } from "@shared/routingPolicy";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -113,6 +115,8 @@ export class CardService {
   readonly ended: EndedCards;
   /** What the stage holds back on each open card (`CardStage`). */
   private readonly stage = new CardStage();
+  /** A held merge card's recheck is queued for after the current record change. */
+  private recheckQueued = false;
   /** The newest `sentBackAt` handed out: stamps stay distinct inside one millisecond. */
   private lastSentBack = 0;
   private presentation = "";
@@ -207,8 +211,24 @@ export class CardService {
           });
       }
     }
-    this.unsubscribeTasks = host.tasks.onChange(({ taskIds }) => this.refreshSettleFacts(taskIds));
+    this.unsubscribeTasks = host.tasks.onChange(({ taskIds }) => {
+      this.refreshSettleFacts(taskIds);
+      this.recheckAfterChange();
+    });
     if (this.cards.size > 0 || this.ended.size > 0) this.scheduleBroadcast();
+  }
+
+  /**
+   * A record change may end what holds a reworked merge card; its return
+   * writes the task, so it runs once the change seam has finished.
+   */
+  private recheckAfterChange(): void {
+    if (this.recheckQueued || this.stage.forChecks().length === 0) return;
+    this.recheckQueued = true;
+    queueMicrotask(() => {
+      this.recheckQueued = false;
+      this.recheckHeld();
+    });
   }
 
   dispose(): void {
@@ -948,8 +968,11 @@ export class CardService {
       card = back;
       moved = true;
     }
-    if (card.awaiting === "close-out") this.release(card, reason);
-    else if (card.awaiting === "answer") return moved;
+    if (card.awaiting === "close-out") {
+      // A reworked merge card held for its new version's checks keeps the
+      // version the captain replied under on the stage (INF-6241).
+      if (!this.release(card, reason) && this.stage.of(card).forChecks) return moved;
+    } else if (card.awaiting === "answer") return moved;
     else if (shown || answer) {
       // The stage moves from the version it held to the author's newest.
       this.host.cardStore.transaction(() =>
@@ -983,14 +1006,28 @@ export class CardService {
    * arrival is the `card_raised` it always was, and a return after the
    * captain's reply says so, so the replay can count a late return.
    */
-  private release(card: Card, reason: CloseOut): void {
+  private release(card: Card, reason: CloseOut): boolean {
     // A story note waits for its task's merge, not its author (INF-2533):
     // `releaseMerged` shows it once a settle merged it.
     if (card.awaiting === "close-out" && this.host.holdsUntilMerge?.(card)) {
       this.stage.hold(card, { forMerge: true });
-      return;
+      return false;
     }
-    this.stage.release(card, "forMerge");
+    // A reworked merge card waits for its new version's checks, not its
+    // author (INF-6241): `recheckHeld` returns it once nothing holds it.
+    const rework = card.awaiting === "close-out" ? this.host.reworkHold?.(card) : undefined;
+    const before = this.stage.of(card).forChecks;
+    if (rework) {
+      this.stage.hold(card, { forChecks: rework });
+      if (!before && card.taskId && !this.reworkNoted(card.taskId, card))
+        this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
+          news: false,
+          data: { cardId: card.id, sentBackAt: card.sentBackAt, held: rework },
+        });
+      if (rework === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
+      return false;
+    }
+    this.stage.release(card, "forMerge", "forChecks");
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
@@ -1001,7 +1038,7 @@ export class CardService {
     });
     this.cards.set(card.id, shown);
     this.host.cardPlaced?.(shown);
-    if (card.author !== "crewmate" || !card.taskId) return;
+    if (card.author !== "crewmate" || !card.taskId) return true;
     const returned = this.host.cardStore
       .messages(card.id)
       .some((message) => message.who === "captain");
@@ -1012,7 +1049,52 @@ export class CardService {
       actor: "crewmate",
       closeOut: reason,
       ...(returned ? { returned } : {}),
+      ...(before ? { heldFor: before } : {}),
     });
+    return true;
+  }
+
+  /**
+   * Return each reworked merge card nothing holds any longer (INF-6241):
+   * after a record change, a read, or the tick, with no author turn needed.
+   * A card whose captain replied again waits for that answer first.
+   */
+  recheckHeld(reason: CloseOut = "idle"): void {
+    const released: string[] = [];
+    let moved = false;
+    for (const id of this.stage.forChecks()) {
+      const card = this.cards.get(id);
+      if (card?.awaiting !== "close-out") continue;
+      if (this.host.reworkHold?.(card)) this.release(card, reason);
+      else if (this.releaseWrites(card, reason, released)) moved = true;
+    }
+    if (moved) this.broadcastReleased(released);
+  }
+
+  /** The hold under this reply is on the timeline already: a restart writes it once. */
+  private reworkNoted(taskId: string, card: Card): boolean {
+    return this.host.tasks
+      .timeline(taskId)
+      .some(
+        (event) =>
+          event.kind === "note" &&
+          event.data?.cardId === card.id &&
+          event.data?.sentBackAt === card.sentBackAt,
+      );
+  }
+
+  /**
+   * Whether a merge card of the task waits on its change's version: under
+   * a captain's reply, or held for its new version's checks (INF-6241).
+   */
+  awaitsVersion(taskId: string): boolean {
+    for (const card of this.cards.values()) {
+      if (card.taskId !== taskId || card.author !== "crewmate") continue;
+      if (this.stage.of(card).forChecks) return true;
+      if (card.awaiting === "answer" && card.actions.some((action) => mergeEffectOf(action)))
+        return true;
+    }
+    return false;
   }
 
   /**

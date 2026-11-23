@@ -356,6 +356,8 @@
   },
   "cardThreadSettingsNote": "Envoyés à l’auteur comme contexte. Une réponse n’autorise jamais à construire.",
   "cardThreadSettingsSent": "Réglages envoyés avec votre réponse à {time}",
+  "cardThreadWaitReworkAuthor": "Réponse donnée. {who} met encore cette carte à jour pour la nouvelle version, et elle vous revient quand c’est fait.",
+  "cardThreadWaitReworkChecks": "Réponse donnée. Les vérifications sont en cours sur la nouvelle version, et cette carte vous revient quand elles se terminent.",
   "cardThreadWhoCaptain": "vous",
   "cardThreadWhoCrewmate": "équipier",
   "cardThreadWhoFirstmate": "second",

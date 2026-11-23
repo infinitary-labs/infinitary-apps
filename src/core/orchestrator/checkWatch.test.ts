@@ -9,7 +9,9 @@ import {
   armWatch,
   CHECK_REFRESH_MS,
   CHECK_WATCH_BOUND_MS,
+  CHECK_WATCH_FAST_MS,
   CheckWatcher,
+  type CheckWatcherHost,
   checkWatchOnce,
   type WatchedReading,
 } from "./checkWatch";
@@ -26,7 +28,7 @@ import { renderWake, type TypedWake } from "./wakes";
 const HEAD = "cafe0001feedbeef";
 const minutes = (n: number) => n * 60_000;
 
-function setup() {
+function setup(extra: Partial<CheckWatcherHost> = {}) {
   let now = 1_000_000;
   const clock = () => now;
   const db = openInMemoryDatabase();
@@ -57,8 +59,10 @@ function setup() {
       steers.push(wake);
       if (wake.once) inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
     },
+    ...extra,
   });
   return {
+    watcher,
     tasks,
     inbox,
     reads,
@@ -340,6 +344,126 @@ describe("CheckWatcher", () => {
  * to raise a repeat card that ended the click. A version the standing
  * approval covers gets no such wake.
  */
+// INF-6241: a project that merges in batches has no pull request per task,
+// so the app learned a push from the crewmate's shell only when the crewmate
+// said so, and a reworked merge card came back on its first version.
+describe("CheckWatcher on a branch-only change (INF-6241)", () => {
+  const PUSHED = "beef0002cafef00d";
+
+  function branchOnly(awaited = false) {
+    const flags = { branch: true, awaited };
+    const at = setup({
+      readsBranch: () => flags.branch,
+      versionAwaited: () => flags.awaited,
+    });
+    seedDelivery(at.tasks, "t1", {
+      ciWatch: undefined,
+      ci: "green",
+      ciAt: at.start,
+      headSha: HEAD,
+    });
+    // Each read records its time on the task, as `ChangeChecks.readWatched` does.
+    const finishedAt =
+      (head: string): (() => WatchedReading) =>
+      () => {
+        seedDelivery(at.tasks, "t1", { ciAt: at.start + (at.reads.at(-1) ?? 0), headSha: head });
+        return {
+          kind: "finished",
+          head,
+          change: "fm/task-t1",
+          checks: [{ name: "linux", state: "success" }],
+        };
+      };
+    at.answer(finishedAt(HEAD));
+    const record = () => {
+      const live = at.tasks.get("t1");
+      if (!live) throw new Error("The task is gone");
+      return live;
+    };
+    return { ...at, flags, finishedAt, record };
+  }
+
+  it("reads it once after a turn ends, owing that read until it finishes, and never on the quiet refresh", async () => {
+    const at = branchOnly();
+    await at.at(CHECK_REFRESH_MS + minutes(1));
+    expect(at.reads).toEqual([]);
+    at.tasks.turns.markIdle("t1", { at: at.start + minutes(7) });
+    expect(at.watcher.afterTurnReadOwed(at.record())).toBe(true);
+    await at.at(minutes(7) + 1_000);
+    expect(at.reads).toEqual([minutes(7) + 1_000]);
+    expect(at.watcher.afterTurnReadOwed(at.record())).toBe(false);
+    await at.at(minutes(30));
+    expect(at.reads).toHaveLength(1);
+  });
+
+  it("counts a failed read as done, so a failure holds nothing", async () => {
+    const at = branchOnly();
+    at.answer({ kind: "failed", transient: true, problem: "The host did not answer." });
+    at.tasks.turns.markIdle("t1", { at: at.start + minutes(1) });
+    await at.watcher.readAfterTurn("t1", at.start + minutes(1) + 1_000);
+    expect(at.reads).toHaveLength(1);
+    expect(at.watcher.afterTurnReadOwed(at.record())).toBe(false);
+  });
+
+  it("reads it when a run watch starts on it and on each fast tick while its merge card waits", async () => {
+    const at = branchOnly();
+    seedDelivery(at.tasks, "t1", {
+      runWatches: [
+        {
+          runId: 42,
+          name: "linux",
+          attempt: 1,
+          since: at.start + minutes(2),
+          nextAt: at.start + minutes(3),
+          failureSeen: false,
+        },
+      ],
+    });
+    await at.at(minutes(2) + 1_000);
+    expect(at.reads).toEqual([minutes(2) + 1_000]);
+    await at.at(minutes(3));
+    expect(at.reads).toHaveLength(1);
+    at.flags.awaited = true;
+    await at.at(minutes(2) + 1_000 + CHECK_WATCH_FAST_MS);
+    await at.at(minutes(2) + 1_000 + CHECK_WATCH_FAST_MS + 1_000);
+    expect(at.reads).toEqual([minutes(2) + 1_000, minutes(2) + 1_000 + CHECK_WATCH_FAST_MS]);
+  });
+
+  it("leaves a change the app does not read as a branch alone", async () => {
+    const at = branchOnly(true);
+    at.flags.branch = false;
+    at.tasks.turns.markIdle("t1", { at: at.start + minutes(1) });
+    expect(at.watcher.afterTurnReadOwed(at.record())).toBe(false);
+    await at.at(minutes(10));
+    expect(at.reads).toEqual([]);
+  });
+
+  it.each([
+    ["no check started", { pending: [], noneStarted: true }, false],
+    [
+      "only a check waiting for a person",
+      { pending: [{ name: "deploy", state: "pending", manual: true }] },
+      false,
+    ],
+    ["a check running", { pending: [{ name: "linux", state: "pending" }] }, true],
+  ] as const)("at a new version with %s, arms a watch: %s", async (_name, reading, arms) => {
+    const at = branchOnly();
+    at.answer(() => {
+      seedDelivery(at.tasks, "t1", { ciAt: at.start + minutes(1) + 1_000, headSha: PUSHED });
+      return {
+        kind: "pending",
+        head: PUSHED,
+        change: "fm/task-t1",
+        ...reading,
+        pending: [...reading.pending],
+      };
+    });
+    at.tasks.turns.markIdle("t1", { at: at.start + minutes(1) });
+    await at.at(minutes(1) + 1_000);
+    expect(at.watch() !== undefined).toBe(arms);
+  });
+});
+
 describe("CheckWatcher at a version the captain's approval covers (INF-4018)", () => {
   function approve(tasks: TaskService) {
     seedDelivery(tasks, "t1", {

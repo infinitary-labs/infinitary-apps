@@ -501,6 +501,8 @@
 "cardThreadSettingChanged" = "alterado";
 "cardThreadSettingsNote" = "Enviado ao autor como contexto. Uma resposta nunca aprova a construção.";
 "cardThreadSettingsSent" = "Ajustes enviados com sua resposta às %1$@";
+"cardThreadWaitReworkAuthor" = "Respondido. %1$@ ainda está atualizando este cartão para a nova versão, e ele volta para você quando terminar.";
+"cardThreadWaitReworkChecks" = "Respondido. As verificações estão em execução na nova versão, e este cartão volta para você quando terminarem.";
 "cardThreadWhoCaptain" = "você";
 "cardThreadWhoCrewmate" = "tripulante";
 "cardThreadWhoFirstmate" = "imediato";
@@ -3910,6 +3912,7 @@
 "taskGroupQueued" = "na fila";
 "taskGroupWaiting" = "aguardando você";
 "taskGroupWorking" = "trabalhando";
+"taskNoteReworkHeld" = "Segurei o cartão de mesclagem “%1$@” até as verificações da nova versão terminarem.";
 "taskPinPin" = "Fixar";
 "taskPinUnpin" = "Desafixar";
 "taskTabActivity" = "Atividade";

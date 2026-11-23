@@ -13,6 +13,7 @@ import type { AskEnding } from "./askEnding";
 import type { CardEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import type { CardStage } from "./cardStage";
+import type { ReworkHold } from "./reworkHold";
 import type { MergeBehind } from "./settleCardFacts";
 
 export type CardActor = "captain" | "firstmate" | "crewmate";
@@ -67,6 +68,14 @@ export type CardServiceHost = {
    * has not merged. Read from typed facts, never the card's words.
    */
   holdsUntilMerge?(card: Card): boolean;
+  /**
+   * What keeps a reworked merge card in its close-out wait (INF-6241,
+   * `reworkHold`), or undefined when it returns as every card does. Read
+   * from typed facts, never the card's words.
+   */
+  reworkHold?(card: Card): ReworkHold | undefined;
+  /** Read the task's change now if the read after its crewmate's turn is still owed (INF-6241). */
+  readAfterTurn?(taskId: string): void;
   /**
    * The merged line a story note carries once its change's receipt says
    * merged (INF-2678); undefined while it has not, and for any other card.

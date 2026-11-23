@@ -1382,7 +1382,10 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   A reading that changes none of them adds no CI event; it advances the reading time and retains observation-forwarding bookkeeping (`changesCheckState`).
   Raw readings retain named failure history without settling repairs or counting attempts.
 - **Quiet refresh** continues every five minutes (`CHECK_REFRESH_MS`) for live tasks with a recorded open pull request, even after a watch ends, using the same reading and delivery facts.
-  It also reads on the first tick after the crewmate's turn ends (`idleSince` later than the last reading), since that turn may have pushed a new version from its shell, which tells the app nothing (INF-3092).
+  It also reads on the first tick after the crewmate's turn ends (`idleSince` later than the last reading), since that turn may have pushed a new version from its shell, which tells the app nothing (INF-3092); a standing watch reads then too.
+- **A branch-only change** (INF-6241), the pushed branch of a project that merges in batches of its own, once a reading has named its version (`readsBranch`), has no quiet refresh: it is read on the first tick after the crewmate's turn ends, when a run watch starts on it, and every minute while its merge card waits under a captain's reply or is held for its new version (`versionAwaited`).
+  A merge card held for the read after the turn starts it at once (`CheckWatcher.readAfterTurn`), and a failed read counts as done (`afterTurnReadOwed`).
+  A reading at a new version arms a watch only when a check there is running or queued: none started, or only checks a person starts, arms none.
   It runs on the shared tick after a restart too and backs off unreadable checks.
   It counts from the saved reading time, whichever pass recorded that reading; only a read that recorded nothing (a failed read, a spent allowance or a merge confirmation alone) backs off from when it ran.
   Changed raw readings retain a durable `ciObservation` identity until a crew tool response or the existing inbox forwards them.

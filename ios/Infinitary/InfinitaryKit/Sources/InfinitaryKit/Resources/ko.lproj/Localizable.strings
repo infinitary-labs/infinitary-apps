@@ -501,6 +501,8 @@
 "cardThreadSettingChanged" = "바뀜";
 "cardThreadSettingsNote" = "작성자에게 참고용으로 보냈어요. 답장은 만들기를 승인하지 않아요.";
 "cardThreadSettingsSent" = "%1$@에 답장과 함께 보낸 설정";
+"cardThreadWaitReworkAuthor" = "답변했어요. %1$@이(가) 새 버전에 맞춰 이 카드를 업데이트하고 있고, 끝나면 다시 돌아와요.";
+"cardThreadWaitReworkChecks" = "답변했어요. 새 버전의 검사가 실행 중이고, 끝나면 이 카드가 다시 돌아와요.";
 "cardThreadWhoCaptain" = "나";
 "cardThreadWhoCrewmate" = "선원";
 "cardThreadWhoFirstmate" = "항해사";
@@ -3912,6 +3914,7 @@
 "taskGroupQueued" = "대기열";
 "taskGroupWaiting" = "선장님을 기다림";
 "taskGroupWorking" = "작업 중";
+"taskNoteReworkHeld" = "새 버전의 검사가 끝날 때까지 병합 카드 “%1$@”을(를) 보내지 않고 두었어요.";
 "taskPinPin" = "고정";
 "taskPinUnpin" = "고정 해제";
 "taskTabActivity" = "활동";

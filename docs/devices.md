@@ -508,9 +508,10 @@ Its second line names what to check, the private network among it, and on an add
 | Reading its SSH key | Something took the connection at that port and sent no key; read on Linux and Windows, which dial the port once themselves after the key read fails | "Something answered at kun@vps on port 22, but sent no SSH key." over "Check that port 22 is its SSH server and not another service." |
 | Reading its SSH key | Nothing answered there in time, on Linux and Windows | "Nothing answered at kun@vps on port 22 when reading its SSH key." over a check of the address, the private network and its firewall |
 | Reading its SSH key | On a Mac, which never dials the port itself, since its local network privacy would ask, or where the name finds no address | "Could not read the SSH key of kun@vps on port 22." over a check that its SSH server listens on that port and of the private network |
-| Signing in | The key was read, and SSH then could not reach it; the port is the one the person's SSH settings resolve, left out behind a proxy | "Could not reach kun@vps on port 22 to sign in, after reading its SSH key." |
-| Sending Infinitary | The connection dropped after the sign-in | "The connection to vps dropped while sending Infinitary." |
+| Signing in | A key read came first, as on every add and on an update or a change of address whose key is remembered, and SSH then could not reach it, or could not reach it to let Firstmate's own key in; the port is the one the person's SSH settings resolve, left out behind a proxy | "Could not reach kun@vps on port 22 to sign in, after reading its SSH key." |
+| Sending Infinitary | The connection dropped after the sign-in: while an add sends and starts Infinitary, once an update's download answers or SSH has read more of its copy than a pipe holds, or during an Ubuntu update after its package went there | "The connection to vps dropped while sending Infinitary." |
 
+An update or a change of address to a computer whose key is not remembered reads no key first, so SSH failing there keeps the bare "Could not reach sam@mini.local." with the same second line.
 The port is the one `ssh -G` resolves for the address (`resolveDestination`, `src/core/devices/hostKey.ts`); an address the settings reach through a proxy, or one SSH cannot resolve, keeps the bare "Could not reach sam@mini.local." with the same second line.
 Join by its address on the first launch says the bare lines too (`joinAtRefusalWords`, `src/shared/joinByAddress.ts`), with no command way, since it joins a first mate that already runs there.
 

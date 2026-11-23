@@ -257,6 +257,8 @@ type UbuntuReady = "ready" | "linger-off";
 
 const LOOK_TIMEOUT_MS = 90_000;
 const SEND_TIMEOUT_MS = REMOTE_LOGIN_TIME_LIMIT_MS;
+/** More than any system's pipe holds before SSH reads from it. */
+const PIPE_HOLDS = 1024 * 1024;
 /** The copy's count is said at most this often between its first bytes and its end. */
 const COPY_EVERY_MS = 1_000;
 const IDLE_TIMEOUT_MS = 2 * 60_000;
@@ -314,7 +316,7 @@ export class RemoteLogin {
       if (!this.builds.canSendAny()) return step.refuse("cannot-send");
       const gated = await this.confirmHost(address, options.confirm);
       if ("asks" in gated) return gated;
-      if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated));
+      if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated.reach));
       step.say("reaching", remoteLoginWords.reaching(address));
       // Whether that Mac is this one is this Mac's own finding, bound to the
       // link it makes, never where the device later dials from.
@@ -344,7 +346,7 @@ export class RemoteLogin {
       } finally {
         here.dispose();
       }
-      if ("refusal" in look) return step.refuse(look.refusal, reachOf(look));
+      if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
       // That computer's system decides how it is set up, and which Firstmate it gets.
       const far = farSystemOf(look.os);
       const chip = far?.chips[look.arch ?? ""];
@@ -517,9 +519,9 @@ export class RemoteLogin {
           // before signing in, and check the joined folder before installing.
           const gated = await this.confirmHost(address, options.confirm);
           if ("asks" in gated) return gated;
-          if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated));
+          if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated.reach));
           const look = await this.look(address, "");
-          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look));
+          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
           if (!look.joined) return step.packageAddressRefused();
           if (look.home !== this.options.pairing.identity().pin)
             return step.refuse("already-joined");
@@ -539,21 +541,21 @@ export class RemoteLogin {
           return outcome;
         }
         const changed = await this.changedKey(address);
-        if (changed) return step.refuse(changed.refusal, reachOf(changed));
+        if (changed) return step.refuse(changed.refusal, reachOf(changed.reach));
         step.say("updating", remoteLoginWords.updating(device), { deviceId });
         // The system it said in its hello; one that never said is asked there.
         let far = device.system ? farSystemNamed(device.system) : null;
         let chip = far ? (device.chip ?? Object.values(far.chips)[0]) : undefined;
         if (!device.system) {
           const look = await this.look(address, "");
-          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look));
+          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
           far = farSystemOf(look.os);
           chip = far?.chips[look.arch ?? ""];
         }
         if (!far || !chip) return step.refuse("other-system");
         if (far.system === "linux" && this.builds.readsPublished()) {
           const looked = await this.look(address, "");
-          if ("refusal" in looked) return step.refuse(looked.refusal, reachOf(looked));
+          if ("refusal" in looked) return step.refuse(looked.refusal, reachOf(looked.reach));
           if (ubuntuPackageRelease(looked)) return this.updateUbuntu(device, looked, options, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
@@ -563,6 +565,9 @@ export class RemoteLogin {
         const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
         let ran: Awaited<ReturnType<typeof runSsh>> | undefined;
         let starting = false;
+        // Infinitary began to go there: its download answered, or SSH read
+        // more of the copy than a pipe holds, which it does only once signed in.
+        let sending = false;
         const start = () => {
           starting = true;
           step.say("updating", remoteLoginWords.starting(name), {
@@ -595,6 +600,7 @@ export class RemoteLogin {
               await new Promise<void>((resolve) => sink.once("close", resolve));
             },
             onLine: (line, activity) => {
+              sending = true;
               if (line === DOWNLOAD_FETCHED) {
                 activity.end();
                 return false;
@@ -650,9 +656,12 @@ export class RemoteLogin {
               ...(build.form === "bundle" ? [] : [build.sha256]),
             ],
             stdin: async (sink, activity) => {
+              let sent = 0;
               await sendCopy(build, sink, (bytes) => {
                 activity();
                 copy.add(bytes);
+                sent += bytes;
+                if (sent > PIPE_HOLDS) sending = true;
               });
               copy.end();
               activity.end();
@@ -694,7 +703,10 @@ export class RemoteLogin {
                   : "failed",
           );
         if (starting) return step.uncertain(name);
-        if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
+        if (ran.code === SSH_FAILED) {
+          const refused = await this.refusedOver(address, sshRefusal(ran.stderr), sending);
+          return step.refuse(refused.refusal, reachOf(refused.reach));
+        }
         return step.refuse("failed");
       }),
     );
@@ -788,10 +800,10 @@ export class RemoteLogin {
       this.holding(deviceId, async () => {
         const step = this.stepper(address, "address", device);
         const changed = await this.changedKey(address);
-        if (changed) return step.refuse(changed.refusal, reachOf(changed));
+        if (changed) return step.refuse(changed.refusal, reachOf(changed.reach));
         step.say("reaching", remoteLoginWords.reaching(address), { deviceId });
         const look = await this.look(address, "");
-        if ("refusal" in look) return step.refuse(look.refusal, reachOf(look));
+        if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
         if (!farSystemOf(look.os)) return step.refuse("other-system");
         if (!look.joined) return step.refuse("not-set-up");
         if (look.home !== this.options.pairing.identity().pin) return step.refuse("already-joined");
@@ -1091,7 +1103,7 @@ export class RemoteLogin {
               },
             );
           }
-          if (ran.code === SSH_FAILED) return refuse(sshRefusal(ran.stderr));
+          if (ran.code === SSH_FAILED) return refuse(sshRefusal(ran.stderr), { step: "send" });
           return refuse("failed");
         } finally {
           clearBackstop();
@@ -1376,7 +1388,11 @@ export class RemoteLogin {
       }
       // Stopped by the time limit while `work update` ran there: it may already have updated.
       if (ran.stopped) return step.uncertain(deviceLabel(device));
-      if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
+      // The package is already there: a connection lost now is lost while sending.
+      if (ran.code === SSH_FAILED) {
+        const refused = await this.refusedOver(address, sshRefusal(ran.stderr), true);
+        return step.refuse(refused.refusal, reachOf(refused.reach));
+      }
       return step.refuse("failed");
     } finally {
       secret?.fill(0);
@@ -1403,9 +1419,7 @@ export class RemoteLogin {
     if (ran.code === SSH_FAILED) {
       const refusal = sshRefusal(ran.stderr);
       if (refusal === "key-refused") return { refusal, methods: passwordMethods(ran.stderr) };
-      return refusal === "unreachable"
-        ? { refusal, reach: await this.signInReach(address) }
-        : { refusal };
+      return this.refusedOver(address, refusal);
     }
     const said = new Map<string, string>();
     const needs: string[] = [];
@@ -1494,7 +1508,10 @@ export class RemoteLogin {
       }
       if (outcome === "off") return step.refuse("password-off");
       if (outcome === "other-system") return step.refuse("other-system");
-      if (outcome !== "placed") return step.refuse(outcome.refusal);
+      if (outcome !== "placed") {
+        const refused = await this.refusedOver(address, outcome.refusal);
+        return step.refuse(refused.refusal, reachOf(refused.reach));
+      }
       try {
         this.options.pairing.ownKeyPlacedAt(address);
       } catch {
@@ -1507,12 +1524,25 @@ export class RemoteLogin {
   }
 
   /**
-   * Where a sign-in that could not reach `address` dialed: the port the
-   * person's SSH settings resolve, unless a proxy stands in between.
+   * An SSH refusal from `address`, with the step it could not reach the
+   * computer at: sending once Infinitary began to go there; signing in, at
+   * the port the person's SSH settings resolve unless a proxy stands
+   * between, when a key read came first, as one does before every sign-in
+   * to a computer whose key is remembered; no step otherwise.
    */
-  private async signInReach(address: string): Promise<RemoteLoginReach> {
+  private async refusedOver(
+    address: string,
+    refusal: RemoteLoginRefusal,
+    sending = false,
+  ): Promise<{ refusal: RemoteLoginRefusal; reach?: RemoteLoginReach }> {
+    if (refusal !== "unreachable") return { refusal };
+    if (sending) return { refusal, reach: { step: "send" } };
+    if (!this.options.pairing.rememberedHost(address)) return { refusal };
     const where = await resolveDestination(this.options.ssh, address);
-    return where && !where.proxied ? { step: "sign-in", port: where.port } : { step: "sign-in" };
+    return {
+      refusal,
+      reach: where && !where.proxied ? { step: "sign-in", port: where.port } : { step: "sign-in" },
+    };
   }
 
   /**
@@ -1804,6 +1834,6 @@ function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
 }
 
 /** The step a refusal could not reach the computer at, as the refusal's words take it. */
-function reachOf(refused: { reach?: RemoteLoginReach }): { reach?: RemoteLoginReach } {
-  return refused.reach ? { reach: refused.reach } : {};
+function reachOf(reach: RemoteLoginReach | undefined): { reach?: RemoteLoginReach } {
+  return reach ? { reach } : {};
 }

@@ -97,11 +97,12 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       });
       const at = await home({ ssh: sshd.ssh({ remote: them.env }), bundle });
       const refused = await addChecked(at.remote, sshd.address).catch((error: unknown) => error);
-      const reason = code === 255 ? "unreachable" : "failed";
-      const lines = remoteLoginWords.refused(reason, {
+      // SSH's own failure there is the connection lost while it sent and started Infinitary.
+      const lines = remoteLoginWords.refused(code === 255 ? "unreachable" : "failed", {
         address: sshd.address,
         name: "Mac mini",
         doing: "add",
+        ...(code === 255 ? { reach: { step: "send" as const } } : {}),
       });
       expect(refused).toBeInstanceOf(RemoteLoginRefusedError);
       expect((refused as Error).message).toBe(lines.join("\n"));

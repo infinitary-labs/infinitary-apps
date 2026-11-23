@@ -40,8 +40,9 @@ export const WORK_HOME_SEAMS: Omit<WorkHomeSeams, "link"> = {
  * "Before it quits"): the home hears Leave, as a device's own Leave sends it,
  * and takes this computer off its list instead of keeping it as out of
  * reach; then the work lets the home go and removes what was set up here
- * for it, as the home's own removal does (`removeFromHome`), keeping a
- * working copy that still holds unmerged work. Called once the work's run is
+ * for it, as the home's own removal does (`removeFromHome`). The work's
+ * working copies sit inside the data folder, so the next start deletes them
+ * with it. Called once the work's run is
  * stopped, so its folder is free. True once nothing of that home is left
  * here; a home out of reach still lists this computer until it is removed
  * there.

@@ -5,6 +5,7 @@ import {
   lstatSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmdirSync,
   rmSync,
@@ -140,9 +141,13 @@ export function clearPhoneKeys(input: {
   homeDir: string;
 }): boolean {
   if (input.platform === "win32" || anotherFlavorBeside(input.flavor, input.dataDir)) return true;
-  const file = join(input.homeDir, ".ssh", "authorized_keys"); // i18n-exempt: OpenSSH's own file name
+  const named = join(input.homeDir, ".ssh", "authorized_keys"); // i18n-exempt: OpenSSH's own file name
+  let file: string;
   let text: string;
   try {
+    // A person who keeps the file as a link (to a dotfiles copy, say) keeps
+    // the link: the lines are written beside the file it leads to.
+    file = realpathSync(named);
     text = readFileSync(file, "utf8");
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === "ENOENT";

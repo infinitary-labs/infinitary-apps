@@ -20,11 +20,12 @@ No agent can start a reset.
 The window's program runs the reset (`runReset`, `src/main/reset/running.ts`) once the system confirmed the person, each step capped so a remote service never holds it up, and none stops the next:
 
 1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
-2. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it, keeping a working copy that still holds unmerged work.
+2. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it.
+   The work's working copies sit inside the data folder, so the next start deletes them with it, unmerged work included.
    A home out of reach still lists this computer until it is removed there.
 3. It writes the mark beside the folder, naming the outside kinds the next start still clears.
 4. It stops the first mate - beside a command, whichever run holds the folder, with its starter let go for good (`Shell.stopForReset`).
-5. It ends the programs tasks left running in the folder, such as a server a task started (`endLeftoverPrograms`, `src/main/reset/leftovers.ts`): each gets 15 seconds to end by itself, then an end request and a kill; never this app or a program it started.
+5. It ends every program of this account still holding a file or working folder in the data folder, such as a server a task started or a terminal the person opened in a task's working copy (`endLeftoverPrograms`, `src/main/reset/leftovers.ts`): each gets 15 seconds to end by itself, then an end request and a kill; never this app or a program it started.
 6. It starts the app again.
    On Windows the new start waits for this program to end, through the same hand-over an update uses (`restartOnWindows`, `src/main/reset/windowsRestart.ts`), so it finds the folder free.
 
@@ -49,7 +50,7 @@ Then, by the mark's stage:
 
 The mark goes last, so a start cut off at any step carries on at the next; each step can run twice, and a fresh folder is never wiped by an old mark.
 The outside kinds are cleared once, at the start that wipes the folder, and a kind that cannot be cleared then is left: a later start may already run the fresh install, whose own Secrets, start entries and preferences a retry would delete.
-A folder renamed aside that cannot be deleted keeps the mark at `moved` for up to three starts, which try only the renamed folders again, then the mark goes anyway.
+A folder renamed aside that cannot be deleted keeps the mark at `moved` for up to three starts, which delete the renamed folders and the older copies again, never the fresh folder, then the mark goes anyway.
 The older copies are the person's own folder's of a flavor alone: an older name's folder (Firstmate 3000's), a folder a move set aside or was still building, the hand-over's throwaway profile and the move's lock files.
 An isolated or chosen folder (`INFINITARY_USER_DATA_DIR`, `--user-data-dir`) is wiped alone, with no older copies and nothing outside it.
 

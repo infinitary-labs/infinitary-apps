@@ -3,6 +3,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -183,6 +184,17 @@ describe("the phone keys a reset clears", () => {
     expect(clearPhoneKeys({ platform: "darwin", flavor: "release", ...at })).toBe(true);
     expect(readFileSync(at.file, "utf8")).toBe(`${PERSON}\n`);
     expect(statSync(at.file).mode & 0o777).toBe(0o600);
+  });
+
+  it("keeps a linked file a link, and clears the lines in the file it leads to", () => {
+    const at = account([PERSON, PHONE]);
+    const dotfiles = join(scratchDir("inf-reset-phone-dotfiles-"), "authorized_keys");
+    renameSync(at.file, dotfiles);
+    symlinkSync(dotfiles, at.file);
+    expect(clearPhoneKeys({ platform: "darwin", flavor: "release", ...at })).toBe(true);
+    expect(lstatSync(at.file).isSymbolicLink()).toBe(true);
+    expect(readFileSync(dotfiles, "utf8")).toBe(`${PERSON}\n`);
+    expect(statSync(dotfiles).mode & 0o777).toBe(0o600);
   });
 
   it("leaves the lines while another flavor's folder is beside, and finds nothing to do without the file", () => {

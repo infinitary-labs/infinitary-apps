@@ -94,8 +94,9 @@ export async function finishReset(
       const cleared = seams.clearOutside ? await seams.clearOutside(kind).catch(() => false) : true;
       if (!cleared) left.push(kind);
     }
-    // A mark still at `moved` stays for the folder it could not delete; only
-    // the renamed-aside folders are tried again, never the fresh one.
+    // A mark still at `moved` stays for the folder it could not delete; later
+    // starts try the renamed-aside folders and older copies again, never the
+    // fresh one.
     if (mark.stage === "moved") {
       if (mark.outside.length > 0) advance(dataDir, mark, { outside: [] });
       return { kind: "done", left };

@@ -29,9 +29,10 @@ export const LEFTOVER_SEAMS: LeftoverSeams = {
 };
 
 /**
- * Ends the programs still running in the data folder once the first mate
- * stopped (docs/reset.md, "Before it quits"): a server or watcher a task
- * started that outlived its close. Each gets the wait to end by itself, then
+ * Ends every program of this account still holding a file or working folder
+ * in the data folder once the first mate stopped (docs/reset.md, "Before it
+ * quits"): a server a task started that outlived its close, or a terminal
+ * the person opened in a task's working copy. Each gets the wait to end by itself, then
  * an end request and a kill. Left running, one holding a file would stop
  * Windows from renaming the folder at the next start. True once none is
  * left; a system whose programs cannot be read answers false.

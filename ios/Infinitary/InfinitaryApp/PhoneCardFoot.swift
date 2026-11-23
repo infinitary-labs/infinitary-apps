@@ -246,16 +246,13 @@ extension PhoneCardPane {
         }
     }
 
-    /// A Secrets use the home raised this card for: an enrolled phone allows it with its own confirmation and
-    /// signature, and any phone may refuse it (docs/secrets.md, "Remote decisions"). INF-1109, the captain: "right
-    /// now it's not even clear what secrets are being requested", so each secret is named as the computer's card
-    /// names it (`named`): its place only when another saved secret shares its name (INF-1690's plan).
-    /// A computer's own title gives one or two secrets as "the X secret" or "the X and Y secrets" before the task
-    /// that asked; when the title holds that exact phrase the foot leaves the names to it, so the choices stay
-    /// pinned in the frame on an iPhone beside a title that runs to three lines. Otherwise, as with three secrets
-    /// or an older computer's title, the foot names every secret.
+    /// A Secrets use the home raised: an enrolled phone allows it with its confirmation and signature, any phone may
+    /// refuse it, and one it cannot make here says where (docs/secrets.md, "Remote decisions"). INF-1109, the captain:
+    /// "right now it's not even clear what secrets are being requested", so each is named as the computer's card names
+    /// it (`named`, INF-1690's plan). A title already naming one or two ("the X secret", "the X and Y secrets") keeps the
+    /// names, so the choices stay pinned beside a three-line title; otherwise the foot names every secret. A choice
+    /// only the computer makes is a small link beside the note, so the choices made here keep one row.
     func approvalFoot(_ use: PhoneApprovals.Use, _ secrets: PhoneSecrets) -> some View {
-        let allows = secrets.standing == .enrolled && use.nonce != nil
         let names = use.secrets.map(use.named)
         let phrases = names.count == 1 ? ["the \(names[0]) secret to "] // i18n-exempt: matched in the computer's own title, not shown
             : names.count == 2 ? ["the \(names[0]) and \(names[1]) secrets to ", "the \(names[1]) and \(names[0]) secrets to "] // i18n-exempt: matched in the computer's own title, not shown
@@ -268,19 +265,23 @@ extension PhoneCardPane {
                 Text("\(name)  \(detail)")
                     .accessibilityLabel(use.named(secret)).accessibilityIdentifier("approval-secret-\(secret.ref)")
             }
-            Text(allows ? PhoneMessages.phoneCardsApprovalAsks(confirmation: ApprovalKey.confirmation)
-                : PhoneMessages.phoneCardsApprovalTurnOn(computer: session.mac.name))
-                .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-note")
-            PhoneChoiceRow {
-                if allows {
-                    Button(PhoneDecision.allowWords) { decide { try await secrets.allow(use) } }
-                        .buttonStyle(PhoneChoiceStyle(.primary)).accessibilityIdentifier("approval-allow")
+            let choices = footerOrder.map { ($0, secrets.choice($0["id"].text, for: use)) }, computer = session.mac.name, choose = { (choice: PhoneSecrets.Choice) in
+                if let words = choice.notice(computer: computer) { host.notice = words } else { decide { try await secrets.decide(choice, use) } } }
+            PhoneCaptionLinks {
+                Text(secrets.allows(use) ? PhoneMessages.phoneCardsApprovalAsks(confirmation: ApprovalKey.confirmation) : PhoneMessages.phoneCardsApprovalTurnOn(computer: computer))
+                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-note")
+            } links: {
+                ForEach(Array(choices.enumerated()).filter { $0.element.1 == .onComputer }, id: \.offset) { _, pair in
+                    Button(card.label(of: pair.0) ?? PhoneMessages.phoneCardsChooseFallback()) { choose(pair.1) }.font(PhoneFont.caption)
+                        .foregroundStyle(PhoneTheme.accent).buttonStyle(.plain).accessibilityIdentifier(pair.1.identifier(pair.0["id"].text))
                 }
-                Button(PhoneDecision.denyWords) { decide { try await secrets.deny(use) } }
-                    .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("approval-deny")
-            // Like every card's choices (INF-1083, INF-1574), these take a press only once the body is revealed at
-            // its drawn height: until then it is still laying out, the choices still move, and a press can land
-            // beside the one meant.
+            }.disabled(host.changing || !session.canChange || !host.revealed)
+            PhoneChoiceRow {
+                ForEach(Array(choices.enumerated()).filter { $0.element.1 != .onComputer }, id: \.offset) { _, pair in
+                    Button(card.label(of: pair.0) ?? PhoneMessages.phoneCardsChooseFallback()) { choose(pair.1) }
+                        .buttonStyle(PhoneChoiceStyle(footerKind(pair.0))).accessibilityIdentifier(pair.1.identifier(pair.0["id"].text))
+                }
+            // As on every card (INF-1083, INF-1574), a press waits for the revealed body, so it cannot land beside a moving choice.
             }.disabled(host.changing || !session.canChange || !host.revealed)
         }
     }

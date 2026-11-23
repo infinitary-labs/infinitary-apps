@@ -36,6 +36,8 @@ export class Outbox {
   private readonly queue: Piece[] = [];
   /** What waits to join the queue until everything ahead of it has been written (`whenClear`). */
   private readonly held: (() => void)[] = [];
+  /** Who waits for the device to answer for every byte up to `end` (`whenAnswered`). */
+  private awaited: { end: number; go: (answered: boolean) => void }[] = [];
   private releasing = false;
   private queuedBytes = 0;
   private written = 0;
@@ -118,6 +120,26 @@ export class Outbox {
     this.release();
   }
 
+  /**
+   * Runs `go(true)` once the device has answered for every byte sent here so
+   * far, waiting or written, or `go(false)` if the connection closes first.
+   * The last of those bytes is named by a ping once it is written, so the
+   * answer never waits for the heartbeat's.
+   */
+  whenAnswered(go: (answered: boolean) => void): void {
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      queueMicrotask(() => go(false));
+      return;
+    }
+    const end = this.written + this.queuedBytes;
+    if (this.answered >= end) {
+      go(true);
+      return;
+    }
+    this.awaited.push({ end, go });
+    this.pump();
+  }
+
   private release(): void {
     if (this.releasing) return;
     this.releasing = true;
@@ -157,8 +179,9 @@ export class Outbox {
       this.written += piece.data.length;
       if (this.written - this.marked >= this.pieceSize()) this.mark();
     }
-    // Held by the window: what went out unmarked is named, so an answer comes for it.
-    if (this.queue.length && this.written > this.marked) this.mark();
+    // Held by the window, or awaited: what went out unmarked is named, so an answer comes for it.
+    const awaitedUnmarked = this.awaited.some((wait) => wait.end > this.marked);
+    if ((this.queue.length || awaitedUnmarked) && this.written > this.marked) this.mark();
     this.release();
   }
 
@@ -188,6 +211,9 @@ export class Outbox {
         Math.min(rate * this.options.aheadMs, this.window + bytes, this.options.aheadBytes),
       );
       this.answered = mark.end;
+      const done = this.awaited.filter((wait) => wait.end <= this.answered);
+      this.awaited = this.awaited.filter((wait) => wait.end > this.answered);
+      for (const wait of done) wait.go(true);
     }
     this.lastAnswerAt = now;
     this.pump();
@@ -198,6 +224,7 @@ export class Outbox {
     this.queuedBytes = 0;
     for (const piece of waiting)
       piece.done?.(new Error("The connection closed before this was sent."));
+    for (const wait of this.awaited.splice(0)) wait.go(false);
     this.release();
   }
 }

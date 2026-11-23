@@ -77,10 +77,20 @@ export class EventJournal {
    * caught up: another epoch, ahead of this journal, or older than it keeps.
    */
   since(cursor: ConnectionCursor): JournalEntry[] | null {
-    if (cursor.epoch !== this.epoch || cursor.seq > this.head) return null;
-    const oldest = this.kept[0]?.seq ?? this.head + 1;
-    if (cursor.seq < oldest - 1) return null;
+    if (this.lost(cursor)) return null;
     return this.kept.filter((entry) => entry.seq > cursor.seq);
+  }
+
+  /**
+   * Why a cursor cannot be caught up, or null when it can: it is from
+   * another epoch (the home restarted or stopped listening), ahead of this
+   * journal, or older than the pushes it keeps.
+   */
+  lost(cursor: ConnectionCursor): "another-epoch" | "ahead" | "older" | null {
+    if (cursor.epoch !== this.epoch) return "another-epoch";
+    if (cursor.seq > this.head) return "ahead";
+    const oldest = this.kept[0]?.seq ?? this.head + 1;
+    return cursor.seq < oldest - 1 ? "older" : null;
   }
 }
 

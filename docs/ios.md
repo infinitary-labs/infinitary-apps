@@ -429,6 +429,7 @@ No panel sits behind the message box: the last turn is its rounds of lines over 
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
 With an Apple Pencil in hand the message box and its last turn stand at the top of Home's column, under the bar and the reach line, so the writing hand rests on the card below; the stage takes the room under it and the pager stays at the foot (`PhoneLayout.composerOnTop`, `PhonePagesLayout`).
 The Pencil itself is the signal, never the kind of device: a Pencil touch or hover anywhere in the window (`PhonePencilWatch`, an observer that never recognizes, cancels or delays a touch), or iPadOS's `isPencilInputExpected` when the app opens or comes back.
+At the top the last turn shows only its newest round, card or no card, so a card coming or going never moves the box.
 The same view moves, so the draft and photos stay, and the box reserves four lines with photo and send on its bottom row; a card's reply field reserves four lines too while the box is at the top.
 Focus that a finger, the trackpad or a hardware key gives the message box or a card's reply puts the box back at the foot; Pencil focus does not.
 Nothing moves while a field holds focus or while the Pencil writes on one: a waiting move applies once it lets go (`PhonePencilPlacement`).
@@ -648,7 +649,7 @@ Task moves (`moves`) are not offered to a panel on the phone yet, so its page re
 
 ## Talk and tasks
 
-The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up.
+The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up or the box stands at the top for Apple Pencil.
 The phone sets them as a quiet glance (INF-1846): 15-point rows, one step under the box's 16-point words and one line each, the bubble hugging its words up to three quarters of the column, each reply in the secondary colour on a 24-point row pressable across its width, 4 points within a round and 12 between rounds and above the box.
 A line too long for its row ends on the last whole word that fits beside the ellipsis, by the Mac's rule (`WholeWords` in the kit, its test `WholeWordsTests`); on iOS 18 to 25, where the text's own font cannot be read, a line keeps the text's own cut.
 While the first mate is busy its line shows the mark turned ember and spinning, beside Working… or the reply; a message that was only photos reads "A picture".

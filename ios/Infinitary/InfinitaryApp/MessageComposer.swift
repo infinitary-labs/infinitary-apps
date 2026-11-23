@@ -148,14 +148,15 @@ struct MessageComposer: View {
     /// left, the older round at half strength and only the newest while a card is up. While the first mate works, the
     /// newest round's mark turns ember and spins (INF-2483), beside its reply or Working…. After 15 seconds of a completed
     /// reply on screen the older round dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet
-    /// glance": 15-point rows, 12 points between rounds and 12 above the box, one line each.
+    /// glance": 15-point rows, 12 points between rounds and 12 above the box, one line each. With the box at the top for
+    /// Apple Pencil only the newest round shows, card or no card, so a card coming or going never moves the box.
     private func lastTurn(_ turn: PhoneLastTurn) -> some View {
         let key = Self.fadeKey(turn)
         let hidden = faded && key != nil && key == fadeKey
         // The count runs only while Home is shown, the app is open, the phone is upright and the first mate is idle.
         let readable = messageContext.cardsVisible && phase == .active && !compact && !session.firstmateBusy
         let cardUp = messageContext.cardsVisible && messageContext.cardShown
-        let older = cardUp ? nil : turn.previous
+        let older = cardUp || messageContext.pencilRoom ? nil : turn.previous
         return VStack(spacing: 12) {
             if let older {
                 round(older, newest: false)

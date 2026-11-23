@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-accepts-company-team",
+      "reason": "Release signing: the Mac app's signature now also accepts updates signed by the Infinitary Labs Apple team, so the later move to that team updates installed copies without a reinstall. Nothing a person sees changes."
+    }
+  ]
+}

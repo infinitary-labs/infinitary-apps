@@ -2,7 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { button, held, shown, unansweredOf } from "./devicesTab";
+import { button, chooseAtWelcome, held, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -32,6 +32,7 @@ test("beside a first mate started outside the window, an untouched first launch 
   bridge.answer("inf:devices:follow-added", () => first.promise);
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
   const setUp = () => shown("[data-join-set-up-chip]");
   await setUp();
   const chips = () =>

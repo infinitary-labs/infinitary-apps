@@ -2,7 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { SetUpHere } from "@shared/joinByAddress";
 import { expect, test } from "vitest";
 import { fakeBridge } from "./bridge";
-import { shown, unansweredOf } from "./devicesTab";
+import { chooseAtWelcome, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -28,6 +28,7 @@ test("a Windows PC keeps the two chips, with no set up from the first mate's com
   const bridge = fakeBridge({ ...home, "inf:devices:set-up-here": windows });
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
   const group = await shown('[data-join-another-mac="closed"]');
   await expect.poll(() => bridge.requests("inf:devices:set-up-here").length).toBeGreaterThan(0);
   const chips = [...group.querySelectorAll<HTMLButtonElement>(".fm-connect-chip")];

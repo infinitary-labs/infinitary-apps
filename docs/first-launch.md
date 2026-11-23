@@ -14,11 +14,23 @@ See `docs/saved-data-compatibility.md` for the guard.
 
 The null state is unchanged - the character greets, the pill sits below - except for one caption under the character while **no model can answer the first mate**: "Welcome aboard Infinitary, Captain", then the first mate's own line.
 That line reads "I'm your first mate.
-I'll help you manage the rest of the crew.
-Set me up on a computer that stays on as much as possible.
-Your other devices need me awake."
-A subscription that is connected and still cannot answer keeps the older heading, "Set up your first mate on this computer", and its remaining-need line.
-The same provider chip row the Intelligence tab has sits below, in catalog order, one group.
+I'll help you manage the rest of the crew."
+Under it the first mate asks where it lives before anything opens (the captain's approval of INF-6207, "ask first"): "Where should I live?
+Pick a computer that stays on as much as possible."
+Three equal cards follow in one row, each a button whose line says how that setup works:
+
+1. **This computer** - "Sign in to a subscription here.
+   I live and work on this computer." - opens the provider chips below.
+2. **Another computer** - "Let me run on another computer you set up, and control me from here." - opens the commands route ("Joining the first mate on another Mac" below).
+3. **One already running** - "Connect to me where I already run on another computer, and control me from here." - opens the chips that join a first mate on another computer.
+
+Tab reaches each card, the arrow keys move between them, and Enter or Space opens one; a narrow stage stacks them.
+`tests/browser/first-launch-choices.test.tsx` drives the cards by keys, the commands route to the paste box, and Where I live back.
+Under the cards, "You can move me to another computer later, in Settings → Devices." says the move after setup stays the fallback (`docs/devices.md`).
+An opened choice shows "‹ Where I live" above it, which returns to the three cards; a gate that closes and comes back asks afresh.
+A subscription that is connected and still cannot answer keeps the older heading, "Set up your first mate on this computer", and its remaining-need line, and opens on This computer, where that account shows.
+A computer that controls another's first mate, and a fresh check (below), ask nothing: they show their chips at once.
+The same provider chip row the Intelligence tab has sits under This computer, in catalog order, one group.
 Sign-in happens right there: a chip runs the provider's own flow (Pi's select, a browser bounce or a device code, a pasted key) through the same aside the tab renders, anchored under the row.
 While a sign-in step is up (`data-sign-in-step`), the band takes the held input's room, the input is hidden, and a window under 720 pixels tall hides the heading, so a code step fits the smallest window without scrolling (INF-842).
 The input is disabled meanwhile, dimmed, with its own line ("connect a subscription first"), and hold-to-talk is ignored in the same state.
@@ -49,14 +61,16 @@ The renderer reads it over `inf:app:first-run` (a core channel on the frozen `ap
 
 ## Joining the first mate on another Mac
 
-Under the provider chips a second group, a hairline apart, offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address", which join the first mate on a computer the person already has instead (`docs/view.md`, "Joining").
+One already running opens a group, a hairline apart, that offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address", which join the first mate on a computer the person already has instead (`docs/view.md`, "Joining").
 On a Mac or an x64 Linux computer "+ Set up from your first mate's computer" leads them, with the three chips on their own line: its aside shows this computer's address, private network first, whether Remote Login is on, and the line to compare, and waits for that computer to add this one (`docs/view.md`, "Set up from your first mate's computer").
 Once it does, this window opens that first mate by itself, with no relaunch, while nothing was done on this computer yet: no sign-in, connection, project or turn (`docs/view.md`, "Following along").
-Above the subscription chips, the first mate's line asks to be set up on a computer that stays on, and says other devices need the first mate awake.
-When a connected subscription still cannot answer, that place keeps "Pick a computer that stays on.
+Another computer sets the first mate up there by commands (`docs/run.md`), in numbered steps under "Set me up on another computer with commands": install Infinitary there; start it, with `infinitary start-at-boot` ("Starting at boot"); make a link for this computer, with `infinitary link` ("A link by command"); and paste the link it prints here.
+Each command sits in a mono box with its own Copy, and a line under the steps says a Mac types `/Applications/Infinitary.app/Contents/MacOS/Infinitary` in place of `infinitary`.
+The last step's "Paste its link" opens One already running at its paste box, so the link joins as any pasted link does; its Cancel leaves One already running's chips.
+When a connected subscription still cannot answer, the first mate's line keeps "Pick a computer that stays on.
 Other computers need it awake."
 These explanations stay visible in a short window, where the band scrolls.
-After this app stops controlling that Mac it returns here, and one line under the chip says which Mac it left, or that the Mac removed it.
+After this app stops controlling that Mac it returns here, and one line under the three cards says which Mac it left, or that the Mac removed it.
 The gate itself stays derived; the line only says what happened.
 
 ## The Diagnostics notice

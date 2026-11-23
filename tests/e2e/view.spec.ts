@@ -39,6 +39,7 @@ import { RETURN_CONTROL_LABEL, TAKE_CONTROL_LABEL } from "../../src/shared/taskB
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { openDevices, selectDevice } from "./deviceFixtures";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -320,6 +321,7 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       air = await launchApp({ env: airEnv });
       const { page } = air;
       await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
+      await chooseWhereFirstMateLives(page, "running");
       await page.locator("[data-join-chip]").click();
       const field = page.getByLabel(`The link from your other ${COMPUTER.one}`);
       await field.fill("https://example.com/join");
@@ -648,6 +650,7 @@ test("a Mac joined at its first launch also runs that Mac's work, and one a comm
       );
       air = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Air" } });
       const { page } = air;
+      await chooseWhereFirstMateLives(page, "running");
       await page.locator("[data-join-chip]").click();
       await page.getByLabel(`The link from your other ${COMPUTER.one}`).fill(invite.link);
       await page.getByRole("button", { name: "Continue" }).click();

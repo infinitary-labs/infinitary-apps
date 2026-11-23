@@ -4,7 +4,7 @@ import { WELCOME_TITLE } from "@shared/welcome";
 import { GATE_HOME_TITLE } from "../../src/renderer/src/app/firstRunGateWords";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
-import { putAwayFirstCrewmateNote } from "./firstLaunch";
+import { chooseWhereFirstMateLives, putAwayFirstCrewmateNote } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { gitIdentityHome } from "./homeFixtures";
 import { launchApp } from "./launch";
@@ -91,6 +91,7 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
     });
 
     await test.step("sign in: a key pasted through the gate's own chip opens the message box", async () => {
+      await chooseWhereFirstMateLives(page, "here");
       await gate.locator(`[data-connect-provider="${KEY_PROVIDER}"]`).click();
       await gate.locator("[data-connect-method]").getByRole("button", { name: "API key" }).click();
       const aside = gate.locator("[data-connect-aside]");

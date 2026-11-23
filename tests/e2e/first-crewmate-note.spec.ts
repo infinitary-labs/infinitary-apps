@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { FIRST_CREWMATE_TITLE } from "@shared/firstCrewmateNote";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { scratchDir } from "../helpers/scratchDirs";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { gitIdentityHome } from "./homeFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -100,6 +101,7 @@ test("a new person's first crewmate shows its note once, in place of the welcome
     await test.step("a key signed in through the gate brings the welcome", async () => {
       const gate = page.locator("[data-first-run-gate]");
       await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
+      await chooseWhereFirstMateLives(page, "here");
       await gate.locator(`[data-connect-provider="${KEY_PROVIDER}"]`).click();
       await gate.locator("[data-connect-method]").getByRole("button", { name: "API key" }).click();
       const aside = gate.locator("[data-connect-aside]");

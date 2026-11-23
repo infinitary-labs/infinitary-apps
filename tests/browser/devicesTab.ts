@@ -192,3 +192,12 @@ export async function selectDevice(id: string) {
     await userEvent.click(page.getByRole("button", { name: "List", exact: true }));
   await userEvent.click(await shown(selector));
 }
+
+/**
+ * Presses one of the first launch's three choices of where the first mate
+ * lives (docs/first-launch.md): One already running opens the chips that
+ * join a first mate on another computer, This computer the subscriptions.
+ */
+export async function chooseAtWelcome(choice: "here" | "another" | "running"): Promise<void> {
+  await userEvent.click(await shown(`[data-gate-choice="${choice}"]`));
+}

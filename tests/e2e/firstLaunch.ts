@@ -125,3 +125,16 @@ export async function putAwayFirstCrewmateNote(page: Page): Promise<void> {
   await noteDone(page, note).click();
   await expectNoCard(page, FIRST_CREWMATE_TITLE);
 }
+
+/**
+ * Presses one of the first launch's three choices of where the first mate
+ * lives (docs/first-launch.md): This computer opens the subscription chips,
+ * One already running the chips that join a first mate on another computer.
+ * A journey reaching either from a fresh profile presses its choice first.
+ */
+export async function chooseWhereFirstMateLives(
+  page: Page,
+  choice: "here" | "another" | "running",
+): Promise<void> {
+  await page.locator(`[data-first-run-gate="open"] [data-gate-choice="${choice}"]`).click();
+}

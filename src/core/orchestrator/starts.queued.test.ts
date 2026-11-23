@@ -163,7 +163,9 @@ describe("the task graph (R1)", () => {
         supervisor.pressNote(cardId, undefined, { answers: withAnythingElse([], words) });
         await tick();
         expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
-        expect(heard.mock.calls).toEqual([[cardId, words, undefined]]);
+        expect(heard.mock.calls).toEqual([
+          [cardId, words, undefined, undefined, undefined, expect.any(Number)],
+        ]);
       } finally {
         release.resolve();
         await start;

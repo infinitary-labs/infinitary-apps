@@ -171,6 +171,7 @@ describe("annotation reply delivery", () => {
       undefined,
       undefined,
       [ANNOTATION_WORDS, ...notes.map(noteText)].join("\n"),
+      expect.any(Number),
     );
     expect(reply.messages[0]).toMatchObject({ text: ANNOTATION_WORDS, notes });
     expect(h.supervisor.cards.snapshot().some((c) => c.id === id)).toBe(true);

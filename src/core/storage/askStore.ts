@@ -36,6 +36,9 @@ export type AskTurnState = "open" | "closed" | "failed";
 
 export type AskImage = { mimeType: string };
 
+/** The card a message was typed under and its line's number in that card's thread. */
+export type AskTypedUnder = { cardId: string; line: number };
+
 export type AskRecord = {
   /** The turn id. */
   id: string;
@@ -79,6 +82,11 @@ export type AskRecord = {
   crewmateAskedAt: number | null;
   /** Sent from the captain's own command, `infinitary-axi`; absent is the window or an older row. */
   through?: Through;
+  /**
+   * The card the message was typed under and its line there (INF-6115
+   * piece 3); absent for a message typed in the main input or saved before.
+   */
+  typedUnder?: AskTypedUnder;
 };
 
 /** Captain-facing words; model readers keep the original text and its full target detail. */
@@ -107,6 +115,8 @@ type Row = {
   answered_at: number | null;
   crewmate_asked_at: number | null;
   through?: string | null;
+  typed_card_id?: string | null;
+  typed_line?: number | null;
 };
 
 function replyOf(json: string | null): LastTurnReply | null {
@@ -188,6 +198,9 @@ function fromRow(row: Row): AskRecord {
     answeredAt: row.answered_at ?? null,
     crewmateAskedAt: row.crewmate_asked_at ?? null,
     ...(row.through === THROUGH_THE_COMMAND ? { through: THROUGH_THE_COMMAND } : {}),
+    ...(row.typed_card_id && typeof row.typed_line === "number"
+      ? { typedUnder: { cardId: row.typed_card_id, line: row.typed_line } }
+      : {}),
   };
 }
 
@@ -223,8 +236,8 @@ export class AskStore {
     const original = captainText !== undefined;
     this.db
       .prepare(
-        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at, through${original ? ", captain_text" : ""})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
+        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at, through, typed_card_id, typed_line${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         ask.id,
@@ -254,6 +267,8 @@ export class AskStore {
         ask.answeredAt,
         ask.crewmateAskedAt,
         ask.through ?? null,
+        ask.typedUnder?.cardId ?? null,
+        ask.typedUnder?.line ?? null,
         ...(original ? [captainText] : []),
       );
     if (captainText !== undefined) {

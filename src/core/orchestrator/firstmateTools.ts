@@ -190,7 +190,15 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     startedFrom: (cardId, taskId, queued) => {
       const task = host.options.tasks.get(taskId);
       if (!task) return "";
-      const line = writeStartedLine(supervisor.cards, cardId, task, queued);
+      // The reply the action's message was typed as, when it was typed under this card.
+      const typed = host.asks.current()?.typedUnder;
+      const line = writeStartedLine(
+        supervisor.cards,
+        cardId,
+        task,
+        queued,
+        typed?.cardId === cardId.trim() ? typed.line : undefined,
+      );
       // The started task keeps which card's reply started it, so the
       // card's own answer task can close as carried on by it (INF-4526).
       if (line.reply)

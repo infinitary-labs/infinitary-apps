@@ -318,7 +318,7 @@ export class CaptainOverrides {
       }
     }
     if (found.ok) {
-      const { at: _at, ...words } = found;
+      const { at: _at, line: _line, ...words } = found;
       return { ...words, ok: true };
     }
     switch (found.missing) {
@@ -349,20 +349,27 @@ export class CaptainOverrides {
    * The captain's words a crewmate's report passes on (INF-3202,
    * docs/card-authoring.md "The You asked line"): his newest words on a
    * card of the crewmate's own task, or his newest line in its Crewmate
-   * tab, with when he typed them - read by the same reader an override
+   * tab, with when he typed them and, for a reply, the line's number in the
+   * card's thread (INF-6115 piece 3) - read by the same reader an override
    * citation uses. A card on another task, or one holding none of his
    * words, is refused with the fix. The host reads none of the words.
    */
   relayedCaptainWords(
     taskId: string,
     from: string,
-  ): { ok: true; words: string; at: number } | { ok: false; text: string } {
+  ): { ok: true; words: string; at: number; line?: number } | { ok: false; text: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     const handle = record.key || record.id;
     const cited = from.trim();
     const found = this.typedWords(taskId, cited);
-    if (found.ok) return { ok: true, words: found.words, at: found.at };
+    if (found.ok)
+      return {
+        ok: true,
+        words: found.words,
+        at: found.at,
+        ...(found.line !== undefined ? { line: found.line } : {}),
+      };
     const fix = `name the id of your own card the captain replied under or clicked, or ${CREWMATE_TAB_VIA} for a line they typed in your Crewmate tab, or leave captain_words_from out.`;
     switch (found.missing) {
       case "tab":
@@ -397,7 +404,7 @@ export class CaptainOverrides {
     taskId: string,
     cited: string,
   ):
-    | { ok: true; words: string; at: number; mergeClick?: true }
+    | { ok: true; words: string; at: number; line?: number; mergeClick?: true }
     | { ok: false; missing: "tab" | "card" }
     | { ok: false; missing: "elsewhere" | "silent"; card: string } {
     if (cited === CREWMATE_TAB_VIA) {
@@ -428,7 +435,7 @@ export class CaptainOverrides {
    */
   private captainWordsOnCard(
     card: Card,
-  ): { words: string; at: number; mergeClick?: true } | undefined {
+  ): { words: string; at: number; line?: number; mergeClick?: true } | undefined {
     const reply = this.host.cards
       .messages(card.id)
       .findLast((message) => message.who === "captain");
@@ -446,7 +453,7 @@ export class CaptainOverrides {
           }
         : undefined;
     if (clicked && (!typed || !reply || clicked.at >= reply.at)) return clicked;
-    return typed && reply ? { words: typed, at: reply.at } : undefined;
+    return typed && reply ? { words: typed, at: reply.at, line: reply.id } : undefined;
   }
 
   /**

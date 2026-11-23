@@ -19,6 +19,7 @@ Two switches on Settings → General → Sharing are the only switches that send
 Whatever the switches say, the update check an installed copy already makes carries a yes/no active mark ("The update check's active mark" below), and the section says so in a line under them.
 The one other thing that reaches a service of ours is a card notification for a paired phone that turned them on, sealed under that phone's key so we cannot read it, through the push relay (`docs/phone-push.md`, and the draft terms' section 2).
 That relay is the one service of ours a person's work passes through, and it cannot open what it forwards.
+A `/feedback` report is not a switch: the person reads it whole and publishes it themselves, as a public issue on Infinitary's own project (`docs/feedback.md`).
 
 ### The policy: no personal data, no user content
 

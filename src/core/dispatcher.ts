@@ -7,6 +7,7 @@ import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
 import { computerPresenceOf, deviceRunsWork } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
+import { isFeedbackRequest } from "@shared/feedback";
 import { forgeOf, forgePlace } from "@shared/forge";
 import {
   type CoreInvokeChannel,
@@ -298,8 +299,16 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
     // The Crewmate tab's composer: the captain's own line, and his ⌃C or Stop.
-    "inf:task:steer": (taskId, text, more) =>
-      services.supervisor.steer.steerFromCrewmateTab(taskId, text, more),
+    // A /feedback line goes to the first mate as a feedback request about this
+    // task, never to its crewmate (docs/feedback.md, "Where it starts").
+    "inf:task:steer": async (taskId, text, more) => {
+      if (!isFeedbackRequest(text))
+        return services.supervisor.steer.steerFromCrewmateTab(taskId, text, more);
+      await services.firstmate.converse(
+        prepareComposerTurn({ text, taskId, ...(more?.images ? { images: more.images } : {}) }),
+      );
+      return { ok: true as const };
+    },
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     ...taskRowChannels(() => services.supervisor.hostOps, services.tasks),

@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "Ordinateurs de travail précédents";
 "commandDevicesTryAgain" = "Réessayer de joindre vos ordinateurs";
 "commandDevicesTryAgainWords" = "appareils, ssh, reconnecter, connecter, ordinateurs";
+"commandFeedbackStart" = "Envoyer un avis";
+"commandFeedbackStartWords" = "avis, signaler, problème, bug, idée, suggestion, ticket";
 "commandFirstmateReply" = "Ouvrir la réponse du second";
 "commandFirstmateReplyWords" = "réponse, message, note, dernière";
 "commandFocusCardActions" = "Aller aux boutons de la carte";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "version, notes, nouveautés, modifications";
 "composerFolderNotProject" = "Impossible d’ajouter ce dossier comme projet.";
 "composerFolderProject" = "Ce dossier fait déjà partie de vos projets.";
+"composerHintFeedback" = "%1$@ : signalez un problème ou une idée aux créateurs d’Infinitary";
 "composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "Message non remis : %1$@";
 "feedUpdated" = "Mise à jour : %1$@";
 "feedYouChose" = "Vous avez choisi « %1$@ »";
+"feedbackStripAccount" = "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub %1$@.";
+"feedbackStripBug" = "Un nouveau signalement de problème";
+"feedbackStripComment" = "Un commentaire sur le ticket n° %1$@";
+"feedbackStripHeading" = "Votre clic publie ceci sur %1$@, publiquement, une fois";
+"feedbackStripIdea" = "Une nouvelle idée";
+"feedbackStripNoAccount" = "Rien n’est envoyé avant votre clic. Il est publié sous votre compte GitHub.";
 "fileAdd" = "Ajouter des fichiers";
 "fileCancel" = "Annuler la préparation de %1$@";
 "fileDropHere" = "Déposez des fichiers pour les ajouter";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "Aide";
 "menuKeyboardSettings" = "Réglages du clavier…";
 "menuResetAllKeys" = "Réinitialiser tous les raccourcis…";
+"menuSendFeedback" = "Envoyer un avis…";
 "menuSettings" = "Réglages…";
 "menuWhatsNew" = "Nouveautés d’Infinitary";
 "mergeButtonAfterFixing" = "Fusionner après correction des erreurs";

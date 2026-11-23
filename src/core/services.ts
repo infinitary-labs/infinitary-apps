@@ -53,6 +53,7 @@ import { startHomeDevices } from "./devices/homeDevices";
 import { homeSourceOf, starterBuild } from "./devices/sourceArchive";
 import { createEventSeam } from "./eventSeam";
 import type { CoreEventSink } from "./events";
+import { startHomeFeedback } from "./feedback/feedbackHost";
 import { homeCardFileReads } from "./files/cardFileReads";
 import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
@@ -1068,6 +1069,21 @@ export async function createServices(
     homeName: sourceComputer,
     now: ticker.now,
   });
+  // What a /feedback report's command reads and keeps (docs/feedback.md).
+  const feedbackHost = startHomeFeedback({
+    host,
+    computerName: sourceComputer,
+    devices,
+    vault,
+    repos,
+    forgeSignIns,
+    accountForge: forges.accountForge,
+    secrets: () => secrets,
+    integrations,
+    tasks,
+    timeline,
+    githubGateway,
+  });
   const supervisor: CrewSupervisor = startHomeCrew({
     captainPlaces,
     decisions,
@@ -1121,6 +1137,7 @@ export async function createServices(
     homePersonal,
     browsers,
     taskCommands,
+    feedback: feedbackHost,
     leftBehind,
     loadLine,
     files,

@@ -591,6 +591,8 @@
 "commandComputersPrevious" = "이전 작업 컴퓨터";
 "commandDevicesTryAgain" = "컴퓨터에 다시 연락하기";
 "commandDevicesTryAgainWords" = "기기, 다시 연결, 연결, 맥";
+"commandFeedbackStart" = "피드백 보내기";
+"commandFeedbackStartWords" = "피드백, 신고, 문제, 버그, 아이디어, 제안, 이슈";
 "commandFirstmateReply" = "일등항해사의 답장 열기";
 "commandFirstmateReplyWords" = "답변, 메시지, 알림, 마지막";
 "commandFocusCardActions" = "카드 버튼으로 이동";
@@ -702,6 +704,7 @@
 "commandWhatsNewShowWords" = "릴리스, 노트, 변경, 버전";
 "composerFolderNotProject" = "이 폴더를 프로젝트로 추가할 수 없어요.";
 "composerFolderProject" = "이 폴더는 이미 내 프로젝트예요.";
+"composerHintFeedback" = "%1$@: Infinitary 제작자에게 문제나 아이디어를 알립니다";
 "composerTooLongShorten" = "너무 길어서 보낼 수 없어요. 먼저 줄여 주세요.";
 "composerWordsOnly" = "Infinitary가 업데이트될 때까지는 글만 보낼 수 있어요. 보내려면 사진과 파일을 빼 주세요.";
 "crewAPart" = "부분";
@@ -980,6 +983,12 @@
 "feedUndelivered" = "메시지 전달 안 됨: %1$@";
 "feedUpdated" = "업데이트: %1$@";
 "feedYouChose" = "\"%1$@\" 선택함";
+"feedbackStripAccount" = "클릭하기 전에는 아무것도 보내지 않습니다. GitHub 계정 %1$@(으)로 게시됩니다.";
+"feedbackStripBug" = "새 문제 신고";
+"feedbackStripComment" = "이슈 #%1$@에 다는 댓글";
+"feedbackStripHeading" = "클릭하면 %1$@에 공개적으로 한 번 게시됩니다";
+"feedbackStripIdea" = "새 아이디어";
+"feedbackStripNoAccount" = "클릭하기 전에는 아무것도 보내지 않습니다. 내 GitHub 계정으로 게시됩니다.";
 "fileAdd" = "파일 추가";
 "fileCancel" = "%1$@ 준비 취소";
 "fileDropHere" = "파일을 여기에 놓아 추가하세요";
@@ -1253,6 +1262,7 @@
 "menuHelp" = "도움말";
 "menuKeyboardSettings" = "키보드 설정…";
 "menuResetAllKeys" = "모든 키 재설정…";
+"menuSendFeedback" = "피드백 보내기…";
 "menuSettings" = "설정…";
 "menuWhatsNew" = "Infinitary의 새로운 기능";
 "mergeButtonAfterFixing" = "오류를 고친 뒤 병합";

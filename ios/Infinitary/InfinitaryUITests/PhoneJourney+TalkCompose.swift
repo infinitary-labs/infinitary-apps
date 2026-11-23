@@ -15,6 +15,95 @@ extension PhoneJourney {
         try await composeAndSend()
     }
 
+    /// The captain's Approve and build on comfortable Apple Pencil input, on an iPad simulator told at launch that a
+    /// Pencil was seen and is expected, since a simulator has none: the message box stands above the card upright and on
+    /// its side, a finger's tap in it puts it back under the card, and Settings → Appearance shows the switch, on.
+    /// Data: this part's test home, the harbour ask just sent as the last turn, and its hero card alone on the stage.
+    /// Resources: this part's own simulator.
+    private func pencilPlacement() async throws {
+        _ = try await home("empty-cards")
+        let hero = try await home("hero-card")
+        let heading = cardHeading(try XCTUnwrap(hero["title"] as? String))
+        let box = app.textFields["message-box"]
+        app.launchEnvironment["INFINITARY_PENCIL_SEEN"] = "1"
+        defer { app.launchEnvironment.removeValue(forKey: "INFINITARY_PENCIL_SEEN") }
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        let above = NSPredicate { _, _ in box.frame.maxY <= heading.frame.minY }
+        let below = NSPredicate { _, _ in box.frame.minY >= heading.frame.maxY }
+        XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
+                       "With a Pencil expected the box stands above the card: \(app.debugDescription)")
+        // The card's own page loads after the relaunch; picture it drawn, as a person sees it.
+        let choice = app.webViews.staticTexts["North Basin"].firstMatch
+        XCTAssertTrue(choice.waitForPresence(timeout: 20), "The card's body draws above the box: \(app.debugDescription)")
+        picture("pencil-top-upright")
+        turnPhone(to: .landscapeLeft, in: app, moving: heading)
+        XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
+                       "On its side the box stands at the top of the card's column: \(app.debugDescription)")
+        XCTAssertTrue(choice.waitForPresence(timeout: 20), app.debugDescription)
+        try await appearances("pencil-top-on-its-side", showing: heading)
+        turnPhone(to: .portrait, in: app, moving: heading)
+        // A finger's tap gives the box focus, which puts it back at the foot.
+        tapOnPhone(box)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "A finger's focus puts the box back under the card: \(app.debugDescription)")
+        picture("pencil-finger-foot")
+        // The keyboard's Done stands where the bar's Settings button sits; put the keyboard away first.
+        let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
+        XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(done)
+        XCTAssertTrue(done.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "Losing focus leaves the box at the foot: \(app.debugDescription)")
+        tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        let pencilSwitch = app.switches["phone-pencil-top"]
+        XCTAssertTrue(pencilSwitch.waitForPresence(timeout: 10), "An iPad that saw a Pencil shows the switch: \(app.debugDescription)")
+        XCTAssertEqual(pencilSwitch.value as? String, "1", "The switch starts on")
+        picture("pencil-switch")
+    }
+
+    /// The captain's choice on the review: at the top only the newest exchange shows, so a card leaving does not move
+    /// the box; then the off switch keeps the box under the card after a relaunch. Data: the saved-rounds fixture's two
+    /// rounds, so an older round exists to leave out, and the hero card. Resources: this part's own simulator.
+    private func pencilSteadyThenOff() async throws {
+        let hero = try await home("hero-card")
+        let heading = cardHeading(try XCTUnwrap(hero["title"] as? String))
+        let box = app.textFields["message-box"]
+        let older = app.buttons["last-turn-older-reply"]
+        app.launchEnvironment["INFINITARY_PENCIL_SEEN"] = "1"
+        defer { app.launchEnvironment.removeValue(forKey: "INFINITARY_PENCIL_SEEN") }
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        let above = NSPredicate { _, _ in box.frame.maxY <= heading.frame.minY }
+        let below = NSPredicate { _, _ in box.frame.minY >= heading.frame.maxY }
+        XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10), app.debugDescription)
+        let top = box.frame
+        _ = try await home("empty-cards")
+        XCTAssertTrue(heading.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(older.exists, "At the top only the newest exchange shows, card or no card: \(app.debugDescription)")
+        XCTAssertEqual(box.frame.minY, top.minY, accuracy: 1, "The card leaving does not move the box at the top")
+        tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        let pencilSwitch = app.switches["phone-pencil-top"]
+        XCTAssertTrue(pencilSwitch.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(pencilSwitch)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: pencilSwitch, timeout: 10), .completed)
+        _ = try await home("hero-card")
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "Turned off, the box stays under the card with a Pencil expected: \(app.debugDescription)")
+    }
+
     /// INF-2218's approved reading view: the existing saved round opens without sending another message.
     /// The talk fixture supplies the real saved reply; the sheet preserves its words and dismissal on both devices.
     private func verifyReplyReading(_ sent: [String: Any]) async throws {
@@ -126,7 +215,10 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("last-turn")
         try await verifyReplyReading(sent)
+        // Before the saved-rounds fixture below adds its problem round, so the last turn is the ask just sent.
+        if UIDevice.current.userInterfaceIdiom == .pad { try await pencilPlacement() }
         try await verifyLongReplyReading()
+        if UIDevice.current.userInterfaceIdiom == .pad { try await pencilSteadyThenOff() }
     }
 
     /// INF-209 and INF-82 integration: one composer retains the actual typed/photo draft across tabs and rotation.

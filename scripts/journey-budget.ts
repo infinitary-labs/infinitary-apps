@@ -446,7 +446,11 @@ export function budget(
   }
   const calibrated = calibratedPlacement(linux, observations);
   return {
-    mac: platforms === "linux" ? [] : mac,
+    // A request that asks for its files on the Mac (mac_once, mac_all) gets
+    // its Mac round even when it names only Linux: a Linux-only request with
+    // mac_once placed nothing there and passed with the round never run
+    // (INF-6259's weekly audit).
+    mac: platforms === "linux" && !everyOnMac ? [] : mac,
     // INF-1987: retain conservative execution when live adoption is unsupported.
     // The calibrated model remains inspectable and explicitly runnable for proofs.
     linux: platforms === "mac" ? [] : applyLinux ? calibrated.linux : linux,

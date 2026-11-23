@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "weekly-audit-check-additions",
+      "reason": "Changes only how the project checks its own changes before they merge: the branch check's size headroom and reach links, the journeys a task branch requests, and what the merge batch regenerates. Nothing in the app changes."
+    }
+  ]
+}

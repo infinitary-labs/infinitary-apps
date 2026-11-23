@@ -5,6 +5,7 @@ import {
   lineCount,
   SIZE_CEILING,
   SIZE_WARNING_LINE,
+  sizeHeadroom,
   sizeProblems,
   sizeWarnings,
 } from "../scripts/file-sizes";
@@ -100,6 +101,51 @@ describe("the size check", () => {
       expect(SIZE_WARNING_LINE).toBeLessThan(SIZE_CEILING);
       expect(sizeProblems(sizes, [])).toEqual([]);
       expect(sizeWarnings(sizes, [])).toHaveLength(1);
+    });
+  });
+
+  // The captain's pick on INF-6259's audit: "refuse a change that grows a
+  // code file past, or further past, 1,800 lines". Two changes that each grew
+  // a file under the ceiling together passed it in the merge batch, seven
+  // times in two weeks.
+  describe("its headroom against a change", () => {
+    it("refuses a file the change grows past the warning line", () => {
+      const refusals = sizeHeadroom(
+        { [WAKES]: SIZE_WARNING_LINE - 10 },
+        { [WAKES]: SIZE_WARNING_LINE + 1 },
+      );
+      expect(refusals).toHaveLength(1);
+      expect(refusals[0]).toMatch(
+        new RegExp(
+          `^${WAKES}: ${SIZE_WARNING_LINE - 10} lines at the change's base, ${SIZE_WARNING_LINE + 1} now`,
+        ),
+      );
+    });
+
+    it("refuses a file already past the line that the change grows further, listed or not", () => {
+      expect(
+        sizeHeadroom({ [WAKES]: SIZE_WARNING_LINE + 50 }, { [WAKES]: SIZE_WARNING_LINE + 51 }),
+      ).toHaveLength(1);
+      expect(sizeHeadroom({ [LISTED]: OVER }, { [LISTED]: OVER + 1 })).toHaveLength(1);
+    });
+
+    it("refuses a new file that starts past the line", () => {
+      expect(sizeHeadroom({ [WAITS]: undefined }, { [WAITS]: SIZE_WARNING_LINE + 1 })).toHaveLength(
+        1,
+      );
+    });
+
+    it("passes a file past the line that the change shrinks or keeps the same length", () => {
+      expect(
+        sizeHeadroom(
+          { [WAKES]: SIZE_CEILING, [LISTED]: OVER },
+          { [WAKES]: SIZE_WARNING_LINE + 5, [LISTED]: OVER },
+        ),
+      ).toEqual([]);
+    });
+
+    it("passes growth that stays at or under the line", () => {
+      expect(sizeHeadroom({ [WAITS]: 100 }, { [WAITS]: SIZE_WARNING_LINE })).toEqual([]);
     });
   });
 });

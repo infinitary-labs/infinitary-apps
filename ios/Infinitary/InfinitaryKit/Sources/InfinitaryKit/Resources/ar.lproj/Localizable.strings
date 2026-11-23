@@ -506,6 +506,8 @@
 "cardThreadSettingChanged" = "تغيّر";
 "cardThreadSettingsNote" = "أُرسلت إلى الكاتب كسياق. الرد لا يوافق على البناء أبدًا.";
 "cardThreadSettingsSent" = "أُرسلت الإعدادات مع ردك في %1$@";
+"cardThreadWaitReworkAuthor" = "تمّ الرد. لا يزال %1$@ يحدّث هذه البطاقة للنسخة الجديدة، وتعود إليك عندما ينتهي.";
+"cardThreadWaitReworkChecks" = "تمّ الرد. الفحوصات قيد التشغيل على النسخة الجديدة، وتعود إليك هذه البطاقة عندما تنتهي.";
 "cardThreadWhoCaptain" = "أنت";
 "cardThreadWhoCrewmate" = "الطاقم";
 "cardThreadWhoFirstmate" = "النائب";
@@ -3934,6 +3936,7 @@
 "taskGroupQueued" = "في قائمة الانتظار";
 "taskGroupWaiting" = "بانتظارك";
 "taskGroupWorking" = "قيد العمل";
+"taskNoteReworkHeld" = "أبقيتُ بطاقة الدمج «%1$@» عندي حتى تنتهي فحوصات نسختها الجديدة.";
 "taskPinPin" = "تثبيت";
 "taskPinUnpin" = "إلغاء التثبيت";
 "taskStatusComputerUpdating" = "%1$@ قيد التحديث";

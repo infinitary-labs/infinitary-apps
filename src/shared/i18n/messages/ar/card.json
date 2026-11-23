@@ -428,6 +428,8 @@
   },
   "cardThreadSettingsNote": "أُرسلت إلى الكاتب كسياق. الرد لا يوافق على البناء أبدًا.",
   "cardThreadSettingsSent": "أُرسلت الإعدادات مع ردك في {time}",
+  "cardThreadWaitReworkAuthor": "تمّ الرد. لا يزال {who} يحدّث هذه البطاقة للنسخة الجديدة، وتعود إليك عندما ينتهي.",
+  "cardThreadWaitReworkChecks": "تمّ الرد. الفحوصات قيد التشغيل على النسخة الجديدة، وتعود إليك هذه البطاقة عندما تنتهي.",
   "cardThreadWhoCaptain": "أنت",
   "cardThreadWhoCrewmate": "الطاقم",
   "cardThreadWhoFirstmate": "النائب",

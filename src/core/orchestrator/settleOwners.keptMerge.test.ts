@@ -760,13 +760,14 @@ describe("CrewSupervisor", () => {
     // INF-834 friction 4, the captain's ask: "A crewmate can revise a
     // completion card's words while its checks run". INF-638's revision
     // was refused while its checks ran, so he closed a stale card and waited.
-    it("revises the completion card's words while the checks run, and its merge waits for them", async () => {
+    it("revises the completion card's words while the checks run, and returns it once they pass (INF-6241)", async () => {
       const REVISED = "revised00004";
-      const h = await approved();
+      const h = await approved({ checkWatch: true });
+      // The written card: under the captain's reply, its return waits for
+      // the new version's checks (INF-6241), so the stage reads it later.
       const merge = () =>
-        h
-          .cards()
-          .find((card) => card.id === h.card.id)
+        h.supervisor.cards
+          .get(h.card.id)
           ?.actions.find((action) => action.effect?.kind === "merge" && !action.passes);
       const revise = (reply?: string, id = h.card.id) =>
         h.specs[0]?.onCard?.({
@@ -792,20 +793,25 @@ describe("CrewSupervisor", () => {
       expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)?.headSha).toBe(REVISED);
       h.crewmate.finishPrompt();
       await tick();
-      const shown = h.cards().find((card) => card.id === h.card.id);
-      expect(shown?.body).toContain("The change is one setting now.");
+      expect(h.supervisor.cards.get(h.card.id)?.body).toContain("The change is one setting now.");
+      expect(h.cards().find((card) => card.id === h.card.id)?.body).not.toContain(
+        "The change is one setting now.",
+      );
       expect(h.cardStore.messages(h.card.id).map((message) => message.text)).toContain(
         "I cut it down to one setting; the checks are running.",
       );
       expect(merge()?.label).toBe(MERGE_WORDS.whenChecksPass);
+      // They pass: the card returns at the revised version, and its click
+      // merges that version.
+      h.forge.states = ["success"];
+      await h.supervisor.watch.pollCheckWatches(Date.now() + 60_000);
+      await tick();
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(h.cards().find((card) => card.id === h.card.id)?.body).toContain(
+        "The change is one setting now.",
+      );
       h.supervisor.cardActions.act(h.card.id, "merge");
-      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
-      expect(h.authorization()?.approvedHead).toBe(REVISED);
-      expect(h.forge.merges).toEqual([]);
-      // They pass, and the next idle boundary merges the revised version with no second click.
-      await repairTurn(h, async () => {
-        h.forge.states = ["success"];
-      });
       await vi.waitFor(() => expect(h.forge.merges).toEqual([REVISED]));
     });
 

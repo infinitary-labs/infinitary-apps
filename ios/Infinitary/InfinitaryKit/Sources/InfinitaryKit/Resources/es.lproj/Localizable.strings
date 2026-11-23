@@ -506,6 +506,8 @@
 "cardThreadSettingChanged" = "cambiado";
 "cardThreadSettingsNote" = "Se enviaron al autor como contexto. Una respuesta nunca aprueba construir.";
 "cardThreadSettingsSent" = "Ajustes enviados con tu respuesta a las %1$@";
+"cardThreadWaitReworkAuthor" = "Respondido. %1$@ todavía está actualizando esta tarjeta para la nueva versión, y vuelve a ti cuando termine.";
+"cardThreadWaitReworkChecks" = "Respondido. Las comprobaciones se están ejecutando en la nueva versión, y esta tarjeta vuelve a ti cuando terminen.";
 "cardThreadWhoCaptain" = "tú";
 "cardThreadWhoCrewmate" = "tripulante";
 "cardThreadWhoFirstmate" = "oficial";
@@ -3934,6 +3936,7 @@
 "taskGroupQueued" = "en cola";
 "taskGroupWaiting" = "esperándote";
 "taskGroupWorking" = "trabajando";
+"taskNoteReworkHeld" = "Retuve la tarjeta de fusión «%1$@» hasta que terminen las comprobaciones de su nueva versión.";
 "taskPinPin" = "Fijar";
 "taskPinUnpin" = "Desfijar";
 "taskStatusComputerUpdating" = "%1$@ se está actualizando";

@@ -790,7 +790,7 @@ export function LiveMessageList({
 }
 
 /** What a thread reads of its card; an ended card's line needs its id and offer too. */
-type ThreadCard = Pick<Card, "author" | "awaiting" | "taskId"> &
+type ThreadCard = Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt"> &
   Partial<Pick<Card, "id" | "ended" | "lifecycleId" | "offerId">>;
 
 /**

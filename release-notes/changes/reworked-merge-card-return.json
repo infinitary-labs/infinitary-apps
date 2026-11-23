@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "reworked-merge-card-return",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge card you asked to change comes back once its new checks finish",
+      "body": "When you reply under a merge card asking for a change, the card now stays away while the crewmate pushes the new version and its checks run, and comes back once, updated, when they finish. Before, it could come back at once still showing the earlier version, with its checks reading as passed and Merge offered. While you wait, the card's thread says the checks are running on the new version. On a project that merges in batches, the app now also notices a version the crewmate pushed, so the card never offers Merge on an earlier one.",
+      "picture": {
+        "dark": "reworked-merge-card-return-dark.webp",
+        "light": "reworked-merge-card-return-light.webp",
+        "alt": "A merge card held after a reply: it says a newer version was pushed, its checks read running, it offers no Merge, and its thread says it comes back when the new version's checks finish"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

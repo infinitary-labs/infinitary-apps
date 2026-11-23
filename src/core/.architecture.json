@@ -1929,7 +1929,7 @@
         {
           "from": "held",
           "to": "shown",
-          "why": "its author's turn closes out",
+          "why": "its author's turn closes out, or its new version's checks end",
           "by": "orchestrator"
         },
         {
@@ -1942,6 +1942,12 @@
           "from": "awaiting answer",
           "to": "shown",
           "why": "the answerer replies",
+          "by": "orchestrator"
+        },
+        {
+          "from": "awaiting answer",
+          "to": "held",
+          "why": "a merge card is answered while its crewmate works on it or its new version is checked",
           "by": "orchestrator"
         },
         {

@@ -264,8 +264,9 @@ jobs:
   # one size (INF-2779, the captain's approved three-job split, so each Mac
   # place can take one and they run side by side): mac runs the Mac unit
   # files, the Claude client check, the replay gate and the package and
-  # signing checks; parallel runs the journeys of the parallel lanes; desktop
-  # runs the one-worker desktop lane, alone, with the recorded demos. The
+  # signing checks; parallel runs the journeys of the parallel lanes; desktop-1
+  # and desktop-2 run the one-worker desktop lane in two groups of equal
+  # measured time, each alone on its own Mac, with the recorded demos. The
   # parallel lanes' journeys are split between the parallel and mac jobs by
   # measured time, the mac job taking fewer for its own work, so the three
   # end together (INF-2987, scripts/journey-groups.ts); the journeys part,
@@ -282,11 +283,11 @@ jobs:
     # enters it.
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-verify-lane-{2}', github.run_id, github.run_attempt, matrix.lane) }}
-    name: ${{ format('{0} · {1}', inputs.trigger || 'Manual request', matrix.lane == 'linux-checks' && 'Code checks and build (Linux)' || matrix.lane == 'mac' && 'Native tests, replay and package (Mac)' || matrix.lane == 'parallel' && 'Parallel journeys (Mac)' || 'Desktop journeys (Mac)') }}
+    name: ${{ format('{0} · {1}', inputs.trigger || 'Manual request', matrix.lane == 'linux-checks' && 'Code checks and build (Linux)' || matrix.lane == 'mac' && 'Native tests, replay and package (Mac)' || matrix.lane == 'parallel' && 'Parallel journeys (Mac)' || format('Desktop journeys (Mac; group {0}/2)', matrix.lane == 'desktop-1' && 1 || 2)) }}
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.part == 'journeys' && '["parallel","desktop"]' || inputs.mac_only && '["mac","parallel","desktop"]' || inputs.linux_only && '["linux-checks"]' || '["linux-checks","mac","parallel","desktop"]') }}
+        lane: ${{ fromJSON(inputs.part == 'journeys' && '["parallel","desktop-1","desktop-2"]' || inputs.mac_only && '["mac","parallel","desktop-1","desktop-2"]' || inputs.linux_only && '["linux-checks"]' || '["linux-checks","mac","parallel","desktop-1","desktop-2"]') }}
     # Every Mac lane asks for the split kind, a size each Mac place can
     # take, so the three run side by side; until MAC_QUEUES names it, the
     # journeys kind's size, then the full check's old kind (docs/testing.md,
@@ -433,10 +434,10 @@ jobs:
       # records would otherwise fetch it in the middle of its test, and where
       # the fetch fails the window never reports itself loaded.
       - id: recorder
-        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || startsWith(matrix.lane, 'desktop-')) && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
       # The pinned encoder a demo journey records with, from the Actions cache.
-      - if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+      - if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || startsWith(matrix.lane, 'desktop-')) && steps.install.outcome == 'success' }}
         uses: ./Application Support/firstmate/.github/actions/demo-encoder
         with:
           working-directory: Application Support/firstmate
@@ -444,7 +445,7 @@ jobs:
       # Electron's own, never this runner's local development identity. A
       # report, never a gate.
       - name: Read the dev Electron's signature
-        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || startsWith(matrix.lane, 'desktop-')) && steps.install.outcome == 'success' }}
         run: codesign -dvv "$(node -p 'require("electron")')" 2>&1 | grep -E '^(Identifier|Authority|Signature|TeamIdentifier|CDHash)=' || true
       # The desktop suite, on the build above and Electron's supplied
       # signature, one journey lane per job, as the Linux journeys run
@@ -469,15 +470,15 @@ jobs:
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
         name: Run this job's journeys
-        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || startsWith(matrix.lane, 'desktop-')) && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
         run: |
           cores="$(node scripts/job-cores.ts)"
           workers="--workers=$(( cores > 1 ? cores / 2 : 1 ))"
-          if [ "$LANE" = desktop ]; then
-            pnpm exec playwright test --no-deps --project=desktop "$workers"
+          if [ "${LANE#desktop-}" != "$LANE" ]; then
+            node scripts/journey-groups.ts --platform mac --lane desktop --group "${LANE#desktop-}/2" -- --no-deps --project=desktop "$workers"
           else
             # shellcheck disable=SC2086 # one word per job name
             node scripts/journey-groups.ts --platform mac --lane parallel --group "$GROUP" $JOBS -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests
@@ -523,20 +524,21 @@ jobs:
       # watched from the run's page. Only a journey that asks records, and
       # each such journey is in the desktop lane (tests/e2e-lanes.test.ts).
       - name: Keep the recorded demos
-        if: ${{ always() && matrix.lane == 'desktop' && steps.e2e.outcome != 'skipped' }}
+        if: ${{ always() && startsWith(matrix.lane, 'desktop-') && steps.e2e.outcome != 'skipped' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: e2e-demos
+          name: ${{ format('e2e-demos-{0}', matrix.lane) }}
           path: Application Support/firstmate/test-results/runs/*/*/demo/
           if-no-files-found: ignore
           retention-days: 14
       # The budgets the suite above only reported, graded (tests/e2e/perf.ts),
-      # in the desktop job, the quiet one. Whole files, because a serial
+      # in the first desktop job, which runs every tagged file whichever group
+      # holds it, after its own journeys. Whole files, because a serial
       # spec's later tests stand on its earlier ones; --no-deps, because the
       # desktop lane is the other lanes' teardown and a teardown project
       # ignores the file filter.
       - id: perf
-        if: ${{ !cancelled() && inputs.perf && matrix.lane == 'desktop' && steps.e2e.outcome != 'skipped' }}
+        if: ${{ !cancelled() && inputs.perf && matrix.lane == 'desktop-1' && steps.e2e.outcome != 'skipped' }}
         run: |
           grep -lE "tag: .*PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
         env:

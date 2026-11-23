@@ -596,9 +596,9 @@ describe("explicit manual verification scope (INF-2374)", () => {
       "lane",
       "linux-tests",
     ]);
-    expect(lanes(full)).toEqual(["linux-checks", "mac", "parallel", "desktop"]);
+    expect(lanes(full)).toEqual(["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"]);
     expect(Object.keys(verify.jobs).filter((id) => runs(id, mac))).toEqual(["request", "lane"]);
-    expect(lanes(mac)).toEqual(["mac", "parallel", "desktop"]);
+    expect(lanes(mac)).toEqual(["mac", "parallel", "desktop-1", "desktop-2"]);
 
     const ran = (lane: string, inputs: Record<string, unknown>) => {
       const outcomes: Record<string, { outcome: string }> = {};

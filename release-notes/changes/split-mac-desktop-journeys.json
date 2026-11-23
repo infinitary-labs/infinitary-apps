@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-mac-desktop-journeys",
+      "reason": "Changes only how the project's own checks run: the merge batch's Mac desktop journeys run in two jobs."
+    }
+  ]
+}

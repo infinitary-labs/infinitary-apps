@@ -1,12 +1,14 @@
+import type { ConversationCard, StripRound } from "@shared/conversation";
 import * as m from "@shared/i18n/messages.generated";
 import { KEYBOARD_COMMANDS } from "@shared/keyboard";
-import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
+import type { LastRound } from "@shared/lastTurn";
 import { CAPTAIN_COMMAND } from "@shared/through";
 import {
   type MouseEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -25,8 +27,10 @@ import {
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
-import { shownEntry, stackOf } from "./stack";
+import { LAST_TURN_GAP, lastTurnLane } from "./promptGeometry";
+import { type ConversationEntry, shownEntry, stackOf } from "./stack";
 import { useShellStore } from "./store";
+import { shownStrip, stripRoundHeight } from "./strip";
 import "./lastTurn.css";
 
 /**
@@ -169,12 +173,15 @@ function MateLine({
   busy,
   announce,
   older,
+  opens,
 }: {
   target: Mate | null;
   /** The Firstmate works: the mark spins beside the working words or the reply. */
   busy: boolean;
   announce: boolean;
   older: boolean;
+  /** Where the reply's press opens the conversation. */
+  opens: ConversationEntry;
 }) {
   const [shown, setShown] = useState<Mate | null>(target);
   const [leaving, setLeaving] = useState(false);
@@ -236,7 +243,7 @@ function MateLine({
                       onClick: (event: MouseEvent) => {
                         // The round's own press opens it too: one open per press.
                         event.stopPropagation();
-                        openConversation(older ? { at: "older" } : {});
+                        openConversation(opens);
                       },
                     }
                   : { title: mateFit.title })}
@@ -271,6 +278,48 @@ function MateLine({
   );
 }
 
+/** The card a round acted on, as the strip names it. */
+type RoundCard = Pick<ConversationCard, "id" | "title">;
+
+/** Opens the card a round acted on: in front while it is still up, else as a past card. */
+function openRoundCard(cardId: string): void {
+  const shell = useShellStore.getState();
+  if (shell.cards.some((card) => card.id === cardId) && shell.focusCard(cardId)) return;
+  shell.openPastCard(cardId);
+}
+
+/**
+ * The card's name before the captain's act on it (INF-6337's plan): a
+ * small card glyph and the title, a button that opens the card.
+ */
+function CardName({ card, leaving }: { card: RoundCard; leaving: boolean }) {
+  const fit = useOverflowTitle(leaving ? undefined : card.title);
+  const cut = useWholeWords(card.title, LANE);
+  const ref = useCuttingRef(fit.ref, cut);
+  const rest = useRestLabel(leaving ? undefined : (fit.title ?? m.shellLastTurnOpenCard()));
+  return (
+    <button
+      {...rest}
+      type="button"
+      className="card-name"
+      data-last-turn-card={card.id}
+      onClick={(event) => {
+        // The round's own press opens the conversation: this one opens the card instead.
+        event.stopPropagation();
+        openRoundCard(card.id);
+      }}
+    >
+      <svg className="glyph" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" />
+        <path d="M3.75 5h4.5M3.75 7.25h2.75" stroke="currentColor" strokeLinecap="round" />
+      </svg>
+      <span className="words" data-last-turn-words="" ref={ref}>
+        {card.title}
+      </span>
+    </button>
+  );
+}
+
 export function LastTurnRound({
   round,
   busy,
@@ -278,6 +327,9 @@ export function LastTurnRound({
   leaving = false,
   fading = false,
   announce = true,
+  card,
+  act,
+  opens = {},
 }: {
   round: LastRound;
   /** The Firstmate works on the newest round. */
@@ -290,6 +342,16 @@ export function LastTurnRound({
   fading?: boolean;
   /** A remount of a reply already read out says nothing. */
   announce?: boolean;
+  /** The card the round acted on: its name stands before the captain's words. */
+  card?: RoundCard;
+  /**
+   * A card round that is not also a message (INF-6337's plan): a press of
+   * one of the card's buttons, its words in an outlined bubble, or a line
+   * typed under a crewmate's card. Either is one row, with no reply line.
+   */
+  act?: "choice" | "reply";
+  /** Where a press on the round opens the conversation. */
+  opens?: ConversationEntry;
 }) {
   const said = round.you.trim();
   const you = said || m.shellLastTurnPictureOnly();
@@ -304,11 +366,12 @@ export function LastTurnRound({
         // A press that ends a drag across words keeps the selection.
         const selection = event.currentTarget.ownerDocument.getSelection();
         if (selection && !selection.isCollapsed) return;
-        useShellStore.getState().openConversation(older ? { at: "older" } : {});
+        useShellStore.getState().openConversation(opens);
       }}
       data-older={older ? "" : undefined}
       data-leaving={leaving ? "" : undefined}
       data-fading={fading ? "" : undefined}
+      data-card-round={act}
       inert={leaving || fading}
       aria-hidden={leaving || undefined}
     >
@@ -318,18 +381,26 @@ export function LastTurnRound({
             {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
           </span>
         ) : null}
-        <span data-last-turn-bubble="you" title={youFit.title}>
+        {card ? <CardName card={card} leaving={leaving} /> : null}
+        <span
+          data-last-turn-bubble="you"
+          data-choice={act === "choice" ? "" : undefined}
+          title={youFit.title}
+        >
           <span className="words" data-last-turn-words="" ref={youRef}>
             {you}
           </span>
         </span>
       </div>
-      <MateLine
-        target={mateOf(busy && !older, round)}
-        busy={busy && !older}
-        announce={announce && !older}
-        older={older}
-      />
+      {act ? null : (
+        <MateLine
+          target={mateOf(busy && !older, round)}
+          busy={busy && !older}
+          announce={announce && !older}
+          older={older}
+          opens={opens}
+        />
+      )}
     </div>
   );
 }
@@ -352,25 +423,62 @@ function useConversationShown(): boolean {
   return useShellStore((s) => shownEntry(s)?.conversation !== undefined);
 }
 
-type Shown = { round: LastRound; key: number; older: boolean };
+type Shown = { strip: StripRound; older: boolean };
 /** A round leaving, drawn where it stood. */
 type Outgoing = Shown & { top: number };
 
-/**
- * The rounds to draw, oldest first, keyed by the message's place in this
- * window's sequence so the newest keeps its node as it becomes the older.
- */
-function roundsOf(turn: Turn, seq: number, withOlder: boolean): Shown[] {
-  const newest: Shown = { round: turn, key: seq, older: false };
-  return withOlder && turn.previous
-    ? [{ round: turn.previous, key: seq - 1, older: true }, newest]
-    : [newest];
+/** The rounds to draw, oldest first, the last of them the newest. */
+function shownOf(strip: readonly StripRound[]): Shown[] {
+  return strip.map((round, index) => ({ strip: round, older: index < strip.length - 1 }));
+}
+
+/** Where a press on a round opens the conversation: at its id, or the older message on a home that gives none. */
+function opensAt(strip: StripRound, older: boolean): ConversationEntry {
+  if (strip.id !== undefined) return { round: strip.id };
+  return older ? { at: "older" } : {};
+}
+
+function StripRoundView({
+  shown,
+  busy,
+  leaving = false,
+  fading = false,
+  announce = false,
+}: {
+  shown: Shown;
+  busy: boolean;
+  leaving?: boolean;
+  fading?: boolean;
+  announce?: boolean;
+}) {
+  const { strip, older } = shown;
+  const common = {
+    older,
+    leaving,
+    fading,
+    announce,
+    opens: opensAt(strip, older),
+    ...(strip.card ? { card: strip.card } : {}),
+  };
+  if (strip.kind === "message")
+    return <LastTurnRound round={strip.round} busy={busy} {...common} />;
+  return (
+    <LastTurnRound
+      round={{ you: strip.kind === "choice" ? strip.label : strip.you, reply: null }}
+      busy={false}
+      act={strip.kind}
+      {...common}
+    />
+  );
 }
 
 export function LastTurn() {
   const turn = useShellStore((s) => s.lastTurn);
   const seq = useShellStore((s) => s.lastTurnSeq);
   const replySeq = useShellStore((s) => s.lastTurnReplySeq);
+  const page = useShellStore((s) => s.stripPage);
+  const cards = useShellStore((s) => s.cards);
+  const threads = useShellStore((s) => s.threads);
   const busy = useShellStore((s) => s.firstmateBusy);
   const view = useShellStore((s) => s.view);
   const cardUp = useCardUp();
@@ -382,17 +490,37 @@ export function LastTurn() {
   const [focused, setFocused] = useState(false);
   const [awake, setAwake] = useState(windowAwake);
   const [covered, setCovered] = useState(messageCovered);
-  const shownRef = useRef<{ rounds: Shown[]; seq: number } | null>(null);
+  const shownRef = useRef<{ rounds: Shown[]; newest: string | undefined } | null>(null);
   /** Where each round stood after the last render, and the render before it. */
-  const tops = useRef(new Map<number, number>());
-  const earlierTops = useRef(new Map<number, number>());
+  const tops = useRef(new Map<string, number>());
+  const earlierTops = useRef(new Map<string, number>());
   const rootRef = useRef<HTMLDivElement>(null);
   /** The reply this mount read out, so a later render does not clear the live region. */
   const spoken = useRef<string | null>(null);
-  const key = fadeKey(turn, seq);
-  const announcement = replyAnnouncementKey(turn, replySeq);
+  const strip = useMemo(
+    () => shownStrip({ lastTurn: turn, lastTurnSeq: seq, stripPage: page }, cardUp),
+    [turn, seq, page, cardUp],
+  );
+  // Behind a card the strip shows only the newest round, so the clock reads the whole strip.
+  const fullStrip = useMemo(
+    () => shownStrip({ lastTurn: turn, lastTurnSeq: seq, stripPage: page }, false),
+    [turn, seq, page],
+  );
+  const key = fadeKey(fullStrip);
+  const newestKey = fullStrip.at(-1)?.key;
+  // Only a message's reply is read out, and only while that message is the newest round.
+  const announcement =
+    fullStrip.at(-1)?.kind === "message" ? replyAnnouncementKey(turn, replySeq) : null;
   const readable =
     view === "home" && !cardUp && !hovering && !selecting && !focused && awake && !covered;
+
+  // The page of the conversation the strip draws its card rounds from, read
+  // again whenever a message, a reply, a card or a card's thread may have
+  // added a round (docs/composer.md "The last turn").
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each is a sign of a new round
+  useEffect(() => {
+    void useShellStore.getState().loadStripPage();
+  }, [seq, replySeq, cards, threads]);
 
   // The clock lives outside this component, so Settings unmounting it only pauses.
   useEffect(() => {
@@ -449,21 +577,25 @@ export function LastTurn() {
 
   const hidden = key !== null && fade.key === key && fade.phase === "hidden";
   const fading = key !== null && fade.key === key && fade.phase === "fading";
-  const rounds = turn ? roundsOf(turn, seq, !cardUp) : [];
+  const rounds = shownOf(strip);
+  const lane = lastTurnLane(rounds.map((shown) => stripRoundHeight(shown.strip)));
 
-  // A new message pushes the oldest round out: it leaves over --dur-fast
-  // from where it stood while the rest glide up.
+  // A new round pushes the oldest out: it leaves over --dur-fast from where
+  // it stood while the rest glide up. Only a new newest round pushes; a card
+  // going up or down shows or hides the older round in place.
   useEffect(() => {
-    const now = turn ? roundsOf(turn, seq, !cardUp) : [];
+    const now = shownOf(strip);
     const before = shownRef.current;
-    shownRef.current = { rounds: now, seq };
-    if (!before || before.seq === seq || prefersReducedMotion()) return;
-    const gone = before.rounds.find((round) => !now.some((kept) => kept.key === round.key));
+    shownRef.current = { rounds: now, newest: newestKey };
+    if (!before || before.newest === newestKey || prefersReducedMotion()) return;
+    const gone = before.rounds.find(
+      (round) => !now.some((kept) => kept.strip.key === round.strip.key),
+    );
     if (!gone) return;
-    setOutgoing({ ...gone, top: earlierTops.current.get(gone.key) ?? 0 });
+    setOutgoing({ ...gone, older: true, top: earlierTops.current.get(gone.strip.key) ?? 0 });
     const id = window.setTimeout(() => setOutgoing(null), LEAVE_MS + 60);
     return () => window.clearTimeout(id);
-  }, [turn, seq, cardUp]);
+  }, [strip, newestKey]);
 
   // The glide: a round that stays starts from where it stood and eases to
   // its new place over --dur-med. Reduced motion lands it at once.
@@ -471,9 +603,9 @@ export function LastTurn() {
     const root = rootRef.current;
     if (!root) return;
     const nodes = root.querySelectorAll<HTMLElement>(":scope > [data-round]:not([data-outgoing])");
-    const next = new Map<number, number>();
+    const next = new Map<string, number>();
     for (const node of nodes) {
-      const at = Number(node.dataset.round);
+      const at = node.dataset.round ?? "";
       const top = node.offsetTop;
       next.set(at, top);
       const was = tops.current.get(at);
@@ -488,30 +620,31 @@ export function LastTurn() {
     tops.current = next;
   });
 
-  if (!turn || conversationShown) return null;
+  if (rounds.length === 0 || conversationShown) return null;
   return (
     <div
       data-last-turn=""
       data-last-turn-rounds={rounds.length}
       data-last-turn-fade={hidden ? "hidden" : fading ? "fading" : "shown"}
+      // The rounds' own heights and the gaps between them; the slot hangs from the input's top edge.
+      style={{ height: lane - LAST_TURN_GAP }}
       ref={rootRef}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
       onFocusCapture={() => setFocused(true)}
       onBlurCapture={(event) => setFocused(event.currentTarget.contains(event.relatedTarget))}
     >
-      {outgoing && !rounds.some((round) => round.key === outgoing.key) && (
-        <div data-round={outgoing.key} data-outgoing="" style={{ top: outgoing.top }}>
-          <LastTurnRound round={outgoing.round} busy={false} older leaving announce={false} />
+      {outgoing && !rounds.some((round) => round.strip.key === outgoing.strip.key) && (
+        <div data-round={outgoing.strip.key} data-outgoing="" style={{ top: outgoing.top }}>
+          <StripRoundView shown={outgoing} busy={false} leaving />
         </div>
       )}
       {rounds.map((shown) =>
         shown.older && hidden ? null : (
-          <div key={shown.key} data-round={shown.key} className="slot">
-            <LastTurnRound
-              round={shown.round}
-              busy={busy}
-              older={shown.older}
+          <div key={shown.strip.key} data-round={shown.strip.key} className="slot">
+            <StripRoundView
+              shown={shown}
+              busy={busy && shown.strip.key === newestKey}
               fading={shown.older && fading}
               announce={!shown.older && spoken.current === announcement}
             />

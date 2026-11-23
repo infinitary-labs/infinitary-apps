@@ -33,6 +33,7 @@ import { projectFocus } from "./projectFocus";
 import { mirrorCardAnswers } from "./savedCardAnswers";
 import { shownEntry, withoutKey } from "./stack";
 import { openNotifiedCard, readCardsAgain, type StackSlice, stackSlice } from "./stackActions";
+import { STRIP_ROUNDS, type StripPage } from "./strip";
 import { type VoiceSlice, voiceSlice } from "./voice";
 
 /**
@@ -89,6 +90,12 @@ type ShellCore = {
   lastTurnSeq: number;
   /** Replies this window saw, so a repeated line still starts a fresh fade. */
   lastTurnReplySeq: number;
+  /**
+   * The conversation's newest rounds for the strip (./strip, docs/composer.md
+   * "The last turn"), with the `lastTurnSeq` it was read at; null until read
+   * and on a home that refuses the read, when the strip shows messages alone.
+   */
+  stripPage: StripPage | null;
   initialized: boolean;
   /** Boot cards are present without an entrance; later shown surfaces may reveal. */
   cardsSnapshotLoaded: boolean;
@@ -187,6 +194,8 @@ type ShellCore = {
   markFirstTurn: () => void;
   /** Read the last turn from the core; a message seen sent meanwhile is newer and wins. */
   loadLastTurn: () => Promise<void>;
+  /** Read the strip's page of the conversation again; a message sent meanwhile reads it once more. */
+  loadStripPage: () => Promise<void>;
   noteCrewWord: (word: CrewWord) => void;
   setView: (view: ShellView) => void;
   /** Command search is open over the window (docs/keyboard.md). */
@@ -291,6 +300,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   lastTurn: null,
   lastTurnSeq: 0,
   lastTurnReplySeq: 0,
+  stripPage: null,
   initialized: false,
   cardsSnapshotLoaded: false,
   bootCardId: null,
@@ -500,6 +510,17 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       if (get().lastTurnSeq === seq) set({ lastTurn });
     } catch {
       // An unreadable answer leaves the area as it is.
+    }
+  },
+  loadStripPage: async () => {
+    const seq = get().lastTurnSeq;
+    try {
+      const page = await window.infinitary.conversation.thread({ limit: STRIP_ROUNDS });
+      // A page read across a message sent meanwhile cannot say which messages it holds.
+      if (get().lastTurnSeq === seq) set({ stripPage: { rounds: page.rounds, seq } });
+    } catch {
+      // A home that cannot answer keeps the strip to the messages the window holds.
+      set({ stripPage: null });
     }
   },
   noteCrewWord: (word) => {

@@ -4111,6 +4111,7 @@ public enum PhoneMessages {
     public static func `shellKeyReminderHint`() -> String { PhoneWords.format("shellKeyReminderHint", []) }
     public static func `shellKeyReminderNotTyping`() -> String { PhoneWords.format("shellKeyReminderNotTyping", []) }
     public static func `shellLastTurnFromCommand`(`command`: String) -> String { PhoneWords.format("shellLastTurnFromCommand", [`command`]) }
+    public static func `shellLastTurnOpenCard`() -> String { PhoneWords.format("shellLastTurnOpenCard", []) }
     public static func `shellLastTurnPictureOnly`() -> String { PhoneWords.format("shellLastTurnPictureOnly", []) }
     public static func `shellLastTurnWorking`() -> String { PhoneWords.format("shellLastTurnWorking", []) }
     public static func `shellMainMessageConnectFirst`() -> String { PhoneWords.format("shellMainMessageConnectFirst", []) }
@@ -8519,6 +8520,7 @@ extension PhoneWords {
         "shellKeyReminderHint": [],
         "shellKeyReminderNotTyping": [],
         "shellLastTurnFromCommand": ["command"],
+        "shellLastTurnOpenCard": [],
         "shellLastTurnPictureOnly": [],
         "shellLastTurnWorking": [],
         "shellMainMessageConnectFirst": [],

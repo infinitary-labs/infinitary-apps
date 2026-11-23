@@ -10,6 +10,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import {
   askFirstmate,
   bubbleWords,
+  cardRound,
   conversation,
   conversationReplies,
   conversationTile,
@@ -525,6 +526,53 @@ test("the conversation holds a card the captain answered, lists it under Cards, 
     await expect(conversation(page)).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(conversation(page)).toHaveAttribute("data-conversation", "cards");
+  });
+});
+
+// Intent: INF-6337's plan, the captain's Approve and build, part 2: a press of
+// a card's button shows above the message box as one row with the card's
+// name; the name opens the card, and the rest of the row opens the
+// conversation at that round. Fixture: the conversation scenario's note,
+// answered with Got it. Failure: no row, a reply line under it, the name not opening
+// the past card, or the conversation opening somewhere else.
+test("a press of a card's button shows on the strip with the card's name, which opens it, and the row opens the conversation there", async () => {
+  launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
+  const { page } = launched;
+  await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+  await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
+  await askFirstmate(page, BACKLOG_ASK);
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+  await noteDone(page).click();
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+
+  const row = cardRound(page);
+  await test.step("the press is the newest round: the card's name, then Got it outlined, with no reply line", async () => {
+    await expect(row).toHaveAttribute("data-card-round", "choice");
+    await expect(row.locator("[data-last-turn-card]")).toHaveText(BACKLOG_CARD_TITLE);
+    await expect(yourBubble(page)).toHaveText(NOTE_GOT_IT_LABEL);
+    await expect(yourBubble(page)).toHaveAttribute("data-choice", "");
+    await expect(mateBubble(page)).toHaveCount(0);
+    // The message it answered is the older round above it, at half strength.
+    await expect(bubbleWords(yourBubble(page, "older"))).toHaveText(BACKLOG_ASK);
+  });
+
+  await test.step("the card's name opens the card it answered, as a past card", async () => {
+    await row.locator("[data-last-turn-card]").click();
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
+    await expect(conversation(page)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  });
+
+  await test.step("the rest of the row opens the conversation at that round", async () => {
+    await yourBubble(page).click();
+    await expect(conversation(page)).toBeVisible();
+    const landed = conversation(page).locator("[data-conversation-round][data-landed]");
+    await expect(landed).toHaveAttribute("data-kind", "choice");
+    await expect(landed.locator("[data-conversation-card]")).toHaveText(
+      new RegExp(BACKLOG_CARD_TITLE),
+    );
+    await expect(landed).toBeInViewport();
   });
 });
 

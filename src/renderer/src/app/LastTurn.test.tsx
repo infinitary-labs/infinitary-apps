@@ -149,4 +149,26 @@ describe("a round of the last turn above the input", () => {
       }
     }
   });
+
+  // INF-6337's plan, the captain's Approve and build, part 2: a press of a
+  // card's button is one row with the card's name, a button that opens the
+  // card, before the button's words in an outlined bubble, with no reply line.
+  it("draws a press of a card's button as one row naming the card, its words outlined, and no reply line", () => {
+    const html = renderToStaticMarkup(
+      <LastTurnRound
+        round={{ you: "Approve and build", reply: null }}
+        busy
+        card={{ id: "card-backlog", title: "A panel that charts your backlog" }}
+        act="choice"
+      />,
+    );
+    expect(html).toMatch(/^<div[^>]*data-card-round="choice"/);
+    expect(html.match(/<button\b[^>]*>/g)).toEqual([
+      expect.stringMatching(/data-last-turn-card="card-backlog"/),
+    ]);
+    expect(html).toMatch(/A panel that charts your backlog<\/span><\/button>/);
+    expect(html).toMatch(/data-last-turn-bubble="you" data-choice=""[^>]*>.*Approve and build/);
+    expect(html).not.toContain('data-last-turn-bubble="firstmate"');
+    expect(html).not.toContain("data-last-turn-mark");
+  });
 });

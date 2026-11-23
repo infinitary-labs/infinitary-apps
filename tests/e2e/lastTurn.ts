@@ -41,6 +41,15 @@ export function mateBubble(page: Page, round: "newest" | "older" = "newest"): Lo
   return page.locator(`${round === "older" ? OLDER : NEWEST} [data-last-turn-bubble="firstmate"]`);
 }
 
+/**
+ * A card round on the strip (docs/composer.md "Card rounds"): one row with
+ * the card's name, a button marked `data-last-turn-card`, before the
+ * captain's press or line; `data-card-round` says which.
+ */
+export function cardRound(page: Page, round: "newest" | "older" = "newest"): Locator {
+  return page.locator(`${round === "older" ? OLDER : NEWEST}[data-card-round]`);
+}
+
 export function olderRound(page: Page): Locator {
   return page.locator(OLDER);
 }

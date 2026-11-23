@@ -79,9 +79,13 @@ function pause(): void {
   emit({ ...snapshot, remainingMs });
 }
 
-/** The older round's arrival, independent of the newest reply or its work. */
-export function fadeKey(turn: LastTurn | null, turnSeq: number): string | null {
-  return turn?.previous ? `${turnSeq}` : null;
+/**
+ * The older round's arrival, independent of the newest reply or its work:
+ * the newest round's key, while a round shows above it. A new round of any
+ * kind, a message or a card round, starts the older one's reading time.
+ */
+export function fadeKey(strip: readonly { key: string }[]): string | null {
+  return strip.length > 1 ? (strip.at(-1)?.key ?? null) : null;
 }
 
 /** The completed newest reply to announce, kept separate from the older-round clock. */

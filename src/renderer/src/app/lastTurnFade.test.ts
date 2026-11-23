@@ -1,3 +1,4 @@
+import { stripRounds } from "@shared/conversation";
 import type { LastTurn } from "@shared/lastTurn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -21,6 +22,10 @@ const turn: LastTurn = {
   },
 };
 
+/** The strip the window draws from these messages alone, `seq` the newest's place. */
+const strip = (shown: LastTurn, seq: number) =>
+  stripRounds({ turn: shown, seq, page: null, limit: 2, cardRounds: true });
+
 describe("the second-to-last round's reading clock", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
@@ -34,16 +39,16 @@ describe("the second-to-last round's reading clock", () => {
   });
 
   it("starts when a previous round exists and never restarts for a newest reply", () => {
-    expect(fadeKey({ ...turn, previous: null }, 1)).toBeNull();
-    const key = fadeKey(turn, 2);
+    expect(fadeKey(strip({ ...turn, previous: null }, 1))).toBeNull();
+    const key = fadeKey(strip(turn, 2));
     syncFade(key, true);
     vi.advanceTimersByTime(READING_MS / 2);
     const answered: LastTurn = {
       ...turn,
       reply: { text: "The crew has it under way.", eligibility: "completed" },
     };
-    expect(fadeKey(answered, 2)).toBe(key);
-    syncFade(fadeKey(answered, 2), true);
+    expect(fadeKey(strip(answered, 2))).toBe(key);
+    syncFade(fadeKey(strip(answered, 2)), true);
     vi.advanceTimersByTime(READING_MS / 2 - 1);
     expect(getFade().phase).toBe("shown");
     vi.advanceTimersByTime(1);
@@ -53,25 +58,27 @@ describe("the second-to-last round's reading clock", () => {
   });
 
   it("does not depend on the newest reply's status or the older reply's eligibility", () => {
-    const key = fadeKey(turn, 2);
+    const key = fadeKey(strip(turn, 2));
     for (const reply of [
       null,
       { text: "Noted" },
       { text: "Your message is waiting", eligibility: "queued" as const },
       { text: "Something went wrong", problem: true },
     ]) {
-      expect(fadeKey({ ...turn, reply }, 2)).toBe(key);
-      expect(fadeKey({ ...turn, previous: { you: turn.previous?.you ?? "", reply } }, 2)).toBe(key);
+      expect(fadeKey(strip({ ...turn, reply }, 2))).toBe(key);
+      expect(
+        fadeKey(strip({ ...turn, previous: { you: turn.previous?.you ?? "", reply } }, 2)),
+      ).toBe(key);
     }
     // A different message starts a new interval even when its words repeat.
     syncFade(key, true);
     vi.advanceTimersByTime(READING_MS);
-    syncFade(fadeKey(turn, 3), true);
+    syncFade(fadeKey(strip(turn, 3)), true);
     expect(getFade()).toMatchObject({ phase: "shown", remainingMs: READING_MS });
   });
 
   it("keeps the remainder while the older round cannot be read, without reviving a hidden round", () => {
-    const key = fadeKey(turn, 2);
+    const key = fadeKey(strip(turn, 2));
     syncFade(key, true);
     vi.advanceTimersByTime(READING_MS / 2);
     syncFade(key, false);
@@ -96,6 +103,6 @@ describe("the second-to-last round's reading clock", () => {
       replyAnnouncementKey({ ...answered, previous: null }, 2),
     );
     expect(replyAnnouncementKey(answered, 3)).not.toBe(replyAnnouncementKey(answered, 2));
-    expect(fadeKey(answered, 2)).toBe(fadeKey(turn, 2));
+    expect(fadeKey(strip(answered, 2))).toBe(fadeKey(strip(turn, 2)));
   });
 });

@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "docs-site-language-menu-whole-names",
-      "reason": "The documentation site's language menu shows each language's whole name instead of cutting Français, Deutsch and the Chinese names short, and the docs site check fails when a name is cut; nothing in the app changes."
+      "reason": "The documentation site's language and theme menus show each name whole in every language instead of cutting names such as Français, Deutsch, the Chinese names and German's System short, and the docs site check fails when a menu cuts a name; nothing in the app changes."
     }
   ]
 }

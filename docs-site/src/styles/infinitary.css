@@ -146,13 +146,15 @@ kbd {
 }
 
 /*
- * The language menu shows the whole name of the page's language
- * (docs/docs-site.md, "Languages"). Starlight gives it a fixed width of seven
- * letters, which cuts Français, Deutsch and the Chinese names short. Where the
- * browser can size a menu to its choice, the menu fits the name it shows;
- * elsewhere it is as wide as its longest name, as a menu is on its own.
+ * The language and theme menus show each name whole (docs/docs-site.md,
+ * "Languages"). Starlight gives them fixed widths of seven and six and a
+ * quarter letters, which cut names such as Français, 简体中文, German's System
+ * and French's Sombre short. Where the browser can size a menu to its choice,
+ * each menu fits the name it shows; elsewhere it is as wide as its longest
+ * name, as a menu is on its own.
  */
-starlight-lang-select select {
+starlight-lang-select select,
+starlight-theme-select select {
   width: auto;
   field-sizing: content;
 }

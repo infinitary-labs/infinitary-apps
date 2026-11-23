@@ -675,8 +675,11 @@ Only the groups with tasks show.
 The scroll view keeps group headers and rows as individual lazy items, using one flat sequence with stable row identities rather than a single tall stack per group, so an update can remeasure the rows at the current position.
 The `task-updates-bottom`, `task-updates-middle`, `task-updates-finish` and `task-updates-start` parts check that rows remain visible after a real Start at the bottom or middle and after a 31-task family moves between Working and Backlog.
 The `task-updates-finish-middle` part finishes that family while its middle rows show, without first reaching the list's end; `task-updates-open-done` keeps the Done header visible when its rows open below a long Backlog.
+The family-finish part also opens Backlog immediately after correction, without another scroll, to keep its header in view.
+The `task-updates-short` part keeps a fitting list's Working row in place when Backlog folds; `task-updates-finish-short` checks a scrolled family update that leaves the remaining content fitting on screen.
 Each part launches its own home and app; the middle Start fixture includes the folded Done group.
-The scroll view corrects a viewport beyond the remaining content after a size reduction, without following content growth when a folding group opens or changing its initial scroll position.
+The scroll view corrects a viewport beyond the remaining content after a size reduction only when its offset is past the resting top, without following content growth or changing its initial position.
+Pull-to-search independently observes threshold crossings, so unrelated geometry changes do not reopen a search the person closed.
 Pinned comes first, never folds, and holds every task the captain pinned, whatever its state or age, in the order it was pinned, newest last, as on the Mac (INF-3127); a pinned task's parts list under it there and nowhere else, each still unpinned (INF-3512), except a finished part not pinned itself, which stays in Done.
 Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
 On a home on major 16 or later, or one that lists `board-without-closed`, the phone's first board read leaves out the week's closed rows (`docs/task-retention.md`, "A view's first board read"); Done counts the rows left out, and opening Done, a search or a task the light board lacks reads the whole board once (`ReadOnlySession.readClosedRows`).

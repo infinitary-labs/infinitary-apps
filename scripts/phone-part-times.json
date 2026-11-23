@@ -124,21 +124,27 @@
     "iphone": 210000
   },
   "task-updates-bottom": {
-    "iphone": 137026
+    "iphone": 108150
   },
   "task-updates-middle": {
-    "iphone": 84094
+    "iphone": 74495
   },
   "task-updates-finish": {
-    "iphone": 83761
+    "iphone": 58377
   },
   "task-updates-start": {
-    "iphone": 74276
+    "iphone": 57421
   },
   "task-updates-finish-middle": {
-    "iphone": 57547
+    "iphone": 69442
   },
   "task-updates-open-done": {
-    "iphone": 58851
+    "iphone": 50385
+  },
+  "task-updates-short": {
+    "iphone": 26412
+  },
+  "task-updates-finish-short": {
+    "iphone": 37679
   }
 }

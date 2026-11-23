@@ -146,10 +146,14 @@ struct PhoneTasks: View {
             // Correct only an out-of-range viewport after a shrink. Following every size change also follows growth
             // when a group opens, moving its header and newest rows out of view.
             if geometry.contentSize.height < old.contentSize.height,
+               geometry.contentOffset.y > -geometry.contentInsets.top,
                geometry.visibleRect.maxY > geometry.contentSize.height + geometry.contentInsets.bottom {
                 position.scrollTo(edge: .bottom)
             }
-            let pulled = geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
+        }
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
+        } action: { _, pulled in
             if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
         }
         // While a record covers the list in the panel's place, the key finds nothing it can show, so it rests.

@@ -14,13 +14,20 @@ extension PhoneJourney {
     func testTaskListFamilyFinishes() async throws {
         // The only running part finishes; its 31-task family leaves Working for folded Backlog.
         try await taskListUpdate("F1", working: 20, backlog: 1, done: 3, family: 30, running: true,
-                                 target: "c-29", operation: "done")
+                                 target: "c-29", operation: "done", openAfterShrink: true)
     }
 
     func testTaskListFamilyStarts() async throws {
         // Starting one part moves the same size family out of the open Backlog.
         try await taskListUpdate("F3", working: 3, backlog: 30, done: 3, family: 30,
                                  target: "b-29", openBacklog: true, operation: "start")
+    }
+
+    func testTaskListFamilyFinishesToFit() async throws {
+        try await taskListUpdate("F1S", working: 2, backlog: 1, family: 20, running: true,
+                                 target: "c-19", operation: "done")
+        XCTAssertTrue(app.buttons["task-task-list-F1S-w-0"].isHittable && app.buttons["group-landed"].isHittable,
+                      "The remaining Working rows and last group must fit together after the shrink")
     }
 
     func testTaskListFamilyFinishesInMiddle() async throws {
@@ -55,9 +62,33 @@ extension PhoneJourney {
         _ = try await home("capture-stop")
     }
 
+    func testTaskListShortListKeepsPosition() async throws {
+        try await launchJoined()
+        _ = try await home("empty-cards")
+        tab("Tasks", repeatDiscarded: false)
+        _ = try await home("task-list-seed", body: "{\"prefix\":\"S0\",\"working\":2,\"backlog\":2}")
+        let backlog = app.buttons["group-backlog"]
+        XCTAssertTrue(backlog.waitForPresence(timeout: 20))
+        tapOnPhone(backlog)
+        let last = app.buttons["task-task-list-S0-b-1"]
+        let working = app.buttons["task-task-list-S0-w-0"]
+        XCTAssertTrue(last.waitForPresence(timeout: 10))
+        XCTAssertTrue(working.isHittable && last.isHittable, "The open short list must fit on screen")
+        waitForSteadyTarget(working)
+        let restingY = working.frame.minY
+        picture("task-list-S0-before")
+        _ = try await home("capture-start")
+        tapOnPhone(backlog)
+        XCTAssertTrue(last.waitForAbsence(timeout: 10))
+        waitForSteadyTarget(working)
+        picture("task-list-S0-after")
+        XCTAssertEqual(working.frame.minY, restingY, accuracy: 1, "Shrinking a fitting list must leave its Working row in place")
+        _ = try await home("capture-stop")
+    }
+
     private func taskListUpdate(_ name: String, working: Int, backlog: Int, done: Int = 0, family: Int = 0,
                                 running: Bool = false, target: String, openBacklog: Bool = false,
-                                operation: String? = nil, scrollToEnd: Bool = true) async throws {
+                                operation: String? = nil, scrollToEnd: Bool = true, openAfterShrink: Bool = false) async throws {
         try await launchJoined()
         _ = try await home("empty-cards")
         tab("Tasks", repeatDiscarded: false)
@@ -100,6 +131,14 @@ extension PhoneJourney {
         // Observe the reported persistent blank after the update, not a transient animation frame.
         try await Task.sleep(for: .seconds(4))
         taskListRead("\(name)-after", blanks: &blanks)
+        if openAfterShrink {
+            XCTAssertTrue(header.exists && header.isHittable, "The corrected viewport must show folded Backlog")
+            picture("task-list-\(name)-before-opening")
+            tapOnPhone(header)
+            XCTAssertTrue(probe.waitForPresence(timeout: 20), "Opening Backlog must show its first row")
+            picture("task-list-\(name)-after-opening")
+            XCTAssertTrue(header.exists && header.isHittable, "Opening Backlog after a correction must keep its header in view")
+        }
         _ = try await home("capture-stop")
         XCTAssertTrue(blanks.isEmpty, "The list showed no task row after an update: \(blanks)")
     }

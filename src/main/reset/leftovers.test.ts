@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { endLeftoverPrograms, LEFTOVER_WAIT_MS, type LeftoverSeams } from "./leftovers";
 
 /**
- * A reset ends the programs tasks left running in the data folder (the
+ * A reset ends every program of this account still holding a file or
+ * working folder in the data folder, such as a server a task started (the
  * approved plan: "end leftover programs still running 15 s after the tasks
  * close"), or one holding a file would keep Windows from renaming the folder
  * at the next start.

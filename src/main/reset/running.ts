@@ -7,8 +7,8 @@ import type { ResetAnswer } from "@shared/reset";
  * this computer; then the first mate undoes what its own
  * side set up elsewhere; this program clears what only it reaches; the mark
  * beside the folder asks the next start to wipe it; the first mate stops,
- * the programs its tasks left running in the folder end, and the app starts
- * again. Nothing here deletes the folder, which this start
+ * every program still holding a file or working folder in the folder ends,
+ * and the app starts again. Nothing here deletes the folder, which this start
  * still holds: the next start does, before anything opens it.
  */
 export type RunningResetSeams = {
@@ -30,7 +30,7 @@ export type RunningResetSeams = {
   dataDir: string;
   /** Stops the first mate this window runs or opened beside, and lets go of what starts it. */
   stopFirstMate: () => Promise<unknown>;
-  /** Ends the programs a task left running in the folder (./leftovers.ts). */
+  /** Ends every program of this account still holding a file or working folder in the folder (./leftovers.ts). */
   endLeftovers: () => Promise<unknown>;
   /** Starts the app again and quits this one. */
   restart: () => Promise<void> | void;

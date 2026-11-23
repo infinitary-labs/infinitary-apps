@@ -1,5 +1,7 @@
 # The docs index
 
+This folder is how Infinitary is built, checked and decided, for crewmates and contributors, and it is never published; the public help for people who use the app is in `docs-site/`.
+
 One line per page under `docs/`, saying what the page owns.
 Each page holds how the project works now, in the present tense; `primitives/README.md` lists the reusable contracts these pages compose.
 Markdown in `docs/`, `primitives/` and the design skill is one sentence per line, so two edits to different sentences of a paragraph merge (`node scripts/reflow-docs.ts --write`).

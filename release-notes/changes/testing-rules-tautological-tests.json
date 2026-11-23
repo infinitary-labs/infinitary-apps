@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "testing-rules-tautological-tests",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Crewmates write tests that can fail",
+      "body": "Crewmates no longer write tests that pass whatever the code does: a test states its expected value apart from the code it checks, asserts what that code did rather than what a stand-in was set to return, and makes at least one assertion. Before the merge card, a crewmate runs each test it adds or edits once against broken code and reports seeing it fail, and every independent review flags a test that cannot fail. A project's own rule on tests still wins, and turning off Testing rules in Settings → Runbooks turns these rules off too.",
+      "noPicture": "This changes the guidance crewmates and reviewers follow, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

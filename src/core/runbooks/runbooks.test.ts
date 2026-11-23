@@ -411,6 +411,25 @@ describe("runbooks over existing prompt and skill doors", () => {
     books.set("testing", false);
     expect(books.crew(code).text).not.toContain(passage);
   });
+  // Intent: INF-6346, the captain's ask to kill tests that cannot fail: rules
+  // naming them reach every independent review through Testing rules, though a
+  // review is never served the crew passage, and never a builder; Testing
+  // rules' switch removes them.
+  it("serves Testing rules' tautology review section to reviews only", () => {
+    const { books, db } = fixture();
+    const passage = readFileSync(join(root, "testing/review.md"), "utf8").trim();
+    for (const backend of ["pi", "claude"]) {
+      expect(books.crewSections({ ...code, backend, kind: "review", care: "none" })).toContain(
+        passage,
+      );
+      for (const care of ["none", "quick", "standard", "reviewed"] as const)
+        for (const kind of ["implement", "fix", "chore", "reproduce", "plan"])
+          expect(books.crewSections({ ...code, backend, kind, care })).not.toContain(passage);
+    }
+    books.set("testing", false);
+    const off = new Runbooks(root, new SettingsStore(db));
+    expect(off.crewSections({ ...code, kind: "review", care: "none" })).not.toContain(passage);
+  });
   it("serves each care its own sections from one manifest with several selectors (INF-1876)", () => {
     // Intent: the host knows the three care names as typed facts; what each
     // asks is the care runbook's. Default and Careful share the Default

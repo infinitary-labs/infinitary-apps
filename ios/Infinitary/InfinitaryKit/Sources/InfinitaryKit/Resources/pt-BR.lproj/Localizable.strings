@@ -2745,6 +2745,7 @@
 "settingsDevicesChangeAddress" = "Mudar endereço";
 "settingsDevicesChangeAddressFailed" = "Não foi possível mudar onde este computador é alcançado.";
 "settingsDevicesChangeAddressNamed" = "Mudar o endereço de %1$@";
+"settingsDevicesCheckingRow" = "Verificando %1$@…";
 "settingsDevicesConfirmThis" = "Este é o computador";
 "settingsDevicesControllingNow" = "Controlando seu imediato agora";
 "settingsDevicesCopied" = "Copiado";

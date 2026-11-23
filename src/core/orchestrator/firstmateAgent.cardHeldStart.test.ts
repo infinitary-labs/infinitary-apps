@@ -7,6 +7,7 @@ import {
   tick,
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 
 fakeClockEachTest();
 
@@ -129,6 +130,115 @@ describe("FirstmateAgent start held by its own open card", () => {
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
   });
 
+  // The takeover review's settled finding: on batched pull requests an approved
+  // wait counts as answered once needs_merge stops naming it, or once
+  // start_at_approval names it, so either edit lets the ready sweep start it.
+  it("refuses an approval edit that ends every wait of when-ready work from a wake while the card waits", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        {
+          id: "origin",
+          title: "Stop an alpha cut soon after its first failed check",
+          status: "running",
+        },
+      ],
+    });
+    await f.agent.converse("what did the alpha cut review find?");
+    const tools = toolsOf(f.specs);
+    const batched = (id: string, title: string, repoId: string | null, shape = {}) =>
+      f.tasks.create({
+        id,
+        title,
+        prompt: title,
+        repoId,
+        startPolicy: "on-request",
+        shape: { kind: "implement", delivery_ask: "queue-pr", ...shape },
+      });
+    // The signing work the key fix waits on, approved to merge in the next batch.
+    const approved = (id: string, title: string, repoId: string | null) => {
+      const task = batched(id, title, repoId);
+      seedDelivery(f.tasks, task.id, {
+        mergeAuthorization: {
+          version: 1,
+          id: `approval-${id}`,
+          generation: 1,
+          issuer: "captain",
+          at: 1,
+          card: { id: `merge-card-${id}`, offerId: `offer-${id}`, actionId: "merge" },
+          target: {
+            repoId: repoId ?? "r1",
+            host: "github.com",
+            owner: "example",
+            name: "nimbus-api",
+            branch: `inf/${id}-a1b2`,
+            delivery: "direct-pr",
+            method: "squash",
+          },
+          approvedHead: "0f3c9a1e4b7d2c6a8e5f1b3d9c7a2e4f6b8d0c1a",
+          proceedWithOpen: false,
+          status: "standing",
+          lineage: [],
+        },
+      });
+      return task;
+    };
+    const signing = approved("signing", "Sign each alpha with the kept key", null);
+    const guide = approved("guide", "Publish the signing guide", "site-repo");
+    // Each set to start when ready before the card went up, waiting until its work merges:
+    // the key fix needs the signing work merged, and the guide sits in another project.
+    const keyFix = batched("key-fix", followUp, null, { needs_merge: [signing.id] });
+    const docs = batched("docs", "Document the signing cleanup", null);
+    for (const [blocker, waiter] of [
+      [signing, keyFix],
+      [guide, docs],
+    ] as const) {
+      f.tasks.graph.link(blocker.id, waiter.id, "blocks", "firstmate");
+      f.tasks.updateFields(waiter.id, { startPolicy: "when-ready" }, "firstmate");
+    }
+    await tools.get("emit_card")?.execute("ask", { ...decision, related: [keyFix.id, docs.id] });
+    const card = f.supervisor.cards.snapshot().find((shown) => shown.title === decision.title);
+    if (!card) throw new Error("No card.");
+    f.session.emitTurnEnd("Asked.");
+    f.session.resolveNextPrompt();
+    await tick();
+    const waits = (id: string) => f.tasks.graph.waitingOn(id).map((row) => row.id);
+    const edit = async (id: string, params: Record<string, unknown>) =>
+      (await tools.get("update_task")?.execute("edit", { task: id, ...params }))?.content[0]?.text;
+    const held = `Not updated, since the edit ends every wait of work set to start when ready: your open card "${decision.title}" (${card.id})`;
+    // The ready sweep's claim of the task: the host's own starting line. The stand-in
+    // workspace cannot build on an approved base, so a claimed start goes no further.
+    const claimed = (id: string) =>
+      f.tasks
+        .timeline(id)
+        .some(
+          (event) => event.actor === "host" && event.kind === "status" && event.text === "starting",
+        );
+    await reportWake({ ...f, tools, task: keyFix, card });
+
+    expect(await edit(keyFix.id, { needs_merge: [] })).toContain(held);
+    const refused = await edit(docs.id, { start_at_approval: guide.id, priority: 1 });
+    expect(refused).toContain(held);
+    expect(refused).toContain("Soft hold card-question");
+    await tick();
+    // Nothing changed: each still waits, and neither started.
+    expect(f.tasks.get(keyFix.id)?.shape?.needs_merge).toEqual([signing.id]);
+    expect(f.tasks.get(docs.id)?.shape?.start_at_approval).toBeUndefined();
+    expect(f.tasks.get(docs.id)?.priority).not.toBe(1);
+    expect(waits(keyFix.id)).toEqual([signing.id]);
+    expect(waits(docs.id)).toEqual([guide.id]);
+    for (const id of [keyFix.id, docs.id]) {
+      expect(f.tasks.get(id)?.status).toBe("open");
+      expect(claimed(id)).toBe(false);
+    }
+
+    // The captain's typed words lift the hold, and the same edit lets the ready sweep start it.
+    await f.agent.converse("the key fix only needs the signing code, start it");
+    expect(await edit(keyFix.id, { needs_merge: [] })).toContain(`Updated ${keyFix.key}`);
+    await tick();
+    expect(claimed(keyFix.id)).toBe(true);
+  });
+
   // The captain's pick on the review: "Only your typed words, or your answer on that card".
   it("keeps the hold when the turn carries only a click on another card", async () => {
     const f = await cardUp();
@@ -150,6 +260,32 @@ describe("FirstmateAgent start held by its own open card", () => {
     await drained(f.session, 3);
     expect(await startNow(f)).toContain(`Not started: your open card "${decision.title}"`);
     expect(f.tasks.get(f.task.id)?.status).toBe("open");
+  });
+
+  // The captain's pick on the takeover's review: "Also wait until your first mate has read your choice".
+  it("holds a start in the running turn until the first mate reads the captain's choice on the card", async () => {
+    const f = await cardUp();
+    await reportWake(f);
+    // The captain chooses while that turn runs: the card leaves the stack at the click,
+    // and the choice waits on the first mate's lane for the turn after.
+    f.supervisor.cardActions.act(f.card.id, "leave");
+    await tick();
+    expect(f.supervisor.cards.get(f.card.id)).toBeUndefined();
+    const text = await startNow(f);
+    expect(text).toContain(
+      `Not started: the captain chose on your card "${decision.title}" (${f.card.id})`,
+    );
+    expect(text).toContain("Soft hold card-question");
+    expect(f.tasks.get(f.task.id)?.status).toBe("open");
+    expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
+
+    // The next turn carries the choice; once the first mate has read it, nothing holds the start.
+    f.session.emitTurnEnd("Noted the report.");
+    f.session.resolveNextPrompt();
+    await drained(f.session, 3);
+    expect(f.session.prompts[2]).toContain("Leave it in the backlog");
+    expect(await startNow(f)).not.toContain("Not started");
+    expect(f.tasks.get(f.task.id)?.status).toBe("active");
   });
 
   it("starts once the captain chooses on the card", async () => {

@@ -112834,7 +112834,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       level: "soft",
       restsOn: "consent",
       name: "the open question card",
-      way: "the captain answers that card or types their own words, or the first mate withdraws the card, and the first mate starts the task again"
+      way: "the first mate has read the captain's answer on that card, the captain types their own words, or the first mate withdraws the card, and the first mate starts the task again"
     },
     "load-line": {
       level: "soft",

@@ -3,6 +3,7 @@ import { standingOverride } from "@shared/holds";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { cutText } from "@shared/textCut";
 import type { TaskToolsDelegate } from "../pi/taskTools";
+import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasksAsync } from "../tasks/taskQuery";
@@ -10,6 +11,7 @@ import { TaskService } from "../tasks/taskService";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
 import { captainWordsIn } from "./captainOverrides";
+import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
@@ -38,6 +40,18 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
   const cardHold = (taskId: string) => ({
     open: supervisor.cards,
     tasks,
+    // The captain's choices on the first mate's own cards, not yet handed to a
+    // turn; a row set aside is never delivered, so it holds nothing.
+    unreadChoices: () =>
+      host.options.inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .flatMap((row) =>
+          row.escalatedAt === null &&
+          row.facts?.kind === "card-choice" &&
+          row.facts.card.id?.startsWith(FIRSTMATE_CARD_PREFIX)
+            ? [row.facts.card]
+            : [],
+        ),
     captainWords: host.turn.typed,
     captainPressedStart: supervisor.hostOps.pendingStarts.has(taskId),
   });
@@ -260,6 +274,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           };
           const changes = tasks.atomic(
             () => {
+              const waited = tasks.graph.waitingOn(record.id).length > 0;
               const moved =
                 Object.keys(moves).length > 0
                   ? tasks.updateFields(record.id, moves, "firstmate")
@@ -290,11 +305,29 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
                       },
                     }
                   : {};
-              return [
+              const changed = [
                 ...moved,
                 ...tasks.updateFields(record.id, { ...rest, ...where }, "firstmate"),
                 ...added,
               ];
+              // INF-6091 finding 1: an edit that leaves when-ready work waiting
+              // on nothing - needs_merge, start_at_approval or a move that lets
+              // an approved base answer its wait - lets the ready sweep start
+              // what the first mate's own open card still asks about; refusing
+              // here rolls the whole edit back.
+              const now = tasks.get(record.id);
+              if (
+                waited &&
+                now?.startPolicy === "when-ready" &&
+                tasks.graph.waitingOn(record.id).length === 0
+              ) {
+                const held = cardHeldStartRefusal(now, {
+                  ...cardHold(record.id),
+                  edit: "waits-ended",
+                });
+                if (held) throw new TaskGraphRefusal(held);
+              }
+              return changed;
             },
             () => {},
           );

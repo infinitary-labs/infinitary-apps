@@ -2,9 +2,19 @@ import type { Card } from "@shared/cards";
 import { softHoldWords } from "@shared/holds";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
+import { questionsNaming } from "./reviewCard";
 
 /** The open card stack, as the hold reads it (`CardService`). */
 type OpenCards = { values(): Iterable<Card>; get(id: string): Card | undefined };
+
+type Tasks = Pick<TaskService, "get" | "graph">;
+
+/**
+ * The card a captain's choice answered, as its wake on the first mate's lane
+ * keeps it (`card-choice`): `taskId` is the task the card was kept on, or the
+ * decision filed as its own record for a card with none.
+ */
+export type ChoiceCard = { id?: string; title: string; taskId?: string };
 
 /**
  * The first mate's own open decision that still asks the captain about a
@@ -19,16 +29,13 @@ type OpenCards = { values(): Iterable<Card>; get(id: string): Card | undefined }
 export function openCardAskingAbout(
   taskId: string,
   open: OpenCards,
-  tasks: Pick<TaskService, "get" | "graph">,
+  tasks: Tasks,
 ): Card | undefined {
   const asks = (card: Card | undefined): card is Card =>
     card?.author === "firstmate" && card.actions.length > 0;
   for (const card of open.values()) if (card.taskId === taskId && asks(card)) return card;
-  for (const link of tasks.graph.linksTo(taskId)) {
-    if (link.type !== "related") continue;
-    const decision = tasks.get(link.fromId);
-    if (decision?.kind !== "decision" || decision.status !== "open" || !decision.gate?.ref)
-      continue;
+  for (const decision of questionsNaming(taskId, tasks)) {
+    if (decision.status !== "open" || !decision.gate?.ref) continue;
     const card = open.get(decision.gate.ref);
     if (asks(card)) return card;
   }
@@ -36,15 +43,35 @@ export function openCardAskingAbout(
 }
 
 /**
+ * The captain's choice on such a card that still waits unread on the first
+ * mate's lane (the captain's pick on the takeover's review, "Also wait until
+ * your first mate has read your choice"): the click took the card off the
+ * stack at once, but the choice reaches the first mate only on its next turn,
+ * so a start in the turn already under way would come before it read the
+ * answer. Matched as the open card is: the card was kept on the task, or on
+ * a decision filed as its own record that names the task in `related`.
+ */
+export function unreadChoiceAbout(
+  taskId: string,
+  choices: readonly ChoiceCard[],
+  tasks: Tasks,
+): ChoiceCard | undefined {
+  const asking = new Set([taskId, ...questionsNaming(taskId, tasks).map((row) => row.id)]);
+  return choices.find((card) => card.taskId !== undefined && asking.has(card.taskId));
+}
+
+/**
  * Why the first mate's start of a task waits for the captain (the soft hold
  * `card-question`), or undefined. It holds `update_task start_now`, a
- * `start_policy` of when-ready, and the removal of when-ready work's last
- * wait, either of which would let the ready sweep start it.
+ * `start_policy` of when-ready, the removal of when-ready work's last wait,
+ * and any other edit that leaves when-ready work waiting on nothing, each of
+ * which would let the ready sweep start it.
  * Only a start not yet made - queued work, or started work in the backlog -
- * waits, and only while its own open decision asks about it and the turn
- * carries no words the captain typed: a click on another card is not their
- * answer to this one (the captain's pick on INF-6121's review). The
- * captain's choice on that card, which takes it off the stack, their typed
+ * waits, and only while its own open decision asks about it, or the
+ * captain's choice on that decision has not reached the first mate yet, and
+ * the turn carries no words the captain typed: a click on another card is
+ * not their answer to this one (the captain's pick on INF-6121's review).
+ * The first mate's read of the captain's choice on that card, their typed
  * words, their Start on the task, or the first mate's withdrawal of the card
  * each lift it; the first mate then starts it again.
  */
@@ -52,12 +79,14 @@ export function cardHeldStartRefusal(
   record: TaskRecord,
   facts: {
     open: OpenCards;
-    tasks: Pick<TaskService, "get" | "graph">;
+    tasks: Tasks;
+    /** The captain's choices on the first mate's own cards it has not read yet. */
+    unreadChoices: () => readonly ChoiceCard[];
     /** The turn carries words the captain typed (`FirstmateTurn.typed`). */
     captainWords: boolean;
     captainPressedStart: boolean;
     /** The edit held, when it is not start_now itself. */
-    edit?: "when-ready" | "wait-removal";
+    edit?: "when-ready" | "wait-removal" | "waits-ended";
   },
 ): string | undefined {
   if (facts.captainWords || facts.captainPressedStart) return undefined;
@@ -65,8 +94,6 @@ export function cardHeldStartRefusal(
     (record.status === "open" && record.kind === "work") ||
     (record.status === "active" && record.backlogSince != null);
   if (!unstarted) return undefined;
-  const card = openCardAskingAbout(record.id, facts.open, facts.tasks);
-  if (!card) return undefined;
   const handle = `${record.key || record.id} "${record.title}"`;
   // i18n-exempt: the first mate's tool answer, served only to a model
   const what =
@@ -74,7 +101,17 @@ export function cardHeldStartRefusal(
       ? "Not set to start when ready"
       : facts.edit === "wait-removal"
         ? "Wait not removed"
-        : "Not started";
+        : facts.edit === "waits-ended"
+          ? "Not updated, since the edit ends every wait of work set to start when ready"
+          : "Not started";
+  const hold = softHoldWords("card-question", "firstmate");
+  const card = openCardAskingAbout(record.id, facts.open, facts.tasks);
+  if (card)
+    // i18n-exempt: the first mate's tool answer, served only to a model
+    return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${hold}`;
+  const answered = unreadChoiceAbout(record.id, facts.unreadChoices(), facts.tasks);
+  if (!answered) return undefined;
+  const named = answered.id ? ` (${answered.id})` : "";
   // i18n-exempt: the first mate's tool answer, served only to a model
-  return `${what}: your open card "${card.title}" (${card.id}) still asks the captain about ${handle}, and no words they typed arrived with this turn. Only if the card no longer applies, withdraw it with close_card, saying why. ${softHoldWords("card-question", "firstmate")}`;
+  return `${what}: the captain chose on your card "${answered.title}"${named} about ${handle}, and that choice has not reached you yet: it comes in a turn after this one. Read it before you start this task. ${hold}`;
 }

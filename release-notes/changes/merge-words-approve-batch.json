@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-words-approve-batch",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Telling your first mate to merge puts a batched change in line",
+      "body": "On a project that merges your approved changes in batches, replying \"merge\" to your first mate under a change's merge card now approves that version and puts it in line for the next batch. Before, the first mate was refused and a second merge card went up for you to click.",
+      "noPicture": "This changes what happens after your reply, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

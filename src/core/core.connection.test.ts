@@ -623,6 +623,25 @@ describe("the connection serves the core to paired devices", () => {
     await core.dispatch("inf:settings:runbooks:set", ["batches", false]);
     await batchesOff;
 
+    // Knowledge shows once some is kept: a write's own event is heard.
+    const knowledgeOn = nextList((shown) => shown.includes("knowledge"));
+    const { direction } = await core.dispatch("inf:knowledge:direction:set", [
+      { op: "add", text: "Keep invoices in euros.", scope: "captain", reason: "test" },
+    ]);
+    const knowledge = (await knowledgeOn).panels.find((panel) => panel.id === "knowledge");
+    expect(knowledge?.title).toBe("Knowledge");
+    const knowledgeFiles = await phone.invoke("inf:plugins:app-panel-files", [
+      { id: "knowledge", version: knowledge?.frame.version as string },
+    ]);
+    expect(knowledgeFiles?.files.map((file) => file.path)).toEqual(["panel.mjs"]);
+    for (const file of knowledgeFiles?.files ?? [])
+      expect(file.integrity).toBe(lib.pins[`builtin/knowledge/${file.path}`]);
+    const knowledgeOff = nextList((shown) => !shown.includes("knowledge"));
+    await core.dispatch("inf:knowledge:direction:set", [
+      { op: "retire", id: direction.id, expectedRevision: direction.revision, reason: "test" },
+    ]);
+    await knowledgeOff;
+
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
@@ -1821,7 +1840,7 @@ describe("a phone's cards reach it sealed through the push relay", () => {
 
 /**
  * A frame realm library as the build lays it out (scripts/frame-lib.ts):
- * the boot module, the host modules, a shared chunk they import, and one of
+ * the boot module, the host modules, a shared chunk they import, and some of
  * the app's own panels under `builtin/`, each pinned by its SHA-256.
  */
 function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, string> } {
@@ -1838,6 +1857,8 @@ function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, st
       'import React from "../../react.mjs";\nexport default () => null;\n',
     "builtin/automation/cards.mjs": "export default {};\n",
     "builtin/batches-panel/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+    "builtin/knowledge/panel.mjs":
       'import React from "../../react.mjs";\nexport default () => null;\n',
   };
   const pins: Record<string, string> = {};

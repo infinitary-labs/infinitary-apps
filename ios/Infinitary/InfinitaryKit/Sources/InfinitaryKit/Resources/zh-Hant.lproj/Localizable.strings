@@ -1017,6 +1017,7 @@
 "feedbackStripHeading" = "你按下後，這會公開發布到 %1$@，僅一次";
 "feedbackStripIdea" = "一個新想法";
 "feedbackStripNoAccount" = "按下之前不會傳送任何內容。它會以你的 GitHub 帳號發布。";
+"feedbackSubmitButton" = "送出意見回饋";
 "fileAdd" = "加入檔案";
 "fileCancel" = "取消準備 %1$@";
 "fileDropHere" = "放開即可加入檔案";

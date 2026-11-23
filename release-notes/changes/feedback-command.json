@@ -3,13 +3,13 @@
     {
       "id": "feedback-command",
       "kind": "feature",
-      "title": "Tell Infinitary's makers about a problem or an idea with /feedback",
+      "title": "Tell Infinitary's maker about a problem or an idea with /feedback",
       "body": "Type /feedback and a few words in any message box, or choose Send feedback from the Help menu or command search. Firstmate drafts an issue for Infinitary's public project with the details needed to reproduce or plan it, and leaves out your names, folders, projects and sign-ins. A card shows the exact issue before anything is sent, and only your click publishes it, under your own GitHub account. Without a GitHub sign-in, the card opens GitHub's new-issue page with the report filled in.",
       "area": "message-box",
       "picture": {
         "dark": "feedback-command-dark.webp",
         "light": "feedback-command-light.webp",
-        "alt": "A card showing the exact problem report and its title before it is published, with Send it to GitHub and Not now"
+        "alt": "A card showing the exact problem report and its title before it is published, with Submit feedback and Not now"
       },
       "provenance": { "origin": "change" }
     }

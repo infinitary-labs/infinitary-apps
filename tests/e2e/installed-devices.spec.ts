@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
@@ -18,6 +19,7 @@ test("an installed build offers joining at its first launch, Settings -> Devices
   try {
     const { page } = app;
     await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
+    await chooseWhereFirstMateLives(page, "running");
     await expect(page.getByRole("button", { name: "Paste its link", exact: false })).toBeVisible();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Devices", exact: true }).click();

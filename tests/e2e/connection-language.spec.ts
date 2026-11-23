@@ -5,6 +5,7 @@ import { COMPUTER } from "../../src/shared/deviceNames";
 import { inLanguage } from "../../src/shared/i18n/current";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { type LaunchedApp, launchApp } from "./launch";
 import { atRest, resizeWindow } from "./layout";
 import { mockProviderOverrideModelsJson } from "./mockModels";
@@ -46,6 +47,7 @@ test("Japanese first launch joins another computer and reports its connection", 
     const gate = page.locator('[data-first-run-gate="open"]');
     await expect(gate).toBeVisible();
     await atRest(gate);
+    await chooseWhereFirstMateLives(page, "here");
     await windowShot(page, test.info().outputPath("evidence", "sign-in.png"));
     await gate.locator('[data-connect-provider="openrouter"]').click();
     const method = gate.locator('[data-connect-method="openrouter"]');
@@ -57,6 +59,8 @@ test("Japanese first launch joins another computer and reports its connection", 
     await method
       .getByRole("button", { name: inLanguage("ja", () => m.accountsConnectCancel()) })
       .click();
+    await page.locator('[data-gate-back="here"]').click();
+    await chooseWhereFirstMateLives(page, "running");
     await page.locator("[data-join-chip]").click();
     const join = page.locator('[data-join-another-mac="paste"]');
     await expect(join).toBeVisible();

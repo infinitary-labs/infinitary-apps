@@ -87653,6 +87653,358 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Turn off`;
   }
+  function shellGateBack() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أين أسكن`;
+      case "de":
+        return `Wo ich wohne`;
+      case "es":
+        return `Dónde vivo`;
+      case "fr":
+        return `Où je vis`;
+      case "ja":
+        return `私の住む場所`;
+      case "ko":
+        return `제가 사는 곳`;
+      case "pt-BR":
+        return `Onde eu moro`;
+      case "zh-Hans":
+        return `我住在哪里`;
+      case "zh-Hant":
+        return `我住在哪裡`;
+      case "en-XA":
+        return `[Ŵĥéŕé Î ļîṽé ~~~~]`;
+      case "ar-XB":
+        return `‮Where I live‬`;
+    }
+    return `Where I live`;
+  }
+  function shellGateChoiceAnother() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حاسوب آخر`;
+      case "de":
+        return `Ein anderer Computer`;
+      case "es":
+        return `Otra computadora`;
+      case "fr":
+        return `Un autre ordinateur`;
+      case "ja":
+        return `別のコンピューター`;
+      case "ko":
+        return `다른 컴퓨터`;
+      case "pt-BR":
+        return `Outro computador`;
+      case "zh-Hans":
+        return `另一台电脑`;
+      case "zh-Hant":
+        return `另一台電腦`;
+      case "en-XA":
+        return `[Åñöţĥéŕ çöɱþûţéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Another computer‬`;
+    }
+    return `Another computer`;
+  }
+  function shellGateChoiceAnotherSub() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `شغّل ثلاثة أوامر هناك، ثم الصق الرابط الذي تُنشئه. تتحكم بي من هنا.`;
+      case "de":
+        return `Führ dort drei Befehle aus und füge dann den Link ein, den sie erstellen. Du steuerst mich von hier aus.`;
+      case "es":
+        return `Ejecuta allí tres comandos y pega el enlace que crean. Me controlas desde aquí.`;
+      case "fr":
+        return `Lancez-y trois commandes, puis collez le lien qu’elles créent. Vous me pilotez d’ici.`;
+      case "ja":
+        return `そちらで3つのコマンドを実行し、作られたリンクを貼り付けます。ここから私を操作できます。`;
+      case "ko":
+        return `그곳에서 명령 세 개를 실행한 뒤 만들어진 링크를 붙여넣으세요. 여기서 저를 제어해요.`;
+      case "pt-BR":
+        return `Rode três comandos lá e cole o link que eles criam. Você me controla daqui.`;
+      case "zh-Hans":
+        return `在那里运行三条命令，然后粘贴它们生成的链接。你在这里控制我。`;
+      case "zh-Hant":
+        return `在那裡執行三條指令，然後貼上它們產生的連結。你在這裡控制我。`;
+      case "en-XA":
+        return `[Ŕûñ ţĥŕéé çöɱɱáñðš ţĥéŕé, ţĥéñ þášţé ţĥé ļîñķ ţĥéý ɱáķé. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Run three commands there, then paste the link they make. You control me from here.‬`;
+    }
+    return `Run three commands there, then paste the link they make. You control me from here.`;
+  }
+  function shellGateChoiceHere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا الحاسوب`;
+      case "de":
+        return `Dieser Computer`;
+      case "es":
+        return `Esta computadora`;
+      case "fr":
+        return `Cet ordinateur`;
+      case "ja":
+        return `このコンピューター`;
+      case "ko":
+        return `이 컴퓨터`;
+      case "pt-BR":
+        return `Este computador`;
+      case "zh-Hans":
+        return `这台电脑`;
+      case "zh-Hant":
+        return `這台電腦`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ ~~~~~]`;
+      case "ar-XB":
+        return `‮This computer‬`;
+    }
+    return `This computer`;
+  }
+  function shellGateChoiceHereSub() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سجّل الدخول إلى اشتراك هنا. أسكن وأعمل على هذا الحاسوب.`;
+      case "de":
+        return `Melde dich hier bei einem Abo an. Ich wohne und arbeite auf diesem Computer.`;
+      case "es":
+        return `Inicia sesión aquí en una suscripción. Vivo y trabajo en esta computadora.`;
+      case "fr":
+        return `Connectez-vous ici à un abonnement. Je vis et travaille sur cet ordinateur.`;
+      case "ja":
+        return `ここでサブスクリプションにサインインします。私はこのコンピューターに住んで働きます。`;
+      case "ko":
+        return `여기서 구독에 로그인하세요. 저는 이 컴퓨터에서 지내며 일해요.`;
+      case "pt-BR":
+        return `Entre em uma assinatura aqui. Eu moro e trabalho neste computador.`;
+      case "zh-Hans":
+        return `在这里登录一个订阅。我在这台电脑上生活和工作。`;
+      case "zh-Hant":
+        return `在這裡登入一個訂閱。我在這台電腦上生活和工作。`;
+      case "en-XA":
+        return `[Šîĝñ îñ ţö á šûƀšçŕîþţîöñ ĥéŕé. Î ļîṽé áñð ŵöŕķ öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sign in to a subscription here. I live and work on this computer.‬`;
+    }
+    return `Sign in to a subscription here. I live and work on this computer.`;
+  }
+  function shellGateChoiceRunning() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حاسوب يعمل عليه Infinitary بالفعل`;
+      case "de":
+        return `Einer, der schon läuft`;
+      case "es":
+        return `Una que ya funciona`;
+      case "fr":
+        return `Un qui tourne déjà`;
+      case "ja":
+        return `すでに動いているもの`;
+      case "ko":
+        return `이미 실행 중인 컴퓨터`;
+      case "pt-BR":
+        return `Um que já está rodando`;
+      case "zh-Hans":
+        return `一台已在运行的电脑`;
+      case "zh-Hant":
+        return `一台已在執行的電腦`;
+      case "en-XA":
+        return `[Öñé áļŕéáðý ŕûññîñĝ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮One already running‬`;
+    }
+    return `One already running`;
+  }
+  function shellGateChoiceRunningSub() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصق رابطًا منه، أو أدخل عنوانه. تتحكم بي من هنا.`;
+      case "de":
+        return `Füge einen Link von dort ein oder gib seine Adresse an. Du steuerst mich von hier aus.`;
+      case "es":
+        return `Pega un enlace de ella o indica su dirección. Me controlas desde aquí.`;
+      case "fr":
+        return `Collez un lien venant de lui, ou donnez son adresse. Vous me pilotez d’ici.`;
+      case "ja":
+        return `そちらのリンクを貼り付けるか、アドレスを入力します。ここから私を操作できます。`;
+      case "ko":
+        return `그곳의 링크를 붙여넣거나 주소를 입력하세요. 여기서 저를 제어해요.`;
+      case "pt-BR":
+        return `Cole um link dele ou informe o endereço dele. Você me controla daqui.`;
+      case "zh-Hans":
+        return `粘贴那里的链接，或输入它的地址。你在这里控制我。`;
+      case "zh-Hant":
+        return `貼上那裡的連結，或輸入它的位址。你在這裡控制我。`;
+      case "en-XA":
+        return `[Þášţé á ļîñķ ƒŕöɱ îţ, öŕ ĝîṽé îţš áððŕéšš. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paste a link from it, or give its address. You control me from here.‬`;
+    }
+    return `Paste a link from it, or give its address. You control me from here.`;
+  }
+  function shellGateCommandsHead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّني على حاسوب آخر بالأوامر`;
+      case "de":
+        return `Richte mich mit Befehlen auf einem anderen Computer ein`;
+      case "es":
+        return `Configúrame en otra computadora con comandos`;
+      case "fr":
+        return `Configurez-moi sur un autre ordinateur avec des commandes`;
+      case "ja":
+        return `コマンドで別のコンピューターに私を準備する`;
+      case "ko":
+        return `명령으로 다른 컴퓨터에 저를 설정하기`;
+      case "pt-BR":
+        return `Configure-me em outro computador com comandos`;
+      case "zh-Hans":
+        return `用命令把我设置在另一台电脑上`;
+      case "zh-Hant":
+        return `用指令把我設定在另一台電腦上`;
+      case "en-XA":
+        return `[Šéţ ɱé ûþ öñ áñöţĥéŕ çöɱþûţéŕ ŵîţĥ çöɱɱáñðš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set me up on another computer with commands‬`;
+    }
+    return `Set me up on another computer with commands`;
+  }
+  function shellGateCommandsInstall() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثبّت Infinitary هناك.`;
+      case "de":
+        return `Installiere dort Infinitary.`;
+      case "es":
+        return `Instala Infinitary allí.`;
+      case "fr":
+        return `Installez Infinitary là-bas.`;
+      case "ja":
+        return `そちらに Infinitary をインストールします。`;
+      case "ko":
+        return `그곳에 Infinitary를 설치하세요.`;
+      case "pt-BR":
+        return `Instale o Infinitary lá.`;
+      case "zh-Hans":
+        return `在那里安装 Infinitary。`;
+      case "zh-Hant":
+        return `在那裡安裝 Infinitary。`;
+      case "en-XA":
+        return `[Îñšţáļļ Îñƒîñîţáŕý ţĥéŕé. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Install Infinitary there.‬`;
+    }
+    return `Install Infinitary there.`;
+  }
+  function shellGateCommandsLink() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أنشئ هناك رابطًا لهذا الحاسوب:`;
+      case "de":
+        return `Erstelle dort einen Link für diesen Computer:`;
+      case "es":
+        return `Crea allí un enlace para esta computadora:`;
+      case "fr":
+        return `Créez là-bas un lien pour cet ordinateur :`;
+      case "ja":
+        return `そちらでこのコンピューター用のリンクを作ります:`;
+      case "ko":
+        return `그곳에서 이 컴퓨터용 링크를 만드세요:`;
+      case "pt-BR":
+        return `Crie lá um link para este computador:`;
+      case "zh-Hans":
+        return `在那里为这台电脑生成链接：`;
+      case "zh-Hant":
+        return `在那裡為這台電腦產生連結：`;
+      case "en-XA":
+        return `[Ṁáķé á ļîñķ ţĥéŕé ƒöŕ ţĥîš çöɱþûţéŕ: ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make a link there for this computer:‬`;
+    }
+    return `Make a link there for this computer:`;
+  }
+  function shellGateCommandsMac(input2) {
+    const path = input2.path;
+    switch (currentLanguage()) {
+      case "ar":
+        return `على جهاز Mac، اكتب ${path} بدلًا من infinitary.`;
+      case "de":
+        return `Auf einem Mac tippst du ${path} statt infinitary.`;
+      case "es":
+        return `En una Mac, escribe ${path} en lugar de infinitary.`;
+      case "fr":
+        return `Sur un Mac, tapez ${path} à la place de infinitary.`;
+      case "ja":
+        return `Mac では infinitary の代わりに ${path} と入力します。`;
+      case "ko":
+        return `Mac에서는 infinitary 대신 ${path}를 입력하세요.`;
+      case "pt-BR":
+        return `Em um Mac, digite ${path} no lugar de infinitary.`;
+      case "zh-Hans":
+        return `在 Mac 上，输入 ${path} 代替 infinitary。`;
+      case "zh-Hant":
+        return `在 Mac 上，輸入 ${path} 代替 infinitary。`;
+      case "en-XA":
+        return `[Öñ á Ṁáç, ţýþé ${path} îñ þļáçé öƒ îñƒîñîţáŕý. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮On a Mac, type ‬${path}‮ in place of infinitary.‬`;
+    }
+    return `On a Mac, type ${path} in place of infinitary.`;
+  }
+  function shellGateCommandsPaste() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصق هنا الرابط الذي يطبعه.`;
+      case "de":
+        return `Füge den ausgegebenen Link hier ein.`;
+      case "es":
+        return `Pega aquí el enlace que muestra.`;
+      case "fr":
+        return `Collez ici le lien affiché.`;
+      case "ja":
+        return `表示されたリンクをここに貼り付けます。`;
+      case "ko":
+        return `출력된 링크를 여기에 붙여넣으세요.`;
+      case "pt-BR":
+        return `Cole aqui o link que aparecer.`;
+      case "zh-Hans":
+        return `把它输出的链接粘贴到这里。`;
+      case "zh-Hant":
+        return `把它輸出的連結貼到這裡。`;
+      case "en-XA":
+        return `[Þášţé ţĥé ļîñķ îţ þŕîñţš ĥéŕé. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Paste the link it prints here.‬`;
+    }
+    return `Paste the link it prints here.`;
+  }
+  function shellGateCommandsStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `شغّلني هناك:`;
+      case "de":
+        return `Starte mich dort:`;
+      case "es":
+        return `Iníciame allí:`;
+      case "fr":
+        return `Démarrez-moi là-bas :`;
+      case "ja":
+        return `そちらで私を起動します:`;
+      case "ko":
+        return `그곳에서 저를 시작하세요:`;
+      case "pt-BR":
+        return `Inicie-me lá:`;
+      case "zh-Hans":
+        return `在那里启动我：`;
+      case "zh-Hant":
+        return `在那裡啟動我：`;
+      case "en-XA":
+        return `[Šţáŕţ ɱé ţĥéŕé: ~~~~~]`;
+      case "ar-XB":
+        return `‮Start me there:‬`;
+    }
+    return `Start me there:`;
+  }
   function shellGateConnecting(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -87888,29 +88240,56 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateIntro() {
     switch (currentLanguage()) {
       case "ar":
-        return `أنا نائب القبطان. سأساعدك في إدارة بقية الطاقم. أعدّني على حاسوب يبقى قيد التشغيل قدر الإمكان. أجهزتك الأخرى تحتاج إلى أن أكون مستيقظًا.`;
+        return `أنا نائب القبطان. سأساعدك في إدارة بقية الطاقم.`;
       case "de":
-        return `Ich bin dein erster Offizier. Ich helfe dir, den Rest der Crew zu führen. Richte mich auf einem Computer ein, der möglichst immer eingeschaltet bleibt. Deine anderen Geräte brauchen mich wach.`;
+        return `Ich bin dein erster Offizier. Ich helfe dir, den Rest der Crew zu führen.`;
       case "es":
-        return `Soy tu primer oficial. Te ayudaré a dirigir al resto de la tripulación. Configúrame en una computadora que esté encendida el mayor tiempo posible. Tus otros dispositivos me necesitan despierto.`;
+        return `Soy tu primer oficial. Te ayudaré a dirigir al resto de la tripulación.`;
       case "fr":
-        return `Je suis votre second. Je vous aide à diriger le reste de l’équipage. Configurez-moi sur un ordinateur qui reste allumé le plus possible. Vos autres appareils ont besoin que je sois éveillé.`;
+        return `Je suis votre second. Je vous aide à diriger le reste de l’équipage.`;
       case "ja":
-        return `私はあなたの一等航海士です。ほかの乗組員のまとめ役をお手伝いします。できるだけ電源が入ったままのコンピューターで私を準備してください。ほかのデバイスは、私が起きていることを必要とします。`;
+        return `私はあなたの一等航海士です。ほかの乗組員のまとめ役をお手伝いします。`;
       case "ko":
-        return `저는 일등항해사예요. 나머지 선원들을 관리하는 일을 도와드릴게요. 되도록 계속 켜져 있는 컴퓨터에 저를 설정하세요. 다른 기기들은 제가 깨어 있어야 해요.`;
+        return `저는 일등항해사예요. 나머지 선원들을 관리하는 일을 도와드릴게요.`;
       case "pt-BR":
-        return `Sou seu imediato. Vou ajudar você a comandar o resto da tripulação. Configure-me em um computador que fique ligado o máximo possível. Seus outros dispositivos precisam de mim acordado.`;
+        return `Sou seu imediato. Vou ajudar você a comandar o resto da tripulação.`;
       case "zh-Hans":
-        return `我是你的大副。我会帮你管理其余的船员。请把我设置在一台尽量保持开机的电脑上。你的其他设备需要我保持运行。`;
+        return `我是你的大副。我会帮你管理其余的船员。`;
       case "zh-Hant":
-        return `我是你的大副。我會幫你管理其他船員。請把我設定在一台盡量保持開機的電腦上。你的其他裝置需要我保持運作。`;
+        return `我是你的大副。我會幫你管理其他船員。`;
       case "en-XA":
-        return `[Î'ɱ ýöûŕ ƒîŕšţ ɱáţé. Î'ļļ ĥéļþ ýöû ɱáñáĝé ţĥé ŕéšţ öƒ ţĥé çŕéŵ. Šéţ ɱé ûþ öñ á çöɱþûţéŕ ţĥáţ šţáýš öñ áš ɱûçĥ áš þöššîƀļé. Ýöûŕ öţĥéŕ ðéṽîçéš ñééð ɱé áŵáķé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Î'ɱ ýöûŕ ƒîŕšţ ɱáţé. Î'ļļ ĥéļþ ýöû ɱáñáĝé ţĥé ŕéšţ öƒ ţĥé çŕéŵ. ~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮I'm your first mate. I'll help you manage the rest of the crew. Set me up on a computer that stays on as much as possible. Your other devices need me awake.‬`;
+        return `‮I'm your first mate. I'll help you manage the rest of the crew.‬`;
     }
-    return `I'm your first mate. I'll help you manage the rest of the crew. Set me up on a computer that stays on as much as possible. Your other devices need me awake.`;
+    return `I'm your first mate. I'll help you manage the rest of the crew.`;
+  }
+  function shellGateMoveLater() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكنك نقلي إلى حاسوب آخر لاحقًا من الإعدادات ← الأجهزة.`;
+      case "de":
+        return `Du kannst mich später unter Einstellungen → Geräte auf einen anderen Computer umziehen.`;
+      case "es":
+        return `Puedes mudarme a otra computadora más tarde, en Configuración → Dispositivos.`;
+      case "fr":
+        return `Vous pourrez me déplacer sur un autre ordinateur plus tard, dans Réglages → Appareils.`;
+      case "ja":
+        return `あとで「設定 → デバイス」から別のコンピューターへ私を移せます。`;
+      case "ko":
+        return `나중에 설정 → 기기에서 저를 다른 컴퓨터로 옮길 수 있어요.`;
+      case "pt-BR":
+        return `Você pode me mudar para outro computador depois, em Ajustes → Dispositivos.`;
+      case "zh-Hans":
+        return `以后可以在“设置 → 设备”中把我搬到另一台电脑。`;
+      case "zh-Hant":
+        return `之後可以在「設定 → 裝置」中把我搬到另一台電腦。`;
+      case "en-XA":
+        return `[Ýöû çáñ ɱöṽé ɱé ţö áñöţĥéŕ çöɱþûţéŕ ļáţéŕ, îñ Šéţţîñĝš → Ðéṽîçéš. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮You can move me to another computer later, in Settings → Devices.‬`;
+    }
+    return `You can move me to another computer later, in Settings → Devices.`;
   }
   function shellGateRecoveryTitle() {
     switch (currentLanguage()) {
@@ -88047,6 +88426,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Connect a subscription to begin‬`;
     }
     return `Connect a subscription to begin`;
+  }
+  function shellGateWhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أين أسكن؟ اختر حاسوبًا يبقى قيد التشغيل قدر الإمكان.`;
+      case "de":
+        return `Wo soll ich wohnen? Wähl einen Computer, der möglichst immer eingeschaltet bleibt.`;
+      case "es":
+        return `¿Dónde debo vivir? Elige una computadora que esté encendida el mayor tiempo posible.`;
+      case "fr":
+        return `Où dois-je vivre ? Choisissez un ordinateur qui reste allumé le plus possible.`;
+      case "ja":
+        return `私はどこに住めばよいですか？できるだけ電源が入ったままのコンピューターを選んでください。`;
+      case "ko":
+        return `제가 어디에 살면 될까요? 되도록 계속 켜져 있는 컴퓨터를 고르세요.`;
+      case "pt-BR":
+        return `Onde devo morar? Escolha um computador que fique ligado o máximo possível.`;
+      case "zh-Hans":
+        return `我应该住在哪里？请选一台尽量保持开机的电脑。`;
+      case "zh-Hant":
+        return `我應該住在哪裡？請選一台盡量保持開機的電腦。`;
+      case "en-XA":
+        return `[Ŵĥéŕé šĥöûļð Î ļîṽé? Þîçķ á çöɱþûţéŕ ţĥáţ šţáýš öñ áš ɱûçĥ áš þöššîƀļé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where should I live? Pick a computer that stays on as much as possible.‬`;
+    }
+    return `Where should I live? Pick a computer that stays on as much as possible.`;
   }
   function shellKeyReminderHint() {
     switch (currentLanguage()) {
@@ -99293,6 +99699,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellDiagnosticsRetry,
     shellDiagnosticsSaving,
     shellDiagnosticsTurnOff,
+    shellGateBack,
+    shellGateChoiceAnother,
+    shellGateChoiceAnotherSub,
+    shellGateChoiceHere,
+    shellGateChoiceHereSub,
+    shellGateChoiceRunning,
+    shellGateChoiceRunningSub,
+    shellGateCommandsHead,
+    shellGateCommandsInstall,
+    shellGateCommandsLink,
+    shellGateCommandsMac,
+    shellGateCommandsPaste,
+    shellGateCommandsStart,
     shellGateConnecting,
     shellGateFreshCheckAction,
     shellGateFreshCheckLine,
@@ -99300,11 +99719,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellGateFreshCheckTitle,
     shellGateHomeTitle,
     shellGateIntro,
+    shellGateMoveLater,
     shellGateRecoveryTitle,
     shellGateRunLine,
     shellGateStaysOn,
     shellGateStillNeeds,
     shellGateTitle,
+    shellGateWhere,
     shellKeyReminderHint,
     shellKeyReminderNotTyping,
     shellLastTurnFromCommand,
@@ -102410,6 +102831,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellDiagnosticsRetry": [],
     "shellDiagnosticsSaving": [],
     "shellDiagnosticsTurnOff": [],
+    "shellGateBack": [],
+    "shellGateChoiceAnother": [],
+    "shellGateChoiceAnotherSub": [],
+    "shellGateChoiceHere": [],
+    "shellGateChoiceHereSub": [],
+    "shellGateChoiceRunning": [],
+    "shellGateChoiceRunningSub": [],
+    "shellGateCommandsHead": [],
+    "shellGateCommandsInstall": [],
+    "shellGateCommandsLink": [],
+    "shellGateCommandsMac": ["path"],
+    "shellGateCommandsPaste": [],
+    "shellGateCommandsStart": [],
     "shellGateConnecting": ["name"],
     "shellGateFreshCheckAction": [],
     "shellGateFreshCheckLine": ["count", "label"],
@@ -102417,11 +102851,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellGateFreshCheckTitle": ["label"],
     "shellGateHomeTitle": [],
     "shellGateIntro": [],
+    "shellGateMoveLater": [],
     "shellGateRecoveryTitle": [],
     "shellGateRunLine": ["computer"],
     "shellGateStaysOn": [],
     "shellGateStillNeeds": [],
     "shellGateTitle": [],
+    "shellGateWhere": [],
     "shellKeyReminderHint": [],
     "shellKeyReminderNotTyping": [],
     "shellLastTurnFromCommand": ["command"],

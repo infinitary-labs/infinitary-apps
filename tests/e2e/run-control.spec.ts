@@ -24,6 +24,7 @@ import {
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
 import { BUILDER, linkInTab, openDevices, rowAction, selectDevice } from "./deviceFixtures";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { knowledgePanel } from "./knowledgeBrowser";
@@ -180,6 +181,7 @@ async function recordOpened(app: LaunchedApp["app"]): Promise<() => Promise<stri
 
 async function joinWith(page: Page, link: string): Promise<void> {
   await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
+  await chooseWhereFirstMateLives(page, "running");
   await page.locator("[data-join-chip]").click();
   await page.getByLabel(`The link from your other ${COMPUTER.one}`).fill(link);
   await page.getByRole("button", { name: "Continue" }).click();

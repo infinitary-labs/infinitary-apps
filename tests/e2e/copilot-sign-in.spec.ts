@@ -119,6 +119,8 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
     const primary = step.getByRole("button", { name: CODE_STEP_WORDS.copyAndOpen(GITHUB) });
 
     // The chip asks no browser-or-key question: the code is the first thing shown.
+    // Where the first mate lives comes first: This computer, by its key too.
+    await pressKey(page.locator('[data-gate-choice="here"]'), "Enter");
     await pressKey(chip, "Enter");
     await expect(step.locator("[data-code-step-code]")).toHaveText(USER_CODE);
     await expect(gate.locator("[data-connect-method]")).toHaveCount(0);

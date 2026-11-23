@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "welcome-asks-where",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "The welcome screen asks where your first mate should live",
+      "body": "A fresh install now asks first: this computer, another computer, or one already running. Another computer lists the commands to run there and ends at the box for the link they make. You can still move your first mate later in Settings → Devices.",
+      "picture": {
+        "dark": "welcome-asks-where-dark.webp",
+        "light": "welcome-asks-where-light.webp",
+        "alt": "The welcome screen's question under the first mate, with three equal cards: This computer, Another computer and One already running"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

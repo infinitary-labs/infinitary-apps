@@ -6,6 +6,7 @@ import { CUSTOM_TOKEN_FAILURE } from "@shared/customApi";
 import { scratchDir } from "../helpers/scratchDirs";
 import { customApiBlock, customApiForm, fillCustomApi, saveCustomApi } from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
+import { chooseWhereFirstMateLives } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import {
@@ -84,6 +85,7 @@ fs.writeFileSync(${JSON.stringify(calls)},String(++n)); process.stdout.write('jo
   });
   try {
     const page = run.page;
+    await chooseWhereFirstMateLives(page, "here");
     await page.locator("[data-first-run-gate] [data-connect-custom-api]").click();
     await fillCustomApi(page, {
       name: "Company gateway",

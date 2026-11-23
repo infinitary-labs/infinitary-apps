@@ -3896,6 +3896,19 @@ public enum PhoneMessages {
     public static func `shellDiagnosticsRetry`() -> String { PhoneWords.format("shellDiagnosticsRetry", []) }
     public static func `shellDiagnosticsSaving`() -> String { PhoneWords.format("shellDiagnosticsSaving", []) }
     public static func `shellDiagnosticsTurnOff`() -> String { PhoneWords.format("shellDiagnosticsTurnOff", []) }
+    public static func `shellGateBack`() -> String { PhoneWords.format("shellGateBack", []) }
+    public static func `shellGateChoiceAnother`() -> String { PhoneWords.format("shellGateChoiceAnother", []) }
+    public static func `shellGateChoiceAnotherSub`() -> String { PhoneWords.format("shellGateChoiceAnotherSub", []) }
+    public static func `shellGateChoiceHere`() -> String { PhoneWords.format("shellGateChoiceHere", []) }
+    public static func `shellGateChoiceHereSub`() -> String { PhoneWords.format("shellGateChoiceHereSub", []) }
+    public static func `shellGateChoiceRunning`() -> String { PhoneWords.format("shellGateChoiceRunning", []) }
+    public static func `shellGateChoiceRunningSub`() -> String { PhoneWords.format("shellGateChoiceRunningSub", []) }
+    public static func `shellGateCommandsHead`() -> String { PhoneWords.format("shellGateCommandsHead", []) }
+    public static func `shellGateCommandsInstall`() -> String { PhoneWords.format("shellGateCommandsInstall", []) }
+    public static func `shellGateCommandsLink`() -> String { PhoneWords.format("shellGateCommandsLink", []) }
+    public static func `shellGateCommandsMac`(`path`: String) -> String { PhoneWords.format("shellGateCommandsMac", [`path`]) }
+    public static func `shellGateCommandsPaste`() -> String { PhoneWords.format("shellGateCommandsPaste", []) }
+    public static func `shellGateCommandsStart`() -> String { PhoneWords.format("shellGateCommandsStart", []) }
     public static func `shellGateConnecting`(`name`: String) -> String { PhoneWords.format("shellGateConnecting", [`name`]) }
     public static func `shellGateFreshCheckAction`() -> String { PhoneWords.format("shellGateFreshCheckAction", []) }
     public static func `shellGateFreshCheckLine`(`count`: Int, `label`: String) -> String { PhoneWords.format("shellGateFreshCheckLine", [`count`, `label`]) }
@@ -3903,11 +3916,13 @@ public enum PhoneMessages {
     public static func `shellGateFreshCheckTitle`(`label`: String) -> String { PhoneWords.format("shellGateFreshCheckTitle", [`label`]) }
     public static func `shellGateHomeTitle`() -> String { PhoneWords.format("shellGateHomeTitle", []) }
     public static func `shellGateIntro`() -> String { PhoneWords.format("shellGateIntro", []) }
+    public static func `shellGateMoveLater`() -> String { PhoneWords.format("shellGateMoveLater", []) }
     public static func `shellGateRecoveryTitle`() -> String { PhoneWords.format("shellGateRecoveryTitle", []) }
     public static func `shellGateRunLine`(`computer`: String) -> String { PhoneWords.format("shellGateRunLine", [`computer`]) }
     public static func `shellGateStaysOn`() -> String { PhoneWords.format("shellGateStaysOn", []) }
     public static func `shellGateStillNeeds`() -> String { PhoneWords.format("shellGateStillNeeds", []) }
     public static func `shellGateTitle`() -> String { PhoneWords.format("shellGateTitle", []) }
+    public static func `shellGateWhere`() -> String { PhoneWords.format("shellGateWhere", []) }
     public static func `shellKeyReminderHint`() -> String { PhoneWords.format("shellKeyReminderHint", []) }
     public static func `shellKeyReminderNotTyping`() -> String { PhoneWords.format("shellKeyReminderNotTyping", []) }
     public static func `shellLastTurnFromCommand`(`command`: String) -> String { PhoneWords.format("shellLastTurnFromCommand", [`command`]) }
@@ -8096,6 +8111,19 @@ extension PhoneWords {
         "shellDiagnosticsRetry": [],
         "shellDiagnosticsSaving": [],
         "shellDiagnosticsTurnOff": [],
+        "shellGateBack": [],
+        "shellGateChoiceAnother": [],
+        "shellGateChoiceAnotherSub": [],
+        "shellGateChoiceHere": [],
+        "shellGateChoiceHereSub": [],
+        "shellGateChoiceRunning": [],
+        "shellGateChoiceRunningSub": [],
+        "shellGateCommandsHead": [],
+        "shellGateCommandsInstall": [],
+        "shellGateCommandsLink": [],
+        "shellGateCommandsMac": ["path"],
+        "shellGateCommandsPaste": [],
+        "shellGateCommandsStart": [],
         "shellGateConnecting": ["name"],
         "shellGateFreshCheckAction": [],
         "shellGateFreshCheckLine": ["count", "label"],
@@ -8103,11 +8131,13 @@ extension PhoneWords {
         "shellGateFreshCheckTitle": ["label"],
         "shellGateHomeTitle": [],
         "shellGateIntro": [],
+        "shellGateMoveLater": [],
         "shellGateRecoveryTitle": [],
         "shellGateRunLine": ["computer"],
         "shellGateStaysOn": [],
         "shellGateStillNeeds": [],
         "shellGateTitle": [],
+        "shellGateWhere": [],
         "shellKeyReminderHint": [],
         "shellKeyReminderNotTyping": [],
         "shellLastTurnFromCommand": ["command"],

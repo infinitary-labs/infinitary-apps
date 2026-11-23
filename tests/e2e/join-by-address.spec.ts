@@ -27,6 +27,9 @@ const topLine = (page: Page) => page.locator("[data-remote-control]");
 async function joinByItsAddress(page: Page, sshd: SshServer): Promise<void> {
   const paste = page.locator("[data-join-chip]");
   const byAddress = page.locator("[data-join-address-chip]");
+  // Where the first mate lives comes first: One already running, by Tab and Enter.
+  await focusOn(page.locator('[data-gate-choice="running"]'));
+  await page.keyboard.press("Enter");
   await focusOn(paste);
   await page.keyboard.press("Tab");
   await expect(byAddress).toBeFocused();

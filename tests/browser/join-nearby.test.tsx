@@ -2,7 +2,7 @@ import { nearbyMacsWords } from "@shared/nearbyMacs";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { button, gone, shown, unansweredOf } from "./devicesTab";
+import { button, chooseAtWelcome, gone, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -28,6 +28,7 @@ test("join by its address looks for Macs nearby while open, fills a pick, and st
   }));
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
   await userEvent.click(await shown("[data-join-address-chip]"));
   await shown("[data-join-address]");
   await expect.poll(() => bridge.requests("inf:devices:nearby")).toEqual([[true]]);

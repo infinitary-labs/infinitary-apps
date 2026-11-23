@@ -18,7 +18,7 @@ import {
   saveCustomApi,
 } from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
-import { committedWelcome } from "./firstLaunch";
+import { chooseWhereFirstMateLives, committedWelcome } from "./firstLaunch";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -117,6 +117,7 @@ test("first setup reads a named loopback site's models, takes its /v1 address in
       syncBuiltinESMExports();
     }, hostname);
     const page = launched.page;
+    await chooseWhereFirstMateLives(page, "here");
     await page.locator("[data-first-run-gate] [data-connect-custom-api]").click();
     const f = customApiForm(page);
     // No network question: the name's answer is read as this Mac.
@@ -175,6 +176,7 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
     let page = launched.page;
     const label = `Synthetic ${protocol}`;
     await expect(promptInput(page)).toBeDisabled();
+    await chooseWhereFirstMateLives(page, "here");
     await page.locator("[data-first-run-gate] [data-connect-custom-api]").click();
     let f = customApiForm(page);
     await fillCustomApi(page, {
@@ -417,6 +419,7 @@ test("the server's model list supplies model names and limits nobody typed", asy
     modelsJson: () => JSON.stringify({ providers: {} }),
   });
   const page = launched.page;
+  await chooseWhereFirstMateLives(page, "here");
   await page.locator("[data-first-run-gate] [data-connect-custom-api]").click();
   const f = customApiForm(page);
   await fillCustomApi(page, { name: "Synthetic listing", address: api.baseUrl, network: "local" });

@@ -3,7 +3,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { shown, unansweredOf } from "./devicesTab";
+import { chooseAtWelcome, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -34,6 +34,7 @@ test("a first launch with something set up promises no switch", async () => {
   });
   await openSize();
   await openWindow(bridge);
+  await chooseAtWelcome("running");
   await userEvent.click(await shown("[data-join-set-up-chip]"));
   const aside = await shown("[data-join-set-up]");
   const status = aside.querySelector(".fm-join-waiting[role=status]");

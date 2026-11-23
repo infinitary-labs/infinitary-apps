@@ -19,7 +19,7 @@ The first mate's turn carries the words as the captain typed them, with one adde
 
 Two more ways start it:
 
-- Typing `/` as the first word of the main message box shows the slash hint in its foot row: "/feedback: tell Infinitary's makers about a problem or an idea" (`typingSlashCommand`, `src/shared/composer.ts`; `docs/composer.md`, "Growth and reflow").
+- Typing `/` as the first word of the main message box shows the slash hint in its foot row: "/feedback: tell Infinitary's maker about a problem or an idea" (`typingSlashCommand`, `src/shared/composer.ts`; `docs/composer.md`, "Growth and reflow").
   Tab is never taken.
 - Send Feedback… in the Help menu, and the window command `feedback.start` ("Send feedback"), go home and start `/feedback ` in the main message box with the caret after it (`docs/keyboard.md`).
 
@@ -71,6 +71,7 @@ It finds only what it holds and what the patterns name; anything else rests on t
 ## The review card
 
 The crewmate's card shows the kept write as its strip (`feedbackAskStrip`, `src/core/orchestrator/requestStrips.ts`): "Your click publishes this on GitHub, publicly, once", whether it is a new problem report, a new idea or a comment on an issue, the title and the body as readable text, the call, and the GitHub account it goes under.
+The host names its button "Submit feedback", in the captain's language, in place of "Send it to GitHub" (`submitFeedbackWords`, `src/shared/vocabulary.ts`).
 A close open match makes the draft a comment on it, and the card offers "Send as a new issue instead".
 Without a sign-in the card shows the link with "I published it" and "Not now".
 A revision keeps a new write; an earlier one stays unsent and drops when the task closes.

@@ -114,6 +114,14 @@ export function sendWriteWords(place: string): string {
   return `Send it to ${place}`;
 }
 
+/**
+ * The host's button on a /feedback report's card in place of `sendWriteWords`
+ * (docs/feedback.md, "The review card"), worded in the process's language.
+ */
+export function submitFeedbackWords(): string {
+  return m.feedbackSubmitButton();
+}
+
 export const RIGOR_WORDS: Words<Rigor> = {
   quick: "Quick",
   standard: "Default",

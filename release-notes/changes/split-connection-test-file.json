@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-connection-test-file",
+      "reason": "Moves the home connection's tests into owner-named files to keep connection.test.ts under the size warning line, with no behavior change."
+    }
+  ]
+}

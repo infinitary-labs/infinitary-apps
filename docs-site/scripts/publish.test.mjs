@@ -1,6 +1,7 @@
 // The docs site's publish checks (docs/docs-site.md, "Publishing"): the
-// preflight that refuses to take over an address someone else owns, and the
-// live checks that decide whether a publish produced a working site.
+// preflight that refuses to take over an address someone else owns, the wait
+// for a new address before the live check's first lookup, and the live checks
+// that decide whether a publish produced a working site.
 //
 //   pnpm --dir docs-site test
 
@@ -10,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { createClient, decide, HOSTNAME, publicRecords, readState, WORKER } from "./cloudflare-docs.mjs";
 import { checkLive } from "./live-checks.mjs";
+import { waitForAddress, WaitError } from "./wait-for-address.mjs";
 
 const ACCOUNT = "0f1e2d3c4b5a69788796a5b4c3d2e1f0";
 
@@ -132,6 +134,71 @@ describe("the preflight", () => {
     assert.deepEqual(await publicRecords(HOSTNAME, empty), {});
     const broken = { ...empty, resolve6: async () => Promise.reject(Object.assign(new Error("timeout"), { code: "ETIMEOUT" })) };
     await assert.rejects(publicRecords(HOSTNAME, broken), /Could not read the public DNS records/);
+  });
+});
+
+// The site's first publish: the live check asked the runner's resolver about
+// the address 0.1 s after the upload, before its DNS record existed, and the
+// resolver kept that "no such name" for the zone's negative time of 30
+// minutes, so every try failed while the site already served. The name
+// servers and answers are getinfinitary.com's own, as dig read them.
+describe("the wait for a new address", () => {
+  const NAME_SERVERS = {
+    "amy.ns.cloudflare.com": ["173.245.58.101", "172.64.32.101", "108.162.192.101"],
+    "ignacio.ns.cloudflare.com": ["108.162.195.82", "162.159.44.82", "172.64.35.82"],
+  };
+  const SERVED = ["172.67.214.47", "104.21.93.194"];
+  const failure = (code) => Object.assign(new Error(`queryA ${code} ${HOSTNAME}`), { code });
+
+  /** This computer's resolver, noting every name it is asked about. */
+  function systemResolver(asked) {
+    return {
+      resolveNs: async (name) => (asked.push(name), Object.keys(NAME_SERVERS)),
+      resolve4: async (name) => (asked.push(name), NAME_SERVERS[name]),
+    };
+  }
+
+  /** A clock that moves only when the wait pauses, and the pauses it took. */
+  function clock() {
+    const state = { at: 0, pauses: 0 };
+    return { state, now: () => state.at, sleep: async (ms) => ((state.at += ms), state.pauses++) };
+  }
+
+  it("asks only the zone's name servers until none says the address is missing", async () => {
+    const asked = [];
+    const { state, now, sleep } = clock();
+    // Round by round, each name server address's answer: missing everywhere,
+    // then at one name server's addresses, then answered everywhere but one
+    // address that does not answer at all.
+    const rounds = [
+      () => Promise.reject(failure("ENOTFOUND")),
+      (server) => (NAME_SERVERS["amy.ns.cloudflare.com"].includes(server) ? Promise.resolve(SERVED) : Promise.reject(failure("ENOTFOUND"))),
+      (server) => (server === "162.159.44.82" ? Promise.reject(failure("ETIMEOUT")) : Promise.resolve(SERVED)),
+    ];
+    const ask = (server) => ({ resolve4: async (name) => (assert.equal(name, HOSTNAME), rounds[state.pauses](server)) });
+    const found = await waitForAddress({ system: systemResolver(asked), ask, now, sleep });
+    assert.deepEqual(found.addresses, SERVED.toSorted());
+    assert.equal(state.pauses, 2);
+    assert.ok(!asked.includes(HOSTNAME), `this computer's resolver was asked about ${HOSTNAME}`);
+  });
+
+  it("passes at once for an address that already answers", async () => {
+    const { state, now, sleep } = clock();
+    const ask = () => ({ resolve4: async () => SERVED });
+    const found = await waitForAddress({ system: systemResolver([]), ask, now, sleep });
+    assert.equal(found.servers, 6);
+    assert.equal(state.pauses, 0);
+  });
+
+  it("stops, naming what the name servers say, when the address never appears", async () => {
+    const { now, sleep } = clock();
+    const ask = () => ({ resolve4: async () => Promise.reject(failure("ENOTFOUND")) });
+    const stopped = await waitForAddress({ system: systemResolver([]), ask, now, sleep, within: 600_000 }).catch((e) => e);
+    assert.ok(stopped instanceof WaitError);
+    assert.equal(
+      stopped.message,
+      `${HOSTNAME} still has no address at getinfinitary.com's name servers after 600 s: 0 of 6 answer, 6 say no such name.`,
+    );
   });
 });
 

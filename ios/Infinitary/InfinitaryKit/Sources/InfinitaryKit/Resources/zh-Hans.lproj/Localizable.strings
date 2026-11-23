@@ -506,6 +506,8 @@
 "cardThreadSettingChanged" = "已更改";
 "cardThreadSettingsNote" = "已作为背景信息发给作者。回复永远不等于批准开始构建。";
 "cardThreadSettingsSent" = "设置已于 %1$@ 随你的回复发送";
+"cardThreadWaitReworkAuthor" = "已回答。%1$@ 仍在为新版本更新这张卡片，完成后它会回到你面前。";
+"cardThreadWaitReworkChecks" = "已回答。新版本的检查正在运行，检查结束后这张卡片会回到你面前。";
 "cardThreadWhoCaptain" = "你";
 "cardThreadWhoCrewmate" = "船员";
 "cardThreadWhoFirstmate" = "大副";
@@ -3934,6 +3936,7 @@
 "taskGroupQueued" = "排队中";
 "taskGroupWaiting" = "等你处理";
 "taskGroupWorking" = "处理中";
+"taskNoteReworkHeld" = "在新版本的检查结束前，暂不把合并卡片“%1$@”交给你。";
 "taskPinPin" = "固定";
 "taskPinUnpin" = "取消固定";
 "taskStatusComputerUpdating" = "%1$@ 正在更新";

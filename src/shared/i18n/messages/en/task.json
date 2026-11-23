@@ -16,6 +16,7 @@
   "taskGroupQueued": "queued",
   "taskGroupWaiting": "waiting on you",
   "taskGroupWorking": "working",
+  "taskNoteReworkHeld": "Kept the merge card “{title}” from you until its new version's checks end.",
   "taskPinPin": "Pin",
   "taskPinUnpin": "Unpin",
   "taskStatusComputerUpdating": "{computer} is updating",

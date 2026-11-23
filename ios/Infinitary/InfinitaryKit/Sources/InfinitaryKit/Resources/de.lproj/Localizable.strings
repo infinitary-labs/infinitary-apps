@@ -506,6 +506,8 @@
 "cardThreadSettingChanged" = "geändert";
 "cardThreadSettingsNote" = "Als Kontext an den Verfasser gesendet. Eine Antwort gibt nie das Bauen frei.";
 "cardThreadSettingsSent" = "Einstellungen um %1$@ mit deiner Antwort gesendet";
+"cardThreadWaitReworkAuthor" = "Beantwortet. %1$@ aktualisiert diese Karte noch für die neue Version, und sie kommt zu dir zurück, sobald das erledigt ist.";
+"cardThreadWaitReworkChecks" = "Beantwortet. Die Überprüfungen laufen für die neue Version, und diese Karte kommt zu dir zurück, sobald sie fertig sind.";
 "cardThreadWhoCaptain" = "du";
 "cardThreadWhoCrewmate" = "Crew";
 "cardThreadWhoFirstmate" = "Offizier";
@@ -3934,6 +3936,7 @@
 "taskGroupQueued" = "eingereiht";
 "taskGroupWaiting" = "wartet auf dich";
 "taskGroupWorking" = "in Arbeit";
+"taskNoteReworkHeld" = "Die Karte zum Zusammenführen „%1$@“ zurückgehalten, bis die Überprüfungen ihrer neuen Version fertig sind.";
 "taskPinPin" = "Anheften";
 "taskPinUnpin" = "Nicht mehr anheften";
 "taskStatusComputerUpdating" = "%1$@ wird aktualisiert";

@@ -308,6 +308,8 @@
   },
   "cardThreadSettingsNote": "已作为背景信息发给作者。回复永远不等于批准开始构建。",
   "cardThreadSettingsSent": "设置已于 {time} 随你的回复发送",
+  "cardThreadWaitReworkAuthor": "已回答。{who} 仍在为新版本更新这张卡片，完成后它会回到你面前。",
+  "cardThreadWaitReworkChecks": "已回答。新版本的检查正在运行，检查结束后这张卡片会回到你面前。",
   "cardThreadWhoCaptain": "你",
   "cardThreadWhoCrewmate": "船员",
   "cardThreadWhoFirstmate": "大副",

@@ -16,6 +16,7 @@
   "taskGroupQueued": "待機中",
   "taskGroupWaiting": "あなた待ち",
   "taskGroupWorking": "作業中",
+  "taskNoteReworkHeld": "新しいバージョンのチェックが終わるまで、マージカード「{title}」をあなたに戻さずにおきました。",
   "taskPinPin": "固定",
   "taskPinUnpin": "固定を解除",
   "taskStatusComputerUpdating": "{computer} は更新中",

@@ -660,7 +660,8 @@ export class IdleLadder {
     return false;
   }
 
-  private jobInBound(taskId: string, now: number): boolean {
+  /** A background job of the task runs inside its bound (`JOB_BOUND_MS`). */
+  jobInBound(taskId: string, now: number): boolean {
     if (this.host.hasRunningJobs?.(taskId) !== true) return false;
     const job = this.host.oldestRunningJob?.(taskId);
     return !job || now - job.startedAt < JOB_BOUND_MS;

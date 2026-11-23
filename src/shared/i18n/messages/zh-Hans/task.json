@@ -16,6 +16,7 @@
   "taskGroupQueued": "排队中",
   "taskGroupWaiting": "等你处理",
   "taskGroupWorking": "处理中",
+  "taskNoteReworkHeld": "在新版本的检查结束前，暂不把合并卡片“{title}”交给你。",
   "taskPinPin": "固定",
   "taskPinUnpin": "取消固定",
   "taskStatusComputerUpdating": "{computer} 正在更新",

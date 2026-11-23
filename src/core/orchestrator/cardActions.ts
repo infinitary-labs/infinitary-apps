@@ -1533,7 +1533,14 @@ export class CardActions {
             readyPresentation(ledger)?.contentHash !== offered.presentationContentHash)))
     )
       return { why: "other", ...shown };
-    const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;
+    // A branch-only change of a project that merges in batches of its own
+    // records its pushed version the same way (INF-6241).
+    const branchOnly =
+      current.number === undefined &&
+      current.branch === associated.branch &&
+      mergesInOwnBatch(associated, repo);
+    const read =
+      !elsewhere && (current.number !== undefined || branchOnly) ? delivery?.headSha : undefined;
     const pushed = read !== undefined && read !== offered?.headSha;
     const story = ledger !== undefined || offered?.presentationRevision !== undefined;
     // Its publication is part of the reading, so a story confirmed published

@@ -938,6 +938,8 @@ export class TaskCapture {
       actor?: TaskEventActor;
       closeOut?: string;
       returned?: boolean;
+      /** The fact that last held a reworked merge card before this return (INF-6241). */
+      heldFor?: string;
     },
   ): void {
     const at = this.writer.now();
@@ -955,6 +957,7 @@ export class TaskCapture {
           kind: input.kind,
           ...(input.closeOut ? { closeOut: input.closeOut } : {}),
           ...(input.returned ? { returned: true } : {}),
+          ...(input.heldFor ? { heldFor: input.heldFor } : {}),
         },
         ref: input.cardId,
         feed: false,

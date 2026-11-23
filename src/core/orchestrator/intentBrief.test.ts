@@ -400,15 +400,17 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     // INF-5510's plan, piece 1 (captain: "a decision is mine only if i would
     // lose something in any case"; settle line small-only): a noticeable
     // small fix that wins under every heading is settled, a medium or larger
-    // one or a real tradeoff asks, and a heading is a product-level quality.
+    // one or a real tradeoff asks.
     expect(brief).toContain(
       "auto-fix: a non-user-visible issue (correctness, error handling, security, performance, mechanical code quality) safely fixable without discussing the author's intent; a noticeable finding whose fix is small and wins or ties under every heading against what the code does now",
     );
     expect(brief).toContain(
       "ask-user: a finding where every way gives something up under some heading; one whose only winning fix is medium or larger",
     );
+    // INF-6293: what a heading is has one home, the card rules' tradeoff
+    // table, which every author reads; the review brief points there.
     expect(brief).toContain(
-      "A heading names a quality of the whole product the captain wants more of, in one or two words that would fit a question about an unrelated change (security would; approval guarantee would not)",
+      "weigh them under the few headings where they differ, each a whole-product quality as the card rules' tradeoff table says",
     );
     expect(brief).toContain(
       "An auto-fix or no-op finding a person would notice is settled without asking: its text begins Settled without asking",

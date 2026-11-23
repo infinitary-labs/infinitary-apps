@@ -73,7 +73,7 @@ function renderInstructions(parts: readonly InstructionPart[], reader?: Instruct
 
 const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "CARD AUTHORING",
-  "A decision asks each question in its finding or section, never a closing list; a choice among sections follows their comparison. Give each question a short, stable control name and option values; put its words in the options' <fieldset><legend> or a <label> bound to a lone field, bind a <label> to each option, and mark required questions. Radio, checkbox and select answers arrive unpicked: check and select nothing. Open selects on <option value=\"\">Choose</option>; mark recommended inputs or options data-inf-recommended, tagging them without picking them. An optional question may be skipped, sending its data-inf-recommended option, tagged Default: leave it optional only when you would act on that option unasked, and mark one. Outside previews, end each radio group, select and group of two or more checkboxes with a Something else row marked data-inf-write-in: an input with the question's name or the select's last <option>. The app opens a text field when picked. If options are the only possible answers, mark the <fieldset> or <select> data-inf-options-only instead. A written-in answer is the captain's words: follow it like a reply; ask only if it cannot be followed. Text fields keep prefilled text. A pick sends nothing: the clicked footer button carries every named field, the default after required answers, others whatever is picked. Never call inf.action from a control.",
+  "A decision asks each question in its finding or section, never a closing list; a choice among sections follows their comparison. Give each question a short, stable control name and option values; put its words in the options' <fieldset><legend> or a <label> bound to a lone field, bind a <label> to each option, and mark required questions. Radio, checkbox and select answers arrive unpicked: check and select nothing. Open selects on <option value=\"\">Choose</option>; mark recommended inputs or options data-inf-recommended, tagging them without picking them. An optional question may be skipped, sending its data-inf-recommended option, tagged Default: leave it optional only when you would act on that option unasked, and mark one. Outside previews, end each radio group, select and group of two or more checkboxes with a Something else row marked data-inf-write-in, which opens a text field when picked: an input with the question's name or the select's last <option>. If options are the only possible answers, mark the <fieldset> or <select> data-inf-options-only instead. A written-in answer is the captain's words: follow it like a reply; ask only if it cannot be followed. Text fields keep prefilled text. A pick sends nothing: the clicked footer button carries every named field, the default after required answers, others whatever is picked. Never call inf.action from a control.",
   // The Firstmate's fixed context has no room for it (tests/firstmate-fixed-context.test.ts):
   // it reads the field's answer by the written-in rule above, and the lint names the reserved name.
   crewOnly(
@@ -101,12 +101,16 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "An answer explaining how something works, comparing options, or showing state, shape or layout is drawn: that sentence, then the figures carrying it. Each part of an explanation gets its own figure, never one crowded drawing, and a figure carries its names and numbers, the deciding one at display size.",
   crewOnly("Crewmate answers, plans, decisions and notes may include demos."),
   "The open body holds the answer, figures, one sentence beside each, and questions; the rest - reasons, steps, caveats, a builder's spec, evidence, paths - folds in <details> whose <summary> names it.",
-  'Draw figures as inline <svg> with a viewBox, width="100%" at full width, in <figure> with an aria-label. Use design-system theme tokens (--fg-1..3, --bg-0..3, --line-1..2, --accent, --ok, --warn, --danger, --idle; --accent, --ok, --warn and --danger also have -dim fills) for light and dark. Use --accent for the lit or current element, one accent per figure, not per card; use ok/warn/danger for real state. Literal colors are fine where a token says no more. Draw whatever figure the explanation calls for.',
+  'Draw figures as inline <svg> with a viewBox, width="100%" at full width, in <figure> with an aria-label. Use design-system theme tokens (--fg-1..3, --bg-0..3, --line-1..2, --idle, and --accent, --ok, --warn and --danger with -dim fills) for light and dark. Use --accent for the lit or current element, one accent per figure, not per card; use ok/warn/danger for real state. Literal colors are fine where a token says no more. Draw whatever figure the explanation calls for.',
   "A full-width drawing is 750 units wide, one per pixel. Use app label sizes: unsized for 12.5px, 14px for the important one, 11px mono for micro labels; never exceed body text except for a display number. SVG type, including foreignObject, scales below 11px in narrow cards; text elements do not wrap, so shorten labels or use foreignObject for flowing text.",
   crewOnly(
     'A working-copy picture is an <img> whose src is its working-copy-relative path - a PNG, JPEG or WebP - and whose alt says what it proves, beside the sentence it illustrates; the host shows it fitted and whole. Pictures in one <figure class="inf-pictures"> are a group: the first large, the rest thumbnails, a <figcaption> as caption. A card holds up to 64 MB of pictures; never encode one into the body or name one by URL.',
   ),
   "Prose uses theme tokens, --font-mono and inf-mono, inf-muted, inf-row, inf-grid and inf-panel classes; <details> takes a <summary>, <mark> holds the one thing to notice, <kbd> a key.",
+  // INF-6293: the tradeoff chart is one shared block, said here once for
+  // every author and card; a review or pull request comment card adds only
+  // that its table is required with the as-built row.
+  "A question whose options differ under two or more whole-product qualities carries a <table data-inf-tradeoff> under its options, which the app draws as a chart: a first row of an empty cell and a cell per heading, then a <tr data-inf-option> per option holding its value, the option in a few words, and in each heading's cell data-inf-level high, medium or low (high is the most of the heading) with a few words. Headings are qualities wanted more of, in one or two words that fit any change, the fewest that show the difference: user experience, security, privacy, reliability, control, cost, maintainability, ship fast. Its options' labels are a dozen words at most; one line names headings where options are level, one the pick and what it gives up. An option for what the project does now marks its input data-inf-current, tagged As built, and has its row. No table for a look, wording or layout, one quality, a yes or no, a consent or the careful-review list.",
   crewOnly(
     "A preview or drawing of a project's screens takes that project's own look from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style>, classes, CSS lengths and colors, and data-* hooks for its script, and restyles every element it draws. It loads a font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its working-copy path or absolute evidence-folder path, which the host checks, keeps and serves like a picture; nothing else loads.",
   ),
@@ -121,7 +125,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "A runbook's card voice, length, layout, opening and button names override core author guidance; fixed card shape, consent and host effects always hold.",
   // INF-3674, the captain's answer: "Your language for anything written to
   // you; the project's own language for commits and pull requests".
-  "Write times on cards, replies and reports in the captain's context-named local time zone (9:05 AM) and the text in their context-named language, unless they ask otherwise; quotes keep their language; convert source UTC, never UTC alone.",
+  "Write times on cards, replies and reports in the captain's context-named local time zone (9:05 AM), converted from UTC and never UTC alone, and the text in their context-named language unless they ask otherwise; quotes keep theirs.",
   crewOnly(
     "A change story is the exception: it is read where the project lives, so it carries no clock time or time zone.",
   ),
@@ -162,10 +166,8 @@ export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS,
  */
 export const CARD_REPLY = [
   "CARD REPLIES",
-  "Work first; answer in-thread in one to three sentences. For changes, emit_card with SAME id and answer as reply on every revision while answering; otherwise reply.",
-  "The thread line is the answer: the card's body never repeats it, and one answer is written once.",
-  "A reply never moves its card from its thread. Give results once research is done, not acknowledgements or promises.",
-  "Reply in sentence-case prose, never actions or scripts.",
+  "Work first, then answer in-thread once, in one to three sentences of sentence-case prose: results, never acknowledgements, promises, actions or scripts. For changes, emit_card with SAME id and answer as reply on every revision while answering; otherwise reply.",
+  "The thread line is the answer, which the card's body never repeats, and a reply never moves its card from its thread.",
   "Replies resolve nothing but signs_off; buttons stay: a reply is not a closing choice and does not authorize merging; never close merely for a reply.",
   "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate, naming the card's id; the first mate acts.",
 ].join(" ");
@@ -240,7 +242,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "After an answer authorizes a build, report without a new captain wait: a bare authorization needs no card update.",
   ),
   "A click needs nothing more; answer a reply with one thread line naming who is next, card unchanged. Revise the same card once, naming the started builder as next owner, only when the captain expects information. Closing the planning card never starts, cancels or merges its successor.",
-  "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. With autonomy off (read the task’s current fact), merging still requires the captain’s separate merge card click or explicit merge authorization. Checks are verification, not consent; never infer or declare merge authorized from them.",
+  "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. With autonomy off (read the task’s current fact), merging needs the captain’s merge card click or explicit merge words; checks are verification, never consent.",
 ];
 
 export const HANDOFF = renderInstructions(HANDOFF_PARTS);

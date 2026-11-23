@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "review-comment-rule-project-wins",
+      "reason": "Adds the sentence letting a project's own rule on comments win to the review section of Rigor levels, which the unreleased rigor-levels-comment-rules note already promises; nothing beyond that note's words changes for a person."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-batches-test-owners",
+      "reason": "The held-batch scenarios of the batches tests moved unchanged into their own file so the file stays under the size warning; nothing a person sees changes."
+    }
+  ]
+}

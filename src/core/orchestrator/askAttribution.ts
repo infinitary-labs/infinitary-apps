@@ -26,15 +26,17 @@ const ATTRIBUTING_TOOLS = new Set([
 // "EVERY TURN is about a task"), not on each of the sixteen tools that carry it.
 const ASK_ID = Type.Optional(Type.String());
 
+// i18n-exempt: served to the first mate as a refusal, never shown to a person
 const UNREAD = "ask_id must name a message this turn has read.";
 
 // These file or start work, so they may name the wake they answer (INF-2326).
 const FILING_TOOLS = new Set(["spawn_crewmate", "create_task"]);
 
+// i18n-exempt: a tool description served to the first mate
 const ORIGIN = Type.Optional(
   Type.String({
     description:
-      "When this turn read several automation runs, card choices or crewmate reports and no captain message: the one answered, by automation id, card id or reporting task key; the task's cards name it as the work's source. Required when it read several automation runs.",
+      "When this turn read several automation runs, card choices or crewmate reports and no captain message: the one answered, by automation id, card id or reporting task key.",
   }),
 );
 
@@ -46,6 +48,7 @@ function severalRunsRefusal(runs: ReturnType<AskCapture["severalRuns"]>): string
 }
 
 // spawn_crewmate's points at create_task's, as its title does, so the rule is said once.
+// i18n-exempt: a tool description served to the first mate
 const ORIGIN_AS_CREATE_TASK = Type.Optional(
   Type.String({ description: "As create_task's origin." }),
 );

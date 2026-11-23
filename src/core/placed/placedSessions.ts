@@ -1008,6 +1008,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * now.
    */
   private async reach(device: Device, contact: number): Promise<void> {
+    // A save there for an update this Mac no longer follows is let go before
+    // anything waiting goes to it (`PlacedHost.letGoUpdate`).
+    await this.host?.letGoUpdate?.(device.id);
     const roster = await this.readRoster(device.id);
     if (this.stoppingCopies || device.contact !== contact) return;
     device.roster = {

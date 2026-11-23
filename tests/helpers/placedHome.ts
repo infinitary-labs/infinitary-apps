@@ -6,6 +6,7 @@ import { type HomeConnection, startConnection } from "../../src/core/connection/
 import { DeviceSetup } from "../../src/core/devices/deviceSetup";
 import { DeviceSignIns } from "../../src/core/devices/deviceSignIns";
 import type { DevicePairing } from "../../src/core/devices/pairing";
+import { saveThereFor } from "../../src/core/devices/saveThere";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import type { FileRouter } from "../../src/core/files/fileRouter";
@@ -653,6 +654,8 @@ export function startPlacedHome(options: {
     letGo: (taskId, now) =>
       now ? supervisor.placedLetGo(taskId, undefined, now) : supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
+    letGoUpdate: (deviceId) =>
+      supervisor.updates.letGoReturned(deviceId, saveThereFor(devices, deviceId)),
   });
   const dispatch = (async (channel, rawArgs, actor) => {
     if (channel === "inf:app:healthcheck")

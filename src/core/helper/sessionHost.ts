@@ -26,6 +26,7 @@ import {
   placedSecretTakeAnswerSchema,
   placedSecretUseAnswerSchema,
 } from "@shared/workSecrets";
+import { UPDATE_RETURN_MS, WORK_RELEASE_ORDER, WORK_SAVE_ORDER } from "@shared/workUpdate";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
@@ -63,6 +64,7 @@ import {
   type SessionFactories,
   type SessionRenewal,
   type SessionSpec,
+  StoppedBeforeStartError,
   type TaskShell,
 } from "../session/session";
 import { bindTools, type CrewmateTool, OutcomeUnknownError } from "../session/tools";
@@ -230,6 +232,11 @@ export type SessionHostOptions = {
    * left leaves the task out until its own cleanup is done (`LeftBehindHere.sweep`).
    */
   closing?: <T>(task: string, run: () => Promise<T>) => Promise<T>;
+  /**
+   * How long a saved update waits for its home before it lets the save go
+   * here (`saveForUpdate`); `UPDATE_RETURN_MS` unless a test stands in a shorter wait.
+   */
+  updateReturnMs?: number;
   now?: () => number;
   log?: (line: string) => void;
 };
@@ -251,6 +258,34 @@ const SECRET_ASK_HOW = contractChange("secret-ask-how");
 const RETRIES = 2;
 
 type Flush = { seq: number; resolve: () => void };
+
+/**
+ * Its home's update of this computer while it saves the crew's work, until
+ * the update ends this run or the save is let go (`saveForUpdate`).
+ */
+type UpdateSave = {
+  /** Withdraws each stop still waiting (`releaseUpdate`). */
+  readonly withdraw: AbortController;
+  /** Each task's latest stop, settled once its turn ended here or it was withdrawn. */
+  readonly stops: Map<string, Promise<void>>;
+  /** Each task whose stop is under way now. */
+  readonly stopping: Set<string>;
+  /** How many stops it asked for, a later turn's of the same task included. */
+  asked: number;
+  /** Resolves once every turn here stopped and the home has every end. */
+  saving: Promise<void>;
+  /** Lets the save go here when the home says nothing for `UPDATE_RETURN_MS` after it saved. */
+  timer: NodeJS.Timeout | undefined;
+};
+
+/**
+ * What the save answers: each task whose turn an update's save stopped here
+ * and still marks stopped (`updateStop`): no turn has started there since,
+ * nor a later save once the home had that turn's end.
+ */
+type UpdateSaveAnswer = { stopped: string[] };
+/** What the let-go answers besides: each task whose stop it withdrew. */
+type UpdateReleaseAnswer = UpdateSaveAnswer & { withdrawn: string[] };
 
 type Held = {
   readonly task: string;
@@ -295,6 +330,8 @@ type Held = {
   flushes: Flush[];
   /** Orders run one at a time per task. */
   chain: Promise<unknown>;
+  /** Settles once the prompt's turn running here has ended and its end is written. */
+  turnOver: Promise<void> | undefined;
   /** The working copy's orders being done now, by id: one asked again waits for the same. */
   copying: Map<string, Promise<unknown>>;
   /** Its folder was removed (`inf:session:remove`): nothing of it is written again. */
@@ -337,6 +374,8 @@ export class SessionHost {
   private stopped = false;
   /** Nothing is sent until the home is first in reach, or asks something. */
   private live = false;
+  /** Its home's update while it saves the crew's work here (`saveForUpdate`). */
+  private updateSave: UpdateSave | undefined;
   private writeTimer: NodeJS.Immediate | undefined;
 
   constructor(private readonly options: SessionHostOptions) {
@@ -345,6 +384,11 @@ export class SessionHost {
     // A turn left running by a quit, or a crash, ended then: say so first.
     for (const task of options.tasks.list()) {
       const held = this.load(task);
+      // The quit cut the turn its home's update was stopping: the save's.
+      if (held.state.updateStop === "stopping") {
+        held.state = { ...held.state, updateStop: "stopped" };
+        this.writeOut(held);
+      }
       if (held.state.running) {
         const { turn } = held.state.running;
         held.state = { ...held.state, running: undefined };
@@ -524,6 +568,7 @@ export class SessionHost {
     this.stopped = true;
     if (this.writeTimer) clearImmediate(this.writeTimer);
     this.writeTimer = undefined;
+    clearTimeout(this.updateSave?.timer);
     const sessions: ModelSession[] = [];
     for (const held of this.held.values()) {
       if (held.state.running) {
@@ -552,6 +597,9 @@ export class SessionHost {
     request: WorkOrderRequest<C>,
   ): Promise<WorkOrderResponse<C>> {
     if (channel === "inf:session:roster") return this.roster() as WorkOrderResponse<C>;
+    if (channel === WORK_SAVE_ORDER) return this.saveForUpdate() as Promise<WorkOrderResponse<C>>;
+    if (channel === WORK_RELEASE_ORDER)
+      return this.releaseUpdate() as Promise<WorkOrderResponse<C>>;
     if (channel === "inf:session:personal")
       return keepOrdered(this.options.personal, request as never) as WorkOrderResponse<C>;
     // Outside the task's order of orders: an order waiting on the stuck turn never holds it.
@@ -1086,6 +1134,9 @@ export class SessionHost {
               return;
             }
             this.record(held, event);
+            // A turn its crewmate carries on by itself while the save holds stops too.
+            if (event.type === "continuation_started" && this.updateSave)
+              this.stopForUpdate(held, this.updateSave);
           },
           this.now,
           // The work major includes owner-only completed-operation observations.
@@ -1295,14 +1346,33 @@ export class SessionHost {
     // Kept before the turn starts: asked again after a quit here, it is
     // answered and never started twice; that turn ended `interrupted`.
     this.remember(held, orderId, { turn });
-    session.prompt(text, images).then(
+    // Its home is updating this computer: the turn never reaches its model,
+    // and the home sends its words again once the update is over.
+    if (this.updateSave) {
+      this.ended(held, turn, "failed", new StoppedBeforeStartError().message, true);
+      return { turn };
+    }
+    held.turnOver = session.prompt(text, images).then(
       () => this.ended(held, turn, "done"),
-      (error: unknown) => this.ended(held, turn, "failed", messageOf(error)),
+      (error: unknown) =>
+        this.ended(
+          held,
+          turn,
+          "failed",
+          messageOf(error),
+          error instanceof StoppedBeforeStartError || undefined,
+        ),
     );
     return { turn };
   }
 
-  private ended(held: Held, turn: number, outcome: "done" | "failed", error?: string): void {
+  private ended(
+    held: Held,
+    turn: number,
+    outcome: "done" | "failed",
+    error?: string,
+    unstarted?: true,
+  ): void {
     // Closed, or this computer stopped, first: that turn already ended.
     if (held.state.running?.turn !== turn || !held.session) return;
     const undelivered = held.session.takeUndeliveredSteers();
@@ -1315,10 +1385,165 @@ export class SessionHost {
       turn,
       outcome,
       ...(error !== undefined ? { error } : {}),
+      ...(unstarted ? { unstarted } : {}),
       undelivered,
       state: this.stateOf(held),
     });
     this.writeOut(held);
+  }
+
+  /**
+   * Its home is about to update this computer (docs/helper.md, "Saving its
+   * work before an update"): no turn starts here until the update ends this
+   * run or the save is let go, and each conversation working here stops
+   * where nothing is lost - its running calls finish and keep their
+   * results, the ones it would start are refused and say so, and then its
+   * turn is cut; so does a turn its crewmate carries on by itself
+   * meanwhile. Answers once every stopped turn's end is written here and
+   * the home has every event, so what the crew did is kept on both sides
+   * before anything here stops. A second ask joins the first. This
+   * computer decides when it is saved, and lets the save go by itself when
+   * the home asks nothing for `UPDATE_RETURN_MS` after that (`homeAsked`).
+   */
+  private async saveForUpdate(): Promise<UpdateSaveAnswer> {
+    let save = this.updateSave;
+    if (!save) {
+      const own: UpdateSave = {
+        withdraw: new AbortController(),
+        stops: new Map(),
+        stopping: new Set(),
+        asked: 0,
+        saving: Promise.resolve(),
+        timer: undefined,
+      };
+      this.updateSave = own;
+      for (const held of this.held.values()) {
+        // An earlier save's stop whose end the home already took is over
+        // there: this save names its own, and one whose end the home lacks.
+        if (held.state.updateStop && held.through >= held.state.seq) {
+          held.state = { ...held.state, updateStop: undefined };
+          this.writeOut(held);
+        }
+        this.stopForUpdate(held, own);
+      }
+      own.saving = this.saveTurns(own);
+      save = own;
+    }
+    // Asked again: the home is still there, so the wait starts over.
+    clearTimeout(save.timer);
+    save.timer = undefined;
+    await save.saving;
+    if (this.updateSave === save && !this.stopped) {
+      const own = save;
+      own.timer = setTimeout(() => {
+        if (this.updateSave !== own) return;
+        // i18n-exempt: this computer's own log.
+        this.log("its home did not update it after saving its work, so it carries on");
+        void this.releaseUpdate();
+      }, this.options.updateReturnMs ?? UPDATE_RETURN_MS);
+      own.timer.unref?.();
+    }
+    return { stopped: this.updateStops("stopped") };
+  }
+
+  /**
+   * Waits for every stop, including one a turn begun meanwhile needed, then
+   * for the home to have every event written by then.
+   */
+  private async saveTurns(save: UpdateSave): Promise<void> {
+    for (let asked = -1; asked !== save.asked; ) {
+      asked = save.asked;
+      await Promise.all(save.stops.values());
+      if (this.updateSave !== save) return;
+      const kept = [...this.held.values()].filter((held) => !held.removed);
+      await Promise.all(kept.map((held) => this.flushed(held)));
+    }
+  }
+
+  /**
+   * Its home asked something: a saved update's wait for it starts over, so
+   * a long download or build there for the update never lets the save go.
+   */
+  homeAsked(): void {
+    this.updateSave?.timer?.refresh();
+  }
+
+  /**
+   * One conversation working here stops for the update: safely when its
+   * session can hold its calls, cut when it cannot. A turn the stop cut is
+   * the save's, so its home carries it on after the update. A later turn
+   * of a task whose earlier one the save already stopped stops too. What
+   * each stop came to is kept in the task's state (`markStop`).
+   */
+  private stopForUpdate(held: Held, save: UpdateSave): void {
+    const session = held.session;
+    if (!session || held.state.closed || save.stopping.has(held.task) || !this.busy(held)) return;
+    const stopping = session.stopSafely
+      ? session.stopSafely({ signal: save.withdraw.signal })
+      : session.abort().then(() => "stopped" as const);
+    save.stopping.add(held.task);
+    save.asked += 1;
+    this.markStop(held, "stopping");
+    save.stops.set(
+      held.task,
+      stopping
+        .catch((caught: unknown) => {
+          // i18n-exempt: this computer's own log.
+          this.log(`could not stop ${held.task} safely: ${messageOf(caught)}`);
+          return "stopped" as const;
+        })
+        .then(async (outcome) => {
+          if (outcome !== "stopped") {
+            this.markStop(held, "withdrawn");
+            return;
+          }
+          this.markStop(held, "stopped");
+          await held.turnOver;
+        })
+        .finally(() => save.stopping.delete(held.task)),
+    );
+  }
+
+  /**
+   * The update did not replace this copy, or was let go: a stop still
+   * waiting is withdrawn and its turn goes on as if never asked, and turns
+   * start here again. Answers once each stop settled, naming every task
+   * whose turn the save stopped, which its home carries on, and every one
+   * whose stop it withdrew, whose turn its home lets go on - the same after
+   * a restart here or once it let the save go by itself (`markStop`).
+   */
+  private async releaseUpdate(): Promise<UpdateReleaseAnswer> {
+    const save = this.updateSave;
+    if (save) {
+      this.updateSave = undefined;
+      clearTimeout(save.timer);
+      save.withdraw.abort();
+      await Promise.all(save.stops.values());
+    }
+    return { stopped: this.updateStops("stopped"), withdrawn: this.updateStops("withdrawn") };
+  }
+
+  /**
+   * Keeps what an update's save did to this task's turn here, through a
+   * restart and after the save is let go, until a turn starts here while
+   * no save holds (`record`): a let-go asked again, by a home that came back after
+   * either, names it as the first would have. A stop the save made stays
+   * one when a later turn's stop in the same save is withdrawn; a new save
+   * forgets it once the home has that turn's end. A stop that settles after
+   * this computer stopped writes nothing: its next start reads the stop it
+   * was making as the save's.
+   */
+  private markStop(held: Held, mark: NonNullable<PlacedTaskState["updateStop"]>): void {
+    if (this.stopped || (held.state.updateStop === "stopped" && mark !== "stopped")) return;
+    held.state = { ...held.state, updateStop: mark };
+    this.writeOut(held);
+  }
+
+  /** Each task whose turn an update's save stopped here, or whose stop it withdrew. */
+  private updateStops(mark: "stopped" | "withdrawn"): string[] {
+    return [...this.held.values()]
+      .filter((held) => held.state.updateStop === mark)
+      .map((held) => held.task);
   }
 
   private async closeTask(held: Held): Promise<void> {
@@ -1555,6 +1780,7 @@ export class SessionHost {
       refused: false,
       flushes: [],
       chain: Promise.resolve(),
+      turnOver: undefined,
       copying: new Map(),
       removed: false,
       opened: undefined,
@@ -1588,6 +1814,12 @@ export class SessionHost {
       seq,
       ...(event.type === "continuation_started" ? { continuing: true as const } : {}),
       ...(event.type === "continuation_ended" ? { continuing: undefined } : {}),
+      // A turn starts here, from the home's prompt or by itself, while no
+      // save holds: what an update's save did is over (`markStop`).
+      ...((event.type === "turn_started" || event.type === "continuation_started") &&
+      !this.updateSave
+        ? { updateStop: undefined }
+        : {}),
     };
     const record: PlacedEventRecord = { seq, at: this.now(), event: event as PlacedEvent };
     held.outbox.push(record);

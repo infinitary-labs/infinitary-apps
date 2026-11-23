@@ -184,6 +184,13 @@ export type RemoteLoginOptions = {
 };
 
 /**
+ * Saves the crew's work there before anything there is sent or stops
+ * (docs/devices.md, "Saving work before an update"); `lost` refuses the
+ * update as out of reach when that save could not finish.
+ */
+export type SaveBeforeUpdate = (lost: () => never) => Promise<void>;
+
+/**
  * A refusal, with the two lines the feed said.
  * The message is those lines, one per line, so Settings can show them apart.
  */
@@ -490,11 +497,11 @@ export class RemoteLogin {
    * the new copy in place of the old, and starts it again. This Mac's SSH
    * connection to it waits while it is updated, and is made again after, to
    * the new copy. `pause` runs once the update goes ahead, before anything
-   * there stops: past every refusal here and the password question.
+   * there is sent or stops: past every refusal here and the password question.
    */
   async update(
     deviceId: string,
-    options: RemoteLoginUpdateOptions & { pause?: () => Promise<void> } = {},
+    options: RemoteLoginUpdateOptions & { pause?: SaveBeforeUpdate } = {},
   ): Promise<DeviceView | RemoteLoginPasswordQuestion | RemoteLoginConfirmQuestion> {
     const device = this.device(deviceId);
     const oneTime = !device.remoteLogin && options.address !== undefined;
@@ -549,7 +556,7 @@ export class RemoteLogin {
           if (ubuntuPackageRelease(looked)) return this.updateUbuntu(device, looked, options, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
-        await options.pause?.();
+        await options.pause?.(() => step.refuse("out-of-reach"));
         const name = deviceLabel(device);
         const download = device.onThisMac ? null : await this.builds.downloadFor(far, chip);
         const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
@@ -1146,6 +1153,8 @@ export class RemoteLogin {
       secret: Buffer | null;
       stage: "setting-up" | "finding" | "updating";
       deviceId?: string;
+      /** Runs once the install goes ahead, past the password question and before anything is sent. */
+      beforeInstall?: () => Promise<void>;
     },
   ): Promise<RemoteLoginAddAnswer | UbuntuReady> {
     const need = ubuntuInstallNeed(look, this.options.version ?? "");
@@ -1160,6 +1169,7 @@ export class RemoteLogin {
         ...(at.deviceId ? { deviceId: at.deviceId } : {}),
       };
     }
+    await at.beforeInstall?.();
     const said = {
       name: at.name,
       ...(at.deviceId ? { deviceId: at.deviceId } : {}),
@@ -1280,7 +1290,7 @@ export class RemoteLogin {
   private async updateUbuntu(
     device: DeviceView,
     look: Look,
-    options: { password?: string; pause?: () => Promise<void> },
+    options: { password?: string; pause?: SaveBeforeUpdate },
     step: ReturnType<RemoteLogin["stepper"]>,
     address = device.remoteLogin ?? "",
     verifyReturn = false,
@@ -1288,6 +1298,14 @@ export class RemoteLogin {
     if (!verifyReturn && ubuntuInstallNeed(look, this.options.version ?? "") === "ready")
       return step.refuse("current");
     const secret = options.password ? Buffer.from(options.password, "utf8") : null;
+    // Its crew's work is saved once, past the password question and before
+    // the package is sent, or before `work update` when none is installed.
+    let saved = false;
+    const save = async () => {
+      if (saved) return;
+      saved = true;
+      await options.pause?.(() => step.refuse("out-of-reach"));
+    };
     try {
       const installed = await this.installUbuntu(look, {
         address,
@@ -1296,12 +1314,13 @@ export class RemoteLogin {
         secret,
         stage: "updating",
         deviceId: device.id,
+        beforeInstall: save,
       });
       if (installed !== "ready" && installed !== "linger-off") {
         if ("asks" in installed && installed.asks === "password") return installed;
         return step.refuse("failed");
       }
-      await options.pause?.();
+      await save();
       if (verifyReturn) {
         const name = deviceLabel(device);
         step.say("updating", remoteLoginWords.starting(name), {

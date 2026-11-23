@@ -350,6 +350,12 @@ Update app tries again."
 While it gets the version, waits or failed, that strip's button is Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it get the version at once and start again as soon as no words are left unsent there, even with its window in front.
 
 **Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Match or Remove until it is done (`AddAMac.prompt.md`).
+Before anything there stops, a computer that saves its own crew's work says so in a strip at the top of the row's notices once its save says what it waits for: "Saving work on Mac mini.
+Waiting for website and docs to finish what is running.", or the first sentence alone when nothing runs there.
+The strip's button is Update later (secondary, small, named "Update Mac mini later" for a screen reader, reached with Tab), which lets the update go before anything there is replaced; the row's update then ends, and the feed says "Mac mini was not updated, since you chose Update later.
+Its work carries on."
+A computer whose turns are stopped from here instead shows no strip and no Update later, since letting the update go could not keep its work running.
+After the update, until each turn it paused has started again, a status line under the summary reads "Mac mini is resuming work the update paused."
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".
 For a Mac reached by its address, Add and Match first let it download this computer's published version itself, and so does Match for a Mac a command added, once it runs a version that takes the download.
 Its summary and the feed read "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size.

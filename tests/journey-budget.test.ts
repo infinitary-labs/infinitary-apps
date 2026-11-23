@@ -111,6 +111,17 @@ describe("INF-1763 journey placement", () => {
     expect(budget(new Map(), times, tagged)).toMatchObject({ mac: [], linux: [] });
   });
 
+  // INF-6259's weekly audit, the captain's pick "Fix two journey request
+  // defects: the Mac round is silently skipped on a Linux-only request": a
+  // request with platforms=linux and mac_once passed with no Mac job.
+  it("keeps the Mac round a request asks for when it names only Linux", () => {
+    const files = ["tests/e2e/activity-updates.spec.ts", "tests/e2e/window-wash.spec.ts"];
+    const asked = new Map(files.map((file) => [file, ["the request names this journey"]]));
+    const result = budget(asked, times, tagged, true, [], false, "linux");
+    expect(result.mac).toEqual(files);
+    expect(linuxFiles(result).toSorted()).toEqual(files);
+  });
+
   it("puts every chosen file on the Mac as well when a request asks", () => {
     const files = ["tests/e2e/activity-updates.spec.ts", "tests/e2e/window-wash.spec.ts"];
     const asked = new Map(files.map((file) => [file, ["the request names this journey"]]));

@@ -1300,6 +1300,8 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
 The chooser places every named file on Linux and their tagged tests on the Mac mini.
 Its `mac_all` input runs every named journey on the Mac mini as well, every test of it, for a check of the Mac itself such as a `starve` experiment.
+`mac_all` and `mac_once` place their files on the Mac even when `platforms` names only Linux, since a request that asks for a Mac round gets one (`scripts/journey-budget.ts`; INF-6259's weekly audit found one passed with its Mac round never run).
+Its `base` input, the comparison that decides which named files the change edits, is read where the checkout holds it, or else as the branch of that name where the project lives, so `main` reads `origin/main`; a base that names neither stops each job with words before it runs a journey (`comparisonBase`, `scripts/journey-runs.ts`).
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
 Ordinary journeys pin the built-in task browser even with an installed browser present.

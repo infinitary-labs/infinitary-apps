@@ -361,9 +361,9 @@ export class CrewSupervisor {
       closeAnsweredTask: (card, action, by, carried) =>
         this.settling.declared.closeAnsweredTask(card, action, by, carried),
       settleFacts: (taskId, part) => this.settleFacts.strip(taskId, part),
-      mergeLabel: (card) => this.cardActions.mergeLabel(card),
-      mergeAnyway: (card) => this.cardActions.mergeAnyway(card),
-      mergeBehind: (card) => this.cardActions.mergeBehind(card),
+      mergeLabel: (card) => this.cardActions.merges.mergeLabel(card),
+      mergeAnyway: (card) => this.cardActions.merges.mergeAnyway(card),
+      mergeBehind: (card) => this.cardActions.merges.mergeBehind(card),
       mergeFellBehind: (cardId, behind) => this.mergeFellBehind(cardId, behind),
       holdsUntilMerge: (card) => this.holdsUntilMerge(card),
       reworkHold: (card) =>
@@ -587,7 +587,7 @@ export class CrewSupervisor {
       taskAutonomy: (taskId) => this.facts.taskAutonomy(taskId),
       isPersonalTask: (taskId) => this.facts.isPersonalTask(taskId),
       worksInPlace: (taskId) => this.facts.worksInPlace(taskId),
-      mergeModeFor: (taskId) => this.cardActions.mergeModeFor(taskId),
+      mergeModeFor: (taskId) => this.cardActions.merges.mergeModeFor(taskId),
       machineOf: (taskId) => this.facts.machineOf(taskId),
       validationHead: (record) => this.reportIntake.validationHead(record),
       keepOffer: (taskId, offers, offer) => this.keepOffer(taskId, offers, offer),

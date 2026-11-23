@@ -123,6 +123,10 @@ describe("a computer that runs work saving its crew's work before its update", (
     await at.restartComputer();
     await at.inReach("t-save");
     expect(api.requests.length - requests).toBe(1);
+    // Settings -> Devices says that computer resumes this work until its turn starts again.
+    expect(home.supervisor.updates.resumingByComputer()).toEqual(
+      new Map([[at.deviceId, ["website"]]]),
+    );
     home.supervisor.updates.resumeAfterUpdate(at.deviceId);
 
     await expect.poll(() => home.tasks.get("t-save")?.outcome).toBe("Picked the footer up again.");
@@ -134,6 +138,7 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(home.tasks.timeline("t-save").some((event) => event.kind === "failed")).toBe(false);
     expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
     expect(home.inbox.allFor("t-save")).toEqual([]);
+    expect(home.supervisor.updates.resumingByComputer().size).toBe(0);
   });
 
   it("lets the save go on Update later: the turn it had not stopped goes on there as if never asked, and starts nothing again", async () => {
@@ -170,5 +175,39 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(said(api.requests.at(-1))).not.toContain("turn-resumed");
     expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
     expect(home.tasks.timeline("t-later").some((event) => event.kind === "failed")).toBe(false);
+  });
+
+  // The captain's choice on the review: a computer that comes back while this
+  // Mac no longer follows its update is asked to let its save go first.
+  it("asks a computer that comes back after its home restarted mid-update to let its save go, and carries the stopped turn on there", async () => {
+    const progress = holdingProgress();
+    const at = await world(undefined, { tools: progress.tools });
+    model([
+      { tools: [{ name: "note_progress", args: { text: "Checking the footer." } }] },
+      { text: "Picked the footer up again." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-return");
+    await progress.reached;
+    const there = saveThereFor(at.home().devices, at.deviceId);
+    const saving = at.home().supervisor.updates.pauseForUpdate(at.deviceId, {
+      signal: new AbortController().signal,
+      ...(there ? { there } : {}),
+    });
+    progress.open();
+    expect(await saving).toBe("saved");
+
+    // The home quits before the update goes on, and the computer still holds the save.
+    await at.restartHome();
+    await at.inReach("t-return");
+    const home = at.home();
+    const failed = () => home.tasks.timeline("t-return").some((event) => event.kind === "failed");
+    await expect.poll(() => failed() || Boolean(home.tasks.get("t-return")?.outcome)).toBe(true);
+    // One carry-on turn, which ran there: none was refused as held.
+    expect(failed()).toBe(false);
+    expect(home.tasks.get("t-return")?.outcome).toBe("Picked the footer up again.");
+    expect(api.requests.length - requests).toBe(2);
+    expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+    expect(home.inbox.allFor("t-return")).toEqual([]);
   });
 });

@@ -151,6 +151,12 @@ export type PlacedHost = {
    * of reach"): the task's crewmate is told where, once.
    */
   awayCopyKept?(taskId: string): void;
+  /**
+   * That computer is back in reach: a save there for an update this Mac no
+   * longer follows - it restarted, or lost that computer or its release - is
+   * let go before anything waiting goes to it (`CrewUpdates.letGoReturned`).
+   */
+  letGoUpdate?(machine: string): Promise<void>;
 };
 
 /** A read a computer that runs work answered "ask again", and how long it had waited. */

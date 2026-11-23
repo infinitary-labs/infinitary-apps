@@ -50,6 +50,7 @@ import { startCorrections } from "./decisions/startCorrections";
 import { CaptainPlaces } from "./devices/captainPlaces";
 import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
+import { saveThereFor } from "./devices/saveThere";
 import { homeSourceOf, starterBuild } from "./devices/sourceArchive";
 import { createEventSeam } from "./eventSeam";
 import type { CoreEventSink } from "./events";
@@ -1243,6 +1244,8 @@ export async function createServices(
     letGo: (taskId, now) =>
       now ? supervisor.placedLetGo(taskId, undefined, now) : supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
+    letGoUpdate: (deviceId) =>
+      supervisor.updates.letGoReturned(deviceId, saveThereFor(workDevices, deviceId)),
   });
   // A computer with work out of reach for a minute is said once in the feed.
   ticker.register("placed-reach", TICK_PERIOD_MS, (now) => placed.tick(now));

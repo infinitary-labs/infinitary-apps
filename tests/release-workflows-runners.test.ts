@@ -882,3 +882,27 @@ describe("a release's hosted machines", () => {
       expect(workflow(file).on.workflow_dispatch?.inputs ?? {}, file).not.toHaveProperty("hosted");
   });
 });
+
+/**
+ * INF-6155's answer: the unsigned Windows installer reads no secret, so its build
+ * runs on GitHub's hosted Windows, while the fresh Windows 11 check stays on the
+ * project's own machine.
+ */
+describe("windows.yml's runners", () => {
+  type Job = { "runs-on"?: string };
+  const jobs = (loadYamlFile(".github/workflows/windows.yml") as { jobs: Record<string, Job> })
+    .jobs;
+  const runner = (id: string, vars: Record<string, string>, hosted = false) =>
+    workflowValue(jobs[id]?.["runs-on"] ?? "", { vars, inputs: { hosted } });
+
+  it("builds on hosted Windows unless a place is named, and always when hosted", () => {
+    expect(runner("build", {})).toBe("windows-2025");
+    expect(runner("build", { WINDOWS_RUNNER: "shell-pc-windows" })).toBe("shell-pc-windows");
+    expect(runner("build", { WINDOWS_RUNNER: "shell-pc-windows" }, true)).toBe("windows-2025");
+  });
+
+  it("checks the installer on the clean Windows 11 machine whatever else is set", () => {
+    expect(runner("check", {})).toBe("shell-pc-win11");
+    expect(runner("check", { WINDOWS_CLEAN_RUNNER: "clean" })).toBe("clean");
+  });
+});

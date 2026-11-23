@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "windows-build-hosted",
+      "reason": "The Windows installer's unsigned build now runs on GitHub's hosted Windows instead of the project's own PC. This is a CI routing change only; the installer and the shipped app are unchanged."
+    }
+  ]
+}

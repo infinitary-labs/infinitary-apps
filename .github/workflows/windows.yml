@@ -20,7 +20,9 @@ name: windows
 # An outside contributor's pull request (docs/public-ci.md, "Outside
 # contributors") calls it with hosted: the build runs on GitHub's hosted
 # Windows and the fresh Windows 11 check waits for the next alpha's release
-# check, since it needs the PC's clean machine.
+# check, since it needs the PC's clean machine. Every other run builds on
+# hosted Windows too, unless WINDOWS_RUNNER names a place, and checks the
+# installer on the PC's clean machine.
 
 on:
   workflow_dispatch:
@@ -96,10 +98,13 @@ env:
 jobs:
   build:
     name: ${{ format('{0} · Build the Windows installer', (inputs.trigger || 'Manual request')) }}
-    # A fresh standard account on the PC's Windows (the placement
-    # service's account places), removed when the job ends; GitHub's hosted
-    # Windows with hosted.
-    runs-on: ${{ inputs.hosted && 'windows-2025' || vars.WINDOWS_RUNNER || 'shell-pc-windows' }}
+    # The unsigned installer reads no secret, so it builds on GitHub's hosted
+    # Windows, which costs nothing a minute in a public project and leaves the
+    # PC's cores to the fresh Windows 11 check (INF-6155). The repository
+    # variable WINDOWS_RUNNER pins it back to a place of the project's own
+    # (a fresh standard account on the PC, removed when the job ends); hosted
+    # always takes the hosted machine.
+    runs-on: ${{ inputs.hosted && 'windows-2025' || vars.WINDOWS_RUNNER || 'windows-2025' }}
     # The update check builds four installers and uploads about a gigabyte.
     timeout-minutes: ${{ inputs.update_check && 90 || 45 }}
     # Each job's own group, which a merge batch's stop enters to cancel it

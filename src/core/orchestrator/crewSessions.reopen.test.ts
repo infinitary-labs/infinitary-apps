@@ -776,7 +776,7 @@ describe("CrewSupervisor", () => {
         await h.supervisor.disposeAll();
       });
 
-      // INF-2279 review: a turn a crewmate carries on by itself after the
+      // From review: a turn a crewmate carries on by itself after the
       // update stopped its earlier one stops too, and the save waits for it.
       it("stops a turn a crewmate carries on by itself after its earlier turn stopped, and waits for it before the copy is replaced", async () => {
         const notes = safelyStoppingCrewmate();

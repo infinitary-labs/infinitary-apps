@@ -78,7 +78,7 @@ describe("a computer that runs work saving its crew's work before its update", (
     });
   });
 
-  // The goal's "the way INF-2245 saves this computer's own": a turn begun by
+  // Saved the way this computer's own update saves its work: a turn begun by
   // itself during the save stops too, and the save holds while its home keeps
   // asking, as during a long download for the update.
   it("stops a turn its crewmate carries on by itself while the save holds, and keeps the save while its home keeps asking", async () => {
@@ -135,7 +135,7 @@ describe("a computer that runs work saving its crew's work before its update", (
     }
   });
 
-  // INF-2279 review: a home that comes back to a save it no longer follows
+  // From review: a home that comes back to a save it no longer follows
   // lets it go, and must hear which turn goes on there instead of stopping.
   it("names the task whose stop it withdrew when let go while its call still runs, and that turn goes on", async () => {
     const at = await placed();

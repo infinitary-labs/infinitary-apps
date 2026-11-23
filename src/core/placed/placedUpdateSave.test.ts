@@ -211,7 +211,7 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(home.inbox.allFor("t-return")).toEqual([]);
   });
 
-  // INF-2279 review: the computer's let-go names a stop it withdrew, whose
+  // From review: the computer's let-go names a stop it withdrew, whose
   // turn goes on there, so nothing carries that turn on a second time.
   it("lets a turn whose stop still waited go on there when its computer comes back after its home restarted, and carries nothing on after it", async () => {
     const progress = holdingProgress();

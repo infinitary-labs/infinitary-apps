@@ -1824,8 +1824,9 @@ It then waits for a run already going to end, which apt's daily script marks by 
 Meanwhile it asks that run's `unattended-upgrade` to stop, the way the package's own shutdown helper does, and it stops after the package it is installing, leaving dpkg consistent.
 `apt-get` then waits for dpkg's lock (`DPkg::Lock::Timeout=-1`) should anything else hold it; apt's own wait covers only dpkg's lock, never the lists' lock `apt-get update` takes, which is why the helper waits for the daily run itself.
 Each wait lasts as long as its step's time limit, ten minutes for each install step.
-That limit holds the download too, so the Linux packages' virtual screen downloads nothing it can do without.
-The runner itself needs only Xvfb, which GitHub's hosted Ubuntu images hold, so the step downloads nothing there, and the AppImage check works its question with xdotool and ImageMagick from its own container's packages (`docs/linux-packages.md`, "The checks").
+That limit holds the download too, so the journeys' virtual display and the Linux packages' virtual screen download nothing they can do without.
+The journeys' desktop names Xvfb and the libraries Electron needs, every one of which GitHub's hosted Ubuntu images hold, and parks the pointer through the X library rather than a tool of its own ("The Linux source desktop"), so the step downloads nothing there.
+The Linux packages' runner itself needs only Xvfb, so that step downloads nothing there either, and the AppImage check works its question with xdotool and ImageMagick from its own container's packages (`docs/linux-packages.md`, "The checks").
 A release built from another commit than the workflow's own, as a stable is from its alpha's, may run an older check that works the AppImage's screen from the runner, so that leg also installs both there, with `--no-install-recommends`: ImageMagick's recommended packages, Ghostscript and its fonts, are 25 MB that its one screenshot never uses.
 A runner's image may already hold every package a step names: the PC's job image holds every package of the Linux desktop.
 Refreshing the package lists then still downloads about 12 MB, and naming a package installs its newer build with whatever that pulls in, about 28 MB of Mesa's graphics libraries for `libgbm1`, which a slow mirror stretches past ten minutes before any test runs.
@@ -1879,8 +1880,9 @@ The Linux packages have their own checks, an installed-package journey on a clea
 
 The launcher shows the app's window on Linux without giving it focus (`paintLikeAMac` in `tests/e2e/launch.ts`): a hidden window there paints about once a second, where a hidden Mac window paints at the display's rate, so a journey that waits on frames or plays Chromium's synthetic pointer would wait out its time.
 On the virtual screen the shown window disrupts no desktop, so run Linux journeys under `xvfb-run` there too.
-With no window manager the window under the pointer takes the keyboard, so the lane parks the pointer on the screen's last pixel (`xdotool`), where no window reaches, and stops before any journey unless the pointer is there.
-It starts Xvfb with `-noreset`: Xvfb otherwise resets as its last client leaves, which is `xdotool` itself before any app opens, and puts the pointer back at the screen's centre.
+With no window manager the window under the pointer takes the keyboard, so the lane parks the pointer on the screen's last pixel, where no window reaches, and stops before any journey unless the pointer is there (`scripts/on-screen.sh`).
+`scripts/park-pointer.ts` moves the pointer and reads it back through the X library Electron itself loads, called through koffi, so the virtual screen needs no tool beyond Xvfb ("The runner's automatic updates").
+It starts Xvfb with `-noreset`: Xvfb otherwise resets as its last client leaves, which is the park itself before any app opens, and puts the pointer back at the screen's centre.
 Every app window opens centred, so a pointer at the centre sits in each one, and the windows of parallel journeys, opening and closing over one another, hand it to the window under test, whose page then hears it leave what its journey rests on.
 Linux text is antialiased in grey, as macOS draws it (`--disable-lcd-text`): Chromium draws subpixel text only on an opaque layer of its own, so a component would otherwise draw different pixels in a panel and out of one.
 Linux journeys draw in software from the start (`--disable-gpu`), as a virtual Mac's do ("Drawing in software").

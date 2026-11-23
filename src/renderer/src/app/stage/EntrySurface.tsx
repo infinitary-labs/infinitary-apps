@@ -345,7 +345,9 @@ export function EntrySurface({
           onInteraction={onInteraction}
           inPlaceThread={inPlace}
           threadWorking={working}
-          choicesIn={replyable && beside ? choicesSlot : null}
+          // A card with masked fields keeps its choices under them, the
+          // fields its Save sends.
+          choicesIn={replyable && beside && !view.chatFirst ? choicesSlot : null}
           style={{ gridColumn: 1, gridRow: beside ? "1 / span 2" : 1 }}
         />
         {beside && !prepared && (

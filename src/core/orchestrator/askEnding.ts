@@ -78,15 +78,16 @@ export type AskState =
   | { kind: "missing" };
 
 /**
- * Where a close of a task's work puts its outcome: on the card that answers
- * its message (`revise`, `open` when it is still up), as the app's one
- * closing note marked as the answer (`note`), nowhere because other work of
- * the message runs on or took it over (`quiet`), or - for work no message
- * of the captain's covers - by today's rule for work the fleet started.
+ * Where a close of a task's work puts its outcome: on a card of that task
+ * that answers its message (`revise`, `open` when it is still up), as the
+ * app's one closing note named for the task (`note`, marked as the answer
+ * only when its message has none), nowhere because other work of the
+ * message runs on or took it over (`quiet`), or - for work no message of
+ * the captain's covers - by today's rule for work the fleet started.
  */
 export type ClosingPlace =
   | { kind: "revise"; card: Card; open: boolean }
-  | { kind: "note" }
+  | { kind: "note"; answering: boolean }
   | { kind: "quiet" }
   | { kind: "unasked"; card?: Card };
 
@@ -448,10 +449,14 @@ export class AskEnding {
   }
 
   /**
-   * Where a closed task's outcome goes (the at-most-one rule). The newest
-   * message covering the task decides: its answer, recorded or accepted,
-   * is revised; other running work of it means quiet; an answering card up
-   * is revised; otherwise the app's one closing note answers it.
+   * Where a closed task's outcome goes (the at-most-one rule). A card
+   * speaks only for its own task (INF-6115): the outcome is written on a
+   * card of the closed task, its own answering card up first, then the
+   * message's answer when that card is the task's. When the message is
+   * answered or waits on a card of other work, the closed task gets its own
+   * closing note, not marked as the answer; other running work of the
+   * message, or an answer the captain saw, keeps it quiet. Otherwise the
+   * app's one closing note answers the message.
    */
   closingPlace(taskId: string): ClosingPlace {
     // A message only tied to the task decides only when no message has it as work.
@@ -461,22 +466,31 @@ export class AskEnding {
       (card) => this.cardTask(card) === taskId && answersByShape(card),
     );
     if (!chain) return { kind: "unasked", ...(own ? { card: own } : {}) };
+    // The task's own card up takes it, even when the message's answer is
+    // another card, shown before a later message about it.
+    if (own) return { kind: "revise", card: own, open: true };
     const { root } = chain;
     const answer =
       root.answeredAt !== null ? (root.answerCardId ?? undefined) : this.acceptance(chain);
     if (answer) {
       const open = [...this.host.openCards()].find((card) => card.id === answer);
       const card = open ?? this.host.storedCard(answer);
-      return card ? { kind: "revise", card, open: open !== undefined } : { kind: "quiet" };
+      if (!card) return { kind: "quiet" };
+      if (this.cardTask(card) === taskId) return { kind: "revise", card, open: open !== undefined };
+      // The answer is a card of other work: it keeps its words, and the
+      // closed task's outcome is told under its own name.
+      return this.waitsOnOther(chain, taskId)
+        ? { kind: "quiet" }
+        : { kind: "note", answering: false };
     }
     if (root.answeredAt !== null || root.delivery === "unresolved") return { kind: "quiet" };
     if (this.waitsOnOther(chain, taskId)) return { kind: "quiet" };
-    // An answering card up is revised; so is the task's own, shown before a
-    // later message about it, which the revision shows again as the answer.
-    const waiting = this.waitingCard(chain) ?? own;
-    if (waiting) return { kind: "revise", card: waiting, open: true };
+    const waiting = this.waitingCard(chain);
+    if (waiting && this.cardTask(waiting) === taskId)
+      return { kind: "revise", card: waiting, open: true };
     // An answer the captain saw already answers it: nothing comes back.
     if (this.seenAnswer(chain)) return { kind: "quiet" };
-    return { kind: "note" };
+    // A card of other work up for the message stays its answer.
+    return { kind: "note", answering: waiting === undefined };
   }
 }

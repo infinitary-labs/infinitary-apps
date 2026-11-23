@@ -191,11 +191,14 @@ An answer the captain saw (**Seen** above) skips all three: the finished report 
 3. The app's one notice.
 
 At most one closing note: when work closes without the captain's click, `TaskClosing` asks `AskEnding.closingPlace` where its outcome goes.
+A card speaks only for its own task: the close line or merge line is written only on a card of the closed task, and no card the captain already chose on or closed is ever put back on the stack (INF-6115, the captain's pick "Its own note").
 
-- The accepted or recorded answer is revised with the outcome line, and a decision the captain chose on comes back to the stack only when the work was dropped after they accepted it; a note they closed never comes back (INF-2718).
+- The task's own card shaped as an answer that is still up is revised first, even when a later message asked about it or the message's answer is another card.
+- The accepted or recorded answer is revised when it is a card of the closed task and still up; one the captain already chose on stays down, and a drop they did not make is told on the task's own closing note instead, while a note they closed tells nothing more (INF-2718).
 - Other running work of the message, or a handover, puts up nothing.
 - Work another task carries on closes done with no outcome of its own, so it puts up nothing; when the task carrying it closed first, that task's held-back outcome is placed once (`docs/task-record.md`, "Work carried on by another task").
-- An answering card that is up is revised, and so is the task's own card shaped as an answer that is still up, even when a later message asked about it.
+- An answering card of the closed task that is up is revised.
+- When the message's answer, accepted or up, is a card of other work, that card keeps its words: a drop, merge or release with the first mate's sentence goes up as the task's own closing note, not marked as the answer, when no card of the task is on the stack; a finish puts up nothing.
 - An answer the captain saw puts up nothing.
 - Otherwise the app's one closing note goes up, marked as the answer.
 - Work no message of the captain's covers, such as work the fleet started, puts up a note only when it merged or released and nothing of the task is on the stack.

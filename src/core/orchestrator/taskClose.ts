@@ -161,14 +161,20 @@ export class TaskClosing {
   /**
    * Where a close of started work puts what became of it (INF-1610's at
    * most one closing note, docs/task-capture.md "How a message ends"). The
-   * captain's message the work covers decides, never the close's words:
-   * - the card that answers it, recorded or accepted, or up for them, is
-   *   revised with the outcome - the merge line on a merge - and a
-   *   decision they already chose on comes back only when the work was
-   *   dropped after all, by someone other than them; a note they closed
-   *   never comes back;
+   * captain's message the work covers decides, never the close's words, and
+   * a card speaks only for its own task (INF-6115):
+   * - a card of the closed task that is still up and answers the message
+   *   is revised with the outcome - the merge line on a merge;
+   * - a card of the task they already chose on or closed never comes back
+   *   (the captain's pick on INF-6115, and INF-2718 for a note): work they
+   *   chose that was dropped after all, by someone other than them, gets
+   *   its own closing note instead;
    * - other work of the message still running, or the task that took this
    *   work over, keeps it quiet;
+   * - a message already answered, or waiting on a card of other work,
+   *   leaves that card as it is: a drop, merge or release with the first
+   *   mate's sentence gets its own closing note named for the task, when no
+   *   card of the task is up, and a finish stays quiet;
    * - otherwise the first mate's sentence goes up as the app's one closing
    *   note, marked as the answer.
    * Work no message of the captain's covers - work the fleet started on
@@ -200,7 +206,7 @@ export class TaskClosing {
     // takes the outcome, and a message it served gets its answer from the
     // first mate step.
     const asked = this.host.askEnding.closingPlace(record.id);
-    const place: ClosingPlace =
+    let place: ClosingPlace =
       !record.shape?.internal_step || asked.kind === "unasked"
         ? asked
         : asked.kind === "revise" && asked.open
@@ -212,24 +218,38 @@ export class TaskClosing {
         : place.kind === "unasked" && place.card
           ? { card: place.card, open: true }
           : undefined;
-    if (answer) {
-      // A note the captain closed stays closed (INF-2718, DOP-201's note
-      // raised again with its "dropped" line): the close stays on the
-      // task's record and in Activity, never on their stack again.
-      if (!answer.open && answer.card.actions.length === 0) return;
-      if (!answer.open && (outcome !== "dropped" || actor === "captain")) return;
-      if (answer.open && outcome !== "merged" && !sentence) return;
-      this.reviseAnswer(answer.card, answer.open, record, outcome, actor, sentence);
+    if (answer?.open) {
+      if (outcome !== "merged" && !sentence) return;
+      this.reviseAnswer(answer.card, record, outcome, actor, sentence);
       return;
     }
-    if (!sentence || place.kind === "quiet") return;
+    if (answer) {
+      // A note the captain closed stays closed (INF-2718, DOP-201's note
+      // raised again with its "dropped" line), and a decision they chose on
+      // is never raised again (INF-6115): the close stays on the task's
+      // record and in Activity; only a drop they did not make gets a note.
+      if (answer.card.actions.length === 0) return;
+      if (outcome !== "dropped" || actor === "captain") return;
+      place = { kind: "note", answering: false };
+    }
+    if (!sentence || place.kind === "quiet" || place.kind === "revise") return;
     const unasked = place.kind === "unasked";
+    // A note beside the message's answer tells only what the captain did
+    // not see happen: a drop, merge or release, never a finish.
+    const beside = place.kind === "unasked" || !place.answering;
     if (unasked && outcome !== "merged" && outcome !== "released") return;
-    if (unasked && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
+    if (beside && outcome === "finished") return;
+    if (beside && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
     // The captain already closed or chose on the task's story or completion
     // card: that card was its one note, so no second note goes up beside it
-    // (INF-2461, the captain's pick on INF-2442).
-    if (unasked && this.host.cards.closedByCaptain(record.id).some(toldOutcome)) return;
+    // (INF-2461, the captain's pick on INF-2442). A drop they did not make
+    // is news that card never told, so it still gets its note (INF-6115).
+    if (
+      beside &&
+      outcome !== "dropped" &&
+      this.host.cards.closedByCaptain(record.id).some(toldOutcome)
+    )
+      return;
     const closed = this.host.tasks.get(record.id) ?? record;
     const prUrl = closed.delivery?.prUrl;
     const prNumber = closed.delivery?.prNumber;
@@ -243,19 +263,17 @@ export class TaskClosing {
       actions: [],
       taskId: record.id,
       aboutTask: true,
-      ...(unasked ? {} : { answering: true }),
+      ...(beside ? {} : { answering: true }),
     });
   }
 
   /**
-   * The card that answers the message, revised with what became of its
-   * work: on a merge the merge line - when, its pull request and the first
-   * mate's sentence (INF-1219) - else the close line. A decision the
-   * captain chose on comes back as a note, since what it offered is gone.
+   * A card of the closed task still up for the captain, revised with what
+   * became of its work: on a merge the merge line - when, its pull request
+   * and the first mate's sentence (INF-1219) - else the close line.
    */
   private reviseAnswer(
     card: Card,
-    open: boolean,
     record: TaskRecord,
     outcome: ClosedWithoutClick,
     actor: TaskClose["actor"],
@@ -281,12 +299,7 @@ export class TaskClosing {
             }),
           )
         : withCloseLine(card.body, closedLine(record.key || record.id, outcome, sentence));
-    if (open) this.host.cards.reviseBody(card.id, body);
-    else {
-      // Raised again as it now stands: no wait of its last showing comes with it.
-      const { awaiting: _awaiting, ...shown } = card;
-      this.host.cards.put({ ...shown, body, actions: [] });
-    }
+    this.host.cards.reviseBody(card.id, body);
   }
 
   /**

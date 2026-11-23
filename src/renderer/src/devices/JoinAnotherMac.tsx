@@ -21,13 +21,13 @@ import {
 } from "@shared/remoteLogin";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useShellStore } from "../app/store";
 import { Button, Input, MicroLabel, StatusDot } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { focusWithRing } from "../design/focus";
 import { useCopied } from "../settings/DevicesLinks";
 import { SettingError } from "../settings/settingRows";
 import { NearbyList, PortField, sshMustBeOn } from "./NearbyList";
+import type { FollowAddedStatus } from "./useFollowAdded";
 import { JOIN_CONFIRM_WORDS, JOIN_RUNS_WORK, joinRefusalWords } from "./viewWords";
 import "./joinAnotherMac.css";
 import "../accounts/connectChips.css";
@@ -111,89 +111,8 @@ function linkAddress(text: string): { address: string; kind: string; alsoPrivate
   }
 }
 
-/** How often the first launch asks whether its first mate's computer added it (docs/view.md, "Joining"). */
-const FOLLOW_EVERY_MS = 5_000;
 /** How often the open aside reads this computer again, so it follows its addresses and Remote Login. */
 const SET_UP_RENEW_MS = 5_000;
-
-/**
- * What the window promises once its first mate's computer adds this one
- * (`useFollowAdded`); `unknown` promises nothing until the shell answers.
- */
-type AfterAdd = "waits" | "keeps" | "stays" | "unknown";
-
-/**
- * Following along at first launch (docs/view.md, "Joining"): while this
- * group is up, the window asks the shell now and then whether its first
- * mate's computer added this one by its address; the shell itself decides,
- * and on a yes the window starts over as that first mate's. The shell says
- * too what it would do: it follows along only while nothing was done here
- * (`FirstRunView.untouched`) and, beside a command, only from one this
- * window's starter owns; otherwise this window keeps its own first mate,
- * and beside a command started elsewhere it cannot join at all. Until the
- * shell answers, joining is unknown and not offered, and the status
- * promises nothing; the window keeps
- * asking, so the answer follows a command that ends or is replaced. A
- * profile with something done is asked too, so the shell keeps that answer
- * after a restart.
- */
-function useFollowAdded(
-  can: boolean,
-  untouched: boolean,
-): { afterAdd: AfterAdd; joins: boolean | null; pastes: boolean | null; outside: boolean } {
-  const [answer, setAnswer] = useState<{
-    follows: boolean;
-    joins: boolean;
-    pastes: boolean;
-    outside: boolean;
-  } | null>(null);
-  useEffect(() => {
-    if (!can) return;
-    let live = true;
-    // Asked on and on, so the answer follows the command beside it: one that
-    // ends, or one started in its place, changes whether a join works here.
-    const ask = () => {
-      void window.infinitary.devices.followAdded().then(
-        (said) => {
-          if (live)
-            setAnswer({
-              follows: said.follows,
-              joins: said.joins,
-              pastes: said.pastes,
-              outside: said.outside,
-            });
-        },
-        // An answer that cannot be read leaves joining unknown, never allowed.
-        () => {
-          if (live) setAnswer(null);
-        },
-      );
-    };
-    ask();
-    const every = setInterval(ask, FOLLOW_EVERY_MS);
-    return () => {
-      live = false;
-      clearInterval(every);
-    };
-  }, [can]);
-  // Only a first mate started outside this window keeps it beside that one. While no command
-  // this window starts runs, or one it started is still starting, there is nothing to promise.
-  const afterAdd: AfterAdd = !answer
-    ? "unknown"
-    : answer.outside
-      ? "stays"
-      : !answer.pastes || !answer.joins
-        ? "unknown"
-        : untouched && answer.follows
-          ? "waits"
-          : "keeps";
-  return {
-    afterAdd,
-    joins: answer?.joins ?? null,
-    pastes: answer?.pastes ?? null,
-    outside: answer?.outside === true,
-  };
-}
 
 /**
  * Whether the address way sets this computer up, read once for the chips
@@ -266,6 +185,7 @@ function useSetUpHere(open: boolean): { here: SetUpHere | null; unread: boolean 
 }
 
 export type JoinAnotherMacProps = {
+  followStatus: FollowAddedStatus;
   /** The aside opened or closed; the stage hides its chips while it is open. */
   onOpenChange?: (open: boolean) => void;
   /** A line under the chip, while it is closed. */
@@ -311,6 +231,7 @@ export function JoinAnotherMac({
   join,
   byAddress,
   opens,
+  followStatus: { afterAdd, joins, pastes, outside },
 }: JoinAnotherMacProps) {
   const [step, setStepState] = useState<Step>(
     opens === "paste" ? { step: "paste", notALink: false } : { step: "closed" },
@@ -332,11 +253,6 @@ export function JoinAnotherMac({
   const nearby = useNearby(step.step === "address");
   const setUpOffered = useSetUpOffered();
   const { here, unread } = useSetUpHere(step.step === "set-up");
-  const firstRun = useShellStore((s) => s.firstRun);
-  const { afterAdd, joins, pastes, outside } = useFollowAdded(
-    firstRun?.gateOpen === true,
-    firstRun?.untouched === true,
-  );
   const setStep = (next: Step) => {
     setStepState(next);
     onOpenChange?.(next.step !== "closed");
@@ -463,7 +379,7 @@ export type JoinAnotherMacViewProps = {
   /** Set up from your first mate's computer leads the chips: the address way sets this computer up. */
   setUpOffered?: boolean;
   /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
-  afterAdd?: AfterAdd;
+  afterAdd?: FollowAddedStatus["afterAdd"];
   /**
    * Whether Join by its address works here, as the shell last said: false
    * beside a first mate started outside this window or while no command this

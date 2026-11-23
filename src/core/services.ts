@@ -1405,6 +1405,7 @@ export async function createServices(
   homePersonal.attachFirstmate((wake) => {
     firstmate.notifyOp(wake, "agent");
   });
+  homeDevices.cardAdds.attach((wake) => firstmate.notifyOp(wake, "agent"));
   attachComputerNotices(homeDevices, computerResourceFeed.snapshot(), {
     tasks,
     here: leftBehind,
@@ -1829,6 +1830,7 @@ export async function createServices(
     // The committed source a computer matched to this run from source builds.
     homeSource: () => (starter ? homeSourceOf(starter) : null),
     remoteLogin,
+    cardAdds: homeDevices.cardAdds,
     nearbyMacs: homeDevices.nearbyMacs,
     homeAnnouncement: homeDevices.homeAnnouncement,
     ...(homeDevices.phoneDoor ? { phoneDoor: homeDevices.phoneDoor } : {}),

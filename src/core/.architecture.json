@@ -518,7 +518,7 @@
     {
       "from": "devices",
       "to": "orchestrator",
-      "why": "keeps the host's clock"
+      "why": "keeps the host's clock and tells the first mate how its card's add ended"
     },
     {
       "from": "devices",

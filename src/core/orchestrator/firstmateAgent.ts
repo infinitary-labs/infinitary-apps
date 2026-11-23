@@ -1509,7 +1509,7 @@ export class FirstmateAgent {
     const waited = now - oldest.createdAt;
     // A captain's words never wait out the window, nor does the one retry
     // for a message nothing took effect after, an answer a message of his
-    // waits on, how his setup click came out,
+    // waits on, how his setup click or the add his click began came out,
     // an Update panel press, or a Start held for this turn. A queued task's
     // directions can still batch.
     const waiting = rows.some(
@@ -1518,6 +1518,7 @@ export class FirstmateAgent {
         row.facts?.kind === "answer-missing" ||
         this.delivery.waitingOn(row).length > 0 ||
         row.facts?.kind === "project-setup" ||
+        row.facts?.kind === "device-add" ||
         row.facts?.kind === "panel-update-asked" ||
         (row.facts?.kind === "captain-start" && row.facts.move === "start"),
     );

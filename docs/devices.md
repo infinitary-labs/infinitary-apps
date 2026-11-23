@@ -1588,6 +1588,15 @@ A link or a command therefore exists only after the captain's own click and live
 Asking twice revises one card while it is up, and only the host's cards carry the `devices` target: no agent's `emit_card` offers it.
 Once the captain answered that card, with its button or Not now, the next ask is a new question on a new card (`CardEmits.offerCardId`), so adding a second computer is never refused as the first one's answered card.
 
+### How the card's add ended
+
+An add the captain started with Add it on the first mate's card tells the first mate how it ended, once, as a `device-add` wake (`CardAdds`, `src/core/devices/cardAdds.ts`).
+The card's click marks its address, and the next `inf:devices:add` at that address is watched until it answers the computer on the list or is refused.
+On the list, the wake names the computer and its id with the lines that finished the add, such as when its work starts; refused, it carries the refusal's two lines, what happened and what to do.
+A question on the way - the check line, the password, another first mate there - is not the end, and the answer to it is watched the same way; an add left at a question for thirty minutes is no longer the card's.
+An add typed on Settings -> Devices with no card is the captain's own and tells the first mate nothing, and neither does a second press while one runs.
+The wake tells the first mate to say what happened in full and offer the next step, and it skips the first mate's wait for more wakes, as a setup card's answer does.
+
 ## While a link is open
 
 The connection listens while something is paired, a link is open, or a computer removed while out of reach has yet to hear it, so a device can use its link, and a command can get Infinitary with it.

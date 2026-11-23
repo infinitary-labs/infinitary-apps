@@ -76,6 +76,7 @@ export type FirstmateWakeKind =
   | "named-model-wait"
   | "computer-left-out"
   | "project-setup"
+  | "device-add"
   | "project-change"
   | "scheduled"
   | "welcome"

@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { ACTIONS } from "@shared/actions";
 import type { FeedLine } from "@shared/feed";
 import { providerLabel } from "@shared/modelSlots";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -303,6 +304,57 @@ describe("the app wiring's own answers, through the booted core", () => {
     }, 60_000);
     expect(quota).toBe("codex/work 62%; claude 40%");
   }, 120_000);
+
+  // INF-6043's change 4: a user pressed Add it on the first mate's card, the add was refused,
+  // and the first mate never heard. Its card's click and the add it opens are wired here, so the
+  // first mate hears the refusal's own words on its next request. A Windows PC adds no computer
+  // by its address: its card makes a link instead.
+  it.skipIf(process.platform === "win32")(
+    "tells the first mate how the add its card began ended, in the refusal's own words",
+    async () => {
+      const address = "sam@mini.local";
+      // The card the first mate's app_change puts up, from the catalog line's own offer.
+      const offer = ACTIONS["device-invite"].offer?.(
+        { how: "address", address, name: "Mac mini" },
+        undefined,
+        { platform: process.platform },
+      );
+      if (!offer || !("arrival" in offer)) throw new Error("No card offered.");
+      const cardId = core.services.supervisor.addFirstmateCard({
+        id: core.services.supervisor.cards.offerCardId(offer.cardId),
+        title: offer.title,
+        body: offer.paragraphs.map((text) => `<p>${text}</p>`).join(""),
+        actions: [
+          {
+            id: "open",
+            label: offer.label,
+            default: true,
+            effect: { kind: "open", target: "devices", ...offer.arrival },
+          },
+          { id: "not-now", label: offer.decline, declines: true },
+        ],
+      });
+      const chosen = await core.dispatch("inf:cards:act", [cardId, "open", "chrome"]);
+      expect(chosen.effect).toMatchObject({ kind: "open", target: "devices", add: address });
+      const before = mock.requestBodies().length;
+      // The copy a test runs cannot send itself, so the add Settings -> Devices runs is refused.
+      const refused = await core
+        .dispatch("inf:devices:add", [address])
+        .catch((error: unknown) => error as Error);
+      const lines = String((refused as Error).message).split("\n");
+      expect(lines).toHaveLength(2);
+      let heard: string | undefined;
+      await waitFor(() => {
+        heard = mock
+          .requestBodies()
+          .slice(before)
+          .find((body) => body.includes(`to add the computer at ${address}, and it was not added`));
+        return heard !== undefined && !core.services.firstmate.isBusy();
+      }, 60_000);
+      for (const line of lines) expect(heard).toContain(JSON.stringify(`"${line}"`).slice(1, -1));
+    },
+    120_000,
+  );
 });
 
 describe("the core's stop", () => {

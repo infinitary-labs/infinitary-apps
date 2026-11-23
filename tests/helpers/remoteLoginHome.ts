@@ -100,6 +100,8 @@ export async function home(options: {
   builds?: FarBuilds;
   idleTimeoutMs?: number;
   sendTimeoutMs?: number;
+  /** Hears each step as the home's own emit does, beside the list this keeps. */
+  hears?: (event: DeviceSetupEvent) => void;
 }) {
   const port = await claimedPort();
   const pairing = new DevicePairing({
@@ -132,7 +134,10 @@ export async function home(options: {
     ...(options.inReach ? { inReach: options.inReach } : {}),
     ...(options.here ? { here: options.here } : {}),
     ...(options.copyEveryMs !== undefined ? { copyEveryMs: options.copyEveryMs } : {}),
-    emit: (event) => said.push(event),
+    emit: (event) => {
+      said.push(event);
+      options.hears?.(event);
+    },
   });
   return {
     pairing,

@@ -81,6 +81,12 @@
       "launches": 1
     }
   },
+  "cards-top-bar": {
+    "iphone": {
+      "reads": 400,
+      "launches": 1
+    }
+  },
   "cards-secret": {
     "iphone": {
       "reads": 155,

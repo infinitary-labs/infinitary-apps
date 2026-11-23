@@ -20,6 +20,7 @@ const REASON = "Charge the test card in the checkout tests";
 const QUESTION = "Which Stripe account should this key come from?";
 const LEFT_WORDS = "Use the shared test account's key instead; I will add it myself.";
 const DRAFT = "Open it as a draft, please.";
+const ANSWER = "The shared test account; its key is the one named Test.";
 const SIZE = { width: 1280, height: 860 };
 
 /** What the app told the asking crewmate, each steer whole, as its task's record keeps it. */
@@ -75,8 +76,9 @@ async function askForASecret(app: Awaited<ReturnType<typeof launchSecrets>>["app
 // Data: an invented ask through the real task command, app, renderer, IPC and
 // task record, over the disposable custody and mock model of `launchSecrets`.
 // Completion: the reply and the Don't save words each reach the asking
-// crewmate as a steer with the app card's own words, and the card's own face
-// holds no reply field.
+// crewmate as a steer with the app card's own words, the crewmate's line
+// naming the captain's message answers it in the thread, and the card's own
+// face holds no reply field.
 // Prerequisites: Electron and the built renderer; no account, native store or
 // network. Shared resources: none beyond its own scratch folders.
 test("the asker hears a reply on its secret card, and Chat opens the thread there", async () => {
@@ -109,6 +111,29 @@ test("the asker hears a reply on its secret card, and Chat opens the thread ther
     await expect
       .poll(async () => (await steersHeard(page)).find((text) => text.includes(QUESTION)))
       .toContain(THREAD_APP_CARD_PREAMBLE);
+
+    // The asking crewmate answers through its reply tool's handler, naming the
+    // captain's message, and the line answers it in the card's thread.
+    const cardId = (await listedCard(page, { title })).id;
+    const answered = await app.evaluate(
+      (_electron, { taskId, cardId, answer }) => {
+        const cards = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.supervisor
+          .cards;
+        const question = cards.messages(cardId).findLast((line) => line.who === "captain");
+        if (!question) throw new Error("The captain's message is not in the thread.");
+        const said = cards.replyFromCrewmate(taskId, {
+          cardId,
+          text: answer,
+          answersMessage: question.id,
+        });
+        return { said, owed: cards.answerOwed(cardId) };
+      },
+      { taskId: TASK.id, cardId, answer: ANSWER },
+    );
+    expect(answered.said).toContain("Replied in the thread");
+    expect(answered.owed).toBe(false);
+    await expect(thread).toContainText(ANSWER);
+
     const pair = shownEntry(page);
     await picture(pair, "secret-card-thread-after");
     if (process.env.INFINITARY_TASK_EVIDENCE_DIR && test.info().repeatEachIndex === 0)
@@ -117,8 +142,8 @@ test("the asker hears a reply on its secret card, and Chat opens the thread ther
     // Words left in the thread's field at Don't save ride the outcome to the asker.
     await focusOn(reply.field);
     await typeInto(reply.field, LEFT_WORDS);
-    // With the thread open its buttons sit at the foot of the pair, under the thread.
-    const dontSave = shownEntry(page).getByRole("button", {
+    // With the thread open its buttons stay under the masked field.
+    const dontSave = card.getByRole("button", {
       name: SECRET_ASK_CARD_WORDS.dontSave,
     });
     await focusOn(dontSave);

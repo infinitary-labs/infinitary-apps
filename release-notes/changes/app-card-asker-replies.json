@@ -9,7 +9,7 @@
       "picture": {
         "dark": "app-card-asker-replies-dark.webp",
         "light": "app-card-asker-replies-light.webp",
-        "alt": "A card asking to save a Stripe test key, naming the task Wire up the checkout, with the conversation open beside it holding a question to the crewmate."
+        "alt": "A card asking to save a Stripe test key, naming the task Wire up the checkout, its Don't save and Save secret buttons under the key's field, with the conversation open beside it holding a question and the crewmate's answer."
       },
       "provenance": { "origin": "change" }
     }

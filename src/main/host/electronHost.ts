@@ -1,7 +1,8 @@
 import type { HostCapabilities } from "@core/host";
+import type { SecretClipboard } from "@core/secrets/clipboard";
 import * as m from "@shared/i18n/messages.generated";
 import { type BuildFlavor, userDataFolderFor } from "@shared/userDataFolders";
-import { app, dialog, Notification, shell } from "electron";
+import { app, clipboard, dialog, Notification, shell } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
 import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
 import { noteNotifiedCard } from "../notifiedCard";
@@ -9,7 +10,9 @@ import { packagedFlavor, readPackageJsonAt } from "../userDataDir";
 import { appWindows } from "../windows";
 import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartEntry";
 import { createAxiProcessSpawner } from "./axiProcess";
+import { createDarwinSecretClipboard } from "./darwinSecretClipboard";
 import { createDesktopKeychain } from "./electronKeychain";
+import { createLinuxSecretClipboard } from "./linuxSecretClipboard";
 import { macUpdateStandIn } from "./macUpdateStandIn";
 import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
@@ -20,6 +23,7 @@ import { createSecretRecoveryDialogs } from "./secretRecoveryDialogs";
 import { createSetAsideProcessSpawner } from "./setAsideProcess";
 import { createSqlProcessSpawner } from "./sqlProcess";
 import { createTaskBrowserHost } from "./taskBrowser";
+import { createWindowsSecretClipboard } from "./windowsSecretClipboard";
 
 /**
  * The Electron implementation of the host seam. This module is the only
@@ -146,6 +150,15 @@ export function applyDockVisibility(showInDock: boolean): void {
   }
 }
 
+/** Copy value's private clipboard writer on this platform; none where it cannot load. */
+function platformSecretClipboard(): SecretClipboard | undefined {
+  const platform = hostPlatform();
+  if (platform === "darwin") return createDarwinSecretClipboard();
+  if (platform === "win32") return createWindowsSecretClipboard();
+  if (platform === "linux") return createLinuxSecretClipboard(clipboard);
+  return undefined;
+}
+
 /** The notifications on screen, the newest for each card, held so each still hears its click. */
 const shownNotifications = new Map<string, Notification>();
 
@@ -162,6 +175,12 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     openWindow,
   } = options;
   const startAtLogin = startAtLoginFor(options.autostartName ?? ownAutostartName());
+  const secretClipboard = options.secrets
+    ? (options.secrets.clipboard ?? (!isolatedUserDataDir ? platformSecretClipboard() : undefined))
+    : undefined;
+  // A copied value still on the clipboard leaves with the app (docs/secrets.md,
+  // "Copying a value"); each writer's clear runs synchronously inside.
+  if (secretClipboard) app.on("will-quit", () => void secretClipboard.clear());
   return {
     ...(options.secrets
       ? {
@@ -170,6 +189,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
             ...(!options.secrets.recovery && !isolatedUserDataDir
               ? { recovery: createSecretRecoveryDialogs() }
               : {}),
+            ...(secretClipboard ? { clipboard: secretClipboard } : {}),
           },
         }
       : {}),

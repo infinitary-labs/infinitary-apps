@@ -3462,6 +3462,20 @@
 "settingsSecretsBackupNote" = "儲存一份加密副本和另外存放的復原金鑰。請把兩者分開保管：同時擁有兩者的人就能讀取儲存的值。金鑰無法重設。";
 "settingsSecretsBroughtFrom" = "從 %1$@ 匯入";
 "settingsSecretsCancel" = "取消";
+"settingsSecretsClearNow" = "立即清除";
+"settingsSecretsCopiedByYou" = "由你複製";
+"settingsSecretsCopiedOn" = "你於 %1$@ 複製";
+"settingsSecretsCopiedUntil" = "已複製。它會在 %1$@ 離開剪貼簿。";
+"settingsSecretsCopiedUntilVisible" = "已複製。它會在 %1$@ 離開剪貼簿。剪貼簿歷史工具仍可能保留它。";
+"settingsSecretsCopyCannotConfirm" = "這台電腦現在無法確認是你本人，所以無法複製值。";
+"settingsSecretsCopyChanged" = "這項機密在開啟其所在列後有了變更。沒有複製任何內容。";
+"settingsSecretsCopyCleared" = "複製的值已離開剪貼簿。";
+"settingsSecretsCopyReason" = "將 %1$@ 複製到這台電腦的剪貼簿。";
+"settingsSecretsCopyRefused" = "未接受任何確認。沒有複製任何內容。";
+"settingsSecretsCopyUnavailable" = "機密無法複製此值。沒有複製任何內容。";
+"settingsSecretsCopyUnknown" = "機密無法確定值是否已到達剪貼簿。請複製其他內容來取代剪貼簿上的內容。";
+"settingsSecretsCopyValue" = "複製值";
+"settingsSecretsCustodyMac" = "保存在這台電腦上。船員會使用它們，但看不到它們，除非你複製其中一項。";
 "settingsSecretsDeleteHistory" = "刪除歷史紀錄";
 "settingsSecretsDeviceCode" = "代碼 %1$@";
 "settingsSecretsExportFailed" = "無法匯出歷史紀錄。";
@@ -3477,6 +3491,7 @@
 "settingsSecretsNamePlaceholder" = "例如：網站部署";
 "settingsSecretsNoExport" = "沒有儲存匯出檔案。";
 "settingsSecretsNoHistory" = "沒有歷史紀錄。";
+"settingsSecretsNoReveal" = "儲存後值會保持隱藏。只有獲准的使用才會收到它，除非你自己複製。";
 "settingsSecretsNotRequested" = "尚未請求";
 "settingsSecretsPermissionsRecovery" = "權限需要復原";
 "settingsSecretsReading" = "正在讀取機密…";
@@ -3486,6 +3501,8 @@
 "settingsSecretsRecoveryNeeded" = "需要復原";
 "settingsSecretsRefresh" = "重新整理";
 "settingsSecretsRestoreNote" = "還原會取代儲存的值，並清除已儲存的決定、手機核准和暫時存取權。歷史紀錄會保留，但它絕不會允許任何使用。";
+"settingsSecretsRowOfferSays" = "在其所在列按「複製值」，你的電腦確認是你本人後，會把值放到這台電腦的剪貼簿上，並在 %1$@ 秒後清除。你在那裡做的事仍由你自己決定。";
+"settingsSecretsRowOfferTitle" = "在機密中開啟 %1$@";
 "settingsSecretsSaving" = "儲存中…";
 "settingsSecretsStorageLocked" = "儲存空間已鎖定";
 "settingsSecretsStorageUnavailable" = "無法使用儲存空間";

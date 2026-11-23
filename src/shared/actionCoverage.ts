@@ -439,6 +439,16 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<
     "kind=ask-phone": ["credential", "The paired phone approves with the captain's own hand"],
     "kind=cancel-phone": ["credential", "Withdraws a phone approval the captain started"],
     "kind=answer": ["credential", "A pass code the captain types"],
+    "kind=copy": [
+      "credential",
+      "Copying a secret's value takes the captain's own Touch ID or password, and the value never reaches an agent",
+    ],
+    "kind=clear-copy": [
+      "credential",
+      "Clears a value the captain copied with their own confirmation",
+    ],
+    version: ["credential", "The record a copy is bound to"],
+    revision: ["credential", "The record a copy is bound to"],
     request: ["consent", "Names a use the captain reviews or withdraws"],
     rules: ["consent", "Which tasks may use which secret"],
     ref: ["destructive", "The secret a forget deletes"],

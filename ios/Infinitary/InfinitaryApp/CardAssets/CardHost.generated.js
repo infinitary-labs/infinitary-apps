@@ -79608,6 +79608,388 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Cancel`;
   }
+  function settingsSecretsClearNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المسح الآن`;
+      case "de":
+        return `Jetzt entfernen`;
+      case "es":
+        return `Borrar ahora`;
+      case "fr":
+        return `Effacer maintenant`;
+      case "ja":
+        return `今すぐ消去`;
+      case "ko":
+        return `지금 지우기`;
+      case "pt-BR":
+        return `Limpar agora`;
+      case "zh-Hans":
+        return `立即清除`;
+      case "zh-Hant":
+        return `立即清除`;
+      case "en-XA":
+        return `[Çļéáŕ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Clear now‬`;
+    }
+    return `Clear now`;
+  }
+  function settingsSecretsCopiedByYou() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسختها أنت`;
+      case "de":
+        return `Von dir kopiert`;
+      case "es":
+        return `Copiado por ti`;
+      case "fr":
+        return `Copiée par vous`;
+      case "ja":
+        return `あなたがコピー`;
+      case "ko":
+        return `직접 복사함`;
+      case "pt-BR":
+        return `Copiado por você`;
+      case "zh-Hans":
+        return `由你复制`;
+      case "zh-Hant":
+        return `由你複製`;
+      case "en-XA":
+        return `[Çöþîéð ƀý ýöû ~~~~~]`;
+      case "ar-XB":
+        return `‮Copied by you‬`;
+    }
+    return `Copied by you`;
+  }
+  function settingsSecretsCopiedOn(input2) {
+    const when = input2.when;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسختها أنت في ${when}`;
+      case "de":
+        return `Von dir kopiert am ${when}`;
+      case "es":
+        return `Copiado por ti el ${when}`;
+      case "fr":
+        return `Copiée par vous le ${when}`;
+      case "ja":
+        return `${when} にあなたがコピー`;
+      case "ko":
+        return `${when}에 직접 복사함`;
+      case "pt-BR":
+        return `Copiado por você em ${when}`;
+      case "zh-Hans":
+        return `你于 ${when} 复制`;
+      case "zh-Hant":
+        return `你於 ${when} 複製`;
+      case "en-XA":
+        return `[Çöþîéð ƀý ýöû öñ ${when} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Copied by you on ‬${when}`;
+    }
+    return `Copied by you on ${when}`;
+  }
+  function settingsSecretsCopiedUntil(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم النسخ. تغادر الحافظة عند ${time2}.`;
+      case "de":
+        return `Kopiert. Um ${time2} wird er aus der Zwischenablage entfernt.`;
+      case "es":
+        return `Copiado. Sale del portapapeles a las ${time2}.`;
+      case "fr":
+        return `Copiée. Elle quitte le presse-papiers à ${time2}.`;
+      case "ja":
+        return `コピーしました。${time2} にクリップボードから消えます。`;
+      case "ko":
+        return `복사했습니다. ${time2}에 클립보드에서 지워집니다.`;
+      case "pt-BR":
+        return `Copiado. Ele sai da área de transferência às ${time2}.`;
+      case "zh-Hans":
+        return `已复制。它会在 ${time2} 离开剪贴板。`;
+      case "zh-Hant":
+        return `已複製。它會在 ${time2} 離開剪貼簿。`;
+      case "en-XA":
+        return `[Çöþîéð. Îţ ļéáṽéš ţĥé çļîþƀöáŕð áţ ${time2}. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copied. It leaves the clipboard at ‬${time2}‮.‬`;
+    }
+    return `Copied. It leaves the clipboard at ${time2}.`;
+  }
+  function settingsSecretsCopiedUntilVisible(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم النسخ. تغادر الحافظة عند ${time2}. قد تحتفظ بها أداة سجل الحافظة رغم ذلك.`;
+      case "de":
+        return `Kopiert. Um ${time2} wird er aus der Zwischenablage entfernt. Ein Verlaufswerkzeug der Zwischenablage kann ihn trotzdem behalten.`;
+      case "es":
+        return `Copiado. Sale del portapapeles a las ${time2}. Una herramienta de historial del portapapeles podría conservarlo.`;
+      case "fr":
+        return `Copiée. Elle quitte le presse-papiers à ${time2}. Un outil d’historique du presse-papiers peut tout de même la garder.`;
+      case "ja":
+        return `コピーしました。${time2} にクリップボードから消えます。クリップボード履歴ツールには残る場合があります。`;
+      case "ko":
+        return `복사했습니다. ${time2}에 클립보드에서 지워집니다. 클립보드 기록 도구에는 남아 있을 수 있습니다.`;
+      case "pt-BR":
+        return `Copiado. Ele sai da área de transferência às ${time2}. Uma ferramenta de histórico da área de transferência ainda pode guardá-lo.`;
+      case "zh-Hans":
+        return `已复制。它会在 ${time2} 离开剪贴板。剪贴板历史工具仍可能保留它。`;
+      case "zh-Hant":
+        return `已複製。它會在 ${time2} 離開剪貼簿。剪貼簿歷史工具仍可能保留它。`;
+      case "en-XA":
+        return `[Çöþîéð. Îţ ļéáṽéš ţĥé çļîþƀöáŕð áţ ${time2}. Å çļîþƀöáŕð ĥîšţöŕý ţööļ ɱáý šţîļļ ķééþ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copied. It leaves the clipboard at ‬${time2}‮. A clipboard history tool may still keep it.‬`;
+    }
+    return `Copied. It leaves the clipboard at ${time2}. A clipboard history tool may still keep it.`;
+  }
+  function settingsSecretsCopyCannotConfirm() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع هذا الكمبيوتر التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
+      case "de":
+        return `Dieser Computer kann gerade nicht bestätigen, dass du es bist, und daher keinen Wert kopieren.`;
+      case "es":
+        return `Esta computadora no puede confirmar que eres tú en este momento, así que no puede copiar un valor.`;
+      case "fr":
+        return `Cet ordinateur ne peut pas confirmer que c’est vous pour le moment, il ne peut donc pas copier de valeur.`;
+      case "ja":
+        return `このコンピュータは今あなた本人であることを確認できないため、値をコピーできません。`;
+      case "ko":
+        return `이 컴퓨터는 지금 본인인지 확인할 수 없어 값을 복사할 수 없습니다.`;
+      case "pt-BR":
+        return `Este computador não consegue confirmar que é você agora, então não pode copiar um valor.`;
+      case "zh-Hans":
+        return `这台电脑现在无法确认是你本人，所以无法复制值。`;
+      case "zh-Hant":
+        return `這台電腦現在無法確認是你本人，所以無法複製值。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ çáññöţ çöñƒîŕɱ îţ îš ýöû ŕîĝĥţ ñöŵ, šö îţ çáññöţ çöþý á ṽáļûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer cannot confirm it is you right now, so it cannot copy a value.‬`;
+    }
+    return `This computer cannot confirm it is you right now, so it cannot copy a value.`;
+  }
+  function settingsSecretsCopyChanged() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيّر هذا السر بعد فتح صفه. لم يُنسخ شيء.`;
+      case "de":
+        return `Dieses Geheimnis hat sich geändert, nachdem seine Zeile geöffnet wurde. Nichts wurde kopiert.`;
+      case "es":
+        return `Este secreto cambió después de abrir su fila. No se copió nada.`;
+      case "fr":
+        return `Ce secret a changé après l’ouverture de sa ligne. Rien n’a été copié.`;
+      case "ja":
+        return `行を開いた後にこのシークレットが変更されました。何もコピーされていません。`;
+      case "ko":
+        return `행을 연 뒤에 이 비밀 정보가 바뀌었습니다. 아무것도 복사하지 않았습니다.`;
+      case "pt-BR":
+        return `Este segredo mudou depois que a linha foi aberta. Nada foi copiado.`;
+      case "zh-Hans":
+        return `这项机密在打开其所在行后发生了变化。没有复制任何内容。`;
+      case "zh-Hant":
+        return `這項機密在開啟其所在列後有了變更。沒有複製任何內容。`;
+      case "en-XA":
+        return `[Ţĥîš šéçŕéţ çĥáñĝéð áƒţéŕ îţš ŕöŵ öþéñéð. Ñöţĥîñĝ ŵáš çöþîéð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This secret changed after its row opened. Nothing was copied.‬`;
+    }
+    return `This secret changed after its row opened. Nothing was copied.`;
+  }
+  function settingsSecretsCopyCleared() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تعد القيمة المنسوخة في الحافظة.`;
+      case "de":
+        return `Der kopierte Wert ist nicht mehr in der Zwischenablage.`;
+      case "es":
+        return `El valor copiado ya no está en el portapapeles.`;
+      case "fr":
+        return `La valeur copiée n’est plus dans le presse-papiers.`;
+      case "ja":
+        return `コピーした値はクリップボードから消えました。`;
+      case "ko":
+        return `복사한 값이 클립보드에서 지워졌습니다.`;
+      case "pt-BR":
+        return `O valor copiado saiu da área de transferência.`;
+      case "zh-Hans":
+        return `复制的值已离开剪贴板。`;
+      case "zh-Hant":
+        return `複製的值已離開剪貼簿。`;
+      case "en-XA":
+        return `[Ţĥé çöþîéð ṽáļûé îš öƒƒ ţĥé çļîþƀöáŕð. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The copied value is off the clipboard.‬`;
+    }
+    return `The copied value is off the clipboard.`;
+  }
+  function settingsSecretsCopyReason(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسخ ${name} إلى حافظة هذا الكمبيوتر.`;
+      case "de":
+        return `${name} in die Zwischenablage dieses Computers kopieren.`;
+      case "es":
+        return `Copiar ${name} al portapapeles de esta computadora.`;
+      case "fr":
+        return `Copier ${name} dans le presse-papiers de cet ordinateur.`;
+      case "ja":
+        return `${name} をこのコンピュータのクリップボードにコピーします。`;
+      case "ko":
+        return `${name}을(를) 이 컴퓨터의 클립보드에 복사합니다.`;
+      case "pt-BR":
+        return `Copiar ${name} para a área de transferência deste computador.`;
+      case "zh-Hans":
+        return `将 ${name} 复制到这台电脑的剪贴板。`;
+      case "zh-Hant":
+        return `將 ${name} 複製到這台電腦的剪貼簿。`;
+      case "en-XA":
+        return `[Çöþý ${name} ţö ţĥîš çöɱþûţéŕ'š çļîþƀöáŕð. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copy ‬${name}‮ to this computer's clipboard.‬`;
+    }
+    return `Copy ${name} to this computer's clipboard.`;
+  }
+  function settingsSecretsCopyRefused() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يُقبل أي تأكيد. لم يُنسخ شيء.`;
+      case "de":
+        return `Es wurde keine Bestätigung angenommen. Nichts wurde kopiert.`;
+      case "es":
+        return `No se aceptó ninguna confirmación. No se copió nada.`;
+      case "fr":
+        return `Aucune confirmation n’a été acceptée. Rien n’a été copié.`;
+      case "ja":
+        return `確認が受け付けられませんでした。何もコピーされていません。`;
+      case "ko":
+        return `확인이 받아들여지지 않았습니다. 아무것도 복사하지 않았습니다.`;
+      case "pt-BR":
+        return `Nenhuma confirmação foi aceita. Nada foi copiado.`;
+      case "zh-Hans":
+        return `未接受任何确认。没有复制任何内容。`;
+      case "zh-Hant":
+        return `未接受任何確認。沒有複製任何內容。`;
+      case "en-XA":
+        return `[Ñö çöñƒîŕɱáţîöñ ŵáš áççéþţéð. Ñöţĥîñĝ ŵáš çöþîéð. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No confirmation was accepted. Nothing was copied.‬`;
+    }
+    return `No confirmation was accepted. Nothing was copied.`;
+  }
+  function settingsSecretsCopyUnavailable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على الأسرار نسخ هذه القيمة. لم يُنسخ شيء.`;
+      case "de":
+        return `Geheimnisse konnte diesen Wert nicht kopieren. Nichts wurde kopiert.`;
+      case "es":
+        return `Secretos no pudo copiar este valor. No se copió nada.`;
+      case "fr":
+        return `Secrets n’a pas pu copier cette valeur. Rien n’a été copié.`;
+      case "ja":
+        return `シークレットはこの値をコピーできませんでした。何もコピーされていません。`;
+      case "ko":
+        return `비밀 정보에서 이 값을 복사할 수 없었습니다. 아무것도 복사하지 않았습니다.`;
+      case "pt-BR":
+        return `Segredos não conseguiu copiar este valor. Nada foi copiado.`;
+      case "zh-Hans":
+        return `机密无法复制此值。没有复制任何内容。`;
+      case "zh-Hant":
+        return `機密無法複製此值。沒有複製任何內容。`;
+      case "en-XA":
+        return `[Šéçŕéţš çöûļð ñöţ çöþý ţĥîš ṽáļûé. Ñöţĥîñĝ ŵáš çöþîéð. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets could not copy this value. Nothing was copied.‬`;
+    }
+    return `Secrets could not copy this value. Nothing was copied.`;
+  }
+  function settingsSecretsCopyUnknown() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تتمكن الأسرار من معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة. انسخ شيئًا آخر ليحل محل ما فيها.`;
+      case "de":
+        return `Geheimnisse konnte nicht feststellen, ob der Wert in der Zwischenablage angekommen ist. Kopiere etwas anderes, um zu ersetzen, was dort liegt.`;
+      case "es":
+        return `Secretos no pudo saber si el valor llegó al portapapeles. Copia otra cosa para reemplazar lo que haya allí.`;
+      case "fr":
+        return `Secrets n’a pas pu savoir si la valeur est arrivée dans le presse-papiers. Copiez autre chose pour remplacer ce qui s’y trouve.`;
+      case "ja":
+        return `シークレットは値がクリップボードに届いたかどうかを確認できませんでした。別のものをコピーして、そこにあるものを置き換えてください。`;
+      case "ko":
+        return `비밀 정보가 값이 클립보드에 들어갔는지 확인하지 못했습니다. 다른 것을 복사해 그곳에 있는 내용을 바꾸세요.`;
+      case "pt-BR":
+        return `Segredos não conseguiu saber se o valor chegou à área de transferência. Copie outra coisa para substituir o que estiver lá.`;
+      case "zh-Hans":
+        return `机密无法确定值是否已到达剪贴板。请复制其他内容来替换剪贴板上的内容。`;
+      case "zh-Hant":
+        return `機密無法確定值是否已到達剪貼簿。請複製其他內容來取代剪貼簿上的內容。`;
+      case "en-XA":
+        return `[Šéçŕéţš çöûļð ñöţ ţéļļ ŵĥéţĥéŕ ţĥé ṽáļûé ŕéáçĥéð ţĥé çļîþƀöáŕð. Çöþý šöɱéţĥîñĝ éļšé ţö ŕéþļáçé ŵĥáţéṽéŕ îš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there.‬`;
+    }
+    return `Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there.`;
+  }
+  function settingsSecretsCopyValue() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسخ القيمة`;
+      case "de":
+        return `Wert kopieren`;
+      case "es":
+        return `Copiar valor`;
+      case "fr":
+        return `Copier la valeur`;
+      case "ja":
+        return `値をコピー`;
+      case "ko":
+        return `값 복사`;
+      case "pt-BR":
+        return `Copiar valor`;
+      case "zh-Hans":
+        return `复制值`;
+      case "zh-Hant":
+        return `複製值`;
+      case "en-XA":
+        return `[Çöþý ṽáļûé ~~~~]`;
+      case "ar-XB":
+        return `‮Copy value‬`;
+    }
+    return `Copy value`;
+  }
+  function settingsSecretsCustodyMac() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
+      case "de":
+        return `Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.`;
+      case "es":
+        return `Se guardan en esta computadora. Tu tripulación los usa pero nunca los ve, salvo que copies uno.`;
+      case "fr":
+        return `Conservés sur cet ordinateur. Votre équipage les utilise sans jamais les voir, sauf si vous en copiez un.`;
+      case "ja":
+        return `このコンピュータに保管されます。乗組員は使いますが、あなたがコピーしない限り値を見ることはありません。`;
+      case "ko":
+        return `이 컴퓨터에 보관됩니다. 선원들은 사용하지만, 직접 복사하지 않는 한 보지 못합니다.`;
+      case "pt-BR":
+        return `Guardados neste computador. Sua tripulação os usa, mas nunca os vê, a menos que você copie um.`;
+      case "zh-Hans":
+        return `保存在这台电脑上。船员们会使用它们，但看不到它们，除非你复制其中一项。`;
+      case "zh-Hant":
+        return `保存在這台電腦上。船員會使用它們，但看不到它們，除非你複製其中一項。`;
+      case "en-XA":
+        return `[Ķéþţ öñ ţĥîš çöɱþûţéŕ. Ýöûŕ çŕéŵ ûšéš ţĥéɱ ƀûţ ñéṽéŕ šééš ţĥéɱ, ûñļéšš ýöû çöþý öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Kept on this computer. Your crew uses them but never sees them, unless you copy one.‬`;
+    }
+    return `Kept on this computer. Your crew uses them but never sees them, unless you copy one.`;
+  }
   function settingsSecretsDeleteHistory() {
     switch (currentLanguage()) {
       case "ar":
@@ -80014,6 +80396,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `No history recorded.`;
   }
+  function settingsSecretsNoReveal() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تبقى القيمة مخفية بعد الحفظ. لا يتلقاها إلا استخدام موافَق عليه، إلا إذا نسختها بنفسك.`;
+      case "de":
+        return `Der Wert bleibt nach dem Speichern verborgen. Nur eine freigegebene Nutzung erhält ihn, außer du kopierst ihn selbst.`;
+      case "es":
+        return `El valor queda oculto después de guardarlo. Solo un uso aprobado lo recibe, salvo que lo copies tú.`;
+      case "fr":
+        return `La valeur reste masquée après l’enregistrement. Seule une utilisation approuvée la reçoit, sauf si vous la copiez vous-même.`;
+      case "ja":
+        return `保存後、値は表示されません。受け取れるのは承認された使用だけです。あなたが自分でコピーする場合を除きます。`;
+      case "ko":
+        return `저장한 뒤에는 값이 숨겨집니다. 승인된 사용만 값을 받으며, 직접 복사하는 경우는 예외입니다.`;
+      case "pt-BR":
+        return `O valor fica oculto depois de salvo. Só um uso aprovado o recebe, a menos que você mesmo o copie.`;
+      case "zh-Hans":
+        return `保存后值会保持隐藏。只有获批的使用才会收到它，除非你自己复制。`;
+      case "zh-Hant":
+        return `儲存後值會保持隱藏。只有獲准的使用才會收到它，除非你自己複製。`;
+      case "en-XA":
+        return `[Ţĥé ṽáļûé šţáýš ĥîððéñ áƒţéŕ šáṽîñĝ. Öñļý áñ áþþŕöṽéð ûšé ŕéçéîṽéš îţ, ûñļéšš ýöû çöþý îţ ýöûŕšéļƒ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The value stays hidden after saving. Only an approved use receives it, unless you copy it yourself.‬`;
+    }
+    return `The value stays hidden after saving. Only an approved use receives it, unless you copy it yourself.`;
+  }
   function settingsSecretsNotRequested() {
     switch (currentLanguage()) {
       case "ar":
@@ -80258,6 +80667,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Restoring replaces stored values and clears saved decisions, phone approvals and temporary access. History stays, and it never allows a use.‬`;
     }
     return `Restoring replaces stored values and clears saved decisions, phone approvals and temporary access. History stays, and it never allows a use.`;
+  }
+  function settingsSecretsRowOfferSays(input2) {
+    const seconds = input2.seconds;
+    switch (currentLanguage()) {
+      case "ar":
+        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الكمبيوتر بعد أن يتأكد كمبيوترك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
+      case "de":
+        return `„Wert kopieren“ in seiner Zeile legt den Wert in die Zwischenablage dieses Computers, sobald dein Computer bestätigt, dass du es bist, und entfernt ihn ${seconds} Sekunden später. Was du dort tust, bleibt deine Sache.`;
+      case "es":
+        return `Copiar valor en su fila pone el valor en el portapapeles de esta computadora cuando tu computadora confirma que eres tú, y lo borra ${seconds} segundos después. Lo que hagas allí es solo tuyo.`;
+      case "fr":
+        return `Copier la valeur, sur sa ligne, met la valeur dans le presse-papiers de cet ordinateur dès que votre ordinateur confirme que c’est vous, et l’efface ${seconds} secondes plus tard. Ce que vous y faites reste à vous.`;
+      case "ja":
+        return `行の「値をコピー」は、コンピュータがあなた本人であることを確認すると値をこのコンピュータのクリップボードに置き、${seconds} 秒後に消去します。そこでの操作はあなただけのものです。`;
+      case "ko":
+        return `행의 값 복사는 컴퓨터가 본인임을 확인하면 값을 이 컴퓨터의 클립보드에 넣고, ${seconds}초 뒤에 지웁니다. 그곳에서 하는 일은 직접 하는 일로 남습니다.`;
+      case "pt-BR":
+        return `Copiar valor, na linha dele, coloca o valor na área de transferência deste computador assim que seu computador confirma que é você, e o limpa ${seconds} segundos depois. O que você faz lá continua sendo só seu.`;
+      case "zh-Hans":
+        return `在其所在行点按“复制值”，你的电脑确认是你本人后，会把值放到这台电脑的剪贴板上，并在 ${seconds} 秒后清除。你在那里做的事仍由你自己决定。`;
+      case "zh-Hant":
+        return `在其所在列按「複製值」，你的電腦確認是你本人後，會把值放到這台電腦的剪貼簿上，並在 ${seconds} 秒後清除。你在那裡做的事仍由你自己決定。`;
+      case "en-XA":
+        return `[Çöþý ṽáļûé öñ îţš ŕöŵ þûţš ţĥé ṽáļûé öñ ţĥîš çöɱþûţéŕ'š çļîþƀöáŕð öñçé ýöûŕ çöɱþûţéŕ çöñƒîŕɱš îţ îš ýöû, áñð çļéáŕš îţ ${seconds} šéçöñðš ļáţéŕ. Ŵĥáţ ýöû ðö ţĥéŕé šţáýš ýöûŕš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copy value on its row puts the value on this computer's clipboard once your computer confirms it is you, and clears it ‬${seconds}‮ seconds later. What you do there stays yours.‬`;
+    }
+    return `Copy value on its row puts the value on this computer's clipboard once your computer confirms it is you, and clears it ${seconds} seconds later. What you do there stays yours.`;
+  }
+  function settingsSecretsRowOfferTitle(input2) {
+    const secret = input2.secret;
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح ${secret} في الأسرار`;
+      case "de":
+        return `${secret} in Geheimnisse öffnen`;
+      case "es":
+        return `Abrir ${secret} en Secretos`;
+      case "fr":
+        return `Ouvrir ${secret} dans Secrets`;
+      case "ja":
+        return `シークレットで ${secret} を開く`;
+      case "ko":
+        return `비밀 정보에서 ${secret} 열기`;
+      case "pt-BR":
+        return `Abrir ${secret} em Segredos`;
+      case "zh-Hans":
+        return `在机密中打开 ${secret}`;
+      case "zh-Hant":
+        return `在機密中開啟 ${secret}`;
+      case "en-XA":
+        return `[Öþéñ ${secret} îñ Šéçŕéţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open ‬${secret}‮ in Secrets‬`;
+    }
+    return `Open ${secret} in Secrets`;
   }
   function settingsSecretsSaving() {
     switch (currentLanguage()) {
@@ -103725,6 +104190,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSecretsBackupNote,
     settingsSecretsBroughtFrom,
     settingsSecretsCancel,
+    settingsSecretsClearNow,
+    settingsSecretsCopiedByYou,
+    settingsSecretsCopiedOn,
+    settingsSecretsCopiedUntil,
+    settingsSecretsCopiedUntilVisible,
+    settingsSecretsCopyCannotConfirm,
+    settingsSecretsCopyChanged,
+    settingsSecretsCopyCleared,
+    settingsSecretsCopyReason,
+    settingsSecretsCopyRefused,
+    settingsSecretsCopyUnavailable,
+    settingsSecretsCopyUnknown,
+    settingsSecretsCopyValue,
+    settingsSecretsCustodyMac,
     settingsSecretsDeleteHistory,
     settingsSecretsDeviceCode,
     settingsSecretsExportFailed,
@@ -103740,6 +104219,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSecretsNamePlaceholder,
     settingsSecretsNoExport,
     settingsSecretsNoHistory,
+    settingsSecretsNoReveal,
     settingsSecretsNotRequested,
     settingsSecretsPermissionsRecovery,
     settingsSecretsReading,
@@ -103749,6 +104229,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsSecretsRecoveryNeeded,
     settingsSecretsRefresh,
     settingsSecretsRestoreNote,
+    settingsSecretsRowOfferSays,
+    settingsSecretsRowOfferTitle,
     settingsSecretsSaving,
     settingsSecretsStorageLocked,
     settingsSecretsStorageUnavailable,
@@ -107004,6 +107486,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSecretsBackupNote": [],
     "settingsSecretsBroughtFrom": ["tool"],
     "settingsSecretsCancel": [],
+    "settingsSecretsClearNow": [],
+    "settingsSecretsCopiedByYou": [],
+    "settingsSecretsCopiedOn": ["when"],
+    "settingsSecretsCopiedUntil": ["time"],
+    "settingsSecretsCopiedUntilVisible": ["time"],
+    "settingsSecretsCopyCannotConfirm": [],
+    "settingsSecretsCopyChanged": [],
+    "settingsSecretsCopyCleared": [],
+    "settingsSecretsCopyReason": ["name"],
+    "settingsSecretsCopyRefused": [],
+    "settingsSecretsCopyUnavailable": [],
+    "settingsSecretsCopyUnknown": [],
+    "settingsSecretsCopyValue": [],
+    "settingsSecretsCustodyMac": [],
     "settingsSecretsDeleteHistory": [],
     "settingsSecretsDeviceCode": ["code"],
     "settingsSecretsExportFailed": [],
@@ -107019,6 +107515,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSecretsNamePlaceholder": [],
     "settingsSecretsNoExport": [],
     "settingsSecretsNoHistory": [],
+    "settingsSecretsNoReveal": [],
     "settingsSecretsNotRequested": [],
     "settingsSecretsPermissionsRecovery": [],
     "settingsSecretsReading": [],
@@ -107028,6 +107525,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsSecretsRecoveryNeeded": [],
     "settingsSecretsRefresh": [],
     "settingsSecretsRestoreNote": [],
+    "settingsSecretsRowOfferSays": ["seconds"],
+    "settingsSecretsRowOfferTitle": ["secret"],
     "settingsSecretsSaving": [],
     "settingsSecretsStorageLocked": [],
     "settingsSecretsStorageUnavailable": [],

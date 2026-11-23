@@ -33,6 +33,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | card | 卡片 | Measure word 张. |
 | certificate | 证书 | Only where the person chooses an organization's CA certificate. |
 | check (of a finding) | 核实 | Kept apart from 检查, which is a pull request's checks. |
+| clipboard | 剪贴板 | Where Copy value puts a secret's value. |
 | clone | 克隆 | Never 复制. |
 | command (run in Terminal) | 命令 | The one-time command run in “终端”, macOS's own name for Terminal. |
 | command search | 命令搜索 | |

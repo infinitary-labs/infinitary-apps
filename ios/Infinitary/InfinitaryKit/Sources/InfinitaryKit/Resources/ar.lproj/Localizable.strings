@@ -3462,6 +3462,20 @@
 "settingsSecretsBackupNote" = "احفظ نسخة مشفّرة ومفتاح استرداد منفصلًا. أبقهما منفصلين: يستطيع أي شخص يملكهما معًا قراءة القيم المحفوظة. لا يمكن إعادة تعيين المفتاح.";
 "settingsSecretsBroughtFrom" = "جُلب من %1$@";
 "settingsSecretsCancel" = "إلغاء";
+"settingsSecretsClearNow" = "المسح الآن";
+"settingsSecretsCopiedByYou" = "نسختها أنت";
+"settingsSecretsCopiedOn" = "نسختها أنت في %1$@";
+"settingsSecretsCopiedUntil" = "تم النسخ. تغادر الحافظة عند %1$@.";
+"settingsSecretsCopiedUntilVisible" = "تم النسخ. تغادر الحافظة عند %1$@. قد تحتفظ بها أداة سجل الحافظة رغم ذلك.";
+"settingsSecretsCopyCannotConfirm" = "لا يستطيع هذا الكمبيوتر التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.";
+"settingsSecretsCopyChanged" = "تغيّر هذا السر بعد فتح صفه. لم يُنسخ شيء.";
+"settingsSecretsCopyCleared" = "لم تعد القيمة المنسوخة في الحافظة.";
+"settingsSecretsCopyReason" = "نسخ %1$@ إلى حافظة هذا الكمبيوتر.";
+"settingsSecretsCopyRefused" = "لم يُقبل أي تأكيد. لم يُنسخ شيء.";
+"settingsSecretsCopyUnavailable" = "تعذّر على الأسرار نسخ هذه القيمة. لم يُنسخ شيء.";
+"settingsSecretsCopyUnknown" = "لم تتمكن الأسرار من معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة. انسخ شيئًا آخر ليحل محل ما فيها.";
+"settingsSecretsCopyValue" = "نسخ القيمة";
+"settingsSecretsCustodyMac" = "محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.";
 "settingsSecretsDeleteHistory" = "حذف السجل";
 "settingsSecretsDeviceCode" = "الرمز %1$@";
 "settingsSecretsExportFailed" = "تعذّر تصدير السجل.";
@@ -3477,6 +3491,7 @@
 "settingsSecretsNamePlaceholder" = "مثلًا، نشر الموقع الإلكتروني";
 "settingsSecretsNoExport" = "لم يُحفظ أي تصدير.";
 "settingsSecretsNoHistory" = "لا يوجد سجل مدوَّن.";
+"settingsSecretsNoReveal" = "تبقى القيمة مخفية بعد الحفظ. لا يتلقاها إلا استخدام موافَق عليه، إلا إذا نسختها بنفسك.";
 "settingsSecretsNotRequested" = "لم يُطلب بعد";
 "settingsSecretsPermissionsRecovery" = "الأذونات تحتاج إلى استرداد";
 "settingsSecretsReading" = "جارٍ قراءة الأسرار…";
@@ -3486,6 +3501,8 @@
 "settingsSecretsRecoveryNeeded" = "يلزم الاسترداد";
 "settingsSecretsRefresh" = "تحديث";
 "settingsSecretsRestoreNote" = "الاستعادة تستبدل القيم المخزّنة وتمسح القرارات المحفوظة وموافقات الهاتف والوصول المؤقت. يبقى السجل، ولا يسمح أبدًا بأي استخدام.";
+"settingsSecretsRowOfferSays" = "«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الكمبيوتر بعد أن يتأكد كمبيوترك من أنك أنت، ويمسحها بعد %1$@ ثانية. ما تفعله هناك يبقى قرارك.";
+"settingsSecretsRowOfferTitle" = "فتح %1$@ في الأسرار";
 "settingsSecretsSaving" = "جارٍ الحفظ…";
 "settingsSecretsStorageLocked" = "التخزين مقفل";
 "settingsSecretsStorageUnavailable" = "التخزين غير متاح";

@@ -9,7 +9,7 @@ A footer opens Access, history & recovery without clearing the protected list’
 
 ## The first line
 
-Protected secrets counts the secrets kept on this computer and says the crew uses them but never sees them.
+Protected secrets counts the secrets kept on this computer and says the crew uses them but never sees them, unless the person copies one.
 On Linux, where any program the person runs can read the unlocked secret store, it says instead that the crew uses them only with the person's approval and that such a program can reach them.
 A badge appears only when something is wrong (storage locked, unavailable or needing recovery), beside a notice that says what to do; a working store says nothing about itself.
 Needing recovery, the notice says Infinitary can no longer read what this computer keeps, so no use is allowed, and offers Recovery options, which opens Backup and restore, beside Start over.
@@ -21,26 +21,32 @@ A request waiting for an answer is one line naming its secrets, with Review requ
 ## Secret rows and secure entry
 
 A search field searches names, places and the task that last used each secret, beside Add secret.
-Each row leads with the secret's name and its place (the optional environment) in quiet mono text, and ends with what last happened, in muted words: Used today by Deploy the site, Used Nov 3, Not used yet, Waiting for your answer or In use now.
+Each row leads with the secret's name and its place (the optional environment) in quiet mono text, and ends with what last happened, in muted words: Used today by Deploy the site, Used Nov 3, Copied by you on Nov 3, Not used yet, Waiting for your answer or In use now.
 The task is named by its own title; a request no task made names only when.
 A request timestamp is never called proof that a value was used.
 A reference appears only when another secret has the same name and place; the row never shows a saved version or a raw timestamp.
-Opening a row offers Replace, Forget and that secret's saved decisions.
+Opening a row offers Copy value, Replace, Forget and that secret's saved decisions, Copy value first.
+Copy value asks for fresh system confirmation on each press, then puts the value on this computer's clipboard; it never shows the value on the page.
+Where this computer cannot confirm, it is off, with a note saying so.
+After a copy, the opened row ends with one muted line, Copied.
+It leaves the clipboard at 3:04:05 PM., with the seconds, beside a small secondary Clear now; on Linux the line adds that a clipboard history tool may still keep it.
+The line is announced politely, sits at the row body's own padding, and leaves when the value is cleared; Clear now returns focus to Copy value.
 Forget asks on the row, never on a card, and the window stays on Settings: Replace and Forget turn into the question, "Forget the Website deployment secret?", its two sentences ("Infinitary removes it from this computer, and no task can use it after this." and "This does not turn it off where it was made, and it cannot take back a copy a program already received.") in `--fg-2`, then a small secondary Keep secret, which has focus so Enter never forgets, and a small danger Forget secret.
 Keep secret changes nothing and returns focus to Forget; Forget secret removes that exact secret, the status line says "Secret forgotten locally." and focus moves to the next secret, or Add secret when none is left.
 Remove, Stop approvals and Delete history ask the same way on their own rows, with their own words; one question is open at a time, and closing its row or area, leaving Settings or starting another Secrets action drops it.
 Each answer is a one-time pass the app made for that question, so the page never forgets or removes by itself.
-A sign-in the app keeps for one of its own services, such as Google's, opens to one line saying Infinitary keeps it for a sign-in made in Integrations and uses it without asking, and one secondary button, Manage in Integrations, reached with Tab after the row; it has no Replace, Forget or decisions.
+A sign-in the app keeps for one of its own services, such as Google's, opens to one line saying Infinitary keeps it for a sign-in made in Integrations and uses it without asking, and one secondary button, Manage in Integrations, reached with Tab after the row; it has no Copy value, Replace, Forget or decisions.
+A server's key opens the same way and also offers Copy value before Manage in Integrations.
 A temporary read shows on the secret's own row as Reading until a time, beside End access; there is no separate temporary-access section.
 Discovery is global: crew can find the names without receiving the values or permission to use them.
 There is no project/computer linking control.
 Add and Replace open an app-authored inline form, never an agent card or contributed frame.
 The form asks for a name, the masked value and an optional place, and never for a reference: saving creates a readable, stable reference from the name.
-The value field is `SecretField`, a password input with no reveal button, autocomplete or clipboard action; submission clears the field before awaiting the response.
+The value field is `SecretField`, a password input with no reveal button, autocomplete or clipboard action (Copy value on the saved row is the only way a value comes back out); submission clears the field before awaiting the response.
 It keeps the line breaks of a pasted multi-line value, such as a private key, each shown as one more dot.
 The form labels every field, explains that the value stays hidden, and keeps Cancel beside Save.
 Opening focuses Name; closing returns focus after the saved list has rendered, to the original control or Add secret if a renamed row no longer matches the search.
-Nothing shows an existing value, prefix or encoded substitute.
+Nothing shows an existing value, prefix or encoded substitute; Copy value puts it on the clipboard and never on the page.
 
 ## Access, history & recovery
 
@@ -51,7 +57,7 @@ Saved decisions are the existing Never, Ask and Allow rules, each in one plain s
 Remove asks on that decision's row, quoting that sentence, with Keep it and Remove decision, and Remove decision needs fresh system confirmation; a click alone grants nothing.
 The page has no rule editor, dropdowns or program rehearsal form: a decision is made only on a request's approval card, and the crew checks a run before asking.
 Approving devices lists each enrolled phone or Mac with the code compared when it enrolled, beside Stop approvals; with none, it says "No phone or Mac approves uses." and to turn on Approves secret uses beside it in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
-Use history reports metadata, storage use and export, with explicit deletion asked in place, Delete Secrets history? with Keep history and Delete history, and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
+Use history reports metadata, storage use and export, with explicit deletion asked in place, Delete Secrets history? with Keep history and Delete history, and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient, except a copy, which reads Copied by you with no reason or recipient.
 History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
 Backup and restore uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.
 It says in short sentences that the copy and the key are kept apart, that there is no key reset, and that restoring replaces values, clears saved decisions, phone approvals and temporary access, and keeps history.

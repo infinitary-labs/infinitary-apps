@@ -3462,6 +3462,20 @@
 "settingsSecretsBackupNote" = "Guarda una copia cifrada y una clave de recuperación aparte. Guárdalas por separado: quien tenga ambas puede leer los valores guardados. La clave no se puede restablecer.";
 "settingsSecretsBroughtFrom" = "Traído de %1$@";
 "settingsSecretsCancel" = "Cancelar";
+"settingsSecretsClearNow" = "Borrar ahora";
+"settingsSecretsCopiedByYou" = "Copiado por ti";
+"settingsSecretsCopiedOn" = "Copiado por ti el %1$@";
+"settingsSecretsCopiedUntil" = "Copiado. Sale del portapapeles a las %1$@.";
+"settingsSecretsCopiedUntilVisible" = "Copiado. Sale del portapapeles a las %1$@. Una herramienta de historial del portapapeles podría conservarlo.";
+"settingsSecretsCopyCannotConfirm" = "Esta computadora no puede confirmar que eres tú en este momento, así que no puede copiar un valor.";
+"settingsSecretsCopyChanged" = "Este secreto cambió después de abrir su fila. No se copió nada.";
+"settingsSecretsCopyCleared" = "El valor copiado ya no está en el portapapeles.";
+"settingsSecretsCopyReason" = "Copiar %1$@ al portapapeles de esta computadora.";
+"settingsSecretsCopyRefused" = "No se aceptó ninguna confirmación. No se copió nada.";
+"settingsSecretsCopyUnavailable" = "Secretos no pudo copiar este valor. No se copió nada.";
+"settingsSecretsCopyUnknown" = "Secretos no pudo saber si el valor llegó al portapapeles. Copia otra cosa para reemplazar lo que haya allí.";
+"settingsSecretsCopyValue" = "Copiar valor";
+"settingsSecretsCustodyMac" = "Se guardan en esta computadora. Tu tripulación los usa pero nunca los ve, salvo que copies uno.";
 "settingsSecretsDeleteHistory" = "Eliminar historial";
 "settingsSecretsDeviceCode" = "Código %1$@";
 "settingsSecretsExportFailed" = "No se pudo exportar el historial.";
@@ -3477,6 +3491,7 @@
 "settingsSecretsNamePlaceholder" = "Por ejemplo, Publicación del sitio web";
 "settingsSecretsNoExport" = "No se guardó ninguna exportación.";
 "settingsSecretsNoHistory" = "No hay historial registrado.";
+"settingsSecretsNoReveal" = "El valor queda oculto después de guardarlo. Solo un uso aprobado lo recibe, salvo que lo copies tú.";
 "settingsSecretsNotRequested" = "Aún no solicitado";
 "settingsSecretsPermissionsRecovery" = "Los permisos necesitan recuperación";
 "settingsSecretsReading" = "Leyendo Secretos…";
@@ -3486,6 +3501,8 @@
 "settingsSecretsRecoveryNeeded" = "Se necesita recuperación";
 "settingsSecretsRefresh" = "Actualizar";
 "settingsSecretsRestoreNote" = "Restaurar reemplaza los valores guardados y borra las decisiones guardadas, las aprobaciones desde el teléfono y los accesos temporales. El historial se conserva y nunca permite un uso.";
+"settingsSecretsRowOfferSays" = "Copiar valor en su fila pone el valor en el portapapeles de esta computadora cuando tu computadora confirma que eres tú, y lo borra %1$@ segundos después. Lo que hagas allí es solo tuyo.";
+"settingsSecretsRowOfferTitle" = "Abrir %1$@ en Secretos";
 "settingsSecretsSaving" = "Guardando…";
 "settingsSecretsStorageLocked" = "Almacenamiento bloqueado";
 "settingsSecretsStorageUnavailable" = "Almacenamiento no disponible";

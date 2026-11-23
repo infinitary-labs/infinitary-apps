@@ -23,8 +23,8 @@ export function resetHandlers(services: CoreServices): ResetHandlers {
 }
 
 export function resetDeps(services: CoreServices): ResetPrepareDeps {
-  // Read at each use, as the dispatcher's other handlers do: the dispatcher
-  // is built before, and sometimes without, the folder's paths.
+  // Read at each use, as the dispatcher's other handlers do, so building a
+  // dispatcher over services that carry no paths reads nothing yet.
   const dataDir = () => services.paths.userData;
   return {
     devices: () => services.computers.list(),

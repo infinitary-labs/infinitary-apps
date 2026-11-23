@@ -347,9 +347,9 @@ describe("readClaudeStore", () => {
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
-  // INF-6273 reproduced both on a Mac with Claude Code's own leftovers: a
-  // sign-out keeps a remote-device key and drops the login (G), and a refused
-  // renewal blanks the login's tokens in place (H). Either is no login.
+  // Claude Code's own Mac Keychain leftovers: a sign-out keeps a
+  // remote-device key and drops the login, and a refused renewal blanks the
+  // tokens in place. Either is no login.
   it.each([
     ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
     [

@@ -74,6 +74,15 @@ function keychain(find: HostKeychainOutcome): HostKeychain & {
   return found;
 }
 
+/** What Claude Code leaves in its store with no login in it. */
+const CLAUDE_LEFTOVERS = [
+  ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
+  [
+    "a login Claude blanked",
+    { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
+  ],
+] as const;
+
 function lapsedFile(dir: string): void {
   writeFileSync(
     join(dir, ".credentials.json"),
@@ -100,7 +109,7 @@ function client(signedIn: boolean): { run: RunClaude; calls: string[][] } {
 function backendFor(
   dir: string,
   env: NodeJS.ProcessEnv,
-  passwords: ReturnType<typeof keychain>,
+  passwords: HostKeychain,
   run: RunClaude,
 ): ClaudeAuthBackend {
   return new ClaudeAuthBackend({
@@ -192,13 +201,7 @@ describe("Claude connect adopts a usable default login", () => {
   // and a refused renewal blanks the login's tokens in place (H). Claude
   // says it is signed out, so the add starts Claude's sign-in, which saves
   // its login beside the entries already in the file.
-  for (const [shape, leftover] of [
-    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
-    [
-      "a login Claude blanked",
-      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
-    ],
-  ] as const) {
+  for (const [shape, leftover] of CLAUDE_LEFTOVERS) {
     it(`starts Claude's sign-in over a file holding ${shape}`, async () => {
       const { dir, env } = home();
       const file = join(dir, ".credentials.json");
@@ -226,15 +229,9 @@ describe("Claude connect adopts a usable default login", () => {
     });
   }
 
-  // INF-6273 found the same two leftovers in the Mac Keychain item, where
-  // Claude Code keeps its login on a Mac.
-  for (const [shape, leftover] of [
-    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
-    [
-      "a login Claude blanked",
-      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
-    ],
-  ] as const) {
+  // On a Mac, Claude Code keeps its login, and these leftovers, in the
+  // Keychain item instead.
+  for (const [shape, leftover] of CLAUDE_LEFTOVERS) {
     it(`starts Claude's sign-in over a Keychain item holding ${shape}`, async () => {
       const { dir, env } = home();
       let stored: object = leftover;
@@ -258,15 +255,7 @@ describe("Claude connect adopts a usable default login", () => {
         }
         return claude.run(args, configDir, options);
       };
-      const backend = new ClaudeAuthBackend({
-        run,
-        available: () => true,
-        keychain: passwords,
-        configDir: () => dir,
-        readStore: (configDir, options) =>
-          readClaudeStore(configDir, { ...options, keychain: passwords, env }),
-      });
-      await loginOf(backend, bridge());
+      await loginOf(backendFor(dir, env, passwords, run), bridge());
       expect(claude.calls[0]).toEqual(["auth", "status", "--json"]);
       expect(claude.calls.some((args) => args[1] === "login")).toBe(true);
       expect(await readClaudeStore(dir, { keychain: passwords, env })).toMatchObject({

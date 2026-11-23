@@ -499,10 +499,11 @@ export class FirstmateContext {
     const requiredActionGuide = requiredActionTask
       ? `; required captain action task_id ${requiredActionTask}. Answer with emit_card using this same id, task_id and reply; the host preserves instructions and controls. For failure, read the output, arrange repair through the crew and keep repair status in this thread. Never confirm for the captain.`
       : "";
-    // INF-1670: the host's stuck alert names the first mate as its answerer.
+    // A host card naming the first mate as its answerer: the stuck alert
+    // (INF-1670) and every card the app raises itself (`raiseHostCard`).
     const hostAlertGuide =
       aboutCard?.author === "host" && aboutCard.answeredBy === "firstmate"
-        ? `; the host's stuck alert on task_id ${aboutCard.taskId ?? ""}, which you answer and cannot revise: any act it asks goes through your tools`
+        ? `; the app's own card${aboutCard.taskId ? `, task_id ${aboutCard.taskId}` : ""}, which you answer and cannot revise: any act it asks goes through your tools, and its buttons stay the captain's`
         : "";
     // Only a line naming the captain's message answers it; the closing
     // words are a line that leaves it open (the captain's "Only a line that

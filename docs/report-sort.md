@@ -302,7 +302,7 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
   Its title says how long ("<title> has been stuck for 1h 20m"), its body what the crewmate last said or the problem its last try ended in, what the ladder already did, what each button does, and that anything else goes in a reply.
   When its newest report declared a work wait, the body also says what it still waits on and the recovery attempts the first mate recorded since ("Self-resolving work waits" above).
   **Nudge** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Back to backlog** parks the task where its wait shows (host op `backlog-task`, `HostOps.moveToBacklog`; `docs/task-board.md`, "A started task in the backlog"; it took Keep waiting's place, the captain's pick on INF-3143's build, since a card holds three buttons), while the minus only puts it aside with its gate still held, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal (INF-1670: the captain removed Drop task and left nuanced operations to the reply).
-  A reply under it goes to the first mate, which answers in its thread (`docs/card-threads.md`, "The stuck alert's reply row").
+  A reply under it goes to the first mate, which answers in its thread (`docs/card-threads.md`, "A host card's reply row").
   While it is up the task is the captain's turn and nothing repeats.
   It leaves on a choice (putting it away keeps its card minimized, and the task's standing line stays), when the task moves (a new turn retires it, unless a reply under it still waits on the first mate's answer), when the task goes back to the backlog, or when the task closes.
 

@@ -85,4 +85,4 @@ Anyone can type the mark, so the labels sort issues and grant nothing.
 
 - Unit: `src/shared/feedback.test.ts` (the request reader), `src/core/feedback/*.test.ts` (the guard per identifier kind, the search guarded, the link's limit, the draft kept or linked, the facts the home reads), `src/core/orchestrator/requestStrips.test.ts` (the strip), `src/core/orchestrator/feedbackReply.test.ts` (a reply under a crewmate's card).
 - Integration: `src/core/core.feedback.test.ts` (the main message box and a phone's crewmate tab reach the first mate over the real connection).
-- Journey: `tests/e2e/feedback.spec.ts` (nothing reaches the GitHub stand-in before the click; exactly the shown text after).
+- Journey: `tests/e2e/feedback.spec.ts` (nothing reaches the GitHub stand-in before the click; exactly the shown text after; on a Mac, Send Feedback in the Help menu starts the message with /feedback).

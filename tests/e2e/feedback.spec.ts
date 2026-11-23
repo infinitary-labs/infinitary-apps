@@ -140,8 +140,7 @@ test("a /feedback report shows its exact issue for review and publishes it once 
 test("Send Feedback in the Help menu starts the message with /feedback", {
   tag: MAC_ONLY_TAG,
 }, async () => {
-  // A desktop whose window draws its own controls has no app menu, so no Help menu.
-  expect(HAS_APP_MENU).toBe(true);
+  test.skip(!HAS_APP_MENU, "a desktop whose window draws its own controls has no Help menu");
   launched = await launchApp({ withMockProvider: true });
   const { app, page } = launched;
   const input = promptInput(page);

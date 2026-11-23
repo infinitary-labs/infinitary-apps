@@ -852,7 +852,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const stall = `card-stall-${taskId}`;
     const question = "is it stuck because the secret PR hasn't landed yet?";
     supervisor.cardActions.replyToCard(stall, question);
-    expect(converseAboutCard).toHaveBeenCalledWith(stall, question, undefined);
+    expect(converseAboutCard).toHaveBeenCalledWith(
+      stall,
+      question,
+      undefined,
+      undefined,
+      undefined,
+      expect.any(Number),
+    );
     expect(crewmate.promptCalls.some((call) => call.includes(question))).toBe(false);
     expect(
       supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,

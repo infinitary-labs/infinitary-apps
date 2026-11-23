@@ -14,6 +14,7 @@ import { withoutOutsideWords } from "../storage/outsideDataScrub";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { AppUpdateWait, TaskActivity, TaskRecord } from "../storage/taskRecords";
 import { conversationOf, type TaskSession } from "../storage/taskSessionStore";
+import type { RelayedWords } from "./taskOrigin";
 import type { TaskService } from "./taskService";
 import type { TaskWriter } from "./taskWriter";
 
@@ -35,8 +36,11 @@ export type KeptReport = {
  * facts until the next turn starts, like the others, so the idle ladder
  * can raise it again while the Firstmate leaves it unanswered (FI3-714).
  */
-/** The captain's words a report passes on, where he typed them and when (INF-3202). */
-export type RelayedCaptainWords = { from: string; text: string; at: number };
+/**
+ * The captain's words a report passes on, where and when they were typed
+ * (INF-3202), with their line's number when they were a reply under a card.
+ */
+export type RelayedCaptainWords = { from: string } & RelayedWords;
 
 export type ReportDeclaration = {
   /** Explicit individually correlated answers, saved immediately by the inbox owner. */

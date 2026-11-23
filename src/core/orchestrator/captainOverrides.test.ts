@@ -127,10 +127,12 @@ describe("the captain's override", () => {
     );
     h.supervisor.cardActions.replyToCard(own, "Volts first, and file the meter's label fix.");
     const reply = h.supervisor.cards.messages(own).findLast((line) => line.who === "captain");
+    // A reply's words keep the number of the line they came from (INF-6115 piece 3).
     expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, own)).toEqual({
       ok: true,
       words: "Volts first, and file the meter's label fix.",
       at: reply?.at,
+      line: reply?.id,
     });
     await h.supervisor.steer.steerFromCrewmateTab(h.taskId, "  also file the gauge's colors ");
     await tick();

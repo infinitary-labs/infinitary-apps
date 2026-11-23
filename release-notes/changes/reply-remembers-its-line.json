@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reply-remembers-its-line",
+      "kind": "fix",
+      "title": "Each reply under a card gets its own answer",
+      "body": "When you send two replies under one of the first mate's cards and neither is answered yet, the first mate is now asked about each one by its own line, so it answers the reply you meant. This holds after the app restarts too.",
+      "area": "firstmate",
+      "noPicture": "Which line a reply was typed as is a fact in the app's record, with nothing new drawn on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

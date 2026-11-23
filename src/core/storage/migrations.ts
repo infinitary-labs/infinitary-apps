@@ -1531,6 +1531,15 @@ export const MIGRATIONS: readonly Migration[] = [
   (db) => addColumn(db, "tasks", "gate_update_json", "TEXT"),
   // INF-6115 piece 2: one thread per message (`ASK_THREAD_CARRIES`).
   ASK_THREAD_CARRIES,
+  // INF-6115 piece 3 (docs/task-capture.md, "Where a reply was typed"): the
+  // card a captain's message was typed under and its line's number in that
+  // card's thread. Null on every existing row and on a message typed in the
+  // main input. `TaskService` is the only writer; no published view reads
+  // it. Dropping the two columns reverses it.
+  (db) => {
+    addColumn(db, "captain_asks", "typed_card_id", "TEXT");
+    addColumn(db, "captain_asks", "typed_line", "INTEGER");
+  },
 ];
 
 /**

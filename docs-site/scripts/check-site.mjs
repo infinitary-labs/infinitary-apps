@@ -5,6 +5,8 @@
 // - a page that does not name its language and direction, itself as its
 //   canonical address, and its version in every shipped language and
 //   x-default as alternates (docs/docs-site.md, "Languages"),
+// - a shipped language's home page whose language menu cuts its name short,
+//   or whose theme menu cuts any of its choices short,
 // - a request to any other host,
 // - a cookie,
 // - a link between pages, or to a heading, that leads nowhere,
@@ -158,6 +160,46 @@ function languageMarks() {
       option.textContent.trim(),
     ),
   };
+}
+
+/**
+ * How much room each name the header's menus can show needs and has, read in the page: the
+ * language menu's name for the page's language, and each of the theme menu's choices in turn.
+ * A select draws only its chosen name, so each is measured in a span set in the select's type.
+ * Choosing a theme here only shows its name: no change event fires, so the theme stays as it was.
+ */
+function menuNames() {
+  const visible = (menu) => [...document.querySelectorAll(`${menu} select`)].find((select) => select.checkVisibility());
+  const room = (select) => {
+    const style = getComputedStyle(select);
+    const name = select.selectedOptions[0]?.textContent.trim() ?? "";
+    const probe = document.createElement("span");
+    probe.textContent = name;
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.whiteSpace = "pre";
+    for (const property of ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontStretch", "letterSpacing", "wordSpacing"]) {
+      probe.style[property] = style[property];
+    }
+    select.after(probe);
+    const needs = probe.getBoundingClientRect().width;
+    probe.remove();
+    const sides = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"];
+    const holds = select.getBoundingClientRect().width - sides.reduce((sum, side) => sum + parseFloat(style[side]), 0);
+    return { name, needs, holds };
+  };
+  const language = visible("starlight-lang-select");
+  const theme = visible("starlight-theme-select");
+  const names = language ? [{ menu: "language", ...room(language) }] : [];
+  if (theme) {
+    const chosen = theme.selectedIndex;
+    for (let index = 0; index < theme.options.length; index++) {
+      theme.selectedIndex = index;
+      names.push({ menu: "theme", ...room(theme) });
+    }
+    theme.selectedIndex = chosen;
+  }
+  return { language: Boolean(language), theme: Boolean(theme), names };
 }
 
 /** How a page's language marks fall short (docs/docs-site.md, "Languages"). */
@@ -329,6 +371,22 @@ try {
     );
     for (const hash of missing) {
       for (const { from, href } of linked.get(hash)) fail(`${from} links to ${href}, but that page has no ${hash}`);
+    }
+  });
+
+  // The header's menus show each name whole, never cut short with an ellipsis (docs/docs-site.md,
+  // "Languages"): on each shipped language's home page, the language menu's name and each of the
+  // theme menu's choices fit inside their menu.
+  await sideBySide(LANGUAGES, async (tab, language) => {
+    await tab.goto(`${origin}${language.prefix}`, { waitUntil: "load" });
+    await tab.evaluate(() => document.fonts.ready);
+    const menus = await tab.evaluate(menuNames);
+    if (LANGUAGES.length > 1 && !menus.language) fail(`${language.prefix} draws no language menu`);
+    if (!menus.theme) fail(`${language.prefix} draws no theme menu`);
+    for (const { menu, name, needs, holds } of menus.names) {
+      if (needs > holds + 0.05) {
+        fail(`${language.prefix}'s ${menu} menu cuts "${name}" short: it needs ${needs.toFixed(1)}px and the menu holds ${holds.toFixed(1)}px`);
+      }
     }
   });
 

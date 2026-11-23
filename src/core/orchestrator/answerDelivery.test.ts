@@ -1,3 +1,5 @@
+import { inLanguage } from "@shared/i18n/current";
+import { wordedCardText, wordSaidMarks } from "@shared/i18n/said";
 import { describe, expect, it } from "vitest";
 import {
   ANSWER_ONLY_REFUSED_TOOLS,
@@ -118,11 +120,24 @@ describe("the output-only retry", () => {
 });
 
 describe("the one notice", () => {
+  // 9:58 AM in the test's time zone, as the captain's message was sent.
+  const sent = new Date(2026, 10, 23, 9, 58).getTime();
+  const words = (body: string) =>
+    body
+      .replace(/<template[^>]*><\/template>/g, "")
+      .replace(/<[^>]+>/g, "\n")
+      .split("\n")
+      .filter(Boolean);
+
   it("quotes only the captain's words, escaped, under a fixed id, with Ask again as the default", () => {
-    const card = noticeCard("abc12345", 'ship it <script>alert("x")</script> & go', [
-      refusedCard(),
-    ]);
+    const card = noticeCard(
+      "abc12345",
+      'ship it <script>alert("x")</script> & go',
+      [refusedCard()],
+      { at: sent },
+    );
     expect(card.id).toBe(noticeCardId("abc12345"));
+    expect(card.title).toBe("Your first mate may have missed your message");
     expect(card.body).toContain(
       "ship it &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; go",
     );
@@ -139,10 +154,51 @@ describe("the one notice", () => {
     ]);
   });
 
-  it("says why only when the reason is typed", () => {
-    expect(noticeCard("a", "hello", []).body).not.toContain("refused");
-    expect(noticeCard("a", "hello", [refusedCard("crewmate-owns")]).body).toContain(
+  it("lights the captain's message with when they sent it, then one reason and the way out", () => {
+    const card = noticeCard("a", "for the apps repo", [did("card", "emit_card")], {
+      at: sent,
+      withdrawnCard: "The panels plan is already in the apps repo",
+    });
+    expect(card.body.startsWith('<blockquote class="inf-lit">')).toBe(true);
+    expect(words(card.body)).toEqual([
+      "Your message, 9:58 AM",
+      "for the apps repo",
+      "Your first mate showed you “The panels plan is already in the apps repo” for it, then closed that card before you chose.",
+      "Leave it if you already have what you need. Ask again sends it once more as a new message.",
+    ]);
+  });
+
+  it.each([
+    [
+      "a typed refusal",
+      [refusedCard("crewmate-owns")],
       "crewmate working on it already owns the card",
-    );
+    ],
+    [
+      "no card or reply at all",
+      [did("close", "close_card")],
+      "The app saw no card or reply from your first mate for it.",
+    ],
+  ])("gives its reason from %s", (_, entries, reason) => {
+    expect(noticeCard("a", "hello", entries, { at: sent }).body).toContain(reason);
+  });
+
+  it("gives no reason when a card was shown that it cannot name", () => {
+    const lines = words(noticeCard("a", "hello", [did("card", "emit_card")], { at: sent }).body);
+    expect(lines).toEqual([
+      "Your message, 9:58 AM",
+      "hello",
+      "Leave it if you already have what you need. Ask again sends it once more as a new message.",
+    ]);
+  });
+
+  it("is worded in the language the window speaks", () => {
+    const card = noticeCard("a", "hello", [], { at: sent });
+    inLanguage("de", () => {
+      expect(wordedCardText(card.title, card.body)).toBe(
+        "Dein erster Offizier hat deine Nachricht vielleicht übersehen",
+      );
+      expect(wordSaidMarks(card.body)).toContain(">Deine Nachricht, ");
+    });
   });
 });

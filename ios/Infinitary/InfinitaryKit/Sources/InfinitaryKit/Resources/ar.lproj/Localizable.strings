@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "أُجيب عن %1$@ من %2$@";
 "cardAnswersChanged" = "%2$@ · تغيّر %1$@";
 "cardAnswersPicked" = "اختير %1$@ من %2$@";
+"cardAskNoticeAskAgain" = "الطلب مجددًا";
+"cardAskNoticeCardRefused" = "حاول نائب القبطان الرد ببطاقة رفضها التطبيق.";
+"cardAskNoticeClosedCard" = "عرض عليك نائب القبطان «%1$@» من أجلها، ثم أغلق تلك البطاقة قبل أن تختار.";
+"cardAskNoticeClosing" = "اتركها إن كان لديك ما تحتاجه. «الطلب مجددًا» يرسلها مرة أخرى كرسالة جديدة.";
+"cardAskNoticeCrewmateOwns" = "فرد الطاقم الذي يعمل عليها يملك البطاقة الخاصة بها بالفعل، لذا رُفضت بطاقة نائب القبطان.";
+"cardAskNoticeLeaveIt" = "اتركه كما هو";
+"cardAskNoticeNothingSeen" = "لم يرَ التطبيق أي بطاقة أو رد من نائب القبطان من أجلها.";
+"cardAskNoticeQuoteLabel" = "رسالتك، %1$@";
+"cardAskNoticeTitle" = "ربما فات نائب القبطان رسالتك";
 "cardAskedAutomation" = "شغّلته أتمتة";
 "cardAskedChoseOn" = "اخترت في «%1$@»";
 "cardAskedFrom" = "من %1$@";

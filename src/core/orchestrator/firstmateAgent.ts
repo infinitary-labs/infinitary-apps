@@ -36,7 +36,7 @@ import {
   WAKE_COALESCE_MS,
 } from "../storage/inboxStore";
 import type { DeliveryNote } from "./answerDelivery";
-import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
+import { AnswerDeliveryCheck, cardLookups } from "./answerDeliveryCheck";
 import { AskCapture, type TurnOrigin } from "./askCapture";
 import { QUIET_CARD_MS, QUIET_FEED_MS } from "./crewWatch";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
@@ -428,8 +428,7 @@ export class FirstmateAgent {
       raiseNotice: (card) => options.supervisor.cards.hostCards.raiseHostCard(card),
       withdrawNotice: (cardId) =>
         options.supervisor.cards.hostCards.withdrawHostCard(cardId, "an answering card went up"),
-      cardTitle: (cardId) =>
-        options.supervisor.cards.snapshot().find((card) => card.id === cardId)?.title,
+      ...cardLookups(options.supervisor.cards),
       ending: options.supervisor.askEnding,
       observe: options.answerDelivery === "observe",
     });

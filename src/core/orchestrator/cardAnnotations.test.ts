@@ -263,7 +263,9 @@ describe("annotation reply delivery", () => {
       h.tasks.capture.setAskDelivery(original.id, "unresolved");
       const saved = h.tasks.capture.getAsk(original.id);
       expect(saved?.deliveryFacts.receipt).toBe(receipt);
-      const notice = noticeCard(original.id, receipt, original.deliveryFacts.entries);
+      const notice = noticeCard(original.id, receipt, original.deliveryFacts.entries, {
+        at: original.at,
+      });
       h.supervisor.cards.put({
         ...notice,
         author: "host",

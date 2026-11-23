@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "已回答 %1$@ / %2$@";
 "cardAnswersChanged" = "%2$@ · 已改 %1$@";
 "cardAnswersPicked" = "已选 %1$@ / %2$@";
+"cardAskNoticeAskAgain" = "再次询问";
+"cardAskNoticeCardRefused" = "你的大副试图用一张被应用拒绝的卡片回答。";
+"cardAskNoticeClosedCard" = "你的大副为它给你看了“%1$@”，然后在你选择前关闭了那张卡片。";
+"cardAskNoticeClosing" = "如果你已经得到所需内容，就保持不变。再次询问会把它作为新消息再发送一次。";
+"cardAskNoticeCrewmateOwns" = "处理它的船员已经拥有它的卡片，所以你的大副的卡片被拒绝了。";
+"cardAskNoticeLeaveIt" = "保持不变";
+"cardAskNoticeNothingSeen" = "应用没有看到你的大副为它发出的卡片或回复。";
+"cardAskNoticeQuoteLabel" = "你的消息，%1$@";
+"cardAskNoticeTitle" = "你的大副可能漏看了你的消息";
 "cardAskedAutomation" = "由自动化运行";
 "cardAskedChoseOn" = "你在“%1$@”上选择了";
 "cardAskedFrom" = "来自 %1$@";

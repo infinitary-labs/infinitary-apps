@@ -42,7 +42,7 @@ import { englishOf } from "@shared/i18n/said";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
-import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS, secretKeepFields } from "@shared/secrets";
+import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS } from "@shared/secrets";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { letterBox } from "../../src/core/phoneLetters";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
@@ -84,6 +84,7 @@ import { startPhonePushRelay } from "./phonePushRelay";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
+import { secretAskShown } from "./phoneSecretAsk";
 import {
   PHONE_SETTINGS_SESSION_LATER,
   phoneSettingsState,
@@ -1095,17 +1096,11 @@ export async function startPhoneHome(
             secrets: [{ name: "Stripe test key", place: "Test" }],
             how: '<ol><li>Open your Stripe API keys page: <a href="https://dashboard.stripe.com/test/apikeys">dashboard.stripe.com/test/apikeys</a></li><li>Reveal the <strong>Secret key</strong> and copy it.</li></ol>',
           });
-          const card = (await core.dispatch("inf:cards:list", [])).find((card) =>
-            card.id.startsWith("card-secrets-ask-"),
-          );
           result = {
             state: answer.state,
             // The field's label says its place once, beside the name (INF-5516's plan).
             place: SECRET_ASK_CARD_WORDS.place("Test"),
-            title: card?.title ?? null,
-            // The buttons' ids, which the phone names its choices by: Save secret is the field's keep, Don't save the decline.
-            save: (card && secretKeepFields(card)?.pass) ?? null,
-            dontSave: card?.actions.find((action) => action.declines)?.id ?? null,
+            ...secretAskShown(await core.dispatch("inf:cards:list", [])),
           };
           break;
         }

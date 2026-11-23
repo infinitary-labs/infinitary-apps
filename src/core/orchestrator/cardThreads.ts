@@ -167,6 +167,11 @@ export class CardThreads {
     return task !== undefined && TaskService.isClosed(task);
   }
 
+  /** Whether a task's crewmate answers a card's thread: its own card, or the app's card for its ask. */
+  crewmateAnswers(card: Card, taskId: string): boolean {
+    return cardAnswerer(card) === "crewmate" && card.taskId === taskId;
+  }
+
   /**
    * Capture the Firstmate's closing words as its line in the thread of a
    * card it answers (phase 2). The line names no captain message, so it

@@ -137,7 +137,7 @@ export function signedInSiteOf(site: string, cookies: readonly HostCookie[]): st
 }
 
 /** Whether a page at `site` lies at an entry's site or under it (`idmsa.apple.com` under `apple.com`). */
-function atOrUnder(site: string, entry: string): boolean {
+export function atOrUnder(site: string, entry: string): boolean {
   const name = siteHostname(site);
   const above = siteHostname(entry);
   return name === above || name.endsWith(`.${above}`);

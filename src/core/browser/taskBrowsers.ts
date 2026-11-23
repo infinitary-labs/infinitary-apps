@@ -1158,6 +1158,8 @@ export class TaskBrowsers {
   closeAll(): void {
     for (const [taskId, browser] of [...this.browsers]) {
       const fact = this.fact(taskId);
+      // A page the captain's own click opened holds none of the task's sign-ins; the task keeps them.
+      const saved = browser.captains ? this.allowed.get(taskId) : browser.saved;
       if (fact) {
         this.options.kept?.write(taskId, {
           fact: {
@@ -1173,7 +1175,7 @@ export class TaskBrowsers {
             generation: browser.generation,
           },
           ...(browser.server ? { served: this.servedOf(browser) } : {}),
-          ...(browser.saved.size > 0 ? { saved: Object.fromEntries(browser.saved) } : {}),
+          ...(saved?.size ? { saved: Object.fromEntries(saved) } : {}),
         });
       }
       this.stop(taskId);

@@ -129,6 +129,22 @@ describe("a kept sign-in covers the whole site its cookies cover", () => {
     expect(h.signIns.records().map((record) => record.site)).toEqual(["developer.apple.example"]);
   });
 
+  it("keeps nothing when the page reached a wider name than the question named", async () => {
+    const h = onThisComputer();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: DEVELOPER });
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.requestHelp("t1", request);
+    await h.browsers.takeControl("t1", handle);
+    h.kept.cookies.cookies = [{ ...SESSION }];
+    await (h.pages.at(-1) as FakePage).load("https://apple.example/");
+    await h.browsers.returnControl("t1", handle, {
+      site: "developer.apple.example",
+      automatic: true,
+    });
+    expect(h.signIns.records()).toEqual([]);
+  });
+
   it("offers it to a later task that stops on the sign-in page, and on a sibling page", async () => {
     const h = onThisComputer();
     await signInOnce(h, false);
@@ -211,6 +227,20 @@ describe("a task keeps the sign-ins it may use until the captain stops its brows
     expect(await h.browsers.returnControl("t2", opened.handle)).toEqual({ ok: true });
     await browser.navigate({ url: DEVELOPER });
     expect(h.browsers.fact("t2")).toMatchObject({ kept: true, saved: ["apple.example"] });
+  });
+
+  it("keeps it across a quit while the captain's page from the project is open", async () => {
+    const folders = scratchDir("infinitary-task-folders-");
+    const keptPages = keptPagesIn((taskId) => join(folders, taskId));
+    const before = onThisComputer({ keptPages, session: "run-1" });
+    const browser = await allowedOnT2(before);
+    await browser.close({});
+    const opened = await before.browsers.openPage("t2", { folder: "/project", path: "index.html" });
+    expect(opened.ok).toBe(true);
+    before.browsers.closeAll();
+    const after = onThisComputer({ signIns: before.signIns, keptPages, session: "run-2" });
+    await after.browsers.forTask("t2").navigate({ url: DEVELOPER });
+    expect(after.browsers.fact("t2")).toMatchObject({ kept: true, saved: ["apple.example"] });
   });
 
   it("forgets it on the captain's Stop browser, on the task's close, and once the captain removed the site", async () => {

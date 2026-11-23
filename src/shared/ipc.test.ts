@@ -530,6 +530,9 @@ describe("ipc contract", () => {
       "inf:models:slots:reset",
       "inf:models:slots:set",
       "inf:models:speed:set",
+      // INF-6295: a phone draws the app's own panels the computer shows.
+      "inf:plugins:app-panel-files",
+      "inf:plugins:app-panels",
       // INF-3660's plan, "Your panels, in every window": a panel asks the first mate from any window.
       "inf:plugins:ask-again",
       "inf:plugins:db",

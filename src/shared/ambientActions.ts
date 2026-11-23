@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { ActionLine } from "./actions";
 import {
-  OWN_STYLES_MAX,
+  findOwnStyle,
+  noOwnStyle,
   type OwnStyle,
   ownStyleFaults,
   ownStyleId,
@@ -81,24 +82,19 @@ export const ambientLines = {
         .describe("A style to save under its name, replacing one of that name, and play"),
       remove: z.string().min(1).max(40).optional().describe("A saved style's name or id to remove"),
     }),
-    line: `Write the ambient music a person describes as their own style, or remove one, when asked: save plays it at once, and saving under a saved style's name changes that style. It is original music for the app's own instruments in the mood asked for, never a copy of a named song. The instruments make tones, sea waves, soft rain and wind; they cannot make voices singing words, recorded instruments or sounds such as birds, so when asked for those say so and offer the nearest the app can play. Start from a shipped style with like and change only what the words name, or write every field; the current value holds the saved styles to change. The app sets each layer's loudness itself. At most ${OWN_STYLES_MAX} are kept.`,
+    line: `Write the ambient music a person describes as their own style, or remove one, when asked: save plays it at once, and saving under a saved style's name changes that style. It is original music for the app's own instruments in the mood asked for, never a copy of a named song. The instruments make tones, sea waves, soft rain and wind; they cannot make voices singing words, recorded instruments or sounds such as birds, so when asked for those say so and offer the nearest the app can play. Start from a shipped style with like and change only what the words name, or write every field. The current value names the saved styles; to change one, read it whole with app_state read ambient.own-style and save it changed. The app sets each layer's loudness itself.`,
     toRequest: (v, current) => {
       const look = current as Appearance;
       const saved = look.ambientOwnStyles ?? [];
       const save = v.save as OwnStyle | undefined;
       const remove = v.remove as string | undefined;
-      if ((save === undefined) === (remove === undefined))
-        throw new Error("Give save or remove, one of them.");
+      const oneOf = "Give save or remove, one of them.";
+      if (save && remove !== undefined) throw new Error(oneOf);
       if (save) {
         const faults = ownStyleFaults(save);
         if (faults.length > 0)
           throw new Error(`The style was not saved, and nothing changed. ${faults.join(" ")}`);
         const id = ownStyleId(save.name);
-        const others = saved.filter((own) => own.id !== id);
-        if (others.length >= OWN_STYLES_MAX)
-          throw new Error(
-            `${OWN_STYLES_MAX} styles are saved already; remove one first. Saved: ${saved.map((own) => own.name).join(", ")}.`,
-          );
         const at = saved.findIndex((own) => own.id === id);
         const styles =
           at === -1
@@ -106,13 +102,9 @@ export const ambientLines = {
             : saved.map((own, i) => (i === at ? { ...save, id } : own));
         return [{ ...look, ambientOwnStyles: styles, ambientStyle: id, ambientMusic: true }];
       }
-      const gone = saved.find(
-        (own) => own.id === remove || own.name.toLowerCase() === remove?.toLowerCase(),
-      );
-      if (!gone)
-        throw new Error(
-          `No own style ${remove}. Saved: ${saved.map((own) => own.name).join(", ") || "none"}.`,
-        );
+      if (remove === undefined) throw new Error(oneOf);
+      const gone = findOwnStyle(saved, remove);
+      if (!gone) throw new Error(noOwnStyle(remove, saved));
       return [
         {
           ...look,
@@ -122,6 +114,14 @@ export const ambientLines = {
       ];
     },
     readValue: ambientOwnStylesValue,
+    // The value names the styles alone, so a style saved again under its name
+    // reads the same before and after: the trail compares the whole styles,
+    // each read back through the look's schema, which writes keys in one order.
+    trailOf: (_args, result, before) =>
+      JSON.stringify((before as Appearance | null)?.ambientOwnStyles ?? []) ===
+      JSON.stringify((result as Appearance).ambientOwnStyles ?? [])
+        ? null
+        : ambientOwnStylesValue(result),
     // The Activity line reads the value as it stands after the change.
     done: (v) => {
       const names = ((v.saved ?? []) as { name: string }[]).map((own) => own.name);

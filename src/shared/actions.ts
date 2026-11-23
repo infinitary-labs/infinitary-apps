@@ -171,7 +171,8 @@ export type ActionLine = {
   settled?: (from: Record<string, unknown>, to: Record<string, unknown>) => string;
   /**
    * The trail of a line whose request does more than this line's act, or
-   * whose act leaves no value to compare: the value its feed line says, from
+   * whose act leaves no value to compare, or a value too narrow to show it
+   * (own ambient styles, read by name): the value its feed line says, from
    * the request, the handler's answer and the line's value read before, or
    * null when this request was not the line's act (a secret action other
    * than ending a read), so it leaves no line of this one's.

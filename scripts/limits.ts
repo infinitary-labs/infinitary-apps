@@ -708,9 +708,6 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
 
 /** Each limit that rests on a number the app made up, by file, with its way out ("none yet" when it has none). */
 export const BASELINE: Record<string, Record<string, string>> = {
-  "src/shared/ambientOwn.ts": {
-    OWN_STYLES_MAX: "a save past 12 is refused in words naming the saved styles; the person removes one, in Settings or by asking",
-  },
   "src/core/accounts/credentialHealth.ts": {
     CREDENTIAL_RENEW_MAX_ATTEMPTS: "proactive renewal stops; a vendor rejection or a remedy still renews",
   },

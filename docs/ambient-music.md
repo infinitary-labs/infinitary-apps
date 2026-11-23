@@ -93,6 +93,7 @@ It is INF-5541's approved plan: a person describes the music they want, and the 
 Asked "play lofi beats to code to", the first mate saves a new style and plays it in the same reply; asked "make it slower", it saves the same style again under its name, and the music starts again from its first bar.
 The first mate does it through its `ambient-own-style` setting (`src/shared/ambientActions.ts`), whose line teaches what the instruments can make: tones, the sea's waves, soft rain and wind, and never voices singing words, recorded instruments or sounds such as birds, so asked for those it says so and offers the nearest it can play.
 No code judges the person's words; the line is the whole of that teaching.
+The line's current value names the saved styles by id and name alone, so however many are saved they cost the first mate only their names; to change one, it reads that style whole through `app_state`'s read `ambient.own-style` (`src/core/pi/appReads.ts`) and saves it changed.
 
 A style is settings, never code: `ownStyleSchema` in `src/shared/ambientOwn.ts` holds every value to a range, and `ownStyleFaults` checks what a range cannot, such as a part playing a voice the style never defines, a step past the bar, a preset its instrument lacks, or more than 96 notes a bar.
 A faulty style is refused with each fault in words the first mate can act on, and nothing is saved.
@@ -110,7 +111,8 @@ The person's own `mix` tilts a layer louder or quieter on top of the balance, an
 Rain is a dark, pink hush with many faint, rounded drops, some ringing as they land in water, kept between 250 Hz and 4.2 kHz, and wind a band of noise whose pitch and loudness drift in slow gusts (`player.ts`).
 At its fullest each reads about -32.5 LUFS alone, 2 dB above the sea's waves, and the style sets how much of it plays.
 
-The styles are `ambientOwnStyles` in the look, at most 12, kept in a row of their own, `ambient-own-styles`, so an older build never meets them, and a view from before the change is never sent them (`src/shared/contract-changes/ambient-own-styles.md`).
+The styles are `ambientOwnStyles` in the look, as many as the person saves, kept in a row of their own, `ambient-own-styles`, so an older build never meets them.
+A view from before the change, or from before the look could hold more than 12, is never sent them (`src/shared/contract-changes/ambient-own-styles.md`, `ambient-own-styles-uncapped.md`).
 Each has an id made from its name, `own-` and a few lowercase words, which `ambientStyle` names while it plays.
 Settings lists them under Yours in the Style picker, with the person's own words as the chosen style's description.
 The Your own music row below it has Describe your own, which goes home and starts the ask to the first mate in the message box, and Remove while a style of the person's own is chosen, which deletes it and plays Cold sleep.

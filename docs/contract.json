@@ -53358,7 +53358,6 @@
             "pattern": "^[a-z0-9-]+$"
           },
           "ambientOwnStyles": {
-            "maxItems": 12,
             "type": "array",
             "items": {
               "type": "object",
@@ -55174,7 +55173,6 @@
                 "pattern": "^[a-z0-9-]+$"
               },
               "ambientOwnStyles": {
-                "maxItems": 12,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -57014,7 +57012,6 @@
             "pattern": "^[a-z0-9-]+$"
           },
           "ambientOwnStyles": {
-            "maxItems": 12,
             "type": "array",
             "items": {
               "type": "object",
@@ -59380,7 +59377,6 @@
                 "pattern": "^[a-z0-9-]+$"
               },
               "ambientOwnStyles": {
-                "maxItems": 12,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -97219,7 +97215,6 @@
                 "pattern": "^[a-z0-9-]+$"
               },
               "ambientOwnStyles": {
-                "maxItems": 12,
                 "type": "array",
                 "items": {
                   "type": "object",

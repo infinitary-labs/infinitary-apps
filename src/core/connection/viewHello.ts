@@ -3,6 +3,7 @@ import {
   AMBIENT_AWAY,
   AMBIENT_MUSIC,
   AMBIENT_OWN_STYLES,
+  AMBIENT_OWN_STYLES_UNCAPPED,
   AMBIENT_PAUSE,
   AMBIENT_STYLE,
   DEVICE_ADDS_BY_ADDRESS,
@@ -82,7 +83,10 @@ export function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
     ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
-    ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) ? [] : ["ambientOwnStyles"]),
+    ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) &&
+    listsChange(hello.changes, AMBIENT_OWN_STYLES_UNCAPPED)
+      ? []
+      : ["ambientOwnStyles"]),
     // Not the look, but read as strictly: where devices find a Windows home.
     ...(listsChange(hello.changes, DEVICE_ADDS_BY_ADDRESS) ? [] : ["addsByAddress"]),
     // A computer's work saved before its update, which an older view's strict device list cannot read.

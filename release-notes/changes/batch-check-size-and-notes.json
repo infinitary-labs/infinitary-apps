@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "batch-check-size-and-notes",
+      "reason": "Moves card submission helpers without changing behavior and updates a release-check test for the batch's generated-files commit."
+    }
+  ]
+}

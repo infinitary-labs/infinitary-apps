@@ -1,44 +1,25 @@
 import type { CutOffClass } from "@shared/authFailure";
 import { type Card, cardWord } from "@shared/cards";
-import { reportSummary } from "@shared/feed";
-import { holdNames, type OverridableHold } from "@shared/holds";
-import {
-  answeringAgainLine,
-  crewProblem,
-  providerOutageFold,
-  typedFailureOf,
-} from "@shared/plainProblem";
-import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
+import { answeringAgainLine, providerOutageFold } from "@shared/plainProblem";
 import type { KeptPutOff } from "@shared/putOff";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { type WorkWait, withoutDigest, workWaitSchema } from "@shared/recovery";
+import { type WorkWait, workWaitSchema } from "@shared/recovery";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
 import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../storage/inboxStore";
-import type { FirstmateAsk, TaskDelivery, TaskGate, TaskRecord } from "../storage/taskRecords";
-import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
-import { TaskGraph } from "../tasks/taskGraph";
+import type { FirstmateAsk, TaskGate, TaskRecord } from "../storage/taskRecords";
+import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";
-import { escapeCardText } from "./cardText";
 import type { CrewTurn } from "./crewTurn";
-import {
-  baseApprovalEndedWake,
-  baseClosedUnmergedOnce,
-  baseClosedUnmergedWake,
-  baseMovedWake,
-  dependencyClosedOnce,
-  dependencyClosedWake,
-  mergeLineOnce,
-  mergeLineWake,
-  waitMovedOnce,
-  waitMovedWake,
-} from "./deliveryWakes";
 import { crewHoldWays, idleStallWays } from "./holds";
+import { DependencySteers, type TaskWait } from "./idleDependencySteers";
+import { raiseStallCard } from "./idleStallCard";
+import { stallCardId, stallCardTitle } from "./idleStallCardNames";
 import { finishedOpenOnce, finishedOpenWake, idleNudge, type WakeNote } from "./idleWakes";
 import { jobBoundOnce, jobBoundWake } from "./jobWakes";
-import { candidateHead, waitingInLine } from "./mergeAuthorization";
+import { waitingInLine } from "./mergeAuthorization";
 import { NextMove } from "./nextMove";
 import {
   CUT_OFF_ONCE_PREFIX,
@@ -153,15 +134,7 @@ function deliversAnswer(record: TaskRecord | undefined): boolean {
   return record?.shape?.deliverable === "answer";
 }
 
-/** The host's own card for a task the idle ladder could not move (rung 3). */
-export function stallCardId(taskId: string): string {
-  return `card-stall-${taskId}`;
-}
-
-/** That card's title: the task's own, and how long it has been stuck. */
-export function stallCardTitle(title: string, stuckFor: string): string {
-  return `${title} has been stuck for ${stuckFor}`;
-}
+export { stallCardId, stallCardTitle };
 
 /** The timeline events that are the Firstmate acting on a task (the ladder's "ignored" test). */
 const FIRSTMATE_ACTS: ReadonlySet<string> = new Set([
@@ -170,8 +143,6 @@ const FIRSTMATE_ACTS: ReadonlySet<string> = new Set([
   "card_raised",
   "answered",
 ]);
-
-const HOST_CARD_PRIORITY = 40;
 
 export type RunningJob = { jobId: string; command: string; startedAt: number };
 
@@ -317,18 +288,14 @@ export class IdleLadder {
   private readonly liveWaitFact = Symbol("idle live dependency waits");
   private readonly askFact = Symbol("unanswered first-mate request");
 
-  /**
-   * The dependency waits whose end this process already tried to steer
-   * about: a steer that could not go (no conversation to resume) records
-   * no once-name, so this keeps the sweep from retrying it every tick.
-   */
-  private readonly resumesTried = new Set<string>();
+  private readonly steers: DependencySteers;
 
   /** Begun work's parts that wait for a start (INF-3846 piece 2). */
   private readonly nextMove: NextMove;
 
   constructor(private readonly host: IdleLadderHost) {
     this.nextMove = new NextMove(host, STALL_WAKE_MS);
+    this.steers = new DependencySteers(host, (record) => this.liveWaits(record));
   }
 
   // ---- the witnesses ------------------------------------------------------
@@ -756,7 +723,7 @@ export class IdleLadder {
       record.idleSince != null &&
       now - record.idleSince >= STALL_WAKE_MS
     )
-      this.tellMergeLine(record);
+      this.steers.tellMergeLine(record);
     if (turn === "captain" || turn === "moving") return;
     if (turn !== "thread") this.checkJobBound(record, now);
     this.climb(record, runtime, now, turn);
@@ -1189,7 +1156,7 @@ export class IdleLadder {
       this.wake(record, runtime, now, count + 1, turn);
       return;
     }
-    this.raiseStallCard(record, now);
+    raiseStallCard(this.host, record, this.episodeNudged(record), now);
   }
 
   /**
@@ -1465,135 +1432,6 @@ export class IdleLadder {
   }
 
   /**
-   * Rung 3 of the idle ladder (the captain's Q3, a decision of 2026-09-26
-   * that revises the card rule): the Firstmate let two wakes about a stuck
-   * crewmate go, so the work cannot move without the captain, and the host
-   * raises its own card - the app's attention, like the sign-in card. Like
-   * every card with actions it places the captain gate on its task, so it
-   * holds the turn while it is up and nothing repeats; it leaves on a
-   * choice (Back to backlog parks the task, INF-3143), when the task moves -
-   * unless a reply under it still waits on the first mate, which answers it
-   * (INF-1670) - when it goes back to the backlog, or when the task closes.
-   * The minus only minimizes the alert and keeps its card and gate pending.
-   */
-  private raiseStallCard(record: TaskRecord, now: number): void {
-    const observed = this.host.tasks
-      .timeline(record.id)
-      .filter((event) => event.kind === "report")
-      .at(-1);
-    const typedWait = workWaitSchema.safeParse(observed?.data?.workWait);
-    const id = stallCardId(record.id);
-    this.host.tasks.turns.recordRecovery(record.id, {
-      rung: 3,
-      count: record.recoveryCount ?? 0,
-      at: now,
-    });
-    const stuckFor = formatDurationShort(now - (record.idleSince ?? now));
-    const last = this.host.tasks
-      .timeline(record.id)
-      .filter((event) => event.kind === "report" || event.kind === "failed")
-      .at(-1);
-    const lastLine = !last
-      ? "<p>It has not reported anything yet.</p>"
-      : last.kind === "report"
-        ? `<p>What it last said: ${escapeCardText(reportSummary(last.text) || last.text)}</p>`
-        : `<p>Its last try ended in a problem: ${escapeCardText(crewProblem(typeof last.data?.error === "string" ? last.data.error : last.text, typedFailureOf(last.data)))}.</p>`;
-    const told = this.episodeNudged(record)
-      ? "It was nudged once, and your first mate was told twice, and nothing has moved since."
-      : "Your first mate was told twice, and nothing has moved since.";
-    // A wait its crewmate declared with no card up is a question nobody put
-    // to him (INF-11): the card names it in the crewmate's words.
-    const wait = record.delivery?.captainWait;
-    const opening = wait
-      ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
-      : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
-    // The same typed wait it stopped on (F1 of INF-1554, "Keep the card for
-    // you after the last wake"): what it still waits on, and the recovery
-    // attempts the first mate recorded since, never an older verdict.
-    const attempts = observed
-      ? this.host.tasks
-          .timeline(record.id)
-          .filter((event) => event.data?.ledger === "verdict" && event.at >= observed.at)
-      : [];
-    const latest = attempts.at(-1);
-    const recovery = typedWait.success
-      ? `<p>It is still waiting: ${escapeCardText(withoutDigest(typedWait.data.observation))}</p><p>${
-          latest
-            ? `Your first mate recorded ${attempts.length === 1 ? "one attempt" : `${attempts.length} attempts`} to get around it since then; the latest: ${escapeCardText(latest.text)}`
-            : "Your first mate has recorded no attempt to get around it."
-        }</p>`
-      : "";
-    const nudges = "Nudge tells it to finish or say what is in its way.";
-    const card: Card = {
-      id,
-      taskId: record.id,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: stallCardTitle(record.title, stuckFor),
-      // The head leads with the task's key from `taskId`, as on every card
-      // about a task (INF-358), and the title names the task: nothing is
-      // left for the meta words to add, so the key reads once (INF-418).
-      meta: "",
-      body: [
-        opening,
-        recovery,
-        lastLine,
-        `<p>${nudges} Back to backlog parks it with its work kept until you start it, and your first mate hears once if news reaches it. Discard ends it and throws its work away. For anything else, reply here.</p>`,
-      ].join(""),
-      // The captain's choice on INF-1670: a reply here goes to the first
-      // mate, which can always answer, and nuanced operations ride it.
-      answeredBy: "firstmate",
-      actions: [
-        {
-          id: "nudge",
-          label: "Nudge",
-          variant: "primary",
-          default: true,
-          effect: { kind: "host", op: "continue-task", arg: record.id },
-        },
-        {
-          // INF-3143's direction A: a blocker nothing will change soon parks
-          // where its wait shows, its work kept, instead of a Nudge starting
-          // the cycle again. It took Keep waiting's place (the captain's
-          // pick: a card holds three buttons).
-          id: "backlog",
-          label: "Back to backlog",
-          variant: "secondary",
-          effect: { kind: "host", op: "backlog-task", arg: record.id },
-        },
-        {
-          id: "discard",
-          label: "Discard",
-          variant: "danger",
-          danger: true,
-          effect: { kind: "settle", mode: "discard" },
-        },
-      ],
-      status: "ready",
-      createdAt: now,
-    };
-    // In place of any further wake: the ledger row carries what went up,
-    // and the Firstmate's context shows the card and the task's stall line.
-    this.host.recordSort(
-      record.id,
-      record.title,
-      `host card ${id}: "${card.title}"`,
-      "captain",
-      "two wakes about this idle crewmate went ignored; the host raised its own card.",
-      "idle-card",
-      () => {
-        this.host.raiseCard(card);
-        this.host.tasks.capture.recordCardRaised(record.id, {
-          cardId: id,
-          kind: cardWord(card),
-          title: card.title,
-          actor: "host",
-        });
-      },
-    );
-  }
-
-  /**
    * The task moved on its own: its stall card, if the host raised one, is
    * moot - unless the captain replied under it and the first mate's answer
    * has not landed yet (INF-1670): it stays up until that answer arrives.
@@ -1725,10 +1563,11 @@ export class IdleLadder {
         this.endTimedWait(record.id, gate, now);
       }
       // The part under a part built on it says more than its wait's close does.
-      const told = this.followBase(record);
+      const told = this.steers.followBase(record);
       for (const ended of this.endedWaits(record))
-        if (ended.task.id !== told) this.endDependencyWait(record.id, ended);
-      for (const moved of this.movedWaits(record)) this.tellMovedWait(record.id, moved);
+        if (ended.task.id !== told) this.steers.endDependencyWait(record.id, ended);
+      for (const moved of this.steers.movedWaits(record))
+        this.steers.tellMovedWait(record.id, moved);
     }
     // A wait that can never end (a dropped blocker) is one wake to the
     // Firstmate, whose tools already express every way out; the row stays
@@ -1792,192 +1631,7 @@ export class IdleLadder {
     this.endTimedWait(taskId, gate, this.host.now(), events);
     return true;
   }
-
-  /**
-   * Work a task waited on closed (FI3-250): the task hears it as one steer
-   * on its own lane, named by that work so the inbox queues it once, even
-   * across a restart. Like a timed wait's end it opens a new idle episode,
-   * so the turn it starts is the task's own, not a ladder turn.
-   */
-  private endDependencyWait(taskId: string, ended: TaskWait): void {
-    const once = dependencyClosedOnce(ended.task);
-    const tried = `${taskId}\n${once}`;
-    if (this.resumesTried.has(tried) || this.host.inbox.woken(taskId, once)) return;
-    this.resumesTried.add(tried);
-    this.host.tasks.turns.endIdle(taskId);
-    const pullRequest = ended.task.delivery?.prNumber;
-    const carried =
-      ended.kind === "blocks"
-        ? this.movedFrom(taskId, ended.task.id).map((task) => task.key || task.id)
-        : [];
-    void this.host
-      .steer(
-        taskId,
-        dependencyClosedWake(
-          { ...ended.task, ...(pullRequest ? { pullRequest } : {}) },
-          ended.kind,
-          carried,
-          ended.task.shape?.program !== undefined &&
-            this.host.tasks.crewFilingOrigin(ended.task.id)?.id === taskId,
-        ),
-      )
-      .catch((caught: unknown) => {
-        // No conversation to resume: the ladder reads the task on its own clock.
-        console.warn("[crew] a closed dependency's steer not delivered:", caught);
-      });
-  }
-
-  /**
-   * A part that started on an earlier part's approved version (`built_on`)
-   * follows that part (docs/task-graph.md, "A part that starts at approval"
-   * and "Following the part under it"), hearing once for each fact: the
-   * part's approval ended while it is live, so its own merge waits; the
-   * part is approved at a newer version than the recorded base, so it
-   * replays its own commits onto that version; or the part closed without
-   * merging, so it reports to the first mate. Each steer is named so the
-   * inbox queues it once, even across a restart. Returns the earlier part
-   * when its close was told here, so its wait's own close steer is not sent.
-   */
-  private followBase(record: TaskRecord): string | undefined {
-    const builtOn = this.host.tasks.graph.unmergedBuiltOn(record);
-    if (!builtOn) return undefined;
-    const base = builtOn.task;
-    if (TaskService.isClosed(base)) {
-      const ended = base.delivery?.mergeAuthorization;
-      this.steerOnce(
-        record.id,
-        baseClosedUnmergedWake({
-          ...base,
-          head: builtOn.head,
-          ...(ended ? { newest: TaskGraph.newestApproved(ended) } : {}),
-          closed: base.status === "done" ? "done" : "dropped",
-        }),
-      );
-      return base.id;
-    }
-    const approval = base.delivery?.mergeAuthorization;
-    if (!approval || !TaskGraph.approvedToMerge(base)) {
-      this.steerOnce(record.id, baseApprovalEndedWake({ ...base, head: builtOn.head, approval }));
-      return undefined;
-    }
-    // The newest version the earlier part's approval covers: a kept approval's repair moves it.
-    const newest = candidateHead(approval);
-    if (newest !== builtOn.head)
-      this.steerOnce(
-        record.id,
-        baseMovedWake({
-          ...base,
-          branch: approval.target.branch,
-          from: builtOn.head,
-          to: newest,
-        }),
-      );
-    return undefined;
-  }
-
-  /** One of `followBase`'s steers, sent once by its name. */
-  private steerOnce(taskId: string, wake: TypedWake): void {
-    const once = wake.once ?? "";
-    const tried = `${taskId}\n${once}`;
-    if (this.resumesTried.has(tried) || this.host.inbox.woken(taskId, once)) return;
-    this.resumesTried.add(tried);
-    this.host.tasks.turns.endIdle(taskId);
-    void this.host.steer(taskId, wake).catch((caught: unknown) => {
-      // No conversation to resume: the ladder reads the task on its own clock.
-      console.warn("[crew] a steer about the part under a task not delivered:", caught);
-    });
-  }
-
-  /**
-   * The tasks whose wait the task's timeline records moving to `carrierId`:
-   * when a replaced-by link was written (INF-1826, `TaskGraph.moveWaits`), or
-   * when a merge's after-merge step held it for the rest of the work
-   * (INF-3846 piece 4, `TaskGraph.carryWait`).
-   */
-  private movedFrom(taskId: string, carrierId: string): TaskRecord[] {
-    const tasks = this.host.tasks;
-    const ids = new Set(
-      tasks
-        .timeline(taskId)
-        .filter((event) => event.kind === "unlinked" && event.data?.movedTo === carrierId)
-        .map((event) => event.data?.fromId)
-        .filter((id): id is string => typeof id === "string"),
-    );
-    return [...ids].flatMap((id) => [tasks.get(id)].filter((row): row is TaskRecord => !!row));
-  }
-
-  /**
-   * The live waits that moved to another task after the waiter was told the
-   * old one was dropped (INF-1826): a late replaced-by link. Each names the
-   * dropped task and the one carrying its work now.
-   */
-  private movedWaits(record: TaskRecord): { replaced: TaskRecord; carrier: TaskRecord }[] {
-    const tasks = this.host.tasks;
-    return this.liveWaits(record).flatMap(({ task, kind }) => {
-      if (kind !== "blocks") return [];
-      const told = tasks.graph.replacedPredecessors(task.id).filter(
-        (old) =>
-          old.status === "dropped" &&
-          // A part built on the dropped task heard of its close in its own steer.
-          (this.host.inbox.woken(record.id, dependencyClosedOnce(old)) ||
-            this.host.inbox.woken(record.id, baseClosedUnmergedOnce(old))) &&
-          !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
-      );
-      if (told.length === 0) return [];
-      const moved = new Set(this.movedFrom(record.id, task.id).map((old) => old.id));
-      return told
-        .filter((old) => moved.has(old.id))
-        .map((replaced) => ({ replaced, carrier: task }));
-    });
-  }
-
-  /**
-   * The captain's kept merge approval waits in the batch line or the
-   * host's merge queue (INF-4497 finding 2), and its crewmate has been idle
-   * as long as the ladder's nudge waits: it hears once, named
-   * by the approval and its line so the inbox queues it once even across a
-   * restart, that the quiet is the line's and nothing is needed from it.
-   */
-  private tellMergeLine(record: TaskRecord): void {
-    const waiting = waitingInLine(record.delivery);
-    if (!waiting) return;
-    const once = mergeLineOnce(waiting.approval, waiting.line);
-    const tried = `${record.id}\n${once}`;
-    if (this.resumesTried.has(tried) || this.host.inbox.woken(record.id, once)) return;
-    this.resumesTried.add(tried);
-    this.host.tasks.turns.endIdle(record.id);
-    void this.host
-      .steer(
-        record.id,
-        mergeLineWake(waiting.approval, waiting.line, candidateHead(waiting.approval)),
-      )
-      .catch((caught: unknown) => {
-        // No conversation to resume: the line still holds the ladder quiet.
-        console.warn("[crew] a kept merge's line steer not delivered:", caught);
-      });
-  }
-
-  /** One steer naming the task that carries the work a dropped wait was on (INF-1826). */
-  private tellMovedWait(
-    taskId: string,
-    moved: { replaced: TaskRecord; carrier: TaskRecord },
-  ): void {
-    const once = waitMovedOnce(moved.replaced, moved.carrier);
-    const tried = `${taskId}\n${once}`;
-    if (this.resumesTried.has(tried)) return;
-    this.resumesTried.add(tried);
-    this.host.tasks.turns.endIdle(taskId);
-    void this.host
-      .steer(taskId, waitMovedWake(moved.replaced, moved.carrier))
-      .catch((caught: unknown) => {
-        // No conversation to resume: the ladder reads the task on its own clock.
-        console.warn("[crew] a moved wait's steer not delivered:", caught);
-      });
-  }
 }
-
-/** A typed wait a task stands on: how it was declared, and the work it names. */
-type TaskWait = DependencyWait & { kind: "baseline" | "blocks" };
 
 /** What a crewmate's last report asked of the Firstmate (`IdleLadder.askOf`). */
 type LadderAsk = FirstmateAsk | { at: number; finished: true };

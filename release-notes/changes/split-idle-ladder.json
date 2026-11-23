@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-idle-ladder",
+      "reason": "The idle ladder's stall card and its steers about waits moved unchanged into their own files so the file stays under the size warning; nothing a person sees changes."
+    }
+  ]
+}

@@ -26,7 +26,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import type { UpdateDownload } from "@shared/work";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -227,7 +227,7 @@ async function world(
         overRemoteLogin.push(deviceId);
         if (options.asksPassword && !asked?.password)
           return { asks: "password", address: options.remoteLogin ?? "", for: "update", deviceId };
-        await asked?.pause?.();
+        await asked?.pause?.(() => assert.fail("That computer is out of reach."));
         return pairing.list().find((device) => device.id === deviceId) as DeviceView;
       }),
     emit: (list) => pushed.push(list),
@@ -427,6 +427,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(at.kept()).toBe("the home's own copy");
     // Its crew paused before its run ended, and waits for it to be back (INF-721 friction 9).
     expect(at.crew).toEqual([`paused ${at.deviceId}`]);
+    expect(at.pushed.flat().some((device) => device.updateWork)).toBe(false); // Cut, never saved.
     expect(at.lines).toEqual(
       expect.arrayContaining(helperWords.updated({ thisMac: true, host: "127.0.0.1" }, null, true)),
     );
@@ -466,7 +467,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
         asked,
       ) => {
         // As RemoteLogin does: the save runs once nothing refused, and only then is the copy there replaced.
-        await asked?.pause?.();
+        await asked?.pause?.(() => assert.fail("That computer is out of reach."));
         replaced.push(deviceId);
         return at.view() as DeviceView;
       };

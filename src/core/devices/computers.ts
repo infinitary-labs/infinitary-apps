@@ -74,7 +74,7 @@ import { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { copyCount } from "./appArchive";
 import type { DevicePairing } from "./pairing";
-import { RemoteLoginRefusedError } from "./remoteLogin";
+import { RemoteLoginRefusedError, type SaveBeforeUpdate } from "./remoteLogin";
 
 /**
  * Your devices as Settings -> Devices lists them, and Remove for a computer
@@ -151,8 +151,12 @@ export type ComputersOptions = {
     options: { signal: AbortSignal; waiting: (tasks: string[]) => void },
   ) => Promise<"saved" | "withdrawn">;
   resumeTasks?: (deviceId: string) => void;
-  /** The tasks on the computer whose turn its update stopped and which have not started again, by title. */
-  resumingTasks?: (deviceId: string) => string[];
+  /**
+   * The tasks whose turn an update stopped and which have not started
+   * again, by title, under the id of the computer they run on
+   * (`CrewUpdates.resumingByComputer`), read once per list.
+   */
+  resumingTasks?: () => ReadonlyMap<string, readonly string[]>;
   /**
    * Removes what Firstmate set up on a computer added by its address, over
    * Remote Login (`RemoteLogin.removeThere`): true once nothing is left there
@@ -168,7 +172,7 @@ export type ComputersOptions = {
   /** Updates Firstmate on a computer added by its address, over Remote Login (`RemoteLogin.update`). */
   updateOverRemoteLogin?: (
     deviceId: string,
-    options?: RemoteLoginUpdateOptions & { pause?: () => Promise<void> },
+    options?: RemoteLoginUpdateOptions & { pause?: SaveBeforeUpdate },
   ) => Promise<DeviceView | RemoteLoginPasswordQuestion | RemoteLoginConfirmQuestion>;
   /**
    * Whether this computer has a Firstmate for that computer's system: its own,
@@ -302,6 +306,7 @@ export class Computers {
     // leaves them, and Remove now stops them.
     const reviews = working ? tasks.activeReviewCountsByDevice() : new Map<string, number>();
     const projects = working ? repos.list() : [];
+    const resuming = (working && this.options.resumingTasks?.()) || new Map<string, string[]>();
     const booted = this.options.bootedAt();
     const listening = work.listening();
     // What each app open now said of its version, read once for the whole list.
@@ -385,7 +390,7 @@ export class Computers {
           ? { carriesOn: movable }
           : {}),
         ...(carrying ? { carrying } : {}),
-        ...this.updateWorkOf(device.id),
+        ...this.updateWorkOf(device.id, resuming),
         ...(ssh ? { ssh } : {}),
         // A Mac that also controls this Firstmate says so while Firstmate is open there.
         ...(deviceControls(device.kind) ? { controlling: work.controlling(device.id) } : {}),
@@ -470,11 +475,12 @@ export class Computers {
       const update = this.options.updateOverRemoteLogin;
       if (!update) throw new Error(`${deviceLabel(device)} cannot be reached over Remote Login.`);
       // Its crew pauses only once the update goes ahead there, past every
-      // refusal and the password question.
+      // refusal and the password question; a save that lost the computer
+      // refuses the update as out of reach there.
       let paused = false;
-      const pause = async () => {
+      const pause: SaveBeforeUpdate = async (lost) => {
         paused = true;
-        if (!(await this.saveWork(device))) throw new UpdateLetGo();
+        if (!(await this.saveWork(device, lost))) throw new UpdateLetGo();
       };
       const oneTime = !device.remoteLogin && options?.address !== undefined;
       const back = oneTime ? this.backOnThisVersion(device, true) : null;
@@ -535,22 +541,24 @@ export class Computers {
 
   /**
    * Its crew's work is saved before anything there stops (docs/devices.md,
-   * "Saving work before an update"): its row says Saving work, naming the
-   * tasks it waits for, and offers Update later. False once Update later let
-   * the update go first. A save that could not finish - the computer went
-   * out of reach and did not come back - is `lost`'s refusal.
+   * "Saving work before an update"): once the computer's own save says what
+   * it waits for, its row says Saving work, naming those tasks, and offers
+   * Update later. One whose turns are cut instead says nothing of it. False
+   * once Update later let the update go first. A save that could not finish
+   * - the computer went out of reach and did not come back - is `lost`'s refusal.
    */
   private async saveWork(device: DeviceView, lost?: () => never): Promise<boolean> {
     const pause = this.options.pauseTasks;
     if (!pause) return true;
     const own = { controller: new AbortController(), tasks: [] as string[] };
-    this.saving.set(device.id, own);
-    this.changed();
+    let open = true;
     try {
       const outcome = await pause(device.id, {
         signal: own.controller.signal,
         waiting: (tasks) => {
+          if (!open || own.controller.signal.aborted) return;
           own.tasks = tasks;
+          this.saving.set(device.id, own);
           this.changed();
         },
       });
@@ -560,8 +568,11 @@ export class Computers {
       if (lost) return lost();
       throw caught;
     } finally {
-      if (this.saving.get(device.id) === own) this.saving.delete(device.id);
-      this.changed();
+      open = false;
+      if (this.saving.get(device.id) === own) {
+        this.saving.delete(device.id);
+        this.changed();
+      }
     }
   }
 
@@ -596,12 +607,15 @@ export class Computers {
    * saving before it, naming the tasks it waits for, or resuming after it
    * until each turn it stopped has started again.
    */
-  private updateWorkOf(deviceId: string): Pick<DeviceView, "updateWork"> {
+  private updateWorkOf(
+    deviceId: string,
+    resuming: ReadonlyMap<string, readonly string[]>,
+  ): Pick<DeviceView, "updateWork"> {
     const saving = this.saving.get(deviceId);
     if (saving) return { updateWork: { state: "saving", tasks: saving.tasks } };
     if (this.updating.has(deviceId)) return {};
-    const tasks = this.options.resumingTasks?.(deviceId) ?? [];
-    return tasks.length > 0 ? { updateWork: { state: "resuming", tasks } } : {};
+    const tasks = resuming.get(deviceId) ?? [];
+    return tasks.length > 0 ? { updateWork: { state: "resuming", tasks: [...tasks] } } : {};
   }
 
   /**

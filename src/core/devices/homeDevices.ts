@@ -623,7 +623,7 @@ export async function startHomeDevices(options: {
           });
         },
         resumeTasks: (deviceId) => supervisor.updates.resumeAfterUpdate(deviceId),
-        resumingTasks: (deviceId) => supervisor.updates.resumingOn(deviceId),
+        resumingTasks: () => supervisor.updates.resumingByComputer(),
         removeThere: (device) => remoteLogin.removeThere(device),
         // Update: a computer's version against this Mac's, over Remote Login or
         // the connection (docs/devices.md, "Updating"). A run from source on

@@ -83,6 +83,27 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     );
   });
 
+  // A save that lost the computer refuses its update as out of reach (docs/devices.md,
+  // "Saving work before an update"), as the connection's own route does.
+  it("refuses the update as out of reach when its crew's work could not be saved, and starts nothing there", async () => {
+    const sshd = await server();
+    const them = otherUser();
+    const record = join(scratchDir("infinitary-remote-record-"), "started");
+    const at = await home({ ssh: sshd.ssh({ remote: them.env }), bundle: standInBundle(record) });
+    const device = await addChecked(at.remote, sshd.address);
+    at.said.splice(0);
+
+    const updating = at.remote.update(device.id, { pause: async (lost) => lost() });
+    await expect(updating).rejects.toMatchObject({ refusal: "out-of-reach" });
+    expect(existsSync(record) ? readFileSync(record, "utf8") : "").not.toContain("work update");
+    const refused = remoteLoginWords.refused("out-of-reach", {
+      address: sshd.address,
+      doing: "update",
+      name: deviceLabel(device),
+    });
+    expect(at.lines()).toEqual([remoteLoginWords.updating(device), ...refused]);
+  });
+
   // INF-325: "Could not reach kunchen@mac-home." after the 30-minute limit
   // stopped an update; SSH exits 255 once stopped, which is not why.
   // INF-2578: other unit rounds churning the disk beside it once kept the

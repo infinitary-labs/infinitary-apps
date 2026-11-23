@@ -143,7 +143,11 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding an Ubuntu computer by its address",
     });
     const joined = new JoinedHome(them.work, () => {});
     joined.join(grant, Date.now());
-    const pause = vi.fn(async () => {});
+    // Its crew's work is saved there before the package is sent and installed.
+    const installedWhenSaved: boolean[] = [];
+    const pause = vi.fn(async () => {
+      installedWhenSaved.push(readdirSync(record).includes("installed.deb"));
+    });
     const options = { address: sshd.address, pause };
     const check = await at.remote.update(grant.deviceId, options);
     if (!("asks" in check) || check.asks !== "confirm")
@@ -165,6 +169,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding an Ubuntu computer by its address",
     expect(readdirSync(record)).not.toContain("installed.deb");
     writeInstalled(them.work, { app: null, service: null });
     expect(await at.remote.update(grant.deviceId, confirmed)).toMatchObject({ id: grant.deviceId });
+    expect(installedWhenSaved).toEqual([false]);
     expect(readFileSync(join(record, "installed.deb"))).toEqual(deb);
     expect(readFileSync(join(record, "started"), "utf8")).toContain("work update --from-home");
     expect(joined.read()?.grant).toEqual(grant);

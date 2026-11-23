@@ -141,6 +141,16 @@ export class CrewUpdates {
     return this.updating.has(deviceId);
   }
 
+  /**
+   * A computer that saves its own work (`there`) came back in reach: unless
+   * this Mac is updating it now, a save there for an update this Mac no
+   * longer follows is let go, so the carry-on turn it would refuse runs
+   * (docs/devices.md, "Saving work before an update").
+   */
+  async letGoReturned(deviceId: string, there: SaveThere | undefined): Promise<void> {
+    if (!this.isUpdating(deviceId)) await there?.release();
+  }
+
   /** This computer's own update is saving its crew's work, or saved it and has not replaced the copy. */
   updatingHere(): boolean {
     return this.localUpdate !== undefined;
@@ -299,23 +309,17 @@ export class CrewUpdates {
   private async saveThere(
     update: RemoteUpdate,
     there: SaveThere,
-    signal?: AbortSignal,
+    signal = new AbortController().signal,
   ): Promise<UpdateSaveOutcome> {
-    const withdraw = new AbortController();
-    const letGo = () => withdraw.abort();
-    if (signal?.aborted) letGo();
-    else signal?.addEventListener("abort", letGo, { once: true });
     update.report();
     try {
-      await there.save(withdraw.signal);
-      if (withdraw.signal.aborted) return "withdrawn";
+      await there.save(signal);
+      if (signal.aborted) return "withdrawn";
       update.report();
       return "saved";
     } catch (caught) {
-      if (withdraw.signal.aborted) return "withdrawn";
+      if (signal.aborted) return "withdrawn";
       throw caught;
-    } finally {
-      signal?.removeEventListener("abort", letGo);
     }
   }
 
@@ -384,29 +388,6 @@ export class CrewUpdates {
       if (this.host.machineOf(taskId) === deviceId) void this.host.sweepTaskLane(taskId, now);
     void this.host.sweepGates(now);
     this.host.broadcastCrewCounts();
-  }
-
-  /**
-   * The tasks on a computer that runs work whose turn its update stopped
-   * and which have not started again, by title: that computer's Resuming work.
-   */
-  resumingOn(deviceId: string): string[] {
-    const titles: string[] = [];
-    for (const taskId of this.options.inbox.recipientsWithRows()) {
-      if (this.host.machineOf(taskId) !== deviceId) continue;
-      const waits = this.options.inbox
-        .allFor(taskId)
-        .some(
-          (row) =>
-            row.deliveredAt === null &&
-            row.facts?.kind === "turn-resumed" &&
-            row.facts.stopped === "update" &&
-            row.facts.computer !== undefined,
-        );
-      const title = waits ? this.options.tasks.get(taskId)?.title : undefined;
-      if (title) titles.push(title);
-    }
-    return titles;
   }
 
   /**
@@ -572,20 +553,31 @@ export class CrewUpdates {
    * not started again, by title: the update's Resuming work.
    */
   resumingAfterUpdate(): string[] {
-    const titles: string[] = [];
+    return this.resumingByComputer().get(LOCAL_MACHINE_ID) ?? [];
+  }
+
+  /**
+   * The tasks whose turn an update stopped and which have not started
+   * again, by title, under the computer that update was of - this
+   * computer's own under `LOCAL_MACHINE_ID` - read once for every
+   * computer's Resuming work.
+   */
+  resumingByComputer(): Map<string, string[]> {
+    const byComputer = new Map<string, string[]>();
     for (const taskId of this.options.inbox.recipientsWithRows()) {
-      const waits = this.options.inbox
-        .allFor(taskId)
-        .some(
-          (row) =>
-            row.deliveredAt === null &&
-            row.facts?.kind === "turn-resumed" &&
-            row.facts.stopped === "update" &&
-            row.facts.computer === undefined,
-        );
-      const title = waits ? this.options.tasks.get(taskId)?.title : undefined;
-      if (title) titles.push(title);
+      const on = new Set<string>();
+      for (const row of this.options.inbox.allFor(taskId))
+        if (
+          row.deliveredAt === null &&
+          row.facts?.kind === "turn-resumed" &&
+          row.facts.stopped === "update"
+        )
+          on.add(row.facts.computer === undefined ? LOCAL_MACHINE_ID : this.host.machineOf(taskId));
+      const title = on.size > 0 ? this.options.tasks.get(taskId)?.title : undefined;
+      if (title)
+        for (const computer of on)
+          byComputer.set(computer, [...(byComputer.get(computer) ?? []), title]);
     }
-    return titles;
+    return byComputer;
   }
 }

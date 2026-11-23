@@ -45,7 +45,9 @@ test("a crewmate emits a file snapshot and shows an edit only on its next explic
     await input.fill(`${SPAWN_PROMPT_MARKER} ${FILE_CARD_PROMPT_MARKER}`);
     await input.press("Enter");
     const frame = cardBody(page, FILE_CARD_TITLE);
-    await expect(frame.locator("body")).toContainText(ORIGINAL_ANSWER);
+    // The first card comes after the first mate's turn, the crewmate's start
+    // and its first turn: the 30 s other journeys give a crewmate's card.
+    await expect(frame.locator("body")).toContainText(ORIGINAL_ANSWER, { timeout: 30_000 });
     if (process.env.INFINITARY_TASK_EVIDENCE_DIR) {
       await page.screenshot({
         path: join(process.env.INFINITARY_TASK_EVIDENCE_DIR, "file-card-before.png"),
@@ -65,7 +67,8 @@ test("a crewmate emits a file snapshot and shows an edit only on its next explic
     const reply = cardReply(page).field;
     await reply.fill(FILE_CARD_REVISE_MARKER);
     await cardReply(page).send.click();
-    await expect(frame.locator("body")).toContainText(UPDATED_ANSWER);
+    // The revision comes after the crewmate's next turn.
+    await expect(frame.locator("body")).toContainText(UPDATED_ANSWER, { timeout: 30_000 });
     await expect(frame.locator("body")).toContainText(UNCHANGED_EVIDENCE);
     // The new drawing appears on the explicit revision, never on a file edit.
     await expect(frame.getByRole("img", { name: "Revised answer drawing" })).toBeVisible();

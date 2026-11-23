@@ -85,10 +85,12 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | live validation | 實際驗證 | Trying the change for real; kept apart from the checks. |
 | local merge | 本機合併 | Taiwan writes 本機, not 本地. |
 | log (a check's kept output) | 日誌 | Distinct from the record, 紀錄. |
+| median (Usage, Cost per task) | 中位數 | The middle task of a week's finished tasks; never "average". |
 | merge | 合併 | GitHub-adjacent Taiwan docs and Microsoft Taiwan both say 合併. |
 | merge queue (the host's own) | 合併佇列 | |
 | Merges on its own | 自行合併 | Short label. |
 | message box / main message | 訊息框 / 主要訊息 | Taiwan writes 訊息, not 信息 or 消息. |
+| middle half (Usage, Cost per task) | 中間一半 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | 模型 | Standard. |
 | Not now | 暫時不要 | The decline button. |
 | offline, disconnected (never said) | 連絡不上 | Never 離線. |

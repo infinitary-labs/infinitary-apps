@@ -96,10 +96,12 @@ A number placeholder sits directly against its counter with no space (「{count}
 | log in (to a computer's user account) | ログイン | Kept apart from サインイン, which is for services. |
 | machine (avoided) | コンピューター | Vocabulary rule; マシン appears only as a search word. |
 | main message | メインのメッセージ欄 | Command label. |
+| median (Usage, Cost per task) | 中央値 | The middle task of a week's finished tasks; never "average". |
 | merge | マージ | GitHub Japanese docs; 「マージ済み」 for the merged state. |
 | merge queue (the host's own) | マージキュー | |
 | Merges on its own | 自動でマージ | Merge setting. |
 | message box | メッセージ欄 | 欄 is the standard word for a field. |
+| middle half (Usage, Cost per task) | 中間の半分 | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | モデル | Standard. |
 | Not now | 今はしない | Consent button. |
 | note (card kind) | お知らせ | A note card carries a fact for the person; メモ is kept for a crewmate's own notes and first mate's noted lines. |

@@ -80,10 +80,12 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | live validation | validação ao vivo | Trying the change for real; kept apart from the checks. |
 | log (a check's kept output) | o log | "Registro" already names the task's record. |
 | machine (avoided) | computador | Also in the voice consent line, where the English says "this machine". |
+| median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | mesclar, mesclagem | GitHub's Portuguese docs say "mesclar uma solicitação de pull"; the noun is "mesclagem". |
 | merge queue (the host's own) | fila de mesclagem | |
 | Merges on its own / Asks first | Mescla por conta própria / Pergunta antes | |
 | message box / main message | caixa de mensagem / mensagem principal | |
+| middle half (Usage, Cost per task) | metade central | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modelo | |
 | Not now | Agora não | |
 | out of reach | fora de alcance | |

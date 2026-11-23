@@ -836,3 +836,127 @@ describe("token category coverage", () => {
     expect(addUsageAmounts([EMPTY_USAGE_AMOUNT, older]).tokenReported).toBeUndefined();
   });
 });
+
+describe("UsageStore.taskCosts, Settings → Usage → Cost per task", () => {
+  const NOW = new Date(2026, 9, 5, 15, 0).getTime();
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+
+  /**
+   * A month of finished work in two projects: a built task with its review
+   * and a fix the review's crewmate made under it, a separate task filed
+   * under the build, one finished in the week before the month and one long
+   * before it, one never priced, one that recorded nothing, and the rows the
+   * tab never counts as finished.
+   */
+  function ledger() {
+    const db = openInMemoryDatabase();
+    for (const [id, name, key] of [
+      ["repo-fm", "firstmate-3000", "FM3K"],
+      ["repo-web", "Website", "WEB"],
+    ] as const) {
+      seedProject(db, { id, name, path: `/repos/${id}`, delivery: "direct-pr", addedAt: NOW, key });
+    }
+    let clock = NOW - 60 * DAY;
+    const tasks = new TaskService({ db, strict: true, now: () => clock });
+    const store = new UsageStore(db);
+    const work = (
+      id: string,
+      options: { repoId?: string; kind?: "implement" | "fix" | "review"; parentId?: string },
+    ) =>
+      seedTask(tasks, {
+        id,
+        title: id,
+        status: "completed",
+        repoId: options.repoId ?? "repo-fm",
+        ...(options.parentId ? { parentId: options.parentId } : {}),
+        ...(options.kind ? { shape: { kind: options.kind } } : {}),
+      });
+    const finish = (id: string, at: number) => {
+      clock = at;
+      tasks.close(id, { status: "done", reason: "finished", actor: "host" });
+    };
+    const spend = (taskId: string, tokens: number, cost: number | null, at: number) =>
+      store.record({
+        taskId,
+        model: { provider: "openai-codex", id: "gpt-5.5" },
+        usage: {
+          input: tokens,
+          output: 0,
+          ...(cost === null ? {} : { cost, costSource: "listed-prices" as const }),
+        },
+        at,
+      });
+
+    work("ancient", { kind: "fix" });
+    spend("ancient", 100, 0.1, NOW - 50 * DAY);
+    finish("ancient", NOW - 50 * DAY);
+
+    clock = NOW - 40 * DAY;
+    work("early", { kind: "fix", repoId: "repo-web" });
+    spend("early", 200, 0.2, NOW - 34 * DAY);
+    finish("early", NOW - 33 * DAY);
+
+    clock = NOW - 10 * DAY;
+    work("build", { kind: "implement" });
+    work("build-review", { kind: "review", parentId: "build" });
+    work("review-fix", { kind: "fix", parentId: "build-review" });
+    work("follow-up", { kind: "fix", parentId: "build" });
+    spend("build", 1000, 1, NOW - 9 * DAY);
+    spend("build-review", 400, 0.4, NOW - 8 * DAY);
+    spend("review-fix", 50, 0.05, NOW - 8 * DAY);
+    spend("follow-up", 300, 0.3, NOW - 6 * DAY);
+    finish("review-fix", NOW - 8 * DAY);
+    finish("build-review", NOW - 8 * DAY);
+    finish("follow-up", NOW - 5 * DAY);
+    finish("build", NOW - 2 * DAY);
+
+    clock = NOW - 4 * DAY;
+    work("unpriced", { kind: "implement", repoId: "repo-web" });
+    spend("unpriced", 700, null, NOW - 3 * DAY);
+    finish("unpriced", NOW - 3 * DAY);
+    work("silent", {});
+    finish("silent", NOW - 3 * DAY);
+    work("running", { kind: "fix" });
+    spend("running", 900, 0.9, NOW - DAY);
+    seedTask(tasks, { id: "ops", kind: "operation", title: "ops", status: "completed" });
+    spend("ops", 900, 0.9, NOW - DAY);
+    finish("ops", NOW - DAY);
+    return store;
+  }
+
+  it("lists each finished task once with its reviews' spend, from a week before the period", () => {
+    const costs = ledger().taskCosts({ period: "30d" }, { now: NOW });
+    expect(costs.at).toBe(NOW);
+    expect(costs.since).toBe(new Date(2026, 8, 6).getTime());
+    expect(
+      costs.tasks.map((task) => ({
+        at: (task.closedAt - NOW) / DAY,
+        project: task.project?.name ?? null,
+        kind: task.kind,
+        tokens: task.tokens,
+        cost: task.cost,
+      })),
+    ).toEqual([
+      { at: -33, project: "Website", kind: "fix", tokens: 200, cost: 0.2 },
+      { at: -5, project: "firstmate-3000", kind: "fix", tokens: 300, cost: 0.3 },
+      { at: -3, project: "firstmate-3000", kind: null, tokens: null, cost: null },
+      { at: -3, project: "Website", kind: "implement", tokens: 700, cost: null },
+      {
+        at: -2,
+        project: "firstmate-3000",
+        kind: "implement",
+        tokens: 1000 + 400 + 50,
+        cost: expect.closeTo(1.45, 10),
+      },
+    ]);
+  });
+
+  it("reads all time from the local day of the first finished task", () => {
+    const costs = ledger().taskCosts({ period: "all" }, { now: NOW });
+    expect(costs.tasks).toHaveLength(6);
+    const first = new Date(NOW - 50 * DAY);
+    first.setHours(0, 0, 0, 0);
+    expect(costs.since).toBe(first.getTime());
+  });
+});

@@ -619,6 +619,7 @@ describe("ipc contract", () => {
       "inf:tasks:opened",
       "inf:tasks:search",
       "inf:usage:summary",
+      "inf:usage:task-costs",
       "inf:usage:tasks",
       "inf:view:answer",
       "inf:window:front",

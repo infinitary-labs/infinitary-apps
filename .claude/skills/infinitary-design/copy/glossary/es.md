@@ -82,10 +82,12 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | log (a check's kept output) | el log | "Registro" already names the task's record. |
 | machine, server, host (never said) | computadora, por su nombre | "this machine" in the voice consent reads "esta computadora". |
 | main message | mensaje principal | |
+| median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | fusionar, fusión | GitHub's Spanish docs say "fusionar una solicitud de incorporación de cambios"; the noun is "fusión" ("Tu fusión queda pendiente"). |
 | merge queue (the host's own) | cola de fusión | |
 | Merges on its own / Asks first | Fusiona por su cuenta / Pregunta antes | |
 | message box | cuadro de mensaje | |
+| middle half (Usage, Cost per task) | mitad central | The band between the quarter and three-quarter marks of a week's tasks. |
 | model | modelo | |
 | Not now | Ahora no | |
 | offline, disconnected (never said) | fuera de alcance | |

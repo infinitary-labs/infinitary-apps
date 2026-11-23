@@ -28,6 +28,22 @@ Open it from your own copy of the project with Infinitary, which writes its stor
 The pull request's "PR raised with Infinitary's Careful review" check reads that record and passes; until then it fails and leaves one comment saying why.
 A record written by another tool does not count (`docs/public-ci.md`, "The Careful review check").
 
+## What happens after you open an issue or pull request
+
+Open an issue from one of its forms: a problem, an idea or a question.
+Inside the app, `/feedback` in the message box writes a problem or an idea for you, with the app's diagnostics and no personal details.
+A new issue, and a new pull request from your own copy of the project, is labeled `needs triage` until a maintainer answers, usually within two working days.
+
+The answer says what happens next, with a label:
+
+- `accepted`: the project takes it on; an accepted problem goes on the project's list of work.
+- `waiting on author`: the answer asks you for something, such as more detail or a change. Your reply, or a new version of your pull request, puts it back in line.
+- `duplicate`, declined or answered: the issue or pull request is closed, and the answer says why.
+
+A pull request also waits on you while its "Contributor License Agreement" or "PR raised with Infinitary's Careful review" check fails; each check's comment says what it needs.
+Something that waits on you gets one reminder after 14 days, and closes 14 days after that reminder; you are welcome to pick it up again in a new one that links the old.
+Each account without write access to the project may have at most 3 pull requests open at a time, drafts not counted, so please finish or close one before opening a fourth.
+
 ## How the code is worked on
 
 `AGENTS.md` and the pages under `docs/` it points to (`docs/README.md`) are the project's own account of how it is built, tested and released, and they apply to people as much as to agents. The short version:

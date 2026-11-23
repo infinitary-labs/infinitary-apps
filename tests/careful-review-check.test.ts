@@ -348,9 +348,10 @@ describe("careful-review-check.yml", () => {
         "sparse-checkout-cone-mode",
       ]);
       expect(step.with?.["persist-credentials"]).toBe(false);
-      expect(String(step.with?.["sparse-checkout"]).trim()).toBe(
+      expect(String(step.with?.["sparse-checkout"]).trim().split("\n").toSorted()).toEqual([
         "scripts/careful-review-check.mjs",
-      );
+        "scripts/intake-labels.mjs",
+      ]);
     }
     expect(steps.filter((step) => step.run)).toEqual([]);
   });

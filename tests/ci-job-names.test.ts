@@ -356,6 +356,27 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
+  // The triage mark (triage-mark.yml, docs/public-ci.md "Intake"): any new
+  // comment but the bot's own.
+  {
+    file: "triage-mark.yml",
+    trigger: "New comment",
+    scenario: {
+      github: { event_name: "issue_comment", event: { comment: { user: { login: "someone" } } } },
+    },
+  },
+  // The waiting-on-author timer (waiting-on-author.yml, docs/public-ci.md
+  // "Intake"): its daily run, and a run started by hand.
+  {
+    file: "waiting-on-author.yml",
+    trigger: "Daily",
+    scenario: { github: { event_name: "schedule" } },
+  },
+  {
+    file: "waiting-on-author.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
   // The feedback labels (feedback-labels.yml, docs/feedback.md "Triage"): a
   // new issue whose body carries the app's feedback mark.
   {

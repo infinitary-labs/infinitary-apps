@@ -383,6 +383,7 @@ describe("contributor-agreement.yml", () => {
       expect(String(step.with?.["sparse-checkout"]).trim().split("\n").toSorted()).toEqual([
         "CLA.md",
         "scripts/contributor-agreement.mjs",
+        "scripts/intake-labels.mjs",
       ]);
     }
     expect(steps.filter((step) => step.run)).toEqual([]);

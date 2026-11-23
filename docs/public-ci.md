@@ -41,6 +41,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 
 1. **It opens.**
    GitHub starts the contributor agreement check and the Careful review check at once, which need no run approval ("The contributor agreement check", "The Careful review check"); every other check waits for the captain's approval of the run.
+   The check-file flag labels it `needs triage` ("Intake").
 2. **The crew reads it when the captain asks.**
    Nothing reads new outside pull requests on a schedule.
    A crewmate reviews one the captain names (`check_change pull`), reads its code and GitHub's runs, and puts it on a card for the captain.
@@ -63,9 +64,48 @@ The check files are what decide which checks run, where they run and what instal
 `check-file-flag.yml` marks such a pull request before anyone approves a run: it labels it `edits checks` and names its check files in one comment, and removes the label once a later version edits none (`scripts/check-file-flag.mjs`).
 It also labels a pull request whose changed files GitHub lists only in part, since GitHub lists at most 3,000, and says so in that comment.
 It marks and never fails or blocks a pull request, and leaves the project's own pull requests alone.
-Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script, never the pull request's code, uses no secret beyond its own token, holds only issue and pull request writes (GitHub refuses a label on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
+Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script and `scripts/intake-labels.mjs`, never the pull request's code, uses no secret beyond its own token, holds only issue and pull request writes (GitHub refuses a label on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
 Started by hand with a pull request number, it reads any pull request of the project, its own included, so the flag can be proved before an outside copy exists.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
+
+### Intake
+
+GitHub sorts each new outside issue and pull request with no model, and a maintainer's reply settles it (`CONTRIBUTING.md`, "What happens after you open an issue or pull request").
+
+- **Forms.**
+  `.github/ISSUE_TEMPLATE/` holds three issue forms, a problem (`bug.yml`), an idea (`idea.yml`) and a question (`question.yml`); each labels its issue with its kind and `needs triage`, states the two-working-day answer window and points to `/feedback` in the app (`docs/feedback.md`).
+  `config.yml` turns blank issues off and sends a security report to the private address in `CONTRIBUTING.md`.
+- **New pull requests.**
+  `check-file-flag.yml` labels a newly opened outside pull request `needs triage` ("Outside contributors").
+- **Waiting on the author.**
+  After each required check writes its status, it labels an outside pull request `waiting on author` while either required check fails; once both pass on the author's own event (a push, an edit, a reopening or an acceptance), the label comes off and `needs triage` goes on (`scripts/intake-labels.mjs`).
+  A maintainer's event never takes the label off, so a reply asking for changes holds although both checks pass.
+- **The triage mark.**
+  `triage-mark.yml` reads each new comment (`scripts/triage-mark.mjs`).
+  A comment from an account that can write to the project, judged by GitHub's collaborator permission API and never by the comment's author relation, may end with `<!-- infinitary-triage v1 disposition=NAME -->`.
+  Each disposition takes `needs triage` off:
+
+  | Disposition | Labels | Closes |
+  | --- | --- | --- |
+  | `duplicate` | adds `duplicate` | as not planned |
+  | `needs-info` | adds `waiting on author` | no |
+  | `accepted` | adds `accepted` | no |
+  | `declined` | none | as not planned |
+  | `answered` | none | as completed |
+  | `changes-requested` (pull requests only) | adds `waiting on author` | no |
+
+  Every disposition but the two that wait on the author takes `waiting on author` off too, and a pull request closes with no reason, which GitHub keeps for issues.
+  The same mark from anyone else changes nothing, and a name off the list is no mark.
+  When an item's own author comments while it is labeled `waiting on author`, the label comes off and `needs triage` goes on, so the next answer reads the reply.
+- **The timer.**
+  `waiting-on-author.yml` runs each day on hosted Ubuntu and reads only open items labeled `waiting on author` (`scripts/waiting-on-author.mjs`).
+  An item starts waiting at the later of the label's newest addition and its author's newest comment, reopening or push.
+  After 14 days it gets one reminder; 14 days after that reminder it closes, issues as not planned, with a note inviting a new one that links it.
+- **The pull request limit.**
+  The project's interaction limits allow each account without write access at most 3 open pull requests, drafts not counted; GitHub offers this setting in Settings, Moderation options, Interaction limits, and no API to read it.
+
+The labels are `needs triage`, `waiting on author`, `accepted`, `idea` and `question`, beside GitHub's defaults and the project's own.
+Like the agreement check, the triage mark and the timer check out only their own scripts from the default branch, never a pull request's code, read words only as data, use no secret beyond their token, hold only issue and pull request writes and run on GitHub's hosted Ubuntu; neither uses `pull_request_target` (`tests/outside-intake.test.ts`).
 
 ### The contributor agreement check
 
@@ -84,7 +124,7 @@ The Actions token comments on a locked issue with its issue write access, and no
 Without the issue the check fails on every outside pull request and names what is missing.
 
 It writes on an outside pull request, as the check-file flag does, so it runs from the default branch on `pull_request_target` and `issue_comment` rather than from the pull request's own files, and needs no run approval.
-It checks out only its script and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue, pull request and status writes (GitHub refuses its comment on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu.
+It checks out only its script, `scripts/intake-labels.mjs` and `CLA.md` from the default branch, never the pull request's code, reads the contributor's words as data, uses no secret beyond its own token, holds only issue, pull request and status writes (GitHub refuses its comment on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu.
 `tests/contributor-agreement.test.ts` holds each of these.
 
 ### The Careful review check
@@ -105,7 +145,7 @@ The record is words in the description, and the author can type it by hand, so t
 It never stands in for reading the change, or any edit to check files before approving a run; the guards stay GitHub's approval of each outside run and the fork guard on the project's own runners.
 
 It writes on an outside pull request, as the agreement check does, so it runs from the default branch on `pull_request_target` (opened, reopened, a push or an edit of the description) rather than from the pull request's own files, and needs no run approval.
-It checks out only its script from the default branch, never the pull request's code, reads the description as data, uses no secret beyond its own token, holds only issue, pull request and status writes, and runs on GitHub's hosted Ubuntu.
+It checks out only its script and `scripts/intake-labels.mjs` from the default branch, never the pull request's code, reads the description as data, uses no secret beyond its own token, holds only issue, pull request and status writes, and runs on GitHub's hosted Ubuntu.
 Started by hand with a pull request number, it reads any pull request of the project; on one of the project's own it writes its verdict to the job summary alone, so the reading can be proved without changing that pull request's status.
 `tests/careful-review-check.test.ts` holds each of these.
 

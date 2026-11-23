@@ -1,7 +1,9 @@
 import type { Card } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import type { AskAttachedVia } from "../storage/askStore";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { ASK_THREAD_CARRIES } from "../storage/migrations";
 import { TaskEventStore } from "../storage/taskEventStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -228,7 +230,7 @@ describe("the answer-delivery check across a restart", () => {
   // INF-2059 (the captain: "every several seconds it freezes for a few
   // seconds"): the sweep after each turn read each message's tasks twice,
   // once for its chain and again for its state.
-  it("looks up each covered message's tasks once when the sweep reads every open chain", () => {
+  it("looks up each covered message's tasks once when the sweep reads every open thread", () => {
     const f = fixture();
     seedTask(f.tasks, { id: "panels", title: "Build personal panels", status: "running" });
     seedTask(f.tasks, { id: "meter", title: "Fix the meter", status: "running" });
@@ -251,5 +253,63 @@ describe("the answer-delivery check across a restart", () => {
     // Their work still runs: nothing is retried or noticed.
     expect(f.retryRows()).toEqual([]);
     expect(f.notices).toEqual([]);
+  });
+
+  // INF-6115: "The upgrade raises no new wake." A message that joined an
+  // earlier one's thread before the update keeps that thread's open work.
+  it("keeps each open message's merged thread across the update to one thread per message, with no retry or notice", () => {
+    const f = fixture();
+    seedTask(f.tasks, { id: "plan", title: "Plan the panels", status: "running" });
+    seedTask(f.tasks, { id: "size", title: "Say what size the panels are", status: "running" });
+    const covered = (id: string, taskId: string, via: AskAttachedVia) => {
+      f.ask(id);
+      f.tasks.capture.attachAsk(id, taskId, via);
+      f.tasks.capture.closeAsk(id, "closed");
+      f.tasks.capture.setAskDelivery(id, "covered");
+    };
+    covered("m1", "plan", "tool:spawn_crewmate");
+    covered("m2", "size", "tool:steer_crewmate");
+    // A reply typed under the plan's card reached it only by the host's
+    // fallback, which the old release joined to m1's thread just the same.
+    covered("m3", "plan", "host:fallback");
+    f.tasks.close("size", { status: "done", reason: "answered", actor: "host" });
+    // As the release before the update saved it: the later message joined
+    // the first message's thread. The update's migration then lists both.
+    f.db.prepare("UPDATE captain_asks SET continues = 'm1' WHERE id IN ('m2', 'm3')").run();
+    f.db.exec("DROP TABLE ask_thread_carries;");
+    f.db.exec(ASK_THREAD_CARRIES);
+    const ending = askEndingOf(f.tasks, {
+      values: () => [],
+      stored: () => undefined,
+      shownAt: () => 0,
+      seenCards: () => [],
+    });
+    const state = (id: string) => {
+      const thread = ending.thread(id);
+      if (!thread) throw new Error(`No thread for ${id}`);
+      return ending.state(thread);
+    };
+    // Its own thread alone holds only finished work: it would be retried.
+    expect(state("m2")).toEqual({ kind: "missing" });
+    // Its fallback attachment never made the plan its own work.
+    expect(state("m3")).toEqual({ kind: "missing" });
+    ending.carryThreads();
+    expect(state("m1")).toEqual({ kind: "working" });
+    expect(state("m2")).toEqual({ kind: "working" });
+    expect(state("m3")).toEqual({ kind: "working" });
+    expect(f.tasks.capture.threadCarries()).toEqual([]);
+    // The carried attachment is never quoted as where the work came from.
+    expect(f.tasks.capture.originAbout("plan")).toMatchObject({ text: "message m1" });
+    f.boot().sweep();
+    expect(f.retryRows()).toEqual([]);
+    expect(f.notices).toEqual([]);
+    // The step runs once: a second boot carries nothing again.
+    ending.carryThreads();
+    expect(
+      f.tasks.capture
+        .askCoverage(["m2"])
+        .work.map((task) => task.id)
+        .sort(),
+    ).toEqual(["plan", "size"]);
   });
 });

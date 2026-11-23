@@ -67,6 +67,26 @@ describe("a /feedback reply under a crewmate's card", () => {
     expect(harness.cards().find((card) => card.id === cardId)?.awaiting).toBeUndefined();
   });
 
+  it("leaves the question the crewmate already owes as the one it answers", async () => {
+    const { harness, cardId } = await crewmateCard();
+    const thread = harness.supervisor.cardActions.replyToCard(cardId, "why not Monday?");
+    const asked = thread.messages.at(-1)?.id ?? 0;
+    await tick();
+    harness.supervisor.cardActions.replyToCard(cardId, "/feedback the card scrolled away");
+    await tick();
+    expect(harness.supervisor.cards.owed(cardId)).toBe("author");
+    // The crewmate answers the question it was asked, not the /feedback line.
+    expect(
+      harness.specs[0]?.onReply?.({
+        cardId,
+        text: "Monday leaves no day for the checks.",
+        answersMessage: asked,
+      }),
+    ).toContain(`It answers the captain's message ${asked}.`);
+    // That answer ends the hold: nothing keeps nudging the crewmate.
+    expect(harness.supervisor.cards.owed(cardId)).not.toBe("author");
+  });
+
   it("leaves an ordinary reply with the card's crewmate", async () => {
     const { crewmate, heard, harness, cardId, prompts } = await crewmateCard();
     harness.supervisor.cardActions.replyToCard(cardId, "why not Monday?");

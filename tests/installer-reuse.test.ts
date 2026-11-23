@@ -9,6 +9,7 @@ import {
   type InstallerReusePlan,
   installerReusePlan,
   reuseInstallerFixtures,
+  SIGNED_BUILD_STEP,
 } from "../scripts/installer-reuse";
 import { hostEnv } from "../src/core/hostEnv";
 import { runJobNames } from "./helpers/ciJobNames";
@@ -95,18 +96,42 @@ it("finds the signed build by its trigger-first name", () => {
   );
 });
 
-it.each(["expired", "other-run", "changed-digest", "failed-build", "outside-build"] as const)(
-  "refuses %s provenance before any download",
-  (kind) => {
-    const { run, artifact, jobs } = records();
-    if (kind === "expired") artifact.expired = true;
-    if (kind === "other-run") artifact.workflow_run.id++;
-    if (kind === "changed-digest") artifact.digest = `sha256:${"0".repeat(64)}`;
-    if (kind === "failed-build") jobs[0].conclusion = "failure";
-    if (kind === "outside-build") artifact.created_at = "2026-10-24T23:08:26Z";
-    expect(() => checkReuseMetadata(recordedPlan, run, artifact, jobs)).toThrow();
-  },
-);
+// The build job checks the copies it built, and keeps them only when that
+// check failed: such a job failed, yet its signed build step passed.
+function checkedInBuild(signed: "success" | "failure") {
+  const { run, artifact, jobs } = records();
+  const steps = [
+    { name: SIGNED_BUILD_STEP, conclusion: signed },
+    {
+      name: "Verify native updates without Homebrew, then signed cask updates",
+      conclusion: signed === "success" ? "failure" : "skipped",
+    },
+  ];
+  return { run, artifact, jobs: [{ ...jobs[0], conclusion: "failure", steps }] };
+}
+
+it("accepts copies a build job kept after its own installed check failed", () => {
+  const { run, artifact, jobs } = checkedInBuild("success");
+  expect(checkReuseMetadata(recordedPlan, run, artifact, jobs).build.id).toBe(jobs[0]?.id);
+});
+
+it.each([
+  "expired",
+  "other-run",
+  "changed-digest",
+  "failed-build",
+  "failed-build-step",
+  "outside-build",
+] as const)("refuses %s provenance before any download", (kind) => {
+  const { run, artifact, jobs } =
+    kind === "failed-build-step" ? checkedInBuild("failure") : records();
+  if (kind === "expired") artifact.expired = true;
+  if (kind === "other-run") artifact.workflow_run.id++;
+  if (kind === "changed-digest") artifact.digest = `sha256:${"0".repeat(64)}`;
+  if (kind === "failed-build") jobs[0].conclusion = "failure";
+  if (kind === "outside-build") artifact.created_at = "2026-10-24T23:08:26Z";
+  expect(() => checkReuseMetadata(recordedPlan, run, artifact, jobs)).toThrow();
+});
 
 const env = () => ({ ...hostEnv(), GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" });
 function repository() {

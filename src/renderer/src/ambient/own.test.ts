@@ -11,6 +11,7 @@ import { type Bar, Composer, type CrewLevel, pitchClass } from "./composer";
 import { styleFromOwn } from "./own";
 import bossa from "./own-samples/bossa.json";
 import bowls from "./own-samples/bowls.json";
+import hardTechno from "./own-samples/hard-techno.json";
 import lofi from "./own-samples/lofi.json";
 import warmSleep from "./own-samples/warm-sleep.json";
 import type { Style } from "./player";
@@ -29,6 +30,7 @@ const SAMPLES: [string, unknown][] = [
   ["singing bowls", bowls],
   ["bossa nova", bossa],
   ["Cold sleep made warmer", warmSleep],
+  ["hard techno, pump up music", hardTechno],
 ];
 
 const UNPITCHED = new Set(["drum", "wood", "tick"]);
@@ -76,6 +78,24 @@ describe.each(SAMPLES)("a person's own style: %s", (_name, sample) => {
     expect(composer.waiting(1)?.some((note) => note.voice === "chime")).toBe(true);
     expect(composer.merged().every((note) => note.voice === "spark")).toBe(true);
     expect(composer.merged().length).toBeGreaterThan(0);
+  });
+});
+
+// A person's report: asking for "hard techno, pump up music" froze the window,
+// and every launch after stayed black, because the first mate's style gave
+// the pad two notes and the composer looked for a third that never came.
+describe("a person's own pad with any number of notes the check accepts", () => {
+  it.each([1, 2, 3, 4])("plays one note on each of %i pad voices", (count) => {
+    const own = ownStyleSchema.parse(hardTechno);
+    if (!own.pad) throw new Error("the hard techno sample has a pad");
+    own.pad.anchors = [33, 45, 52, 57].slice(0, count);
+    expect(ownStyleFaults(own)).toEqual([]);
+    const composer = new Composer(styleFromOwn(own), 7);
+    for (const level of [0, 1, 2, 2, 1, 0] as CrewLevel[]) {
+      const { pad } = composer.bar(level);
+      expect(pad).toHaveLength(count);
+      for (const note of pad) expect(Number.isInteger(note)).toBe(true);
+    }
   });
 });
 

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "ambient-own-pad-freeze",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Your own ambient style no longer freezes the window",
+      "body": "A style your first mate made from your words could give its pad one, two or four notes. With one or two, the window froze as the music started, and every launch after showed a black window. These styles now play, and a window left black by one draws again once you update.",
+      "noPicture": "The fix changes how the music is composed, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

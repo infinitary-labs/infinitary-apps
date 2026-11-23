@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { TaskRecord } from "../storage/taskRecords";
+import { git } from "../workspace/git";
 import type { WorkspaceService } from "../workspace/workspaceService";
 
 /**
@@ -21,4 +23,26 @@ export async function checkedOutHead(
   if (record.deviceId) return (await options.machines?.checkedOut(record.id))?.head;
   if (!record.worktreeDir) return undefined;
   return (await options.workspace.branchHead(record.worktreeDir, "HEAD")) ?? undefined;
+}
+
+/**
+ * The branch a task's working copy has checked out where it lives, when
+ * that is not the task's own: the branch its crewmate committed on, as a
+ * story follows it (INF-2490). A successor handed the task's own branch
+ * then starts from work nobody built. Undefined on the task's own branch,
+ * on a detached checkout, or where nothing answers, as a computer on an
+ * older contract does: the caller hands on the task's own branch, as a
+ * story does then.
+ */
+export async function otherCheckedOutBranch(
+  options: { machines?: Pick<CrewMachines, "checkedOut"> },
+  record: TaskRecord,
+): Promise<string | undefined> {
+  const dir = record.worktreeDir;
+  const branch = record.deviceId
+    ? (await options.machines?.checkedOut(record.id))?.branch
+    : dir && existsSync(dir)
+      ? await git(dir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(() => undefined)
+      : undefined;
+  return branch && branch !== record.branch ? branch : undefined;
 }

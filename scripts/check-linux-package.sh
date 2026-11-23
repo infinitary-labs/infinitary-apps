@@ -15,7 +15,9 @@
 #                pacman in a clean Arch container (Omarchy's base)
 #   appimage     the AppImage in a clean container of IMAGE with a desktop's
 #                libraries and no git: it must ask for git and quit when told
-#                to; then, with git installed, it runs the crew turn
+#                to; then, with git installed, it runs the crew turn. The
+#                container's own xdotool and ImageMagick work the question,
+#                so the runner needs only Xvfb
 #   nix          the Nix package built with nix-build against NIXPKGS and run
 #                from the Nix store on this runner
 #
@@ -56,6 +58,11 @@ NODE_DIR="$(dirname "$(dirname "$NODE")")"
 JOURNEY=("$NODE" "$WORKSPACE/node_modules/@playwright/test/cli.js" test --config "$WORKSPACE/playwright.installed.config.ts")
 
 in_box() { docker exec "$NAME" bash -euo pipefail -c "$1"; }
+
+# A screen tool run in the box as the person, on the runner's virtual screen.
+on_screen() {
+  docker exec -u "$(id -u):$(id -g)" -e HOME=/tmp/person -e DISPLAY="$DISPLAY" "$NAME" "$@"
+}
 
 # The Ubuntu and Fedora packages replace Firstmate 3000's and leave its
 # program path, /opt/firstmate-3000/firstmate-3000, and its command,
@@ -127,6 +134,9 @@ case "$SYSTEM" in
     start_box
     APPIMAGE="$(one '*.AppImage')"
     in_box "dnf install -y gtk3 nss alsa-lib libXScrnSaver libXtst at-spi2-core mesa-libgbm libsecret libnotify xdg-utils util-linux"
+    # The screen tools come from the box's own packages, as its desktop
+    # libraries do, so nothing here downloads from the runner's own mirrors.
+    in_box "dnf install -y --setopt=install_weak_deps=False xdotool ImageMagick"
     in_box "! command -v git" || fail "the container already has git"
     in_box "cp '$APPIMAGE' /tmp/person/infinitary.AppImage && chmod 0755 /tmp/person/infinitary.AppImage && chown $(id -u) /tmp/person/infinitary.AppImage"
     # A container has no FUSE: the AppImage's own runtime unpacks and runs it.
@@ -135,16 +145,16 @@ case "$SYSTEM" in
     # Only a window on the screen: xdotool matches names without case, and
     # GTK's hidden leader window carries the app's name, "infinitary".
     for _ in $(seq 1 60); do
-      xdotool search --onlyvisible --name '^Infinitary$' >/dev/null 2>&1 && break
+      on_screen xdotool search --onlyvisible --name '^Infinitary$' >/dev/null 2>&1 && break
       sleep 1
     done
-    WINDOW="$(xdotool search --onlyvisible --name '^Infinitary$' | head -n 1)" || fail "no question appeared"
+    WINDOW="$(on_screen xdotool search --onlyvisible --name '^Infinitary$' | head -n 1)" || fail "no question appeared"
     sleep 2
-    import -window root "$EVIDENCE/no-git-ask.png"
+    on_screen import -window root "$EVIDENCE/no-git-ask.png"
     # No window manager runs here to give the question the keyboard, so the
     # check presses Quit itself: the left of the two buttons along its foot.
-    eval "$(xdotool getwindowgeometry --shell "$WINDOW")"
-    xdotool mousemove $((X + WIDTH / 4)) $((Y + HEIGHT - 16)) click 1
+    eval "$(on_screen xdotool getwindowgeometry --shell "$WINDOW")"
+    on_screen xdotool mousemove $((X + WIDTH / 4)) $((Y + HEIGHT - 16)) click 1
     for _ in $(seq 1 30); do
       in_box "test -f /tmp/person/no-git.exit" && break
       sleep 1

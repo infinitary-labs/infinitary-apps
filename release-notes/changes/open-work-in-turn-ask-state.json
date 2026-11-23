@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "open-work-in-turn-ask-state",
+      "reason": "Internal first-mate host consistency: open_work no longer labels an unread captain message as needing an answer, so emit_card does not retry with an unnameable ask_id. No person-facing screen or wording changes."
+    }
+  ]
+}

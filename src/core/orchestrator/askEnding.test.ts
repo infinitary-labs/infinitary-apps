@@ -121,6 +121,7 @@ describe("how a captain's message ends", () => {
     expect(f.ending.nameRefusal("read")).toBeUndefined();
     f.tasks.capture.openAsk({ id: "parked", text: "and the other mac?" });
     expect(f.ending.nameRefusal("parked")).toMatch(/a step has read/);
+    expect(f.ending.nameRefusal("parked")).toMatch(/Leave ask_id empty/);
     f.tasks.capture.markAnswered("read", null);
     expect(f.ending.nameRefusal("read")).toMatch(/has ended/);
   });

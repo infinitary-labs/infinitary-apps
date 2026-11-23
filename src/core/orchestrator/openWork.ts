@@ -234,11 +234,16 @@ function readAsk(host: OpenWorkHost, askId: string): Read {
   const { ask } = thread;
   const work = host.ending.listedWork(thread);
   const images: TurnImage[] = [];
+  // A message still in its own turn (turn_state open) is not nameable on
+  // emit_card yet (INF-2664 / AskEnding.nameRefusal). Report the same
+  // IN_TURN state the overview uses, never "no answer yet", so a later
+  // step does not loop emit_card with that ask_id.
+  const state = ask.turnState === "open" ? IN_TURN : stateWords(host.ending.state(thread));
   const text = JSON.stringify(
     {
       ask_id: ask.id,
       sent: iso(ask.at),
-      state: stateWords(host.ending.state(thread)),
+      state,
       words: ask.text,
       ...(ask.attachments.length > 0
         ? { pictures: ask.attachments.map((ref) => picture(ref, images)) }

@@ -58,10 +58,7 @@ const watching = vi.hoisted(() => ({ silent: null as string | null }));
 vi.mock("node:fs", async (load) => {
   const actual = await load<typeof import("node:fs")>();
   const watch = ((path: PathLike, ...rest: unknown[]) =>
-    Reflect.apply(actual.watch, actual, [
-      watching.silent ?? path,
-      ...rest,
-    ])) as typeof actual.watch;
+    Reflect.apply(actual.watch, actual, [watching.silent ?? path, ...rest])) as typeof actual.watch;
   return { ...actual, watch };
 });
 

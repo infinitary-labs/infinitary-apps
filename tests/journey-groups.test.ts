@@ -34,6 +34,8 @@ const splits: {
   { platform: "linux", lane: "desktop", count: 3 },
   // verify.yml: the parallel lanes between the parallel and mac jobs.
   { platform: "mac", lane: "parallel", count: 2, jobs: ["parallel", "mac"] },
+  // verify.yml: the desktop lane in two jobs, each alone on its own Mac.
+  { platform: "mac", lane: "desktop", count: 2 },
 ];
 
 describe("journeyGroup", () => {

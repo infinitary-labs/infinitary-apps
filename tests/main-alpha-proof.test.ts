@@ -360,7 +360,8 @@ function recheckedBatch() {
     [`${desktop}Browser tests (Linux)`, "success"],
     [`${desktop}Native tests, replay and package (Mac)`, "success"],
     [`${desktop}Parallel journeys (Mac)`, "success"],
-    [`${desktop}Desktop journeys (Mac)`, "success"],
+    [`${desktop}Desktop journeys (Mac; group 1/2)`, "success"],
+    [`${desktop}Desktop journeys (Mac; group 2/2)`, "success"],
     ...[1, 2, 3, 4, 5, 6].map((n): [string, string] => [
       `${linux}parallel group ${n}/6)`,
       n === 1 ? "failure" : "success",
@@ -555,7 +556,11 @@ describe("an alpha's own verification (INF-2480)", () => {
   // skipped job leaves them unproven. A run from before reads by its one job.
   it("reads the split Mac lanes only when each of their jobs passed", () => {
     const native = "verify / Native tests, replay and package (Mac)";
-    const macJourneys = ["verify / Parallel journeys (Mac)", "verify / Desktop journeys (Mac)"];
+    const macJourneys = [
+      "verify / Parallel journeys (Mac)",
+      "verify / Desktop journeys (Mac; group 1/2)",
+      "verify / Desktop journeys (Mac; group 2/2)",
+    ];
     const whole = [
       "verify / Validate verification selection",
       "verify / linux-checks",
@@ -582,6 +587,11 @@ describe("an alpha's own verification (INF-2480)", () => {
       expect(run(journeys.filter((each) => each !== name)), name).toBeNull();
       expect(run(journeys, [name, { conclusion: "failure" }]), name).toBeNull();
     }
+    // A run from before the desktop journeys split in two ran them in one job.
+    const oneDesktop = whole
+      .map((name) => (name === macJourneys[1] ? "verify / Desktop journeys (Mac)" : name))
+      .filter((name) => name !== macJourneys[2]);
+    expect(run(oneDesktop)).toBe("all");
     const main = completedMain();
     const splitMain = [
       ...main.jobs.filter(({ name }) => name !== "verify / mac"),

@@ -899,7 +899,7 @@ describe("the alpha's proof following a covered push to a batch pull request's r
 describe("the batch's verdict and the alpha's proof, as they stood with the first-failure job", () => {
   const SWEEP = "Merge batch · Desktop checks / Merge batch · ";
   const unit = `${SWEEP}${FAILED_JOB.slice(FAILED_JOB.lastIndexOf(" · ") + " · ".length)}`;
-  const macJourneys = `${SWEEP}Desktop journeys (Mac)`;
+  const macJourneys = `${SWEEP}Desktop journeys (Mac; group 1/2)`;
   const macNative = `${SWEEP}Native tests, replay and package (Mac)`;
   const linuxJourney = `${SWEEP}Linux journeys / Merge batch · App journeys (Linux; serial group 3/3)`;
   const codeChecks = `${SWEEP}Code checks and build (Linux)`;

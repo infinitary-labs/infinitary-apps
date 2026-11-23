@@ -1,4 +1,4 @@
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { connect, createServer } from "node:net";
@@ -8,6 +8,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
 import { HERE } from "@shared/deviceNames";
 import { reportSummary } from "@shared/feed";
+import { PHONE_DOOR_FOLDER } from "@shared/phoneLink";
 import { AUTOMATIC_COMPUTER, placementReason } from "@shared/placement";
 import {
   STANDBY_FULL_ORDER,
@@ -21,6 +22,8 @@ import { thisDeviceUser } from "../../src/core/devices/deviceUser";
 import { joinCommand } from "../../src/core/devices/joinCommand";
 import { JoinedHome } from "../../src/core/devices/joinedHome";
 import { DevicePairing } from "../../src/core/devices/pairing";
+import { PhoneDoor } from "../../src/core/devices/phoneDoor";
+import { systemSshTool } from "../../src/core/devices/ssh";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { serviceLabel } from "../../src/core/helper/background";
@@ -59,6 +62,7 @@ import { dockFrameElement, reportLine, startedLine, taskKey } from "../e2e/rails
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchInstalled } from "../installed/installedApp";
+import { startLoopbackSshd } from "./loopbackSshd";
 import {
   JOB_PIDS_FILE,
   stepMark,
@@ -1063,6 +1067,105 @@ test("the Windows installer installs for this person, offers Git, starts the com
       await launched.close();
       await home.close();
       // The window started the command with no window as it opened: ask it to stop.
+      if (runProcesses().length > 0) {
+        requestRunStop(dataDir);
+        await expect.poll(() => runProcesses().length, { timeout: 120_000 }).toBe(0);
+      }
+    }
+  });
+
+  await test.step("the window joins a home by its address with Windows' own ssh.exe and ssh-keyscan.exe, which read the server's check line and sign in with the person's key; a port nobody answers reads as SSH off, and the PC offers no add by address", async () => {
+    const serverDir = process.env.INFINITARY_WINDOWS_SSHD;
+    if (!serverDir) throw new Error("windows.yml named no SSH server (INFINITARY_WINDOWS_SSHD)");
+    const dataDir = join(appData, "infinitary");
+    const workDir = join(dataDir, "work");
+    const label = serviceLabel("release");
+    const user = userInfo().username;
+    const home = await standInHome({ anotherComputer: true });
+    // The home's data folder, where the join's fixed command finds its door
+    // as it finds an open Infinitary's on a Mac or a Linux computer.
+    const homeData = scratchDir("infinitary-windows-door-");
+    const door = await PhoneDoor.open({
+      dir: join(homeData, PHONE_DOOR_FOLDER),
+      invite: () => home.pairing.invite({ kind: "mac", at: `127.0.0.1:${home.port}` }),
+      listening: () => home.connection.settled(),
+    });
+    const sshd = await startLoopbackSshd({
+      serverDir,
+      bash: join(gitRoot, "bin", "bash.exe"),
+      dataDir: homeData,
+      user,
+    });
+    const launched = await launchInstalled({ ownDataDir: dataDir });
+    try {
+      // ssh -V says its version on stderr.
+      const version = spawnSync(systemSshTool("ssh"), ["-V"], { encoding: "utf8" });
+      keep("windows-ssh-version.txt", `${version.stdout}${version.stderr}`);
+      await joinReady(launched.page);
+      // A Windows PC's own ssh keeps no control connection, so its first mate adds no computer by
+      // its address and Devices offers only the link and the command (docs/windows.md).
+      const addresses = await launched.page.evaluate(() => window.infinitary.devices.addresses());
+      expect(addresses.addsByAddress).toBe(false);
+
+      // Nothing listens at that port: ssh-keyscan.exe is refused, and the join says SSH is off there.
+      const nobody = `ssh://${user}@127.0.0.1:${await claimedPort()}`;
+      const refused = await launched.page.evaluate(
+        (address) => window.infinitary.devices.joinAt(address),
+        nobody,
+      );
+      keep("address-join-refused.json", JSON.stringify(refused, null, 2));
+      expect(refused).toEqual({ refused: "remote-login-off" });
+
+      // The first ask reads the server's key and asks for the person's yes on its check line before
+      // any sign-in: the line names the key Windows' ssh-keygen made there. ssh-keyscan.exe stops at
+      // the key exchange this server picks, as every OpenSSH server from 8.5 on does, so ssh.exe
+      // reads the key instead (hostKey.ts).
+      const asked = await launched.page.evaluate(
+        (address) => window.infinitary.devices.joinAt(address),
+        sshd.address,
+      );
+      keep("address-join-confirm.json", JSON.stringify(asked, null, 2));
+      if (!("asks" in asked) || asked.asks !== "confirm")
+        throw new Error(`the join asked no check line: ${JSON.stringify(asked)}`);
+      expect(sshd.fingerprint).not.toBe("");
+      expect(asked.line).toContain(sshd.fingerprint);
+      // The yes: ssh.exe signs in with the person's own key, runs the fixed command there, and the
+      // home's door answers a one-use link, which the window keeps out of the page.
+      const held = await launched.page.evaluate(
+        ([address, line]) => window.infinitary.devices.joinAt(address, { confirm: line }),
+        [sshd.address, asked.line] as const,
+      );
+      keep("address-join-held.json", JSON.stringify(held, null, 2));
+      expect(held).toMatchObject({ asks: "join", runsWork: true });
+      if (evidence) screenshot(join(evidence, "address-join-asks.png"));
+      // Joining starts the window over, so its answer may never return to this page.
+      await launched.page.evaluate(() => {
+        void window.infinitary.devices.joinHeld("join");
+      });
+      await expect.poll(() => home.pairing.list().length, { timeout: 120_000 }).toBe(1);
+      const [device] = home.pairing.list();
+      keep("address-join-device.json", JSON.stringify(device, null, 2));
+      expect(device?.kind).toBe("mac");
+      await expect
+        .poll(() => new JoinedHome(workDir).read(), { timeout: 120_000 })
+        .toMatchObject({ name: "MacBook Pro" });
+      await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
+      await expect.poll(() => home.reached, { timeout: 120_000 }).toContain(device?.id);
+      if (evidence) screenshot(join(evidence, "address-joined.png"));
+
+      home.pairing.remove(device?.id ?? "");
+      await expect.poll(() => runTask(label), { timeout: 120_000 }).toBe(null);
+      await expect.poll(() => new JoinedHome(workDir).read(), { timeout: 60_000 }).toBeNull();
+      await expect.poll(() => workRunProcesses().length, { timeout: 60_000 }).toBe(0);
+      await expect
+        .poll(() => new JoinedHome(join(dataDir, "joined")).read(), { timeout: 60_000 })
+        .toBeNull();
+    } finally {
+      keep("address-join-sshd.log", sshd.log());
+      await launched.close();
+      await sshd.close();
+      door.close();
+      await home.close();
       if (runProcesses().length > 0) {
         requestRunStop(dataDir);
         await expect.poll(() => runProcesses().length, { timeout: 120_000 }).toBe(0);

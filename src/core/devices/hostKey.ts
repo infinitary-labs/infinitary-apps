@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -171,6 +171,8 @@ function scan(host: string, port: number): Promise<HostKeyRead> {
       .filter((key) => key !== null);
     const chosen = preferHostKey(keys);
     if (chosen) return chosen;
+    if (hostPlatform() === "win32" && /unsupported KEX method/i.test(ran.stderr))
+      return readWithWindowsSsh(host, port);
     // macOS ssh-keyscan says "Broken pipe" when nothing answers the port.
     if (/Connection refused|connect\(\) failed|Connection reset|Broken pipe/i.test(ran.stderr))
       return { refusal: "remote-login-off" };
@@ -178,6 +180,103 @@ function scan(host: string, port: number): Promise<HostKeyRead> {
     // itself; a Mac never dials it, which its local network privacy would ask.
     if (hostPlatform() !== "darwin" && (await portRefuses(host, port)))
       return { refusal: "remote-login-off" };
+    return { refusal: "unreachable" };
+  });
+}
+
+/**
+ * The key a server answers Windows' own ssh.exe with, for the server
+ * Windows' own ssh-keyscan.exe cannot read: that ssh-keyscan offers a key
+ * exchange it cannot finish (sntrup761x25519), which every OpenSSH server
+ * from 8.5 on picks, so it stops before any key. Windows' ssh.exe does not
+ * offer it. It reads no SSH settings, writes the one key it was offered to
+ * a known-hosts file of its own, and offers no key and no password, so it
+ * stops before it signs in; a server that lets anyone in with no key at all
+ * runs only `exit`.
+ */
+function readWithWindowsSsh(host: string, port: number): Promise<HostKeyRead> {
+  const dir = mkdtempSync(join(tmpdir(), "infinitary-host-key-"));
+  const offered = join(dir, "offered");
+  const none = join(dir, "none");
+  writeFileSync(none, "");
+  return run(
+    systemSshTool("ssh"),
+    [
+      "-F",
+      none,
+      "-T",
+      "-p",
+      String(port),
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=15",
+      "-o",
+      "ControlMaster=no",
+      "-o",
+      `UserKnownHostsFile=${offered}`,
+      "-o",
+      `GlobalKnownHostsFile=${none}`,
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UpdateHostKeys=no",
+      "-o",
+      "CheckHostIP=no",
+      "-o",
+      "VerifyHostKeyDNS=no",
+      "-o",
+      `HostKeyAlgorithms=${PROXY_KEY_ALGORITHMS}`,
+      "-o",
+      "PreferredAuthentications=publickey",
+      "-o",
+      "PubkeyAuthentication=no",
+      "-o",
+      "PasswordAuthentication=no",
+      "-o",
+      "KbdInteractiveAuthentication=no",
+      "-o",
+      "GSSAPIAuthentication=no",
+      "-o",
+      "HostbasedAuthentication=no",
+      "-o",
+      "IdentitiesOnly=yes",
+      "-o",
+      "IdentityAgent=none",
+      "-o",
+      "ForwardAgent=no",
+      "-o",
+      "ForwardX11=no",
+      "-o",
+      "ClearAllForwardings=yes",
+      "-o",
+      "PermitLocalCommand=no",
+      "-o",
+      "RequestTTY=no",
+      "--",
+      host,
+      "exit",
+    ],
+    SCAN_TIMEOUT_MS,
+  ).then((ran) => {
+    let said = "";
+    try {
+      said = readFileSync(offered, "utf8");
+    } catch {
+      // Nothing was offered.
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    const chosen = preferHostKey(
+      said
+        .split("\n")
+        .map((line) => parseKeyLine(line))
+        .filter((key) => key !== null),
+    );
+    if (chosen) return chosen;
+    if (/Connection refused/i.test(ran.stderr)) return { refusal: "remote-login-off" };
     return { refusal: "unreachable" };
   });
 }

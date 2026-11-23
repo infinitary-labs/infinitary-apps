@@ -91,6 +91,9 @@ extension PhoneJourney {
             XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
         }
 
+        // Before the page's background work ends: once its page has started again, an iPad's accessibility still names
+        // the ended page's process, so the test reads none of the new page's words.
+        try await verifyPanelDraftAndSettings()
         try await pressPhoneKey("4", modifiers: .command, in: app)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
@@ -104,8 +107,6 @@ extension PhoneJourney {
         let retried = try await home("panel-state", method: "GET")
         XCTAssertTrue(retried["stopped"] is NSNull, "Retry lifted the stop on the computer")
 
-        // Last on this panel, since the draft's words then wait in Home's message box.
-        try await verifyPanelDraftAndSettings()
 
         _ = try await home("panel-remove")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 20), app.debugDescription)

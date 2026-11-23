@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "windows-takeover-keyboard",
+      "reason": "Only the installed Windows test's keyboard harness changes; the app and its shortcuts are unchanged."
+    }
+  ]
+}

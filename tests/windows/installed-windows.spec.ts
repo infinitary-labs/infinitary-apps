@@ -594,9 +594,10 @@ test("the Windows installer installs for this person, offers Git, starts the com
         expect(topAppProcesses().map((app) => app.pid)).toEqual([window.pid]);
         expect(runProcesses()).toEqual([]);
         // The person quits that window on purpose with its own key, which runs the tray's Quit.
-        await expect
-          .poll(() => pressQuitKey(window.pid), { timeout: 60_000, intervals: [1_000] })
-          .toBe(true);
+        const quitKey = pressQuitKey(window.pid);
+        const quitReading = JSON.stringify(quitKey, null, 2);
+        keep("takeover-quit-input.json", quitReading);
+        expect(quitKey.status, quitReading).toBe("sent");
         expect(await window.ended, window.said()).toBe(0);
         nothingRuns();
       });

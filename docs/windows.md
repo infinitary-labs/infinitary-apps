@@ -119,6 +119,8 @@ That journey checks, in order:
    Its task starts on the PC with none of Automatic's checks refusing it, the task's activity says Automatic chose this computer, and the PC's own reading is fresh with a memory figure.
    Its crewmate runs `git status`, `pnpm install`, one test file, a build and a task command in that Git's Git Bash, each step printing its mark only when it succeeded.
    The crewmate then starts a background job whose program starts a child; cancelling the task ends both.
+   During the data-folder takeover check, the journey brings the app forward with one desktop click on its drag strip if needed and verifies foreground ownership before pressing Ctrl+Q.
+   The input evidence distinguishes a missing or lost window from failure to bring an existing window forward; the journey still checks that the app exits without starting anything else.
 5. The installed app joins a home on the PC's loopback with the line Devices shows another Windows user, run in a PowerShell console window, the home standing in another Windows account's Infinitary.
    The journey types the yes into that console's input as a keyboard does, and reads the question and the answer from its screen.
    The same line run against a home whose own account is this one is refused with the words for the user Infinitary already runs as, and nothing joins.

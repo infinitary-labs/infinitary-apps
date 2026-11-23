@@ -76,6 +76,12 @@ export type MessageFacts = {
   answersMessage?: number;
   clarification?: true;
   responseId?: string;
+  /**
+   * A captain line nobody on the card owes an answer to, such as a
+   * /feedback reply the first mate takes as a feedback request
+   * (docs/feedback.md): it joins the thread without the answer hold.
+   */
+  owesNoAnswer?: true;
 };
 
 /** What a reply alone keeps of its card, as its receipt names it. */

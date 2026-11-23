@@ -1200,11 +1200,11 @@ export class CardService {
         ...(facts.responseId ? { responseId: facts.responseId } : {}),
       });
       if (about) this.evidence.noteMessage(about, message, by, { interim, answers, submission });
-      if (who === "captain") held = this.writeHold(cardId, "answer", by);
+      if (who === "captain" && !facts.owesNoAnswer) held = this.writeHold(cardId, "answer", by);
       else if (answered) held = this.writeHold(cardId, "close-out", by);
       return message;
     });
-    if (who === "captain" || answered) this.applyHold(cardId, held);
+    if ((who === "captain" && !facts.owesNoAnswer) || answered) this.applyHold(cardId, held);
     if (answered && !contributed && card && (who === "crewmate" || who === "firstmate"))
       this.stage.hold(card, { answering: true });
     // Another writer's answer reaches the stage when that writer's turn ends.

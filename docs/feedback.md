@@ -1,7 +1,8 @@
 # Feedback
 
 `/feedback <words>` turns a person's report of a problem or an idea into an issue on Infinitary's own public project, which the person reads whole and publishes with one click.
-Nothing leaves the computer before that click, and the issue goes under the person's own GitHub account, or through GitHub's own new-issue page when the app has no GitHub sign-in.
+Nothing is published before that click: the one thing sent earlier is the search for similar issues, whose words pass the same guard.
+The issue goes under the person's own GitHub account, or through GitHub's own new-issue page when the app has no GitHub sign-in.
 It is not one of the Sharing switches (`docs/sharing.md`): the person writes it, reads it and sends it themselves.
 
 ## Where it starts
@@ -9,7 +10,7 @@ It is not one of the Sharing switches (`docs/sharing.md`): the person writes it,
 A message that starts with `/feedback`, in any letter case, reaches the first mate as a feedback request from every message box:
 
 - the main message box (`inf:converse`), on the desktop and the phone alike;
-- a card's reply (`inf:cards:reply`): the reply stays in the card's thread, and the first mate, not the card's author, answers it (`replyToCard`, `src/core/orchestrator/cardActions.ts`);
+- a card's reply (`inf:cards:reply`): the reply stays in the card's thread, and the first mate, not the card's author, answers it, and the card's author owes it no answer (`replyToCard`, `src/core/orchestrator/cardActions.ts`; `owesNoAnswer`);
 - a task's crewmate tab (`inf:task:steer`): the line goes to the first mate with the task's id, never to the crewmate (`src/core/dispatcher.ts`).
 
 The phone's connection runs the same handlers, so a phone's `/feedback` takes the same path.
@@ -18,7 +19,7 @@ The first mate's turn carries the words as the captain typed them, with one adde
 
 Two more ways start it:
 
-- Typing `/` as the first word of any message box shows the slash hint in its foot row: "/feedback: tell Infinitary's makers about a problem or an idea" (`typingSlashCommand`, `src/shared/composer.ts`; `docs/composer.md`, "Growth and reflow").
+- Typing `/` as the first word of the main message box shows the slash hint in its foot row: "/feedback: tell Infinitary's makers about a problem or an idea" (`typingSlashCommand`, `src/shared/composer.ts`; `docs/composer.md`, "Growth and reflow").
   Tab is never taken.
 - Send Feedback… in the Help menu, and the window command `feedback.start` ("Send feedback"), go home and start `/feedback ` in the main message box with the caret after it (`docs/keyboard.md`).
 
@@ -51,10 +52,10 @@ The destination is the build's own release project (`releaseSource.repository`),
 The crewmate's words, then a folded block of typed facts (`FeedbackDiagnostics`, `src/core/feedback/diagnostics.ts`):
 
 - the app's version, update channel, kind of installation and language;
-- this computer's system, release and chip;
+- this computer's system, its version as the system names it (the kernel's, marked as such, where that is all that is known) and chip;
 - the other computers by system and app version, the phones by app version;
 - model connections by provider kind, and project hosts by kind;
-- with `--task`, that task's kind, state, how it closed and care, and its steps as minute and kind; the earliest go first when the issue would pass GitHub's 65,536 characters, or the link its 8,000.
+- with `--task`, that task's kind, state, how it closed, care and delivery, its pull request's check summary and each check's state (never a check's name, which can name the project), and its steps as minute and kind; the earliest go first when the issue would pass GitHub's 65,536 characters, or the link its 8,000.
 
 Each fact is a short code word or version; anything else prints as "unknown", so no name, path or words can ride the block.
 
@@ -62,6 +63,8 @@ Each fact is a short code word or version; anything else prints as "unknown", so
 
 Before anything is kept, the host refuses a title or body that holds an identifier it knows about the person (`src/core/feedback/guard.ts`): the account name, the home folder, the computer and device names, every sign-in, each project's name, folder and repository, secret names and connection names.
 It refuses closed patterns too: an email address, a home-folder path, a network address and a key in a known format.
+It compares curly and straight apostrophes and quotes as the same, and holds a computer's network name (name.local) bare as well.
+The words `similar` searches with pass the same guard, since that search reaches GitHub before the click.
 It names each match and its kind, and the crewmate rewrites the sentence: the guard refuses rather than replaces, so what the captain reads is exactly what goes.
 It finds only what it holds and what the patterns name; anything else rests on the crewmate and the captain's review.
 
@@ -80,6 +83,6 @@ Anyone can type the mark, so the labels sort issues and grant nothing.
 
 ## Tests
 
-- Unit: `src/shared/feedback.test.ts` (the request reader), `src/core/feedback/*.test.ts` (the guard per identifier kind, the link's limit, the draft kept or linked), `src/core/orchestrator/requestStrips.test.ts` (the strip), `src/core/orchestrator/feedbackReply.test.ts` (a reply under a crewmate's card).
+- Unit: `src/shared/feedback.test.ts` (the request reader), `src/core/feedback/*.test.ts` (the guard per identifier kind, the search guarded, the link's limit, the draft kept or linked, the facts the home reads), `src/core/orchestrator/requestStrips.test.ts` (the strip), `src/core/orchestrator/feedbackReply.test.ts` (a reply under a crewmate's card).
 - Integration: `src/core/core.feedback.test.ts` (the main message box and a phone's crewmate tab reach the first mate over the real connection).
 - Journey: `tests/e2e/feedback.spec.ts` (nothing reaches the GitHub stand-in before the click; exactly the shown text after).

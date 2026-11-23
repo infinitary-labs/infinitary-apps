@@ -130,7 +130,7 @@ export type ComposerHint = keyof typeof COMPOSER_HINTS | "command";
 
 /**
  * Whether the field holds the start of a slash command (docs/composer.md,
- * "The slash hint"): a first word that begins with `/` and could still be
+ * "Growth and reflow"): a first word that begins with `/` and could still be
  * `/feedback`, or is it.
  */
 export function typingSlashCommand(text: string): boolean {

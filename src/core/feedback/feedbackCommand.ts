@@ -101,6 +101,10 @@ export function taskFeedback(host: FeedbackHost, taskId: string): TaskFeedback {
     similar: async ({ words }) => {
       const query = words.replace(/\s+/g, " ").trim().slice(0, 200);
       if (!query) return invalid(SAY.noWords);
+      // The search leaves the computer before the captain's click, so its
+      // words pass the same guard a draft does.
+      const matches = guardMatches(query, await host.held());
+      if (matches.length > 0) return { text: guardRefusal(matches), refused: "refused" };
       try {
         const found = await host.searchIssues(taskId, `repo:${host.repository} is:issue ${query}`);
         return { data: { issues: found } };

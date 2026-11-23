@@ -14,7 +14,7 @@ import { type FeedbackHost, taskFeedback } from "./feedbackCommand";
  */
 const FACTS: FeedbackDiagnostics = {
   app: { version: "0.8.6-alpha.23", channel: "alpha", install: "app", language: "en" },
-  system: { name: "macOS", release: "25.2.0", chip: "arm64" },
+  system: { name: "macOS", release: "26.1", chip: "arm64" },
   computers: [{ system: "macOS", version: "0.8.6-alpha.23" }],
   phones: [{ version: "0.8.6" }],
   models: ["anthropic", "openai-codex", "anthropic"],
@@ -23,6 +23,9 @@ const FACTS: FeedbackDiagnostics = {
     kind: "work",
     status: "active",
     care: "careful",
+    delivery: "queue-pr",
+    ci: "red",
+    checks: ["success", "success", "failure", "pending"],
     steps: Array.from({ length: 300 }, (_, index) => ({
       minute: index * 1.5,
       kind: index % 3 === 0 ? "progress" : index % 3 === 1 ? "card_raised" : "tool_call",
@@ -43,6 +46,7 @@ const WORDS = [
 function host(signedIn: boolean) {
   const kept: Array<{ taskId: string; path: string; body: string; feedback: FeedbackAskFacts }> =
     [];
+  const searched: string[] = [];
   const fake: FeedbackHost = {
     repository: "infinitary-labs/infinitary-apps",
     diagnostics: (taskKey) =>
@@ -53,13 +57,16 @@ function host(signedIn: boolean) {
           : { unknownTask: taskKey },
     held: async () => [{ kind: "sign-in", value: "mtorres-dev" }],
     signedIn: () => signedIn,
-    searchIssues: async () => [],
+    searchIssues: async (_taskId, query) => {
+      searched.push(query);
+      return [];
+    },
     keep: (taskId, write) => {
       kept.push({ taskId, ...write });
       return `ask-${kept.length}`;
     },
   };
-  return { fake, kept };
+  return { fake, kept, searched };
 }
 
 describe("the feedback command's draft", () => {
@@ -85,7 +92,9 @@ describe("the feedback command's draft", () => {
     expect(sent.body).toContain("- App: Infinitary 0.8.6-alpha.23 · alpha · app · en");
     expect(sent.body).toContain("- Model connections: anthropic, openai-codex");
     expect(sent.body).toContain("- Project hosts: github ×2, this computer");
-    expect(sent.body).toContain("- Task: work · active · careful");
+    expect(sent.body).toContain("- System: macOS 26.1 · arm64");
+    expect(sent.body).toContain("- Task: work · active · careful · queue-pr");
+    expect(sent.body).toContain("- Checks: red · failure, pending, success ×2");
     expect(
       sent.body
         .trimEnd()
@@ -104,6 +113,19 @@ describe("the feedback command's draft", () => {
     expect(kept[0]?.path).toBe("/repos/infinitary-labs/infinitary-apps/issues/412/comments");
     expect(Object.keys(JSON.parse(kept[0]?.body ?? "{}"))).toEqual(["body"]);
     expect(kept[0]?.feedback.commentOn).toBe(412);
+  });
+
+  it("searches only words that pass the guard, since the search leaves before the click", async () => {
+    const { fake, searched } = host(true);
+    const command = taskFeedback(fake, "task-1");
+    const refused = await command.similar({ words: "reply box focus for mtorres-dev" });
+    expect(refused.refused).toBe("refused");
+    expect(refused.text).toContain('- sign-in: "mtorres-dev"');
+    expect(searched).toEqual([]);
+    await command.similar({ words: "reply box loses focus" });
+    expect(searched).toEqual([
+      "repo:infinitary-labs/infinitary-apps is:issue reply box loses focus",
+    ]);
   });
 
   it("refuses words holding a personal detail and keeps nothing", async () => {

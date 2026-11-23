@@ -159,7 +159,7 @@ On a computer that runs work, a call waits on this Mac at most until 750 millise
 ## The feedback command
 
 `infinitary-feedback-axi` (`src/core/axi/feedbackCommands.ts`) drafts a `/feedback` report for Infinitary's own public project (`docs/feedback.md`).
-`diagnostics` prints the typed facts a report carries, `similar <words>` lists the project's matching issues, and `draft` reads its body from a file in the task's working copy, at most 256 KB, runs the guard and keeps the draft for the captain's click, or answers a filled-in link without a GitHub sign-in.
+`diagnostics` prints the typed facts a report carries, `similar <words>` lists the project's matching issues once its words pass the guard, and `draft` reads its body from the file it names, relative to the shell's folder, at most 256 KB, runs the guard and keeps the draft for the captain's click, or answers a filled-in link without a GitHub sign-in.
 A missing or malformed flag exits 2 before reaching the app; a guard refusal names each match and its kind with exit 1 (`REFUSED`).
 It never sends anything itself.
 

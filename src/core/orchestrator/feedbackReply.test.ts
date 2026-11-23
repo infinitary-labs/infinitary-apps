@@ -61,6 +61,10 @@ describe("a /feedback reply under a crewmate's card", () => {
     expect(thread.messages.at(-1)).toMatchObject({ who: "captain", text: typed });
     expect(crewmate.promptCalls).toHaveLength(prompts);
     expect(crewmate.steer).not.toHaveBeenCalled();
+    // Nobody on the card owes the /feedback line an answer: the card does not
+    // wait on its author, so no nudge or whose-turn sort asks the crewmate.
+    expect(harness.supervisor.cards.owed(cardId)).toBe("none");
+    expect(harness.cards().find((card) => card.id === cardId)?.awaiting).toBeUndefined();
   });
 
   it("leaves an ordinary reply with the card's crewmate", async () => {
@@ -69,5 +73,6 @@ describe("a /feedback reply under a crewmate's card", () => {
     await tick();
     expect(heard).not.toHaveBeenCalled();
     expect(crewmate.promptCalls.length).toBeGreaterThan(prompts);
+    expect(harness.supervisor.cards.owed(cardId)).toBe("author");
   });
 });

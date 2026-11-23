@@ -231,8 +231,9 @@ export class CardActions {
     // The host's stuck alert names the first mate as its answerer (INF-1670).
     // A /feedback reply is a feedback request for the first mate about this
     // card, never words for its author (docs/feedback.md).
+    const feedback = isFeedbackRequest(typed);
     const toFirstmate =
-      isFeedbackRequest(typed) ||
+      feedback ||
       pressed?.closesTask === true ||
       card.author === "firstmate" ||
       card.answeredBy === "firstmate" ||
@@ -249,7 +250,7 @@ export class CardActions {
       answers,
       undefined,
       false,
-      { notes, captainText: typed },
+      { notes, captainText: typed, ...(feedback ? { owesNoAnswer: true as const } : {}) },
     );
     if (toFirstmate) {
       const delivery: [messageFiles?: MessageFile[], receipt?: string] = notes?.length

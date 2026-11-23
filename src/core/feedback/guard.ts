@@ -52,6 +52,7 @@ const PUBLIC_WORDS = new Set([
   "macbook air",
   "macbook pro",
   "imac",
+  "localhost",
 ]);
 
 // i18n-exempt: the guard's refusal is read by a crewmate, in English
@@ -74,6 +75,15 @@ const PATTERNS: ReadonlyArray<{ kind: PatternKind; pattern: RegExp }> = [
   ...Object.values(KEY_FORMATS).map((pattern) => ({ kind: "key" as const, pattern })),
 ];
 
+/**
+ * Text as the guard compares it: curly apostrophes and quotes as straight
+ * ones, so "Kun’s Mac mini" held is found as "Kun's Mac mini" written, and
+ * the other way round. Each is one character, so places do not move.
+ */
+function plain(text: string): string {
+  return text.replace(/[\u2018\u2019\u02BC]/g, "'").replace(/[\u201C\u201D]/g, '"');
+}
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -88,7 +98,7 @@ export function usableIdentifiers(held: readonly HeldIdentifier[]): HeldIdentifi
   const seen = new Set<string>();
   const out: HeldIdentifier[] = [];
   for (const entry of held) {
-    const value = entry.value.trim();
+    const value = plain(entry.value.trim());
     const key = value.toLowerCase();
     if (!value || PUBLIC_WORDS.has(key) || seen.has(key)) continue;
     seen.add(key);
@@ -113,7 +123,8 @@ export function guardMatches(text: string, held: readonly HeldIdentifier[]): Gua
   };
   // A longer value is looked for first and blanked once found, so the
   // account inside a folder or a sign-in is not named a second time.
-  let rest = text;
+  const compared = plain(text);
+  let rest = compared;
   for (const entry of usableIdentifiers(held)) {
     const pattern = heldPattern(entry.value);
     const hit = pattern.exec(rest);
@@ -122,7 +133,7 @@ export function guardMatches(text: string, held: readonly HeldIdentifier[]): Gua
     rest = rest.replace(new RegExp(pattern.source, "giu"), (found) => " ".repeat(found.length));
   }
   for (const { kind, pattern } of PATTERNS) {
-    for (const hit of text.matchAll(new RegExp(pattern.source, pattern.flags)))
+    for (const hit of compared.matchAll(new RegExp(pattern.source, pattern.flags)))
       add({ kind, text: hit[0] });
   }
   return found;

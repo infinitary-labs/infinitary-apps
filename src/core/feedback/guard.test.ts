@@ -42,7 +42,9 @@ describe("the feedback guard", () => {
   it.each([
     ["account name", "The crewmate wrote mtorres in the title.", "mtorres"],
     ["computer name", "It happens on marias-macbook-pro only.", "marias-macbook-pro"],
-    ["device name", "Maria’s iPhone shows the card twice.", "Maria’s iPhone"],
+    ["device name", "Maria’s iPhone shows the card twice.", "Maria's iPhone"],
+    // The draft's straight apostrophe still finds the name held with a curly one.
+    ["device name", "Maria's iPhone shows the card twice.", "Maria's iPhone"],
     ["sign-in", "Signed in as mtorres-dev on GitHub.", "mtorres-dev"],
     ["project", "In harbor-ledger the checks never start.", "harbor-ledger"],
     ["repository", "Pushing to torres-labs/harbor-ledger fails.", "torres-labs/harbor-ledger"],

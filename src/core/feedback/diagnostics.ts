@@ -24,6 +24,9 @@ export type FeedbackTaskFacts = {
   closed?: string;
   care?: string;
   delivery?: string;
+  /** The pull request's check summary, and each check's state, never its name. */
+  ci?: string;
+  checks?: string[];
   steps: Array<{ minute: number; kind: string }>;
 };
 
@@ -66,6 +69,14 @@ export function diagnosticsLines(
       .join(" · ");
     // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
     lines.push(`- Task: ${states}`);
+    if (task.ci || task.checks?.length) {
+      const checks = [
+        ...(task.ci ? [fact(task.ci)] : []),
+        ...(task.checks?.length ? [counted(task.checks)] : []),
+      ].join(" · ");
+      // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+      lines.push(`- Checks: ${checks}`);
+    }
     const steps =
       stepsMax >= task.steps.length
         ? task.steps

@@ -34,7 +34,8 @@ import type { HeldIdentifier } from "./guard";
 export type FeedbackHostDeps = {
   repository: string;
   app: { version: string; channel: () => string; install: () => string; language: () => string };
-  system: { name: string; chip: string };
+  /** The system's own version (macOS 26.1, not its kernel's), and the chip. */
+  system: { name: string; version: string; chip: string };
   computerNames: () => string[];
   devices: () => DeviceView[];
   models: () => Array<{ providerId: string; login?: string | undefined }>;
@@ -49,6 +50,8 @@ export type FeedbackHostDeps = {
   secretLabels: () => Promise<string[]>;
   integrations: () => Array<{ kind: string; name: string; account: string | null }>;
   task: (key: string) => TaskRecord | undefined;
+  /** A task's delivery and care now, read with its project's settings; none for a task that ships nothing. */
+  policies: (record: TaskRecord) => { delivery: string; care: string } | null;
   timeline: (taskId: string) => TimelineEntry[];
   signedIn: () => boolean;
   login: () => string | null;
@@ -60,13 +63,21 @@ export type FeedbackHostDeps = {
   ) => string;
 };
 
-function taskFacts(record: TaskRecord, entries: readonly TimelineEntry[]): FeedbackTaskFacts {
+function taskFacts(
+  record: TaskRecord,
+  policies: { delivery: string; care: string } | null,
+  entries: readonly TimelineEntry[],
+): FeedbackTaskFacts {
   const start = record.startedAt ?? record.createdAt;
+  const checks = record.delivery?.checks?.items ?? [];
   return {
     kind: record.shape?.kind ?? record.kind,
     status: record.status,
     ...(record.closedReason ? { closed: record.closedReason } : {}),
-    ...(record.shape?.rigor ? { care: record.shape.rigor } : {}),
+    ...(policies ? { care: policies.care, delivery: policies.delivery } : {}),
+    // Each check's state alone: a check's name can name the person's project.
+    ...(record.delivery?.ci ? { ci: record.delivery.ci } : {}),
+    checks: checks.map((item) => item.state),
     steps: entries
       .filter((entry) => !entry.quiet && entry.at !== null)
       .map((entry) => ({
@@ -98,7 +109,7 @@ export function homeFeedbackHost(deps: FeedbackHostDeps): FeedbackHost {
           install: deps.app.install(),
           language: deps.app.language(),
         },
-        system: { name: deps.system.name, release: release(), chip: deps.system.chip },
+        system: { name: deps.system.name, release: deps.system.version, chip: deps.system.chip },
         computers: devices
           .filter((device) => !isPhone(device) && device.kind !== "view")
           .map((device) => ({
@@ -113,7 +124,9 @@ export function homeFeedbackHost(deps: FeedbackHostDeps): FeedbackHost {
           .repos()
           .filter((repo) => repo.kind !== "personal")
           .map((repo) => repo.host?.kind ?? "this computer"),
-        ...(record ? { task: taskFacts(record, deps.timeline(record.id)) } : {}),
+        ...(record
+          ? { task: taskFacts(record, deps.policies(record), deps.timeline(record.id)) }
+          : {}),
       };
       return facts;
     },
@@ -128,7 +141,11 @@ export function homeFeedbackHost(deps: FeedbackHostDeps): FeedbackHost {
         // No account name to read on this system.
       }
       add("home folder", homedir());
-      for (const name of deps.computerNames()) add("computer name", name);
+      // A network name such as name.local is also written bare.
+      for (const name of deps.computerNames()) {
+        add("computer name", name);
+        add("computer name", name.split(".")[0]);
+      }
       for (const device of deps.devices()) {
         add("device name", device.name);
         add("account name", device.user);
@@ -187,6 +204,18 @@ export function homeFeedbackHost(deps: FeedbackHostDeps): FeedbackHost {
   };
 }
 
+/**
+ * The system's version as a person names it: Electron reads macOS's and
+ * Windows's own; elsewhere only the kernel's is known, and it says so,
+ * since Darwin's kernel number is not the macOS version.
+ */
+export function systemVersion(platform: string): string {
+  const own = (process as { getSystemVersion?: () => string }).getSystemVersion?.();
+  if (own && (platform === "darwin" || platform === "win32")) return own;
+  // i18n-exempt: a code word in the issue's English diagnostics
+  return `kernel ${release()}`;
+}
+
 /** The home's wiring: each reading from its owner, the destination from the build's release source. */
 export function startHomeFeedback(parts: {
   host: Pick<HostCapabilities, "app" | "macUpdates">;
@@ -199,7 +228,7 @@ export function startHomeFeedback(parts: {
   /** Late-bound: Secrets is built after the crew. */
   secrets: () => Pick<SecretsSettings, "view"> | undefined;
   integrations: Pick<IntegrationsService, "view">;
-  tasks: Pick<TaskService, "byKey">;
+  tasks: Pick<TaskService, "byKey" | "policiesOf">;
   timeline: Pick<TaskTimeline, "entries">;
   githubGateway: Pick<GithubGatewayService, "keepFeedback">;
 }): FeedbackHost {
@@ -226,7 +255,11 @@ export function startHomeFeedback(parts: {
               : app.platform,
       language: () => currentLanguage(),
     },
-    system: { name: system.system ?? app.platform, chip: system.chip ?? process.arch },
+    system: {
+      name: system.system ?? app.platform,
+      version: systemVersion(app.platform),
+      chip: system.chip ?? process.arch,
+    },
     computerNames: () => [parts.computerName, hostname()],
     devices: () => parts.devices.list(),
     models: () => parts.vault.list(),
@@ -242,6 +275,10 @@ export function startHomeFeedback(parts: {
     },
     integrations: () => parts.integrations.view().integrations,
     task: (key) => parts.tasks.byKey(key),
+    policies: (record) => {
+      const policies = parts.tasks.policiesOf(record);
+      return policies ? { delivery: policies.delivery.value, care: policies.rigor.value } : null;
+    },
     timeline: (taskId) => parts.timeline.entries(taskId),
     signedIn: () => forgeSignIns.isSignedIn(GITHUB_COM),
     login: () => forgeSignIns.loginOf(GITHUB_COM),

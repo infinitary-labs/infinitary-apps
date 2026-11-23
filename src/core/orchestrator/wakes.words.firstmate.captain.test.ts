@@ -2,7 +2,8 @@
  * The words of the first mate's wakes that `captainWakes.ts` words, byte for
  * byte (INF-2625's plan, the wakes row; `tests/helpers/wakeWords.ts` says
  * why): the captain's own moves: a stale validation question, a closed answer
- * task, a project setup or change, and the retry when the captain's message
+ * task, a project setup or change, how an add the first mate's card began
+ * ended, and the retry when the captain's message
  * moved nothing.
  */
 import {
@@ -132,6 +133,39 @@ const CASES: WordsCases<FirstmateCaptainWakeKind> = {
       wake: { facts: { kind: "project-setup", outcome: "failed", name: "infinitary" } },
       words:
         "[fm-op] the captain clicked Add project on the setup card for infinitary, and it could not be added: no reason was given. Nothing was added.",
+    },
+  ],
+  "device-add": [
+    {
+      name: "added, with the line that finished it",
+      wake: {
+        facts: {
+          kind: "device-add",
+          address: "sam@100.94.48.29",
+          outcome: "added",
+          name: "vps",
+          deviceId: "d-7f3a",
+          lines: ["vps starts running work the next time sam logs in."],
+        },
+      },
+      words:
+        '[fm-op] the captain chose on your card to add the computer at sam@100.94.48.29, and it is on the list now as vps (device id d-7f3a). The app finished with: "vps starts running work the next time sam logs in." Tell the captain it was added, with anything those words say is still to do, and offer the next step toward what they asked it for, such as moving you there when they want you to live on it.',
+    },
+    {
+      name: "refused, with its two lines",
+      wake: {
+        facts: {
+          kind: "device-add",
+          address: "100.94.48.29",
+          outcome: "refused",
+          lines: [
+            "Could not reach 100.94.48.29.",
+            "Check its address and that it is awake, then ask again.",
+          ],
+        },
+      },
+      words:
+        '[fm-op] the captain chose on your card to add the computer at 100.94.48.29, and it was not added. The app said: "Could not reach 100.94.48.29." "Check its address and that it is awake, then ask again." Tell the captain in full what happened and what it says to do, and offer the next step on one card: what those words say to try, or another way to add it.',
     },
   ],
   "project-change": [

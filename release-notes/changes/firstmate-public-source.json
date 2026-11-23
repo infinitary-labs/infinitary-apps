@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-public-source",
+      "reason": "The first mate is told where Infinitary's public source lives and to leave it alone unless asked; nothing a person sees changes."
+    }
+  ]
+}

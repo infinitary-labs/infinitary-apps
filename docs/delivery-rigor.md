@@ -811,6 +811,7 @@ The host counts an approval only while the very yes it rests on stays on the tas
 An approval an earlier build kept rests on no yes and counts as before.
 The reviewer judges whether a named yes's words cover what the check declares; one that does not is a finding.
 `TaskService` keeps the approval on the check by its id for every later run and version of the task, including script fixes and reruns, with no limit on runs.
+The captain's click on a check's card counts at whatever version the builder has reached while the card waited, so a commit made meanwhile does not void it, as long as the check is still the one the card showed (INF-6250 finding 2); a gap's or an effect's click stays bound to the version it was asked at.
 A plan revision that changes the check's declared resources or cost, or removes the check, expires the approval.
 A later plan revision that declares exactly the resources and cost the captain approved restores it with no new question, since the captain's answer covers those words; it never restores an ask whose card ended unanswered, or one the captain's newer no to the same words declined (INF-3751).
 A record an earlier build left expired with those words declared again heals on its next validation write.

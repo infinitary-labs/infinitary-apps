@@ -40,6 +40,7 @@ While the choice still waits on the author's lane, not yet handed to a turn (`In
 Once the author has heard the choice, an emit with actions under the id is refused, since it would ask the same question again: a new question is a new card with its own title.
 One without actions only tells the captain something, such as which crewmate took the work, and shows as a note.
 A note the captain closed with its Got it or Done stays closed (INF-2718, the captain's pick "Refuse re-showing a closed note"): every emit under its id is refused and nothing is shown, so a crewmate whose conversation restarted cannot raise it again, and something new goes on a new card.
+One note is the exception: a validation question whose click the host could not count turns into a note while its crewmate asks again, and the host tells that crewmate to revise the same card, so the renewed question comes back under its id even after the captain closed that note (INF-6250 finding 2).
 A decision the captain closed without choosing, or a card a script or its author closed, can still come back under its id.
 The host's own card for a first mate's `app_change` ask (`HandoverOffer`) is never refused this way: while it is up, asking again revises it, and once the captain answered it, the next ask goes up under the next id in its series (`CardEmits.offerCardId`), such as `app-device-invite-2`.
 

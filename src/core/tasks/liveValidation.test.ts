@@ -1055,6 +1055,46 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
     });
   });
 
+  it("INF-6250 finding 2: a yes to a check counts after the crewmate commits again, and a gap's yes does not", () => {
+    // INF-2279: the crewmate committed a repair while its check card waited,
+    // and the captain's Allow click approved nothing.
+    let state = observed(planned([claudeCheck, codexCheck]), head, "no-sign-ins", [
+      claudeCheck.id,
+      codexCheck.id,
+    ]);
+    state = ask(state, gapRequest(state, claudeCheck.id, "claude-gap"));
+    state = ask(state, {
+      kind: "request",
+      request: { kind: "check", id: "codex-run", head, scenario: codexCheck.id },
+    });
+    for (const [request, card] of [
+      ["claude-gap", "gap-card"],
+      ["codex-run", "check-card"],
+    ] as const)
+      state = recordValidation(
+        state,
+        { kind: "decision", request, card, action: "accept" },
+        { ...ctx, decision: { offer: `${card}-offer` } },
+      );
+    const click = (card: string) =>
+      decideValidation(state, {
+        card,
+        offer: `${card}-offer`,
+        action: "accept",
+        label: "Allow",
+        head: later,
+        at: 5,
+      });
+    expect(() => click("gap-card")).toThrow("The validation request's version changed");
+    state = click("check-card");
+    expect(state.permissions.find((item) => item.request.id === "codex-run")).toMatchObject({
+      state: "approved",
+      yes: "check-card",
+    });
+    state = observed(state, later, "codex-at-repair", [claudeCheck.id]);
+    expect(state.runs.at(-1)?.checkApprovals).toEqual(["codex-run"]);
+  });
+
   it("FIRS-3: four gaps of one version share one checklist and the next round's gap takes a second card", () => {
     const checks = [
       "outside-prs-quick",

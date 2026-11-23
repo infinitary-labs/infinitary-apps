@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "check-consent-follows-version",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Your yes to a crewmate's check counts even after it keeps working",
+      "body": "When a crewmate asks you to allow a check and keeps working while the card waits, your Allow now counts for the version it has reached. Before, a new commit while the card waited threw your answer away and the crewmate had to ask again. When a question does change and the crewmate asks again, the new question now comes back on the same card, even if you closed the note left in its place.",
+      "noPicture": "This changes whether an existing card's answer counts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

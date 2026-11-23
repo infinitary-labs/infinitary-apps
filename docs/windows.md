@@ -130,6 +130,9 @@ That journey checks, in order:
    The journey ends the run as a crash would, and the task's next minute starts it again and it reaches the home again, with its copy as it was.
    When the home removes it, the run forgets the home and takes its task away.
    The window, opened on the person's own data folder, then joins such a home by its pasted link and sets up the same task, which reaches the home and leaves when the home removes it.
+   The window then joins a home by its address with Windows' own `ssh.exe` and `ssh-keyscan.exe` (`tests/windows/loopbackSshd.ts`): the server is Win32-OpenSSH's `sshd.exe` from its release zip, pinned by its SHA-256 in `windows.yml`, run in the foreground as this person on the loopback, by key alone, handing each command to the job's Git Bash as a Mac's or Linux computer's shell would run it.
+   A port nobody answers is refused as SSH off; the check line names the server's own key, read by `ssh.exe` since `ssh-keyscan.exe` stops at the key exchange that server picks; after the yes, `ssh.exe` signs in with the person's own key, the home's door answers a one-use link, and the window joins and sets up the same task.
+   The PC's first mate offers no add by address, since Windows' own ssh keeps no control connection.
    A run asked with `home_link`, a one-use link from a throwaway home on another computer, also has the window join that home over the network, run its work until that home removes the PC, and end it.
 6. The removal entry's own command removes the app silently, as Settings does: the program, its removal entry and its Start menu entry are gone, and `%APPDATA%\infinitary` still holds the saved data.
 

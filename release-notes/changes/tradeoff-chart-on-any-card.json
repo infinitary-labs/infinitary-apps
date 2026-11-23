@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "cards",
       "title": "Plan and decision cards draw their tradeoffs as a chart too",
-      "body": "The chart you pick from on review questions now appears on any card whose choice weighs two or more things you care about, such as security against ease of use: plan cards, other decision cards and Firstmate's own. Each option keeps a short label, and its reasons sit in the table one click away. A choice of look, wording or layout keeps its pictures instead, and a plain yes or no stays as it is. A question no longer needs an option for what the project does now to get a chart.",
+      "body": "The chart you pick from on review questions now appears on any card whose choice weighs two or more things you care about, such as security against ease of use: plan cards, other decision cards and your first mate's own. Each option keeps a short label, and its reasons sit in the table one click away. A choice of look, wording or layout keeps its pictures instead, and a plain yes or no stays as it is. A question no longer needs an option for what the project does now to get a chart.",
       "picture": {
         "dark": "tradeoff-chart-on-any-card-dark.webp",
         "light": "tradeoff-chart-on-any-card-light.webp",

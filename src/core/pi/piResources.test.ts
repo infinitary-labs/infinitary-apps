@@ -156,13 +156,6 @@ describe("selective filing reaches every agent that acts on it", () => {
   });
 });
 
-/**
- * The plan-to-build handoff, read the way each agent receives it: the
- * served persona prompt, plus the sequences document the Firstmate is
- * served after it and the basis section a builder's brief carries. Each
- * fact must reach every agent that acts on it, wherever its one home is;
- * a fact that stops reaching one is a change of behaviour, not of structure.
- */
 describe("the tradeoff chart's rules reach every card author (INF-6293)", () => {
   // The captain: "can we make these tradeoff charts a common building block
   // that can be used in any card". One text in the card rules is the nudge
@@ -185,6 +178,13 @@ describe("the tradeoff chart's rules reach every card author (INF-6293)", () => 
   });
 });
 
+/**
+ * The plan-to-build handoff, read the way each agent receives it: the
+ * served persona prompt, plus the sequences document the Firstmate is
+ * served after it and the basis section a builder's brief carries. Each
+ * fact must reach every agent that acts on it, wherever its one home is;
+ * a fact that stops reaching one is a change of behaviour, not of structure.
+ */
 describe("the plan-to-build handoff reaches every agent that acts on it", () => {
   const builderBasis = renderBasisSection({
     key: "FM3K-7",

@@ -266,7 +266,7 @@ export class Computers {
    */
   private readonly saving = new Map<string, { controller: AbortController; tasks: string[] }>();
   /**
-   * Each update whose crew's work was saved, by device id, until it ends: when that
+   * Each update whose crew paused, by device id, until it ends: when that
    * computer or its update was last heard from (`updatingOf`), and how to
    * cancel the read once it would go quiet. Kept only in memory, so a
    * restart here forgets it.
@@ -501,8 +501,8 @@ export class Computers {
       let paused = false;
       const pause: SaveBeforeUpdate = async (lost) => {
         paused = true;
-        if (!(await this.saveWork(device, lost))) throw new UpdateLetGo();
         this.follow(deviceId);
+        if (!(await this.saveWork(device, lost))) throw new UpdateLetGo();
       };
       const oneTime = !device.remoteLogin && options?.address !== undefined;
       const back = oneTime ? this.backOnThisVersion(device, true) : null;
@@ -994,12 +994,12 @@ export class Computers {
     });
     try {
       say("updating", remoteLoginWords.updating(device));
-      // Its crew's work is saved before anything there stops, and carries on after; from then it reads updating.
+      // Its crew's work is saved before anything there stops, and carries on after; from its pause it reads updating.
+      this.follow(device.id);
       if (!(await this.saveWork(device, () => refuse("out-of-reach")))) {
         this.sayLetGo(device);
         return this.viewOf(device.id) ?? device;
       }
-      this.follow(device.id);
       let starting = false;
       const start = () => {
         if (starting) return;
@@ -1169,7 +1169,8 @@ export class Computers {
     let settled = false;
     try {
       say("updating", remoteLoginWords.updating(device));
-      // Its crew's work is saved before anything there stops, and carries on after; from then it reads updating.
+      // Its crew's work is saved before anything there stops, and carries on after; from its pause it reads updating.
+      this.follow(device.id);
       const lost = () =>
         refused(
           "out-of-reach",
@@ -1183,7 +1184,6 @@ export class Computers {
         this.sayLetGo(device);
         return this.viewOf(device.id) ?? device;
       }
-      this.follow(device.id);
       step("fetching");
       const everyMs = this.options.countEveryMs ?? COUNT_EVERY_MS;
       const ask = async () => {
@@ -1763,7 +1763,7 @@ export class Computers {
 
   /**
    * Whether the home follows a computer's update now (docs/devices.md,
-   * "Updating"): from when its crew's work is saved until the update ends, done, refused,
+   * "Updating"): from its crew's pause until the update ends, done, refused, let go,
    * failed or not back, while it is in reach or was heard from - a
    * connection coming or going, a count of its copy or a step said - within
    * `UPDATE_RETURN_MS`, after which it goes back to the copy it ran before.
@@ -1782,7 +1782,7 @@ export class Computers {
     return this.options.updateWaitMs ?? UPDATE_RETURN_MS;
   }
 
-  /** Its crew's work is saved and the update goes ahead: from here the computer reads updating (`updatingOf`). */
+  /** The update's crew pauses to save its work: from here the computer reads updating (`updatingOf`). */
   private follow(deviceId: string): void {
     if (this.followed.has(deviceId)) return;
     this.followed.set(deviceId, { heard: this.options.now(), cancel: () => {} });

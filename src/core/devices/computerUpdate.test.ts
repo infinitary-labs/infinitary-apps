@@ -198,6 +198,8 @@ describe("a computer that runs work on another version of Firstmate", () => {
       await expect
         .poll(() => at.view()?.updateWork)
         .toEqual({ state: "saving", tasks: ["Fix the footer"] });
+      // Its crew paused for the update: it reads updating while its work is saved, until let go.
+      expect(at.view()?.updating).toBe(true);
       expect(at.computers.updateLater(at.deviceId)).toBe(true);
 
       const answered = await updating;
@@ -207,6 +209,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
       expect(replaced).toEqual([]);
       expect(at.view()).toMatchObject({ inReach: true, otherVersion: { updateBy: route } });
       expect(at.view()?.updateWork).toBeUndefined();
+      expect(at.view()).not.toHaveProperty("updating");
       expect(at.crew).toEqual([`paused ${at.deviceId}`, `resumed ${at.deviceId}`]);
       // This list says an update over the connection began; RemoteLogin says its own.
       const builder = { name: "Mac mini", user: "builder", onThisMac: true };
@@ -612,7 +615,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
   });
 
   // The captain's ask: a work computer being updated reads updating, never out of reach.
-  it("reads updating from when its crew's work is saved until the update ends, then its own reach", async () => {
+  it("reads updating from its crew's pause until the update ends, then its own reach", async () => {
     const at = await world({ kept: true });
     const before = at.start({ appVersion: "0.1.20" });
     await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
@@ -651,7 +654,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(at.view()).not.toHaveProperty("updating");
   });
 
-  it("reads its own reach once its update failed, and never updating when refused before its crew's work was saved", async () => {
+  it("reads its own reach once its update failed, and never updating when refused before its crew paused", async () => {
     const at = await world({
       kept: true,
       remoteLogin: "sam@mini.local",

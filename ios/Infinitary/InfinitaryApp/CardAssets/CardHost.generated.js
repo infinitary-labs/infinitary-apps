@@ -116941,8 +116941,8 @@ ${startersHtml()}`;
      */
     updateWork: updateWorkSchema.optional(),
     /**
-     * The home follows its update now (docs/devices.md, "Updating"): from when its
-     * crew's work is saved until the update ends, while it was heard from in the last
+     * The home follows its update now (docs/devices.md, "Updating"): from its
+     * crew's pause until the update ends, while it was heard from in the last
      * `UPDATE_RETURN_MS`. Every place that names it says updating rather than
      * out of reach. A view that does not list `computer-updating` is sent the
      * list without it.

@@ -1337,7 +1337,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   A crewmate's report names where the captain typed the words it passes on with `captain_words_from`: a card of its own task by id, or `crewmate-tab` (INF-3202).
   The host reads the captain's newest words there with when they were typed, through the reader an override citation uses (`CaptainOverrides.relayedCaptainWords`), keeps them on the report's event and in its wake's `captainWords`, and refuses a card on another task or one with none of the captain's words.
   Work filed from that report keeps those words and their time with its reporting task, and the line quotes them instead of reading on to the reporting task's own origin; a report that names none leads on to it as before.
-  When one turn read several, the first mate names the one it answers with `origin` on `spawn_crewmate` or `create_task`, and the host refuses a name the turn did not read; with several and none named it saves none.
+  When one turn read several, the first mate names the one it answers with `origin` on `spawn_crewmate` or `create_task`, and the host refuses a name the turn did not read; with several and none named it saves none, except that a filing answering no captain message after the turn read more than one automation run is refused with each run's automation named, so the work keeps its automation and its notes (INF-6250).
   The host never guesses an origin from timing, and tasks filed before the change are not filled in afterwards.
 - **A long message.**
   The grey bubble shows the start of the message, cut after two lines with an ellipsis; clicking or tapping the bubble opens the whole of it with its paragraphs, and again folds it.

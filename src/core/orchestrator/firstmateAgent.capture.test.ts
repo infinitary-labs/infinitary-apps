@@ -211,6 +211,46 @@ describe("FirstmateAgent capture", () => {
     await tick();
   });
 
+  // INF-6250's finding 5: at 3:00 AM one first mate turn read both nightly
+  // automation runs and started both tasks naming neither, so neither task
+  // kept its automation or its notes. A start that names none is refused.
+  it("refuses a start that names no automation when the turn read several runs", async () => {
+    const { agent, session, specs, tasks, db } = setup();
+    const inbox = new InboxStore(db);
+    for (const rule of [
+      { id: "r-audit", name: "Nightly session audit" },
+      { id: "r-review", name: "Bottleneck review" },
+    ])
+      inbox.enqueueWake(
+        FIRSTMATE_RECIPIENT,
+        { facts: { kind: "scheduled", prompt: `run the ${rule.name}`, catchUp: false, rule } },
+        "scheduled",
+      );
+    agent.pokeInbox();
+    await tick();
+    const tools = toolsOf(specs);
+    for (const tool of ["create_task", "spawn_crewmate"])
+      await expect(
+        tools.get(tool)?.execute("unnamed", {
+          title: "Audit the last day's sessions",
+          goal: "Frictions from the past day are on one card.",
+          user_words: "run the Nightly session audit",
+        }),
+      ).rejects.toThrow(/name the one this work answers with origin, one of r-audit/);
+    expect(tasks.list()).toEqual([]);
+    await tools.get("create_task")?.execute("named", {
+      title: "Audit the last day's sessions",
+      goal: "Frictions from the past day are on one card.",
+      user_words: "run the Nightly session audit",
+      origin: "r-audit",
+    });
+    const audit = tasks.list().find((task) => task.title === "Audit the last day's sessions");
+    expect(tasks.capture.automationStart(audit?.id ?? "")).toMatchObject({ ruleId: "r-audit" });
+    session.emitTurnEnd("Filed the audit.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
   // INF-3202: the captain typed "ask first mate to separately investigate
   // and fix this stale picture problem" under INF-3106's plan card, and its
   // crewmate passed the words on; INF-3187 and INF-3188 were filed from that

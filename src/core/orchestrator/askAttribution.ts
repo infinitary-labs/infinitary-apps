@@ -34,9 +34,16 @@ const FILING_TOOLS = new Set(["spawn_crewmate", "create_task"]);
 const ORIGIN = Type.Optional(
   Type.String({
     description:
-      "When this turn read several automation runs, card choices or crewmate reports and no captain message: the one answered, by automation id, card id or reporting task key; the task's cards name it as the work's source.",
+      "When this turn read several automation runs, card choices or crewmate reports and no captain message: the one answered, by automation id, card id or reporting task key; the task's cards name it as the work's source. Required when it read several automation runs.",
   }),
 );
+
+/** Names each read run by id and the name it ran under, so the retry can copy one. */
+function severalRunsRefusal(runs: ReturnType<AskCapture["severalRuns"]>): string {
+  const named = runs.map((run) => (run.name ? `${run.ruleId} ("${run.name}")` : run.ruleId));
+  // i18n-exempt: a refusal served to the first mate, never shown to a person
+  return `This turn read several automation runs: name the one this work answers with origin, one of ${named.join(", ")}, or name the captain's message with ask_id.`;
+}
 
 // spawn_crewmate's points at create_task's, as its title does, so the rule is said once.
 const ORIGIN_AS_CREATE_TASK = Type.Optional(
@@ -99,13 +106,16 @@ export function withAskAttribution<Tool extends BoundTool>(
       }
       const askId = declared === undefined ? capture.current()?.id : declared || undefined;
       const declares = typeof declared === "string" && declared !== "";
-      if (named === undefined || named === "")
+      if (named === undefined || named === "") {
+        const runs = filing && !askId ? capture.severalRuns() : [];
+        if (runs.length > 0) throw new Error(severalRunsRefusal(runs));
         return capture.withAsk(
           askId,
           () => tool.run(filing ? input : rest, signal),
           undefined,
           declares,
         );
+      }
       const answered = typeof named === "string" ? capture.readOrigin(named) : undefined;
       if (!answered)
         throw new Error(

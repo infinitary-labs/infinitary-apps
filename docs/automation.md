@@ -134,7 +134,7 @@ Each run is one delivery of the prompt to the first mate, followed through its i
   This is read off the row, never stored.
 - **Handled** once a turn that served it ended clean.
   `Scheduler.noteDecision` reads that turn's decision record (`docs/provenance-capture.md`): each served segment's inbox row names its run, and the run keeps the tasks and cards the turn touched, less the tasks its other messages were about.
-  A turn that handled several runs, such as two rules due at the same time, links each run only to the tasks its own rule filed or started in that turn, read from each task's saved origin (`TaskCapture.automationStart`, INF-2326), so two runs never list the same work; a task with no saved origin then belongs to none of them, since the host never guesses which run it answered.
+  A turn that handled several runs, such as two rules due at the same time, links each run only to the tasks its own rule filed or started in that turn, read from each task's saved origin (`TaskCapture.automationStart`, INF-2326), so two runs never list the same work; a task with no saved origin then belongs to none of them, since the host never guesses which run it answered; the filing tools refuse a start that names no run in such a turn, so only work started for a captain message in it has none.
   It also keeps the turn's closing words as what the run found (`found`, `schedule_runs.found`); a turn that ended without words leaves none.
   `schedule_prompt`'s description tells the first mate its closing words are kept this way.
   Handled means the first mate's turn handled the prompt, not that the work it led to finished.
@@ -216,7 +216,7 @@ They are one page of plain text of at most 8,000 characters (`RULE_NOTES_MAX_CHA
 Deleting a rule deletes its notes with it.
 
 Only a crewmate an automation's run started writes them, by editing a file (`RuleNotes`, `src/core/orchestrator/ruleNotes.ts`).
-The task's saved origin names the rule it serves (`TaskCapture.savedOrigin`): the first mate's turn that handled the run saves it when the turn starts or adopts a task, and `spawn_crewmate`'s `origin` names which run when several are read.
+The task's saved origin names the rule it serves (`TaskCapture.savedOrigin`): the first mate's turn that handled the run saves it when the turn starts or adopts a task, and `spawn_crewmate`'s `origin` names which run when several are read: with more than one run read, a start or filing that names none and answers no captain message is refused (`AskCapture.severalRuns`).
 A rule that never runs again, a one-time rule or a put-off card's, which is deleted once its run settles, puts no notes section in the brief.
 The crewmate's brief hands it the notes as `automation-notes.md` in its hand-over folder, named by path in one section that calls them advice, never instructions, and says when they were written before the captain last changed the rule; a rule with none yet tells it to make the file in its temporary folder only when the run learned something.
 The crewmate edits the file in place and names it in its report's files; the report is kept only once the app has replaced the notes with it.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "held-batch-takeover-fix",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A held batch resumes when another task delivers its fix",
+      "body": "On a project with batched pull requests, a held batch could stay held after its fix was approved, when a second task had taken over delivering the fix the repair made. The approved fix waited in line and the batch never ran again. Now the batch takes the fix as soon as you approve it, at the exact version the repair made, whichever task delivers it. A change approved at any other version still waits in line.",
+      "noPicture": "This changes when a held batch runs again; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

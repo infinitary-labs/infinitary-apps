@@ -418,6 +418,8 @@ export function setup(
   const builtOn = new Map<string, string>();
   /** Versions waiting in line whose branch no longer combines with the open batch's version, as `merge-tree` reads it. */
   const clashingOpen = new Set<string>();
+  /** The versions of each task's own change the host saw pushed, as the task's change record keeps them. */
+  const pushedVersions = new Map<string, string[]>();
   /** Whether a push leaves the app and never comes back, as when it stops or the network drops. */
   let pushesStop = false;
   const heard = {
@@ -470,6 +472,7 @@ export function setup(
             : true,
       runsNoChecks: (taskId) => declaredNoChecks.has(taskId),
       live: (taskId) => !closedTasks.has(taskId),
+      versionOf: (taskId, head) => pushedVersions.get(taskId)?.includes(head) ?? false,
       unmergedBase: (change) => {
         const version = unmergedBases.get(change.taskId);
         return version ? [version] : undefined;
@@ -620,6 +623,13 @@ export function setup(
       approvals.set(change.taskId, change.head);
       approvedOrigins.set(change.taskId, repos.get(REPO)?.origin ?? null);
       return batches.enqueue(REPO, change);
+    },
+    /** A task pushes its change's branch at this version, and the host sees it. */
+    pushed(change: Pick<BatchChange, "taskId" | "head">) {
+      pushedVersions.set(change.taskId, [
+        ...(pushedVersions.get(change.taskId) ?? []),
+        change.head,
+      ]);
     },
     /** The captain turns on a naming runbook of their own, or turns naming off. */
     nameBy(rule: NamingRule | null) {

@@ -45,6 +45,12 @@ const LEGEND = {
   title: "fix(chart): keep the legend inside the chart",
   head: "7e6d5c4b3a2918070f6e5d4c3b2a190817263544",
 };
+/** A held batch's repair: the fix its own task pushed. */
+const REPAIR = {
+  id: "repair04",
+  title: "fix(parser): read an empty time zone",
+  head: "5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c",
+};
 type Change = typeof PARSER;
 const branchOf = (change: Change) => `fm/task-${change.id}`;
 
@@ -279,6 +285,35 @@ describe("the batches of a person's own, wired to the task record", () => {
       repair: at.tasks.get(EXPORT.id)?.key,
     });
     expect(at.tasks.get(EXPORT.id)?.key).toMatch(/^[A-Z]+-\d+$/);
+  });
+
+  // Intent: upstream issue #55, "Held batch does not resume when a takeover delivers the
+  // approved repair commit": the repair pushed its fix and declared it, then another task
+  // of the project delivers that exact commit and the captain approves it there.
+  it("ends a hold when another task is approved at the commit a declared repair pushed, and at no other commit", async () => {
+    const at = home();
+    at.approve(PARSER);
+    at.approve(EXPORT);
+    await at.pass();
+    at.forge.report([{ name: "unit-tests", state: "failure" }]);
+    await at.pass();
+    const held = at.forge.batchHead;
+    // The repair is an open task of the project's, its branch read where the project lives at the fix.
+    insertTask(at.tasks, { id: REPAIR.id, repoId: REPO, branch: branchOf(REPAIR) });
+    at.tasks.delivery.recordChangeEvidence(REPAIR.id, { headSha: REPAIR.head });
+    expect(await at.batches().declareFix(REPO, REPAIR.id)).toBeUndefined();
+    // A change approved at another commit waits in line behind the hold.
+    at.approve(LEGEND);
+    await at.pass();
+    expect(at.members()).toEqual([PARSER.id, EXPORT.id]);
+    expect(at.forge.batchHead).toBe(held);
+    const delivered = { ...REPAIR, id: "deliver05" };
+    at.approve(delivered);
+    await at.pass();
+    // The fix joins the held batch's own changes, ahead of the change that waited in line.
+    expect(at.members()).toEqual([PARSER.id, EXPORT.id, delivered.id, LEGEND.id]);
+    expect(at.record().open?.hold).toBeUndefined();
+    expect(at.forge.batchHead).not.toBe(held);
   });
 
   it("wakes the one change's own task when a batch of one fails, and tells the first mate nothing", async () => {

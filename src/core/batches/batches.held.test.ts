@@ -535,6 +535,55 @@ describe("a held batch", () => {
     expect(home.open()).toEqual(joined);
   });
 
+  // Intent: issue #55, a bug being fixed: a repair declared its change the held batch's fix,
+  // another task took that work over and was approved at the same commit, and the batch stayed
+  // held because the fix mark followed the declaring task alone.
+  it("lets another task's change approved at the declared fix's exact commit join the held batch and end the hold", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    // The repair pushes its fix and is never approved; the task that takes its work over
+    // delivers that commit from a branch of its own.
+    home.pushed(FIX);
+    const delivered = { ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 };
+
+    home.approve(delivered);
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-takeover"]);
+    expect(home.open().members.at(-1)).toMatchObject({ head: FIX.head, fix: true });
+    expect(home.open().hold).toBeUndefined();
+    expect(home.open().head).not.toBe(held.head);
+    expect(home.record().line).toEqual([]);
+    // It is carried as the fix is: from the version that held.
+    expect(home.heard.combinedOn.at(-1)).toEqual([held.head]);
+  });
+
+  // Intent: issue #55's control: only the declared fix's exact commit carries its mark, so an
+  // unrelated approval, or the same work in a commit of its own, never releases the hold.
+  it("keeps the batch held when changes at other commits are approved beside a declared fix", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    home.pushed(FIX);
+    // The fix's own title and words, committed again: another commit, so another change.
+    const rewritten = {
+      ...FIX,
+      taskId: "t-rewrite",
+      branch: "fm/task-rewrite",
+      head: "4d3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2",
+      at: 8_000,
+    };
+
+    home.approve(LEGEND);
+    home.approve(rewritten);
+    await home.pass();
+    expect(home.open()).toEqual({ ...held, repair: FIX.taskId });
+    expect(home.record().line).toEqual([LEGEND, rewritten]);
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+    expect(home.heard.pushes.at(-1)?.head).toBe(held.head);
+    expect(home.host.merges).toEqual([]);
+  });
+
   // Intent: INF-4421's finding, a bug being fixed: Try again rebuilt the held batch from its
   // own changes and erased the fix declared for it, so the fix never joined.
   it("keeps a declared fix through Try again, and the fix joins when the batch holds again", async () => {

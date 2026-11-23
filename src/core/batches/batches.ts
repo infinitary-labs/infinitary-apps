@@ -264,6 +264,12 @@ export type BatchesOptions = {
   /** Whether a task is still open: a closed task's receipts and notes are dropped. */
   live: (taskId: string) => boolean;
   /**
+   * Whether `head` is a version of the change a task carries on its own
+   * branch, as the project's host saw it pushed: another task approved at
+   * that exact commit delivers that change. Absent, none is.
+   */
+  versionOf?: (taskId: string, head: string) => boolean;
+  /**
    * The approved version a task's work merged at, once it closed done. A
    * change built on its approved version then joins with no base left to
    * wait for, checked against that version. Absent, none is merged.
@@ -448,13 +454,23 @@ export class Batches {
 
   /**
    * Put an approved change in line and start a pass. A change a repair
-   * declared the held batch's fix is marked so, whichever came first.
+   * declared the held batch's fix is marked so, whichever came first. So is
+   * another task's change approved at the exact commit of a declared fix, as
+   * when that task took the repair's work over: it is declared the fix for
+   * the task that delivers it. Only that commit carries the declaration, and
+   * only the delivered version's own approval puts it here.
    */
   async enqueue(repoId: string, change: BatchChange): Promise<void> {
     await this.write(repoId, (record) => {
       // Still a fix after its batch was closed and put back in line, until a batch merges or ends.
-      const fix = (record.fixes ?? []).includes(change.taskId);
-      return enqueue(record, fix ? { ...change, fix: true } : change);
+      const fixes = record.fixes ?? [];
+      if (fixes.includes(change.taskId)) return enqueue(record, { ...change, fix: true });
+      const delivers = fixes.some(
+        (taskId) => this.options.live(taskId) && this.options.versionOf?.(taskId, change.head),
+      );
+      return delivers
+        ? enqueue(declared(record, change.taskId), { ...change, fix: true })
+        : enqueue(record, change);
     });
     void this.pass(repoId);
   }

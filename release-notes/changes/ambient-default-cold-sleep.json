@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "ambient-default-cold-sleep",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "The ambient music starts on Cold sleep",
+      "body": "When you turn on the ambient music without picking a style, it now plays Cold sleep, the soft felt piano, instead of Star cruise. If you already picked a style in Settings → Appearance or asked your first mate for one, it keeps playing that style.",
+      "noPicture": "The Style choice looks the same; only the style it starts on changed, and Cold sleep's own note already shows it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

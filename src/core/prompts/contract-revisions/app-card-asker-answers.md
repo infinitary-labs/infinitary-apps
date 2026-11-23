@@ -13,7 +13,8 @@ What the crew is now told:
 What the first mate is now told:
 
 - Such a choice with words, or with a note, file or picture it carried, no longer reaches the first mate as a carried-out choice: it goes to the crewmate that asked.
-  The first mate's own ask, an ask with no task and a panel's integration call keep their answerer as before.
+  The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - took no reply before and now names the first mate as its answerer: a reply there is a captain turn about the card, which the first mate answers as on the stuck alert.
+  A panel's integration call still takes no reply.
 
 The host reads no word of the reply or of the field; whether the words change the ask is the crewmate's judgment.
 The fixed context does not grow: the new words ride only two wakes.

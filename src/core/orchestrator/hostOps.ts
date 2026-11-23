@@ -340,6 +340,7 @@ export class HostOps {
         void result.started
           .then((text) => {
             if (
+              text &&
               this.core.options.tasks.get(result.task.id)?.status !== "active" &&
               !this.pendingStarts.has(result.task.id)
             )

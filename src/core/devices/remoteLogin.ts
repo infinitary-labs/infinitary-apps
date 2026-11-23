@@ -29,6 +29,7 @@ import {
   type RemoteLoginCopy,
   type RemoteLoginDoing,
   type RemoteLoginPasswordQuestion,
+  type RemoteLoginReach,
   type RemoteLoginRefusal,
   type RemoteLoginStage,
   type RemoteLoginUpdateOptions,
@@ -201,6 +202,8 @@ export class RemoteLoginRefusedError extends Error {
     message: string = lines.join("\n"),
     /** The change there may already have happened, so it is not tried again. */
     readonly uncertain = false,
+    /** The step an `unreachable` refusal stopped at, when known. */
+    readonly reach?: RemoteLoginReach,
   ) {
     super(message);
     this.name = "RemoteLoginRefusedError";
@@ -256,6 +259,8 @@ type UbuntuReady = "ready" | "linger-off";
 
 const LOOK_TIMEOUT_MS = 90_000;
 const SEND_TIMEOUT_MS = REMOTE_LOGIN_TIME_LIMIT_MS;
+/** More than any system's pipe holds before SSH reads from it. */
+const PIPE_HOLDS = 1024 * 1024;
 /** The copy's count is said at most this often between its first bytes and its end. */
 const COPY_EVERY_MS = 1_000;
 const IDLE_TIMEOUT_MS = 2 * 60_000;
@@ -313,7 +318,7 @@ export class RemoteLogin {
       if (!this.builds.canSendAny()) return step.refuse("cannot-send");
       const gated = await this.confirmHost(address, options.confirm);
       if ("asks" in gated) return gated;
-      if ("refusal" in gated) return step.refuse(gated.refusal);
+      if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated.reach));
       step.say("reaching", remoteLoginWords.reaching(address));
       // Whether that Mac is this one is this Mac's own finding, bound to the
       // link it makes, never where the device later dials from.
@@ -343,7 +348,7 @@ export class RemoteLogin {
       } finally {
         here.dispose();
       }
-      if ("refusal" in look) return step.refuse(look.refusal);
+      if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
       // That computer's system decides how it is set up, and which Firstmate it gets.
       const far = farSystemOf(look.os);
       const chip = far?.chips[look.arch ?? ""];
@@ -431,12 +436,15 @@ export class RemoteLogin {
   async linkAt(text: string, options: JoinAtOptions = {}): Promise<LinkAtAnswer> {
     const address = parseRemoteLoginAddress(text);
     if (!address) return { refused: "not-an-address" };
+    // Only a program that reads it hears where it could not reach.
+    const refused = (refusal: JoinAtRefusal, reach: RemoteLoginReach | undefined) =>
+      options.reach && reach ? { refused: refusal, reach } : { refused: refusal };
     return this.once(address, address, async () => {
       const step = this.stepper(address, "add", undefined, true);
       try {
         const gated = await this.confirmHost(address, options.confirm);
         if ("asks" in gated) return gated;
-        if ("refusal" in gated) return { refused: gated.refusal };
+        if ("refusal" in gated) return refused(gated.refusal, gated.reach);
         let asked = await this.askLink(address);
         if ("refusal" in asked && asked.refusal === "key-refused") {
           const methods = asked.methods ?? null;
@@ -451,7 +459,7 @@ export class RemoteLogin {
           if ("refusal" in asked && asked.refusal === "key-refused")
             return { refused: "key-not-taken" };
         }
-        if ("refusal" in asked) return { refused: asked.refusal };
+        if ("refusal" in asked) return refused(asked.refusal, asked.reach);
         if ("none" in asked) return { refused: linkNoneRefusal(asked.none) };
         let key: string;
         try {
@@ -463,7 +471,7 @@ export class RemoteLogin {
         const where = await resolveDestination(this.options.ssh, address);
         return { link: asked.link, host: where?.host ?? null };
       } catch (error) {
-        if (error instanceof RemoteLoginRefusedError) return { refused: error.refusal };
+        if (error instanceof RemoteLoginRefusedError) return refused(error.refusal, error.reach);
         throw error;
       }
     });
@@ -474,7 +482,7 @@ export class RemoteLogin {
     address: string,
   ): Promise<
     | ReturnType<typeof readComputerLinkAnswer>
-    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null }
+    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null; reach?: RemoteLoginReach }
   > {
     const ran = await runSsh({
       ...this.sshFor(address),
@@ -483,9 +491,8 @@ export class RemoteLogin {
     });
     if (ran.code === SSH_FAILED) {
       const refusal = sshRefusal(ran.stderr);
-      return refusal === "key-refused"
-        ? { refusal, methods: passwordMethods(ran.stderr) }
-        : { refusal };
+      if (refusal === "key-refused") return { refusal, methods: passwordMethods(ran.stderr) };
+      return this.refusedOver(address, refusal);
     }
     return readComputerLinkAnswer(ran.stdout);
   }
@@ -516,9 +523,9 @@ export class RemoteLogin {
           // before signing in, and check the joined folder before installing.
           const gated = await this.confirmHost(address, options.confirm);
           if ("asks" in gated) return gated;
-          if ("refusal" in gated) return step.refuse(gated.refusal);
+          if ("refusal" in gated) return step.refuse(gated.refusal, reachOf(gated.reach));
           const look = await this.look(address, "");
-          if ("refusal" in look) return step.refuse(look.refusal);
+          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
           if (!look.joined) return step.packageAddressRefused();
           if (look.home !== this.options.pairing.identity().pin)
             return step.refuse("already-joined");
@@ -538,21 +545,21 @@ export class RemoteLogin {
           return outcome;
         }
         const changed = await this.changedKey(address);
-        if (changed) return step.refuse(changed);
+        if (changed) return step.refuse(changed.refusal, reachOf(changed.reach));
         step.say("updating", remoteLoginWords.updating(device), { deviceId });
         // The system it said in its hello; one that never said is asked there.
         let far = device.system ? farSystemNamed(device.system) : null;
         let chip = far ? (device.chip ?? Object.values(far.chips)[0]) : undefined;
         if (!device.system) {
           const look = await this.look(address, "");
-          if ("refusal" in look) return step.refuse(look.refusal);
+          if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
           far = farSystemOf(look.os);
           chip = far?.chips[look.arch ?? ""];
         }
         if (!far || !chip) return step.refuse("other-system");
         if (far.system === "linux" && this.builds.readsPublished()) {
           const looked = await this.look(address, "");
-          if ("refusal" in looked) return step.refuse(looked.refusal);
+          if ("refusal" in looked) return step.refuse(looked.refusal, reachOf(looked.reach));
           if (ubuntuPackageRelease(looked)) return this.updateUbuntu(device, looked, options, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
@@ -562,6 +569,9 @@ export class RemoteLogin {
         const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
         let ran: Awaited<ReturnType<typeof runSsh>> | undefined;
         let starting = false;
+        // Infinitary began to go there: its download answered, or SSH read
+        // more of the copy than a pipe holds, which it does only once signed in.
+        let sending = false;
         const start = () => {
           starting = true;
           step.say("updating", remoteLoginWords.starting(name), {
@@ -594,6 +604,7 @@ export class RemoteLogin {
               await new Promise<void>((resolve) => sink.once("close", resolve));
             },
             onLine: (line, activity) => {
+              sending = true;
               if (line === DOWNLOAD_FETCHED) {
                 activity.end();
                 return false;
@@ -649,9 +660,12 @@ export class RemoteLogin {
               ...(build.form === "bundle" ? [] : [build.sha256]),
             ],
             stdin: async (sink, activity) => {
+              let sent = 0;
               await sendCopy(build, sink, (bytes) => {
                 activity();
                 copy.add(bytes);
+                sent += bytes;
+                if (sent > PIPE_HOLDS) sending = true;
               });
               copy.end();
               activity.end();
@@ -693,7 +707,10 @@ export class RemoteLogin {
                   : "failed",
           );
         if (starting) return step.uncertain(name);
-        if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
+        if (ran.code === SSH_FAILED) {
+          const refused = await this.refusedOver(address, sshRefusal(ran.stderr), sending);
+          return step.refuse(refused.refusal, reachOf(refused.reach));
+        }
         return step.refuse("failed");
       }),
     );
@@ -787,10 +804,10 @@ export class RemoteLogin {
       this.holding(deviceId, async () => {
         const step = this.stepper(address, "address", device);
         const changed = await this.changedKey(address);
-        if (changed) return step.refuse(changed);
+        if (changed) return step.refuse(changed.refusal, reachOf(changed.reach));
         step.say("reaching", remoteLoginWords.reaching(address), { deviceId });
         const look = await this.look(address, "");
-        if ("refusal" in look) return step.refuse(look.refusal);
+        if ("refusal" in look) return step.refuse(look.refusal, reachOf(look.reach));
         if (!farSystemOf(look.os)) return step.refuse("other-system");
         if (!look.joined) return step.refuse("not-set-up");
         if (look.home !== this.options.pairing.identity().pin) return step.refuse("already-joined");
@@ -904,8 +921,14 @@ export class RemoteLogin {
         let backstop: ReturnType<typeof setTimeout> | undefined;
         // The time limit stopped it: said as that, never as what SSH answered after.
         let timedOut = false;
-        const refuse = (refusal: RemoteLoginRefusal): never =>
-          timedOut ? step.stopped(name, "timeout") : step.refuse(refusal, { name });
+        // A connection lost after the sign-in is said as lost while sending.
+        const refuse = (refusal: RemoteLoginRefusal, reach?: RemoteLoginReach): never =>
+          timedOut
+            ? step.stopped(name, "timeout")
+            : step.refuse(refusal, {
+                name,
+                ...(refusal === "unreachable" && reach ? { reach } : {}),
+              });
         const clearBackstop = () => {
           if (backstop) clearTimeout(backstop);
         };
@@ -927,12 +950,14 @@ export class RemoteLogin {
           const stage = heard.get("stage") ?? "";
           if (!ready) {
             const ran = await master.exited;
-            return refuse(ran.code === SSH_FAILED ? sshRefusal(ran.stderr) : "failed");
+            return refuse(ran.code === SSH_FAILED ? sshRefusal(ran.stderr) : "failed", {
+              step: "sign-in",
+            });
           }
           if (!(await master.forward(socket, pairing.port))) {
             const alive = master.alive();
             await master.stop();
-            return refuse(alive ? "forwarding-refused" : "unreachable");
+            return refuse(alive ? "forwarding-refused" : "unreachable", { step: "send" });
           }
           // The bytes sent so far, said as they move, each count in place of the one before.
           const run = { id: `copy-${randomUUID()}` };
@@ -972,7 +997,7 @@ export class RemoteLogin {
             startBackstop();
             downloaded = got.code === 0 && !got.stopped;
             if (!downloaded) {
-              if (!master.alive()) return refuse("unreachable");
+              if (!master.alive()) return refuse("unreachable", { step: "send" });
               step.say(
                 at.stage,
                 remoteLoginWords.downloadFallback(name, got.code === 7),
@@ -1020,7 +1045,7 @@ export class RemoteLogin {
             if (sent.stopped) return step.stopped(name, sent.stopped);
             if (sent.code !== 0) {
               await master.stop();
-              return refuse(sent.code === SSH_FAILED ? "unreachable" : "failed");
+              return refuse(sent.code === SSH_FAILED ? "unreachable" : "failed", { step: "send" });
             }
             copy.end();
           }
@@ -1082,7 +1107,7 @@ export class RemoteLogin {
               },
             );
           }
-          if (ran.code === SSH_FAILED) return refuse(sshRefusal(ran.stderr));
+          if (ran.code === SSH_FAILED) return refuse(sshRefusal(ran.stderr), { step: "send" });
           return refuse("failed");
         } finally {
           clearBackstop();
@@ -1367,7 +1392,11 @@ export class RemoteLogin {
       }
       // Stopped by the time limit while `work update` ran there: it may already have updated.
       if (ran.stopped) return step.uncertain(deviceLabel(device));
-      if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
+      // The package is already there: a connection lost now is lost while sending.
+      if (ran.code === SSH_FAILED) {
+        const refused = await this.refusedOver(address, sshRefusal(ran.stderr), true);
+        return step.refuse(refused.refusal, reachOf(refused.reach));
+      }
       return step.refuse("failed");
     } finally {
       secret?.fill(0);
@@ -1382,7 +1411,10 @@ export class RemoteLogin {
   private async look(
     address: string,
     here: string,
-  ): Promise<Look | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null }> {
+  ): Promise<
+    | Look
+    | { refusal: RemoteLoginRefusal; methods?: PasswordMethod[] | null; reach?: RemoteLoginReach }
+  > {
     const ran = await runSsh({
       ...this.sshFor(address),
       command: ["/bin/sh", "-c", LOOK, "firstmate", ...this.folder(), here],
@@ -1390,9 +1422,8 @@ export class RemoteLogin {
     });
     if (ran.code === SSH_FAILED) {
       const refusal = sshRefusal(ran.stderr);
-      return refusal === "key-refused"
-        ? { refusal, methods: passwordMethods(ran.stderr) }
-        : { refusal };
+      if (refusal === "key-refused") return { refusal, methods: passwordMethods(ran.stderr) };
+      return this.refusedOver(address, refusal);
     }
     const said = new Map<string, string>();
     const needs: string[] = [];
@@ -1481,7 +1512,10 @@ export class RemoteLogin {
       }
       if (outcome === "off") return step.refuse("password-off");
       if (outcome === "other-system") return step.refuse("other-system");
-      if (outcome !== "placed") return step.refuse(outcome.refusal);
+      if (outcome !== "placed") {
+        const refused = await this.refusedOver(address, outcome.refusal);
+        return step.refuse(refused.refusal, reachOf(refused.reach));
+      }
       try {
         this.options.pairing.ownKeyPlacedAt(address);
       } catch {
@@ -1491,6 +1525,28 @@ export class RemoteLogin {
     } finally {
       password.fill(0);
     }
+  }
+
+  /**
+   * An SSH refusal from `address`, with the step it could not reach the
+   * computer at: sending once Infinitary began to go there; signing in, at
+   * the port the person's SSH settings resolve unless a proxy stands
+   * between, when a key read came first, as one does before every sign-in
+   * to a computer whose key is remembered; no step otherwise.
+   */
+  private async refusedOver(
+    address: string,
+    refusal: RemoteLoginRefusal,
+    sending = false,
+  ): Promise<{ refusal: RemoteLoginRefusal; reach?: RemoteLoginReach }> {
+    if (refusal !== "unreachable") return { refusal };
+    if (sending) return { refusal, reach: { step: "send" } };
+    if (!this.options.pairing.rememberedHost(address)) return { refusal };
+    const where = await resolveDestination(this.options.ssh, address);
+    return {
+      refusal,
+      reach: where && !where.proxied ? { step: "sign-in", port: where.port } : { step: "sign-in" },
+    };
   }
 
   /**
@@ -1505,7 +1561,7 @@ export class RemoteLogin {
   ): Promise<
     | { ok: true }
     | { asks: "confirm"; address: string; line: string }
-    | { refusal: RemoteLoginRefusal }
+    | { refusal: RemoteLoginRefusal; reach?: RemoteLoginReach }
   > {
     if (this.options.pairing.hostTrustCannotBeRead()) return { refusal: "failed" };
     const live = await readHostKey(this.options.ssh, address);
@@ -1528,10 +1584,12 @@ export class RemoteLogin {
    * sign-in. Null when nothing is remembered, so a Mac added before this
    * check still uses the captain's own SSH.
    */
-  private async changedKey(address: string): Promise<RemoteLoginRefusal | null> {
+  private async changedKey(
+    address: string,
+  ): Promise<{ refusal: RemoteLoginRefusal; reach?: RemoteLoginReach } | null> {
     if (!this.options.pairing.rememberedHost(address)) return null;
     const gated = await this.confirmHost(address, undefined);
-    return "refusal" in gated ? gated.refusal : null;
+    return "refusal" in gated ? gated : null;
   }
 
   /**
@@ -1619,7 +1677,12 @@ export class RemoteLogin {
         ...(device ? { name: deviceLabel(device), deviceId: device.id } : {}),
         ...extra,
       });
-    type At = { name?: string; missing?: string[]; installs?: LinuxInstalls };
+    type At = {
+      name?: string;
+      missing?: string[];
+      installs?: LinuxInstalls;
+      reach?: RemoteLoginReach;
+    };
     const lines = (refusal: RemoteLoginRefusal, at: At) =>
       remoteLoginWords.refused(refusal, {
         address,
@@ -1627,6 +1690,7 @@ export class RemoteLogin {
         name: at.name ?? (device ? deviceLabel(device) : undefined),
         missing: at.missing,
         installs: at.installs,
+        reach: at.reach,
       });
     return {
       say: (stage: RemoteLoginStage, text: string, extra: StepFacts = {}) =>
@@ -1656,7 +1720,7 @@ export class RemoteLogin {
       refuse: (refusal: RemoteLoginRefusal, at: At = {}): never => {
         const said = lines(refusal, at);
         for (const line of said) emit("refused", line, "warn", at.name ? { name: at.name } : {});
-        throw new RemoteLoginRefusedError(refusal, said);
+        throw new RemoteLoginRefusedError(refusal, said, undefined, false, at.reach);
       },
     };
   }
@@ -1771,4 +1835,9 @@ function linkNoneRefusal(none: ComputerLinkNone): JoinAtRefusal {
     default:
       return "no-link";
   }
+}
+
+/** The step a refusal could not reach the computer at, as the refusal's words take it. */
+function reachOf(reach: RemoteLoginReach | undefined): { reach?: RemoteLoginReach } {
+  return reach ? { reach } : {};
 }

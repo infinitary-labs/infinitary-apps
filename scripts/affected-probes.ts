@@ -50,6 +50,7 @@ export const PROBES = [
     files: [
       "src/core/devices/computerUpdate.test.ts",
       "src/core/devices/dnsSd.test.ts",
+      "src/core/devices/hostKey.test.ts",
       "src/core/devices/joinCommand.test.ts",
       "src/core/devices/relay.test.ts",
       "src/core/devices/remoteLogin.test.ts",

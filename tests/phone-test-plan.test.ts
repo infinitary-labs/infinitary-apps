@@ -88,11 +88,11 @@ describe("the phone check's built test plan", () => {
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's four parts run
 // side by side, each from its own simulator, and every check the single journey made stays.
-// Every test the build has: Xcode 27.1's -enumerate-tests of the phone check's own build of the
+// Every test the build has: Xcode 27.2's test-without-building -enumerate-tests of the phone check's own build of the
 // scheme (INF-2625, which retired testCards, testJoinAndRecover and testTalkAndTasks from it), less the weak link
 // checks, which INF-4326 moved out of the app's build into a test target of the phone's package.
 const everyTest: string[] = JSON.parse(
-  readFileSync("tests/fixtures/phone-test-plan/xcode-27.1-tests.json", "utf8"),
+  readFileSync("tests/fixtures/phone-test-plan/xcode-27.2-tests.json", "utf8"),
 );
 // INF-4326: every test of the parts on the Mac, from `swift test list` of the phone's package, as XCTest names them.
 const macTests = readFileSync("tests/fixtures/phone-test-plan/swift-test-list.txt", "utf8")

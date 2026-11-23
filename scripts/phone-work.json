@@ -242,5 +242,29 @@
       "reads": 305,
       "launches": 3
     }
+  },
+  "task-updates-bottom": {
+    "iphone": {
+      "reads": 927,
+      "launches": 1
+    }
+  },
+  "task-updates-middle": {
+    "iphone": {
+      "reads": 443,
+      "launches": 1
+    }
+  },
+  "task-updates-finish": {
+    "iphone": {
+      "reads": 288,
+      "launches": 1
+    }
+  },
+  "task-updates-start": {
+    "iphone": {
+      "reads": 233,
+      "launches": 1
+    }
   }
 }

@@ -122,5 +122,17 @@
   },
   "homes": {
     "iphone": 210000
+  },
+  "task-updates-bottom": {
+    "iphone": 137026
+  },
+  "task-updates-middle": {
+    "iphone": 84094
+  },
+  "task-updates-finish": {
+    "iphone": 83761
+  },
+  "task-updates-start": {
+    "iphone": 74276
   }
 }

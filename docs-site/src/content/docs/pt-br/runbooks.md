@@ -1,5 +1,5 @@
 ---
-source: cee1a57585b4bde1
+source: 6d79068a24795b48
 title: Manuais
 description: As orientações escritas que seu imediato e sua tripulação seguem em cada tipo de trabalho, e como ativá-las ou desativá-las, lê-las e criar ou adicionar as suas.
 ---
@@ -61,7 +61,7 @@ Três começam desativados até você ativá-los: **Batched pull requests**, **P
 - **Moving secrets in**: como um tripulante traz segredos de outra ferramenta para **Segredos** sem que nenhum agente veja um valor.
   Um tripulante só o lê durante uma transferência desse tipo.
   Veja [Segredos](/pt-br/secrets/).
-- **Feedback**: digite `/feedback` e algumas palavras em qualquer caixa de mensagem, e um tripulante redige uma issue para os criadores do Infinitary que você lê e publica.
+- **Feedback**: digite `/feedback` e algumas palavras em qualquer caixa de mensagem, e um tripulante redige uma issue para o criador do Infinitary que você lê e publica.
   Ela leva fatos sobre o app e o seu sistema, nunca seus nomes, caminhos ou projetos.
 - **Advanced architecture**: mapeia as partes de um projeto e como elas se conectam, e mostra o que uma mudança mexe nesse mapa.
   É um experimento.

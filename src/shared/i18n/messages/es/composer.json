@@ -1,7 +1,7 @@
 {
   "composerFolderNotProject": "No se pudo añadir esa carpeta como proyecto.",
   "composerFolderProject": "Esa carpeta ya es uno de tus proyectos.",
-  "composerHintFeedback": "{command}: cuéntales a los creadores de Infinitary un problema o una idea",
+  "composerHintFeedback": "{command}: cuéntale al creador de Infinitary un problema o una idea",
   "composerLines": {
     "plural": "count",
     "one": "{count} línea",

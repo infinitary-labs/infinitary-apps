@@ -52,7 +52,7 @@ export function diagnosticsLines(
   facts: FeedbackDiagnostics,
   stepsMax = Number.POSITIVE_INFINITY,
 ): string[] {
-  // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+  // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
   const lines = [
     `- App: Infinitary ${fact(facts.app.version)} · ${fact(facts.app.channel)} · ${fact(facts.app.install)} · ${fact(facts.app.language)}`,
     `- System: ${fact(facts.system.name)} ${fact(facts.system.release)} · ${fact(facts.system.chip)}`,
@@ -67,14 +67,14 @@ export function diagnosticsLines(
       .filter((value): value is string => Boolean(value))
       .map(fact)
       .join(" · ");
-    // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+    // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
     lines.push(`- Task: ${states}`);
     if (task.ci || task.checks?.length) {
       const checks = [
         ...(task.ci ? [fact(task.ci)] : []),
         ...(task.checks?.length ? [counted(task.checks)] : []),
       ].join(" · ");
-      // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+      // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
       lines.push(`- Checks: ${checks}`);
     }
     const steps =
@@ -82,7 +82,7 @@ export function diagnosticsLines(
         ? task.steps
         : task.steps.slice(task.steps.length - Math.max(0, stepsMax));
     if (steps.length > 0)
-      // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+      // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
       lines.push(
         `- Steps (minute: kind): ${steps.map((step) => `${Math.max(0, Math.round(step.minute))}: ${fact(step.kind)}`).join(", ")}`,
       );
@@ -171,7 +171,7 @@ export function newIssueLink(
     `https://github.com/${repository}/issues/new?${new URLSearchParams({ title, body }).toString()}`;
   const keep = stepsThatFit(words, facts, kind, FEEDBACK_LINK_MAX, (body) => link(body).length);
   if (keep !== undefined) return link(feedbackBody(words, facts, kind, keep));
-  // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's makers, in English
+  // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
   const cut = "\n\n(The rest was too long for a link; add it on this page.)";
   let low = 0;
   let high = words.length;

@@ -1,5 +1,5 @@
 ---
-source: cee1a57585b4bde1
+source: 6d79068a24795b48
 title: Procédures
 description: Les consignes écrites que suivent votre second et votre équipage pour certains types de travail, et comment les activer ou les désactiver, les lire, créer les vôtres ou en ajouter.
 ---
@@ -61,7 +61,7 @@ Trois restent désactivées jusqu’à ce que vous les activiez : **Demandes de
 - **Importer des secrets** : la façon dont un équipier déplace des secrets d’un autre outil vers **Secrets** sans qu’aucun agent ne voie une valeur.
   Un équipier ne la lit que pendant un tel déplacement.
   Voir [Secrets](/fr/secrets/).
-- **Avis** : tapez `/feedback` et quelques mots dans n’importe quelle zone de message, et un équipier rédige un ticket pour les créateurs d’Infinitary, que vous lisez et publiez vous-même.
+- **Avis** : tapez `/feedback` et quelques mots dans n’importe quelle zone de message, et un équipier rédige un ticket pour le créateur d’Infinitary, que vous lisez et publiez vous-même.
   Il contient des faits sur l’app et votre système, jamais vos noms, chemins ou projets.
 - **Architecture avancée** : cartographie les parties d’un projet et leurs liens, et montre ce qu’une modification déplace sur cette carte.
   C’est une expérimentation.

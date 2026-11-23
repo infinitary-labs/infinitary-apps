@@ -28,7 +28,7 @@ export const FEEDBACK_WORDS = [
   "",
   "The card shows the checks as passed once they finish.",
 ].join("\n");
-const GOAL = "Draft a problem report for Infinitary's makers and ask the captain before it goes.";
+const GOAL = "Draft a problem report for Infinitary's maker and ask the captain before it goes.";
 const BODY_FILE = "feedback-report.md";
 
 const call = (scripted: ScriptedCall): ScenarioAnswer => ({ calls: [scripted] });

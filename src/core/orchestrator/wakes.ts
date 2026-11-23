@@ -64,7 +64,7 @@ export const CAPTAIN_WORDS_FROM_THE_COMMAND = `Sent ${FROM_THE_COMMAND}.`;
  * from, which the Feedback runbook tells the first mate how to carry out.
  */
 export const FEEDBACK_REQUEST_NOTE =
-  "[feedback request] The captain's message starts with /feedback: a report of a problem or an idea for Infinitary's makers, to become an issue on Infinitary's own public project after the captain reviews it. Follow the Feedback runbook now. Where they typed it is the visible card or open task in your context; with neither, it came from the message box.";
+  "[feedback request] The captain's message starts with /feedback: a report of a problem or an idea for Infinitary's maker, to become an issue on Infinitary's own public project after the captain reviews it. Follow the Feedback runbook now. Where they typed it is the visible card or open task in your context; with neither, it came from the message box.";
 
 function guidanceMarkNote(mark: number): string {
   return `[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new merge card when the work is ready).`;

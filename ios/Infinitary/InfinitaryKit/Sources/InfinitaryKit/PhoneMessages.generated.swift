@@ -1069,6 +1069,7 @@ public enum PhoneMessages {
     public static func `feedbackStripHeading`(`place`: String) -> String { PhoneWords.format("feedbackStripHeading", [`place`]) }
     public static func `feedbackStripIdea`() -> String { PhoneWords.format("feedbackStripIdea", []) }
     public static func `feedbackStripNoAccount`() -> String { PhoneWords.format("feedbackStripNoAccount", []) }
+    public static func `feedbackSubmitButton`() -> String { PhoneWords.format("feedbackSubmitButton", []) }
     public static func `fileAdd`() -> String { PhoneWords.format("fileAdd", []) }
     public static func `fileCancel`(`name`: String) -> String { PhoneWords.format("fileCancel", [`name`]) }
     public static func `fileDropHere`() -> String { PhoneWords.format("fileDropHere", []) }
@@ -5357,6 +5358,7 @@ extension PhoneWords {
         "feedbackStripHeading": ["place"],
         "feedbackStripIdea": [],
         "feedbackStripNoAccount": [],
+        "feedbackSubmitButton": [],
         "fileAdd": [],
         "fileCancel": ["name"],
         "fileDropHere": [],

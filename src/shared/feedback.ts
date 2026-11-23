@@ -1,7 +1,7 @@
 /**
  * `/feedback` (docs/feedback.md): a message whose first word is the
  * command word reaches the first mate as a feedback request for
- * Infinitary's makers, from any message field. The command word is a typed
+ * Infinitary's maker, from any message field. The command word is a typed
  * fact the host reads; what the words mean stays the agents' judgment.
  */
 

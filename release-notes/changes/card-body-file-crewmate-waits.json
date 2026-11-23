@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-body-file-crewmate-waits",
+      "reason": "The file-backed card journey now waits as long as other journeys do for a crewmate's card and its revision, so a slow crewmate start on a busy machine no longer fails it; the app itself is unchanged."
+    }
+  ]
+}

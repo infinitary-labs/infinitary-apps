@@ -3,6 +3,7 @@ import {
   type BatchChange,
   type BatchHold,
   type BatchMember,
+  type BatchRebuild,
   type BatchReceipt,
   type BatchRecord,
   type BatchSendBack,
@@ -12,7 +13,7 @@ import {
   type OpenBatch,
 } from "@shared/batches";
 import { BATCH_WAITING_WORDS } from "../forge";
-import type { Combined } from "./combine";
+import { type Combined, LEFT_OUT_WORDS } from "./combine";
 
 /**
  * The rules of a project's line and its one open batch (docs/forge.md,
@@ -38,8 +39,17 @@ export type Standing =
     }
   /** The only change of a batch whose checks failed: its own crewmate repairs it. */
   | { state: "failed"; checks: string[]; number?: number; url?: string | null }
-  /** Left out; `ahead` names the task of the unmerged change ahead it clashes with. */
-  | { state: "left-out"; reason: string; ahead?: string }
+  /**
+   * Left out; `ahead` names the task of the unmerged change ahead it clashes
+   * with; `rebuild`, the open batch's version its crewmate was told to
+   * rebuild it on, while that batch is open.
+   */
+  | {
+      state: "left-out";
+      reason: string;
+      ahead?: string;
+      rebuild?: { head: string; branch: string };
+    }
   /**
    * Sent back from its batch at this version (INF-5097 piece 1): like the
    * only change of a failed batch, its crewmate repairs it in a new version.
@@ -65,14 +75,23 @@ export function standing(record: BatchRecord, taskId: string, head: string): Sta
         ? { state: "waiting", place: "held", hold: hold.reason, ...request }
         : { state: "waiting", place: "batch", ...request };
   }
-  if (record.line.some((entry) => entry.taskId === taskId && entry.head === head))
-    return { state: "waiting", place: "line" };
+  if (record.line.some((entry) => entry.taskId === taskId && entry.head === head)) {
+    // Told to rebuild while in line, with that rebuild standing: no batch carries this version,
+    // and its merge waits for the version rebuilt on that batch.
+    const waits = standingRebuild(record, { taskId, head });
+    return waits ? { state: "left-out", ...waits } : { state: "waiting", place: "line" };
+  }
   const left = record.leftOut.find((entry) => entry.taskId === taskId && entry.head === head);
   if (left)
     return {
       state: "left-out",
       reason: left.reason,
       ...(left.ahead ? { ahead: left.ahead } : {}),
+      // The rebuild it was told stands while the batch it names is open, and after it merged.
+      ...(left.rebuild &&
+      (record.open?.branch === left.rebuild.branch || rebuildStands(record, left))
+        ? { rebuild: left.rebuild }
+        : {}),
     };
   const sent = sentBackOf(record, taskId).findLast((entry) => entry.head === head);
   if (!sent) return undefined;
@@ -132,9 +151,10 @@ export function batchStatus(place: Standing): BatchStatus {
         ...link(place.url),
       };
     case "left-out":
-      // A clash with a change ahead that is not merged yet asks nothing of the change itself.
+      // A clash with a change ahead that is not merged yet, or one its crewmate is rebuilding
+      // on the open batch, asks nothing more of the change itself.
       return {
-        kind: place.ahead ? "paused" : "failed",
+        kind: place.ahead || place.rebuild ? "paused" : "failed",
         words: BATCH_STATUS_WORDS.leftOut(place.reason),
       };
     case "waiting":
@@ -264,9 +284,12 @@ export function markFix(record: BatchRecord, taskId: string): BatchRecord {
   if (!record.line.some((entry) => entry.taskId === taskId && !entry.fix)) return record;
   return {
     ...record,
-    line: record.line.map((entry) =>
-      entry.taskId === taskId ? { ...entry, fix: true as const } : entry,
-    ),
+    // A fix is carried from the held version it builds on, never as a change rebuilt on a batch.
+    line: record.line.map((entry) => {
+      if (entry.taskId !== taskId) return entry;
+      const { onBatch: _onBatch, ...change } = entry;
+      return { ...change, fix: true as const };
+    }),
   };
 }
 
@@ -354,11 +377,30 @@ export function carried(
     const heldBase = record.fixBases?.[change.taskId];
     return heldBase ? { ...change, heldBase } : change;
   };
-  if (!record.open) return inTurn(record.line, new Set(), closed).map(based);
+  // A change rebuilt on an open batch goes right behind the changes it was built on: first
+  // in a new batch, behind the declared fixes when the line joins a held batch, and, when the
+  // open batch is combined again with those changes still in it, right behind them then too.
+  // A clashing version whose rebuild stands waits for the rebuilt version, in no batch.
+  const line = record.line.filter((entry) => !rebuildStands(record, entry));
+  const rebuilt = line.filter((entry) => entry.onBatch && !entry.fix);
+  const rest = line.filter((entry) => !entry.onBatch && !entry.fix);
+  if (!record.open)
+    return inTurn(
+      [...rebuilt, ...line.filter((entry) => !rebuilt.includes(entry))],
+      new Set(),
+      closed,
+    ).map(based);
+  const open = record.open;
+  const behindOpen = (entry: BatchChange) =>
+    (entry.onBatch?.members ?? []).every((carried) =>
+      open.members.some(
+        (member) => member.taskId === carried.taskId && member.head === carried.head,
+      ),
+    );
   const joining =
     join === "line"
-      ? [...record.line.filter((entry) => entry.fix), ...record.line.filter((entry) => !entry.fix)]
-      : [];
+      ? [...line.filter((entry) => entry.fix), ...rebuilt, ...rest]
+      : rebuilt.filter(behindOpen);
   const members = record.open.members.map(asChange);
   return [
     ...members,
@@ -381,22 +423,39 @@ function inTurn(
   closed: (taskId: string) => boolean,
 ): BatchChange[] {
   const carriedIds = new Set(ahead);
+  const coming = new Set(changes.map((change) => change.taskId));
+  // Rebuilt on an open batch: behind each change that version carries that is still to come.
+  // One that is not coming, left or merged, is the combine's to judge.
+  const waitsOn = (change: BatchChange) =>
+    (change.onBatch?.members ?? []).some(
+      (carried) =>
+        carried.taskId !== change.taskId &&
+        coming.has(carried.taskId) &&
+        !carriedIds.has(carried.taskId),
+    );
+  const waits = (change: BatchChange) =>
+    (change.after !== undefined && !carriedIds.has(change.after) && !closed(change.after)) ||
+    waitsOn(change);
   const turn: BatchChange[] = [];
-  let waiting = [...changes];
+  const taken = new Set<BatchChange>();
+  const take = (change: BatchChange) => {
+    turn.push(change);
+    taken.add(change);
+    carriedIds.add(change.taskId);
+    // A rebuilt change whose last change still to come just went goes right behind it.
+    for (const next of changes)
+      if (!taken.has(next) && next.onBatch && !waits(next)) {
+        const behind = next.onBatch.members.some((carried) => carried.taskId === change.taskId);
+        if (behind) take(next);
+      }
+  };
   for (let moved = true; moved; ) {
     moved = false;
-    const still: BatchChange[] = [];
-    for (const change of waiting) {
-      const after = change.after;
-      if (after && !carriedIds.has(after) && !closed(after)) {
-        still.push(change);
-        continue;
-      }
-      turn.push(change);
-      carriedIds.add(change.taskId);
+    for (const change of changes) {
+      if (taken.has(change) || waits(change)) continue;
+      take(change);
       moved = true;
     }
-    waiting = still;
   }
   return turn;
 }
@@ -538,8 +597,20 @@ export function merged(
   const { open, finished: _finished, ...rest } = record;
   if (!open || open.number === undefined) return record;
   const number = open.number;
+  // A rebuild told on this batch stands once it merged carrying each change the crewmate was
+  // told about, at that version: the version rebuilt on it goes first in the next batch.
+  const carriedAll = (told: BatchRebuild) =>
+    told.members.every((carried) =>
+      open.members.some(
+        (member) => member.taskId === carried.taskId && member.head === carried.head,
+      ),
+    );
+  const rebuilds = record.rebuilds?.map((told) =>
+    told.branch === open.branch && carriedAll(told) ? { ...told, merged: true as const } : told,
+  );
   return {
     ...rest,
+    ...(rebuilds ? { rebuilds } : {}),
     ...finishedWith(record, open, "merged", at),
     receipts: [
       ...record.receipts.filter(
@@ -621,6 +692,19 @@ export function finishedWithin(finished: readonly FinishedBatch[], now: number):
 }
 
 /**
+ * A left-out change's clash with a change ahead that ended; `rebuilt` when
+ * its crewmate was told to rebuild it on the batch that merged, and that
+ * rebuild stands (`rebuildStands`).
+ */
+export type EndedClash = {
+  taskId: string;
+  head: string;
+  ahead: string;
+  how: "merged" | "left";
+  rebuilt?: true;
+};
+
+/**
  * The left-out changes whose clash with a change ahead ended: that change
  * merged with its batch (`merged`), or it is in neither the open batch nor
  * the line any more (`left`). A merged clash is now one with the default
@@ -634,14 +718,20 @@ export function clashesEnded(
   conflict: string,
 ): {
   record: BatchRecord;
-  ended: { taskId: string; head: string; ahead: string; how: "merged" | "left" }[];
+  ended: EndedClash[];
 } {
-  const ended: { taskId: string; head: string; ahead: string; how: "merged" | "left" }[] = [];
+  const ended: EndedClash[] = [];
   const leftOut = record.leftOut.flatMap((entry) => {
     const ahead = entry.ahead;
     if (!ahead) return [entry];
     if (record.receipts.some((receipt) => receipt.taskId === ahead)) {
-      ended.push({ taskId: entry.taskId, head: entry.head, ahead, how: "merged" });
+      ended.push({
+        taskId: entry.taskId,
+        head: entry.head,
+        ahead,
+        how: "merged",
+        ...(rebuildStands(record, entry) ? { rebuilt: true as const } : {}),
+      });
       const { ahead: _ahead, ...rest } = entry;
       return [{ ...rest, reason: conflict }];
     }
@@ -653,6 +743,127 @@ export function clashesEnded(
     return [];
   });
   return ended.length ? { record: { ...record, leftOut }, ended } : { record, ended };
+}
+
+/** The changes, by task and approved version, the open batch's version carries. */
+function carriedBy(open: OpenBatch): BatchRebuild["members"] {
+  return open.members.map(({ taskId, head }) => ({ taskId, head }));
+}
+
+/**
+ * The record after a change that clashes with the open batch, left out of
+ * it or waiting in line, had its crewmate told to rebuild it on the batch's
+ * version (docs/forge.md, "A change rebuilt on an open batch"). `fresh` is
+ * true only when the crewmate has not heard it for this version of the
+ * change and the same changes in the batch, so it hears once; a left-out
+ * entry at that version names the version it was told. The same record
+ * with no open batch to rebuild on.
+ */
+export function toldRebuild(
+  record: BatchRecord,
+  change: Pick<BatchChange, "taskId" | "head">,
+  at: number,
+): { record: BatchRecord; fresh: boolean; told?: BatchRebuild } {
+  const open = record.open;
+  if (!open || open.members.length === 0) return { record, fresh: false };
+  const members = carriedBy(open);
+  const earlier = record.rebuilds?.find((entry) => entry.taskId === change.taskId);
+  const same =
+    earlier?.head === change.head &&
+    earlier.branch === open.branch &&
+    JSON.stringify(earlier.members) === JSON.stringify(members);
+  const told: BatchRebuild =
+    same && earlier
+      ? earlier
+      : {
+          taskId: change.taskId,
+          head: change.head,
+          on: open.head,
+          branch: open.branch,
+          members,
+          at,
+        };
+  const rebuild = { head: told.on, branch: told.branch };
+  return {
+    record: {
+      ...record,
+      rebuilds: [
+        ...(record.rebuilds ?? []).filter((entry) => entry.taskId !== change.taskId),
+        told,
+      ],
+      leftOut: record.leftOut.map((entry) =>
+        entry.taskId === change.taskId && entry.head === change.head
+          ? { ...entry, rebuild }
+          : entry,
+      ),
+    },
+    fresh: !same,
+    told,
+  };
+}
+
+/**
+ * Whether the crewmate of `change` was already told to rebuild it on the
+ * open batch as that batch stands now, so a pass need not try it again.
+ */
+export function rebuildTold(record: BatchRecord, change: Pick<BatchChange, "taskId" | "head">) {
+  const open = record.open;
+  const earlier = record.rebuilds?.find((entry) => entry.taskId === change.taskId);
+  return (
+    !!open &&
+    earlier?.head === change.head &&
+    earlier.branch === open.branch &&
+    JSON.stringify(earlier.members) === JSON.stringify(carriedBy(open))
+  );
+}
+
+/**
+ * The rebuild told for `change` at its version, once the batch it named
+ * merged carrying each change the crewmate was told about (`merged`): the
+ * clashing version waits for the version rebuilt on it, in no batch, until
+ * the task closes or a new version takes its place.
+ */
+export function rebuildStands(
+  record: BatchRecord,
+  change: Pick<BatchChange, "taskId" | "head">,
+): boolean {
+  const told = record.rebuilds?.find((entry) => entry.taskId === change.taskId);
+  return told?.merged === true && told.head === change.head;
+}
+
+/**
+ * Why a version in line whose rebuild stands waits in no batch, and the
+ * version it waits to be rebuilt on (`rebuildStands`): its merge and the
+ * Batches panel read it as left out. Undefined for any other version.
+ */
+export function standingRebuild(
+  record: BatchRecord,
+  change: Pick<BatchChange, "taskId" | "head">,
+): { reason: string; rebuild: { head: string; branch: string } } | undefined {
+  const told = record.rebuilds?.find((entry) => entry.taskId === change.taskId);
+  if (!told || !rebuildStands(record, change)) return undefined;
+  return {
+    reason: LEFT_OUT_WORDS.batchMerged(told.on),
+    rebuild: { head: told.on, branch: told.branch },
+  };
+}
+
+/**
+ * The batch version a repair declared as its new base, as the line carries
+ * it (`BatchChange.onBatch`): the version its crewmate was told to rebuild
+ * on, or the open batch's version as it is now, with the changes that
+ * version carries other than the task's own. Undefined for any other
+ * version, such as a commit of the default branch.
+ */
+export function builtOnBatch(
+  record: BatchRecord,
+  taskId: string,
+  on: string,
+): BatchChange["onBatch"] | undefined {
+  const told = record.rebuilds?.find((entry) => entry.taskId === taskId && entry.on === on);
+  const members = told?.members ?? (record.open?.head === on ? carriedBy(record.open) : undefined);
+  const others = members?.filter((entry) => entry.taskId !== taskId);
+  return others?.length ? { head: on, members: others } : undefined;
 }
 
 /**
@@ -677,6 +888,7 @@ export function pruned(record: BatchRecord, live: (taskId: string) => boolean): 
   const receipts = record.receipts.filter((entry) => live(entry.taskId));
   const leftOut = record.leftOut.filter((entry) => live(entry.taskId));
   const sentBack = record.sentBack?.filter((entry) => live(entry.taskId));
+  const rebuilds = record.rebuilds?.filter((entry) => live(entry.taskId));
   const fixes = record.fixes?.filter(live);
   const open = record.open;
   const orphaned = Boolean(open?.awaits) && !live(open?.awaits as string);
@@ -685,12 +897,13 @@ export function pruned(record: BatchRecord, live: (taskId: string) => boolean): 
     receipts.length === record.receipts.length &&
     leftOut.length === record.leftOut.length &&
     sentBack?.length === record.sentBack?.length &&
+    rebuilds?.length === record.rebuilds?.length &&
     fixes?.length === record.fixes?.length &&
     !orphaned &&
     !unrepaired
   )
     return record;
-  const { sentBack: _sentBack, ...rest } = record;
+  const { sentBack: _sentBack, rebuilds: _rebuilds, ...rest } = record;
   let kept = open;
   if (kept && orphaned) kept = { ...kept, awaits: "" };
   if (kept && unrepaired) {
@@ -702,6 +915,7 @@ export function pruned(record: BatchRecord, live: (taskId: string) => boolean): 
     receipts,
     leftOut,
     ...(sentBack?.length ? { sentBack } : {}),
+    ...(rebuilds?.length ? { rebuilds } : {}),
     ...(kept && kept !== open ? { open: kept } : {}),
   };
   return fixes?.length === record.fixes?.length

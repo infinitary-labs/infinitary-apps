@@ -9,6 +9,8 @@
 // - a cookie,
 // - a link between pages, or to a heading, that leads nowhere,
 // - a picture that does not draw,
+// - a space after a full-width full stop (。), which Chinese and Japanese
+//   never put there, though their pages break a line after each sentence,
 // - search that draws no search box, or finds nothing, with the network limited to the site itself,
 //   in English and, from each shipped language's home page, for a word of
 //   one of its page titles, finding that language's own pages,
@@ -280,6 +282,11 @@ try {
     const title = (await tab.locator("main h1").first().textContent())?.trim();
     if (!title) fail(`${path} drew no title`);
     if (await tab.evaluate(() => document.cookie)) fail(`${path} set a cookie`);
+    // The page's words as the browser draws them, a line break inside a paragraph as a space.
+    const spaced = await tab.evaluate(
+      () => /.{0,12}。[ \u00a0].{0,12}/u.exec(document.querySelector("main .sl-markdown-content")?.innerText ?? "")?.[0],
+    );
+    if (spaced) fail(`${path} draws a space after 。: "${spaced}"`);
     const broken = await tab.$$eval("main img", (images) =>
       images.filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.getAttribute("src")),
     );

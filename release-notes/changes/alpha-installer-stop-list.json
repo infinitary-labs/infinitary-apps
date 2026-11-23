@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-installer-stop-list",
+      "reason": "Internal release workflow maintenance: remove the cancellation entry for the reuse-only installer check that the release never requests. The fresh installer check and the app are unchanged."
+    }
+  ]
+}

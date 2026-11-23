@@ -710,7 +710,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 
 `PlacedSessions` (`src/core/placed/placedSessions.ts`) is the home's half, composed in `createServices` as `services.placed`; it reaches the computers only through `WorkDevices`, which the shell attaches to the connection (`docs/devices.md`).
 It is the one writer of a task's `crewmates/<task>/placed/` folder at the home, through its `PlacedLedger`.
-Its parts sit beside it in `src/core/placed/`: what the crew reads of the computers (`CrewMachines`, `crewMachines.ts`), the callbacks it answers (`placedCallbacks.ts`), what it keeps of them (`PlacedLedger`, `placedLedger.ts`), this Mac's copy of a record there (`RecordCopy`, `recordCopy.ts`), and each computer's own accounts (`PlacedAccounts`, `placedAccounts.ts`).
+Its parts sit beside it in `src/core/placed/`: what the crew reads of the computers (`CrewMachines`, `crewMachines.ts`), the callbacks it answers (`placedCallbacks.ts`), what it keeps of them (`PlacedLedger`, `placedLedger.ts`), this Mac's copy of a record there (`RecordCopy`, `recordCopy.ts`), each computer's own accounts (`PlacedAccounts`, `placedAccounts.ts`), what it keeps of each computer and task (`placedState.ts`), the spec an open asks there (`placedSpecs.ts`), the close orders it sends (`PlacedCloses`, `placedCloses.ts`), and the clearing of words from outside there (`placedOutside.ts`).
 
 - **Where a task runs.**
   `task_execution.device_id` (migration 63, moved by migration 97, written by `TaskService.placement.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.

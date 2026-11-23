@@ -692,6 +692,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/placed/placedAccounts.ts": 1,
   "src/core/placed/placedBrowsers.ts": 10,
   "src/core/placed/placedCallbacks.ts": 4,
+  "src/core/placed/placedCloses.ts": 1,
   "src/core/placed/placedCopies.ts": 18,
   "src/core/placed/placedLedger.ts": 2,
   "src/core/placed/placedSession.ts": 2,

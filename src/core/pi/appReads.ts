@@ -77,6 +77,7 @@ function overChannel<C extends CoreInvokeChannel>(
 }
 
 const deviceArgs = z.strictObject({ id: z.string().min(1).max(64) });
+const ownStyleArgs = z.strictObject({ name: z.string().min(1).max(40) });
 
 /**
  * The keys each command has now, as Keyboard settings lists them. With a
@@ -133,9 +134,9 @@ export const APP_READS = {
     // i18n-exempt: served to the first mate, a model, never shown
     about:
       "One of the person's own ambient styles, whole, by its name or id, as the ambient-own-style line's current value names them: read it before saving it changed.",
-    args: z.strictObject({ name: z.string().min(1).max(40) }),
+    args: ownStyleArgs,
     run: async (dispatch, args) => {
-      const { name } = args as { name: string };
+      const { name } = ownStyleArgs.parse(args);
       const saved = (await dispatch("inf:settings:appearance:get", [])).ambientOwnStyles ?? [];
       const style = findOwnStyle(saved, name);
       if (!style) throw new Error(noOwnStyle(name, saved));

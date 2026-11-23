@@ -238,18 +238,13 @@ async function findRecord({ github, owner, repo }) {
   return null;
 }
 
-/** Whether an account can write to the project; one GitHub no longer knows cannot. */
+/** Whether an account can write to the project. */
 async function canWrite({ github, owner, repo, login }) {
   if (!login) return false;
-  try {
-    const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
-      owner,
-      repo,
-      username: login,
-    });
-    return KEEPERS.has(data.permission);
-  } catch (error) {
-    if (error?.status === 404) return false;
-    throw error;
-  }
+  const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+    owner,
+    repo,
+    username: login,
+  });
+  return KEEPERS.has(data.permission);
 }

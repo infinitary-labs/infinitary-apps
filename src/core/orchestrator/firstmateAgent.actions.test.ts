@@ -256,9 +256,17 @@ describe("FirstmateAgent", () => {
       (await change("device-invite", { how: "address", address: "sam@mini.local" })).text,
     ).toMatch(/offered on/);
     const add = card("Add the computer at sam@mini.local");
-    expect(add.body).toBe(
-      "<p>I set it up over Remote Login, with your own SSH key. Nothing needs to be open on it.</p>\n<p>Only your click can add a computer, so I ask first.</p>",
-    );
+    // INF-6043's change 1: what the add makes, over SSH; a named account asks for none.
+    const here = m.placeThisComputer();
+    const words = (shown: Card) => (shown.body ?? "").split(/<[^>]+>/).filter((t) => t.trim());
+    expect(words(add)).toEqual([
+      m.devicesAddressCardResult({ address: "sam@mini.local", computer: here }),
+      m.devicesAddressCardSetUp(),
+      m.devicesAddressCardAsk(),
+    ]);
+    inLanguage("fr", () => {
+      expect(wordSaidMarks(add.body ?? "")).toContain(`>${m.devicesAddressCardSetUp()}</p>`);
+    });
     expect(add.actions.find((action) => action.default)).toMatchObject({
       label: "Add it",
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
@@ -309,6 +317,16 @@ describe("FirstmateAgent", () => {
     expect(supervisor.cardActions.act(add.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
+    // A bare address, as in INF-6043's recording, asks for the account name.
+    expect((await change("device-invite", { how: "address", address: "10.0.0.9" })).text).toMatch(
+      /offered on/,
+    );
+    expect(words(card("Add the computer at 10.0.0.9"))).toEqual([
+      m.devicesAddressCardResult({ address: "10.0.0.9", computer: here }),
+      m.devicesAddressCardSetUp(),
+      m.devicesAddressCardNoAccount({ computer: here }),
+      m.devicesAddressCardAsk(),
+    ]);
     // INF-4926's plan: how "address" with no address offers a card that opens the form.
     expect((await change("device-invite", { how: "address", name: "Mac mini" })).text).toMatch(
       /offered on/,

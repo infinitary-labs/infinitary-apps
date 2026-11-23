@@ -1027,10 +1027,7 @@ export class CardService {
           news: false,
           data: { cardId: card.id, sentBackAt: card.sentBackAt, held: rework },
         });
-      // Only on entering "read": a recheck while the read is out must not
-      // ask for it again, or each answer queues the next recheck at once.
-      if (rework === "read" && before !== "read" && card.taskId)
-        this.host.readAfterTurn?.(card.taskId);
+      if (rework === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
       return false;
     }
     this.stage.release(card, "forMerge", "forChecks");

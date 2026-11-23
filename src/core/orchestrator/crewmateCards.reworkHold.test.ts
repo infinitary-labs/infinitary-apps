@@ -233,6 +233,14 @@ async function shown(options: { checks?: boolean } = {}) {
     onStage: () => at.cards().find((entry) => entry.id === card.id),
     /** Whether the card still waits in its close-out, kept from the captain. */
     held: () => at.supervisor.cards.get(card.id)?.awaiting === "close-out",
+    /** The hold's notes on the timeline, read from `tasks` (the record a restart opens). */
+    holdNotes: (tasks: TaskService = at.tasks) =>
+      tasks
+        .timeline(taskId)
+        .filter(
+          (event) =>
+            event.kind === "note" && event.data?.cardId === card.id && "held" in (event.data ?? {}),
+        ),
     raised: () =>
       at.tasks
         .timeline(taskId)
@@ -328,9 +336,8 @@ describe("a reworked merge card's return (INF-6241)", () => {
     ]);
   });
 
-  // The host answers a read seconds later, never in the same pass: a
-  // recheck while the read is out must not ask for it again, or each
-  // answer queues the next recheck and the read's answer is never handled.
+  // The host answers a read seconds later, never in the same pass, so a
+  // recheck can land while the read is out.
   it("waits for a slow read without rechecking in a loop, through a record change", async () => {
     const at = await shown();
     await at.replyAndAnswer("make it read true at night too", "On it.");
@@ -369,6 +376,7 @@ describe("a reworked merge card's return (INF-6241)", () => {
     expect(at.reads).toEqual([HEAD]);
     expect(at.held()).toBe(false);
     expect(merges(at.onStage())).toHaveLength(1);
+    expect(at.holdNotes()).toEqual([]);
 
     // Again with a watch standing on the version the card shows.
     const again = await shown();
@@ -380,6 +388,7 @@ describe("a reworked merge card's return (INF-6241)", () => {
     await endTurn(again.crewmate, again.taskId);
     await tick();
     expect(again.held()).toBe(false);
+    expect(again.holdNotes()).toEqual([]);
   });
 
   it("returns at turn end on a project with no checks or only checks a person starts", async () => {
@@ -483,6 +492,7 @@ describe("a reworked merge card's return (INF-6241)", () => {
     await endTurn(at.crewmate, at.taskId);
     expect(at.held()).toBe(true);
     expect(at.tasks.get(at.taskId)?.activity).toBe("idle");
+    expect(at.holdNotes()).toHaveLength(1);
     at.supervisor.disposeAll();
     // The launch opens the task record again, as the app does.
     const tasks = new TaskService({ db: at.db, strict: true });
@@ -496,6 +506,7 @@ describe("a reworked merge card's return (INF-6241)", () => {
     restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
     await tick();
     expect(restarted.cards.get(at.cardId)?.awaiting).toBe("close-out");
+    expect(at.holdNotes(tasks)).toHaveLength(1);
     vi.spyOn(restarted.steer, "steerInternal").mockResolvedValue(undefined as never);
     at.remote.checks = "green";
     await vi.advanceTimersByTimeAsync(60_000);
@@ -507,6 +518,7 @@ describe("a reworked merge card's return (INF-6241)", () => {
     await endTurn(resumed, at.taskId);
     await tick();
     expect(restarted.cards.get(at.cardId)?.awaiting).toBeUndefined();
+    expect(at.holdNotes(tasks)).toHaveLength(1);
     restarted.disposeAll();
   });
 

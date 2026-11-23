@@ -26,7 +26,11 @@ import {
   writeAnthropicToolUse,
 } from "../helpers/anthropicDialect";
 import type { ScriptedArgs, ScriptedCall } from "../helpers/scriptedCalls";
-import { OUTSIDE_READER_MARKER, WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
+import {
+  OUTSIDE_READER_CHANGE_MARKER,
+  OUTSIDE_READER_MARKER,
+  WRITE_ASK_ANSWER_MARKER,
+} from "./apiWriteCases";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_ORG_REFUSAL_MESSAGE,
@@ -1178,7 +1182,10 @@ export async function startMockProvider(
                   // Both ride the work-shape group (contract v4.12).
                   shape: {
                     ...(title.includes(AUTONOMY_ASK_MARKER) ? { autonomy_ask: true } : {}),
-                    ...(title.includes(OUTSIDE_READER_MARKER) ? { outside_reader: true } : {}),
+                    ...(title.includes(OUTSIDE_READER_MARKER) ||
+                    title.includes(OUTSIDE_READER_CHANGE_MARKER)
+                      ? { outside_reader: true }
+                      : {}),
                     ...(title.includes(CLAUDE_CREW_PROMPT_MARKER) ||
                     title.includes(CLAUDE_CREWMATE_MARKER)
                       ? { override_model_id: CLAUDE_CREW_MODEL }

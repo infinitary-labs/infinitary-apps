@@ -27,6 +27,11 @@ extension PhoneCardPane {
         }
     }
 
+    /// Save secret stays with its masked fields on the face: on the back it would sit under the thread's plain field.
+    func savesFromBack(_ action: PhoneJSON) -> Bool {
+        showsBack && action["id"].text != nil && action["id"].text == PhoneSecretAsk.of(card)?.pass
+    }
+
     var chosenID: PhoneJSON? { card.isPast && card.value["ending"]["how"].text != "closed" ? card.value["ending"]["actionId"] : nil }
 
     var foot: some View {
@@ -100,7 +105,7 @@ extension PhoneCardPane {
                     if asking, let count = host.reading["of"].numeric {
                         answersCount(Int(count)).layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }
-                    ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
+                    ForEach(Array(footerOrder.filter { !savesFromBack($0) }.enumerated()), id: \.offset) { _, action in
                         Button { if !endsTypingInstead() { choose(action) } } label: {
                             HStack(spacing: 6) {
                                 Text(card.label(of: action) ?? PhoneMessages.phoneCardsChooseFallback())

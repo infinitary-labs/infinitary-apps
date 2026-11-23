@@ -284,6 +284,7 @@ A reply sends its words, photos and current settings to the card’s author and 
 A card's thread is on its back (INF-1919, the captain's Approve and build): once it has a message, a latest line at the face's foot, above the field, says who wrote last in their color and the newest words on one line, then `working` with a spinner while the author is at work, the author's replies new since the back last showed with a dot on its chevron, or how many messages there are.
 A tap on the line, or Command-backslash, turns the card over about its upright axis in `--dur-med` (`PhoneTheme.surfaceMove`), a cut under Reduce Motion; Card at the back's head, or Command-backslash again, turns it back.
 The back holds Card, the thread's count and the card's minus, the card's title in one muted line, the messages, and at its foot the same field, with its draft, photos and focus, and the same choices.
+A card with a secret's masked fields leaves Save secret off its back, so Save stays with its fields on the face and never sits under the thread's plain field; Don't save there still carries the back's words.
 The body's web view stays on the hidden face through the turn, never rebuilt, and the hidden face takes no touches and is out of the accessibility tree.
 A reply that lands while the face shows lights the line and never turns the card; a send from either side turns it to show the new line.
 A revision never turns the card either (INF-2565, the captain: "i don't think we should auto flip").

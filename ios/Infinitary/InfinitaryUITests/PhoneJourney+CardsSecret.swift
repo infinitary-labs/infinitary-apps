@@ -57,6 +57,10 @@ extension PhoneJourney {
         let send = app.buttons["send-reply"]
         reveal(send); tapOnPhone(send)
         XCTAssertTrue(back.staticTexts[question].waitForPresence(timeout: 10), app.debugDescription)
+        // Save secret stays with its field on the face, never under the thread's plain field.
+        let save = try XCTUnwrap(asked["save"] as? String)
+        XCTAssertFalse(back.buttons["card-action-\(save)"].exists, "Save secret sits under the thread's field\n\(app.debugDescription)")
+        XCTAssertTrue(back.buttons["card-action-\(try XCTUnwrap(asked["dontSave"] as? String))"].exists, app.debugDescription)
         picture("1-secret-ask-thread")
         tapOnPhone(app.buttons["thread-return"])
         XCTAssertTrue(back.waitForAbsence(timeout: 10), app.debugDescription)

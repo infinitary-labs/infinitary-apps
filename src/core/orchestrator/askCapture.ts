@@ -92,6 +92,8 @@ export function askTitle(text: string, images: AskImage[] = []): string {
  */
 export type TurnOrigin = { origin: SavedOrigin; refs: readonly string[] };
 
+type AutomationOrigin = Extract<SavedOrigin, { kind: "automation" }>;
+
 export class AskCapture {
   /** The latest read ask, used only when an action omits its own selection. */
   private currentAskId: string | undefined;
@@ -187,6 +189,20 @@ export class AskCapture {
   /** The read automation run, click or report an action names, or undefined when it names none this turn read. */
   readOrigin(ref: string): TurnOrigin | undefined {
     return this.readOrigins().find((entry) => entry.refs.includes(ref));
+  }
+
+  /**
+   * The automation runs this turn read, when it read more than one. A task
+   * filed or started without naming one of them saves no origin, so it
+   * would lose its automation, that run's history and the notes its rule
+   * hands the crewmate; the filing tools refuse it instead (INF-6250's
+   * finding 5).
+   */
+  severalRuns(): AutomationOrigin[] {
+    const runs = this.readOrigins().flatMap(({ origin }) =>
+      origin.kind === "automation" ? [origin] : [],
+    );
+    return runs.length > 1 ? runs : [];
   }
 
   /**

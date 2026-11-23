@@ -14,7 +14,7 @@ import {
 } from "@shared/homeAt";
 import * as m from "@shared/i18n/messages.generated";
 import { computerOf, type JoinAtAnswer, joinAtRefusalWords } from "@shared/joinByAddress";
-import { NEARBY_OFF, NEARBY_RENEW_MS, type NearbyMacsView } from "@shared/nearbyMacs";
+import type { NearbyMacsView } from "@shared/nearbyMacs";
 import {
   addressAtPort,
   addressParts,
@@ -24,9 +24,7 @@ import {
 } from "@shared/remoteLogin";
 import { useEffect, useRef, useState } from "react";
 import { Button, StatusDot } from "../design";
-import { useCopied } from "../settings/DevicesLinks";
-import { SettingError } from "../settings/settingRows";
-import { AddressForm, PasswordStep } from "./JoinAnotherMac";
+import { AddressForm, CopyLine, PasswordStep, useNearby } from "./JoinAnotherMac";
 import { sshMustBeOn } from "./NearbyList";
 import { joinRefusalWords } from "./viewWords";
 import "./joinAnotherMac.css";
@@ -94,29 +92,6 @@ export type SetUpThereProps = {
   onConnect: (address: string) => void;
   requests?: HomeRequests;
 };
-
-/** Computers nearby with Remote Login on, looked for while `open`, as Join by its address does. */
-function useNearby(open: boolean): NearbyMacsView {
-  const [nearby, setNearby] = useState<NearbyMacsView>(NEARBY_OFF);
-  useEffect(() => {
-    if (!open) return;
-    let live = true;
-    const off = window.infinitary.devices.onNearby((view) => {
-      if (live) setNearby(view);
-    });
-    const ask = () => void window.infinitary.devices.nearby(true).catch(() => undefined);
-    ask();
-    const renew = setInterval(ask, NEARBY_RENEW_MS);
-    return () => {
-      live = false;
-      off();
-      clearInterval(renew);
-      setNearby(NEARBY_OFF);
-      void window.infinitary.devices.nearby(false).catch(() => undefined);
-    };
-  }, [open]);
-  return nearby;
-}
 
 /** The computer's own name until the look reads it: the host the address names. */
 function hostOf(address: string): string {
@@ -365,22 +340,6 @@ export type SetUpThereViewProps = {
   onCommands: () => void;
 };
 
-/** One command to run there, with its own Copy. */
-function WayLine({ text }: { text: string }) {
-  const [copied, copy] = useCopied();
-  return (
-    <>
-      <div className="fm-join-copy" data-home-way="">
-        <code className="fm-devices-link">{text}</code>
-        <Button variant="secondary" size="sm" type="button" onClick={() => void copy(text)}>
-          {copied === "copied" ? m.settingsDevicesCopied() : m.devicesJoinSetUpCopy()}
-        </Button>
-      </div>
-      {copied === "failed" && <SettingError error={m.devicesJoinSetUpCopyFailed()} />}
-    </>
-  );
-}
-
 /** The address form's fields, without the steps' Cancel: the welcome's Back leaves this form. */
 function fields({ onCancel: _steps, ...props }: SetUpThereViewProps) {
   return props;
@@ -587,7 +546,7 @@ function Steps(
       {started?.lingerOff && started.user && (
         <div data-home-linger="">
           <p className="fm-join-sub">{m.devicesHomeLinger({ computer: phase.name })}</p>
-          <WayLine text={lingerWay(started.user)} />
+          <CopyLine name="way" text={lingerWay(started.user)} />
         </div>
       )}
       {phase.at === "working" && (
@@ -611,7 +570,7 @@ function Steps(
             <span>{phase.lines[0]}</span>
           </p>
           {phase.lines[1] && <p className="fm-join-sub fm-home-way">{phase.lines[1]}</p>}
-          {phase.way && <WayLine text={phase.way} />}
+          {phase.way && <CopyLine name="way" text={phase.way} />}
           <div className="fm-join-buttons">
             <Button
               variant="primary"

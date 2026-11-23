@@ -212,7 +212,7 @@ export type JoinAnotherMacProps = {
  * looked for while `open`, asked again inside the core's minute, and
  * stopped once it closes, as Settings -> Devices looks for them.
  */
-function useNearby(open: boolean): NearbyMacsView {
+export function useNearby(open: boolean): NearbyMacsView {
   const [nearby, setNearby] = useState<NearbyMacsView>(NEARBY_OFF);
   useEffect(() => {
     if (!open) return;
@@ -653,8 +653,16 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   );
 }
 
-/** One address to type on the first mate's computer, with its own Copy. */
-function CopyLine({ text, name, autoFocus }: { text: string; name: string; autoFocus: boolean }) {
+/** One line to type on another computer, such as an address or a command, with its own Copy. */
+export function CopyLine({
+  text,
+  name,
+  autoFocus = false,
+}: {
+  text: string;
+  name: string;
+  autoFocus?: boolean;
+}) {
   const [copied, copy] = useCopied();
   return (
     <>

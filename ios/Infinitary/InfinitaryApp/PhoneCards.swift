@@ -1237,7 +1237,9 @@ private struct PhoneCardPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space3)
         .contentShape(Rectangle())
-        .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
+        // INF-3106 direction B inside the scroller: the tap exists only while the keyboard is up, so at rest no tap of the
+        // scroller's own waits on it and the body's taps, such as Point at's, reach the body untouched.
+        .gesture(TapGesture().onEnded { dismissPhoneKeyboard() }, including: messageContext.keyboardUp ? .all : .subviews)
     }
 
     /// The card's one minus, at the trailing end of its face's head and of its thread's head; Shift-Command-M presses

@@ -1201,7 +1201,7 @@ Every route of `Computers.update` - over Remote Login, over the connection and M
 Add and Update first look up this computer's version in the published builds, without downloading its zip here.
 This computer sends fixed shell instructions, the address and the published SHA-256 over its existing SSH path; an older Mac needs no new helper to read them.
 That Mac downloads the universal zip itself over HTTPS, checks its checksum and unpacks it in a private temporary folder.
-Before starting it, `codesign --verify --deep --strict -R` verifies its Developer ID signature against the release's Team ID and app identifier in `packaging/release-identity.json`, also read by the release gate.
+Before starting it, `codesign --verify --deep --strict -R` verifies its Developer ID signature against the release's accepted teams and app identifier in `packaging/release-identity.json` (`src/shared/releaseRequirement.ts`), also read by the release gate.
 A bad or wrong-publisher signature follows the same immediate counted-send fallback as a checksum mismatch.
 A Mac reached by its address but proven to be this Mac uses the local copy as before, without even looking up a public download.
 Each second it reports received bytes and the final release response's Content-Length, if present, never a redirect's size.

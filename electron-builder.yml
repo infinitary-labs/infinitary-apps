@@ -172,6 +172,11 @@ mac:
   # self-signed certificate (docs/local-code-signing.md) and never with
   # this one.
   identity: "Kun Chen (9T2J7MNUP9)"
+  # Signs as electron-builder would, and gives the app bundle a designated
+  # requirement naming every team in packaging/release-identity.json, so an
+  # installed copy accepts the next team's update (docs/alpha.md, "Moving
+  # releases to another Apple team"). electron-builder.dev.yml replaces it.
+  sign: ./scripts/sign-release-mac.mjs
   entitlements: packaging/entitlements.plist
   entitlementsInherit: packaging/entitlements.plist
   # The sentence macOS shows when it first asks for the microphone

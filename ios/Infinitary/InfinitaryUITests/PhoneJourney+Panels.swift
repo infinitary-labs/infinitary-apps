@@ -11,7 +11,7 @@ extension PhoneJourney {
     /// on the computer, runs one press exactly once, stays folded across a relaunch, shows the computer's stop with Retry,
     /// and the tab leaves once the panel is gone. INF-6295: with a rule saved on the test home's real core (`panel-automation-on`),
     /// the app's own Automation panel joins the tab with no owner word and the rule's name, the Tasks and Activity panels
-    /// stay out, and the tab leaves once the rule is deleted.
+    /// stay out, an iPad on its side draws it from the sidebar's Panels choice, and the tab leaves once the rule is deleted.
     func testPanelsTab() async throws {
         try await launchFresh()
         try await join()
@@ -154,6 +154,17 @@ extension PhoneJourney {
         XCTAssertFalse(app.buttons["panel-header-activity"].exists, "Activity stays its own tab")
         // In light and dark, as the release note's picture pair shows it.
         try await appearances("panels-app-automation", showing: automation)
+        // In the wide layout, the sidebar's Panels choice shows for an app panel alone and draws it.
+        if phoneTurnedLayout(app) == .wide {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let choice = app.otherElements["phone-sidebar"].buttons["Panels"]
+            XCTAssertTrue(choice.waitForPresence(timeout: 20), app.debugDescription)
+            tapOnPhone(choice, repeatDiscarded: false)
+            XCTAssertTrue(rule.waitForPresence(timeout: 60), app.debugDescription)
+            picture("panels-ipad-sidebar-automation")
+            XCUIDevice.shared.orientation = .portrait
+            XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
+        }
         _ = try await home("panel-automation-off")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once no rule is saved")
     }

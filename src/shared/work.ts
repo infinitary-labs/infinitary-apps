@@ -23,6 +23,7 @@ import { crewResponseSchema } from "./crewResponses";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
 import { filesAnswerSchema, filesReadInputSchema } from "./files";
+import { followupInputSchema } from "./followup";
 import { closeOrder } from "./leftoverPrograms";
 import { keptValidationInputSchema } from "./liveValidation";
 import { personalVersionSchema } from "./personalSet";
@@ -548,16 +549,7 @@ export const workRequests = {
   },
   "inf:work:followup": {
     effect: "change",
-    request: asked({
-      input: z.object({
-        title: z.string(),
-        goal: z.string(),
-        why: z.string(),
-        blocksMe: z.boolean().optional(),
-        testFailure: z.boolean().optional(),
-        testPath: z.string().optional(),
-      }),
-    }),
+    request: asked({ input: followupInputSchema }),
     response: toolTextSchema,
   },
   "inf:work:start-program": {

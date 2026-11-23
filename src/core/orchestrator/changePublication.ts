@@ -201,7 +201,13 @@ export class ChangePublication {
       : undefined;
   }
 
-  async presentationHead(taskId: string): Promise<string> {
+  /**
+   * The commit the working copy has checked out, and, given the version a
+   * story was prepared for, a refusal when this working copy does not have
+   * that version at all (SCR-450): it was committed in another project's
+   * folder, which this task can neither prepare nor merge.
+   */
+  async presentationHead(taskId: string, staged?: string): Promise<string> {
     const record = this.options.tasks.get(taskId);
     if (!record?.branch) throw new Error("The task has no committed branch.");
     let dir = record.worktreeDir;
@@ -220,7 +226,34 @@ export class ChangePublication {
     // Here the demonstrated version is the commit the working copy has
     // checked out: the task's own branch, or an existing branch or another
     // change the crewmate checked out to deliver (INF-2184, INF-2490).
-    return git(dir, ["rev-parse", `${record.deviceId ? record.branch : "HEAD"}^{commit}`]);
+    const head = await git(dir, [
+      "rev-parse",
+      `${record.deviceId ? record.branch : "HEAD"}^{commit}`,
+    ]);
+    // A story for a commit this working copy does not have was committed in
+    // another project's folder (SCR-450): "the code changed" would name the
+    // wrong cause, and the crewmate has nothing to commit here that would help.
+    if (
+      staged &&
+      !record.deviceId &&
+      staged !== head &&
+      /^[0-9a-f]{7,64}$/i.test(staged) &&
+      !(await this.holdsCommit(dir, staged))
+    ) {
+      const here = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+      throw new Error(
+        `The story's version is not a commit in this task's working copy${here ? `, ${here.name}'s folder` : ""}: a change committed in another project's folder cannot be prepared or merged from this task. Report it, so the first mate moves the task to that project (update_task project), where its story and merge are read.`,
+      );
+    }
+    return head;
+  }
+
+  /** Whether the working copy at `dir` holds `commit`; never a fetch. */
+  private async holdsCommit(dir: string, commit: string): Promise<boolean> {
+    return git(dir, ["cat-file", "-e", `${commit}^{commit}`]).then(
+      () => true,
+      () => false,
+    );
   }
 
   /**

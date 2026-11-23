@@ -288,6 +288,13 @@ export type FollowupInput = {
   testFailure?: boolean;
   /** The failing test's path. The host dedupes open rows on it. */
   testPath?: string;
+  /**
+   * The project that owns the files the defect is in, by key or name: the
+   * follow-up lands there, with that project's working copy, story and merge.
+   */
+  project?: string;
+  /** A repository of that project, when it holds more than one. */
+  repository?: string;
 };
 
 /**

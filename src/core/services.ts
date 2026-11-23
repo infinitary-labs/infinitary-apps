@@ -816,7 +816,7 @@ export async function createServices(
     namingRule,
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
-    head: (taskId) => changeDelivery.publication.presentationHead(taskId),
+    head: (taskId, staged) => changeDelivery.publication.presentationHead(taskId, staged),
     branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
     mapPart: () => runbooks.mapPart(),
   });

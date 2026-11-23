@@ -266,6 +266,13 @@ export type FileFollowupInput = {
   testFailure?: boolean;
   /** The failing test's path. The host refuses a second open row for it. */
   testPath?: string;
+  /**
+   * The project the follow-up lands in, when the defect is in another
+   * project's files: its row, and the repository it works in, are that
+   * project's, never the origin's.
+   */
+  projectId?: string;
+  repoId?: string | null;
 };
 
 export type FileFollowupResult = {
@@ -1273,10 +1280,10 @@ export class TaskService {
         title: input.title,
         goal: input.goal,
         prompt: input.prompt,
-        repoId: origin.repoId,
+        repoId: input.repoId === undefined ? origin.repoId : input.repoId,
         // No parentId: the discovered-from edge below is the whole
         // relationship. A child would gate the origin's close.
-        projectId: origin.projectId,
+        projectId: input.projectId ?? origin.projectId,
         startPolicy: "on-request",
         actor,
         createdAt: at,

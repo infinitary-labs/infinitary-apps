@@ -30,6 +30,7 @@ import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import type { FollowupInput } from "../session/tools";
 import type { TaskRecord } from "../storage/taskRecords";
 import { keptYeses } from "../tasks/alreadyAllowed";
+import { moveTargetRepository } from "../tasks/projectMove";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";
@@ -113,10 +114,28 @@ export class ReportIntake {
     if (titleRefused) throw new Error(`Nothing was filed. ${titleRefused}`);
     if (!goal) throw new Error("goal is required: one sentence saying what done looks like.");
     if (!why) throw new Error("why is required: what you found that makes this follow-up needed.");
-    const personal = this.host.isPersonalTask(task.id);
+    // A defect in another project's files is that project's work (SCR-450):
+    // the follow-up lands there, so the working copy, story and merge that
+    // carry it are that project's; without one it lands in the origin's.
+    const named = input.project?.trim();
+    const project = named
+      ? (this.options.tasks.projects.byKey(named) ?? this.options.tasks.projects.get(named))
+      : undefined;
+    if (named && !project) {
+      const known = this.options.tasks.projects
+        .list()
+        .map((each) => each.key)
+        .join(", ");
+      throw new Error(`Nothing was filed. No project "${named}"; the projects are ${known}.`);
+    }
+    const landing = project
+      ? moveTargetRepository(project, this.options.tasks.projects, origin, input.repository)
+      : undefined;
+    const personal = project ? false : this.host.isPersonalTask(task.id);
     // The follow-up's own posture, never the origin's: an ask made of the
     // origin is not one made of it (FI3-733). It is written again at start.
-    const repo = origin.repoId ? this.options.repos.get(origin.repoId) : undefined;
+    const repoId = landing === undefined ? origin.repoId : landing;
+    const repo = repoId ? this.options.repos.get(repoId) : undefined;
     const delivery = personal ? undefined : deliveryFor({ repo: repo?.delivery }).delivery;
     const filed = this.options.tasks.fileFollowup({
       id: randomUUID().slice(0, 8),
@@ -129,6 +148,7 @@ export class ReportIntake {
         delivery,
         personal ? this.host.personalFacts() : undefined,
       ),
+      ...(project ? { projectId: project.id, repoId: landing ?? null } : {}),
       ...(input.blocksMe ? { blocksOrigin: true } : {}),
       ...(input.testFailure ? { testFailure: true } : {}),
       ...(input.testPath ? { testPath: input.testPath } : {}),

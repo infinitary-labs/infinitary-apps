@@ -171,8 +171,12 @@ export class ChangePresentations {
       namingRule?: () => NamingRule | null;
       tasks: PresentationLedger;
       mediaDir: (taskId: string) => string;
-      /** Read actual committed code, including after asynchronous uploads. */
-      head: (taskId: string) => Promise<string>;
+      /**
+       * The commit the task's working copy has checked out, read for the
+       * version a story was prepared for: a story for a commit that copy does
+       * not have is refused there in its own words (SCR-450).
+       */
+      head: (taskId: string, staged?: string) => Promise<string>;
       /**
        * The branch the working copy has checked out, whose change a story
        * is prepared for (INF-2490); undefined for the task's current change.
@@ -205,7 +209,7 @@ export class ChangePresentations {
       return await this.serial(
         taskId,
         async () => {
-          if ((await this.options.head(taskId)) !== staged.head)
+          if ((await this.options.head(taskId, staged.head)) !== staged.head)
             throw new Error("The code changed. Prepare a story for the current committed version.");
           const branch = await this.options.branch?.(taskId);
           const destination = await storyDestination(target);

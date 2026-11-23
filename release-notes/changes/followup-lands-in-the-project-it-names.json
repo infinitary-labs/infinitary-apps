@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "followup-lands-in-the-project-it-names",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A follow-up about another project's files lands in that project",
+      "body": "A follow-up about another project's files now files its task in that project, so the fix is committed and merged where those files live. Preparing a change the task does not have now says the change was committed in another project's folder. It says the task has to move there first, instead of asking for a commit that would not help.",
+      "noPicture": "Which project a filed task lands in and one refusal's words change; the task board shows the row only once a crewmate files one.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

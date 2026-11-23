@@ -1582,6 +1582,7 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 Every new branch-based change and its merge card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`), including GitHub Enterprise, self-hosted GitLab, plain Git and local-only delivery.
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
+A story is prepared for the version the task's working copy has: when its `head` is not a commit in that working copy at all, the answer says the change was committed in another project's folder, and that this task can neither prepare nor merge it; the first mate moves the task there (`update_task` `project`), where its story and merge are read.
 A hosted story is read by everyone who can see the project, and by anyone when the project is public, so the crewmate writes it for a stranger (INF-2142).
 `PUBLIC_WRITING` (`src/core/prompts/publicWriting.ts`) is that rule's one home in the crewmate core, served once on Pi and on Claude, and covers everything sent where the project lives: stories, descriptions, commit messages, comments and releases.
 It keeps out the captain's own setup by name, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys and the captain's words; a local-only project's story, shown only on its merge card, is exempt.

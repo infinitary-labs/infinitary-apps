@@ -135,6 +135,14 @@ describe("selective filing reaches every agent that acts on it", () => {
     );
   });
 
+  it("tells a crewmate where a defect in another project's files lands", () => {
+    expect(filing?.description).toContain(
+      "A defect in another project's files is that project's work: name it with project",
+    );
+    expect(filingParameters.properties.project?.description).toContain("Destination project key");
+    expect(filingParameters.properties.repository?.description).toContain("With project");
+  });
+
   it("has the Firstmate weed out repeats, keep a filing with a reason, offer optional ideas together, and check what a merge covered", () => {
     const core = FIRSTMATE_PROMPT_CORE;
     expect(core).toContain("Search tasks first; drop a repeat as covered");

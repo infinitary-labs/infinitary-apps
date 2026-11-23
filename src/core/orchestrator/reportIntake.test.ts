@@ -91,6 +91,47 @@ describe("what a crewmate reports", () => {
     expect(h.tasks.list()).toHaveLength(2);
   });
 
+  it("lands a follow-up in the project it names, with that project's repository and posture, and refuses a project the app does not know", async () => {
+    const h = await builder();
+    const notes = seedProject(h.db, {
+      id: "notes",
+      name: "notes",
+      path: scratchDir("infinitary-notes-"),
+      origin: "https://github.com/octo/notes.git",
+      delivery: "local-only",
+    });
+    const landing = h.tasks.projects
+      .list()
+      .find((each) =>
+        h.tasks.projects.repositoriesOf(each.id).some((repository) => repository.id === notes.id),
+      );
+    if (!landing) throw new Error("the notes project was not seeded");
+    const filed = h.followup({
+      title: "Fix the notes index",
+      goal: "The index lists every note.",
+      why: "It drops the newest one.",
+      project: landing.key,
+    });
+    const row = h.tasks.list().find((each) => each.title === "Fix the notes index");
+    if (!row) throw new Error("the follow-up was not filed");
+    expect(filed).toContain(`Filed follow-up ${row.key}`);
+    // The row that lands in the other project works there: its repository
+    // gives its working copy, story head and local merge, and its brief takes
+    // that project's delivery, never the origin's pull requests.
+    expect(row.projectId).toBe(landing.id);
+    expect(row.repoId).toBe(notes.id);
+    expect(row.prompt).toContain("local-only - work merges on a local branch");
+    expect(() =>
+      h.followup({
+        title: "Fix the notes index again",
+        goal: "The index lists every note.",
+        why: "It drops the newest one.",
+        project: "NOPE",
+      }),
+    ).toThrow(/Nothing was filed. No project "NOPE"; the projects are /);
+    expect(h.tasks.list()).toHaveLength(2);
+  });
+
   it("refuses a response on a card line for a request that is unknown, cancelled, already answered, about another card or another message", async () => {
     const h = await builder();
     const cardId = syncCardId(

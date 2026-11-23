@@ -126,6 +126,7 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "Set blocks_me only for a real dependency your task cannot merge without; it stops your task closing.",
   "For a test failure, pass test_failure true and test_path: the host refuses a missing path and returns an existing key instead of filing a duplicate.",
+  "A defect in another project's files is that project's work: name it with project, and the app files the row there.",
   "Never file progress, captain questions (emit a card), or work you are about to do yourself.",
 ].join(" ");
 
@@ -160,6 +161,17 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
         description: "The failing test's path.",
       }),
     ),
+    project: Type.Optional(
+      Type.String({
+        description:
+          "Destination project key: a defect in another project's files is that project's work, so the row lands there, with its working copy, story and merge; absent, in your task's project.",
+      }),
+    ),
+    repository: Type.Optional(
+      Type.String({
+        description: "With project: repository name if several",
+      }),
+    ),
   }),
   bind: ({ onFollowup }) =>
     onFollowup &&
@@ -174,6 +186,8 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
             ...(params.blocks_me ? { blocksMe: true } : {}),
             ...(params.test_failure ? { testFailure: true } : {}),
             ...(params.test_path ? { testPath: params.test_path } : {}),
+            ...(params.project ? { project: params.project } : {}),
+            ...(params.repository ? { repository: params.repository } : {}),
           },
         ],
         signal,

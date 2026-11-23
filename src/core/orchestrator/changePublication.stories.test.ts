@@ -35,6 +35,8 @@ import {
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
 import type { MergeAuthorization } from "../storage/taskRecords";
+import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
+import { ChangePresentations } from "./changePresentations";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (a stale story merged under an override) 0.63 s
@@ -1709,6 +1711,102 @@ describe("shared story delivery boundaries", () => {
     writeFileSync(join(dir, "tracked.txt"), "An uncommitted change\n");
     await expect(at.service.publication.presentationHead("ab12cd34")).rejects.toThrow(
       "Commit the task's changes",
+    );
+  });
+
+  // SCR-450: a crewmate on a task whose working copy is one project cannot
+  // prepare a change its fixes committed in another project's folder, and the
+  // refusal says so instead of "the code changed", which names nothing it can do.
+  it("refuses a story for a version this task's working copy does not have, and says where it was committed", async () => {
+    const at = setup();
+    const { repo } = await at.repos.setup({ kind: "init", name: "story-head" });
+    insertTask(at.tasks, { repoId: repo.id, repoDir: repo.path, worktreeDir: repo.path });
+    const dir = repo.path;
+    const run = (...args: string[]) =>
+      execFileSync("git", ["-C", dir, ...args])
+        .toString()
+        .trim();
+    run("config", "user.email", "test@example.com");
+    run("config", "user.name", "Test");
+    const base = run("rev-parse", "HEAD");
+    run("checkout", "-b", "fm/task-ab12cd34");
+    writeFileSync(join(dir, "tracked.txt"), "Recorded fixture\n");
+    run("add", "tracked.txt");
+    run("commit", "-m", "test: record a fixture");
+    const story = (head: string) =>
+      stageChangePresentation(
+        {
+          title: "fix(story): refuse a version this working copy lacks",
+          base,
+          head,
+          publishable: true,
+          why: ["A crewmate needed the truth about where its change was committed."],
+          whatChanged: ["The refusal names the other project's folder."],
+          before: ["The answer said the code changed."],
+          after: ["The answer says the version is not in this working copy."],
+          checked: [{ check: "Ran the file", result: "It passed." }],
+          verification: [],
+          risk: {
+            blast: { level: "low", why: "One refusal's words." },
+            behavior: { level: "low", why: "A refusal names the right cause." },
+            undo: { level: "low", why: "A revert undoes it." },
+            evidence: { level: "low", why: "One test shows it." },
+            sensitivity: { level: "low", why: "No saved data." },
+            novelty: { level: "low", why: "An existing refusal." },
+            deps: { level: "low", why: "No package." },
+          },
+          requiredActions: [],
+          unfinished: [],
+          views: [
+            {
+              id: "refusal",
+              kind: "new",
+              caption: "The refusal",
+              before: [],
+              after: [
+                {
+                  path: "release-notes/pictures/action-reply-line-dark.webp",
+                  alt: "The refusal under the change story answer",
+                  inspected: true,
+                  captureHead: head,
+                  faults: [],
+                },
+              ],
+            },
+          ],
+        },
+        { taskId: "ab12cd34", worktree: process.cwd(), dir: at.paths },
+      );
+    // The story's own reading of the working copy is the one the app wires:
+    // this delivery's publication answers the version and the refusal.
+    let publication: ChangeDelivery["publication"];
+    const presentations = new ChangePresentations({
+      tasks: at.tasks,
+      mediaDir: () => at.paths,
+      head: (taskId, staged) => publication.presentationHead(taskId, staged),
+    });
+    const delivery = createChangeDelivery({
+      tasks: at.tasks,
+      repos: at.repos,
+      presentations,
+      forgeFor: () => at.forge,
+      validateRange: async () => {},
+    });
+    publication = delivery.publication;
+    const elsewhere = "b".repeat(40);
+    const refused = await delivery.publication.preparePresentation(
+      "ab12cd34",
+      await story(elsewhere),
+    );
+    expect(refused).toContain("Could not prepare the change story");
+    expect(refused).toContain(
+      "a change committed in another project's folder cannot be prepared or merged from this task",
+    );
+    expect(refused).toContain("moves the task to that project");
+    // A version this working copy has, but has not checked out, is the case
+    // the older words still fit: nothing was committed elsewhere.
+    expect(await delivery.publication.preparePresentation("ab12cd34", await story(base))).toContain(
+      "The code changed. Prepare a story for the current committed version.",
     );
   });
   // INF-3585's story-selection finding and the captain's title choice:

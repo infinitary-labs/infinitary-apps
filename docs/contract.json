@@ -76019,6 +76019,12 @@
                   },
                   "testPath": {
                     "type": "string"
+                  },
+                  "project": {
+                    "type": "string"
+                  },
+                  "repository": {
+                    "type": "string"
                   }
                 },
                 "required": [

@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "Copy %1$@ to this computer's clipboard.";
 "settingsSecretsCopyRefused" = "No confirmation was accepted. Nothing was copied.";
 "settingsSecretsCopyUnavailable" = "Secrets could not copy this value. Nothing was copied.";
-"settingsSecretsCopyUnknown" = "Secrets could not tell whether the value reached the clipboard, so it cleared what it wrote.";
+"settingsSecretsCopyUnknown" = "Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there.";
 "settingsSecretsCopyValue" = "Copy value";
 "settingsSecretsCustodyMac" = "Kept on this computer. Your crew uses them but never sees them, unless you copy one.";
 "settingsSecretsDeleteHistory" = "Delete history";

@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "%1$@ in die Zwischenablage dieses Computers kopieren.";
 "settingsSecretsCopyRefused" = "Es wurde keine Bestätigung angenommen. Nichts wurde kopiert.";
 "settingsSecretsCopyUnavailable" = "Geheimnisse konnte diesen Wert nicht kopieren. Nichts wurde kopiert.";
-"settingsSecretsCopyUnknown" = "Geheimnisse konnte nicht erkennen, ob der Wert in der Zwischenablage ankam, und hat daher entfernt, was es geschrieben hat.";
+"settingsSecretsCopyUnknown" = "Geheimnisse konnte nicht feststellen, ob der Wert in der Zwischenablage angekommen ist. Kopiere etwas anderes, um zu ersetzen, was dort liegt.";
 "settingsSecretsCopyValue" = "Wert kopieren";
 "settingsSecretsCustodyMac" = "Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.";
 "settingsSecretsDeleteHistory" = "Verlauf löschen";

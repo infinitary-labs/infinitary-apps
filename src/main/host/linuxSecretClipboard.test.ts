@@ -47,4 +47,13 @@ describe("Linux clipboard writer", () => {
     expect(await writer.write(Buffer.from([0xff, 0xfe, 0x41]))).toBe(false);
     expect(board.text).toBe("what the person copied before");
   });
+
+  it("keeps clearing an earlier copy after a later copy fails to write", async () => {
+    const board = standIn();
+    const writer = createLinuxSecretClipboard(board);
+    await writer.write(Buffer.from(TOKEN));
+    expect(await writer.write(Buffer.from([0xff, 0xfe, 0x41]))).toBe(false);
+    await writer.clear();
+    expect(board.text).toBe("");
+  });
 });

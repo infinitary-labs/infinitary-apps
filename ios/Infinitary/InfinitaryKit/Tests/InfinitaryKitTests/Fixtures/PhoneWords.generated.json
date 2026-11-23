@@ -2697,7 +2697,7 @@
   {"said":{"m":"settingsSecretsCopyReason","a":{"name":"‹name›"}},"words":"Copy ‹name› to this computer's clipboard."},
   {"said":{"m":"settingsSecretsCopyRefused"},"words":"No confirmation was accepted. Nothing was copied."},
   {"said":{"m":"settingsSecretsCopyUnavailable"},"words":"Secrets could not copy this value. Nothing was copied."},
-  {"said":{"m":"settingsSecretsCopyUnknown"},"words":"Secrets could not tell whether the value reached the clipboard, so it cleared what it wrote."},
+  {"said":{"m":"settingsSecretsCopyUnknown"},"words":"Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there."},
   {"said":{"m":"settingsSecretsCopyValue"},"words":"Copy value"},
   {"said":{"m":"settingsSecretsCustodyMac"},"words":"Kept on this computer. Your crew uses them but never sees them, unless you copy one."},
   {"said":{"m":"settingsSecretsDeleteHistory"},"words":"Delete history"},

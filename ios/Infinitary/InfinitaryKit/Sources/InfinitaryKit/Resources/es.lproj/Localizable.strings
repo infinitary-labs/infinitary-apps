@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "Copiar %1$@ al portapapeles de esta computadora.";
 "settingsSecretsCopyRefused" = "No se aceptó ninguna confirmación. No se copió nada.";
 "settingsSecretsCopyUnavailable" = "Secretos no pudo copiar este valor. No se copió nada.";
-"settingsSecretsCopyUnknown" = "Secretos no pudo saber si el valor llegó al portapapeles, así que borró lo que había escrito.";
+"settingsSecretsCopyUnknown" = "Secretos no pudo saber si el valor llegó al portapapeles. Copia otra cosa para reemplazar lo que haya allí.";
 "settingsSecretsCopyValue" = "Copiar valor";
 "settingsSecretsCustodyMac" = "Se guardan en esta computadora. Tu tripulación los usa pero nunca los ve, salvo que copies uno.";
 "settingsSecretsDeleteHistory" = "Eliminar historial";

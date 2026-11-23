@@ -33,47 +33,111 @@ const MARKERS = [
 const OPEN_TRIES = 10;
 const OPEN_WAIT_MS = 10;
 
-type User32 = {
-  /** Writes the text and markers; the clipboard's sequence number after, or undefined. */
-  write(value: Buffer): Promise<number | undefined>;
+/** The user32 and kernel32 calls the writer makes; a check supplies a stand-in. */
+export type WindowsClipboardCalls = {
+  /** OpenClipboard for the writer's own window. */
+  open(): boolean;
+  close(): void;
+  empty(): boolean;
+  /** SetClipboardData; on success Windows owns the memory. */
+  put(format: number, memory: unknown): boolean;
+  /** Movable memory holding the value as UTF-16 text; undefined when it is not UTF-8 or none is left. */
+  text(value: Buffer): unknown;
+  /** Movable memory holding a DWORD 0. */
+  zero(): unknown;
+  free(memory: unknown): void;
   sequence(): number;
-  /** Empties the clipboard if it opens now; synchronous, for a clear the app starts as it quits. */
-  empty(): void;
+  /** The registered marker formats, in `MARKERS` order. */
+  markers: readonly number[];
 };
 
-export function createWindowsSecretClipboard(): SecretClipboard | undefined {
-  if (hostPlatform() !== "win32") return undefined;
-  let user32: User32;
-  try {
-    binding ??= bindUser32();
-    user32 = binding;
-  } catch {
-    return undefined;
+export function createWindowsSecretClipboard(
+  calls?: WindowsClipboardCalls,
+): SecretClipboard | undefined {
+  let api = calls;
+  if (!api) {
+    if (hostPlatform() !== "win32") return undefined;
+    try {
+      binding ??= bindUser32();
+      api = binding;
+    } catch {
+      return undefined;
+    }
   }
-  /** The sequence number right after the last write, while it may still be there. */
+  const user32 = api;
+  /** The sequence number right after the last write that landed, while it may still be there. */
   let written: number | undefined;
+  const open = async () => {
+    for (let tried = 1; ; tried++) {
+      if (user32.open()) return true;
+      if (tried === OPEN_TRIES) return false;
+      await new Promise((resolve) => setTimeout(resolve, OPEN_WAIT_MS));
+    }
+  };
+  /** The sequence number after the text and every marker are on the clipboard, or undefined. */
+  const write = async (value: Buffer): Promise<number | undefined> => {
+    const text = user32.text(value);
+    if (text == null) return undefined;
+    if (!(await open())) {
+      user32.free(text);
+      return undefined;
+    }
+    try {
+      if (!user32.empty()) {
+        user32.free(text);
+        return undefined;
+      }
+      if (!user32.put(UNICODE_TEXT, text)) {
+        user32.free(text);
+        return undefined;
+      }
+      for (const format of user32.markers) {
+        const zero = user32.zero();
+        if (zero == null || !user32.put(format, zero)) {
+          if (zero != null) user32.free(zero);
+          // The text must not stay without the formats that keep it here.
+          user32.empty();
+          return undefined;
+        }
+      }
+    } finally {
+      user32.close();
+    }
+    return user32.sequence();
+  };
   return {
     concealed: true,
+    // The last write's mark stays until a new write lands, so a failed copy
+    // never strands the earlier value past its clear; the sequence number
+    // keeps that clear from touching anything newer.
     write: async (value) => {
-      written = undefined;
+      let next: number | undefined;
       try {
-        written = await user32.write(value);
+        next = await write(value);
       } catch {
         return false;
       }
-      return written !== undefined;
+      if (next === undefined) return false;
+      written = next;
+      return true;
     },
+    // Synchronous inside, so a clear the app starts as it quits finishes first.
     clear: async () => {
       const last = written;
       written = undefined;
-      if (last !== undefined && user32.sequence() === last) user32.empty();
+      if (last === undefined || user32.sequence() !== last || !user32.open()) return;
+      try {
+        user32.empty();
+      } finally {
+        user32.close();
+      }
     },
   };
 }
 
-let binding: User32 | undefined;
+let binding: WindowsClipboardCalls | undefined;
 
-function bindUser32(): User32 {
+function bindUser32(): WindowsClipboardCalls {
   const user = koffi.load("user32.dll");
   const kernel = koffi.load("kernel32.dll");
   const openClipboard = user.func("OpenClipboard", "bool", ["void *"]);
@@ -127,61 +191,29 @@ function bindUser32(): User32 {
     globalFree(handle);
     return undefined;
   };
-  const put = (format: number, handle: unknown) => {
-    if (setClipboardData(format, handle) != null) return true;
-    globalFree(handle);
-    return false;
-  };
-  const open = async () => {
-    for (let tried = 1; ; tried++) {
-      if (openClipboard(owner)) return true;
-      if (tried === OPEN_TRIES) return false;
-      await new Promise((resolve) => setTimeout(resolve, OPEN_WAIT_MS));
-    }
-  };
 
   return {
-    write: async (value) => {
-      // Straight from the value's bytes into Windows' memory: no string of it
-      // is made in this process.
+    open: () => openClipboard(owner),
+    close: () => {
+      closeClipboard();
+    },
+    empty: () => emptyClipboard(),
+    put: (format, handle) => setClipboardData(format, handle) != null,
+    // Straight from the value's bytes into Windows' memory: no string of it
+    // is made in this process.
+    text: (value) => {
       const units = toWide(UTF8, INVALID_CHARS, value, value.length, null, 0);
       if (units <= 0) return undefined;
-      const text = memory(
+      return memory(
         (units + 1) * 2,
         (at) => toWide(UTF8, INVALID_CHARS, value, value.length, at, units) === units,
       );
-      if (!text) return undefined;
-      if (!(await open())) {
-        globalFree(text);
-        return undefined;
-      }
-      try {
-        if (!emptyClipboard()) {
-          globalFree(text);
-          return undefined;
-        }
-        if (!put(UNICODE_TEXT, text)) return undefined;
-        for (const format of markers) {
-          const zero = memory(4, () => true);
-          if (!zero || !put(format, zero)) {
-            // The text must not stay without the formats that keep it here.
-            emptyClipboard();
-            return undefined;
-          }
-        }
-      } finally {
-        closeClipboard();
-      }
-      return sequence();
+    },
+    zero: () => memory(4, () => true),
+    free: (handle) => {
+      globalFree(handle);
     },
     sequence: () => sequence(),
-    empty: () => {
-      if (!openClipboard(owner)) return;
-      try {
-        emptyClipboard();
-      } finally {
-        closeClipboard();
-      }
-    },
+    markers,
   };
 }

@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "نسخ %1$@ إلى حافظة هذا الكمبيوتر.";
 "settingsSecretsCopyRefused" = "لم يُقبل أي تأكيد. لم يُنسخ شيء.";
 "settingsSecretsCopyUnavailable" = "تعذّر على الأسرار نسخ هذه القيمة. لم يُنسخ شيء.";
-"settingsSecretsCopyUnknown" = "تعذّر على الأسرار معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة، لذا مسحت ما كتبته.";
+"settingsSecretsCopyUnknown" = "لم تتمكن الأسرار من معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة. انسخ شيئًا آخر ليحل محل ما فيها.";
 "settingsSecretsCopyValue" = "نسخ القيمة";
 "settingsSecretsCustodyMac" = "محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.";
 "settingsSecretsDeleteHistory" = "حذف السجل";

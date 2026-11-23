@@ -3395,7 +3395,7 @@
 "settingsSecretsCopyReason" = "%1$@을(를) 이 컴퓨터의 클립보드에 복사합니다.";
 "settingsSecretsCopyRefused" = "확인이 받아들여지지 않았습니다. 아무것도 복사하지 않았습니다.";
 "settingsSecretsCopyUnavailable" = "비밀 정보에서 이 값을 복사할 수 없었습니다. 아무것도 복사하지 않았습니다.";
-"settingsSecretsCopyUnknown" = "비밀 정보에서 값이 클립보드에 들어갔는지 알 수 없어, 쓴 내용을 지웠습니다.";
+"settingsSecretsCopyUnknown" = "비밀 정보가 값이 클립보드에 들어갔는지 확인하지 못했습니다. 다른 것을 복사해 그곳에 있는 내용을 바꾸세요.";
 "settingsSecretsCopyValue" = "값 복사";
 "settingsSecretsCustodyMac" = "이 컴퓨터에 보관됩니다. 선원들은 사용하지만, 직접 복사하지 않는 한 보지 못합니다.";
 "settingsSecretsDeleteHistory" = "기록 삭제";

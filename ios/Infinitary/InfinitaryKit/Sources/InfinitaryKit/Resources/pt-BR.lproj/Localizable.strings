@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "Copiar %1$@ para a área de transferência deste computador.";
 "settingsSecretsCopyRefused" = "Nenhuma confirmação foi aceita. Nada foi copiado.";
 "settingsSecretsCopyUnavailable" = "Segredos não conseguiu copiar este valor. Nada foi copiado.";
-"settingsSecretsCopyUnknown" = "Segredos não conseguiu saber se o valor chegou à área de transferência, então limpou o que escreveu.";
+"settingsSecretsCopyUnknown" = "Segredos não conseguiu saber se o valor chegou à área de transferência. Copie outra coisa para substituir o que estiver lá.";
 "settingsSecretsCopyValue" = "Copiar valor";
 "settingsSecretsCustodyMac" = "Guardados neste computador. Sua tripulação os usa, mas nunca os vê, a menos que você copie um.";
 "settingsSecretsDeleteHistory" = "Excluir histórico";

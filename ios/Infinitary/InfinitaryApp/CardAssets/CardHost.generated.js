@@ -77674,29 +77674,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCopyUnknown() {
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على الأسرار معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة، لذا مسحت ما كتبته.`;
+        return `لم تتمكن الأسرار من معرفة ما إذا كانت القيمة قد وصلت إلى الحافظة. انسخ شيئًا آخر ليحل محل ما فيها.`;
       case "de":
-        return `Geheimnisse konnte nicht erkennen, ob der Wert in der Zwischenablage ankam, und hat daher entfernt, was es geschrieben hat.`;
+        return `Geheimnisse konnte nicht feststellen, ob der Wert in der Zwischenablage angekommen ist. Kopiere etwas anderes, um zu ersetzen, was dort liegt.`;
       case "es":
-        return `Secretos no pudo saber si el valor llegó al portapapeles, así que borró lo que había escrito.`;
+        return `Secretos no pudo saber si el valor llegó al portapapeles. Copia otra cosa para reemplazar lo que haya allí.`;
       case "fr":
-        return `Secrets n’a pas pu savoir si la valeur a atteint le presse-papiers, il a donc effacé ce qu’il avait écrit.`;
+        return `Secrets n’a pas pu savoir si la valeur est arrivée dans le presse-papiers. Copiez autre chose pour remplacer ce qui s’y trouve.`;
       case "ja":
-        return `シークレットは値がクリップボードに届いたか確認できなかったため、書き込んだものを消去しました。`;
+        return `シークレットは値がクリップボードに届いたかどうかを確認できませんでした。別のものをコピーして、そこにあるものを置き換えてください。`;
       case "ko":
-        return `비밀 정보에서 값이 클립보드에 들어갔는지 알 수 없어, 쓴 내용을 지웠습니다.`;
+        return `비밀 정보가 값이 클립보드에 들어갔는지 확인하지 못했습니다. 다른 것을 복사해 그곳에 있는 내용을 바꾸세요.`;
       case "pt-BR":
-        return `Segredos não conseguiu saber se o valor chegou à área de transferência, então limpou o que escreveu.`;
+        return `Segredos não conseguiu saber se o valor chegou à área de transferência. Copie outra coisa para substituir o que estiver lá.`;
       case "zh-Hans":
-        return `机密无法确定值是否已进入剪贴板，因此清除了它写入的内容。`;
+        return `机密无法确定值是否已到达剪贴板。请复制其他内容来替换剪贴板上的内容。`;
       case "zh-Hant":
-        return `機密無法確定值是否已進入剪貼簿，因此清除了它寫入的內容。`;
+        return `機密無法確定值是否已到達剪貼簿。請複製其他內容來取代剪貼簿上的內容。`;
       case "en-XA":
-        return `[Šéçŕéţš çöûļð ñöţ ţéļļ ŵĥéţĥéŕ ţĥé ṽáļûé ŕéáçĥéð ţĥé çļîþƀöáŕð, šö îţ çļéáŕéð ŵĥáţ îţ ŵŕöţé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Šéçŕéţš çöûļð ñöţ ţéļļ ŵĥéţĥéŕ ţĥé ṽáļûé ŕéáçĥéð ţĥé çļîþƀöáŕð. Çöþý šöɱéţĥîñĝ éļšé ţö ŕéþļáçé ŵĥáţéṽéŕ îš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Secrets could not tell whether the value reached the clipboard, so it cleared what it wrote.‬`;
+        return `‮Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there.‬`;
     }
-    return `Secrets could not tell whether the value reached the clipboard, so it cleared what it wrote.`;
+    return `Secrets could not tell whether the value reached the clipboard. Copy something else to replace whatever is there.`;
   }
   function settingsSecretsCopyValue() {
     switch (currentLanguage()) {

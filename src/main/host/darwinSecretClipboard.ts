@@ -52,14 +52,19 @@ export function createDarwinSecretClipboard(
   return {
     concealed: true,
     pasteboard,
+    // The last write's mark stays until a new write lands, so a failed copy
+    // never strands the earlier value past its clear; the change count keeps
+    // that clear from touching anything newer.
     write: async (value) => {
-      written = undefined;
+      let next: number | undefined;
       try {
-        written = pasteboard.write(value);
+        next = pasteboard.write(value);
       } catch {
         return false;
       }
-      return written !== undefined;
+      if (next === undefined) return false;
+      written = next;
+      return true;
     },
     // Synchronous inside, so a clear the app starts as it quits finishes first.
     clear: async () => {

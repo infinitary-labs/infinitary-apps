@@ -1062,7 +1062,7 @@
   "settingsSecretsCopyReason": "{name} をこのコンピュータのクリップボードにコピーします。",
   "settingsSecretsCopyRefused": "確認が受け付けられませんでした。何もコピーされていません。",
   "settingsSecretsCopyUnavailable": "シークレットはこの値をコピーできませんでした。何もコピーされていません。",
-  "settingsSecretsCopyUnknown": "シークレットは値がクリップボードに届いたか確認できなかったため、書き込んだものを消去しました。",
+  "settingsSecretsCopyUnknown": "シークレットは値がクリップボードに届いたかどうかを確認できませんでした。別のものをコピーして、そこにあるものを置き換えてください。",
   "settingsSecretsCopyValue": "値をコピー",
   "settingsSecretsCustodyMac": "このコンピュータに保管されます。乗組員は使いますが、あなたがコピーしない限り値を見ることはありません。",
   "settingsSecretsDeleteHistory": "履歴を削除",

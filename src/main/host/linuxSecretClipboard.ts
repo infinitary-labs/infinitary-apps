@@ -22,8 +22,9 @@ export function createLinuxSecretClipboard(clipboard: TextClipboard): SecretClip
   let written: string | undefined;
   return {
     concealed: false,
+    // The last write's digest stays until a new write lands, so a failed copy
+    // never strands the earlier value past its clear.
     write: async (value) => {
-      written = undefined;
       const text = value.toString("utf8");
       // A value that is not UTF-8 decodes with replacement characters: nothing is written.
       const back = Buffer.from(text, "utf8");

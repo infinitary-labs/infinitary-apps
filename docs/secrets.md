@@ -213,19 +213,20 @@ Remove only proposes a change, and native confirmation covers the exact proposed
 
 Copy value on a secret's row puts its value on the home computer's clipboard, and only that computer's: it is the one way a person reads a saved value back.
 It covers the person's own secrets and a server's key; a sign-in's hidden entry ("App sign-ins") offers none, and the owner refuses one.
-Each press asks the computer's own confirmation (Touch ID or the password on a Mac, Windows Hello or its password, polkit on Linux), naming the secret; a copy never rides an earlier confirmation, a saved decision or a phone approval.
+Each press asks the computer's own confirmation (Touch ID or the password on a Mac, Windows Hello or its password, polkit on Linux); on a Mac and a Windows PC its dialog names the secret, while polkit shows only its installed policy's message.
+A copy never rides an earlier confirmation, a saved decision or a phone approval.
 Where this computer cannot confirm, the button is off with a line saying why (the view's `copy` `no-confirmation`).
 The owner (`ProtectedSecrets.copyValue`) checks the row's version and revision before and after the confirmation, journals the copy as requested, approved and consumed before it opens the value, and refuses when the journal cannot be written.
 It hands the opened value to the host's writer and zero-fills it after; no answer, view or saved file holds it.
 A writer that throws ends the use `unknown`, since the clipboard may have changed, and one that writes nothing ends it `unavailable`.
 The row then says until when it stays (the view's `copied`), with Clear now; the controller clears it after `SECRET_COPY_SECONDS` (90), on Clear now and when the app quits, and only while the clipboard still holds this copy, so something the person copied since stays.
-A second copy replaces the first and starts the time again.
+A second copy replaces the first and starts the time again; a copy that fails to write leaves the first one's clear in place.
 The row's status says Copied by you and when, and the history lists the copy as Copied by you, with no program or reason.
 
 The host's writer (`HostCapabilities.secrets.clipboard`, `src/core/secrets/clipboard.ts`) is composed in `src/main/host/electronHost.ts`, for a run on the person's own data folder only.
 On macOS (`darwinSecretClipboard.ts`) it writes through NSPasteboard for this Mac alone (`NSPasteboardContentsCurrentHostOnly`), so Universal Clipboard never carries it, with the nspasteboard.org Concealed and Transient markers that clipboard history tools skip; the clear compares the pasteboard's change count.
 On Windows (`windowsSecretClipboard.ts`) it writes through user32 with the formats that keep the text out of clipboard history and off the cloud clipboard and that clipboard monitors skip; the clear compares the clipboard's sequence number.
-On Linux (`linuxSecretClipboard.ts`) it writes through Electron's clipboard, which carries no such marker, so the row says a clipboard history tool may keep it; the clear compares a keyed digest of the clipboard's text.
+On Linux (`linuxSecretClipboard.ts`) it writes through Electron's clipboard, which carries no such marker, so the row says a clipboard history tool may keep it, and a tool that shares the clipboard with other devices may carry it there; the clear compares a keyed digest of the clipboard's text.
 A value that is not UTF-8 text writes nothing on any of them.
 What the person pastes it into can keep it; the clipboard's time limits only how long it waits there.
 
@@ -563,7 +564,7 @@ These remain unproven in the app:
 - An Allow from a real iPhone or iPad, whose Secure Enclave key and Face ID, Touch ID or passcode only a device has.
 - An Allow from a second Mac's real Touch ID and Keychain, and a program run on a real computer that runs work over its work route.
 - An Allow on a real Windows PC through Windows Hello or the Windows password, which only a person at the PC can answer.
-- Copy value's writers on a real Windows PC and a real Linux desktop: their checks cover the clear's rule with a stand-in clipboard, not user32's formats or a desktop's clipboard.
+- Copy value's writers on a real Windows PC and a real Linux desktop: their checks drive the writing and clearing rules through stand-ins of user32's calls and of Electron's clipboard, not Windows' clipboard history and cloud clipboard or a desktop's clipboard.
 - Each consumer migration in the register below.
 
 No real keychain or signing access occurs in a check without the captain's separate consent.

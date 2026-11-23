@@ -3393,7 +3393,7 @@
 "settingsSecretsCopyReason" = "将 %1$@ 复制到这台电脑的剪贴板。";
 "settingsSecretsCopyRefused" = "未接受任何确认。没有复制任何内容。";
 "settingsSecretsCopyUnavailable" = "机密无法复制此值。没有复制任何内容。";
-"settingsSecretsCopyUnknown" = "机密无法确定值是否已进入剪贴板，因此清除了它写入的内容。";
+"settingsSecretsCopyUnknown" = "机密无法确定值是否已到达剪贴板。请复制其他内容来替换剪贴板上的内容。";
 "settingsSecretsCopyValue" = "复制值";
 "settingsSecretsCustodyMac" = "保存在这台电脑上。船员们会使用它们，但看不到它们，除非你复制其中一项。";
 "settingsSecretsDeleteHistory" = "删除历史记录";

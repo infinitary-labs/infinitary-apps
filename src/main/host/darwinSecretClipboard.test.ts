@@ -59,4 +59,13 @@ describe.skipIf(process.platform !== "darwin")("macOS secret clipboard", () => {
     expect(await clipboard.write(Buffer.from([0xff, 0xfe, 0xfd]))).toBe(false);
     expect(clipboard.pasteboard.contents().text).toBe("copied before");
   });
+
+  it("keeps clearing an earlier copy after a later copy fails to write", async () => {
+    const name = `app.infinitary.secret-clipboard-check.${randomUUID()}`;
+    const clipboard = ownBoard(name);
+    expect(await clipboard.write(Buffer.from("invented-copy-value"))).toBe(true);
+    expect(await clipboard.write(Buffer.from([0xff, 0xfe, 0xfd]))).toBe(false);
+    await clipboard.clear();
+    expect(clipboard.pasteboard.contents()).toEqual({ text: null, types: [] });
+  });
 });

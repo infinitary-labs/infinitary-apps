@@ -1112,7 +1112,7 @@
   "settingsSecretsCopyReason": "Copier {name} dans le presse-papiers de cet ordinateur.",
   "settingsSecretsCopyRefused": "Aucune confirmation n’a été acceptée. Rien n’a été copié.",
   "settingsSecretsCopyUnavailable": "Secrets n’a pas pu copier cette valeur. Rien n’a été copié.",
-  "settingsSecretsCopyUnknown": "Secrets n’a pas pu savoir si la valeur a atteint le presse-papiers, il a donc effacé ce qu’il avait écrit.",
+  "settingsSecretsCopyUnknown": "Secrets n’a pas pu savoir si la valeur est arrivée dans le presse-papiers. Copiez autre chose pour remplacer ce qui s’y trouve.",
   "settingsSecretsCopyValue": "Copier la valeur",
   "settingsSecretsCustodyMac": "Conservés sur cet ordinateur. Votre équipage les utilise sans jamais les voir, sauf si vous en copiez un.",
   "settingsSecretsDeleteHistory": "Supprimer l’historique",

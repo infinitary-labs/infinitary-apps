@@ -55,7 +55,15 @@ const { grades } = await commands.loadReading();
   "a test whose command process is held past its limit still passes",
   { timeout: 1_000 },
   async () => {
+    const wallStart = performance.now();
+    const loadStart = pageLoadClock()?.now();
     await commands.holdCommandProcess(3_000);
+    // The wall clock ran the whole hold; the test's own clock counted under its limit.
+    expect(performance.now() - wallStart).toBeGreaterThanOrEqual(3_000);
+    expect(loadStart).toBeDefined();
+    expect((pageLoadClock()?.now() ?? Number.POSITIVE_INFINITY) - (loadStart ?? 0)).toBeLessThan(
+      1_000,
+    );
   },
 );
 

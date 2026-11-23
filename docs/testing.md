@@ -1088,12 +1088,13 @@ A step that breaks fails the pull request, and is repaired at its owner; weakeni
 
 A task branch's checks are the check each push of it runs ("A pushed branch"), the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
 INF-4500's weekly audit widened the journey request with the captain's choices "Journeys that import a changed file" and "One Mac round for each edited journey": sixteen later failures in one week were journeys that directly import a changed file, and eight were edited journeys that passed on Linux and failed on the Mac.
+INF-6259's weekly audit widened it again with the captain's choice "Wider journey selection": journeys one import further, the importers of an edited helper and the first-run screen's fallback row, after such journeys broke in the batch on changes whose request ran none of them.
 The swept batch runs every journey on Linux and the Mac, and the critical path, on each approved change before it reaches `main` ("The swept batch").
-So a journey the change only reaches some other way, by a word, a hook, a helper or a fallback row, is checked there, and a break found there sends the change back to its task.
+So a journey the change only reaches some other way, by a word, a hook, a helper most journeys import or an unmarked fallback row, is checked there, and a break found there sends the change back to its task.
 
 | Check | A task branch requests it when | It requests |
 | --- | --- | --- |
-| Edited and importing journeys | its change edits a journey file, or a journey directly imports a product module or a scenario under `tests/e2e/scenarios/` that the change edits; a held batch's fix requests none, since the batch's rebuild runs every journey on it ("A held batch's repair") | `journeys.yml` with the files `node scripts/affected-journeys.ts --request --base origin/main` lists: an edited file runs three rounds and then alone, an importing one once (`scripts/journey-runs.ts`); with an edited file, `platforms=both` and `mac_once: true`, so each edited file runs every test once on the Mac too, after the rounds of its tagged tests |
+| Edited and importing journeys | its change edits a journey file; a journey directly imports a product module or a scenario under `tests/e2e/scenarios/` that the change edits, or a product module one import further (rule 14); it imports a changed export of an edited helper that no more than 40 journeys import that way; or a fallback row marked `request` matches; a held batch's fix requests none, since the batch's rebuild runs every journey on it ("A held batch's repair") | `journeys.yml` with the files `node scripts/affected-journeys.ts --request --base origin/main` lists: an edited file runs three rounds and then alone, an importing one once (`scripts/journey-runs.ts`); with an edited file, `platforms=both` and `mac_once: true`, so each edited file runs every test once on the Mac too, after the rounds of its tagged tests |
 | Other reached journeys | never | nothing: they wait for the swept batch; a journey the batch sent the change back for is named again after its repair |
 | The batch's Linux checks | the swept batch sent the change back ("A change sent back from its batch", below) | `verify.yml` with `linux_only`, task and reason |
 | The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
@@ -1205,7 +1206,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7, 10, 12 and 13 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7, 10, 12, 13 and 14 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
@@ -1213,7 +1214,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
    The parser uses the smallest enclosing JSX subtree plus ancestor container hooks, or the enclosing top-level declaration for non-JSX edits, following local declaration consumers.
    Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
 7. a spec, or a helper most journeys do not import, that calls a `window.infinitary` method, or names a read, whose message between the window and the core the change edits (`scripts/window-messages.ts`);
-8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
+8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence; a row marked `request` names journeys a task branch's request runs too;
 9. a commit of the change names the journey in a `Journeys:` trailer;
 10. a spec, or a helper most journeys do not import, that reads words a string of `src/` serves, when the change alters what it reads.
     It reads them with a regular expression of its own holding a word of four or more letters, or its stand-in scripts a tool by name, as `name: "check_change"`, that most journeys do not script.
@@ -1230,6 +1231,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
     A trailing slash means every file under that directory; otherwise the declaration names one exact product file.
     The declaration does not follow the common launcher's imports: nearly every journey reaches that launcher, but only the stand-in's explicit callers exercise its product area.
     `tests/e2e/mockClaudeClient.ts` declares `src/core/claude/` so changes to the real reader select the stand-in's callers;
+14. a spec one import further than rule 12: it directly imports a product module, other than a hub, that imports a changed product module, or it reaches a helper that imports one, other than a helper more than half the journeys or more than 40 journeys reach.
+    An edited module more than 40 journeys reach this way selects none of them by this rule, as a hub does under rule 12 (INF-6259's weekly audit, the captain's choice "Wider journey selection");
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).

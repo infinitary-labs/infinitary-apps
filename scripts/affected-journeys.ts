@@ -60,6 +60,11 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  * 13. it imports a helper declaring `@journey-area src/path/` for a changed area,
  *     other than a unit test there, which no journey runs (INF-2486, cut B).
  *     The journey imports that stand-in directly, not only through the shared launcher.
+ * 14. it is one import further than rule 12: it directly imports a product
+ *     module, a hub aside, that imports a changed product module, or reaches a
+ *     helper that imports one, a helper most journeys or more than
+ *     `JOURNEY_SELECTION_CAP` reach aside. An edited module that reaches more
+ *     journeys than the cap this way selects none by it (INF-6259).
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
@@ -91,6 +96,7 @@ export function selectionCoverage(listed: readonly string[], ran: readonly strin
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const E2E = "tests/e2e";
+const TESTS = "tests";
 
 /** A module of the product, as opposed to the test code a journey runs. */
 const isSource = (file: string) => file.startsWith("src/");
@@ -98,8 +104,10 @@ const isSource = (file: string) => file.startsWith("src/");
 export type Reasons = Map<string, string[]>;
 
 // These narrow fallbacks cover breaks that do not change a hook or copied
-// words. Union them with the existing selection, never replace it.
-const FALLBACKS = [
+// words. Union them with the existing selection, never replace it. A row
+// marked `request` also runs on a task branch's request (requested()).
+const REQUESTED_FALLBACK = "targeted fallback a request runs";
+const FALLBACKS: readonly { paths: readonly string[]; specs: readonly string[]; request?: true }[] = [
   { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/hostCardStack.ts", "src/core/orchestrator/cardStackTypes.ts", "src/core/orchestrator/cardEmit.ts", "src/core/orchestrator/cardEvidence.ts", "src/core/orchestrator/cardThreads.ts", "src/core/orchestrator/hostCards.ts", "src/core/orchestrator/settleCardFacts.ts", "src/core/orchestrator/crewSupervisor.ts", "src/core/orchestrator/cardActions.ts", "src/core/orchestrator/crewmateCards.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
   {
     paths: [
@@ -182,7 +190,20 @@ const FALLBACKS = [
     ],
     specs: ["automatic-placement.spec.ts"],
   },
-] as const;
+  {
+    // Both journeys meet the first-run screen or its join step on their way
+    // in, and a new step there stopped both on a task branch whose request
+    // ran neither (INF-6224).
+    paths: [
+      "src/renderer/src/app/FirstRunGate.tsx",
+      "src/renderer/src/app/firstRunGateWords.ts",
+      "src/renderer/src/devices/JoinAnotherMac.tsx",
+      "src/renderer/src/devices/useFollowAdded.ts",
+    ],
+    specs: ["bedrock-provider.spec.ts", "follow-along-owner.spec.ts"],
+    request: true,
+  },
+];
 
 /**
  * The freeze journey (INF-2061's plan; docs/freeze-recorder.md, "Before a
@@ -290,7 +311,8 @@ export function closureOf(
     // Only the test code a journey runs is walked into - `tests/e2e`, the shared
     // helpers under `tests/` and a script it imports. A module of `src/` is a
     // leaf, since what its own imports change reaches a journey through the
-    // hooks and words below, not through the import.
+    // hooks and words below, or one import further under rule 14, not through
+    // this closure.
     if (!isSource(file)) for (const next of imports) walk(next);
   };
   walk(entry);
@@ -656,6 +678,7 @@ export function select({
   const importCache = new Map<string, string[]>();
   const reachOf = new Map<string, string[]>();
   const reachCount = new Map<string, number>();
+  const helperReach = new Map<string, number>();
   const directOf = new Map<string, string[]>();
   const readerCount = new Map<string, number>();
   for (const spec of specs) {
@@ -664,6 +687,7 @@ export function select({
     for (const file of reach) {
       if (file.startsWith(`${E2E}/`) && file !== spec)
         reachCount.set(file, (reachCount.get(file) ?? 0) + 1);
+      if (!isSource(file) && file !== spec) helperReach.set(file, (helperReach.get(file) ?? 0) + 1);
     }
     const direct = importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined || readBefore?.(path) !== undefined);
     directOf.set(spec, direct);
@@ -715,6 +739,21 @@ export function select({
     if (list.length < 3 && !list.includes(why)) list.push(why);
     reasons.set(spec, list);
   };
+  const sourceImportCache = new Map<string, string[]>();
+  const sourceImports = (file: string) => {
+    let found = sourceImportCache.get(file);
+    if (!found) {
+      found = importsOf(file, read(file) ?? "", (path) => read(path) !== undefined).filter(isSource);
+      sourceImportCache.set(file, found);
+    }
+    return found;
+  };
+  const furtherOf = new Map<string, Map<string, string>>();
+  const further = (edited: string, spec: string, why: string) => {
+    const bySpec = furtherOf.get(edited) ?? new Map<string, string>();
+    if (!bySpec.has(spec)) bySpec.set(spec, why);
+    furtherOf.set(edited, bySpec);
+  };
   for (const spec of specs) {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
@@ -723,6 +762,21 @@ export function select({
       if (changedSet.has(file)) add(spec, `directly imports ${file}, which the change edits`);
       const data = dataImportsOf(file, read(file) ?? "").find((path) => changedSet.has(path));
       if (data) add(spec, `directly imports ${file}, which imports ${data}, which the change edits`);
+    }
+    // Rule 14: one import further than rule 12. Gathered here and added
+    // below, since its cap counts every journey an edited module reaches.
+    for (const file of directOf.get(spec) ?? []) {
+      if (!isSource(file) || hub(file)) continue;
+      for (const next of sourceImports(file))
+        if (next !== file && changedSet.has(next))
+          further(next, spec, `directly imports ${file}, which imports ${next}, which the change edits`);
+    }
+    for (const helper of reach) {
+      const reached = helperReach.get(helper) ?? 0;
+      if (helper === spec || isSource(helper) || reached > specs.length / 2 || reached > JOURNEY_SELECTION_CAP) continue;
+      for (const file of importCache.get(helper) ?? [])
+        if (isSource(file) && changedSet.has(file))
+          further(file, spec, `imports ${helper}, which imports ${file}, which the change edits`);
     }
     for (const helper of importsOf(spec, read(spec) ?? "", (path) => read(path) !== undefined).filter((file) => !isSource(file))) {
       for (const area of standInAreas(read(helper) ?? "")) {
@@ -810,6 +864,10 @@ export function select({
       if (holdsPhrase(narrowText, name))
         add(spec, `reads ${name}, whose message ${channel} the change edits`);
   }
+  // A module more journeys reach this way than the cap would make a sweep of
+  // any edit to it; its readers still follow the other rules.
+  for (const bySpec of furtherOf.values())
+    if (bySpec.size <= JOURNEY_SELECTION_CAP) for (const [spec, why] of bySpec) add(spec, why);
   const available = new Set(specs);
   for (const row of FALLBACKS) {
     const matches = changed.filter((file) =>
@@ -820,7 +878,8 @@ export function select({
       const spec = `${E2E}/${name}`;
       if (!available.has(spec)) throw new Error(`Stale journey fallback target: ${spec}`);
       // Keep every existing reason, including a full three-reason list.
-      reasons.set(spec, [...(reasons.get(spec) ?? []), `targeted fallback for ${matches.join(", ")}`]);
+      const kind = row.request ? REQUESTED_FALLBACK : "targeted fallback";
+      reasons.set(spec, [...(reasons.get(spec) ?? []), `${kind} for ${matches.join(", ")}`]);
     }
   }
   for (const spec of declared) {
@@ -837,14 +896,30 @@ export function select({
  * requests"; INF-4500's weekly audit, addition 2, the captain's choice
  * "Journeys that import a changed file"): each journey the change edits, and
  * each one that directly imports a changed product module (rule 12, a hub
- * module aside) or a changed scenario under `tests/e2e/scenarios/`. The
- * rest of the selection waits for the swept batch.
+ * module aside) or a changed scenario under `tests/e2e/scenarios/`.
+ * INF-6259's weekly audit added, with the captain's choice "Wider journey
+ * selection", each journey one import further (rule 14), each one that
+ * imports an edited helper's changed export (rule 2) when no more than
+ * `JOURNEY_SELECTION_CAP` journeys do, and each one a fallback row marked
+ * `request` names. The rest of the selection waits for the swept batch.
  */
 export function requested(reasons: Reasons): Reasons {
-  const asks = (why: string) =>
-    why === "the change edits this journey" ||
-    why.startsWith("directly imports ") ||
-    new RegExp(`^imports ${E2E}/scenarios/\\S+, which the change edits$`).test(why);
+  const helperEdit = new RegExp(`^imports (${TESTS}/\\S+), which the change edits$`);
+  const helperReaders = new Map<string, number>();
+  for (const whys of reasons.values())
+    for (const helper of new Set(whys.flatMap((why) => helperEdit.exec(why)?.[1] ?? [])))
+      helperReaders.set(helper, (helperReaders.get(helper) ?? 0) + 1);
+  const asks = (why: string) => {
+    const helper = helperEdit.exec(why)?.[1];
+    return (
+      why === "the change edits this journey" ||
+      why.startsWith("directly imports ") ||
+      / which imports src\/\S+, which the change edits$/.test(why) ||
+      why.startsWith(REQUESTED_FALLBACK) ||
+      (helper !== undefined &&
+        (helper.startsWith(`${E2E}/scenarios/`) || (helperReaders.get(helper) ?? 0) <= JOURNEY_SELECTION_CAP))
+    );
+  };
   return new Map(
     [...reasons].flatMap(([spec, whys]) => {
       const kept = whys.filter(asks);

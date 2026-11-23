@@ -296,9 +296,9 @@ The app's own card for a crewmate's ask takes a reply that reaches the crewmate 
 The host names that answerer when it raises the card (`Card.answeredBy` "crewmate", read through `cardAnswerer`), and its header names the asking task as a crewmate's card does.
 The crewmate answers in the thread with `reply` naming the message, as on its own card, but it cannot revise or close the app's card: its steer opens with its own preamble (`THREAD_APP_CARD_PREAMBLE`), which tells it to withdraw the ask where its command offers that when the work no longer needs it, and never to ask for a value in the thread.
 Words left in the field when the captain presses one of the card's buttons reach the same crewmate with the choice, told that the app carries the button out and its outcome reaches it on its own (`CARRIED_OUT_ASKER_WORDS`); the first mate is not told.
-The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - took no reply before; it now names the first mate as its answerer, which answers in the thread as on the stuck alert.
+The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - names the first mate as its answerer, which answers in the thread as on the stuck alert.
 A panel's integration call still takes no reply, since a panel cannot answer one.
-A desktop view whose hello does not list `card-answered-by-crewmate` is sent the card without that answerer and draws it with no reply row, as before.
+A view whose hello does not list `card-answered-by-crewmate`, a phone included, is sent the card without a crewmate answerer, and a card with a secret's masked fields without any answerer, and draws it with no reply row.
 
 ## Images on steers (phase 2)
 
@@ -371,7 +371,7 @@ The design skill owns every visual rule (`.claude/skills/infinitary-design/compo
 While a card has no thread open beside it, its one field, reading "anything to add?", sits above the button row under one hairline, and Chat sits at the right edge of that row (INF-924; `docs/card-authoring.md`, "The card's one field").
 A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above); a host card the first mate answers has both ("A host card's reply row", above).
 A card whose own field is masked - a secret's field - draws no reply field under it, so a reply is never typed beside a secret: Chat (or its key) opens the thread beside the card at once, even with no message yet, and the thread's field takes the caret (`EntryView.chatFirst`, the captain's choice on INF-6265).
-On the phone, such a card's face draws no reply field either: Chat at the leading edge of its choices turns the card to its thread, even with no message yet, with the caret in the thread's field.
+On the phone, such a card's face draws no reply field either: Chat at the leading edge of its choices turns the card to its thread, even with no message yet, with the caret in the thread's field, and the thread's foot leaves Save secret off, so it stays with its fields on the face.
 
 The first sent message opens the thread beside the card in ONE container (tweak 1): one surface, border, radius and shadow, a single `--line-2` hairline between the columns, the pair centred as one object.
 For card and thread sizing, stage width is the window minus twice the larger expanded rail, so one-sided panels never shift the pair.

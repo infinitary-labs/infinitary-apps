@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "mac-claude-keychain-leftover",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Adding a Claude account on a Mac no longer stops at a login Claude Code left empty",
+      "body": "On a Mac, when Claude Code had signed out or its login had lapsed, adding a Claude account could refuse every time, saying Infinitary couldn't read the Claude login. It now goes on to Claude's own sign-in, and a Claude account already added in that state shows as signed out with a Sign in button.",
+      "noPicture": "The change is in how Claude Code's Mac Keychain item is read; it shows only when that item holds no login, which could not be set up and photographed without touching a real login.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

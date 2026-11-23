@@ -74,6 +74,15 @@ function keychain(find: HostKeychainOutcome): HostKeychain & {
   return found;
 }
 
+/** What Claude Code leaves in its store with no login in it. */
+const CLAUDE_LEFTOVERS = [
+  ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
+  [
+    "a login Claude blanked",
+    { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
+  ],
+] as const;
+
 function lapsedFile(dir: string): void {
   writeFileSync(
     join(dir, ".credentials.json"),
@@ -100,7 +109,7 @@ function client(signedIn: boolean): { run: RunClaude; calls: string[][] } {
 function backendFor(
   dir: string,
   env: NodeJS.ProcessEnv,
-  passwords: ReturnType<typeof keychain>,
+  passwords: HostKeychain,
   run: RunClaude,
 ): ClaudeAuthBackend {
   return new ClaudeAuthBackend({
@@ -192,13 +201,7 @@ describe("Claude connect adopts a usable default login", () => {
   // and a refused renewal blanks the login's tokens in place (H). Claude
   // says it is signed out, so the add starts Claude's sign-in, which saves
   // its login beside the entries already in the file.
-  for (const [shape, leftover] of [
-    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
-    [
-      "a login Claude blanked",
-      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
-    ],
-  ] as const) {
+  for (const [shape, leftover] of CLAUDE_LEFTOVERS) {
     it(`starts Claude's sign-in over a file holding ${shape}`, async () => {
       const { dir, env } = home();
       const file = join(dir, ".credentials.json");
@@ -223,6 +226,42 @@ describe("Claude connect adopts a usable default login", () => {
       await loginOf(backendFor(dir, env, keychain({ kind: "absent" }), run), bridge());
       expect(claude.calls[0]).toEqual(["auth", "status", "--json"]);
       expect(claude.calls.some((args) => args[1] === "login")).toBe(true);
+    });
+  }
+
+  // On a Mac, Claude Code keeps its login, and these leftovers, in the
+  // Keychain item instead.
+  for (const [shape, leftover] of CLAUDE_LEFTOVERS) {
+    it(`starts Claude's sign-in over a Keychain item holding ${shape}`, async () => {
+      const { dir, env } = home();
+      let stored: object = leftover;
+      let modifiedAt = "20261123090000Z";
+      const passwords: HostKeychain = {
+        findGenericPassword: async () => ({ kind: "found", account: env.USER, modifiedAt }),
+        readGenericPassword: async () => ({ kind: "value", value: JSON.stringify(stored) }),
+      };
+      expect(await readClaudeStore(dir, { keychain: passwords, env })).toEqual({
+        state: "absent",
+      });
+
+      const claude = client(false);
+      const run: RunClaude = async (args, configDir, options) => {
+        if (args[1] === "login") {
+          stored = {
+            ...leftover,
+            claudeAiOauth: { accessToken: "fresh", refreshToken: "r", expiresAt: 9e15 },
+          };
+          modifiedAt = "20261123090100Z";
+        }
+        return claude.run(args, configDir, options);
+      };
+      await loginOf(backendFor(dir, env, passwords, run), bridge());
+      expect(claude.calls[0]).toEqual(["auth", "status", "--json"]);
+      expect(claude.calls.some((args) => args[1] === "login")).toBe(true);
+      expect(await readClaudeStore(dir, { keychain: passwords, env })).toMatchObject({
+        state: "present",
+        auth: { accessToken: "fresh" },
+      });
     });
   }
 

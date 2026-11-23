@@ -347,6 +347,23 @@ describe("readClaudeStore", () => {
     expect(isKeychainLocked(dir)).toBe(true);
   });
 
+  // Claude Code's own Mac Keychain leftovers: a sign-out keeps a
+  // remote-device key and drops the login, and a refused renewal blanks the
+  // tokens in place. Either is no login.
+  it.each([
+    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
+    [
+      "a login Claude blanked",
+      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
+    ],
+  ])("a Keychain value holding %s is absent, not a held lock", async (_shape, leftover) => {
+    const dir = storeDir();
+    const keychain = fakeKeychain({ read: { kind: "value", value: JSON.stringify(leftover) } });
+    const result = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(result).toEqual({ state: "absent" });
+    expect(isKeychainLocked(dir)).toBe(false);
+  });
+
   it("a no-interactive-session probe is retryable and never a held lock", async () => {
     const dir = storeDir();
     const keychain = fakeKeychain({

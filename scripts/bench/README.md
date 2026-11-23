@@ -156,7 +156,7 @@ Other ends:
 | `timeout` | The attempt hit the 3-hour cap. |
 | `infra` | A boot failure, no model available, or a refused ask. |
 
-The row records `rigor_asked` (the care level) and `rigor_served` (what the host stamped on the graded task). They differ when the Firstmate passes a rigor of its own. The dry run shows this: the mock Firstmate always asks for `quick`.
+The row records `rigor_asked` (the rigor level) and `rigor_served` (what the host stamped on the graded task). They differ when the Firstmate passes a rigor of its own. The dry run shows this: the mock Firstmate always asks for `quick`.
 
 ### The verifier seam
 

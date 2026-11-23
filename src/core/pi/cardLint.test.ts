@@ -989,7 +989,7 @@ describe("lintCrewmateCard", () => {
         }
       });
 
-      it("refuses the mark on the picture itself on every crewmate card, at every care level", () => {
+      it("refuses the mark on the picture itself on every crewmate card, at every rigor level", () => {
         const misplaced = body("", `<img data-inf-new src="x.png" alt="new">`);
         expect(lintCrewmateCard(completion(misplaced), { rigor: "quick" })).toBe(
           untaggedNewMarkRefusal("img"),

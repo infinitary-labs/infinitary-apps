@@ -34,7 +34,7 @@ import { pressWindowKey, untilWindowCommands } from "./windowKeys";
 
 /**
  * Review carefully (INF-562, the captain's plan: "the most natural place to
- * make use of the careful care level is when a merge completion card is
+ * make use of the careful rigor level is when a merge completion card is
  * raised, and they looked at the card and felt it's risky"), end to end by
  * keys: a Default pull request's merge card offers Review carefully at ⌘2;
  * the key closes the card, makes the task Careful and starts its crewmate,

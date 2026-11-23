@@ -125,7 +125,7 @@ test("a standard-tier crewmate's completion card renders the completion outline 
   ).toContainText(MOCK_STANDARD_AFTER);
   // The host's facts strip stands above the buttons (ruling D4, the fact
   // strip at v2.7): the body never repeats the project's care, and the
-  // strip names a care level only when it is not Default (INF-3709's plan,
+  // strip names a rigor level only when it is not Default (INF-3709's plan,
   // the captain's answer 3).
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(DEFAULT_WORKSPACE_WORD);

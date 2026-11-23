@@ -101,6 +101,32 @@
   color: var(--fg-1);
   font-weight: 500;
 }
+/* A quote: a hairline at its start, as the task record draws the captain's words. */
+.fm-card-md blockquote {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--line-1);
+}
+/* The lit quote (class inf-lit): the one passage a card asks the reader to notice, such as the
+   captain's own message on the unanswered-message notice; its micro label is inf-quote-k. */
+.fm-card-md blockquote.inf-lit {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 2px solid var(--accent);
+  background: var(--accent-dim);
+  border-radius: var(--radius-s);
+  color: var(--fg-1);
+}
+.fm-card-md blockquote p {
+  margin: 0;
+}
+.fm-card-md .inf-quote-k {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
 
 /* Side rails: two dock columns framing the home stage. A rail is a flex
    column of host-framed panels at one fixed width token; an EMPTY rail is

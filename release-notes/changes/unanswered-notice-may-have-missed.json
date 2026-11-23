@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "unanswered-notice-may-have-missed",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "The unanswered-message notice says what the app saw",
+      "body": "When the app cannot tell that your first mate answered a message, its notice now says your first mate may have missed it, rather than that it has not answered. Your message stands out in a highlighted quote with the time you sent it, one line says what the app saw, such as a card your first mate closed before you chose, and the notice speaks your language.",
+      "picture": {
+        "dark": "unanswered-notice-may-have-missed-dark.webp",
+        "light": "unanswered-notice-may-have-missed-light.webp",
+        "alt": "The notice titled Your first mate may have missed your message, with the message in a highlighted quote labelled with its time, a reason line, and Leave it and Ask again buttons."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { processAlive } from "../src/core/helper/lock";
@@ -26,6 +26,19 @@ const LINUX = process.platform === "linux";
 const LABEL = "app.infinitary.stand-in-check";
 
 describe.skipIf(process.platform === "win32")("the stand-in service manager", () => {
+  it("accepts a removed supervisor PID record but surfaces other PID read failures", () => {
+    const standIn = serviceManagerStandIn(scratchDir("stand-in-home-"));
+    const state = join(standIn.dir, "state");
+    // Teardown reads the PID after the supervisor removes it and records the run's exit.
+    writeFileSync(join(state, `${LABEL}.runs`), "123\n");
+    writeFileSync(join(state, `${LABEL}.exits`), "0\n");
+    expect(() => standIn.stopAll()).not.toThrow();
+
+    const pid = join(state, `${LABEL}.pid`);
+    symlinkSync(pid, pid);
+    expect(() => standIn.stopAll()).toThrow(expect.objectContaining({ code: "ELOOP" }));
+  });
+
   it("keeps a job whose supervisor died before its run exited, and says its cleanup failed", async () => {
     const home = scratchDir("stand-in-home-");
     const standIn = serviceManagerStandIn(home);

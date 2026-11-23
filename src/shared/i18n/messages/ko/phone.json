@@ -554,6 +554,8 @@
   "phoneSettingsNotificationsOn": "켜져 있어요. Infinitary가 닫혀 있어도 {computer}의 새 카드와 답장이 이 {device}에 도착해요.",
   "phoneSettingsNotificationsOpen": "설정에서 변경",
   "phoneSettingsNotificationsUpdate": "여기서 카드마다 알림을 받으려면 {computer}의 Infinitary를 업데이트하세요.",
+  "phoneSettingsPencilTop": "Apple Pencil용으로 메시지 상자 옮기기",
+  "phoneSettingsPencilTopScope": "Apple Pencil로 쓰면 이 iPad는 메시지 상자를 위쪽으로 옮기고 쓸 공간을 넓혀요. 손가락이나 키보드를 쓰면 제자리로 돌아가요. 이 iPad에서만 설정돼요.",
   "phoneSettingsSecretsApprovals": "비밀 정보 승인",
   "phoneSettingsSetUpAgain": "승인 다시 설정",
   "phoneSettingsTextSize": "텍스트 크기",

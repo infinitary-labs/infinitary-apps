@@ -54,6 +54,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneKeptMacs.swift",
     // Home's pages and the one-row bar every tab and sheet asks for (PhoneWorkspace.swift, PhoneStyle.swift).
     "ios/Infinitary/InfinitaryApp/PhonePages.swift",
+    // The Apple Pencil watch and placement under every part's Home and message box (PhoneWorkspace.swift).
+    "ios/Infinitary/InfinitaryApp/PhonePencilWatch.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePencil.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift",
     "ios/Infinitary/InfinitaryApp/PhoneStyle.swift",

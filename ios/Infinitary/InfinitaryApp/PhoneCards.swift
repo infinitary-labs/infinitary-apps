@@ -1555,7 +1555,7 @@ private struct PhoneCardPane: View {
                     Label(PhoneMessages.phoneCardsAddPhotos(), systemImage: "photo").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                 }
                 .disabled(photos.count >= PhoneLimits.images || host.changing).accessibilityIdentifier("reply-photos")
-                TextField(PhoneCardWords.replyHint, text: $reply, axis: .vertical).lineLimit(1...5)
+                TextField(PhoneCardWords.replyHint, text: $reply, axis: .vertical).lineLimit(messageContext.pencilRoom ? 4...5 : 1...5)
                     .padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
                     .focused($replyFocus, equals: side).accessibilityIdentifier("card-reply")
                     .onAppear { if pendingFocus == side { replyFocus = side; pendingFocus = nil } }

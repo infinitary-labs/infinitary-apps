@@ -12,11 +12,11 @@
  *   to the record and passes;
  * - otherwise it fails and posts one comment saying how to accept.
  *
- * The record is a locked issue of this project titled RECORD_TITLE. Each
- * entry is a comment the check writes there, read back only from the
- * Actions bot, so a comment by anyone else adds no one. The agreement's
- * version is `CLA.md`'s "Version N" line, so a new version asks everyone
- * again.
+ * The record is a locked issue of this project titled RECORD_TITLE, opened
+ * by an account that can write to the project. Each entry is a comment the
+ * check writes there, read back only from the Actions bot, so a comment by
+ * anyone else adds no one. The agreement's version is `CLA.md`'s
+ * "Version N" line, so a new version asks everyone again.
  *
  * It reads the contributor's words only as data, and the workflow that runs
  * it (contributor-agreement.yml) checks out only this project's own copy of
@@ -30,8 +30,12 @@ export const SENTENCE = "I agree that my submission is governed by the Contribut
 export const BOT = "github-actions[bot]";
 const ASK_MARK = "<!-- contributor-license-agreement:ask -->";
 const ENTRY = /<!-- contributor-license-agreement:entry (\{.*\}) -->/;
-/** Who may have opened the record issue. */
-const KEEPERS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+/**
+ * Who may have opened the record issue: an account whose permission on the
+ * project is one of these, GitHub's legacy roles, where maintain reads as
+ * write.
+ */
+const KEEPERS = new Set(["admin", "write"]);
 
 /** The agreement's version, from its "Version N" line. */
 export function agreementVersion(text) {
@@ -215,21 +219,32 @@ export async function check({ github, context, core, agreement, now = () => new 
   return "asked";
 }
 
-/** The record issue: the oldest locked issue with its exact title that a maintainer opened. */
+/**
+ * The record issue: the oldest locked issue with its exact title that a
+ * maintainer opened. The opener is judged by their permission on the project,
+ * never by the issue's author_association: GitHub reads an organization
+ * member whose membership is private as a contributor to the Actions token.
+ */
 async function findRecord({ github, owner, repo }) {
   const { data } = await github.rest.search.issuesAndPullRequests({
     q: `repo:${owner}/${repo} is:issue in:title "${RECORD_TITLE}"`,
     per_page: 100,
   });
-  return (
-    data.items
-      .filter(
-        (issue) =>
-          issue.title === RECORD_TITLE &&
-          issue.locked &&
-          !issue.pull_request &&
-          KEEPERS.has(issue.author_association),
-      )
-      .toSorted((a, b) => a.number - b.number)[0] ?? null
-  );
+  const candidates = data.items
+    .filter((issue) => issue.title === RECORD_TITLE && issue.locked && !issue.pull_request)
+    .toSorted((a, b) => a.number - b.number);
+  for (const issue of candidates)
+    if (await canWrite({ github, owner, repo, login: issue.user?.login })) return issue;
+  return null;
+}
+
+/** Whether an account can write to the project. */
+async function canWrite({ github, owner, repo, login }) {
+  if (!login) return false;
+  const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+    owner,
+    repo,
+    username: login,
+  });
+  return KEEPERS.has(data.permission);
 }

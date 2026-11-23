@@ -61,14 +61,27 @@ function pullRequest({
   };
 }
 
+/**
+ * The record issue as the workflow's Actions token reads it: the project's
+ * issue 30, opened by a maintainer whose organization membership is private,
+ * so GitHub gives the token the association CONTRIBUTOR.
+ */
+const recordIssue = {
+  number: 30,
+  title: RECORD_TITLE,
+  locked: true,
+  user: { login: maintainer.login, id: maintainer.id, type: "User" },
+  author_association: "CONTRIBUTOR",
+};
+/** Each account's permission on the project, as the Actions token reads it; anyone else reads "read". */
+const permissions = new Map([[maintainer.login, "admin"]]);
+
 /** GitHub's API for this project, in memory: the record issue, pull requests and their comments, and statuses. */
-function gitHub({ record = true, pulls = [] as ReturnType<typeof pullRequest>[] } = {}) {
-  const recordIssue = {
-    number: 7,
-    title: RECORD_TITLE,
-    locked: true,
-    author_association: "OWNER",
-  };
+function gitHub({
+  record = true,
+  others = [] as (typeof recordIssue)[],
+  pulls = [] as ReturnType<typeof pullRequest>[],
+} = {}) {
   const comments = new Map<number, Comment[]>([[recordIssue.number, []]]);
   const statuses: { sha: string; state: string; context: string; description: string }[] = [];
   let searches = 0;
@@ -93,7 +106,7 @@ function gitHub({ record = true, pulls = [] as ReturnType<typeof pullRequest>[] 
       search: {
         issuesAndPullRequests: async () => {
           searches++;
-          return { data: { items: record ? [recordIssue] : [] } };
+          return { data: { items: [...others, ...(record ? [recordIssue] : [])] } };
         },
       },
       issues: {
@@ -105,6 +118,9 @@ function gitHub({ record = true, pulls = [] as ReturnType<typeof pullRequest>[] 
         }),
       },
       repos: {
+        getCollaboratorPermissionLevel: async ({ username }: { username: string }) => ({
+          data: { permission: permissions.get(username) ?? "read" },
+        }),
         createCommitStatus: async (status: (typeof statuses)[number]) => {
           statuses.push(status);
           return { data: status };
@@ -274,7 +290,7 @@ describe("the contributor agreement check", () => {
     const pull = pullRequest();
     const api = gitHub({ pulls: [pull] });
     api.add(
-      7,
+      recordIssue.number,
       contributor,
       `<!-- contributor-license-agreement:entry ${JSON.stringify({ login: contributor.login, id: contributor.id, version })} -->`,
     );
@@ -299,6 +315,22 @@ describe("the contributor agreement check", () => {
     expect(seen.failed[0]).toContain(RECORD_TITLE);
     expect(api.statuses).toEqual([expect.objectContaining({ state: "error" })]);
     expect(api.entries()).toEqual([]);
+  });
+
+  it("never takes a locked issue with the record's title that someone who cannot write opened", async () => {
+    const pull = pullRequest({ body: ticked });
+    const impostor = {
+      ...recordIssue,
+      number: 5,
+      user: { login: someoneElse.login, id: someoneElse.id, type: "User" },
+      author_association: "NONE",
+    };
+    const api = gitHub({ others: [impostor], pulls: [pull] });
+    expect(await check({ ...api, core, agreement, now, context: opened(pull) })).toBe(
+      "accepted now",
+    );
+    expect(api.entries()).toHaveLength(1);
+    expect(api.commentsOn(impostor.number)).toEqual([]);
   });
 
   it("ignores a comment on an issue that is not a pull request", async () => {

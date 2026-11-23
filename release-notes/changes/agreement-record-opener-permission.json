@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agreement-record-opener-permission",
+      "reason": "Internal: the contributor agreement check finds its record issue by its opener's permission on the project, so an outside pull request no longer errors; nothing in the app changes."
+    }
+  ]
+}

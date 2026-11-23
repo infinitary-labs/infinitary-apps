@@ -122562,6 +122562,12 @@ ${startersHtml()}`;
      */
     fixBases: record(string(), string()).optional(),
     /**
+     * The exact commit each declared fix's task had committed as it declared
+     * it, by task, kept as long as the declaration: another task's change
+     * approved at that commit, and no other, carries the same declaration.
+     */
+    fixHeads: record(string(), string()).optional(),
+    /**
      * When the project's last batch formed from the line (epoch ms): a
      * project's batch gap counts from it (`batchGap` on the project). A held
      * batch combined again by its repair forms no new batch, so it moves nothing.

@@ -16,8 +16,8 @@ import {
 
 /**
  * The Discord announcement of each stable (docs/alpha.md, "Announcing a
- * stable"; part 1 of INF-6319's approved plan). Intents: an alpha posts
- * nothing and a stable posts one message (INF-1104); a second run for a
+ * stable"; part 1 of INF-6319's approved plan). Intents: an alpha or a
+ * rehearsal posts nothing and a stable posts one message (INF-1104); a second run for a
  * claimed version posts nothing, and a Discord answer that does not say
  * whether the message exists is never retried (SSHH-34, where a
  * list-based announcer posted a release twice). Only the network is stood
@@ -33,6 +33,7 @@ type RunFixture = {
 };
 const STABLE_RUN = fixture<RunFixture>("release-run-45219209472.json");
 const ALPHA_RUN = fixture<RunFixture>("release-run-45177463244.json");
+const REHEARSAL_RUN = fixture<RunFixture>("release-run-44898655966.json");
 const STABLE = fixture<Release>("release-v0.8.7.json");
 const ALPHA = fixture<Release>("release-v0.8.7-alpha.31.json");
 const LEDGER = readLedger(FIXTURES);
@@ -44,9 +45,11 @@ const TAG_COMMIT = "aa091719c3b5e9cd99652ef0bd8f3bd9b8391110";
 type DiscordAnswer = () => Response | Promise<Response>;
 
 /** GitHub, the docs site and Discord as the script reaches them, holding the refs it creates. */
-function network(discord: DiscordAnswer) {
+function network(discord: DiscordAnswer, { claimRule = false } = {}) {
   const refs = new Map<string, string>();
-  const runs = new Map([STABLE_RUN, ALPHA_RUN].map((fixture) => [String(fixture.run.id), fixture]));
+  const runs = new Map(
+    [STABLE_RUN, ALPHA_RUN, REHEARSAL_RUN].map((fixture) => [String(fixture.run.id), fixture]),
+  );
   const posts: WebhookMessage[] = [];
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
   const fetch: Deps["fetch"] = async (url, init) => {
@@ -81,6 +84,7 @@ function network(discord: DiscordAnswer) {
     if (method === "POST" && path === "/git/refs") {
       const { ref, sha } = JSON.parse(String(init?.body)) as { ref: string; sha: string };
       if (refs.has(ref)) return json(422, { message: "Reference already exists" });
+      if (claimRule) return json(422, { message: "Repository rule violations found" });
       refs.set(ref, sha);
       return json(201, { ref });
     }
@@ -113,9 +117,12 @@ const afterRun = (fixture: RunFixture) => options({ releaseRun: String(fixture.r
 const created = () => new Response(JSON.stringify({ id: "1442250000000000000" }), { status: 200 });
 
 describe("which release runs post", () => {
-  it("posts nothing after an alpha's release run", async () => {
+  it.each([
+    ["an alpha's", ALPHA_RUN],
+    ["a stable rehearsal's", REHEARSAL_RUN],
+  ] as [string, RunFixture][])("posts nothing after %s release run", async (_, run) => {
     const { deps, refs, posts } = network(created);
-    const outcome = await announce(afterRun(ALPHA_RUN), deps);
+    const outcome = await announce(afterRun(run), deps);
     expect(outcome).toMatchObject({ exit: 0, result: "not_stable" });
     expect(posts).toHaveLength(0);
     expect(refs.size).toBe(0);
@@ -188,6 +195,15 @@ describe("one post per version", () => {
       expect(refs.has(`${POSTED_PREFIX}v0.8.7`)).toBe(true);
     },
   );
+
+  // The plan's "any other answer" rule: a 422 that is not an existing claim, such as a rule refusing the name, posts nothing.
+  it("posts nothing when GitHub refuses the claim for another reason", async () => {
+    const { deps, refs, posts } = network(created, { claimRule: true });
+    const outcome = await announce(afterRun(STABLE_RUN), deps);
+    expect(outcome).toMatchObject({ exit: 1, result: "github_error" });
+    expect(posts).toHaveLength(0);
+    expect(refs.size).toBe(0);
+  });
 
   it("releases the claim when Discord refuses the post, so a later run posts once", async () => {
     let discord: DiscordAnswer = () => new Response("{}", { status: 400 });

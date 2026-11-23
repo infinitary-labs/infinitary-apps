@@ -656,7 +656,8 @@ Every check comes before the post, and the first that fails stops the run with n
 7. It claims the version by creating `refs/announcements/discord/v<version>` at the tag's commit.
    GitHub creates a ref only once, so only the run that created it may post.
    If the claim already exists and `refs/announcements/discord-posted/v<version>` does too, the run ends green as `already_announced`; with no posted marker it stops red as `ambiguous`.
-8. It posts once, with `?wait=true`, and on Discord's answer with a message id creates the posted marker, a ref to an annotated tag holding the message id and the payload's SHA-256.
+   Any other answer, such as a rule refusing the name, stops red as `github_error` with nothing posted.
+8. It posts once, with `?wait=true`, and on Discord's answer with a message id prints the id, then creates the posted marker, a ref to an annotated tag holding the message id and the payload's SHA-256.
 
 Discord's other answers:
 

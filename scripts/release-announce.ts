@@ -473,7 +473,8 @@ async function run(options: Options, deps: Deps, github: GitHub): Promise<Outcom
       await deps.sleep(WHATS_NEW_EVERY_MS);
     }
     const created = await github.call("POST", "/git/refs", { ref: claim, sha: commit });
-    if (created.status === 422) {
+    // GitHub answers 422 for an invalid name or a rule too, so only a claim that reads back means "already claimed".
+    if (created.status === 422 && (await refExists(github, claim))) {
       if (await refExists(github, posted))
         return { exit: 0, result: "already_announced", version, message: `${version} was already announced. Nothing posted.` };
       return {
@@ -514,6 +515,8 @@ async function run(options: Options, deps: Deps, github: GitHub): Promise<Outcom
       message: `Discord ${answer.why}, so whether ${version} posted is unknown. The claim stays and nothing retries on its own. Check the Discord channel; if ${version} is not there, run ${replayCommand(version)}.`,
     };
 
+  // Printed before the marker writes, so a failure or hang there still leaves the id in the log.
+  deps.log(`Discord created message ${answer.id} for ${version}.`);
   const digest = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   const tag = await github.call("POST", "/git/tags", {
     tag: `announced-discord-v${version}`,
@@ -548,7 +551,8 @@ async function run(options: Options, deps: Deps, github: GitHub): Promise<Outcom
 function gitLedger(version: string): Map<string, LedgerEntry> {
   const scratch = mkdtempSync(join(tmpdir(), "release-announce-"));
   try {
-    execFileSync("git", ["-C", ROOT, "fetch", "--quiet", "--no-tags", "--depth=1", "origin", `+refs/tags/v${version}:refs/tags/v${version}`], {
+    // Never --depth: a depth fetch in a full clone makes that clone shallow at the tag.
+    execFileSync("git", ["-C", ROOT, "fetch", "--quiet", "--no-tags", "origin", `+refs/tags/v${version}:refs/tags/v${version}`], {
       stdio: "inherit",
     });
     const archive = join(scratch, "release-notes.tar");

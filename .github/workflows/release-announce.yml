@@ -61,7 +61,11 @@ jobs:
     # The wait for What's new is up to 30 minutes.
     timeout-minutes: 45
     steps:
+      # Every commit and tag: the script reads release-notes at the stable's
+      # tag, and fetching that tag into a shallow clone would deepen it.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24

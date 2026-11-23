@@ -5,6 +5,7 @@ import InfinitaryKit
 
 enum PhoneCardWords {
     static let replyHint = PhoneMessages.`cardReplyHint`()
+    static let chat = "Chat"
     static let anythingElse = "anything_else"
     static let sentWithChoice = PhoneMessages.`cardPastSentLead`()
     static let filesFirst = "Send the file as a reply first"

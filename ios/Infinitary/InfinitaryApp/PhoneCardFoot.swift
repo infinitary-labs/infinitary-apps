@@ -89,6 +89,14 @@ extension PhoneCardPane {
                 approvalFoot(use, secrets)
             } else if !card.actions.isEmpty {
                 PhoneChoiceRow {
+                    // The Mac's Chat on a card with a masked field: the reply is typed on the thread's back, never beside it.
+                    if takesReply && !showsBack && PhoneSecretAsk.of(card) != nil {
+                        Button { chatOnBack() } label: { Text(PhoneCardWords.chat) }
+                            .buttonStyle(PhoneChoiceStyle(.secondary))
+                            .disabled(!session.canChange)
+                            .layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
+                            .accessibilityIdentifier("card-chat")
+                    }
                     if asking, let count = host.reading["of"].numeric {
                         answersCount(Int(count)).layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }

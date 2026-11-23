@@ -174,7 +174,10 @@ export function stillRunning(pids: readonly number[]): number[] {
  * button's label rather than the button, so the press goes to the nearest
  * element that can be pressed; a classic dialog's button that offers no
  * such pattern gets its window's own click message; failing both, the
- * press focuses it and presses Enter as a person's keyboard would. When nothing could be pressed and
+ * press brings the dialog to the front, focuses the button and presses
+ * Enter as a person's keyboard would, and only once Windows shows both:
+ * a key sent while another window is in front would go to that window
+ * instead. When nothing could be pressed and
  * treeFile is given, the dialog's accessibility tree is written there.
  */
 export function pressDialogButton(pid: number, button: string, treeFile?: string): boolean {
@@ -206,10 +209,31 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
           }
           $pressed = [InfDialog.Button]::PostMessage([System.IntPtr]$candidate.Current.NativeWindowHandle, 0x00F5, [System.IntPtr]::Zero, [System.IntPtr]::Zero)
         }
-        if (-not $pressed -and $candidate.Current.IsKeyboardFocusable) {
-          $candidate.SetFocus()
-          [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
-          $pressed = $true
+        # Enter goes to whatever window is in front, so it is pressed only once the dialog is in
+        # front with the button focused: a notification that took the front, such as Windows
+        # Security's, would otherwise take the key and open itself while the dialog stays up.
+        if (-not $pressed -and $candidate.Current.IsKeyboardFocusable -and $window.Current.NativeWindowHandle -ne 0) {
+          if (-not ('InfDialog.Front' -as [type])) {
+            Add-Type -Name Front -Namespace InfDialog -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr hWnd); [DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, System.UIntPtr extra);'
+          }
+          $front = [System.IntPtr]$window.Current.NativeWindowHandle
+          # Windows lets a program bring another window to the front just after a key press of its own.
+          [InfDialog.Front]::keybd_event(0x12, 0, 0, [System.UIntPtr]::Zero)
+          [InfDialog.Front]::keybd_event(0x12, 0, 2, [System.UIntPtr]::Zero)
+          [void][InfDialog.Front]::SetForegroundWindow($front)
+          try { $candidate.SetFocus() } catch { }
+          Start-Sleep -Milliseconds 300
+          # The focus may sit on the button that carries the words' element, as the press above climbs.
+          $focused = $A::FocusedElement
+          $onButton = $false
+          $e = $candidate
+          for ($i = 0; $i -lt 3 -and $e -and $focused -and -not $onButton; $i++) {
+            if ($focused.Equals($e)) { $onButton = $true } else { $e = $walker.GetParent($e) }
+          }
+          if ([InfDialog.Front]::GetForegroundWindow() -eq $front -and $onButton) {
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+            $pressed = $true
+          }
         }
         if ($pressed) { break }
       }

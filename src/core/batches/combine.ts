@@ -46,6 +46,8 @@ export type CombineInput = {
   changes: readonly BatchChange[];
   /** The commits' date (epoch ms). */
   at: number;
+  /** Versions a requested retry must not reuse. */
+  excludeHeads?: readonly string[];
   remote?: string;
   /** Bound on each fetch; a test shortens it. */
   timeoutMs?: number;
@@ -208,6 +210,20 @@ export async function combine(input: CombineInput): Promise<Combined> {
     head = await commit(input.repoDir, tree, head, change, input.at);
     members.push({ ...change, commit: head });
   }
+  const last = members.at(-1);
+  if (last && input.excludeHeads?.includes(head)) {
+    // Identical work in the same Git second yields the same head. Change only the tip's
+    // committer date, leaving the tree, parent, author and story words as they were.
+    const excluded = new Set(input.excludeHeads);
+    const tree = await git(input.repoDir, ["rev-parse", `${head}^{tree}`]);
+    const parent = members.at(-2)?.commit ?? base;
+    let committedAt = input.at;
+    do {
+      committedAt += 1_000;
+      head = await commit(input.repoDir, tree, parent, last, input.at, committedAt);
+    } while (excluded.has(head));
+    last.commit = head;
+  }
   // Kept until the next combine, so the written commits outlive a cleanup before their push.
   await git(input.repoDir, ["update-ref", HEAD_REF, head]);
   return { base, head, members, leftOut, ...(waiting.length ? { waiting } : {}) };
@@ -339,6 +355,7 @@ async function commit(
   parent: string,
   change: BatchChange,
   at: number,
+  committedAt = at,
 ): Promise<string> {
   const [name = "", email = ""] = (
     await git(repoDir, ["log", "-1", "--format=%an%n%ae", change.head])
@@ -352,7 +369,7 @@ async function commit(
       GIT_AUTHOR_DATE: date,
       GIT_COMMITTER_NAME: name,
       GIT_COMMITTER_EMAIL: email,
-      GIT_COMMITTER_DATE: date,
+      GIT_COMMITTER_DATE: `${Math.floor(committedAt / 1000)} +0000`,
     },
   });
 }

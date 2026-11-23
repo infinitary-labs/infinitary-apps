@@ -559,6 +559,12 @@ export function CrewOrbit({
         avoid: room.avoid.map((box) => local(box, SUMMARY_MARGIN_PX)),
       },
     );
+    // No readable placement exists while panels occupy every available
+    // pocket. Keep inspecting the agent, but never paint under a panel.
+    if (!at) {
+      layer.removeAttribute("data-placed");
+      return;
+    }
     const px = (value: number) => `${Math.round(value * 10) / 10}px`;
     writeStyle(target, "width", px(reach * 2));
     writeStyle(target, "height", px(reach * 2));

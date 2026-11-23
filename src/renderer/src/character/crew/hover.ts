@@ -155,14 +155,64 @@ function tie(
   };
 }
 
+/** Search obstacle edges only after the four preferred positions fail. Any
+ * free rectangle can be translated until one edge touches a room/obstacle
+ * edge, so these positions also find pockets between the rails. */
+function remainingCrewSpace(
+  first: { x: number; y: number },
+  clear: Box,
+  panel: { width: number; height: number },
+  room: SummaryRoom,
+): { x: number; y: number } | null {
+  const { within } = room;
+  const { width, height } = panel;
+  const clamped = {
+    x: clamp(first.x, within.left, within.right - width),
+    y: first.y,
+  };
+  // Keep the historical window-only clamp when no sidebar is present.
+  if (room.avoid.length === 0) return clamped;
+  const lead = CREW_HOVER.leadPx;
+  const avoid = [
+    ...room.avoid,
+    {
+      left: clear.left - lead,
+      top: clear.top - lead,
+      right: clear.right + lead,
+      bottom: clear.bottom + lead,
+    },
+  ];
+  const xs = [
+    clamped.x,
+    within.left,
+    within.right - width,
+    ...avoid.flatMap((box) => [box.left - width, box.right]),
+  ];
+  const ys = [
+    clamped.y,
+    within.top,
+    within.bottom - height,
+    ...avoid.flatMap((box) => [box.top - height, box.bottom]),
+  ];
+  const distance = (at: { x: number; y: number }) =>
+    (at.x - clamped.x) ** 2 + (at.y - clamped.y) ** 2;
+  return (
+    xs
+      .flatMap((x) => ys.map((y) => ({ x, y })))
+      .filter((at) => hasRoom(at, panel, { within, avoid }))
+      .sort((a, b) => distance(a) - distance(b))[0] ?? null
+  );
+}
+
 /**
  * Where the summary sits: beside the crewmate on the side away from the
  * character, level with it; where that has no room, under or over it (away
  * from the character first); and only then on the character's side. A place
  * has room when it lies inside `room.within` and over none of `room.avoid`.
  * `clear` is what the panel must not cover: the brackets round the crewmate,
- * and its name when it shows one. `reach` is the brackets' half-size, where
- * the hairline starts.
+ * and its name when it shows one. If the preferred positions fail, search
+ * the remaining clear space; null when panels leave nowhere for it to fit.
+ * `reach` is the brackets' half-size, where the hairline starts.
  */
 export function placeCrewSummary(
   anchor: { x: number; y: number },
@@ -170,7 +220,7 @@ export function placeCrewSummary(
   clear: Box,
   panel: { width: number; height: number },
   room: SummaryRoom,
-): SummaryPlacement {
+): SummaryPlacement | null {
   const { within } = room;
   const { width, height } = panel;
   const lead = CREW_HOVER.leadPx;
@@ -186,11 +236,10 @@ export function placeCrewSummary(
   const down = anchor.y >= 0;
   const places = [beside(away), stacked(down), stacked(!down), beside(!away)];
   const first = places[0] as { x: number; y: number };
-  const at = places.find((place) => hasRoom(place, panel, room)) ?? {
-    x: clamp(first.x, within.left, within.right - width),
-    y: first.y,
-  };
-  return { ...at, line: tie(anchor, reach, at, panel) };
+  const at =
+    places.find((place) => hasRoom(place, panel, room)) ??
+    remainingCrewSpace(first, clear, panel, room);
+  return at ? { ...at, line: tie(anchor, reach, at, panel) } : null;
 }
 
 /**

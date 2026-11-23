@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "fleet-hover-sidebar",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Agent hover cards stay clear of sidebars in narrow windows",
+      "body": "Hovering a fleet agent keeps its card readable beside the sidebar, without changing the fleet visible behind it.",
+      "picture": {
+        "dark": "fleet-hover-sidebar-dark.webp",
+        "light": "fleet-hover-sidebar-light.webp",
+        "alt": "A fleet agent's hover card sits in the open space beside the sidebar with its text unobscured"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

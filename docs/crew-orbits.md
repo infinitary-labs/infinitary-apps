@@ -439,6 +439,8 @@ The status may wrap, to two lines at most, as may the task title and the project
 A cut-short line is not expanded in place; the record has the full text.
 The panel sits beside the crewmate on the side away from the character, level with it; where that has no room, under or over it; and only then on the character's side.
 It keeps inside the window between the top bar and the input, never under a rail's panel, and clear of the crewmate's own name.
+If none of its preferred positions fits, it searches the remaining space along the panels' edges, keeping the same size and a hairline back to the crewmate.
+When panels leave no clear place for the summary, it stays hidden until a place becomes available.
 It lives outside the fitted formation, so its type is never scaled, and it follows the painted crewmate with compare-before-write, so a paused stage touches no DOM.
 It is read-only - no buttons - and never takes the pointer.
 Under reduced motion the summary works against the still frame.

@@ -315,8 +315,12 @@ describe("where the summary sits", () => {
     right: x + reach,
     bottom: y + reach,
   });
-  const place = (x: number, y: number, room = roomy, clear = around(x, y)) =>
-    placeCrewSummary({ x, y }, reach, clear, panel, room);
+  const place = (x: number, y: number, room = roomy, clear = around(x, y)) => {
+    const at = placeCrewSummary({ x, y }, reach, clear, panel, room);
+    expect(at, "This geometry has space for the summary").not.toBeNull();
+    if (!at) throw new Error("The summary has no placement");
+    return at;
+  };
   const inside = (at: { x: number; y: number }, box = within) =>
     at.x >= box.left &&
     at.x + panel.width <= box.right &&

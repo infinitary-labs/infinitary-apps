@@ -124,6 +124,9 @@ const plusIcon = (
   </svg>
 );
 
+/** The keys a person scrolls a page with, which end the page following a card's add. */
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+
 /**
  * The tab: the first mate's devices, and on a computer that controls it,
  * which computer and Leave above them (`ControllingTab`, docs/view.md,
@@ -507,9 +510,10 @@ function HomeDevicesTab() {
 
   // After a card's Add it, the page scrolls to its row while it is under
   // way, then to the question or refusal it ended with.
+  const revealUnderWay = reveal !== null && adding.some((mac) => mac.address === reveal);
   useEffect(() => {
     if (!reveal) return;
-    const underWay = adding.some((mac) => mac.address === reveal);
+    const underWay = revealUnderWay;
     const target = document.querySelector<HTMLElement>(
       underWay
         ? `[data-device-adding="${CSS.escape(reveal)}"]`
@@ -524,12 +528,25 @@ function HomeDevicesTab() {
     }
     // The tab may still be drawing what it read, such as this computer's
     // address above the row, which moves the row on after it was brought in.
+    // The person's own scrolling ends that.
     const tab = document.querySelector("[data-devices]");
     if (!tab) return;
     const watch = new ResizeObserver(bring);
     watch.observe(tab);
-    return () => watch.disconnect();
-  }, [reveal, adding, outcome]);
+    const stop = () => watch.disconnect();
+    const stopOnKey = (event: KeyboardEvent) => {
+      if (SCROLL_KEYS.has(event.key)) stop();
+    };
+    window.addEventListener("wheel", stop, { passive: true });
+    window.addEventListener("touchmove", stop, { passive: true });
+    window.addEventListener("keydown", stopOnKey);
+    return () => {
+      stop();
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchmove", stop);
+      window.removeEventListener("keydown", stopOnKey);
+    };
+  }, [reveal, revealUnderWay, outcome]);
 
   const update = useCallback(
     async (deviceId: string, options: RemoteLoginUpdateOptions = {}, worker?: DeviceView) => {

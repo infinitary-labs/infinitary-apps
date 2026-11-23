@@ -65,6 +65,16 @@ function inView(element: Element): boolean {
   return box.top >= 0 && box.bottom <= window.innerHeight;
 }
 
+/** The nearest box around the element that scrolls, where the person scrolls the tab. */
+function scrollerOf(element: Element): HTMLElement {
+  for (let box = element.parentElement; box; box = box.parentElement) {
+    if (box.scrollHeight > box.clientHeight && getComputedStyle(box).overflowY !== "visible") {
+      return box;
+    }
+  }
+  return document.scrollingElement as HTMLElement;
+}
+
 test("an add under way says Checking from the press on, a second press waits for it, and its answer lands where it was pressed", async () => {
   const { bridge, adds, devices, asked } = await devicesWithHeldAdds();
   const checking = m.settingsDevicesCheckingRow({ address: ADDRESS });
@@ -130,8 +140,15 @@ test("an add under way says Checking from the press on, a second press waits for
   await expect.poll(refusalLines).toEqual(UNREACHABLE);
   expect(field()?.value).toBe(ADDRESS);
   await cancelAside();
+  // Section: once the person scrolls away from a card's row, the add's next step leaves the page
+  // where they put it.
   useShellStore.setState({ pendingDeviceArrival: { add: ADDRESS } });
-  await shown(`[data-device-adding="${ADDRESS}"]`);
+  const row = await shown(`[data-device-adding="${ADDRESS}"]`);
+  await expect.poll(() => inView(row)).toBe(true);
+  const scroller = scrollerOf(row);
+  window.dispatchEvent(new WheelEvent("wheel", { deltaY: -1000 }));
+  scroller.scrollTop = 0;
+  await expect.poll(() => inView(row)).toBe(false);
   bridge.push("inf:event", {
     type: "device_setup",
     address: ADDRESS,
@@ -143,6 +160,8 @@ test("an add under way says Checking from the press on, a second press waits for
   await expect
     .poll(() => document.querySelector(`[data-device-adding="${ADDRESS}"]`)?.textContent)
     .toContain(remoteLoginWords.reachingRow(ADDRESS));
+  await new Promise(requestAnimationFrame);
+  expect(scroller.scrollTop).toBe(0);
   refuse(3);
   await gone("[data-device-adding]");
 

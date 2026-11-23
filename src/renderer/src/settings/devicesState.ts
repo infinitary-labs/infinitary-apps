@@ -155,7 +155,7 @@ type SetupStore = {
   /** Computers whose address is changing. */
   moving: MovingMac[];
   stopListening: (() => void) | null;
-  addFrom: (address: string, stage?: AddingMac["stage"]) => void;
+  addFrom: (address: string, stage: AddingMac["stage"]) => void;
   addDone: (address: string) => void;
   updateFrom: (deviceId: string) => void;
   updateDone: (deviceId: string) => void;
@@ -247,7 +247,7 @@ export const useSetups = create<SetupStore>((set, get) => {
     updateCopy: {},
     moving: [],
     stopListening: null,
-    addFrom: (address, stage = "reaching") => {
+    addFrom: (address, stage) => {
       hear();
       set({ adding: [...get().adding, { address, stage }] });
     },

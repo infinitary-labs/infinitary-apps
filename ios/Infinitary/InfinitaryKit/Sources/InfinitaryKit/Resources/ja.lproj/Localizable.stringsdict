@@ -1641,20 +1641,6 @@
       <string>%1$@ · %2$ld件はサインインが必要</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>other</key>
-      <string>%2$@、一等航海士はイベントと一緒にこのプロンプトを受け取ります。Infinitary は%1$ld分ごとに確認します。何も送信されません。</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

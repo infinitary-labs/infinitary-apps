@@ -6020,56 +6020,56 @@ ${events}` : prompt;
   function settingsAutomationDraftNote() {
     switch (currentLanguage()) {
       case "ar":
-        return `المسودة لا تعمل أبدًا. اختر «تفعيل» لفحصها وتشغيلها.`;
+        return `المسودة لا تعمل أبدًا. اختر «تشغيل» لفحصها وتشغيلها.`;
       case "de":
-        return `Ein Entwurf läuft nie. Wähl „Aktivieren“, um ihn zu prüfen und einzuschalten.`;
+        return `Ein Entwurf läuft nie. Wähl „Einschalten“, um ihn zu prüfen und einzuschalten.`;
       case "es":
         return `Un borrador nunca se ejecuta. Elige Activar para revisarlo y ponerlo en marcha.`;
       case "fr":
         return `Un brouillon ne s’exécute jamais. Choisissez Activer pour le vérifier et le mettre en marche.`;
       case "ja":
-        return `下書きは実行されません。「有効にする」を選ぶと確認してオンにできます。`;
+        return `下書きは実行されません。「オンにする」を選ぶと確認してオンにできます。`;
       case "ko":
-        return `초안은 실행되지 않아요. 확인하고 켜려면 활성화를 고르세요.`;
+        return `초안은 실행되지 않아요. 확인하고 켜려면 켜기를 고르세요.`;
       case "pt-BR":
         return `Um rascunho nunca roda. Escolha Ativar para verificá-lo e ligá-lo.`;
       case "zh-Hans":
-        return `草稿从不运行。选择“启用”来检查并打开它。`;
+        return `草稿从不运行。选择“打开”来检查并打开它。`;
       case "zh-Hant":
-        return `草稿永遠不會執行。選擇「啟用」來檢查並開啟它。`;
+        return `草稿永遠不會執行。選擇「開啟」來檢查並開啟它。`;
       case "en-XA":
-        return `[Å ðŕáƒţ ñéṽéŕ ŕûñš. Çĥööšé Éñáƀļé ţö çĥéçķ îţ áñð ţûŕñ îţ öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Å ðŕáƒţ ñéṽéŕ ŕûñš. Çĥööšé Ţûŕñ öñ ţö çĥéçķ îţ áñð ţûŕñ îţ öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮A draft never runs. Choose Enable to check it and turn it on.‬`;
+        return `‮A draft never runs. Choose Turn on to check it and turn it on.‬`;
     }
-    return `A draft never runs. Choose Enable to check it and turn it on.`;
+    return `A draft never runs. Choose Turn on to check it and turn it on.`;
   }
   function settingsAutomationEnable() {
     switch (currentLanguage()) {
       case "ar":
-        return `تفعيل…`;
+        return `تشغيل…`;
       case "de":
-        return `Aktivieren …`;
+        return `Einschalten …`;
       case "es":
         return `Activar…`;
       case "fr":
         return `Activer…`;
       case "ja":
-        return `有効にする…`;
+        return `オンにする…`;
       case "ko":
-        return `활성화…`;
+        return `켜기…`;
       case "pt-BR":
         return `Ativar…`;
       case "zh-Hans":
-        return `启用…`;
+        return `打开…`;
       case "zh-Hant":
-        return `啟用…`;
+        return `開啟…`;
       case "en-XA":
-        return `[Éñáƀļé… ~~~]`;
+        return `[Ţûŕñ öñ… ~~~]`;
       case "ar-XB":
-        return `‮Enable…‬`;
+        return `‮Turn on…‬`;
     }
-    return `Enable…`;
+    return `Turn on…`;
   }
   function settingsAutomationEventsPreview() {
     switch (currentLanguage()) {
@@ -6178,6 +6178,61 @@ ${events}` : prompt;
         return `‮Led to‬`;
     }
     return `Led to`;
+  }
+  function settingsAutomationLocalTimeNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تتبع هذه الأتمتة ساعة هذا الحاسوب، لذا يتغير وقتها حين تسافر. اختر منطقة زمنية لتثبيته.`;
+      case "de":
+        return `Diese Automatisierung folgt der Uhr dieses Computers und verschiebt sich daher, wenn du reist. Wähl eine Zeitzone, damit sie fest bleibt.`;
+      case "es":
+        return `Esta automatización sigue el reloj de esta computadora, así que cambia cuando viajas. Elige una zona horaria para dejarla fija.`;
+      case "fr":
+        return `Cette automatisation suit l’horloge de cet ordinateur : elle se décale quand vous voyagez. Choisissez un fuseau horaire pour la garder fixe.`;
+      case "ja":
+        return `この自動化はこのコンピューターの時計に従うため、移動すると時刻も変わります。固定するにはタイムゾーンを選んでください。`;
+      case "ko":
+        return `이 자동화는 이 컴퓨터의 시계를 따르므로, 선장님이 이동하면 시각도 바뀌어요. 고정하려면 시간대를 고르세요.`;
+      case "pt-BR":
+        return `Esta automação segue o relógio deste computador, então muda quando você viaja. Escolha um fuso horário para mantê-la fixa.`;
+      case "zh-Hans":
+        return `这项自动化跟随这台电脑的时钟，所以你出行时它会跟着变。选择一个时区可以让它保持固定。`;
+      case "zh-Hant":
+        return `這項自動化跟隨這台電腦的時鐘，所以你旅行時它也會跟著變。選擇一個時區就能讓它固定。`;
+      case "en-XA":
+        return `[Ţĥîš áûţöɱáţîöñ ƒöļļöŵš ţĥîš çöɱþûţéŕ'š çļöçķ, šö îţ ɱöṽéš ŵĥéñ ýöû ţŕáṽéļ. Þîçķ á ţîɱé žöñé ţö ķééþ îţ ƒîẋéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This automation follows this computer's clock, so it moves when you travel. Pick a time zone to keep it fixed.‬`;
+    }
+    return `This automation follows this computer's clock, so it moves when you travel. Pick a time zone to keep it fixed.`;
+  }
+  function settingsAutomationLocalTimeNoteThere(input) {
+    const where = input.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تتبع هذه الأتمتة ساعة ${where}، لذا يتغير وقتها حين يسافر ذلك الحاسوب. اختر منطقة زمنية لتثبيته.`;
+      case "de":
+        return `Diese Automatisierung folgt der Uhr auf ${where} und verschiebt sich daher, wenn dieser Computer reist. Wähl eine Zeitzone, damit sie fest bleibt.`;
+      case "es":
+        return `Esta automatización sigue el reloj de ${where}, así que cambia cuando esa computadora viaja. Elige una zona horaria para dejarla fija.`;
+      case "fr":
+        return `Cette automatisation suit l’horloge de ${where} : elle se décale quand cet ordinateur voyage. Choisissez un fuseau horaire pour la garder fixe.`;
+      case "ja":
+        return `この自動化は ${where} の時計に従うため、そのコンピューターが移動すると時刻も変わります。固定するにはタイムゾーンを選んでください。`;
+      case "ko":
+        return `이 자동화는 ${where}의 시계를 따르므로, 그 컴퓨터가 이동하면 시각도 바뀌어요. 고정하려면 시간대를 고르세요.`;
+      case "pt-BR":
+        return `Esta automação segue o relógio de ${where}, então muda quando esse computador viaja. Escolha um fuso horário para mantê-la fixa.`;
+      case "zh-Hans":
+        return `这项自动化跟随 ${where} 上的时钟，所以那台电脑出行时它会跟着变。选择一个时区可以让它保持固定。`;
+      case "zh-Hant":
+        return `這項自動化跟隨 ${where} 上的時鐘，所以那台電腦移動到別的時區時它也會跟著變。選擇一個時區就能讓它固定。`;
+      case "en-XA":
+        return `[Ţĥîš áûţöɱáţîöñ ƒöļļöŵš ţĥé çļöçķ öñ ${where}, šö îţ ɱöṽéš ŵĥéñ ţĥáţ çöɱþûţéŕ ţŕáṽéļš. Þîçķ á ţîɱé žöñé ţö ķééþ îţ ƒîẋéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This automation follows the clock on ‬${where}‮, so it moves when that computer travels. Pick a time zone to keep it fixed.‬`;
+    }
+    return `This automation follows the clock on ${where}, so it moves when that computer travels. Pick a time zone to keep it fixed.`;
   }
   function settingsAutomationMissedEvent() {
     switch (currentLanguage()) {
@@ -7473,6 +7528,61 @@ ${events}` : prompt;
         return `‮When‬`;
     }
     return `When`;
+  }
+  function settingsAutomationZoneNote() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل في هذا الوقت حسب المنطقة الزمنية التي تختارها، أينما كان هذا الحاسوب. تعمل الأتمتة فقط ما دام Infinitary مفتوحًا والحاسوب مستيقظًا؛ وأي تشغيل يفوت في أثناء ذلك يُنفَّذ مرة واحدة عند عودته.`;
+      case "de":
+        return `Läuft zu dieser Uhrzeit in der gewählten Zeitzone, wo auch immer dieser Computer ist. Die Automatisierung läuft nur, solange Infinitary geöffnet und der Computer wach ist; ein in der Zwischenzeit verpasster Lauf wird einmal nachgeholt, sobald er zurück ist.`;
+      case "es":
+        return `Se ejecuta a esta hora en la zona que elijas, esté donde esté esta computadora. La automatización se ejecuta solo mientras Infinitary está abierto y la computadora está activa; una ejecución perdida mientras tanto se hace una sola vez cuando vuelve.`;
+      case "fr":
+        return `S’exécute à cette heure dans le fuseau que vous choisissez, où que se trouve cet ordinateur. L’automatisation s’exécute seulement quand Infinitary est ouvert et que l’ordinateur est éveillé ; une exécution manquée entre-temps a lieu une seule fois à son retour.`;
+      case "ja":
+        return `このコンピューターがどこにあっても、選んだタイムゾーンのこの時刻に実行します。自動化は Infinitary が開いていてコンピューターがスリープしていない間だけ実行されます。その間に逃した実行は、復帰時に1回行われます。`;
+      case "ko":
+        return `이 컴퓨터가 어디에 있든 고른 시간대의 이 시각에 실행돼요. 자동화는 Infinitary가 열려 있고 컴퓨터가 깨어 있을 때만 실행돼요. 그동안 놓친 실행은 돌아왔을 때 한 번 실행해요.`;
+      case "pt-BR":
+        return `Roda neste horário no fuso que você escolher, onde quer que este computador esteja. A automação só roda enquanto o Infinitary estiver aberto e o computador estiver ativo; uma execução perdida nesse meio-tempo acontece uma vez quando ele voltar.`;
+      case "zh-Hans":
+        return `按你选择的时区在这个时间运行，无论这台电脑身在何处。自动化仅在 Infinitary 打开且电脑未睡眠时运行；期间错过的运行会在它恢复后运行一次。`;
+      case "zh-Hant":
+        return `依你選擇的時區在這個時間執行，不論這台電腦在哪裡。自動化只在 Infinitary 開啟且電腦未睡眠時執行；期間錯過的執行會在它恢復後執行一次。`;
+      case "en-XA":
+        return `[Ŕûñš áţ ţĥîš ţîɱé îñ ţĥé žöñé ýöû þîçķ, ŵĥéŕéṽéŕ ţĥîš çöɱþûţéŕ îš. Åûţöɱáţîöñ ŕûñš öñļý ŵĥîļé Îñƒîñîţáŕý îš öþéñ áñð ţĥé çöɱþûţéŕ îš áŵáķé; á ŕûñ ɱîššéð ɱéáñŵĥîļé ĥáþþéñš öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Runs at this time in the zone you pick, wherever this computer is. Automation runs only while Infinitary is open and the computer is awake; a run missed meanwhile happens once when it returns.‬`;
+    }
+    return `Runs at this time in the zone you pick, wherever this computer is. Automation runs only while Infinitary is open and the computer is awake; a run missed meanwhile happens once when it returns.`;
+  }
+  function settingsAutomationZoneNoteThere(input) {
+    const where = input.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل في هذا الوقت حسب المنطقة الزمنية التي تختارها. تعمل الأتمتة على ${where}، فقط ما دام Infinitary مفتوحًا هناك والحاسوب مستيقظًا؛ وأي تشغيل يفوت في أثناء ذلك يُنفَّذ مرة واحدة عند عودته.`;
+      case "de":
+        return `Läuft zu dieser Uhrzeit in der gewählten Zeitzone. Die Automatisierung läuft auf ${where}, nur solange Infinitary dort geöffnet und der Computer wach ist; ein in der Zwischenzeit verpasster Lauf wird einmal nachgeholt, sobald er zurück ist.`;
+      case "es":
+        return `Se ejecuta a esta hora en la zona que elijas. La automatización se ejecuta en ${where}, solo mientras Infinitary está abierto allí y la computadora está activa; una ejecución perdida mientras tanto se hace una sola vez cuando vuelve.`;
+      case "fr":
+        return `S’exécute à cette heure dans le fuseau que vous choisissez. L’automatisation s’exécute sur ${where}, seulement quand Infinitary y est ouvert et que l’ordinateur est éveillé ; une exécution manquée entre-temps a lieu une seule fois à son retour.`;
+      case "ja":
+        return `選んだタイムゾーンのこの時刻に実行します。自動化は ${where} で、そこで Infinitary が開いていてスリープしていない間だけ実行されます。その間に逃した実行は、復帰時に1回行われます。`;
+      case "ko":
+        return `고른 시간대의 이 시각에 실행돼요. 자동화는 ${where}에서 실행되며, 그곳에서 Infinitary가 열려 있고 컴퓨터가 깨어 있을 때만 실행돼요. 그동안 놓친 실행은 돌아왔을 때 한 번 실행해요.`;
+      case "pt-BR":
+        return `Roda neste horário no fuso que você escolher. A automação roda em ${where}, só enquanto o Infinitary estiver aberto lá e o computador estiver ativo; uma execução perdida nesse meio-tempo acontece uma vez quando ele voltar.`;
+      case "zh-Hans":
+        return `按你选择的时区在这个时间运行。自动化在 ${where} 上运行，仅在那里的 Infinitary 打开且电脑未睡眠时运行；期间错过的运行会在它恢复后运行一次。`;
+      case "zh-Hant":
+        return `依你選擇的時區在這個時間執行。自動化在 ${where} 上執行，只在那裡的 Infinitary 開啟且電腦未睡眠時執行；期間錯過的執行會在它恢復後執行一次。`;
+      case "en-XA":
+        return `[Ŕûñš áţ ţĥîš ţîɱé îñ ţĥé žöñé ýöû þîçķ. Åûţöɱáţîöñ ŕûñš öñ ${where}, öñļý ŵĥîļé Îñƒîñîţáŕý îš öþéñ ţĥéŕé áñð îţ îš áŵáķé; á ŕûñ ɱîššéð ɱéáñŵĥîļé ĥáþþéñš öñçé ŵĥéñ îţ ŕéţûŕñš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Runs at this time in the zone you pick. Automation runs on ‬${where}‮, only while Infinitary is open there and it is awake; a run missed meanwhile happens once when it returns.‬`;
+    }
+    return `Runs at this time in the zone you pick. Automation runs on ${where}, only while Infinitary is open there and it is awake; a run missed meanwhile happens once when it returns.`;
   }
   function settingsDevicesSignInsAsOf(input) {
     const time2 = input.time;
@@ -17079,6 +17189,12 @@ ${events}` : prompt;
       return where ? settingsAutomationMissedOnceThere({ where }) : settingsAutomationMissedOnce();
     return where ? settingsAutomationMissedRepeatsThere({ where }) : settingsAutomationMissedRepeats();
   }
+  function zoneNote(where) {
+    return where ? settingsAutomationZoneNoteThere({ where }) : settingsAutomationZoneNote();
+  }
+  function localTimeNote(where) {
+    return where ? settingsAutomationLocalTimeNoteThere({ where }) : settingsAutomationLocalTimeNote();
+  }
   function localClockWords(where) {
     return where ? settingsAutomationClockThere({ where }) : settingsAutomationClockHere();
   }
@@ -17118,18 +17234,23 @@ ${events}` : prompt;
     if (!projectId) return settingsAutomationNoProject();
     return projects.find((one) => one.id === projectId)?.name ?? settingsAutomationRemovedProject();
   }
-  function reviewFacts(review, projects, where) {
+  function reviewFacts(review, projects, where, { zoneNote: withZoneNote = false } = {}) {
     const { spec, listened } = review;
     const zone = automationZoneOf(spec);
     const next = review.dates.map((at) => automationDateWords(at, zone));
+    const zoneFact = () => {
+      const words = zone ? automationZoneWords(zone) : localClockWords(where);
+      if (!withZoneNote) return { term: settingsAutomationTimeZone(), value: words };
+      const note = zone ? zoneNote(where) : localTimeNote(where);
+      return {
+        term: settingsAutomationTimeZone(),
+        value: `${words}. ${note}`,
+        lines: [words, note]
+      };
+    };
     return [
       { term: settingsAutomationWhen(), value: automationWhenWords(spec, listened?.when) },
-      ...spec.kind === "daily" || spec.kind === "weekly" ? [
-        {
-          term: settingsAutomationTimeZone(),
-          value: zone ? automationZoneWords(zone) : localClockWords(where)
-        }
-      ] : [],
+      ...spec.kind === "daily" || spec.kind === "weekly" ? [zoneFact()] : [],
       ...spec.kind === "event" ? (listened?.filters ?? []).map((field) => ({
         term: field.label,
         value: spec.filter?.[field.name] || field.defaultValue || settingsAutomationNotSpecified()

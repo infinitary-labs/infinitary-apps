@@ -1641,20 +1641,6 @@
       <string>%1$@ · %2$ld개 로그인 필요</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>other</key>
-      <string>%2$@, 일등항해사가 이벤트와 함께 이 메시지를 받아요. Infinitary는 %1$ld분마다 확인해요. 보내지는 것은 없어요.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

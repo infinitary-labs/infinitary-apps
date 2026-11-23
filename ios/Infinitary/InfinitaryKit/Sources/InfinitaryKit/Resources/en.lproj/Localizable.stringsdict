@@ -1875,22 +1875,6 @@
       <string>%1$@ · %2$ld need a sign-in</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.</string>
-      <key>other</key>
-      <string>%2$@, your first mate gets this prompt with the events. Infinitary looks every %1$ld minutes. Nothing is sent.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -1875,22 +1875,6 @@
       <string>%1$@ · %2$ld brauchen eine Anmeldung</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut jede Minute nach. Es wird nichts gesendet.</string>
-      <key>other</key>
-      <string>%2$@, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut alle %1$ld Minuten nach. Es wird nichts gesendet.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

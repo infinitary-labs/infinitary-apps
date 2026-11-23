@@ -2109,24 +2109,6 @@
       <string>%1$@ · %2$ld necesitan iniciar sesión</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada minuto. No se envía nada.</string>
-      <key>many</key>
-      <string>%2$@, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada %1$ld de minutos. No se envía nada.</string>
-      <key>other</key>
-      <string>%2$@, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada %1$ld minutos. No se envía nada.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

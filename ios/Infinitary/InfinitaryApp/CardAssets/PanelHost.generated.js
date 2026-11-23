@@ -52043,83 +52043,110 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsAutomationDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `رسائل يتلقاها نائب القبطان وفق جدول. يمكنك أيضًا أن تطلب من نائب القبطان إعداد واحدة.`;
+        return `رسائل يتلقاها نائب القبطان وفق جدول أو عند حدوث شيء. يمكنك أيضًا أن تطلب من نائب القبطان إعداد واحدة.`;
       case "de":
-        return `Nachrichten, die dein erster Offizier nach Zeitplan bekommt. Du kannst deinen ersten Offizier auch bitten, eine einzurichten.`;
+        return `Nachrichten, die dein erster Offizier nach Zeitplan oder bei einem Ereignis bekommt. Du kannst deinen ersten Offizier auch bitten, eine einzurichten.`;
       case "es":
-        return `Indicaciones que tu primer oficial recibe según una programación. También puedes pedirle a tu primer oficial que configure una.`;
+        return `Indicaciones que tu primer oficial recibe según una programación o cuando pasa algo. También puedes pedirle a tu primer oficial que configure una.`;
       case "fr":
-        return `Des consignes que votre second reçoit selon une planification. Vous pouvez aussi demander à votre second d’en créer une.`;
+        return `Des consignes que votre second reçoit selon une planification ou quand quelque chose se produit. Vous pouvez aussi demander à votre second d’en créer une.`;
       case "ja":
-        return `スケジュールに沿って一等航海士に届くプロンプトです。一等航海士に設定を頼むこともできます。`;
+        return `スケジュールに沿って、または何かが起きたときに一等航海士に届くプロンプトです。一等航海士に設定を頼むこともできます。`;
       case "ko":
-        return `일정에 따라 일등항해사가 받는 메시지예요. 일등항해사에게 설정해 달라고 부탁할 수도 있어요.`;
+        return `일정에 따라 또는 어떤 일이 일어날 때 일등항해사가 받는 메시지예요. 일등항해사에게 설정해 달라고 부탁할 수도 있어요.`;
       case "pt-BR":
-        return `Pedidos que seu imediato recebe em horários agendados. Você também pode pedir ao seu imediato para criar uma.`;
+        return `Pedidos que seu imediato recebe em horários agendados ou quando algo acontece. Você também pode pedir ao seu imediato para criar uma.`;
       case "zh-Hans":
-        return `按计划发给你的大副的提示。你也可以让大副帮你设置一个。`;
+        return `按计划或在某事发生时发给你的大副的提示。你也可以让大副帮你设置一个。`;
       case "zh-Hant":
-        return `依排程傳給你的大副的提示。你也可以請大副幫你設定一個。`;
+        return `依排程或在某件事發生時傳給你的大副的提示。你也可以請大副幫你設定一個。`;
       case "en-XA":
-        return `[Þŕöɱþţš ýöûŕ ƒîŕšţ ɱáţé ĝéţš öñ á šçĥéðûļé. Ýöû çáñ áļšö ášķ ýöûŕ ƒîŕšţ ɱáţé ţö šéţ öñé ûþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Þŕöɱþţš ýöûŕ ƒîŕšţ ɱáţé ĝéţš öñ á šçĥéðûļé öŕ ŵĥéñ šöɱéţĥîñĝ ĥáþþéñš. Ýöû çáñ áļšö ášķ ýöûŕ ƒîŕšţ ɱáţé ţö šéţ öñé ûþ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Prompts your first mate gets on a schedule. You can also ask your first mate to set one up.‬`;
+        return `‮Prompts your first mate gets on a schedule or when something happens. You can also ask your first mate to set one up.‬`;
     }
-    return `Prompts your first mate gets on a schedule. You can also ask your first mate to set one up.`;
+    return `Prompts your first mate gets on a schedule or when something happens. You can also ask your first mate to set one up.`;
   }
-  function settingsAutomationDetailNote() {
+  function settingsAutomationDetails() {
     switch (currentLanguage()) {
       case "ar":
-        return `تُملأ كل تفصيلة عند إرسال الرسالة.`;
+        return `التفاصيل`;
       case "de":
-        return `Jede Angabe wird ausgefüllt, wenn die Nachricht gesendet wird.`;
+        return `Details`;
       case "es":
-        return `Cada dato se completa cuando se envía la indicación.`;
+        return `Detalles`;
       case "fr":
-        return `Chaque détail est rempli au moment où la consigne est envoyée.`;
+        return `Détails`;
       case "ja":
-        return `各詳細はプロンプトを送るときに入ります。`;
+        return `詳細`;
       case "ko":
-        return `각 정보는 메시지를 보낼 때 채워져요.`;
+        return `자세히`;
       case "pt-BR":
-        return `Cada detalhe é preenchido quando o pedido é enviado.`;
+        return `Detalhes`;
       case "zh-Hans":
-        return `每项详情会在发送提示时填入。`;
+        return `详情`;
       case "zh-Hant":
-        return `每項詳細資料會在送出提示時填入。`;
+        return `詳細資料`;
       case "en-XA":
-        return `[Éáçĥ ðéţáîļ îš ƒîļļéð îñ ŵĥéñ ţĥé þŕöɱþţ îš šéñţ. ~~~~~~~~~~~~~~~~~]`;
+        return `[Ðéţáîļš ~~~]`;
       case "ar-XB":
-        return `‮Each detail is filled in when the prompt is sent.‬`;
+        return `‮Details‬`;
     }
-    return `Each detail is filled in when the prompt is sent.`;
+    return `Details`;
+  }
+  function settingsAutomationDiscard() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجاهل التغييرات`;
+      case "de":
+        return `Änderungen verwerfen`;
+      case "es":
+        return `Descartar cambios`;
+      case "fr":
+        return `Annuler les modifications`;
+      case "ja":
+        return `変更を破棄`;
+      case "ko":
+        return `변경 사항 취소`;
+      case "pt-BR":
+        return `Descartar alterações`;
+      case "zh-Hans":
+        return `放弃更改`;
+      case "zh-Hant":
+        return `捨棄變更`;
+      case "en-XA":
+        return `[Ðîšçáŕð çĥáñĝéš ~~~~~]`;
+      case "ar-XB":
+        return `‮Discard changes‬`;
+    }
+    return `Discard changes`;
   }
   function settingsAutomationDraftNote() {
     switch (currentLanguage()) {
       case "ar":
-        return `المسودة لا تعمل أبدًا. اختر «تفعيل» لفحصها وتشغيلها.`;
+        return `المسودة لا تعمل أبدًا. اختر «تشغيل» لفحصها وتشغيلها.`;
       case "de":
-        return `Ein Entwurf läuft nie. Wähl „Aktivieren“, um ihn zu prüfen und einzuschalten.`;
+        return `Ein Entwurf läuft nie. Wähl „Einschalten“, um ihn zu prüfen und einzuschalten.`;
       case "es":
         return `Un borrador nunca se ejecuta. Elige Activar para revisarlo y ponerlo en marcha.`;
       case "fr":
         return `Un brouillon ne s’exécute jamais. Choisissez Activer pour le vérifier et le mettre en marche.`;
       case "ja":
-        return `下書きは実行されません。「有効にする」を選ぶと確認してオンにできます。`;
+        return `下書きは実行されません。「オンにする」を選ぶと確認してオンにできます。`;
       case "ko":
-        return `초안은 실행되지 않아요. 확인하고 켜려면 활성화를 고르세요.`;
+        return `초안은 실행되지 않아요. 확인하고 켜려면 켜기를 고르세요.`;
       case "pt-BR":
         return `Um rascunho nunca roda. Escolha Ativar para verificá-lo e ligá-lo.`;
       case "zh-Hans":
-        return `草稿从不运行。选择“启用”来检查并打开它。`;
+        return `草稿从不运行。选择“打开”来检查并打开它。`;
       case "zh-Hant":
-        return `草稿永遠不會執行。選擇「啟用」來檢查並開啟它。`;
+        return `草稿永遠不會執行。選擇「開啟」來檢查並開啟它。`;
       case "en-XA":
-        return `[Å ðŕáƒţ ñéṽéŕ ŕûñš. Çĥööšé Éñáƀļé ţö çĥéçķ îţ áñð ţûŕñ îţ öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Å ðŕáƒţ ñéṽéŕ ŕûñš. Çĥööšé Ţûŕñ öñ ţö çĥéçķ îţ áñð ţûŕñ îţ öñ. ~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮A draft never runs. Choose Enable to check it and turn it on.‬`;
+        return `‮A draft never runs. Choose Turn on to check it and turn it on.‬`;
     }
-    return `A draft never runs. Choose Enable to check it and turn it on.`;
+    return `A draft never runs. Choose Turn on to check it and turn it on.`;
   }
   function settingsAutomationEmpty() {
     switch (currentLanguage()) {
@@ -52151,29 +52178,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsAutomationEnable() {
     switch (currentLanguage()) {
       case "ar":
-        return `تفعيل…`;
+        return `تشغيل…`;
       case "de":
-        return `Aktivieren …`;
+        return `Einschalten …`;
       case "es":
         return `Activar…`;
       case "fr":
         return `Activer…`;
       case "ja":
-        return `有効にする…`;
+        return `オンにする…`;
       case "ko":
-        return `활성화…`;
+        return `켜기…`;
       case "pt-BR":
         return `Ativar…`;
       case "zh-Hans":
-        return `启用…`;
+        return `打开…`;
       case "zh-Hant":
-        return `啟用…`;
+        return `開啟…`;
       case "en-XA":
-        return `[Éñáƀļé… ~~~]`;
+        return `[Ţûŕñ öñ… ~~~]`;
       case "ar-XB":
-        return `‮Enable…‬`;
+        return `‮Turn on…‬`;
     }
-    return `Enable…`;
+    return `Turn on…`;
   }
   function settingsAutomationEventIn(input2) {
     const event = input2.event;
@@ -52230,129 +52257,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮An integration not connected now‬`;
     }
     return `An integration not connected now`;
-  }
-  function settingsAutomationEventPreview(input2) {
-    const count = formatNumber(input2.count);
-    const when = input2.when;
-    switch (currentLanguage()) {
-      case "ar":
-        switch (pluralCategory(input2.count)) {
-          case "zero":
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
-          case "one":
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل دقيقة. لا يُرسَل شيء.`;
-          case "two":
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقتين. لا يُرسَل شيء.`;
-          case "few":
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقائق. لا يُرسَل شيء.`;
-          case "many":
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
-          default:
-            return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل ${count} دقيقة. لا يُرسَل شيء.`;
-        }
-      case "de":
-        switch (pluralCategory(input2.count)) {
-          case "one":
-            return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut jede Minute nach. Es wird nichts gesendet.`;
-          default:
-            return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen. Infinitary schaut alle ${count} Minuten nach. Es wird nichts gesendet.`;
-        }
-      case "es":
-        switch (pluralCategory(input2.count)) {
-          case "one":
-            return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada minuto. No se envía nada.`;
-          case "many":
-            return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada ${count} de minutos. No se envía nada.`;
-          default:
-            return `${when}, tu primer oficial recibe esta indicación con los eventos. Infinitary revisa cada ${count} minutos. No se envía nada.`;
-        }
-      case "fr":
-        switch (pluralCategory(input2.count)) {
-          case "one":
-            return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie chaque minute. Rien n’est envoyé.`;
-          case "many":
-            return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les ${count} minutes. Rien n’est envoyé.`;
-          default:
-            return `${when}, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les ${count} minutes. Rien n’est envoyé.`;
-        }
-      case "ja":
-        switch (pluralCategory(input2.count)) {
-          default:
-            return `${when}、一等航海士はイベントと一緒にこのプロンプトを受け取ります。Infinitary は${count}分ごとに確認します。何も送信されません。`;
-        }
-      case "ko":
-        switch (pluralCategory(input2.count)) {
-          default:
-            return `${when}, 일등항해사가 이벤트와 함께 이 메시지를 받아요. Infinitary는 ${count}분마다 확인해요. 보내지는 것은 없어요.`;
-        }
-      case "pt-BR":
-        switch (pluralCategory(input2.count)) {
-          case "one":
-            return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada minuto. Nada é enviado.`;
-          case "many":
-            return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada ${count} minutos. Nada é enviado.`;
-          default:
-            return `${when}, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada ${count} minutos. Nada é enviado.`;
-        }
-      case "zh-Hans":
-        switch (pluralCategory(input2.count)) {
-          default:
-            return `${when}，你的大副会收到这条提示和这些事件。Infinitary 每 ${count} 分钟查看一次。不会发送任何内容。`;
-        }
-      case "zh-Hant":
-        switch (pluralCategory(input2.count)) {
-          default:
-            return `${when}，你的大副會收到這段提示和這些事件。Infinitary 每 ${count} 分鐘查看一次。不會送出任何內容。`;
-        }
-      case "en-XA":
-        switch (pluralCategory(input2.count, "en")) {
-          case "one":
-            return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš. Îñƒîñîţáŕý ļööķš éṽéŕý ɱîñûţé. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-          default:
-            return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš. Îñƒîñîţáŕý ļööķš éṽéŕý ${count} ɱîñûţéš. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-        }
-      case "ar-XB":
-        switch (pluralCategory(input2.count, "en")) {
-          case "one":
-            return `${when}‮, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.‬`;
-          default:
-            return `${when}‮, your first mate gets this prompt with the events. Infinitary looks every ‬${count}‮ minutes. Nothing is sent.‬`;
-        }
-    }
-    switch (pluralCategory(input2.count)) {
-      case "one":
-        return `${when}, your first mate gets this prompt with the events. Infinitary looks every minute. Nothing is sent.`;
-      default:
-        return `${when}, your first mate gets this prompt with the events. Infinitary looks every ${count} minutes. Nothing is sent.`;
-    }
-  }
-  function settingsAutomationEventPreviewNoLook(input2) {
-    const when = input2.when;
-    switch (currentLanguage()) {
-      case "ar":
-        return `${when}، يتلقى نائب القبطان هذه الرسالة مع الأحداث.  لا يُرسَل شيء.`;
-      case "de":
-        return `${when}, bekommt dein erster Offizier diese Nachricht mit den Ereignissen.  Es wird nichts gesendet.`;
-      case "es":
-        return `${when}, tu primer oficial recibe esta indicación con los eventos. No se envía nada.`;
-      case "fr":
-        return `${when}, votre second reçoit cette consigne avec les événements. Rien n’est envoyé.`;
-      case "ja":
-        return `${when}、一等航海士はイベントと一緒にこのプロンプトを受け取ります。何も送信されません。`;
-      case "ko":
-        return `${when}, 일등항해사가 이벤트와 함께 이 메시지를 받아요.  보내지는 것은 없어요.`;
-      case "pt-BR":
-        return `${when}, seu imediato recebe este pedido com os eventos. Nada é enviado.`;
-      case "zh-Hans":
-        return `${when}，你的大副会收到这条提示和这些事件。不会发送任何内容。`;
-      case "zh-Hant":
-        return `${when}，你的大副會收到這段提示和這些事件。不會送出任何內容。`;
-      case "en-XA":
-        return `[${when}, ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵîţĥ ţĥé éṽéñţš.  Ñöţĥîñĝ îš šéñţ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `${when}‮, your first mate gets this prompt with the events.  Nothing is sent.‬`;
-    }
-    return `${when}, your first mate gets this prompt with the events.  Nothing is sent.`;
   }
   function settingsAutomationEventsPreview() {
     switch (currentLanguage()) {
@@ -52489,6 +52393,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `History`;
   }
+  function settingsAutomationInsert() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إدراج`;
+      case "de":
+        return `Einfügen`;
+      case "es":
+        return `Insertar`;
+      case "fr":
+        return `Insérer`;
+      case "ja":
+        return `挿入`;
+      case "ko":
+        return `넣기`;
+      case "pt-BR":
+        return `Inserir`;
+      case "zh-Hans":
+        return `插入`;
+      case "zh-Hant":
+        return `插入`;
+      case "en-XA":
+        return `[Îñšéŕţ ~~]`;
+      case "ar-XB":
+        return `‮Insert‬`;
+    }
+    return `Insert`;
+  }
   function settingsAutomationInsertDetail() {
     switch (currentLanguage()) {
       case "ar":
@@ -52515,33 +52446,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Insert schedule detail‬`;
     }
     return `Insert schedule detail`;
-  }
-  function settingsAutomationInsertDetailChoice() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إدراج تفصيلة من الجدول…`;
-      case "de":
-        return `Zeitplanangabe einfügen …`;
-      case "es":
-        return `Insertar un dato de la programación…`;
-      case "fr":
-        return `Insérer un détail de planification…`;
-      case "ja":
-        return `スケジュールの詳細を挿入…`;
-      case "ko":
-        return `일정 정보 넣기…`;
-      case "pt-BR":
-        return `Inserir detalhe do agendamento…`;
-      case "zh-Hans":
-        return `插入计划详情…`;
-      case "zh-Hant":
-        return `插入排程詳細資料…`;
-      case "en-XA":
-        return `[Îñšéŕţ šçĥéðûļé ðéţáîļ… ~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Insert schedule detail…‬`;
-    }
-    return `Insert schedule detail…`;
   }
   function settingsAutomationKeptCheck() {
     switch (currentLanguage()) {
@@ -53584,6 +53488,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `New automation`;
   }
+  function settingsAutomationNextRun() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل التالي`;
+      case "de":
+        return `Nächster Lauf`;
+      case "es":
+        return `Próxima ejecución`;
+      case "fr":
+        return `Prochaine exécution`;
+      case "ja":
+        return `次回の実行`;
+      case "ko":
+        return `다음 실행`;
+      case "pt-BR":
+        return `Próxima execução`;
+      case "zh-Hans":
+        return `下一次运行`;
+      case "zh-Hant":
+        return `下一次執行`;
+      case "en-XA":
+        return `[Ñéẋţ ŕûñ ~~~]`;
+      case "ar-XB":
+        return `‮Next run‬`;
+    }
+    return `Next run`;
+  }
   function settingsAutomationNextRuns() {
     switch (currentLanguage()) {
       case "ar":
@@ -54434,29 +54365,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const dates = input2.dates;
     switch (currentLanguage()) {
       case "ar":
-        return `التالي: ${dates}. لا يُرسَل شيء.`;
+        return `التالي: ${dates}`;
       case "de":
-        return `Als Nächstes: ${dates}. Es wird nichts gesendet.`;
+        return `Als Nächstes: ${dates}`;
       case "es":
-        return `Próximas: ${dates}. No se envía nada.`;
+        return `Próximas: ${dates}`;
       case "fr":
-        return `Prochaines : ${dates}. Rien n’est envoyé.`;
+        return `Prochaines : ${dates}`;
       case "ja":
-        return `次回：${dates}。何も送信されません。`;
+        return `次回：${dates}`;
       case "ko":
-        return `다음: ${dates}. 보내지는 것은 없어요.`;
+        return `다음: ${dates}`;
       case "pt-BR":
-        return `Próximas: ${dates}. Nada é enviado.`;
+        return `Próximas: ${dates}`;
       case "zh-Hans":
-        return `下一次：${dates}。不会发送任何内容。`;
+        return `下一次：${dates}`;
       case "zh-Hant":
-        return `下一次：${dates}。不會送出任何內容。`;
+        return `下一次：${dates}`;
       case "en-XA":
-        return `[Ñéẋţ: ${dates}. Ñöţĥîñĝ îš šéñţ. ~~~~~~~~]`;
+        return `[Ñéẋţ: ${dates} ~~]`;
       case "ar-XB":
-        return `‮Next: ‬${dates}‮. Nothing is sent.‬`;
+        return `‮Next: ‬${dates}`;
     }
-    return `Next: ${dates}. Nothing is sent.`;
+    return `Next: ${dates}`;
   }
   function settingsAutomationProject() {
     switch (currentLanguage()) {
@@ -55261,6 +55192,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `set up by your first mate`;
   }
+  function settingsAutomationSetup() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الإعداد`;
+      case "de":
+        return `Einrichtung`;
+      case "es":
+        return `Configuración`;
+      case "fr":
+        return `Configuration`;
+      case "ja":
+        return `設定`;
+      case "ko":
+        return `설정`;
+      case "pt-BR":
+        return `Configuração`;
+      case "zh-Hans":
+        return `设置`;
+      case "zh-Hant":
+        return `設定`;
+      case "en-XA":
+        return `[Šéţûþ ~~]`;
+      case "ar-XB":
+        return `‮Setup‬`;
+    }
+    return `Setup`;
+  }
   function settingsAutomationStoppedNote() {
     switch (currentLanguage()) {
       case "ar":
@@ -55314,60 +55272,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Waiting for its integration to be picked again‬`;
     }
     return `Waiting for its integration to be picked again`;
-  }
-  function settingsAutomationSubmittedNote() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `يتلقى نائب القبطان هذه الرسالة حين يحين الوقت. تصل الرسالة والوقت إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان.`;
-      case "de":
-        return `Dein erster Offizier bekommt diese Nachricht, wenn es so weit ist. Nachricht und Uhrzeit gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers.`;
-      case "es":
-        return `Tu primer oficial recibe esta indicación cuando llega la hora. La indicación y la hora llegan a tu suscripción de IA y quedan en la conversación de tu primer oficial.`;
-      case "fr":
-        return `Votre second reçoit cette consigne le moment venu. La consigne et l’heure parviennent à votre abonnement d’IA et restent dans la conversation de votre second.`;
-      case "ja":
-        return `時刻になると、一等航海士がこのプロンプトを受け取ります。プロンプトと時刻は AI サブスクリプションに送られ、一等航海士の会話に残ります。`;
-      case "ko":
-        return `때가 되면 일등항해사가 이 메시지를 받아요. 메시지와 시각은 AI 구독으로 전달되고 일등항해사의 대화에 남아요.`;
-      case "pt-BR":
-        return `Seu imediato recebe este pedido na hora marcada. O pedido e o horário chegam à sua assinatura de IA e ficam na conversa do seu imediato.`;
-      case "zh-Hans":
-        return `时间到了，你的大副会收到这条提示。提示和时间会发送到你的 AI 订阅，并保留在大副的对话中。`;
-      case "zh-Hant":
-        return `時間到了，你的大副就會收到這段提示。提示和時間會送到你的 AI 訂閱方案，並保留在大副的對話中。`;
-      case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ ŵĥéñ ţĥé ţîɱé çöɱéš. Ţĥé þŕöɱþţ áñð ţîɱé ŕéáçĥ ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.‬`;
-    }
-    return `Your first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.`;
-  }
-  function settingsAutomationSubmittedNoteEvents() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `يتلقى نائب القبطان هذه الرسالة في كل مرة تصل فيها أحداث جديدة، مع ملخص قصير لكل منها. تصل إلى اشتراكك في الذكاء الاصطناعي وتبقى في محادثة نائب القبطان.`;
-      case "de":
-        return `Dein erster Offizier bekommt diese Nachricht jedes Mal, wenn neue Ereignisse eintreffen, mit einer kurzen Zusammenfassung von jedem. Sie gehen an dein KI-Abo und bleiben in der Unterhaltung deines ersten Offiziers.`;
-      case "es":
-        return `Tu primer oficial recibe esta indicación cada vez que llegan eventos nuevos, con un breve resumen de cada uno. Todo eso llega a tu suscripción de IA y queda en la conversación de tu primer oficial.`;
-      case "fr":
-        return `Votre second reçoit cette consigne chaque fois que de nouveaux événements arrivent, avec un court résumé de chacun. Ils parviennent à votre abonnement d’IA et restent dans la conversation de votre second.`;
-      case "ja":
-        return `新しいイベントが届くたびに、一等航海士がこのプロンプトを各イベントの短い要約と一緒に受け取ります。これらは AI サブスクリプションに送られ、一等航海士の会話に残ります。`;
-      case "ko":
-        return `새 이벤트가 올 때마다 일등항해사가 각 이벤트의 짧은 요약과 함께 이 메시지를 받아요. 이것들은 AI 구독으로 전달되고 일등항해사의 대화에 남아요.`;
-      case "pt-BR":
-        return `Seu imediato recebe este pedido sempre que chegam novos eventos, com um breve resumo de cada um. Eles chegam à sua assinatura de IA e ficam na conversa do seu imediato.`;
-      case "zh-Hans":
-        return `每次有新事件到达，你的大副都会收到这条提示，并附上每个事件的简短摘要。它们会发送到你的 AI 订阅，并保留在大副的对话中。`;
-      case "zh-Hant":
-        return `每次有新事件到達，你的大副都會收到這段提示，並附上每個事件的簡短摘要。它們會送到你的 AI 訂閱方案，並保留在大副的對話中。`;
-      case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ĝéţš ţĥîš þŕöɱþţ éáçĥ ţîɱé ñéŵ éṽéñţš áŕŕîṽé, ŵîţĥ á šĥöŕţ šûɱɱáŕý öƒ éáçĥ. Ţĥéý ŕéáçĥ ýöûŕ ÅÎ šûƀšçŕîþţîöñ áñð šţáý îñ ýöûŕ ƒîŕšţ ɱáţé'š çöñṽéŕšáţîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.‬`;
-    }
-    return `Your first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.`;
   }
   function settingsAutomationSun() {
     switch (currentLanguage()) {
@@ -101202,21 +101106,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationDeliverySent,
     settingsAutomationDeliveryWaiting,
     settingsAutomationDescription,
-    settingsAutomationDetailNote,
+    settingsAutomationDetails,
+    settingsAutomationDiscard,
     settingsAutomationDraftNote,
     settingsAutomationEmpty,
     settingsAutomationEnable,
     settingsAutomationEventIn,
     settingsAutomationEventNotConnected,
-    settingsAutomationEventPreview,
-    settingsAutomationEventPreviewNoLook,
     settingsAutomationEventsPreview,
     settingsAutomationFirstMateGets,
     settingsAutomationFri,
     settingsAutomationFriday,
     settingsAutomationHistory,
+    settingsAutomationInsert,
     settingsAutomationInsertDetail,
-    settingsAutomationInsertDetailChoice,
     settingsAutomationKeptCheck,
     settingsAutomationKeptCheckUnfinished,
     settingsAutomationKeptDescription,
@@ -101255,6 +101158,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationName,
     settingsAutomationNamePlaceholder,
     settingsAutomationNew,
+    settingsAutomationNextRun,
     settingsAutomationNextRuns,
     settingsAutomationNoEvents,
     settingsAutomationNoMatch,
@@ -101309,10 +101213,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationSaveDraft,
     settingsAutomationSearch,
     settingsAutomationSetUpByFirstMate,
+    settingsAutomationSetup,
     settingsAutomationStoppedNote,
     settingsAutomationStoppedWhen,
-    settingsAutomationSubmittedNote,
-    settingsAutomationSubmittedNoteEvents,
     settingsAutomationSun,
     settingsAutomationSunday,
     settingsAutomationThu,
@@ -104419,21 +104322,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationDeliverySent": [],
     "settingsAutomationDeliveryWaiting": [],
     "settingsAutomationDescription": [],
-    "settingsAutomationDetailNote": [],
+    "settingsAutomationDetails": [],
+    "settingsAutomationDiscard": [],
     "settingsAutomationDraftNote": [],
     "settingsAutomationEmpty": [],
     "settingsAutomationEnable": [],
     "settingsAutomationEventIn": ["event", "integration"],
     "settingsAutomationEventNotConnected": [],
-    "settingsAutomationEventPreview": ["count", "when"],
-    "settingsAutomationEventPreviewNoLook": ["when"],
     "settingsAutomationEventsPreview": [],
     "settingsAutomationFirstMateGets": [],
     "settingsAutomationFri": [],
     "settingsAutomationFriday": [],
     "settingsAutomationHistory": [],
+    "settingsAutomationInsert": [],
     "settingsAutomationInsertDetail": [],
-    "settingsAutomationInsertDetailChoice": [],
     "settingsAutomationKeptCheck": [],
     "settingsAutomationKeptCheckUnfinished": ["time"],
     "settingsAutomationKeptDescription": [],
@@ -104472,6 +104374,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationName": [],
     "settingsAutomationNamePlaceholder": [],
     "settingsAutomationNew": [],
+    "settingsAutomationNextRun": [],
     "settingsAutomationNextRuns": [],
     "settingsAutomationNoEvents": [],
     "settingsAutomationNoMatch": [],
@@ -104526,10 +104429,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationSaveDraft": [],
     "settingsAutomationSearch": [],
     "settingsAutomationSetUpByFirstMate": [],
+    "settingsAutomationSetup": [],
     "settingsAutomationStoppedNote": [],
     "settingsAutomationStoppedWhen": [],
-    "settingsAutomationSubmittedNote": [],
-    "settingsAutomationSubmittedNoteEvents": [],
     "settingsAutomationSun": [],
     "settingsAutomationSunday": [],
     "settingsAutomationThu": [],

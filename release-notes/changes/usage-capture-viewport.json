@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "usage-capture-viewport",
+      "reason": "Only the Usage journey's screenshot viewport changes; the app is unchanged."
+    }
+  ]
+}

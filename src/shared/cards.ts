@@ -1282,6 +1282,14 @@ export function cardAnswerer(
   return undefined;
 }
 
+/**
+ * A saved answerer, read tolerantly: a value a later build wrote that this one
+ * does not know leaves the card showing with no answerer, never hides it.
+ */
+export function savedAnswerer(value: string | null): Pick<Card, "answeredBy"> {
+  return value === "firstmate" || value === "crewmate" ? { answeredBy: value } : {};
+}
+
 /** Whether a card has someone a reply can reach (`cardAnswerer`). */
 export function cardTakesReplies(
   card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,
@@ -1340,6 +1348,11 @@ export function mergeEffectOf(action: Pick<CardAction, "effect">): MergeEffect |
   if (effect?.kind === "request_merge" && typeof effect.review === "string")
     return { kind: "merge", review: effect.review, after: "continue" };
   return undefined;
+}
+
+/** Whether a card's actions hold a merge, and so make it a merge decision. */
+export function isMergeDecision(actions: Pick<CardAction, "effect">[]): boolean {
+  return actions.some((action) => mergeEffectOf(action) !== undefined);
 }
 
 /**

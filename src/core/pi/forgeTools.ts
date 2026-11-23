@@ -41,7 +41,7 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your branch as a GitHub pull request, GitLab merge request, or pushed branch on a plain Git host.",
   "On GitHub or GitLab, push first; the app's sign-in answers the host.",
-  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR: report the blocker, never omit evidence. Other hosts publish text; plain Git keeps the story on its card.",
+  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR: report the blocker. Other hosts publish text; plain Git keeps the story on its card.",
   "body replaces the description; the answer reads it back. A saved-story replacement preserves surrounding text; change it with around.",
 ].join(" ");
 
@@ -54,7 +54,7 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "Read the latest pull request's checks, runs, workflows, events, mergeability and version changes. facts.main: the failed check's latest default-branch run, evidence of cause, never a merge input.",
-  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome; explain renamed jobs.",
+  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome.",
   "repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw readings never settle a repair.",
   "Empty or all-skipped hosted readings stay pending. absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate, with pull or on your own PR.",
   "The app wakes you on first failure and completion of watched checks; end your turn. No watchable checks means no wake.",
@@ -150,6 +150,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
     "Prepare a two-tier story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Fold commands, file names, counts, unfinished work and the PR's risk table. Never write versions, hashes or revisions in text; use base, head and captureHead. Pair ordered Before and After views under one heading; stack recordings. Inspect publishable media and raster exports. Put public templates and issue references in projectText. No setting change, new approval, upload fallback or evidence commit.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
+      dropPatterns: true,
       description: PREPARE_CHANGE_STORY_DESCRIPTION,
     }),
   }),
@@ -468,12 +469,12 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
   label: "Read workflow evidence",
   description: [
     "Read project CI evidence through the app's sign-in. runId alone reads name, state, version, link, attempt and latest-attempt job numbers, names, states and failures.",
-    "A short read watches a running run, up to 3 hours and 5 runs per task. It wakes on first failure and completion; if already ended at first failure, only the end wake goes. End your turn; never sleep or loop on reads. A result you read sends no matching wake.",
+    "A short read watches a running run, up to 3 hours and 5 runs per task. It wakes on first failure and completion; end your turn, never sleep or loop on reads. A result you read sends no matching wake.",
     "Over 100 jobs are read; the answer counts omissions.",
     "jobId reads run/version, steps and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues. Lines over 2,000 characters are clipped.",
-    "GitHub runId is an Actions run; on GitLab runId is the pipeline and jobId the job; on Bitbucket runId is the pipeline's build number and jobId the step's place from 1.",
-    "Find a version's run with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (use untouched main for a baseline), on GitLab GET /projects/{id}/pipelines?sha=<full commit id>, or on Bitbucket GET /repositories/{workspace}/{repo_slug}/pipelines?sort=-created_on, matching target.commit.hash.",
-    "Bitbucket Data Center has no runs or logs of its own: its checks are build statuses another service posts, whose link names where to read them.",
+    "GitHub runId is an Actions run; GitLab's is the pipeline and jobId the job; Bitbucket's is the build number and jobId the step's place from 1.",
+    "Find a version's run with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (untouched main for a baseline), on GitLab GET /projects/{id}/pipelines?sha=<full commit id>, on Bitbucket GET /repositories/{workspace}/{repo_slug}/pipelines?sort=-created_on, matching target.commit.hash.",
+    "Bitbucket Data Center has no runs or logs: its checks are build statuses another service posts, whose link names where to read them.",
     "Read failed logs before diagnosing check_change; missing or expired evidence is not proof of cause.",
   ].join(" "),
   parameters: Type.Object({
@@ -496,8 +497,8 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
   name: "download_artifact",
   label: "Download workflow artifact",
   description: [
-    "Download project CI artifacts through the app's sign-in: GitHub lists them at github_read GET /repos/{owner}/{repo}/actions/runs/{runId}/artifacts; GitLab uses a job archive (runId is the pipeline, artifactId the job).",
-    "Saves the unchanged ZIP (up to 64 MiB) at .infinitary-artifacts/run-<runId>/artifact-<artifactId>.zip in the working copy, never extracting or overwriting.",
+    "Download project CI artifacts: GitHub lists them at github_read GET /repos/{owner}/{repo}/actions/runs/{runId}/artifacts; GitLab uses a job archive (runId is the pipeline, artifactId the job).",
+    "Saves the unchanged ZIP (up to 64 MiB) at .infinitary-artifacts/run-<runId>/artifact-<artifactId>.zip in the working copy, never overwriting.",
     "On GitHub, list true lists files of any size, narrowed by files and paged by offset; files alone saves paths or folders as artifact-<artifactId>-<part>.zip (up to 64 MiB packed).",
     "On GitHub, file alone verifies the ZIP and unpacks an exact member into evidence, even a recording over 64 MiB. Never combine file with list, files or offset.",
     "Bitbucket offers no artifact download; read the step's log with read_workflow.",
@@ -519,7 +520,7 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
 });
 
 const GITHUB_GATEWAY_RULES =
-  "Use this connection for your GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page (pagelen on Bitbucket, limit on Bitbucket Data Center) at 100, calls per task at 200. nextPath, when given, is the next page's path.";
+  "path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page (pagelen on Bitbucket, limit on Bitbucket Data Center) at 100, calls per task at 200. nextPath, when given, is the next page's path.";
 
 const GITHUB_READ_SCOPE =
   "Reads reach what the sign-in can read: repositories (/repos/{owner}/{repo}/..., issues, pull requests, contents and Actions), account, organizations, notifications and search. Tasks without a project API (local, plain Git or no project) use the github.com sign-in.";
@@ -531,12 +532,12 @@ const BITBUCKET_READ_SCOPE =
   "Bitbucket API after /2.0: /repositories/{workspace}/{repo_slug}/..., with page size pagelen. Bitbucket Data Center: the path after the server's address, /rest/api/latest/projects/{KEY}/repos/{slug}/..., and build statuses under /rest/build-status/latest/commits/{commit}.";
 
 const GITHUB_WRITE_SCOPE =
-  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes - another project, account, organization or task without a project API (using the github.com sign-in) - are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
+  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes (another project, account, organization, or a task without a project API) are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
 
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
   label: "Read where the project lives",
-  description: `Read where your project lives with GET or HEAD - GitHub's API, or GitLab's or Bitbucket's on a project there. ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${BITBUCKET_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A list over the cap comes back at the largest page that fits, each try a call; other oversized answers are refused, never cut.`,
+  description: `Read where your project lives with GET or HEAD - GitHub's API, or GitLab's or Bitbucket's on a project there. ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${BITBUCKET_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A list over the cap comes back at the largest page that fits; other oversized answers are refused.`,
   parameters: Type.Object({
     path: Type.String({
       description:

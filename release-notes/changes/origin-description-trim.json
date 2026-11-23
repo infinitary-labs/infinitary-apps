@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "origin-description-trim",
+      "reason": "Drops a duplicated sentence from a tool description the first mate reads so its fixed prompt is back under budget; nothing a person sees changes."
+    }
+  ]
+}

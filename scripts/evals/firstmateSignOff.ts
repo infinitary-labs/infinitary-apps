@@ -88,6 +88,18 @@ function showRequiredAction(host: Awaited<ReturnType<typeof approvalHost>>): str
  * the run sheet's turn fingerprint holds while the model still reads the turn as served. An id that
  * reads as a number, such as 1234e567, is served quoted, so its quotes go with it.
  */
+const STAMP = /\d{4}-\d\d-\d\dT[\d:.]+Z/g;
+
+/**
+ * Every clock reading in the turn as its `as_of`: a case serves its messages within a few
+ * milliseconds of that reading, and readings that land in the same millisecond on one run but not
+ * the next would otherwise change the turn's fingerprint between preparation and the live run.
+ */
+function atServedTime(turn: string): string {
+  const servedAt = turn.match(STAMP)?.at(-1);
+  return servedAt ? turn.replace(STAMP, servedAt) : turn;
+}
+
 function volatile(turn: string): Record<string, string> {
   const found = turn.match(
     /card-fm-[\w-]+|"[0-9a-f]{8}"|\b[0-9a-f]{8}\b|\d{4}-\d\d-\d\dT[\d:.]+Z|\/\S*fm-model-eval-\w+/g,
@@ -112,7 +124,8 @@ export const signOffHost: typeof approvalHost = async (test, dir, model, protect
   host.supervisor.cardActions.replyToCard(cardId, signOff.line);
   for (let wait = 0; host.served.length === before && wait < 100; wait++)
     await new Promise((resolve) => setTimeout(resolve, 20));
-  const turn = host.served.at(-1);
+  const served = host.served.at(-1);
+  const turn = served && atServedTime(served);
   if (host.served.length === before || !turn)
     throw new Error("The captain's line under the card served the first mate no turn");
   return {

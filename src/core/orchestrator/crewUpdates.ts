@@ -152,16 +152,17 @@ export class CrewUpdates {
    * A computer that saves its own work (`there`) came back in reach: unless
    * this Mac is updating it now, a save there for an update this Mac no
    * longer follows is let go, so the carry-on turn it would refuse runs
-   * (docs/devices.md, "Saving work before an update"). A turn whose stop
-   * the let-go withdrew goes on there, so its pause and its lane rows go,
-   * as `letGoThere` takes them.
+   * (docs/devices.md, "Saving work before an update"). A turn the let-go
+   * did not name stopped goes on there - its stop withdrawn, or a save it
+   * never got - so its pause and its lane rows go, as `letGoThere` takes
+   * them.
    */
   async letGoReturned(deviceId: string, there: SaveThere | undefined): Promise<void> {
     if (this.isUpdating(deviceId)) return;
     const answer = await there?.release();
-    for (const taskId of answer?.withdrawn ?? []) {
-      if (answer?.stopped.includes(taskId) || this.host.machineOf(taskId) !== deviceId) continue;
-      const rows = this.options.inbox
+    if (!answer) return;
+    const rowsOf = (taskId: string) =>
+      this.options.inbox
         .allFor(taskId)
         .filter(
           ({ facts }) =>
@@ -170,7 +171,15 @@ export class CrewUpdates {
             facts.computer !== undefined,
         )
         .map((row) => row.id);
-      const task = [...this.host.runtimes()].find((runtime) => runtime.id === taskId);
+    const runtimes = new Map([...this.host.runtimes()].map((task) => [task.id, task]));
+    const held = [...runtimes.values()].filter((task) => {
+      const row = task.turn.pause?.row;
+      return row !== undefined && rowsOf(task.id).includes(row);
+    });
+    for (const taskId of new Set([...answer.withdrawn, ...held.map((task) => task.id)])) {
+      if (answer.stopped.includes(taskId) || this.host.machineOf(taskId) !== deviceId) continue;
+      const rows = rowsOf(taskId);
+      const task = runtimes.get(taskId);
       const row = task?.turn.pause?.row;
       if (row !== undefined && rows.includes(row)) task?.turn.takePause();
       this.options.inbox.withdraw(rows);

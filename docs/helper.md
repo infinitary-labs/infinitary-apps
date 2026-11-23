@@ -446,7 +446,7 @@ This computer, not the home, decides when its work is saved:
 The save lasts until the update ends this run.
 When the update did not replace this copy, or the captain chose Update later, the home asks `inf:session:release-update`: a stop still waiting is withdrawn and its turn goes on as if never asked, turns start here again, and the answer names the same stopped tasks and, under `withdrawn`, each task whose stop it withdrew.
 When the home asks it nothing for `UPDATE_RETURN_MS` after the save answered, this run lets the save go by itself, as if released; every order the home asks, such as reading the update's download, starts that wait over (`homeAsked`).
-A home that comes back in reach while it is not updating this computer asks the release before anything waiting goes here, and takes back the carry-on of each turn the release lets go on (`docs/devices.md`, "Saving work before an update").
+A home that comes back in reach while it is not updating this computer asks the release before anything waiting goes here, and takes back the carry-on of each turn the release does not name stopped (`docs/devices.md`, "Saving work before an update").
 A home without the change never asks either order, and a run without it is never asked them: that home stops this computer's turns from there, as above.
 
 ### Waiting for its update

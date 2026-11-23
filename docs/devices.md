@@ -1150,7 +1150,7 @@ Every route of `Computers.update` - over Remote Login, over the connection and M
 - **When it is over.**
   Whatever came of the update, a computer that saved its own work is asked to let its save go (`inf:session:release-update`); one updated has already let it go by restarting, and one out of reach lets it go by itself `UPDATE_RETURN_MS` after its home last asked it anything.
   A computer that lists the change and comes back in reach while this Mac is not updating it is asked to let any save go before anything waiting goes to it (`PlacedSessions.reach`, `CrewUpdates.letGoReturned`), so a save this Mac no longer follows - after this Mac restarted, or lost that computer or its release - never refuses a carry-on turn.
-  A turn whose stop that let-go withdrew goes on there as if never asked, so its `turn-resumed` row goes and nothing carries it on a second time.
+  A turn that let-go does not name stopped goes on there as if never asked - its stop withdrawn, or a save the drop took before it arrived - so its `turn-resumed` row goes and nothing carries it on a second time.
   Each paused crewmate then carries on once that computer is back and caught up, or at once when it never stopped, with its `turn-resumed` row as the turn's first words: one carry-on per task, however many times that computer restarts, the update is asked or the connection drops meanwhile.
 
 ### Downloading on a Mac reached by its address

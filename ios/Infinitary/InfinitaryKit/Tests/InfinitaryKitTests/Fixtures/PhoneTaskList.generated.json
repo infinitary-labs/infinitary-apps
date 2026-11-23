@@ -1143,8 +1143,6 @@
               "depth": 0,
               "word": "held",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1158,8 +1156,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1173,8 +1169,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1188,8 +1182,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1203,8 +1195,6 @@
               "depth": 2,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1218,8 +1208,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1233,8 +1221,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1249,8 +1235,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1271,8 +1255,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1286,8 +1268,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1308,8 +1288,6 @@
               "depth": 0,
               "word": "checks",
               "trailing": {
-                "name": "Harbour",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1323,8 +1301,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "on Mac mini",
                 "outOfReach": true,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1338,8 +1314,6 @@
               "depth": 1,
               "word": "waiting",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1353,8 +1327,6 @@
               "depth": 2,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1368,8 +1340,6 @@
               "depth": 3,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1383,8 +1353,6 @@
               "depth": 3,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1398,8 +1366,6 @@
               "depth": 0,
               "word": "batch",
               "trailing": {
-                "name": "Harbour",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1420,8 +1386,6 @@
               "depth": 0,
               "word": "starting",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1435,8 +1399,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Harbour",
-                "place": "on Studio",
                 "outOfReach": true,
                 "connecting": true,
                 "reach": "connecting"
@@ -1459,8 +1421,6 @@
               "depth": 0,
               "word": "blocked",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1474,8 +1434,6 @@
               "depth": 0,
               "word": "found on INF-2901",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1489,8 +1447,6 @@
               "depth": 0,
               "word": "could not start",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1504,8 +1460,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1526,8 +1480,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1541,8 +1493,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -1556,8 +1506,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2709,8 +2657,6 @@
               "depth": 0,
               "word": "held",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2724,8 +2670,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2739,8 +2683,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2754,8 +2696,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2769,8 +2709,6 @@
               "depth": 2,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2784,8 +2722,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2799,8 +2735,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2815,8 +2749,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2837,8 +2769,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2852,8 +2782,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2874,8 +2802,6 @@
               "depth": 0,
               "word": "checks",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2889,8 +2815,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "on Mac mini",
                 "outOfReach": true,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2904,8 +2828,6 @@
               "depth": 1,
               "word": "waiting",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2919,8 +2841,6 @@
               "depth": 2,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2934,8 +2854,6 @@
               "depth": 3,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2949,8 +2867,6 @@
               "depth": 3,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2964,8 +2880,6 @@
               "depth": 0,
               "word": "batch",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -2986,8 +2900,6 @@
               "depth": 0,
               "word": "starting",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3001,8 +2913,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "on Studio",
                 "outOfReach": true,
                 "connecting": true,
                 "reach": "connecting"
@@ -3025,8 +2935,6 @@
               "depth": 0,
               "word": "blocked",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3040,8 +2948,6 @@
               "depth": 0,
               "word": "found on INF-2901",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3055,8 +2961,6 @@
               "depth": 0,
               "word": "could not start",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3070,8 +2974,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3092,8 +2994,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3107,8 +3007,6 @@
               "depth": 1,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -3122,8 +3020,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4392,8 +4288,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4407,8 +4301,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4422,8 +4314,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4438,8 +4328,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4460,8 +4348,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4483,8 +4369,6 @@
               "depth": 0,
               "word": "found on INF-2901",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4505,8 +4389,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"
@@ -4519,8 +4401,6 @@
               "depth": 0,
               "word": "",
               "trailing": {
-                "name": "Infinitary",
-                "place": "",
                 "outOfReach": false,
                 "connecting": false,
                 "reach": "out of reach"

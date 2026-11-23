@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-rows-name-no-computer",
+      "kind": "improvement",
+      "title": "Task rows no longer name the computer or the project, so titles get the whole row",
+      "body": "A row in the Tasks panel now shows its key and title, and a task's parts count where it has parts. It no longer ends with the project's name or which computer runs the task; the key still says the project, and resting on the row names both. Only when a task's computer cannot take work does the row still say why, such as out of reach. A parts count also no longer draws over the row's words. The phone's Tasks list matches.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-rows-name-no-computer-dark.webp",
+        "light": "task-rows-name-no-computer-light.webp",
+        "alt": "The Tasks panel's Working rows, each showing only its key and full title, with a parts count on the first row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

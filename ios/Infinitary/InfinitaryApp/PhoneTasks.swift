@@ -266,9 +266,9 @@ struct PhoneTasks: View {
         }
     }
 
-    /// The Mac's row: its status mark, the key and title with the one dim word after them, then the project's name where
-    /// more than one project could be meant, where the task runs and why that computer cannot take work now. A part sits
-    /// indented under its parent, and a Queued row adds the home's dated wait line below.
+    /// The Mac's row: its status mark, the key and title with the one dim word after them, then, only while its computer
+    /// cannot take work now, why not. A part sits indented under its parent, and a Queued row adds the home's dated wait
+    /// line below.
     private func taskRow(_ row: PhoneTaskList.Row, in part: PhoneTaskList.Part, list: PhoneTaskList, last: Bool) -> some View {
         let task = row.task
         let status = PhoneTaskFacts.status(task)
@@ -282,12 +282,8 @@ struct PhoneTasks: View {
             title = title + Text(" · \(word)").font(PhoneFont.body)
                 .foregroundStyle(word == PhoneTaskRowWords.couldNotStart ? PhoneTheme.warning : PhoneTheme.muted)
         }
-        let ends = [trailing.name, trailing.place].filter { !$0.isEmpty }.joined(separator: " · ")
-        var end = Text(ends)
-        if trailing.outOfReach {
-            end = end + Text("\(ends.isEmpty ? "" : " · ")\(trailing.reach)")
-                .foregroundStyle(trailing.connecting ? PhoneTheme.muted : PhoneTheme.warning)
-        }
+        // The spoken label still names the project and where the task runs; the row shows neither.
+        let ends = [list.projectName(of: task), task.place?.where ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
         // What the Mac's row shows at rest. INF-2928 piece 3: a Backlog row's Start, which a swipe shows, says why under the
         // row when it cannot start. A pinned backlog task keeps it, as on the Mac (INF-3127).
         let controls = PhoneRowMoves.rowControls(task, home: part.home(of: task))
@@ -306,8 +302,9 @@ struct PhoneTasks: View {
                     HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                         title.lineLimit(titleLines).layoutPriority(1)
                         Spacer(minLength: PhoneTheme.space2)
-                        if !ends.isEmpty || trailing.outOfReach {
-                            end.font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                        if trailing.outOfReach {
+                            Text(trailing.reach).font(PhoneFont.mono)
+                                .foregroundStyle(trailing.connecting ? PhoneTheme.muted : PhoneTheme.warning).fixedSize()
                         }
                     }
                     if let wait {

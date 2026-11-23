@@ -17,15 +17,15 @@ A waiting child separates into Waiting on you while its nonwaiting parent and si
 Working lists a working task's live tree beside it: its parent and the parent's other open parts.
 A finished part - a done review, plan or piece of work - stays under done · 7d, never in Working, and finished work does not hold a tree together.
 
-A row is a shared task status mark, the task key in dim mono at the start of the title, the title (one line, ellipsized), and, when space permits, the project name in dim mono at the end (ellipsized; the trailing track is `fit-content(40%)` so short names size to content and long names cap at 40%).
-Hide the project name and its grid track when the panel content is 320px wide or less, or when exactly one registered, non-archived repo project exists (Scratch and archived projects do not count).
-A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn`, while its connection is being made it ends `connecting` in `--fg-3` with no warn mark, and while it is connected and the app is still catching up with the task it ends `catching up` in `--fg-3` with no warn mark, its time left to the status reason the row's summary shows (`../devices/RunsOn.prompt.md`).
-A part that does not fit leaves whole, the project name first and then the place; `out of reach` or `catching up` always stays, so the narrow panel keeps the track for those words alone.
+A row is a shared task status mark, the task key in dim mono at the start of the title, and the title (one line, ellipsized); the row names neither its project nor the computer that runs it, so the title has the row's width (the captain: the right side was noisy, and the computer's name is not important there).
+The key's prefix says the project, and the row's summary names both.
+Only while the task's computer cannot take work does the row end with why, in dim mono: `out of reach` or `takes no new work` in `--warn`, `connecting` in `--fg-3` with no warn mark while its connection is being made, and `catching up` in `--fg-3` with no warn mark while it is connected and the app is still catching up with the task, its time left to the status reason the row's summary shows (`../devices/RunsOn.prompt.md`).
+Those words name no computer; their track is `auto`, as wide as they are, so a long title gives way and never cuts them, at every panel width.
 Count from the full board, not the visible-task filter.
 Only an unstarted row in the Queued section adds one quiet mono line below its title: what it waits for and since when, supplied by the home and shared with the first mate.
 Backlog keeps its compact row without that extra line, since it normally waits for an explicit go; the task's record and first-mate reads retain the wait fact.
 The Queued line wraps without ellipsis, and carries no control or new status.
-The row keeps the full project name in its accessible label; the preview shows it, and the row has no hover title.
+The row keeps the full project name and where it runs in its accessible label; the preview shows them, and the row has no hover title.
 A blocked or held row, or working one waiting on its checks, carries exactly one dim word after the title; a child row indents under its parent when both belong to the same group.
 The task key also stays on hover, search, and the row locator.
 The shared mark, word and reason follow the Shared task status rule below; group membership is not a status.
@@ -96,7 +96,7 @@ The phone keeps its own list; it follows in a later piece.
 The captain's direction A on INF-1662: while the pointer rests on a backlog row, or the keyboard's focus is on it or its Start, a small secondary button reading `Start` shows over the row's right end, just before the row's pin (Pinned, below), which sits 4px in from that end.
 It is the row's sibling, never inside the row, so the row stays one button that opens the record and nothing moves on rest.
 It is 22px tall, `--text-sm` medium in `--fg-1`, with a `--line-2` hairline border on no surface of its own, and fades in and out over `--dur-fast`; its border brightens to `--fg-3` on hover.
-The row keeps its rest look under it, `--bg-3` while the pointer is on the Start too; the title fades out before the Start's left edge, as wide as the Start is, and the trailing project name hides.
+The row keeps its rest look under it, `--bg-3` while the pointer is on the Start too; the title fades out before the Start's left edge, as wide as the Start is, and the trailing reach words hide.
 One press runs the record's own Start (`tasks.run` with `start-task`) with no question, so the row moves to Queued as starting and to Working when its crewmate begins.
 A row whose start failed reads `Try again`, as the record's bar does.
 A row that cannot start - blocked, or one whose parts do the work - shows the Start dim (`--fg-3` on a `--line-1` border), still reachable, with the record's reason on rest (`useRestLabel`); held work on request starts, as its record's Start does.

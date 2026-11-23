@@ -643,10 +643,56 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    The stable's record rides with the next alpha's review commit, which the notes check asks for.
    It keeps the picks, as the stable's source release names them: `node scripts/release-notes.ts manifest --version <X.Y.Z> --highlights <picks> --write`.
    Pinning a promoted stable without `--highlights` is refused.
+5. **Confirm the announcement.**
+   After the release run ends, the crewmate reads the `release-announce` run that followed it and reports its result ("Announcing a stable").
+   If no announcement run started within 10 minutes of the release run's end, it dispatches one: `gh workflow run release-announce.yml --ref main -f mode=normal -f version=<X.Y.Z>`; the claim keeps a second run from posting again.
+   An `ambiguous` result is reported, never replayed by the crewmate on its own.
 
 The next alpha is numbered from the new stable tag ("The signed channel workflow"); no rolling alpha cuts while the promotion or its rehearsal runs ("An alpha with nothing new to build").
 A stable rehearsal (`release.yml -f channel=stable -f dry_run=true`) promotes an alpha the same way, or builds the dispatched commit as the next stable when it names none, and publishes nothing.
 It may leave `highlights` empty to keep the alpha reviews' ranks.
+
+## Announcing a stable
+
+Each stable posts one message to the project's Discord channel, and an alpha or a rehearsal posts nothing (`.github/workflows/release-announce.yml`, `scripts/release-announce.ts`).
+The message shows the stable's three picked highlights, lead first, each with its title and the first sentence of its note, the lead's dark hero picture, and links to the version's heading on What's new and to the download page.
+It mentions nobody: `allowed_mentions` is empty.
+
+The workflow follows every release run's end, as the docs site's publish does, and runs only in this project, on main, for the operator, after a successful release run on main.
+Its one job runs on a machine GitHub hosts, in the `release-announcement` environment, limited to main, which holds the webhook as `INFINITARY_DISCORD_RELEASE_WEBHOOK_URL`.
+Runs queue one at a time and are never cancelled midway.
+Every check comes before the post, and the first that fails stops the run with nothing posted:
+
+1. The release run counts only when its latest jobs include one named `Requested stable · …`; otherwise the run ends green as `not_stable`.
+2. The version is the latest release's tag, exactly `vX.Y.Z`, not a draft or prerelease, published between the release run's start and end.
+3. The highlights are the `Highlights picked, lead first:` line of the stable's record, which the release run writes; each pick's words and the lead's picture come from `release-notes/changes/` at the stable's tag, and the picture is linked as the public file at that tag.
+4. The message must fit Discord's limits.
+5. A missing webhook stops the run red as `no_webhook` before anything is claimed.
+6. It waits up to 30 minutes for `https://docs.getinfinitary.com/whats-new/` to show the version's heading (`id="087"` for 0.8.7), reading past any cache, and otherwise stops red as `whats_new_not_listed`.
+7. It claims the version by creating `refs/announcements/discord/v<version>` at the tag's commit.
+   GitHub creates a ref only once, so only the run that created it may post.
+   If the claim already exists and `refs/announcements/discord-posted/v<version>` does too, the run ends green as `already_announced`; with no posted marker it stops red as `ambiguous`.
+   Any other answer, such as a rule refusing the name, stops red as `github_error` with nothing posted.
+8. It posts once, with `?wait=true`, and on Discord's answer with a message id prints the id, then creates the posted marker, a ref to an annotated tag holding the message id and the payload's SHA-256.
+
+Discord's other answers:
+
+- A refusal (a 4xx other than 429) releases the claim and stops red as `refused`, so a later normal run may try again.
+- A 429 waits its `retry_after` once and posts again; a second 429 counts as a refusal.
+- A timeout, a lost connection, a 5xx or a success without a message id keeps the claim and stops red as `ambiguous`.
+  Nothing retries it: a person checks the channel, and only if the stable is not there replays it.
+
+The markers' one writer is this workflow; neither is in the tag list, and the release readers, which match only `vX.Y.Z`, never see them.
+Nothing here reads a list of past announcements or writes issues.
+
+Requests, from main:
+
+- `gh workflow run release-announce.yml --ref main -f mode=preview -f version=<X.Y.Z>` prints the message in the run's summary and posts nothing; it reads no webhook.
+- `-f mode=normal -f version=<X.Y.Z>` announces the newest stable, the same way a release run does; any other version is refused as `not_latest`.
+- `-f mode=replay -f version=<X.Y.Z>`, only after a person checked the channel, posts a version that is claimed with no posted marker, once, and writes the marker.
+  A version with no claim is refused, and one already posted ends as `already_announced`.
+
+If a post succeeded but its marker could not be written, the run says so with the message id and keeps the claim, so nothing posts it again; create the marker by hand with the same name.
 
 ## Activating the channels
 

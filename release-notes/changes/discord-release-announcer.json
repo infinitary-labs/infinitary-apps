@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "discord-release-announcer",
+      "reason": "A release workflow that posts each stable to the project's Discord channel; nothing in the app changes."
+    }
+  ]
+}

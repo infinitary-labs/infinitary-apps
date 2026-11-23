@@ -1,0 +1,34 @@
+{
+  "run": {
+    "display_title": "Alpha from main run 35",
+    "id": 45177463244,
+    "run_started_at": "2026-11-23T12:46:23Z",
+    "updated_at": "2026-11-23T13:28:59Z"
+  },
+  "jobs": [
+    "Automatic alpha · Select source and version",
+    "Automatic alpha · Watch for a stop",
+    "Automatic alpha · Check compatible phone release",
+    "Automatic alpha · Check release notes · catalog",
+    "Automatic alpha · Check release notes",
+    "Automatic alpha · Linux packages / Automatic alpha · Build Linux packages",
+    "Automatic alpha · Signed installer publication gate",
+    "Automatic alpha · Windows installer / Automatic alpha · Build the Windows installer",
+    "Automatic alpha · Build, sign and notarize (Mac)",
+    "Automatic alpha · Desktop checks",
+    "Automatic alpha · Windows installer / Automatic alpha · Install and run the Windows app (fresh Windows 11)",
+    "Automatic alpha · Windows installer / ${{ ((inputs.trigger || 'Manual request')) }} · Update the Windows app on ${{ matrix.channel }} (fresh Windows 11${{ ((((strategy.job-total > 2) && format('; round {0}', matrix.round)) || '')) }})",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Ubuntu 26.04 host)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Ubuntu 24.04 container)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Fedora; latest image)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run AppImage (Fedora; latest image)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Ubuntu 26.04 container)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Ubuntu 24.04 host)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Arch; latest image)",
+    "Automatic alpha · Linux packages / Automatic alpha · Install and run package (Nix on Ubuntu 24.04)",
+    "Automatic alpha · Published-alpha update check / Automatic alpha · Apply published-alpha update (Mac; Apple silicon)",
+    "Automatic alpha · Upload every download",
+    "${{ needs.resolve.outputs.trigger }} · Stop the cut (${{ matrix.job }})",
+    "Automatic alpha · Check every copy and switch downloads"
+  ]
+}

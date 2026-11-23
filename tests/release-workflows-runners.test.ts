@@ -440,6 +440,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "batch-checks.yml:push-regenerated",
     // The docs site's publish, which holds its publishing key (docs/docs-site.md, "Publishing").
     "docs-site-publish.yml:publish",
+    // The Discord announcement, which holds the webhook (docs/alpha.md, "Announcing a stable").
+    "release-announce.yml:announce",
     // An outside contributor's pull request reads what its change reaches
     // on GitHub's machines alone (docs/public-ci.md, "Outside contributors").
     "contributors.yml:paths",

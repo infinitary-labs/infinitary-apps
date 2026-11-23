@@ -12,6 +12,7 @@ import { remoteLoginRefusedAnswerSchema, remoteLoginWords } from "@shared/remote
 import { BATCHES_OFF_REFUSAL } from "@shared/repos";
 import { BATCHED_PULL_REQUESTS_OFFER } from "@shared/runbooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MOCK_PROVIDER_ID, mockModelsJson } from "../../tests/e2e/mockModels";
 import { fakeHost, listening, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
 import { recordNewerMigration } from "../../tests/helpers/database";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -988,6 +989,67 @@ describe("the captain's language choice at boot", () => {
     setCurrentLanguage("de");
     core = await startCore(fakeHost(userDataDir).host, { computerLanguage: "de" });
     expect(currentLanguage()).toBe("ja");
+  }, 60_000);
+});
+
+/**
+ * A wiped Windows install that skipped the sign-in screen: the app keeps
+ * the whole Windows environment, Pi reads a provider's key from it when
+ * nothing is saved, and that key outlives an uninstall and a data wipe.
+ * A key only the environment holds is no account the person added, so the
+ * gate stays open (docs/first-launch.md).
+ */
+describe("a provider key in the environment at first launch", () => {
+  let core: Core | undefined;
+  let userDataDir: string;
+  let quotaDir: string;
+
+  afterEach(async () => {
+    await core?.dispose();
+    core = undefined;
+    await catalogRefreshesSettled();
+    rmSync(userDataDir, { recursive: true, force: true });
+    rmSync(quotaDir, { recursive: true, force: true });
+    delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.INFINITARY_MOCK_PROVIDER_KEY;
+  });
+
+  it("leaves the sign-in screen up on a packaged build with OPENAI_API_KEY set", async () => {
+    userDataDir = scratchDir("infinitary-core-env-key-");
+    quotaDir = quotaFixture("infinitary-core-env-key-quota-");
+    process.env.PI_OFFLINE = "1";
+    process.env.OPENAI_API_KEY = "not-a-real-key";
+    core = await startCore(fakeHost(userDataDir, true).host);
+    const { auth } = core.services;
+    // Pi's first availability pass has read the key once OpenAI's models serve account-less.
+    await waitFor(
+      () =>
+        auth
+          .accountless()
+          .accountlessModels()
+          .some((model) => model.provider === "openai"),
+      30_000,
+    );
+    expect(await core.dispatch("inf:app:first-run", [])).toMatchObject({ gateOpen: true });
+  }, 60_000);
+
+  it("still counts a models.json provider whose key names an environment variable", async () => {
+    userDataDir = scratchDir("infinitary-core-env-key-");
+    quotaDir = quotaFixture("infinitary-core-env-key-quota-");
+    process.env.PI_OFFLINE = "1";
+    process.env.INFINITARY_MOCK_PROVIDER_KEY = "not-a-real-key";
+    const config = JSON.parse(mockModelsJson(9));
+    config.providers[MOCK_PROVIDER_ID].apiKey = "INFINITARY_MOCK_PROVIDER_KEY";
+    mkdirSync(join(userDataDir, "auth"), { recursive: true });
+    writeFileSync(join(userDataDir, "auth", "models.json"), JSON.stringify(config));
+    core = await startCore(fakeHost(userDataDir, true).host);
+    const { auth } = core.services;
+    await waitFor(
+      () => auth.customProviderModels().some((model) => model.provider === MOCK_PROVIDER_ID),
+      30_000,
+    );
+    expect(await core.dispatch("inf:app:first-run", [])).toMatchObject({ gateOpen: false });
   }, 60_000);
 });
 

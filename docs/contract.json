@@ -15071,6 +15071,10 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 1024
+              },
+              "reach": {
+                "type": "boolean",
+                "const": true
               }
             },
             "additionalProperties": false
@@ -15220,6 +15224,60 @@
                       "controls",
                       "no-link",
                       "self"
+                    ]
+                  }
+                ]
+              },
+              "reach": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "key"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "answered": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "step",
+                      "port"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "sign-in"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      }
+                    },
+                    "required": [
+                      "step"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "const": "send"
+                      }
+                    },
+                    "required": [
+                      "step"
                     ]
                   }
                 ]

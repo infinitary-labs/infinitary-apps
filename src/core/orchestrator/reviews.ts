@@ -93,8 +93,9 @@ export class Reviews {
 
   /**
    * The review target and evidence are read where the builder actually runs.
-   * The target is that computer's committed branch head, even when an older
-   * pull request already records a different head (INF-288).
+   * The target is the commit the builder's working copy there has checked
+   * out (`checkedOutHead`), even when an older pull request already records
+   * a different head (INF-288).
    */
   async reviewFacts(builder: TaskRecord): Promise<ReviewBriefFacts> {
     // Only a pull request's page: a batched branch's compare page (INF-4196)

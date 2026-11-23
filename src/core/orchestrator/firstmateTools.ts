@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
-import type { TurnImage } from "@shared/cards";
+import type { CardMutation, TurnImage } from "@shared/cards";
 import { deviceUpdateCardOfOffer } from "@shared/deviceUpdateNudge";
 import type { HostReplyEmote } from "@shared/emotes";
 import { cardWordsMark, saidMark } from "@shared/i18n/said";
@@ -334,6 +334,24 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
   // The typed reason the last refused card gives, read off the lint: a card
   // refused for a crewmate's own card on the task names that card.
   let cardOwner: { id: string } | undefined;
+  // Only a write that changed the record is an action; an unchanged card
+  // took no effect and a refusal changed nothing. A line alone in an open
+  // card's thread is the first mate's words in its replies, which answer
+  // the messages it read; a revision shows the card again. A closed card's
+  // dated clarification keeps the card's kind.
+  const noteTyped = (mutation: CardMutation): void => {
+    if (mutation.effect === "refused") {
+      host.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
+    } else if (mutation.effect !== "unchanged") {
+      const inThread = mutation.effect === "reply-only" && !mutation.clarification;
+      host.noteDelivery({
+        outcome: "action",
+        kind: inThread ? "reply" : "card",
+        tool: "emit_card",
+        ref: mutation.cardId,
+      });
+    }
+  };
   const emitCard = createEmitCardTool(
     (card) => {
       // A write on someone else's card is a contribution
@@ -341,22 +359,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       // author, task and answerer, files nothing and answers its typed result.
       const contribution = supervisor.contributeAsFirstmate(card);
       if (contribution) {
-        // Only a write that changed the record is an action; an unchanged
-        // card took no effect and a refusal changed nothing. A line alone in
-        // an open card's thread is the first mate's words in its replies,
-        // which answer the messages it read; a revision shows the card
-        // again. A closed card's dated clarification keeps the card's kind.
-        if (contribution.effect === "refused") {
-          host.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
-        } else if (contribution.effect !== "unchanged") {
-          const inThread = contribution.effect === "reply-only" && !contribution.clarification;
-          host.noteDelivery({
-            outcome: "action",
-            kind: inThread ? "reply" : "card",
-            tool: "emit_card",
-            ref: contribution.cardId,
-          });
-        }
+        noteTyped(contribution);
         return contribution;
       }
       const written: OwnCardWrite = {};
@@ -431,7 +434,20 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           : undefined;
       return refusal;
     },
-    { role: "firstmate" },
+    {
+      role: "firstmate",
+      // Its body left out, the write is a line on the card's thread alone,
+      // on its own card as on anyone's, and the card stays as it is
+      // (INF-6128). The id resolves as a revision's would: a card on the
+      // record by its own id, else its own card under that stable id.
+      onReplyAlone: (reply) => {
+        const target = supervisor.cards.targetOf({ actor: "firstmate" }, reply.cardId);
+        const cardId = target.kind === "new" ? resolveFirstmateCardId(reply.cardId) : target.id;
+        const mutation = supervisor.cards.replyAs({ actor: "firstmate" }, { ...reply, cardId });
+        noteTyped(mutation);
+        return mutation;
+      },
+    },
   );
   const emitCardTool = {
     ...emitCard,

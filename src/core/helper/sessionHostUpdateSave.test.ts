@@ -1,4 +1,6 @@
+import type { PlacedSpec } from "@shared/work";
 import { describe, expect, it } from "vitest";
+import { scriptedClaudeWorld } from "../../../tests/helpers/scriptedClaudeContract";
 import {
   api,
   model,
@@ -11,8 +13,8 @@ import {
  * A computer that runs work saving its crew's work before its home updates
  * it (docs/helper.md, "Saving its work before an update";
  * `tests/helpers/sessionHostWorld.ts`): it decides when its work is saved,
- * holds turns meanwhile, and lets the save go by itself when its home says
- * nothing after it.
+ * holds turns meanwhile, stops a turn its crewmate carries on by itself, and
+ * lets the save go by itself only when its home says nothing after it.
  */
 
 sessionHostHooks();
@@ -71,5 +73,51 @@ describe("a computer that runs work saving its crew's work before its update", (
     expect(api.requests.length).toBeGreaterThan(asked);
     // Let go already, the release answers that nothing is held.
     expect(await at.order("inf:session:release-update", [])).toEqual({ stopped: [] });
+  });
+
+  // The goal's "the way INF-2245 saves this computer's own": a turn begun by
+  // itself during the save stops too, and the save holds while its home keeps
+  // asking, as during a long download for the update.
+  it("stops a turn its crewmate carries on by itself while the save holds, and keeps the save while its home keeps asking", async () => {
+    const claude = await scriptedClaudeWorld();
+    const at = await placed({ claude, updateReturnMs: 1_000 });
+    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+    claude.answer({ text: "The background check started." });
+    try {
+      await at.order("inf:session:open", [{ orderId: "open:carry-on", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:carry-on", task: TASK, text: "Start the background check." },
+      ]);
+      await at.ended(1);
+      expect(await at.order("inf:session:save-for-update", [])).toEqual({ stopped: [] });
+
+      claude.answer({
+        tool: "note_progress",
+        args: { text: "Reading the background check." },
+        answer: "The background check passed.",
+      });
+      claude.continueTurn();
+      await expect
+        .poll(() => at.home.events.some(({ event }) => event.type === "continuation_ended"))
+        .toBe(true);
+      // Its call was refused before it ran: the home never heard of it.
+      expect(at.home.effects.map((effect) => effect.channel)).not.toContain("inf:work:progress");
+
+      // The home asks something more often than the computer's wait, for
+      // longer than it: the save holds, and a turn asked now never starts.
+      const until = Date.now() + 2_500;
+      while (Date.now() < until) {
+        await at.order("inf:session:roster", []);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await at.order("inf:session:prompt", [{ orderId: "rows:held", task: TASK, text: "Next." }]);
+      await at.ended(2);
+      expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", unstarted: true });
+
+      // Let go, the save names the turn it stopped, which its home carries on.
+      expect(await at.order("inf:session:release-update", [])).toEqual({ stopped: [TASK] });
+    } finally {
+      claude.endClient();
+    }
   });
 });

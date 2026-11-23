@@ -1121,6 +1121,9 @@ export class SessionHost {
               return;
             }
             this.record(held, event);
+            // A turn its crewmate carries on by itself while the save holds stops too.
+            if (event.type === "continuation_started" && this.updateSave)
+              this.stopForUpdate(held, this.updateSave);
           },
           this.now,
           // The work major includes owner-only completed-operation observations.
@@ -1382,11 +1385,12 @@ export class SessionHost {
    * run or the save is let go, and each conversation working here stops
    * where nothing is lost - its running calls finish and keep their
    * results, the ones it would start are refused and say so, and then its
-   * turn is cut. Answers once every stopped turn's end is written here and
+   * turn is cut; so does a turn its crewmate carries on by itself
+   * meanwhile. Answers once every stopped turn's end is written here and
    * the home has every event, so what the crew did is kept on both sides
    * before anything here stops. A second ask joins the first. This
    * computer decides when it is saved, and lets the save go by itself when
-   * the home says nothing for `UPDATE_RETURN_MS` after that.
+   * the home asks nothing for `UPDATE_RETURN_MS` after that (`homeAsked`).
    */
   private async saveForUpdate(): Promise<UpdateSaveAnswer> {
     let save = this.updateSave;
@@ -1420,12 +1424,26 @@ export class SessionHost {
     return { stopped: [...save.stopped] };
   }
 
-  /** Waits for every stop, then for the home to have every event written by then. */
+  /**
+   * Waits for every stop, including one a turn begun meanwhile needed, then
+   * for the home to have every event written by then.
+   */
   private async saveTurns(save: UpdateSave): Promise<void> {
-    await Promise.all(save.stops.values());
-    if (this.updateSave !== save) return;
-    const kept = [...this.held.values()].filter((held) => !held.removed);
-    await Promise.all(kept.map((held) => this.flushed(held)));
+    for (let asked = -1; asked !== save.stops.size; ) {
+      asked = save.stops.size;
+      await Promise.all(save.stops.values());
+      if (this.updateSave !== save) return;
+      const kept = [...this.held.values()].filter((held) => !held.removed);
+      await Promise.all(kept.map((held) => this.flushed(held)));
+    }
+  }
+
+  /**
+   * Its home asked something: a saved update's wait for it starts over, so
+   * a long download or build there for the update never lets the save go.
+   */
+  homeAsked(): void {
+    this.updateSave?.timer?.refresh();
   }
 
   /**

@@ -36,7 +36,7 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
 }));
 
 const { AccountVault } = await import("../pi/accountVault");
-const { CLAUDE_LOGIN_UNREADABLE_TEXT, ClaudeAuthBackend } = await import("../claude/claudeAuth");
+const { claudeLoginUnreadableText, ClaudeAuthBackend } = await import("../claude/claudeAuth");
 const { claudeAvailableModels } = await import("../claude/claudeModels");
 const { PiAccountBackend } = await import("../pi/piAccountBackend");
 
@@ -311,7 +311,7 @@ describe("signing in over a login Infinitary cannot read", () => {
     const { paths, store, subject, vendorSignIns } = unreadableVault();
 
     await expect(subject.add(CLAUDE_PROVIDER_ID, "oauth", bridge())).rejects.toThrow(
-      CLAUDE_LOGIN_UNREADABLE_TEXT,
+      claudeLoginUnreadableText(),
     );
     expect(vendorSignIns()).toBe(0);
     expect(existsSync(join(store, "credential"))).toBe(false);

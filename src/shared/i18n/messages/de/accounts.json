@@ -1,4 +1,6 @@
 {
+  "accountsClaudeLoginUnreadable": "Infinitary konnte die Claude-Anmeldung auf {here} nicht lesen und hat deshalb keine neue Anmeldung darüber gestartet. Versuch es noch einmal – wenn es weiter passiert, beende Infinitary und öffne es über das Dock.",
+  "accountsClaudeLoginUnreadableReopen": "Infinitary konnte die Claude-Anmeldung auf {here} nicht lesen und hat deshalb keine neue Anmeldung darüber gestartet. Versuch es noch einmal – wenn es weiter passiert, beende Infinitary und öffne es erneut.",
   "accountsConnectAddAnother": "Weiteres {provider}-Konto hinzufügen",
   "accountsConnectBrowser": "Mit deinem Browser anmelden",
   "accountsConnectCancel": "Abbrechen",

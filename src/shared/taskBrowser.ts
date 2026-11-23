@@ -260,6 +260,13 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      */
     rule: z.enum(["ask", "automatic"]).optional(),
     /**
+     * While the captain holds it in the kept profile, the wider site the
+     * page's sign-in would be kept under when its cookies cover a name above
+     * the page's (docs/task-browser.md, "The rule"): the Return control
+     * question names it. Absent while that is the page's own site.
+     */
+    keepAs: z.string().min(1).optional(),
+    /**
      * While the captain does not hold it, the signed-in site the computer it
      * runs on keeps for the page's site, which a request card offers;
      * absent when it keeps none the browser does not already use.
@@ -770,7 +777,6 @@ export function signInCaption(
   return fact.returned ? RETURNED_CAPTION : SIGN_IN_CAPTION;
 }
 export const OPEN_AGAIN_LABEL = "Open again";
-export const OPEN_AGAIN_CAPTION = "A fresh browser, with nothing signed in";
 /** Report a problem's start in the Firstmate input, which the captain finishes. */
 export const REPORT_PROBLEM_DRAFT = "This task's browser has a problem: ";
 

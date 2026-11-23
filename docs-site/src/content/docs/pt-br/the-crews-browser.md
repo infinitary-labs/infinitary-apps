@@ -1,5 +1,5 @@
 ---
-source: 30ff177c9864ccf9
+source: 72e8eba0a4de8933
 title: O navegador da tripulação
 description: Um tripulante pode abrir sites em um navegador próprio para a tarefa dele. Acompanhe o trabalho, assuma o controle quando uma página precisar de você e decida quais dos seus logins as próximas tarefas podem usar.
 ---
@@ -47,7 +47,7 @@ Abra-a para ler a conversa do tripulante ao lado da página e escrever para ele.
 Ocultar ou Escape tira a visualização da frente, e o navegador continua rodando.
 
 Um navegador parado diz por que parou.
-**Abrir de novo** inicia um navegador novo, sem nenhum login, na página em que ele estava; essa opção não aparece depois que a tarefa é encerrada.
+**Abrir de novo** inicia um navegador novo na página em que ele estava, com login só nos sites que esta tarefa ainda pode usar; essa opção não aparece depois que a tarefa é encerrada.
 
 ## Assumir o controle {#take-control}
 
@@ -84,17 +84,19 @@ O cartão some, o tripulante continua, e as palavras que ficaram no campo do car
 
 ## Sites com login {#signed-in-sites}
 
-Quando um tripulante pede que você faça login, aquilo em que você fez login fica no perfil de navegador desse computador.
+Quando um tripulante pede que você faça login ou crie uma conta, aquilo em que você fez login fica no perfil de navegador desse computador.
+O login vale para o site inteiro, então um login feito na página de login separada de example.com também serve para as outras páginas dele, como developer.example.com.
 Quando você aperta **Devolver o controle**, uma pergunta acima da página pede o que as próximas tarefas podem fazer, como “Seu login em example.com fica neste computador. Próximas tarefas:”:
 
-- **Perguntar toda vez** vem primeiro.
-  Uma próxima tarefa que precise do site pergunta no cartão dela, que adiciona **Usar meu login em example.com** ao lado de **Fazer login eu mesmo**.
-  Um clique deixa o navegador dessa tarefa usar o site, com login feito, sem você digitar nada.
-- **Usar sem perguntar** deixa uma próxima tarefa abrir o site com login feito, sem cartão, e a Atividade dela avisa isso a cada vez.
+- **Usar sem perguntar** vem primeiro e já vem escolhido para um site novo.
+  Uma próxima tarefa abre o site com login feito, sem cartão, e a Atividade dela avisa isso a cada vez.
   Isso nunca vale para um pagamento ou um envio final.
+- Com **Perguntar toda vez**, uma próxima tarefa que precise do site pergunta no cartão dela, que adiciona **Usar meu login em example.com** ao lado de **Fazer login eu mesmo**.
+  Um clique deixa o navegador dessa tarefa usar o site, com login feito, sem você digitar nada.
 
 Uma regra vale para as tarefas de todos os projetos nesse computador.
 Um navegador que usa um site com login feito abre com login só esse site e as páginas de login pelas quais ele passou; qualquer outro site abre sem login.
+Uma tarefa mantém os sites com login que pode usar quando o navegador dela para sozinho ou o app reinicia, até você apertar **Parar o navegador** ou a tarefa ser encerrada.
 Quando você faz login por qualquer outro motivo, como depois de apertar **Assumir o controle** por conta própria, o login normalmente dura só até esse navegador parar.
 A linha abaixo da página diz qual é o caso, como “temporário · guarda o que você fez login até parar”.
 

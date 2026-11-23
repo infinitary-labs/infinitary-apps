@@ -125,6 +125,12 @@ export type Browser = {
    * entry names. They go when it leaves the kept profile.
    */
   passed?: Set<string>;
+  /**
+   * While the captain holds it in the kept profile, the site Return control
+   * would keep the page's sign-in under (`signedInSiteOf`), read from its
+   * cookies at each page he opens; the Return control question names it.
+   */
+  keepAs?: string;
   automaticTried?: Set<string>;
   cancelIdle?: () => void;
   /** Stops the pictures the captain watches. */

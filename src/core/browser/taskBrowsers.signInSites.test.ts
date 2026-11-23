@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type FakePage, harness } from "../../../tests/helpers/taskBrowserStandIn";
 import type { HostCookie } from "../host";
@@ -41,6 +41,11 @@ const request = {
   signIn: true as const,
 };
 
+/** A project folder the captain opens a page from, served on a loopback address of its own. */
+function serve(folder: string) {
+  return Promise.resolve({ folder, origin: "http://127.0.0.1:41000", close: () => undefined });
+}
+
 function onThisComputer(
   options: { signIns?: WebSignIns; keptPages?: KeptPages; session?: string } = {},
 ) {
@@ -50,6 +55,7 @@ function onThisComputer(
     ...harness({
       signIns,
       now: () => 1_000,
+      serve,
       ...(options.keptPages ? { keptPages: options.keptPages } : {}),
       ...(options.session ? { session: options.session } : {}),
     }),
@@ -57,7 +63,11 @@ function onThisComputer(
   };
 }
 
-/** The captain takes t1's browser, passes through the sign-in page and hands it back signed in. */
+/**
+ * The captain takes t1's browser, signs in on the sign-in page, which sends
+ * him back to the developer page signed in, and hands it back with the
+ * site the Return control question named.
+ */
 async function signInOnce(h: ReturnType<typeof onThisComputer>, automatic: boolean) {
   const browser = h.browsers.forTask("t1");
   await browser.navigate({ url: DEVELOPER });
@@ -66,11 +76,16 @@ async function signInOnce(h: ReturnType<typeof onThisComputer>, automatic: boole
   await h.browsers.takeControl("t1", handle);
   const page = h.pages.at(-1) as FakePage;
   await page.load(SIGN_IN_PAGE);
-  await page.load(DEVELOPER);
   h.kept.cookies.cookies = [{ ...SESSION }];
-  expect(
-    await h.browsers.returnControl("t1", handle, { site: "developer.apple.example", automatic }),
-  ).toEqual({ ok: true });
+  await page.load(DEVELOPER);
+  const shown = await vi.waitFor(() => {
+    const fact = h.browsers.fact("t1");
+    expect(fact).toMatchObject({ keepAs: "apple.example" });
+    return fact?.state === "open" ? (fact.keepAs ?? fact.site) : "";
+  });
+  expect(await h.browsers.returnControl("t1", handle, { site: shown, automatic })).toEqual({
+    ok: true,
+  });
 }
 
 /** A later task whose browser lands on `url` and asks the captain for help there. */
@@ -95,6 +110,23 @@ describe("a kept sign-in covers the whole site its cookies cover", () => {
         via: expect.arrayContaining(["idmsa.apple.example", "developer.apple.example"]),
       },
     ]);
+  });
+
+  it("keeps it under the page's own name when the question named only that", async () => {
+    const h = onThisComputer();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: DEVELOPER });
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.requestHelp("t1", request);
+    await h.browsers.takeControl("t1", handle);
+    // The session cookie arrives with no page load after it, so the question still names the page.
+    h.kept.cookies.cookies = [{ ...SESSION }];
+    expect(h.browsers.fact("t1")).not.toHaveProperty("keepAs");
+    await h.browsers.returnControl("t1", handle, {
+      site: "developer.apple.example",
+      automatic: false,
+    });
+    expect(h.signIns.records().map((record) => record.site)).toEqual(["developer.apple.example"]);
   });
 
   it("offers it to a later task that stops on the sign-in page, and on a sibling page", async () => {
@@ -124,6 +156,16 @@ describe("a kept sign-in covers the whole site its cookies cover", () => {
     const answer = await browser.navigate({ url: SIBLING });
     expect((h.pages.at(-1) as FakePage).opened.kept).toBe(true);
     expect(answer.text).toContain("The captain lets tasks use the sign-in kept for apple.example");
+  });
+
+  it("signs the kept profile out of a sibling page a task opened, its page storage included, on Remove", async () => {
+    const h = onThisComputer();
+    await signInOnce(h, true);
+    await h.browsers.forTask("t2").navigate({ url: SIBLING });
+    h.kept.store.put("https://appstoreconnect.apple.example", { session: "s-2" });
+    expect(await h.browsers.removeSavedSignIn("apple.example")).toEqual({ ok: true });
+    expect(h.kept.store.of("https://appstoreconnect.apple.example")).toEqual({});
+    expect(h.kept.cookies.cookies).toEqual([]);
   });
 });
 
@@ -157,6 +199,18 @@ describe("a task keeps the sign-ins it may use until the captain stops its brows
     const after = onThisComputer({ signIns: before.signIns, keptPages, session: "run-2" });
     await after.browsers.forTask("t2").navigate({ url: DEVELOPER });
     expect(after.browsers.fact("t2")).toMatchObject({ kept: true, saved: ["apple.example"] });
+  });
+
+  it("keeps it when the captain closes a page he opened from the project with Return control", async () => {
+    const h = onThisComputer();
+    const browser = await allowedOnT2(h);
+    await browser.close({});
+    const opened = await h.browsers.openPage("t2", { folder: "/project", path: "index.html" });
+    if (!opened.ok) throw new Error(opened.text);
+    expect(h.browsers.fact("t2")).not.toHaveProperty("saved");
+    expect(await h.browsers.returnControl("t2", opened.handle)).toEqual({ ok: true });
+    await browser.navigate({ url: DEVELOPER });
+    expect(h.browsers.fact("t2")).toMatchObject({ kept: true, saved: ["apple.example"] });
   });
 
   it("forgets it on the captain's Stop browser, on the task's close, and once the captain removed the site", async () => {

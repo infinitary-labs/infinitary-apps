@@ -35,7 +35,15 @@ import {
  */
 export type SignInStore = Pick<
   WebSignIns,
-  "list" | "records" | "get" | "find" | "record" | "remove" | "markFailed" | "allowAutomatic"
+  | "list"
+  | "records"
+  | "get"
+  | "find"
+  | "record"
+  | "opened"
+  | "remove"
+  | "markFailed"
+  | "allowAutomatic"
 >;
 
 /** Whether an address is a web page's, whose site an allowance names. */
@@ -108,13 +116,41 @@ export class SavedSignInGrants {
    * while the captain holds it in the kept profile: the entry this computer
    * keeps, so the Return control question starts from the rule chosen on the
    * computer the browser runs on. Absent while this computer lists none.
+   * With it, the wider site the question names when the page's cookies
+   * cover a name above the page's (`keepAs`, read by `readKeepAs`).
    */
-  ruleOf(browser: Browser): { rule?: "ask" | "automatic" } {
+  ruleOf(browser: Browser): { rule?: "ask" | "automatic"; keepAs?: string } {
     if (!browser.kept || browser.control !== "captain") return {};
     const address = addressOf(browser, browser.current);
     if (!isWebAddress(address)) return {};
-    const record = this.find(browser, siteOf(address));
-    return record ? { rule: record.automatic ? "automatic" : "ask" } : {};
+    const site = signInSite(siteOf(address));
+    const keepAs =
+      browser.keepAs && browser.keepAs !== site && sameSignInSite(browser.keepAs, site)
+        ? browser.keepAs
+        : undefined;
+    const record = this.find(browser, site);
+    return {
+      ...(record ? { rule: record.automatic ? ("automatic" as const) : ("ask" as const) } : {}),
+      ...(keepAs ? { keepAs } : {}),
+    };
+  }
+
+  /**
+   * The site the captain's page would keep its sign-in under, read from the
+   * cookies it sends now, for the Return control question to name; the
+   * browser's fact moves when it changes.
+   */
+  async readKeepAs(taskId: string, browser: Browser): Promise<void> {
+    if (!browser.kept || browser.control !== "captain") return;
+    const address = addressOf(browser, browser.current);
+    if (!isWebAddress(address)) return;
+    const pageSite = signInSite(siteOf(address));
+    const cookies = await browser.current.page.cookies.all().catch(() => undefined);
+    if (!cookies || this.core.browsers.get(taskId) !== browser) return;
+    const keepAs = signedInSiteOf(pageSite, cookiesOfSite(cookies, pageSite));
+    if (keepAs === browser.keepAs) return;
+    browser.keepAs = keepAs;
+    this.core.options.onChange?.(taskId);
   }
 
   /**
@@ -182,6 +218,24 @@ export class SavedSignInGrants {
     if (!isWebAddress(url)) return;
     browser.passed ??= new Set();
     browser.passed.add(signInSite(siteOf(url)));
+  }
+
+  /**
+   * A page the crewmate's browser opened in the kept profile: a name under
+   * a signed-in site it may use joins that entry's opened names, so the
+   * captain's Remove clears its page storage too.
+   */
+  openedKept(browser: Browser, url: string): void {
+    const store = this.core.options.signIns;
+    if (!store || !isWebAddress(url) || browser.saved.size === 0) return;
+    const site = signInSite(siteOf(url));
+    const id = [...browser.saved].find(([saved]) => sameSignInSite(saved, site))?.[1];
+    if (!id) return;
+    try {
+      store.opened(id, site);
+    } catch {
+      // A list that cannot be written now leaves the name for the next page it opens.
+    }
   }
 
   /**
@@ -275,7 +329,8 @@ export class SavedSignInGrants {
     const store = this.core.options.signIns;
     if (!store) return "Control returned, but this computer keeps no sign-ins.";
     const pageSite = signInSite(siteOf(addressOf(browser, browser.current)));
-    if (pageSite !== signInSite(shownSite))
+    const shown = signInSite(shownSite);
+    if (shown !== pageSite && !sameSignInSite(shown, pageSite))
       return "Control returned, but the page changed sites. Its sign-in was not added to the list.";
     try {
       const page = browser.current.page;
@@ -284,9 +339,13 @@ export class SavedSignInGrants {
       if (cookies.length === 0 && (storage?.items.length ?? 0) === 0) {
         return "Control returned. This site holds no sign-in, so nothing was added for later tasks.";
       }
-      // Kept for the whole site its cookies cover; the page's own name stays
-      // among the pages passed through, so Remove clears its page storage too.
-      const site = signedInSiteOf(pageSite, cookies);
+      // Kept for the whole site its cookies cover, but never wider than the
+      // name the captain's question showed: a session cookie set after the
+      // question last read them keeps the page's own name, as he agreed to.
+      // The page's own name stays among the pages passed through, so Remove
+      // clears its page storage too.
+      const wide = signedInSiteOf(pageSite, cookies);
+      const site = wide === shown ? wide : pageSite;
       const via = [...(browser.passed ?? []), pageSite].filter((one) => signInSite(one) !== site);
       const record = store.record(site, { automatic, via });
       browser.saved.set(record.site, record.id);
@@ -359,8 +418,9 @@ export class SavedSignInGrants {
   /**
    * The captain's Remove in Settings: the site's entry goes from this
    * computer, the kept profile signs out of it - its cookies, and its own
-   * origins' page storage, with those of the sign-in pages only it passed
-   * through - and every browser that could use it no longer may; its
+   * origins' page storage, with those of the sign-in pages it passed
+   * through and the names under it task browsers opened, where no other
+   * entry names them - and every browser that could use it no longer may; its
    * crewmate is told on its next command.
    */
   async remove(site: string): Promise<TaskBrowserCommandResult> {
@@ -376,9 +436,16 @@ export class SavedSignInGrants {
       return { ok: false, text: `${HERE.This} keeps no sign-in for ${key}.` };
     }
     const others = new Set(
-      (store?.records() ?? []).flatMap((record) => [record.site, ...(record.via ?? [])]),
+      (store?.records() ?? []).flatMap((record) => [
+        record.site,
+        ...(record.via ?? []),
+        ...(record.opened ?? []),
+      ]),
     );
-    const sites = [key, ...(removed?.via ?? []).filter((via) => !others.has(via))];
+    const sites = [
+      key,
+      ...[...(removed?.via ?? []), ...(removed?.opened ?? [])].filter((one) => !others.has(one)),
+    ];
     try {
       await this.core.options.host.kept?.forget(
         (cookies) => sites.flatMap((one) => cookiesOfSite(cookies, one)),

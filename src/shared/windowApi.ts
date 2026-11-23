@@ -757,7 +757,7 @@ export type FirstmateApi = {
     onFrame: (listener: (frame: TaskBrowserFrame) => void) => () => void;
     /** Stop browser: its pages, history and site data go. */
     stop: (taskId: string) => Promise<TaskBrowserCommandResult>;
-    /** Open again: a fresh browser at the stopped one's last page, nothing signed in. */
+    /** Open again: a fresh browser at the stopped one's last page, signed in only where the task may use a kept sign-in. */
     reopen: (taskId: string) => Promise<TaskBrowserCommandResult>;
     /** What the page's outline names on screen now, for Point at; read once and nothing is recorded. */
     places: (taskId: string) => Promise<TaskBrowserPlaces>;

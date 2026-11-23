@@ -326,6 +326,7 @@
 "cardBrowserManage" = "Administrar";
 "cardBrowserMore" = "Más";
 "cardBrowserNone" = "Esta tarea no tiene navegador en %1$@.";
+"cardBrowserOpenAgainCaption" = "Un navegador nuevo, solo con los inicios de sesión que esta tarea puede usar";
 "cardBrowserOpenFailed" = "%1$@ no pudo abrir un navegador para esta tarea en este momento.";
 "cardBrowserPageWatching" = "La página de %1$@, tal como la muestra el navegador del tripulante";
 "cardBrowserPageYours" = "La página de %1$@, bajo tu control";

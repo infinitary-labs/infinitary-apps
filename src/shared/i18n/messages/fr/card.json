@@ -61,6 +61,7 @@
   "cardBrowserManage": "Gérer",
   "cardBrowserMore": "Plus",
   "cardBrowserNone": "Cette tâche n’a pas de navigateur sur {place}.",
+  "cardBrowserOpenAgainCaption": "Un nouveau navigateur, avec seulement les connexions que cette tâche peut utiliser",
   "cardBrowserOpenFailed": "{place} n’a pas pu ouvrir de navigateur pour cette tâche pour l’instant.",
   "cardBrowserPageWatching": "La page sur {site}, telle que la montre le navigateur de l’équipier",
   "cardBrowserPageYours": "La page sur {site}, sous votre contrôle",

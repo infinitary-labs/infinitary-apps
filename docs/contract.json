@@ -47546,6 +47546,10 @@
                       "automatic"
                     ]
                   },
+                  "keepAs": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "offer": {
                     "type": "object",
                     "properties": {
@@ -85926,6 +85930,10 @@
                               "automatic"
                             ]
                           },
+                          "keepAs": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "offer": {
                             "type": "object",
                             "properties": {
@@ -110086,6 +110094,10 @@
                               "ask",
                               "automatic"
                             ]
+                          },
+                          "keepAs": {
+                            "type": "string",
+                            "minLength": 1
                           },
                           "offer": {
                             "type": "object",

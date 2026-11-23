@@ -53,6 +53,7 @@
   "cardBrowserManage": "管理",
   "cardBrowserMore": "その他",
   "cardBrowserNone": "このタスクには {place} 上のブラウザがありません。",
+  "cardBrowserOpenAgainCaption": "新しいブラウザ。このタスクが使えるサインインだけが残ります",
   "cardBrowserOpenFailed": "{place} は今、このタスク用のブラウザを開けませんでした。",
   "cardBrowserPageWatching": "{site} のページ（乗組員のブラウザの表示）",
   "cardBrowserPageYours": "{site} のページ（あなたが操作中）",

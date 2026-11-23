@@ -326,6 +326,7 @@
 "cardBrowserManage" = "Gérer";
 "cardBrowserMore" = "Plus";
 "cardBrowserNone" = "Cette tâche n’a pas de navigateur sur %1$@.";
+"cardBrowserOpenAgainCaption" = "Un nouveau navigateur, avec seulement les connexions que cette tâche peut utiliser";
 "cardBrowserOpenFailed" = "%1$@ n’a pas pu ouvrir de navigateur pour cette tâche pour l’instant.";
 "cardBrowserPageWatching" = "La page sur %1$@, telle que la montre le navigateur de l’équipier";
 "cardBrowserPageYours" = "La page sur %1$@, sous votre contrôle";

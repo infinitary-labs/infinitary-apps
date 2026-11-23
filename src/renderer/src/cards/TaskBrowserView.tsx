@@ -11,7 +11,6 @@ import {
   CLOSE_PAGE_LABEL,
   canOpenAgain,
   NOT_NOW_LABEL,
-  OPEN_AGAIN_CAPTION,
   OPEN_AGAIN_LABEL,
   REPORT_PROBLEM_DRAFT,
   RETURN_CONTROL_LABEL,
@@ -915,7 +914,7 @@ export function TaskBrowserView({
                 </Button>
               </span>
               <div style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>
-                {OPEN_AGAIN_CAPTION}
+                {m.cardBrowserOpenAgainCaption()}
               </div>
             </>
           )}
@@ -955,7 +954,7 @@ export function TaskBrowserView({
       const result =
         which === "return"
           ? await window.infinitary.browser.return(taskId, handle, {
-              ...(kept ? { site: fact.site, automatic } : {}),
+              ...(kept ? { site: fact.keepAs ?? fact.site, automatic } : {}),
               ...(words ? { words } : {}),
             })
           : await window.infinitary.browser.take(taskId, handle);
@@ -1293,7 +1292,7 @@ export function TaskBrowserView({
                   }}
                 >
                   <legend style={{ ...LINE, float: "inline-start", padding: 0, maxWidth: "100%" }}>
-                    {signInRuleLegend(fact.site, place)}
+                    {signInRuleLegend(fact.keepAs ?? fact.site, place)}
                   </legend>
                   {(
                     [

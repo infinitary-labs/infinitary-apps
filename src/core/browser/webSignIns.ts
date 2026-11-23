@@ -39,6 +39,12 @@ export type SignedInSite = {
   automatic?: boolean;
   /** The sign-in pages the captain passed through on the way, by site. */
   via?: string[];
+  /**
+   * Other names under the site that task browsers opened with this sign-in,
+   * by site: Remove clears their page storage too, since page storage is
+   * kept per origin and cannot be cleared for a whole site at once.
+   */
+  opened?: string[];
   /** When a crewmate last said this sign-in did not sign its page in; absent while none has. */
   failedAt?: number;
 };
@@ -50,6 +56,7 @@ const recordSchema = z.object({
   id: z.string().min(1),
   automatic: z.boolean().optional(),
   via: z.array(z.string().min(1)).optional(),
+  opened: z.array(z.string().min(1)).optional(),
   failedAt: z.number().optional(),
 });
 
@@ -190,7 +197,7 @@ export class WebSignIns {
    * passed through. An entry already there keeps its id and the pages it named;
    * a crewmate's mark that it failed goes, since the captain signed in again.
    * Entries for names under the site (an older `developer.apple.com` once
-   * `apple.com` is kept) fold into it, their id and pages with them, so a
+   * `apple.com` is kept) fold into it, their id, pages and opened names with them, so a
    * task allowed the narrower one keeps its allowance.
    */
   record(site: string, rule: { automatic: boolean; via?: readonly string[] }): SignedInSite {
@@ -208,16 +215,35 @@ export class WebSignIns {
         ].map(signInSite),
       ),
     ].filter((one) => one !== key);
+    const opened = [
+      ...new Set([...(before?.opened ?? []), ...under.flatMap((one) => one.opened ?? [])]),
+    ].filter((one) => one !== key && !via.includes(one));
     const record: SignedInSite = {
       site: key,
       savedAt: this.now(),
       id: before?.id ?? under[0]?.id ?? randomUUID(),
       ...(rule.automatic ? { automatic: true } : {}),
       ...(via.length > 0 ? { via } : {}),
+      ...(opened.length > 0 ? { opened } : {}),
     };
     this.write(record);
     for (const one of under) rmSync(this.fileFor(one.site), { force: true });
     return record;
+  }
+
+  /**
+   * A task browser opened `site` with the entry `id`: a name under the
+   * entry's own that neither it nor its pages passed through name yet joins
+   * its opened names. False when that entry was removed or replaced since.
+   */
+  opened(id: string, site: string): boolean {
+    const key = signInSite(site);
+    const record = this.records().find((one) => one.id === id);
+    if (!record) return false;
+    if (key === record.site || !atOrUnder(key, record.site)) return true;
+    if ([...(record.via ?? []), ...(record.opened ?? [])].includes(key)) return true;
+    this.write({ ...record, opened: [...(record.opened ?? []), key] });
+    return true;
   }
 
   /**

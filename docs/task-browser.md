@@ -29,7 +29,7 @@ The command is granted where the browser binds (`CrewSupervisor.browserHooks`): 
 
 The browser stays open across the crewmate's turns.
 It stops on `infinitary-browser-axi stop`, on the captain's Stop browser, when its task closes done or dropped (except a browser the captain's own click on a page from the project started, which is the captain's, below), after half an hour with no command while nobody watches it and the captain does not hold it, when its page stops working, or when the app quits.
-Whatever stopped it is told to the crewmate once, and the next open is a fresh browser with nothing signed in.
+Whatever stopped it is told to the crewmate once, and the next open is a fresh browser, signed in only where the task may still use a kept sign-in ("What a task keeps").
 At most four task browsers run on this Mac at once; the next one is refused in words, and none is stopped to make room.
 One command runs at a time per task, in the order they came, and each answers within 30 seconds, in words when the page did not finish.
 
@@ -327,8 +327,8 @@ What the second page says in the captain's time, its opening and closing include
 
 ## A signed-in page
 
-Once the captain has handed a browser back it may hold the captain's sign-in, so until it stops it keeps only what the task needs (`TaskBrowsers.signedIn`).
-The host reads that from the typed fact that the captain returned control, never from the page.
+Once the captain has handed a browser back, or once it may use a kept sign-in - from its start when its task keeps one ("What a task keeps") - it may hold the captain's sign-in, so until it stops it keeps only what the task needs (`signedIn`).
+The host reads that from typed facts - the captain returned control, the browser may use a kept sign-in, or its page runs in the kept profile - never from the page.
 
 - Text typed into the page is read out only while it is just what the crewmate itself typed there since the captain last handed the page back (`OutlineOptions.typedOnly`, `RefBook.noteTyped`).
   Any other - a typed field's value, the text of an editable part of the page - may be what the captain typed, such as a card number or a code, whether or not the captain sent it: the outline says the field holds something, `(value hidden)`, and never what, and a wait for words never finds it.
@@ -387,8 +387,8 @@ Each page the browser holds is a Browser tab on the card's strip, reading Browse
 Picking a page's tab is navigation, so it is the captain's only while the captain holds the browser (`{ kind: "page" }` on `inf:browser:input`); while the captain watches, the other pages' tabs are disabled.
 
 More holds Fit or Actual size, Stop browser, Copy page address, and Report a problem, which starts the first mate input with "This task's browser has a problem: " for the captain to finish.
-Stop browser (`inf:browser:stop`) stops it at once, as the crewmate's own close would.
-Open again (`inf:browser:reopen`) starts a fresh browser, with nothing signed in, at the page the stopped one was on, refused in words past the cap of four or once the task has closed; the crewmate's next answer says the captain opened it again.
+Stop browser (`inf:browser:stop`) stops it at once, and unlike the crewmate's own close it also ends the kept sign-ins the task may use ("What a task keeps").
+Open again (`inf:browser:reopen`) starts a fresh browser, signed in only where the task may still use a kept sign-in, at the page the stopped one was on, refused in words past the cap of four or once the task has closed; the crewmate's next answer says the captain opened it again.
 Both are core requests every view may ask.
 
 ## From a card
@@ -409,7 +409,7 @@ The card's line says `this card's browser has stopped` in both cases.
 ### After a restart
 
 A stopped browser's page is kept with its task (`KeptPages`, `src/core/browser/keptPages.ts`): one owner-only file, `browser.json`, in the task's own folder on the computer that runs its browser, beside its registered stops (`docs/leftover-programs.md`).
-It holds the stopped fact, with the address bare when the captain signed in, and the project folder its page served, if any.
+It holds the stopped fact, with the address bare when the captain signed in, the project folder its page served, if any, and the kept sign-ins the task may still use (`saved`, "What a task keeps").
 Each stop with a reason writes it; the app's quit writes each open browser's page as stopped by the quit (`quit: true`, with `stopped` read as `gone` by a reader without the field); a browser that opens removes it; the task's close removes it, so a closed task's build is never brought back.
 After a restart the first read of the task's browser reads the file as its stopped browser (`TaskBrowsers.endedOf`), with the session and generation it had, so a card from before the restart still names it and Open again, or a card's press, starts it there.
 A computer that runs work answers the home's facts for each task it holds, not only the browsers that spoke since its start (`heldTasks`, `src/core/helper/browsers.ts`), so its restart keeps the page too.
@@ -627,20 +627,22 @@ A request without it, such as a payment review, leaves the page where it is, and
 While the captain signs in, each site the page passes through, such as a separate sign-in service, is noted on the browser (`passed`).
 
 **The rule.**
-Returning control from the kept profile asks one question above the page, `Your <site> sign-in stays on <computer>. Later tasks:`, with two choices: `Use it without asking`, which leads and is picked for a site not yet listed, as the captain chose, and `Ask me each time` (`signInRuleLegend`, `ASK_EACH_TIME_LABEL`, `USE_WITHOUT_ASKING_LABEL`).
+Returning control from the kept profile asks one question above the page, `Your <site> sign-in stays on <computer>. Later tasks:`, naming the site the entry will be kept under, with two choices: `Use it without asking`, which leads and is picked for a site not yet listed, as the captain chose, and `Ask me each time` (`signInRuleLegend`, `ASK_EACH_TIME_LABEL`, `USE_WITHOUT_ASKING_LABEL`).
 A site the computer the browser runs on already lists starts at its rule there, which the browser's fact carries (`rule`), with Manage beside it.
+While the captain holds the browser, each page the captain opens reads its cookies again, and when they cover a name above the page's, the fact carries that wider site (`keepAs`, `SavedSignInGrants.readKeepAs`) and the question names it.
 Return control sends the displayed site and the rule (`inf:browser:return` with `site` and `automatic`); the core checks the site again, and when the site's cookies and its own origins' page storage hold something, it lists the sign-in with that rule and the pages passed through, and the browser may use it from then on (`SavedSignInGrants.keep`).
 The entry is the whole site the sign-in's cookies cover: the widest name among the cookies the page's parent shares with every name under it, such as `apple.com` for a sign-in made at `idmsa.apple.com`, otherwise the page's own host and port (`signedInSiteOf`).
 The engine never accepts a cookie on a public suffix, so this stops at the registrable domain, as a browser groups one site; the page signed in at stays among the pages passed through.
+The entry is never wider than the site the question named: a session cookie that arrived after the question last read the cookies, with no page opened since, keeps the page's own name, as the captain agreed to.
 An entry for a name under the new one, kept before by a page's exact name, folds into it with its id and pages, so a task allowed it keeps its allowance.
 A site that holds nothing is not listed, and the answer says so.
 
 **Where the list lives.**
-`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when the captain signed in there, which entry it is (`id`), its optional `automatic` rule, the sign-in pages passed through (`via`) and its optional `failedAt`.
+`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when the captain signed in there, which entry it is (`id`), its optional `automatic` rule, the sign-in pages passed through (`via`), the other names under its site that task browsers opened with it (`opened`) and its optional `failedAt`.
 It holds no cookie and no page storage.
 A file from before, a copy of a site's cookies and page storage (version 1), retires: the list deletes it unread the first time it meets it, and Settings never shows it.
 `TaskBrowsers` is its only caller, and each computer keeps its own.
-One lookup finds the entry for a page (`WebSignIns.find`): one whose site is the page's or a name above it, or whose pages passed through hold the page's site, the one also covering the browser's first address first, then the newest.
+One lookup finds the entry for a page (`WebSignIns.find`): one whose site is the page's or a name above it, or whose pages passed through hold the page's site, the one also covering the browser's first address first, then one the page lies under, then the newest.
 The offer, the grant, the Return control rule and a use by the rule all read it, so a later task stopped on a sign-in page or a sibling page of a kept site finds it.
 
 **What a task may open there.**
@@ -653,6 +655,7 @@ What a task was allowed - by a grant, by a use under the rule, or by the captain
 Its browser's stop by the crewmate, the stop after half an hour unused, a page that stopped working and the app's quit keep it, in memory and in the task's owner-only `browser.json` beside its kept page (`KeptPages`, `saved`: site to entry id), and the task's next browser starts with it (`TaskBrowsers.allowanceOf`).
 Each entry must still be on the list by its id when that browser starts, so Remove or Remove all ends it.
 The captain's Stop browser and the task's close drop it.
+A browser the captain's own click on a page from the project started is the captain's and starts with none of it, so closing that page, Return control included, leaves the task's as it was.
 A task holds at most `SAVED_SIGN_INS_PER_TASK` sites.
 A task's own empty context still ends at every stop, since the engine keeps it only in memory.
 
@@ -679,7 +682,7 @@ Settings → Secrets lists them last on the main page, under Signed-in sites, in
 In Secrets, each row shows the site’s current rule and opens to the rule control and Remove.
 The list is per computer: this computer's first, under its name once other computers are listed, then each computer that runs work, with its own sites, or a line saying it could not be asked (`WebsiteSignInsSection`, `src/renderer/src/settings/`, read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers).
 Each row shows the site with when the captain signed in there, its rule as a `Later tasks` choice and Remove.
-Remove (`inf:browser:sign-ins:remove`, `SavedSignInGrants.remove`) takes the site off that computer's list and clears it in that computer's kept profile - its cookies, its own origins' page storage, and those of the sign-in pages only it passed through - so every browser using it is signed out at once, a line goes on each such task's timeline, and each crewmate is told on its next command.
+Remove (`inf:browser:sign-ins:remove`, `SavedSignInGrants.remove`) takes the site off that computer's list and clears it in that computer's kept profile - its cookies, its own origins' page storage, and those of the sign-in pages it passed through and the other names under its site task browsers opened with it, where no other entry names them - so every browser using it is signed out at once, a line goes on each such task's timeline, and each crewmate is told on its next command.
 Under each computer's list, Remove all (`inf:browser:sign-ins:remove-all`, `SavedSignInGrants.removeAll`) signs that computer out of every site, including sign-ins in the kept profile that never reached the list, such as a site whose sign-in the captain abandoned or one passed through on the way: it empties the list and takes every browser's allowances at once, before anything waits, so no open finds its way back in, reopens every browser in the kept profile in an empty context of its own, signed out, then empties the kept profile - the built-in engine's partition of every cookie and every origin's site data, and Chrome's by stopping its kept Chrome and deleting its profile folder, by its path when Chrome is not switched on - and each crewmate whose browser could use a sign-in is told on its next command.
 The list, the rule (`inf:browser:sign-ins:automatic`), Remove and Remove all are core requests the captain asks from any window that controls the first mate; the first mate never changes a rule or removes a site.
 
@@ -737,7 +740,7 @@ No retry of the app's replays a browser commitment.
 A wake or steer the inbox delivers again - after a provider failure or a restart (`docs/inbox.md`) - is words alone: the host keeps no browser command to replay, and a restart keeps no browser, page or form, since every browser closes when the app quits.
 A crewmate whose redelivered wake finds its browser gone reads the outcome as unknown, as the wake says, and asks.
 A request card from before a quit still stands; the captain's click on it tells its crewmate that its browser was gone, and the steer says an unknown outcome still is unknown, so the crewmate checks again on a fresh browser and asks anew.
-Open again, after a stop within one run, starts a fresh browser with nothing signed in at a plain visit to the last address, never sending what the page last sent.
+Open again, after a stop within one run, starts a fresh browser, signed in only where the task may still use a kept sign-in, at a plain visit to the last address, never sending what the page last sent.
 
 ## On another computer
 
@@ -908,6 +911,7 @@ Its restart journey has a crewmate leave its task's browser open at a local page
 The first journey in `tests/e2e/task-browser-handoff.spec.ts` has a crewmate ask the captain to sign in on a local account page: its card's strip reads paused for your help with no button beside the card's action and its browser refuses the crewmate, the card's key opens the record, whose Open shows the paused page and says so, Open browser and sign in hands the captain the page with no word to the crewmate, the captain signs in with real clicks and typing on the view's picture while no file under the app's data and no model call holds the captain's password, Hide resumes nothing and the sharing notice stays visible before handback, and Return control wakes the crewmate once - its old ref refused, its fresh look leading with the return, the page signed in, and nothing the page logged or asked for in the captain's time reaching it - and its picture of the signed-in page is refused without a reason and taken with one, which its record names.
 `webSignIns.test.ts` holds the list - its folder's and files' modes, one entry per site with no cookie or page storage in it, the rule bound to the entry Settings showed, a mark only on the entry it was given, a copy from before deleted unread, a broken file read as nothing - and which cookies make up a site's sign-in.
 `taskBrowsers.signIns.test.ts` holds signed-in sites against the stand-in page: a sign-in request opens the kept profile and one without it does not, a site holding nothing is not listed, a second task granted the site is signed in with nothing copied while a third is signed out, a kept browser opens only its allowed sites and the pages passed through, its own navigation and second pages elsewhere leave for an empty context, the rule opens the site without a card, a request is offered the site only while its browser may not use it, a grant is refused to a browser not waiting or stale or with nothing listed, a site that turned it away is marked, and Remove clears its cookies and page storage in the kept profile, keeping a sign-in page another entry still names; `placedBrowsers.test.ts` holds the same orders to a computer that runs work.
+`taskBrowsers.signInSites.test.ts` holds a sign-in made on a separate sign-in page under a company's name: the question names the whole site, the entry is kept under it (or under the page's name when the question named only that), later tasks stopped on the sign-in page or a sibling page find it, Remove clears a sibling page's storage, and a task keeps what it may use across its crewmate's stop, the idle stop, a restart and the captain's page from the project, until Stop browser, Remove or its close.
 `cardActions.browser.test.ts` holds the request card's added default and relabeled action, a card left as declared with nothing listed, a crewmate's declared signed-in site never carried, the sign-in mark carried to the request, the click's grant and its feed line when refused, and the saved wake; `wakes.test.ts` its words, `taskBrowser.test.ts` the foot line, `WebsiteSignInsSection.test.tsx` the Settings rows per computer with the rule, and `core.boot.test.ts` the gate.
 The first journey in `tests/e2e/task-browser-saved-sign-ins.spec.ts` has a crewmate's sign-in request open a club page whose server keeps its sign-in in a cookie in the kept profile, the captain sign in, keep `Ask me each time` while returning control, and find the site in Settings with its rule while the list holds no cookie and no file the password; a second task's own browser then reads the page signed out, its request offers `Use my <site> sign-in` as its default beside `Sign in myself`, and that one click signs the page in with nothing copied and wakes the crewmate, which reads it signed in while no model call holds the password; Remove in Settings then signs that browser out.
 A journey beside it has a club page that keeps its sign-in in local storage kept under `Use it without asking`, so a second task's own open is signed in with no card, and Remove clears that storage; a third has the crewmate mark a sign-in the club turned away, so the next request leads with `Sign in myself`.

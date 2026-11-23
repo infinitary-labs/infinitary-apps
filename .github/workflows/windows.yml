@@ -94,6 +94,13 @@ permissions:
 env:
   PORTABLE_GIT: https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/PortableGit-2.56.1-64-bit.7z.exe
   PORTABLE_GIT_SHA256: 9dd04a608ceb5f6ab32a73709e0ecb159d211da71b697c45ff81f6dd0c6b49c7
+  # Win32-OpenSSH's own server, which the installer check runs as its standard
+  # person on the machine's loopback, so the installed app joins a home by its
+  # address with Windows' own ssh.exe and ssh-keyscan.exe (docs/windows.md,
+  # "The checks"). The SHA-256 is the digest GitHub keeps for the release's
+  # asset; the project publishes no list of its own.
+  WIN32_OPENSSH: https://github.com/PowerShell/Win32-OpenSSH/releases/download/10.4.0.0p1-Preview/OpenSSH-Win64.zip
+  WIN32_OPENSSH_SHA256: b67ff8becd203502190ec42ac7787c24c2cd3325ed7700485fe7a1c83d2a7957
 
 jobs:
   build:
@@ -430,11 +437,22 @@ jobs:
           if ((Get-FileHash -Algorithm SHA256 -LiteralPath $setup).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
           $p = Start-Process -FilePath $setup -ArgumentList '/S', '--force-run' -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
+      # The SSH server the journey's join by address reaches, checked by its
+      # SHA-256 and unpacked into the job's temporary folder; nothing installs
+      # it or runs it as a service.
+      - name: Win32-OpenSSH's server for the join by address
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $zip = Join-Path $env:RUNNER_TEMP 'OpenSSH-Win64.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri $env:WIN32_OPENSSH -OutFile $zip
+          if ((Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower() -ne $env:WIN32_OPENSSH_SHA256) { throw 'the OpenSSH download differs from its release' }
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'openssh-server')
       - name: Check the installed app
         env:
           INFINITARY_INSTALLED_EVIDENCE: ${{ runner.temp }}/windows-evidence
           INFINITARY_INSTALLED_VERSION: ${{ needs.build.outputs.version }}
           INFINITARY_WINDOWS_HOME_LINK: ${{ inputs.home_link }}
+          INFINITARY_WINDOWS_SSHD: ${{ runner.temp }}/openssh-server/OpenSSH-Win64
         run: pnpm exec playwright test --config playwright.windows.config.ts tests/windows/installed-windows.spec.ts
       # Kept even when the job's timeout cancels it, so a hang leaves its
       # pictures and trace.

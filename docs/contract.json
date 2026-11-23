@@ -6620,6 +6620,10 @@
                 "tasks"
               ]
             },
+            "updating": {
+              "type": "boolean",
+              "const": true
+            },
             "addressChanged": {
               "type": "boolean"
             },
@@ -7120,6 +7124,10 @@
                   "state",
                   "tasks"
                 ]
+              },
+              "updating": {
+                "type": "boolean",
+                "const": true
               },
               "addressChanged": {
                 "type": "boolean"
@@ -7684,6 +7692,10 @@
                   "state",
                   "tasks"
                 ]
+              },
+              "updating": {
+                "type": "boolean",
+                "const": true
               },
               "addressChanged": {
                 "type": "boolean"
@@ -8809,6 +8821,10 @@
               "tasks"
             ]
           },
+          "updating": {
+            "type": "boolean",
+            "const": true
+          },
           "addressChanged": {
             "type": "boolean"
           },
@@ -9275,6 +9291,10 @@
               "tasks"
             ]
           },
+          "updating": {
+            "type": "boolean",
+            "const": true
+          },
           "addressChanged": {
             "type": "boolean"
           },
@@ -9699,6 +9719,10 @@
               "state",
               "tasks"
             ]
+          },
+          "updating": {
+            "type": "boolean",
+            "const": true
           },
           "addressChanged": {
             "type": "boolean"
@@ -10385,6 +10409,10 @@
                   "state",
                   "tasks"
                 ]
+              },
+              "updating": {
+                "type": "boolean",
+                "const": true
               },
               "addressChanged": {
                 "type": "boolean"
@@ -11967,6 +11995,10 @@
                 "reconnecting",
                 "out-of-reach"
               ]
+            },
+            "updating": {
+              "type": "boolean",
+              "const": true
             },
             "signIns": {
               "anyOf": [
@@ -41515,6 +41547,10 @@
                       "type": "boolean",
                       "const": true
                     },
+                    "updating": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "catchingUpSince": {
                       "type": "number"
                     }
@@ -43310,6 +43346,10 @@
                 ]
               },
               "noNewWork": {
+                "type": "boolean",
+                "const": true
+              },
+              "updating": {
                 "type": "boolean",
                 "const": true
               },
@@ -45484,6 +45524,10 @@
                         "reconnecting",
                         "out-of-reach"
                       ]
+                    },
+                    "updating": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "missingTools": {
                       "maxItems": 65,
@@ -48444,6 +48488,10 @@
                   "type": "boolean",
                   "const": true
                 },
+                "updating": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "catchingUpSince": {
                   "type": "number"
                 }
@@ -50154,6 +50202,10 @@
                   ]
                 },
                 "noNewWork": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "updating": {
                   "type": "boolean",
                   "const": true
                 },
@@ -92267,6 +92319,10 @@
                       "type": "boolean",
                       "const": true
                     },
+                    "updating": {
+                      "type": "boolean",
+                      "const": true
+                    },
                     "catchingUpSince": {
                       "type": "number"
                     }
@@ -94027,6 +94083,10 @@
                       ]
                     },
                     "noNewWork": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "updating": {
                       "type": "boolean",
                       "const": true
                     },
@@ -100325,6 +100385,10 @@
                 "tasks"
               ]
             },
+            "updating": {
+              "type": "boolean",
+              "const": true
+            },
             "addressChanged": {
               "type": "boolean"
             },
@@ -101228,6 +101292,10 @@
                 "reconnecting",
                 "out-of-reach"
               ]
+            },
+            "updating": {
+              "type": "boolean",
+              "const": true
             },
             "signIns": {
               "anyOf": [

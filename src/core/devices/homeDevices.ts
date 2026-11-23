@@ -14,7 +14,9 @@ import {
   DOWNLOAD_COMMAND_LINK_TTL_MS,
   deviceLabel,
   deviceRunsWork,
+  reachAfterStart,
   reachFrom,
+  STARTUP_CONNECTING_MS,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { overridePasses } from "@shared/holds";
@@ -126,6 +128,8 @@ export type HomeDevices = {
   signIns: DeviceSignIns;
   /** A computer connected on an older Firstmate takes no new work: answered by Your devices. */
   takesNoWorkUntilUpdated: (deviceId: string) => boolean;
+  /** The home follows that computer's update now (`Computers.updatingOf`): it reads updating. */
+  updatingOf: (deviceId: string) => boolean;
   /** A task began waiting for an update: its card comes back, even after Not now. */
   recallUpdateCard: (deviceId: string) => void;
   /** Each computer's resources reach the pressure watch from here on. */
@@ -458,11 +462,19 @@ export async function startHomeDevices(options: {
     emit: (event) => broadcastEvent(event),
     changed: () => devicesChanged(),
   });
+  // For the first minute after this start, a computer not heard from since
+  // reads connecting: each one dials this one again within seconds
+  // (docs/devices.md, "Updating").
+  const startedAt = Date.now();
+  let startingUp = true;
   const reachOf = (deviceId: string) =>
-    reachFrom({
-      inReach: workDevices.inReach(deviceId),
-      ssh: sshConnections.state(deviceId),
-    });
+    reachAfterStart(
+      reachFrom({
+        inReach: workDevices.inReach(deviceId),
+        ssh: sshConnections.state(deviceId),
+      }),
+      { startedAt, now: Date.now(), seenAt: devices.lastSeen(deviceId) },
+    );
   // The adds the first mate's card began, whose end it hears (docs/devices.md, "Asking the first mate").
   const cardAdds = new CardAdds();
   const remoteLogin: RemoteLogin = new RemoteLogin({
@@ -477,6 +489,8 @@ export async function startHomeDevices(options: {
     connections: sshConnections,
     emit: (event) => {
       cardAdds.heard(event);
+      // A step of an update over Remote Login is heard from that computer.
+      if (event.type === "device_setup" && event.deviceId) computers?.heardFrom(event.deviceId);
       broadcastEvent(event);
     },
   });
@@ -579,6 +593,7 @@ export async function startHomeDevices(options: {
     unanswered: (deviceId) => deviceSetup?.refresh(deviceId),
     protectedIds: options.protectedIds,
     reachOf,
+    updatingOf: (deviceId) => computers?.updatingOf(deviceId) === true,
   });
   return {
     work: workDevices,
@@ -600,6 +615,7 @@ export async function startHomeDevices(options: {
     privacyWatch,
     signIns: deviceSignIns,
     takesNoWorkUntilUpdated: (deviceId) => computers?.takesNoWorkUntilUpdated(deviceId) === true,
+    updatingOf: (deviceId) => computers?.updatingOf(deviceId) === true,
     recallUpdateCard: (deviceId) => updateNudge?.refresh(deviceId, true),
     attachPressure: (observe) => {
       observePressure = observe;
@@ -672,6 +688,8 @@ export async function startHomeDevices(options: {
         },
         ssh: (deviceId) => sshConnections.state(deviceId),
         reachOf,
+        // Task rows say updating by the same fact: they follow it at once.
+        updatingChanged: () => options.scheduleWorkPresentation(),
         emit: (view) => {
           emit("inf:devices", view);
           updateNudge?.appsChanged(view);
@@ -696,7 +714,10 @@ export async function startHomeDevices(options: {
       // The connecting limit is read when reach is read. The host clock asks
       // whether that read moved, and pushes only then.
       ticker.register("device-reach", TICK_PERIOD_MS, () => {
-        if (sshConnections.due()) devicesChanged();
+        // The first minute's connecting ends once, and every reader reads it again.
+        const started = startingUp && Date.now() - startedAt >= STARTUP_CONNECTING_MS;
+        if (started) startingUp = false;
+        if (sshConnections.due() || started) devicesChanged();
       });
       // Its work comes here first, or once it is back, as Remove's would.
       leaveWithWork = (device) => {

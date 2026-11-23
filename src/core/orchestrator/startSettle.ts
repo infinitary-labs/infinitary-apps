@@ -150,7 +150,7 @@ export class StartSettle {
   async settleStartAttempt(record: TaskRecord, audience: "tool" | "captain"): Promise<void> {
     if (!this.core.options.tasks.starts.startAttemptOf(record.id)) return;
     const now = this.core.options.tasks.get(record.id);
-    if (!now) {
+    if (!now || this.core.options.tasks.isClosed(now)) {
       this.core.options.tasks.starts.clearStartAttempt(record.id);
       return;
     }
@@ -209,6 +209,8 @@ export class StartSettle {
   ): Promise<{ text: string; shown: boolean }> {
     const told = (text: string) => ({ text, shown: false });
     const now = this.core.options.tasks.get(taskId);
+    // The record already shows the close. No start result needs to be told.
+    if (now && this.core.options.tasks.isClosed(now)) return { text: "", shown: true };
     if (this.core.options.tasks.starts.startAttemptOf(taskId)?.phase === "checking") {
       return { text: `${handle} is still starting. Checking whether it started.`, shown: true };
     }

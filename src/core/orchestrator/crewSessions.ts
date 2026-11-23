@@ -989,11 +989,11 @@ export class CrewSessions {
   }
 
   /**
-   * A reopen whose crewmate was let go while its conversation opened - a
+   * An opening whose crewmate was let go while its conversation opened - a
    * move, a stop or a close took the task meanwhile - ends here: the session
    * it opened goes too, never left running with no task (INF-2556).
    */
-  private endIfLetGo(task: TaskRuntime): void {
+  endIfLetGo(task: TaskRuntime): void {
     if (this.core.tasks.get(task.id) === task) return;
     this.disposeSession(task);
     throw new Error("This task's crewmate was let go while its conversation opened.");

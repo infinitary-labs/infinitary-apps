@@ -1947,7 +1947,7 @@
         {
           "from": "awaiting answer",
           "to": "held",
-          "why": "a merge card is answered while its new version is checked",
+          "why": "a merge card is answered while its crewmate works on it or its new version is checked",
           "by": "orchestrator"
         },
         {

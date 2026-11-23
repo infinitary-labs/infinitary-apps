@@ -59,6 +59,7 @@ import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
+import type { ReworkVerdict } from "./reworkHold";
 import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
@@ -1016,21 +1017,11 @@ export class CardService {
     // A reworked merge card waits for its new version's checks, not its
     // author (INF-6241): `recheckHeld` returns it once nothing holds it.
     const verdict = card.awaiting === "close-out" ? this.host.reworkHold?.(card) : undefined;
-    const before = this.stage.of(card).forChecks;
     if (verdict) {
-      const { hold, checking } = verdict;
-      this.stage.hold(card, { forChecks: hold });
-      // The note says the card waits for its new version's checks: a reply
-      // answered with no push, or a push with no checks to run, returns once
-      // the crewmate's work ends, unnoted.
-      if (checking && card.taskId && !this.reworkNoted(card.taskId, card))
-        this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
-          news: false,
-          data: { cardId: card.id, sentBackAt: card.sentBackAt, held: hold },
-        });
-      if (hold === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
+      this.holdRework(card, verdict);
       return false;
     }
+    const before = this.stage.of(card).forChecks;
     this.stage.release(card, "forMerge", "forChecks");
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
@@ -1058,6 +1049,25 @@ export class CardService {
     return true;
   }
 
+  /** Keep a reworked merge card off the stage for what holds it. */
+  private holdRework(card: Card, { hold, checking }: ReworkVerdict): void {
+    this.stage.hold(card, { forChecks: hold });
+    // The note says the card waits for its new version's checks: a reply
+    // answered with no push, or a push with no checks to run, returns once
+    // the crewmate's work ends, unnoted.
+    if (checking && card.taskId && !this.reworkNoted(card.taskId, card))
+      this.host.tasks.note(card.taskId, m.taskNoteReworkHeld({ title: card.title }), {
+        news: false,
+        data: {
+          cardId: card.id,
+          sentBackAt: card.sentBackAt,
+          held: hold,
+          reworkHeld: reworkKey(card),
+        },
+      });
+    if (hold === "read" && card.taskId) this.host.readAfterTurn?.(card.taskId);
+  }
+
   /**
    * Return each reworked merge card nothing holds any longer (INF-6241):
    * after a record change, a read, or the tick, with no author turn needed.
@@ -1069,7 +1079,8 @@ export class CardService {
     for (const id of this.stage.forChecks()) {
       const card = this.cards.get(id);
       if (card?.awaiting !== "close-out") continue;
-      if (this.host.reworkHold?.(card)) this.release(card, reason);
+      const verdict = this.host.reworkHold?.(card);
+      if (verdict) this.holdRework(card, verdict);
       else if (this.releaseWrites(card, reason, released)) moved = true;
     }
     if (moved) this.broadcastReleased(released);
@@ -1077,14 +1088,7 @@ export class CardService {
 
   /** The hold under this reply is on the timeline already: a restart writes it once. */
   private reworkNoted(taskId: string, card: Card): boolean {
-    return this.host.tasks
-      .timeline(taskId)
-      .some(
-        (event) =>
-          event.kind === "note" &&
-          event.data?.cardId === card.id &&
-          event.data?.sentBackAt === card.sentBackAt,
-      );
+    return this.host.tasks.hasNoteWith(taskId, "reworkHeld", reworkKey(card));
   }
 
   /**
@@ -1917,4 +1921,9 @@ function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undefined {
     case "automation":
       return { at: line.at, text: line.name, kind: "automation", ...through };
   }
+}
+
+/** The hold note's key: one note per reply a reworked merge card waits under. */
+function reworkKey(card: Card): string {
+  return `${card.id}@${card.sentBackAt ?? ""}`;
 }

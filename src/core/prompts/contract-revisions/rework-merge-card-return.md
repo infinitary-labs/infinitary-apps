@@ -11,5 +11,5 @@ What a crewmate is now told, in the thread-reply wake:
 - The app keeps the card from the captain until then, and a question the rework raises goes on a card of its own.
 
 Home: the thread-reply wake's preamble, which every crewmate reads when the captain replies under its card; no tool description or brief repeats it.
-The hold itself is the host's, read from typed facts (the change's newer version, a standing check or run watch, a running turn, a wake the lane can deliver); no word of the crewmate's holds or releases the card (`docs/card-threads.md`, "A reworked merge card").
+The hold itself is the host's, read from typed facts (a running background job or turn, the change's read after that work, the change's newer version, a standing check or run watch, a wake the lane can deliver); no word of the crewmate's holds or releases the card (`docs/card-threads.md`, "A reworked merge card").
 The first mate's fixed context does not grow: the sentence rides only a crewmate's wake.

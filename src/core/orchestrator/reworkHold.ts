@@ -11,14 +11,16 @@ import type { Witnesses } from "./reportSort";
  *
  * - `job`: a background job of the crewmate's runs;
  * - `turn`: the crewmate's turn is running;
- * - `read`: the change has not been read since the crewmate's turn ended,
+ * - `read`: the change has not been read since the crewmate's work ended,
  *   so a push from its shell is not known yet;
  * - `checks`: a check watch or a run watch stands on the task;
  * - `wake`: a wake waits for the crewmate on a lane that can deliver it.
  *
  * `job` and `turn` hold before the version is compared: a push may still
  * come from that work, and a read taken while it runs can miss it, so only
- * the read after the turn's end decides whether the change moved.
+ * the read after that work ends decides whether the change moved. The job
+ * hold ends at the background-job bound (`JOB_BOUND_MS`), as the idle
+ * ladder's does: past it, a card with no newer version returns.
  */
 export type ReworkHold = "job" | "turn" | "read" | "checks" | "wake";
 
@@ -34,9 +36,12 @@ export type ReworkHoldHost = {
   cardStore: Pick<CardStore, "lastAvailableOffer">;
   /** The read after the crewmate's newest turn has not finished (`CheckWatcher.afterTurnReadOwed`). */
   readOwed(record: TaskRecord): boolean;
+  /** A background job of the crewmate's runs inside its bound (`IdleLadder.jobInBound`). */
+  jobRunning(taskId: string): boolean;
+  /** Read only at the wake step: gathering them scans cards and the inbox. */
   witnesses(
     taskId: string,
-  ): Pick<Witnesses, "deliverable" | "accountHeld" | "outOfReach" | "jobsRunning"> | undefined;
+  ): Pick<Witnesses, "deliverable" | "accountHeld" | "outOfReach"> | undefined;
   /** The lane is stuck at its provider until the first mate answers. */
   stuck(taskId: string): boolean;
   /** The task's computer must be updated before it takes a turn. */
@@ -46,9 +51,10 @@ export type ReworkHoldHost = {
 /**
  * What holds a crewmate's merge card back at its close-out, or undefined
  * when it returns as every other card does. Only a merge card of the task's
- * own change, under a captain's reply, whose change is at a newer version
- * than the one the card showed, is ever held; every fact is read from the
- * record, never from anyone's words, so a restart derives the same hold.
+ * own change, under a captain's reply, is ever held: while its crewmate's
+ * work or the read after it is pending, then while its change is at a newer
+ * version than the one the card showed. Every fact is read from the record,
+ * never from anyone's words, so a restart derives the same hold.
  */
 export function reworkHold(card: Card, host: ReworkHoldHost): ReworkVerdict | undefined {
   if (card.author !== "crewmate" || !card.taskId || !card.lifecycleId) return undefined;
@@ -77,12 +83,12 @@ function holdOf(
   watched: boolean,
   host: ReworkHoldHost,
 ): ReworkHold | undefined {
-  const lane = host.witnesses(record.id);
-  if (lane?.jobsRunning) return "job";
+  if (host.jobRunning(record.id)) return "job";
   if (record.activity === "running") return "turn";
   if (host.readOwed(record)) return "read";
   if (!newer) return undefined;
   if (watched) return "checks";
+  const lane = host.witnesses(record.id);
   // A wake the lane cannot deliver holds nothing: the card returns showing
   // what it can, and the thread says what holds the crewmate.
   if (

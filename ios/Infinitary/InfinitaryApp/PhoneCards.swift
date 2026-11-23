@@ -790,10 +790,10 @@ private struct PhoneCardPane: View {
     /// Moving the choices can change what they measure, and while a rotation animates both places are drawn at once, so
     /// the frame changes its shape at most once for each stage, bar and foot height and never animates the move, or the
     /// two could trade places on every frame and never rest; a new real measurement, such as a taller foot, shapes it again.
-    /// INF-1524: the reply field sits in the pinned foot, and moving the foot in or out of the scroller makes a new field,
+    /// INF-1524: the reply field (and INF-6136 a secret ask's) sits in the pinned foot; moving the foot makes a new field,
     /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     private func shapeFrame() {
-        guard paneHeight > 0, replyFocus == nil, pick == nil else { return }
+        guard paneHeight > 0, replyFocus == nil, secretFocus == nil, pick == nil else { return }
         let pins = paneHeight - barHeight - footHeight >= barHeight + footHeight
         let measured = [paneHeight, barHeight, footHeight].map { $0.rounded() }
         guard pins != pinsFrame, !shapedAt.contains(measured) else { return }
@@ -842,6 +842,7 @@ private struct PhoneCardPane: View {
         .onChange(of: [paneHeight, barHeight, footHeight]) { shapeFrame() }
         .onChange(of: backMounted) { _, mounted in if !mounted { footHeight = footMeasured } }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
+        .onChange(of: secretFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
         .onChange(of: pick == nil) { _, closed in if closed { shapeFrame() } }
         // Only the shown card speaks for the reply's focus; one that slides aside lets its field go.
         // INF-3427: a text box in the body that holds the keyboard counts as the card's own field here too.

@@ -19,6 +19,10 @@ import SwiftUI
         if environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1", environment["INFINITARY_FOLD_SEEN"] == "1" {
             PhoneFoldSplit.saveFoldSeen()
         }
+        // The iPad's Pencil steps start as if a Pencil had been seen and is expected, since a simulator has none.
+        if environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1", environment["INFINITARY_PENCIL_SEEN"] == "1" {
+            PhonePencilTop.savePencilSeen()
+        }
         #endif
         _appearance = State(initialValue: PhoneAppearance())
     }

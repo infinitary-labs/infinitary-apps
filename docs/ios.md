@@ -428,6 +428,14 @@ Home is one column: the stage, then the last turn and the message box under it, 
 No bar height is measured or guessed, and nothing recedes on scroll.
 No panel sits behind the message box: the last turn is its rounds of lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
+With an Apple Pencil in hand the message box and its last turn stand at the top of Home's column, under the bar and the reach line, so the writing hand rests on the card below; the stage takes the room under it and the pager stays at the foot (`PhoneLayout.composerOnTop`, `PhonePagesLayout`).
+The Pencil itself is the signal, never the kind of device: a Pencil touch or hover anywhere in the window (`PhonePencilWatch`, an observer that never recognizes, cancels or delays a touch), or iPadOS's `isPencilInputExpected` when the app opens or comes back.
+At the top the last turn shows only its newest round, card or no card, so a card coming or going never moves the box.
+The same view moves, so the draft and photos stay, and the box reserves four lines with photo and send on its bottom row; a card's reply field reserves four lines too while the box is at the top.
+Focus that a finger, the trackpad or a hardware key gives the message box or a card's reply puts the box back at the foot; Pencil focus does not.
+Nothing moves while a field holds focus or while the Pencil writes on one: a waiting move applies once it lets go (`PhonePencilPlacement`).
+An iPad on its side moves the box to the top of the stage column beside the sidebar the same way; a window with a fold and a maximized card keep the box where it was, and an iPhone, which never sees a Pencil, never changes.
+The placement is held only while the app runs, never saved or sent to the computer.
 Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 The names, the sheet's own Settings title and Back are the catalog's messages, never words typed into the sheet (`docs/i18n.md`, "On the phone").
 The phone's four own sections, Settings, Done and Back to Settings are the phone's own messages (`PhoneMessages.phoneSettings…`, `phoneCommonSettings`, `phoneCommonDone`); the five pages read from the computer take the computer's own tab names (`PhoneMessages.panelSettings…`).
@@ -453,6 +461,11 @@ Off, the pages below never show either: a Duo open on its side keeps one column 
 Whether the device has shown such a fold is saved too, so the switch stays while the Duo is closed, and a device that never folds never shows it.
 Tab or the down arrow from Language reaches it, Return or Space turns it, and the up arrow goes back to Language.
 The join part's Appearance steps drive it by keys on a simulator launched with `INFINITARY_FOLD_SEEN`, which only a simulator build reads beside `INFINITARY_ISOLATED_PHONE_TEST`, to save that a fold was seen.
+Under it, on a device that has seen an Apple Pencil, Move the message box for Apple Pencil is this device's own switch (`PhonePencilTop`), saved beside Theme and never sent to the computer or another device, so a phone joined to the same computer keeps its box at the foot.
+It starts on; off, the message box stays at the foot whatever the Pencil does ("Native shell and component ownership").
+Whether the device has seen a Pencil is saved too, so a device that never met one never shows the switch.
+Tab or the down arrow from the row above reaches it, Return or Space turns it, and the up arrow goes back.
+The talk-compose part's iPad steps launch a simulator with `INFINITARY_PENCIL_SEEN`, read only by a simulator build beside `INFINITARY_ISOLATED_PHONE_TEST`, which saves that a Pencil was seen and answers that Pencil input is expected.
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
@@ -639,7 +652,7 @@ Task moves (`moves`) are not offered to a panel on the phone yet, so its page re
 
 ## Talk and tasks
 
-The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up.
+The message box keeps the captain’s last two messages and the first mate’s replies above its native multiline field, by the Mac's rules and in its Chat layout (`docs/composer.md`, "The last turn"; INF-1517, INF-1771): the captain's words in a grey bubble on the right, each reply beside the first mate's mark on the left, the older round at half strength and only the newest while a card is up or the box stands at the top for Apple Pencil.
 The phone sets them as a quiet glance (INF-1846): 15-point rows, one step under the box's 16-point words and one line each, the bubble hugging its words up to three quarters of the column, each reply in the secondary colour on a 24-point row pressable across its width, 4 points within a round and 12 between rounds and above the box.
 A line too long for its row ends on the last whole word that fits beside the ellipsis, by the Mac's rule (`WholeWords` in the kit, its test `WholeWordsTests`); on iOS 18 to 25, where the text's own font cannot be read, a line keeps the text's own cut.
 While the first mate is busy its line shows the mark turned ember and spinning, beside Working… or the reply; a message that was only photos reads "A picture".
@@ -648,7 +661,7 @@ A tap on a reply line opens that whole reply in the existing Reply sheet, with i
 The captain's message sits in the shared question bubble below You at the right, followed by the first mate's mark, First mate label and unboxed reply at the left (INF-2218, A · Open reply).
 The shared `PhoneQuestionBubble` owns the grey surface and two-line fold; a tap on a long question opens or folds it, and the sheet owns that expansion state.
 The reply keeps its literal words, line breaks, text selection and problem colour; reading or dismissing it sends nothing.
-Its component owns messages and photos; the shared shell places it at the foot of Home.
+Its component owns messages and photos; the shared shell places it at the foot of Home, or at the top while Apple Pencil is in use on an iPad (the Pencil paragraph under "Native shell").
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
 Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.

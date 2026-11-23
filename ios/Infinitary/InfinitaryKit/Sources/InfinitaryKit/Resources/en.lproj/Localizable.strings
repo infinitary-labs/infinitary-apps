@@ -2017,6 +2017,8 @@
 "phoneSettingsNotificationsOn" = "On. Each new card and reply from %1$@ reaches this %2$@ while Infinitary is closed.";
 "phoneSettingsNotificationsOpen" = "Change in Settings";
 "phoneSettingsNotificationsUpdate" = "Update Infinitary on %1$@ to get a notification here for each card.";
+"phoneSettingsPencilTop" = "Move the message box for Apple Pencil";
+"phoneSettingsPencilTopScope" = "With Apple Pencil, this iPad moves the message box to the top with room to write. A finger or keyboard puts it back. Set on this iPad only.";
 "phoneSettingsSecretsApprovals" = "Secrets approvals";
 "phoneSettingsSetUpAgain" = "Set up approvals again";
 "phoneSettingsTextSize" = "Text size";

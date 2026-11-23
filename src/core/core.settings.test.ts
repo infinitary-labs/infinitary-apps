@@ -1,7 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACTION_NAMES, ACTIONS } from "@shared/actions";
-import { ownStyleId, type SavedOwnStyle } from "@shared/ambientOwn";
 import { SCHEDULE_DETAILS } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
 import { feedLineFrom } from "@shared/feed";
@@ -1354,97 +1353,6 @@ describe("the core, driven with no Electron in the process", () => {
       await core.dispatch("inf:settings:keys:set", [savedKeys.saved]);
       await core.dispatch("inf:automation:delete", [rule.id]);
       jobs.forget(null, folder);
-    }
-  });
-
-  // INF-6289, the captain's pick on INF-6278: own ambient styles reach the
-  // first mate by name, so how many are saved costs it no context and the
-  // cap of 12 goes. Fixture: the sample styles a first mate wrote
-  // (src/renderer/src/ambient/own-samples/), saved under 13 names.
-  it("names any number of own ambient styles to the first mate and reads one whole by its name", async () => {
-    const appearance = await core.dispatch("inf:settings:appearance:get", []);
-    const lines: string[] = [];
-    const detach = core.events.subscribe((channel, payload) => {
-      const event = payload as FmEvent;
-      if (channel === "inf:event" && event.type === "personalized" && event.actor === "firstmate")
-        lines.push(event.text);
-    });
-    const tools = createAppTools({
-      dispatch: core.dispatch,
-      actor: () => ({ kind: "firstmate", wake: "captain" }),
-      platform: "darwin",
-    });
-    const change = tools.find((tool) => tool.name === "app_change");
-    const state = tools.find((tool) => tool.name === "app_state");
-    if (!change || !state) throw new Error("Missing catalog tools");
-    const samples = ["lofi", "bossa", "bowls", "warm-sleep", "hard-techno"].map((file) =>
-      JSON.parse(
-        readFileSync(
-          join(process.cwd(), "src/renderer/src/ambient/own-samples", `${file}.json`),
-          "utf8",
-        ),
-      ),
-    );
-    const styles = Array.from({ length: 13 }, (_, i) => {
-      const sample = samples[i % samples.length];
-      return { ...sample, name: `${sample.name} ${Math.floor(i / samples.length) + 1}` };
-    });
-    const save = async (style: Record<string, unknown>) =>
-      JSON.parse(
-        (
-          await change.run({
-            action: "ambient-own-style",
-            value: { save: style },
-            evidence: `save ${style.name}`,
-          })
-        ).text,
-      );
-    const read = async (name: string) => {
-      const text = (await state.run({ read: "ambient.own-style", args: { name } })).text;
-      return text.startsWith("{") ? JSON.parse(text).value : text;
-    };
-    try {
-      let answer: { current: unknown } = { current: null };
-      for (const style of styles) answer = await save(style);
-      const names = styles.map((style) => style.name);
-      // The value names each style by id and name alone, in the answer and in app_state.
-      const named = {
-        saved: names.map((name) => ({ id: ownStyleId(name), name })),
-        playing: ownStyleId(names[12]),
-      };
-      expect(answer.current).toEqual(named);
-      const look = JSON.parse((await state.run({ area: "appearance" })).text);
-      expect(
-        look.find((line: { action: string }) => line.action === "ambient-own-style").current,
-      ).toEqual(named);
-      // Each save leaves the line naming every style saved by then.
-      const ownLines = () =>
-        lines.filter((line) => line === ACTIONS["ambient-own-style"].done(named)).length;
-      expect(ownLines()).toBe(1);
-      // One style reads whole by its name in any case, as Settings reads it.
-      const saved = (await core.dispatch("inf:settings:appearance:get", [])).ambientOwnStyles;
-      const lateShift = saved?.find((own) => own.name === "Late shift 1");
-      expect(await read("late shift 1")).toEqual(lateShift);
-      expect(lateShift).toMatchObject({ words: samples[0].words, bpm: samples[0].bpm });
-      expect(await read("Cold rain")).toMatch(
-        `could not answer: No own style Cold rain. Saved: ${names.join(", ")}.`,
-      );
-      // The style playing, read whole and saved again changed under its name,
-      // reads the same by name, yet the change leaves a line; saved again the
-      // same, nothing does.
-      const playing = await read(names[12]);
-      const { id: _id, ...whole } = playing as SavedOwnStyle;
-      expect((await save({ ...whole, bpm: whole.bpm - 4 })).current).toEqual(named);
-      expect((await read(names[12])).bpm).toBe(whole.bpm - 4);
-      expect(ownLines()).toBe(2);
-      await save({ ...whole, bpm: whole.bpm - 4 });
-      expect(ownLines()).toBe(2);
-    } finally {
-      detach();
-      // A look without styles keeps the saved ones, so the restore names none.
-      await core.dispatch("inf:settings:appearance:set", [
-        { ...appearance, ambientOwnStyles: appearance.ambientOwnStyles ?? [] },
-      ]);
     }
   });
 

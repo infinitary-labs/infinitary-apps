@@ -88,8 +88,8 @@ export const ambientLines = {
       const saved = look.ambientOwnStyles ?? [];
       const save = v.save as OwnStyle | undefined;
       const remove = v.remove as string | undefined;
-      const oneOf = "Give save or remove, one of them.";
-      if (save && remove !== undefined) throw new Error(oneOf);
+      const oneOf = () => new Error("Give save or remove, one of them.");
+      if (save && remove !== undefined) throw oneOf();
       if (save) {
         const faults = ownStyleFaults(save);
         if (faults.length > 0)
@@ -102,7 +102,7 @@ export const ambientLines = {
             : saved.map((own, i) => (i === at ? { ...save, id } : own));
         return [{ ...look, ambientOwnStyles: styles, ambientStyle: id, ambientMusic: true }];
       }
-      if (remove === undefined) throw new Error(oneOf);
+      if (remove === undefined) throw oneOf();
       const gone = findOwnStyle(saved, remove);
       if (!gone) throw new Error(noOwnStyle(remove, saved));
       return [

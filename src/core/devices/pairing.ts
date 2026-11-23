@@ -96,6 +96,7 @@ import {
   SOURCE_ALLOWED_FILE,
   SSH_FILE,
   type SshCleanup,
+  type sshCleanupSchema,
   type SshRecord,
   SYSTEMS_FILE,
   type SystemRecord,

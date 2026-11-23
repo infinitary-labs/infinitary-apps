@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-pairing-file",
+      "reason": "Moves device pairing's record shapes, options and rules into their own files to keep the file under the size warning line, with no behavior change."
+    }
+  ]
+}

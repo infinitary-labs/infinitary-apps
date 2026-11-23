@@ -1504,7 +1504,8 @@ jobs:
   # queued or running: verify.yml's lanes and test groups,
   # source-journeys.yml's journey groups, the signing job, linux-packages.yml's
   # build and install checks, windows.yml's build and check,
-  # mac-installer.yml's build and installed check and mac-update.yml's update.
+  # mac-installer.yml's build and mac-update.yml's update. The cut never
+  # requests reused installer copies, so their separate check needs no stop.
   # The resolve, phone and notes jobs end before any of these start, the
   # verification request ends in seconds, and the upload and publication
   # never start after a failure, so none has a stop. Each stop passes, so
@@ -1552,7 +1553,6 @@ jobs:
           - windows-build
           - windows-check
           - mac-installer-build
-          - mac-installer-installed
           - mac-update
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.job) }}

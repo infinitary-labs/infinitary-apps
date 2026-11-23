@@ -147,7 +147,9 @@ extension PhoneJourney {
         XCTAssertTrue(automation.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(automation.label.contains("AUTOMATION"), "Its title: \(automation.label)")
         XCTAssertFalse(automation.label.contains("yours"), "No owner word: \(automation.label)")
-        XCTAssertTrue(app.webViews.staticTexts["Morning summary"].waitForPresence(timeout: 60), app.debugDescription)
+        // The panel draws each rule as one row button whose label leads with the rule's name.
+        let rule = app.webViews.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Morning summary")).firstMatch
+        XCTAssertTrue(rule.waitForPresence(timeout: 60), app.debugDescription)
         XCTAssertFalse(app.buttons["panel-header-now"].exists, "Tasks stays its own tab")
         XCTAssertFalse(app.buttons["panel-header-activity"].exists, "Activity stays its own tab")
         // In light and dark, as the release note's picture pair shows it.

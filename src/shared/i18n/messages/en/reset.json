@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "Another program is using Infinitary's folder. Close it, then try again.",
+  "resetHeldMessage": "Infinitary could not finish its reset",
+  "resetHeldQuit": "Quit",
+  "resetHeldTryAgain": "Try again",
   "resetKeysAsk": "Reset every key to the {preset} preset's?",
   "resetKeysConfirm": "Reset All Keys",
   "resetKeysDetail": "Every shortcut you changed in Keyboard settings goes back to the one the {preset} preset gives it."

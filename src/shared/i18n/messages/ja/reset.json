@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "別のプログラムが Infinitary のフォルダを使用しています。そのプログラムを閉じてから、もう一度お試しください。",
+  "resetHeldMessage": "Infinitary はリセットを完了できませんでした",
+  "resetHeldQuit": "終了",
+  "resetHeldTryAgain": "もう一度試す",
   "resetKeysAsk": "すべてのキーを {preset} プリセットの割り当てに戻しますか？",
   "resetKeysConfirm": "すべてのキーをリセット",
   "resetKeysDetail": "キーボード設定で変更したショートカットは、すべて {preset} プリセットの割り当てに戻ります。"

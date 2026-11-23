@@ -1,6 +1,7 @@
 import koffi from "koffi";
 import type {
   CustodyRead,
+  CustodyRemove,
   CustodySlot,
   CustodyWrite,
   SecretCustody,
@@ -31,6 +32,8 @@ export type LibsecretApi = {
   ): Promise<LibsecretAnswer>;
   /** Only the person's explicit Unlock request reaches this method. */
   unlock(store: string): Promise<boolean>;
+  /** Deletes every item of the slot; only a reset asks it (docs/reset.md). */
+  remove(store: string, slot: CustodySlot): Promise<"removed" | "absent" | LibsecretAnswer>;
 };
 
 /** The low-level service operations: none but unlock may invoke Secret Service Unlock/Prompt. */
@@ -47,6 +50,8 @@ export type LibsecretService = {
     password: Buffer,
   ): Promise<boolean>;
   unlock(paths: string[]): Promise<void>;
+  /** Deletes the item; false when the provider asked for a prompt, which is never run. */
+  delete(path: string): Promise<boolean>;
 };
 
 /** Classified native failure, never a library message that might contain private data. */
@@ -60,7 +65,10 @@ export class LibsecretFailure extends Error {
 }
 
 export type LinuxCustodyOptions = { store: string };
-export type LinuxSecretCustody = SecretCustody & { unlock(): Promise<boolean> };
+export type LinuxSecretCustody = SecretCustody & {
+  unlock(): Promise<boolean>;
+  remove(slot: CustodySlot): Promise<CustodyRemove>;
+};
 
 const LABEL: Record<CustodySlot, string> = {
   root: "Infinitary Secrets root key",
@@ -108,6 +116,16 @@ export function createLinuxSecretCustody(
         return (await api?.unlock(options.store)) ?? false;
       } catch {
         return false;
+      }
+    },
+    async remove(slot): Promise<CustodyRemove> {
+      if (!api) return "unavailable";
+      try {
+        const answer = await api.remove(options.store, slot);
+        if (answer === "removed" || answer === "absent") return answer;
+        return answer.kind === "error" && answer.locked ? "locked" : "unavailable";
+      } catch {
+        return "unavailable";
       }
     },
   };
@@ -171,6 +189,19 @@ export function libsecretFromService(service: LibsecretService): LibsecretApi {
         } catch (error) {
           if (attempted && !(error instanceof LibsecretFailure && error.locked))
             throw new Error("The native Secrets write outcome is unknown.");
+          return failure(error);
+        }
+      }),
+    remove: (store, slot) =>
+      run(async () => {
+        try {
+          const found = await service.search(store, slot);
+          if (found.locked.length) return { kind: "error", locked: true };
+          if (found.unlocked.length === 0) return "absent";
+          for (const path of found.unlocked)
+            if (!(await service.delete(path))) return { kind: "error", locked: false };
+          return "removed";
+        } catch (error) {
           return failure(error);
         }
       }),
@@ -611,6 +642,38 @@ function bindLibsecret(): LibsecretService {
           return false;
         }
         return created !== "/";
+      }),
+    delete: (path) =>
+      withService(async (service) => {
+        const answer = await rpc(
+          service,
+          path,
+          "org.freedesktop.Secret.Item",
+          "Delete",
+          null,
+          "(o)",
+        );
+        const prompt = child(answer, 0);
+        let needed: string;
+        try {
+          needed = getString(prompt, null) as string;
+        } finally {
+          variantUnref(prompt);
+          variantUnref(answer);
+        }
+        if (needed === "/") return true;
+        // A provider may ask for a prompt; it is never run here, as with CreateItem.
+        const dismissed = await rpc(
+          service,
+          needed,
+          "org.freedesktop.Secret.Prompt",
+          // i18n-exempt: a D-Bus method name
+          "Dismiss",
+          null,
+          "()",
+        );
+        variantUnref(dismissed);
+        return false;
       }),
     unlock: (paths) =>
       withService(async (service) => {

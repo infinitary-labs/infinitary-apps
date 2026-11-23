@@ -125,6 +125,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | repo (never said) | projet | The app's noun for what work belongs to stays projet. |
 | report | rapport | "font leur rapport", "Rapport : …". |
 | repository (one of a project's) | dépôt | "Ajouter un dépôt", "2 dépôts". Names one of a project's repositories, or the thing on GitHub. |
+| reset (Infinitary on this computer) | réinitialiser | Settings → General's row that deletes everything the app keeps on this computer; apart from "effacer", which clears tasks only. |
 | resets | se renouvelle | "se renouvelle ven."; the allowance comes back, nothing is erased. |
 | review | revue | "Revue réussie". |
 | revision (of a knowledge record) | révision | Kept apart from "revue", which is review. |

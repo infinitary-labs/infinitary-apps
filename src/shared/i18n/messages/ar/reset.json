@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "برنامج آخر يستخدم مجلد Infinitary. أغلقه ثم حاول مرة أخرى.",
+  "resetHeldMessage": "تعذّر على Infinitary إكمال إعادة التعيين",
+  "resetHeldQuit": "إنهاء",
+  "resetHeldTryAgain": "إعادة المحاولة",
   "resetKeysAsk": "هل تريد إعادة كل مفتاح إلى ما يحدده الإعداد المسبق {preset}؟",
   "resetKeysConfirm": "إعادة تعيين كل المفاتيح",
   "resetKeysDetail": "كل اختصار غيّرته في إعدادات لوحة المفاتيح يعود إلى ما يعطيه الإعداد المسبق {preset}."

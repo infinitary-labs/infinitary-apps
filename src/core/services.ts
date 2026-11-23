@@ -1860,6 +1860,7 @@ export async function createServices(
     automaticPlacement,
     placed,
     keptRunning: keptRunningAt(placed.keptJobs, workDevices, devices, () => sourceComputer),
+    leftovers: leftoverPrograms,
     deviceSignIns,
     forgeChanges: forges.changes,
     forgeProjects: forges.projects,

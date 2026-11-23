@@ -24,6 +24,10 @@ function keychain(status?: number) {
       items.set(`${service}/${account}`, Buffer.from(bytes));
       return 0;
     },
+    remove: (service, account) => {
+      if (status !== undefined) return status;
+      return items.delete(`${service}/${account}`) ? 0 : -25300;
+    },
   };
   return { api, items, interaction };
 }
@@ -88,10 +92,29 @@ describe("macOS Keychain custody", () => {
         },
         read: () => ({ status: 0 }),
         write: () => 0,
+        remove: () => 0,
       },
       { service: SERVICE },
     );
     expect(await broken.read("root")).toEqual({ kind: "unavailable" });
     expect(await broken.write("root", Buffer.alloc(32))).toBe("unavailable");
+    expect(await broken.remove?.("root")).toBe("unavailable");
+  });
+
+  // Intent: Reset Infinitary clears its Secrets items, or Secrets would open
+  // as tampered beside the fresh folder (docs/reset.md, "Outside the folder").
+  it("removes one slot's item under its own service, and says when none was there", async () => {
+    const { api, items } = keychain();
+    const custody = createDarwinSecretCustody(api, { service: SERVICE });
+    await custody.write("root", Buffer.alloc(32, 1));
+    await custody.write("authority-head", Buffer.alloc(32, 2));
+    expect(await custody.remove?.("root")).toBe("removed");
+    expect([...items.keys()]).toEqual([`${SERVICE}/authority-head`]);
+    expect(await custody.remove?.("root")).toBe("absent");
+  });
+
+  it("reports a locked Keychain's removal as locked, never removed", async () => {
+    const custody = createDarwinSecretCustody(keychain(-25308).api, { service: SERVICE });
+    expect(await custody.remove?.("root")).toBe("locked");
   });
 });

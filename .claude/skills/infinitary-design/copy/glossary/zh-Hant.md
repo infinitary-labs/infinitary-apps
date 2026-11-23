@@ -131,6 +131,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | repo (never said) | 專案 | The app's noun for what work belongs to stays 專案. |
 | report | 回報 | Taiwan's everyday word for reporting back. |
 | repository (one of a project's) | 存放庫 | GitHub's own Traditional Chinese word; 「加入存放庫」「2 個存放庫」. Names one of a project's repositories, or the thing on GitHub. |
+| reset (Infinitary on this computer) | 重設 | Settings → General's row that deletes everything the app keeps on this computer; distinct from 清除, which clears tasks only. |
 | restore (Secrets from a backup) | 還原 | Kept apart from 復原, which the recovery key and recovery states use. |
 | review | 審查 | As in 已通過審查. |
 | revision (of a record) | 修訂 | 修訂 {revision}. |

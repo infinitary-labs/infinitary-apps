@@ -76,6 +76,13 @@ So is a lock written before this computer last started: its process ended with t
 Any other lock that cannot be read holds.
 The one-time move below writes both the marker and the lock.
 
+## The reset mark
+
+Reset Infinitary (`docs/reset.md`) writes `<folder>.reset` beside the data folder, never in it, with its lock `<folder>.reset-lock` beside it.
+The mark is `{ "schemaVersion": 1, "stage", "askedAt", "outside", "outsideTries" }` (`resetMarkSchema`, `src/core/reset/mark.ts`) and names no path or command: the start that finishes it works out every place again.
+A mark that cannot be parsed is a reset asked from its first step with every outside kind, since only a reset writes that name; one that cannot be opened at all is left for a later start.
+A build without the reset ignores the mark and opens the folder.
+
 ## The one-time move
 
 An app whose spelling has older spellings before it moves an older spelling's folder of its own flavor into its own once, before anything opens either (`src/core/folderMove/move.ts`; the Infinitary rename, FI3-1780 step 3).

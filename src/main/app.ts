@@ -91,6 +91,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
+import { resetInApp } from "./reset/inApp";
 import {
   answerLaunch,
   bringWindowForward,
@@ -1742,6 +1743,27 @@ export async function startApp(
         host,
         frameMounts,
         voice: { place: voicePlace, helper: voiceHelper },
+        reset: resetInApp({
+          shell,
+          dataDir,
+          choice: userDataChoice,
+          platform: hostPlatform(),
+          starter,
+          work: {
+            dataDir: work.place.dataDir,
+            flavor: work.place.flavor,
+            spelling: work.place.folderSpelling,
+            serviceManager,
+          },
+          relaunch: () =>
+            relaunchWith(
+              process.argv
+                .slice(1)
+                .filter((arg) => arg !== START_HERE_ARG && arg !== LET_GO_JOB_ARG),
+              besideRun ? process.env.APPIMAGE : undefined,
+            ),
+          quit: () => app.quit(),
+        }),
       });
       handleVoiceModelProtocol(voiceModel);
       handleFrameProtocol({

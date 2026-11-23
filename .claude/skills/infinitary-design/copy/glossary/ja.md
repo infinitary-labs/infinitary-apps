@@ -137,6 +137,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | repair (the task repairing a held batch) | 修復 | 「{key} が修復しています」 for the task at work; the change it makes stays 修正. |
 | report | 報告 | 「報告：{summary}」. |
 | repository (one of a project's) | リポジトリ | 「リポジトリを追加」「2 個のリポジトリ」. Names one of a project's repositories, or GitHub's own; what work belongs to stays プロジェクト. |
+| reset (Infinitary on this computer) | リセット | Settings → General's row that deletes everything the app keeps on this computer; distinct from 消去, which clears tasks only. |
 | revision (of a record) | 改訂 | 「改訂 {revision}」. |
 | rigor (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} rigor". |
 | Runbooks | ランブック | Settings section name. |

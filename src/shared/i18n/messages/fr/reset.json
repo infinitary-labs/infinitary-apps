@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "Un autre programme utilise le dossier d’Infinitary. Fermez-le, puis réessayez.",
+  "resetHeldMessage": "Infinitary n’a pas pu terminer sa réinitialisation",
+  "resetHeldQuit": "Quitter",
+  "resetHeldTryAgain": "Réessayer",
   "resetKeysAsk": "Rétablir tous les raccourcis du préréglage {preset} ?",
   "resetKeysConfirm": "Réinitialiser tous les raccourcis",
   "resetKeysDetail": "Chaque raccourci modifié dans les réglages du clavier reprend celui que lui donne le préréglage {preset}."

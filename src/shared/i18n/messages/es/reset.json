@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "Otro programa está usando la carpeta de Infinitary. Ciérralo y vuelve a intentarlo.",
+  "resetHeldMessage": "Infinitary no pudo terminar de restablecerse",
+  "resetHeldQuit": "Salir",
+  "resetHeldTryAgain": "Reintentar",
   "resetKeysAsk": "¿Restablecer todas las teclas a las del preajuste {preset}?",
   "resetKeysConfirm": "Restablecer todas las teclas",
   "resetKeysDetail": "Cada atajo que cambiaste en la configuración del teclado vuelve al que le da el preajuste {preset}."

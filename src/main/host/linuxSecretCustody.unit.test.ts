@@ -79,6 +79,11 @@ function fixture() {
         return true;
       },
     ),
+    delete: vi.fn(async (path: string) => {
+      const item = items.get(path);
+      if (item?.locked) throw new LibsecretFailure(true);
+      return items.delete(path);
+    }),
     unlock: vi.fn(async (paths: string[]) => {
       if (!acceptUnlock) return;
       if (paths.includes(COLLECTION)) collectionLocked = false;
@@ -106,6 +111,21 @@ function fixture() {
 }
 
 describe("noninteractive Linux custody", () => {
+  // Intent: Reset Infinitary clears its Secrets items, or Secrets would open
+  // as tampered beside the fresh folder (docs/reset.md, "Outside the folder").
+  it("removes only its own store's slot, and leaves a locked item for the person", async () => {
+    const f = fixture();
+    f.add("root");
+    f.add("root", ROOT, "Another store");
+    expect(await f.custody.remove?.("root")).toBe("removed");
+    expect([...f.items.values()].map((item) => item.store)).toEqual(["Another store"]);
+    expect(await f.custody.remove?.("root")).toBe("absent");
+    f.add("authority-head");
+    f.lock();
+    expect(await f.custody.remove?.("authority-head")).toBe("locked");
+    expect(f.service.unlock).not.toHaveBeenCalled();
+  });
+
   it("reports a locked item without reading its value, unlocking or creating anything", async () => {
     const f = fixture();
     f.add("root");

@@ -1,4 +1,8 @@
 {
+  "resetHeldDetail": "Ein anderes Programm verwendet den Ordner von Infinitary. Schließe es und versuche es dann erneut.",
+  "resetHeldMessage": "Infinitary konnte das Zurücksetzen nicht abschließen",
+  "resetHeldQuit": "Beenden",
+  "resetHeldTryAgain": "Erneut versuchen",
   "resetKeysAsk": "Alle Tasten auf die der Vorlage {preset} zurücksetzen?",
   "resetKeysConfirm": "Alle Tasten zurücksetzen",
   "resetKeysDetail": "Jedes Tastenkürzel, das du in den Tastatureinstellungen geändert hast, kehrt zu dem zurück, das die Vorlage {preset} vorsieht."

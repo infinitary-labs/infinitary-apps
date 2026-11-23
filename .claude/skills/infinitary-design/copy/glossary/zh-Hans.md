@@ -128,6 +128,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | repair (the task repairing a held batch) | 修复 | “{key} 正在修复” for the task at work; the change it makes stays 修正. |
 | report | 汇报 | |
 | repository (one of a project's) | 仓库 | GitHub's own Simplified Chinese word; 「添加仓库」「2 个仓库」. Names one of a project's repositories; what work belongs to stays 项目. |
+| reset (Infinitary on this computer) | 重置 | Settings → General's row that deletes everything the app keeps on this computer; distinct from 清除, which clears tasks only. |
 | review (the reviewer's pass) | 审查 | |
 | Review carefully (a merge card's button) | 仔细审查 | Raises the task to 谨慎. |
 | revision (of a record) | 修订 | 修订 {revision}. |

@@ -3,6 +3,7 @@ import { decisionModelIdSchema, decisionsSettingsSchema, decisionsViewSchema } f
 import { decisionUseRequestSchema } from "../decisionUses";
 import { homeUpdateSchema } from "../homeUpdate";
 import { releaseNotesViewSchema, shownReleaseNoteSchema } from "../releaseTracking";
+import { resetPreparedSchema, resetScopeSchema } from "../reset";
 import { keptOutsideDataSchema, outsideDataDeletedSchema } from "../savedOutsideData";
 import {
   presenceSettingsSchema,
@@ -181,6 +182,27 @@ export const upkeepChannels = {
     reach: "home",
     request: z.tuple([presenceSettingsSchema]),
     response: presenceSettingsSchema,
+  },
+  /** What Reset Infinitary's question counts before the person answers it (docs/reset.md). */
+  "inf:app:reset-scope": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: resetScopeSchema,
+  },
+  /**
+   * The first mate's own side of a reset the person confirmed: devices
+   * removed, tasks discarded, kept jobs removed, accounts signed out and
+   * integrations removed, before the window quits and the next start wipes
+   * the folder. Only the window's own program asks it (docs/reset.md).
+   */
+  "inf:app:reset-prepare": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: resetPreparedSchema,
   },
   "inf:retention:purge": {
     effect: "change",

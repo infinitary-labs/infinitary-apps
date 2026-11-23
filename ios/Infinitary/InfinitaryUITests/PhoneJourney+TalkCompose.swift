@@ -33,10 +33,14 @@ extension PhoneJourney {
         let below = NSPredicate { _, _ in box.frame.minY >= heading.frame.maxY }
         XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
                        "With a Pencil expected the box stands above the card: \(app.debugDescription)")
+        // The card's own page loads after the relaunch; picture it drawn, as a person sees it.
+        let choice = app.webViews.staticTexts["North Basin"].firstMatch
+        XCTAssertTrue(choice.waitForPresence(timeout: 20), "The card's body draws above the box: \(app.debugDescription)")
         picture("pencil-top-upright")
         turnPhone(to: .landscapeLeft, in: app, moving: heading)
         XCTAssertEqual(waitForPhonePredicate(above, object: nil, timeout: 10), .completed,
                        "On its side the box stands at the top of the card's column: \(app.debugDescription)")
+        XCTAssertTrue(choice.waitForPresence(timeout: 20), app.debugDescription)
         try await appearances("pencil-top-on-its-side", showing: heading)
         turnPhone(to: .portrait, in: app, moving: heading)
         // A finger's tap gives the box focus, which puts it back at the foot.
@@ -44,7 +48,14 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
                        "A finger's focus puts the box back under the card: \(app.debugDescription)")
         picture("pencil-finger-foot")
-        try await pressPhoneKey(",", modifiers: .command, in: app)
+        // The keyboard's Done stands where the bar's Settings button sits; put the keyboard away first.
+        let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
+        XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(done)
+        XCTAssertTrue(done.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(below, object: nil, timeout: 10), .completed,
+                       "Losing focus leaves the box at the foot: \(app.debugDescription)")
+        tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(appearance)

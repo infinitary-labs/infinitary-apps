@@ -1,0 +1,62 @@
+name: careful-review-check
+
+# The Careful review check (scripts/careful-review-check.mjs; docs/public-ci.md,
+# "The Careful review check"): it sets the commit status "PR raised with
+# Infinitary's Careful review" on each pull request's newest commit. A pull
+# request from this project's own branches passes at once; an outside one
+# passes once its description carries Infinitary's Careful record for its
+# newest version, and otherwise fails with one comment saying how to raise it.
+# Started by hand with a pull request number, it reads any pull request of the
+# project, so the check can be proved before an outside copy exists.
+#
+# It writes on an outside pull request, as contributor-agreement.yml does, so
+# it runs from this project's default branch (pull_request_target) rather
+# than from the pull request's own files, checks out only its script from
+# that branch, never the pull request's code, reads the description as data,
+# uses no secret beyond its own token, and runs on GitHub's own machines.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+  workflow_dispatch:
+    inputs:
+      pull:
+        description: The pull request number to read
+        required: true
+        type: number
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+# Each run reads the pull request live, so a newer run replaces an older one.
+concurrency:
+  group: careful-review-check-${{ github.event.pull_request.number || inputs.pull }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Pull request' }} · Careful review check
+    runs-on: ubuntu-24.04
+    # GitHub refuses a comment on a pull request to a token without pull
+    # request writes, even with issue writes.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/careful-review-check.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          PULL: ${{ inputs.pull }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {check} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/careful-review-check.mjs`).href);
+            core.info(await check({github, context, core, pullNumber: process.env.PULL}));

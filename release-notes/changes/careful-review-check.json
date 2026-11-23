@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "careful-review-check",
+      "reason": "Internal: the project adds a check that passes an outside pull request only when it carries Infinitary's Careful record for its newest version; nothing in the app changes."
+    }
+  ]
+}

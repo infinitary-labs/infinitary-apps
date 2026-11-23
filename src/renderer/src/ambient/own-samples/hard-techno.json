@@ -1,0 +1,96 @@
+{
+  "name": "Hard drive",
+  "words": "hard techno, pump up music",
+  "bpm": 145,
+  "beats": 4,
+  "grid": 4,
+  "hold": 2,
+  "key": "A",
+  "scale": "phrygian",
+  "chords": [
+    { "name": "i", "degree": 0, "tones": [0, 2, 4] },
+    { "name": "II", "degree": 1, "tones": [0, 2, 4] },
+    { "name": "vii", "degree": 6, "tones": [0, 2, 4] }
+  ],
+  "start": "i",
+  "next": { "i": ["i", "II", "vii"], "II": ["i"], "vii": ["i"] },
+  "cadence": ["II", "i"],
+  "hands": { "lo": 48, "hi": 72, "center": [55, 64], "start": [57, 60, 64] },
+  "bassLow": 33,
+  "pad": { "timbre": "drone", "anchors": [33, 45], "amp": 0.03 },
+  "room": {
+    "reverb": 1.2,
+    "wet": 0.2,
+    "echo": { "beats": 0.75, "fb": 0.35, "lp": 2400, "mix": 0.3 }
+  },
+  "voices": {
+    "kick": { "instrument": "drum", "bus": "kick", "preset": "kick" },
+    "hat": { "instrument": "tick", "bus": "tick", "preset": "shaker" },
+    "clap": { "instrument": "wood", "bus": "rim", "preset": "tap" },
+    "bass": { "instrument": "bass", "bus": "bass", "preset": "round" },
+    "stab": { "instrument": "sus", "bus": "lead", "preset": "synthLead" },
+    "seq": { "instrument": "pluck", "bus": "arp", "preset": "seq" },
+    "chime": { "instrument": "fm", "bus": "cue", "preset": "chime" },
+    "spark": { "instrument": "mallet", "bus": "cue", "preset": "bell" }
+  },
+  "levels": [
+    { "heat": 0.5, "layers": { "pad": 0.6, "bass": 0.8, "kick": 0.9, "tick": 0.4 } },
+    {
+      "heat": 0.75,
+      "layers": { "pad": 0.6, "bass": 0.9, "kick": 1, "tick": 0.7, "rim": 0.6, "arp": 0.6 }
+    },
+    {
+      "heat": 1,
+      "layers": {
+        "pad": 0.6,
+        "bass": 1,
+        "kick": 1,
+        "tick": 0.9,
+        "rim": 0.8,
+        "arp": 0.8,
+        "lead": 0.7
+      }
+    }
+  ],
+  "cue": { "gain": [0, 0] },
+  "parts": [
+    { "part": "steps", "voice": "kick", "hits": [[0, 0, 1], [4, 0, 1], [8, 0, 1], [12, 0, 1]] },
+    {
+      "part": "steps",
+      "voice": "hat",
+      "hits": [[2, 0, 0.6], [6, 0, 0.6], [10, 0, 0.6], [14, 0, 0.6]],
+      "when": { "layer": "tick" }
+    },
+    {
+      "part": "steps",
+      "voice": "clap",
+      "hits": [[4, 0, 0.8], [12, 0, 0.8]],
+      "when": { "layer": "rim" }
+    },
+    {
+      "part": "steps",
+      "voice": "bass",
+      "hits": [
+        [2, "bass", 0.9, 0.2],
+        [6, "bass", 0.9, 0.2],
+        [10, "bass", 0.9, 0.2],
+        [14, "bass", 0.9, 0.2]
+      ]
+    },
+    {
+      "part": "pattern",
+      "voice": "seq",
+      "orders": [[0, 1, 2, 3], [0, 2, 1, 3]],
+      "len": 0.2,
+      "accents": [1, 0.6, 0.8, 0.6],
+      "when": { "layer": "arp" }
+    },
+    {
+      "part": "strum",
+      "voice": "stab",
+      "hits": [[3, 0.8], [11, 0.7]],
+      "len": 0.3,
+      "when": { "layer": "lead" }
+    }
+  ]
+}

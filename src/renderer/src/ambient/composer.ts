@@ -117,7 +117,11 @@ export type Score = {
 export const pitchClass = (midi: number) => ((midi % 12) + 12) % 12;
 export const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
+/** The first MIDI note at or above `from` with pitch class `pc`. */
 export function upTo(from: number, pc: number): number {
+  // A missing note or pitch class would never match and hang the window's thread.
+  if (!Number.isFinite(from) || !Number.isInteger(pc) || pc < 0 || pc > 11)
+    throw new RangeError(`upTo needs a note and a pitch class 0-11, not ${from} and ${pc}`);
   let m = Math.round(from);
   while (pitchClass(m) !== pc) m += 1;
   return m;
@@ -514,7 +518,10 @@ export class Composer {
     const padPcs = (chord.p || s.pad.tones || [0, 2, 1]).map(
       (i) => tones[i % tones.length] as number,
     );
-    const pad = padPcs.map((p, k) => upTo(s.pad.anchors[k] as number, k === 0 ? rootPc : p));
+    // One note for each pad voice the player keeps, one voice per anchor.
+    const pad = s.pad.anchors.map((anchor, k) =>
+      upTo(anchor, k === 0 ? rootPc : (padPcs[k % padPcs.length] as number)),
+    );
     const k = new BarContext(
       this,
       s,

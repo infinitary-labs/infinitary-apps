@@ -53,6 +53,8 @@ import type { PreferenceSource } from "./windowSize";
 
 /** Join by its address asked of the command's first mate (`join-by-address-beside.md`). */
 const JOIN_BY_ADDRESS_BESIDE = contractChange("join-by-address-beside");
+/** Where a join by address could not reach (`join-by-address-reach.md`). */
+const JOIN_BY_ADDRESS_REACH = contractChange("join-by-address-reach");
 
 /** How often the window reads whether the command still runs while it is out of reach. */
 const BESIDE_RUN_READ_MS = 1_000;
@@ -619,9 +621,14 @@ export class BesideWindow {
    */
   async linkAt(address: string, options: JoinAtOptions): Promise<LinkAtAnswer> {
     if (this.held) await this.held;
-    if (!listsChange(this.window.homeChanges(), JOIN_BY_ADDRESS_BESIDE))
-      return { refused: "failed" };
-    return this.window.dispatch("inf:devices:link-at", [address, options]);
+    const changes = this.window.homeChanges();
+    if (!listsChange(changes, JOIN_BY_ADDRESS_BESIDE)) return { refused: "failed" };
+    // A first mate from before reads its options strictly, so it is asked no `reach`.
+    const { reach: _, ...asked } = options;
+    return this.window.dispatch("inf:devices:link-at", [
+      address,
+      listsChange(changes, JOIN_BY_ADDRESS_REACH) ? { ...asked, reach: true } : asked,
+    ]);
   }
 
   /**

@@ -5,7 +5,8 @@ The existing private repository keeps running until that switch.
 
 ## Pull requests and runners
 
-Set GitHub pull request creation to collaborators only for the initial rollout.
+`infinitary-apps` is public and open to pull requests from everyone: pull request creation is set to all, and forking is on.
+Set fork run approval to require approval for all external contributors, and read it back ("Outside contributors").
 Read back effective access, including team and organization grants, rather than using the displayed account role alone.
 The swept batch accepts only pull requests whose head repository is the current repository, from its reserved branch prefix into the default base branch.
 A fork's pull request never starts it, even when its branch looks like an internal batch.

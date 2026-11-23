@@ -70,7 +70,10 @@ async function language(page: Page, choice: (typeof LANGUAGES)[number]) {
     choice,
   );
   await expect(page.locator("html")).toHaveAttribute("lang", choice);
-  await expect(page.locator("[data-crew-model-anchor][data-painted]").first()).toBeVisible();
+  // The positioned anchor has no box; wait for its actual button instead.
+  await expect(
+    page.locator("[data-crew-model-anchor][data-painted] [data-crew-model-name]").first(),
+  ).toBeVisible();
   await expect(nowFrame(page).locator("[data-now-row]").first()).toBeVisible();
   await nextFrame(page);
 }
@@ -94,10 +97,18 @@ async function expectAboveSidebar(summary: Locator, obstacles: Locator[]) {
       await obstacle.evaluate((element) => element.style.setProperty("opacity", "0", "important"));
       try {
         const withoutSidebarPaint = await regionShot(fact);
-        expect(
-          withoutSidebarPaint.equals(before),
-          "Sidebar paint must not obscure summary facts",
-        ).toBe(true);
+        const unchanged = withoutSidebarPaint.equals(before);
+        if (!unchanged) {
+          // Keep the exact compared bytes before diagnostics can change timing.
+          await test
+            .info()
+            .attach("sidebar-fact-before", { body: before, contentType: "image/png" });
+          await test.info().attach("sidebar-fact-without-paint", {
+            body: withoutSidebarPaint,
+            contentType: "image/png",
+          });
+        }
+        expect(unchanged, "Sidebar paint must not obscure summary facts").toBe(true);
       } finally {
         await obstacle.evaluate((element) => element.style.removeProperty("opacity"));
       }

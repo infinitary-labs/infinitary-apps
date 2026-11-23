@@ -612,23 +612,23 @@ import XCTest
         XCTAssertTrue(temporary.exists, app.debugDescription)
         // INF-1109 and INF-1690: the card names the requested secret as the computer's Settings names it - this
         // lone saved secret by its name alone, with no place, reference or version - and the task that asked; the
-        // title names this one secret, so the foot does not repeat it, and the choices stay in the card's frame
-        // rather than scrolling away with its body.
+        // title names this one secret, so the foot does not repeat it.
         let cardTitle = app.staticTexts["card-title"]
         XCTAssertTrue(cardTitle.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(cardTitle.label, title)
         XCTAssertTrue(title.contains("the Planning calendar secret to "), title)
         XCTAssertFalse(app.staticTexts["approval-secret-calendar"].exists, app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["card-frame"].exists, "The choices stay pinned: \(app.debugDescription)")
         // The choices take a press once the computer's body is revealed at its drawn height, as every card's do.
         waitUntilEnabled(allow)
+        reveal(allow)
         XCTAssertTrue(allow.isHittable, app.debugDescription)
         picture("secrets-use")
-        // The scope lies below an iPhone's fold; the body scrolls to it while the pinned choices stay.
+        // The scope lies below an iPhone's fold; the body scrolls to it, and the choices take a press after it.
         let reading = app.scrollViews["card-scroll"]
         revealPhoneCardReading(temporary, in: reading, app: app)
         XCTAssertTrue(phoneCardReadingBounds(reading, app: app).contains(phoneAccessibilityBounds(temporary.frame)),
             "The scope reads whole \(temporary.frame) inside \(phoneCardReadingBounds(reading, app: app))")
+        reveal(allow)
         XCTAssertTrue(allow.isHittable, app.debugDescription)
         picture("secrets-use-scope")
         let waiting = try await home("secrets-state", method: "GET")

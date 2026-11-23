@@ -250,8 +250,8 @@ extension PhoneCardPane {
     /// refuse it, and one it cannot make here says where (docs/secrets.md, "Remote decisions"). INF-1109, the captain:
     /// "right now it's not even clear what secrets are being requested", so each is named as the computer's card names
     /// it (`named`, INF-1690's plan). A title already naming one or two ("the X secret", "the X and Y secrets") keeps the
-    /// names, so the choices stay pinned beside a three-line title; otherwise the foot names every secret. A choice
-    /// only the computer makes is a small link beside the note, so the choices made here keep one row.
+    /// names, rather than the foot saying them twice beside a three-line title; otherwise the foot names every secret.
+    /// A choice only the computer makes is a small link beside the note, so the choices made here keep one row.
     func approvalFoot(_ use: PhoneApprovals.Use, _ secrets: PhoneSecrets) -> some View {
         let names = use.secrets.map(use.named)
         let phrases = names.count == 1 ? ["the \(names[0]) secret to "] // i18n-exempt: matched in the computer's own title, not shown

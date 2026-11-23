@@ -261,6 +261,22 @@ describe("the Careful review check on an outside pull request", () => {
     expect(body).not.toContain("example.com");
     expect(body).not.toContain("@someone");
   });
+
+  it("names only a verdict's letters and hyphens when a record's verdict carries other words", async () => {
+    const forged = story(newer).replace(
+      '"verdict":"go"',
+      '"verdict":"go [click](https://example.com) @someone"',
+    );
+    const pull = pullRequest({ body: forged });
+    const api = gitHub(pull);
+    const core = makeCore();
+    expect(await check({ ...api, core, context: event(pull) })).toBe("passed");
+    for (const text of [api.lastStatus()?.description ?? "", core.summaries.join("")]) {
+      expect(text).toContain("live validation goclickhttpsexamplecomsomeone, 2 of 2");
+      expect(text).not.toContain("example.com");
+      expect(text).not.toContain("@someone");
+    }
+  });
 });
 
 describe("the Careful review check on the project's own pull requests", () => {

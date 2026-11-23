@@ -13,7 +13,8 @@
  * story once an independent review passed and live validation the review
  * accepted cover that version (src/core/forge/pipelineAttestation.ts): no-mistakes'
  * signature line and v1 attestation, with `producer` "infinitary" and a
- * `live_validation` object that no-mistakes never writes. The author can type
+ * `live_validation` object. no-mistakes writes `live_validation` too but no
+ * `producer`, so `producer` tells the two records apart. The author can type
  * it by hand, so the check is a guardrail for contributors, never a proof
  * that a review happened; the guards stay GitHub's approval of each outside
  * run and the fork guard on the project's own runners.
@@ -128,7 +129,11 @@ export function readRecord(body, head) {
   }
   if (REQUIRED_STEPS.some((step) => statuses.get(step) !== "completed"))
     return { ok: false, problem: "steps incomplete" };
-  return { ok: true, live: { verdict: live.verdict, live: live.live, total: live.total } };
+  // The verdict is the author's text, shown in the status and the rendered job
+  // summary, so only letters and hyphens are kept, as `version` keeps a hash's.
+  const verdict = live.verdict.replace(/[^A-Za-z-]/g, "");
+  if (!verdict) return { ok: false, problem: "not careful" };
+  return { ok: true, live: { verdict, live: live.live, total: live.total } };
 }
 
 /** A version as inert Markdown: only its first twelve hexadecimal characters, in a code span. */

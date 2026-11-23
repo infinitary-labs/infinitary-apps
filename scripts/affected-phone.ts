@@ -849,6 +849,25 @@ export function dealtJobLabel(job: PhoneDealtJob, of: number): string {
 }
 
 /**
+ * INF-6223: the commit a request's named base reads. The check's clone holds the project's branches only as their
+ * `origin/` copies, so a branch named by its name, such as `main`, reads from `origin/main`. A base neither reads is
+ * refused with the reason, since comparing with it would fail and count every part on every device.
+ */
+export function readableBase(
+  base: string, git: (args: string[]) => string,
+): { base: string } | { refused: string } {
+  const commit = (ref: string) => {
+    try { return git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]).trim() !== ""; } catch { return false; }
+  };
+  if (commit(base)) return { base };
+  const name = base.replace(/^refs\/heads\//, "");
+  if (name && commit(`origin/${name}`)) return { base: `origin/${name}` };
+  return {
+    refused: `The phone base ${base} names no commit or branch in the check's copy of the project; send a branch name such as main, a full commit id, or no base to compare with main.`,
+  };
+}
+
+/**
  * INF-3379 (the captain's "compute the base from the branch's merge point with main and ignore an older base"): a
  * request's base older than the branch's merge point with main would count main's own changes since that base as
  * the branch's edits, so the comparison starts at the merge point instead. A base at or past the merge point, such
@@ -923,7 +942,14 @@ function main(): void {
   const root = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
   const virtualMac = Boolean(process.env.PHONE_VIRTUAL_MAC);
-  const base = requestBase(values.base, values.head, git);
+  const readable = readableBase(values.base, git);
+  if ("refused" in readable) {
+    console.error(readable.refused);
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Native phone gate\n\n${readable.refused}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const base = requestBase(readable.base, values.head, git);
   if (base.ignored) console.error(`Phone base ${values.base} is behind this branch's merge point with main; comparing with ${base.base} instead.`);
   const range = `${base.base}...${values.head}`;
   let paths: string[] | undefined;
@@ -936,7 +962,7 @@ function main(): void {
   if (values.since && paths) {
     try {
       const edit = (from: string, to: string) => git(["diff", "-U0", "--full-index", "--no-renames", `${from}...${to}`, "--"]);
-      const files = ownEdits(edit(requestBase(values.base, values.since, git).base, values.since), edit(base.base, values.head));
+      const files = ownEdits(edit(requestBase(readable.base, values.since, git).base, values.since), edit(base.base, values.head));
       since = { commit: values.since, files };
       paths = files;
     } catch {

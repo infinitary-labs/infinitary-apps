@@ -58,6 +58,8 @@ export type SettleCards = {
   snapshot(): Card[];
   put(next: Card): void;
   reviseBody(id: string, body: string): void;
+  /** The app takes a card down unanswered, recording `resolution` as its reason. */
+  takeDown(id: string, resolution: string): void;
   hostCards: {
     raiseHostCard(
       card: Omit<Card, "author" | "priority" | "status" | "createdAt">,

@@ -214,7 +214,11 @@ export class KeptApproval {
 
   /**
    * Mint the captain's merge approval for the offer he clicked (FI3-304),
-   * inside the card resolution's transaction and before any work starts.
+   * inside the card resolution's transaction and before any work starts,
+   * or, on a project that merges in batches, for the open merge card's
+   * offer when his words recorded as passing asking first approve it at the
+   * task's current version (`SettleService.mergeOnCaptainWords`), outside
+   * any card resolution.
    * It is minted only on a pull request task (direct-pr or queue-pr) on
    * GitHub or GitLab, for an offer the host published after its checks
    * passed at a known head, on the pull request the task still names;

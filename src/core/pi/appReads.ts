@@ -1,3 +1,4 @@
+import { findOwnStyle, noOwnStyle } from "@shared/ambientOwn";
 import { automationSpecSchema } from "@shared/automation";
 import type { CoreInvokeChannel, InvokeRequest } from "@shared/ipc";
 import {
@@ -76,6 +77,7 @@ function overChannel<C extends CoreInvokeChannel>(
 }
 
 const deviceArgs = z.strictObject({ id: z.string().min(1).max(64) });
+const ownStyleArgs = z.strictObject({ name: z.string().min(1).max(40) });
 
 /**
  * The keys each command has now, as Keyboard settings lists them. With a
@@ -128,6 +130,19 @@ export const APP_READS = {
     z.strictObject({ spec: automationSpecSchema }),
     (args: { spec: z.infer<typeof automationSpecSchema> }) => [args.spec],
   ),
+  "ambient.own-style": {
+    // i18n-exempt: served to the first mate, a model, never shown
+    about:
+      "One of the person's own ambient styles, whole, by its name or id, as the ambient-own-style line's current value names them: read it before saving it changed.",
+    args: ownStyleArgs,
+    run: async (dispatch, args) => {
+      const { name } = ownStyleArgs.parse(args);
+      const saved = (await dispatch("inf:settings:appearance:get", [])).ambientOwnStyles ?? [];
+      const style = findOwnStyle(saved, name);
+      if (!style) throw new Error(noOwnStyle(name, saved));
+      return style;
+    },
+  },
   "keyboard.keys": {
     about:
       "Each keyboard command's keys as Keyboard settings shows them and whether the captain changed them; source saved means no window installed them, so a panel's key may differ. Read only: the keys are the captain's to change.",

@@ -1,7 +1,9 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACTIONS, type ActionName } from "@shared/actions";
+import { type OwnStyle, ownStyleId, type SavedOwnStyle } from "@shared/ambientOwn";
 import type { DeviceView } from "@shared/devices";
+import type { FmEvent } from "@shared/events";
 import type { IntegrationsView } from "@shared/integrations";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { knownPanels } from "@shared/panelArrangement";
@@ -130,6 +132,86 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     const paused = await asked("ambient-away", { pause: true });
     expect((await appearance()).ambientPlaysWhenAway).not.toBe(true);
     expect(paused.lines).toEqual(["ambient music pauses while you're away"]);
+  });
+
+  // INF-6289, the captain's pick on INF-6278: own ambient styles reach the
+  // first mate by name, so how many are saved costs it no context and the
+  // cap of 12 goes. Fixture: the sample styles a first mate wrote
+  // (src/renderer/src/ambient/own-samples/), saved under 13 names.
+  it("names any number of own ambient styles and reads one whole by its name", async () => {
+    const was = await appearance();
+    const sample = (file: string): OwnStyle =>
+      JSON.parse(
+        readFileSync(
+          join(process.cwd(), "src/renderer/src/ambient/own-samples", `${file}.json`),
+          "utf8",
+        ),
+      );
+    const lofi = sample("lofi");
+    const samples = [lofi, ...["bossa", "bowls", "warm-sleep", "hard-techno"].map(sample)];
+    // Three rounds of the five samples, cut at 13: the bowls' third round saves last and plays.
+    const styles = [1, 2, 3]
+      .flatMap((round) => samples.map((style) => ({ ...style, name: `${style.name} ${round}` })))
+      .slice(0, 13);
+    const last = "Still water 3";
+    const names = styles.map((style) => style.name);
+    const read = async (name: string) => {
+      const text = (await tool("app_state").run({ read: "ambient.own-style", args: { name } }))
+        .text;
+      return text.startsWith("{") ? JSON.parse(text).value : text;
+    };
+    const said: string[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      const event = payload as FmEvent;
+      if (channel === "inf:event" && event.type === "personalized") said.push(event.text);
+    });
+    try {
+      let saved: Awaited<ReturnType<typeof asked>> | undefined;
+      for (const style of styles) saved = await asked("ambient-own-style", { save: style });
+      // The value names each style by id and name alone, in the answer and in app_state.
+      const named = {
+        saved: names.map((name) => ({ id: ownStyleId(name), name })),
+        playing: ownStyleId(last),
+      };
+      expect(saved?.reply.current).toEqual(named);
+      // The line names every style, which Activity and an operation's title cut short.
+      const ownLines = () =>
+        said.filter((text) => text === ACTIONS["ambient-own-style"].done(named)).length;
+      expect(ownLines()).toBe(1);
+      const look = JSON.parse((await tool("app_state").run({ area: "appearance" })).text);
+      expect(
+        look.find((line: { action: string }) => line.action === "ambient-own-style").current,
+      ).toEqual(named);
+      // One style reads whole by its name in any case, as Settings reads it.
+      const lateShift = (await appearance()).ambientOwnStyles?.find(
+        (own) => own.name === "Late shift 1",
+      );
+      expect(await read("late shift 1")).toEqual(lateShift);
+      expect(lateShift).toMatchObject({ words: lofi.words, bpm: lofi.bpm });
+      expect(await read("Cold rain")).toMatch(
+        `could not answer: No own style Cold rain. Saved: ${names.join(", ")}.`,
+      );
+      // The style playing, read whole and saved again slower under its name,
+      // reads the same by name, yet the change leaves its line; saved again
+      // the same, nothing does.
+      const { id: _id, bpm, ...playing } = (await read(last)) as SavedOwnStyle;
+      if (bpm === undefined) throw new Error(`${last} names no tempo of its own`);
+      const slower = await asked("ambient-own-style", { save: { ...playing, bpm: bpm - 4 } });
+      expect(slower.reply.current).toEqual(named);
+      expect(slower.lines).toHaveLength(1);
+      expect(ownLines()).toBe(2);
+      expect((await read(last)).bpm).toBe(bpm - 4);
+      expect(
+        (await asked("ambient-own-style", { save: { ...playing, bpm: bpm - 4 } })).lines,
+      ).toEqual([]);
+      expect(ownLines()).toBe(2);
+    } finally {
+      detach();
+      // A look without styles keeps the saved ones, so the restore names none.
+      await core.dispatch("inf:settings:appearance:set", [
+        { ...was, ambientOwnStyles: was.ambientOwnStyles ?? [] },
+      ]);
+    }
   });
 
   it("chooses a language by its tag and goes back to the default with null", async () => {

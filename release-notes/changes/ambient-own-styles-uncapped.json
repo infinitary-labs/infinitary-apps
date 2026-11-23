@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ambient-own-styles-uncapped",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Keep as many of your own ambient styles as you like",
+      "body": "Your first mate saves every style of your own you describe. Before, it stopped at 12 and asked you to remove one first. Every style you keep is listed under Yours in Settings → Appearance → Style and in the sound button’s list.",
+      "noPicture": "This lifts a limit on how many styles are kept; no view changes how it looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { type PersonalExtensionView, personalSnapshotSchema } from "@shared/personal/manifest";
 import {
   appearanceSchema,
@@ -227,6 +229,57 @@ it("leaves keep playing while away out of the look a view without ambient-away i
   expect((await older.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual({
     ...look,
     appearance: withoutAway,
+  });
+  expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
+    look,
+  );
+  await older.close();
+  await current.close();
+});
+
+// Own styles past 12 (INF-6289, `ambient-own-styles-uncapped`): a view that
+// reads own styles but not this change refuses a look holding more than 12,
+// so it is never pushed or answered them; one naming both reads the whole look.
+it("leaves own ambient styles out of the look a view without ambient-own-styles-uncapped is pushed or answered", async () => {
+  const warm = JSON.parse(
+    readFileSync(
+      join(process.cwd(), "src/renderer/src/ambient/own-samples/warm-sleep.json"),
+      "utf8",
+    ),
+  );
+  const look = {
+    ...DEFAULT_SHELL_PREFERENCES,
+    appearance: {
+      ...DEFAULT_SHELL_PREFERENCES.appearance,
+      ambientMusic: true,
+      ambientStyle: "own-warm-sleep-13",
+      ambientOwnStyles: Array.from({ length: 13 }, (_, i) => ({
+        ...warm,
+        name: `Warm sleep ${i + 1}`,
+        id: `own-warm-sleep-${i + 1}`,
+      })),
+    },
+  };
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:shell:preferences") return look;
+      if (channel === "inf:settings:appearance:get") return look.appearance;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const ambient = ["ambient-music", "ambient-pause", "ambient-style", "ambient-own-styles"];
+  const older = await connectClient(grant, { changes: ambient });
+  const current = await connectClient(grant, {
+    changes: [...ambient, "ambient-own-styles-uncapped"],
+  });
+  const { ambientOwnStyles: _own, ...withoutOwn } = look.appearance;
+  expect(await older.invoke("inf:settings:appearance:get", [])).toEqual(withoutOwn);
+  expect(await current.invoke("inf:settings:appearance:get", [])).toEqual(look.appearance);
+  at.events.emit("inf:shell:preferences", look);
+  expect((await older.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual({
+    ...look,
+    appearance: withoutOwn,
   });
   expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
     look,

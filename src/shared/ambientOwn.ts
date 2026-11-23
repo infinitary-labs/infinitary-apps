@@ -8,8 +8,6 @@
 import { z } from "zod";
 import { AMBIENT_STYLES, type AmbientStyle } from "./ambientStyles";
 
-/** How many own styles are kept: each is read whole by the first mate and every window. */
-export const OWN_STYLES_MAX = 12;
 /** How long one saved style may be, in characters of JSON. */
 export const OWN_STYLE_CHARS_MAX = 8_000;
 /**
@@ -483,10 +481,25 @@ export type OwnStyle = z.infer<typeof ownStyleSchema>;
 export type OwnPart = OwnStyle["parts"] extends (infer P)[] | undefined ? P : never;
 
 /** The saved own styles, as the look carries them. */
-export const ownStylesSchema = z
-  .array(ownStyleSchema.extend({ id: z.string().regex(/^own-[a-z0-9-]{1,36}$/) }))
-  .max(OWN_STYLES_MAX);
+export const ownStylesSchema = z.array(
+  ownStyleSchema.extend({ id: z.string().regex(/^own-[a-z0-9-]{1,36}$/) }),
+);
 export type SavedOwnStyle = OwnStyle & { id: string };
+
+/** The saved style a name or id names: a name in any case, an id exactly. */
+export function findOwnStyle(
+  saved: readonly SavedOwnStyle[],
+  nameOrId: string,
+): SavedOwnStyle | undefined {
+  const name = nameOrId.toLowerCase();
+  return saved.find((own) => own.id === nameOrId || own.name.toLowerCase() === name);
+}
+
+/** What a name no saved style has answers: the saved styles' names, to name one of them. */
+export function noOwnStyle(nameOrId: string, saved: readonly SavedOwnStyle[]): string {
+  // i18n-exempt: served to the first mate in English
+  return `No own style ${nameOrId}. Saved: ${saved.map((own) => own.name).join(", ") || "none"}.`;
+}
 
 /** The id a style's name saves under: its own, never a shipped style's, and the same for the same name. */
 export function ownStyleId(styleName: string): string {

@@ -66,7 +66,7 @@ export const EMIT_CARD_TOOL_NAME = "emit_card";
 export const CLOSE_CARD_TOOL_NAME = "close_card";
 
 export const CLOSE_CARD_TOOL_DESCRIPTION = [
-  "Withdraw a card of YOUR OWN that is no longer valid or necessary, without waiting for the captain, by the id emit_card returned.",
+  "Withdraw a card of YOUR OWN that is no longer valid or necessary, by the id emit_card returned.",
   "Never withdraw a note emitted as this turn's answer.",
   "Close a decision only when the choice no longer applies - you are withdrawing it as obsolete, not answering for the captain.",
   // Someone else's card is said by close_card's own refusal, which names
@@ -475,6 +475,7 @@ const REQUIRED_ACTIONS_DESCRIPTION =
 const sharedCardParams = {
   required_actions: Type.Optional(
     zodParameter<RequiredAction[]>(requiredActionsSchema, {
+      dropPatterns: true,
       description: REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
@@ -571,7 +572,7 @@ export const ALLOWS_PARAM =
  * the crewmate: no sections, length or required items.
  */
 export const SINCE_SEEN_PARAM =
-  "If the captain saw an earlier merge card, summarize changes since in your words. The card draws it first under that viewing time; only the captain reads it, never the pull request, story or merge message.";
+  "If the captain saw an earlier merge card, summarize changes since in your words. The card draws it first; only the captain reads it.";
 
 /**
  * The saved-story rule, said once (INF-416 piece J). A top-level parameter,
@@ -580,9 +581,9 @@ export const SINCE_SEEN_PARAM =
  */
 export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: every branch and local-only change uses prepare_change's story. show_merge_card prepares, publishes and shows it; the rest applies where it is not served.",
-  "Pass the current revision as presentation here and to open_change, with its saved title and one merge action, no body, body_file, risk or required_actions; autonomy on merges from it. A host-identified upstream contribution shows its published presentation as a note without actions; maintainers merge it.",
+  "Pass the current revision as presentation here and to open_change, with its saved title and one merge action, no body, body_file, risk or required_actions; autonomy on merges from it. A host-identified upstream contribution shows its published presentation as a note without actions.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses it after checks pass.",
-  "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base, title and updated verification; publish it where needed before the card.",
+  "After a push, show the same presentation; the host republishes the pull request story at that version. Changed words or a later local-only or plain-branch commit need a revision with the same base, title and updated verification, published before the card.",
   "After the merge click, a same-version story revision keeps approval: publish it without another merge card; only another commit needs one.",
 ].join(" ");
 
@@ -593,7 +594,7 @@ export const SAVED_STORY_RULE = [
 export const CARD_FILES_PARAM = [
   "Files for the captain to open, edit, attach or send: absolute or working-copy-relative paths, at most 1 GB each.",
   "The app keeps copies; the captain's Save moves each to Downloads.",
-  "Never give a path instead, especially on another computer or in temporary or evidence folders. Revisions pass files again; the list replaces the card's.",
+  "Never give a path instead, least of all one on another computer or in temporary or evidence folders. A revision passes files again; the list replaces the card's.",
 ].join(" ");
 
 /** Why a card naming a read or view it may not have is refused. */
@@ -691,7 +692,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write UTF-8 HTML card bodies in the task's card body folder outside the working copy; name an absolute or folder-relative path. Revise in place only what the captain's words changed, so the app can mark it. A full rewrite is fine when the answer changed shape; say so in the opening sentence. Call emit_card again with the same id. Give exactly one of body_file or body. The app reads only on this call; it does not watch edits.",
+        "Write UTF-8 HTML card bodies in the task's card body folder outside the working copy; name an absolute or folder-relative path. Revise in place only what the captain's words changed, so the app can mark it. A full rewrite is fine when the answer changed shape; say so in the opening sentence. Call emit_card again with the same id. Give exactly one of body_file or body. The app reads only on this call.",
     }),
   ),
 });
@@ -704,8 +705,8 @@ const crewmateCardParams = Type.Object({
  */
 const BROWSER_BUTTON_DESCRIPTION = [
   `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
-  "It only opens the view: it never answers or closes the card, and it changes no merge.",
-  `It needs this task's browser, opened with ${browserCommand("open <url>")}. If that browser has stopped, the captain's press opens it again at its page. For a page this computer serves, open it with --start '<command>' --within <seconds> so Infinitary starts its server itself when nothing answers there; without one, or when that fails, you are woken once.`,
+  "It only opens the view: it never answers or closes the card.",
+  `It needs this task's browser, opened with ${browserCommand("open <url>")}; if it has stopped, the press opens it again at its page. For a page this computer serves, open it with --start '<command>' --within <seconds> so Infinitary starts its server when nothing answers; if none or it fails, you are woken once.`,
 ].join(" ");
 
 /**
@@ -714,9 +715,8 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens in this task's browser, by its path relative to your working copy, with no .. and no link on the way.",
-  "The app serves only files inside the project folder; before your work merges the click opens the current file or says it is not there yet.",
-  "It needs no open browser and works after your task closes; never beside browser_handoff.",
+  "Optional, only beside browser_button: an .html or .htm file of your task's project, such as index.html, that the button opens in this task's browser, by its working-copy-relative path, with no .. and no link on the way.",
+  "The app serves only files inside the project folder; the click opens the current file or says it is not there yet. It needs no open browser; never beside browser_handoff.",
 ].join(" ");
 
 /** The label the request's description gives as its example of the captain's step to sign in. */
@@ -733,14 +733,12 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   "Optional: ask the captain to take over this task's browser for what only a person should do - a sign-in, a code, a payment - never in a card reply.",
   `Give site (the page's host), reason (why you need the captain) and after (what you will do once control comes back), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
   `The card is an ordinary decision naming the site and why; give it exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
-  "The app pauses your browser before the card goes up; its commands refuse until the captain returns control.",
-  "The card stays beside the page while the captain has control: put the steps and values to copy in its body.",
-  "Only the captain's Return control resumes you, once, with your earlier refs gone.",
+  "The app pauses your browser before the card goes up; its commands refuse until the captain returns control. Put the steps and values to copy in the card body. Only the captain's Return control resumes you, once, with your earlier refs gone.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
-  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed since the captain chose; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
+  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
-  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain.",
+  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain.",
   UNKNOWN_OUTCOME_WORDS,
 ].join(" ");
 
@@ -752,7 +750,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
  */
 const BROWSER_SIGN_IN_DESCRIPTION = [
   "Optional, only beside browser_handoff: true when what you need from the captain is a sign-in to the site.",
-  "The captain's Take control then opens the site in this computer's kept browser profile, where the sign-in stays for later tasks under the rule the captain picks: ask each time, or use it without asking.",
+  "The captain's Take control then opens the site in this computer's kept browser profile, where the sign-in stays for later tasks under the captain's rule.",
   "Never for a code, a payment or a review alone.",
 ].join(" ");
 
@@ -1278,7 +1276,7 @@ export const CLOSE_CARD_TOOL = crewmateTool({
     reason: Type.Optional(
       Type.String({
         description:
-          "Why you ended it, in one plain line: a card they have seen stays up, marked ended, with this line",
+          "Why you ended it, in one plain line; a seen card stays up, marked ended, with it",
       }),
     ),
   }),

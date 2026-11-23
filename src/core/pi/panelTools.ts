@@ -33,17 +33,17 @@ export const LINT_PANEL_TOOL_DESCRIPTION = [
 export const PLACE_PANEL_TOOL_DESCRIPTION = [
   "Put the version of a personal panel you are building on the captain's rail, and read back what the window did.",
   "Until you place it or report, their rail keeps the panel's last commit and your version runs out of sight; a new panel is on no rail at all.",
-  "Answers per panel with the window's own word: drawn on which rail, collapsed, folded or in its rail's More row, loading, stopped drawing, off its rail, hidden by the captain, or refused, with the window's reason.",
+  "Answers per panel in the window's own word: drawn (on which rail), collapsed, folded or in the More row, loading, stopped drawing, off its rail, hidden by the captain, or refused, with its reason.",
   "The placed version shows with the running dot until your report commits it; a save after placing runs out of sight again until you place again.",
   "Pass id (the extension's directory name) to place one; omit it to place every extension you changed. An id you did not change is only looked at.",
   "Run it before every report, then capture_panel to photograph the panel docked.",
-  "When the window did not draw it and the panel's files cannot change that, such as a hidden panel or panels switched off, say so in your report and wait on the captain; do not call it done.",
-  "Folded or in the More row, the panel is built and on their rail, which is only too short: say where it sits in your report, and never collapse, move or hide their other panels.",
+  "When the window did not draw it and your files cannot change that (a hidden panel, panels switched off), say so in your report and wait on the captain; do not call it done.",
+  "Folded or in the More row, the panel is built and on their rail, which is only too short: say where it sits, and never collapse, move or hide their other panels.",
 ].join(" ");
 
 export const CAPTURE_PANEL_TOOL_DESCRIPTION = [
   "Screenshot a personal panel at rail width, in the dark theme and the light theme.",
-  "While your saved files differ from what the captain's rail holds, it photographs your version drawn out of sight, and says so; once place_panel has put that version on their rail, it photographs the panel docked, as they see it.",
+  "While your saved files differ from the captain's rail, it photographs your version drawn out of sight, and says so; once place_panel has put that version on their rail, it photographs the panel docked.",
   "Returns both images and the files they were written to.",
   "The panel must be drawable: compiled, and its presence rule satisfied (a store-keyed presence needs data in that key first).",
   "Pass id: the extension's directory name.",

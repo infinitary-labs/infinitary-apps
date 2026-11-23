@@ -28,7 +28,7 @@ export function createEmoteTool(request: (emote: FirstmateEmote) => void) {
       "confused - something went wrong; fidget - idle play. Reply emotes play as your turn ends:",
       "nod - got it, instruction understood; salute - on it, work sent out; tick - all set,",
       "a change you made; tuck - noted, something kept; aww - captain's thanks or praise, any time.",
-      "On a captain turn the app already nods, tucks or ticks for a steer, note or personalize.",
+      "The app already nods, tucks or ticks on a captain turn's steer, note or personalize.",
     ].join(" "),
     parameters: Type.Object({
       emote: stringEnum(FIRSTMATE_EMOTES, {

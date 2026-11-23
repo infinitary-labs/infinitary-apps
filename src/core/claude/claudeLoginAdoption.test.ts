@@ -226,6 +226,56 @@ describe("Claude connect adopts a usable default login", () => {
     });
   }
 
+  // INF-6273 found the same two leftovers in the Mac Keychain item, where
+  // Claude Code keeps its login on a Mac.
+  for (const [shape, leftover] of [
+    ["only a remote-device key", { coworkRemoteDevice: { deviceId: "device-1", key: "k" } }],
+    [
+      "a login Claude blanked",
+      { claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } },
+    ],
+  ] as const) {
+    it(`starts Claude's sign-in over a Keychain item holding ${shape}`, async () => {
+      const { dir, env } = home();
+      let stored: object = leftover;
+      let modifiedAt = "20261123090000Z";
+      const passwords: HostKeychain = {
+        findGenericPassword: async () => ({ kind: "found", account: env.USER, modifiedAt }),
+        readGenericPassword: async () => ({ kind: "value", value: JSON.stringify(stored) }),
+      };
+      expect(await readClaudeStore(dir, { keychain: passwords, env })).toEqual({
+        state: "absent",
+      });
+
+      const claude = client(false);
+      const run: RunClaude = async (args, configDir, options) => {
+        if (args[1] === "login") {
+          stored = {
+            ...leftover,
+            claudeAiOauth: { accessToken: "fresh", refreshToken: "r", expiresAt: 9e15 },
+          };
+          modifiedAt = "20261123090100Z";
+        }
+        return claude.run(args, configDir, options);
+      };
+      const backend = new ClaudeAuthBackend({
+        run,
+        available: () => true,
+        keychain: passwords,
+        configDir: () => dir,
+        readStore: (configDir, options) =>
+          readClaudeStore(configDir, { ...options, keychain: passwords, env }),
+      });
+      await loginOf(backend, bridge());
+      expect(claude.calls[0]).toEqual(["auth", "status", "--json"]);
+      expect(claude.calls.some((args) => args[1] === "login")).toBe(true);
+      expect(await readClaudeStore(dir, { keychain: passwords, env })).toMatchObject({
+        state: "present",
+        auth: { accessToken: "fresh" },
+      });
+    });
+  }
+
   it("treats a directory where the credential file should be as unreadable", async () => {
     const { dir, env } = home();
     mkdirSync(join(dir, ".credentials.json"));

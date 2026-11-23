@@ -1,3 +1,4 @@
+import { cardAnswerer } from "@shared/cards";
 import type { TaskView } from "@shared/tasks";
 import { crewStatusOf } from "../../character/crew/crewSignal";
 import type { StackEntry } from "../stack";
@@ -10,12 +11,11 @@ import type { StackEntry } from "../stack";
  * beside the page").
  */
 export function entryWorking(
-  entry: Pick<StackEntry, "author" | "taskId" | "browserTaskId" | "answeredBy">,
+  entry: Pick<StackEntry, "author" | "taskId" | "browserTaskId" | "replies" | "answeredBy">,
   firstmateBusy: boolean,
   crewActivity: Readonly<Record<string, TaskView["activity"]>>,
 ): boolean {
   if (entry.author === "firstmate") return firstmateBusy;
-  const crewmate = entry.author === "crewmate" || entry.answeredBy === "crewmate";
-  const taskId = crewmate ? entry.taskId : entry.browserTaskId;
+  const taskId = cardAnswerer(entry) === "crewmate" ? entry.taskId : entry.browserTaskId;
   return taskId !== undefined && crewStatusOf(crewActivity[taskId] ?? null) === "working";
 }

@@ -1151,7 +1151,6 @@ export class SecretsSettings {
           : { label: SECRETS_WORDS.always, run: always, kind: "allow-always" },
       ],
       this.taskOf.get(request)?.values().next().value,
-      "crewmate",
     );
     // A phone reads which card is this use's once the card is up.
     this.options.changed();
@@ -1214,7 +1213,6 @@ export class SecretsSettings {
     body: string,
     actions: { label: string; run: () => Promise<void>; kind?: SecretUseAnswer }[],
     taskId?: string,
-    askedBy?: "crewmate",
   ): void {
     for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
     // A use card's pass names its answer, so a window on another computer
@@ -1233,13 +1231,13 @@ export class SecretsSettings {
     this.offeredCard = `card-secrets-${group}`;
     // A use a task asked for is its crewmate's to talk over: a reply under
     // the card reaches it, and the head names its task.
-    const asker = askedBy && taskId ? this.options.taskTitle?.(taskId) : undefined;
+    const asker = taskId ? this.options.taskTitle?.(taskId) : undefined;
     this.options.raise({
       id: this.offeredCard,
       title,
       body,
       meta: asker ?? FIRSTMATE_CARD_META,
-      ...(askedBy && taskId ? { answeredBy: askedBy } : {}),
+      ...(taskId ? { answeredBy: "crewmate" as const } : {}),
       ...(taskId ? { taskId } : {}),
       actions: offered.map((action, i) => ({
         id: action.id,

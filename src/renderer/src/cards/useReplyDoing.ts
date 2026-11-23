@@ -1,4 +1,4 @@
-import type { Card, CardMessage } from "@shared/cards";
+import { type Card, type CardMessage, cardAnswerer } from "@shared/cards";
 import { nowOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { useEffect, useState } from "react";
@@ -28,12 +28,11 @@ export function replyDoing(
  * on a card that is not a crewmate's.
  */
 export function useReplyDoing(
-  card: Pick<Card, "author" | "taskId" | "answeredBy">,
+  card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,
   messages: readonly CardMessage[],
   working: boolean,
 ): string | undefined {
-  const crewmate = card.author === "crewmate" || card.answeredBy === "crewmate";
-  const taskId = crewmate && working ? card.taskId : undefined;
+  const taskId = cardAnswerer(card) === "crewmate" && working ? card.taskId : undefined;
   const [read, setRead] = useState<{ id: string; detail: TaskDetail }>();
   useEffect(() => {
     if (!taskId) return;

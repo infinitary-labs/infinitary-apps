@@ -1,4 +1,4 @@
-import type { Card } from "./cards";
+import { type Card, cardAnswerer } from "./cards";
 import * as m from "./i18n/messages.generated.ts";
 import { formatResetText } from "./quota";
 import type { AccountHold, WorkPosture } from "./workPosture";
@@ -36,11 +36,10 @@ export type ThreadWait =
  * answers.
  */
 export function threadWait(
-  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt" | "answeredBy">,
+  card: Pick<Card, "author" | "awaiting" | "taskId" | "sentBackAt" | "replies" | "answeredBy">,
   posture: WorkPosture | undefined,
 ): ThreadWait | undefined {
-  if ((card.author !== "crewmate" && card.answeredBy !== "crewmate") || !card.taskId || !posture)
-    return undefined;
+  if (cardAnswerer(card) !== "crewmate" || !card.taskId || !posture) return undefined;
   // Answered but still in its close-out wait once its author's turn ended:
   // the core holds a reworked merge card for its new version (INF-6241).
   if (card.awaiting === "close-out" && card.sentBackAt !== undefined) {

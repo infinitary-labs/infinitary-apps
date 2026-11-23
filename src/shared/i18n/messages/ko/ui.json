@@ -101,6 +101,10 @@
   "uiTaskFactsSkipped": "건너뜀",
   "uiTaskFactsTask": "작업",
   "uiTaskResourceRun": "실행",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "other": "다음 차례 · 프로세서 {processors}개와 {memory}GB 여유"
+  },
   "uiTaskResourceRunUnavailable": "{computer}에서 실행 상태를 알 수 없음",
   "uiTaskResourceUse": "사용",
   "uiVoiceAbandon": "버리기",

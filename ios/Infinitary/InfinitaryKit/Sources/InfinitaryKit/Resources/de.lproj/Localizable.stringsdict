@@ -2451,6 +2451,22 @@
       <string>· %1$ld übersprungen</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>als Nächster an der Reihe · %2$ld Prozessor und %1$@ GB frei</string>
+      <key>other</key>
+      <string>als Nächster an der Reihe · %2$ld Prozessoren und %1$@ GB frei</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

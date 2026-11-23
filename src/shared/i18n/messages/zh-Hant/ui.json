@@ -101,6 +101,10 @@
   "uiTaskFactsSkipped": "已略過",
   "uiTaskFactsTask": "任務",
   "uiTaskResourceRun": "執行",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "other": "排在最前 · 閒置 {processors} 個處理器和 {memory} GB"
+  },
   "uiTaskResourceRunUnavailable": "無法取得 {computer} 上的執行狀態",
   "uiTaskResourceUse": "使用量",
   "uiVoiceAbandon": "放棄",

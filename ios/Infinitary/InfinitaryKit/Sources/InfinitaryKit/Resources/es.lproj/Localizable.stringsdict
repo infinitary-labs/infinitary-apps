@@ -2757,6 +2757,24 @@
       <string>· %1$ld omitidos</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>primero en la fila · %2$ld procesador y %1$@ GB libres</string>
+      <key>many</key>
+      <string>primero en la fila · %2$ld procesadores y %1$@ GB libres</string>
+      <key>other</key>
+      <string>primero en la fila · %2$ld procesadores y %1$@ GB libres</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

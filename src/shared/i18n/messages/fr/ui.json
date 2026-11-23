@@ -109,6 +109,12 @@
   "uiTaskFactsSkipped": "ignorée",
   "uiTaskFactsTask": "Tâche",
   "uiTaskResourceRun": "Exécution",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "one": "premier dans la file · {processors} processeur et {memory} Go libres",
+    "many": "premier dans la file · {processors} processeurs et {memory} Go libres",
+    "other": "premier dans la file · {processors} processeurs et {memory} Go libres"
+  },
   "uiTaskResourceRunUnavailable": "État d’exécution indisponible sur {computer}",
   "uiTaskResourceUse": "Consommation",
   "uiVoiceAbandon": "Abandonner",

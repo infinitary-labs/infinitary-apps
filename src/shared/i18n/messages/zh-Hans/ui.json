@@ -101,6 +101,10 @@
   "uiTaskFactsSkipped": "已跳过",
   "uiTaskFactsTask": "任务",
   "uiTaskResourceRun": "运行",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "other": "排在最前 · 空闲 {processors} 个处理器和 {memory} GB"
+  },
   "uiTaskResourceRunUnavailable": "无法获取 {computer} 上的运行状态",
   "uiTaskResourceUse": "占用",
   "uiVoiceAbandon": "放弃",

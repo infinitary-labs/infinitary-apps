@@ -13818,7 +13818,12 @@ ${events}` : prompt;
     demand: loadDemandSchema,
     state: _enum(["waiting", "running"]),
     ahead: number().int().nonnegative(),
-    reason: _enum(["line", "capacity", "pressure", "unavailable"]).optional()
+    reason: _enum(["line", "capacity", "pressure", "unavailable"]).optional(),
+    /** First in line and waiting for room: what the line had to give when it last compared. */
+    free: object({
+      cpu: number().finite().nonnegative(),
+      memoryBytes: number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+    }).optional()
   });
   const loadSnapshotSchema = object({ runs: array(loadRunSchema) });
   const computerLoadReadingSchema = loadSnapshotSchema.extend({

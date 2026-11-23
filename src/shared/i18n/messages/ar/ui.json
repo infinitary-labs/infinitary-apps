@@ -121,6 +121,15 @@
   "uiTaskFactsSkipped": "متخطّى",
   "uiTaskFactsTask": "المهمة",
   "uiTaskResourceRun": "التشغيل",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "zero": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت",
+    "one": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت",
+    "two": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت",
+    "few": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت",
+    "many": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت",
+    "other": "الأول في الدور · المتاح: {processors} معالج و{memory} غيغابايت"
+  },
   "uiTaskResourceRunUnavailable": "حالة التشغيل غير متاحة على {computer}",
   "uiTaskResourceUse": "الاستهلاك",
   "uiVoiceAbandon": "التخلي",

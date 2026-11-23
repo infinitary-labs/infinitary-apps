@@ -4190,6 +4190,7 @@ public enum PhoneMessages {
     public static func `uiTaskFactsSkipped`() -> String { PhoneWords.format("uiTaskFactsSkipped", []) }
     public static func `uiTaskFactsTask`() -> String { PhoneWords.format("uiTaskFactsTask", []) }
     public static func `uiTaskResourceRun`() -> String { PhoneWords.format("uiTaskResourceRun", []) }
+    public static func `uiTaskResourceRunFree`(`memory`: String, `processors`: Int) -> String { PhoneWords.format("uiTaskResourceRunFree", [`memory`, `processors`]) }
     public static func `uiTaskResourceRunUnavailable`(`computer`: String) -> String { PhoneWords.format("uiTaskResourceRunUnavailable", [`computer`]) }
     public static func `uiTaskResourceUse`() -> String { PhoneWords.format("uiTaskResourceUse", []) }
     public static func `uiVoiceAbandon`() -> String { PhoneWords.format("uiVoiceAbandon", []) }
@@ -8485,6 +8486,7 @@ extension PhoneWords {
         "uiTaskFactsSkipped": [],
         "uiTaskFactsTask": [],
         "uiTaskResourceRun": [],
+        "uiTaskResourceRunFree": ["memory", "processors"],
         "uiTaskResourceRunUnavailable": ["computer"],
         "uiTaskResourceUse": [],
         "uiVoiceAbandon": [],
@@ -8746,6 +8748,7 @@ extension PhoneWords {
         "uiTaskFactsFoldedDone": "count",
         "uiTaskFactsFoldedMore": "count",
         "uiTaskFactsPlanSkipped": "count",
+        "uiTaskResourceRunFree": "processors",
         "updateSourceAvailable": "count",
         "updateSourceStillAvailable": "count",
     ]

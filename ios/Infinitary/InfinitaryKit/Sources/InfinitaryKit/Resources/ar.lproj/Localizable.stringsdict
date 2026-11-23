@@ -3675,6 +3675,30 @@
       <string>· تم تخطي %1$ld</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+      <key>one</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+      <key>two</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+      <key>few</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+      <key>many</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+      <key>other</key>
+      <string>الأول في الدور · المتاح: %2$ld معالج و%1$@ غيغابايت</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

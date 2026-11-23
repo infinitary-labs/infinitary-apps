@@ -96274,6 +96274,101 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Run`;
   }
+  function uiTaskResourceRunFree(input2) {
+    const memory = input2.memory;
+    const processors = formatNumber(input2.processors);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.processors)) {
+          case "zero":
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+          case "one":
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+          case "two":
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+          case "few":
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+          case "many":
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+          default:
+            return `الأول في الدور · المتاح: ${processors} معالج و${memory} غيغابايت`;
+        }
+      case "de":
+        switch (pluralCategory(input2.processors)) {
+          case "one":
+            return `als Nächster an der Reihe · ${processors} Prozessor und ${memory} GB frei`;
+          default:
+            return `als Nächster an der Reihe · ${processors} Prozessoren und ${memory} GB frei`;
+        }
+      case "es":
+        switch (pluralCategory(input2.processors)) {
+          case "one":
+            return `primero en la fila · ${processors} procesador y ${memory} GB libres`;
+          case "many":
+            return `primero en la fila · ${processors} procesadores y ${memory} GB libres`;
+          default:
+            return `primero en la fila · ${processors} procesadores y ${memory} GB libres`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.processors)) {
+          case "one":
+            return `premier dans la file · ${processors} processeur et ${memory} Go libres`;
+          case "many":
+            return `premier dans la file · ${processors} processeurs et ${memory} Go libres`;
+          default:
+            return `premier dans la file · ${processors} processeurs et ${memory} Go libres`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.processors)) {
+          default:
+            return `次に実行 · 空き ${processors} プロセッサ・${memory} GB`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.processors)) {
+          default:
+            return `다음 차례 · 프로세서 ${processors}개와 ${memory}GB 여유`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.processors)) {
+          case "one":
+            return `primeiro da fila · ${processors} processador e ${memory} GB livres`;
+          case "many":
+            return `primeiro da fila · ${processors} processadores e ${memory} GB livres`;
+          default:
+            return `primeiro da fila · ${processors} processadores e ${memory} GB livres`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.processors)) {
+          default:
+            return `排在最前 · 空闲 ${processors} 个处理器和 ${memory} GB`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.processors)) {
+          default:
+            return `排在最前 · 閒置 ${processors} 個處理器和 ${memory} GB`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.processors, "en")) {
+          case "one":
+            return `[ƒîŕšţ îñ ļîñé · ${processors} þŕöçéššöŕ áñð ${memory} ĜƁ ƒŕéé ~~~~~~~~~~~~~]`;
+          default:
+            return `[ƒîŕšţ îñ ļîñé · ${processors} þŕöçéššöŕš áñð ${memory} ĜƁ ƒŕéé ~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.processors, "en")) {
+          case "one":
+            return `‮first in line · ‬${processors}‮ processor and ‬${memory}‮ GB free‬`;
+          default:
+            return `‮first in line · ‬${processors}‮ processors and ‬${memory}‮ GB free‬`;
+        }
+    }
+    switch (pluralCategory(input2.processors)) {
+      case "one":
+        return `first in line · ${processors} processor and ${memory} GB free`;
+      default:
+        return `first in line · ${processors} processors and ${memory} GB free`;
+    }
+  }
   function uiTaskResourceRunUnavailable(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -102381,6 +102476,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uiTaskFactsSkipped,
     uiTaskFactsTask,
     uiTaskResourceRun,
+    uiTaskResourceRunFree,
     uiTaskResourceRunUnavailable,
     uiTaskResourceUse,
     uiVoiceAbandon,
@@ -105592,6 +105688,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "uiTaskFactsSkipped": [],
     "uiTaskFactsTask": [],
     "uiTaskResourceRun": [],
+    "uiTaskResourceRunFree": ["memory", "processors"],
     "uiTaskResourceRunUnavailable": ["computer"],
     "uiTaskResourceUse": [],
     "uiVoiceAbandon": [],
@@ -118540,7 +118637,12 @@ ${startersHtml()}`;
     demand: loadDemandSchema,
     state: _enum(["waiting", "running"]),
     ahead: number().int().nonnegative(),
-    reason: _enum(["line", "capacity", "pressure", "unavailable"]).optional()
+    reason: _enum(["line", "capacity", "pressure", "unavailable"]).optional(),
+    /** First in line and waiting for room: what the line had to give when it last compared. */
+    free: object({
+      cpu: number().finite().nonnegative(),
+      memoryBytes: number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+    }).optional()
   });
   const loadSnapshotSchema = object({ runs: array(loadRunSchema) });
   const computerLoadReadingSchema = loadSnapshotSchema.extend({

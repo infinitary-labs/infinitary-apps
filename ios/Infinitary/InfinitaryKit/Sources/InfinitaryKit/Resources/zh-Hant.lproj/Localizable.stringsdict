@@ -2145,6 +2145,20 @@
       <string>· 略過 %1$ld 項</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>排在最前 · 閒置 %2$ld 個處理器和 %1$@ GB</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

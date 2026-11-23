@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { cpSync, mkdirSync, readFileSync, realpathSync, renameSync } from "node:fs";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
+import { loadSnapshotSchema } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
@@ -143,9 +144,13 @@ describe("the declared heavy-run line through its native command", () => {
         .poll(() => line.snapshot().runs.map((row) => [row.taskId, row.state, row.ahead]))
         .toEqual([
           ["first", "running", 0],
-          ["second", "waiting", 1],
+          ["second", "waiting", 0],
         ]);
       expect(second.output()).toBe("");
+      // INF-6381: the first in line tells its crewmate the room it waits for.
+      await expect.poll(second.errors).toMatch(/free:\n {2}processors: [\d.]+\n {2}memoryMiB: \d+/);
+      // A busy computer has none free; the home still reads the run (loadSnapshotSchema).
+      expect(loadSnapshotSchema.parse(line.snapshot())).toEqual(line.snapshot());
       line.observe({ ...reading, memory: { ...reading.memory, memoryPressure: "warning" } }, null);
       first.child.stdin.write("still running\n");
       await expect.poll(first.output).toContain("still running");
@@ -455,15 +460,11 @@ describe("the declared heavy-run line through its native command", () => {
     });
     channels.push(channel);
     const blockedShell = channel.grant("blocked", { load: line.forTask("blocked") });
-    const blocked = run(
-      blockedShell,
-      dir,
-      [process.execPath, "-e", "console.log('should not run')"],
-      {
-        processors: "4",
-        memoryMiB: String((reading.memory.totalBytes / 1024 ** 2) * 2),
-      },
-    );
+    const blocked = run(blockedShell, dir, [
+      process.execPath,
+      "-e",
+      "console.log('should not run')",
+    ]);
     let following: ReturnType<typeof run> | undefined;
     try {
       await expect.poll(() => line.snapshot().runs.map((run) => run.taskId)).toEqual(["blocked"]);
@@ -475,7 +476,9 @@ describe("the declared heavy-run line through its native command", () => {
       await expect.poll(() => line.snapshot().runs.length).toBe(2);
       expect(line.snapshot().runs.every((run) => run.reason === "unavailable")).toBe(true);
       expect(blocked.output() + following.output()).toBe("");
-      line.observe(reading, null);
+      // Re-typed for INF-6381 (captain approved): a front declaring more memory than the
+      // computer has is now refused, so a memory warning holds the front here instead.
+      line.observe({ ...reading, memory: { ...reading.memory, memoryPressure: "warning" } }, null);
       expect(line.snapshot().runs.map((run) => run.state)).toEqual(["waiting", "waiting"]);
       now = RESOURCE_MAX_AGE_MS + 1;
       channel.revoke("blocked");
@@ -495,6 +498,47 @@ describe("the declared heavy-run line through its native command", () => {
     } finally {
       channel.close();
       await Promise.all([blocked.ended, following?.ended]);
+    }
+  });
+
+  // INF-6381: a run asking more memory than the computer can ever give could never
+  // start and held every run behind it; its wrapper now ends at once, naming the most.
+  it("refuses at once a run too big for its computer, and the run behind it starts", async () => {
+    const dir = scratchDir("infinitary-load-too-big-");
+    const line = new LoadLine({ stateFile: join(dir, "load.json"), now: stillClock });
+    lines.push(line);
+    line.observe(reading, null);
+    const channel = await AxiChannel.open({
+      spawner: forkChildProcess(entry),
+      binDir: bin,
+      version: "9.9.9-test",
+      keysDir: join(dir, "keys"),
+    });
+    channels.push(channel);
+    const installedMiB = reading.memory.totalBytes / 1024 ** 2;
+    const tooBig = run(
+      channel.grant("too-big", { load: line.forTask("too-big") }),
+      dir,
+      [process.execPath, "-e", "console.log('should not run')"],
+      { processors: "1", memoryMiB: String(installedMiB) },
+    );
+    expect(await tooBig.ended).not.toBe(0);
+    expect(tooBig.output()).toBe("");
+    expect(tooBig.errors()).toContain(
+      `Declare at most ${Math.floor(installedMiB * 0.9)} MiB, its installed memory less the margin; nothing started.`,
+    );
+    const behind = run(channel.grant("behind", { load: line.forTask("behind") }), dir, [
+      process.execPath,
+      "-e",
+      "console.log('behind admitted')",
+    ]);
+    try {
+      expect(await behind.ended).toBe(0);
+      expect(behind.output()).toContain("behind admitted");
+      console.info("Too-big refusal proof", JSON.stringify({ refused: tooBig.errors() }));
+    } finally {
+      channel.close();
+      await behind.ended;
     }
   });
 

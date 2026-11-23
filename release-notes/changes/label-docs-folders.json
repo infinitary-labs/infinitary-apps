@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "label-docs-folders",
+      "reason": "Internal: docs/README.md and docs-site/README.md each say what their folder is and point to the other; nothing a person using the app sees changes."
+    }
+  ]
+}

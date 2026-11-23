@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "public-ci-open-pull-requests",
+      "reason": "Documentation update: the public project now takes pull requests from everyone; no change to the app."
+    }
+  ]
+}

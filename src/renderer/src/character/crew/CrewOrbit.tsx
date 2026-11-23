@@ -391,6 +391,7 @@ export function CrewOrbit({
   const { shown, leaving } = useSummaryPresence(inspecting);
   const summary = shown !== null ? (facts?.[shown] ?? null) : null;
   const layerRef = useRef<HTMLDivElement>(null);
+  const summaryStageRef = useRef<HTMLDivElement>(null);
   // React keeps one portal target, so moving its owned container never
   // remounts CrewSummary or drops its record, project or relationship facts.
   const [summaryHost] = useState(() => {
@@ -652,7 +653,7 @@ export function CrewOrbit({
   useLayoutEffect(() => {
     const parent = aboveRails
       ? document.querySelector("[data-summary-overlay-root]")
-      : wrapRef.current;
+      : summaryStageRef.current;
     if (summaryHost && parent && summaryHost.parentNode !== parent) parent.appendChild(summaryHost);
     aboveRailsRef.current = aboveRails;
     const panel = panelRef.current;
@@ -1357,7 +1358,9 @@ export function CrewOrbit({
           </div>
         </div>
       )}
-      {/* Outside the fitted formation, so the summary's type is never scaled. */}
+      {/* A permanent last slot keeps the summary above later-mounted stage
+          controls, outside the fitted formation so its type is never scaled. */}
+      <div ref={summaryStageRef} style={{ display: "contents" }} />
       {summaryLayer && summaryHost ? createPortal(summaryLayer, summaryHost) : null}
     </div>
   );

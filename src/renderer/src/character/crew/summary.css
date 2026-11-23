@@ -1,8 +1,9 @@
 /* The crewmate summary (FI3-398; laid out again in FI3-427 and FI3-439):
    one instrument-style panel beside the crewmate the pointer is on. It sits
-   in a layer whose origin is the formation's centre and which is not scaled
-   with the crowded formation, so its type stays at size. The status, the
-   task title, the project and the tags wrap in full. The other facts stay
+   normally in a layer whose origin is the formation's centre, or in the
+   window-wide layer when no clear place remains beside the rails. Neither
+   layer scales with the crowded formation, so its type stays at size. The
+   status, task title, project and tags wrap in full. The other facts stay
    one line, and a longer one ends in an ellipsis; the footnote under the
    model may take a second line. Read-only, so it never takes the pointer. */
 .fm-crew-summary-layer {
@@ -13,9 +14,9 @@
   height: 0;
   pointer-events: none;
 }
-/* A Tasks row's summary (FI3-565 piece 3): the same panel and hairline, in
-   a window-wide layer above the rails and the cards, placed in window
-   coordinates beside the row. */
+/* Tasks-row and task-key summaries (FI3-565 piece 3), and a crewmate summary
+   when no clear place remains: the same panel and hairline in a window-wide
+   layer above the rails and the cards, placed in window coordinates. */
 .fm-row-summary-layer {
   position: fixed;
   inset: 0;

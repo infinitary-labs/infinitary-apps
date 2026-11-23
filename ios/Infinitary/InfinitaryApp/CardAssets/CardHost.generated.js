@@ -121604,7 +121604,7 @@ ${startersHtml()}`;
      */
     signIn: literal(true).optional()
   });
-  const SAVED_SIGN_INS_PER_BROWSER = 8;
+  const SAVED_SIGN_INS_PER_TASK = 8;
   const offeredSignInSchema = object({
     site: string(),
     savedAt: number(),
@@ -121666,7 +121666,7 @@ ${startersHtml()}`;
        * one whose rule lets tasks use it without asking, or one the captain
        * signed in to as he held it. Absent while it may use none.
        */
-      saved: array(string()).min(1).max(SAVED_SIGN_INS_PER_BROWSER).optional(),
+      saved: array(string()).min(1).max(SAVED_SIGN_INS_PER_TASK).optional(),
       /**
        * Its pages run in the computer's kept profile, where the captain's
        * sign-ins stay (docs/task-browser.md, "Signed-in sites"); absent while

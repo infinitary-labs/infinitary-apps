@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-sign-ins-remembered",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A website sign-in you made once keeps later tasks signed in",
+      "body": "A sign-in you make in a task's browser now covers the whole site, so a later task on its sign-in page or on another page of the same site finds it. A task keeps the sign-ins it may use when its browser stops or the app restarts, until you stop its browser or the task closes. When you hand the browser back, Use it without asking is now picked for a new site, so later tasks there are signed in without a card. Crewmates also mark a request to create an account as a sign-in, so that sign-in stays too.",
+      "picture": {
+        "dark": "task-browser-sign-ins-remembered-dark.webp",
+        "light": "task-browser-sign-ins-remembered-light.webp",
+        "alt": "A task browser under your control, with Use it without asking picked for later tasks as you return control"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

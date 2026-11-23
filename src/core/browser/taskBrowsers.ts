@@ -4,7 +4,7 @@ import { listsPrivateSite } from "@shared/privateSites";
 import {
   FRESH_LOOK_WORDS,
   type OfferedSignIn,
-  SAVED_SIGN_INS_PER_BROWSER,
+  SAVED_SIGN_INS_PER_TASK,
   type SavedSignIn,
   TASK_BROWSER_PAGE,
   TASK_BROWSER_PAGES_MAX,
@@ -77,7 +77,7 @@ import type {
   ProjectPage,
   TaskBrowsersOptions,
 } from "./taskBrowserOptions";
-import { signInSite } from "./webSignIns";
+import { type SignedInSite, signInSite } from "./webSignIns";
 
 export type {
   BrowserFrameSink,
@@ -202,6 +202,13 @@ export class TaskBrowsers {
     string,
     Pick<ProjectServer, "folder" | "origin"> & { captains?: true }
   >();
+  /**
+   * The signed-in sites each task may use, site to entry id, kept from its
+   * last browser's stop until the captain's Stop browser or the task's close
+   * (docs/task-browser.md, "Signed-in sites"): its next browser starts with
+   * those whose entry this computer still keeps.
+   */
+  private readonly allowed = new Map<string, Map<string, string>>();
   /** The tasks whose kept page this run has read, or no longer needs to. */
   private readonly restored = new Set<string>();
   /**
@@ -359,7 +366,7 @@ export class TaskBrowsers {
       ...(browser.returns > 0 ? { returned: true as const } : {}),
       ...(browser.captains ? { own: true as const } : {}),
       ...(browser.saved.size > 0
-        ? { saved: [...browser.saved.keys()].slice(-SAVED_SIGN_INS_PER_BROWSER) }
+        ? { saved: [...browser.saved.keys()].slice(-SAVED_SIGN_INS_PER_TASK) }
         : {}),
       ...(browser.kept ? { kept: true as const } : {}),
       ...this.grants.ruleOf(browser),
@@ -1136,6 +1143,7 @@ export class TaskBrowsers {
     // A closed task's build is not brought back: nothing is kept for it.
     this.restored.add(taskId);
     this.options.kept?.remove(taskId);
+    this.allowed.delete(taskId);
     this.outages.delete(taskId);
     this.stopped.delete(taskId);
   }
@@ -1163,6 +1171,7 @@ export class TaskBrowsers {
             generation: browser.generation,
           },
           ...(browser.server ? { served: this.servedOf(browser) } : {}),
+          ...(browser.saved.size > 0 ? { saved: Object.fromEntries(browser.saved) } : {}),
         });
       }
       this.stop(taskId);
@@ -1183,6 +1192,7 @@ export class TaskBrowsers {
     opened: string,
     options: { captains?: boolean; kept?: boolean } = {},
   ): Promise<Browser | undefined> {
+    const saved = this.allowanceOf(taskId);
     const first = this.newEntry(taskId);
     const browser: Browser = {
       pages: [first],
@@ -1199,7 +1209,7 @@ export class TaskBrowsers {
       // His own from the start, before anything hears it opened.
       control: options.captains ? "captain" : "crewmate",
       returns: 0,
-      saved: new Map(),
+      saved,
       ...(options.captains ? { captains: true as const } : {}),
     };
     const notices = browser.notices;
@@ -1595,6 +1605,10 @@ export class TaskBrowsers {
     if (!browser) return;
     const fact = why ? this.fact(taskId) : undefined;
     this.browsers.delete(taskId);
+    // The captain's Stop browser and the task's close end what it may use; any other stop keeps it.
+    if (why === "captain" || why === "task-closed" || browser.saved.size === 0) {
+      this.allowed.delete(taskId);
+    } else this.allowed.set(taskId, new Map(browser.saved));
     // A build the host started stops with its browser, after a running turn; a crewmate's own never does.
     this.options.starts?.stopWithBrowser(taskId);
     browser.cancelIdle?.();
@@ -1630,7 +1644,12 @@ export class TaskBrowsers {
       if (why === "task-closed") this.options.kept?.remove(taskId);
       else {
         const served = this.endedServers.get(taskId);
-        this.options.kept?.write(taskId, { fact: ended, ...(served ? { served } : {}) });
+        const saved = this.allowed.get(taskId);
+        this.options.kept?.write(taskId, {
+          fact: ended,
+          ...(served ? { served } : {}),
+          ...(saved ? { saved: Object.fromEntries(saved) } : {}),
+        });
       }
       this.options.onChange?.(taskId);
     }
@@ -1661,7 +1680,32 @@ export class TaskBrowsers {
     if (!page || page.fact.stopped === "task-closed") return undefined;
     this.ended.set(taskId, page.fact);
     if (page.served) this.endedServers.set(taskId, page.served);
+    if (page.saved) this.allowed.set(taskId, new Map(Object.entries(page.saved)));
     return page.fact;
+  }
+
+  /**
+   * The signed-in sites a task's new browser may use: those its last one
+   * could, whose entry this computer still keeps by its id - a removed one
+   * is gone - by the site the entry names now.
+   */
+  private allowanceOf(taskId: string): Map<string, string> {
+    if (!this.restored.has(taskId)) this.endedOf(taskId);
+    const allowed = this.allowed.get(taskId);
+    if (!allowed?.size) return new Map();
+    let records: SignedInSite[];
+    try {
+      records = this.options.signIns?.records() ?? [];
+    } catch {
+      return new Map();
+    }
+    const ids = new Set(allowed.values());
+    return new Map(
+      records
+        .filter((record) => ids.has(record.id))
+        .map((record) => [record.site, record.id] as const)
+        .slice(-SAVED_SIGN_INS_PER_TASK),
+    );
   }
 
   /** The address a browser's current page is on, its last one while it shows an error page. */

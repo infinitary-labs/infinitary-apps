@@ -102,8 +102,8 @@ export const taskBrowserRequestSchema = z.object({
 });
 export type TaskBrowserRequest = z.infer<typeof taskBrowserRequestSchema>;
 
-/** The most signed-in sites one browser is allowed at once: one per site it was granted or signed in to. */
-export const SAVED_SIGN_INS_PER_BROWSER = 8;
+/** The most signed-in sites one task is allowed at once: one per site it was granted or signed in to. */
+export const SAVED_SIGN_INS_PER_TASK = 8;
 
 /**
  * The signed-in site a request card may offer: its site, when the captain
@@ -245,7 +245,7 @@ export const taskBrowserFactSchema = z.discriminatedUnion("state", [
      * one whose rule lets tasks use it without asking, or one the captain
      * signed in to as he held it. Absent while it may use none.
      */
-    saved: z.array(z.string()).min(1).max(SAVED_SIGN_INS_PER_BROWSER).optional(),
+    saved: z.array(z.string()).min(1).max(SAVED_SIGN_INS_PER_TASK).optional(),
     /**
      * Its pages run in the computer's kept profile, where the captain's
      * sign-ins stay (docs/task-browser.md, "Signed-in sites"); absent while

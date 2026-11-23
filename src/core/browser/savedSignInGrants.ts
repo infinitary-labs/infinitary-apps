@@ -2,7 +2,7 @@ import { HERE } from "@shared/deviceNames";
 import {
   type OfferedSignIn,
   SAVED_SIGN_IN_FAILED_WORDS,
-  SAVED_SIGN_INS_PER_BROWSER,
+  SAVED_SIGN_INS_PER_TASK,
   type SavedSignIn,
   type TaskBrowserCommandResult,
   type TaskBrowserFact,
@@ -22,6 +22,7 @@ import {
   cookiesOfSite,
   type SignedInSite,
   sameSignInSite,
+  signedInSiteOf,
   signInSite,
   siteOrigins,
   type WebSignIns,
@@ -34,7 +35,7 @@ import {
  */
 export type SignInStore = Pick<
   WebSignIns,
-  "list" | "records" | "get" | "record" | "remove" | "markFailed" | "allowAutomatic"
+  "list" | "records" | "get" | "find" | "record" | "remove" | "markFailed" | "allowAutomatic"
 >;
 
 /** Whether an address is a web page's, whose site an allowance names. */
@@ -89,15 +90,10 @@ export class SavedSignInGrants {
    */
   offerOf(browser: Browser): { offer?: OfferedSignIn } {
     if (browser.captains) return {};
-    const site = signInSite(siteOf(addressOf(browser, browser.current)));
-    if (!isWebAddress(addressOf(browser, browser.current)) || browser.saved.has(site)) return {};
-    let record: SignedInSite | undefined;
-    try {
-      record = this.core.options.signIns?.get(site);
-    } catch {
-      return {};
-    }
-    if (!record) return {};
+    const address = addressOf(browser, browser.current);
+    if (!isWebAddress(address)) return {};
+    const record = this.find(browser, siteOf(address));
+    if (!record || [...browser.saved.values()].includes(record.id)) return {};
     return {
       offer: {
         site: record.site,
@@ -117,13 +113,21 @@ export class SavedSignInGrants {
     if (!browser.kept || browser.control !== "captain") return {};
     const address = addressOf(browser, browser.current);
     if (!isWebAddress(address)) return {};
-    let record: SignedInSite | undefined;
-    try {
-      record = this.core.options.signIns?.get(signInSite(siteOf(address)));
-    } catch {
-      return {};
-    }
+    const record = this.find(browser, siteOf(address));
     return record ? { rule: record.automatic ? "automatic" : "ask" } : {};
+  }
+
+  /**
+   * The entry a page at `site` may be signed in by (`WebSignIns.find`), the
+   * one covering the browser's first address first; nothing when this
+   * computer keeps none or its list cannot be read.
+   */
+  private find(browser: Browser, site: string): SignedInSite | undefined {
+    try {
+      return this.core.options.signIns?.find(site, siteOf(browser.firstUrl));
+    } catch {
+      return undefined;
+    }
   }
 
   offerFor(taskId: string, site: string): OfferedSignIn | undefined {
@@ -143,9 +147,11 @@ export class SavedSignInGrants {
    */
   markFailed(taskId: string, site: string): boolean {
     const key = siteNamed(site);
-    const id = this.core.browsers.get(taskId)?.saved.get(key);
+    const saved = [...(this.core.browsers.get(taskId)?.saved ?? [])];
+    const id = saved.find(([allowed]) => sameSignInSite(allowed, key))?.[1];
     const store = this.core.options.signIns;
-    if (!id || !store?.markFailed(key, id)) return false;
+    const record = id ? store?.records().find((one) => one.id === id) : undefined;
+    if (!id || !record || !store?.markFailed(record.site, id)) return false;
     this.core.options.note?.(taskId, failedSignInNote(key));
     return true;
   }
@@ -198,19 +204,15 @@ export class SavedSignInGrants {
     if (!isWebAddress(url) || browser.captains) return undefined;
     const site = signInSite(siteOf(url));
     if ([...browser.saved.keys()].some((allowed) => sameSignInSite(allowed, site))) {
+      browser.passed = new Set([...(browser.passed ?? []), ...this.viaOf(browser)]);
       return this.move(taskId, browser, true, url);
     }
-    if (browser.saved.size >= SAVED_SIGN_INS_PER_BROWSER || browser.automaticTried?.has(site)) {
+    if (browser.saved.size >= SAVED_SIGN_INS_PER_TASK || browser.automaticTried?.has(site)) {
       return undefined;
     }
     browser.automaticTried ??= new Set();
     browser.automaticTried.add(site);
-    let record: SignedInSite | undefined;
-    try {
-      record = this.core.options.signIns?.get(site);
-    } catch {
-      return undefined;
-    }
+    const record = this.find(browser, site);
     if (!record?.automatic) return undefined;
     browser.saved.set(record.site, record.id);
     browser.passed = new Set(record.via ?? []);
@@ -227,6 +229,18 @@ export class SavedSignInGrants {
     );
     this.core.options.onChange?.(taskId);
     return outcome;
+  }
+
+  /** The sign-in pages the entries a browser was given passed through, which its pages may open beside them. */
+  private viaOf(browser: Browser): string[] {
+    let records: SignedInSite[];
+    try {
+      records = this.core.options.signIns?.records() ?? [];
+    } catch {
+      return [];
+    }
+    const ids = new Set(browser.saved.values());
+    return records.filter((record) => ids.has(record.id)).flatMap((record) => record.via ?? []);
   }
 
   /** The captain's rule for a signed-in site, bound to the entry Settings showed. */
@@ -260,17 +274,20 @@ export class SavedSignInGrants {
   async keep(browser: Browser, shownSite: string, automatic: boolean): Promise<string | undefined> {
     const store = this.core.options.signIns;
     if (!store) return "Control returned, but this computer keeps no sign-ins.";
-    const site = signInSite(siteOf(addressOf(browser, browser.current)));
-    if (site !== signInSite(shownSite))
+    const pageSite = signInSite(siteOf(addressOf(browser, browser.current)));
+    if (pageSite !== signInSite(shownSite))
       return "Control returned, but the page changed sites. Its sign-in was not added to the list.";
     try {
       const page = browser.current.page;
-      const cookies = cookiesOfSite(await page.cookies.all(), site);
+      const cookies = cookiesOfSite(await page.cookies.all(), pageSite);
       const storage = await page.storage.read().catch(() => undefined);
       if (cookies.length === 0 && (storage?.items.length ?? 0) === 0) {
         return "Control returned. This site holds no sign-in, so nothing was added for later tasks.";
       }
-      const via = [...(browser.passed ?? [])].filter((passed) => !sameSignInSite(passed, site));
+      // Kept for the whole site its cookies cover; the page's own name stays
+      // among the pages passed through, so Remove clears its page storage too.
+      const site = signedInSiteOf(pageSite, cookies);
+      const via = [...(browser.passed ?? []), pageSite].filter((one) => signInSite(one) !== site);
       const record = store.record(site, { automatic, via });
       browser.saved.set(record.site, record.id);
       return undefined;
@@ -300,7 +317,7 @@ export class SavedSignInGrants {
       }
       const address = addressOf(browser, browser.current);
       const site = siteOf(address);
-      const record = this.core.options.signIns?.get(site);
+      const record = this.find(browser, site);
       if (!record) return { ok: false, text: `No sign-in for ${site} is kept on ${HERE.this}.` };
       const request = browser.request;
       const after = request?.after;
@@ -350,7 +367,11 @@ export class SavedSignInGrants {
     const key = signInSite(site);
     const store = this.core.options.signIns;
     const removed = store?.remove(key);
-    const using = [...this.core.browsers].filter(([, browser]) => browser.saved.has(key));
+    // By id too: a browser may hold an entry by a narrower name it had before it folded into this one.
+    const using = [...this.core.browsers].filter(
+      ([, browser]) =>
+        browser.saved.has(key) || (removed && [...browser.saved.values()].includes(removed.id)),
+    );
     if (!removed && using.length === 0) {
       return { ok: false, text: `${HERE.This} keeps no sign-in for ${key}.` };
     }
@@ -370,7 +391,9 @@ export class SavedSignInGrants {
       };
     }
     for (const [taskId, browser] of using) {
-      browser.saved.delete(key);
+      for (const [site, id] of browser.saved) {
+        if (site === key || id === removed?.id) browser.saved.delete(site);
+      }
       if (this.core.browsers.get(taskId) !== browser) continue;
       const notices = browser.notices;
       notices.notice = `${notices.notice ? `${notices.notice} ` : ""}The captain removed the sign-in kept for ${key} from ${HERE.this}, so this browser is no longer signed in there. Reload the page to see it signed out, and ask on a card if the task still needs that site.`;

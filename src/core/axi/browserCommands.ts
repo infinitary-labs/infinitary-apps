@@ -543,7 +543,7 @@ export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   ),
   stop: command(
     "stop",
-    "Stop this task's browser: its pages, history and site data are gone. A request waiting for the captain is withdrawn.",
+    "Stop this task's browser: its pages, history and site data are gone, while the captain's sign-ins this task may use stay for its next browser. A request waiting for the captain is withdrawn.",
     async (args, browser) => {
       none(args, "stop", "stop");
       return ask(browser, "stop", "close", {}, []);

@@ -621,15 +621,18 @@ Each installed engine keeps its profile under the app’s data, `task-browser-ch
 Every browser opened in the kept profile shares it, and one kept connection guard serves it, so a page there may go only where some browser in it may go ("Where a page may go").
 
 **Signing in.**
-A crewmate that asks the captain to sign in marks its request with `emit_card`'s top-level `browser_sign_in` true, beside `browser_handoff` ("Asking for help").
+A crewmate that asks the captain to sign in, or to create an account, marks its request with `emit_card`'s top-level `browser_sign_in` true, beside `browser_handoff` ("Asking for help").
 The captain's click takes the browser and reopens its page at the same address in the kept profile (`TaskBrowsers.takeControl`, `SavedSignInGrants.openForSignIn`), so what the captain signs in to stays.
 A request without it, such as a payment review, leaves the page where it is, and the captain's sign-in there goes with the browser.
 While the captain signs in, each site the page passes through, such as a separate sign-in service, is noted on the browser (`passed`).
 
 **The rule.**
-Returning control from the kept profile asks one question above the page, `Your <site> sign-in stays on <computer>. Later tasks:`, with two choices: `Ask me each time`, which leads, and `Use it without asking` (`signInRuleLegend`, `ASK_EACH_TIME_LABEL`, `USE_WITHOUT_ASKING_LABEL`).
+Returning control from the kept profile asks one question above the page, `Your <site> sign-in stays on <computer>. Later tasks:`, with two choices: `Use it without asking`, which leads and is picked for a site not yet listed, as the captain chose, and `Ask me each time` (`signInRuleLegend`, `ASK_EACH_TIME_LABEL`, `USE_WITHOUT_ASKING_LABEL`).
 A site the computer the browser runs on already lists starts at its rule there, which the browser's fact carries (`rule`), with Manage beside it.
-Return control sends the displayed site and the rule (`inf:browser:return` with `site` and `automatic`); the core checks the site again, and when the site's cookies and its own origins' page storage hold something, it lists the site with that rule and the pages passed through, and the browser may use it from then on (`SavedSignInGrants.keep`).
+Return control sends the displayed site and the rule (`inf:browser:return` with `site` and `automatic`); the core checks the site again, and when the site's cookies and its own origins' page storage hold something, it lists the sign-in with that rule and the pages passed through, and the browser may use it from then on (`SavedSignInGrants.keep`).
+The entry is the whole site the sign-in's cookies cover: the widest name among the cookies the page's parent shares with every name under it, such as `apple.com` for a sign-in made at `idmsa.apple.com`, otherwise the page's own host and port (`signedInSiteOf`).
+The engine never accepts a cookie on a public suffix, so this stops at the registrable domain, as a browser groups one site; the page signed in at stays among the pages passed through.
+An entry for a name under the new one, kept before by a page's exact name, folds into it with its id and pages, so a task allowed it keeps its allowance.
 A site that holds nothing is not listed, and the answer says so.
 
 **Where the list lives.**
@@ -637,14 +640,25 @@ A site that holds nothing is not listed, and the answer says so.
 It holds no cookie and no page storage.
 A file from before, a copy of a site's cookies and page storage (version 1), retires: the list deletes it unread the first time it meets it, and Settings never shows it.
 `TaskBrowsers` is its only caller, and each computer keeps its own.
+One lookup finds the entry for a page (`WebSignIns.find`): one whose site is the page's or a name above it, or whose pages passed through hold the page's site, the one also covering the browser's first address first, then the newest.
+The offer, the grant, the Return control rule and a use by the rule all read it, so a later task stopped on a sign-in page or a sibling page of a kept site finds it.
 
 **What a task may open there.**
 A browser in the kept profile may open only the sites it was allowed and the sign-in pages passed through on the way to them (`SavedSignInGrants.allows`); a site is one with a name under it or above it, whatever the port.
 The crewmate's own open of any other site, a link, a redirect or a second page that leaves for one, reopens in an empty context of its own, signed out, and the crewmate's next answer says so (`keptMayOpen`, `openIn`).
 A browser that was allowed nothing never opens the kept profile.
 
+**What a task keeps.**
+What a task was allowed - by a grant, by a use under the rule, or by the captain's own sign-in on its browser - belongs to the task, not to one browser.
+Its browser's stop by the crewmate, the stop after half an hour unused, a page that stopped working and the app's quit keep it, in memory and in the task's owner-only `browser.json` beside its kept page (`KeptPages`, `saved`: site to entry id), and the task's next browser starts with it (`TaskBrowsers.allowanceOf`).
+Each entry must still be on the list by its id when that browser starts, so Remove or Remove all ends it.
+The captain's Stop browser and the task's close drop it.
+A task holds at most `SAVED_SIGN_INS_PER_TASK` sites.
+A task's own empty context still ends at every stop, since the engine keeps it only in memory.
+
 **A later task.**
 When a crewmate asks for help on a site the computer lists and its browser may not use it yet, its fact carries the offer (`offer`), and the host adds `Use my <site> sign-in` to the request card as its default, last in the row, and relabels the crewmate's open-browser action `Sign in myself` (`CardBrowserActions.withSavedSignIn`, `offeredSignIn`).
+The offer reads the entry `WebSignIns.find` names, so a page on a sign-in page or a sibling of a kept site is offered it too.
 The crewmate never learns which sites are listed, and only the host adds that action: its effect is `{ kind: "open", target: "browser", savedSignIn: true }`, which the crewmate's tool cannot declare and the supervisor refuses from any other author.
 The host adds it after the card lint, so the 2 or 3 actions a decision gives are counted over the crewmate's own (`docs/card-authoring.md`, "The shape lint").
 The captain's click is the grant: `SavedSignInGrants.grant` lets the browser the card names use that one site, reopens its page at its address in the kept profile, signed in, hands the browser back to its crewmate - refusing every older ref, as a return does - and writes one line on the task's timeline, `you let it use your sign-in at <site>`.

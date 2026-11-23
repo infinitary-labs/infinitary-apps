@@ -742,9 +742,10 @@ export function TaskBrowserView({
   const kept = fact?.state === "open" && fact.kept === true;
   const currentKey = `${fact?.session}:${fact?.generation}:${currentSite}`;
   // The site's rule on the computer the browser runs on, which its fact
-  // carries: Ask me each time leads unless that entry uses it without asking.
+  // carries: a listed site keeps its rule, and a new one starts at Use it
+  // without asking, the captain's chosen default (docs/task-browser.md, "Signed-in sites").
   const listed = fact?.state === "open" ? fact.rule : undefined;
-  const automatic = ruleFor?.key === currentKey ? ruleFor.automatic : listed === "automatic";
+  const automatic = ruleFor?.key === currentKey ? ruleFor.automatic : listed !== "ask";
   // The record keeps the card the view came from, so Hide on it returns there too.
   const openRecord = () =>
     useShellStore.getState().openRecord(taskId, from ? { cardId: from.cardId } : undefined);
@@ -1296,8 +1297,8 @@ export function TaskBrowserView({
                   </legend>
                   {(
                     [
-                      [false, ASK_EACH_TIME_LABEL],
                       [true, USE_WITHOUT_ASKING_LABEL],
+                      [false, ASK_EACH_TIME_LABEL],
                     ] as const
                   ).map(([value, label]) => (
                     <label

@@ -249,17 +249,22 @@ test("a sign-in kept in this computer's profile signs in a later task on the cap
       const rule = question.getByRole("group", { name: signInRuleLegend(site) });
       const ask = rule.getByRole("radio", { name: ASK_EACH_TIME_LABEL });
       const automatic = rule.getByRole("radio", { name: USE_WITHOUT_ASKING_LABEL });
-      await expect(ask).toBeChecked();
-      await expect(automatic).not.toBeChecked();
+      // A site not yet listed starts at Use it without asking, the captain's chosen default.
+      await expect(automatic).toBeChecked();
+      await expect(ask).not.toBeChecked();
       if (evidence) {
         await setThemeViaSettings(page, "light");
-        await expect(ask).toBeChecked();
+        await expect(automatic).toBeChecked();
         await shoot(view(page, a.id), "view-return-rule-light.png");
         await setThemeViaSettings(page, "dark");
         // The release note's hero pair: the rule asked as control comes back.
-        await heroShot(app, page, { region: view(page, a.id), name: "task-browser-kept-sign-ins" });
+        await heroShot(app, page, {
+          region: view(page, a.id),
+          name: "task-browser-sign-ins-remembered",
+        });
       }
       await shoot(view(page, a.id), "view-return-rule-dark.png");
+      await ask.check();
       expect(savedSignInFiles()).toEqual([]);
       await view(page, a.id)
         .getByRole("button", { name: RETURN_CONTROL_LABEL, exact: true })

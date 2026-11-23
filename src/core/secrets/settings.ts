@@ -73,6 +73,7 @@ export type SecretsSettingsOptions = {
   unlock?: () => Promise<boolean>;
   recovery?: HostSecretsRecovery;
   raise: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => void;
+  openCard?: (id: string) => Pick<Card, "actions"> | undefined;
   withdraw: (id: string, reason: string) => void;
   changed: () => void;
   /** A waiting requester hears the terminal receipt through the existing task inbox, never values. */
@@ -448,9 +449,21 @@ export class SecretsSettings {
         if (owner.protected.availability !== "available") this.owner = undefined;
         this.message = null;
         break;
-      case "review-use":
-        await this.offerUse(owner, action.request);
+      case "review-use": {
+        const group = `use-${action.request}`;
+        const id = `card-secrets-${group}`;
+        const card = this.options.openCard?.(id);
+        if (
+          owner.requests.pending(action.request) &&
+          card?.actions.length &&
+          card.actions.every(({ id: pass }) => this.offers.get(pass)?.group === group)
+        ) {
+          this.offeredCard = id;
+        } else if (!this.deciding.has(group)) {
+          await this.offerUse(owner, action.request);
+        }
         break;
+      }
       case "cancel-use":
         await owner.requests.cancel(action.request);
         break;

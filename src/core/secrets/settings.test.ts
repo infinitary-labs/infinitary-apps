@@ -114,6 +114,7 @@ function fixture() {
       raise: (card) => {
         cards.push(card);
       },
+      openCard: (id) => cards.findLast((card) => card.id === id),
       withdraw: (id) => {
         withdrawn.push(id);
       },
@@ -788,6 +789,26 @@ describe("trusted Secrets settings", () => {
     await f.settings.action({ kind: "save-rules", rules: [] });
     await f.answer(SAVED_DECISION_WORDS.removeConfirm);
     expect(owner.authority()?.rules).toEqual([]);
+  });
+
+  it("reopens the waiting use from Settings without invalidating its live buttons", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    const receipt = await f.request("review-waiting-use");
+    expect(receipt.state).toBe("waiting");
+    const offer = f.cards.at(-1);
+    expect(offer).toBeDefined();
+    for (let review = 0; review < 2; review++) {
+      const view = await f.settings.action({ kind: "review-use", request: receipt.request });
+      expect(view.offeredCard).toBe(offer?.id);
+      expect(f.cards.at(-1)?.actions).toEqual(offer?.actions);
+    }
+    expect(f.confirms()).toBe(0);
+    expect(f.sent).toEqual([]);
+    await Promise.all([f.click(SECRETS_WORDS.once, offer), f.click(SECRETS_WORDS.once, offer)]);
+    expect(f.confirms()).toBe(1);
+    expect(f.sent).toEqual([`Bearer ${TOKEN}`]);
+    expect((await f.settings.view()).uses[0]?.state).toBe("completed");
   });
 
   it("only the exact host offer plus fresh confirmation sends a brokered request, with no raw result in views", async () => {

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-top-bar",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card on your iPhone keeps only its top line in place",
+      "body": "On an iPhone or iPad, only a card's top line, with its kind, task and minimize button, now stays in place; the title and the rest of the head scroll away with the body, so the body gets the room and the choices can always be reached. The minimize button sits on the same line as the words beside it.",
+      "picture": {
+        "dark": "phone-card-top-bar-dark.webp",
+        "light": "phone-card-top-bar-light.webp",
+        "alt": "A decision card on an iPhone: its kind, task and computer share one line with the minimize button, above the model, title and revised line"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

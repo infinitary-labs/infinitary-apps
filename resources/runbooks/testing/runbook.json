@@ -2,19 +2,32 @@
   "id": "testing",
   "name": "Testing rules",
   "description": "Testing guidance for planning and code changes on a project.",
-  "crew": {
-    "file": "crew.md",
-    "when": {
-      "kind": [
-        "plan",
-        "reproduce",
-        "implement",
-        "fix",
-        "chore"
-      ],
-      "place": [
-        "project"
-      ]
+  "crew": [
+    {
+      "file": "crew.md",
+      "when": {
+        "kind": [
+          "plan",
+          "reproduce",
+          "implement",
+          "fix",
+          "chore"
+        ],
+        "place": [
+          "project"
+        ]
+      }
+    },
+    {
+      "file": "review.md",
+      "when": {
+        "kind": [
+          "review"
+        ],
+        "place": [
+          "project"
+        ]
+      }
     }
-  }
+  ]
 }

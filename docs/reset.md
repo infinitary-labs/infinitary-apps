@@ -5,7 +5,7 @@ Purge task data, the row above it, removes tasks alone and keeps projects, sign-
 
 ## The row
 
-The row is the window's own and never a view's: a window that controls another computer's first mate does not show it, and `inf:app:reset` refuses there (`Shell.resettable`).
+The row resets the computer whose window shows it, and on a computer that controls another's first mate it resets both ("From a computer that controls the first mate").
 Pressing Reset turns the row into its question, as Secrets' Forget does: what it deletes, how many open tasks stop (`inf:app:reset-scope`), and that projects in the person's own folders keep every file and commit, with Purge task data named for clearing tasks only.
 Keep everything has focus, so Enter never resets; it changes nothing and gives focus back to Reset.
 The danger button, Reset Infinitary, asks the system's own confirmation of the person at this computer, the one Secrets uses: Touch ID or the account password on a Mac, Windows Hello, or the Linux system prompt.
@@ -13,7 +13,49 @@ Cancelling it, or a confirmation that fails, changes nothing and gives focus bac
 Once confirmed, the app quits and starts again.
 
 No agent can start a reset.
-`inf:app:reset` is a host channel only the window's page reaches, and the first mate's side, `inf:app:reset-prepare`, is a program-only channel (`PROGRAM_ONLY_CHANNELS`) that neither the page nor `infinitary-axi` reaches; both are destructive exceptions in the app actions coverage (`src/shared/actionCoverage.ts`).
+`inf:app:reset` is a host channel only the window's page reaches, and the first mate's side, `inf:app:reset-prepare`, and a controlling computer's ask, `inf:home-reset:start`, are program-only channels (`PROGRAM_ONLY_CHANNELS`) that neither the page nor `infinitary-axi` reaches; all three are destructive exceptions in the app actions coverage (`src/shared/actionCoverage.ts`).
+The reset command and the screens below ask the system's own confirmation the same way, and the command refuses where there is none to ask.
+
+## From a computer that controls the first mate
+
+A computer that controls another computer's first mate, the home, shows the row once the home lists the contract change `home-reset` (`ThisMac.homeResets`); an older home shows no row, since it cannot be reset from here.
+The row and its question name the home: Reset Infinitary on the home and this computer, which deletes everything Infinitary keeps on both, and the counts are the home's open tasks.
+The person confirms at this computer with its system's own confirmation, which names both computers.
+
+Then this computer's program asks the home `inf:home-reset:start` over the connection, and only once the home answers does it reset itself:
+
+1. The home serves the ask only to a paired computer that controls it, never a phone, a computer that only runs work or its own window, and answers before it starts.
+2. The home resets itself with no question of its own, since its person confirmed at the computer that asked: every step of "Before it quits" runs there, except that it leaves the asking computer on its list, so the two never race over unpairing.
+3. This computer then resets itself: it has no first mate of its own to undo, so it clears what it reaches outside its folder, writes the mark and restarts on the welcome screen.
+
+A home that does not answer, or refuses, resets nothing on either computer: the row says the home did not answer and stays on its question.
+
+## Where a reset can start
+
+A reset starts in three places, each confirmed by the person at this computer:
+
+- **Settings → General**, the row above.
+- **The screens shown when Infinitary cannot open**: the saved-data refusal, when the folder holds data from a newer version (`docs/saved-data-compatibility.md`), the privacy refusals of a folder others can reach or one left mid-move, and the could-not-start screen below.
+  The refusals of a folder an older name left behind and of a move in progress offer no reset, since a reset there would delete what the person is still moving.
+- **The reset command**, `<app> reset`, below.
+
+The screens and the command reset with no first mate running (`resetWithoutFirstMate`, `src/main/reset/withoutFirstMate.ts`): the program clears what it reaches outside the folder, writes the mark, ends every program still holding a file in the folder and restarts, so the next start wipes the folder as after the row.
+What only a running first mate undoes stays as a plain wipe leaves it: paired devices are not told, open tasks' stops do not run, accounts are not signed out with their providers and projects keep the settings Infinitary wrote into them.
+
+A screen's Reset Infinitary turns the screen into the row's question, with Keep everything focused, then asks the system's confirmation; where the system has none to ask, the question alone confirms, as on the row.
+A reset that is not confirmed goes back to the screen and says nothing was reset.
+
+### Infinitary could not start
+
+A window start on its own folder counts itself in `<folder>.start-attempts`, beside the folder and never in it (`src/main/reset/startAttempts.ts`), once it holds the folder's lock; the count goes once a window is ready to show or the first mate or the view started.
+A start that finds two earlier starts that never got that far shows Infinitary could not start instead of trying again (`showCouldNotStart`, `src/main/reset/couldNotStart.ts`), with Try again, which clears the count and starts the app once more, Reset Infinitary, and Quit, which leaves the count so the next start shows the screen again.
+A start with no window, a move and a run beside a command count nothing, and a reset deletes the count with the folder.
+
+### The reset command
+
+`<app> reset` (`src/main/reset/command.ts`) resets this computer's Infinitary from a terminal, for a computer whose window never opens.
+It asks the system's own confirmation of the person at this computer and wipes the folder at once, then says Infinitary opens on the welcome screen next time.
+It refuses, changing nothing, where the system has no confirmation to ask, as on an isolated or chosen folder, so a shell an agent drives can never pass it; while Infinitary runs on the folder, whose own row resets it; and when the person does not confirm.
 
 ## Before it quits
 

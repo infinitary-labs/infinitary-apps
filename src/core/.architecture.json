@@ -1809,7 +1809,7 @@
     {
       "from": "dispatcher",
       "to": "reset",
-      "why": "answers how many tasks a reset stops and undoes the first mate's side"
+      "why": "answers how many tasks a reset stops, undoes the first mate's side and leaves a controlling computer that asked for the reset paired"
     }
   ],
   "machines": [

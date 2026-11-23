@@ -35,7 +35,7 @@
     {
       "name": "reset",
       "path": "src/main/reset",
-      "about": "Runs Reset Infinitary and finishes it at the next start"
+      "about": "Runs Reset Infinitary from Settings, the screens shown when it cannot open and its command, and finishes it at the next start"
     }
   ],
   "outside": [
@@ -166,7 +166,7 @@
     {
       "from": "reset",
       "to": "core",
-      "why": "asks the first mate to undo its side, leaves the home it works for, ends leftover programs and finishes the mark"
+      "why": "asks the first mate to undo its side, asks a home this computer controls to reset first, leaves the home it works for, ends leftover programs and finishes the mark"
     },
     {
       "from": "reset",

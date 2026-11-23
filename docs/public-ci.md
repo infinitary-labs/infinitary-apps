@@ -75,6 +75,8 @@ GitHub sorts each new outside issue and pull request with no model, and a mainta
 - **Forms.**
   `.github/ISSUE_TEMPLATE/` holds three issue forms, a problem (`bug.yml`), an idea (`idea.yml`) and a question (`question.yml`); each labels its issue with its kind and `needs triage`, states the two-working-day answer window and points to `/feedback` in the app (`docs/feedback.md`).
   `config.yml` turns blank issues off and sends a security report to the private address in `CONTRIBUTING.md`.
+  A fourth form, "Feedback from the app" (`from-app.yml`), is the one the app's `/feedback` link opens without a GitHub sign-in, with its title and one field filled in, since GitHub's plain new-issue page shows the form chooser and drops a prefilled body (`docs/feedback.md`).
+  An issue `/feedback` files through the API carries no form, so `feedback-labels.yml` adds `needs triage` beside "from-app" and its kind.
 - **New pull requests.**
   `check-file-flag.yml` labels a newly opened outside pull request `needs triage` ("Outside contributors").
 - **Waiting on the author.**

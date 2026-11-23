@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         A maintainer usually answers within two working days.
-        The guide at https://docs.getinfinitary.com may already answer it. From inside the app, `/feedback` in the message box sends a question too.
+        The guide at https://docs.getinfinitary.com may already answer it.
   - type: textarea
     id: question
     attributes:

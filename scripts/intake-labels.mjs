@@ -20,6 +20,19 @@ export const REQUIRED = Object.freeze([
 ]);
 
 /**
+ * Takes a label off an item. The other required check may run at the same
+ * time and take it off first, which GitHub answers with 404; the label is
+ * off either way.
+ */
+export async function removeLabel({ github, owner, repo, number, name }) {
+  try {
+    await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name });
+  } catch (error) {
+    if (error?.status !== 404) throw error;
+  }
+}
+
+/**
  * Sets "waiting on author" on an outside pull request from the required
  * statuses on its newest version, after a check wrote its own:
  *
@@ -64,7 +77,7 @@ export async function syncWaiting({ github, context, pullNumber }) {
   }
   const byAuthor = context.payload.sender?.id === pull.user?.id;
   if (states.every((each) => each === "success") && labels.has(WAITING) && byAuthor) {
-    await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: WAITING });
+    await removeLabel({ github, owner, repo, number, name: WAITING });
     if (!labels.has(NEEDS_TRIAGE))
       await github.rest.issues.addLabels({
         owner,

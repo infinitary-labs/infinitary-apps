@@ -2,7 +2,7 @@
 
 `/feedback <words>` turns a person's report of a problem or an idea into an issue on Infinitary's own public project, which the person reads whole and publishes with one click.
 Nothing is published before that click: the one thing sent earlier is the search for similar issues, whose words pass the same guard.
-The issue goes under the person's own GitHub account, or through GitHub's own new-issue page when the app has no GitHub sign-in.
+The issue goes under the person's own GitHub account, or through an issue form on GitHub when the app has no GitHub sign-in.
 It is not one of the Sharing switches (`docs/sharing.md`): the person writes it, reads it and sends it themselves.
 
 ## Where it starts
@@ -44,7 +44,8 @@ Turning the runbook off stops the first mate from starting feedback tasks; the c
 
 With a GitHub sign-in the draft is a kept write (`GithubGatewayService.keepFeedback`) to `POST /repos/<project>/issues`, or to an issue's comments with `--comment-on`, sent only by the captain's click on the crewmate's card.
 It is always kept, even for a task in Infinitary's own project (`docs/forge.md`, "A write that asks").
-Without a sign-in the draft answers a link to GitHub's new-issue page with the title and body filled in, at most 8,000 characters: the task's steps are shortened first, then the words are cut with a line saying so (`newIssueLink`).
+Without a sign-in the draft answers a link to the project's "Feedback from the app" issue form (`FEEDBACK_FORM`, `.github/ISSUE_TEMPLATE/from-app.yml`) with the title and its one field filled in, since the project turns blank issues off and GitHub's plain new-issue page would drop the body.
+The link is at most 8,000 characters: the task's steps are shortened first, then the words are cut with a line saying so (`newIssueLink`).
 The destination is the build's own release project (`releaseSource.repository`), never one a crewmate names.
 
 ## What a report holds
@@ -78,7 +79,7 @@ A revision keeps a new write; an earlier one stays unsent and drops when the tas
 
 ## Triage
 
-`.github/workflows/feedback-labels.yml` labels a new issue whose body carries the mark "from-app" and its kind, "bug" or "idea".
+`.github/workflows/feedback-labels.yml` labels a new issue whose body carries the mark "from-app", its kind, "bug" or "idea", and "needs triage", so it waits for a maintainer's answer as an issue from a form does (`docs/public-ci.md`, "Intake").
 It reads only the issue's body from the event, checks out nothing and holds only a token that may label issues.
 Anyone can type the mark, so the labels sort issues and grant nothing.
 

@@ -15,6 +15,7 @@ import {
   reminderComment,
   tick,
 } from "../scripts/waiting-on-author.mjs";
+import { FEEDBACK_FORM } from "../src/core/feedback/diagnostics";
 import { loadYamlFile } from "./helpers/releaseWorkflows";
 
 // Piece 2 of INF-6358's approved plan (docs/public-ci.md, "Intake"): issue
@@ -70,7 +71,9 @@ function gitHub(item: Item) {
         },
         removeLabel: async ({ name }: { name: string }) => {
           writes++;
-          if (!labels.delete(name)) throw new Error(`Label does not exist: ${name}`);
+          // GitHub answers 404 for a label the item does not carry.
+          if (!labels.delete(name))
+            throw Object.assign(new Error(`Label does not exist: ${name}`), { status: 404 });
           return { data: {} };
         },
         update: async (params: Record<string, unknown>) => {
@@ -290,6 +293,23 @@ describe("waiting on author from the required checks", () => {
     expect(api.writes()).toBe(0);
   });
 
+  it("takes the label off once when both checks clear it at the same time", async () => {
+    const api = pullWithStatuses(
+      [WAITING, NEEDS_TRIAGE],
+      [
+        { context: agreement, state: "success" },
+        { context: careful, state: "success" },
+      ],
+    );
+    // Both runs read the pull request before either writes.
+    const both = await Promise.all([
+      syncWaiting({ github: api.github, context: pushed() }),
+      syncWaiting({ github: api.github, context: pushed() }),
+    ]);
+    expect(both).toEqual(["back to triage", "back to triage"]);
+    expect([...api.labels]).toEqual([NEEDS_TRIAGE]);
+  });
+
   it("waits for the other check before taking the label off", async () => {
     const api = pullWithStatuses([WAITING], [{ context: careful, state: "success" }]);
     expect(await syncWaiting({ github: api.github, context: pushed() })).toBe("unchanged");
@@ -413,6 +433,40 @@ describe("the waiting-on-author timer", () => {
   });
 });
 
+// INF-6394's finding: an issue /feedback files through the API carries no
+// form, so its label workflow puts it in triage itself, or the intake round
+// never reads it.
+describe("feedback-labels.yml", () => {
+  const workflow = loadYamlFile(".github/workflows/feedback-labels.yml") as {
+    jobs: Record<string, { steps: { with?: { script?: string } }[] }>;
+  };
+  const script = String(Object.values(workflow.jobs)[0]?.steps[0]?.with?.script);
+  const run = async (body: string) => {
+    const added: string[][] = [];
+    const github = {
+      rest: {
+        issues: {
+          addLabels: async ({ labels }: { labels: string[] }) => {
+            added.push(labels);
+            return { data: {} };
+          },
+        },
+      },
+    };
+    const context = { repo: project, payload: { issue: { number: 55, body } } };
+    const AsyncFunction = Object.getPrototypeOf(async () => undefined).constructor;
+    await new AsyncFunction("github", "context", "core", script)(github, context, core);
+    return added;
+  };
+
+  it("puts an issue /feedback filed in triage beside from-app and its kind", async () => {
+    const body =
+      "The card moved after the checks finished.\n\n<!-- infinitary-feedback v1 kind=bug version=0.8.7-alpha.31 -->";
+    expect(await run(body)).toEqual([["from-app", "bug", NEEDS_TRIAGE]]);
+    expect(await run("No mark here.")).toEqual([]);
+  });
+});
+
 describe("the issue forms", () => {
   const folder = ".github/ISSUE_TEMPLATE";
   const forms = readdirSync(new URL(`../${folder}`, import.meta.url)).filter(
@@ -428,9 +482,21 @@ describe("the issue forms", () => {
     );
     expect(labels).toEqual({
       "bug.yml": ["bug", NEEDS_TRIAGE],
+      "from-app.yml": [NEEDS_TRIAGE],
       "idea.yml": ["idea", NEEDS_TRIAGE],
       "question.yml": ["question", NEEDS_TRIAGE],
     });
+  });
+
+  // INF-6394's finding: with blank issues off, GitHub's plain new-issue page
+  // drops a prefilled body, so /feedback's no-sign-in link opens this form.
+  it("holds the field the app's no-sign-in feedback link fills", () => {
+    const form = loadYamlFile(`${folder}/${FEEDBACK_FORM.file}`) as {
+      body: { type: string; id?: string }[];
+    };
+    expect(form.body.filter((field) => field.id === FEEDBACK_FORM.field)).toEqual([
+      expect.objectContaining({ type: "textarea" }),
+    ]);
   });
 
   it("turns blank issues off and sends security reports to the private address", () => {

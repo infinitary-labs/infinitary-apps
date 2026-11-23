@@ -20,7 +20,7 @@
  * and reads the comment only as data.
  */
 
-import { ACCEPTED, NEEDS_TRIAGE, WAITING } from "./intake-labels.mjs";
+import { ACCEPTED, NEEDS_TRIAGE, removeLabel, WAITING } from "./intake-labels.mjs";
 
 const MARK = /<!-- infinitary-triage v1 disposition=([a-z-]+)(?: [^>]*)?-->/;
 const WRITERS = new Set(["admin", "write"]);
@@ -75,8 +75,7 @@ export async function applyMark({ github, context, core }) {
   };
   const remove = async (names) => {
     for (const name of names)
-      if (labels.has(name))
-        await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name });
+      if (labels.has(name)) await removeLabel({ github, owner, repo, number, name });
   };
 
   const disposition = readMark(comment.body);

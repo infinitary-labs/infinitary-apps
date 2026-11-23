@@ -32,7 +32,7 @@ A record written by another tool does not count (`docs/public-ci.md`, "The Caref
 
 Open an issue from one of its forms: a problem, an idea or a question.
 Inside the app, `/feedback` in the message box writes a problem or an idea for you, with the app's diagnostics and no personal details.
-A new issue, and a new pull request from your own copy of the project, is labeled `needs triage` until a maintainer answers, usually within two working days.
+An issue opened from a form or with `/feedback`, and a new pull request from your own copy of the project, is labeled `needs triage` until a maintainer answers, usually within two working days.
 
 The answer says what happens next, with a label:
 

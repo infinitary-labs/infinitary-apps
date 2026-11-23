@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "branch-check-on-hosted-ubuntu",
+      "reason": "Moves the project's own branch check from its own Linux machines to GitHub's hosted Ubuntu and updates the CI documentation; how the project itself is checked, nothing a person notices."
+    }
+  ]
+}

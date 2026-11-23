@@ -14,9 +14,9 @@ A fork's pull request never starts it, even when its branch looks like an intern
 ## The project's own Linux jobs
 
 The project's own Linux jobs run on GitHub's hosted Ubuntu, which costs nothing a minute in a public project and leaves the project's own machines to the Mac, Windows and signing work.
-The one exception is the branch check each push of the project's own task branches starts: its jobs run on the project's own Linux places, where they finish about three times sooner (INF-5577's review, the captain's pick "Run your own task branches' checks on your own Linux machines again; contributors' checks stay on GitHub").
-Leave the repository variables `LINUX_RUNNER` and `RELEASE_LINUX_PACKAGES_RUNNER` unset on the destination, and set `LINUX_QUEUES` to `{"typecheck":"fleet-linux-pr"}` alone: every other Linux job then falls back to `ubuntu-24.04` (`docs/testing.md`, "Each Linux job's kind").
-An outside contributor's pull request takes hosted Ubuntu before any variable, so it never reaches that queue ("Outside contributors").
+The branch check each push of a task branch starts runs there too (INF-6330's plan): on hosted four-processor Ubuntu its steps take about as long as on the project's own Linux places, so those places no longer hold it.
+Leave the repository variables `LINUX_RUNNER` and `RELEASE_LINUX_PACKAGES_RUNNER` unset on the destination, and set `LINUX_QUEUES` to `{}`: every Linux job then falls back to `ubuntu-24.04` (`docs/testing.md`, "Each Linux job's kind").
+An outside contributor's pull request takes hosted Ubuntu before any variable, so no variable can send it to the project's own machines ("Outside contributors").
 The existing private project keeps its variables until it is archived, since GitHub bills its hosted minutes.
 The Windows installer's unsigned build runs on hosted `windows-2025` whenever `WINDOWS_RUNNER` is unset (`docs/windows.md`, "The checks"); leave it unset.
 The Mac jobs, the fresh Windows 11 check, signing and TestFlight keep their runner variables and stay on the project's own machines.

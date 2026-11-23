@@ -261,8 +261,9 @@ struct PhoneChoiceRow: Layout {
     }
 }
 
-/// A caption with small links after it on the same line when they fit, or on the line below when they do not,
-/// so a choice made elsewhere stays in view without a second row of full-size choices.
+/// A caption with small links after it on the same line when they fit, or as the caption's next line when they do
+/// not, with no gap, so a choice made elsewhere stays in view without a second row of full-size choices: an approval
+/// card's foot then stays short enough to pin beside a three-line title on an iPhone (PhoneJourney, "stay pinned").
 struct PhoneCaptionLinks<Caption: View, Links: View>: View {
     @ViewBuilder let caption: Caption
     @ViewBuilder let links: Links
@@ -270,7 +271,7 @@ struct PhoneCaptionLinks<Caption: View, Links: View>: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) { caption.fixedSize(); Spacer(minLength: 0); links.fixedSize() }
-            VStack(alignment: .leading, spacing: PhoneTheme.space2) { caption; HStack(spacing: PhoneTheme.space3) { links } }
+            VStack(alignment: .leading, spacing: 0) { caption; HStack(spacing: PhoneTheme.space3) { links } }
         }
     }
 }

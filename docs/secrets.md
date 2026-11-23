@@ -505,7 +505,7 @@ An enrollment the computer holds under the earlier name stays until the captain 
 Each Allow evaluates a fresh `LAContext` with no reuse, naming exactly what it gives, before the key signs; a failed confirmation sends nothing.
 A use's approval card on the phone shows every choice the computer's card carries, in its footer order, and reads which answer each gives from the start of its pass (`allow-once:<id>`, `SECRET_USE_ANSWERS`).
 Allow once confirms and signs on an enrolled phone holding the use's challenge; on a phone that is not enrolled it stays drawn, sends nothing, and its press says to turn on Approves secret uses or allow on the computer, as the note above the choices does.
-A saved decision or a short read allowance is made only on the computer: Always allow this and Allow for 10 minutes stay on the phone as a small link beside the card's note, so the choices made here keep one row and stay pinned; they send nothing, and their press says to do it on the computer, as the phone's other computer-only choices do.
+A saved decision or a short read allowance is made only on the computer: Always allow this and Allow for 10 minutes stay on the phone as a small link after the card's note, so the choices made here keep one row and stay pinned; they send nothing, and their press says to do it on the computer, as the phone's other computer-only choices do.
 Don't allow refuses from any phone.
 Only an executing or completed Allow, or a denied Don't allow, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
 A later successful key read clears an earlier locked-store problem without replacing the key.

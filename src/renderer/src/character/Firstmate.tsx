@@ -4,6 +4,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { readLiveVoiceLevel } from "../voice/liveVoiceLevel";
 import { crewRush } from "./crew/rush";
+import { crewSupernova } from "./crew/supernova";
 import { crewWarp } from "./crew/warp";
 import {
   takeCharacterEmote,
@@ -250,6 +251,10 @@ export function Firstmate({
       const sim = simRef.current;
       crewWarp.playing(snap.variant, now - snap.phase, size * 0.27, sim.heat);
     } else crewWarp.stopped(now);
+    // The supernova's blast reaches through the crew (./crew/supernova.ts).
+    if (snap.state === "fidget" && snap.variant === "supernova" && !prefersReducedMotion()) {
+      crewSupernova.playing(now - snap.phase, size * 0.27, simRef.current.heat);
+    } else crewSupernova.stopped(now);
     if (snap.state !== ariaState.current) ariaState.current = snap.state;
     const drawn = {
       now,

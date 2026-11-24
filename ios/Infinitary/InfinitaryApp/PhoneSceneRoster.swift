@@ -259,6 +259,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var captain = 0.0, captainSince = 0.0
         /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
         var scale = 1.0, streak: [CGPoint] = []
+        /// A supernova's flash and kick lighting it toward white (CharacterSupernova.kick), on the drawn frame only.
+        var flash = 0.0
         /// A fixed star's eased blend, 0 when it is not pinned, and its glint's twinkle, 0 on a settled frame (INF-3634).
         var star = 0.0, twinkle = 0.0
         /// Its glyph before the depth cue, as the desktop draws it: home's crowded planes, a smaller one in another
@@ -317,6 +319,10 @@ final class PhoneSceneMotion: @unchecked Sendable {
     /// The warp the crew ride this frame and how many ride it, for the backdrop under them.
     private var playing: CharacterWarp.Frame?
     private var riding = 0
+    private var blast = CharacterSupernova.Ride()
+    /// The supernova the home crew are kicked by this frame, for the blast under them.
+    private var exploding: CharacterSupernova.Frame?
+    var supernova: CharacterSupernova.Frame? { lock.withLock { exploding } }
     private var latest = Frame(glyphs: [], marks: [], packets: [], links: [])
     var warp: CharacterWarp.Frame? { lock.withLock { playing } }
     var riders: Int { lock.withLock { riding } }
@@ -353,15 +359,20 @@ final class PhoneSceneMotion: @unchecked Sendable {
         }
     }
 
-    /// `warp` is the warp the first mate plays (CharacterWarp.frame), nil when none.
-    func frame(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame? = nil) -> Frame {
-        lock.withLock { frameLocked(roster: roster, now: now, settled: settled, warp: playing) }
+    /// `warp` is the warp the first mate plays (CharacterWarp.frame) and `supernova` its supernova
+    /// (CharacterSupernova.frame), each nil when none.
+    func frame(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame? = nil,
+               supernova bursting: CharacterSupernova.Frame? = nil) -> Frame {
+        lock.withLock { frameLocked(roster: roster, now: now, settled: settled, warp: playing, supernova: bursting) }
     }
-    private func frameLocked(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame?) -> Frame {
+    private func frameLocked(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame?,
+                             supernova bursting: CharacterSupernova.Frame?) -> Frame {
         let dt = min(0.05, max(0, now - (last ?? now))); last = now; time = now
-        if settled { ride = CharacterWarp.Ride() }
+        if settled { ride = CharacterWarp.Ride(); blast = CharacterSupernova.Ride() }
         let warp = settled ? nil : ride.resolve(playing, now: now)
         self.playing = warp
+        let supernova = settled ? nil : blast.resolve(bursting, now: now)
+        exploding = supernova
         if generation != roster.generation { rosterReady = false }
         let initial = generation != roster.generation || !rosterReady
         if initial { members = [:]; packets = []; computerTime = [:]; drawingBooks = [:]; generation = roster.generation; home = nil }
@@ -577,6 +588,11 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var glyphs = members.values.map { shown[$0.glyph.task.id] ?? $0.glyph }
         riding = 0
         if let warp { riding = Self.ride(&glyphs, warp: warp, roster: roster, home: firstmate, offsets: members.mapValues(\.companion)) }
+        if let supernova {
+            for i in glyphs.indices where Self.rides(glyphs[i]) {
+                CharacterSupernova.kick(&glyphs[i], around: firstmate, f: supernova, scale: PhoneSceneRoster.ringScale)
+            }
+        }
         glyphs.sort { $0.depth < $1.depth }
         let byID = Dictionary(uniqueKeysWithValues: glyphs.map { ($0.task.id, $0) })
         let byKey = Dictionary(uniqueKeysWithValues: glyphs.map { ($0.task.key, $0) })
@@ -613,11 +629,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
     private static func ride(_ glyphs: inout [Glyph], warp: CharacterWarp.Frame, roster: PhoneSceneRoster, home: CGPoint, offsets: [String: CGPoint]) -> Int {
         let flat = warp.variant == .tunnel ? warp.k : 0
         let shrink = 1 - (warp.variant == .tunnel ? 0.12 : warp.variant == .sphere ? 0.05 : 0) * warp.k
-        let riders = glyphs.indices.filter { i in
-            let g = glyphs[i]
-            // A fixed star holds its place through the warp.
-            return !g.unknown && !g.programPart && g.star < 0.5 && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
-        }.sorted { (roster.order[glyphs[$0].task.id] ?? .max, glyphs[$0].task.id) < (roster.order[glyphs[$1].task.id] ?? .max, glyphs[$1].task.id) }
+        let riders = glyphs.indices.filter { rides(glyphs[$0]) }.sorted { (roster.order[glyphs[$0].task.id] ?? .max, glyphs[$0].task.id) < (roster.order[glyphs[$1].task.id] ?? .max, glyphs[$1].task.id) }
         for (index, i) in riders.enumerated() {
             if var orbit = glyphs[i].orbit, offsets[glyphs[i].task.id] ?? .zero == .zero {
                 orbit.radius *= shrink
@@ -628,6 +640,10 @@ final class PhoneSceneMotion: @unchecked Sendable {
             CharacterWarp.ride(&glyphs[i], index: index, count: riders.count, around: home, w: warp, scale: PhoneSceneRoster.ringScale)
         }
         return riders.count
+    }
+    /// A home crewmate on its orbit, which a warp or a supernova takes along; a fixed star holds its place.
+    private static func rides(_ g: Glyph) -> Bool {
+        !g.unknown && !g.programPart && g.star < 0.5 && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
     }
     /// Ease each pinned crewmate to its place in the sky and back (INF-3634), as the desktop's applyStars: it rises once
     /// it has arrived, a little nearer than the orbit's middle; one leaving keeps its glint fading where it hangs. Returns

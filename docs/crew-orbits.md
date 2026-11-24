@@ -109,6 +109,7 @@ Remote clusters receive a rush level of zero: their crew keep their pace and sho
 
 **The warps stay at home too.**
 A remote cluster's orbit never takes a warp: its crew keep their own group and pace while the home crew ride ("The warps" below).
+Nor does a supernova's kick reach a remote cluster ("The supernova" below).
 
 **Placement arrives with the row.**
 The core creates a placed task's row with its computer in the same write (`CreateTaskInput.deviceId`), so the row's first `task_changed` already carries `executionDeviceId` and the crewmate spawns on its own cluster.
@@ -541,6 +542,18 @@ Reduced motion plays no warp.
 The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-before-write, and its travel speed as `data-crew-travel`.
 
 `crew/warp.test.ts` covers each warp's ride: the home crew move, the riders end on their own seats, a remote cluster keeps its pace, and a cut warp lets go; on the phone, `PhoneWarpTests` holds the same promises for its scene.
+
+## The supernova
+
+Captain's ask: "one more fidget animation added to the pool for the first mate character that's somewhat like a supernova explosion"; the approved preview reaches through the crew.
+The character publishes the supernova it plays to `crew/supernova.ts`'s shared `crewSupernova` every frame (its start in stage time, the first mate's radius and its ember) and that it stopped; the orbit reads the frame each frame (`CrewOrbit.update(now, settled, rush, warp, supernova)`), and the crew's far canvas paints the blast under every crewmate.
+The flash lights every rider at once, and the blast's front kicks each one straight out from the center as it passes, by up to `SUPERNOVA.crewKickPx` on a damped swing of about 0.75 s, weaker farther out; the swing ends on the crewmate's own seat, since it is applied in screen space after the crewmate is seated.
+The riders are the warps' riders: orbiting crewmates not circling a program, never a fixed star or another computer's cluster.
+A supernova cut short by attention lets the crew go home over a warp's release, 0.6 s.
+Reduced motion plays no supernova.
+The near crew canvas publishes the supernova it draws as `data-crew-supernova`.
+
+`crew/supernova.test.ts` covers the kick: no crewmate moves before the front reaches it or after its swing settles, the front reaches every orbit, and a cut supernova lets go; on the phone, `PhoneSupernovaTests` replays the desktop's own readings and holds the same promises for its scene.
 
 
 ## Fixed stars

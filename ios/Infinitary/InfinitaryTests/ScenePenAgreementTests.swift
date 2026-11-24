@@ -46,7 +46,8 @@ import XCTest
     }
 
     /// The whole window as the render thread draws it: about twenty crewmates on two computers around the first mate,
-    /// resting and busy, with keyboard browsing's outline and a summary's brackets, and each warp under way.
+    /// resting and busy, with keyboard browsing's outline and a summary's brackets, each warp under way, and a
+    /// supernova's blast with its sparks, shards and pulsar reaching through the crew.
     func testTheCrowdedSceneDrawsTheSameThroughBothPens() throws {
         let roster = try Self.roster(home: 12, remote: 8)
         let selected = try XCTUnwrap(roster.computers.first?.tasks.first)
@@ -63,15 +64,16 @@ import XCTest
                                bracketed: (selected.id, PhoneSceneRoster.computerID(selected)), in: &pen)
                 }
             }
-            for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew] {
+            for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew, .supernova] {
                 let motion = PhoneSceneMotion(), seconds = CharacterCatalog.shared.fidgets[variant.rawValue]! / 1000
                 var frame = motion.frame(roster: roster, now: 0, settled: false), pose = CharacterPose.still(.idle, at: 0)
                 for step in 0...Int(seconds * 0.45 * 60) {
                     let now = Double(step) / 60
                     pose = CharacterPose(mode: .fidget, progress: now / seconds, variant: variant, milliseconds: now * 1000)
-                    frame = motion.frame(roster: roster, now: now, settled: false, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27))
+                    frame = motion.frame(roster: roster, now: now, settled: false, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
+                                         supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27))
                 }
-                XCTAssertNotNil(motion.warp, "\(variant) is under way at the frame drawn")
+                XCTAssertTrue(motion.warp != nil || motion.supernova != nil, "\(variant) is under way at the frame drawn")
                 let drawn = pose
                 try agree("warp-\(variant)-\(theme)", size: Self.window) { pen in
                     Self.paint(frame, motion: motion, pose: drawn, roster: roster, now: drawn.milliseconds / 1000, palette: palette,
@@ -89,6 +91,9 @@ import XCTest
         if let warp = motion.warp {
             CharacterWarp.drawBackdrop(warp, at: CGPoint(x: roster.homeX, y: roster.height / 2), riders: motion.riders,
                                        scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
+        }
+        if let supernova = motion.supernova {
+            CharacterSupernova.drawBlast(supernova, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
         }
         PhoneCrewPainter.draw(frame, roster: roster, now: now, still: false, in: &pen, palette: palette)
         var firstmate = pen

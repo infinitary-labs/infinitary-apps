@@ -49,6 +49,9 @@ export type FidgetVariant =
   | "tunnel"
   | "sphere"
   | "corkscrew"
+  // The supernova (renderer character/supernova.ts): the first mate bursts
+  // and falls back together, the blast kicking the crew as it passes.
+  | "supernova"
   | "blackhole";
 
 /**

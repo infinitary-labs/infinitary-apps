@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-reads-checked-out-commit",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A Careful review reads the version the crewmate built",
+      "body": "When a crewmate committed its work on a second branch of its own, its Careful review was given an older version left on the task's branch, so the reviewer could only report it blocked. The review and the crewmate's proof now read the version the crewmate committed.",
+      "noPicture": "This changes which version a review reads, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

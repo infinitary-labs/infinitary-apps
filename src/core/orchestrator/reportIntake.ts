@@ -38,6 +38,7 @@ import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import type { AskEnding } from "./askEnding";
 import { cardEmitter, crewmateCardId } from "./cardEmit";
 import type { CardService } from "./cardService";
+import { checkedOutHead } from "./checkedOutHead";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { type PersonalBriefFacts, renderFollowupBrief } from "./intentBrief";
@@ -211,11 +212,13 @@ export class ReportIntake {
   }
 
   async validationHead(record: TaskRecord): Promise<string> {
-    const head = record.deviceId
-      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
-      : record.branch
-        ? await this.options.workspace.branchHead(record.repoDir, record.branch)
-        : undefined;
+    const head =
+      (await checkedOutHead(this.options, record)) ??
+      (record.deviceId
+        ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
+        : record.branch
+          ? await this.options.workspace.branchHead(record.repoDir, record.branch)
+          : undefined);
     if (!head)
       throw new Error("The task's committed version cannot be read; validation remains held.");
     return head;
@@ -235,9 +238,7 @@ export class ReportIntake {
           },
           { strict: true },
         );
-    const actual = record.deviceId
-      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
-      : await this.options.workspace.branchHead(record.worktreeDir, "HEAD");
+    const actual = await this.validationHead(record).catch(() => undefined);
     if (!status || status.dirty || actual !== head)
       throw new Error(
         "Commit the current work before validation; proof and permission name one clean committed version.",
@@ -286,7 +287,7 @@ export class ReportIntake {
       // A part built on an approved version has changed only what it added to that version.
       const builtOn = this.options.tasks.graph.startedOn(owner)?.head;
       const files = owner.deviceId
-        ? (await this.options.machines?.revision(owner.deviceId, owner.id, undefined, builtOn))
+        ? (await this.options.machines?.revision(owner.deviceId, owner.id, head, builtOn))
             ?.changedFiles
         : await this.options.workspace.reviewChangedFiles(
             owner.repoDir,

@@ -1025,6 +1025,7 @@ This placement applies in every build, without a development gate.
   A separate placement request for a review is refused because its builder owns the choice.
 - **Code to read.**
   `reviewFacts` asks the builder's computer for its committed head, complete changed-file list and change reading (`inf:working-copy:revision`).
+  The head is the commit its working copy has checked out, which that computer names first (`inf:working-copy:status`); one that names no checkout answers its task branch's head.
   The reading is optional: a computer on an older contract omits it, and a pass from that computer does not carry.
   The list, the reading and the counted lines are measured from the default branch the clone's `origin` names, except for a task whose own remote names another address, as one that followed its project to a new address does (`WorkspaceService.routedReviewBase`).
   That task's computer fetches the new address's declared default branch into the task remote's own tracking ref, never `origin`'s, and answers its full ref as `base`; the brief names that ref in place of the default branch, so the reviewer's own diff reads the same base.

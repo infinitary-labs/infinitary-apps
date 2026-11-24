@@ -285,7 +285,7 @@ The main process's own commands, the size keys, are never refused by the page.
   It does nothing while a recording runs, while Settings picks the dictation key, or while the main message is held: the first-launch gate is up, or the window has not yet read whether it is (`mainMessageRefusal`).
 - `focus.card-reply`, Go to the card's reply, focuses the shown card's one field (`docs/card-authoring.md`, "The card's one field"), its words and caret as they were; from Settings it goes home first.
   In the Browser tab it focuses a docked card's reply field or, with no card docked, opens the Crewmate column and focuses its message box.
-  `browser.page`, Go to the browser page, takes focus back to the page while you hold control.
+  `browser.page`, Go to the browser page, takes focus back to the page while you hold control; a request card's open-browser click puts focus there by itself once the page is yours (`docs/task-browser.md`, "Asking for help").
   Command search also finds it by "anything to add" and "comment".
   It refuses when no card is shown, when the shown entry takes no reply (a host card, a task record, a past card) and while a recording runs.
   It focuses the reply of the card that was shown when it ran, never another one shown since.

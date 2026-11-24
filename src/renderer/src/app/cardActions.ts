@@ -37,6 +37,7 @@ import { readBringPicks } from "../cards/SecretBringPicks";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
 import { takePictures } from "./composer";
+import { pressesSoFar } from "./presses";
 import { pickProjectFolder } from "./projectFolder";
 import { savedCardAnswers } from "./savedCardAnswers";
 import { withoutKey } from "./stack";
@@ -328,6 +329,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         return;
       }
       noteCardPress([cardId]);
+      const pressedAt = pressesSoFar();
       const chosen = get()
         .cards.find((card) => card.id === cardId)
         ?.actions.find((action) => action.id === actionId);
@@ -490,6 +492,15 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
               session: browser.session,
               generation: browser.generation,
             });
+            if (opensBrowser)
+              set({
+                browserPageFocus: {
+                  taskId: browser.taskId,
+                  session: browser.session,
+                  generation: browser.generation,
+                  presses: pressedAt,
+                },
+              });
           }
         } else if (effect?.kind === "open" && !folderButton) {
           set({

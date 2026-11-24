@@ -27,6 +27,7 @@ import {
   TASK_BROWSER_PASTE_MAX,
   type TaskBrowserAskAnswer,
   type TaskBrowserDriver,
+  type TaskBrowserFact,
   type TaskBrowserFrame,
   type TaskBrowserInput,
   toldWords,
@@ -48,6 +49,7 @@ import {
   useState,
 } from "react";
 import { useCommandKeys } from "../app/keyHints";
+import { pressesSoFar } from "../app/presses";
 import { openSavedSignIns } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
@@ -79,6 +81,7 @@ import { pageQueue } from "./markedPictures";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { returnWordsOf } from "./returnWords";
+import { useStageFocusable } from "./SurfaceReveal";
 import { TaskTabStrip } from "./TaskTabStrip";
 import { NO_TAB_FACTS, taskTabFactsOf } from "./taskTabs";
 import { usePlacesHome } from "./useAnnotationHome";
@@ -366,6 +369,36 @@ function useCaptainInput(taskId: string, enabled: boolean) {
         }
       : {},
   };
+}
+
+/**
+ * The page a request card's open-browser click handed the captain takes the
+ * window's focus once it takes the captain's keys, so typing reaches it with
+ * no click first (docs/task-browser.md, "Asking for help"). It waits while
+ * control passes and the view comes forward, since an entry not yet shown
+ * cannot take focus; a press begun since the click decides where focus goes
+ * instead. Once, and only for the browser the click named.
+ */
+function useHandedOverFocus(
+  taskId: string,
+  fact: TaskBrowserFact | undefined,
+  takesKeys: boolean,
+  page: React.RefObject<HTMLDivElement | null>,
+): void {
+  const handed = useShellStore((s) => s.browserPageFocus);
+  const focusable = useStageFocusable();
+  const session = fact?.session;
+  const generation = fact?.generation;
+  const open = fact?.state === "open";
+  useEffect(() => {
+    if (!handed || handed.taskId !== taskId || generation === undefined) return;
+    const same = session === handed.session && generation === handed.generation;
+    const ready = takesKeys && focusable;
+    if (same && open && !ready) return;
+    useShellStore.setState({ browserPageFocus: null });
+    if (same && ready && pressesSoFar() === handed.presses)
+      page.current?.focus({ preventScroll: true });
+  }, [handed, taskId, session, generation, open, takesKeys, focusable, page]);
 }
 
 const SURFACE: React.CSSProperties = {
@@ -726,7 +759,9 @@ export function TaskBrowserView({
   const who = VIEW_DRIVER_WORDS[driver];
   const captain = fact?.state === "open" && driver === "captain";
   // With Point at on the pointer and the keys mark, and none reaches the page.
-  const input = useCaptainInput(taskId, captain && offWords === null && !point.on);
+  const takesKeys = captain && offWords === null && !point.on;
+  const input = useCaptainInput(taskId, takesKeys);
+  useHandedOverFocus(taskId, fact, takesKeys, input.ref);
   // A refusal belongs to the state it answered.
   const factState = fact?.state;
   useEffect(() => {

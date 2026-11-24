@@ -36,7 +36,7 @@ Both are written from the same ledger rows, so every number equals Settings → 
 - **The standard format**, OpenTelemetry's conventions for AI calls at version 1.37.0, pinned on every scope's schema address because those names are still marked in development.
   All work, Claude's included: `gen_ai.client.token.usage` as a histogram by `gen_ai.token.type`, provider and model, and `infinitary.cost.usage` in estimated US dollars, since the conventions define no cost.
   The conventions name only `input` and `output` token types; cache reads and writes go as `cache_read` and `cache_creation` rather than folding into input, because a provider's input count may or may not include them.
-  Traces hold one `invoke_agent` span per first mate or crewmate turn, a `chat {model}` child span per ledger row, and an `execute_tool {name}` child span per tool run; context shortening and provider retries are not tool runs.
+  Traces hold one `invoke_agent` span per first mate or crewmate turn, a `chat {model}` span per ledger row, a child of its turn or a trace of its own for a call outside any turn, such as a reply check, and an `execute_tool {name}` child span per tool run; context shortening and provider retries are not tool runs.
 
 Every metric, event, model call span and turn span is grouped by `infinitary.role` (`firstmate`, `crewmate` or `other`) and the task's saved kind of work (`infinitary.work_kind`); a tool run's span carries the tool's name and call id.
 Nothing carries a task title, project name, prompt or output.

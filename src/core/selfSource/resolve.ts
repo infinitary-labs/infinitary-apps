@@ -17,7 +17,7 @@ const sourceMapSchema = z
 /**
  * Where the Firstmate agent reads its own source. Packaged builds ship the
  * filtered git-tracked source as extraResources (`Contents/Resources/self-source`),
- * without test fixtures or draft data terms;
+ * without test fixtures, draft data terms or the README's pictures;
  * unpackaged / dev uses the checkout itself so both modes look the same to
  * the agent. Nothing ever executes from this tree.
  */

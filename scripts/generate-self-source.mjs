@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Build-time self-source bundle: the git-tracked tree at HEAD, without
-// test data or draft data terms, plus self-map.json, the behavior→source
-// index. Packaged via extraResources as Contents/Resources/self-source/ and
-// Contents/Resources/self-map.json. Nothing executes from this tree.
+// test data, draft data terms or the README's pictures, plus self-map.json,
+// the behavior→source index. Packaged via extraResources as
+// Contents/Resources/self-source/ and Contents/Resources/self-map.json.
+// Nothing executes from this tree.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -20,7 +21,7 @@ const repoRoot = join(here, "..");
 
 // Filter only the installer input, not ordinary source archives or checkouts.
 // The replay gate and other tests still read their fixtures from the checkout.
-const excludedFromSelfSource = ["tests/fixtures", "DATA-TERMS.md"].map(
+const excludedFromSelfSource = ["tests/fixtures", "DATA-TERMS.md", ".github/readme"].map(
   (path) => `:(top,exclude,literal)${path}`,
 );
 

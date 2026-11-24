@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "readme-landing-hero",
+      "reason": "Internal: documentation only. The project's README opens with badges, the website's wording and an animated hero picture that stays out of the source copy shipped inside the app; nothing in the app changes."
+    }
+  ]
+}

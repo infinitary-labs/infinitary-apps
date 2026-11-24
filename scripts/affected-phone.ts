@@ -7,7 +7,7 @@ import { PHONE_MESSAGES_PATH } from "./generate-messages.ts";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
 import {
   dealPhonePasses, devicePartNames, PHONE_DEVICES, PHONE_JOURNEY, PHONE_PART_TIMES, PHONE_PARTS, type PhoneDealtJob, type PhoneDevice,
-  type PhoneJob, type PhonePassTimes, partDevices, partIdentifier, partTimes, phonePasses,
+  type PhoneJob, type PhonePassTimes, partDevices, partIdentifier, partTimes, phonePasses, phoneToolEntry,
 } from "./phone-test-plan.ts";
 
 export { partTimes };
@@ -531,7 +531,8 @@ export function before(after: string | undefined, hunks: Hunk[]): string {
   return lines.join("\n");
 }
 
-export type PartReach = { part: string; distance: 0 | 1 | 2; why: string; repeat?: boolean; repeatTests?: string[] };
+/** `toolTests` names the rest part's tool tests whose own code changed, which every pass of the part then runs. */
+export type PartReach = { part: string; distance: 0 | 1 | 2; why: string; repeat?: boolean; repeatTests?: string[]; toolTests?: string[] };
 /** A part table: each part's name and the journey test it runs, or the whole test class it names as its
  * `suite`, the last part running every test no other names. The gate's own is PHONE_PARTS; a recorded change
  * replays against the table of its own time. */
@@ -547,6 +548,21 @@ const names = (parts: PartTable) => parts.map((part) => part.name);
 const EVERY = names(PHONE_PARTS);
 const owners = (part: string) => PART_OWNERS[part] ?? Object.entries(PART_OWNERS)
   .filter(([name]) => partFamily(name) === part).flatMap(([, files]) => files);
+
+const XCTEST_CLASS = /\bclass\s+(\w+)\s*:\s*XCTestCase\b/g;
+/** The names of the XCTestCase classes the files declare. */
+const testClasses = (files: Iterable<string>) => new Set([...files].flatMap((text) => [...blankSwift(text).matchAll(XCTEST_CLASS)].map((each) => each[1]!)));
+
+/** The class XCTest runs a test function in, read from the class or extension around each function of that name in
+ * `source`, when that names one of `classes`; none when the functions sit in no such class or in more than one. */
+function testClass(source: string, name: string, classes: ReadonlySet<string>): string | undefined {
+  const blocks = swiftBlocks(source);
+  const found = new Set((swiftFunctions(source) ?? []).filter((fn) => fn.name === name).map((fn) => {
+    const around = blocks.filter((block) => block.start <= fn.start && block.end >= fn.start).at(-1);
+    return around && (around.kind === "class" || around.kind === "extension") && classes.has(around.name) ? around.name : undefined;
+  }));
+  return found.size === 1 ? [...found][0] : undefined;
+}
 
 /**
  * The declarations each part runs, by name, from its test and identifier references. The rest
@@ -611,8 +627,12 @@ export function partReach(
   const repeats = new Set<string>();
   const repeatTests = new Map<string, Set<string>>();
   const broadRepeats = new Set<string>();
+  // The rest part skips the phone check's own tool tests, so its passes run an edited one only by name, broad or not.
+  const rest = parts.at(-1)!.name;
+  const toolTests = new Set<string>();
   const repeat = (part: string, test?: string) => {
     repeats.add(part);
+    if (test && part === rest && phoneToolEntry(test)) toolTests.add(test);
     if (!test) broadRepeats.add(part);
     else { const tests = repeatTests.get(part) ?? new Set<string>(); tests.add(test); repeatTests.set(part, tests); }
   };
@@ -679,8 +699,8 @@ export function partReach(
             const current = after.get(each.path) ?? "";
             if (!swiftFunctions(current)?.some((fn) => fn.name === each.name)) continue;
             const table = parts.find((entry) => "test" in entry && entry.test === each.name);
-            const classes = [...blankSwift(current).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
-            repeat(part, table ? `${PHONE_JOURNEY}/${each.name}` : classes.length === 1 ? `InfinitaryUITests/${classes[0]![1]}/${each.name}` : undefined);
+            const owner = table ? undefined : testClass(current, each.name, testClasses(after.values()));
+            repeat(part, table ? `${PHONE_JOURNEY}/${each.name}` : owner ? `InfinitaryUITests/${owner}/${each.name}` : undefined);
           } else if (every.filter((name) => side.reached.get(name)!.has(each.name)).length === 1) {
             const table = parts.find((entry) => entry.name === part);
             repeat(part, table && "test" in table ? partIdentifier(table) : undefined);
@@ -757,10 +777,10 @@ export function partReach(
         else for (const fn of functions.filter((fn) => /^test[A-Z_]/.test(fn.name) &&
           side.lines.some((line) => fn.start <= line && line <= fn.end))) {
           if (!swiftFunctions(text!)?.some((current) => current.name === fn.name)) continue;
-          const classes = [...blankSwift(text!).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
+          const owner = testClass(text!, fn.name, testClasses([text!]));
           // The XCTest target: the app's hosted tests, or the package target a part on the Mac names.
           const target = path.startsWith(APP_TESTS) ? "InfinitaryTests" : path.slice(MAC_TESTS.length).split("/")[0];
-          repeat(part, classes.length === 1 ? `${target}/${classes[0]![1]}/${fn.name}` : undefined);
+          repeat(part, owner ? `${target}/${owner}/${fn.name}` : undefined);
         }
       }
     }
@@ -768,7 +788,8 @@ export function partReach(
   return every.map((part): PartReach => {
     const own = [...edited.get(part)!];
     if (own.length) return { part, distance: 0, repeat: repeats.has(part),
-      ...(repeatTests.has(part) && !broadRepeats.has(part) ? { repeatTests: [...repeatTests.get(part)!].sort() } : {}), why: `edits test code it runs: ${own.join(", ")}` };
+      ...(repeatTests.has(part) && !broadRepeats.has(part) ? { repeatTests: [...repeatTests.get(part)!].sort() } : {}),
+      ...(part === rest && toolTests.size ? { toolTests: [...toolTests].sort() } : {}), why: `edits test code it runs: ${own.join(", ")}` };
     // A generated file's change reaches the owners of what reads its changed entries, when they could be read.
     const owned = reasons.filter((path) => generated.get(path)?.includes(part) ?? matches(owners(part), path));
     if (owned.length) return { part, distance: 1, why: `edits a file it owns: ${owned.join(", ")}` };
@@ -886,12 +907,12 @@ export function requestDevicePlan(parts: readonly string[], reach: readonly Part
 }
 
 /** What the chooser hands phone.yml's jobs for a manual request: today's devices, the kept parts, the parts the iPhone
- * runs alone, each other device's parts, the edited parts' further passes with their named tests, whether the selection
- * is complete, and whether the request named its parts. */
+ * runs alone, each other device's parts, the edited parts' further passes with their named tests, the edited tool tests
+ * each pass of a kept part runs, whether the selection is complete, and whether the request named its parts. */
 export type RequestSelection = {
   devices: readonly string[]; kept: readonly string[]; iphoneOnly: readonly string[]; ipadParts: readonly string[];
-  duoParts: readonly string[]; repeats: readonly string[]; repeatTests: Record<string, readonly string[]>; full: boolean;
-  named: boolean;
+  duoParts: readonly string[]; repeats: readonly string[]; repeatTests: Record<string, readonly string[]>;
+  toolTests?: Record<string, readonly string[]>; full: boolean; named: boolean;
 };
 
 /** A manual request's selection from its kept parts and how far the change reaches each: `explicit` for a request that
@@ -906,6 +927,7 @@ export function chooseRequest(kept: readonly string[], reach: readonly PartReach
     devices, kept, iphoneOnly, ipadParts: ipadParts(kept, iphoneOnly, screens), duoParts: deviceParts("duo", kept, iphoneOnly, screens),
     repeats: repeats.repeatParts, full: repeats.full, named,
     repeatTests: Object.fromEntries(reach.filter((each) => each.repeatTests?.length).map((each) => [each.part, each.repeatTests!])),
+    toolTests: Object.fromEntries(reach.filter((each) => each.toolTests?.length && kept.includes(each.part)).map((each) => [each.part, each.toolTests!])),
   };
 }
 
@@ -914,9 +936,9 @@ export function chooseRequest(kept: readonly string[], reach: readonly PartReach
  * jobs, when phone.yml ran one job for each of `devices` and each job's gate built its passes from what the chooser
  * named. A device job's list was the kept parts, or its own parts for the iPad's and the Duo's, of which the iPhone ran
  * its iPhone-only parts alone; a complete selection with no iPhone-only part ran every part instead. A request that named
- * its parts read none of the chooser's further passes or completeness, so it ran no further pass. The gate
- * (`scripts/test-phone.ts`) then built each job's passes with `phonePasses`, the job of every device from every device.
- * `devices` names only devices with parts, as a device job with none ended before its gate.
+ * its parts read none of the chooser's further passes or completeness, so it ran no further pass, and it runs no edited
+ * tool test by name either. The gate (`scripts/test-phone.ts`) then built each job's passes with `phonePasses`, the job of
+ * every device from every device. `devices` names only devices with parts, as a device job with none ended before its gate.
  */
 export function requestPasses(selection: RequestSelection): PhoneJob[] {
   const repeats = selection.named ? [] : selection.repeats;
@@ -929,7 +951,7 @@ export function requestPasses(selection: RequestSelection): PhoneJob[] {
     return phonePasses(devices, {
       parts: every ? PHONE_PARTS.map((part) => part.name) : list.filter((part) => !alone.includes(part)),
       iphoneOnly: every ? undefined : list.filter((part) => alone.includes(part)),
-      repeats, repeatTests: selection.repeatTests,
+      repeats, repeatTests: selection.repeatTests, toolTests: selection.named ? {} : selection.toolTests ?? {},
     });
   });
 }
@@ -1171,6 +1193,7 @@ function main(): void {
       `On the iPad: ${selection.ipadParts.join(" ") || "none"}.`,
       `On the iPhone Duo: ${selection.duoParts.join(" ") || "none"}.`,
       `Two additional passes on the iPhone (the iPad and the Duo run each of their own parts once): ${repeats.repeatParts.join(" ") || "none"}.`,
+      ...Object.entries(selection.named ? {} : selection.toolTests ?? {}).map(([part, tests]) => `Edited tool tests every ${part} pass runs: ${tests.join(", ")}.`),
       "", ...(jobs.length ? ["#### Jobs", "", ...jobs.map((job) => `- ${job.label}: ${job.passes.map((pass) => `${pass.part}${pass.round > 1 ? ` round ${pass.round}` : ""} (${pass.device})`).join(", ")}`), ""] : []), ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 

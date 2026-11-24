@@ -64,6 +64,8 @@ const { values } = parseArgs({ options: {
   "repeat-part": { type: "string", multiple: true },
   "repeat-tests": { type: "string" },
   test: { type: "string", multiple: true },
+  // The rest part's tool tests whose own code changed, which one part's run then runs beside its tests (`partSelection`).
+  "tool-test": { type: "string", multiple: true },
   // Local repeats stop at their first failed part; CI chooses fail-fast or full discovery explicitly.
   "stop-early": { type: "boolean", default: phoneStopsEarly(process.env) },
   // INF-4241 piece 3: how many simulated devices run at once, as many as this Mac's processors and memory hold
@@ -108,8 +110,9 @@ const only = values.waits ? "waits" as const : values.tools ? "tools" as const :
 if (values.mac && (values.xctestrun || values.part?.length !== 1 || !partOnMac(values.part[0]!) || !values["swift-build"]))
   throw new Error("--mac runs exactly one Mac part, with the gate's package build");
 if (values.test && !values.xctestrun && !values.mac) throw new Error("--test needs the gate's built test plan");
+if (values["tool-test"] && (!values.xctestrun || only)) throw new Error("--tool-test runs beside one part's own tests, from the gate's built test plan");
 if (values.passes && (values.xctestrun || values.mac)) throw new Error("--passes belongs to the gate, not one part");
-if (values.plan && (values.part || values["iphone-part"] || values["repeat-part"] || values["repeat-tests"] || values.test || values.device
+if (values.plan && (values.part || values["iphone-part"] || values["repeat-part"] || values["repeat-tests"] || values.test || values["tool-test"] || values.device
   || values["every-device"] || values.both || values.ipad || values.xctestrun || values.mac || values.waits || values.tools))
   throw new Error("--plan names the job's passes itself, so it takes no parts, devices or selection");
 if (values["skip-package-tests"] && !values.plan) throw new Error("--skip-package-tests belongs to a dealt job's --plan");
@@ -615,7 +618,8 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>, xcode: string) 
     const command = [process.execPath, "scripts/test-phone.ts", "--device", device,
       ...(device === "duo" ? ["--hinge-helper", await hingeHelper!] : []),
       ...demo.childArgs, ...(only ? [`--${only}`] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
-      "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]), "--evidence", folder(job),
+      "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]),
+      ...(job.tools ?? []).flatMap((test) => ["--tool-test", test]), "--evidence", folder(job),
       "--xctestrun", join(products, plan), "--simulator", lane.owned];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
@@ -784,7 +788,7 @@ const onePart = async () => {
     } });
   const testing = new Date();
   let output = "";
-  await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...phoneTestSelection(values.part![0]!, values.test, only),
+  await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...phoneTestSelection(values.part![0]!, values.test, only, values["tool-test"]),
     ...phoneExecutionArguments(GRADES_BUDGETS, partBudget / 1000), "test-without-building"], false, (line) => {
       idleStack?.receive(line);
       if (guestObserver && phoneGuestJourneyFinished(line, values.part![0]!)) guestObserver.stop();
@@ -824,11 +828,11 @@ const onePart = async () => {
     });
   // INF-1541 piece 1: the native wait-clock tests launch no app, so only a journey part must say it skipped the wait;
   // a part that runs an app-hosted class alone (INF-2989's weak-link) drives no UI and has no such wait.
-  if (!only && phoneSelectionRunsJourney(values.part![0]!, values.test) && !phoneAnimationWaits(output).skipped)
+  if (!only && phoneSelectionRunsJourney(values.part![0]!, values.test, values["tool-test"]) && !phoneAnimationWaits(output).skipped)
     throw new Error(`The ${values.part![0]} part ran with XCTest's animation wait: its journey never printed "Phone animation wait skipped", so the hook in PhoneAnimationWait.swift is missing`);
   // INF-2625: a test XCTest no longer finds passes silently; the part's own journey test must have started.
-  if (!only && !phoneTestsStarted(values.part![0]!, output, values.test))
-    throw new Error(`The ${values.part![0]} part never started its journey test: XCTest did not find it in the built tests`);
+  if (!only && !phoneTestsStarted(values.part![0]!, output, values.test, values["tool-test"]))
+    throw new Error(`The ${values.part![0]} part never started its journey test${values["tool-test"] ? " or an edited tool test it runs" : ""}: XCTest did not find it in the built tests`);
 };
 // INF-4326 (INF-4241's speed-ups): a part on the Mac itself, beside the simulated devices: its own disposable home, and
 // its tests from the phone's package, built by the gate's package tests, on the real timers. Its phone identity is kept

@@ -1,3 +1,4 @@
+import type { StripPage } from "@shared/conversation";
 import type { DeviceArrival } from "@shared/deviceArrival";
 import type { ThisMac } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
@@ -33,7 +34,7 @@ import { projectFocus } from "./projectFocus";
 import { mirrorCardAnswers } from "./savedCardAnswers";
 import { shownEntry, withoutKey } from "./stack";
 import { openNotifiedCard, readCardsAgain, type StackSlice, stackSlice } from "./stackActions";
-import { STRIP_ROUNDS, type StripPage } from "./strip";
+import { STRIP_ROUNDS } from "./strip";
 import { type VoiceSlice, voiceSlice } from "./voice";
 
 /**

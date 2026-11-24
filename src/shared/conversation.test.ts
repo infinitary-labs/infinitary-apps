@@ -62,7 +62,6 @@ describe("the strip's rounds", () => {
       seq: 1,
       page,
       limit: 2,
-      cardRounds: true,
     });
     expect(shown(strip)).toEqual(["message:m:1:", `choice:${approved.id}:${BACKLOG_CARD.title}`]);
     expect(strip[1]).toMatchObject({ id: approved.id, kind: "choice", label: "Approve and build" });
@@ -76,7 +75,6 @@ describe("the strip's rounds", () => {
       seq: 2,
       page: { rounds: [approved, asked], seq: 1 },
       limit: 2,
-      cardRounds: true,
     });
     expect(shown(strip)).toEqual([`choice:${approved.id}:${BACKLOG_CARD.title}`, "message:m:2:"]);
     // Read again, the same rounds keep their keys, and the message gains its id.
@@ -85,7 +83,6 @@ describe("the strip's rounds", () => {
       seq: 2,
       page: { rounds: [reminded, approved], seq: 2 },
       limit: 2,
-      cardRounds: true,
     });
     expect(shown(read)).toEqual(shown(strip));
     expect(read[1]).toMatchObject({ id: reminded.id });
@@ -106,7 +103,6 @@ describe("the strip's rounds", () => {
       seq: 3,
       page: { rounds: [typed, reminded], seq: 3 },
       limit: 2,
-      cardRounds: true,
     });
     expect(shown(strip)).toEqual(["message:m:2:", `message:m:3:${BACKLOG_CARD.title}`]);
   });
@@ -125,18 +121,12 @@ describe("the strip's rounds", () => {
       seq: 2,
       page: { rounds: [line, reminded], seq: 2 },
       limit: 2,
-      cardRounds: true,
     });
     expect(strip.at(-1)).toMatchObject({ kind: "reply", you: "thanks, looks right", id: line.id });
   });
 
-  it("keeps to messages on a home that refuses the read, without card rounds, and to the newest while a card is up", () => {
-    const page = { rounds: [reminded, approved], seq: 2 };
-    expect(shown(stripRounds({ turn, seq: 2, page: null, limit: 2, cardRounds: true }))).toEqual([
-      "message:m:1:",
-      "message:m:2:",
-    ]);
-    expect(shown(stripRounds({ turn, seq: 2, page, limit: 2, cardRounds: false }))).toEqual([
+  it("keeps to messages on a home that refuses the read, and to the newest while a card is up", () => {
+    expect(shown(stripRounds({ turn, seq: 2, page: null, limit: 2 }))).toEqual([
       "message:m:1:",
       "message:m:2:",
     ]);
@@ -147,8 +137,8 @@ describe("the strip's rounds", () => {
       label: "Got it",
     };
     const pressed = { rounds: [gotIt, reminded], seq: 2 };
-    expect(shown(stripRounds({ turn, seq: 2, page: pressed, limit: 1, cardRounds: true }))).toEqual(
-      [`choice:${gotIt.id}:${BACKLOG_CARD.title}`],
-    );
+    expect(shown(stripRounds({ turn, seq: 2, page: pressed, limit: 1 }))).toEqual([
+      `choice:${gotIt.id}:${BACKLOG_CARD.title}`,
+    ]);
   });
 });

@@ -152,6 +152,7 @@ A round is one thing the captain did and what came back: a message and the reply
   Working never takes a reply's place: an operational wake leaves the reply on screen with its own mark spinning beside it.
   A message with no reply yet shows the spinning mark and "Working…" in `--fg-3` where its reply will go.
   When the busy signal falls, the mark eases on to its next resting sixth of a turn over `--dur-med` as it fades back to `--accent`; the older round's mark never spins.
+  A card round has no reply line, so while it is the newest round its row starts with the same spinning mark, with no words, and stays 22 px; the mark leaves when the busy signal falls (INF-6365's review, the captain's choice: "Spin the first mate's mark beside your card answer").
   The phone draws the same spinning mark (`MessageComposer.swift`); card threads keep their own working words.
   Before its turn has started, and after a turn that closed with no words where nothing took effect, the first mate's line is absent and the captain's words stand alone.
 - **The reply line.**

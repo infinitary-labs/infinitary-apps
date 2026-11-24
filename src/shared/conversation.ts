@@ -127,6 +127,9 @@ export type StripRound = {
   | { kind: "reply"; you: string }
 );
 
+/** The conversation's newest page as the strip keeps it, with the message sequence it was read at. */
+export type StripPage = { rounds: readonly ConversationRound[]; seq: number };
+
 /** The window's messages and the newest page of the conversation, as the strip reads them. */
 export type StripInput = {
   turn: LastTurn | null;
@@ -136,11 +139,9 @@ export type StripInput = {
    * The newest page and the `seq` it was read at; null while none was read
    * or on a home that refuses the read, and the strip shows messages alone.
    */
-  page: { rounds: readonly ConversationRound[]; seq: number } | null;
+  page: StripPage | null;
   /** How many rounds the strip shows. */
   limit: number;
-  /** Whether card rounds take a place on the strip (INF-6337's plan, the captain's choice: shown). */
-  cardRounds: boolean;
 };
 
 /**
@@ -179,7 +180,7 @@ export function stripRounds(input: StripInput): StripRound[] {
       },
     };
   });
-  if (page && input.cardRounds)
+  if (page)
     page.rounds.forEach((read, order) => {
       if (read.kind === "message" || sentAsMessage(read)) return;
       const base = { key: read.id, id: read.id, card: read.card };

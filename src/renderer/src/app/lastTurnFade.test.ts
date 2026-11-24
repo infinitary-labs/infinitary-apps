@@ -24,7 +24,7 @@ const turn: LastTurn = {
 
 /** The strip the window draws from these messages alone, `seq` the newest's place. */
 const strip = (shown: LastTurn, seq: number) =>
-  stripRounds({ turn: shown, seq, page: null, limit: 2, cardRounds: true });
+  stripRounds({ turn: shown, seq, page: null, limit: 2 });
 
 describe("the second-to-last round's reading clock", () => {
   beforeEach(() => {

@@ -101,6 +101,14 @@
   line-height: 18px;
   white-space: nowrap;
 }
+/* While the Firstmate works after a card round, the round's row starts with
+   the spinning mark, at the line's start like a reply's, with no words, so
+   the row stays 22 px. */
+[data-last-turn] .row.you .card-working {
+  display: inline-flex;
+  flex: none;
+  margin-inline-end: auto;
+}
 /* A card round (INF-6337's plan): the card's name, a button that opens the
    card, before the captain's words on the one 22 px row. */
 [data-last-turn] .card-name {

@@ -157,7 +157,7 @@ describe("a round of the last turn above the input", () => {
     const html = renderToStaticMarkup(
       <LastTurnRound
         round={{ you: "Approve and build", reply: null }}
-        busy
+        busy={false}
         card={{ id: "card-backlog", title: "A panel that charts your backlog" }}
         act="choice"
       />,
@@ -170,5 +170,26 @@ describe("a round of the last turn above the input", () => {
     expect(html).toMatch(/data-last-turn-bubble="you" data-choice=""[^>]*>.*Approve and build/);
     expect(html).not.toContain('data-last-turn-bubble="firstmate"');
     expect(html).not.toContain("data-last-turn-mark");
+  });
+
+  // INF-6365's review, the captain's choice: while the first mate works
+  // after a card round, the row starts with its spinning mark, with no words.
+  it("starts a card round's row with the working mark and no words while the first mate works", () => {
+    const round = (older: boolean) =>
+      renderToStaticMarkup(
+        <LastTurnRound
+          round={{ you: "Approve and build", reply: null }}
+          busy
+          older={older}
+          card={{ id: "card-backlog", title: "A panel that charts your backlog" }}
+          act="choice"
+        />,
+      );
+    const newest = round(false);
+    expect(newest.match(/data-last-turn-mark=""/g)).toHaveLength(1);
+    expect(newest).toMatch(/data-last-turn-mark="" data-working=""/);
+    expect(newest).not.toContain(WORKING_WORDS);
+    expect(newest).not.toContain('data-last-turn-bubble="firstmate"');
+    expect(round(true)).not.toContain("data-last-turn-mark");
   });
 });

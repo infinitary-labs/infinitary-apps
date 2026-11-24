@@ -350,7 +350,9 @@ export function LastTurnRound({
   /**
    * A card round that is not also a message (INF-6337's plan): a press of
    * one of the card's buttons, its words in an outlined bubble, or a line
-   * typed under a crewmate's card. Either is one row, with no reply line.
+   * typed under a crewmate's card. Either is one row, with no reply line;
+   * while it is the newest and the Firstmate works, the row starts with the
+   * spinning mark and no words (the captain's choice in INF-6365's review).
    */
   act?: "choice" | "reply";
   /** Where a press on the round opens the conversation. */
@@ -379,6 +381,11 @@ export function LastTurnRound({
       aria-hidden={leaving || undefined}
     >
       <div className="row you">
+        {act && busy && !older ? (
+          <span className="card-working" data-last-turn-card-working="">
+            <MateMark working />
+          </span>
+        ) : null}
         {round.through ? (
           <span className="through" data-last-turn-through="">
             {m.shellLastTurnFromCommand({ command: CAPTAIN_COMMAND })}
@@ -468,7 +475,7 @@ function StripRoundView({
   return (
     <LastTurnRound
       round={{ you: strip.kind === "choice" ? strip.label : strip.you, reply: null }}
-      busy={false}
+      busy={busy}
       act={strip.kind}
       {...common}
     />
@@ -500,15 +507,12 @@ export function LastTurn() {
   const rootRef = useRef<HTMLDivElement>(null);
   /** The reply this mount read out, so a later render does not clear the live region. */
   const spoken = useRef<string | null>(null);
-  const strip = useMemo(
-    () => shownStrip({ lastTurn: turn, lastTurnSeq: seq, stripPage: page }, cardUp),
-    [turn, seq, page, cardUp],
-  );
   // Behind a card the strip shows only the newest round, so the clock reads the whole strip.
   const fullStrip = useMemo(
     () => shownStrip({ lastTurn: turn, lastTurnSeq: seq, stripPage: page }, false),
     [turn, seq, page],
   );
+  const strip = useMemo(() => (cardUp ? fullStrip.slice(-1) : fullStrip), [fullStrip, cardUp]);
   const key = fadeKey(fullStrip);
   const newestKey = fullStrip.at(-1)?.key;
   // Only a message's reply is read out, and only while that message is the newest round.

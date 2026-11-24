@@ -43,6 +43,7 @@ import {
   submitFeedbackWords,
 } from "@shared/vocabulary";
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
+import { contractChange } from "../connection/contractChanges";
 import type { CaptainPlace } from "../devices/captainPlaces";
 import { crewmateCardPicturesDir } from "../paths";
 import { lintCrewmateCard } from "../pi/cardLint";
@@ -90,6 +91,9 @@ import type { SettleOwners } from "./settleOwners";
 import { contributionStatusLine, pendingMergeLine } from "./settleWords";
 import { seenBefore, sinceSeenNotice, sinceSeenSection } from "./sinceSeen";
 import { deliverableOf, mergesInOwnBatch, taskContributesUpstream } from "./workShape";
+
+/** A crewmate can name the answered card it asks again (`asks_again`). */
+const CARD_ASKS_AGAIN = contractChange("card-asks-again");
 
 /**
  * The tool's answer when a completion card's revision went up while its
@@ -523,6 +527,15 @@ export class CrewmateCards {
     return true;
   }
 
+  /** Whether the computer a task runs on can send `asks_again` (`card-asks-again.md`). */
+  private takesAsksAgain(taskId: string): boolean {
+    const machine = this.host.machineOf(taskId);
+    return (
+      machine === LOCAL_MACHINE_ID ||
+      this.options.machines?.listsChange?.(machine, CARD_ASKS_AGAIN) === true
+    );
+  }
+
   /** One card as it stands, for a writer about to revise or answer it. */
   readCard(cardId: string): string {
     const read = this.host.cards.cardRead(cardId.trim());
@@ -952,6 +965,7 @@ export class CrewmateCards {
         task.title,
         task.session?.modelLabel() ?? task.session?.modelRef()?.id ?? "Unknown model",
         this.host.cardPlace(task.id),
+        this.takesAsksAgain(task.id),
       );
       // INF-3170 piece 2: the card's marked yes, bound to the offer it was
       // shown on; a revision without one offers none.

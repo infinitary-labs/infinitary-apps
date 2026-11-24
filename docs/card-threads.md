@@ -44,7 +44,19 @@ One note is the exception: a validation question whose click the host could not 
 A decision the captain closed without choosing, or a card a script or its author closed, can still come back under its id.
 The host's own card for a first mate's `app_change` ask (`HandoverOffer`) is never refused this way: while it is up, asking again revises it, and once the captain answered it, the next ask goes up under the next id in its series (`CardEmits.offerCardId`), such as `app-device-invite-2`.
 
-### A question already answered
+A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
+The minimize minus puts the card away and says what stays on rest (`docs/card-authoring.md`, "Put a card aside").
+An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again as a note after a choice, but a revision or thread answer never undoes the captain's paging away.
+Every choice still closes the card immediately; nothing keeps its page running while its author writes.
+The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
+Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
+The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
+A card with a secret's masked fields keeps its buttons under them instead (`EntryView.chatFirst`), so Save sits with the fields it sends and never under the thread's plain field; words left in the thread's field still go with a press.
+The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
+The author's answer redraws it at the close-out - see the next section.
+A refused reply moves nothing and keeps the draft.
+
+## A question already answered
 
 A question the captain answered on one card is not asked again on another (INF-6523, the captain's pick "Keep the backstop").
 Three facts carry the answer to the agent that might ask again, and one refusal backs them.
@@ -57,20 +69,10 @@ Three facts carry the answer to the agent that might ask again, and one refusal 
   A question repeats when it has the same control name and the same set of option values (`cardChoiceQuestions`, `cardLint.ts`), whatever its title, legend or body say; a Something else row is no option.
   Only a choice that neither declines nor puts the card off answers it, and only an answer that names the question.
   The check reads the emitting task's closed cards and, for an independent reviewer or a first mate relaying one, the cards of the builder and every review of it.
-  The refusal shows the earlier card, its legend, options, the choice, the answers and when, and nothing is shown.
-  The author judges whether the question is the same: when its facts changed or it is a different question under the same name, `asks_again` `{ card, why }` names the earlier card and the card goes up, opening with the earlier answer and what changed.
-
-A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
-The minimize minus puts the card away and says what stays on rest (`docs/card-authoring.md`, "Put a card aside").
-An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again as a note after a choice, but a revision or thread answer never undoes the captain's paging away.
-Every choice still closes the card immediately; nothing keeps its page running while its author writes.
-The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
-Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
-The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
-A card with a secret's masked fields keeps its buttons under them instead (`EntryView.chatFirst`), so Save sits with the fields it sends and never under the thread's plain field; words left in the thread's field still go with a press.
-The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
-The author's answer redraws it at the close-out - see the next section.
-A refused reply moves nothing and keeps the draft.
+  The refusal shows the earlier card, its legend, options, the choice, the answers and when, an unsafe data reader's words marked as data, and nothing is shown.
+  Only the newest answered card with the question counts, so a question asked again on purpose is settled by its latest answer.
+  The author judges whether the question is the same: when its facts changed, `asks_again` `{ card, why }` names that newest card and the card goes up, opening with the earlier answer and what changed; a different question that only shares the name takes a name of its own.
+  A crewmate on a computer that runs work without the `card-asks-again` change cannot send `asks_again`, so its cards skip this check.
 
 ## When a card reaches the stage
 

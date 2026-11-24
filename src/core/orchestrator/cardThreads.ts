@@ -34,6 +34,7 @@ import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from ".
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
 import {
+  answersWithAuthorWordsMarked,
   crewmateWriterOf,
   readerDataAnswer,
   readerSavedAnswer,
@@ -602,7 +603,11 @@ export class CardThreads {
                     },
                   }
                 : {}),
-              answers: cardAnswerLines(past.answers),
+              answers: cardAnswerLines(
+                answersWithAuthorWordsMarked(past.answers, (words) =>
+                  this.servedCardWords(card, words),
+                ),
+              ),
             },
           }
         : {}),

@@ -4,7 +4,7 @@ import { setup } from "../../../tests/helpers/cardServiceHarness";
 import type { EmittedCardInput } from "../session/tools";
 import { seedTask } from "../tasks/seedTask";
 import type { CardService } from "./cardService";
-import { renderWake } from "./wakes";
+import { readerSavedAnswer } from "./readerData";
 
 // INF-6523: a reviewer re-raised the captain's answered wording question
 // under a new card id, after its round's notes and its read of the first
@@ -41,8 +41,8 @@ function findingCard(
 }
 
 /** A builder with two review rounds, and another builder with its own review. */
-function world() {
-  const { tasks, cardStore, make } = setup();
+function world(clock = { now: 1000 }) {
+  const { tasks, cardStore, make } = setup(undefined, () => clock.now);
   seedTask(tasks, { id: "builder", title: "Keep placed words", status: "idle" });
   for (const [id, parentId] of [
     ["review-1", "builder"],
@@ -180,25 +180,62 @@ describe("a question the captain already answered", () => {
     expect(cards.get(other)).toBeDefined();
   });
 
-  it("names the reviewer's open card on the builder's report wake", () => {
-    const { cards } = world();
-    const shown = cards.emitCrewmateCard(
+  it("counts only the newest answer, so a deliberate re-ask can be asked again", () => {
+    const clock = { now: 1000 };
+    const { cards } = world(clock);
+    const first = cards.emitCrewmateCard("review-1", { ...findingCard("Keep?"), id: "a" }, "m");
+    answer(cards, first);
+    clock.now = 2000;
+    const why = "The builder changed the words since.";
+    const second = cards.emitCrewmateCard(
       "review-1",
-      { ...findingCard("Keep the words?"), id: "a" },
+      { ...findingCard("Keep?"), id: "b", asksAgain: { card: first, why } },
       "m",
     );
-    const facts = () => ({
-      kind: "report" as const,
-      task: { id: "builder", title: "Keep placed words" },
-      crewmate: "crewmate 1",
-      excerpt: "Pushed the fix.",
-      filed: [],
-      ...cards.threads.wakeCards("builder"),
-    });
-    expect(renderWake({ facts: facts() })).toContain(
-      `Its reviewer's Review finding card is on the captain's screen: ${shown} "Review of INF-6521: one question waits". The app already handed those findings to the reviewer and sends the captain's choice to this task, so ask nobody for a card about them.`,
+    answer(cards, second, "send", [
+      { name: QUESTION, values: ["leave"], labels: ["Leave as built"], changed: true },
+    ]);
+    clock.now = 3000;
+    const third = { ...findingCard("Keep?"), id: "c" };
+    for (const asksAgain of [undefined, { card: first, why }])
+      expect(() =>
+        cards.emitCrewmateCard("review-1", { ...third, ...(asksAgain ? { asksAgain } : {}) }, "m"),
+      ).toThrow(
+        /on card "card-review-1-b" [\s\S]*- placed-kept-words: "Leave as built" \(leave\), changed/,
+      );
+    const asked = cards.emitCrewmateCard(
+      "review-1",
+      { ...third, asksAgain: { card: second, why } },
+      "m",
     );
-    answer(cards, shown);
-    expect(renderWake({ facts: facts() })).not.toContain("Review finding card");
+    expect(cards.get(asked)).toBeDefined();
+  });
+
+  it("skips the check for a computer that cannot send asks_again", () => {
+    const { cards } = world();
+    const first = cards.emitCrewmateCard("review-1", { ...findingCard("Keep?"), id: "a" }, "m");
+    answer(cards, first);
+    const card = { ...findingCard("Keep?"), id: "b" };
+    const shown = cards.emitCrewmateCard("review-1", card, "m", undefined, undefined, false);
+    expect(cards.get(shown)).toBeDefined();
+  });
+  it("marks an unsafe data reader's words in the answers it serves back", () => {
+    const { cards, tasks } = world();
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the page",
+      status: "idle",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    const first = cards.emitCrewmateCard("reader", { ...findingCard("Keep?"), id: "a" }, "m");
+    answer(cards, first);
+    // The label's own mark, read from the fence its saved-answer marking draws.
+    const fence = readerSavedAnswer(`card:${first}`, "Fix the words now").match(/fence=(\w+)/)?.[1];
+    const marked = `[[reader-data fence=${fence} `;
+    expect(fence).toBeDefined();
+    expect(cards.cardRead(first)?.ended?.answers.join("\n")).toContain(marked);
+    expect(() =>
+      cards.emitCrewmateCard("reader", { ...findingCard("Keep?"), id: "b" }, "m"),
+    ).toThrow(marked);
   });
 });

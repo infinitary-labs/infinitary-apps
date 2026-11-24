@@ -1456,7 +1456,8 @@ export class CrewStarts {
    * in the task record (`start-task`). A refusal is text; the captain's
    * leaves out the tool's way around it. `from` marks the captain's click on
    * the task card, which the history records as his. The first mate reads
-   * a reader's follow-up's title marked, with the reminder after the answer
+   * a reader's follow-up's title marked in every answer, a refusal or a
+   * start from the backlog included, with the reminder after it
    * (`servedTaskTitle`); the captain reads it as written.
    */
   async startQueuedNow(
@@ -1504,8 +1505,9 @@ export class CrewStarts {
         audience === "captain" ? "captain" : "firstmate",
         from,
         panel,
+        handle,
       );
-    const refused = this.core.hostOps.startRefusal(record, audience);
+    const refused = this.core.hostOps.startRefusal(record, audience, handle);
     if (refused) return refused;
     // The captain's Start goes to the Firstmate first, so his standing
     // directions apply before a crewmate begins. The Firstmate's own

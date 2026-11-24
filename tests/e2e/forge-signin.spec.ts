@@ -1256,10 +1256,11 @@ for (const runtime of READER_RUNTIMES) {
       UNSAFE_DATA_READER_CARD.title,
       UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
       UNSAFE_DATA_READER_CARD_WORDS.option,
-    ])
-      expect(copiesOf(answered, words)).toEqual({ total: expect.any(Number), unmarked: 0 });
-    expect(copiesOf(answered, UNSAFE_DATA_READER_CARD.title).total).toBeGreaterThan(0);
-    expect(copiesOf(answered, UNSAFE_DATA_READER_CARD_WORDS.option).total).toBeGreaterThan(0);
+    ]) {
+      const copies = copiesOf(answered, words);
+      expect(copies.total, words).toBeGreaterThan(0);
+      expect(copies.unmarked, words).toBe(0);
+    }
     expect(answered).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
     // Every time the read serves the card's body, as its card and in its
     // decisions, it is marked; on Pi, so is the follow-up's title the start

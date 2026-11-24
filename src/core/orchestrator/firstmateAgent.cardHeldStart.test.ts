@@ -1,3 +1,4 @@
+import { fencedListReminder, fencedSpans } from "@shared/outsideData";
 import { describe, expect, it } from "vitest";
 import {
   drained,
@@ -8,6 +9,8 @@ import {
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { seedTask } from "../tasks/seedTask";
+import { READER_DATA_LABEL } from "./readerData";
 
 fakeClockEachTest();
 
@@ -83,6 +86,27 @@ describe("FirstmateAgent start held by its own open card", () => {
     expect(text).toContain(`Not started: your open card "${decision.title}" (${f.card.id})`);
     expect(f.tasks.get(f.task.id)?.status).toBe("open");
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
+  });
+
+  // INF-6427's piece 1 (review): a follow-up an unsafe data reader filed is
+  // named with its title between reader-data marks in the refusal too.
+  it("names a reader's follow-up by its marked title in the refusal", async () => {
+    const f = await cardUp();
+    seedTask(f.tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "idle",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    f.tasks.graph.link(f.task.id, "reader", "discovered-from", "crewmate");
+    await reportWake(f);
+    const text = (await startNow(f)) ?? "";
+    expect(
+      fencedSpans(text)
+        .filter((span) => span.label === "reader-data" && span.closed)
+        .map((span) => span.words),
+    ).toEqual([followUp]);
+    expect(text.endsWith(`\n${fencedListReminder(READER_DATA_LABEL)}`)).toBe(true);
   });
 
   // The review's finding: when-ready lets the ready sweep start it at once.

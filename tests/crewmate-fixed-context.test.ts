@@ -23,6 +23,7 @@ import {
   overLine,
   roomAtHardLine,
 } from "./helpers/promptBudget";
+import { intentsWithoutSentence, type ProtectedIntent } from "./helpers/protectedSentences";
 
 /**
  * The fixed part of every crewmate request: the served prompt and the tool
@@ -154,6 +155,109 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
 ];
 
+function textOf(
+  home: Home,
+  runtime: CrewmateBackend | undefined,
+  kind: CrewmateProcedureFacts | undefined,
+): string {
+  return home === "prompt"
+    ? promptFor(runtime, kind)
+    : (CREWMATE_TOOLS.find((tool) => tool.name === home.tool)?.description ?? "");
+}
+
+/**
+ * The protected sentences (docs/testing.md, "The protected sentences"): the
+ * served words that decide consent, what reaches the captain, merges, tests,
+ * private data and deleted files. Changing or removing an entry, or the
+ * served words it names, waits for the captain's approval.
+ */
+const PROTECTED: { intent: ProtectedIntent; rule: string; home: Home; says: string }[] = [
+  {
+    intent: "consent",
+    rule: "sensitive or costly validation asks the captain first",
+    home: "prompt",
+    says: "Before anything sensitive or costly - the captain's sign-ins or accounts, plan allowance or money, real data or production, keychain or signing access, credential access, or anything others can see - ask for consent on a card unless a captain-origin project direction's words or the served Already allowed list cover it.",
+  },
+  {
+    intent: "consent",
+    rule: "Keychain and signing commands against real material ask first",
+    home: "prompt",
+    says: "Keychain and signing access is sensitive: before running security, codesign or any other Keychain command against the person's real keychains or a project's own signing material, ask for consent on a card under the validation resource rule.",
+  },
+  {
+    intent: "consent",
+    rule: "the captain signs in, and a crewmate looks for no other way in",
+    home: "prompt",
+    says: "if a tool or a push answers that the app is not signed in, report that as a blocker and stop - the captain signs in, never you, and never look for another way in.",
+  },
+  {
+    intent: "what reaches the captain",
+    rule: "a card only for a captain decision or a fact the captain needs",
+    home: "prompt",
+    says: "A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact.",
+  },
+  {
+    intent: "what reaches the captain",
+    rule: "the captain is left only what the fleet cannot do",
+    home: "prompt",
+    says: "Whatever reaches the captain - a question, option or step - leaves them only what the fleet cannot do: choose what they want, give consent the app holds for their click, sign in, enter a password, approval or signing material, or reach a device the fleet cannot.",
+  },
+  {
+    intent: "merges",
+    rule: "a crewmate never merges or pushes to a default branch from its shell",
+    home: "prompt",
+    says: "Never merge a pull request or push to a default branch from your shell, even when your goal names that merge: a merge goes only through your merge card",
+  },
+  {
+    intent: "merges",
+    rule: "approval, saved answers and passing checks never grant a merge",
+    home: "prompt",
+    says: "Implementation approval, plan closure, saved answers and passing validation never grant merge permission.",
+  },
+  {
+    intent: "tests",
+    rule: "a failing test is diagnosed before its expectation changes",
+    home: "prompt",
+    says: "A failing test is a bug report first: diagnose the cause before touching its expectation.",
+  },
+  {
+    intent: "tests",
+    rule: "deleting a test asks the captain",
+    home: "prompt",
+    says: "deleting a test still asks for the captain's approval.",
+  },
+  {
+    intent: "tests",
+    rule: "a test the change edits is never called a flake",
+    home: "prompt",
+    says: "A test whose own code your change adds or edits is never a suspected flake: your change owns its failure.",
+  },
+  {
+    intent: "private data",
+    rule: "secrets stay off command lines and out of output",
+    home: "prompt",
+    says: "Keep secrets off command lines and out of printed output.",
+  },
+  {
+    intent: "private data",
+    rule: "published text names no computer, host, user, account or key",
+    home: "prompt",
+    says: "Leave out computer, host, user and account names and which key or sign-in reaches what.",
+  },
+  {
+    intent: "deleted files",
+    rule: "bringing a branch up to date never undoes newer work",
+    home: "prompt",
+    says: "never git reset --soft onto it, which undoes newer work.",
+  },
+  {
+    intent: "deleted files",
+    rule: "discarding unmerged work is confirmed only when the card says what is lost",
+    home: { tool: "emit_card" },
+    says: "settle discard drops the worktree unmerged; confirm true only when the body already says there are unmerged commits or uncommitted edits",
+  },
+];
+
 describe("the crewmate's fixed context (INF-416 piece J)", () => {
   it("stays under its hard line for each runtime and kind of work", () => {
     // INF-2286: keep the assembled context readings in the run's evidence,
@@ -279,14 +383,6 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
   });
 
   it("says each rule the trim took out of the delivery guidance in the home the ledger names", () => {
-    const textOf = (
-      home: Home,
-      runtime: CrewmateBackend | undefined,
-      kind: CrewmateProcedureFacts | undefined,
-    ) =>
-      home === "prompt"
-        ? promptFor(runtime, kind)
-        : (CREWMATE_TOOLS.find((tool) => tool.name === home.tool)?.description ?? "");
     for (const runtime of RUNTIMES) {
       for (const kind of KINDS) {
         const missing = LEDGER.filter(
@@ -297,5 +393,25 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
         );
       }
     }
+  });
+});
+
+describe("the crewmate's protected sentences (INF-6559 part 4)", () => {
+  it("serves each one word for word in the home it names, for each runtime and kind of work", () => {
+    for (const runtime of RUNTIMES) {
+      for (const kind of KINDS) {
+        const missing = PROTECTED.filter(
+          ({ home, says }) => !textOf(home, runtime, kind).includes(says),
+        ).map(({ intent, rule }) => `${intent}: ${rule}`);
+        expect(
+          missing,
+          `a protected sentence the crewmate (${label(runtime, kind)}) is no longer told`,
+        ).toEqual([]);
+      }
+    }
+  });
+
+  it("keeps a sentence for each intent it protects", () => {
+    expect(intentsWithoutSentence(PROTECTED)).toEqual([]);
   });
 });

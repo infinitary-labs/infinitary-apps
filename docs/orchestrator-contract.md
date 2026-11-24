@@ -185,6 +185,7 @@ Report net growth, the chosen growth horizon, the restored room and the forecast
 Only the captain raises a budget, when a trim finds that what every task needs no longer fits; an overrun below the hard line spends promised conversation room only until its trim merges.
 Each revision file says what its words cost, and names the one home of each rule it adds.
 The test's ledger names, for every rule taken out of one text, the text that still says it: the core, a tool, a wake, or the refusal that answers the call breaking it.
+A sentence that decides consent, what reaches the captain, merges, tests, private data or deleted files is protected word for word, and only the captain's approval changes one (`docs/testing.md`, "The protected sentences").
 The crewmate prompt follows the same homes: its tools say how `check_change`, `read_workflow`, `github_write` and `report` work, their refusals hold the repair, rerun and baseline limits, and the prompt keeps which move comes when.
 `file_followup` owns filing eligibility, duplicate searches, dependencies and continuations; `note_progress` owns the plan format, `report` owns waiting and finished declarations, and `emit_card` owns completion-card shapes.
 The general validation resource rule owns secret handling on every tier; the core keeps the specific Keychain consent and isolation instructions.

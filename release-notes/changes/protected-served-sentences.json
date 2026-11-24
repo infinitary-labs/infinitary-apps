@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "protected-served-sentences",
+      "reason": "Internal: the fixed-context tests now hold the served sentences that decide consent, what reaches the captain, merges, tests, private data and deleted files word for word; nothing the agents are told or a person sees changes."
+    }
+  ]
+}

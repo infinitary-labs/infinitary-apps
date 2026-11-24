@@ -1,5 +1,5 @@
 diff --git a/dist/chunk-artifact.js b/dist/chunk-artifact.js
-index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..4d7529995ec0260e747b21d0e09b09340beba807 100644
+index 1f3db9bac2448d085c881ded1ec0f3a37cda6a13..1823b1cdc46f9ec635214dfd748c0b9d7e4e1f92 100644
 --- a/dist/chunk-artifact.js
 +++ b/dist/chunk-artifact.js	
 @@ -2258,6 +2258,24 @@ async function runWithSuite(suite, fn) {

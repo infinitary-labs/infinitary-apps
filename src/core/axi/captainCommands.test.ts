@@ -334,6 +334,11 @@ describe("infinitary-axi", () => {
 
     const detail = answer((await run(["api", "show", "inf:tasks:detail"])).stdout);
     expect(detail).toMatchObject({ channel: "inf:tasks:detail", effect: "read", required: 1 });
+    // Its one argument is an account's id, or null for none.
+    const account = answer(
+      (await run(["api", "show", "inf:settings:firstmate-account:set"])).stdout,
+    );
+    expect(account).toMatchObject({ args: [{ position: 1, type: "string or null" }] });
     const read = await run(["api", "inf:tasks:detail", "axi-read"]);
     expect(read.exitCode).toBe(0);
     expect(answer(read.stdout)).toMatchObject({ value: { key, title: "Tidy axi-read" } });

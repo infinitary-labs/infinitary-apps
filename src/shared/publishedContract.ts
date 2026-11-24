@@ -106,8 +106,9 @@ function publish(what: string, schema: z.ZodType, io: "input" | "output", open: 
         if (open && jsonSchema.additionalProperties === false)
           delete jsonSchema.additionalProperties;
         const def = zodSchema._zod.def;
-        if (def.type === "tuple" && !(def as z.core.$ZodTupleDef).rest)
-          boundTuple((def as z.core.$ZodTupleDef).items, jsonSchema, io);
+        // An empty list has no prefix to name: JSON Schema wants one prefix item at least.
+        if (def.type === "tuple" && (def as z.core.$ZodTupleDef).items.length === 0)
+          delete jsonSchema.prefixItems;
       },
     }) as JsonSchema;
   } catch (error) {
@@ -117,28 +118,32 @@ function publish(what: string, schema: z.ZodType, io: "input" | "output", open: 
   }
   // The dialect is named once, for the whole file.
   delete json.$schema;
-  return json;
+  return oneTypeEach(json) as JsonSchema;
 }
 
+// Keywords whose values are data, not schemas: a "type" inside them is a value.
+const DATA_KEYWORDS = new Set(["const", "enum", "default", "examples"]);
+// Keywords whose keys are names a shape chose, such as a field called "default".
+const NAME_MAPS = new Set(["properties", "patternProperties", "$defs", "dependentSchemas"]);
+
 /**
- * A list of arguments is published with the counts the home holds it to,
- * which zod leaves out: up to the last element that may not be left off,
- * and no more than it lists. Without them JSON Schema would admit any count.
+ * zod folds a union of bare types into one `type` list, after overrides run.
+ * A strict validator, as a client would use, refuses a `type` list wider than
+ * one type and null (Ajv's strictTypes), so the contract spells every union
+ * of types as anyOf, one type to a branch, at the place `type` stood.
  */
-function boundTuple(
-  items: readonly z.core.SomeType[],
-  jsonSchema: Record<string, unknown>,
-  io: "input" | "output",
-) {
-  const optional = io === "input" ? "optin" : "optout";
-  let required = items.length;
-  while (required > 0 && items[required - 1]?._zod[optional] === "optional") required -= 1;
-  if (required > 0) jsonSchema.minItems = required;
-  // An empty list has no prefix to name: JSON Schema wants one item at least.
-  if (items.length === 0) {
-    delete jsonSchema.prefixItems;
-    jsonSchema.maxItems = 0;
-  } else jsonSchema.items = false;
+function oneTypeEach(node: unknown, names = false): unknown {
+  if (Array.isArray(node)) return node.map((item) => oneTypeEach(item));
+  if (!node || typeof node !== "object") return node;
+  const spelled: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (names) spelled[key] = oneTypeEach(value);
+    else if (key === "type" && Array.isArray(value))
+      spelled.anyOf = value.map((type) => ({ type }));
+    else if (DATA_KEYWORDS.has(key)) spelled[key] = value;
+    else spelled[key] = oneTypeEach(value, NAME_MAPS.has(key));
+  }
+  return spelled;
 }
 
 export const VERSION_RULE = {

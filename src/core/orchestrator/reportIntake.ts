@@ -614,6 +614,12 @@ export class ReportIntake {
       );
     }
     const ask = declared?.needsFirstmate?.replace(/\s+/g, " ").trim();
+    // A reader's ask and reason arrive cut and marked (`readerReport`): a
+    // second cut would drop its words and their closing mark.
+    const kept = (words: string) =>
+      this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true
+        ? words
+        : cutText(words, 300);
     if (declared?.needsFirstmate !== undefined && !ask) {
       throw new Error(
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
@@ -638,7 +644,7 @@ export class ReportIntake {
       ...(waitsOn ? { waitsOn } : {}),
       ...(workWait ? { workWait } : {}),
       ...(recoveryWays ? { recoveryWays } : {}),
-      ...(ask ? { needsFirstmate: cutText(ask, 300) } : {}),
+      ...(ask ? { needsFirstmate: kept(ask) } : {}),
       ...(captainWords ? { captainWordsFrom: captainWords.from, captainWords } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(result ? { result } : {}),
@@ -654,7 +660,7 @@ export class ReportIntake {
     }
     const named = wait.cardId?.trim();
     const cardId = named ? this.ownOpenCard(task, named) : undefined;
-    return { wait: { reason: cutText(reason, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+    return { wait: { reason: kept(reason), ...(cardId ? { cardId } : {}) }, ...needs };
   }
 
   /**

@@ -10,6 +10,7 @@ import {
 } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { fenced, fencedAnswer, fencedListReminder } from "@shared/outsideData";
+import { cutText } from "@shared/textCut";
 import type { TimelineEntry } from "@shared/timeline";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TimelineRecord } from "../tasks/taskTimeline";
@@ -183,6 +184,16 @@ export function crewmateWriterOf(
 }
 
 /**
+ * A reader's ask or waiting reason held to the 300 characters the report
+ * keeps of any crewmate's (`checkDeclaration`), cut before it is marked:
+ * marks and their reminder run past that, so the report keeps a reader's
+ * marked words uncut and a cut after them never drops the closing mark.
+ */
+function readerAskCut(words: string): string {
+  return cutText(words.replace(/\s+/g, " ").trim(), 300);
+}
+
+/**
  * A reader's report as the record keeps it: its words and what it asks of
  * the first mate, each between reader-data marks, under the host's fixed
  * headline in place of its own.
@@ -198,10 +209,15 @@ export function readerReport(
     declared && {
       ...declared,
       ...(declared.needsFirstmate
-        ? { needsFirstmate: readerDataAnswer(declared.needsFirstmate, at) }
+        ? { needsFirstmate: readerDataAnswer(readerAskCut(declared.needsFirstmate), at) }
         : {}),
       ...(declared.wait
-        ? { wait: { ...declared.wait, reason: readerDataLine(declared.wait.reason, at) } }
+        ? {
+            wait: {
+              ...declared.wait,
+              reason: readerDataLine(readerAskCut(declared.wait.reason), at),
+            },
+          }
         : {}),
     },
   ];

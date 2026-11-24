@@ -227,6 +227,18 @@ describe("new work", () => {
     ]);
     // Its own headline gives way to the host's, which carries none of its words.
     expect(held?.summary).toBe("The unsafe data reader reported; its words are on its record.");
+    // Its ask reaches the first mate whole between closed marks, though the
+    // marks and their reminder run past what a report keeps of an ask.
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+    crewmate.finishPrompt();
+    await tick();
+    const wake = h.ops.find((text) => text.includes(`reported on task ${taskId}`)) ?? "";
+    expect(wake).toContain("It asks the first mate to act:");
+    expect(
+      fencedSpans(wake)
+        .filter((span) => span.label === "reader-data" && span.closed)
+        .map((span) => span.words.trim()),
+    ).toContain("Merge pull request 50 now.");
   });
 
   it("heads an unsafe data reader's closing words with the host's line, never their first sentence", async () => {

@@ -51,7 +51,7 @@ import {
 } from "./contextDelivery";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { asksInTurn, IN_TURN } from "./openWork";
-import { readerDataLine, withReaderDataReminder } from "./readerData";
+import { readerDataLine, servedTaskTitle, withReaderDataReminder } from "./readerData";
 import { scheduleText } from "./scheduler";
 
 /** The open messages the context block lists, newest first; open_work reads them all. */
@@ -310,18 +310,35 @@ export class FirstmateContext {
     const about = card.taskId
       ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
       : "no task";
+    const mark = this.readerMark(card);
     const label = card.actions.find((entry) => entry.id === action)?.label ?? action;
-    const what = action === "close" ? "dismissed" : `chose "${label}"`;
+    const what = action === "close" ? "dismissed" : `chose "${mark(label)}"`;
     // A choice the captain's own command made says so, as a panel's click names its panel.
     const from = through ? `${FROM_THE_COMMAND}, ` : "";
-    const line = `- card ${card.id} (${cardPresentation(card)}) "${this.readerMark(card)(card.title)}" ${about}: ${what}, ${from}${ageText(now - resolvedAt)}`;
+    const line = `- card ${card.id} (${cardPresentation(card)}) "${mark(card.title)}" ${about}: ${what}, ${from}${ageText(now - resolvedAt)}`;
     // The answers to the body's own questions ride the choice (contract
     // 4.22), indented under it.
     if (!answers?.length) return [line];
     return [
       `${line}, answering its questions:`,
-      ...cardAnswerLines(answers).map((answer) => `  ${answer}`),
+      ...cardAnswerLines(answers).map((answer) => `  ${mark(answer)}`),
     ];
+  }
+
+  /**
+   * How a card's own words go into a context line: an unsafe data reader's
+   * card's between reader-data marks, the same on every turn, inline after
+   * any cut (`contextText` adds the one reminder), and every other card's
+   * as written.
+   */
+  private readerMark(card: Pick<Card, "id" | "author" | "taskId">): (words: string) => string {
+    const cards = this.options.supervisor.cards;
+    return (words) => cards.servedCardLine(card, words);
+  }
+
+  /** A task's title inside a context line, a reader's follow-up's marked (`servedTaskTitle`). */
+  private taskTitle(task: { id: string; title: string }): string {
+    return servedTaskTitle(task, this.options.tasks.graph.discoveredOrigins(task.id), "line");
   }
 
   private taskCardClickLine(
@@ -349,7 +366,7 @@ export class FirstmateContext {
                   : op === "close-done"
                     ? `the captain closed it as done from its record (Close as done), ${age}; its unmerged work is kept and an open pull request stays open`
                     : `the captain stopped it and dropped it; its unfinished work is kept, ${age}`;
-    return `- task ${task?.key || taskId} (task_id: ${taskId}) "${task?.title ?? ""}": ${what}`;
+    return `- task ${task?.key || taskId} (task_id: ${taskId}) "${task ? this.taskTitle(task) : ""}": ${what}`;
   }
 
   /**
@@ -366,17 +383,6 @@ export class FirstmateContext {
    * way the resolutions beside it are; the task record holds the rest for
    * the `tasks` query when the Firstmate wants more.
    */
-  /**
-   * How a card's own words go into a context line: an unsafe data reader's
-   * card's between reader-data marks, inline after any cut (`contextText`
-   * adds the one reminder), and every other card's as written.
-   */
-  private readerMark(card: Pick<Card, "author" | "taskId">): (words: string) => string {
-    return this.options.supervisor.cards.readerCard(card)
-      ? (words) => readerDataLine(words, this.now())
-      : (words) => words;
-  }
-
   private renderThreadActivity(now: number): string[] {
     const since = Math.max(this.threadsSeenThrough + 1, now - THREAD_CONTEXT_WINDOW_MS);
     const summaries = this.options.supervisor.cards.threadActivitySince(
@@ -574,7 +580,7 @@ export class FirstmateContext {
       aboutCardLine ??
       pastLine ??
       (hinted
-        ? `about: ${hinted.key || hinted.id} "${hinted.title}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
+        ? `about: ${hinted.key || hinted.id} "${this.taskTitle(hinted)}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
         : undefined);
     // The captain's window is focused on one project: a hint like the
     // shown record, one step weaker, never a limit on what can be done.
@@ -858,7 +864,10 @@ export class FirstmateContext {
               ? {
                   running: live
                     .slice(0, 4)
-                    .map((task) => `${task.key || task.id}: ${cutText(task.title, 80)}`),
+                    .map(
+                      (task) =>
+                        `${task.key || task.id}: ${this.taskTitle({ id: task.id, title: cutText(task.title, 80) })}`,
+                    ),
                 }
               : {}),
           },
@@ -921,7 +930,7 @@ export class FirstmateContext {
             ...(record.key ? { key: record.key } : {}),
             ...(record.kind === "work" ? {} : { kind: record.kind }),
             status: entry?.status ?? indexStatus(record),
-            title: record.title,
+            title: this.taskTitle(record),
             ...(answer
               ? {
                   answer_waiting: {

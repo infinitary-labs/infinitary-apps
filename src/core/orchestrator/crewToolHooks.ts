@@ -703,8 +703,8 @@ export class CrewToolHooks {
       this.core.options.tasks,
       input,
       (repoId) => this.core.options.repos.get(repoId)?.name,
-      (taskId) => this.core.cards.newestForTask(taskId)?.body,
-      (taskId) => this.core.cards.newestResolutionForTask(taskId),
+      (taskId) => this.core.cards.servedNewestBody(taskId),
+      (taskId) => this.core.cards.servedResolutionForTask(taskId),
       this.taskQueryReach(),
     );
   }

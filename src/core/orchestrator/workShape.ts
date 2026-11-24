@@ -29,6 +29,7 @@ import {
   type EscalationBriefFacts,
   type SpawnIntent,
 } from "./intentBrief";
+import { crewmateWriterOf, readerDataAnswer, readerDataLine, servedTaskTitle } from "./readerData";
 
 /** The task's prepared routing wins; local-only delivery never contributes to a host. */
 export function contributionForTask(
@@ -447,6 +448,11 @@ export function sourceFacts(
 ): BasisBriefFacts {
   const timeline = options.tasks.timeline(basis.id);
   const card = cards.newestAnswerForTask(basis.id);
+  // An unsafe data reader's card words may carry words anyone can write: a
+  // builder reads them between reader-data marks (docs/agents-reach.md).
+  const reader = basis.shape?.unsafe_data_reader === true;
+  const at = Date.now();
+  const mark = (words: string) => (reader ? readerDataLine(words, at) : words);
   // Only a change's working copy holds its work: an answer task commits
   // nothing and its scratch copy goes with it, so its answer is the report
   // and the card below, never a branch to start from.
@@ -464,10 +470,13 @@ export function sourceFacts(
     ? cards
         .messages(card.id)
         .filter((message) => message.text.trim() || message.notes?.length)
-        .map((message) => ({
-          who: message.who,
-          text: replyWithSettings(cardMessageText(message), message.answers),
-        }))
+        .map((message) => {
+          const text = replyWithSettings(cardMessageText(message), message.answers);
+          return {
+            who: message.who,
+            text: crewmateWriterOf(card, message) === basis.id ? mark(text) : text,
+          };
+        })
     : [];
   // The choice, the answers and the body all come off that one card, so a
   // later card on the task never lends the builder its choice instead.
@@ -490,7 +499,7 @@ export function sourceFacts(
         .at(-1)
     : undefined;
   const latest = submitted?.success ? submitted.data : resolution?.answers;
-  const answers = latest ? cardAnswerLines(latest) : undefined;
+  const answers = latest ? cardAnswerLines(latest).map(mark) : undefined;
   // What the captain's field sent with the closing choice (`choice-attachments.md`):
   // its notes and files as words here, its pictures among the brief's own.
   const closing = card
@@ -504,12 +513,14 @@ export function sourceFacts(
   );
   const carried = carriedRecord.success ? carriedLines(carriedRecord.data) : [];
   const result = options.tasks.latestResult(basis.id);
-  const rawBody = offer?.body ?? card?.body;
+  const unmarkedBody = offer?.body ?? card?.body;
+  // The body may be saved whole in a file, so it carries its own reminder.
+  const rawBody = unmarkedBody && reader ? readerDataAnswer(unmarkedBody, at) : unmarkedBody;
   const cardBody = rawBody ? cardPictureFiles(rawBody, options.paths.crewmatesDir) : undefined;
   return {
     key: basis.key || basis.id,
     taskId: basis.id,
-    title: basis.title,
+    title: servedTaskTitle(basis, options.tasks.graph.discoveredOrigins(basis.id), "line"),
     ...(basis.intent?.userWords ? { userWords: basis.intent.userWords } : {}),
     ...(basis.outcome ? { outcome: basis.outcome } : {}),
     ...(result ? { result: result.value } : {}),
@@ -522,7 +533,7 @@ export function sourceFacts(
     ...(branch ? { branch } : {}),
     ...(keptRef ? { keptRef } : {}),
     ...(thread.length > 0 ? { thread } : {}),
-    ...(choice ? { choice } : {}),
+    ...(choice ? { choice: mark(choice) } : {}),
     ...(answers ? { answers } : {}),
     ...(carried.length > 0 ? { carried } : {}),
   };

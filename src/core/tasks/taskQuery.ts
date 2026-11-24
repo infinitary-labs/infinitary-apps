@@ -4,6 +4,7 @@ import { foldForSearch } from "@shared/searchText";
 import { taskChangeOf } from "@shared/taskFacts";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath } from "../attachments";
+import { servedTaskTitle } from "../orchestrator/readerData";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskRecords";
@@ -518,7 +519,7 @@ function toRow(
     ...(policies ? { policies } : {}),
     kind: record.kind,
     status: statusText(record),
-    title: record.title,
+    title: servedTaskTitle(record, origins, "answer"),
     project: projectKeys.get(record.projectId) ?? record.projectId,
     priority: record.priority,
     ...(record.status === "open" && record.kind === "work"

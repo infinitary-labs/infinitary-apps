@@ -56,7 +56,6 @@ import {
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
-import { readerDataLine } from "./readerData";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
@@ -566,7 +565,7 @@ export class CardService {
       .map((card) => ({
         id: card.id,
         word: cardWord(card),
-        title: this.readerCard(card) ? readerDataLine(card.title, Date.now()) : card.title,
+        title: this.threads.servedCardLine(card, card.title),
       }));
   }
 
@@ -1821,9 +1820,54 @@ export class CardService {
     return this.threads.servedLine(card, message);
   }
 
-  /** A card's title or body as an agent reads it (`CardThreads.servedCardWords`). */
-  servedCardWords(card: Pick<Card, "author" | "taskId">, words: string): string {
+  /** A card's title, body or label as an agent reads it (`CardThreads.servedCardWords`). */
+  servedCardWords(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
     return this.threads.servedCardWords(card, words);
+  }
+
+  /** A card's title or label inside a line of a list (`CardThreads.servedCardLine`). */
+  servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
+    return this.threads.servedCardLine(card, words);
+  }
+
+  /** A task's newest card body as the by-key read serves it (`newestBody`, `servedCardWords`). */
+  servedNewestBody(taskId: string): string | undefined {
+    const card = this.host.cardStore.newestForTask(taskId);
+    return card ? this.servedCardWords(card, card.body) : undefined;
+  }
+
+  /**
+   * A task's newest captain resolution as the by-key read serves it
+   * (`newestResolutionForTask`): a reader's card and closing offer with
+   * their title, body and labels marked as data, the same marks as the
+   * newest body, so a body the two share is still shown once.
+   */
+  servedResolutionForTask(taskId: string): CardResolution | undefined {
+    const resolved = this.newestResolutionForTask(taskId);
+    if (!resolved || !this.readerCard(resolved.card)) return resolved;
+    const card = resolved.card;
+    const words = (text: string) => this.servedCardWords(card, text);
+    const actions = <T extends { label: string }>(list: T[]) =>
+      list.map((action) => ({ ...action, label: words(action.label) }));
+    return {
+      ...resolved,
+      card: {
+        ...card,
+        title: words(card.title),
+        body: words(card.body),
+        actions: actions(card.actions),
+      },
+      ...(resolved.offer
+        ? {
+            offer: {
+              ...resolved.offer,
+              title: words(resolved.offer.title),
+              body: words(resolved.offer.body),
+              actions: actions(resolved.offer.actions),
+            },
+          }
+        : {}),
+    };
   }
 
   /** Whether an unsafe data reader wrote this thread line (`CardThreads.fromReader`). */

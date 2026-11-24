@@ -639,8 +639,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         tasks,
         input,
         (repoId) => host.options.repos.get(repoId)?.name,
-        (taskId) => host.options.supervisor.cards.newestBody(taskId),
-        (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
+        (taskId) => host.options.supervisor.cards.servedNewestBody(taskId),
+        (taskId) => host.options.supervisor.cards.servedResolutionForTask(taskId),
         host.options.supervisor.toolHooks.taskQueryReach(),
       ),
   };

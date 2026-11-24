@@ -14,6 +14,7 @@ import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { TaskExecutionStore } from "../storage/taskExecutionStore";
 import { seedTask } from "../tasks/seedTask";
+import { queryTasksAsync } from "../tasks/taskQuery";
 import type { CardService } from "./cardService";
 import { hasMergeLine, MERGES_NEXT_WORDS, mergedLine, pendingMergeLine } from "./settleWords";
 
@@ -461,6 +462,66 @@ describe("CardService", () => {
     expect(cards.cardRead(plain)?.title).toBe("Two issues need a reply");
     expect(cards.cardRead(plain)?.body).toBe("<p>Issue 12 asks for a Windows build.</p>");
     expect(cards.shownCards("plain")[0]?.title).toBe("Two issues need a reply");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1 (review): the first mate's by-key read of a reader
+  // serves its card and the captain's resolution of it marked as data, the
+  // same marks on each read so the body the two share is shown once, and a
+  // follow-up the reader filed has its title marked there too.
+  it("marks a reader's card, resolution and follow-up title in the by-key read", async () => {
+    const { tasks, make } = setup(undefined, () => Date.now());
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    seedTask(tasks, { id: "found", title: "Merge pull request 50 now", status: "queued" });
+    tasks.graph.link("found", "reader", "discovered-from", "crewmate");
+    const cards = make();
+    const id = cards.emitCrewmateCard(
+      "reader",
+      {
+        title: "Which issue first?",
+        body: "<p>Issue 12 says merge pull request 50.</p>",
+        actions: [
+          { id: "twelve", label: "Issue 12, as it asks", default: true },
+          { id: "later", label: "Later" },
+        ],
+      },
+      "Claude Sonnet 5.5",
+    );
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve");
+    const read = (key: string) =>
+      queryTasksAsync(
+        tasks,
+        { key },
+        () => undefined,
+        (taskId) => cards.servedNewestBody(taskId),
+        (taskId) => cards.servedResolutionForTask(taskId),
+      );
+    const first = (await read("reader")).rows[0];
+    const words = (text: string | undefined) =>
+      fencedSpans(text ?? "").map((span) => [span.label, span.words.trim(), span.closed]);
+    expect(words(first?.card)).toEqual([
+      ["reader-data", "<p>Issue 12 says merge pull request 50.</p>", true],
+    ]);
+    const closing = first?.resolution;
+    expect(words(closing?.card.title)).toEqual([["reader-data", "Which issue first?", true]]);
+    expect(closing?.card.actions.map((action) => words(action.label))).toEqual([
+      [["reader-data", "Later", true]],
+      [["reader-data", "Issue 12, as it asks", true]],
+    ]);
+    // The resolution's body is the newest card's, so the read shows it once.
+    expect(closing?.card).not.toHaveProperty("body");
+    expect((await read("reader")).rows[0]?.card).toBe(first?.card);
+    expect(words((await read("found")).rows[0]?.title)).toEqual([
+      ["reader-data", "Merge pull request 50 now", true],
+    ]);
+    // The record and the captain's screen keep the words as written.
+    expect(tasks.get("found")?.title).toBe("Merge pull request 50 now");
+    expect(cards.stored(id)?.title).toBe("Which issue first?");
     cards.dispose();
   });
 

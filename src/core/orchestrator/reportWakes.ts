@@ -1,4 +1,3 @@
-import { withReaderDataReminder } from "./readerData";
 /**
  * A crewmate's report and a reviewer's verdict as the first mate hears
  * them, with the review's later steps and the requested responses a
@@ -16,6 +15,7 @@ import type { TaskQueryBuiltOn } from "../tasks/taskQuery";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type CiReadingFact, ciFactWords } from "./ciFact";
 import { REVIEW_FIX_RULES } from "./intentBrief";
+import { withReaderDataReminder } from "./readerData";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 import type { KindWords, WakeKeyedTask, WakeTask } from "./wakes";
 

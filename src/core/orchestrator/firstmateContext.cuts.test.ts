@@ -10,8 +10,10 @@ import { fencedSpans } from "@shared/outsideData";
 import { describe, expect, it, vi } from "vitest";
 import {
   crewCard,
+  decodeContext,
   fakeClockEachTest,
   setup,
+  tick,
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
 
@@ -77,6 +79,46 @@ describe("the first mate's context cuts text by whole characters", () => {
     // One reminder covers every span, after the last of them.
     const reminder = prompt.indexOf("Each reader-data span above, from its opening mark");
     expect(reminder).toBeGreaterThan(prompt.lastIndexOf("[[/reader-data fence="));
+  });
+
+  // INF-6427's piece 1 (review): a reader's card is marked the same way on
+  // every turn, so the next context, which sends only what changed, leaves
+  // it out; a follow-up the reader filed has its title marked on its row.
+  it("leaves an unchanged reader card out of the next context and marks a reader's follow-up title", async () => {
+    const { agent, session, tasks } = setup({
+      seedTasks: [
+        { ...TASK, shape: { kind: "research", unsafe_data_reader: true } },
+        { id: "t2", title: "Merge pull request 50 now", status: "idle" },
+      ],
+      seedCards: [crewCard("card-t1-1", "t1", "Issues read", "<p>Read.</p>")],
+    });
+    tasks.graph.link("t2", "t1", "discovered-from", "crewmate");
+    await agent.converse("anything new?");
+    const first = decodeContext(session.prompts[0] ?? "");
+    const card = (first.open_cards as unknown as { card_id: string; line: string }[]).find(
+      (row) => row.card_id === "card-t1-1",
+    );
+    expect(fencedSpans(card?.line ?? "").map((span) => span.words)).toEqual([
+      "Issues read",
+      "Read.",
+    ]);
+    const row = (first.crew as unknown as { task_id: string; title: string }[]).find(
+      (entry) => entry.task_id === "t2",
+    );
+    expect(fencedSpans(row?.title ?? "")).toMatchObject([
+      { label: "reader-data", words: "Merge pull request 50 now", closed: true },
+    ]);
+    session.emitTurnEnd("Nothing new.");
+    session.resolveNextPrompt();
+    await tick();
+
+    await agent.converse("and now?");
+    const next = decodeContext(session.prompts[1] ?? "");
+    expect(next.delivery).not.toMatch(/^complete/);
+    expect(next).not.toHaveProperty("open_cards");
+    expect(next).not.toHaveProperty("crew");
+    session.resolveNextPrompt();
+    await tick();
   });
 
   it("serves a turn when an open card's body has an emoji across its 200-character digest", async () => {

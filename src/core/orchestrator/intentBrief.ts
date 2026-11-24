@@ -2,6 +2,7 @@ import { alreadyAllowedWords, type ServedAllowance } from "@shared/captainAllowa
 import { folderRefreshWords } from "@shared/folderRefresh";
 import type { HoldOverride } from "@shared/holds";
 import { type LiveValidation, validationRevision } from "@shared/liveValidation";
+import { fencedListReminder } from "@shared/outsideData";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import {
@@ -15,6 +16,7 @@ import {
 import { RIGOR_WORDS } from "@shared/vocabulary";
 import { BRIEF_CARRIED_LEAD } from "../prompts/choiceCarried";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
+import { holdsReaderData, READER_DATA_LABEL } from "./readerData";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 
 /**
@@ -1052,6 +1054,9 @@ export function basisSectionParts(
   if (!facts.userWords && !facts.outcome && !facts.card && !facts.cardFile) {
     lines.push("", `Read it with the tasks query, key ${facts.key}.`);
   }
+  // An unsafe data reader's choice, answers and replies sit inline between reader-data marks.
+  if (lines.some((line) => typeof line === "string" && holdsReaderData(line)))
+    lines.push("", fencedListReminder(READER_DATA_LABEL));
   lines.push(
     "",
     "Build on it rather than re-deriving it, and say in your report where it turned out to be wrong.",

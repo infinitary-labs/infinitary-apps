@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import type { Card, CardMessage } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import { fenced, fencedAnswer, fencedListReminder } from "@shared/outsideData";
@@ -31,13 +31,68 @@ export function readerDataLine(words: string, at: number): string {
 }
 
 /**
+ * Words a reader saved once, such as a card's title, body and labels or a
+ * follow-up's title, are marked the same way each time they are served:
+ * the fence is a keyed digest of where they live and what they say, under
+ * a secret this process draws once. The same words then read the same, so
+ * a context that sends only what changed leaves them out, and a read can
+ * tell a card's body from the same body under its resolution; changed
+ * words draw a new fence. Nobody who wrote them is served a read of them,
+ * and the secret never leaves the process.
+ */
+const SAVED_WORDS_SECRET = randomBytes(32);
+/** When this process started serving saved words: their marks' read time. */
+const SAVED_WORDS_READ = Date.now();
+
+function savedFence(key: string, words: string) {
+  const value = createHmac("sha256", SAVED_WORDS_SECRET)
+    .update(key)
+    .update("\0")
+    .update(words)
+    .digest("hex")
+    .slice(0, READER_DATA_BYTES * 2);
+  return { label: READER_DATA_LABEL, value, at: SAVED_WORDS_READ };
+}
+
+/** Saved reader words as one answer, marked the same each time (`savedFence`). */
+export function readerSavedAnswer(key: string, words: string): string {
+  return fencedAnswer(words, savedFence(key, words));
+}
+
+/** Saved reader words on one line, marked the same each time, for a list the caller ends with its reminder. */
+export function readerSavedLine(key: string, words: string): string {
+  return fenced(words, savedFence(key, words));
+}
+
+type Origin = { shape?: { unsafe_data_reader?: boolean } | null };
+
+/**
+ * A task's title as an agent reads it: one an unsafe data reader filed as
+ * a follow-up is the reader's words, so it is marked the same on every
+ * read; any other task's title is as written. `origins` are the tasks it
+ * was found in (`TaskGraph.discoveredOrigins`).
+ */
+export function servedTaskTitle(
+  task: { id: string; title: string },
+  origins: readonly Origin[],
+  form: "answer" | "line",
+): string {
+  if (!origins.some((origin) => origin.shape?.unsafe_data_reader === true)) return task.title;
+  const key = `task:${task.id}`;
+  return form === "answer" ? readerSavedAnswer(key, task.title) : readerSavedLine(key, task.title);
+}
+
+/**
  * Text the first mate reads, with the one reminder after it that covers every
  * reader-data span written inline by `readerDataLine`, when it holds any.
  */
 export function withReaderDataReminder(text: string): string {
-  return text.includes(`[[${READER_DATA_LABEL} fence=`)
-    ? `${text}\n${fencedListReminder(READER_DATA_LABEL)}`
-    : text;
+  return holdsReaderData(text) ? `${text}\n${fencedListReminder(READER_DATA_LABEL)}` : text;
+}
+
+/** Whether text holds a reader-data span. */
+export function holdsReaderData(text: string): boolean {
+  return text.includes(`[[${READER_DATA_LABEL} fence=`);
 }
 
 /**

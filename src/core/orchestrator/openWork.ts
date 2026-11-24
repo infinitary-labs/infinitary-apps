@@ -37,7 +37,7 @@ export type OpenWorkHost = {
   /** A card's words as an agent reads them, an unsafe data reader's marked (`CardThreads`). */
   served: {
     servedLine: (card: Pick<Card, "taskId">, message: CardMessage) => string;
-    servedCardWords: (card: Pick<Card, "author" | "taskId">, words: string) => string;
+    servedCardWords: (card: Pick<Card, "id" | "author" | "taskId">, words: string) => string;
   };
 };
 
@@ -218,7 +218,7 @@ function cardSummary(host: OpenWorkHost, card: Card) {
     ...(card.answering ? { answering: true } : {}),
     actions: card.actions.map((action) => ({
       id: action.id,
-      label: action.label,
+      label: host.served.servedCardWords(card, action.label),
       ...(action.default ? { default: true } : {}),
     })),
     ...(thread.length > 0
@@ -313,14 +313,30 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       ...(past.taskId ? { task_id: past.taskId } : {}),
       title: host.served.servedCardWords(past, past.title),
       body: host.served.servedCardWords(past, past.body),
-      actions: past.actions.map((action) => ({ id: action.id, label: action.label })),
+      actions: past.actions.map((action) => ({
+        id: action.id,
+        label: host.served.servedCardWords(past, action.label),
+      })),
       ending: {
         how: past.ending.how,
         at: iso(past.ending.at),
-        ...(past.ending.label ? { chose: past.ending.label } : {}),
+        ...(past.ending.label
+          ? { chose: host.served.servedCardWords(past, past.ending.label) }
+          : {}),
         ...(past.ending.by ? { by: past.ending.by } : {}),
       },
-      ...(past.answers.length > 0 ? { answers: past.answers } : {}),
+      ...(past.answers.length > 0
+        ? {
+            answers: past.answers.map((answer) =>
+              answer.labels
+                ? {
+                    ...answer,
+                    labels: answer.labels.map((label) => host.served.servedCardWords(past, label)),
+                  }
+                : answer,
+            ),
+          }
+        : {}),
       messages: past.messages.map((message) => threadLine(host, past, message)),
     },
     null,

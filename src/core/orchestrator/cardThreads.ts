@@ -30,7 +30,12 @@ import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import { firstmateSignOffRefusal, SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
-import { crewmateWriterOf, readerDataAnswer } from "./readerData";
+import {
+  crewmateWriterOf,
+  readerDataAnswer,
+  readerSavedAnswer,
+  readerSavedLine,
+} from "./readerData";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 
 /**
@@ -448,11 +453,21 @@ export class CardThreads {
 
   /**
    * A card's own title or body as an agent reads it: an unsafe data reader's
-   * card's between reader-data marks, as its thread lines are; the captain's
-   * card keeps the words as written.
+   * card's between reader-data marks, as its thread lines are, marked the
+   * same on every read (`readerSavedAnswer`); the captain's card keeps the
+   * words as written.
    */
-  servedCardWords(card: Pick<Card, "author" | "taskId">, words: string): string {
-    return this.readerCard(card) ? readerDataAnswer(words, Date.now()) : words;
+  servedCardWords(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
+    return this.readerCard(card) ? readerSavedAnswer(`card:${card.id}`, words) : words;
+  }
+
+  /**
+   * A reader's card's title or label inside a line of a list, marked the
+   * same on every read; the list ends with the reader-data reminder
+   * (`withReaderDataReminder`).
+   */
+  servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
+    return this.readerCard(card) ? readerSavedLine(`card:${card.id}`, words) : words;
   }
 
   /** Whether an unsafe data reader wrote this card. */
@@ -549,7 +564,7 @@ export class CardThreads {
         : {}),
       choices: card.actions.map((action) => ({
         id: action.id,
-        label: action.label,
+        label: this.servedCardWords(card, action.label),
         ...(action.effect ? { effect: action.effect.kind } : {}),
       })),
       body: this.servedCardWords(card, card.body),

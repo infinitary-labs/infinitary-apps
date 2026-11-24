@@ -70,7 +70,7 @@ import {
   browserView as view,
 } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
-import { focusOn, pressWindowKey, runFromSearch } from "./windowKeys";
+import { focusOn, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
  * A task's browser handed between its crewmate and the captain
@@ -97,7 +97,8 @@ test.afterAll(async () => {
 
 /**
  * The account page a crewmate cannot sign in to itself: blue, so its own
- * pixels show in the view; it signs in only on a real click, keeps who
+ * pixels show in the view; its Email field takes the page's focus on load,
+ * as a sign-in page's first field does; it signs in only on a real click, keeps who
  * signed in in its site data, clears its form as a sign-in that moves on
  * does, and at that moment logs a private line and asks a tracker on the
  * internet for a picture - both while the captain holds the page, so
@@ -111,7 +112,7 @@ const ACCOUNT_PAGE = `<!doctype html>
   <body>
     <h1>Sign in</h1>
     <p id="state"></p>
-    <p><label>Email <input id="email" type="email"></label></p>
+    <p><label>Email <input id="email" type="email" autofocus></label></p>
     <p><label>Password <input id="password" type="password"></label></p>
     <p><button id="sign-in">Sign in</button></p>
     <p><label>Plan <select id="plan"><option id="plan-monthly" value="monthly">Monthly</option><option id="plan-yearly" value="yearly">Yearly</option></select></label></p>
@@ -272,6 +273,8 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
         await expect(view(page, task.id).locator("[data-browser-status]")).toContainText(
           VIEW_DRIVER_WORDS.captain,
         );
+        // The captain's ask: the page a hand-over opens holds the keys with no click first.
+        await expect(view(page, task.id).locator("[data-browser-page]")).toBeFocused();
         // The click answers nothing: the request docks beside the page, its
         // words and its field in reach while he works (INF-4578).
         expect((await savedCard())?.status).toBe("ready");
@@ -292,7 +295,14 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       });
 
     await test.step("he signs in on the page itself, and nothing he types is kept", async () => {
-      await typeOnPage(launched.app, page, task.id, accountUrl, "email", "sam@example.com");
+      // The first keys go straight to the page's focused Email field.
+      expect(await onPage(launched.app, accountUrl, "document.activeElement?.id ?? null")).toBe(
+        "email",
+      );
+      await typeInto(view(page, task.id).locator("[data-browser-page]"), "sam@example.com");
+      await expect
+        .poll(() => pageSays(launched.app, accountUrl, "email", "value"))
+        .toBe("sam@example.com");
       await typeOnPage(launched.app, page, task.id, accountUrl, "password", PASSWORD);
       // Escape is the page's while he drives: the view stays.
       await page.keyboard.press("Escape");

@@ -49,6 +49,13 @@ import { noteCardPress } from "./stageCleared";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 import { typingInShownCard } from "./typingInCard";
 
+export type BrowserPageFocus = {
+  taskId: string;
+  session: string;
+  generation: number;
+  presses: number;
+};
+
 /** The stack's state in the store and the actions that move it (./stack.ts is its pure model). */
 export type StackSlice = {
   cards: Card[];
@@ -60,6 +67,13 @@ export type StackSlice = {
   cardFocusTarget: string | null;
   /** The captain's presses counted when the pointing began: one begun since keeps focus where it is. */
   cardFocusPresses: number;
+  /**
+   * The browser a request card's open-browser click handed the captain
+   * (docs/task-browser.md, "Asking for help"), with the presses counted when
+   * the click began: its view puts the window's focus on the page once the
+   * captain holds it, unless a press began since, which decides where focus goes.
+   */
+  browserPageFocus: BrowserPageFocus | null;
   /** Current-update news from the owner, with local marks only for legacy or shell-held entries. */
   unreadCardIds: string[];
   /** Cards the project focus holds back off the stack (docs/project-focus.md "The card stack"). */
@@ -347,6 +361,7 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
     cardFocusRequest: 0,
     cardFocusTarget: null,
     cardFocusPresses: 0,
+    browserPageFocus: null,
     unreadCardIds: [],
     heldBackCardIds: [],
     letThroughCardIds: [],

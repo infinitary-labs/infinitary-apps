@@ -86,6 +86,37 @@ describe("a project's tags", () => {
       f.db.close();
     }
   });
+
+  it("removes a tag in one project only, leaving another project's same-named tag on its tasks", () => {
+    const { f, add } = withProject();
+    try {
+      const bug = add("bug", "Broken now.").tags[0]?.id as string;
+      seedProject(f.db, { id: "r2", name: "website", path: "/fleet/website", addedAt: 2 });
+      f.tasks.create({ id: "site", title: "Redo the footer", prompt: "", repoId: "r2" });
+      const website = f.tasks.get("site")?.projectId as string;
+      const siteBug = f.tasks.changeProjectTags({
+        op: "add",
+        projectId: website,
+        name: "bug",
+        description: "Something on the site is broken.",
+      }).tags[0]?.id as string;
+      f.tasks.replaceTags("work", { ids: [bug] }, "captain");
+      f.tasks.replaceTags("site", { ids: [siteBug] }, "captain");
+      const siteLines = tagLines(f, "site").length;
+
+      f.tasks.changeProjectTags({ op: "remove", tagId: bug });
+
+      expect(f.tasks.tagsOf("work")).toEqual([]);
+      expect(f.tasks.tagsOf("site")).toEqual([{ id: siteBug, name: "bug", by: "captain" }]);
+      expect(f.fresh().projects.find((project) => project.id === website)?.tags).toMatchObject([
+        { id: siteBug, name: "bug", tasks: 1 },
+      ]);
+      expect(tagLines(f, "site")).toHaveLength(siteLines);
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
 });
 
 describe("the tags a task carries", () => {

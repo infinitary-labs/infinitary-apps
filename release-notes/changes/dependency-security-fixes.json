@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "dependency-security-fixes",
+      "reason": "Library upgrades: the desktop app's and the phone app's packages move to the releases that fix their open security alerts; nothing a person sees changes."
+    }
+  ]
+}

@@ -43,7 +43,7 @@ export type ClaudeCodingBuiltinCall =
 
 /** The JSON Schema subset the crewmate tools use, as typebox writes it. */
 type JsonSchema = {
-  type?: string;
+  type?: string | string[];
   description?: string;
   const?: string | number | boolean;
   enum?: string[];
@@ -69,6 +69,13 @@ type JsonSchema = {
  * does, so a new kind of parameter fails its first test here.
  */
 function zodOf(schema: JsonSchema, at: string): z.ZodType {
+  // zod writes a plain type that may be null, such as a string or null, as one type list.
+  if (Array.isArray(schema.type)) {
+    const [value, ...more] = schema.type.filter((type) => type !== "null");
+    if (value === undefined || more.length > 0 || schema.type.length !== 2)
+      throw new Error(`${at}: a union Claude's tool server cannot carry`);
+    return zodOf({ ...schema, type: value }, at).nullable();
+  }
   // One of a fixed set of words (`stringEnum`).
   if (schema.enum) {
     if (schema.type !== "string" || schema.enum.length === 0) {

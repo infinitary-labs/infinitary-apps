@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-certificates.git", exact: "1.21.0"),
         // INF-1183: joining a home by its address signs in over SSH.
         .package(url: "https://github.com/apple/swift-nio-ssh.git", exact: "0.9.1"),
-        .package(url: "https://github.com/apple/swift-nio.git", exact: "2.99.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", exact: "2.100.0"),
     ],
     targets: [
         .target(name: "InfinitaryPush"),

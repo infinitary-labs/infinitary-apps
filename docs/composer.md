@@ -192,7 +192,7 @@ A round is one thing the captain did and what came back: a message and the reply
   Fading does not move focus, change the draft, or read the reply out again.
   The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.capture.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
 - **The conversation.**
-  Pressing a round, or Enter or Space on its reply line, opens the conversation at the front of the stack, in front of any open card (INF-6337's plan, the captain's Approve and build: "a thread that has everything the user directly interacted with", "a place for people to find their recent cards"); it lands on the round pressed, centered and outlined in `--accent` for a moment.
+  Pressing a round, or Enter or Space on its reply line or a card round's name, opens the conversation at the front of the stack, in front of any open card (INF-6337's plan, the captain's Approve and build: "a thread that has everything the user directly interacted with", "a place for people to find their recent cards"); it lands on the round pressed, centered and outlined in `--accent` for a moment.
   The window holds it, as it holds a past card (`{ conversation }` in `OpenRecord`, `stack.ts`, `ConversationCard.tsx`): opening and reading it tell the first mate nothing.
   It is 720 px wide until dragged, carries the Note chip, a quiet Conversation heading and two views, Everything and Cards, and has no buttons or reply row; the shared minus or Esc puts it away.
   While it is the shown entry the lines above the input are not drawn, and the message box is its field: a message sent there joins its foot as it is sent, and the first mate's reply follows.

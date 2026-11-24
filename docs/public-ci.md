@@ -221,12 +221,17 @@ GitHub's own security updates stay off and the repository has no `dependabot.yml
 
 Fix tasks go through the swept batch like any change, never as a pull request merged alone:
 
-1. The first mate starts one fix task, branch `inf/fix-security-alerts`, for alerts no open task names. If an open fix task has not pushed yet, it steers that task instead. Only one fix task is open at a time.
+1. The first mate starts one fix task, branch `inf/fix-security-alerts`, for alerts no open task names.
+   If an open fix task has not pushed yet, it steers that task instead.
+   Only one fix task is open at a time.
 2. Every severity runs on the same daily cadence.
-3. The fix takes the first patched version inside the allowed range. For a transitive package it adds a scoped override in `pnpm-workspace.yaml`, since Dependabot cannot pin transitive packages. A major bump goes to its own task.
+3. The fix takes the first patched version inside the allowed range.
+   For a transitive package it adds a scoped override in `pnpm-workspace.yaml`, since Dependabot cannot pin transitive packages.
+   A major bump goes to its own task.
 4. Alerts in the two iOS `Package.resolved` files are fixed in the same task; the phone check runs on request.
 5. Development-only alerts are fixed too.
-6. The crew never dismisses an alert. An alert with no safe fix goes on the fix task's card for the captain to decide.
+6. The crew never dismisses an alert.
+   An alert with no safe fix goes on the fix task's card for the captain to decide.
 7. The change adds a release-note exclusion, because dependency upgrades are internal work, and runs at Default care.
 
 Merging: a fix merges on its own once all checks pass, unless the change affects actual product behavior; then it asks the captain first.

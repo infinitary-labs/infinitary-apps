@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "person-word-whole-marks",
+      "reason": "Test-only fix: the person-word integration test's stand-in copy leaves each mark whole by rename, so the test never reads an empty process number as a running copy. No app behavior changes."
+    }
+  ]
+}

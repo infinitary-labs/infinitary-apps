@@ -48,7 +48,7 @@ function copyProgram(): string {
   writeFileSync(
     file,
     `
-    import { existsSync, rmSync, writeFileSync } from "node:fs";
+    import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
     import { join } from "node:path";
     import {
       claimWordProfile,
@@ -60,6 +60,13 @@ function copyProgram(): string {
     const [mode, marks] = process.argv.slice(2);
     const profile = process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice(16) ?? "";
     const say = (text, code = 0) => process.stdout.write(text, () => process.exit(code));
+    // A mark the test may read the moment it appears, so it appears whole, in one rename: one seen
+    // while still being written reads as empty, and an empty pid as 0, which every probe finds alive.
+    const mark = (name, text = "") => {
+      const part = join(marks, name + ".part");
+      writeFileSync(part, text);
+      renameSync(part, join(marks, name));
+    };
     // Whether the temporary folder it was given was there before it ran anything.
     const tempAtStart = existsSync(process.env.TEMP ?? "");
     // With "hold-profile" among its words it takes its profile for itself alone, as Electron's lock
@@ -86,7 +93,7 @@ function copyProgram(): string {
     else if (mode === "unshown") say(replyLine("unshown"));
     else if (mode === "zero") {
       // The first button, which every box has, from a copy that says it started.
-      writeFileSync(join(marks, "started"), "");
+      mark("started");
       say(replyLine(0));
     } else if (mode === "write") {
       // A file of its own in its profile, as a browser profile keeps.
@@ -98,7 +105,7 @@ function copyProgram(): string {
       // its input's end nor an ordinary end reaches that thread, and only a bounded wait ends it.
       if (process.platform !== "win32") process.on("SIGTERM", () => {});
       endWithRequesterOffMain();
-      writeFileSync(join(marks, "pid"), String(process.pid));
+      mark("pid", String(process.pid));
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30_000);
       say(replyLine(0));
     } else if (mode === "wait") {
@@ -110,11 +117,11 @@ function copyProgram(): string {
       setTimeout(() => process.exit(0), 30_000);
       // A temporary file it still uses, where its requester said its temporary files go.
       writeFileSync(join(process.env.TEMP, "in-use"), "");
-      writeFileSync(join(marks, "temp"), process.env.TEMP);
-      writeFileSync(join(marks, "temp-at-start"), String(tempAtStart));
-      writeFileSync(join(marks, "pid"), String(process.pid));
+      mark("temp", process.env.TEMP);
+      mark("temp-at-start", String(tempAtStart));
+      mark("pid", String(process.pid));
       endWithRequester(process.stdin, () => {
-        writeFileSync(join(marks, "requester-gone"), "");
+        mark("requester-gone");
         setInterval(() => {
           if (existsSync(join(marks, "release"))) process.exit(0);
         }, 25);

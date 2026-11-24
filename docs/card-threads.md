@@ -53,7 +53,7 @@ Its field moves from above the card's buttons to the thread's foot and keeps the
 The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
 A card with a secret's masked fields keeps its buttons under them instead (`EntryView.chatFirst`), so Save sits with the fields it sends and never under the thread's plain field; words left in the thread's field still go with a press.
 The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
-The author's answer redraws it at the close-out - see the next section.
+The author's answer redraws it at the close-out - see "When a card reaches the stage".
 A refused reply moves nothing and keeps the draft.
 
 ## A question already answered

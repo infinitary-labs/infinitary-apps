@@ -48,7 +48,7 @@ import {
   WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./scenarios/lastTurnWords";
 import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
-import { cardSurface, closeOpenCards, noteDone, shownCard } from "./stack";
+import { cardSurface, noteDone, shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressKey, runFromSearch } from "./windowKeys";
 
@@ -249,10 +249,14 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await expect(bubbleWords(mateBubble(again))).toHaveText(MOCK_ANSWER_TITLE);
     const kept = await again.evaluate(() => window.infinitary.conversation.lastTurn());
     expect(kept?.previous).toMatchObject({ you: second, reply: { text: MOCK_FM_DONE_TEXT } });
-    // The card is still up, so only the newest round shows; closing it
-    // brings the older round back.
+    // The card is still up, so only the newest round shows; putting it
+    // aside brings the older round back. Aside is not a round, where Got it
+    // on the card would be (docs/composer.md "Card rounds").
     await expect(olderRound(again)).toHaveCount(0);
-    await closeOpenCards(again);
+    await again.evaluate(async () => {
+      for (const card of await window.infinitary.cards.list())
+        await window.infinitary.cards.minimize(card.id, true);
+    });
     await expect(bubbleWords(yourBubble(again, "older"))).toHaveText(second);
   });
 });

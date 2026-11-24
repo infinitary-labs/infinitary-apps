@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "session-host-split",
+      "reason": "Internal: the save before an update and the working copy orders move unchanged out of the file that holds a conversation on a computer that runs work, each into its own file; nothing a person sees changes."
+    }
+  ]
+}

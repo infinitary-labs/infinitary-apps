@@ -6,7 +6,6 @@ import { hearsClientJobEnds } from "@shared/contractFeatures";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
 import { invokeContract, type WorkInvokeChannel } from "@shared/ipc";
-import { cutText } from "@shared/textCut";
 import {
   isWorkOrderChannel,
   PLACED_EVENTS_MAX_PER_REQUEST,
@@ -26,7 +25,7 @@ import {
   placedSecretTakeAnswerSchema,
   placedSecretUseAnswerSchema,
 } from "@shared/workSecrets";
-import { UPDATE_RETURN_MS, WORK_RELEASE_ORDER, WORK_SAVE_ORDER } from "@shared/workUpdate";
+import { WORK_RELEASE_ORDER, WORK_SAVE_ORDER } from "@shared/workUpdate";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
@@ -70,8 +69,6 @@ import {
 import { bindTools, type CrewmateTool, OutcomeUnknownError } from "../session/tools";
 import { changeRecoveryCheck, sameNames } from "../session/workRecovery";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
-import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
-import type { MovedFolders } from "../workspace/workMove";
 import { keepOrdered, type PersonalCopy } from "./personalCopy";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { SecretUsesThere } from "./secretUses";
@@ -83,7 +80,9 @@ import {
   toolCallbacks,
 } from "./toolCallbacks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
+import { UpdateSaves } from "./updateSaves";
 import type { WorkingCopies } from "./workingCopies";
+import { type WorkingCopyHost, workingCopyOrder } from "./workingCopyOrders";
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -102,7 +101,9 @@ import type { WorkingCopies } from "./workingCopies";
  *
  * Each task's conversation runs in its own working copy here, which the
  * home has made first (`WorkingCopies`, docs/helper.md "Its working
- * copies"); the orders about the working copy ride the same answers.
+ * copies"); the orders about the working copy ride the same answers
+ * (`workingCopyOrder`). Its home's update saves the crew's work here
+ * first (`UpdateSaves`).
  *
  * Nothing is done twice. An order carries an id from what the home saved,
  * and one this conversation already applied is answered as it was, without
@@ -259,34 +260,6 @@ const RETRIES = 2;
 
 type Flush = { seq: number; resolve: () => void };
 
-/**
- * Its home's update of this computer while it saves the crew's work, until
- * the update ends this run or the save is let go (`saveForUpdate`).
- */
-type UpdateSave = {
-  /** Withdraws each stop still waiting (`releaseUpdate`). */
-  readonly withdraw: AbortController;
-  /** Each task's latest stop, settled once its turn ended here or it was withdrawn. */
-  readonly stops: Map<string, Promise<void>>;
-  /** Each task whose stop is under way now. */
-  readonly stopping: Set<string>;
-  /** How many stops it asked for, a later turn's of the same task included. */
-  asked: number;
-  /** Resolves once every turn here stopped and the home has every end. */
-  saving: Promise<void>;
-  /** Lets the save go here when the home says nothing for `UPDATE_RETURN_MS` after it saved. */
-  timer: NodeJS.Timeout | undefined;
-};
-
-/**
- * What the save answers: each task whose turn an update's save stopped here
- * and still marks stopped (`updateStop`): no turn has started there since,
- * nor a later save once the home had that turn's end.
- */
-type UpdateSaveAnswer = { stopped: string[] };
-/** What the let-go answers besides: each task whose stop it withdrew. */
-type UpdateReleaseAnswer = UpdateSaveAnswer & { withdrawn: string[] };
-
 type Held = {
   readonly task: string;
   state: PlacedTaskState;
@@ -374,13 +347,32 @@ export class SessionHost {
   private stopped = false;
   /** Nothing is sent until the home is first in reach, or asks something. */
   private live = false;
-  /** Its home's update while it saves the crew's work here (`saveForUpdate`). */
-  private updateSave: UpdateSave | undefined;
+  /** Its home's update while it saves the crew's work here. */
+  private readonly updates: UpdateSaves<Held>;
+  /** What a working copy's order asks of this host (`workingCopyOrder`). */
+  private readonly copyHost: WorkingCopyHost<Held>;
   private writeTimer: NodeJS.Immediate | undefined;
 
   constructor(private readonly options: SessionHostOptions) {
     this.now = options.now ?? Date.now;
     this.log = options.log ?? ((line) => console.warn(`[session-host] ${line}`));
+    this.updates = new UpdateSaves({
+      held: this.held,
+      stopped: () => this.stopped,
+      busy: (held) => this.busy(held),
+      writeOut: (held) => this.writeOut(held),
+      flushed: (held) => this.flushed(held),
+      log: (line) => this.log(line),
+      updateReturnMs: options.updateReturnMs,
+    });
+    this.copyHost = {
+      copies: options.copies,
+      tasks: options.tasks,
+      hold: (task) => this.hold(task),
+      remember: (held, orderId, answer) => this.remember(held, orderId, answer),
+      busy: (held) => this.busy(held),
+      releaseConversation: (held) => this.releaseConversation(held),
+    };
     // A turn left running by a quit, or a crash, ended then: say so first.
     for (const task of options.tasks.list()) {
       const held = this.load(task);
@@ -568,7 +560,7 @@ export class SessionHost {
     this.stopped = true;
     if (this.writeTimer) clearImmediate(this.writeTimer);
     this.writeTimer = undefined;
-    clearTimeout(this.updateSave?.timer);
+    this.updates.close();
     const sessions: ModelSession[] = [];
     for (const held of this.held.values()) {
       if (held.state.running) {
@@ -597,9 +589,10 @@ export class SessionHost {
     request: WorkOrderRequest<C>,
   ): Promise<WorkOrderResponse<C>> {
     if (channel === "inf:session:roster") return this.roster() as WorkOrderResponse<C>;
-    if (channel === WORK_SAVE_ORDER) return this.saveForUpdate() as Promise<WorkOrderResponse<C>>;
+    if (channel === WORK_SAVE_ORDER)
+      return this.updates.saveForUpdate() as Promise<WorkOrderResponse<C>>;
     if (channel === WORK_RELEASE_ORDER)
-      return this.releaseUpdate() as Promise<WorkOrderResponse<C>>;
+      return this.updates.releaseUpdate() as Promise<WorkOrderResponse<C>>;
     if (channel === "inf:session:personal")
       return keepOrdered(this.options.personal, request as never) as WorkOrderResponse<C>;
     // Outside the task's order of orders: an order waiting on the stuck turn never holds it.
@@ -621,7 +614,7 @@ export class SessionHost {
       return this.options.tasks.sourceFile(piece) as Promise<WorkOrderResponse<C>>;
     }
     if (channel.startsWith("inf:working-copy:"))
-      return this.workingCopy(channel, request) as Promise<WorkOrderResponse<C>>;
+      return workingCopyOrder(this.copyHost, channel, request) as Promise<WorkOrderResponse<C>>;
     const held = this.hold(fields.task);
     // A new order is news from the home: what it refused before goes again.
     held.refused = false;
@@ -770,170 +763,6 @@ export class SessionHost {
         };
       }),
     };
-  }
-
-  /**
-   * An order about a task's working copy (docs/helper.md, "Its working
-   * copies"). Those that act carry an id and are answered as they were when
-   * asked again, but for a keep, which reads the working copy again; they
-   * run beside the conversation's own orders, so a long clone or install
-   * never holds a steer or an abort.
-   */
-  private async workingCopy(channel: WorkOrderChannel, request: unknown): Promise<unknown> {
-    const copies = this.options.copies;
-    if (!copies) throw new Error("This computer keeps no working copies.");
-    switch (channel) {
-      case "inf:working-copy:source-ref": {
-        const [source] = request as WorkOrderRequest<"inf:working-copy:source-ref">;
-        const file = `${this.options.tasks.folders(source.task).sourceCards}/${source.name}`;
-        return copies.sourceRef(source, file);
-      }
-      case "inf:working-copy:revision": {
-        const [{ task, headSha, builtOn }] =
-          request as WorkOrderRequest<"inf:working-copy:revision">;
-        return copies.revision(task, headSha, builtOn);
-      }
-      case "inf:working-copy:status": {
-        const [{ task }] = request as WorkOrderRequest<"inf:working-copy:status">;
-        return copies.status(task);
-      }
-      case "inf:working-copy:read": {
-        const [{ task, ref, offset }] = request as WorkOrderRequest<"inf:working-copy:read">;
-        return copies.read(task, ref, offset);
-      }
-      case "inf:working-copy:bundle": {
-        const [{ task, ref, have, branch }] =
-          request as WorkOrderRequest<"inf:working-copy:bundle">;
-        return copies.bundle(task, ref, have, branch);
-      }
-      case "inf:working-copy:seed": {
-        const [seed] = request as WorkOrderRequest<"inf:working-copy:seed">;
-        return copies.seed(seed);
-      }
-      case "inf:working-copy:artifact": {
-        const [piece] = request as WorkOrderRequest<"inf:working-copy:artifact">;
-        return copies.artifact(piece);
-      }
-      default:
-        break;
-    }
-    const [fields] = request as [{ task: string; orderId: string }];
-    const held = this.hold(fields.task);
-    const saved = held.orders.get(fields.orderId);
-    const retryingPreparation = channel === "inf:working-copy:prepare" && preparationUnknown(saved);
-    // A keep answers what the working copy holds now, which an earlier
-    // version may have read short of its branch; keeping again what is
-    // already kept answers the same commit.
-    const keeping = channel === "inf:working-copy:keep";
-    if (held.orders.has(fields.orderId) && !retryingPreparation && !keeping) return saved;
-    const running = held.copying.get(fields.orderId);
-    if (running) return running;
-    const run = (async () => {
-      let answer: unknown;
-      switch (channel) {
-        case "inf:working-copy:prepare": {
-          const [prepare] = request as WorkOrderRequest<"inf:working-copy:prepare">;
-          if (held.state.closed)
-            throw new Error(
-              "This task's conversation was closed here, so it takes no working copy.",
-            );
-          if (prepare.base && held.state.running)
-            throw new Error("The conversation is running; its working copy cannot move yet.");
-          // Persist uncertainty before any asynchronous preparation. After a
-          // restart a failed reconciliation cannot prove the earlier work ended.
-          this.remember(held, fields.orderId, { refused: "preparation-unknown" });
-          try {
-            answer = await copies.prepare(
-              prepare.task,
-              prepare.project,
-              prepare.seed,
-              prepare.base,
-              prepare.branch,
-            );
-          } catch (caught) {
-            // The host wants this computer's own sign-in: a typed answer, so
-            // the home holds the task for it rather than reading the words
-            // of a failure (docs/forge.md, "A computer's own sign-in").
-            if (retryingPreparation) {
-              answer = { refused: "preparation-unknown" };
-              break;
-            }
-            if (!(caught instanceof ForgeAuthRequiredError)) {
-              answer = {
-                refused: "preparation-failed",
-                message: cutText(caught instanceof Error ? caught.message : String(caught), 2000),
-              };
-              break;
-            }
-            const refused: WorkOrderResponse<"inf:working-copy:prepare"> = {
-              refused: "forge-sign-in",
-              host: caught.host,
-              // A long server address fits the order's word; the home names the host itself.
-              name: caught.place.slice(0, 64),
-            };
-            answer = refused;
-          }
-          break;
-        }
-        case "inf:working-copy:install":
-          answer = await copies.install(held.task);
-          break;
-        case "inf:working-copy:keep":
-          // Its conversation is closed for good first, so nothing changes the copy after.
-          if (held.session || held.opening || held.state.running)
-            throw new Error("This task's conversation is still open here.");
-          answer = await copies.keep(held.task);
-          break;
-        case "inf:working-copy:retire": {
-          const [retire] = request as WorkOrderRequest<"inf:working-copy:retire">;
-          await copies.retire(held.task, retire.kept);
-          answer = { ok: true };
-          break;
-        }
-        case "inf:working-copy:move-out": {
-          // Moving to another computer (docs/helper.md, "Moving a started
-          // task"): only between turns, with nothing it started still
-          // running, and the conversation let go, never closed, so the task
-          // can run here again if the move does not finish.
-          if (this.busy(held)) throw new Error("This task's conversation is in a turn here.");
-          if (this.options.tasks.jobs(held.task).some((job) => !job.exit && !job.stoppedAt))
-            throw new Error("A command this task started is still running here.");
-          await this.releaseConversation(held);
-          const [out] = request as WorkOrderRequest<"inf:working-copy:move-out">;
-          answer = await copies.moveOut(held.task, this.movedFolders(held.task), out?.keep);
-          break;
-        }
-        case "inf:working-copy:move-in": {
-          const [move] = request as WorkOrderRequest<"inf:working-copy:move-in">;
-          if (held.state.closed)
-            throw new Error(
-              "This task's earlier conversation here was closed and is not removed yet, so it takes no moved work.",
-            );
-          const sources = this.options.tasks.folders(held.task).sourceCards;
-          answer = await copies.moveIn(
-            move,
-            {
-              ...(move.bundle ? { bundle: join(sources, move.bundle.name) } : {}),
-              ...(move.pack ? { pack: join(sources, move.pack.name) } : {}),
-            },
-            this.movedFolders(held.task),
-          );
-          break;
-        }
-        default:
-          throw new Error(`${channel} is not a request this computer answers.`);
-      }
-      if ((channel === "inf:working-copy:prepare" && !preparationUnknown(answer)) || keeping)
-        held.orders.delete(fields.orderId);
-      this.remember(held, fields.orderId, answer);
-      return answer;
-    })();
-    held.copying.set(fields.orderId, run);
-    try {
-      return await run;
-    } finally {
-      held.copying.delete(fields.orderId);
-    }
   }
 
   /**
@@ -1135,8 +964,7 @@ export class SessionHost {
             }
             this.record(held, event);
             // A turn its crewmate carries on by itself while the save holds stops too.
-            if (event.type === "continuation_started" && this.updateSave)
-              this.stopForUpdate(held, this.updateSave);
+            if (event.type === "continuation_started") this.updates.carriedOn(held);
           },
           this.now,
           // The work major includes owner-only completed-operation observations.
@@ -1298,18 +1126,6 @@ export class SessionHost {
     return this.busy(held) || held.clientTasks.size > 0;
   }
 
-  /** The task's own folders a move carries, here (`workMove.ts`). */
-  private movedFolders(task: string): MovedFolders {
-    const folders = this.options.tasks.ensure(task);
-    return {
-      evidence: folders.evidence,
-      "card-bodies": folders.cardBodies,
-      "source-cards": folders.sourceCards,
-      sessions: folders.sessions,
-      handover: join(folders.temp, HANDOVER_IN_DIR_NAME),
-    };
-  }
-
   private async releaseConversation(held: Held): Promise<void> {
     await held.unsubscribe?.();
     held.unsubscribe = null;
@@ -1348,7 +1164,7 @@ export class SessionHost {
     this.remember(held, orderId, { turn });
     // Its home is updating this computer: the turn never reaches its model,
     // and the home sends its words again once the update is over.
-    if (this.updateSave) {
+    if (this.updates.holding) {
       this.ended(held, turn, "failed", new StoppedBeforeStartError().message, true);
       return { turn };
     }
@@ -1392,158 +1208,9 @@ export class SessionHost {
     this.writeOut(held);
   }
 
-  /**
-   * Its home is about to update this computer (docs/helper.md, "Saving its
-   * work before an update"): no turn starts here until the update ends this
-   * run or the save is let go, and each conversation working here stops
-   * where nothing is lost - its running calls finish and keep their
-   * results, the ones it would start are refused and say so, and then its
-   * turn is cut; so does a turn its crewmate carries on by itself
-   * meanwhile. Answers once every stopped turn's end is written here and
-   * the home has every event, so what the crew did is kept on both sides
-   * before anything here stops. A second ask joins the first. This
-   * computer decides when it is saved, and lets the save go by itself when
-   * the home asks nothing for `UPDATE_RETURN_MS` after that (`homeAsked`).
-   */
-  private async saveForUpdate(): Promise<UpdateSaveAnswer> {
-    let save = this.updateSave;
-    if (!save) {
-      const own: UpdateSave = {
-        withdraw: new AbortController(),
-        stops: new Map(),
-        stopping: new Set(),
-        asked: 0,
-        saving: Promise.resolve(),
-        timer: undefined,
-      };
-      this.updateSave = own;
-      for (const held of this.held.values()) {
-        // An earlier save's stop whose end the home already took is over
-        // there: this save names its own, and one whose end the home lacks.
-        if (held.state.updateStop && held.through >= held.state.seq) {
-          held.state = { ...held.state, updateStop: undefined };
-          this.writeOut(held);
-        }
-        this.stopForUpdate(held, own);
-      }
-      own.saving = this.saveTurns(own);
-      save = own;
-    }
-    // Asked again: the home is still there, so the wait starts over.
-    clearTimeout(save.timer);
-    save.timer = undefined;
-    await save.saving;
-    if (this.updateSave === save && !this.stopped) {
-      const own = save;
-      own.timer = setTimeout(() => {
-        if (this.updateSave !== own) return;
-        // i18n-exempt: this computer's own log.
-        this.log("its home did not update it after saving its work, so it carries on");
-        void this.releaseUpdate();
-      }, this.options.updateReturnMs ?? UPDATE_RETURN_MS);
-      own.timer.unref?.();
-    }
-    return { stopped: this.updateStops("stopped") };
-  }
-
-  /**
-   * Waits for every stop, including one a turn begun meanwhile needed, then
-   * for the home to have every event written by then.
-   */
-  private async saveTurns(save: UpdateSave): Promise<void> {
-    for (let asked = -1; asked !== save.asked; ) {
-      asked = save.asked;
-      await Promise.all(save.stops.values());
-      if (this.updateSave !== save) return;
-      const kept = [...this.held.values()].filter((held) => !held.removed);
-      await Promise.all(kept.map((held) => this.flushed(held)));
-    }
-  }
-
-  /**
-   * Its home asked something: a saved update's wait for it starts over, so
-   * a long download or build there for the update never lets the save go.
-   */
+  /** Its home asked something (`UpdateSaves.homeAsked`). */
   homeAsked(): void {
-    this.updateSave?.timer?.refresh();
-  }
-
-  /**
-   * One conversation working here stops for the update: safely when its
-   * session can hold its calls, cut when it cannot. A turn the stop cut is
-   * the save's, so its home carries it on after the update. A later turn
-   * of a task whose earlier one the save already stopped stops too. What
-   * each stop came to is kept in the task's state (`markStop`).
-   */
-  private stopForUpdate(held: Held, save: UpdateSave): void {
-    const session = held.session;
-    if (!session || held.state.closed || save.stopping.has(held.task) || !this.busy(held)) return;
-    const stopping = session.stopSafely
-      ? session.stopSafely({ signal: save.withdraw.signal })
-      : session.abort().then(() => "stopped" as const);
-    save.stopping.add(held.task);
-    save.asked += 1;
-    this.markStop(held, "stopping");
-    save.stops.set(
-      held.task,
-      stopping
-        .catch((caught: unknown) => {
-          // i18n-exempt: this computer's own log.
-          this.log(`could not stop ${held.task} safely: ${messageOf(caught)}`);
-          return "stopped" as const;
-        })
-        .then(async (outcome) => {
-          if (outcome !== "stopped") {
-            this.markStop(held, "withdrawn");
-            return;
-          }
-          this.markStop(held, "stopped");
-          await held.turnOver;
-        })
-        .finally(() => save.stopping.delete(held.task)),
-    );
-  }
-
-  /**
-   * The update did not replace this copy, or was let go: a stop still
-   * waiting is withdrawn and its turn goes on as if never asked, and turns
-   * start here again. Answers once each stop settled, naming every task
-   * whose turn the save stopped, which its home carries on, and every one
-   * whose stop it withdrew, whose turn its home lets go on - the same after
-   * a restart here or once it let the save go by itself (`markStop`).
-   */
-  private async releaseUpdate(): Promise<UpdateReleaseAnswer> {
-    const save = this.updateSave;
-    if (save) {
-      this.updateSave = undefined;
-      clearTimeout(save.timer);
-      save.withdraw.abort();
-      await Promise.all(save.stops.values());
-    }
-    return { stopped: this.updateStops("stopped"), withdrawn: this.updateStops("withdrawn") };
-  }
-
-  /**
-   * Keeps what an update's save did to this task's turn here, through a
-   * restart and after the save is let go, until a turn starts here while
-   * no save holds (`record`): a let-go asked again, by a home that came back after
-   * either, names it as the first would have. A stop the save made stays
-   * one when a later turn's stop in the same save is withdrawn; a new save
-   * forgets it once the home has that turn's end. A stop that settles after
-   * this computer stopped writes nothing: its next start reads the stop it
-   * was making as the save's.
-   */
-  private markStop(held: Held, mark: NonNullable<PlacedTaskState["updateStop"]>): void {
-    if (this.stopped || (held.state.updateStop === "stopped" && mark !== "stopped")) return;
-    held.state = { ...held.state, updateStop: mark };
-    this.writeOut(held);
-  }
-
-  /** Each task whose turn an update's save stopped here, or whose stop it withdrew. */
-  private updateStops(mark: "stopped" | "withdrawn"): string[] {
-    return [...this.held.values()]
-      .filter((held) => held.state.updateStop === mark)
-      .map((held) => held.task);
+    this.updates.homeAsked();
   }
 
   private async closeTask(held: Held): Promise<void> {
@@ -1817,7 +1484,7 @@ export class SessionHost {
       // A turn starts here, from the home's prompt or by itself, while no
       // save holds: what an update's save did is over (`markStop`).
       ...((event.type === "turn_started" || event.type === "continuation_started") &&
-      !this.updateSave
+      !this.updates.holding
         ? { updateStop: undefined }
         : {}),
     };
@@ -1965,15 +1632,6 @@ function recordName(sessions: string, path: string | undefined): string | undefi
   const name = relative(sessions, path);
   if (!name || name.startsWith("..") || isAbsolute(name)) return undefined;
   return name.split(sep).join("/");
-}
-
-function preparationUnknown(value: unknown): boolean {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "refused" in value &&
-    value.refused === "preparation-unknown"
-  );
 }
 
 function messageOf(error: unknown): string {

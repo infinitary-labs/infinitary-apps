@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-release-trace-read",
+      "reason": "Test-only: the phone release test reads an absent stand-in trace as an empty one and fails on any other read or parse error, so its no-signing-tools check can no longer pass on a trace it could not read; no app behavior changes."
+    }
+  ]
+}

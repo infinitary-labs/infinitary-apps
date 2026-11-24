@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-button-always-shown",
+      "kind": "improvement",
+      "title": "The ambient music button is always at the top of the window",
+      "body": "The sound button now sits before Settings whether ambient music is on or off, as four quiet dots while off. Pressing it turns the music on or off, and the Ambient music switch in Settings turns with it. Music you had paused before this update stays off.",
+      "area": "settings",
+      "picture": {
+        "dark": "ambient-button-always-shown-dark.webp",
+        "light": "ambient-button-always-shown-light.webp",
+        "alt": "The ambient music button, shown as four quiet dots while off, beside the Settings button at the top of the window"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

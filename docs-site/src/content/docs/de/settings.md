@@ -1,5 +1,5 @@
 ---
-source: ae7178f2ee99eec5
+source: 454b7a23fdc82430
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -88,10 +88,10 @@ Einige Teile von Infinitary zeigen noch Englisch.
 Sie folgt der Crew und läutet, wenn etwas auf dich wartet.
 Sie ist aus, bis du sie einschaltest, und **Lautstärke** legt fest, wie laut sie spielt.
 
-Solange sie an ist, sitzt ein Ton-Knopf direkt vor **Einstellungen** oben im Fenster.
-Drück ihn, um zu pausieren oder fortzusetzen.
+Ein Ton-Knopf sitzt direkt vor **Einstellungen** oben im Fenster, ob die Musik an oder aus ist.
+Drück ihn, um die Musik ein- oder auszuschalten; der Schalter **Ambient-Musik** schaltet mit.
 Lass den Zeiger darauf ruhen, und er zeigt den Namen der Musik, die gerade spielt; lass ihn auf dem Namen ruhen oder drück ihn, um einen anderen Stil aus der Liste darunter zu wählen.
-Auch die Befehlssuche hat **Ambient-Musik abspielen oder pausieren** und **Ambient-Musik auswählen**.
+Auch die Befehlssuche hat **Ambient-Musik abspielen oder stoppen** und **Ambient-Musik auswählen**.
 
 ## Leitfäden {#runbooks}
 

@@ -1,5 +1,5 @@
 ---
-source: ae7178f2ee99eec5
+source: 454b7a23fdc82430
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -88,10 +88,10 @@ Certaines parties d’Infinitary s’affichent encore en anglais.
 Elle suit l’équipage, et sonne quand quelque chose vous attend.
 Elle est désactivée jusqu’à ce que vous l’activiez, et **Volume** règle son niveau.
 
-Quand elle est activée, un bouton de son se trouve juste avant **Réglages** en haut de la fenêtre.
-Appuyez dessus pour mettre en pause ou reprendre.
+Un bouton de son se trouve juste avant **Réglages** en haut de la fenêtre, que la musique soit activée ou non.
+Appuyez dessus pour activer ou désactiver la musique ; l’interrupteur **Musique d’ambiance** suit.
 Laissez le pointeur dessus et il affiche le nom de la musique en cours ; laissez-le sur le nom, ou appuyez dessus, pour choisir un autre style dans la liste qui s’ouvre en dessous.
-La recherche de commandes propose aussi **Lire ou mettre en pause la musique d’ambiance** et **Choisir la musique d’ambiance**.
+La recherche de commandes propose aussi **Lire ou arrêter la musique d’ambiance** et **Choisir la musique d’ambiance**.
 
 ## Procédures {#runbooks}
 

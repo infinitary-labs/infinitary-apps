@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reader-integration-reads",
+      "kind": "feature",
+      "title": "A crewmate that reads strangers' words can use your integrations, one click at a time",
+      "body": "An unsafe data reader can now list your integrations and call them. A read you set to Always allow runs at once, and everything it reads comes marked as words from outside. Every other call, including any MCP server's and every change or send, waits as a ticked row on the reader's one approval card beside its writes, until you choose Only this time.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "reader-integration-reads-dark.webp",
+        "light": "reader-integration-reads-light.webp",
+        "alt": "An approval card asking to allow an unsafe data reader's calls, with a read of an integration and a note it wants to add as two ticked rows"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

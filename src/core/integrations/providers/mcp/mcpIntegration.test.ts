@@ -5,9 +5,11 @@ import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { integrationsViewSchema } from "@shared/integrations";
+import { fencedSpans } from "@shared/outsideData";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { integrationKeys } from "../../../../../tests/helpers/integrationKeys";
+import { serveSignInNotes } from "../../../../../tests/helpers/mcpSignInStandIn";
 import {
   NOTES_KEY_VARIABLE,
   NOTES_URI,
@@ -28,6 +30,7 @@ import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
 import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "../../index";
 import type { IntegrationKeys } from "../../secrets";
+import { checkSignInAddress, guardedSignInFetch } from "./guardedFetch";
 import { mcpIntegration } from "./mcpIntegration";
 import { McpServerStore } from "./store";
 
@@ -71,6 +74,8 @@ afterEach(async () => {
 function serviceIn(
   root: string,
   keys?: IntegrationKeys,
+  signIn?: Pick<Parameters<typeof mcpIntegration>[0], "open" | "now">,
+  reads?: Pick<ConstructorParameters<typeof IntegrationsService>[0], "reads" | "panelReads">,
 ): {
   service: IntegrationsService;
   tasks: TaskService;
@@ -89,6 +94,7 @@ function serviceIn(
     version: "0.0.0-test",
     changed: () => service?.changed(),
     ...(keys ? { keys } : {}),
+    ...signIn,
   });
   service = new IntegrationsService({
     bindings: [binding],
@@ -99,6 +105,7 @@ function serviceIn(
       record: (taskId, askId, outcome) =>
         tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
+    ...reads,
   });
   return { service, tasks, binding, close: () => db.close() };
 }
@@ -139,6 +146,21 @@ describe.each([
   ["legacy", "http"],
   ["modern", "http"],
 ] as const)("an MCP server in the %s era over %s", (era, transport) => {
+  /**
+   * What the server said, as an agent reads it: an address server's words
+   * are fenced as data from outside, which anyone who writes to that
+   * service may have written; a program's are its own and reach it as they are.
+   */
+  const said = (text: string): string => {
+    const spans = fencedSpans(text);
+    if (transport === "stdio") {
+      expect(spans).toEqual([]);
+      return text;
+    }
+    expect(spans.map((span) => span.label)).toEqual(["mcp-data"]);
+    return spans[0]?.words.trim() ?? "";
+  };
+
   it("is added with its own tool list, reads, asks before a change and tells when a resource changes", async () => {
     const root = scratchDir("mcp-integration");
     const { service, tasks, close } = serviceIn(root);
@@ -179,16 +201,21 @@ describe.each([
       { id: 2 },
       "To perform the task’s requested action.",
     );
-    expect(one.text).toBe(SAMPLE_NOTES[1]);
+    expect(said(one.text)).toBe(SAMPLE_NOTES[1]);
 
     const start = await service.look(id, "resource_changed", null);
     expect(start.items).toEqual([]);
     served.addNote("Return the library books by Friday");
     // Polled until the server's word arrives, within the file's budget.
     await expect
-      .poll(async () => (await service.look(id, "resource_changed", start.cursor)).items, {
-        timeout: 9_000,
-      })
+      .poll(
+        async () =>
+          (await service.look(id, "resource_changed", start.cursor)).items.map((item) => ({
+            ...item,
+            summary: said(item.summary),
+          })),
+        { timeout: 9_000 },
+      )
       .toEqual([{ id: expect.any(String), summary: `All notes changed (${NOTES_URI})` }]);
     const read = await service.call(
       task,
@@ -220,7 +247,7 @@ describe.each([
     });
     const click = await service.sendAsk(task.taskId, ask?.id ?? "");
     expect(click.outcome).toEqual({ kind: "ran" });
-    expect(click.answer).toBe("Added note 5.");
+    expect(said(click.answer ?? "")).toBe("Added note 5.");
     expect(served.notes()).toContain("Pay the electric bill");
   });
 });
@@ -1073,5 +1100,437 @@ describe("an MCP server's key", () => {
     expect(refused.text).toContain(
       "Kept notes keeps its keys in Secrets, which this computer does not offer, so it cannot start here.",
     );
+  });
+});
+
+/**
+ * A web MCP server that asks for a sign-in connects through its own
+ * registration and a browser sign-in; its lasting key is kept in Secrets,
+ * and renewal, signing in again and revocation on removal all work.
+ * The stand-in serves the notes behind a sign-in at another address, and
+ * its `browse` is the person's browser.
+ */
+describe("an MCP server that asks for a sign-in", () => {
+  const SIGNED_OUT = "Notes is signed out. Sign in again in Settings → Integrations.";
+
+  async function signInWorld(
+    era: StandInEra,
+    options: Parameters<typeof serveSignInNotes>[1] = {},
+  ) {
+    const root = scratchDir("mcp-sign-in-");
+    const secrets = integrationKeys();
+    const standIn = await serveSignInNotes(era, options);
+    const pages: string[] = [];
+    let answer: "approve" | "decline" | "wait" = "approve";
+    let browsed: Promise<string> | undefined;
+    const clock = { now: Date.UTC(2026, 10, 2, 9) };
+    const world = serviceIn(root, secrets.keys, {
+      open: async (page) => {
+        pages.push(page);
+        if (answer !== "wait") browsed = standIn.browse(page, answer);
+      },
+      now: () => clock.now,
+    });
+    opened.push({
+      service: world.service,
+      close: () => {
+        world.close();
+        void standIn.close();
+      },
+    });
+    const pushed: string[] = [];
+    const add = () =>
+      world.service.add("mcp", { name: "Notes", runs: standIn.url }, true).then(async (added) => {
+        await browsed;
+        return added;
+      });
+    return {
+      ...world,
+      root,
+      secrets,
+      standIn,
+      pages,
+      pushed,
+      clock,
+      add,
+      browsed: () => browsed,
+      answer: (next: typeof answer) => {
+        answer = next;
+      },
+      row: () => world.service.view().integrations.find((one) => one.id === "mcp-notes"),
+      list: () =>
+        world.service.call(
+          task,
+          "Notes",
+          "list_notes",
+          {},
+          "To perform the task’s requested action.",
+        ),
+    };
+  }
+
+  describe.each(["legacy", "modern"] as const)("in the %s era", (era) => {
+    it("signs in in the browser as Settings adds it, keeps the lasting key in Secrets alone, and lists its tools", async () => {
+      const world = await signInWorld(era);
+      const { id, view } = await world.add();
+      expect(id).toBe("mcp-notes");
+      // The page opened is the sign-in's own, at another address than the server.
+      expect(world.pages).toHaveLength(1);
+      expect(new URL(world.pages[0] ?? "").origin).toBe(world.standIn.issuer);
+      expect(new URL(world.pages[0] ?? "").origin).not.toBe(new URL(world.standIn.url).origin);
+      expect(await world.browsed()).toBe(
+        '<!doctype html><meta charset="utf-8"><title>Infinitary</title><body style="font:15px system-ui;margin:3em">Signed in to Notes. You can close this tab and go back to Infinitary.</body>',
+      );
+      expect(world.standIn.clients.size).toBe(1);
+      expect(view.integrations.find((one) => one.id === id)).toMatchObject({
+        name: "Notes",
+        health: "ok",
+        signIn: true,
+        runs: world.standIn.url,
+      });
+      expect(view.integrations[0]?.actions.map((action) => action.name)).toEqual([
+        "list_notes",
+        "get_note",
+        "add_note",
+        "read_resource",
+      ]);
+      expect(view.signingIn).toBeUndefined();
+
+      // One hidden entry, the lasting key; neither key in any file or anything a person or agent reads.
+      const [entry, ...others] = await world.secrets.entries();
+      expect(others).toEqual([]);
+      expect(entry).toMatchObject({ label: "Notes sign-in", discoverable: false });
+      expect(world.standIn.lasting.size).toBe(1);
+      const keys = [...world.standIn.access, ...world.standIn.lasting];
+      const reads = [
+        readFileSync(join(world.root, "mcp.json"), "utf8"),
+        readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8"),
+        JSON.stringify(world.service.view()),
+        JSON.stringify(world.service.roster()),
+        JSON.stringify(world.service.show("Notes")),
+      ];
+      for (const key of keys) for (const read of reads) expect(read).not.toContain(key);
+      // A build without sign-ins still reads the servers file and lists the server.
+      expect(new McpServerStore(world.root).read()).toEqual([
+        expect.objectContaining({ id, name: "Notes", runs: world.standIn.url, health: "ok" }),
+      ]);
+
+      allowIntegrationReads(world.service);
+      const listed = await world.list();
+      expect(listed.refused).toBeUndefined();
+      expect(listed.text).toContain(`1. ${SAMPLE_NOTES[0]}`);
+      // No Secrets card at any point: signing in is the consent.
+      expect(world.secrets.cards).toEqual([]);
+    });
+  });
+
+  it("renews before a key runs out and once after a refusal, inside Secrets with no card", async () => {
+    const world = await signInWorld("modern", { rotate: true, lifetime: 60 });
+    await world.add();
+    allowIntegrationReads(world.service);
+    const first = [...world.standIn.lasting][0];
+
+    // Within thirty seconds of its end, the access key is renewed before the request.
+    world.clock.now += 45_000;
+    expect((await world.list()).refused).toBeUndefined();
+    expect(world.standIn.renewals).toEqual([first]);
+
+    // The server refuses an access key it ended early: renewed once, and the call goes through.
+    world.standIn.expireAccess();
+    expect((await world.list()).refused).toBeUndefined();
+    expect(world.standIn.renewals).toHaveLength(2);
+    // Each renewal handed a new lasting key, which replaced the old one under the same entry.
+    const entries = await world.secrets.entries();
+    expect(entries).toHaveLength(1);
+    expect(world.standIn.lasting.size).toBe(1);
+    expect(world.standIn.renewals[1]).not.toBe(first);
+
+    const view = await world.secrets.keys.view();
+    expect(view.rules).toEqual([]);
+    expect(view.history.map((item) => [item.approval, item.signIn])).toEqual([
+      [undefined, true],
+      [undefined, true],
+    ]);
+    expect(world.secrets.cards).toEqual([]);
+    expect(world.row()?.health).toBe("ok");
+  });
+
+  it("turns signed out when the sign-in refuses its lasting key, and signs in again keeping its switches", async () => {
+    const world = await signInWorld("modern");
+    await world.add();
+    allowIntegrationReads(world.service);
+    world.service.configure("mcp-notes", { actions: { add_note: false } });
+    expect(world.row()?.actions.find((one) => one.name === "list_notes")?.rule).toBe("allow");
+
+    world.standIn.signOutThere();
+    const refused = await world.list();
+    expect(refused.refused).toBe("refused");
+    expect(refused.text).toBe(`Error: ${SIGNED_OUT}`);
+    expect(world.row()?.health).toBe("needs_reauth");
+    // Signed out, a call asks nothing of the server or its sign-in.
+    const asked = world.standIn.renewalsAsked.length;
+    expect((await world.list()).text).toBe(`Error: ${SIGNED_OUT}`);
+    expect(world.standIn.renewalsAsked).toHaveLength(asked);
+    const [before] = await world.secrets.entries();
+
+    const view = await world.service.signInAgain("mcp-notes");
+    await world.browsed();
+    const row = view.integrations.find((one) => one.id === "mcp-notes");
+    expect(row?.health).toBe("ok");
+    expect(world.pages).toHaveLength(2);
+    // A new app registration and a new lasting key, which replaced the one before.
+    expect(world.standIn.clients.size).toBe(2);
+    const after = await world.secrets.entries();
+    expect(after).toHaveLength(1);
+    expect(after[0]?.ref).not.toBe(before?.ref);
+    // Its switches stay; Always allow ends, since it may be another account.
+    expect(row?.actions.find((one) => one.name === "add_note")?.enabled).toBe(false);
+    expect(row?.actions.find((one) => one.name === "list_notes")?.rule).toBe("ask");
+    allowIntegrationReads(world.service);
+    expect((await world.list()).refused).toBeUndefined();
+  });
+
+  it("is forgotten at the server and in Secrets when it is removed", async () => {
+    const world = await signInWorld("modern");
+    await world.add();
+    const lasting = [...world.standIn.lasting];
+    const access = [...world.standIn.access];
+    await world.service.remove("mcp-notes");
+    expect(world.standIn.revoked).toEqual(expect.arrayContaining([...lasting, ...access]));
+    expect((await world.secrets.keys.view()).history.map((item) => item.reason)).toEqual([
+      "Infinitary tells Notes to forget the sign-in you removed.",
+    ]);
+    expect(world.standIn.lasting.size).toBe(0);
+    expect(await world.secrets.entries()).toEqual([]);
+    expect(JSON.parse(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8"))).toEqual({
+      signIns: [],
+    });
+    expect(world.secrets.cards).toEqual([]);
+  });
+
+  it("leaves no row and no key when the sign-in is declined or cancelled", async () => {
+    const world = await signInWorld("modern");
+    world.answer("decline");
+    await expect(world.add()).rejects.toThrow(/^The sign-in was declined on Notes's page\.$/);
+    expect(await world.browsed()).toContain("Not signed in to Notes.");
+    expect(world.service.view().integrations).toEqual([]);
+    expect(await world.secrets.entries()).toEqual([]);
+
+    world.answer("wait");
+    const adding = world.service.add("mcp", { name: "Notes", runs: world.standIn.url }, true);
+    await expect.poll(() => world.pages.length).toBe(2);
+    expect(world.service.view().signingIn).toEqual({ name: "Notes", page: world.pages[1] });
+    world.service.cancelSignIn();
+    await expect(adding).rejects.toThrow(/^The sign-in was cancelled\.$/);
+    expect(world.service.view().signingIn).toBeUndefined();
+    expect(world.service.view().integrations).toEqual([]);
+    expect(await world.secrets.entries()).toEqual([]);
+  });
+
+  it("opens the page again while it waits", async () => {
+    const world = await signInWorld("modern");
+    world.answer("wait");
+    const adding = world.service.add("mcp", { name: "Notes", runs: world.standIn.url }, true);
+    await expect.poll(() => world.pages.length).toBe(1);
+    await world.service.openSignInPage();
+    expect(world.pages).toHaveLength(2);
+    expect(world.pages[1]).toBe(world.pages[0]);
+    await world.standIn.browse(world.pages[1] ?? "");
+    await expect(adding).resolves.toMatchObject({ id: "mcp-notes" });
+  });
+
+  it("refuses a sign-in that will not register Infinitary, before the browser opens", async () => {
+    const world = await signInWorld("modern", { register: false });
+    await expect(world.add()).rejects.toThrow(
+      /^Notes does not let Infinitary register itself to sign in\. It needs an app of your own, which Infinitary does not offer yet\.$/,
+    );
+    expect(world.pages).toEqual([]);
+    expect(world.service.view().integrations).toEqual([]);
+    expect(await world.secrets.entries()).toEqual([]);
+  });
+
+  it.each(["client_secret_basic", "client_secret_post"] as const)(
+    "signs in, renews and is forgotten as an app with a key of its own (%s)",
+    async (clientAuth) => {
+      const world = await signInWorld("modern", { clientAuth });
+      await world.add();
+      const [client] = [...world.standIn.clients.values()];
+      expect(client?.secret).toEqual(expect.any(String));
+      const entries = await world.secrets.entries();
+      expect(entries.map((entry) => [entry.label, entry.discoverable])).toEqual(
+        expect.arrayContaining([
+          ["Notes sign-in", false],
+          ["Notes sign-in app", false],
+        ]),
+      );
+      expect(entries).toHaveLength(2);
+      expect(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8")).not.toContain(
+        client?.secret ?? "",
+      );
+
+      allowIntegrationReads(world.service);
+      world.standIn.expireAccess();
+      expect((await world.list()).refused).toBeUndefined();
+      expect(world.standIn.renewals).toHaveLength(1);
+      await world.service.remove("mcp-notes");
+      expect(await world.secrets.entries()).toEqual([]);
+    },
+  );
+
+  it.each([
+    [
+      "in a private network",
+      "http://10.0.0.5/token",
+      "The server's sign-in at 10.0.0.5 is in a private network, but the server is not, so Infinitary does not reach it.",
+    ],
+    [
+      "over plain http",
+      "http://93.184.215.14/token",
+      "The server's sign-in is at 93.184.215.14 over plain http, which Infinitary does not use. It needs https.",
+    ],
+  ])(
+    "refuses a sign-in whose document names an address %s, before the browser opens",
+    async (_where, token, words) => {
+      const world = await signInWorld("modern", { endpoints: { token } });
+      await expect(world.add()).rejects.toThrow(words);
+      expect(world.pages).toEqual([]);
+      expect(world.standIn.clients.size).toBe(0);
+      expect(world.service.view().integrations).toEqual([]);
+    },
+  );
+
+  it("ends at Cancel while the sign-in's document does not answer", async () => {
+    const world = await signInWorld("modern", { silent: true });
+    const adding = world.service.add("mcp", { name: "Notes", runs: world.standIn.url }, true);
+    await expect.poll(() => world.standIn.documentsAsked).toBe(1);
+    world.service.cancelSignIn();
+    await expect(adding).rejects.toThrow(/^The sign-in was cancelled\.$/);
+    expect(world.pages).toEqual([]);
+    expect(world.service.view().integrations).toEqual([]);
+  });
+
+  it("says the server refused the sign-in just made, keeping no row and no key", async () => {
+    const world = await signInWorld("modern", { refuseKeys: true });
+    await expect(world.add()).rejects.toThrow(
+      /^Notes refused the sign-in you just made\. Check that the account you signed in with can use it\.$/,
+    );
+    expect(world.service.view().integrations).toEqual([]);
+    expect(await world.secrets.entries()).toEqual([]);
+  });
+
+  it("escapes the name on the browser's page after the sign-in", async () => {
+    const world = await signInWorld("modern");
+    const name = '<meta http-equiv="refresh" content="0;url=https://example.com">';
+    await world.service.add("mcp", { name, runs: world.standIn.url }, true);
+    const page = await world.browsed();
+    expect(page).not.toContain("<meta http-equiv");
+    expect(page).toContain(
+      "Signed in to &lt;meta http-equiv=&quot;refresh&quot; content=&quot;0;url=https://example.com&quot;&gt;.",
+    );
+  });
+
+  it("refuses the first mate's addition with words, opening no browser", async () => {
+    const world = await signInWorld("modern");
+    await expect(
+      world.service.add("mcp", { name: "Notes", runs: world.standIn.url }),
+    ).rejects.toThrow(
+      /^Notes asks for a sign-in, which you make in your browser from Settings → Integrations → MCP server\.$/,
+    );
+    expect(world.pages).toEqual([]);
+    expect(world.service.view().integrations).toEqual([]);
+  });
+
+  it("forgets at launch a sign-in whose server a build without sign-ins removed", async () => {
+    const world = await signInWorld("modern");
+    await world.add();
+    await world.service.dispose();
+    // The older build's removal: the server leaves mcp.json, its sign-in stays behind.
+    new McpServerStore(world.root).write([]);
+    const relaunched = serviceIn(world.root, world.secrets.keys);
+    opened.push({ service: relaunched.service, close: relaunched.close });
+    await relaunched.binding.moveKeys();
+    expect(await world.secrets.entries()).toEqual([]);
+    expect(JSON.parse(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8"))).toEqual({
+      signIns: [],
+    });
+  });
+});
+
+describe("an MCP server's words read by a task", () => {
+  // Fenced, but kept for no days: they never tie the task's conversation to
+  // another kind's deletion, as a Gmail read does.
+  it("are fenced and noted for no deletion", async () => {
+    const root = scratchDir("mcp-integration");
+    const noted: string[] = [];
+    const { service, close } = serviceIn(root, undefined, undefined, {
+      reads: { note: (reader) => noted.push(reader) },
+      panelReads: (panel) => noted.push(panel),
+    });
+    const http = await serveNotesHttp("modern");
+    opened.push({ service, http, close });
+    await service.add("mcp", { name: "Notes", runs: http.url });
+    allowIntegrationReads(service);
+    const listed = await service.call(
+      task,
+      "Notes",
+      "list_notes",
+      {},
+      "To perform the task’s requested action.",
+    );
+    expect(fencedSpans(listed.text).map((span) => span.label)).toEqual(["mcp-data"]);
+    expect(noted).toEqual([]);
+  });
+});
+
+describe("a sign-in's addresses", () => {
+  const resolveTo =
+    (answers: Record<string, string[]>) =>
+    async (hostname: string): Promise<readonly string[]> => {
+      const found = answers[hostname];
+      if (!found) throw new Error("not found");
+      return found;
+    };
+
+  it("are reached over https at public addresses, or where the server itself is", async () => {
+    const resolve = resolveTo({
+      "auth.example.com": ["93.184.215.14"],
+      "intranet.example.com": ["10.0.0.5"],
+    });
+    await expect(
+      checkSignInAddress(new URL("https://auth.example.com/token"), "public", resolve),
+    ).resolves.toEqual(["93.184.215.14"]);
+    await expect(
+      checkSignInAddress(new URL("https://intranet.example.com/token"), "public", resolve),
+    ).rejects.toThrow(
+      "The server's sign-in at intranet.example.com is in a private network, but the server is not, so Infinitary does not reach it.",
+    );
+    await expect(
+      checkSignInAddress(new URL("https://intranet.example.com/token"), "private", resolve),
+    ).resolves.toEqual(["10.0.0.5"]);
+    await expect(
+      checkSignInAddress(new URL("http://auth.example.com/token"), "public", resolve),
+    ).rejects.toThrow(
+      "The server's sign-in is at auth.example.com over plain http, which Infinitary does not use. It needs https.",
+    );
+  });
+
+  it("never follow a redirect", async () => {
+    const redirecting = createServer((_request, reply) => {
+      reply.writeHead(302, { location: "http://169.254.169.254/latest" });
+      reply.end();
+    });
+    await new Promise<void>((done) => redirecting.listen(0, "127.0.0.1", done));
+    const { port } = redirecting.address() as AddressInfo;
+    try {
+      await expect(
+        guardedSignInFetch("local")(
+          `http://127.0.0.1:${port}/.well-known/oauth-authorization-server`,
+        ),
+      ).rejects.toThrow(
+        "The sign-in at 127.0.0.1 answered with a redirect, which Infinitary does not follow.",
+      );
+    } finally {
+      await new Promise<void>((done) => redirecting.close(() => done()));
+    }
   });
 });

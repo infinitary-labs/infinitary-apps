@@ -1174,8 +1174,26 @@ public enum PhoneMessages {
     public static func `handoverStoppingTitle`(`from`: String) -> String { PhoneWords.format("handoverStoppingTitle", [`from`]) }
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
+    public static func `integrationsMcpAdd`(`name`: String) -> String { PhoneWords.format("integrationsMcpAdd", [`name`]) }
+    public static func `integrationsMcpNeedsSignIn`() -> String { PhoneWords.format("integrationsMcpNeedsSignIn", []) }
+    public static func `integrationsMcpOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsMcpOfferBody", [`name`]) }
+    public static func `integrationsMcpOfferButton`() -> String { PhoneWords.format("integrationsMcpOfferButton", []) }
+    public static func `integrationsMcpOfferNotNow`() -> String { PhoneWords.format("integrationsMcpOfferNotNow", []) }
+    public static func `integrationsMcpOfferOpen`() -> String { PhoneWords.format("integrationsMcpOfferOpen", []) }
+    public static func `integrationsMcpRenewOperation`(`name`: String) -> String { PhoneWords.format("integrationsMcpRenewOperation", [`name`]) }
+    public static func `integrationsMcpRenewReason`(`name`: String) -> String { PhoneWords.format("integrationsMcpRenewReason", [`name`]) }
+    public static func `integrationsMcpRenewResult`(`name`: String) -> String { PhoneWords.format("integrationsMcpRenewResult", [`name`]) }
+    public static func `integrationsMcpRevokeOperation`(`name`: String) -> String { PhoneWords.format("integrationsMcpRevokeOperation", [`name`]) }
+    public static func `integrationsMcpRevokeReason`(`name`: String) -> String { PhoneWords.format("integrationsMcpRevokeReason", [`name`]) }
+    public static func `integrationsMcpRevokeResult`() -> String { PhoneWords.format("integrationsMcpRevokeResult", []) }
     public static func `integrationsSignInAgain`() -> String { PhoneWords.format("integrationsSignInAgain", []) }
     public static func `integrationsSignInCancel`() -> String { PhoneWords.format("integrationsSignInCancel", []) }
+    public static func `integrationsSignInCancelled`() -> String { PhoneWords.format("integrationsSignInCancelled", []) }
+    public static func `integrationsSignInNoneAgain`(`name`: String) -> String { PhoneWords.format("integrationsSignInNoneAgain", [`name`]) }
+    public static func `integrationsSignInNoneWaiting`() -> String { PhoneWords.format("integrationsSignInNoneWaiting", []) }
+    public static func `integrationsSignInPageAt`(`host`: String) -> String { PhoneWords.format("integrationsSignInPageAt", [`host`]) }
+    public static func `integrationsSignInPageNotSignedIn`(`name`: String) -> String { PhoneWords.format("integrationsSignInPageNotSignedIn", [`name`]) }
+    public static func `integrationsSignInPageSignedIn`(`name`: String) -> String { PhoneWords.format("integrationsSignInPageSignedIn", [`name`]) }
     public static func `integrationsSignInWaiting`(`name`: String) -> String { PhoneWords.format("integrationsSignInWaiting", [`name`]) }
     public static func `keptCap`() -> String { PhoneWords.format("keptCap", []) }
     public static func `keptChecks`() -> String { PhoneWords.format("keptChecks", []) }
@@ -5586,8 +5604,26 @@ extension PhoneWords {
         "handoverStoppingTitle": ["from"],
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
+        "integrationsMcpAdd": ["name"],
+        "integrationsMcpNeedsSignIn": [],
+        "integrationsMcpOfferBody": ["name"],
+        "integrationsMcpOfferButton": [],
+        "integrationsMcpOfferNotNow": [],
+        "integrationsMcpOfferOpen": [],
+        "integrationsMcpRenewOperation": ["name"],
+        "integrationsMcpRenewReason": ["name"],
+        "integrationsMcpRenewResult": ["name"],
+        "integrationsMcpRevokeOperation": ["name"],
+        "integrationsMcpRevokeReason": ["name"],
+        "integrationsMcpRevokeResult": [],
         "integrationsSignInAgain": [],
         "integrationsSignInCancel": [],
+        "integrationsSignInCancelled": [],
+        "integrationsSignInNoneAgain": ["name"],
+        "integrationsSignInNoneWaiting": [],
+        "integrationsSignInPageAt": ["host"],
+        "integrationsSignInPageNotSignedIn": ["name"],
+        "integrationsSignInPageSignedIn": ["name"],
         "integrationsSignInWaiting": ["name"],
         "keptCap": [],
         "keptChecks": [],

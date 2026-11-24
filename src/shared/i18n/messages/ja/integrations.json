@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "{name} を追加",
+  "integrationsMcpNeedsSignIn": "もう一度サインインが必要",
+  "integrationsMcpOfferBody": "{name} はサインインを求めます。サインインはブラウザで行います。その後、ツールは「常に許可」を選ぶまでカードで確認します。",
+  "integrationsMcpOfferButton": "連携を開く",
+  "integrationsMcpOfferNotNow": "今はしない",
+  "integrationsMcpOfferOpen": "連携を開いてください。MCP サーバーのフォームは入力済みで、接続するとサインインページが開きます。",
+  "integrationsMcpRenewOperation": "ツールが動き続けるよう {name} のサインインを更新する",
+  "integrationsMcpRenewReason": "ツールが動き続けるよう、Infinitary が {name} のサインインを更新します。",
+  "integrationsMcpRenewResult": "{name} の新しいアクセスキー。アプリのメモリにだけ保持します",
+  "integrationsMcpRevokeOperation": "削除したサインインを忘れるよう {name} に伝える",
+  "integrationsMcpRevokeReason": "削除したサインインを忘れるよう、Infinitary が {name} に伝えます。",
+  "integrationsMcpRevokeResult": "何も保持しません。サインインはそこで終わります",
   "integrationsSignInAgain": "ページをもう一度開く",
   "integrationsSignInCancel": "キャンセル",
+  "integrationsSignInCancelled": "サインインはキャンセルされました。",
+  "integrationsSignInNoneAgain": "{name} にはやり直すサインインがありません。",
+  "integrationsSignInNoneWaiting": "待機中のサインインはありません。",
+  "integrationsSignInPageAt": "ページは {host} にあります。",
+  "integrationsSignInPageNotSignedIn": "{name} にサインインしていません。このタブを閉じて Infinitary に戻れます。",
+  "integrationsSignInPageSignedIn": "{name} にサインインしました。このタブを閉じて Infinitary に戻れます。",
   "integrationsSignInWaiting": "ブラウザで {name} へのサインインを完了してください。"
 }

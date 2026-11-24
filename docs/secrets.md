@@ -6,7 +6,7 @@ It also provides native custody and fresh system authentication for macOS, Linux
 The app supplies that custody and confirmation as its Secrets host capability on the person's own data folder on macOS, Linux and Windows ("In the app"), so the core builds the protected owner, Settings → Secrets and the task command.
 A run on an isolated or chosen data folder, and every other platform, gets no capability and offers no Secrets.
 The explicit host seam lets disposable checks exercise the real controller, trusted cards, secure entry and sealed files without opening a native credential store.
-The Google integration's sign-in and the keys of MCP servers a person adds in Integrations are the consumers migrated so far ("App services"); every other consumer in the register keeps its own store.
+The Google integration's sign-in and the keys and sign-ins of MCP servers a person adds in Integrations are the consumers migrated so far ("App services"); every other consumer in the register keeps its own store.
 
 ## Threat model and the accepted boundary
 
@@ -378,12 +378,12 @@ With `forProgram` it marks a key the service hands a program it starts ("Program
 It forgets one only after reading every saved setting whole: a damaged file, or one a newer build wrote, names nothing the service can see, so it forgets nothing.
 `forgetHidden` forgets only a hidden entry.
 `use` runs through the service's own registered broker and waits for the use to end with the broker's private result.
-The Google integration's sign-in and MCP servers' keys are such services today ([Integrations](integrations.md#keys)).
+The Google integration's sign-in, MCP servers' keys and the sign-ins of MCP servers at an address are such services today ([Integrations](integrations.md#keys)).
 
 ### App sign-ins
 
 A sign-in the person makes in the app itself is their consent to the app's own use of it, so that use asks nothing.
-A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names.
+A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names or, for an MCP server's sign-in (`mcp-sign-in`), the token or revocation address that sign-in's own documents named when the person signed in, saved with it and checked again on each send.
 `prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when the adapter declares `signIn` and every secret it names is a hidden entry not marked `forProgram`; the journal records the method `sign-in`, and history marks the use `signIn` with no approval ("Your sign-in" in Use history).
 Anything else is evaluated as before: an undeclared broker, a declaring broker that names a crew-visible secret, and every crewmate run.
 Signing out where the sign-in was made withdraws the consent: the service forgets its hidden entry.
@@ -592,7 +592,7 @@ Copy value is the only way a value comes back out ("Copying a value"): there is 
 
 ## Consumer register
 
-Every row but Google's sign-in and connected programs remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
+Every row but Google's sign-in, MCP server sign-ins and connected programs remains unmigrated; this is the maintained source-to-owner contract, not an assertion that direct readers are retired.
 A migration includes writers, every reader, replacement/renewal, interruption, rollback and old-app compatibility, without permanent dual writes or plaintext backups.
 The current owner retains protocol and lifecycle decisions; Secrets supplies custody, scoped use and atomic versioned replacement.
 Public certificates, host pins, fingerprints, token counts and non-secret metadata do not become vault values.
@@ -600,6 +600,7 @@ Public certificates, host pins, fingerprints, token counts and non-secret metada
 | Area | Current entry points | Adapter and required preservation |
 | --- | --- | --- |
 | Google sign-in (migrated) | `src/core/integrations/secrets.ts`; `providers/google/{googleIntegration,movedKeys,store}.ts` | A hidden entry used through the `google-sign-in` broker ("App services"); the access key stays in memory, one renewer at a time replaces the entry in place, and an earlier version's key file moves once and is removed. |
+| MCP server sign-ins (migrated) | `src/core/integrations/providers/mcp/{signIn,store,mcpIntegration}.ts` | The lasting key, and any key the sign-in gave the app, are hidden entries used through the `mcp-sign-in` broker ("App sign-ins") to renew and revoke; the access key stays in memory, one renewer per server replaces the lasting key in place, and removal forgets both. |
 | Connected programs (migrated) | `src/core/integrations/providers/mcp/{runs,store,mcpIntegration}.ts`; `src/core/secrets/programBroker.ts` | Each `NAME=value` on a server's Runs line but `PATH` is a hidden `forProgram` entry the line names as `NAME={secret:REF}`, handed to the server's program at each start, with no question, through the `mcp-server-keys` broker ("Programs that keep running"); an earlier version's line moves once at launch, and a computer without Secrets keeps the values on the line as before. |
 | Pi accounts | `src/core/pi/{accountVault,piAccountBackend,piAuth,modelRuntime}.ts` | Inject a Secrets-backed CredentialStore for account and base auth stores; retain serialized refresh and account lifecycle. |
 | Usage, Copilot and models | `src/core/quota/{auth,fetchQuota,http}.ts`; `src/core/pi/copilotMeter.ts`; model/account readers | Use the same account adapter; remove direct-file routes without confusing unavailable with signed out or adding renewal. |

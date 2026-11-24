@@ -995,6 +995,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/shared/holds.ts": 36,
   "src/shared/homeMove.ts": 1,
   "src/shared/i18n/languages.ts": 9,
+  "src/shared/integrationActions.ts": 18,
   "src/shared/integrations.ts": 102,
   "src/shared/intents.ts": 22,
   "src/shared/ipc.ts": 1,

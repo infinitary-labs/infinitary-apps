@@ -38,6 +38,7 @@ import {
   DEFAULT_APPEARANCE,
   DEFAULT_LAYOUT,
   DEFAULT_PERSONAL_PANELS,
+  foldAmbientPause,
   type Layout,
   languageChoiceSchema,
   layoutSchema,
@@ -332,7 +333,7 @@ export class SettingsStore {
     const ambient = ambientMusicRowSchema.safeParse(this.get("ambient-music"));
     const style = ambientStyleRowSchema.safeParse(this.get("ambient-style"));
     const own = ambientOwnRowSchema.safeParse(this.get("ambient-own-styles"));
-    return {
+    return foldAmbientPause({
       ...DEFAULT_APPEARANCE,
       ...appearance,
       ...(maximize.success
@@ -349,7 +350,7 @@ export class SettingsStore {
         : {}),
       ...(style.success ? { ambientStyle: style.data.style } : {}),
       ...(own.success && own.data.styles.length > 0 ? { ambientOwnStyles: own.data.styles } : {}),
-    };
+    });
   }
 
   /**
@@ -364,7 +365,9 @@ export class SettingsStore {
    * The ambient music's switch and volume go to their own row
    * (`ambient-music`), and a look without them keeps the saved ones; its
    * style goes to `ambient-style` the same way. Keep playing while away is
-   * `ambient-away-plays`, kept only while on. The person's own styles go to
+   * `ambient-away-plays`, kept only while on. A look saved paused, by this
+   * build's read of the old `ambient-paused` row or by an older view, is
+   * saved off and the row removed (`foldAmbientPause`). The person's own styles go to
    * `ambient-own-styles`; a look without them keeps the saved ones, and an
    * empty list removes the row.
    */
@@ -376,16 +379,16 @@ export class SettingsStore {
       language,
       fonts,
       ambientMusic,
-      ambientPaused,
+      ambientPaused: _paused,
       ambientPlaysWhenAway,
       ambientVolume,
       ambientStyle,
       ambientOwnStyles,
       ...look
-    } = {
+    } = foldAmbientPause({
       ...was,
       ...appearance,
-    };
+    });
     if (ambientMusic !== undefined || ambientVolume !== undefined)
       this.set("ambient-music", {
         on: ambientMusic ?? false,
@@ -396,8 +399,7 @@ export class SettingsStore {
       if (ambientOwnStyles.length === 0) this.remove("ambient-own-styles");
       else this.set("ambient-own-styles", { styles: ambientOwnStyles });
     }
-    if (ambientMusic && ambientPaused) this.set("ambient-paused", true);
-    else this.remove("ambient-paused");
+    this.remove("ambient-paused");
     if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);
     else this.remove("ambient-away-plays");
     if (language === undefined) this.remove("language");

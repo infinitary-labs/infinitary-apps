@@ -40,7 +40,10 @@ export const ambientOwnStylesValue = (c: unknown) => ({
   saved: (look(c).ambientOwnStyles ?? []).map(({ id, name }) => ({ id, name })),
   playing: ambientStyleIn(look(c).ambientStyle, look(c).ambientOwnStyles),
 });
-/** A saved pause of the music, which a panel reads beside the music's own value. */
+/**
+ * The music's pause, which a panel reads beside the music's own value: always
+ * false since the pause retired, kept so panels that read it still work.
+ */
 export const ambientPausedValue = (c: unknown) => ({ paused: look(c).ambientPaused ?? false });
 export const enabledValue = (c: unknown) => ({ enabled: c as boolean });
 /** Reads the limit alone from any answer that carries it, the app's cost limit view included. */

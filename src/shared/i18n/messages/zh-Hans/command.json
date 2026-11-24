@@ -3,7 +3,7 @@
   "commandAllowanceRecheckWords": "配额, 刷新, 用量, 限制, 账户, 切换",
   "commandAmbientStyle": "选择环境音乐",
   "commandAmbientStyleWords": "音乐, 风格, lofi, 声音, 氛围, 选择, 更换",
-  "commandAmbientToggle": "播放或暂停环境音乐",
+  "commandAmbientToggle": "播放或停止环境音乐",
   "commandAmbientToggleWords": "音乐, lofi, 声音, 背景音, 停止",
   "commandAutomationPauseAll": "暂停所有自动化",
   "commandAutomationPauseAllWords": "计划, 定时, 重复, 停止",

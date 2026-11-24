@@ -538,7 +538,7 @@
 "commandAllowanceRecheckWords" = "한도, 새로 고침, 사용량, 제한, 계정, 전환";
 "commandAmbientStyle" = "앰비언트 음악 고르기";
 "commandAmbientStyleWords" = "음악, 스타일, 로파이, 소리, 분위기, 고르기, 바꾸기";
-"commandAmbientToggle" = "앰비언트 음악 재생 또는 일시 정지";
+"commandAmbientToggle" = "앰비언트 음악 재생 또는 정지";
 "commandAmbientToggleWords" = "음악, lofi, 사운드, 배경음, 정지";
 "commandAutomationPauseAll" = "모든 자동화 일시 정지";
 "commandAutomationPauseAllWords" = "예약, 예약됨, 반복, 중지";
@@ -3880,9 +3880,9 @@
 "settleMergingChange" = "%1$@ 병합 중";
 "settleMergingChangeAfterTurn" = "선원이 하던 일을 마치면 %1$@을(를) 병합해요";
 "settleProjectAddressChanged" = "프로젝트 주소가 변경되었습니다. 새 병합 카드를 표시하세요.";
-"shellAmbientPause" = "배경 음악 일시 정지";
 "shellAmbientPlay" = "배경 음악 재생";
 "shellAmbientQuiet" = "말하는 동안 음소거";
+"shellAmbientStop" = "배경 음악 정지";
 "shellAmbientStyleNamed" = "스타일: %1$@";
 "shellCardFoldPanels" = "패널 접기";
 "shellCardMateAnswering" = "일등항해사가 이 카드에서 답하는 중이에요";

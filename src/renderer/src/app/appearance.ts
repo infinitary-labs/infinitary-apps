@@ -35,9 +35,11 @@ export type AppearanceSlice = {
   setSize: (size: UiSize) => void;
   washStrength: number;
   showCrewModelNames: boolean;
-  /** Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md). */
+  /**
+   * Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md):
+   * one on/off for the sound button, its key and Settings' switch.
+   */
   ambientMusic: boolean;
-  ambientPaused: boolean;
   ambientPlaysWhenAway: boolean;
   ambientVolume: number;
   /**
@@ -76,7 +78,6 @@ export type AppearanceSlice = {
   setShowCrewModelNames: (shown: boolean) => void;
   setAmbientMusic: (on: boolean) => void;
   setAmbientPlaysWhenAway: (plays: boolean) => void;
-  toggleAmbientPlayback: () => void;
   setAmbientVolume: (volume: number) => void;
   setAmbientStyle: (style: string) => void;
   /** Removes one of the person's own styles; the default plays if it was playing. */
@@ -95,7 +96,6 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     washStrength: appearance.washStrength ?? DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: appearance.showCrewModelNames ?? true,
     ambientMusic: appearance.ambientMusic ?? false,
-    ambientPaused: appearance.ambientPaused ?? false,
     ambientPlaysWhenAway: appearance.ambientPlaysWhenAway ?? false,
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
     ambientStyle: appearance.ambientStyle ?? DEFAULT_AMBIENT_STYLE,
@@ -167,7 +167,6 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         washStrength: s.washStrength,
         showCrewModelNames: s.showCrewModelNames,
         ambientMusic: s.ambientMusic,
-        ambientPaused: s.ambientPaused,
         ambientPlaysWhenAway: s.ambientPlaysWhenAway,
         ambientVolume: s.ambientVolume,
         ambientStyle: s.ambientStyle,
@@ -191,7 +190,6 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     washStrength: DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
     ambientMusic: false,
-    ambientPaused: false,
     ambientPlaysWhenAway: false,
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
     ambientStyle: DEFAULT_AMBIENT_STYLE,
@@ -237,19 +235,12 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       saveAppearance("showCrewModelNames", { showCrewModelNames });
     },
     setAmbientMusic: (ambientMusic) => {
-      set({ ambientMusic, ambientPaused: false });
-      saveAppearance("ambientMusic", { ambientMusic, ambientPaused: false });
+      set({ ambientMusic });
+      saveAppearance("ambientMusic", { ambientMusic });
     },
     setAmbientPlaysWhenAway: (ambientPlaysWhenAway) => {
       set({ ambientPlaysWhenAway });
       saveAppearance("ambientPlaysWhenAway", { ambientPlaysWhenAway });
-    },
-    toggleAmbientPlayback: () => {
-      const s = get();
-      if (!s.ambientMusic) return s.setAmbientMusic(true);
-      const ambientPaused = !s.ambientPaused;
-      set({ ambientPaused });
-      saveAppearance("ambientPaused", { ambientPaused });
     },
     setAmbientVolume: (ambientVolume) => {
       set({ ambientVolume });

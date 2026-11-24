@@ -42,6 +42,11 @@ import { REPO_ROOT } from "./moduleRunner.ts";
 /** Pages the build writes rather than a person: Keyboard has its own generator and check, What's new is English everywhere. */
 export const GENERATED_PAGES = new Set(["keyboard.mdx", "whats-new.md"]);
 
+/** What's new and each stable's own page under whats-new/, shown in English in every language. */
+export function isWhatsNew(name: string): boolean {
+  return name === "whats-new.md" || name.startsWith("whats-new/");
+}
+
 /** The fingerprint a translated page records of the English page it was written from. */
 export function fingerprint(english: string): string {
   return createHash("sha256").update(english).digest("hex").slice(0, 16);
@@ -216,11 +221,11 @@ export function languageProblems(site: SiteLanguages): string[] {
   }
   for (const { segment, pages } of site.languages.values()) {
     for (const name of site.english.keys()) {
-      if (name !== "whats-new.md" && !pages.has(name)) problems.push(`${segment}/${name} is missing: English has ${name}`);
+      if (!isWhatsNew(name) && !pages.has(name)) problems.push(`${segment}/${name} is missing: English has ${name}`);
     }
     for (const [name, text] of pages) {
       const source = site.english.get(name);
-      if (source === undefined || name === "whats-new.md") {
+      if (source === undefined || isWhatsNew(name)) {
         problems.push(`${segment}/${name} has no English page to be a translation of`);
         continue;
       }

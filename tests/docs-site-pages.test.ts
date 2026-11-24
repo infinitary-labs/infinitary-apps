@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -10,6 +10,8 @@ import {
   type ListedRelease,
   ledgerEntries,
   releaseChanges,
+  releasePage,
+  releaseSlug,
   whatsNewPage,
 } from "../scripts/docs-site-whats-new.ts";
 import { NOTE_AREAS } from "../src/core/releaseNotes/catalog";
@@ -18,6 +20,7 @@ import * as keyboard from "../src/shared/keyboard";
 import * as keymap from "../src/shared/keymap";
 import * as presets from "../src/shared/keyPresets";
 import * as panelCards from "../src/shared/plugins/panelCards";
+import { compareSemver, isStableVersion } from "../src/shared/semver";
 
 /**
  * The docs site's generated pages (docs/docs-site.md, "Generated pages"):
@@ -144,6 +147,15 @@ describe("the What's new page", () => {
     for (const entry of hidden) expect(listed.map((item) => item.id)).not.toContain(entry?.id);
   });
 
+  /** Each note as a page shows it: the title its disclosure shows, and what opening it reveals. */
+  const disclosures = (page: string) =>
+    [...page.matchAll(/^<details>\n<summary>(.*)<\/summary>\n([\s\S]*?)^<\/details>$/gm)].map(
+      ([, summary, detail]) => ({ summary: summary ?? "", detail: (detail ?? "").trim() }),
+    );
+  const html = (text: string) =>
+    text.replace(/[&<>"]/g, (character) => `&#${character.charCodeAt(0)};`);
+  const markdown = (text: string) => text.replace(/[\\`*_[\]<>#|{}]/g, (c) => `\\${c}`);
+
   it("files each change under its area's heading, in the app's order", () => {
     const page = whatsNewPage([{ release, before }], entries);
     const headings = [...page.matchAll(/^### (.+)$/gm)].map((match) => match[1]);
@@ -152,9 +164,68 @@ describe("the What's new page", () => {
     for (const entry of releaseChanges(release, before, entries)) {
       const area = NOTE_AREAS.find((item) => item.id === (entry.area ?? "other"))?.label ?? "";
       const section = page.split(`### ${area}\n`)[1]?.split("\n### ")[0] ?? "";
-      expect(section, entry.id).toContain(
-        entry.title.slice(0, 24).replace(/[\\`*_[\]<>#|{}]/g, (c) => `\\${c}`),
-      );
+      expect(section, entry.id).toContain(`</strong> ${html(entry.title)}</summary>`);
     }
+  });
+
+  // INF-6408: the page showed every note's detail open, about 22,000 words; each title stays in view and its detail folds under it.
+  it("shows each change's title and folds its detail under it", () => {
+    const changes = releaseChanges(release, before, entries);
+    const page = whatsNewPage([{ release, before }], entries);
+    const shown = disclosures(page);
+    expect(shown.map(({ summary }) => summary.replace(/^<strong>.*?<\/strong> /, ""))).toEqual(
+      NOTE_AREAS.flatMap((area) =>
+        changes
+          .filter((entry) => (entry.area ?? "other") === area.id)
+          .map((entry) => html(entry.title)),
+      ),
+    );
+    const detailed = changes.filter((entry) => entry.body);
+    expect(detailed.length).toBeGreaterThan(0);
+    for (const entry of detailed)
+      expect(
+        shown.map(({ detail }) => detail),
+        entry.id,
+      ).toContain(markdown(entry.body ?? ""));
+  });
+
+  // INF-6408: a stable dropped off the site once five newer ones shipped; now each keeps a page of its own, listed on What's new.
+  it("keeps every stable with changes on a page of its own, listed on What's new", () => {
+    const stables = readdirSync(join(ROOT, "release-notes/releases"))
+      .map((file) => file.replace(/\.json$/, ""))
+      .filter((version) => isStableVersion(version))
+      .sort((a, b) => compareSemver(b, a) ?? 0)
+      .map(manifest);
+    const releases = stables.map((stable, index) => ({
+      release: stable,
+      before: stables[index + 1] ?? null,
+    }));
+    expect(releases.length).toBeGreaterThan(5);
+    const page = whatsNewPage(releases, entries);
+    const shown = [...page.matchAll(/^## (\d.*)$/gm)].map((match) => match[1]);
+    expect(shown).toEqual(releases.slice(0, 5).map(({ release }) => release.version));
+    const index = page.split("\n## Every release\n")[1] ?? "";
+    const withChanges = releases.filter(
+      ({ release, before }) => releaseChanges(release, before, entries).length > 0,
+    );
+    expect(withChanges.slice(5).length).toBeGreaterThan(0);
+    expect(
+      [...index.matchAll(/^- \[(.+?)\]\(\/whats-new\/(.+?)\/\)/gm)].map(([, version, slug]) => [
+        version,
+        slug,
+      ]),
+    ).toEqual(withChanges.map(({ release }) => [release.version, releaseSlug(release.version)]));
+    const oldest = withChanges.at(-1);
+    if (!oldest) throw new Error("no stable with changes");
+    const own = releasePage(oldest, entries) ?? "";
+    expect(own).toContain(`title: What's new in ${oldest.release.version}`);
+    expect(disclosures(own)).toHaveLength(
+      releaseChanges(oldest.release, oldest.before, entries).length,
+    );
+    const quiet = releases.find(
+      ({ release, before }) => releaseChanges(release, before, entries).length === 0,
+    );
+    if (!quiet) throw new Error("no stable without changes");
+    expect(releasePage(quiet, entries)).toBeNull();
   });
 });

@@ -410,7 +410,7 @@ const SHAPE_FIELD_RULES = {
   review_of:
     "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer: omit runs_on_ask.",
   repairs_batch:
-    "True only on the one task you start to repair a project's held batch; the captain sees it as that batch's repair.",
+    "True only on the one task you start to repair a project's held batch: the host records it as that batch's repair, which the captain sees.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -951,7 +951,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "Moves started work to another work computer or this Mac at a safe pause: " +
       "its crewmate's turn and commands finish first. It keeps " +
       "its key, branch, uncommitted work, files and record, and continues in a new conversation " +
-      "there on its model. Only on the captain's ask, never to balance load. cancel stops a " +
+      "there on the same model. Only on the captain's ask, never to balance load. cancel stops a " +
       "move before crossing starts. Files git ignores stay behind and go with the old copy unless keep names them. " +
       "Off a computer out of reach it refuses, saying what stays behind; leave_behind, only once " +
       "the captain heard that and said yes, continues from the commit the first mate's computer holds.",
@@ -963,7 +963,8 @@ export function createCrewTools(delegate: CrewDelegate) {
       cancel: Type.Optional(Type.Boolean()),
       keep: Type.Optional(
         Type.Array(Type.String(), {
-          description: "Ignored files or folders to move too, by working-copy path",
+          description:
+            "Ignored files or folders to move too, by working-copy path, as the captain or its crewmate named them",
         }),
       ),
       // The description above is the one home of its rule.

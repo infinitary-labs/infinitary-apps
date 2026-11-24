@@ -1,7 +1,7 @@
 # Move what only some work needs, and restore lost instructions
 
 Part 3 of an approved plan from an audit of recent prompt-budget trims: the first trim under "How a trim works" (`docs/orchestrator-contract.md`).
-The captain chose to keep both budgets for now and raise them only if the rules every task needs do not fit.
+The captain chose to raise only the first mate's budget, by half, once its always-needed rules no longer fit, and to keep a crewmate's.
 
 Moved to pages read when needed:
 
@@ -19,7 +19,10 @@ Restored, from the wording a trim removed:
 - First mate: "here or on a work computer" on a quit, restart or update; "a one-project skill stays in that project", which had come to point at the personal workspace; "Policy edits never start/restart work."; "reported crew need".
 - Crewmate: "baggage" in a purchase review; "never omit evidence" on a failed upload; "explain renamed jobs" when settling a check; and the pull request comments guide's reply sentence, mended to "what you changed or what was chosen, written for a stranger".
 
-Not restored, because the first mate's text has no room left under its budget: the eight clauses an earlier first mate trim dropped (the list of what saved knowledge holds; "portability"; "on an available model"; "Refusals name blockers."; "Hold keeps work started;"; "eligible" and "current work"; how to add a wait when linking tasks, which the core's wait rule already says), kept files "as the captain or its crewmate named them", "First mate/Decisions stay Standard.", and the other first mate losses the audit lists.
+- First mate, after the raise: the eight clauses an earlier first mate trim dropped (the list of what saved knowledge holds; "portability"; "on an available model"; "Refusals name blockers."; "Hold keeps work started;"; "eligible" and "current work"; "Ask only unclear task/scope/consent"); kept files "as the captain or its crewmate named them"; "First mate/Decisions stay Standard."; a schedule's "Closing words are its found line. Draft if details open."; a replaced-by link as the record of every move of work to another task (drop, takeover, fresh task); the window's Mac "that controls this one"; a reply that ends a card "so the message it answers counts it"; a batch's repair task that "the host records"; a moved task "on the same model".
 
-The crewmate's largest reading goes from 27,191 to 25,664 tokens on today's main, 96% of its 26,624 budget. The first mate's falls by about 90 tokens but stays over its 19,772 budget at 19,846, after changes merged since the trim began.
-What only some work needs and is still served is held word for word by tests, or has no page the first mate reads, so the trim stops and the captain is asked about the budget.
+Not restored: how to add a wait when linking tasks, which the core's wait rule already says ("add that wait with update_task blocked_by and needs_merge in one call instead").
+
+The first mate's budget becomes 29,658, half again the 19,772 derived from the 64K window, with its hard line a quarter over it at 37,072, so that window still promises a 23,590-token conversation at the budget.
+The crewmate's budget stays 26,624 and its largest reading goes from 27,191 to 25,664 tokens, 96% of it; the passages it still serves that only some work needs are held word for word by tests and move in a change of their own.
+The first mate's reading is 19,967 tokens with the restorations, 67% of its raised budget.

@@ -223,7 +223,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       placement_requirements: Type.Optional({
         ...PLACEMENT_REQUIREMENTS_PARAM,
         description:
-          "Declare systems, chips, exact programs and admission profile. Omitted platforms inherit home. Never infer tools from keywords or relax project requirements.",
+          "Declare systems, chips, exact programs and admission profile. Omitted platforms inherit home. Never infer portability or tools from keywords or relax project requirements.",
       }),
       internal_step: Type.Optional(
         Type.Boolean({
@@ -299,10 +299,10 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Edit tasks; only unstarted open work can change project.",
       "Only captain-requested start_again replaces dropped work, keeping saved work/waits and returning a new key.",
       "Drop with drop true and reason; confirm true also supersedes open children. Use replaced_by for replacement, settle_task for started work.",
-      "start_now applies edits first, stops on refusals, and starts queued work despite allowance waits.",
+      "start_now applies edits first, stops on refusals, and starts queued work on an available model despite allowance waits.",
       "When the user names a model, pass override_model_id (start_now starts it): it keeps its key and links; never drop it to spawn a replacement.",
       "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them. Policy edits never start/restart work.",
-      "Local Careful = Default; keep request. No silent PR close or fallback without access.",
+      "Local Careful = Default; keep request. No silent PR close or fallback without access. Ask only unclear task/scope/consent; refusals name blockers.",
     ].join(" "),
     parameters: Type.Object({
       task: Type.String({ description: "The task id or key" }),
@@ -372,7 +372,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
           description:
-            "Captain-only crew/summary speed next request; null inherits Models. Ultrafast: 8× allowance/6× credits.",
+            "Captain-only crew/summary speed next request; null inherits Models. First mate/Decisions stay Standard. Ultrafast: 8× allowance/6× credits.",
         }),
       ),
       override_model_id: Type.Optional(
@@ -415,7 +415,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then the answered basis's computer, then room), or project to reset. Name a computer only on captain’s words or reported crew need.",
+            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then eligible answered basis's current work computer, then room), or project to reset. Name a computer only on captain’s words or reported crew need.",
         }),
       ),
       direction: Type.Optional(
@@ -481,7 +481,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         Type.Unsafe<HoldParam | null>({
           anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }],
           description:
-            "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update or a newer one on its computer. Only unanswered captain replies remind; one notice at the deadline. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Park for backlog.",
+            "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update or a newer one on its computer. Only unanswered captain replies remind; one notice at the deadline. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
         }),
       ),
       take_back_yes: Type.Optional(
@@ -749,7 +749,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
       "until `from` closes, except on batched pull requests as your wait rule says, and a cycle is refused as text.",
       "related: work neither task is waiting on.",
-      "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now: `from`'s waits",
+      "discovered-from: `from` was found while doing `to`. replaced-by, for every move of work to another task (drop, takeover, fresh task): `to` does `from`'s work now: `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",
     ].join(" "),
     parameters: Type.Object({

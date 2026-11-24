@@ -51,9 +51,9 @@ describe("local cost reporting respects existing reporting choices", () => {
   });
 });
 
-describe("the host Settings → Usage names", () => {
-  // The line names where Claude work is reported: an administrator's managed
-  // collector, else the person's setup the receiver passes on, else nothing.
+describe("the host Claude work is reported to", () => {
+  // An administrator's managed collector, else the person's setup the
+  // receiver passes on, else nothing.
   const setup = companyReportingFrom({
     CLAUDE_CODE_ENABLE_TELEMETRY: "1",
     OTEL_METRICS_EXPORTER: "otlp",

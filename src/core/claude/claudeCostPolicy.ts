@@ -45,11 +45,10 @@ export function claudeReportingDeps(): Pick<
 }
 
 /**
- * The host Claude work is reported to, for Settings → Usage: an
- * administrator's managed collector, which Claude's client sends to itself
- * and which ranks above every other setup; otherwise the person's setup the
- * receiver passes on to, and none where the receiver steps aside, as a
- * session's attachment does.
+ * The host Claude work is reported to: an administrator's managed collector,
+ * which Claude's client sends to itself and which ranks above every other
+ * setup; otherwise the person's setup the receiver passes on to, and none
+ * where the receiver steps aside, as a session's attachment does.
  */
 export async function claudeReportingHost(
   env: NodeJS.ProcessEnv,

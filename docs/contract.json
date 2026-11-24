@@ -6626,6 +6626,24 @@
                               "pressure",
                               "unavailable"
                             ]
+                          },
+                          "free": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "memoryBytes": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "cpu",
+                              "memoryBytes"
+                            ]
                           }
                         },
                         "required": [
@@ -101815,6 +101833,24 @@
                               "pressure",
                               "unavailable"
                             ]
+                          },
+                          "free": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "memoryBytes": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "cpu",
+                              "memoryBytes"
+                            ]
                           }
                         },
                         "required": [
@@ -114780,6 +114816,24 @@
                       "capacity",
                       "pressure",
                       "unavailable"
+                    ]
+                  },
+                  "free": {
+                    "type": "object",
+                    "properties": {
+                      "cpu": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "memoryBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "cpu",
+                      "memoryBytes"
                     ]
                   }
                 },

@@ -116,6 +116,12 @@
   "uiTaskFactsSkipped": "omitido",
   "uiTaskFactsTask": "Tarea",
   "uiTaskResourceRun": "Ejecución",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "one": "primero en la fila · {processors} procesador y {memory} GB libres",
+    "many": "primero en la fila · {processors} procesadores y {memory} GB libres",
+    "other": "primero en la fila · {processors} procesadores y {memory} GB libres"
+  },
   "uiTaskResourceRunUnavailable": "Estado de ejecución no disponible en {computer}",
   "uiTaskResourceUse": "Uso",
   "uiVoiceAbandon": "Abandonar",

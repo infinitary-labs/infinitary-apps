@@ -1,6 +1,8 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { LoadRun } from "@shared/load";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
+import { type LoadRun, loadRunWords } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
@@ -217,7 +219,8 @@ describe("accepted counted-once admission", () => {
   });
 
   // INF-2165's worked case: the MacBook's 24 GB with 5.4 GB free admits a lone 4 GB run.
-  // An ask above installed memory less the 10 percent margin still waits alone.
+  // Re-typed for INF-6381 (captain approved): an ask above installed memory less the
+  // 10 percent margin could never start and held the line behind it, so it is refused.
   it("judges a lone run's memory ask against installed memory less the margin", async () => {
     const { line, claim } = setup();
     const macBook = { ...reading, memory: { ...reading.memory, availableBytes: 5.4 * 1024 ** 3 } };
@@ -226,9 +229,12 @@ describe("accepted counted-once admission", () => {
     const other = setup();
     other.line.observe(reading, null);
     const total = reading.memory.totalBytes;
-    const tooBig = Math.floor(total * 0.9) + 1;
-    expect(await other.claim(0, 1, tooBig)).toMatchObject({ state: "waiting", reason: "capacity" });
-    console.info("Installed-memory proof", JSON.stringify(other.line.snapshot()));
+    const most = Math.floor(total * 0.9);
+    await expect(other.claim(0, 1, most + 1024 ** 2)).rejects.toThrow(
+      `Declare at most ${Math.floor(most / 1024 ** 2)} MiB`,
+    );
+    expect(other.line.snapshot().runs).toEqual([]);
+    expect((await other.claim(0, 1, most)).state).toBe("running");
   });
 
   // INF-2165's worked case: a 4 GB run using its 4 GB with 4.0 GB free admits a 1 GB run,
@@ -568,11 +574,15 @@ describe("verified processor startup coverage", () => {
 describe("reservations that nothing uses", () => {
   const wall = Date.parse("2026-11-03T22:41:00-08:00");
   const table = (text: string) => processesFromPs(text) ?? [];
-  function line(rows: () => ProcessReading[], jobs?: LoadJobs) {
-    const folder = scratchDir("unused-line-");
+  function line(
+    rows: () => ProcessReading[],
+    jobs?: LoadJobs,
+    now = () => 0,
+    folder = scratchDir("unused-line-"),
+  ) {
     const created = new LoadLine({
       stateFile: join(folder, "holds.json"),
-      now: () => 0,
+      now,
       wallClock: () => wall,
       processes: async () => rows(),
       groupExists: () => true,
@@ -646,7 +656,7 @@ describe("reservations that nothing uses", () => {
     const orphan = { pid: 4403, demand: { cpu: 6, memoryBytes: 10 * gib } };
     const behind = { pid: 4503, demand: { cpu: 2, memoryBytes: 10 * gib } };
     expect((await f.line.forTask("INF-2225").claim(orphan)).state).toBe("waiting");
-    expect((await f.line.forTask("behind").claim(behind)).ahead).toBe(2);
+    expect((await f.line.forTask("behind").claim(behind)).ahead).toBe(1);
 
     // The crewmate's shell ends: both outer wrappers are gone and the system adopts the leaders.
     const adopted = (pid: number) => (row: ProcessReading) =>
@@ -659,13 +669,13 @@ describe("reservations that nothing uses", () => {
     // A running group keeps its hold whatever became of its caller; the waiter leaves.
     expect(f.line.snapshot().runs).toMatchObject([
       { id: front.id, state: "running" },
-      { taskId: "behind", state: "waiting", ahead: 1 },
+      { taskId: "behind", state: "waiting", ahead: 0 },
     ]);
     await expect(f.line.forTask("INF-2225").claim(orphan)).rejects.toThrow("caller has ended");
     expect(f.line.snapshot().runs.map((run) => run.taskId)).toEqual(["running", "behind"]);
     const journal = f.journal();
     expect(journal.filter((entry) => entry.taskId === "INF-2225")).toMatchObject([
-      { event: "wait", ahead: 1 },
+      { event: "wait", ahead: 0 },
       { event: "blocked", running: 1 },
       { event: "release", why: "it left the line: its caller ended" },
       { event: "refuse", why: expect.stringContaining("caller has ended") },
@@ -778,5 +788,203 @@ describe("reservations that nothing uses", () => {
       { event: "blocked", capacity: null },
     ]);
     expect(f.journal()[0]).toMatchObject({ taskId: "old" });
+  });
+
+  // INF-6381, the captain's answers: a run too big for its computer is refused, a run
+  // that fits may pass the first in line during its first 10 minutes of waiting, the
+  // pressure stop stays, and "ahead" counts only runs waiting before it.
+  describe("the line's order", () => {
+    const minute = 60_000;
+    // Recorded Mac rows: a crewmate's wrapper (parent 4210) leading each run's group.
+    const leader = (pid: number) =>
+      table(`  ${pid - 1}  4210  4210 0:00.02  2800 Tue Nov  3 21:25:10 2026
+  ${pid}  ${pid - 1}  ${pid} 0:00.03  3100 Tue Nov  3 21:25:10 2026
+`);
+    const without = (rows: ProcessReading[], pid: number) =>
+      rows.filter((row) => row.group !== pid && row.pid !== pid - 1);
+
+    it("releases a saved waiting run too big for its computer and refuses its next claim", async () => {
+      const rows = leader(4403);
+      const folder = scratchDir("too-big-line-");
+      const group = rowAt(rows, 1);
+      const demand = { cpu: 1, memoryBytes: 22 * gib };
+      // Saved by a version that let it wait: 22 GiB is above 24 GiB less the 2.4 GiB margin.
+      writeFileSync(
+        join(folder, "holds.json"),
+        JSON.stringify([
+          {
+            id: "3f6c1d2e-8a4b-4c5d-9e7f-1a2b3c4d5e6f",
+            taskId: "INF-6381",
+            demand,
+            pid: group.pid,
+            started: group.started,
+            state: "waiting",
+          },
+        ]),
+      );
+      const f = line(
+        () => rows,
+        undefined,
+        () => 0,
+        folder,
+      );
+      expect(f.line.snapshot().runs).toHaveLength(1);
+      f.line.observe(busy, rows);
+      expect(f.line.snapshot().runs).toEqual([]);
+      await expect(f.line.forTask("INF-6381").claim({ pid: group.pid, demand })).rejects.toThrow(
+        "Declare at most 22118 MiB",
+      );
+      expect(f.journal()).toMatchObject([
+        {
+          event: "release",
+          why: "it left the line: it declares more memory than this computer can ever give one run",
+        },
+        { event: "refuse", demand, why: expect.stringContaining("more than this computer") },
+      ]);
+    });
+
+    it("lets a run that fits pass the first in line only during its first 10 minutes", async () => {
+      let rows = [...leader(4302), ...leader(4403), ...leader(4503), ...leader(4603)];
+      const clock = { now: 0 };
+      const f = line(
+        () => rows,
+        undefined,
+        () => clock.now,
+      );
+      f.line.observe(busy, rows);
+      // 7.6 processors to give: A takes 4, so B's 6 does not fit and C's 2 does.
+      const a = { pid: 4302, demand: { cpu: 4, memoryBytes: 2 * gib } };
+      const b = { pid: 4403, demand: { cpu: 6, memoryBytes: 4 * gib } };
+      const c = { pid: 4503, demand: { cpu: 2, memoryBytes: gib } };
+      const d = { pid: 4603, demand: { cpu: 1, memoryBytes: gib } };
+      expect((await f.line.forTask("A").claim(a)).state).toBe("running");
+      const front = await f.line.forTask("B").claim(b);
+      expect(front).toMatchObject({ state: "waiting", reason: "capacity", ahead: 0 });
+
+      // A memory warning still starts nothing, not even a run that fits.
+      f.line.observe({ ...busy, memory: { ...busy.memory, memoryPressure: "warning" } }, rows);
+      expect(await f.line.forTask("C").claim(c)).toMatchObject({
+        state: "waiting",
+        reason: "pressure",
+      });
+      clock.now = 9 * minute;
+      f.line.observe(busy, rows);
+      expect(f.line.snapshot().runs.map((run) => [run.taskId, run.state])).toEqual([
+        ["A", "running"],
+        ["B", "waiting"],
+        ["C", "running"],
+      ]);
+      expect(
+        f.journal().find((entry) => entry.event === "admit" && entry.taskId === "C"),
+      ).toMatchObject({
+        basis: "capacity",
+        passed: front.id,
+      });
+
+      // After the window, D fits the 1.6 processors left but waits behind B.
+      clock.now = 10 * minute;
+      f.line.observe(busy, rows);
+      expect(await f.line.forTask("D").claim(d)).toMatchObject({
+        state: "waiting",
+        reason: "line",
+        ahead: 1,
+      });
+      // A and C finish: B starts alone, then D fits beside it.
+      rows = without(without(rows, 4302), 4503);
+      f.line.observe(busy, rows);
+      expect(f.line.snapshot().runs.map((run) => [run.taskId, run.state])).toEqual([
+        ["B", "running"],
+        ["D", "running"],
+      ]);
+    });
+
+    it("starts the first in line under a stream of small runs once its window and the passed runs end", async () => {
+      // The plan's model: A (4 processors) runs 5 minutes, B (6) waits, and a
+      // 1-processor run that lasts 3 minutes arrives every minute.
+      const smallRuns = 30;
+      let rows = [...leader(4302), ...leader(4403)];
+      for (let k = 0; k < smallRuns; k++) rows.push(...leader(5002 + 10 * k));
+      const clock = { now: 0 };
+      const f = line(
+        () => rows,
+        undefined,
+        () => clock.now,
+      );
+      f.line.observe(busy, rows);
+      await f.line.forTask("A").claim({ pid: 4302, demand: { cpu: 4, memoryBytes: 2 * gib } });
+      await f.line.forTask("B").claim({ pid: 4403, demand: { cpu: 6, memoryBytes: 4 * gib } });
+      // When each small run started, by its group.
+      const running = new Map<number, number>();
+      let started: number | undefined;
+      let passed = 0;
+      for (let at = 0; at < smallRuns && started === undefined; at++) {
+        clock.now = at * minute;
+        if (at === 5) rows = without(rows, 4302);
+        for (const [pid, since] of running)
+          if (at - since >= 3) {
+            rows = without(rows, pid);
+            running.delete(pid);
+          }
+        f.line.observe(busy, rows);
+        const pid = 5002 + 10 * at;
+        await f.line
+          .forTask(`small-${pid}`)
+          .claim({ pid, demand: { cpu: 1, memoryBytes: gib / 4 } });
+        const runs = f.line.snapshot().runs;
+        if (runs.some((run) => run.taskId === "B" && run.state === "running")) started = at;
+        for (const run of runs) {
+          if (run.state !== "running" || started !== undefined) continue;
+          const small = Number(run.taskId.slice("small-".length));
+          if (
+            run.taskId.startsWith("small-") &&
+            !running.has(small) &&
+            rows.some((row) => row.pid === small)
+          ) {
+            running.set(small, at);
+            passed++;
+          }
+        }
+      }
+      expect(passed).toBeGreaterThan(0);
+      expect(started).toBeDefined();
+      expect(started).toBeLessThanOrEqual(10 + 3);
+    });
+
+    it("counts only runs waiting before it, and the first in line carries the room it waits for", async () => {
+      let rows = [...leader(4302), ...leader(4403), ...leader(4503), ...leader(4603)];
+      const f = line(() => rows);
+      f.line.observe(busy, rows);
+      await f.line.forTask("A").claim({ pid: 4302, demand: { cpu: 3, memoryBytes: gib } });
+      // The lone-run rule started A; with 7.6 to give, B's 3 fits beside it.
+      await f.line.forTask("B").claim({ pid: 4403, demand: { cpu: 3, memoryBytes: gib } });
+      // B's program exits, leaving a recorded helper in its group.
+      rows = [
+        ...rows.filter((row) => row.pid !== 4403),
+        ...table("19260     1  4403 0:00.04  7980 Tue Nov  3 16:31:44 2026"),
+      ];
+      f.line.observe(busy, rows);
+      const c = await held(
+        f.line.forTask("C").claim({ pid: 4503, demand: { cpu: 6, memoryBytes: gib } }),
+      );
+      const d = await held(
+        f.line.forTask("D").claim({ pid: 4603, demand: { cpu: 5, memoryBytes: gib } }),
+      );
+      expect(c).toMatchObject({ state: "waiting", ahead: 0, reason: "capacity" });
+      expect(d).toMatchObject({ state: "waiting", ahead: 1, reason: "line" });
+      expect(d.free).toBeUndefined();
+      const free = c.free;
+      if (!free) throw new Error("The first in line carries no room");
+      // A's uncovered start is charged; B's exited program reserves nothing more.
+      expect(free.cpu).toBe(4.6);
+      expect(loadRunWords(c, "Mac mini")).toContain(
+        m.uiTaskResourceRunFree({
+          processors: 4.6,
+          memory: formatNumber(free.memoryBytes / gib, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }),
+        }),
+      );
+    });
   });
 });

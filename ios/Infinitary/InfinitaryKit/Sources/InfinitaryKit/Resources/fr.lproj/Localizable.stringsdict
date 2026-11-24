@@ -2775,6 +2775,24 @@
       <string>· %1$ld ignorées</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>premier dans la file · %2$ld processeur et %1$@ Go libres</string>
+      <key>many</key>
+      <string>premier dans la file · %2$ld processeurs et %1$@ Go libres</string>
+      <key>other</key>
+      <string>premier dans la file · %2$ld processeurs et %1$@ Go libres</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

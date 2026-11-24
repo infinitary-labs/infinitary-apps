@@ -716,6 +716,14 @@ export class AxiChannel {
           ...(run.id ? { hold: run.id } : {}),
           ahead: run.ahead,
           ...(run.reason ? { reason: run.reason, note: loadWaitWords() } : {}),
+          ...("free" in run && run.free
+            ? {
+                free: {
+                  processors: run.free.cpu,
+                  memoryMiB: Math.floor(run.free.memoryBytes / 1024 ** 2),
+                },
+              }
+            : {}),
         },
       };
     } catch (error) {

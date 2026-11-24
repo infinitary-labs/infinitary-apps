@@ -18878,6 +18878,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quick answer`;
   }
+  function cardReaderAsksTitle(input2) {
+    const place = input2.place;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تسمح بالكتابة على ${place} وبصفحات الويب؟`;
+      case "de":
+        return `Schreibzugriffe auf ${place} und Webseiten erlauben?`;
+      case "es":
+        return `¿Permitir escrituras en ${place} y páginas web?`;
+      case "fr":
+        return `Autoriser les écritures sur ${place} et des pages web ?`;
+      case "ja":
+        return `${place} への書き込みと Web ページを許可しますか？`;
+      case "ko":
+        return `${place}에 쓰기와 웹 페이지를 허용할까요?`;
+      case "pt-BR":
+        return `Permitir escritas em ${place} e páginas da web?`;
+      case "zh-Hans":
+        return `允许在 ${place} 上写入并打开网页吗？`;
+      case "zh-Hant":
+        return `允許在 ${place} 上寫入並開啟網頁嗎？`;
+      case "en-XA":
+        return `[Åļļöŵ ŵŕîţéš öñ ${place} áñð ŵéƀ þáĝéš? ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Allow writes on ‬${place}‮ and web pages?‬`;
+    }
+    return `Allow writes on ${place} and web pages?`;
+  }
   function cardReaderCallChanges() {
     switch (currentLanguage()) {
       case "ar":
@@ -19067,6 +19095,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Allow these calls?‬`;
     }
     return `Allow these calls?`;
+  }
+  function cardReaderPagesHow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تأتي كل الصفوف محددة؛ ألغِ تحديد ما لا تريد فتحه. تُفتح كل صفحة محددة مرة واحدة دون تسجيل دخول، وبعدها يمكن لفرد الطاقم قراءة ذلك العنوان مرة أخرى.`;
+      case "de":
+        return `Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht geöffnet werden sollen. Jede angehakte Seite öffnet sich einmal, ohne Anmeldung, und danach darf das Crewmitglied diese Adresse erneut lesen.`;
+      case "es":
+        return `Todas las filas vienen marcadas; desmarca las que no quieras abrir. Cada página marcada se abre una vez, sin iniciar sesión, y después el tripulante puede volver a leer esa dirección.`;
+      case "fr":
+        return `Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas ouvrir. Chaque page cochée s’ouvre une fois, sans connexion, et l’équipier peut ensuite relire cette adresse.`;
+      case "ja":
+        return `各行は最初からチェックされています。開きたくない行はチェックを外してください。チェックされたページはサインインせずに 1 回ずつ開かれ、その後乗組員はそのアドレスを再び読めます。`;
+      case "ko":
+        return `모든 행은 체크된 상태로 옵니다. 열지 않을 행은 체크를 해제하세요. 체크된 페이지는 로그인 없이 한 번씩 열리고, 그 후 선원은 그 주소를 다시 읽을 수 있습니다.`;
+      case "pt-BR":
+        return `Todas as linhas vêm marcadas; desmarque as que você não quer abrir. Cada página marcada abre uma vez, sem login, e depois disso o tripulante pode ler esse endereço de novo.`;
+      case "zh-Hans":
+        return `每一行默认已勾选；取消勾选你不想打开的行。勾选的网页各以未登录状态打开一次，之后船员可以再次读取该地址。`;
+      case "zh-Hant":
+        return `每一列預設已勾選；取消勾選你不想開啟的列。勾選的網頁各以未登入狀態開啟一次，之後船員可以再次讀取該網址。`;
+      case "en-XA":
+        return `[Éṽéŕý ŕöŵ çöɱéš ţîçķéð; ûñţîçķ áñý ýöû ðö ñöţ ŵáñţ öþéñéð. Éáçĥ ţîçķéð þáĝé öþéñš öñçé, šîĝñéð öûţ, áñð áƒţéŕ ţĥáţ ţĥé çŕéŵɱáţé ɱáý ŕéáð ţĥáţ áððŕéšš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Every row comes ticked; untick any you do not want opened. Each ticked page opens once, signed out, and after that the crewmate may read that address again.‬`;
+    }
+    return `Every row comes ticked; untick any you do not want opened. Each ticked page opens once, signed out, and after that the crewmate may read that address again.`;
+  }
+  function cardReaderPagesLead(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فرد الطاقم في «${task}» كلامًا يمكن لأي أحد كتابته، وصار يحمل شيئًا من أشيائك، لذا ينتظر كل عنوان ويب جديد يفتحه قرارك: فقد يحمل العنوان ما قرأه إلى من يدير الموقع. كل صف هو صفحة واحدة بعنوانها كاملًا.`;
+      case "de":
+        return `Das Crewmitglied von „${task}“ liest Texte, die jeder schreiben kann, und hat jetzt etwas von dir, darum wartet jede neue Webadresse, die es öffnet, auf deine Entscheidung: Eine Adresse kann das Gelesene an den Betreiber der Website tragen. Jede Zeile ist eine Seite mit ihrer ganzen Adresse.`;
+      case "es":
+        return `El tripulante de «${task}» lee palabras que cualquiera puede escribir y ahora tiene algo tuyo, así que cada nueva dirección web que abre espera tu decisión: una dirección puede llevar lo que leyó a quien gestiona el sitio. Cada fila es una página, con su dirección completa.`;
+      case "fr":
+        return `L’équipier de « ${task} » lit des mots que tout le monde peut écrire et détient maintenant quelque chose à vous : chaque nouvelle adresse web qu’il ouvre attend donc votre décision, car une adresse peut porter ce qu’il a lu jusqu’à qui gère le site. Chaque ligne est une page, avec son adresse complète.`;
+      case "ja":
+        return `「${task}」の担当の乗組員は誰でも書ける文章を読み、今はあなたのものを手にしているため、新しく開く Web アドレスはすべてあなたの判断を待ちます。アドレスは読んだ内容をサイトの運営者に運べるからです。各行は 1 ページで、アドレス全体を示します。`;
+      case "ko":
+        return `"${task}"의 선원은 누구나 쓸 수 있는 글을 읽고 이제 당신의 것을 가지고 있으므로, 새로 여는 웹 주소는 모두 결정을 기다립니다. 주소는 읽은 내용을 사이트 운영자에게 전할 수 있기 때문입니다. 각 행은 전체 주소가 적힌 페이지 하나입니다.`;
+      case "pt-BR":
+        return `O tripulante de “${task}” lê textos que qualquer pessoa pode escrever e agora tem algo seu, então cada novo endereço da web que ele abre espera a sua decisão: um endereço pode levar o que ele leu a quem mantém o site. Cada linha é uma página, com o endereço completo.`;
+      case "zh-Hans":
+        return `“${task}”上的船员会读取任何人都能写的内容，并且现在持有你的东西，所以它打开的每个新网址都要等你决定：网址可能把它读到的内容带给网站的运营者。每一行是一个网页及其完整网址。`;
+      case "zh-Hant":
+        return `「${task}」上的船員會讀取任何人都能寫的內容，並且現在持有你的東西，所以它開啟的每個新網址都要等你決定：網址可能把它讀到的內容帶給網站的經營者。每一列是一個網頁及其完整網址。`;
+      case "en-XA":
+        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ŕéáðš ŵöŕðš áñýöñé çáñ ŵŕîţé áñð ñöŵ ĥöļðš šöɱéţĥîñĝ öƒ ýöûŕš, šö éáçĥ ñéŵ ŵéƀ áððŕéšš îţ öþéñš ŵáîţš ƒöŕ ýöû: áñ áððŕéšš çáñ çáŕŕý ŵĥáţ îţ ŕéáð ţö ŵĥöéṽéŕ ŕûñš ţĥé šîţé. Éáçĥ ŕöŵ îš öñé þáĝé, ŵîţĥ îţš ŵĥöļé áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The crewmate on “‬${task}‮” reads words anyone can write and now holds something of yours, so each new web address it opens waits for you: an address can carry what it read to whoever runs the site. Each row is one page, with its whole address.‬`;
+    }
+    return `The crewmate on “${task}” reads words anyone can write and now holds something of yours, so each new web address it opens waits for you: an address can carry what it read to whoever runs the site. Each row is one page, with its whole address.`;
+  }
+  function cardReaderPagesTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تفتح صفحات الويب؟`;
+      case "de":
+        return `Webseiten öffnen?`;
+      case "es":
+        return `¿Abrir páginas web?`;
+      case "fr":
+        return `Ouvrir des pages web ?`;
+      case "ja":
+        return `Web ページを開きますか？`;
+      case "ko":
+        return `웹 페이지를 열까요?`;
+      case "pt-BR":
+        return `Abrir páginas da web?`;
+      case "zh-Hans":
+        return `打开网页吗？`;
+      case "zh-Hant":
+        return `開啟網頁嗎？`;
+      case "en-XA":
+        return `[Öþéñ ŵéƀ þáĝéš? ~~~~~]`;
+      case "ar-XB":
+        return `‮Open web pages?‬`;
+    }
+    return `Open web pages?`;
   }
   function cardReaderUnsafeData() {
     switch (currentLanguage()) {
@@ -105912,6 +106022,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
+    cardReaderAsksTitle,
     cardReaderCallChanges,
     cardReaderCallReads,
     cardReaderCallSends,
@@ -105919,6 +106030,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardReaderCallsHow,
     cardReaderCallsLead,
     cardReaderCallsTitle,
+    cardReaderPagesHow,
+    cardReaderPagesLead,
+    cardReaderPagesTitle,
     cardReaderUnsafeData,
     cardReaderWritesHow,
     cardReaderWritesLead,
@@ -109292,6 +109406,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
+    "cardReaderAsksTitle": ["place"],
     "cardReaderCallChanges": [],
     "cardReaderCallReads": [],
     "cardReaderCallSends": [],
@@ -109299,6 +109414,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardReaderCallsHow": [],
     "cardReaderCallsLead": ["task"],
     "cardReaderCallsTitle": [],
+    "cardReaderPagesHow": [],
+    "cardReaderPagesLead": ["task"],
+    "cardReaderPagesTitle": [],
     "cardReaderUnsafeData": [],
     "cardReaderWritesHow": ["place"],
     "cardReaderWritesLead": ["place", "task"],

@@ -446,6 +446,7 @@
 "cardPastSentLead" = "Envoyé avec votre choix :";
 "cardPastUnreadable" = "Cette carte n’a pas pu être lue";
 "cardQuickAnswer" = "Réponse rapide";
+"cardReaderAsksTitle" = "Autoriser les écritures sur %1$@ et des pages web ?";
 "cardReaderCallChanges" = "Change quelque chose en dehors de votre projet.";
 "cardReaderCallReads" = "Lit seulement et ne change rien.";
 "cardReaderCallSends" = "Envoie quelque chose à d’autres personnes.";
@@ -453,6 +454,9 @@
 "cardReaderCallsHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas lancer. Les lignes cochées s’exécutent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion à chaque destination.";
 "cardReaderCallsLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire : ces appels attendent donc votre décision. Chaque ligne est un appel, sa destination et ce qu’il envoie.";
 "cardReaderCallsTitle" = "Autoriser ces appels ?";
+"cardReaderPagesHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas ouvrir. Chaque page cochée s’ouvre une fois, sans connexion, et l’équipier peut ensuite relire cette adresse.";
+"cardReaderPagesLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire et détient maintenant quelque chose à vous : chaque nouvelle adresse web qu’il ouvre attend donc votre décision, car une adresse peut porter ce qu’il a lu jusqu’à qui gère le site. Chaque ligne est une page, avec son adresse complète.";
+"cardReaderPagesTitle" = "Ouvrir des pages web ?";
 "cardReaderUnsafeData" = "Cet équipier lit des mots que tout le monde peut écrire : un lien ou une demande sur cette carte peut donc venir d’un inconnu.";
 "cardReaderWritesHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas envoyer. Les lignes cochées partent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion %1$@.";
 "cardReaderWritesLead" = "L’équipier de « %2$@ » lit des mots que tout le monde peut écrire : chaque écriture qu’il fait sur %1$@ attend donc votre décision. Chaque ligne est un appel et la requête qu’il envoie.";

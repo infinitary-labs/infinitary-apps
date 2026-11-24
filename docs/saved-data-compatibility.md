@@ -577,3 +577,9 @@ A migration adds nullable `captain_asks.typed_card_id` and `captain_asks.typed_l
 Every existing row and every message typed in the main input keeps both null; such a message names no card in its retry and no line in the first mate's context, as a message whose card the app lost at a restart did before.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 Dropping the two columns and removing the migration's history row undoes it; an older build with the history row removed but the columns kept reads and writes the table as before, since it names its columns and never reads these two.
+
+## A reader's web pages
+
+A task's delivery facts may carry a `WebReadAsk` among its `writeAsks`, with `kind: "web"`, and a `readerHolds` mark (`docs/agents-reach.md`, "Web pages"); both ride the existing JSON and add no migration.
+An older build knows no web ask, so it would list one as a write where the project lives with no method or path; downgrading with a page still waiting is unsupported.
+An older build ignores `readerHolds` and serves no `web_read`.

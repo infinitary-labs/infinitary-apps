@@ -58,6 +58,13 @@ export function skipRulesStrip(review: MergeReview, place: string): string {
  */
 export function writeAskStrip(ask: WriteAsk): string {
   if (ask.kind === "integration") return integrationAskStrip(ask);
+  if (ask.kind === "web")
+    return [
+      '<div class="inf-call" data-inf-call="write">',
+      `<div class="inf-call-k">Your click opens this page on ${escapeCardText(ask.place)} once, signed out</div>`,
+      `<div class="inf-call-line" data-inf-call-line>${escapeCardText(`GET ${ask.url}`)}</div>`,
+      "</div>",
+    ].join("");
   if (ask.feedback) return feedbackAskStrip(ask, ask.feedback);
   let body = ask.body;
   if (body !== undefined) {

@@ -305,6 +305,7 @@ export type SetupExtras = {
   downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
   closePullRequest?: (taskId: string) => Promise<{ ok: boolean; text: string }>;
   githubRead?: CrewSupervisorOptions["githubRead"];
+  webRead?: CrewSupervisorOptions["webRead"];
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
   /** The captain's click on a crewmate's kept write sends it once (`GithubGatewayService.sendAsk`). */
@@ -611,6 +612,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
     ...(extras.mergedStory ? { mergedStory: extras.mergedStory } : {}),
     ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
+    ...(extras.webRead ? { webRead: extras.webRead } : {}),
     ...(extras.githubWrite ? { githubWrite: extras.githubWrite } : {}),
     ...(extras.sendTakenIntegrationAsk
       ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }

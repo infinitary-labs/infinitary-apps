@@ -483,6 +483,7 @@ public enum PhoneMessages {
     public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
     public static func `cardPastUnreadable`() -> String { PhoneWords.format("cardPastUnreadable", []) }
     public static func `cardQuickAnswer`() -> String { PhoneWords.format("cardQuickAnswer", []) }
+    public static func `cardReaderAsksTitle`(`place`: String) -> String { PhoneWords.format("cardReaderAsksTitle", [`place`]) }
     public static func `cardReaderCallChanges`() -> String { PhoneWords.format("cardReaderCallChanges", []) }
     public static func `cardReaderCallReads`() -> String { PhoneWords.format("cardReaderCallReads", []) }
     public static func `cardReaderCallSends`() -> String { PhoneWords.format("cardReaderCallSends", []) }
@@ -490,6 +491,9 @@ public enum PhoneMessages {
     public static func `cardReaderCallsHow`() -> String { PhoneWords.format("cardReaderCallsHow", []) }
     public static func `cardReaderCallsLead`(`task`: String) -> String { PhoneWords.format("cardReaderCallsLead", [`task`]) }
     public static func `cardReaderCallsTitle`() -> String { PhoneWords.format("cardReaderCallsTitle", []) }
+    public static func `cardReaderPagesHow`() -> String { PhoneWords.format("cardReaderPagesHow", []) }
+    public static func `cardReaderPagesLead`(`task`: String) -> String { PhoneWords.format("cardReaderPagesLead", [`task`]) }
+    public static func `cardReaderPagesTitle`() -> String { PhoneWords.format("cardReaderPagesTitle", []) }
     public static func `cardReaderUnsafeData`() -> String { PhoneWords.format("cardReaderUnsafeData", []) }
     public static func `cardReaderWritesHow`(`place`: String) -> String { PhoneWords.format("cardReaderWritesHow", [`place`]) }
     public static func `cardReaderWritesLead`(`place`: String, `task`: String) -> String { PhoneWords.format("cardReaderWritesLead", [`place`, `task`]) }
@@ -4945,6 +4949,7 @@ extension PhoneWords {
         "cardPastSentLead": [],
         "cardPastUnreadable": [],
         "cardQuickAnswer": [],
+        "cardReaderAsksTitle": ["place"],
         "cardReaderCallChanges": [],
         "cardReaderCallReads": [],
         "cardReaderCallSends": [],
@@ -4952,6 +4957,9 @@ extension PhoneWords {
         "cardReaderCallsHow": [],
         "cardReaderCallsLead": ["task"],
         "cardReaderCallsTitle": [],
+        "cardReaderPagesHow": [],
+        "cardReaderPagesLead": ["task"],
+        "cardReaderPagesTitle": [],
         "cardReaderUnsafeData": [],
         "cardReaderWritesHow": ["place"],
         "cardReaderWritesLead": ["place", "task"],

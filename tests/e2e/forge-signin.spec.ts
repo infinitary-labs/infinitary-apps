@@ -1086,7 +1086,7 @@ for (const runtime of READER_RUNTIMES) {
     expect(tools.length).toBeGreaterThan(0);
     for (const names of tools) {
       for (const name of runtime.reads) expect(names).toContain(name);
-      for (const name of ["github_read", "github_write"])
+      for (const name of ["github_read", "github_write", "web_read"])
         expect(names.some((served: string) => served.endsWith(name))).toBe(true);
       for (const name of runtime.gone) expect(names).not.toContain(name);
       expect(names.some((served: string) => /browser|bash/i.test(served))).toBe(false);

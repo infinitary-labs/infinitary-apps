@@ -35,6 +35,7 @@ import type { SecretsCatalog, UseComputer } from "../secrets/requests";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskTurns";
+import type { WebReadInput } from "../web/publicPage";
 
 /**
  * One tool spec for every seat and both runtimes (primitives P7). A tool is
@@ -531,6 +532,12 @@ export type CrewmateToolDelegate = {
     input?: Record<string, unknown>;
     reason?: string;
   }) => Promise<string>;
+
+  /**
+   * An unsafe data reader's signed-out read of one public web page, its text
+   * marked as data from outside (docs/agents-reach.md, "An unsafe data reader").
+   */
+  onWebRead?: (input: WebReadInput, signal?: AbortSignal) => Promise<string>;
   /**
    * This task's own browser (docs/task-browser.md), handed to a crewmate
    * whose task runs on this Mac when the host has one.

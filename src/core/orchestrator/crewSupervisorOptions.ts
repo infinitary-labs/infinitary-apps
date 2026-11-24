@@ -45,6 +45,7 @@ import type { DeclaredCardInput, SecretUsesElsewhere } from "../session/tools";
 import type { CardStore } from "../storage/cardStore";
 import type { InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
+import type { WebReadInput } from "../web/publicPage";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import type { PrCiOverall } from "./changeChecks";
@@ -523,6 +524,8 @@ export type CrewSupervisorOptions = {
   downloadArtifact?: (taskId: string, input: DownloadArtifactInput) => Promise<string>;
   githubRead?: (taskId: string, input: GithubReadInput) => Promise<string>;
   githubWrite?: (taskId: string, input: GithubWriteInput) => Promise<string>;
+  /** An unsafe data reader's `web_read` (`ReaderWebService.read`). */
+  webRead?: (taskId: string, input: WebReadInput, signal?: AbortSignal) => Promise<string>;
   /**
    * The check watch's quiet read (`ChangeChecks.readWatched`, docs/forge.md
    * "The check watch"): the host reads a watched change's checks on the

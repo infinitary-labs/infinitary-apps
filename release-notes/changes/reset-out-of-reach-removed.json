@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "reset-out-of-reach-removed",
+      "kind": "fix",
+      "title": "A computer out of reach during a reset is removed when it comes back",
+      "body": "When you reset Infinitary while one of your computers is off or away, that computer no longer keeps trying to reach a first mate that is gone. For 30 days the fresh Infinitary tells it that it was removed as soon as it opens again, and tries over Remote Login where you added it that way, so it goes back to being on its own. Activity says once which computer it removed, or which stayed out of reach after 30 days.",
+      "area": "devices",
+      "picture": {
+        "dark": "reset-out-of-reach-removed-dark.webp",
+        "light": "reset-out-of-reach-removed-light.webp",
+        "alt": "A freshly reset Infinitary's welcome screen with Activity open, its line reading: Studio was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

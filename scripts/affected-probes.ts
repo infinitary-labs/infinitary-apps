@@ -61,6 +61,7 @@ export const PROBES = [
       "src/core/devices/remoteLoginPassword.test.ts",
       "src/core/devices/remoteLoginUbuntu.test.ts",
       "src/core/devices/remoteLoginUpdate.test.ts",
+      "src/core/devices/resetFarewellsRemoteLogin.test.ts",
       "src/core/devices/sshConnections.test.ts",
       "src/core/helper/cleanUp.test.ts",
       "src/core/helper/connect.test.ts",

@@ -1060,6 +1060,8 @@
 "feedRemembered" = "일등항해사 · 기억함: %1$@";
 "feedReported" = "보고함: %1$@";
 "feedReportedBare" = "보고함";
+"feedResetRemovalRemoved" = "Infinitary를 초기화할 때 %1$@ 컴퓨터에 연결할 수 없었어요. 다시 연결되어 Infinitary가 그곳에 설정한 것을 삭제했어요.";
+"feedResetRemovalStayed" = "Infinitary를 초기화한 뒤 30일 동안 %1$@ 컴퓨터에 연결할 수 없었어요. Infinitary가 그곳에 설정한 것은 그곳에서 직접 삭제할 때까지 남아 있어요.";
 "feedReviewBlocked" = "검토를 마치지 못했어요";
 "feedReviewFindings" = "검토에서 고칠 점을 찾았어요";
 "feedReviewPassed" = "검토 통과";

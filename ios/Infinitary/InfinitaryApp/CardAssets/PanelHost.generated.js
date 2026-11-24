@@ -37512,6 +37512,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Reported`;
   }
+  function feedResetRemovalRemoved(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `كان ${name} خارج النطاق عند إعادة تعيين Infinitary. لقد عاد، وأُزيل ما أعدّه Infinitary هناك.`;
+      case "de":
+        return `${name} war nicht erreichbar, als Infinitary zurückgesetzt wurde. Es ist wieder da, und was Infinitary dort eingerichtet hat, ist entfernt.`;
+      case "es":
+        return `${name} no estaba al alcance cuando se restableció Infinitary. Ya volvió, y lo que Infinitary configuró allí se quitó.`;
+      case "fr":
+        return `${name} était hors de portée quand Infinitary a été réinitialisé. Il est revenu, et ce qu’Infinitary y avait installé est supprimé.`;
+      case "ja":
+        return `${name} は Infinitary のリセット時に接続できませんでした。接続が戻り、Infinitary がそこで設定したものは削除されました。`;
+      case "ko":
+        return `Infinitary를 초기화할 때 ${name} 컴퓨터에 연결할 수 없었어요. 다시 연결되어 Infinitary가 그곳에 설정한 것을 삭제했어요.`;
+      case "pt-BR":
+        return `${name} estava fora de alcance quando o Infinitary foi redefinido. Ele voltou, e o que o Infinitary configurou lá foi removido.`;
+      case "zh-Hans":
+        return `重置 Infinitary 时无法连接 ${name}。它已恢复连接，Infinitary 在那里设置的内容已移除。`;
+      case "zh-Hant":
+        return `重設 Infinitary 時無法連線到 ${name}。它已恢復連線，Infinitary 在那裡設定的內容已移除。`;
+      case "en-XA":
+        return `[${name} ŵáš öûţ öƒ ŕéáçĥ ŵĥéñ Îñƒîñîţáŕý ŵáš ŕéšéţ. Îţ îš ƀáçķ, áñð ŵĥáţ Îñƒîñîţáŕý šéţ ûþ ţĥéŕé îš ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed.‬`;
+    }
+    return `${name} was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed.`;
+  }
+  function feedResetRemovalStayed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بقي ${name} خارج النطاق لمدة 30 يومًا بعد إعادة تعيين Infinitary. يبقى ما أعدّه Infinitary هناك حتى تحذفه هناك.`;
+      case "de":
+        return `${name} blieb nach dem Zurücksetzen von Infinitary 30 Tage lang nicht erreichbar. Was Infinitary dort eingerichtet hat, bleibt, bis du es dort löschst.`;
+      case "es":
+        return `${name} siguió fuera de alcance 30 días después de restablecer Infinitary. Lo que Infinitary configuró allí se queda hasta que lo borres allí.`;
+      case "fr":
+        return `${name} est resté hors de portée pendant les 30 jours qui ont suivi la réinitialisation d’Infinitary. Ce qu’Infinitary y a installé reste jusqu’à ce que tu le supprimes là-bas.`;
+      case "ja":
+        return `${name} は Infinitary のリセット後 30 日間接続できませんでした。Infinitary がそこで設定したものは、そこで削除するまで残ります。`;
+      case "ko":
+        return `Infinitary를 초기화한 뒤 30일 동안 ${name} 컴퓨터에 연결할 수 없었어요. Infinitary가 그곳에 설정한 것은 그곳에서 직접 삭제할 때까지 남아 있어요.`;
+      case "pt-BR":
+        return `${name} ficou fora de alcance por 30 dias depois que o Infinitary foi redefinido. O que o Infinitary configurou lá continua até você apagar lá.`;
+      case "zh-Hans":
+        return `重置 Infinitary 后 30 天内一直无法连接 ${name}。Infinitary 在那里设置的内容会保留，直到你在那里删除。`;
+      case "zh-Hant":
+        return `重設 Infinitary 後 30 天內一直無法連線到 ${name}。Infinitary 在那裡設定的內容會保留，直到你在那裡刪除。`;
+      case "en-XA":
+        return `[${name} šţáýéð öûţ öƒ ŕéáçĥ ƒöŕ 30 ðáýš áƒţéŕ Îñƒîñîţáŕý ŵáš ŕéšéţ. Ŵĥáţ Îñƒîñîţáŕý šéţ ûþ ţĥéŕé šţáýš ûñţîļ ýöû ðéļéţé îţ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ stayed out of reach for 30 days after Infinitary was reset. What Infinitary set up there stays until you delete it there.‬`;
+    }
+    return `${name} stayed out of reach for 30 days after Infinitary was reset. What Infinitary set up there stays until you delete it there.`;
+  }
   function feedReviewBlocked() {
     switch (currentLanguage()) {
       case "ar":
@@ -106403,6 +106459,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedRepairsCapped,
     feedReported,
     feedReportedBare,
+    feedResetRemovalRemoved,
+    feedResetRemovalStayed,
     feedReviewBlocked,
     feedReviewFindings,
     feedReviewPassed,
@@ -109771,6 +109829,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedRepairsCapped": ["rounds"],
     "feedReported": ["summary"],
     "feedReportedBare": [],
+    "feedResetRemovalRemoved": ["name"],
+    "feedResetRemovalStayed": ["name"],
     "feedReviewBlocked": [],
     "feedReviewFindings": [],
     "feedReviewPassed": [],
@@ -122558,6 +122618,18 @@ ${FRAME_KEYBOARD_SCRIPT}
       kind: deviceKindSchema
     }),
     /**
+     * A paired computer out of reach when Infinitary was reset came back and
+     * heard it was removed, or stayed out of reach for the 30 days the reset
+     * waits (docs/reset.md, "Computers out of reach"). `name` is how the old
+     * first mate's list named it.
+     */
+    object({
+      type: literal("device_reset_removal"),
+      deviceId: string(),
+      name: string(),
+      outcome: _enum(["removed", "stayed"])
+    }),
+    /**
      * A computer that runs work signed in to one of its own subscriptions
      * (docs/helper.md, "Its own sign-ins"). `who` is how the home names it -
      * its own name, or the macOS user it runs as here - and `provider` the
@@ -125615,6 +125687,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "device_update",
     "device_connection",
     "device_left",
+    "device_reset_removal",
     "device_signed_in",
     "device_signed_out",
     "turn_failed"
@@ -125726,6 +125799,8 @@ ${FRAME_KEYBOARD_SCRIPT}
         return { kind: event.tone, text: event.text };
       case "device_left":
         return line("info", said("feedComputerLeft", { name: event.name }));
+      case "device_reset_removal":
+        return event.outcome === "removed" ? line("info", said("feedResetRemovalRemoved", { name: event.name })) : line("warn", said("feedResetRemovalStayed", { name: event.name }));
       case "device_signed_in":
         return line(
           "info",

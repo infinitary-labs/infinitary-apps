@@ -1060,6 +1060,8 @@
 "feedRemembered" = "一等航海士 · 記憶：%1$@";
 "feedReported" = "報告：%1$@";
 "feedReportedBare" = "報告";
+"feedResetRemovalRemoved" = "%1$@ は Infinitary のリセット時に接続できませんでした。接続が戻り、Infinitary がそこで設定したものは削除されました。";
+"feedResetRemovalStayed" = "%1$@ は Infinitary のリセット後 30 日間接続できませんでした。Infinitary がそこで設定したものは、そこで削除するまで残ります。";
 "feedReviewBlocked" = "レビューを完了できませんでした";
 "feedReviewFindings" = "レビューで修正点が見つかりました";
 "feedReviewPassed" = "レビューに合格";

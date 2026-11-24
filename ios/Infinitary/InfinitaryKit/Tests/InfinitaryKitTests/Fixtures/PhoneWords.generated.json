@@ -1145,6 +1145,8 @@
   {"said":{"m":"feedRepairsCapped","a":{"rounds":1234}},"words":"1,234 repairs did not get the checks to pass - your first mate will ask you what to do"},
   {"said":{"m":"feedReported","a":{"summary":"‹summary›"}},"words":"Reported: ‹summary›"},
   {"said":{"m":"feedReportedBare"},"words":"Reported"},
+  {"said":{"m":"feedResetRemovalRemoved","a":{"name":"‹name›"}},"words":"‹name› was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed."},
+  {"said":{"m":"feedResetRemovalStayed","a":{"name":"‹name›"}},"words":"‹name› stayed out of reach for 30 days after Infinitary was reset. What Infinitary set up there stays until you delete it there."},
   {"said":{"m":"feedReviewBlocked"},"words":"The review could not finish"},
   {"said":{"m":"feedReviewFindings"},"words":"The review found things to fix"},
   {"said":{"m":"feedReviewPassed"},"words":"Passed its review"},

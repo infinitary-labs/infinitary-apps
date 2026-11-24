@@ -17586,6 +17586,18 @@ ${events}` : prompt;
       kind: deviceKindSchema
     }),
     /**
+     * A paired computer out of reach when Infinitary was reset came back and
+     * heard it was removed, or stayed out of reach for the 30 days the reset
+     * waits (docs/reset.md, "Computers out of reach"). `name` is how the old
+     * first mate's list named it.
+     */
+    object({
+      type: literal("device_reset_removal"),
+      deviceId: string(),
+      name: string(),
+      outcome: _enum(["removed", "stayed"])
+    }),
+    /**
      * A computer that runs work signed in to one of its own subscriptions
      * (docs/helper.md, "Its own sign-ins"). `who` is how the home names it -
      * its own name, or the macOS user it runs as here - and `provider` the

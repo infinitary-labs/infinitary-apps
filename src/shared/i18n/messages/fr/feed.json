@@ -99,6 +99,8 @@
   },
   "feedReported": "Rapport : {summary}",
   "feedReportedBare": "Rapport rendu",
+  "feedResetRemovalRemoved": "{name} était hors de portée quand Infinitary a été réinitialisé. Il est revenu, et ce qu’Infinitary y avait installé est supprimé.",
+  "feedResetRemovalStayed": "{name} est resté hors de portée pendant les 30 jours qui ont suivi la réinitialisation d’Infinitary. Ce qu’Infinitary y a installé reste jusqu’à ce que tu le supprimes là-bas.",
   "feedReviewBlocked": "La revue n’a pas pu aboutir",
   "feedReviewFindings": "La revue a trouvé des points à corriger",
   "feedReviewPassed": "Revue réussie",

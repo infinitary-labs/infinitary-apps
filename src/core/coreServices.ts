@@ -28,6 +28,7 @@ import type { NearbyMacs } from "./devices/nearby";
 import type { DevicePairing } from "./devices/pairing";
 import type { PhoneDoor } from "./devices/phoneDoor";
 import type { RemoteLogin } from "./devices/remoteLogin";
+import type { ResetFarewells } from "./devices/resetFarewells";
 import type { SshConnections } from "./devices/sshConnections";
 import type { CardFileReads } from "./files/cardFileReads";
 import type { FirstRunService } from "./firstRun";
@@ -297,6 +298,8 @@ export type CoreServices = {
    * connection.
    */
   sshConnections: SshConnections;
+  /** The computers a reset could not tell they were removed (docs/reset.md, "Computers out of reach"). */
+  resetFarewells: ResetFarewells;
   /**
    * The home's side of a crewmate's conversation held on a computer that
    * runs work (src/core/placed/placedSessions.ts): the work requests such a

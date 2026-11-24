@@ -104,6 +104,7 @@ export const FEED_EVENT_TYPES = [
   "device_update",
   "device_connection",
   "device_left",
+  "device_reset_removal",
   "device_signed_in",
   "device_signed_out",
   "turn_failed",
@@ -260,6 +261,10 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       return { kind: event.tone, text: event.text };
     case "device_left":
       return line("info", said("feedComputerLeft", { name: event.name }));
+    case "device_reset_removal":
+      return event.outcome === "removed"
+        ? line("info", said("feedResetRemovalRemoved", { name: event.name }))
+        : line("warn", said("feedResetRemovalStayed", { name: event.name }));
     case "device_signed_in":
       return line(
         "info",

@@ -19,6 +19,8 @@ How a device pairs, and the keys both sides prove themselves with, is `docs/devi
   A change to where devices are listened for restarts only the devices' listeners and closes only devices; the door and its clients stay.
 - **TLS 1.3 only, on every address.**
   Each listener serves the home's own key (`docs/devices.md`, "Keys") and asks the device for its own; it accepts no older protocol, resumes no session, and has no plain listener, loopback included.
+  A seam with `identityFor(address)` picks the key per connection instead, before the handshake, by the address it comes from, since a device that dials an address names no key: the app's does so to show a reset's old key to a computer that reset could not reach (`docs/reset.md`, "Computers out of reach").
+  It hears each handshake that finished (`noticed`) and each that ended before it did (`abandoned`), as a device's does when it was shown a key it does not expect, and listens anew when `identityTag()` names another key.
   A handshake, the request headers and a whole request each have 10 seconds.
 - **Loopback plus every address a link may carry.**
   It always listens on `127.0.0.1`.

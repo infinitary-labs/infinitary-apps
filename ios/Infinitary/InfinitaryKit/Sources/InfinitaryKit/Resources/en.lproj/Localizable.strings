@@ -1060,6 +1060,8 @@
 "feedRemembered" = "First mate · remembered: %1$@";
 "feedReported" = "Reported: %1$@";
 "feedReportedBare" = "Reported";
+"feedResetRemovalRemoved" = "%1$@ was out of reach when Infinitary was reset. It is back, and what Infinitary set up there is removed.";
+"feedResetRemovalStayed" = "%1$@ stayed out of reach for 30 days after Infinitary was reset. What Infinitary set up there stays until you delete it there.";
 "feedReviewBlocked" = "The review could not finish";
 "feedReviewFindings" = "The review found things to fix";
 "feedReviewPassed" = "Passed its review";

@@ -46,6 +46,7 @@ import {
   reachedNetwork,
 } from "../connection/addresses";
 import type { PairedDevice, PairedDevices, PairOutcome } from "../connection/connection";
+import type { ResetRemoval } from "../reset/removals";
 import { readHomeNumber, writeHomeNumber } from "./homeNumber";
 import {
   HOST_TRUST_FILE,
@@ -923,6 +924,32 @@ export class DevicePairing implements PairedDevices {
    */
   sshCleanups(): SshCleanup[] {
     return [...this.sshCleanupRecords].map(([deviceId, cleanup]) => ({ deviceId, ...cleanup }));
+  }
+
+  /**
+   * What a reset keeps of the computers in `ids` it cannot tell it was
+   * removed (docs/reset.md, "Computers out of reach"): this home's key, each
+   * one's key pin, and where this Mac reaches it over Remote Login with the
+   * host key the captain checked. Null when none of them is on the list.
+   */
+  resetRemoval(ids: readonly string[], at: number): ResetRemoval | null {
+    if (this.unreadable) return null;
+    const computers = this.entries
+      .filter((entry) => ids.includes(entry.id))
+      .map((entry) => {
+        const ssh = this.sshRecords.get(entry.id);
+        const hostKey = ssh ? this.hostTrust.get(ssh.address) : undefined;
+        return {
+          id: entry.id,
+          name: deviceLabel(this.viewOf(entry)).slice(0, 160) || entry.id,
+          keyPin: entry.keyPin,
+          told: 0,
+          ...(ssh ? { ssh: { address: ssh.address, ...(hostKey ? { hostKey } : {}) } } : {}),
+        };
+      });
+    if (computers.length === 0) return null;
+    const { key, cert, pin } = this.identity();
+    return { at, home: { key, cert, pin }, computers };
   }
 
   /** What Firstmate set up on a removed computer is gone there, or this Mac stopped trying. */

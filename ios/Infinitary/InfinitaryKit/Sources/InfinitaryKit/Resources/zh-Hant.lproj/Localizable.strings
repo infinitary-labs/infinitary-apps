@@ -1060,6 +1060,8 @@
 "feedRemembered" = "大副 · 已記住：%1$@";
 "feedReported" = "已回報：%1$@";
 "feedReportedBare" = "已回報";
+"feedResetRemovalRemoved" = "重設 Infinitary 時無法連線到 %1$@。它已恢復連線，Infinitary 在那裡設定的內容已移除。";
+"feedResetRemovalStayed" = "重設 Infinitary 後 30 天內一直無法連線到 %1$@。Infinitary 在那裡設定的內容會保留，直到你在那裡刪除。";
 "feedReviewBlocked" = "審查無法完成";
 "feedReviewFindings" = "審查發現需要修正的地方";
 "feedReviewPassed" = "已通過審查";

@@ -53,6 +53,7 @@ enum FeedChange: String {
     case `device_update` = "device_update"
     case `device_connection` = "device_connection"
     case `device_left` = "device_left"
+    case `device_reset_removal` = "device_reset_removal"
     case `device_signed_in` = "device_signed_in"
     case `device_signed_out` = "device_signed_out"
     case `turn_failed` = "turn_failed"

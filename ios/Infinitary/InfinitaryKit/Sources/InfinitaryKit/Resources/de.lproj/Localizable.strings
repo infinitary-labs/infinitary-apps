@@ -1060,6 +1060,8 @@
 "feedRemembered" = "Erster Offizier · gemerkt: %1$@";
 "feedReported" = "Berichtet: %1$@";
 "feedReportedBare" = "Berichtet";
+"feedResetRemovalRemoved" = "%1$@ war nicht erreichbar, als Infinitary zurückgesetzt wurde. Es ist wieder da, und was Infinitary dort eingerichtet hat, ist entfernt.";
+"feedResetRemovalStayed" = "%1$@ blieb nach dem Zurücksetzen von Infinitary 30 Tage lang nicht erreichbar. Was Infinitary dort eingerichtet hat, bleibt, bis du es dort löschst.";
 "feedReviewBlocked" = "Das Review konnte nicht abgeschlossen werden";
 "feedReviewFindings" = "Das Review hat Punkte zum Beheben gefunden";
 "feedReviewPassed" = "Review bestanden";

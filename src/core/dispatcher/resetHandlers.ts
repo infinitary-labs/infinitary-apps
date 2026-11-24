@@ -5,6 +5,7 @@ import type { CoreServices } from "../coreServices";
 import type { HostCapabilities } from "../host";
 import { prepareReset, type ResetPrepareDeps, resetScope } from "../reset/prepare";
 import { real, undoProjectSettings, within } from "../reset/projectGit";
+import { addResetRemoval } from "../reset/removals";
 
 type ResetHandlers = {
   [C in Extract<
@@ -63,6 +64,24 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
   return {
     devices: () => services.computers.list(),
     removeDevice: (id) => services.devices.remove(id),
+    // A computer none of whose connections is up now cannot hear its removal:
+    // neither its work nor its window. A phone is never kept for, as before.
+    keepOutOfReach: (keep) => {
+      const reach = services.workDevices;
+      const away = services.devices
+        .list()
+        .filter(
+          (device) =>
+            device.id !== keep &&
+            !isPhone(device) &&
+            !reach.inReach(device.id) &&
+            !reach.controlling(device.id) &&
+            reach.version(device.id) === undefined,
+        )
+        .map((device) => device.id);
+      if (away.length > 0)
+        addResetRemoval(dataDir(), services.devices.resetRemoval(away, Date.now()));
+    },
     accounts: () => services.vault.list(),
     signOut: (id) => services.vault.remove(id),
     integrations: () => services.integrations.view().integrations,

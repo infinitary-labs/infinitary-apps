@@ -93,6 +93,8 @@
   },
   "feedReported": "報告：{summary}",
   "feedReportedBare": "報告",
+  "feedResetRemovalRemoved": "{name} は Infinitary のリセット時に接続できませんでした。接続が戻り、Infinitary がそこで設定したものは削除されました。",
+  "feedResetRemovalStayed": "{name} は Infinitary のリセット後 30 日間接続できませんでした。Infinitary がそこで設定したものは、そこで削除するまで残ります。",
   "feedReviewBlocked": "レビューを完了できませんでした",
   "feedReviewFindings": "レビューで修正点が見つかりました",
   "feedReviewPassed": "レビューに合格",

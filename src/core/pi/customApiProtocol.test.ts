@@ -1191,3 +1191,88 @@ it.each(["openai-completions", "openai-responses", "anthropic-messages"] as cons
     }
   },
 );
+
+describe("an OpenCode address's session header", () => {
+  // OpenCode Go refuses any generation request without x-opencode-session, this
+  // body and status as its server sent them, before it reads the key.
+  const MISSING_SESSION = JSON.stringify({
+    type: "error",
+    error: {
+      type: "MissingSessionID",
+      message:
+        "Request is missing x-opencode-session and cannot be routed efficiently. Please see https://opencode.ai/v2/docs/console/go/#where-can-i-use-it",
+    },
+  });
+  async function goFixture() {
+    const sessions: (string | undefined)[] = [];
+    const base = await fixture(async (req, res) => {
+      const body = await bodyOf(req);
+      const session = req.headers["x-opencode-session"];
+      sessions.push(typeof session === "string" ? session : undefined);
+      if (typeof session !== "string") {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(MISSING_SESSION);
+        return;
+      }
+      sendCustomStream(
+        res,
+        body.tools && !JSON.stringify(body.messages).includes('"role":"tool"')
+          ? customChatCall("firstmate_echo", '{"text":"FIRSTMATE_CUSTOM_API_OK"}')
+          : customChatText("FIRSTMATE_CUSTOM_API_OK"),
+      );
+    });
+    return { base, sessions };
+  }
+  // The fixture stands at a named address; DNS answers only with the fixture.
+  const atFixture = (options: Parameters<typeof createCustomApiTransport>[0]) => {
+    const transport = createCustomApiTransport(options, async () => ["127.0.0.1"]);
+    transports.push(transport);
+    return transport;
+  };
+  const named = (base: string, hostname: string) =>
+    base.replace("127.0.0.1", hostname).replace("/operator/base", "/inference/go/openai/v1");
+
+  it("lets OpenCode Go accept the save check, one ID for the whole check", async () => {
+    const { base, sessions } = await goFixture();
+    const config = candidate(named(base, "opencode.ai"), "openai-completions");
+    const proof = await checkCustomApiModel(config, undefined, atFixture);
+    expect(customModelProofMatches(config, proof)).toBe(true);
+    expect(sessions).toHaveLength(3);
+    expect(sessions[0]).toBe(customModelFingerprint(config));
+    expect(new Set(sessions).size).toBe(1);
+  });
+
+  it("sends each conversation's own ID on its turns, and none to other addresses", async () => {
+    const { base, sessions } = await goFixture();
+    const turn = (address: string, sessionId?: string) =>
+      generateCustomApi(
+        atFixture({ baseUrl: address, mode: "local", credential: { kind: "local-no-key" } }),
+        { ...generation("openai-completions"), ...(sessionId ? { sessionId } : {}) },
+      );
+    const go = named(base, "opencode.ai");
+    await turn(go, "conversation-a");
+    await turn(go, "conversation-a");
+    await turn(go, "conversation-b");
+    expect(sessions).toEqual(["conversation-a", "conversation-a", "conversation-b"]);
+    await expect(turn(named(base, "api.example.test"), "conversation-a")).rejects.toMatchObject({
+      category: "server",
+      status: 400,
+    });
+    expect(sessions.at(-1)).toBeUndefined();
+  });
+
+  it("keeps the person's own x-opencode-session header", async () => {
+    const { base, sessions } = await goFixture();
+    const transport = atFixture({
+      baseUrl: named(base, "opencode.ai"),
+      mode: "local",
+      credential: { kind: "local-no-key" },
+      headers: [{ name: "X-OpenCode-Session", value: "chosen-by-person", secret: false }],
+    });
+    await generateCustomApi(transport, {
+      ...generation("openai-completions"),
+      sessionId: "conversation-a",
+    });
+    expect(sessions).toEqual(["chosen-by-person"]);
+  });
+});

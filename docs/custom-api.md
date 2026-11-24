@@ -215,6 +215,7 @@ The check, model menu and actual request share `customPiModel`; no parallel redu
 Pi resolves supported levels, then the first mate applies its existing visible levels, duplicate suppression and downward/Quick policy.
 Cache retention is opt-in and independent of Responses storage consent; no-cache requests carry no retention key, though the server may cache automatically.
 A requested session cache key never becomes server-saved conversation continuation or an affinity header.
+The one routing header sent is OpenCode's: a connection whose address is `opencode.ai` or one of its subdomains sends `x-opencode-session` on every check and chat request, carrying the conversation's ID (the check's own fingerprint during Save), because OpenCode refuses generation requests without it; a header of that name the person added is sent instead, and the model list never carries it.
 
 ## Extra request headers
 

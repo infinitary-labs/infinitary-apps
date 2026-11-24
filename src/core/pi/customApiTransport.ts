@@ -110,6 +110,12 @@ export async function readCustomApiDestination(
   }
   return normalizeCustomApiBase(baseUrl, classifyCustomApiAddresses(addresses));
 }
+const OPENCODE_SESSION_HEADER = "x-opencode-session";
+function isOpenCodeAddress(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  return host === "opencode.ai" || host.endsWith(".opencode.ai");
+}
+
 export type CustomApiTransportOptions = {
   /** The Anthropic Messages format authenticates with `x-api-key` and names its API version. */
   anthropic?: boolean;
@@ -151,6 +157,8 @@ export type CustomApiTransport = {
     signal?: AbortSignal,
     context?: number,
     pictureBytes?: number,
+    /** The conversation's stable ID; only an OpenCode address receives it (`x-opencode-session`). */
+    session?: string,
   ) => Promise<Response>;
   /** Never return a literal credential echo, or publish a closed transport's reply. */
   assertSafeOutput: (value: unknown) => void;
@@ -192,6 +200,11 @@ export function createCustomApiTransport(
     headers.map((header) => [header.name, header.value]),
   );
   let secrets = headers.filter((header) => header.secret).map((header) => header.value);
+  // OpenCode refuses generation requests without a per-conversation routing ID.
+  // The person's own header of that name wins, as in Pi's built-in OpenCode provider.
+  const opencodeSession =
+    isOpenCodeAddress(destination.hostname) &&
+    !headers.some((header) => header.name.toLowerCase() === OPENCODE_SESSION_HEADER);
   const generation =
     options.generation === "turn" ? CUSTOM_API_TURN_LIMITS : CUSTOM_API_CHECK_LIMITS;
   let closed = false;
@@ -203,6 +216,7 @@ export function createCustomApiTransport(
     signal?: AbortSignal,
     context?: number,
     pictureBytes = 0,
+    session?: string,
     requestKey = key,
   ): Promise<Response> {
     if (closed) throw new CustomApiError("closed");
@@ -292,6 +306,9 @@ export function createCustomApiTransport(
             },
             headers: {
               ...extra,
+              ...(opencodeSession && session && operation !== "models"
+                ? { [OPENCODE_SESSION_HEADER]: session }
+                : {}),
               Accept: operation === "models" ? "application/json" : "text/event-stream",
               ...(options.anthropic
                 ? {
@@ -405,19 +422,28 @@ export function createCustomApiTransport(
     signal?: AbortSignal,
     context?: number,
     pictureBytes = 0,
+    session?: string,
   ): Promise<Response> {
-    if (!token) return requestOnce(operation, body, signal, context, pictureBytes);
+    if (!token) return requestOnce(operation, body, signal, context, pictureBytes, session);
     try {
       const first = await token.get(signal);
       let result: Response;
       try {
-        result = await requestOnce(operation, body, signal, context, pictureBytes, first);
+        result = await requestOnce(operation, body, signal, context, pictureBytes, session, first);
       } catch (error) {
         if (!(error instanceof CustomApiError) || error.category !== "key-rejected") throw error;
         const renewed = await token.get(signal, first);
         // Retry the identical request once, only before any reply was published.
         try {
-          result = await requestOnce(operation, body, signal, context, pictureBytes, renewed);
+          result = await requestOnce(
+            operation,
+            body,
+            signal,
+            context,
+            pictureBytes,
+            session,
+            renewed,
+          );
         } catch (error) {
           if (error instanceof CustomApiError && error.category === "key-rejected")
             token.invalidate(renewed);

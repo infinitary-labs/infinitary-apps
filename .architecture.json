@@ -127,8 +127,8 @@
       "about": "Infinitary's service that hands sealed cards to Apple, which wakes the phone"
     },
     {
-      "name": "company collector",
-      "about": "Where a company's Claude Code setup gathers its usage reports"
+      "name": "usage collectors",
+      "about": "The OpenTelemetry collectors a company or a person points the usage report at"
     }
   ],
   "links": [
@@ -229,11 +229,6 @@
     },
     {
       "from": "core",
-      "to": "company collector",
-      "why": "passes Claude's usage reports on"
-    },
-    {
-      "from": "core",
       "to": "Codex client",
       "why": "uses a saved reset and signs Codex in for it"
     },
@@ -311,6 +306,11 @@
       "from": "core",
       "to": "push relay",
       "why": "posts each new card sealed for a paired phone"
+    },
+    {
+      "from": "core",
+      "to": "usage collectors",
+      "why": "reports usage in each destination's format"
     },
     {
       "from": "main",

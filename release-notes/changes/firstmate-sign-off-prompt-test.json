@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-sign-off-prompt-test",
+      "reason": "The card-reply integration test now expects the intended sign-off guidance; no app behavior changes."
+    }
+  ]
+}

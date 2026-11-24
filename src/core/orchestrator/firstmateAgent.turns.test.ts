@@ -952,7 +952,7 @@ describe("FirstmateAgent", () => {
     const turn = session.prompts[0] as string;
     const asked = supervisor.cards.thread(card?.id ?? "").messages[0]?.id;
     expect(decodeContext(turn).about).toBe(
-      `about: card ${card?.id} (decision) "Pick one" - the captain replied in its thread as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open`,
+      `about: card ${card?.id} (decision) "Pick one" - the captain replied in its thread as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open; when their words, however put, say they need nothing more from this card and ask, correct or approve nothing, pass signs_off true with that reply instead of close_card`,
     );
     expect(turn).not.toContain("maybe on screen");
     expect(turn).toContain("[user]\nthe second option is wrong");

@@ -16,7 +16,7 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | Its shapes and pure math | `src/shared/usage.ts` |
 | The tab, its words and numbers | `src/renderer/src/settings/UsageTab.tsx`, `UsageCostPerTask.tsx`, `usageWords.ts`, `usage.css` |
 | The remembered unit | `appearance.usageUnit` (`src/shared/preferences.ts`), written through `setAppearance` |
-| The two commands | `settings.usage` and `usage.unit` (`src/shared/keyboard.ts`, `docs/keyboard.md`) |
+| The two commands | `settings.usage` and `usage.unit` (`src/shared/keyboardCommands.ts`, `docs/keyboard.md`) |
 
 ## What the ledger records
 

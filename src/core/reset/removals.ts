@@ -107,16 +107,6 @@ export function writeResetRemovals(dataDir: string, resets: readonly ResetRemova
   renameSync(pending, path);
 }
 
-/**
- * The reset adds its own computers out of reach, keeping every earlier
- * reset's that still waits under its own key and date. Nothing out of reach
- * adds nothing, so a reset that reached every computer writes no file.
- */
-export function addResetRemoval(dataDir: string, reset: ResetRemoval | null): void {
-  if (!reset || reset.computers.length === 0) return;
-  writeResetRemovals(dataDir, withResetRemoval(readResetRemovals(dataDir), reset));
-}
-
 /** `earlier` with `reset` added last, in place of one under the same key, keeping the newest few. */
 export function withResetRemoval(
   earlier: readonly ResetRemoval[],

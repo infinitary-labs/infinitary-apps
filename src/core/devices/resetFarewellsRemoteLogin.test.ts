@@ -11,7 +11,7 @@ import { startConnection } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { WorkDevices } from "../placed/workDevices";
-import { addResetRemoval, resetRemovalsPath } from "../reset/removals";
+import { resetRemovalsPath } from "../reset/removals";
 import { DevicePairing } from "./pairing";
 import { RemoteLogin } from "./remoteLogin";
 import { type ResetFarewellOutcome, ResetFarewells, removeThereOverSsh } from "./resetFarewells";
@@ -107,7 +107,9 @@ describe.runIf(SSH_SERVER_AVAILABLE)("a reset's computer reached over Remote Log
     // Reset while it is out of reach: the old first mate is gone.
     const dataDir = join(scratchDir("infinitary-reset-ssh-"), "Infinitary");
     mkdirSync(dataDir);
-    addResetRemoval(dataDir, pairing.resetRemoval([added.id], Date.now()));
+    new ResetFarewells({ dataDir, said: () => {} }).add(
+      pairing.resetRemoval([added.id], Date.now()),
+    );
     const oldPin = pairing.identity().pin;
     await connection.close();
     pairing.dispose();

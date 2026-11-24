@@ -9,7 +9,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type HomeConnection, type PairedDevices, startConnection } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
-import { addResetRemoval, readResetRemovals, resetRemovalsPath } from "../reset/removals";
+import { readResetRemovals, resetRemovalsPath } from "../reset/removals";
 import { claimLink, dialHome } from "./dial";
 import { HomeLink } from "./homeLink";
 import { peerPin } from "./identity";
@@ -108,7 +108,9 @@ async function resetWhileAway() {
   await until(() => studio.state().contact === "in-reach");
   await old.quit();
   await until(() => studio.state().contact === "closed");
-  addResetRemoval(dataDir, old.pairing.resetRemoval([grant.deviceId], Date.now()));
+  new ResetFarewells({ dataDir, said: () => {} }).add(
+    old.pairing.resetRemoval([grant.deviceId], Date.now()),
+  );
   return { dataDir, port, grant, studio, oldPin: old.pairing.identity().pin };
 }
 

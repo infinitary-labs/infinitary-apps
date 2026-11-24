@@ -3,11 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { loadOrCreateHomeIdentity } from "../devices/identity";
+import { ResetFarewells } from "../devices/resetFarewells";
 import {
-  addResetRemoval,
   type ResetRemoval,
   readResetRemovals,
   resetRemovalsPath,
+  withResetRemoval,
+  writeResetRemovals,
 } from "./removals";
 
 /**
@@ -42,25 +44,23 @@ describe("a reset's removal record", () => {
   it("sits beside the data folder, readable by this account alone", () => {
     const dir = dataDir();
     const first = reset(1_700_000_000_000, ["Mac Studio"]);
-    addResetRemoval(dir, first);
+    writeResetRemovals(dir, [first]);
     expect(resetRemovalsPath(dir)).toBe(`${dir}.reset-removals.json`);
     expect(statSync(resetRemovalsPath(dir)).mode & 0o777).toBe(0o600);
     expect(readResetRemovals(dir)).toEqual([first]);
   });
 
   it("keeps an earlier reset's computers, under that reset's own key and date", () => {
-    const dir = dataDir();
     const first = reset(1_700_000_000_000, ["Mac Studio"]);
     const second = reset(1_700_100_000_000, ["Linux box", "MacBook Air"]);
-    addResetRemoval(dir, first);
-    addResetRemoval(dir, second);
-    expect(readResetRemovals(dir)).toEqual([first, second]);
+    expect(withResetRemoval([first], second)).toEqual([first, second]);
   });
 
   it("writes nothing for a reset that reached every computer", () => {
     const dir = dataDir();
-    addResetRemoval(dir, null);
-    addResetRemoval(dir, reset(1_700_000_000_000, []));
+    const farewells = new ResetFarewells({ dataDir: dir, said: () => {} });
+    farewells.add(null);
+    farewells.add(reset(1_700_000_000_000, []));
     expect(existsSync(resetRemovalsPath(dir))).toBe(false);
   });
 

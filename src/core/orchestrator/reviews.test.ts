@@ -862,13 +862,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const recorded = tasks.get(builderId);
       expect(recorded && tasks.graph.verdictReviewOf(recorded)?.id).toBe(reviewId);
       // INF-4338's direction D: the ask-user finding goes back to the
-      // reviewer that read the change, with the card rules, and the first
+      // reviewer with the builder's goal and the card rules, and the first
       // mate hears nothing of it. The auto-fix finding goes to the builder
       // with the fix rules; the brief names the care and nothing it asks.
       expect(ops.filter((line) => line.includes("with verdict findings"))).toEqual([]);
       const cardAsk = reviewer.promptCalls.at(-1) ?? "";
       expect(cardAsk).toContain(
-        `Findings for the captain:\n- F2 warning src/meter.ts:40 the copy says Later - ask-user\n${REVIEW_CARD_RULES}`,
+        `${JSON.stringify(tasks.get(builderId)?.goal)}\nFindings for the captain:\n- F2 warning src/meter.ts:40 the copy says Later - ask-user\n${REVIEW_CARD_RULES}`,
       );
       expect(received(builder)).toContain("F1 error src/meter.test.ts:12");
       expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));

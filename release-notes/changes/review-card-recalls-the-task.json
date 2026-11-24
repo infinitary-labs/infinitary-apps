@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-card-recalls-the-task",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A review's question card first reminds you what the work was for",
+      "body": "When a review of a change needs your choice, its card now opens with a sentence or two on what the reviewed task set out to do and why, before the question. You no longer have to open the task to remember what is being reviewed.",
+      "noPicture": "The reviewing crewmate writes each question card for its own change, so no single view shows the change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

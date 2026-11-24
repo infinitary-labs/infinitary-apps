@@ -667,15 +667,6 @@ export function LastTurn() {
       // The rounds' own heights and the gaps between them; the slot hangs from the input's top edge.
       style={{ height: lane - LAST_TURN_GAP }}
       ref={rootRef}
-      onClick={(event) => {
-        // A press between rounds, inside the lit strip, opens the newest; a round opens its own.
-        const target = event.target as Element;
-        if (target.closest("[data-last-turn-pair]") || hidden) return;
-        const selection = document.getSelection();
-        if (selection && !selection.isCollapsed) return;
-        const newest = rounds.at(-1);
-        if (newest) useShellStore.getState().openConversation(opensAt(newest.strip, false));
-      }}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
       onFocusCapture={() => setFocused(true)}

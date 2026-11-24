@@ -14,7 +14,7 @@
  * takes the pointer, and resting on the strip or focusing its button lays
  * one --bg-3 fill behind the whole strip (INF-6623's plan, the captain's
  * words: "highlight the whole area"); a press between rounds opens the
- * conversation at the newest. A reply line, and a card round's name, is a
+ * round nearest it. A reply line, and a card round's name, is a
  * button (docs/composer.md "The conversation"): a Tab stop and the focus
  * ring, and no other chrome, so it still reads as a line of type.
  *
@@ -46,7 +46,6 @@
 [data-last-turn][data-last-turn-fade="shown"],
 [data-last-turn][data-last-turn-fade="fading"] {
   pointer-events: auto;
-  cursor: pointer;
 }
 /* The round a new message pushes out leaves from where it stood. */
 [data-last-turn] > [data-outgoing] {
@@ -93,6 +92,15 @@
 [data-last-turn][data-last-turn-fade="hidden"]
   [data-last-turn-pair]:is(:hover, :has(button:focus))::before {
   opacity: 1;
+}
+/* Each round takes presses 5 px into the gap beside it and 6 px past its
+   sides, so a press anywhere inside the lit strip opens a round: the one
+   nearest it. The two reaches meet in the 10 px between rounds. */
+[data-last-turn-pair]::after {
+  content: "";
+  position: absolute;
+  inset: -5px -6px;
+  z-index: -1;
 }
 /* The older round, at the strength the captain chose. */
 [data-last-turn-pair][data-older] {

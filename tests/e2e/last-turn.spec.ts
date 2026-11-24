@@ -541,7 +541,8 @@ test("the conversation holds a card the captain answered, lists it under Cards, 
 // lights the whole strip as one area ("highlight the whole area"). Fixture: the
 // conversation scenario's note, answered with Got it. Failure: no row, a reply
 // line under it, the name opening the card, the conversation opening
-// somewhere else, its tile not opening the card, or no one fill behind the strip.
+// somewhere else, its tile not opening the card, no one fill behind the strip,
+// or a press in the strip's blank edge opening nothing.
 test("a press of a card's button shows on the strip with the card's name, and every press on the row opens the conversation there", async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
   const { page } = launched;
@@ -613,6 +614,14 @@ test("a press of a card's button shows on the strip with the card's name, and ev
 
   await test.step("Enter on the focused card name opens the conversation there too", async () => {
     await pressKey(name, "Enter");
+    await landedOnChoice();
+    await closeConversation();
+  });
+
+  await test.step("a press in the lit strip's blank edge beside the row opens the conversation there", async () => {
+    const box = await row.boundingBox();
+    if (!box) throw new Error("The card round is not on screen");
+    await page.mouse.click(box.x + 10, box.y - 3);
     await landedOnChoice();
     await closeConversation();
   });

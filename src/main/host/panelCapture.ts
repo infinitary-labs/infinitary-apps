@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, type WebContents } from "electron";
 import { appWindows } from "../windows";
+import { pngSize } from "./pageProtocol";
 import {
   buildCaptureHtml,
   CAPTURE_WINDOW_BACKGROUND,
@@ -17,8 +18,8 @@ import {
  * panel plus the page's CSS, with `data-theme` set only there. The live
  * window's theme attribute is never written: that write used to flash the
  * whole UI into the light theme (and back) on every `capture_panel`, because
- * the token files key `--bg-0` off `body`. `stayHidden` keeps the capture
- * window from appearing while it paints.
+ * the token files key `--bg-0` off `body`. The capture window is never shown:
+ * it draws for the picture as a hidden capturer (`drawnPicture`).
  */
 
 /** A rail animates its width open; the box is read until two reads agree, bounded. */
@@ -217,6 +218,29 @@ function captureDocumentDir(): Promise<string> {
   return captureDir;
 }
 
+/**
+ * A picture of a frame the window draws after this call, never one from before.
+ *
+ * Electron's `capturePage` copies whichever frame the window drew last, and
+ * asks for no new one. A window that has just loaded its document and laid
+ * it out may not have drawn it yet: that copy is the bare window background,
+ * a blank picture that reads as a broken panel. Chromium's own screenshot
+ * command, which the task browser and Playwright use on hidden windows too,
+ * makes the page draw a new frame and copies that frame once it is drawn. It
+ * counts itself as a hidden capturer, so the window draws without appearing.
+ */
+async function drawnPicture(contents: WebContents): Promise<Buffer> {
+  contents.debugger.attach("1.3");
+  try {
+    const shot = (await contents.debugger.sendCommand("Page.captureScreenshot", {
+      format: "png",
+    })) as { data: string };
+    return Buffer.from(shot.data, "base64");
+  } finally {
+    if (contents.debugger.isAttached()) contents.debugger.detach();
+  }
+}
+
 async function renderSnapshot(
   anchor: BrowserWindow,
   snapshot: Snapshot,
@@ -266,9 +290,8 @@ async function renderSnapshot(
       "document.fonts.ready.then(() => document.body.getBoundingClientRect().width)",
       true,
     );
-    const image = await shot.webContents.capturePage(undefined, { stayHidden: true });
-    const size = image.getSize();
-    return { png: image.toPNG(), width: size.width, height: size.height };
+    const png = await drawnPicture(shot.webContents);
+    return { png, ...pngSize(png) };
   } finally {
     captureWindows.delete(shot);
     if (!shot.isDestroyed()) shot.destroy();

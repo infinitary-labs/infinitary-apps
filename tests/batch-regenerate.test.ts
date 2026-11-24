@@ -104,6 +104,14 @@ it("regenerates the app parts list before the phone's card bundle, and the proje
   expect(notGenerated(process.cwd(), written)).toEqual([]);
 });
 
+// The daily velocity review of 2026-11-24, the captain's pick "Have the
+// batch's first job regenerate the published contract file too": a stale
+// docs/contract.json stopped batch #61 for 27 minutes.
+it("regenerates the published contract, and the project marks the file it writes generated", () => {
+  expect(BATCH_GENERATORS).toContain("scripts/generate-contract.ts");
+  expect(notGenerated(process.cwd(), ["docs/contract.json"])).toEqual([]);
+});
+
 type Step = { run: string; env: Record<string, string> };
 
 it("pushes the regenerated files as one commit on the batch branch, then ends once the app's own push moves the branch on", () => {

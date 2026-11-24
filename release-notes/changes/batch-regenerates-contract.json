@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-regenerates-contract",
+      "reason": "This project's own merge batch check also regenerates the published contract file as part of its generated-files commit, so nobody using the app sees a difference."
+    }
+  ]
+}

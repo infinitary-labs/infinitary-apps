@@ -124,7 +124,8 @@ The task board and `task_changed` carry `executionDeviceId`, the task's actual e
 Names and the project's current Runs on never determine identity.
 A paired view of an older home that has not published placement keeps the existing stage rather than inventing groups; clustering begins once the home supplies those facts.
 An unreachable peer remains configured, so it never collapses a multi-computer scene into the single-computer path.
-Its last painted crew positions and spin freeze, with cool dim solids and an Out of reach line under its name; current activity, packets and animated review cues are not guessed.
+Its last painted crew positions and spin freeze, with cool dim solids and a line under its name; current activity, packets and animated review cues are not guessed.
+That line says why it is away with the word Devices uses (`awayWord`, `docs/devices.md` "Updating"): Updating while its update is followed, Connecting while its connection is being made, both in the name's quiet color, and Out of reach in the warning color otherwise (`tests/browser/crew-remote-away.test.tsx`).
 A removed computer that still owns active work keeps an unavailable cluster until those tasks leave.
 
 Each page shows home and at most five other computers, without limiting tasks or computers.

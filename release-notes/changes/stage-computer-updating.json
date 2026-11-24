@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "stage-computer-updating",
+      "kind": "fix",
+      "area": "devices",
+      "title": "The center says when another computer is updating or connecting",
+      "body": "A computer being updated, or whose connection was being made, read Out of reach in orange under its name in the center. It now reads Updating or Connecting in the same quiet color as its name, as Devices does, and Out of reach stays for a computer that is truly away.",
+      "picture": {
+        "dark": "stage-computer-updating-dark.webp",
+        "light": "stage-computer-updating-light.webp",
+        "alt": "The center with this computer's Firstmate and a Mac mini group labeled Updating in the same gray as its name"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

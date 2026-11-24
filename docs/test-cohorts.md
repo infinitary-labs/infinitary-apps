@@ -283,7 +283,8 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/claudeClientExit.integration.test.ts` | the SDK's own client, boxed, against a per-case local stub API; the client frozen with SIGSTOP while a question is given up on or a crewmate's session is closed | 30 s (each case waits out the SDK's fixed 7 s from its close to SIGKILL; Mac fastest 7.3 s per case) |
 | `tests/bench-attempt.test.ts` | the benchmark attempt CLI: the whole core, real git, the e2e mock provider | 95 s |
 | `src/core/claude/claudeFirstmateSeat.live.test.ts` | the installed Claude client on the machine's own login (opt-in, `INFINITARY_CLAUDE_SEAT_LIVE=1`) | 180 s opt-in |
-| `src/core/core.settings.test.ts` | the whole core: git at the run's own priority, the login shell, the MCP stand-in as a Node child | 60 s on its boot; 20 s on adding three MCP servers (Linux fastest 3.567 s, three child starts) |
+| `src/core/core.settings.test.ts` | the whole core: git at the run's own priority, the login shell | 60 s on its boot |
+| `src/core/core.settings.trail.test.ts` | the whole core: git at the run's own priority, the login shell, the MCP stand-in as a Node child | 60 s on its boot; 20 s on adding three MCP servers (Linux fastest 3.567 s, three child starts) |
 | `src/core/core.settingsParity.test.ts` | the whole core: git at the run's own priority, the login shell, a kept job's check as a shell command | 60 s on its boot |
 | `src/core/core.projects.test.ts` | the whole core: git at the run's own priority, the login shell | 60 s on its boot |
 | `src/core/core.capture.test.ts` | the whole core, real git, the e2e mock provider's Firstmate and crewmate sessions | 120 s on its boot and on each captain turn |

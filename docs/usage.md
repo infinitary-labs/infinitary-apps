@@ -48,7 +48,7 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   An OpenRouter decision records the cost its reply states for the call (`cost_source = 'reported'`, no split).
   A model with no listed rates prices a message at zero, which proves nothing, so Pi's normalizer records no cost at all for it.
   The summary and the cost limit count a record as priced only when its cost is above zero, or zero from listed prices on a custom connection, so an older zero is never read as free (`PRICED_RECORD`, `src/core/storage/usageDays.ts`).
-  That listed zero comes only from a custom model the person stated as free; Pi's normalizer records it only when the turn measured tokens.
+  That listed zero comes only from a custom model the person stated as free, since a catalog entry listing every rate at zero counts as no price; Pi's normalizer records it only when the turn measured tokens.
   Custom models take a name and price stated on their line, else listed price metadata from an exact model-id match in the local catalog (`docs/custom-api.md`); unpriced ids or unreported counts stay unavailable.
   Nothing is repriced: a record keeps the estimate it was written with.
 

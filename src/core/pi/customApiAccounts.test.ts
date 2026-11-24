@@ -1255,6 +1255,31 @@ it("uses a model's stated name and prices, and keeps its saved check when only t
   expect(rekeyed.models.map((model) => model.checked)).toEqual([false, false]);
 });
 
+// INF-6581's plan: a catalog match with nothing stated prices as before. Pi's
+// bundled Qwen token-plan entry lists every rate at zero while the model is
+// paid elsewhere, so only a person's own Free may record a turn as costing nothing.
+it("leaves a turn unpriced when the model's catalog match lists every rate at zero", async () => {
+  const api = await fixture();
+  const world = vault();
+  const draft = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    models: [{ id: "qwen3.7-max", context: 65536, output: 1024 }],
+  });
+  await world.vault.customCheck(draft.draftId ?? "", "qwen3.7-max");
+  const account = await world.vault.customSave(draft.draftId ?? "", false);
+  const runtime = await world.vault.runtimeFor(account.id);
+  const model = runtime.getModel(account.providerId, "qwen3.7-max");
+  if (!model) throw new Error("Missing saved model");
+  api.highUsage();
+  const usage = usageFromMessage(
+    await runtime.completeSimple(model, {
+      messages: [{ role: "user" as const, content: "Synthetic request", timestamp: Date.now() }],
+    }),
+  );
+  expect(usage).toMatchObject({ input: 60000, output: 20 });
+  expect(usage?.cost).toBeUndefined();
+});
+
 it("offers a connection's models once a checked replacement is applied after a restart that left it without a runtime", async () => {
   const api = await fixture();
   const first = vault();

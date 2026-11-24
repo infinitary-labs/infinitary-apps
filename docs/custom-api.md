@@ -156,7 +156,7 @@ These estimates/checks prove interoperability, not model quality, server capacit
 Every custom turn leaves a Usage record, even when the server reports no counts; unreported categories remain unknown, never zero.
 A name or price stated on the model's line wins over the catalog, one price at a time: a price left blank takes the match's, else stays unknown.
 Four stated zeros price the model at nothing: its turns record a zero estimate from listed prices, which Usage and the cost limit count as priced (`PRICED_RECORD`), while any other zero stays a price nobody knew.
-An exact model-id match in Pi's catalog as this computer knows it (`CustomApiCatalog`: each Pi account's runtime and the custom catalog runtime, with the pi.dev catalog each last fetched, then the bundled list) supplies the model's display name and listed prices; the first match in catalog order wins if multiple providers list that id.
+An exact model-id match in Pi's catalog as this computer knows it (`CustomApiCatalog`: each Pi account's runtime and the custom catalog runtime, with the pi.dev catalog each last fetched, then the bundled list) supplies the model's display name and listed prices, where an entry listing every rate at zero lists none; the first match in catalog order wins if multiple providers list that id.
 Only descriptive and price metadata is borrowed: the approved destination, protocol, proven picture input and checked limits remain connection-owned.
 Pi normalizes input, output, cache-read and cache-write counts and calculates each category once from its listed price.
 A presence-only observer restores missing categories to unknown after normalization and pricing; it never invents a cache count.

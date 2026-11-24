@@ -86,7 +86,7 @@ export const USAGE_DAY_AMOUNTS = [
   "cost_reported_cache_write",
 ] as const;
 
-/** An estimate column: null while nothing it sums was priced, never zero. */
+/** An estimate column: null while nothing it sums was priced; zero only when it sums free turns. */
 function isEstimate(column: string): boolean {
   return column === "cost" || (column.startsWith("cost_") && !column.startsWith("cost_reported"));
 }

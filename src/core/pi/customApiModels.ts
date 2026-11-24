@@ -248,11 +248,17 @@ function snapshotOf(source: Model<CustomApiProtocol>, profile: string): CustomCa
 /**
  * A model line's prices: each one the person stated, else the catalog
  * match's, else unknown (NaN, never zero). Absent when neither says anything.
+ * A catalog entry listing all four rates at zero states no price: such ids
+ * are often paid elsewhere, and only a person's own Free may record a zero.
  */
 export function customModelCost(
   stated: CustomModelCost | undefined,
-  catalog: Model<Api>["cost"] | undefined,
+  listed: Model<Api>["cost"] | undefined,
 ): Model<CustomApiProtocol>["cost"] | undefined {
+  const catalog =
+    listed && [listed.input, listed.output, listed.cacheRead, listed.cacheWrite].some(Boolean)
+      ? listed
+      : undefined;
   if (!stated && !catalog) return undefined;
   const pick = (key: keyof CustomModelCost) => stated?.[key] ?? catalog?.[key] ?? Number.NaN;
   return {

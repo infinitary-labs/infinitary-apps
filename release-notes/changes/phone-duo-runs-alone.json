@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-duo-runs-alone",
+      "reason": "The phone check's gate runs the simulated iPhone Duo alone on a phone Mac with room for two simulators, since beside another simulator both ran up to 3.6 times slower and the iPad's panels part ran past its time allowance; only how the project is checked changes."
+    }
+  ]
+}

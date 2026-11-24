@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-settings-taps-wait-for-their-control",
+      "reason": "Test-only: the phone settings journey waits for a project's controls, and a runbook's switch, to take input again after a change before its next tap, since a reading can show the change before the change's own answer arrives."
+    }
+  ]
+}

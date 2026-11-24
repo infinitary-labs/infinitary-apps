@@ -241,20 +241,26 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in careful.isSelected }, object: nil, timeout: 20), .completed, app.debugDescription)
         try await settingsKeeps("projects.phone-website.rigor", "reviewed")
 
+        // Every control of a project waits while one of its changes waits for the computer's answer, and ignores a tap
+        // until then. Careful can show before that answer: the computer broadcasts the change first, and the reading
+        // the broadcast starts can come back first. So each tap after a change waits for its control to take input.
         let asks = app.switches["project-asks"]
         XCTAssertEqual(asks.value as? String, "1", "It asks before merging")
+        waitUntilEnabled(asks)
         tapOnPhone(asks, repeatDiscarded: false)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in asks.value as? String == "0" }, object: nil, timeout: 20), .completed, app.debugDescription)
         try await settingsKeeps("projects.phone-website.autonomy", "true")
 
         let local = app.buttons["project-delivery-local-only"]
+        waitUntilEnabled(local)
         tapOnPhone(local, repeatDiscarded: false)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in local.isSelected }, object: nil, timeout: 20), .completed, app.debugDescription)
         try await settingsKeeps("projects.phone-website.delivery", "local-only")
 
         // A cost limit of its own starts at the app's amount; a typed one is kept as typed.
-        let cost = app.segmentedControls["project-cost"]
-        tapOnPhone(cost.buttons["Own amount"], repeatDiscarded: false)
+        let cost = app.segmentedControls["project-cost"], own = cost.buttons["Own amount"]
+        waitUntilEnabled(own)
+        tapOnPhone(own, repeatDiscarded: false)
         let amount = app.textFields["project-cost-amount"]
         XCTAssertTrue(amount.waitForPresence(timeout: 20), app.debugDescription)
         let save = app.buttons["project-cost-save"]
@@ -286,6 +292,8 @@ extension PhoneJourney {
         app.typeKey("\n", modifierFlags: [])
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in first.value as? String == "0" }, object: nil, timeout: 20), .completed, app.debugDescription)
         try await settingsKeeps("runbooks.sequences", "false")
+        // A runbook's switch waits for its own change's answer as a project's controls do.
+        waitUntilEnabled(first)
         app.typeKey("\n", modifierFlags: [])
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in first.value as? String == "1" }, object: nil, timeout: 20), .completed, app.debugDescription)
         try await settingsKeeps("runbooks.sequences", "true")

@@ -107,19 +107,7 @@ export function moveIntoProject(
     after.set(row.id, to);
     return { row, repoId: to };
   });
-  // As a plan is refused a direct-pr ask with no remote to open it on
-  // (CrewSupervisor.resolveSpawnDelivery), before anything is written.
-  for (const { row, repoId: to } of moves) {
-    if (!to || to === row.repoId || !repos) continue;
-    const repo = repos.get(to);
-    if (repo?.kind === "personal" || repo?.origin) continue;
-    if (!opensPullRequest(deliveryForRecord(row, "local-only"))) continue;
-    const name = repo?.name ?? project.name;
-    const handle = keyOrId(row);
-    throw new TaskGraphRefusal(
-      `Refused: ${handle} asks to ship as a pull request (direct-pr), and ${name} has no remote to open one on, so ${handle} cannot move there. Configure a remote for ${name}, or set ${handle}'s delivery to local-only first.`,
-    );
-  }
+  refuseRemoteless(repos, moves, project.name);
   for (const { row, repoId: to } of moves) {
     const { seq, key } = writer.projects.allocateSeq(project.id);
     writer.patch(row.id, { projectId: project.id, key, seq, repoId: to, updatedAt: at });
@@ -138,6 +126,30 @@ export function moveIntoProject(
       },
       feed: false,
     });
+  }
+}
+
+/**
+ * As a plan is refused a direct-pr ask with no remote to open it on
+ * (CrewSupervisor.resolveSpawnDelivery), a move is refused before anything
+ * is written when a row it takes asks to ship as a pull request and the
+ * repository it lands in has none.
+ */
+export function refuseRemoteless(
+  repos: ProjectMoveContext["repos"],
+  moves: readonly { row: TaskRecord; repoId: string | null }[],
+  projectName: string,
+): void {
+  for (const { row, repoId: to } of moves) {
+    if (!to || to === row.repoId || !repos) continue;
+    const repo = repos.get(to);
+    if (repo?.kind === "personal" || repo?.origin) continue;
+    if (!opensPullRequest(deliveryForRecord(row, "local-only"))) continue;
+    const name = repo?.name ?? projectName;
+    const handle = keyOrId(row);
+    throw new TaskGraphRefusal(
+      `Refused: ${handle} asks to ship as a pull request (direct-pr), and ${name} has no remote to open one on, so ${handle} cannot move there. Configure a remote for ${name}, or set ${handle}'s delivery to local-only first.`,
+    );
   }
 }
 

@@ -1067,6 +1067,8 @@
 "feedRemembered" = "نائب القبطان · تذكّر: %1$@";
 "feedReported" = "التقرير: %1$@";
 "feedReportedBare" = "أُرسل تقرير";
+"feedRepositoryMoved" = "نُقلت إلى المستودع %1$@";
+"feedRepositoryRestarted" = "نُقلت إلى المستودع %1$@ قبل أول إيداع لها؛ تبدأ من جديد هناك";
 "feedResetRemovalRemoved" = "كان %1$@ خارج النطاق عند إعادة تعيين Infinitary. لقد عاد، وأُزيل ما أعدّه Infinitary هناك.";
 "feedResetRemovalStayed" = "بقي %1$@ خارج النطاق لمدة 30 يومًا بعد إعادة تعيين Infinitary. يبقى ما أعدّه Infinitary هناك حتى تحذفه هناك.";
 "feedReviewBlocked" = "تعذّر إكمال المراجعة";

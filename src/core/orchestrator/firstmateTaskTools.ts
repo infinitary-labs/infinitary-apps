@@ -17,6 +17,7 @@ import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import { startedReply } from "./replyLine";
+import { RepositoryMoves } from "./repositoryMoves";
 import { handOffShape, UNSAFE_DATA_READER_ANSWERS } from "./workShape";
 
 export type FirstmateTaskToolsHost = {
@@ -187,6 +188,17 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           // keeping its key, branch and working copy (INF-849).
           const moveTo =
             record.kind === "work" && record.status === "active" ? input.model?.trim() : undefined;
+          // A repository named for started work of the same project moves it
+          // there while it has no commits of its own (INF-6536 finding 1): its
+          // crewmate stops and it starts again there.
+          const sameProject =
+            input.project === undefined ||
+            (tasks.projects.byKey(input.project) ?? tasks.projects.get(input.project))?.id ===
+              record.projectId;
+          const toRepository =
+            input.repository !== undefined && sameProject && RepositoryMoves.started(record)
+              ? input.repository
+              : undefined;
           // on-request on started work moves it back to the backlog (INF-2062):
           // its turn stops and its work stays, after the other edits land.
           const toBacklog =
@@ -229,7 +241,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           const moves = {
             ...(input.correctRequiredAction ? { correctRequiredAction: true } : {}),
             ...(input.project !== undefined ? { project: input.project } : {}),
-            ...(input.repository !== undefined ? { repository: input.repository } : {}),
+            ...(input.repository !== undefined && toRepository === undefined
+              ? { repository: input.repository }
+              : {}),
             ...(input.parent !== undefined ? { parent: input.parent } : {}),
           };
           // INF-6091 finding 1: when-ready would let the ready sweep start
@@ -336,6 +350,11 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           const move = moveTo
             ? await supervisor.moves.requestMove(record.id, { by: "firstmate", model: moveTo })
             : undefined;
+          const repositoryMove =
+            toRepository !== undefined
+              ? await supervisor.repositoryMoves.move(record.id, toRepository, "firstmate")
+              : undefined;
+          if (repositoryMove?.ok) tookEffect(record.id);
           const backlog = toBacklog
             ? supervisor.hostOps.moveToBacklog(
                 record.id,
@@ -359,11 +378,15 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
                 ? `Recorded that the captain asked ${record.key || record.id} to wait.`
                 : `${record.key || record.id} is already recorded as stopped by the captain.`;
           if (changes.length === 0) {
+            if (repositoryMove && !repositoryMove.ok)
+              throw new TaskGraphRefusal(repositoryMove.text);
             if (move && !move.ok) throw new TaskGraphRefusal(move.text);
             if (backlog && !backlog.ok) throw new TaskGraphRefusal(backlog.text);
             if (stop && !stop.ok && !move && !backlog) throw new TaskGraphRefusal(stop.text);
-            if (move || backlog || stop)
-              return [move?.text, backlog?.text, stopText].filter(Boolean).join(" ");
+            if (repositoryMove || move || backlog || stop)
+              return [repositoryMove?.text, move?.text, backlog?.text, stopText]
+                .filter(Boolean)
+                .join(" ");
             return `${record.key || record.id} is unchanged.`;
           }
           const updated = tasks.get(record.id) ?? record;
@@ -394,7 +417,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             supervisor.intake.graphChanged();
           }
           const now = tasks.get(record.id);
-          return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}${stopText ? ` ${stopText}` : ""}`;
+          return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${repositoryMove ? ` ${repositoryMove.text}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}${stopText ? ` ${stopText}` : ""}`;
         })();
         // The change took effect: the task is the message's work.
         if (about) host.asks.attach(about, "update_task");

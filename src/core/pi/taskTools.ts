@@ -59,7 +59,11 @@ export type TaskToolsDelegate = {
     /** A task ref, or the empty string to clear the parent. */
     parent?: string;
     project?: string;
-    /** With project: the repository it moves into, when the project holds several. */
+    /**
+     * With project: the repository it moves into, when the project holds
+     * several. Alone: another repository of its own project, where started
+     * work with no commits of its own starts again (`RepositoryMoves`).
+     */
     repository?: string;
     startPolicy?: TaskStartPolicy;
     /** Why started work goes back to the backlog (start_policy on-request, INF-2062). */
@@ -331,7 +335,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       repository: Type.Optional(
         Type.String({
-          description: "With project: repository name if several",
+          description:
+            "With project: repository name if several. Alone: moves it to that repository of its own project, key kept; started work moves only with no commits of its own, as its crewmate reports, and starts again there.",
         }),
       ),
       basis: Type.Optional(

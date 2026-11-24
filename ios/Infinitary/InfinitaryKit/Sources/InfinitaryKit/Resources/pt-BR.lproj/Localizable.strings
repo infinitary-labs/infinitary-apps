@@ -1067,6 +1067,8 @@
 "feedRemembered" = "Imediato · lembrou: %1$@";
 "feedReported" = "Relatou: %1$@";
 "feedReportedBare" = "Relatou";
+"feedRepositoryMoved" = "Movida para o repositório %1$@";
+"feedRepositoryRestarted" = "Movida para o repositório %1$@ antes do primeiro commit; começa de novo lá";
 "feedResetRemovalRemoved" = "%1$@ estava fora de alcance quando o Infinitary foi redefinido. Ele voltou, e o que o Infinitary configurou lá foi removido.";
 "feedResetRemovalStayed" = "%1$@ ficou fora de alcance por 30 dias depois que o Infinitary foi redefinido. O que o Infinitary configurou lá continua até você apagar lá.";
 "feedReviewBlocked" = "A revisão não pôde terminar";

@@ -1067,6 +1067,8 @@
 "feedRemembered" = "Second · retenu : %1$@";
 "feedReported" = "Rapport : %1$@";
 "feedReportedBare" = "Rapport rendu";
+"feedRepositoryMoved" = "Déplacée vers le dépôt %1$@";
+"feedRepositoryRestarted" = "Déplacée vers le dépôt %1$@ avant son premier commit ; elle recommence là-bas";
 "feedResetRemovalRemoved" = "%1$@ était hors de portée quand Infinitary a été réinitialisé. Il est revenu, et ce qu’Infinitary y avait installé est supprimé.";
 "feedResetRemovalStayed" = "%1$@ est resté hors de portée pendant les 30 jours qui ont suivi la réinitialisation d’Infinitary. Ce qu’Infinitary y a installé reste jusqu’à ce que tu le supprimes là-bas.";
 "feedReviewBlocked" = "La revue n’a pas pu aboutir";

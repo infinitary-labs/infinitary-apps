@@ -76,6 +76,7 @@ import { mergeHold, standingAuthorization } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
+import { RepositoryMoves } from "./repositoryMoves";
 import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
 import { reworkHold } from "./reworkHold";
@@ -139,6 +140,8 @@ export class CrewSupervisor {
   readonly placement: TaskPlacement;
   /** A started task's moves: to another provider between turns, and to another computer at a safe pause. */
   readonly moves: TaskMoves;
+  /** A started task with no commits of its own, moved to another repository of its project. */
+  readonly repositoryMoves: RepositoryMoves;
   /** The captain's overrides of a soft hold: declared, withdrawn, and the words they cite. */
   readonly overrides: CaptainOverrides;
   /** The crew's pause and save while a computer is updated. */
@@ -539,6 +542,28 @@ export class CrewSupervisor {
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
     });
+    const machines = options.machines;
+    this.repositoryMoves = new RepositoryMoves(
+      {
+        now: this.now,
+        tasks: options.tasks,
+        workspace: options.workspace,
+        stopRuntime: (taskId) => this.sessions.stopRuntime(taskId),
+        ...(options.killJobs ? { killJobs: options.killJobs } : {}),
+        endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
+        ...(machines ? { placedStatus: (taskId: string) => machines.workStatus(taskId) } : {}),
+        ...(machines?.retireMoved
+          ? {
+              retireThere: (deviceId: string, taskId: string) =>
+                machines.retireMoved?.(deviceId, taskId) ?? Promise.resolve(),
+            }
+          : {}),
+        moving: (taskId) => this.moves.isMoving(taskId),
+        repoint: (taskId) => this.placement.runsOnChanged(taskId),
+        sweepGates: (at) => this.watch.sweepGates(at),
+      },
+      this.settling.locks,
+    );
     this.overrides = new CaptainOverrides(options, {
       now: this.now,
       cards: this.cards,

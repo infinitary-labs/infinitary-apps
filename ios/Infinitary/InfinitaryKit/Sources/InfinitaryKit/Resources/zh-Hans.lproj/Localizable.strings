@@ -1067,6 +1067,8 @@
 "feedRemembered" = "大副 · 已记住：%1$@";
 "feedReported" = "已汇报：%1$@";
 "feedReportedBare" = "已汇报";
+"feedRepositoryMoved" = "已移到 %1$@ 仓库";
+"feedRepositoryRestarted" = "在第一次提交前已移到 %1$@ 仓库，将在那里重新开始";
 "feedResetRemovalRemoved" = "重置 Infinitary 时无法连接 %1$@。它已恢复连接，Infinitary 在那里设置的内容已移除。";
 "feedResetRemovalStayed" = "重置 Infinitary 后 30 天内一直无法连接 %1$@。Infinitary 在那里设置的内容会保留，直到你在那里删除。";
 "feedReviewBlocked" = "审查未能完成";

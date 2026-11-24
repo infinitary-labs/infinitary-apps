@@ -20,6 +20,7 @@ import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import { KIND_SOURCE, type KindInput, resolveKind } from "../routing/kindClassifier";
 import { escalationFloor } from "../routing/policy";
 import type { TaskRecord } from "../storage/taskRecords";
+import { elsewhereWords } from "../tasks/taskRelationships";
 import { resultSchemaRefusal } from "../tasks/taskResult";
 import type { TaskService } from "../tasks/taskService";
 import { branchNameRefusal } from "../workspace/taskBranches";
@@ -578,10 +579,17 @@ export function branchFromSource(
   if (!source) return { refused: `Unknown branch_from "${ref}": name a task by its key.` };
   const key = source.key || source.id;
   if (source.id === selfId) return { refused: "A task cannot branch from itself." };
-  if (source.repoId !== repoId)
+  if (source.repoId !== repoId) {
+    const projectId =
+      (selfId ? tasks.get(selfId)?.projectId : undefined) ??
+      (repoId ? tasks.projects.forRepo(repoId)?.id : undefined) ??
+      "";
     return {
-      refused: `branch_from ${key} is in another project; a task branches only from work in its own project.`,
+      refused: elsewhereWords("branch_from", source, { repoId, projectId }, (record) =>
+        tasks.repositoryNameOf(record),
+      ),
     };
+  }
   if (source.workspaceState === "present" && source.branch && !source.deviceId)
     return { task: source, ref: source.branch };
   const kept = keptRefOf(tasks, source.id);

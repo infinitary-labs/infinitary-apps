@@ -37702,6 +37702,62 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Reported`;
   }
+  function feedRepositoryMoved(input2) {
+    const repository = input2.repository;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نُقلت إلى المستودع ${repository}`;
+      case "de":
+        return `In das Repository ${repository} verschoben`;
+      case "es":
+        return `Se movió al repositorio ${repository}`;
+      case "fr":
+        return `Déplacée vers le dépôt ${repository}`;
+      case "ja":
+        return `${repository} リポジトリに移動`;
+      case "ko":
+        return `${repository} 저장소로 옮김`;
+      case "pt-BR":
+        return `Movida para o repositório ${repository}`;
+      case "zh-Hans":
+        return `已移到 ${repository} 仓库`;
+      case "zh-Hant":
+        return `已移到 ${repository} 存放庫`;
+      case "en-XA":
+        return `[Ṁöṽéð ţö ţĥé ${repository} ŕéþöšîţöŕý ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Moved to the ‬${repository}‮ repository‬`;
+    }
+    return `Moved to the ${repository} repository`;
+  }
+  function feedRepositoryRestarted(input2) {
+    const repository = input2.repository;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نُقلت إلى المستودع ${repository} قبل أول إيداع لها؛ تبدأ من جديد هناك`;
+      case "de":
+        return `Vor dem ersten Commit in das Repository ${repository} verschoben; beginnt dort neu`;
+      case "es":
+        return `Se movió al repositorio ${repository} antes de su primera confirmación; vuelve a empezar allí`;
+      case "fr":
+        return `Déplacée vers le dépôt ${repository} avant son premier commit ; elle recommence là-bas`;
+      case "ja":
+        return `最初のコミットの前に ${repository} リポジトリに移動：そこで最初からやり直します`;
+      case "ko":
+        return `첫 커밋 전에 ${repository} 저장소로 옮김: 그곳에서 다시 시작`;
+      case "pt-BR":
+        return `Movida para o repositório ${repository} antes do primeiro commit; começa de novo lá`;
+      case "zh-Hans":
+        return `在第一次提交前已移到 ${repository} 仓库，将在那里重新开始`;
+      case "zh-Hant":
+        return `在第一次提交前已移到 ${repository} 存放庫，將在那裡重新開始`;
+      case "en-XA":
+        return `[Ṁöṽéð ţö ţĥé ${repository} ŕéþöšîţöŕý ƀéƒöŕé îţš ƒîŕšţ çöɱɱîţ; îţ šţáŕţš áĝáîñ ţĥéŕé ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Moved to the ‬${repository}‮ repository before its first commit; it starts again there‬`;
+    }
+    return `Moved to the ${repository} repository before its first commit; it starts again there`;
+  }
   function feedResetRemovalRemoved(input2) {
     const name = input2.name;
     switch (currentLanguage()) {
@@ -106742,6 +106798,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedRepairsCapped,
     feedReported,
     feedReportedBare,
+    feedRepositoryMoved,
+    feedRepositoryRestarted,
     feedResetRemovalRemoved,
     feedResetRemovalStayed,
     feedReviewBlocked,
@@ -110122,6 +110180,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedRepairsCapped": ["rounds"],
     "feedReported": ["summary"],
     "feedReportedBare": [],
+    "feedRepositoryMoved": ["repository"],
+    "feedRepositoryRestarted": ["repository"],
     "feedResetRemovalRemoved": ["name"],
     "feedResetRemovalStayed": ["name"],
     "feedReviewBlocked": [],

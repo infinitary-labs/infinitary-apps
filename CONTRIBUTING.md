@@ -50,7 +50,7 @@ Each account without write access to the project may have at most 3 pull request
 `AGENTS.md` and the pages under `docs/` it points to (`docs/README.md`) are the project's own account of how it is built, tested and released, and they apply to people as much as to agents. The short version:
 
 - Before merge, finish the smallest relevant proof for the current version; `docs/testing.md` says what each change runs and where.
-- Weakening, skipping or deleting a test requires the captain's approval.
+- Weakening, skipping or deleting a test that was there before the change requires the captain's approval.
 - Passing checks never grants merge permission.
 - All UI work follows the design skill under `.claude/skills/infinitary-design/`.
 - Commit subjects and pull request titles use `type(scope): summary` or `type: summary`, optionally with `!` and a `BREAKING CHANGE` footer. Types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs`, and `perf`; scopes are open-ended. `feat`, `fix` and breaking changes drive release versions, so do not call a fix a feature to force a release.

@@ -240,7 +240,16 @@ describe("a task that runs on a computer that runs work", () => {
     await handle.started;
     expect(home.tasks.get(handle.taskId)?.delivery?.headSha).toBe(tip);
     expect(home.tasks.get(handle.taskId)?.prompt).toContain('- "footer.html"');
-    expect(await git(at.folders(handle.taskId).work, ["rev-parse", "HEAD"])).toBe(tip);
+    const review = at.folders(handle.taskId).work;
+    expect(await git(review, ["rev-parse", "HEAD"])).toBe(tip);
+    // The work its brief hands on, carried into the reviewer's working copy,
+    // is that commit too (INF-6378).
+    const carried = await git(review, [
+      "for-each-ref",
+      "--format=%(refname)",
+      "refs/infinitary/sources/",
+    ]);
+    expect(await git(review, ["rev-parse", carried])).toBe(tip);
   });
 
   it("prepares a story on the home after transferring the work computer's inspected pictures, without showing a card or uploading (INF-92)", async () => {

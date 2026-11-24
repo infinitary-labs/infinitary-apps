@@ -25,6 +25,7 @@ import type { CrewMachines } from "../placed/crewMachines";
 import { PreparationUnknown } from "../placed/placedCopies";
 import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
+import { checkedOutRefFor } from "../workspace/workspaceService";
 import { lostStartLine, lostStepWords } from "./lostStarts";
 
 vi.mock("../utilityQos", async (importOriginal) =>
@@ -58,6 +59,8 @@ async function placedTask(
     branchFrom?: boolean;
     automatic?: boolean;
     liveSource?: boolean;
+    // Another branch the live source's crewmate committed on there.
+    checkedOutThere?: string;
     // The captain asked for the strongest model, and only a lower one is served now.
     premiumAsk?: boolean;
   } = {},
@@ -97,6 +100,11 @@ async function placedTask(
     }),
     prepare,
     bringBranchHome,
+    // Without a branch named, it names no checkout, as a computer older than that answer does.
+    checkedOut: async () =>
+      options.checkedOutThere
+        ? { branch: options.checkedOutThere, head: "4f80358a3c1e9d2b7f6a5e4d3c2b1a0f9e8d7c6b" }
+        : null,
     factories: () => ({
       pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open: async () => crew },
     }),
@@ -459,6 +467,19 @@ describe("a start Automatic placed that loses its computer", () => {
 });
 
 describe("a start whose brief reads from another computer", () => {
+  it("hands on the other branch the source's crewmate committed on there, brought home to the source's own ref for it (INF-6378)", async () => {
+    const h = await placedTask({ liveSource: true, checkedOutThere: "fm/task-live-dev" });
+    await h.supervisor.starts.dispatchQueuedTask(h.taskId);
+    await tick();
+    expect(h.tasks.get(h.taskId)?.status).toBe("active");
+    expect(h.bringBranchHome).toHaveBeenCalledWith("5142dddd", true, "fm/task-live-dev");
+    const brief = h.crew.promptCalls[0] ?? "";
+    expect(brief).toContain(
+      `Its starting work has been copied into this repository at ${checkedOutRefFor("5142dddd")}`,
+    );
+    expect(brief).not.toContain("Its work is on branch fm/task-live");
+  });
+
   it("waits for that computer across sweeps and starts by itself once it is back", async () => {
     const h = await placedTask({ liveSource: true });
     // The source computer goes while its work is read, as a connection does.

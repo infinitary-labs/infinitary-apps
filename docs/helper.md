@@ -1559,7 +1559,7 @@ A new join clears the note, and nothing tries again on its own; a join that find
 The home copies the chosen source card whole, including its script and style, and its pictures and recordings into the destination task's `source-cards/` folder before its first turn.
 The brief and the card name the verified copies on that computer, never the home's paths.
 The card's choice, submitted answers and thread remain inline in the brief.
-A live source branch on another computer is brought home at its current commit first.
+A live source branch on another computer is brought home at its current commit first: the branch its working copy there has checked out, which, when its crewmate committed on another branch than the task's own, comes home to the source's own `refs/infinitary/checked-out/<source>` (`docs/task-record.md`, "Specification delivery and history").
 A source in another repository crosses no code: its branch stays where it is and its brief names where that code lives (`docs/task-record.md`).
 Starting branches and kept work cross to the destination as verified git bundles over the paired connection, into private `refs/infinitary/sources/<destination>-<source>` refs in the destination repository.
 A bundle carries only the commits the destination lacks: the home first asks the destination's working copy which commit it has checked out (`inf:working-copy:status`) and leaves that commit and everything before it out.

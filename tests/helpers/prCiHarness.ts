@@ -217,6 +217,8 @@ export function setup(
     namingRule?: () => NamingRule | null;
     /** The line and open batch of projects that get batches of the person's own, read late as the app wires it. */
     batches?: () => Batches | undefined;
+    /** Look a story's Before base up in the project's real git, as the app wires it. */
+    startingCommits?: boolean;
   } = {},
 ): PrCiHarness {
   const db = freshDatabase();
@@ -235,6 +237,12 @@ export function setup(
     head: readHead,
     ...(options.checkedOut
       ? { branch: (taskId) => service.publication.presentationBranch(taskId) }
+      : {}),
+    ...(options.startingCommits
+      ? {
+          startsFrom: (taskId: string, base: string, head: string) =>
+            service.publication.startingCommit(taskId, base, head),
+        }
       : {}),
   });
   const service: ChangeDelivery = createChangeDelivery({

@@ -9,7 +9,7 @@ import type { WorkContext } from "../workContext";
 import { couldNotStartYet } from "./couldNotStart";
 import { freshAuthenticationFor } from "./freshAuthentication";
 import { type ResetAsk, type ResetPlace, resetInApp, restartForReset } from "./inApp";
-import { forgetOwnRunEntries as forgetEntries } from "./ownEntries";
+import { forgetOwnRunEntries } from "./ownEntries";
 import { clearStartAttempts } from "./startAttempts";
 import { resetWithoutFirstMate } from "./withoutFirstMate";
 
@@ -80,6 +80,9 @@ export function resetsFor(input: {
     /** The reset a screen shown when this folder cannot open offers, with no first mate running. */
     withoutFirstMate: (authentication: FreshAuthentication | undefined) =>
       resetWithoutFirstMate({ ...spot, authentication, questionConfirms: true, restart }),
+    /** A run ending for good: what would start it again goes, the run left going (./ownEntries.ts). */
+    forgetRunEntries: () =>
+      forgetOwnRunEntries(work.place.flavor, input.dataDir, input.choice.kind === "flavor"),
     /** The window's own row's reset, also asked by a computer that controls this one. */
     inApp: (shell: Shell, authentication: FreshAuthentication | undefined) => {
       here = resetInApp({ ...spot, authentication, shell, restart });
@@ -99,11 +102,6 @@ export function resetsFor(input: {
       });
     },
   };
-}
-
-/** What would start this run again goes, the run left going (./inApp.ts, `forgetOwnRunEntries`). */
-export function forgetOwnRunEntries(work: WorkContext, dataDir: string): void {
-  forgetEntries(work.place.flavor, dataDir);
 }
 
 /** Whether a reset waits for the next start to finish it (docs/reset.md, "At the next start"). */

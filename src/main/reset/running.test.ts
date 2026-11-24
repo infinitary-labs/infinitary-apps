@@ -90,6 +90,22 @@ describe("running a reset", () => {
     expect(readResetMark(dataDir)?.outside).toEqual(["password-store", "app-files"]);
   });
 
+  it("has the mark naming every kind still to clear before a clearer runs, which may end this program", async () => {
+    const marked: string[][] = [];
+    const { dataDir, seams: s } = seams({
+      atStart: ["app-files"],
+      clear: {
+        "start-entries": async () => {
+          marked.push([...(readResetMark(dataDir)?.outside ?? [])].sort());
+          return true;
+        },
+      },
+    });
+    await runReset(s);
+    expect(marked).toEqual([["app-files", "start-entries"]]);
+    expect(readResetMark(dataDir)?.outside).toEqual(["app-files"]);
+  });
+
   it("goes on when the first mate's side fails, hangs or a clearer throws", async () => {
     const {
       steps,

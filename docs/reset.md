@@ -34,9 +34,10 @@ A home that does not answer, or refuses, resets nothing on either computer: the 
 
 A home whose first mate a command started (`<app> run`, at boot, by its service or behind a window opened beside it; `docs/run.md`) takes the reset in that run, as a window would, with three differences (`resetsFor`'s `endRun`, `src/main/reset/wiring.ts`):
 
-- Its own start-at-boot entry is not turned off through the service manager, whose stop would end the run before its mark is written: on a Mac or Linux the run takes the entry's files away and goes on (`bootEntryOff`, `src/main/reset/ownEntries.ts`), and the mark leaves the entry to the next start too; removing a Windows task leaves its run going.
+- On a Mac or Linux its own start-at-boot entry is not turned off through the service manager, whose stop would end the run partway: the run takes the entry's files away and goes on (`bootEntryOff`, `src/main/reset/ownEntries.ts`), and the mark leaves the entry to the next start too.
+  On Windows the run removes its task through Task Scheduler, after the mark is written, so a removal that ended the run still leaves the next start to finish the reset.
 - A window opened beside it keeps its own profile inside the folder (`window-profile`), so ending the leftover programs leaves that window alone.
-- The run starts nothing again: it ends with 0 and says so, and its starters' files are gone, so nothing starts it again.
+- The run starts nothing again: it ends with 0 and says so, and its starters' files are gone, so nothing starts it again; on a chosen or isolated folder only the agent file inside the folder goes, since the entries in the home folder start the person's own folder.
   A window beside it starts again by itself once the run ended and the mark is there (`BesideOptions.resetAsked`), and that start wipes the folder and opens on the welcome screen; with no window there, the next start of Infinitary on that computer does.
 
 ## Where a reset can start
@@ -71,13 +72,14 @@ It refuses, changing nothing, where the system has no confirmation to ask, as on
 The window's program runs the reset (`runReset`, `src/main/reset/running.ts`) once the system confirmed the person, each step capped so a remote service never holds it up, and none stops the next:
 
 1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
-2. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it.
+2. It writes the mark beside the folder, naming every outside kind still to clear, before anything that could end this program.
+3. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it.
    The work's working copies sit inside the data folder, so the next start deletes them with it, unmerged work included.
    A home out of reach still lists this computer until it is removed there.
-3. It writes the mark beside the folder, naming the outside kinds the next start still clears.
-4. It stops the first mate - beside a command, whichever run holds the folder, with its starter let go for good (`Shell.stopForReset`).
-5. It ends every program of this account still holding a file or working folder in the data folder, such as a server a task started or a terminal the person opened in a task's working copy (`endLeftoverPrograms`, `src/main/reset/leftovers.ts`): each gets 15 seconds to end by itself, then an end request and a kill; never this app or a program it started.
-6. It starts the app again; a run with no window ends instead ("A first mate with no window").
+4. It writes the mark again, naming only the outside kinds the next start still clears.
+5. It stops the first mate - beside a command, whichever run holds the folder, with its starter let go for good (`Shell.stopForReset`).
+6. It ends every program of this account still holding a file or working folder in the data folder, such as a server a task started or a terminal the person opened in a task's working copy (`endLeftoverPrograms`, `src/main/reset/leftovers.ts`): each gets 15 seconds to end by itself, then an end request and a kill; never this app or a program it started.
+7. It starts the app again; a run with no window ends instead ("A first mate with no window").
    On Windows the new start waits for this program to end, through the same hand-over an update uses (`restartOnWindows`, `src/main/reset/windowsRestart.ts`), so it finds the folder free.
 
 Nothing before the quit deletes the folder, which this start still holds.

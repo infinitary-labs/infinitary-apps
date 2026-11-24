@@ -53,10 +53,11 @@ export type ResetPlace = {
    */
   authentication: FreshAuthentication | undefined;
   /**
-   * A run with no window (docs/run.md): a stop through its own start entry
-   * would end it before the reset is done, so it takes the entry's files
-   * away instead and the next start turns it off; a window beside it keeps
-   * its own profile in the folder and starts again once the run ends.
+   * A run with no window (docs/run.md): on a Mac or Linux a stop through its
+   * own start entry would end it partway, so it takes the entry's files away
+   * instead (`bootEntryOff`), and the next start turns the entry off; a
+   * window beside it keeps its own profile in the folder and starts again
+   * once the run ends.
    */
   inRun?: boolean;
 };
@@ -242,7 +243,7 @@ async function clearStartEntries(
     bootEntryOff(
       { inRun: input.inRun === true, platform: hostPlatform() },
       {
-        forget: () => forgetOwnRunEntries(own.flavor, folder),
+        forget: () => forgetOwnRunEntries(own.flavor, folder, true),
         off: async () => {
           const answer = await answerBootCommand({ boot: ["--off"], help: null }, folder);
           if (answer.code !== 0) throw new Error(answer.error);

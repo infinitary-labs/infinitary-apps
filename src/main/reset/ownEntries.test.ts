@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { bootEntryOff } from "./ownEntries";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
+import { runLabelOf } from "@shared/codeNames";
+import { afterEach, describe, expect, it } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { bootEntryOff, forgetOwnRunEntries } from "./ownEntries";
 
 // The review of a reset asked of a first mate with no window (docs/reset.md,
 // "A first mate with no window"; the captain's answer command_home=finish):
@@ -32,5 +37,37 @@ describe("turning a reset's own start-at-boot entry off", () => {
     expect(await asked(true, "win32")).toEqual(["off"]);
     for (const platform of ["darwin", "linux", "win32"] as const)
       expect(await asked(false, platform)).toEqual(["off"]);
+  });
+});
+
+describe("a run ending for good takes away what would start it again", () => {
+  const home = process.env.HOME;
+  afterEach(() => {
+    process.env.HOME = home;
+  });
+
+  function entries() {
+    const homeDir = scratchDir("inf-own-entries-home-");
+    process.env.HOME = homeDir;
+    const dataDir = scratchDir("inf-own-entries-data-");
+    const login = loginAgentFile({ homeDir, label: runLabelOf("dev") });
+    const session = sessionAgentFile({ dataDir });
+    for (const file of [login, session]) {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, "<plist/>");
+    }
+    return { dataDir, login, session };
+  }
+
+  it("on the person's own folder, its start-at-boot entry in the home folder and its agent in the folder", () => {
+    const { dataDir, login, session } = entries();
+    forgetOwnRunEntries("dev", dataDir, true);
+    expect([existsSync(login), existsSync(session)]).toEqual([false, false]);
+  });
+
+  it("on a chosen or isolated folder, only its agent in the folder: the home folder's entry starts the person's own", () => {
+    const { dataDir, login, session } = entries();
+    forgetOwnRunEntries("dev", dataDir, false);
+    expect([existsSync(login), existsSync(session)]).toEqual([true, false]);
   });
 });

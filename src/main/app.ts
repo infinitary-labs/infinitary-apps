@@ -89,7 +89,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
-import { forgetOwnRunEntries, resetAskedOf, resetsFor } from "./reset/wiring";
+import { resetAskedOf, resetsFor } from "./reset/wiring";
 import {
   answerLaunch,
   bringWindowForward,
@@ -906,7 +906,7 @@ export async function startApp(
     const endUpdated = () => endToStartAgain("updated");
     // A run whose first mate moved away or was reset ends with 0, and nothing starts it again here.
     const endForGood = (line: string) => {
-      forgetOwnRunEntries(work, dataDir);
+      resets.forgetRunEntries();
       process.stdout.write(`${line}\n`);
       runEnd = { reason: "quit", exitCode: 0, lines: [line] };
       stopRun();

@@ -47,8 +47,9 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   `cost` is the session's own estimate in US dollars: Pi prices a message from the model's listed per-category rates (`cost_source = 'listed-prices'`, with `cost_input`, `cost_output`, `cost_cache_read` and `cost_cache_write`), and Claude makes its own estimate per model and turn (`cost_source = 'claude'`, no split).
   An OpenRouter decision records the cost its reply states for the call (`cost_source = 'reported'`, no split).
   A model with no listed rates prices a message at zero, which proves nothing, so Pi's normalizer records no cost at all for it.
-  The summary counts a record as priced only when its cost is above zero, so an older zero is never read as free.
-  Custom models borrow listed price metadata only from an exact model-id match in the local catalog (`docs/custom-api.md`); unmatched ids or unreported counts stay unavailable.
+  The summary and the cost limit count a record as priced only when its cost is above zero, or zero from listed prices on a custom connection, so an older zero is never read as free (`PRICED_RECORD`, `src/core/storage/usageDays.ts`).
+  That listed zero comes only from a custom model the person stated as free; Pi's normalizer records it only when the turn measured tokens.
+  Custom models take a name and price stated on their line, else listed price metadata from an exact model-id match in the local catalog (`docs/custom-api.md`); unpriced ids or unreported counts stay unavailable.
   Nothing is repriced: a record keeps the estimate it was written with.
 
 ## Claude calls during a turn

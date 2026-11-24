@@ -146,6 +146,15 @@ public enum PhoneMessages {
     public static func `accountsCustomApiPause`() -> String { PhoneWords.format("accountsCustomApiPause", []) }
     public static func `accountsCustomApiPausedHint`() -> String { PhoneWords.format("accountsCustomApiPausedHint", []) }
     public static func `accountsCustomApiPrepareFailed`() -> String { PhoneWords.format("accountsCustomApiPrepareFailed", []) }
+    public static func `accountsCustomApiPriceCacheRead`() -> String { PhoneWords.format("accountsCustomApiPriceCacheRead", []) }
+    public static func `accountsCustomApiPriceCacheWrite`() -> String { PhoneWords.format("accountsCustomApiPriceCacheWrite", []) }
+    public static func `accountsCustomApiPriceFree`() -> String { PhoneWords.format("accountsCustomApiPriceFree", []) }
+    public static func `accountsCustomApiPriceHint`() -> String { PhoneWords.format("accountsCustomApiPriceHint", []) }
+    public static func `accountsCustomApiPriceInput`() -> String { PhoneWords.format("accountsCustomApiPriceInput", []) }
+    public static func `accountsCustomApiPriceInvalid`() -> String { PhoneWords.format("accountsCustomApiPriceInvalid", []) }
+    public static func `accountsCustomApiPriceName`() -> String { PhoneWords.format("accountsCustomApiPriceName", []) }
+    public static func `accountsCustomApiPriceOutput`() -> String { PhoneWords.format("accountsCustomApiPriceOutput", []) }
+    public static func `accountsCustomApiPriceTitle`() -> String { PhoneWords.format("accountsCustomApiPriceTitle", []) }
     public static func `accountsCustomApiProfilesFailed`() -> String { PhoneWords.format("accountsCustomApiProfilesFailed", []) }
     public static func `accountsCustomApiProtocol`() -> String { PhoneWords.format("accountsCustomApiProtocol", []) }
     public static func `accountsCustomApiRateLimit`() -> String { PhoneWords.format("accountsCustomApiRateLimit", []) }
@@ -4596,6 +4605,15 @@ extension PhoneWords {
         "accountsCustomApiPause": [],
         "accountsCustomApiPausedHint": [],
         "accountsCustomApiPrepareFailed": [],
+        "accountsCustomApiPriceCacheRead": [],
+        "accountsCustomApiPriceCacheWrite": [],
+        "accountsCustomApiPriceFree": [],
+        "accountsCustomApiPriceHint": [],
+        "accountsCustomApiPriceInput": [],
+        "accountsCustomApiPriceInvalid": [],
+        "accountsCustomApiPriceName": [],
+        "accountsCustomApiPriceOutput": [],
+        "accountsCustomApiPriceTitle": [],
         "accountsCustomApiProfilesFailed": [],
         "accountsCustomApiProtocol": [],
         "accountsCustomApiRateLimit": [],

@@ -12,7 +12,7 @@ import { starterFor } from "./starters";
 import { usageSummary, usageTab } from "./usage";
 import { runFromSearch } from "./windowKeys";
 
-test("custom turns remain in Usage without counts and exact catalog ids receive estimates", async () => {
+test("custom turns remain in Usage without counts, and exact catalog ids and stated prices receive estimates", async () => {
   const mock = await startMockProvider();
   const requested = await startCustomApiFixture(mock.port, undefined, undefined, "requested");
   const silent = await startCustomApiFixture(mock.port, undefined, undefined, "silent");
@@ -21,13 +21,17 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
   try {
     const { page, app } = launched;
     await resizeWindow(app, page, { width: 1200, height: 1000 });
-    for (const [baseUrl, label, id] of [
-      [requested.baseUrl, "Team gateway", starterFor("openai-codex", "medium")],
-      [requested.baseUrl, "Local model", "operator-model"],
-      [silent.baseUrl, "Lab server", starterFor("openai-codex", "medium")],
+    // INF-6581's plan, piece 1: a stated price prices an unmatched model, and Free prices it at nothing.
+    const free = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+    for (const [baseUrl, label, id, cost] of [
+      [requested.baseUrl, "Team gateway", starterFor("openai-codex", "medium"), undefined],
+      [requested.baseUrl, "Local model", "operator-model", undefined],
+      [silent.baseUrl, "Lab server", starterFor("openai-codex", "medium"), undefined],
+      [requested.baseUrl, "Priced model", "operator-model", { input: 2, output: 8 }],
+      [requested.baseUrl, "Free model", "operator-model", free],
     ] as const) {
       await page.evaluate(
-        async ({ baseUrl, label, id }) => {
+        async ({ baseUrl, label, id, cost }) => {
           const draft = await window.infinitary.accounts.custom.prepare({
             baseUrl,
             approvedDestination: baseUrl,
@@ -40,7 +44,7 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
             unencryptedLocalApproved: true,
             allowStorageDefault: false,
             storageApproved: false,
-            models: [{ id, context: 200000, output: 4096 }],
+            models: [{ id, context: 200000, output: 4096, ...(cost ? { cost } : {}) }],
           });
           const checked = await window.infinitary.accounts.custom.check(draft.draftId ?? "", id);
           if (!checked.models[0]?.checked) throw new Error("Fixture model check failed");
@@ -52,7 +56,7 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
           await window.infinitary.settings.setFirstmateModel({ provider: account.providerId, id });
           await window.infinitary.settings.setFirstmateAccount(account.id);
         },
-        { baseUrl, label, id },
+        { baseUrl, label, id, cost },
       );
       const cardsBefore = (await page.evaluate(() => window.infinitary.cards.list())).filter(
         (card) => card.title === MOCK_ANSWER_TITLE,
@@ -83,7 +87,9 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
       const known = summary.models.find((model) => model.providerName === "Team gateway");
       const unknown = summary.models.find((model) => model.providerName === "Local model");
       const noCounts = summary.models.find((model) => model.providerName === "Lab server");
-      if (!known || !unknown || !noCounts)
+      const stated = summary.models.find((model) => model.providerName === "Priced model");
+      const nothing = summary.models.find((model) => model.providerName === "Free model");
+      if (!known || !unknown || !noCounts || !stated || !nothing)
         throw new Error("A custom connection disappeared from Usage");
       expect(known.amount.records).toBeGreaterThan(0);
       expect(known.amount.counted).toBe(known.amount.records);
@@ -93,6 +99,9 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
       expect(noCounts.amount.records).toBeGreaterThan(0);
       expect(noCounts.amount.counted).toBe(0);
       expect(noCounts.amount.cost).toBeNull();
+      expect(stated.amount.cost).toBeGreaterThan(0);
+      expect(nothing.amount.records).toBeGreaterThan(0);
+      expect(nothing.amount.cost).toBe(0);
     }
     // Leave room for Cost per task and keep the whole Usage overview in both captures.
     await resizeWindow(app, page, { width: 1200, height: 1550 });

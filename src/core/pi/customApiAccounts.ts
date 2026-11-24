@@ -36,6 +36,7 @@ import {
   customCapabilities,
   customCapabilityProfiles,
   customCatalog,
+  customModelCost,
   customPiModel,
 } from "./customApiModels";
 import {
@@ -308,11 +309,22 @@ export class CustomApiAccountOwner {
       }
     }
     const catalog = this.catalog();
+    // An edit that keeps the saved address, key, headers and storage choice
+    // keeps the saved checks: a model's check still counts while its
+    // fingerprint matches, so changing only its name or price never checks it
+    // again, and changing what a check proves still does.
+    const kept =
+      original &&
+      input.replaceAccountId &&
+      sameCredential(original.stored.input, input) &&
+      original.stored.input.allowStorageDefault === input.allowStorageDefault
+        ? original.stored
+        : undefined;
     const draft: Draft = {
       input,
-      credentialRevision: revision(),
-      storageRevision: revision(),
-      proofs: {},
+      credentialRevision: kept?.credentialRevision ?? revision(),
+      storageRevision: kept?.storageRevision ?? revision(),
+      proofs: kept ? { ...kept.proofs } : {},
       capabilities: Object.fromEntries(
         input.models.flatMap((model) => {
           const retention = model.cacheRetention ?? customDefaultCacheRetention(input.protocol);
@@ -627,17 +639,18 @@ export class CustomApiAccountOwner {
         .map((model) => {
           // Exact ids only, in catalog order if several providers list the id.
           // Borrow descriptive/pricing metadata, never another provider's
-          // credentials, wire settings or unchecked capability claims.
+          // credentials, wire settings or unchecked capability claims. What
+          // the person stated wins over the catalog.
           const known = catalog.find((entry) => entry.id === model.id);
           return customPiModel({
             protocol: input.protocol,
             provider: live.ref.providerId,
             model: model.id,
-            name: known?.name,
+            name: model.name ?? known?.name,
             limits: { context: model.context, output: model.output },
             readsPictures: live.stored.proofs[model.id]?.readsPictures,
             capabilities: live.stored.capabilities?.[model.id],
-            cost: known?.cost,
+            cost: customModelCost(model.cost, known?.cost),
           });
         }),
     });
@@ -781,6 +794,15 @@ export class CustomApiAccountOwner {
       rmSync(temporary, { force: true });
     }
   }
+}
+/** The same key or token command, and the same headers with the same values, in order. */
+function sameCredential(saved: CustomApiInput, next: CustomApiInput): boolean {
+  return (
+    saved.key === next.key &&
+    saved.noKey === next.noKey &&
+    JSON.stringify(saved.tokenCommand ?? null) === JSON.stringify(next.tokenCommand ?? null) &&
+    JSON.stringify(saved.headers) === JSON.stringify(next.headers)
+  );
 }
 function revision(): string {
   return randomBytes(16).toString("hex");

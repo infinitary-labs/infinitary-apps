@@ -9,7 +9,11 @@ import type {
 } from "@earendil-works/pi-ai";
 import { getBuiltinModels, getBuiltinProviders } from "@earendil-works/pi-ai/providers/all";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { type CustomCapabilityProfile, customUnprofiledRetentions } from "@shared/customApi";
+import {
+  type CustomCapabilityProfile,
+  type CustomModelCost,
+  customUnprofiledRetentions,
+} from "@shared/customApi";
 import { CustomApiError } from "./customApiPolicy";
 import type { CustomApiProtocol, CustomModelLimits } from "./customApiProtocol";
 import { createCatalogRuntime, withHonestReasoning } from "./modelRuntime";
@@ -238,6 +242,25 @@ function snapshotOf(source: Model<CustomApiProtocol>, profile: string): CustomCa
     ...(source.thinkingLevelMap ? { thinkingLevelMap: { ...source.thinkingLevelMap } } : {}),
     compat,
     cacheRetentions,
+  };
+}
+
+/**
+ * A model line's prices: each one the person stated, else the catalog
+ * match's, else unknown (NaN, never zero). Absent when neither says anything.
+ */
+export function customModelCost(
+  stated: CustomModelCost | undefined,
+  catalog: Model<Api>["cost"] | undefined,
+): Model<CustomApiProtocol>["cost"] | undefined {
+  if (!stated && !catalog) return undefined;
+  const pick = (key: keyof CustomModelCost) => stated?.[key] ?? catalog?.[key] ?? Number.NaN;
+  return {
+    ...catalog,
+    input: pick("input"),
+    output: pick("output"),
+    cacheRead: pick("cacheRead"),
+    cacheWrite: pick("cacheWrite"),
   };
 }
 

@@ -140,6 +140,15 @@
 "accountsCustomApiPause" = "إيقاف مؤقت";
 "accountsCustomApiPausedHint" = "متوقف مؤقتًا. استأنف لاستخدام هذه النماذج.";
 "accountsCustomApiPrepareFailed" = "تعذّر على نائب القبطان تجهيز هذا الاتصال. حاول مرة أخرى.";
+"accountsCustomApiPriceCacheRead" = "قراءة الذاكرة المؤقتة";
+"accountsCustomApiPriceCacheWrite" = "كتابة الذاكرة المؤقتة";
+"accountsCustomApiPriceFree" = "مجاني";
+"accountsCustomApiPriceHint" = "بالدولار الأمريكي لكل مليون رمز. السعر الذي تكتبه يحل محل السعر الذي يعرفه Infinitary لهذا النموذج، والسعر الفارغ يبقيه أو يبقى غير معروف. تغيير الاسم أو الأسعار لا يعيد فحص النموذج أبدًا.";
+"accountsCustomApiPriceInput" = "المدخلات";
+"accountsCustomApiPriceInvalid" = "اكتب كل سعر كمبلغ بالدولار الأمريكي، مثل 3 أو 0.25.";
+"accountsCustomApiPriceName" = "الاسم المعروض";
+"accountsCustomApiPriceOutput" = "المخرجات";
+"accountsCustomApiPriceTitle" = "الاسم والسعر";
 "accountsCustomApiProfilesFailed" = "تعذّرت قراءة ملفات القدرات. أغلق هذه الاستمارة وأعد فتحها لتحاول مرة أخرى.";
 "accountsCustomApiProtocol" = "بروتوكول API";
 "accountsCustomApiRateLimit" = "يحدّ الخادم من الطلبات الآن. انتظر لحظة، ثم اضغط «حفظ» مرة أخرى.";

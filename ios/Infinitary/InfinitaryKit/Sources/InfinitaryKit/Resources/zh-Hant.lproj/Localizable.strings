@@ -140,6 +140,15 @@
 "accountsCustomApiPause" = "暫停";
 "accountsCustomApiPausedHint" = "已暫停。繼續後即可使用這些模型。";
 "accountsCustomApiPrepareFailed" = "你的大副無法準備這個連線。請再試一次。";
+"accountsCustomApiPriceCacheRead" = "快取讀取";
+"accountsCustomApiPriceCacheWrite" = "快取寫入";
+"accountsCustomApiPriceFree" = "免費";
+"accountsCustomApiPriceHint" = "每百萬 token 的美元價格。你輸入的價格會取代 Infinitary 已知的該模型價格；留空則保留已知價格，否則仍為未知。修改名稱或價格不會重新檢查模型。";
+"accountsCustomApiPriceInput" = "輸入";
+"accountsCustomApiPriceInvalid" = "請把每個價格寫成美元數字，例如 3 或 0.25。";
+"accountsCustomApiPriceName" = "顯示名稱";
+"accountsCustomApiPriceOutput" = "輸出";
+"accountsCustomApiPriceTitle" = "名稱和價格";
 "accountsCustomApiProfilesFailed" = "無法讀取功能設定檔。請關閉後重新開啟這個表單再試一次。";
 "accountsCustomApiProtocol" = "API 通訊協定";
 "accountsCustomApiRateLimit" = "伺服器目前正在限制要求。請稍候片刻，再按一次「儲存」。";

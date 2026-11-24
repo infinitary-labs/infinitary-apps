@@ -1173,6 +1173,88 @@ it.each(["openai-completions", "openai-responses"] as const)(
   },
 );
 
+// INF-6581's plan, piece 1: a stated name and price win over the catalog, a
+// free model is priced at nothing, and editing them never checks again.
+it("uses a model's stated name and prices, and keeps its saved check when only those change", async () => {
+  const api = await fixture();
+  const world = vault();
+  const draft = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024, name: "Team GPT", cost: { input: 2 } },
+      { id: "operator-model", context: 65536, output: 1024 },
+    ],
+  });
+  for (const id of ["gpt-4o", "operator-model"])
+    await world.vault.customCheck(draft.draftId ?? "", id);
+  const account = await world.vault.customSave(draft.draftId ?? "", false);
+  const runtime = await world.vault.runtimeFor(account.id);
+  const known = runtime
+    .getModels()
+    .find((model) => model.provider !== account.providerId && model.id === "gpt-4o");
+  if (!known) throw new Error("Missing catalog fixture model");
+  expect(runtime.getModel(account.providerId, "gpt-4o")).toMatchObject({
+    name: "Team GPT",
+    cost: {
+      input: 2,
+      output: known.cost.output,
+      cacheRead: known.cost.cacheRead,
+      cacheWrite: known.cost.cacheWrite,
+    },
+  });
+
+  const sent = api.requests.length;
+  const free = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const edit = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024, name: "Operator", cost: free },
+    ],
+  });
+  expect(edit.models.map((model) => model.checked)).toEqual([true, true]);
+  await world.vault.customSave(edit.draftId ?? "", false);
+  expect(api.requests).toHaveLength(sent);
+  expect(runtime.getModel(account.providerId, "gpt-4o")?.name).toBe(known.name);
+  const operator = runtime.getModel(account.providerId, "operator-model");
+  expect(operator).toMatchObject({ name: "Operator", cost: free });
+  if (!operator) throw new Error("Missing edited model");
+  api.highUsage();
+  const context = {
+    messages: [{ role: "user" as const, content: "Synthetic request", timestamp: Date.now() }],
+  };
+  expect(usageFromMessage(await runtime.completeSimple(operator, context))).toMatchObject({
+    input: 60000,
+    output: 20,
+    cost: 0,
+    costSource: "listed-prices",
+  });
+
+  // What a check proves still needs one: a new size checks that model, a new key every model.
+  const resized = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 32768, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024 },
+    ],
+  });
+  expect(resized.models.map((model) => model.checked)).toEqual([false, true]);
+  const rekeyed = world.vault.customPrepare({
+    ...input(api.baseUrl),
+    key: "another-synthetic-secret",
+    replaceAccountId: account.id,
+    models: [
+      { id: "gpt-4o", context: 65536, output: 1024 },
+      { id: "operator-model", context: 65536, output: 1024 },
+    ],
+  });
+  expect(rekeyed.models.map((model) => model.checked)).toEqual([false, false]);
+});
+
 it("offers a connection's models once a checked replacement is applied after a restart that left it without a runtime", async () => {
   const api = await fixture();
   const first = vault();

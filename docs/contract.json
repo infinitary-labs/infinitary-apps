@@ -13444,6 +13444,36 @@
                                     "long"
                                   ]
                                 },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "cost": {
+                                  "type": "object",
+                                  "properties": {
+                                    "input": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "output": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheRead": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheWrite": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  }
+                                },
                                 "checked": {
                                   "type": "boolean"
                                 },
@@ -14763,6 +14793,36 @@
                         "short",
                         "long"
                       ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "output": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheRead": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheWrite": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        }
+                      }
                     }
                   },
                   "required": [
@@ -14956,6 +15016,36 @@
                         "short",
                         "long"
                       ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "output": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheRead": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheWrite": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        }
+                      }
                     },
                     "checked": {
                       "type": "boolean"
@@ -15279,6 +15369,36 @@
                     "short",
                     "long"
                   ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
                 },
                 "checked": {
                   "type": "boolean"
@@ -15609,6 +15729,36 @@
                     "long"
                   ]
                 },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
+                },
                 "checked": {
                   "type": "boolean"
                 },
@@ -15852,6 +16002,36 @@
                     "short",
                     "long"
                   ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
                 },
                 "checked": {
                   "type": "boolean"
@@ -25852,6 +26032,36 @@
                         "short",
                         "long"
                       ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "output": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheRead": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheWrite": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        }
+                      }
                     }
                   },
                   "required": [
@@ -26045,6 +26255,36 @@
                         "short",
                         "long"
                       ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "output": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheRead": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheWrite": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        }
+                      }
                     },
                     "checked": {
                       "type": "boolean"
@@ -26343,6 +26583,36 @@
                         "short",
                         "long"
                       ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "cost": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "output": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheRead": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "cacheWrite": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        }
+                      }
                     }
                   },
                   "required": [
@@ -26534,6 +26804,36 @@
                     "short",
                     "long"
                   ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
                 },
                 "checked": {
                   "type": "boolean"
@@ -26774,6 +27074,36 @@
                     "short",
                     "long"
                   ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
                 },
                 "checked": {
                   "type": "boolean"
@@ -27083,6 +27413,36 @@
                     "long"
                   ]
                 },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
+                },
                 "checked": {
                   "type": "boolean"
                 },
@@ -27320,6 +27680,36 @@
                     "long"
                   ]
                 },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "cost": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "output": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheRead": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "cacheWrite": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  }
+                },
                 "checked": {
                   "type": "boolean"
                 },
@@ -27552,6 +27942,36 @@
                       "short",
                       "long"
                     ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "output": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheRead": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheWrite": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      }
+                    }
                   },
                   "checked": {
                     "type": "boolean"
@@ -90549,6 +90969,36 @@
                               "long"
                             ]
                           },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "cost": {
+                            "type": "object",
+                            "properties": {
+                              "input": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              },
+                              "output": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              },
+                              "cacheRead": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              },
+                              "cacheWrite": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000000
+                              }
+                            }
+                          },
                           "checked": {
                             "type": "boolean"
                           },
@@ -105216,6 +105666,36 @@
                                     "long"
                                   ]
                                 },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "cost": {
+                                  "type": "object",
+                                  "properties": {
+                                    "input": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "output": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheRead": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheWrite": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  }
+                                },
                                 "checked": {
                                   "type": "boolean"
                                 },
@@ -106850,6 +107330,36 @@
                                     "short",
                                     "long"
                                   ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "cost": {
+                                  "type": "object",
+                                  "properties": {
+                                    "input": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "output": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheRead": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    },
+                                    "cacheWrite": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 1000000
+                                    }
+                                  }
                                 },
                                 "checked": {
                                   "type": "boolean"
@@ -110951,6 +111461,36 @@
                             "long"
                           ]
                         },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "cost": {
+                          "type": "object",
+                          "properties": {
+                            "input": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1000000
+                            },
+                            "output": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1000000
+                            },
+                            "cacheRead": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1000000
+                            },
+                            "cacheWrite": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1000000
+                            }
+                          }
+                        },
                         "checked": {
                           "type": "boolean"
                         },
@@ -111975,6 +112515,36 @@
                           "short",
                           "long"
                         ]
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "cost": {
+                        "type": "object",
+                        "properties": {
+                          "input": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "output": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "cacheRead": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "cacheWrite": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          }
+                        }
                       }
                     },
                     "required": [
@@ -112169,6 +112739,36 @@
                           "short",
                           "long"
                         ]
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "cost": {
+                        "type": "object",
+                        "properties": {
+                          "input": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "output": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "cacheRead": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          },
+                          "cacheWrite": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000000
+                          }
+                        }
                       },
                       "checked": {
                         "type": "boolean"
@@ -112486,6 +113086,36 @@
                       "long"
                     ]
                   },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "output": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheRead": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheWrite": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      }
+                    }
+                  },
                   "checked": {
                     "type": "boolean"
                   },
@@ -112796,6 +113426,36 @@
                       "long"
                     ]
                   },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "output": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheRead": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheWrite": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      }
+                    }
+                  },
                   "checked": {
                     "type": "boolean"
                   },
@@ -113032,6 +113692,36 @@
                       "short",
                       "long"
                     ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "cost": {
+                    "type": "object",
+                    "properties": {
+                      "input": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "output": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheRead": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "cacheWrite": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      }
+                    }
                   },
                   "checked": {
                     "type": "boolean"

@@ -101,6 +101,14 @@ export const USAGE_DAY_SUMS = USAGE_DAY_AMOUNTS.map((column) =>
 
 const KEY = ["day", "task_id", "provider", "model", "model_source", "cost_source"] as const;
 
+/**
+ * A record with a price: a positive estimate, or zero from prices a person
+ * stated for a free model. Any other zero is a price nobody knew, which Pi
+ * reports as zero (`usageFromMessage`), so it stays unpriced.
+ */
+// i18n-exempt: SQL, never shown.
+export const PRICED_RECORD = "(cost > 0 OR (cost = 0 AND cost_source = 'listed-prices'))";
+
 /** The ledger rows after one id, summed by day and key: what a fold adds. */
 const LEDGER_DAYS = `SELECT date(at / 1000, 'unixepoch', 'localtime') AS day,
        task_id, provider, model, model_source, cost_source,
@@ -115,19 +123,19 @@ const LEDGER_DAYS = `SELECT date(at / 1000, 'unixepoch', 'localtime') AS day,
        COALESCE(SUM(output), 0) AS output,
        COALESCE(SUM(cache_read), 0) AS cache_read,
        COALESCE(SUM(cache_write), 0) AS cache_write,
-       SUM(CASE WHEN cost > 0 THEN cost END) AS cost,
-       SUM(CASE WHEN cost > 0 THEN 1 ELSE 0 END) AS priced,
-       SUM(CASE WHEN cost > 0 THEN cost_input END) AS cost_input,
-       SUM(CASE WHEN cost > 0 THEN cost_output END) AS cost_output,
-       SUM(CASE WHEN cost > 0 THEN cost_cache_read END) AS cost_cache_read,
-       SUM(CASE WHEN cost > 0 THEN cost_cache_write END) AS cost_cache_write,
-       SUM(CASE WHEN cost > 0 AND (cost_input IS NOT NULL OR cost_output IS NOT NULL
+       SUM(CASE WHEN ${PRICED_RECORD} THEN cost END) AS cost,
+       SUM(CASE WHEN ${PRICED_RECORD} THEN 1 ELSE 0 END) AS priced,
+       SUM(CASE WHEN ${PRICED_RECORD} THEN cost_input END) AS cost_input,
+       SUM(CASE WHEN ${PRICED_RECORD} THEN cost_output END) AS cost_output,
+       SUM(CASE WHEN ${PRICED_RECORD} THEN cost_cache_read END) AS cost_cache_read,
+       SUM(CASE WHEN ${PRICED_RECORD} THEN cost_cache_write END) AS cost_cache_write,
+       SUM(CASE WHEN ${PRICED_RECORD} AND (cost_input IS NOT NULL OR cost_output IS NOT NULL
            OR cost_cache_read IS NOT NULL OR cost_cache_write IS NOT NULL)
            THEN 1 ELSE 0 END) AS split,
-       SUM(CASE WHEN cost > 0 AND cost_input IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_input,
-       SUM(CASE WHEN cost > 0 AND cost_output IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_output,
-       SUM(CASE WHEN cost > 0 AND cost_cache_read IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_cache_read,
-       SUM(CASE WHEN cost > 0 AND cost_cache_write IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_cache_write,
+       SUM(CASE WHEN ${PRICED_RECORD} AND cost_input IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_input,
+       SUM(CASE WHEN ${PRICED_RECORD} AND cost_output IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_output,
+       SUM(CASE WHEN ${PRICED_RECORD} AND cost_cache_read IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_cache_read,
+       SUM(CASE WHEN ${PRICED_RECORD} AND cost_cache_write IS NOT NULL THEN 1 ELSE 0 END) AS cost_reported_cache_write,
        MIN(at) AS first_at, MAX(at) AS last_at
 FROM usage_events
 WHERE id > @after AND id <= @through

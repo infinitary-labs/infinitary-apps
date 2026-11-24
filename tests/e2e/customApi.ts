@@ -31,6 +31,17 @@ export function customApiForm(page: Page) {
     fetch: form.getByRole("button", { name: /^Fetch (from server|again)$/ }),
     listed: (id: string) => form.locator(`[data-custom-listed="${id}"]`),
     row,
+    /** A model line's folded name and prices. */
+    price: (id: string) => {
+      const part = row(id).locator("[data-custom-price]");
+      return {
+        open: part.locator("summary"),
+        name: part.getByLabel("Display name", { exact: true }),
+        input: part.getByLabel("Input", { exact: true }),
+        output: part.getByLabel("Output", { exact: true }),
+        free: part.getByLabel("Free", { exact: true }),
+      };
+    },
     /** The words a failed check left on a model's row. */
     rowError: (id: string) => row(id).getByRole("alert"),
     /** The words a failure left beside a field: `address`, `http`, `key`, `headers`, `save`... */

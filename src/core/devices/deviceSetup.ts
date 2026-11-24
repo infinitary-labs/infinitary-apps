@@ -31,9 +31,11 @@ import type { WorkDeviceContact } from "../connection/connection";
  * again under its id as those facts change, comes down by itself with one
  * feed line once every row is done, and stays down after Not now, which
  * the card's own resolution remembers across restarts. The Firstmate is
- * never asked to write or judge any of it. While no subscription answers
- * the Firstmate itself, its first launch's subscription step comes first:
- * the card waits, and goes up once one does (docs/first-launch.md).
+ * never asked to write or judge any of it. A computer that joined from its
+ * own first launch shows this Firstmate's subscription step first while no
+ * subscription answers it: its card waits, and goes up once one does
+ * (docs/first-launch.md). One a command joined gets its card at once, since
+ * that card is what its window shows in place of the step.
  *
  * The same reader keeps the backstop in step: a project that lives on
  * GitHub set to run on a computer with no GitHub sign-in of its own raises
@@ -88,6 +90,12 @@ export class DeviceSetup {
   private readonly found = new Map<string, FoundTools | undefined>();
   /** Each computer whose card is this run's business, with its rows as last raised. */
   private readonly raised = new Map<string, string | undefined>();
+  /**
+   * Each computer that joined from its own first launch, with its window,
+   * whose card has not gone up yet: that window shows this Firstmate's
+   * subscription step first while none answers.
+   */
+  private readonly fromFirstLaunch = new Set<string>();
   /** Up until the first launch says, so no card goes up before its first read. */
   private gateUp: () => boolean = () => true;
 
@@ -97,12 +105,19 @@ export class DeviceSetup {
    * A device used its link: a computer that runs work gets its setup card,
    * from what the join found and nothing else yet. One that found this Mac
    * again runs work as before, and a Mac that controls this Firstmate
-   * needs no setup.
+   * needs no setup. `fromFirstLaunch` when it joined at its own first
+   * launch, with its window.
    */
-  joined(device: ListedDevice, found: FoundTools | undefined, again: boolean): void {
+  joined(
+    device: ListedDevice,
+    found: FoundTools | undefined,
+    again: boolean,
+    fromFirstLaunch = false,
+  ): void {
     if (!deviceRunsWork(device.kind) || again) return;
     this.found.set(device.id, found);
     this.raised.set(device.id, undefined);
+    if (fromFirstLaunch) this.fromFirstLaunch.add(device.id);
     this.refresh(device.id);
   }
 
@@ -148,8 +163,8 @@ export class DeviceSetup {
 
   /**
    * The first launch says from here on whether its gate is up, as its last
-   * read found it: no subscription answers the Firstmate yet, and a card not
-   * on the stack waits until one does.
+   * read found it: no subscription answers the Firstmate yet, and the card
+   * of a computer that joined from its own first launch waits until one does.
    */
   readsGate(gateUp: () => boolean): void {
     this.gateUp = gateUp;
@@ -157,8 +172,7 @@ export class DeviceSetup {
 
   /** A subscription answers the Firstmate now: each card that waited for one goes up. */
   firstmateAnswers(): void {
-    for (const device of this.options.devices())
-      if (deviceRunsWork(device.kind)) this.refresh(device.id, device);
+    for (const deviceId of [...this.fromFirstLaunch]) this.refresh(deviceId);
   }
 
   /** The Devices list follows both connections; only active setup cards follow those changes. */
@@ -176,6 +190,7 @@ export class DeviceSetup {
       if (listed.has(deviceId)) continue;
       this.raised.delete(deviceId);
       this.found.delete(deviceId);
+      this.fromFirstLaunch.delete(deviceId);
       this.options.cards.withdraw(deviceSetupCardId(deviceId), "the computer was removed");
       // Each host a project lives on may have raised its own card for it.
       const hosts = new Set([GITHUB_HOST]);
@@ -225,7 +240,8 @@ export class DeviceSetup {
    * Reads the facts again and puts the card where they say: up with its
    * rows as they stand, revised only when a row moved since it was last
    * raised, or down for good with one feed line once every row is done.
-   * One not on the stack stays off it while the Firstmate cannot answer.
+   * One that joined from its own first launch stays off the stack while
+   * the Firstmate cannot answer.
    */
   refresh(
     deviceId: string,
@@ -245,9 +261,10 @@ export class DeviceSetup {
         this.options.broadcastEvent({ type: "firstmate_note", text: deviceSetupDoneLine(facts) });
       this.raised.delete(deviceId);
       this.found.delete(deviceId);
+      this.fromFirstLaunch.delete(deviceId);
       return;
     }
-    if (!up && this.gateUp()) return;
+    if (!up && this.fromFirstLaunch.has(deviceId) && this.gateUp()) return;
     const actions = deviceSetupActions(facts);
     const done = deviceSetupRows(facts);
     if (!up && this.options.cards.chosenAction(id)) {
@@ -275,6 +292,7 @@ export class DeviceSetup {
     ]);
     if (this.raised.has(deviceId) && this.raised.get(deviceId) === rows) return;
     this.raised.set(deviceId, rows);
+    this.fromFirstLaunch.delete(deviceId);
     this.options.cards.raise({
       id,
       title: deviceSetupTitle(facts.place),

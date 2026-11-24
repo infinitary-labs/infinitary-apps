@@ -289,7 +289,10 @@ describe("device pairing", () => {
   });
 
   it("joins another Mac as a Mac, by its window or its work, and a link for a Mac used on this Mac as a second app or another user", () => {
-    const { pairing } = pairingAt();
+    const told: { name: string; window: boolean }[] = [];
+    const { pairing } = pairingAt(undefined, undefined, {
+      onJoined: (device, _found, _again, window) => told.push({ name: device.name, window }),
+    });
     const asHome = { name: "sam", uid: HOME_UID };
     // From another Mac, at its first launch or by its work mode, as any user:
     // a Mac, which both controls and runs work.
@@ -327,6 +330,13 @@ describe("device pairing", () => {
       { name: "Mini", kind: "mac", user: "builder" },
       { name: "Second app", kind: "view", user: undefined },
       { name: "MacBook Pro", kind: "work", user: "builder" },
+    ]);
+    // The home hears which joined from its own first launch, with its window.
+    expect(told).toEqual([
+      { name: "Air", window: true },
+      { name: "Mini", window: false },
+      { name: "Second app", window: true },
+      { name: "MacBook Pro", window: false },
     ]);
     // A Mac says its user; Firstmate at its first launch takes no link for another user.
     expect(

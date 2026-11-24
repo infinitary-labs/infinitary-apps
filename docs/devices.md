@@ -151,7 +151,8 @@ So the moment one joins, the host files one card, "Finish setting up Mac mini" o
   A computer taken off the list takes its card with it.
   A computer that joined before this Mac started and never had the card gets none: for one set up later, or signed out again, the backstop below speaks.
 - **While the first mate cannot answer.**
-  A first mate whose first launch still asks for a subscription (`docs/first-launch.md`, the gate) keeps a card that is not up off the stack, since a card outranks that step in the window: the computer that just set it up from its own welcome screen sees the subscription step first.
+  A first mate whose first launch still asks for a subscription (`docs/first-launch.md`, the gate) keeps the card of a computer that joined from its own first launch, with its window, off the stack, since a card outranks that step in the window: the computer that just set it up from its own welcome screen, or pasted its link there, sees the subscription step first.
+  A computer a command or its work mode joined gets its card at once, as ever: its window controls this first mate rather than signing it in, and the card is what it shows there.
   The card waits for the first read that finds the gate closed (`FirstRunService`, `onGateClosed`), which commits the welcome before the card goes up, so the card never counts as the use that skips the welcome; it then reads its rows as they stand.
   The wait lives only in this run, so a computer that joined while the first mate could not answer and is still waiting when this Mac restarts gets no card, as one that joined before this Mac started; a card already up stays up and keeps following its rows.
 - **The backstop** (`docs/helper.md`, "Runs on"; `docs/forge.md`, "A computer's own sign-in").

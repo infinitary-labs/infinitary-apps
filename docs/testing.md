@@ -859,7 +859,7 @@ The cost is GitHub's per-minute bill for those jobs.
 `linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` and `contributors.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and opts only the sweep's eight Linux test groups into `LINUX_RUNNER` with `fleet_tests: true`; its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
 
-`ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
+`ios-release.yml`'s four Linux jobs, `resolve`, `preflight`, `availability` and `external`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and this project's own pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
 An outside contributor's pull request runs on GitHub's machines whatever the variables say: `ci.yml`'s branch check and the docs site's check name `ubuntu-24.04` first for it, and `contributors.yml` calls `verify.yml` with `hosted: true` and `mac_runner: macos-15`, `linux-startup.yml`, and `journeys.yml` and `windows.yml` with `hosted: true` (`docs/public-ci.md`, "Outside contributors").
 `tests/release-workflows-runners.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.

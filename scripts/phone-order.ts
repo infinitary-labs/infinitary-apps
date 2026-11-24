@@ -78,6 +78,9 @@ export type PhoneBuild = { build: string; source: string };
  * (scripts/release-phone.sh), so the build's commit is that run's. A build
  * Apple once confirmed stays one: the captain's "A past success is enough"
  * (INF-1649 review R2), so nothing asks Apple whether it is still there.
+ * The run's own state is not read: its external testing job still runs after
+ * availability passed, for ten minutes or more while Apple prepares the build
+ * (INF-1784), and an alpha dispatched then must find the build.
  */
 export async function testFlightBuilds(
   runs: readonly Run[],
@@ -86,7 +89,6 @@ export async function testFlightBuilds(
 ): Promise<PhoneBuild[]> {
   const builds: PhoneBuild[] = [];
   for (const run of runs) {
-    if (run.status !== "completed") continue;
     const jobs = await jobsOf(run);
     if (!jobs.some((job) => legacyJobName(job.name) === "availability" && job.conclusion === "success")) continue;
     const checked = /check build (\d+)\.(\d+)$/.exec(run.display_title);

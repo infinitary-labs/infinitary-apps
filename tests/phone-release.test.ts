@@ -6,8 +6,10 @@ import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import {
   type AppleRead,
+  type AppleWrite,
   appleCredentials,
   appleReader,
+  appleWriter,
   buildNumber,
   checkReady,
   findPhoneApp,
@@ -15,6 +17,7 @@ import {
   readBuild,
   releaseVersion,
   resolveRelease,
+  shareExternally,
   waitForBuild,
 } from "../scripts/phone-release";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
@@ -60,13 +63,19 @@ function buildPage(
   processingState = "VALID",
   internalBuildState = "IN_BETA_TESTING",
   version = releaseEnv.PHONE_VERSION,
+  externalBuildState = "READY_FOR_BETA_SUBMISSION",
 ) {
   return {
     data: [
       {
         type: "builds",
         id: "build-42",
-        attributes: { version: "42.2", processingState, expired: false },
+        attributes: {
+          version: "42.2",
+          uploadedDate: "2026-11-23T03:52:13-08:00",
+          processingState,
+          expired: false,
+        },
         relationships: {
           preReleaseVersion: { data: { type: "preReleaseVersions", id: "pre-1" } },
           buildBetaDetail: { data: { type: "buildBetaDetails", id: "beta-1" } },
@@ -75,7 +84,11 @@ function buildPage(
     ],
     included: [
       { type: "preReleaseVersions", id: "pre-1", attributes: { version, platform: "IOS" } },
-      { type: "buildBetaDetails", id: "beta-1", attributes: { internalBuildState } },
+      {
+        type: "buildBetaDetails",
+        id: "beta-1",
+        attributes: { internalBuildState, externalBuildState },
+      },
     ],
   };
 }
@@ -344,6 +357,199 @@ describe("Apple readiness and receipt readings", () => {
   });
 });
 
+// INF-1784: the captain asked that each build join the external TestFlight group
+// with no manual step, and that the run say the group's review state.
+const external = {
+  type: "betaGroups",
+  id: "external-1",
+  attributes: { name: "Alpha testers", isInternalGroup: false, hasAccessToAllBuilds: false },
+};
+const olderBuild = {
+  type: "builds",
+  id: "build-41",
+  attributes: { version: "41.1", uploadedDate: "2026-11-22T13:17:58-08:00" },
+};
+/** Apple as the external step reads it: each reading of the build takes the next state, the last repeating. */
+function externalApple(states: string[], newest: unknown, groups: unknown[] = [group, external]) {
+  const writes: [string, unknown][] = [];
+  let reading = 0;
+  const read: AppleRead = async (path) => {
+    if (path.includes("/betaGroups?")) return { data: groups as never[] };
+    if (path.includes("filter[betaGroups]=")) {
+      expect(path).toContain(`filter[betaGroups]=${external.id}`);
+      return { data: (newest ? [newest] : []) as never[] };
+    }
+    const state = states[Math.min(reading++, states.length - 1)];
+    return buildPage("VALID", "IN_BETA_TESTING", "0.1.0", state);
+  };
+  const write: AppleWrite = async (path, body) => {
+    writes.push([path, body]);
+  };
+  return { read, write, writes };
+}
+const share = (apple: ReturnType<typeof externalApple>, pause = async () => {}) =>
+  shareExternally(apple.read, apple.write, app.id, "0.1.0", "42.2", pause, 3);
+
+describe("external TestFlight testing", () => {
+  it("adds the confirmed build to the external group, submits it for Beta App Review and says its review state", async () => {
+    const apple = externalApple(
+      ["READY_FOR_BETA_SUBMISSION", "READY_FOR_BETA_SUBMISSION", "WAITING_FOR_BETA_REVIEW"],
+      olderBuild,
+    );
+    expect(await share(apple)).toEqual([
+      'Added to the external group "Alpha testers".',
+      "Submitted it for Beta App Review.",
+      "Review state: waiting for Beta App Review.",
+    ]);
+    // The internal group gets builds by itself; only the external group is written.
+    expect(apple.writes).toEqual([
+      [
+        "/v1/betaGroups/external-1/relationships/builds",
+        { data: [{ type: "builds", id: "build-42" }] },
+      ],
+      [
+        "/v1/betaAppReviewSubmissions",
+        {
+          data: {
+            type: "betaAppReviewSubmissions",
+            relationships: { build: { data: { type: "builds", id: "build-42" } } },
+          },
+        },
+      ],
+    ]);
+  });
+  it("waits while Apple still prepares the build for external testing before submitting it", async () => {
+    let pauses = 0;
+    const apple = externalApple(
+      ["NOT_APPLICABLE", "PROCESSING", "READY_FOR_BETA_SUBMISSION", "IN_BETA_REVIEW"],
+      undefined,
+    );
+    const lines = await share(apple, async () => {
+      pauses++;
+    });
+    expect(pauses).toBe(1);
+    expect(lines.at(-1)).toBe("Review state: in Beta App Review.");
+    expect(apple.writes.map(([path]) => path)).toEqual([
+      "/v1/betaGroups/external-1/relationships/builds",
+      "/v1/betaAppReviewSubmissions",
+    ]);
+  });
+  it("adds nothing on a repeat and keeps an older build out of a group that has a newer one", async () => {
+    const repeat = externalApple(["WAITING_FOR_BETA_REVIEW"], buildPage().data[0]);
+    expect(await share(repeat)).toEqual([
+      'Already in the external group "Alpha testers".',
+      "Review state: waiting for Beta App Review.",
+    ]);
+    const newer = {
+      type: "builds",
+      id: "build-43",
+      attributes: { version: "43.1", uploadedDate: "2026-11-24T09:00:00-08:00" },
+    };
+    const behind = externalApple(["READY_FOR_BETA_SUBMISSION"], newer);
+    expect(await share(behind)).toEqual([
+      'Left out of the external group "Alpha testers", which has the newer build 43.1.',
+    ]);
+    expect([...repeat.writes, ...behind.writes]).toEqual([]);
+  });
+  it("writes nothing when the app has no external group", async () => {
+    const apple = externalApple(["NOT_APPLICABLE"], undefined, [group]);
+    expect(await share(apple)).toEqual([
+      "Infinitary has no external TestFlight group, so this build went to internal testers only.",
+    ]);
+    expect(apple.writes).toEqual([]);
+  });
+  it("fails on a rejected, unexpected or unconfirmed build, and a refusal says what Apple already took", async () => {
+    await expect(share(externalApple(["BETA_REJECTED"], buildPage().data[0]))).rejects.toThrow(
+      "Beta App Review rejected this build",
+    );
+    await expect(share(externalApple(["SURPRISE"], buildPage().data[0]))).rejects.toThrow(
+      "unexpected external-testing state (SURPRISE)",
+    );
+    const unconfirmed = externalApple(["READY_FOR_BETA_SUBMISSION"], undefined);
+    const processing: AppleRead = (path) =>
+      path.includes("filter[version]=")
+        ? Promise.resolve(buildPage("VALID", "PROCESSING"))
+        : unconfirmed.read(path);
+    await expect(
+      shareExternally(processing, unconfirmed.write, app.id, "0.1.0", "42.2"),
+    ).rejects.toThrow("does not join external testing yet");
+    expect(unconfirmed.writes).toEqual([]);
+    const refused = externalApple(["READY_FOR_BETA_SUBMISSION"], olderBuild);
+    const write: AppleWrite = async (path, body) => {
+      await refused.write(path, body);
+      if (path === "/v1/betaAppReviewSubmissions") throw new Error("App Store Connect refused.");
+    };
+    await expect(
+      shareExternally(refused.read, write, app.id, "0.1.0", "42.2", async () => {}, 1),
+    ).rejects.toThrow('Added to the external group "Alpha testers". App Store Connect refused.');
+  });
+  it("sends only the two external-testing writes as signed POSTs and names Apple's error codes without its prose", async () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+    const env = {
+      APP_STORE_CONNECT_KEY_ID: "A1B2C3D4E5",
+      APP_STORE_CONNECT_ISSUER_ID: "11111111-2222-3333-4444-555555555555",
+      APP_STORE_CONNECT_API_KEY: Buffer.from(
+        privateKey.export({ format: "pem", type: "pkcs8" }),
+      ).toString("base64"),
+    };
+    const sent: { url: string; method?: string; body?: unknown }[] = [];
+    let answer = new Response(null, { status: 204 });
+    const write = appleWriter(env, (async (input, init) => {
+      sent.push({ url: String(input), method: init?.method, body: JSON.parse(String(init?.body)) });
+      expect(init?.redirect).toBe("error");
+      const bearer = new Headers(init?.headers).get("Authorization") ?? "";
+      const [header, payload, signature] = bearer.slice("Bearer ".length).split(".");
+      expect(
+        verify(
+          "sha256",
+          Buffer.from(`${header}.${payload}`),
+          { key: publicKey, dsaEncoding: "ieee-p1363" },
+          Buffer.from(signature ?? "", "base64url"),
+        ),
+      ).toBe(true);
+      return answer;
+    }) as typeof fetch);
+    const join = { data: [{ type: "builds", id: "build-42" }] };
+    await write("/v1/betaGroups/external-1/relationships/builds", join);
+    expect(sent).toEqual([
+      {
+        url: "https://api.appstoreconnect.apple.com/v1/betaGroups/external-1/relationships/builds",
+        method: "POST",
+        body: join,
+      },
+    ]);
+    for (const path of [
+      "/v1/apps/1234567890",
+      "/v1/betaGroups/external-1",
+      "https://another.example/v1/betaAppReviewSubmissions",
+    ])
+      await expect(write(path, {})).rejects.toThrow("only add a build to external testing");
+    expect(sent).toHaveLength(1);
+    // A submission answers 201; Apple's 204 is the group's answer, not the submission's.
+    await expect(write("/v1/betaAppReviewSubmissions", {})).rejects.toThrow("HTTP 204");
+    answer = new Response(
+      JSON.stringify({
+        errors: [
+          {
+            status: "422",
+            code: "ENTITY_UNPROCESSABLE.BETA_CONTRACT_MISSING",
+            title: "The request entity is not processable.",
+            detail: "Beta contract is missing for the app.",
+          },
+        ],
+      }),
+      { status: 422 },
+    );
+    const refusal = write("/v1/betaAppReviewSubmissions", {});
+    await expect(refusal).rejects.toThrow("HTTP 422, ENTITY_UNPROCESSABLE.BETA_CONTRACT_MISSING");
+    await expect(refusal).rejects.not.toThrow("Beta contract is missing");
+    const lost = appleWriter(env, (async () => {
+      throw new TypeError("fetch failed");
+    }) as typeof fetch);
+    await expect(lost("/v1/betaAppReviewSubmissions", {})).rejects.toThrow("is not known");
+  });
+});
+
 // Workflow expressions are exercised with the same reader as the release contracts.
 const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
@@ -518,5 +724,38 @@ describe("the dispatched workflow's gate", () => {
     expect(eligible(workflow.jobs.availability.if, { needs }, false)).toBe(false);
     needs.testflight.result = "success";
     expect(eligible(workflow.jobs.availability.if, { needs })).toBe(true);
+  });
+  it("adds the build to external testing only after Apple confirmed availability, and holds up nothing (INF-1784)", () => {
+    const job = workflow.jobs.external;
+    expect(job.needs).toEqual(["resolve", "availability"]);
+    expect(job.environment).toBe("ios-release");
+    const step = job.steps.find((item: { run?: string }) => item.run?.includes("phone-release.ts"));
+    expect(step.run).toBe("node scripts/phone-release.ts external");
+    // The release's own build, so a rerun of this job checks it rather than numbering another.
+    expect(
+      workflowString(step.env.CHECK_BUILD, {
+        needs: { resolve: { outputs: { build_number: "42.1" } } },
+      }),
+    ).toBe("42.1");
+    // A release, and a status request whose skipped Mac job leaves success() false.
+    for (const [mode, upstream] of [
+      ["release", true],
+      ["status", false],
+    ] as const) {
+      const needs = (availability: string) => ({
+        resolve: { result: "success", outputs: { mode } },
+        availability: { result: availability },
+      });
+      expect(eligible(job.if, { needs: needs("success") }, upstream)).toBe(true);
+      for (const result of ["failure", "skipped", "cancelled"])
+        expect(eligible(job.if, { needs: needs(result) }, false)).toBe(false);
+      expect(eligible(job.if, { needs: needs("success") }, upstream, true)).toBe(false);
+    }
+    // The alpha's phone order reads the availability job, so nothing waits on this one.
+    expect(
+      Object.entries(workflow.jobs)
+        .filter(([, other]) => [(other as { needs?: unknown }).needs].flat().includes("external"))
+        .map(([id]) => id),
+    ).toEqual([]);
   });
 });

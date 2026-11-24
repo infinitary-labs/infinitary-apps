@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-journey-groups-rebalanced",
+      "reason": "Merge batch checks only: GitHub's Mac journey groups are balanced again from three measured rounds."
+    }
+  ]
+}

@@ -267,6 +267,8 @@ describe("ipc contract", () => {
       "inf:cards:save-file",
       // Save all: every file of a card into one new folder in that computer's Downloads.
       "inf:cards:save-files",
+      // The picture viewer's Save to Downloads, into that computer's Downloads.
+      "inf:cards:save-picture",
       "inf:cards:saved-files",
       // The card a click on its notification asked this window to open (docs/view.md, "Notifications").
       "inf:cards:take-notified",

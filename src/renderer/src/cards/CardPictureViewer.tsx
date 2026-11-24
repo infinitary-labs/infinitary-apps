@@ -4,7 +4,7 @@ import { isDrawingSource } from "@shared/cardPictures";
 import { TURN_IMAGES_MAX } from "@shared/cards";
 import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import type { MarkTool } from "../design/cards/PictureMarks";
@@ -24,6 +24,7 @@ import {
   settleAnnotation,
 } from "./annotationBridge";
 import { markedGroups, rememberMarked } from "./markedPictures";
+import { pictureMenu } from "./pictureMenu";
 import { usePlacesHome } from "./useAnnotationHome";
 
 /**
@@ -60,6 +61,12 @@ export function CardPictureViewer({
     noteCardId ? (s.replyImages[noteCardId]?.length ?? 0) : 0,
   );
   const keys = useCommandKeys("cards.point-at");
+  const { keys: saveKeys, "aria-keyshortcuts": saveShortcuts } =
+    useCommandKeys("viewer.save-picture");
+  const menu = useMemo(
+    () => pictureMenu({ keys: saveKeys, "aria-keyshortcuts": saveShortcuts }),
+    [saveKeys, saveShortcuts],
+  );
   // The card's own Point at is drawn with its reply row, after the viewer's first render.
   const [offered, setOffered] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: read again when the queue or a send redraws the row
@@ -163,5 +170,5 @@ export function CardPictureViewer({
       },
     };
   };
-  return <PictureViewer {...viewer} marking={viewer.demo ? undefined : marking} />;
+  return <PictureViewer {...viewer} marking={viewer.demo ? undefined : marking} menu={menu} />;
 }

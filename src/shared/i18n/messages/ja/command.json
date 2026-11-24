@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "アップデート, 再起動, 安定版, アルファ版",
   "commandUsageUnit": "使用量の単位を切り替える",
   "commandUsageUnitWords": "トークン, 費用, ドル, 見積もり",
+  "commandViewerSavePicture": "画像を保存",
+  "commandViewerSavePictureWords": "ダウンロード, 画像, ピクチャ, ビューア",
   "commandWhatsNewShow": "新機能を表示",
   "commandWhatsNewShowWords": "リリース, ノート, 変更, バージョン"
 }

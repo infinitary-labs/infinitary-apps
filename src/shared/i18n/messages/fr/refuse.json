@@ -12,6 +12,7 @@
   "refuseNoCardThreadIsReadAboveIts": "Aucun fil de carte n’est lu au-dessus de son dernier message",
   "refuseNoOtherCardIsNew": "Aucune autre carte n’est nouvelle",
   "refuseNoPageToPointAt": "Aucune page n’est affichée à désigner",
+  "refuseNoPictureIsOpen": "Ouvre d’abord une image d’une carte",
   "refuseNoReleaseNotesYet": "Pas encore de notes de version",
   "refuseNoUpdateIsAvailable": "Aucune mise à jour n’est disponible",
   "refuseNoUpdateIsSavingWorkNow": "Aucune mise à jour n’enregistre de travail en ce moment",

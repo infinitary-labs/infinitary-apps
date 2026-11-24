@@ -13,6 +13,7 @@ import type {
   CardFileSaved,
   CardFilesSaved,
   OpenCardFileResult,
+  PictureSaveSource,
   SavedCardFiles,
 } from "./cardFiles";
 import type { CardNote } from "./cardNotes";
@@ -667,6 +668,11 @@ export type FirstmateApi = {
      * refusal in words thrown as an error.
      */
     saveFile: (cardId: string, fileId: string) => Promise<CardFileSaved>;
+    /**
+     * The picture viewer's Save to Downloads: the picture or recording shown,
+     * as its own file named for `name`, into this computer's Downloads.
+     */
+    savePicture: (name: string, source: PictureSaveSource) => Promise<CardFileSaved>;
     /** Save all: every named file into one new Downloads folder named `name` (the task's title). */
     saveFiles: (cardId: string, fileIds: string[], name: string) => Promise<CardFilesSaved>;
     /** Only this computer's saved display names, and a folder if Save all made one. */

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "picture-viewer-menu",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Right-click a full screen picture to copy or save it",
+      "body": "A right-click on a picture you opened from a card now shows a menu where you clicked. Copy picture puts it on the clipboard at its own size, ready to paste into any app or a message. Save to Downloads keeps its own file, named for the card. The menu also holds Actual size and Point at, and ⌘C and ⌘S work without it.",
+      "picture": {
+        "dark": "picture-viewer-menu-dark.webp",
+        "light": "picture-viewer-menu-light.webp",
+        "alt": "A full screen card picture with its menu open at the pointer: Copy picture, Save to Downloads, Actual size and Point at, each with its key"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

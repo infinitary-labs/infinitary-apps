@@ -4,28 +4,9 @@ import { createPortal } from "react-dom";
 import { usePopoverPresence } from "../motion";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
+import { EDGE, MENU_ITEMS, MenuPanel, type RowMenuItem, stepMenuFocus } from "./MenuPanel";
 
-export type RowMenuItem =
-  | {
-      id: string;
-      label: string;
-      onSelect?: () => void;
-      /** The one destructive item; last, behind a separator. */
-      tone?: "danger";
-      /** A trailing glyph, e.g. the ✱ pin. */
-      trailing?: React.ReactNode;
-      /** A sub-line under the label: what it does, or why it cannot run. */
-      detail?: string;
-      /** Listed but dim: it cannot run now, and its detail says why. */
-      disabled?: boolean;
-      /**
-       * An on/off setting rather than an action: it draws a small switch at
-       * its end in this state, keeps one fixed label, and a pick flips it
-       * with the menu left open (design skill RowMenu, "Settings").
-       */
-      checked?: boolean;
-    }
-  | { separator: true };
+export type { RowMenuItem } from "./MenuPanel";
 
 export type RowMenuProps = {
   /** Accessible name of the kebab, e.g. "Work #2 actions". */
@@ -55,12 +36,8 @@ export type RowMenuProps = {
   "data-key-command"?: string | undefined;
 };
 
-/** Every item a key can reach: actions and on/off settings. */
-const ITEMS = '[role="menuitem"], [role="menuitemcheckbox"]';
-
-/** Space between the kebab and the panel, and the minimum kept from the window edge. */
+/** Space between the kebab and the panel. */
 const GAP = 4;
-const EDGE = 8;
 
 const kebab = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -140,7 +117,7 @@ export function RowMenu({
       menu.current = node;
       if (!node) return;
       place();
-      node.querySelector<HTMLButtonElement>(ITEMS)?.focus();
+      node.querySelector<HTMLButtonElement>(MENU_ITEMS)?.focus();
     },
     [place],
   );
@@ -162,14 +139,7 @@ export function RowMenu({
         giveBackFocus();
         return;
       }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      const focusable = [...(menu.current?.querySelectorAll<HTMLButtonElement>(ITEMS) ?? [])];
-      if (focusable.length === 0) return;
-      event.preventDefault();
-      const index = focusable.indexOf(document.activeElement as HTMLButtonElement);
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      const next = focusable[(index + step + focusable.length) % focusable.length];
-      next?.focus();
+      stepMenuFocus(menu.current, event);
     };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
@@ -223,170 +193,23 @@ export function RowMenu({
       {drawn &&
         anchor &&
         createPortal(
-          <div
+          <MenuPanel
             ref={mountMenu}
-            role="menu"
-            aria-label={label}
-            style={{
-              position: "fixed",
-              top: anchor.top,
-              right: anchor.right,
-              zIndex: 4,
-              minWidth: 180,
-              maxWidth: `calc(100vw - ${EDGE * 2}px)`,
-              boxSizing: "border-box",
-              maxHeight: `calc(100vh - ${EDGE * 2}px)`,
-              overflowY: "auto",
-              background: "var(--bg-2)",
-              border: "1px solid var(--line-2)",
-              borderRadius: "var(--radius-m)",
-              boxShadow: "var(--shadow-2)",
-              padding: 6,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
+            label={label}
+            items={items}
+            style={{ top: anchor.top, right: anchor.right }}
+            onPick={(item) => {
+              if (item.checked !== undefined) {
+                item.onSelect?.();
+                return;
+              }
+              setOpen(false);
+              giveBackFocus();
+              item.onSelect?.();
             }}
-          >
-            {items.map((item, index) =>
-              "separator" in item ? (
-                <hr
-                  // biome-ignore lint/suspicious/noArrayIndexKey: separators have no identity
-                  key={`separator-${index}`}
-                  style={{
-                    height: 1,
-                    border: 0,
-                    background: "var(--line-1)",
-                    margin: "4px 2px",
-                  }}
-                />
-              ) : (
-                <MenuItem
-                  key={item.id}
-                  item={item}
-                  onPick={() => {
-                    if (item.disabled) return;
-                    if (item.checked !== undefined) {
-                      item.onSelect?.();
-                      return;
-                    }
-                    setOpen(false);
-                    giveBackFocus();
-                    item.onSelect?.();
-                  }}
-                />
-              ),
-            )}
-          </div>,
+          />,
           document.body,
         )}
-    </span>
-  );
-}
-
-function MenuItem({
-  item,
-  onPick,
-}: {
-  item: Exclude<RowMenuItem, { separator: true }>;
-  onPick: () => void;
-}) {
-  const [hover, setHover] = useState(false);
-  const dim = item.disabled === true;
-  const setting = item.checked !== undefined;
-  const label = setting ? (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <span>{item.label}</span>
-      {item.trailing}
-    </span>
-  ) : (
-    <span>{item.label}</span>
-  );
-  return (
-    <button
-      type="button"
-      {...(setting
-        ? { role: "menuitemcheckbox", "aria-checked": item.checked }
-        : { role: "menuitem" })}
-      data-menu-item={item.id}
-      aria-disabled={dim || undefined}
-      onClick={onPick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        background: hover && !dim ? "var(--bg-3)" : "transparent",
-        border: 0,
-        textAlign: "start",
-        padding: "7px 10px",
-        borderRadius: "var(--radius-s)",
-        fontFamily: "var(--font-ui)",
-        fontSize: "var(--text-sm)",
-        color: dim ? "var(--fg-3)" : item.tone === "danger" ? "var(--danger)" : "var(--fg-1)",
-        cursor: dim ? "default" : "pointer",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {item.detail ? (
-        <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          {label}
-          <span
-            data-menu-detail=""
-            style={{
-              color: "var(--fg-3)",
-              fontSize: "var(--text-xs)",
-              whiteSpace: "normal",
-              maxWidth: 260,
-            }}
-          >
-            {item.detail}
-          </span>
-        </span>
-      ) : (
-        label
-      )}
-      {setting ? <MenuSwitch on={item.checked === true} dim={dim} /> : item.trailing}
-    </button>
-  );
-}
-
-/**
- * The switch at the end of an on/off item: the Switch's look at menu size,
- * drawn only, since the whole item is the control that flips it.
- */
-function MenuSwitch({ on, dim }: { on: boolean; dim: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      data-menu-switch={on ? "on" : "off"}
-      style={{
-        position: "relative",
-        flexShrink: 0,
-        width: 28,
-        height: 16,
-        boxSizing: "border-box",
-        borderRadius: "var(--radius-pill)",
-        background: on ? "var(--accent)" : "var(--bg-3)",
-        border: `1px solid ${on ? "transparent" : "var(--line-1)"}`,
-        opacity: dim ? 0.4 : 1,
-        transition: "background var(--dur-med) var(--ease-out)",
-      }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          top: 2,
-          insetInlineStart: on ? 14 : 2,
-          width: 10,
-          height: 10,
-          borderRadius: "50%",
-          background: on ? "#05070d" : "var(--fg-2)",
-          transition:
-            "inset-inline-start var(--dur-med) var(--ease-out),background var(--dur-med) var(--ease-out)",
-        }}
-      />
     </span>
   );
 }

@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "更新, 重启, 稳定版, 测试版",
   "commandUsageUnit": "切换用量单位",
   "commandUsageUnitWords": "令牌, 费用, 美元, 估算",
+  "commandViewerSavePicture": "保存图片",
+  "commandViewerSavePictureWords": "下载, 图片, 图像, 查看器",
   "commandWhatsNewShow": "显示新功能",
   "commandWhatsNewShowWords": "发布, 说明, 更新内容, 版本"
 }

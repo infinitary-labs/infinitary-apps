@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-card-actions",
+      "reason": "The merge card's part of the captain's card actions, a request card's browser clicks and the answers to held writes moved unchanged into their own files so the file stays under the size warning; nothing a person sees changes."
+    }
+  ]
+}

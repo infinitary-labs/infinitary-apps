@@ -108,7 +108,7 @@ export type Reasons = Map<string, string[]>;
 // marked `request` also runs on a task branch's request (requested()).
 const REQUESTED_FALLBACK = "targeted fallback a request runs";
 const FALLBACKS: readonly { paths: readonly string[]; specs: readonly string[]; request?: true }[] = [
-  { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/hostCardStack.ts", "src/core/orchestrator/cardStackTypes.ts", "src/core/orchestrator/cardEmit.ts", "src/core/orchestrator/cardEvidence.ts", "src/core/orchestrator/cardThreads.ts", "src/core/orchestrator/hostCards.ts", "src/core/orchestrator/settleCardFacts.ts", "src/core/orchestrator/crewSupervisor.ts", "src/core/orchestrator/cardActions.ts", "src/core/orchestrator/crewmateCards.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
+  { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/hostCardStack.ts", "src/core/orchestrator/cardStackTypes.ts", "src/core/orchestrator/cardEmit.ts", "src/core/orchestrator/cardEvidence.ts", "src/core/orchestrator/cardThreads.ts", "src/core/orchestrator/hostCards.ts", "src/core/orchestrator/settleCardFacts.ts", "src/core/orchestrator/crewSupervisor.ts", "src/core/orchestrator/cardActions.ts", "src/core/orchestrator/mergeCardActions.ts", "src/core/orchestrator/cardBrowserClicks.ts", "src/core/orchestrator/cardWriteAsks.ts", "src/core/orchestrator/crewmateCards.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
   {
     paths: [
       "src/renderer/src/cards/",

@@ -392,6 +392,7 @@
         "!src/core/orchestrator/firstmateAgent.context.test.ts",
         "!src/core/orchestrator/firstmateAgent.delivery.test.ts",
         "!src/core/orchestrator/firstmateAgent.flagship.test.ts",
+        "!src/core/orchestrator/firstmateAgent.handoffs.test.ts",
         "!src/core/orchestrator/firstmateAgent.inbox.test.ts",
         "!src/core/orchestrator/holdRules.inbox.test.ts",
         "!src/core/orchestrator/firstmateAgent.knowledge.test.ts",

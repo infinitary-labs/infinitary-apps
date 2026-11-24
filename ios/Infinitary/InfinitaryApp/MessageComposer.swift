@@ -16,7 +16,8 @@ struct MessageComposer: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// INF-6366: the Conversation, open at the strip round pressed, and what it read, kept while it is away.
+    /// INF-6366: the Conversation, open at the strip round pressed, and what it read, kept only while a card a tile
+    /// opened is in front.
     @State private var conversationOpen: ConversationOpening?
     @State private var conversation = PhoneConversationModel()
     /// The reading clock (docs/composer.md "The last turn"): the reply it counts, the time left, and whether it faded.
@@ -192,7 +193,12 @@ struct MessageComposer: View {
         let id = newest ? "last-turn" : "last-turn-older"
         let busy = newest && session.firstmateBusy && round.sentAsMessage
         let strength = newest ? 1.0 : 0.5
-        let open = { conversationOpen = ConversationOpening(landing: round.id) }
+        // A press opens the Conversation afresh (docs/composer.md, "The conversation"): only the return after a tile's
+        // card keeps the reading. A round the phone made itself is on no page, so the Conversation lands on the newest.
+        let open = {
+            conversation = PhoneConversationModel()
+            conversationOpen = ConversationOpening(landing: PhoneConversation.heldOnPhone(round) ? nil : round.id)
+        }
         return VStack(alignment: .leading, spacing: 4) {
             if let card = round.card {
                 cardRow(round, card: card, id: id, open: open).opacity(strength)

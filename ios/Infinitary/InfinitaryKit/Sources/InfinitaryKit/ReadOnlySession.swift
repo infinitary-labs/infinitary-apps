@@ -72,6 +72,8 @@ public struct PhoneNotice: Equatable, Sendable {
     /// INF-6366: the conversation's newest rounds for the strip, nil before the first read and while the computer
     /// cannot answer it; the strip then shows the last turn alone (`stripRounds`).
     public private(set) var stripPage: [PhoneConversationRound]?
+    /// The last turn as `stripPage` was read, which says which of its messages were sent since (`sentSince`).
+    public private(set) var stripReadAt: PhoneLastTurn?
     /// Moves each time the newest rounds read differently, so an open Conversation reads its newest page again.
     public private(set) var conversationRevision = 0
     @ObservationIgnored private var stripReading: Task<Void, Never>?
@@ -506,7 +508,9 @@ public struct PhoneNotice: Equatable, Sendable {
     }
 
     /// INF-6366: the strip's rounds, newest first.
-    public var stripRounds: [PhoneConversationRound] { PhoneConversation.strip(turn: lastTurn, page: stripPage) }
+    public var stripRounds: [PhoneConversationRound] {
+        PhoneConversation.strip(turn: lastTurn, page: stripPage, readAt: stripReadAt)
+    }
 
     /// One page of the conversation, newest first, older than `before` when given.
     public func readConversation(before: PhoneConversationRound? = nil, limit: Int) async throws -> PhoneConversationPage {
@@ -520,13 +524,19 @@ public struct PhoneNotice: Equatable, Sendable {
         guard conversationReadable, contact == "in-reach" else { return }
         guard stripReading == nil else { stripOwed = true; return }
         let current = generation
+        let turn = lastTurn
         stripReading = Task { [weak self] in
             guard let self else { return }
             do {
                 let page = try await self.readConversation(limit: PhoneConversation.roundsAtRest).rounds
-                if current == self.generation, page != self.stripPage { self.stripPage = page; self.conversationRevision += 1 }
+                // A page read across a message sent meanwhile cannot say which messages it holds; the turn's change
+                // owes a read after this one.
+                if current == self.generation, PhoneConversation.sentSince(turn, self.lastTurn) == 0 {
+                    self.stripReadAt = self.lastTurn
+                    if page != self.stripPage { self.stripPage = page; self.conversationRevision += 1 }
+                }
             } catch PhoneError.refused, PhoneError.invalidReply {
-                if current == self.generation { self.conversationReadable = false; self.stripPage = nil }
+                if current == self.generation { self.conversationReadable = false; self.stripPage = nil; self.stripReadAt = nil }
             } catch {}
             self.stripReading = nil
             if self.stripOwed { self.stripOwed = false; self.readStrip() }
@@ -552,7 +562,7 @@ public struct PhoneNotice: Equatable, Sendable {
         held = nil
         syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
         syncedThreads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
-        stripPage = nil; conversationReadable = true
+        stripPage = nil; stripReadAt = nil; conversationReadable = true
         ledger.clear(); restorers = [:]; changeNotice = nil; takenBack = [:]; refold()
         notified = [:]; awaited = []; primed = false; workRevision += 1
         wakeReachWaiters()

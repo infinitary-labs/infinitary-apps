@@ -49,7 +49,7 @@ struct PhoneConversationTests {
     }
 
     @Test func theStripShowsTheLastTwoRoundsWithTheLastTurnsReply() {
-        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: reading.strip.rounds)
+        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: reading.strip.rounds, readAt: reading.lastTurn)
         #expect(strip.map(\.id) == reading.strip.rounds.map(\.id))
         #expect(strip.map(\.kind) == [.message, .choice])
         #expect(strip[0].reply?.words == "All set.\nI'll remind you Friday at 9:00 AM.")
@@ -60,7 +60,7 @@ struct PhoneConversationTests {
         let turn = PhoneLastTurn(you: "also remind me to check usage on friday",
                                  reply: .init(text: "Setting it up", problem: nil, eligibility: "pending", words: nil),
                                  previous: reading.lastTurn.previous)
-        let strip = PhoneConversation.strip(turn: turn, page: reading.strip.rounds)
+        let strip = PhoneConversation.strip(turn: turn, page: reading.strip.rounds, readAt: reading.lastTurn)
         #expect(strip[0].reply?.text == "Setting it up")
         #expect(PhoneConversation.fadeKey(strip[0]) == nil)
     }
@@ -68,22 +68,38 @@ struct PhoneConversationTests {
     @Test func aMessageThePageHasNotReadComesFirst() {
         let turn = PhoneLastTurn(you: "and the weekly report", reply: nil,
                                  previous: PhoneLastRound(you: reading.lastTurn.you, reply: reading.lastTurn.reply))
-        let strip = PhoneConversation.strip(turn: turn, page: reading.strip.rounds)
+        let strip = PhoneConversation.strip(turn: turn, page: reading.strip.rounds, readAt: reading.lastTurn)
         #expect(strip.map(\.you) == ["and the weekly report", "also remind me to check usage on friday"])
         #expect(strip[0].reply == nil)
     }
 
+    /// The review of INF-6366: two card acts after a message, as the conversation stood once "Approve and build" and
+    /// the line under the crewmate's chart card were the newest rounds and the newest message was the one before them.
+    @Test func twoCardActsAfterAMessageAreTheStripsTwoRounds() {
+        let whole = reading.whole.rounds
+        let message = whole[5]
+        let turn = PhoneLastTurn(you: message.you, reply: nil, previous: nil)
+        let page = [whole[3], whole[4]]
+        let strip = PhoneConversation.strip(turn: turn, page: page, readAt: turn)
+        #expect(strip.map(\.you) == ["use bars, not lines", "Approve and build"])
+        #expect(strip.map(\.kind) == [.reply, .choice])
+        // A message sent after that read comes first, above the newer card act.
+        let sent = PhoneLastTurn(you: "and chart the open tasks too", reply: nil, previous: PhoneLastRound(you: message.you, reply: nil))
+        let after = PhoneConversation.strip(turn: sent, page: page, readAt: turn)
+        #expect(after.map(\.you) == ["and chart the open tasks too", "use bars, not lines"])
+    }
+
     @Test func withoutCardRoundsTheStripShowsMessagesAlone() {
-        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: reading.whole.rounds, cardRounds: false)
+        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: reading.whole.rounds, readAt: reading.lastTurn, cardRounds: false)
         #expect(strip.map(\.you) == ["also remind me to check usage on friday", "move it to Monday"])
     }
 
     @Test func aComputerThatCannotReadItShowsTheLastTurnAsBefore() {
-        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: nil)
+        let strip = PhoneConversation.strip(turn: reading.lastTurn, page: nil, readAt: nil)
         #expect(strip.map(\.you) == ["also remind me to check usage on friday", "move it to Monday"])
         #expect(strip.map(\.kind) == [.message, .message])
         #expect(strip[1].reply?.text == "Moved to Monday.")
-        #expect(PhoneConversation.strip(turn: nil, page: nil).isEmpty)
+        #expect(PhoneConversation.strip(turn: nil, page: nil, readAt: nil).isEmpty)
     }
 
     @Test func aRoundMayDissolveOnceItIsComplete() {

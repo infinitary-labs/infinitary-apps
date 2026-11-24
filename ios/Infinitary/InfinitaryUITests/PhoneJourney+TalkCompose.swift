@@ -229,7 +229,50 @@ extension PhoneJourney {
         XCTAssertTrue(waitingTile.waitForPresence(timeout: 10), "It comes back on the view it was left on")
         tapOnPhone(app.buttons["close-conversation"])
         XCTAssertTrue(app.buttons["close-conversation"].waitForAbsence(timeout: 10))
+        try await verifyCardActsOnTheStrip(chart: title, waiting: waiting)
         _ = try await home("empty-cards")
+    }
+
+    /// The review of INF-6366, from the captain's "the last couple of interactions" and "cards they interacted": two card
+    /// acts in a row after a message keep both on the strip, newest first; a line typed under a crewmate's card is a
+    /// card round with no reply line; one typed under the first mate's own card is also a message and keeps its reply
+    /// line. Data: this part's test home, the waiting card above and two more cards. Resources: this part's simulator.
+    private func verifyCardActsOnTheStrip(chart: String, waiting: [String: Any]) async throws {
+        let title = try XCTUnwrap(waiting["title"] as? String)
+        let heading = cardHeading(title)
+        XCTAssertTrue(heading.waitForPresence(timeout: 10), app.debugDescription)
+        let north = app.buttons["card-action-north"]
+        reveal(north); tapOnPhone(north)
+        XCTAssertTrue(heading.waitForAbsence(timeout: 10), app.debugDescription)
+        let newest = app.buttons["last-turn-card"], older = app.buttons["last-turn-older-card"]
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label CONTAINS %@", title), object: newest, timeout: 15), .completed,
+                       "The newer press is the newest round: \(app.debugDescription)")
+        XCTAssertEqual(app.buttons["last-turn-you"].label, try XCTUnwrap(waiting["label"] as? String))
+        XCTAssertTrue(older.waitForPresence(timeout: 10), "The press before it is the older round, not the message: \(app.debugDescription)")
+        XCTAssertTrue(older.label.contains(chart), "The older round names the first card pressed")
+        XCTAssertFalse(app.staticTexts["last-turn-older-you"].exists, "The message before both presses leaves the strip")
+        try await appearances("strip-two-card-rounds", showing: older)
+        for (command, words, message) in [("conversation-crew-card", "Chart the south channel next.", false),
+                                          ("conversation-mate-card", "Move it to Monday.", true)] {
+            let card = try await home(command)
+            let cardTitle = try XCTUnwrap(card["title"] as? String)
+            XCTAssertTrue(cardHeading(cardTitle).waitForPresence(timeout: 10), app.debugDescription)
+            let reply = app.textFields["card-reply"]
+            reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
+            let send = app.buttons["send-reply"]
+            reveal(send); tapOnPhone(send)
+            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label CONTAINS %@", cardTitle), object: newest, timeout: 15), .completed,
+                           "The line typed under \(cardTitle) is the newest round: \(app.debugDescription)")
+            XCTAssertEqual(app.buttons["last-turn-you"].label, words, "The round shows the typed words")
+            let line = app.descendants(matching: .any)["last-turn-reply"]
+            if message {
+                XCTAssertTrue(line.waitForPresence(timeout: 10), "A line under the first mate's own card keeps its reply line")
+                try await appearances("strip-typed-under-card", showing: newest)
+            } else {
+                XCTAssertFalse(line.exists, "A line under a crewmate's card is no message and has no reply line")
+            }
+            _ = try await home("empty-cards")
+        }
     }
 
     /// INF-64 piece 5: native input and controls reach the real Mac as captain actions.

@@ -2381,10 +2381,9 @@ export async function startPhoneHome(
         }
         case "POST conversation-card":
         case "POST conversation-waiting":
-          result = raiseConversationCard(
-            (card) => core.services.supervisor.addFirstmateCard(card),
-            command,
-          );
+        case "POST conversation-crew-card":
+        case "POST conversation-mate-card":
+          result = raiseConversationCard(core, command);
           break;
         // INF-3881: a card holding the Advanced architecture map part, filled with this project's own map files, with words
         // under it so the card is taller than the screen and a finger on the diagram has a card to scroll.

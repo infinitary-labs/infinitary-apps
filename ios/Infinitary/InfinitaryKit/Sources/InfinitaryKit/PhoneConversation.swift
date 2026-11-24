@@ -115,27 +115,42 @@ public enum PhoneConversation {
         return rounds
     }
 
-    /// The strip's rounds, newest first (INF-6337's plan, as INF-6365 draws them on the Mac): the newest page's order,
+    /// How many of the last turn's messages were sent after `read`, the last turn as a page was read: 0, 1 or 2. A
+    /// newer turn is one whose newest message is not `read`'s, or whose earlier one differs; one sent since keeps
+    /// `read`'s newest as its earlier one. The same words sent three times in a row read as none sent.
+    public static func sentSince(_ read: PhoneLastTurn?, _ now: PhoneLastTurn?) -> Int {
+        guard let now else { return 0 }
+        guard let read else { return now.previous == nil ? 1 : 2 }
+        if now.you == read.you && now.previous?.you == read.previous?.you { return 0 }
+        return now.previous?.you == read.you ? 1 : 2
+    }
+
+    /// The strip's rounds, newest first (INF-6337's plan, by the rule of the Mac's `stripRounds`): the page's order,
     /// times and card rounds, with each message's reply taken from the last turn, which a live reply and a message sent
-    /// from this phone reach first. A message the last turn holds that the page has not read yet comes first. With no
-    /// page - an older computer, or before the first read - the last turn's two messages, as before.
-    public static func strip(turn: PhoneLastTurn?, page: [PhoneConversationRound]?, cardRounds: Bool = true,
-                             count: Int = roundsAtRest) -> [PhoneConversationRound] {
+    /// from this phone reach first. Only a message sent after the page was read (`readAt`, `sentSince`) comes before
+    /// the page's rounds; a message the page does not reach is older than all of them. With no page - an older
+    /// computer, or before the first read - the last turn's two messages, as before.
+    public static func strip(turn: PhoneLastTurn?, page: [PhoneConversationRound]?, readAt: PhoneLastTurn?,
+                             cardRounds: Bool = true, count: Int = roundsAtRest) -> [PhoneConversationRound] {
         guard let page else { return Array(fallback(turn).prefix(count)) }
         let held: [(you: String, reply: PhoneLastTurn.Reply?)] = turn.map { turn in
             [(turn.you, turn.reply)] + (turn.previous.map { [($0.you, $0.reply)] } ?? [])
         } ?? []
+        let lag = min(sentSince(readAt, turn), held.count)
         var rounds = page.filter { cardRounds || $0.sentAsMessage }
-        let messages = rounds.indices.filter { rounds[$0].sentAsMessage }
-        if let newest = held.first, !messages.contains(where: { rounds[$0].you == newest.you }) {
-            rounds.insert(PhoneConversationRound(held: newest.you, reply: newest.reply, id: "held:\(newest.you)"), at: 0)
-        } else {
-            for (place, index) in messages.prefix(held.count).enumerated() where rounds[index].you == held[place].you {
-                rounds[index] = rounds[index].replying(held[place].reply)
-            }
+        for (place, index) in rounds.indices.filter({ rounds[$0].sentAsMessage }).enumerated()
+        where place + lag < held.count && rounds[index].you == held[place + lag].you {
+            rounds[index] = rounds[index].replying(held[place + lag].reply)
         }
-        return Array(rounds.prefix(count))
+        let sent = held.prefix(lag).enumerated().map { place, said in
+            PhoneConversationRound(held: said.you, reply: said.reply, id: place == 0 ? "held:\(said.you)" : "held:1:\(said.you)")
+        }
+        return Array((sent + rounds).prefix(count))
     }
+
+    /// A round the phone made itself, which no page of the computer's holds: one held before a read, or the last
+    /// turn's on a computer that cannot answer the read.
+    public static func heldOnPhone(_ round: PhoneConversationRound) -> Bool { round.at == 0 }
 
     /// What the reading clock waits on before the older round may dissolve, or nil while it must stay: a message's
     /// completed reply line, or a card round, which is complete as it is drawn.

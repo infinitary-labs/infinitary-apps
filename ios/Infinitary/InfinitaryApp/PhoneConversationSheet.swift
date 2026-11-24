@@ -24,17 +24,24 @@ import SwiftUI
     /// The computer refused the read, as one from before the Conversation does: the last turn stands in, said so.
     private(set) var partial = false
     private(set) var readingEarlier = false
+    /// The last turn as the newest page was read (`PhoneConversation.sentSince`).
+    private(set) var readAt: PhoneLastTurn?
 
-    /// What Everything draws, newest first: the pages read, with the last turn's live reply and a message it holds
-    /// that no page has yet; the last turn alone until the first page arrives or when the computer cannot read it.
+    /// What Everything draws, newest first: the pages read, with the last turn's live reply and a message sent since
+    /// the newest page was read; the last turn alone until the first page arrives or when the computer cannot read it.
     func shown(_ turn: PhoneLastTurn?) -> [PhoneConversationRound] {
-        PhoneConversation.strip(turn: turn, page: read && !partial ? rounds : nil, count: .max)
+        PhoneConversation.strip(turn: turn, page: read && !partial ? rounds : nil, readAt: readAt, count: .max)
     }
 
     /// The newest page again; rounds read earlier stay, and how many remain keeps the deepest page's word.
     func readNewest(_ session: ReadOnlySession) async {
+        let turn = session.lastTurn
         do {
             let page = try await session.readConversation(limit: Self.pageSize)
+            // A page read across a message sent meanwhile cannot say which messages it holds; the strip's next read
+            // moves `conversationRevision`, which reads it again.
+            guard PhoneConversation.sentSince(turn, session.lastTurn) == 0 else { return }
+            readAt = session.lastTurn
             let deeper = read && !partial && rounds.count > page.rounds.count
             rounds = read && !partial ? PhoneConversation.merged(rounds, page.rounds) : page.rounds
             if !deeper { more = page.more }
@@ -54,7 +61,8 @@ import SwiftUI
         more = page.more
     }
 
-    /// Reads back until `id` is among the rounds, for a strip round older than the first page.
+    /// Reads back until `id` is among the rounds, for a strip round older than the first page; `id` is one a page gave,
+    /// never one the phone holds (`PhoneConversation.heldOnPhone`), which no page reaches.
     func reach(_ id: String, _ session: ReadOnlySession) async {
         while read, !partial, more, !rounds.contains(where: { $0.id == id }) {
             let before = rounds.count
@@ -64,7 +72,7 @@ import SwiftUI
     }
 }
 
-/// The phone's Conversation (INF-6337's plan, part 3): the strip's reply sheet become the whole conversation. Everything
+/// The phone's Conversation (INF-6337's plan, part 3): the whole conversation, opened from the strip. Everything
 /// draws each round oldest first, with day and time marks; Cards lists the cards waiting on the captain, then the ones
 /// they answered. A card's tile opens it on Home, and the Conversation returns when the card leaves.
 struct PhoneConversationSheet: View {

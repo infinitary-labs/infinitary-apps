@@ -1,3 +1,5 @@
+import type { Core } from "@core/index";
+import { seedTask } from "@core/tasks/seedTask";
 import type { TaskService } from "../../src/core/tasks/taskService";
 import { plainProblem } from "../../src/shared/plainProblem";
 
@@ -40,41 +42,73 @@ export function seedReplyReading(tasks: TaskService) {
   return { question: REPLY_READING_QUESTION, words: REPLY_NOTE_WORDS, problemWords };
 }
 
-type FirstmateCard = {
-  id: string;
-  title: string;
-  body: string;
-  actions: { id: string; label: string; default?: boolean }[];
-};
-
 /**
- * INF-6366's first mate cards on the phone's home: `conversation-card` raises one for the phone to answer with its
- * own button, so the strip and the Conversation show that press as a card round; `conversation-waiting` raises one
- * left waiting, for the Conversation's Cards view.
+ * INF-6366's cards on the phone's home, each answered from the phone so the strip and the Conversation show the act
+ * as a card round: `conversation-card`, a first mate card answered with its own button; `conversation-waiting`, one
+ * left waiting for the Cards view and then pressed, so two card acts follow a message; `conversation-crew-card`, a
+ * crewmate's note to type a line under, which is not a message; and `conversation-mate-card`, a first mate card to
+ * type a line under, which is also a message and keeps its reply line.
  */
-export function raiseConversationCard(add: (card: FirstmateCard) => string, command?: string) {
-  if (command === "conversation-card") {
-    const title = "Pick the chart style";
-    const id = add({
-      id: "phone-conversation-chart",
-      title,
-      body: "<p>Bars read best for a week of counts; lines read best for a trend.</p>",
-      actions: [
-        { id: "bars", label: "Use bars", default: true },
-        { id: "lines", label: "Use lines" },
-      ],
-    });
-    return { id, title, label: "Use bars" };
-  }
-  const title = "Which harbour goes first?";
-  const id = add({
-    id: "phone-conversation-waiting",
-    title,
-    body: "<p>Both harbours need a fresh chart this week.</p>",
-    actions: [
-      { id: "north", label: "North first", default: true },
-      { id: "south", label: "South first" },
-    ],
+export function raiseConversationCard(core: Core, command?: string) {
+  const firstmate = (card: Parameters<Core["services"]["supervisor"]["addFirstmateCard"]>[0]) => ({
+    id: core.services.supervisor.addFirstmateCard(card),
+    title: card.title,
   });
-  return { id, title };
+  switch (command) {
+    case "conversation-card":
+      return {
+        ...firstmate({
+          id: "phone-conversation-chart",
+          title: "Pick the chart style",
+          body: "<p>Bars read best for a week of counts; lines read best for a trend.</p>",
+          actions: [
+            { id: "bars", label: "Use bars", default: true },
+            { id: "lines", label: "Use lines" },
+          ],
+        }),
+        label: "Use bars",
+      };
+    case "conversation-waiting":
+      return {
+        ...firstmate({
+          id: "phone-conversation-waiting",
+          title: "Which harbour goes first?",
+          body: "<p>Both harbours need a fresh chart this week.</p>",
+          actions: [
+            { id: "north", label: "North first", default: true },
+            { id: "south", label: "South first" },
+          ],
+        }),
+        label: "North first",
+      };
+    case "conversation-mate-card":
+      return firstmate({
+        id: "phone-conversation-reminder",
+        title: "Your reminders",
+        body: "<p>The usage check is set for Friday at 9:00 AM.</p>",
+        actions: [],
+      });
+    default: {
+      const task = seedTask(core.services.tasks, {
+        id: "phone-conversation-crew",
+        title: "Chart the harbour soundings",
+        status: "idle",
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      const cards = core.services.supervisor.cards;
+      const title = "The soundings are charted";
+      const id = cards.emitCrewmateCard(
+        task.id,
+        {
+          id: "phone-conversation-soundings",
+          title,
+          body: "<p>Both channels hold four fathoms at low water.</p>",
+          actions: [],
+        },
+        "crew",
+      );
+      cards.closeOut({ kind: "crewmate", taskId: task.id }, "idle");
+      return { id, title };
+    }
+  }
 }

@@ -3956,6 +3956,7 @@
 "shellKeyReminderHint" = "pressione uma vez e isto para";
 "shellKeyReminderNotTyping" = "quando não estiver digitando";
 "shellLastTurnFromCommand" = "De %1$@";
+"shellLastTurnOpenCard" = "Abrir este cartão";
 "shellLastTurnPictureOnly" = "Uma imagem";
 "shellLastTurnWorking" = "Trabalhando…";
 "shellMainMessageConnectFirst" = "Conecte uma assinatura primeiro";

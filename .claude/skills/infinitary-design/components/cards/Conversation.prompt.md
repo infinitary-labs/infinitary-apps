@@ -12,7 +12,7 @@ It is an escape hatch for a person who still thinks in a chat thread, and the pl
 
 ## Everything
 
-Oldest at the top, the newest at the foot, the body scrolled to the foot on open, or to the round the strip was pressed on.
+Oldest at the top, the newest at the foot, the body scrolled to the foot on open, or to the round the strip was pressed on, centered and outlined for a moment in a 1 px `--accent` line `--space-2` outside it, `--radius-m`, which fades over `--dur-slow` after 1.6 s.
 
 - **Day line.**
   A hairline in `--line-1` either side of the day's name (Today, Yesterday, or the weekday and date), mono `--text-xs` in `--fg-3`, `--space-2` above and below.

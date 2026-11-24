@@ -63,6 +63,27 @@ function fallbackRounds(turn: LastTurn | null): ConversationRound[] {
   return [round("last:1", turn), ...(turn.previous ? [round("last:0", turn.previous)] : [])];
 }
 
+/** Where an open brings the reader: the newest end, the strip's older message, or a pressed round. */
+type Landing = "newest" | "older" | { round: string };
+
+function landingOf(entry: ConversationEntry): Landing {
+  if (entry.round !== undefined) return { round: entry.round };
+  return entry.at ?? "newest";
+}
+
+/**
+ * Marks the round an open landed on, and only it; conversation.css outlines
+ * it for a moment (INF-6337's plan: "outlined for a moment"). The mark is
+ * set again, not kept, so landing on the same round twice outlines it twice.
+ */
+function landOn(node: HTMLElement): void {
+  for (const was of node.parentElement?.querySelectorAll("[data-landed]") ?? [])
+    was.removeAttribute("data-landed");
+  // A style read between the two restarts the animation on a round marked before.
+  void node.offsetWidth;
+  node.setAttribute("data-landed", "");
+}
+
 function sameDay(a: number, b: number): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
@@ -368,15 +389,12 @@ export function ConversationCard({
   const fromFoot = useRef<number | null>(null);
   const drawn = useRef(false);
   /** The round to bring into view once the rounds are drawn: set on each open. */
-  const landing = useRef<ConversationEntry["at"] | "newest" | null>(
-    visit ? null : (entry.at ?? "newest"),
-  );
+  const landing = useRef<Landing | null>(visit ? null : landingOf(entry));
   const opened = useRef(entry);
   if (opened.current !== entry) {
     opened.current = entry;
     // Keeping the view or the card it opened is not a new open.
-    if (entry.view === undefined && entry.opened === undefined)
-      landing.current = entry.at ?? "newest";
+    if (entry.view === undefined && entry.opened === undefined) landing.current = landingOf(entry);
   }
   /** Whether the reader stands at the foot, where a new round keeps them. */
   const atFoot = useRef(visit?.atFoot ?? true);
@@ -467,13 +485,15 @@ export function ConversationCard({
     if (view !== "everything") return;
     const land = landing.current;
     landing.current = null;
-    if (land === "older") {
-      const older = loaded.rounds.filter(sentAsMessage)[1];
-      const node = older
-        ? element.querySelector<HTMLElement>(`[data-conversation-round="${CSS.escape(older.id)}"]`)
+    if (land !== null && land !== "newest") {
+      const id = land === "older" ? loaded.rounds.filter(sentAsMessage)[1]?.id : land.round;
+      const node = id
+        ? element.querySelector<HTMLElement>(`[data-conversation-round="${CSS.escape(id)}"]`)
         : null;
-      if (node) node.scrollIntoView({ block: "center" });
-      else element.scrollTop = element.scrollHeight;
+      if (node) {
+        node.scrollIntoView({ block: "center" });
+        landOn(node);
+      } else element.scrollTop = element.scrollHeight;
     } else if (land === "newest" || (atFoot.current && fromFoot.current === null)) {
       element.scrollTop = element.scrollHeight;
     }

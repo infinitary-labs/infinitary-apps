@@ -88,6 +88,17 @@ patchedDependencies:
 # - sharp: @huggingface/transformers 4.2.0 asks for ^0.34.5, and only 0.35.5
 #   fixes its open alerts. Nothing here loads it: the main build stands it in
 #   (src/main/voice/noSharp.ts) and the renderer's build does no image work.
+# - minimatch: these five ask for ^9 or ^10, and its alerts are fixed only in
+#   11; 11.0.8 is the first release its maintainer lists as fixing every
+#   advisory against 11.0.1 to 11.0.7 as well. All five are build or lint
+#   tools that match the project's own globs; none ships in the app. Newer
+#   eslint, @eslint/config-array and @typescript-eslint/typescript-estree ask
+#   for ^11 themselves, and @electron/universal 3 drops minimatch.
 overrides:
   onnxruntime-node>adm-zip: 0.6.1
   '@huggingface/transformers>sharp': 0.35.5
+  '@electron/universal>minimatch': 11.0.8
+  '@eslint/config-array>minimatch': 11.0.8
+  '@typescript-eslint/typescript-estree>minimatch': 11.0.8
+  app-builder-lib>minimatch: 11.0.8
+  eslint>minimatch: 11.0.8

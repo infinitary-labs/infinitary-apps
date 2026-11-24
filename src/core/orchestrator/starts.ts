@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import type { AttachmentRef } from "@shared/attachments";
 import { isClientIssueReason } from "@shared/claudeClient";
 import { preparedPublicationRemote } from "@shared/contributions";
@@ -19,6 +19,7 @@ import {
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { capWithOverflow, type MessageFile } from "../overflow";
+import { crewmateReaderDir } from "../paths";
 import { type PlacedCopy, PreparationUnknown } from "../placed/placedCopies";
 import { KIND_SOURCE, kindEstablished } from "../routing/kindClassifier";
 import { legacyShapeFromDifficulty, tierFor } from "../routing/policy";
@@ -390,6 +391,7 @@ export class CrewStarts {
     // A folder repair (INF-549) works in its project's own folder, as the
     // personal workspace does, with none of that workspace's own rules.
     const inPlace = !live && !placed && this.core.facts.worksInPlace(taskId);
+    const readerFolder = !spec.repoId && record?.shape?.unsafe_data_reader === true;
     // On a computer that runs work, its working copy is there, made by that
     // computer from where the project lives (docs/helper.md, "Its working
     // copies"). This Mac makes none, so the runtime holds no workspace a
@@ -512,6 +514,13 @@ export class CrewStarts {
         }
         const cwd = inPlace ? this.core.inPlaceWork.inPlaceDir(taskId, repoDir) : repoDir;
         task.workspace = { taskId, cwd, branch: "", repoDir };
+      } else if (readerFolder) {
+        // An unsafe data reader with no project reads in an empty folder of
+        // its own: a copy of the default workspace would hand it files other
+        // tasks' work left there (docs/agents-reach.md, "An unsafe data reader").
+        const cwd = crewmateReaderDir(this.core.options.paths, taskId);
+        mkdirSync(cwd, { recursive: true });
+        task.workspace = { taskId, cwd, branch: "", repoDir: cwd };
       } else {
         // A task that needs the project's folder here is refused while it
         // is missing, naming it and the repair that brings it back (INF-572).
@@ -629,7 +638,7 @@ export class CrewStarts {
       this.core.options.tasks.starts.dispatch(taskId, {
         workspace: {
           repoDir: workspaceRepoDir,
-          worktreeDir: live || inPlace || !task.workspace ? "" : task.workspace.cwd,
+          worktreeDir: live || inPlace || readerFolder || !task.workspace ? "" : task.workspace.cwd,
           branch: task.workspace?.branch ?? elsewhere?.branch ?? "",
           ...(elsewhere ? { elsewhere: true } : {}),
         },

@@ -26,7 +26,9 @@ extension PhoneJourney {
 
         let before = box.frame
         let start = box.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.3)
+        // The drag runs 240 points for an 80-point move: the card's scroll takes the finger only after the map's press
+        // handling lets it go, and on a busy phone Mac that came late enough that a 160-point drag moved the card 73.
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -240)), withVelocity: .slow, thenHoldForDuration: 0.3)
         waitForSteadyTarget(box)
         XCTAssertLessThan(box.frame.minY, before.minY - 80, "A drag on the map scrolls the card: \(before) to \(box.frame)")
         XCTAssertEqual(box.frame.width, before.width, accuracy: 1, "A drag on the map in the card leaves the map's size alone")

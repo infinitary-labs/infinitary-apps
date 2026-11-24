@@ -263,7 +263,7 @@ struct PhoneChoiceRow: Layout {
 
 /// A caption with small links after it on the same line when they fit, or as the caption's next line when they do
 /// not, with no gap, so a choice made elsewhere stays in view without a second row of full-size choices: an approval
-/// card's foot then stays short enough to pin beside a three-line title on an iPhone (PhoneJourney, "stay pinned").
+/// card's foot then keeps its choices made here on one row.
 struct PhoneCaptionLinks<Caption: View, Links: View>: View {
     @ViewBuilder let caption: Caption
     @ViewBuilder let links: Links

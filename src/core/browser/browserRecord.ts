@@ -329,6 +329,14 @@ export function addressOf(browser: Browser, entry: PageEntry): string {
   return entry === browser.pages[0] ? browser.firstUrl : shown || "about:blank";
 }
 
+/** The address a browser's current page is on, its last one while it shows an error page. */
+export function pageAddress(browser: Browser): string {
+  const entry = browser.current;
+  const shown = addressOf(browser, entry);
+  if (/^https?:/.test(shown)) return shown;
+  return entry.lastUrl ?? (entry === browser.pages[0] ? browser.firstUrl : shown);
+}
+
 export function outlineOptions(browser: Browser): OutlineOptions {
   const withheld = signedIn(browser);
   return {

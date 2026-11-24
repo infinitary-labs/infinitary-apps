@@ -34,7 +34,7 @@ At most four task browsers run on this Mac at once; the next one is refused in w
 One command runs at a time per task, in the order they came, and each answers within 30 seconds, in words when the page did not finish.
 
 `TaskBrowsers` (`src/core/browser/taskBrowsers.ts`) is the one owner of every task browser and every word a crewmate reads from one.
-It composes its parts over one typed core (`BrowsersCore`, `browserRecord.ts`, with each browser's record): the crewmate's commands (`crewmateCommands.ts`), the input actions (`pageActions.ts`), signed-in sites (`savedSignInGrants.ts`), each browser's notices (`pageNotices.ts`) and the files it writes to the evidence folder (`evidenceFiles.ts`).
+It composes its parts over one typed core (`BrowsersCore`, `browserRecord.ts`, with each browser's record): the crewmate's commands (`crewmateCommands.ts`), the input actions (`pageActions.ts`), signed-in sites (`savedSignInGrants.ts`), each browser's notices (`pageNotices.ts`), the files it writes to the evidence folder (`evidenceFiles.ts`), a site's asks (`siteAsks.ts`) and whether anything answers at a page's loopback address (`pageOutages.ts`).
 Callers drive every browser through `TaskBrowsers`, and import the shapes and words they share from the part that owns them.
 
 ## Where a page may go
@@ -175,7 +175,7 @@ A yes makes the page's own call go on to the engine, with the permission granted
 A no ends the call as a browser does when a person says no: `NotAllowedError`, or `denied` for notifications.
 
 While the crewmate drives, every ask is no, and a passkey adds the crewmate's notice ("A passkey request").
-While the captain holds the page (`TaskBrowsers.pageAsked`):
+While the captain holds the page (`SiteAsks.pageAsked`, `src/core/browser/siteAsks.ts`):
 
 - a permission the site asks for waits in the view's row above the page, `<site> asks to use your camera.` and the like, with Allow once and Not now, answered through `inf:browser:ask`, a core request every view may ask, which the core answers only for the captain's own browser and its current ask; the browser's fact carries it as `ask`;
 - one ask waits at a time, and another while it waits is no;

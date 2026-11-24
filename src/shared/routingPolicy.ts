@@ -252,10 +252,11 @@ export const workShapeSchema = z.object({
    * The first mate's declaration that this answer task reads words from
    * outside its project's own people, such as issues and pull requests
    * strangers open (docs/agents-reach.md, "An unsafe data reader"): its session
-   * gets no shell, no web, no browser and no subagent, its file reads stay
-   * in its working copy, its reads where the project lives stay in its own
-   * project and arrive fenced, and every write it makes there waits for the
-   * captain's click on one host card. The host refuses it on a task that is
+   * gets no shell, no browser and no subagent, its file reads stay in its
+   * working copy, its reads where the project lives stay in its own project
+   * and arrive fenced, its web is public pages only, a new address waiting
+   * once it holds something of the captain's, and every write it makes there
+   * waits for the captain's click on one host card. The host refuses it on a task that is
    * not an answer, and the task runs only on the computer keeping the record.
    */
   unsafe_data_reader: z.boolean().optional(),

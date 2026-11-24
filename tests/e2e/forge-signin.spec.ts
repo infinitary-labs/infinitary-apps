@@ -1067,7 +1067,7 @@ for (const runtime of READER_RUNTIMES) {
     expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
     expect(github.requests()).not.toContain(issue);
     expect(github.dispatches()).toEqual([]);
-    // Its session held only reads: no shell, no file changes, no web or browser.
+    // Its session held only reads: no shell, no file changes and no browser; web_read is its one way onto the web.
     const tools = (launched.mockProvider?.requestBodies() ?? [])
       .map((raw) => JSON.parse(raw))
       .filter((request) => JSON.stringify(request.messages).includes(UNSAFE_DATA_READER_MARKER))

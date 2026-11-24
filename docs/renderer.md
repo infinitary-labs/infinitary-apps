@@ -157,6 +157,7 @@ The shell still holds the previous drawing’s rectangle, but does not constrain
 A record whose frame never reports appears as it is when the hold ends.
 A prepared page with a script that drew held is ready only once the card is shown, its scripts ran and it reported its drawing again.
 Readiness and the shell's natural height read laid-out sizes, so a card still scaling into place (the arrival, a card coming forward) counts at its own width and height.
+While the shell holds a body that scrolls, its natural height starts from the shown entry's scroll height where that is taller than the shell: a maximized card's floor holds its surface taller than the shell, and a shell measured from its own height would stay short, so the stage would centre it and push the surface past the window's foot (INF-6510).
 A ready entry appears by one move, and the next successor is prepared once the leaving drawing has retired and the incoming reveal and the height easing have both finished.
 An interrupted reveal releases its pending completion when it is cancelled, so returning to the drawing still held can settle without waiting for a finish event that will never arrive.
 The next selection interrupts the reveal of the one it leaves even when the leaving drawing has already retired, as after a close, whose drop is shorter than the next card's coming forward (INF-1154).

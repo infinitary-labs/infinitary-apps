@@ -71,7 +71,7 @@ It refuses, changing nothing, where the system has no confirmation to ask, as on
 
 The window's program runs the reset (`runReset`, `src/main/reset/running.ts`) once the system confirmed the person, each step capped so a remote service never holds it up, and none stops the next:
 
-1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
+1. The first mate undoes what its own side set up elsewhere (`prepareReset`, `src/core/reset/prepare.ts`): it removes its paired phones and computers while the connection still runs, so a connected one hears it was removed; discards each open task, so its registered stops and keeps run, and waits for them and for the working copies those closes handed back to the worktree pool; removes each kept job with its own remove; undoes what it set in projects outside its folder ("Your projects"); signs out its accounts; and removes its integrations, revoking a sign-in where the service offers it.
 2. It writes the mark beside the folder, naming every outside kind still to clear, before anything that could end this program.
 3. On the person's own folder of a flavor, the program clears what it reaches outside the folder now ("Outside the folder"), and leaves the home this computer runs work for (`leaveWorkHome`, `src/main/reset/workHome.ts`): it stops the work's run, tells that home Leave, as a device's own Leave does, so the home takes this computer off its list instead of keeping it as out of reach, and removes what was set up here for it.
    The work's working copies sit inside the data folder, so the next start deletes them with it, unmerged work included.
@@ -89,6 +89,7 @@ Nothing before the quit deletes the folder, which this start still holds.
 A project that lives in the data folder, one the app cloned, goes with the folder.
 One that lives outside it - adopted from the person's own folder, even when a link inside the folder names it - keeps every branch, commit and file, and each task's saved work under `refs/infinitary/kept/` and `refs/infinitary/away-copy/` (`undoProjectSettings`, `src/core/reset/projectGit.ts`).
 Discarding each open task already released its own remote and deleted its branch, saving its unmerged commits first; the reset itself removes only the push address Infinitary set on origin and the links to working copies inside the data folder.
+It reads those links only once the pool has finished putting each discarded task's copy away, because the pool's last rename of a copy rewrites the project's link to it, and a link read mid-write names no folder, so it would stay.
 It never touches another task's remote or branch mark, so another run of the app on the same project, such as a development build, keeps its tasks.
 
 ## At the next start

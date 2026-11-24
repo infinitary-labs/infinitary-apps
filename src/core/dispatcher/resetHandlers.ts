@@ -75,6 +75,7 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
         actor: "captain",
       }),
     leftoversSettled: (id) => services.leftovers.settled(id),
+    worktreesSettled: () => services.workspace.poolSettled(),
     keptJobs: () => services.keptRunning.list().jobs,
     removeKeptJob: (id) => services.keptRunning.remove(id),
     // Projects the app cloned live in its folder and go with it; one it

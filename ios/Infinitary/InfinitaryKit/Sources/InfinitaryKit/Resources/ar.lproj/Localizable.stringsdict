@@ -2859,30 +2859,6 @@
       <string>%1$@ · %2$ld تحتاج إلى تسجيل الدخول</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>zero</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل %1$ld دقيقة. لا يُرسَل شيء.</string>
-      <key>one</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل دقيقة. لا يُرسَل شيء.</string>
-      <key>two</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل %1$ld دقيقتين. لا يُرسَل شيء.</string>
-      <key>few</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل %1$ld دقائق. لا يُرسَل شيء.</string>
-      <key>many</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل %1$ld دقيقة. لا يُرسَل شيء.</string>
-      <key>other</key>
-      <string>%2$@، يتلقى نائب القبطان هذه الرسالة مع الأحداث. يتحقق Infinitary كل %1$ld دقيقة. لا يُرسَل شيء.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

@@ -1,5 +1,5 @@
 ---
-source: 3ada960e24611905
+source: 196a49ab4dfdf816
 title: Automatisation
 description: Donnez à votre second une consigne qui s’exécute selon un horaire ou quand quelque chose se produit, et mettez en pause, modifiez ou relisez chacune dans les Réglages.
 ---
@@ -47,7 +47,7 @@ Rien n’est envoyé.
 
 Une automatisation quotidienne ou hebdomadaire garde le **Fuseau horaire** que vous choisissez, pour s’exécuter à la même heure où que se trouve votre ordinateur.
 
-**Insérer un détail de planification** place un détail dans votre consigne, comme l’heure prévue.
+Chaque bouton **Insérer** sous la consigne y place un détail, comme l’heure prévue.
 Chaque détail est rempli au moment où la consigne est envoyée.
 
 ## La mettre en marche {#turn-it-on}
@@ -55,7 +55,7 @@ Chaque détail est rempli au moment où la consigne est envoyée.
 Une nouvelle automatisation créée dans les Réglages commence comme brouillon.
 Un brouillon ne s’exécute jamais.
 
-Quand vous choisissez **Activer…**, la fiche montre ce qui va se passer avant que rien ne s’exécute :
+Quand vous choisissez **Activer…**, la page montre ce qui va se passer avant que rien ne s’exécute :
 
 - quand elle s’exécute et dans quel fuseau horaire,
 - le projet et la consigne exactement telle que votre second la reçoit,
@@ -87,7 +87,7 @@ Si une heure passe pendant qu’il est fermé, l’automatisation s’exécute u
 
 ## Historique {#history}
 
-Sous la fiche d’une automatisation, **Historique** liste ses exécutions, les plus récentes en premier.
+Sur la page d’une automatisation, l’onglet **Historique** liste ses exécutions, les plus récentes en premier.
 Chaque exécution indique où elle en est :
 
 - **En attente** : votre second ne l’a pas encore traitée.

@@ -2145,24 +2145,6 @@
       <string>%1$@ · %2$ld nécessitent une connexion</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, votre second reçoit cette consigne avec les événements. Infinitary vérifie chaque minute. Rien n’est envoyé.</string>
-      <key>many</key>
-      <string>%2$@, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les %1$ld minutes. Rien n’est envoyé.</string>
-      <key>other</key>
-      <string>%2$@, votre second reçoit cette consigne avec les événements. Infinitary vérifie toutes les %1$ld minutes. Rien n’est envoyé.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

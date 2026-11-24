@@ -15,7 +15,7 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * automation rule keeps limited-size learning notes that its runs change, so
  * later runs are faster; the captain reads, edits and clears them.
  *
- * - Promised result: the sheet shows the page a crewmate wrote; edited and
+ * - Promised result: the Notes tab shows the page a crewmate wrote; edited and
  *   saved by keys it becomes the next version; Earlier versions opens by
  *   Enter and lists both versions with who wrote each; Clear notes by Enter
  *   saves an empty version and the field empties; each save leaves one
@@ -64,6 +64,7 @@ test("a rule's notes are edited, saved, read back and cleared in Settings by key
       tab.locator(`[data-automation-row="${rule.id}"]`).getByRole("button").first(),
       "Enter",
     );
+    await pressKey(tab.locator('[data-automation-tab="notes"]'), "Enter");
 
     const field = tab.locator("#automation-notes");
     await expect(field).toHaveValue(LEARNED);

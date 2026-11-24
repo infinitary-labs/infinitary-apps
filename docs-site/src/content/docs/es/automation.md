@@ -1,5 +1,5 @@
 ---
-source: 3ada960e24611905
+source: 196a49ab4dfdf816
 title: Automatización
 description: Dale a tu primer oficial una indicación que se ejecuta según un horario o cuando pasa algo, y pausa, cambia o vuelve a leer cualquiera de ellas en Configuración.
 ---
@@ -47,7 +47,7 @@ No se envía nada.
 
 Una automatización diaria o semanal conserva la **Zona horaria** que elijas, así que se ejecuta a la misma hora dondequiera que esté tu computadora.
 
-**Insertar un dato de la programación** pone un dato en tu indicación, como la hora para la que estaba prevista.
+Cada botón de **Insertar** bajo la indicación pone un dato en ella, como la hora para la que estaba prevista.
 Cada dato se completa cuando se envía la indicación.
 
 ## Activarla {#turn-it-on}
@@ -55,7 +55,7 @@ Cada dato se completa cuando se envía la indicación.
 Una automatización nueva creada en Configuración empieza como borrador.
 Un borrador nunca se ejecuta.
 
-Cuando eliges **Activar…**, la hoja muestra lo que pasará antes de que se ejecute nada:
+Cuando eliges **Activar…**, la página muestra lo que pasará antes de que se ejecute nada:
 
 - cuándo se ejecuta y en qué zona horaria,
 - el proyecto y la indicación exactamente como los recibe tu primer oficial,
@@ -87,7 +87,7 @@ Si pasa una hora mientras está cerrado, la automatización se ejecuta una vez c
 
 ## Historial {#history}
 
-En la hoja de una automatización, **Historial** enumera sus ejecuciones, la más reciente primero.
+En la página de una automatización, la pestaña **Historial** enumera sus ejecuciones, la más reciente primero.
 Cada ejecución muestra su situación:
 
 - **En espera**: tu primer oficial todavía no la ha atendido.

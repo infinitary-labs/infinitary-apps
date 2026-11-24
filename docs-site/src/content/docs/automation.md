@@ -31,7 +31,7 @@ Pick an automation to read or change it.
 3. Under **When**, pick how often it runs.
 4. Under **Project**, pick the project it is about, or leave **No project**.
 5. Under **Tell your first mate**, write the prompt.
-6. Choose **Save draft** to keep it for later, or **Enable…** to check it and turn it on.
+6. Choose **Save draft** to keep it for later, or **Turn on…** to check it and turn it on.
 
 **Preview** shows the next three times it will run, and the prompt as your first mate will get it.
 Nothing is sent.
@@ -46,7 +46,7 @@ Nothing is sent.
 
 A daily or weekly automation keeps the **Time zone** you pick, so it runs at the same time wherever your computer is.
 
-**Insert schedule detail** puts a detail in your prompt, such as the time it was planned for.
+The **Insert** buttons under the prompt each put a detail in it, such as the time it was planned for.
 Each detail is filled in when the prompt is sent.
 
 ## Turn it on
@@ -54,7 +54,7 @@ Each detail is filled in when the prompt is sent.
 A new automation from Settings starts as a draft.
 A draft never runs.
 
-When you choose **Enable…**, the sheet shows what will happen before anything runs:
+When you choose **Turn on…**, the page shows what will happen before anything runs:
 
 - when it runs and in which time zone,
 - the project and the prompt exactly as your first mate gets it,
@@ -86,7 +86,7 @@ If a time passes while it is closed, the automation runs once when Infinitary op
 
 ## History
 
-Under an automation's sheet, **History** lists its runs, newest first.
+On an automation's page, the **History** tab lists its runs, newest first.
 Each run shows where it stands:
 
 - **Waiting**: your first mate has not handled it yet.

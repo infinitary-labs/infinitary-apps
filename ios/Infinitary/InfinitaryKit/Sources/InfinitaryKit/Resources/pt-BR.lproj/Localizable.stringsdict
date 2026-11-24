@@ -2145,24 +2145,6 @@
       <string>%1$@ · %2$ld precisam de login</string>
     </dict>
   </dict>
-  <key>settingsAutomationEventPreview</key>
-  <dict>
-    <key>NSStringLocalizedFormatKey</key>
-    <string>%1$#@count@</string>
-    <key>count</key>
-    <dict>
-      <key>NSStringFormatSpecTypeKey</key>
-      <string>NSStringPluralRuleType</string>
-      <key>NSStringFormatValueTypeKey</key>
-      <string>ld</string>
-      <key>one</key>
-      <string>%2$@, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada minuto. Nada é enviado.</string>
-      <key>many</key>
-      <string>%2$@, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada %1$ld minutos. Nada é enviado.</string>
-      <key>other</key>
-      <string>%2$@, seu imediato recebe este pedido com os eventos. O Infinitary verifica a cada %1$ld minutos. Nada é enviado.</string>
-    </dict>
-  </dict>
   <key>settingsAutomationRunCatchingUpMissed</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

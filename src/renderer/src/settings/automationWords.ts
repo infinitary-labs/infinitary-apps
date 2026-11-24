@@ -260,13 +260,6 @@ export const CANCEL_WORDS: Record<AutomationCancelReason, string> = {
   },
 };
 
-/** An event rule's preview: what it does in place of its next dates. */
-export function eventPreviewWords(when: string, every: number | undefined): string {
-  return every === undefined
-    ? m.settingsAutomationEventPreviewNoLook({ when })
-    : m.settingsAutomationEventPreview({ when, count: every });
-}
-
 /** The review's Runs for an event rule: each time events arrive, and how often the app looks. */
 export function eventRunsWords(every: number | undefined): string {
   return every === undefined
@@ -336,12 +329,6 @@ export const AUTOMATION_SHEET_WORDS = {
   get eventsPreview() {
     return m.settingsAutomationEventsPreview();
   },
-  get submittedNote() {
-    return m.settingsAutomationSubmittedNote();
-  },
-  get submittedNoteEvents() {
-    return m.settingsAutomationSubmittedNoteEvents();
-  },
   /** What a draft says at the top of its sheet. */
   get draftNote() {
     return m.settingsAutomationDraftNote();
@@ -353,9 +340,6 @@ export const AUTOMATION_SHEET_WORDS = {
   /** What saving a stopped event rule does, after why it stopped: it listens to what is picked. */
   get stoppedNote() {
     return m.settingsAutomationStoppedNote();
-  },
-  get detailNote() {
-    return m.settingsAutomationDetailNote();
   },
 } as const;
 
@@ -406,12 +390,13 @@ export function ruleProjectWords(
 }
 
 /**
- * Enable's review as its facts, in order (docs/automation.md, "Drafts"):
- * the schedule, its zone, an event rule's filters, the project, the next
- * dates, the exact prompt, what it sends and what happens to a missed time.
- * `where` names the computer the first mate lives on when another one
- * shows the review. The computer's review and the phone's page of a rule
- * both draw these.
+ * The Turn on step's review as its facts, in order (docs/automation.md,
+ * "Drafts"): the schedule, its zone, an event rule's filters, the project,
+ * the next dates, the exact prompt, what it sends and what happens to a
+ * missed time. `where` names the computer the first mate lives on when
+ * another one shows the review. The computer's review and Preview and the
+ * phone's page of a rule all draw these; `zoneNote` adds what the zone
+ * means to its line, where the computer's page has no other place for it.
  */
 export function reviewFacts(
   review: {
@@ -423,20 +408,24 @@ export function reviewFacts(
   },
   projects: readonly { id: string; name: string }[],
   where: string | null,
+  { zoneNote: withZoneNote = false }: { zoneNote?: boolean } = {},
 ): ReviewFact[] {
   const { spec, listened } = review;
   const zone = automationZoneOf(spec);
   const next = review.dates.map((at) => automationDateWords(at, zone));
+  const zoneFact = (): ReviewFact => {
+    const words = zone ? automationZoneWords(zone) : localClockWords(where);
+    if (!withZoneNote) return { term: m.settingsAutomationTimeZone(), value: words };
+    const note = zone ? zoneNote(where) : localTimeNote(where);
+    return {
+      term: m.settingsAutomationTimeZone(),
+      value: `${words}. ${note}`,
+      lines: [words, note],
+    };
+  };
   return [
     { term: m.settingsAutomationWhen(), value: automationWhenWords(spec, listened?.when) },
-    ...(spec.kind === "daily" || spec.kind === "weekly"
-      ? [
-          {
-            term: m.settingsAutomationTimeZone(),
-            value: zone ? automationZoneWords(zone) : localClockWords(where),
-          },
-        ]
-      : []),
+    ...(spec.kind === "daily" || spec.kind === "weekly" ? [zoneFact()] : []),
     ...(spec.kind === "event"
       ? (listened?.filters ?? []).map((field) => ({
           term: field.label,

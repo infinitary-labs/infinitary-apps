@@ -89,21 +89,21 @@ export const WRITE_ASK_CARD_TITLE = "Send this write for me?";
 export const WRITE_ASK_SENT_WAKE = WRITE_ANSWERED_LEAD;
 
 /**
- * A scripted outside reader (docs/agents-reach.md, "An outside reader"): it
+ * A scripted unsafe data reader (docs/agents-reach.md, "An unsafe data reader"): it
  * reads its own project and is refused another and a file outside its
  * working copy, then makes two writes to its
  * own project, an issue and a workflow run start, both kept for the app's one
  * approval card.
  */
-export const OUTSIDE_READER_MARKER = "triage the waiting outside issues";
-/** The same ask as an outside reader that would change its project, which the host refuses. */
-export const OUTSIDE_READER_CHANGE_MARKER = "fix the waiting outside issues";
+export const UNSAFE_DATA_READER_MARKER = "triage the waiting outside issues";
+/** The same ask as an unsafe data reader that would change its project, which the host refuses. */
+export const UNSAFE_DATA_READER_CHANGE_MARKER = "fix the waiting outside issues";
 /** A file outside every working copy, which its read tool refuses. */
-export const OUTSIDE_READER_FILE = "/etc/hosts";
+export const UNSAFE_DATA_READER_FILE = "/etc/hosts";
 /** The reads it makes: its own project, then one outside it. */
-export const OUTSIDE_READER_READS = ["/repos/octo/meterlab/pulls", "/repos/octo/website/pulls"];
+export const UNSAFE_DATA_READER_READS = ["/repos/octo/meterlab/pulls", "/repos/octo/website/pulls"];
 /** The writes it makes, in order: an issue, then a run start. */
-export const OUTSIDE_READER_WRITES: GithubWriteInput[] = [
+export const UNSAFE_DATA_READER_WRITES: GithubWriteInput[] = [
   {
     method: "POST",
     path: "/repos/octo/meterlab/issues",

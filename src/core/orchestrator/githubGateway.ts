@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
+import type { ForgeKind } from "@shared/forge";
 import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/forgeKinds";
 import { INTEGRATION_KIND_NAMES, type IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
@@ -78,29 +79,40 @@ type Target = {
   integration?: true;
 };
 
-/** The label an outside reader's answers are fenced with (docs/agents-reach.md, "An outside reader"). */
-export const READER_FENCE_LABEL = "github-data";
+/**
+ * The label an unsafe data reader's answers are fenced with: its project's
+ * host kind, so the reader knows where the words came from (docs/agents-reach.md,
+ * "An unsafe data reader"). A reader's project always lives on one of these.
+ */
+export function readerFenceLabel(kind: ForgeKind): string {
+  return kind === "gitlab" || kind === "bitbucket" ? `${kind}-data` : "github-data";
+}
+/** The longest label `readerFenceLabel` gives, which sizes a reader's longest answer. */
+const READER_FENCE_LONGEST = "bitbucket-data";
 /** Random bytes in each answer's fence value, as the integrations draw theirs. */
 const READER_FENCE_BYTES = 8;
 const READER_READ_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
-  "Refused: an outside reader reads only its own project, through its own sign-in: a /repos/{owner}/{repo}/... path of the task's project. Nothing was read.";
+  "Refused: an unsafe data reader reads only its own project, through its own sign-in: a /repos/{owner}/{repo}/... path of the task's project. Nothing was read.";
 const READER_WRITE_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
-  "Refused: an outside reader writes only to its own project, through its own sign-in, as a JSON request. Nothing was kept or sent.";
+  "Refused: an unsafe data reader writes only to its own project, through its own sign-in, as a JSON request. Nothing was kept or sent.";
 const READER_VALIDATION_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
-  "Refused: an outside reader's writes carry no validation effect. Nothing was kept or sent.";
+  "Refused: an unsafe data reader's writes carry no validation effect. Nothing was kept or sent.";
 
 /**
- * The longest unfenced answer an outside reader is served: its answer must
+ * The longest unfenced answer an unsafe data reader is served: its answer must
  * reach its model whole, never as a saved file (`serveAnswerFiles`), since
  * its fence refuses the temporary folder and it has no shell.
  */
 const READER_ANSWER_MAX =
   ANSWER_WHOLE_MAX_CHARACTERS -
-  fencedAnswer("", { label: READER_FENCE_LABEL, value: "0".repeat(READER_FENCE_BYTES * 2), at: 0 })
-    .length;
+  fencedAnswer("", {
+    label: READER_FENCE_LONGEST,
+    value: "0".repeat(READER_FENCE_BYTES * 2),
+    at: 0,
+  }).length;
 const READER_NARROW =
   // i18n-exempt: served to the crewmate as a tool answer
   " Nothing was served. Ask for less: a smaller per_page, one item by its number, or a narrower path.";
@@ -163,20 +175,20 @@ export class GithubGatewayService {
       ) => Promise<void>;
       sleep?: (ms: number) => Promise<void>;
       /**
-       * Put an outside reader's kept write on its task's approval card
+       * Put an unsafe data reader's kept write on its task's approval card
        * (`IntegrationAsks.askForge`), with the waiting asks the cap dropped.
        */
       presentReaderAsk?: (taskId: string, ask: ForgeWriteAsk, dropped: WriteAsk[]) => void;
     },
   ) {}
 
-  /** The task is an outside reader (docs/agents-reach.md, "An outside reader"). */
+  /** The task is an unsafe data reader (docs/agents-reach.md, "An unsafe data reader"). */
   private isReader(taskId: string): boolean {
-    return this.options.tasks.get(taskId)?.shape?.outside_reader === true;
+    return this.options.tasks.get(taskId)?.shape?.unsafe_data_reader === true;
   }
 
   /**
-   * An outside reader's read: its own project only, through the project's
+   * An unsafe data reader's read: its own project only, through the project's
    * own sign-in, and the answer fenced whole as data from outside, with a
    * fresh fence each read so no answer can forge the closing mark.
    */
@@ -188,18 +200,19 @@ export class GithubGatewayService {
   ): Promise<string> {
     return this.answer(
       taskId,
-      async ({ api, via, integration }) => {
+      async (target) => {
+        const { api, via, integration } = target;
         if (through || integration || via !== "project")
           throw new ForgeError("refused", READER_READ_REFUSAL);
         const route = api.route(input.method ?? "GET", input.path);
         if (!route.own) throw new ForgeError("refused", READER_READ_REFUSAL);
         const answer = await this.readOn(taskId, api, input, READER_ANSWER_MAX);
-        const fenced = this.readerFenced(answer);
+        const fenced = this.readerFenced(answer, target.forge.kind);
         // Breaking a copied mark lengthens the words by one character each.
         if (fenced.length > ANSWER_WHOLE_MAX_CHARACTERS)
           throw new ForgeError(
             "refused",
-            `The answer exceeds the ${ANSWER_WHOLE_MAX_CHARACTERS} characters an outside reader's answer carries whole.${READER_NARROW}`,
+            `The answer exceeds the ${ANSWER_WHOLE_MAX_CHARACTERS} characters an unsafe data reader's answer carries whole.${READER_NARROW}`,
           );
         return fenced;
       },
@@ -209,9 +222,9 @@ export class GithubGatewayService {
   }
 
   /** Words from outside, fenced with a fresh value so none can forge the closing mark. */
-  private readerFenced(words: string): string {
+  private readerFenced(words: string, kind: ForgeKind): string {
     return fencedAnswer(words, {
-      label: READER_FENCE_LABEL,
+      label: readerFenceLabel(kind),
       value: randomBytes(READER_FENCE_BYTES).toString("hex"),
       at: this.options.now(),
     });
@@ -342,7 +355,7 @@ export class GithubGatewayService {
   }
 
   /**
-   * `most` bounds the answer as served, in characters: an outside reader's
+   * `most` bounds the answer as served, in characters: an unsafe data reader's
    * answer must reach its model whole (`READER_ANSWER_MAX`), so a longer one
    * is paged the same way as one past the JSON cap, and refused when no
    * smaller page would fit.
@@ -363,7 +376,7 @@ export class GithubGatewayService {
     const limit =
       most === undefined
         ? `${API_RESPONSE_MAX_BYTES / 1024} KiB read limit`
-        : `${most} characters an outside reader's answer carries whole`;
+        : `${most} characters an unsafe data reader's answer carries whole`;
     for (;;) {
       let held: OversizedAnswer;
       try {
@@ -410,7 +423,7 @@ export class GithubGatewayService {
       async (target) => {
         const { api, forge } = target;
         const reader = this.isReader(taskId);
-        // An outside reader writes only to its own project, through its own
+        // An unsafe data reader writes only to its own project, through its own
         // sign-in, a JSON request alone: every one waits for the captain.
         if (
           reader &&
@@ -525,7 +538,7 @@ export class GithubGatewayService {
 
   /**
    * Send a kept write the captain's click already took (`sendAsk`), or one
-   * row of an approval card that lists an outside reader's writes, whose
+   * row of an approval card that lists an unsafe data reader's writes, whose
    * click took every row before the first was sent. Not now refuses it;
    * only Only this time sends it.
    */
@@ -645,7 +658,7 @@ export class GithubGatewayService {
     // issue's body, and reaches it under the captain's click.
     return done(
       { kind: "answered", status: response.status, requestId: response.requestId },
-      this.isReader(taskId) ? this.readerFenced(answer) : answer,
+      this.isReader(taskId) ? this.readerFenced(answer, target.forge.kind) : answer,
     );
   }
 

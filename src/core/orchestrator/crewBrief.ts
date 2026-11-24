@@ -32,7 +32,6 @@ import {
   type CodeElsewhere,
   FLEET_STARTED_CHANGE_WORDS,
   joinParts,
-  OUTSIDE_READER_WORDS,
   renderAnswerShapeSection,
   renderBranchFromCarriedLine,
   renderBranchFromLine,
@@ -42,6 +41,7 @@ import {
   renderProgramPartSection,
   renderResultShapeSection,
   renderRigorSection,
+  UNSAFE_DATA_READER_WORDS,
   withoutOriginReadLine,
 } from "./intentBrief";
 import { lostComputer, SourceOutOfReach } from "./lostStarts";
@@ -271,7 +271,7 @@ export class CrewBrief {
         renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
       ]);
     }
-    if (record?.shape?.outside_reader) sections.push([OUTSIDE_READER_WORDS]);
+    if (record?.shape?.unsafe_data_reader) sections.push([UNSAFE_DATA_READER_WORDS]);
     if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.

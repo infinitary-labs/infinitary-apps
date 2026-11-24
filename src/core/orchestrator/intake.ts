@@ -45,8 +45,8 @@ import type { TaskPlacement } from "./taskPlacement";
 import {
   type EscalationPlan,
   handOffShape,
-  OUTSIDE_READER_PROJECT,
   resolveEscalation,
+  UNSAFE_DATA_READER_PROJECT,
   withBasisVerdict,
   withDeliverable,
   workShape,
@@ -371,8 +371,8 @@ export class TaskIntake {
     const handOff = handOffShape(this.options.tasks, input.shape, boundRepoId);
     if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
     // Its reads and writes where the project lives are fenced to its own project.
-    if (input.shape?.outside_reader && (!boundRepoId || placement.personal))
-      throw new Error(`${NOTHING_SPAWNED} ${OUTSIDE_READER_PROJECT}`);
+    if (input.shape?.unsafe_data_reader && (!boundRepoId || placement.personal))
+      throw new Error(`${NOTHING_SPAWNED} ${UNSAFE_DATA_READER_PROJECT}`);
     const shape = withDeliverable(
       {
         ...workShape(this.options.tasks, input.shape, escalation),

@@ -400,7 +400,7 @@ const SHAPE_FIELD_RULES = {
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository default is unchanged.",
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
-  outside_reader:
+  unsafe_data_reader:
     "True only on a read-only task whose brief has it read words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell, web or browser, reads only its own project, and every write it makes waits for the captain's click.",
   in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
@@ -446,7 +446,7 @@ const SHAPE_FIELDS = {
   autonomy_ask: "boolean",
   runs_on_ask: "string",
   internal_step: "boolean",
-  outside_reader: "boolean",
+  unsafe_data_reader: "boolean",
   in_folder: "boolean",
   skipped_plan_because: "string",
   review_of: "string",
@@ -631,7 +631,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             autonomy_ask: Type.Optional(Type.Boolean()),
             runs_on_ask: Type.Optional(Type.String()),
             internal_step: Type.Optional(Type.Boolean()),
-            outside_reader: Type.Optional(Type.Boolean()),
+            unsafe_data_reader: Type.Optional(Type.Boolean()),
             in_folder: Type.Optional(Type.Boolean()),
             skipped_plan_because: Type.Optional(Type.String()),
             review_of: Type.Optional(Type.String()),
@@ -1027,7 +1027,7 @@ function shapeAskFrom(params: {
   runs_on_ask?: string;
   placement_requirements?: PlacementRequirements;
   internal_step?: boolean;
-  outside_reader?: boolean;
+  unsafe_data_reader?: boolean;
   in_folder?: boolean;
   review_of?: string;
   skipped_plan_because?: string;
@@ -1061,7 +1061,7 @@ function shapeAskFrom(params: {
       ? { placement_requirements: params.placement_requirements }
       : {}),
     ...(params.internal_step ? { internal_step: true } : {}),
-    ...(params.outside_reader ? { outside_reader: true } : {}),
+    ...(params.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
     ...(params.in_folder ? { in_folder: true } : {}),
     ...(reviewOf ? { review_of: reviewOf } : {}),
     ...(params.skipped_plan_because?.trim()

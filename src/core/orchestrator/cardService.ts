@@ -652,6 +652,7 @@ export class CardService {
         ...shown,
         ...(about ? { asked: about } : {}),
         ...(this.quickAnswer(shown) ? { quick: true as const } : {}),
+        ...(this.fromUnsafeDataReader(shown) ? { unsafeData: true as const } : {}),
       };
     });
   }
@@ -681,6 +682,12 @@ export class CardService {
   private quickAnswer(card: Card): boolean {
     if (card.author !== "crewmate" || !card.taskId) return false;
     return isQuickAnswer(this.host.tasks.get(card.taskId)?.shape);
+  }
+
+  /** Whether a card is a crewmate's from an unsafe data reader, read from its task's recorded shape. */
+  private fromUnsafeDataReader(card: Card): boolean {
+    if (card.author !== "crewmate" || !card.taskId) return false;
+    return this.host.tasks.get(card.taskId)?.shape?.unsafe_data_reader === true;
   }
 
   /**
@@ -1806,6 +1813,16 @@ export class CardService {
   }
 
   /** Every card whose thread moved since `since`, newest first (`CardThreads`). */
+  /** A thread line's words as an agent reads them (`CardThreads.servedLine`). */
+  servedLine(card: Pick<Card, "taskId">, message: CardMessage): string {
+    return this.threads.servedLine(card, message);
+  }
+
+  /** Whether an unsafe data reader wrote this thread line (`CardThreads.fromReader`). */
+  fromReader(card: Card, message: CardMessage): boolean {
+    return this.threads.fromReader(card, message);
+  }
+
   threadActivitySince(since: number, limit?: number): ThreadActivity[] {
     return this.threads.threadActivitySince(since, limit);
   }

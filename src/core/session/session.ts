@@ -211,7 +211,7 @@ export type SessionSpec = {
   /**
    * With the coding set, only its read-only tools, each refusing a path
    * outside `cwd`: no shell, no file change, no web and no subagent (an
-   * outside reader, docs/agents-reach.md). Only this computer's factories
+   * unsafe data reader, docs/agents-reach.md). Only this computer's factories
    * build it; a computer that runs work refuses it.
    */
   fenced?: true;

@@ -106,7 +106,7 @@ export type PlacementRecord = {
     kind?: string;
     runs_on_ask?: string;
     in_place?: object;
-    outside_reader?: boolean;
+    unsafe_data_reader?: boolean;
   } | null;
 };
 

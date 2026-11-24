@@ -89,7 +89,7 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   /** Quick care lowers effort once, after the backend clamps to its model. */
   quick?: boolean;
   /**
-   * An outside reader (docs/agents-reach.md, "An outside reader"): its
+   * An unsafe data reader (docs/agents-reach.md, "An unsafe data reader"): its
    * session gets read-only built-ins confined to its working copy, and no
    * shell, web, browser or subagent.
    */
@@ -263,15 +263,17 @@ export function crewmateSessionSpec(
   const instructions =
     buildCrewmateSystemPrompt(
       binding.backend,
-      spec.evidenceDir,
-      spec.cardBodiesDir,
+      // An unsafe data reader writes no file, so it is told of no folder to
+      // write in: its card bodies go inline and it keeps no evidence.
+      spec.fenced ? undefined : spec.evidenceDir,
+      spec.fenced ? undefined : spec.cardBodiesDir,
       timeZoneFact(Date.now()),
       // A task on another computer is granted its command by that computer's
       // own task channel, beside its shell there.
       spec.browser !== undefined &&
         (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
       spec.procedure,
-      spec.tempDir,
+      spec.fenced ? undefined : spec.tempDir,
       // Its files command rides the same channel, here or there (docs/files.md).
       spec.computers &&
         spec.files !== undefined &&

@@ -51,6 +51,13 @@ Only when the words are cut, the bubble itself is the control: click or tap it t
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
 `QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line, and the phone's Reply sheet; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
+
+### The unsafe data line
+
+A crewmate's card from an unsafe data reader carries one quiet sentence under the title's lines, after the You asked line and `--space-2` below it: "This crewmate reads words anyone can write, so a link or request on this card may come from a stranger."
+It uses `--font-ui` `--text-xs` `--fg-3`, wraps rather than cuts, and is never a control or a Tab stop.
+The app sets it from the task's recorded shape, never the author and never the card's words; the iPhone and iPad draw the same sentence at the end of the head in caption type and the secondary color.
+
 Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).
 The shared `src/shared/cardLeave.ts` table owns each kind’s icon, label, rest words and operation; live cards carry the core’s corner and the window’s own panels read their table row.
 Every live note carries one host footer button at the bottom right, the card's only primary, pressed by ⌘1 (INF-2794).

@@ -91,11 +91,11 @@ A crewmate reserves and reruns a failed job a second time, and the host records 
 The weekly audit rule, set to run once, starts one audit task, and the corpus export counts each override per hold.
 Every refusal an agent was served names its hold: a soft hold with its way out, a fixed limit as fixed.
 
-## An outside reader
+## An unsafe data reader
 
-A task that reads words strangers can write, such as its project's issues and pull requests, starts as an outside reader: a read-only answer task whose shape says `outside_reader` (`src/shared/routingPolicy.ts`).
+A task that reads words strangers can write, such as its project's issues and pull requests, starts as an unsafe data reader: a read-only answer task whose shape says `unsafe_data_reader` (`src/shared/routingPolicy.ts`).
 Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
-`spawn_crewmate` refuses one with no project, on the personal workspace, or that is not an answer (`OUTSIDE_READER_PROJECT`, `OUTSIDE_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+`spawn_crewmate` refuses one with no project, on the personal workspace, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 
 - Its session is fenced (`SessionSpec.fenced`): no shell, no file change, no web and no browser, on both kinds of model session.
   Pi serves only its read, grep and ls tools (`fencedPiReadTools`): read and ls check every path they open, and grep checks its search root and leaves the files beneath it to ripgrep, which follows no links out of it.
@@ -103,12 +103,19 @@ Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it
   Claude serves only Read, Grep and Glob, and a gate before each call refuses a path outside the working copy (`claudeFenceHook`); no skill is staged, since a plugin can bring hooks and servers of its own.
   A path's links are followed before the check, and a `~` path is refused whole (`outsideWorkingCopy`, `src/core/session/fencedReads.ts`).
 - None of the app's shell commands reach it, so it has no integrations and no browser, and it gets no task reads, no knowledge, no programs and no workflow logs or artifacts: those would bring outside words in unfenced, or reach past its project.
-- `github_read` reaches only its own project, through the project's own sign-in, and every answer comes fenced whole as `github-data`, the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
+- `github_read` reaches only its own project, through the project's own sign-in, and every answer comes fenced whole under its host's label, `github-data`, `gitlab-data` or `bitbucket-data` (`readerFenceLabel`), the way Google's words are (`docs/integrations.md`, "Data from outside"), with a fresh fence each read.
   Fencing the whole answer, not only the words of authors who cannot write to the project, keeps the host from judging who is trusted.
   Its answer must reach the model whole, since its fence refuses the temporary folder a long answer is saved to: a listing past that length is read again at the largest page that fits (`smallerPage`), and an answer no page fits is refused with words on asking for less.
 - Every `github_write` it makes to its own project is kept, run starts included, and the host puts it on one approval card with a ticked row each ("A reader's writes" in `docs/forge.md`); a write anywhere else, a release file and a validation effect are refused and nothing is kept.
+- It writes no file, so its instructions name no evidence, temporary or card body folder: its card bodies go inline.
+- Each of its cards carries one line, drawn by the app from its task's shape, saying it reads words anyone can write, so a link or request there may come from a stranger (`Card.unsafeData`).
 - It runs only on this computer: another computer's host rebuilds a session with the whole coding set, so the placement keeps it home (`runsOnlyHere`) and a placed session refuses a fenced spec.
 
 Every other crewmate's shell and the merge card's rules are unchanged; this is a fence for one kind of task, not a general sandbox.
-The brief names the fence to its crewmate (`OUTSIDE_READER_WORDS`).
-Its reports still reach the first mate, and the words it chooses to put there are its own.
+The brief names the fence to its crewmate (`UNSAFE_DATA_READER_WORDS`).
+What it says reaches the first mate between `reader-data` marks with a fresh fence (`src/core/orchestrator/readerData.ts`), since it may carry words anyone can write:
+
+- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its own headline is dropped, since a feed line is cut short, and the record takes one from the marked words.
+- A follow-up it files keeps its goal and why marked in the record and in the brief a builder would start from, so no builder takes them as instructions.
+- Its progress notes are kept marked, cut before they are marked.
+- Its card replies stay as written in the captain's thread and are marked where an agent reads them: a card read, the open-work read and the first mate's thread activity (`CardThreads.servedLine`).

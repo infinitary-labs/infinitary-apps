@@ -47,6 +47,7 @@ import { CrewmatePrograms } from "./crewmatePrograms";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
+import { readerReport } from "./readerData";
 import type { WakeBody } from "./wakes";
 import { deliverableOf } from "./workShape";
 
@@ -75,10 +76,10 @@ export class CrewToolHooks {
       machine === LOCAL_MACHINE_ID
         ? undefined
         : this.core.options.machines?.folders(machine, task.id);
-    // An outside reader holds strangers' words, so it gets no shell and none
+    // An unsafe data reader holds strangers' words, so it gets no shell and none
     // of the commands that ride it, no program, and no read of the captain's
-    // record or saved knowledge (docs/agents-reach.md, "An outside reader").
-    const reader = this.core.options.tasks.get(task.id)?.shape?.outside_reader === true;
+    // record or saved knowledge (docs/agents-reach.md, "An unsafe data reader").
+    const reader = this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
     return {
       ...(reader ? { fenced: true as const } : {}),
       onSpeed: (model, selection) => this.noteSpeed(task.id, model, selection),
@@ -124,7 +125,12 @@ export class CrewToolHooks {
         : {}),
       onProgress: (text, plan) => this.core.reportIntake.noteProgress(task, text, plan),
       onReport: (text, summary, declared) =>
-        this.core.turns.recordReportFromSession(task, text, summary, declared),
+        reader
+          ? this.core.turns.recordReportFromSession(
+              task,
+              ...readerReport(text, declared, Date.now()),
+            )
+          : this.core.turns.recordReportFromSession(task, text, summary, declared),
       onReply: (input) => this.core.cards.replyFromCrewmate(task.id, input),
       onReviseRequiredAction: (input) =>
         cardMutationText(
@@ -470,11 +476,11 @@ export class CrewToolHooks {
     | "onGithubWrite"
   > {
     if (this.core.facts.isPersonalTask(task.id)) return {};
-    // An outside reader reaches where its project lives only through the
+    // An unsafe data reader reaches where its project lives only through the
     // API pair, whose answers the gateway fences and whose writes all wait
     // for the captain: a workflow log or artifact would bring outside words
-    // in unfenced (docs/agents-reach.md, "An outside reader").
-    if (this.core.options.tasks.get(task.id)?.shape?.outside_reader === true) {
+    // in unfenced (docs/agents-reach.md, "An unsafe data reader").
+    if (this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true) {
       const { githubRead, githubWrite } = this.core.options;
       return {
         ...(githubRead

@@ -463,6 +463,7 @@
   {"said":{"m":"cardPastSentLead"},"words":"Sent with your choice:"},
   {"said":{"m":"cardPastUnreadable"},"words":"This card could not be read"},
   {"said":{"m":"cardQuickAnswer"},"words":"Quick answer"},
+  {"said":{"m":"cardReaderUnsafeData"},"words":"This crewmate reads words anyone can write, so a link or request on this card may come from a stranger."},
   {"said":{"m":"cardReaderWritesHow","a":{"place":"‹place›"}},"words":"Every row comes ticked; untick any you do not want sent. The ticked rows go once each, oldest first, with your ‹place› sign-in."},
   {"said":{"m":"cardReaderWritesLead","a":{"place":"‹place›","task":"‹task›"}},"words":"The crewmate on “‹task›” reads words anyone can write, so every write it makes on ‹place› waits for you. Each row is one call and the request it sends."},
   {"said":{"m":"cardReaderWritesTitle","a":{"place":"‹place›"}},"words":"Allow writes on ‹place›?"},

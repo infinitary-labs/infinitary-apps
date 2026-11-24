@@ -63,8 +63,8 @@ export class IntegrationAsks {
   }
 
   /**
-   * An outside reader's kept write where its project lives
-   * (docs/agents-reach.md, "An outside reader"): it joins its task's card of
+   * An unsafe data reader's kept write where its project lives
+   * (docs/agents-reach.md, "An unsafe data reader"): it joins its task's card of
    * waiting writes, revised in place to list it, or raises its own, the way
    * a crewmate's integration ask does. The waiting asks the cap dropped to
    * keep it are refused first.
@@ -258,7 +258,7 @@ export function waitingIntegrationAsks(asks: readonly WriteAsk[] | undefined): I
     .sort((a, b) => a.at - b.at);
 }
 
-/** An outside reader's writes still waiting on the host's approval card, oldest first. */
+/** An unsafe data reader's writes still waiting on the host's approval card, oldest first. */
 export function waitingForgeCardAsks(
   asks: readonly WriteAsk[] | undefined,
 ): (ForgeWriteAsk & { card: string })[] {

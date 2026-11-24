@@ -17468,6 +17468,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Quick answer`;
   }
+  function cardReaderUnsafeData() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يقرأ فرد الطاقم هذا كلامًا يمكن لأي أحد كتابته، لذا قد يأتي رابط أو طلب في هذه البطاقة من شخص غريب.`;
+      case "de":
+        return `Dieses Crewmitglied liest Texte, die jeder schreiben kann, darum kann ein Link oder eine Bitte auf dieser Karte von einem Fremden stammen.`;
+      case "es":
+        return `Este tripulante lee palabras que cualquiera puede escribir, así que un enlace o una petición en esta tarjeta puede venir de un desconocido.`;
+      case "fr":
+        return `Cet équipier lit des mots que tout le monde peut écrire : un lien ou une demande sur cette carte peut donc venir d’un inconnu.`;
+      case "ja":
+        return `この乗組員は誰でも書ける文章を読むため、このカードのリンクや依頼は見知らぬ人から来たものかもしれません。`;
+      case "ko":
+        return `이 선원은 누구나 쓸 수 있는 글을 읽으므로, 이 카드의 링크나 요청은 모르는 사람이 보낸 것일 수 있습니다.`;
+      case "pt-BR":
+        return `Este tripulante lê textos que qualquer pessoa pode escrever, então um link ou pedido neste cartão pode vir de um desconhecido.`;
+      case "zh-Hans":
+        return `这名船员会读取任何人都能写的内容，所以这张卡片上的链接或请求可能来自陌生人。`;
+      case "zh-Hant":
+        return `這名船員會讀取任何人都能寫的內容，所以這張卡片上的連結或請求可能來自陌生人。`;
+      case "en-XA":
+        return `[Ţĥîš çŕéŵɱáţé ŕéáðš ŵöŕðš áñýöñé çáñ ŵŕîţé, šö á ļîñķ öŕ ŕéǫûéšţ öñ ţĥîš çáŕð ɱáý çöɱé ƒŕöɱ á šţŕáñĝéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This crewmate reads words anyone can write, so a link or request on this card may come from a stranger.‬`;
+    }
+    return `This crewmate reads words anyone can write, so a link or request on this card may come from a stranger.`;
+  }
   function cardReaderWritesHow(input2) {
     const place = input2.place;
     switch (currentLanguage()) {
@@ -103652,6 +103679,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastSentLead,
     cardPastUnreadable,
     cardQuickAnswer,
+    cardReaderUnsafeData,
     cardReaderWritesHow,
     cardReaderWritesLead,
     cardReaderWritesTitle,
@@ -107001,6 +107029,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
     "cardQuickAnswer": [],
+    "cardReaderUnsafeData": [],
     "cardReaderWritesHow": ["place"],
     "cardReaderWritesLead": ["place", "task"],
     "cardReaderWritesTitle": ["place"],
@@ -110893,6 +110922,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * kind, never stored on the row and never an author's.
      */
     quick: literal(true).optional(),
+    /**
+     * A crewmate's card from an unsafe data reader (docs/agents-reach.md, "An
+     * unsafe data reader"), which the chrome draws as one line saying it read
+     * words anyone can write, so a link on it may be a stranger's.
+     * Host-computed on the stage's snapshot from the task's recorded shape,
+     * never stored on the row and never an author's.
+     */
+    unsafeData: literal(true).optional(),
     /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
     seen: boolean().optional(),
     /** Snapshot-only: the exact released update, distinct from its historical offer. */
@@ -125861,14 +125898,14 @@ ${startersHtml()}`;
     /**
      * The first mate's declaration that this answer task reads words from
      * outside its project's own people, such as issues and pull requests
-     * strangers open (docs/agents-reach.md, "An outside reader"): its session
+     * strangers open (docs/agents-reach.md, "An unsafe data reader"): its session
      * gets no shell, no web, no browser and no subagent, its file reads stay
      * in its working copy, its reads where the project lives stay in its own
      * project and arrive fenced, and every write it makes there waits for the
      * captain's click on one host card. The host refuses it on a task that is
      * not an answer, and the task runs only on the computer keeping the record.
      */
-    outside_reader: boolean().optional(),
+    unsafe_data_reader: boolean().optional(),
     /**
      * The shape this task's report must carry as its typed result (INF-799
      * piece 1): a JSON Schema object with an object at its root, declared by
@@ -126052,7 +126089,7 @@ ${startersHtml()}`;
     runs_on_ask: true,
     placement_requirements: true,
     internal_step: true,
-    outside_reader: true,
+    unsafe_data_reader: true,
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,

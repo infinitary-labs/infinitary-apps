@@ -304,8 +304,8 @@ export function startHomeCrew({
       "integration"
         ? integrations.sendAsk(taskId, askId, choice)
         : githubGateway.sendAsk(taskId, askId),
-    // An outside reader's write joins the same approval cards and is sent
-    // where its project lives (docs/agents-reach.md, "An outside reader").
+    // An unsafe data reader's write joins the same approval cards and is sent
+    // where its project lives (docs/agents-reach.md, "An unsafe data reader").
     sendTakenIntegrationAsk: (rowId, taken, choice) =>
       "ask" in taken && taken.ask.kind !== "integration"
         ? githubGateway.sendTaken(rowId, taken, choice)

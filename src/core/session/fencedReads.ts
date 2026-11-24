@@ -4,7 +4,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 /** The words a fenced session's read hears when its path leaves the working copy. */
 export function outsideWorkingCopyText(path: string): string {
   // i18n-exempt: a refusal served to the crewmate's read tool
-  return `Refused: ${path} is outside this task's working copy. An outside reader reads only its own project's files.`;
+  return `Refused: ${path} is outside this task's working copy. An unsafe data reader reads only its own project's files.`;
 }
 
 /**

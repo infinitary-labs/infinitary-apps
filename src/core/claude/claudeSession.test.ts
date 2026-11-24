@@ -103,7 +103,7 @@ describe("the Claude crewmate's coding session", () => {
     session.dispose();
   });
 
-  // INF-6358's piece 4: an outside reader's client keeps only its reads, and
+  // INF-6358's piece 4: an unsafe data reader's client keeps only its reads, and
   // the app's gate refuses any of them that leaves the working copy.
   it("hands a fenced session only the client's reads, each gated to its working copy", async () => {
     const cwd = scratchDir("fm-claude-fenced-");

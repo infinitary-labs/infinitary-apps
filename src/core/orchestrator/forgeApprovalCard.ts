@@ -12,8 +12,8 @@ import { HOST_CARD_PRIORITY } from "./hostCards";
 import { APPROVAL_CARD_META, inputLines } from "./integrationApprovalCard";
 
 /**
- * The host's approval card for an outside reader's writes where its project
- * lives (docs/agents-reach.md, "An outside reader"), drawn as the
+ * The host's approval card for an unsafe data reader's writes where its project
+ * lives (docs/agents-reach.md, "An unsafe data reader"), drawn as the
  * integration approval card draws several asks: one ticked row per write,
  * its exact call and the request it sends, and the same tally and legend.
  * It offers only Only this time and Not now: a reader's write is never

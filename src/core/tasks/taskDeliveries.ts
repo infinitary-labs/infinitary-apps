@@ -585,7 +585,7 @@ export class TaskDeliveries {
 
   /**
    * Name the approval card that lists a crewmate's waiting integration ask
-   * (INF-2993 piece 2), or an outside reader's waiting write. An ask already
+   * (INF-2993 piece 2), or an unsafe data reader's waiting write. An ask already
    * taken, or no longer kept, changes nothing.
    */
   listWriteAsk(id: string, askId: string, card: string): void {

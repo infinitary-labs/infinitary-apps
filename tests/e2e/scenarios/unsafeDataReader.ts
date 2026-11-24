@@ -1,22 +1,22 @@
 import {
-  OUTSIDE_READER_FILE,
-  OUTSIDE_READER_MARKER,
-  OUTSIDE_READER_READS,
-  OUTSIDE_READER_WRITES,
+  UNSAFE_DATA_READER_FILE,
+  UNSAFE_DATA_READER_MARKER,
+  UNSAFE_DATA_READER_READS,
+  UNSAFE_DATA_READER_WRITES,
   WRITE_ASK_SENT_WAKE,
 } from "../apiWriteCases";
 import type { Scenario } from "../mockProvider";
 import { sinceLastUser } from "../providerRequest";
 
 /**
- * An outside reader's turn (docs/agents-reach.md, "An outside reader"): a
+ * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
  * file read and two reads where its project lives, two writes and a report, then a report of what the captain's click
  * answered. It emits no card: the app shows its kept writes on its own.
  */
-export const outsideReader: Scenario =
+export const unsafeDataReader: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {
-    if (isFirstmate || !wantsStream || !body.includes(OUTSIDE_READER_MARKER)) return undefined;
+    if (isFirstmate || !wantsStream || !body.includes(UNSAFE_DATA_READER_MARKER)) return undefined;
     // The last words a person or the app said, past tool results, which
     // Claude's client sends as user messages and Pi as tool messages.
     const { user, results } = sinceLastUser(body);
@@ -34,22 +34,22 @@ export const outsideReader: Scenario =
         ],
       };
     }
-    if (!user.includes(OUTSIDE_READER_MARKER)) return undefined;
+    if (!user.includes(UNSAFE_DATA_READER_MARKER)) return undefined;
     if (!results.length)
       // Claude's client serves its own read as Read, where Pi serves read.
       return {
         calls: [
           body.includes('"name":"Read"')
-            ? { name: "Read", args: { file_path: OUTSIDE_READER_FILE } }
-            : { name: "read", args: { path: OUTSIDE_READER_FILE } },
+            ? { name: "Read", args: { file_path: UNSAFE_DATA_READER_FILE } }
+            : { name: "read", args: { path: UNSAFE_DATA_READER_FILE } },
         ],
       };
-    const reads = OUTSIDE_READER_READS.length + 1;
-    const read = OUTSIDE_READER_READS[results.length - 1];
+    const reads = UNSAFE_DATA_READER_READS.length + 1;
+    const read = UNSAFE_DATA_READER_READS[results.length - 1];
     if (read) return { calls: [{ name: "github_read", args: { path: read } }] };
-    const write = OUTSIDE_READER_WRITES[results.length - reads];
+    const write = UNSAFE_DATA_READER_WRITES[results.length - reads];
     if (write) return { calls: [{ name: "github_write", args: write }] };
-    if (results.length === reads + OUTSIDE_READER_WRITES.length)
+    if (results.length === reads + UNSAFE_DATA_READER_WRITES.length)
       return {
         calls: [
           {

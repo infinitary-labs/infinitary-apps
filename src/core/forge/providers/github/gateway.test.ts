@@ -21,6 +21,7 @@ import {
   CLONE_TOKEN_NOTE,
   DOWNLOAD_TOKEN_NOTE,
   GithubGatewayService,
+  readerFenceLabel,
 } from "../../../orchestrator/githubGateway";
 import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
@@ -525,7 +526,7 @@ async function fixture(
     status: "idle",
     shape: { kind: "research", deliverable: "answer" },
   });
-  // An outside reader (docs/agents-reach.md): a read-only answer task in its project.
+  // An unsafe data reader (docs/agents-reach.md): a read-only answer task in its project.
   seedTask(tasks, {
     id: "task-reader",
     title: "Triage the waiting issues",
@@ -533,7 +534,7 @@ async function fixture(
     repoId: "repo-1",
     worktreeDir: dir,
     branch: "fm/task-reader",
-    shape: { kind: "research", deliverable: "answer", outside_reader: true },
+    shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
   });
   seedTask(tasks, {
     id: "task-operation",
@@ -1616,10 +1617,17 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(seen).toHaveLength(2);
   });
 
+  // INF-6427's piece 1: the mark on a reader's project reads names its host.
+  it("names an unsafe data reader's fence after its project's host", () => {
+    expect(readerFenceLabel("github")).toBe("github-data");
+    expect(readerFenceLabel("gitlab")).toBe("gitlab-data");
+    expect(readerFenceLabel("bitbucket")).toBe("bitbucket-data");
+  });
+
   // INF-6358's piece 4: a task that reads words strangers can write reads only
   // its own project, gets every answer fenced, and keeps every write for the
   // captain's card, run starts included.
-  it("keeps an outside reader to its own project, fences each answer afresh, and keeps every write for its card", async () => {
+  it("keeps an unsafe data reader to its own project, fences each answer afresh, and keeps every write for its card", async () => {
     const { service, writeAs, seen, presentReaderAsk, tasks } = await fixture();
     const read = bindTool(GITHUB_READ_TOOL, {
       onGithubRead: (i) => service.readForCrew("task-reader", i),
@@ -1632,7 +1640,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(fenceOf(second)?.value).not.toBe(fenceOf(first)?.value);
     for (const path of ["/repos/acme/site/issues", "/search/issues?q=meter", "/user"]) {
       expect((await read.run({ path })).text).toContain(
-        "Refused: an outside reader reads only its own project",
+        "Refused: an unsafe data reader reads only its own project",
       );
     }
     expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
@@ -1667,7 +1675,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       { ...comment, validationEffect: "vr-1" },
       { method: "POST" as const, path: "/repos/octo/meter/releases/1/assets", file: "notes.txt" },
     ]) {
-      expect((await reader.run(write)).text).toMatch(/Refused: an outside reader/);
+      expect((await reader.run(write)).text).toMatch(/Refused: an unsafe data reader/);
     }
     expect(seen).toHaveLength(2);
     expect(tasks.get("task-reader")?.delivery?.writeAsks).toHaveLength(2);
@@ -1690,7 +1698,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
 
   // INF-6388's review: a reader has no shell and its fence refuses the
   // temporary folder, so an answer saved there as a file would never be read.
-  it("serves an outside reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {
+  it("serves an unsafe data reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {
     const { service, seen } = await fixture();
     const read = bindTool(GITHUB_READ_TOOL, {
       onGithubRead: (i) => service.readForCrew("task-reader", i),
@@ -1704,7 +1712,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(served).toBeGreaterThan(0);
     expect(answer.body.workflow_runs[0].id).toBe(RUNS[0]?.id);
     expect(answer.note).toMatch(
-      /at per_page=50 exceeds the \d+ characters an outside reader's answer carries whole/,
+      /at per_page=50 exceeds the \d+ characters an unsafe data reader's answer carries whole/,
     );
     expect(seen.at(-1)?.path).toBe(`/repos/octo/meter/actions/runs?per_page=${served}`);
 

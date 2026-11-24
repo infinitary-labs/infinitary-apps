@@ -125,6 +125,13 @@ export type ResponseCardProps = {
    */
   asked?: React.ReactNode;
   /**
+   * The unsafe data line under the title's lines: one quiet sentence on a
+   * crewmate's card from an unsafe data reader, saying a link or request on
+   * it may be a stranger's (design skill
+   * `components/cards/ResponseCard.prompt.md`, "The unsafe data line").
+   */
+  unsafeData?: boolean;
+  /**
    * Host chrome below the action row - a task record's own bar, or the
    * words a past card's field sent with its choice. It is never a card
    * action and never wraps into that row.
@@ -243,6 +250,7 @@ export function ResponseCard({
   headExtra,
   revised,
   asked,
+  unsafeData,
   footer,
   bare = false,
   style,
@@ -512,6 +520,20 @@ export function ResponseCard({
             }}
           >
             {asked}
+          </div>
+        )}
+        {!bare && !chrome && unsafeData && (
+          <div
+            data-card-unsafe-data=""
+            style={{
+              order: 1,
+              padding: `var(--space-2) ${asideRoom} 0 20px`,
+              flexShrink: 0,
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-3)",
+            }}
+          >
+            {m.cardReaderUnsafeData()}
           </div>
         )}
         <div

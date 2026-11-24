@@ -1021,6 +1021,14 @@ export const cardSchema = z.strictObject({
    * kind, never stored on the row and never an author's.
    */
   quick: z.literal(true).optional(),
+  /**
+   * A crewmate's card from an unsafe data reader (docs/agents-reach.md, "An
+   * unsafe data reader"), which the chrome draws as one line saying it read
+   * words anyone can write, so a link on it may be a stranger's.
+   * Host-computed on the stage's snapshot from the task's recorded shape,
+   * never stored on the row and never an author's.
+   */
+  unsafeData: z.literal(true).optional(),
   /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
   seen: z.boolean().optional(),
   /** Snapshot-only: the exact released update, distinct from its historical offer. */

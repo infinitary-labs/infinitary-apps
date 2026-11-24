@@ -370,7 +370,7 @@ describe("the Pi coding session's production contract", () => {
     expect(piMocks.agentSession.dispose.mock.calls).toHaveLength(releases);
   });
 
-  // INF-6358's piece 4: an outside reader's session reads its working copy
+  // INF-6358's piece 4: an unsafe data reader's session reads its working copy
   // and nothing else - no shell, file change or find, even with a shell to hand.
   it("serves a fenced session only reads, each refusing a path outside its working copy", async () => {
     const cwd = scratchDir("fm-fenced-");

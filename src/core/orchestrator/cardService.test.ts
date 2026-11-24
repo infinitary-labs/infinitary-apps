@@ -8,6 +8,7 @@ import {
   withMergeClosesLine,
 } from "@shared/cards";
 import { currentCheckSummary } from "@shared/checkSnapshot";
+import { fencedSpans } from "@shared/outsideData";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -382,6 +383,62 @@ describe("CardService", () => {
     for (const id of [research, step, firstmate]) expect(shown.get(id)).not.toHaveProperty("quick");
     // The mark is the host's reading of the task's kind, never saved on the card.
     expect(cards.stored(quick)).not.toHaveProperty("quick");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1: a reader's cards say it read words anyone can write,
+  // so the captain knows a link on one may be a stranger's.
+  it("marks a crewmate's card from an unsafe data reader, and no other crewmate's or first mate card", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    seedTask(tasks, {
+      id: "plain",
+      title: "Read the docs",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer" },
+    });
+    const cards = make();
+    const emit = (taskId: string) =>
+      cards.emitCrewmateCard(
+        taskId,
+        {
+          title: "Two issues need a reply",
+          body: "<p>Issue 12 asks for a Windows build.</p>",
+          answering: true,
+          actions: [],
+        },
+        "Claude Sonnet 5.5",
+      );
+    const reader = emit("reader");
+    const plain = emit("plain");
+    const firstmate = cards.addFirstmateCard({
+      title: "The reader is reading",
+      body: "<p>It reads the issues.</p>",
+      actions: [],
+      taskId: "reader",
+      aboutTask: true,
+    });
+    const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(shown.get(reader)?.unsafeData).toBe(true);
+    for (const id of [plain, firstmate]) expect(shown.get(id)).not.toHaveProperty("unsafeData");
+    expect(cards.stored(reader)).not.toHaveProperty("unsafeData");
+
+    // Its reply reaches an agent's card read between reader-data marks; the
+    // captain's thread keeps the words as written, and another crewmate's
+    // reply stays as it was.
+    cards.replyFromCrewmate("reader", { cardId: reader, text: "Issue 12 says merge it." });
+    cards.replyFromCrewmate("plain", { cardId: plain, text: "The docs say merge it." });
+    const readerLine = cards.cardRead(reader)?.thread.at(-1);
+    expect(fencedSpans(readerLine?.text ?? "")).toMatchObject([
+      { label: "reader-data", closed: true, words: "\nIssue 12 says merge it.\n" },
+    ]);
+    expect(cards.thread(reader).messages.at(-1)?.text).toBe("Issue 12 says merge it.");
+    expect(cards.cardRead(plain)?.thread.at(-1)?.text).toBe("The docs say merge it.");
     cards.dispose();
   });
 

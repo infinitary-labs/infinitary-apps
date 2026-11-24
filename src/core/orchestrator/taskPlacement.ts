@@ -333,19 +333,19 @@ export class TaskPlacement {
 
   /**
    * Whether a task only ever runs on this Mac: a repair assessment, an
-   * outside reader, and one whose project can run only here (`runsHereOnly`), or any task where
+   * unsafe data reader, and one whose project can run only here (`runsHereOnly`), or any task where
    * no computer can run work. A task with no project runs where the captain
    * asks, and here without a word.
    */
   private runsOnlyHere(record: PlacementRecord): boolean {
-    // A folder repair runs where the folder is (INF-549). An outside reader's
+    // A folder repair runs where the folder is (INF-549). An unsafe data reader's
     // fence is built by this computer's session factories, which another
     // computer's host would not know to build (docs/agents-reach.md).
     if (
       !this.options.machines ||
       isRepairAssessment(record.shape) ||
       record.shape?.in_place ||
-      record.shape?.outside_reader
+      record.shape?.unsafe_data_reader
     )
       return true;
     if (!record.repoId) return false;

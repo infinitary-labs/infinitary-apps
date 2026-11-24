@@ -446,6 +446,7 @@
 "cardPastSentLead" = "Mit deiner Wahl gesendet:";
 "cardPastUnreadable" = "Diese Karte konnte nicht gelesen werden";
 "cardQuickAnswer" = "Schnelle Antwort";
+"cardReaderUnsafeData" = "Dieses Crewmitglied liest Texte, die jeder schreiben kann, darum kann ein Link oder eine Bitte auf dieser Karte von einem Fremden stammen.";
 "cardReaderWritesHow" = "Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht gesendet werden sollen. Die angehakten Zeilen gehen je einmal, die älteste zuerst, mit deiner Anmeldung bei %1$@.";
 "cardReaderWritesLead" = "Das Crewmitglied von „%2$@“ liest Texte, die jeder schreiben kann, darum wartet jeder Schreibzugriff auf %1$@ auf deine Entscheidung. Jede Zeile ist ein Aufruf mit der Anfrage, die er sendet.";
 "cardReaderWritesTitle" = "Schreibzugriffe auf %1$@ erlauben?";

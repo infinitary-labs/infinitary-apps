@@ -10,7 +10,7 @@ import {
 } from "../../src/core/forge";
 import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
-import { OUTSIDE_READER_ANSWERS } from "../../src/core/orchestrator/workShape";
+import { UNSAFE_DATA_READER_ANSWERS } from "../../src/core/orchestrator/workShape";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
@@ -42,13 +42,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import {
   API_WRITE_GUARD_MARKER,
   mergeWriteCases,
-  OUTSIDE_READER_CHANGE_MARKER,
-  OUTSIDE_READER_FILE,
-  OUTSIDE_READER_MARKER,
-  OUTSIDE_READER_WRITES,
   PAGED_REPOSITORY,
   READS_ANYWHERE_MARKER,
   savedWriteAsks,
+  UNSAFE_DATA_READER_CHANGE_MARKER,
+  UNSAFE_DATA_READER_FILE,
+  UNSAFE_DATA_READER_MARKER,
+  UNSAFE_DATA_READER_WRITES,
   WRITE_ASK_ANSWER_MARKER,
   WRITE_ASK_CARD_TITLE,
   WRITE_ASK_MARKER,
@@ -103,7 +103,7 @@ import {
   MOCK_GITHUB_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
-import { outsideReader } from "./scenarios/outsideReader";
+import { unsafeDataReader } from "./scenarios/unsafeDataReader";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, noteDone, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
@@ -259,7 +259,7 @@ async function arrange({
     githubChange,
     continueChange,
     forgeSignin,
-    outsideReader,
+    unsafeDataReader,
     forgeSigninReads,
     mergeWriteGuard,
   ];
@@ -942,7 +942,7 @@ test("a task that only answers asks before writing even to its own project, and 
 });
 
 /**
- * An outside reader (docs/agents-reach.md, "An outside reader"), on a Pi
+ * An unsafe data reader (docs/agents-reach.md, "An unsafe data reader"), on a Pi
  * crewmate and on Claude's own client: its session holds only reads, a file
  * outside its working copy is refused, GitHub answers come fenced, a read of
  * another project is refused, and both its writes to its own project, an
@@ -967,18 +967,18 @@ const READER_RUNTIMES = [
 ];
 
 for (const runtime of READER_RUNTIMES) {
-  test(`an outside reader on ${runtime.name} reads only its own project and its writes wait on one approval card`, async () => {
+  test(`an unsafe data reader on ${runtime.name} reads only its own project and its writes wait on one approval card`, async () => {
     await arrange({ signedIn: true, claude: runtime.claude });
     const { page } = launched;
     if (!runtime.claude) {
-      // An outside reader that would change its project never starts.
-      const refused = `meterlab ${OUTSIDE_READER_CHANGE_MARKER}`;
+      // An unsafe data reader that would change its project never starts.
+      const refused = `meterlab ${UNSAFE_DATA_READER_CHANGE_MARKER}`;
       await send(page, `${SPAWN_PROMPT_MARKER} ${refused}`);
       await expect
         .poll(
           () =>
             (launched.mockProvider?.requestBodies() ?? []).some((raw) =>
-              raw.includes(OUTSIDE_READER_ANSWERS),
+              raw.includes(UNSAFE_DATA_READER_ANSWERS),
             ),
           { timeout: 45_000 },
         )
@@ -986,8 +986,10 @@ for (const runtime of READER_RUNTIMES) {
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       expect(board.tasks.some((row) => row.title === refused)).toBe(false);
     }
-    const title = `meterlab ${OUTSIDE_READER_MARKER}${runtime.suffix}`;
-    const [issue, dispatch] = OUTSIDE_READER_WRITES.map((call) => `${call.method} ${call.path}`);
+    const title = `meterlab ${UNSAFE_DATA_READER_MARKER}${runtime.suffix}`;
+    const [issue, dispatch] = UNSAFE_DATA_READER_WRITES.map(
+      (call) => `${call.method} ${call.path}`,
+    );
     await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
     const cardTitle = cardReaderWritesTitle({ place: "GitHub" });
     const card = shownCard(page, cardTitle);
@@ -1020,11 +1022,25 @@ for (const runtime of READER_RUNTIMES) {
       (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcome ?? "";
     // A file outside its working copy is refused; its own project's answer
     // arrives fenced; another project is never read.
-    expect(firstReport).toContain(`${OUTSIDE_READER_FILE} is outside this task's working copy`);
+    expect(firstReport).toContain(`${UNSAFE_DATA_READER_FILE} is outside this task's working copy`);
     // The file's own words never reached the crewmate.
     expect(firstReport).not.toMatch(/localhost/);
     expect(firstReport).toContain("github-data");
     expect(firstReport).toContain("Nothing was read");
+    // Its report is kept between reader-data marks, and reaches the first
+    // mate's own turn that way.
+    expect(firstReport).toMatch(/\[\[reader-data fence=[0-9a-f]{16} /);
+    await expect
+      .poll(
+        () =>
+          (launched.mockProvider?.requestBodies() ?? []).some(
+            (raw) =>
+              raw.includes("spawn_crewmate") &&
+              /\[\[reader-data fence=[0-9a-f]{16} [^\]]*\]\][\s\S]*Nothing was read/.test(raw),
+          ),
+        { timeout: 45_000 },
+      )
+      .toBe(true);
     expect(github.requests()).toContain("GET /repos/octo/meterlab/pulls");
     expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
     expect(github.requests()).not.toContain(issue);
@@ -1032,7 +1048,7 @@ for (const runtime of READER_RUNTIMES) {
     // Its session held only reads: no shell, no file changes, no web or browser.
     const tools = (launched.mockProvider?.requestBodies() ?? [])
       .map((raw) => JSON.parse(raw))
-      .filter((request) => JSON.stringify(request.messages).includes(OUTSIDE_READER_MARKER))
+      .filter((request) => JSON.stringify(request.messages).includes(UNSAFE_DATA_READER_MARKER))
       .map((request) =>
         (request.tools ?? []).map(
           (tool: { name?: string; function?: { name: string } }) =>
@@ -1054,7 +1070,7 @@ for (const runtime of READER_RUNTIMES) {
       expect(names.some((served: string) => /browser|bash/i.test(served))).toBe(false);
     }
     const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
-    const shot = `outside-reader-${runtime.name.toLowerCase()}`;
+    const shot = `unsafe-data-reader-${runtime.name.toLowerCase()}`;
     if (evidence) {
       await resizeWindow(launched.app, page, { width: 1100, height: 860 });
       await page.screenshot({ path: join(evidence, `${shot}-card.png`) });
@@ -1064,7 +1080,7 @@ for (const runtime of READER_RUNTIMES) {
           anchors: [
             card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
           ],
-          name: "outside-reader",
+          name: "unsafe-data-reader",
         });
     }
     await pressKey(rows.nth(1).getByRole("checkbox"), " ");
@@ -1091,12 +1107,12 @@ for (const runtime of READER_RUNTIMES) {
     const oldestFirst = savedWriteAsks(userDataDir, id).sort((a, b) => a.at - b.at);
     expect(oldestFirst).toEqual([
       expect.objectContaining({
-        path: OUTSIDE_READER_WRITES[0]?.path,
+        path: UNSAFE_DATA_READER_WRITES[0]?.path,
         sentAt: expect.any(Number),
         outcome: expect.objectContaining({ kind: "answered", status: 201 }),
       }),
       expect.objectContaining({
-        path: OUTSIDE_READER_WRITES[1]?.path,
+        path: UNSAFE_DATA_READER_WRITES[1]?.path,
         outcome: expect.objectContaining({ kind: "refused" }),
       }),
     ]);

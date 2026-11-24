@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "unsafe-data-reader",
+      "kind": "feature",
+      "title": "A crewmate that reads strangers' words works inside a fence",
+      "body": "When a task reads words anyone can write, such as your project's issues and pull requests, your first mate can start its crewmate as an unsafe data reader. It has no shell, web or browser, reads only its own project, and everything it reads there is marked as words from outside. Each change it asks to make waits as a ticked row on one approval card until you choose Only this time. What it reports to your first mate is marked as outside words too, and each of its cards says it reads words anyone can write.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "unsafe-data-reader-dark.webp",
+        "light": "unsafe-data-reader-light.webp",
+        "alt": "An approval card listing two writes an unsafe data reader asked to send to GitHub, each a ticked row with its call and the request it sends"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

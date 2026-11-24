@@ -10,6 +10,7 @@ import { forgePlace } from "@shared/forge";
 import { inLanguage } from "@shared/i18n/current";
 import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { levelForFirstmate } from "@shared/levelWords";
+import { fencedListReminder } from "@shared/outsideData";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { catalogEntry } from "@shared/providers";
 import { PREMIUM_SLOT, SLOTS, type Slot, servedModelKey, servedProviderOf } from "@shared/quota";
@@ -51,6 +52,7 @@ import {
 } from "./contextDelivery";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { asksInTurn, IN_TURN } from "./openWork";
+import { READER_DATA_LABEL, readerDataLine } from "./readerData";
 import { scheduleText } from "./scheduler";
 
 /** The open messages the context block lists, newest first; open_work reads them all. */
@@ -367,6 +369,9 @@ export class FirstmateContext {
       THREAD_CONTEXT_LIMIT,
     );
     if (summaries.length === 0) return [];
+    const marked = summaries.some(({ card, last }) =>
+      this.options.supervisor.cards.fromReader(card, last),
+    );
     return [
       "thread activity since your last turn (already on the record; not a request - the card's author answers it; each line ends with what its card waits on now, not who wrote last):",
       ...summaries.map(({ card, count, last, owed }) => {
@@ -374,14 +379,19 @@ export class FirstmateContext {
         const about = card.taskId
           ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
           : "no task";
-        const excerpt = cutText(
+        const cut = cutText(
           cardMessageText(last).replace(/\s+/g, " ").trim(),
           THREAD_EXCERPT_CHARS,
         );
+        // An unsafe data reader's line is marked after the cut, so no cut splits its marks.
+        const excerpt = this.options.supervisor.cards.fromReader(card, last)
+          ? readerDataLine(cut, last.at)
+          : cut;
         return `- card ${card.id} "${card.title}" ${about}: ${count} message${
           count === 1 ? "" : "s"
         }, last from ${last.who}${last.through ? ` ${FROM_THE_COMMAND}` : ""} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;
       }),
+      ...(marked ? [fencedListReminder(READER_DATA_LABEL)] : []),
     ];
   }
 

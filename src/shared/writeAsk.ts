@@ -36,8 +36,8 @@ export type ForgeWriteAsk = {
    */
   feedback?: FeedbackAskFacts;
   /**
-   * The host's approval card that lists it: an outside reader's write
-   * (docs/agents-reach.md, "An outside reader") joins its task's card of
+   * The host's approval card that lists it: an unsafe data reader's write
+   * (docs/agents-reach.md, "An unsafe data reader") joins its task's card of
    * waiting writes, or raises its own. Absent on every other crewmate's
    * write, which its crewmate asks for on a card of its own.
    */

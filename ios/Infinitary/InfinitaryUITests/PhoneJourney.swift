@@ -452,8 +452,18 @@ import XCTest
             tries += 1
             if element.isHittable && !stale { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
-            if stale || (element.exists && !view.isNull && element.frame.maxY < view.minY) { scroll.swipeDown() }
-            else { scroll.swipeUp() }
+            let down = stale || (element.exists && !view.isNull && element.frame.maxY < view.minY)
+            if view.isNull { if down { scroll.swipeDown() } else { scroll.swipeUp() }; continue }
+            // INF-5591: XCTest's own swipe starts 100 points from the scroller's middle. On an iPhone on its side the scroller
+            // runs under the top bar to the screen's top edge, so a swipe down began 26 points from that edge, where the
+            // system took it as a pull on its notification sheet: the sheet covered the app, the app went to the background
+            // and the body's text left the accessibility tree. This swipe starts and ends inside what shows below the bar, at
+            // XCTest's own swipe's speed of 1,000 points a second, and lifts while moving so the card scrolls on as it does.
+            let travel = min(200, view.height * 0.8) * (down ? 1 : -1)
+            let from = scroll.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: view.midX - scroll.frame.minX, dy: view.midY - travel / 2 - scroll.frame.minY))
+            from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: travel)),
+                       withVelocity: XCUIGestureVelocity(rawValue: 1000), thenHoldForDuration: 0)
         }
         XCTAssertTrue(element.isHittable, app.debugDescription)
     }

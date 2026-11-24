@@ -368,6 +368,26 @@ function readerMarked(words: string): RegExp {
   return new RegExp(`\\[\\[reader-data fence=[0-9a-f]{16} [^\\]]*\\]\\][^\\[]*${escaped}`);
 }
 
+/**
+ * How many copies of `words` a request's JSON text holds, and how many of
+ * them sit outside every reader-data span (from its opening mark to the
+ * closing mark with the same fence).
+ */
+function copiesOf(raw: string, words: string): { total: number; unmarked: number } {
+  const spans = [
+    ...raw.matchAll(
+      /\[\[reader-data fence=([0-9a-f]{16})[^\]]*\]\][\s\S]*?\[\[\/reader-data fence=\1\]\]/g,
+    ),
+  ].map((span): [number, number] => [span.index, span.index + span[0].length]);
+  let total = 0;
+  let unmarked = 0;
+  for (let at = raw.indexOf(words); at >= 0; at = raw.indexOf(words, at + words.length)) {
+    total += 1;
+    if (!spans.some(([start, end]) => start < at && at + words.length <= end)) unmarked += 1;
+  }
+  return { total, unmarked };
+}
+
 const section = (page: Page) => page.locator("[data-integrations]");
 
 test("Settings -> Integrations offers the GitHub sign-in as optional, and each way a code can end", async () => {
@@ -1213,9 +1233,9 @@ for (const runtime of READER_RUNTIMES) {
         : [{ name: "update_task" as const, args: { task: followup.key, start_now: true } }]),
     ]);
     expect(firstmateRead(UNSAFE_DATA_READER_CARD.title)).toBe(true);
-    // In the first mate's turn after the answer, the reader's chosen button and
-    // option are marked and the captain's own words are not; its read of the
-    // reader's record marks the card's body the same way.
+    // In the first mate's turn after the answer, the reader's card title,
+    // chosen button and option are marked and the captain's own words are not;
+    // its read of the reader's record marks the card's body the same way.
     const answered = (launched.mockProvider?.requestBodies() ?? [])
       .slice(sent)
       .find((raw) => raw.includes("spawn_crewmate") && raw.includes(UNSAFE_DATA_READER_WRITTEN));
@@ -1230,19 +1250,25 @@ for (const runtime of READER_RUNTIMES) {
       writeFileSync(join(evidence, `${shot}-answered-request.json`), answered);
       writeFileSync(join(evidence, `${shot}-reader-read-request.json`), readerRead);
     }
+    // Every copy of the reader's words in that turn sits between marks: its
+    // context's card line, the answer-closed wake and the resolution alike.
     for (const words of [
+      UNSAFE_DATA_READER_CARD.title,
       UNSAFE_DATA_READER_CARD.actions[0]?.label ?? "",
       UNSAFE_DATA_READER_CARD_WORDS.option,
     ])
-      expect(answered).toMatch(readerMarked(words));
+      expect(copiesOf(answered, words)).toEqual({ total: expect.any(Number), unmarked: 0 });
+    expect(copiesOf(answered, UNSAFE_DATA_READER_CARD.title).total).toBeGreaterThan(0);
+    expect(copiesOf(answered, UNSAFE_DATA_READER_CARD_WORDS.option).total).toBeGreaterThan(0);
     expect(answered).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
     // Every time the read serves the card's body, as its card and in its
-    // decisions, it is marked.
-    const served = readerRead.split(UNSAFE_DATA_READER_CARD_WORDS.body).length - 1;
-    expect(served).toBeGreaterThan(0);
-    expect(
-      readerRead.match(new RegExp(readerMarked(UNSAFE_DATA_READER_CARD_WORDS.body).source, "g")),
-    ).toHaveLength(served);
+    // decisions, it is marked; on Pi, so is the follow-up's title the start
+    // answers with.
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_CARD_WORDS.body).total).toBeGreaterThan(0);
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_CARD_WORDS.body).unmarked).toBe(0);
+    if (!runtime.claude)
+      expect(copiesOf(readerRead, UNSAFE_DATA_READER_FOLLOWUP.title).total).toBeGreaterThan(0);
+    expect(copiesOf(readerRead, UNSAFE_DATA_READER_FOLLOWUP.title).unmarked).toBe(0);
     expect(readerRead).toContain(UNSAFE_DATA_READER_WRITTEN);
     expect(readerRead).not.toMatch(readerMarked(UNSAFE_DATA_READER_WRITTEN));
     if (runtime.claude) return;

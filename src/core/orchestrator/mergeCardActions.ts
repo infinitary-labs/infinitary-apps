@@ -15,6 +15,7 @@ import type { CardActionUndone } from "./captainWakes";
 import type { CrewCore } from "./crewCore";
 import { approvableOffer, matchesOfferDestination, taskPull } from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
+import { servedCardLine } from "./readerData";
 import type { MergeBehind } from "./settleCardFacts";
 import { mergesInOwnBatch } from "./workShape";
 
@@ -349,9 +350,13 @@ export class MergeCardActions {
       {
         facts: {
           kind: "card-action-undone",
-          card: { id: card.id, title: card.title },
-          task: { id: taskId, key: record?.key || taskId, title: record?.title ?? card.title },
-          label,
+          card: { id: card.id, title: servedCardLine(this.core.options.tasks, card, card.title) },
+          task: {
+            id: taskId,
+            key: record?.key || taskId,
+            title: record?.title ?? servedCardLine(this.core.options.tasks, card, card.title),
+          },
+          label: servedCardLine(this.core.options.tasks, card, label),
           undone,
           reason,
         },

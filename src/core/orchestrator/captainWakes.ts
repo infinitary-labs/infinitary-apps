@@ -34,6 +34,7 @@ import {
   CARRIED_WITH_CHOICE_LEAD,
 } from "../prompts/choiceCarried";
 import { pageUnansweredWords } from "../prompts/pageUnanswered";
+import { withReaderDataReminder } from "./readerData";
 import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 
 export type CaptainFacts =
@@ -533,19 +534,25 @@ const CARD_ACTION_UNDONE_WORDS: Record<CardActionUndone, string> = {
 };
 
 export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
+  // A reader's card title and label arrive marked (`servedCardLine`); the
+  // reminder follows whatever text holds them.
   "card-action-undone": (facts) =>
-    `[fm-op] The captain pressed "${facts.label}" on card "${facts.card.title}" (${facts.card.id}) for task ${facts.task.key} "${facts.task.title}", and the app could not ${CARD_ACTION_UNDONE_WORDS[facts.undone]}. The reason: ${facts.reason.trim()} Carry out what the captain's click asked for with your own tools, or tell the captain on a card what stops it.`,
+    withReaderDataReminder(
+      `[fm-op] The captain pressed "${facts.label}" on card "${facts.card.title}" (${facts.card.id}) for task ${facts.task.key} "${facts.task.title}", and the app could not ${CARD_ACTION_UNDONE_WORDS[facts.undone]}. The reason: ${facts.reason.trim()} Carry out what the captain's click asked for with your own tools, or tell the captain on a card what stops it.`,
+    ),
   "validation-question-stale": (facts) =>
     `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`,
   "answer-closed": (facts) =>
-    `[fm-op] ${JSON.stringify({
-      ...facts.handoff,
-      read: {
-        tool: "tasks",
-        arguments: { key: facts.handoff.task.key || facts.handoff.task.id },
-      },
-      next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
-    })}${carriedText(facts.carried)}`,
+    withReaderDataReminder(
+      `[fm-op] ${JSON.stringify({
+        ...facts.handoff,
+        read: {
+          tool: "tasks",
+          arguments: { key: facts.handoff.task.key || facts.handoff.task.id },
+        },
+        next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
+      })}${carriedText(facts.carried)}`,
+    ),
   "card-choice": (facts) => {
     // The app's Decline (INF-3108) is the captain's no to every choice.
     const declined = facts.choice.id === DECLINE_ACTION_ID ? ` ${DECLINE_WORDS}` : "";

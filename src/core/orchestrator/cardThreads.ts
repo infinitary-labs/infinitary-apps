@@ -34,7 +34,8 @@ import {
   crewmateWriterOf,
   readerDataAnswer,
   readerSavedAnswer,
-  readerSavedLine,
+  readerWroteCard,
+  servedCardLine,
 } from "./readerData";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 
@@ -467,13 +468,12 @@ export class CardThreads {
    * (`withReaderDataReminder`).
    */
   servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
-    return this.readerCard(card) ? readerSavedLine(`card:${card.id}`, words) : words;
+    return servedCardLine(this.host.tasks, card, words);
   }
 
   /** Whether an unsafe data reader wrote this card. */
   readerCard(card: Pick<Card, "author" | "taskId">): boolean {
-    if (card.author !== "crewmate" || !card.taskId) return false;
-    return this.host.tasks.get(card.taskId)?.shape?.unsafe_data_reader === true;
+    return readerWroteCard(this.host.tasks, card);
   }
 
   /** Whether an unsafe data reader wrote this thread line. */

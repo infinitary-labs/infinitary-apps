@@ -4,6 +4,7 @@ import { TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
 import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { SIGNED_OFF_ACTION_ID } from "./cardSignOff";
+import { servedCardLine } from "./readerData";
 import type { SettleServiceHost } from "./settleHost";
 import type { TaskClosing } from "./taskClose";
 
@@ -74,8 +75,12 @@ export class DeclaredCloses {
       version: 1,
       event: "answer_task_closed",
       task: { id: task.id, key: task.key, title: task.title },
-      card: { id: card.id, title: card.title },
-      choice: { id: choice.id, label: choice.label, effect: choice.effect ?? null },
+      card: { id: card.id, title: servedCardLine(this.host.tasks, card, card.title) },
+      choice: {
+        id: choice.id,
+        label: servedCardLine(this.host.tasks, card, choice.label),
+        effect: choice.effect ?? null,
+      },
       close: { status: "done", reason: "answered", actor: "captain" },
     };
   }

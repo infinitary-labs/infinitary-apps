@@ -80,6 +80,28 @@ export function readerSavedLine(key: string, words: string): string {
 
 type Origin = { shape?: { unsafe_data_reader?: boolean } | null };
 
+/** Whether an unsafe data reader wrote this card. */
+export function readerWroteCard(
+  tasks: { get(id: string): Origin | undefined },
+  card: Pick<Card, "author" | "taskId">,
+): boolean {
+  if (card.author !== "crewmate" || !card.taskId) return false;
+  return tasks.get(card.taskId)?.shape?.unsafe_data_reader === true;
+}
+
+/**
+ * A card's title or label inside a line, marked the same on every read
+ * when a reader wrote the card; the line's text ends with the reminder
+ * (`withReaderDataReminder`).
+ */
+export function servedCardLine(
+  tasks: { get(id: string): Origin | undefined },
+  card: Pick<Card, "id" | "author" | "taskId">,
+  words: string,
+): string {
+  return readerWroteCard(tasks, card) ? readerSavedLine(`card:${card.id}`, words) : words;
+}
+
 /**
  * A task's title as an agent reads it: one an unsafe data reader filed as
  * a follow-up is the reader's words, so it is marked the same on every

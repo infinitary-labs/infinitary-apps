@@ -49,6 +49,7 @@ import {
 import { unnamedBackgroundWork } from "./jobWakes";
 import { lostComputer, lostStartLine, lostTwiceReason, type StartStep } from "./lostStarts";
 import { namedModelDiffers, namedModelOf } from "./namedModel";
+import { servedTaskTitle, withReaderDataReminder } from "./readerData";
 import { ReasoningHolds } from "./reasoningHolds";
 import { StartFailure, StartSettle, startFailureReason } from "./startSettle";
 import { computerLeftOutWake, namedModelWaitWake, systemWaitWake } from "./startWakes";
@@ -1454,7 +1455,9 @@ export class CrewStarts {
    * button carried; cards/tasks/agents P0, WI-3), or on the captain's Start
    * in the task record (`start-task`). A refusal is text; the captain's
    * leaves out the tool's way around it. `from` marks the captain's click on
-   * the task card, which the history records as his.
+   * the task card, which the history records as his. The first mate reads
+   * a reader's follow-up's title marked, with the reminder after the answer
+   * (`servedTaskTitle`); the captain reads it as written.
    */
   async startQueuedNow(
     taskRef: string,
@@ -1467,9 +1470,34 @@ export class CrewStarts {
     } = {},
   ): Promise<string> {
     const audience = options.audience ?? "tool";
-    let { from, panel } = options;
     const record = this.core.intake.resolveTaskRef(taskRef, "task");
-    const handle = `${record.key || record.id} "${record.title}"`;
+    const title =
+      audience === "tool"
+        ? servedTaskTitle(
+            record,
+            this.core.options.tasks.graph.discoveredOrigins(record.id),
+            "line",
+          )
+        : record.title;
+    const text = await this.startQueued(record, `${record.key || record.id} "${title}"`, {
+      ...options,
+      audience,
+    });
+    return audience === "tool" ? withReaderDataReminder(text) : text;
+  }
+
+  private async startQueued(
+    record: TaskRecord,
+    handle: string,
+    options: {
+      audience: "tool" | "captain";
+      from?: typeof TASK_CARD_VIA;
+      panel?: string;
+      direct?: boolean;
+    },
+  ): Promise<string> {
+    const audience = options.audience;
+    let { from, panel } = options;
     if (record.status === "active" && record.backlogSince != null)
       return this.core.hostOps.startFromBacklog(
         record,

@@ -12,6 +12,7 @@
   "refuseNoCardThreadIsReadAboveIts": "沒有卡片討論串停在最新訊息之前",
   "refuseNoOtherCardIsNew": "沒有其他新卡片",
   "refuseNoPageToPointAt": "沒有可指向的頁面",
+  "refuseNoPictureIsOpen": "請先開啟卡片中的圖片",
   "refuseNoReleaseNotesYet": "還沒有版本說明",
   "refuseNoUpdateIsAvailable": "沒有可用的更新",
   "refuseNoUpdateIsSavingWorkNow": "目前沒有更新正在儲存工作",

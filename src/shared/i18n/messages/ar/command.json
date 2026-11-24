@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "تحديث, إعادة تشغيل, مستقر, ألفا",
   "commandUsageUnit": "تبديل وحدات الاستخدام",
   "commandUsageUnitWords": "رموز, تكلفة, دولارات, تقدير",
+  "commandViewerSavePicture": "حفظ الصورة",
+  "commandViewerSavePictureWords": "تنزيل, صورة, عارض",
   "commandWhatsNewShow": "عرض ما الجديد",
   "commandWhatsNewShowWords": "إصدار, ملاحظات, تغييرات, نسخة"
 }

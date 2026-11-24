@@ -716,6 +716,8 @@
 "commandUpdatesShowWords" = "Update, Aktualisierung, neu starten, stabil, Alpha";
 "commandUsageUnit" = "Einheit der Nutzung wechseln";
 "commandUsageUnitWords" = "Token, Kosten, Dollar, Schätzung";
+"commandViewerSavePicture" = "Bild sichern";
+"commandViewerSavePictureWords" = "Download, Bild, Foto, Betrachter";
 "commandWhatsNewShow" = "Neuigkeiten anzeigen";
 "commandWhatsNewShowWords" = "Versionshinweise, Neuigkeiten, Änderungen, Version";
 "composerFolderNotProject" = "Dieser Ordner konnte nicht als Projekt hinzugefügt werden.";
@@ -2315,6 +2317,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "Kein Kartenverlauf ist oberhalb seiner neuesten Nachricht gelesen";
 "refuseNoOtherCardIsNew" = "Keine andere Karte ist neu";
 "refuseNoPageToPointAt" = "Es wird keine Seite angezeigt, auf die du zeigen kannst";
+"refuseNoPictureIsOpen" = "Öffne zuerst ein Bild in einer Karte";
 "refuseNoReleaseNotesYet" = "Noch keine Versionshinweise";
 "refuseNoUpdateIsAvailable" = "Kein Update verfügbar";
 "refuseNoUpdateIsSavingWorkNow" = "Gerade sichert kein Update Arbeit";
@@ -3994,10 +3997,15 @@
 "uiPercentLeft" = "%1$@ %% übrig";
 "uiPictureViewerActualSize" = "Originalgröße";
 "uiPictureViewerClose" = "Betrachter schließen";
+"uiPictureViewerCopied" = "Bild kopiert";
+"uiPictureViewerCopyFailed" = "Das Bild konnte nicht kopiert werden";
+"uiPictureViewerCopyPicture" = "Bild kopieren";
 "uiPictureViewerDemoFrom" = "Demo aus %1$@";
+"uiPictureViewerFitToWindow" = "An Fenster anpassen";
 "uiPictureViewerHintFitted" = "%1$@ · eingepasst · klicken oder Z für 1:1";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · ziehen oder scrollen zum Verschieben";
 "uiPictureViewerHintOwn" = "%1$@ · in eigener Größe angezeigt";
+"uiPictureViewerMenu" = "Bildaktionen";
 "uiPictureViewerNext" = "Nächstes Bild";
 "uiPictureViewerPartFrom" = "%1$@, Vollbild";
 "uiPictureViewerPause" = "Pausieren";
@@ -4005,6 +4013,8 @@
 "uiPictureViewerPlay" = "Abspielen";
 "uiPictureViewerPrevious" = "Vorheriges Bild";
 "uiPictureViewerReplay" = "Erneut abspielen";
+"uiPictureViewerSaveFailed" = "Das Bild konnte nicht gesichert werden";
+"uiPictureViewerSaveToDownloads" = "In „Downloads“ sichern";
 "uiPictureViewerSeek" = "Position";
 "uiPictureViewerSeekValue" = "%2$@ von %1$@";
 "uiPictureViewerShownAtOwnSize" = "In eigener Größe angezeigt";

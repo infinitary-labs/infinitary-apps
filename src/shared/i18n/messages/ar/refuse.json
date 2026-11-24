@@ -12,6 +12,7 @@
   "refuseNoCardThreadIsReadAboveIts": "لا توجد سلسلة بطاقة مقروءة حتى ما قبل أحدث رسائلها",
   "refuseNoOtherCardIsNew": "لا توجد بطاقة جديدة أخرى",
   "refuseNoPageToPointAt": "لا توجد صفحة معروضة للإشارة إليها",
+  "refuseNoPictureIsOpen": "افتح صورة في بطاقة أولًا",
   "refuseNoReleaseNotesYet": "لا توجد ملاحظات إصدار بعد",
   "refuseNoUpdateIsAvailable": "لا يوجد تحديث متاح",
   "refuseNoUpdateIsSavingWorkNow": "لا يوجد تحديث يحفظ العمل الآن",

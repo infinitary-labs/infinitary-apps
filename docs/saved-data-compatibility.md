@@ -83,6 +83,8 @@ The mark is `{ "schemaVersion": 1, "stage", "askedAt", "outside", "asideTries"? 
 A mark that cannot be parsed is a reset asked from its first step with every outside kind, since only a reset writes that name; one that cannot be opened at all is left for a later start.
 A build without the reset ignores the mark and opens the folder.
 
+A window start also counts itself in `<folder>.start-attempts` beside the folder, a decimal count of earlier starts that never got as far as starting (`docs/reset.md`, "Infinitary could not start"); a file that cannot be read counts as none, and a build without the count ignores it.
+
 ## The one-time move
 
 An app whose spelling has older spellings before it moves an older spelling's folder of its own flavor into its own once, before anything opens either (`src/core/folderMove/move.ts`; the Infinitary rename, FI3-1780 step 3).

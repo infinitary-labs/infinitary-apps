@@ -44,6 +44,8 @@ export type ElectronHostOptions = {
   relaunch?: (execPath?: string) => void;
   /** Opens this computer's window beside a first mate a command started (`HostCapabilities.openOwnWindow`). */
   openOwnWindow?: () => void;
+  /** Resets this computer for a computer that controls it (`HostCapabilities.resetForController`). */
+  resetForController?: HostCapabilities["resetForController"];
   /** The window's installed keys (`HostCapabilities.installedKeys`); null or absent with no window open. */
   installedKeys?: HostCapabilities["installedKeys"];
   /** Explicit protected capability, also the isolated launcher's injection seam; absent means off. */
@@ -221,6 +223,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       return standIn ? { macUpdates: standIn } : {};
     })(),
     ...(options.openOwnWindow ? { openOwnWindow: options.openOwnWindow } : {}),
+    ...(options.resetForController ? { resetForController: options.resetForController } : {}),
     ...(options.installedKeys ? { installedKeys: options.installedKeys } : {}),
     // An isolated run is started from outside, which starts it again; only a
     // person's app starts itself again.

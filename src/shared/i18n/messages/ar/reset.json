@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "أُعيد تعيين Infinitary. سيفتح على شاشة الترحيب في المرة القادمة.",
+  "resetCommandHelp": "يحذف كل ما يحتفظ به Infinitary هنا، بعد أن تؤكد أنك أنت.",
+  "resetCommandKept": "لم تؤكد، لذا لم يُعَد تعيين أي شيء.",
+  "resetCommandNoConfirmation": "لا يستطيع هذا الكمبيوتر التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.",
+  "resetCommandRunning": "Infinitary مفتوح على هذا الكمبيوتر، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.",
   "resetConfirmReason": "إعادة تعيين Infinitary على هذا الكمبيوتر.",
+  "resetConfirmReasonBoth": "إعادة تعيين Infinitary على {home} وعلى هذا الكمبيوتر.",
+  "resetConfirmReasonBothMac": "إعادة تعيين Infinitary على {home} وعلى هذا الكمبيوتر",
   "resetConfirmReasonMac": "إعادة تعيين Infinitary على هذا الكمبيوتر",
+  "resetCouldNotStartMessage": "توقف مرتين قبل أن يكتمل تشغيله. لم يتغير عملك المحفوظ.",
+  "resetCouldNotStartNext": "أعد المحاولة، أو أعد تعيين Infinitary لتبدأ من جديد كأنه ثُبّت للتو.",
+  "resetCouldNotStartTitle": "تعذّر تشغيل Infinitary",
   "resetHeldDetail": "برنامج آخر يستخدم مجلد Infinitary. أغلقه ثم حاول مرة أخرى.",
   "resetHeldMessage": "تعذّر على Infinitary إكمال إعادة التعيين",
   "resetHeldQuit": "إنهاء",
   "resetHeldTryAgain": "إعادة المحاولة",
   "resetKeysAsk": "هل تريد إعادة كل مفتاح إلى ما يحدده الإعداد المسبق {preset}؟",
   "resetKeysConfirm": "إعادة تعيين كل المفاتيح",
-  "resetKeysDetail": "كل اختصار غيّرته في إعدادات لوحة المفاتيح يعود إلى ما يعطيه الإعداد المسبق {preset}."
+  "resetKeysDetail": "كل اختصار غيّرته في إعدادات لوحة المفاتيح يعود إلى ما يعطيه الإعداد المسبق {preset}.",
+  "resetRunEnded": "تمت إعادة تعيين Infinitary هنا، لذا ينتهي هذا التشغيل نهائيًا، وسيفتح Infinitary على شاشة الترحيب في المرة القادمة.",
+  "resetScreenKeeps": "تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها.",
+  "resetScreenKept": "لم يُعَد تعيين أي شيء."
 }

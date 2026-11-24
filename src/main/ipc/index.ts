@@ -38,6 +38,7 @@ import { offerWindowKey, pressMoveKey, recordWindowKeys } from "../keyboard";
 import type { KeyReminderStore } from "../keyReminders";
 import { takeNotifiedCard } from "../notifiedCard";
 import { presenceWatch } from "../presence";
+import type { ResetAsk } from "../reset/inApp";
 import type { RendererSourceOptions } from "../security/rendererSource";
 import type { Shell } from "../shell";
 import { micAccess, micSettingsUrl } from "../voice/micAccess";
@@ -91,7 +92,7 @@ export type IpcOptions = {
   /** Where this computer transcribes, asked once per run, and the voice helper that does it there. */
   voice: { place: () => Promise<RecognizerPlace>; helper: RecognizerClient };
   /** Reset Infinitary, once the person confirmed it in Settings (./reset/running.ts). */
-  reset: () => Promise<ResetAnswer>;
+  reset: (ask?: ResetAsk) => Promise<ResetAnswer>;
 };
 
 export function registerIpc(options: IpcOptions): void {
@@ -245,11 +246,15 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:app:start-here", rendererSource, () => shell.startHere());
   handleInvoke("inf:app:restart-command", rendererSource, () => shell.restartCommand());
   handleInvoke("inf:app:stop-command", rendererSource, () => shell.stopCommand());
-  // Only this window's own Reset Infinitary row asks it, never a view of
-  // another computer's first mate (docs/reset.md).
+  // Only this window's own Reset Infinitary row asks it. On a computer that
+  // controls another's first mate, it resets that computer first, then this
+  // one (docs/reset.md, "From a computer that controls the first mate").
   handleInvoke("inf:app:reset", rendererSource, () => {
-    if (!shell.resettable()) throw new Error("Reset Infinitary runs only on its own computer.");
-    return reset();
+    if (shell.resettable()) return reset();
+    const here = shell.thisMac();
+    if (shell.controlsAnother() && here.role === "view")
+      return reset({ kind: "of-home", home: here.name });
+    throw new Error("Infinitary is still starting.");
   });
   handleInvoke("inf:app:quit", rendererSource, () => {
     // After this answer, so the window is not torn down under its own request.

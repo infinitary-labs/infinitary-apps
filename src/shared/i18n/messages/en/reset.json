@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "Infinitary is reset. It opens on the welcome screen next time.",
+  "resetCommandHelp": "Deletes everything Infinitary keeps here, once you confirm it is you.",
+  "resetCommandKept": "You did not confirm, so nothing was reset.",
+  "resetCommandNoConfirmation": "This computer cannot confirm it is you here, so nothing was reset. Use Reset Infinitary in Settings → General, or on the screen Infinitary shows when it cannot open.",
+  "resetCommandRunning": "Infinitary is open on this computer, so nothing was reset. Use Reset Infinitary in Settings → General, or quit Infinitary and run this again.",
   "resetConfirmReason": "Reset Infinitary on this computer.",
+  "resetConfirmReasonBoth": "Reset Infinitary on {home} and this computer.",
+  "resetConfirmReasonBothMac": "reset Infinitary on {home} and this computer",
   "resetConfirmReasonMac": "reset Infinitary on this computer",
+  "resetCouldNotStartMessage": "It stopped twice before it finished starting. Your saved work has not been changed.",
+  "resetCouldNotStartNext": "Try again, or reset Infinitary to start over as if just installed.",
+  "resetCouldNotStartTitle": "Infinitary could not start",
   "resetHeldDetail": "Another program is using Infinitary's folder. Close it, then try again.",
   "resetHeldMessage": "Infinitary could not finish its reset",
   "resetHeldQuit": "Quit",
   "resetHeldTryAgain": "Try again",
   "resetKeysAsk": "Reset every key to the {preset} preset's?",
   "resetKeysConfirm": "Reset All Keys",
-  "resetKeysDetail": "Every shortcut you changed in Keyboard settings goes back to the one the {preset} preset gives it."
+  "resetKeysDetail": "Every shortcut you changed in Keyboard settings goes back to the one the {preset} preset gives it.",
+  "resetRunEnded": "Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time.",
+  "resetScreenKeeps": "Projects in your own folders keep every file and commit.",
+  "resetScreenKept": "Nothing was reset."
 }

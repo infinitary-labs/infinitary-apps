@@ -718,7 +718,9 @@
   "settingsGeneralReset": "إعادة تعيين Infinitary",
   "settingsGeneralResetButton": "إعادة تعيين",
   "settingsGeneralResetDeletes": "يحذف Infinitary كل ما يحتفظ به هنا، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كأنه ثُبّت للتو.",
+  "settingsGeneralResetDeletesBoth": "يحذف Infinitary كل ما يحتفظ به على الجهازين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.",
   "settingsGeneralResetDescription": "يُعيد Infinitary على هذا الحاسوب إلى ما كان عليه بعد تثبيته مباشرة.",
+  "settingsGeneralResetDescriptionBoth": "يُعيد Infinitary على {home} وعلى هذا الحاسوب إلى ما كان عليه بعد تثبيته مباشرة.",
   "settingsGeneralResetKeep": "الاحتفاظ بكل شيء",
   "settingsGeneralResetKeeps": "تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها. لمحو المهام فقط، استخدم محو بيانات المهام.",
   "settingsGeneralResetOpenTasks": {
@@ -731,6 +733,8 @@
     "other": "تتوقف {count} مهمة مفتوحة."
   },
   "settingsGeneralResetQuestion": "هل تريد إعادة تعيين Infinitary على هذا الحاسوب؟",
+  "settingsGeneralResetQuestionBoth": "هل تريد إعادة تعيين Infinitary على {home} وعلى هذا الحاسوب؟",
+  "settingsGeneralResetUnreached": "لم يستجب {home}، لذا لم يُعَد تعيين أي شيء. أعد المحاولة عندما يصبح في المتناول.",
   "settingsGeneralResetting": "جارٍ إعادة التعيين…",
   "settingsGeneralShowInDock": "الإظهار في Dock",
   "settingsGeneralShowInDockDescription": "الإيقاف يخفي أيقونة Dock مع بقاء النافذة.",

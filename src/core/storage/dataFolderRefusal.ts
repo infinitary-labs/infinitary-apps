@@ -2,8 +2,13 @@ import { MOVE_LOCK_MESSAGE, MOVE_LOCK_TITLE, moveLockHeld, moveLockPathFor } fro
 import type { DataFolderPrivacy } from "./ownerOnly";
 import { isProfileRetired, RETIRED_PROFILE_MESSAGE, RETIRED_PROFILE_TITLE } from "./retiredProfile";
 
-/** What a refusal window says: a title, the reason, and what the captain can do next. */
-export type DataRefusal = { title: string; message: string; next: string };
+/**
+ * What a refusal window says: a title, the reason, and what the captain can do
+ * next. `offersReset` marks a refusal whose window also offers Reset
+ * Infinitary (docs/reset.md, "Where a reset can start"); a folder a move
+ * retired or holds never does, since its work lives on elsewhere.
+ */
+export type DataRefusal = { title: string; message: string; next: string; offersReset?: true };
 
 export const UNSAFE_FOLDER_TITLE = "Infinitary could not keep this folder private";
 export const UNSAFE_FOLDER_MESSAGE =
@@ -53,6 +58,7 @@ export function dataFolderRefusal(
       title: UNCHECKED_FOLDER_TITLE,
       message: UNCHECKED_FOLDER_MESSAGE,
       next: UNCHECKED_FOLDER_NEXT,
+      offersReset: true,
     };
   }
   if (why === "unfinished") {
@@ -60,10 +66,16 @@ export function dataFolderRefusal(
       title: UNFINISHED_FOLDER_TITLE,
       message: UNFINISHED_FOLDER_MESSAGE,
       next: UNFINISHED_FOLDER_NEXT,
+      offersReset: true,
     };
   }
   if (why) {
-    return { title: UNSAFE_FOLDER_TITLE, message: UNSAFE_FOLDER_MESSAGE, next: UNSAFE_FOLDER_NEXT };
+    return {
+      title: UNSAFE_FOLDER_TITLE,
+      message: UNSAFE_FOLDER_MESSAGE,
+      next: UNSAFE_FOLDER_NEXT,
+      offersReset: true,
+    };
   }
   return null;
 }

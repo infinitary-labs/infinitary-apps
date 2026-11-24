@@ -14,9 +14,11 @@ export type ResetScope = z.infer<typeof resetScopeSchema>;
 
 /**
  * What the row hears back: the app quits now and starts again on the welcome
- * screen, or the system's own confirmation was not given and nothing changed.
+ * screen; the system's own confirmation was not given and nothing changed; or,
+ * on a computer that controls another's first mate, that computer did not
+ * answer and nothing changed on either.
  */
 export const resetAnswerSchema = z.strictObject({
-  outcome: z.enum(["restarting", "kept"]),
+  outcome: z.enum(["restarting", "kept", "unreached"]),
 });
 export type ResetAnswer = z.infer<typeof resetAnswerSchema>;

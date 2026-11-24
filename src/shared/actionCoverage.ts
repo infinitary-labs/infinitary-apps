@@ -155,6 +155,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "consent",
     "The person's own Cancel on the welcome screen's setup on another computer",
   ],
+  "inf:home-reset:start": [
+    "destructive",
+    "Resets this computer when a computer that controls its first mate asks, after the captain's click and that computer's own system confirmation; asked only by that computer's program, never a page, a phone or a command",
+  ],
   "inf:devices:link-at": [
     "credential",
     `One step of joining another ${COMPUTER.one} by its address on the captain's click, asked only by the window's own program of the command it started; the link it answers never reaches a page or a command`,

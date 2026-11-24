@@ -107,6 +107,7 @@ When it cannot start, it says why on its error output and exits 1, where the app
 | Anything else stopped its start | "Infinitary could not start: " and the reason |
 
 A run whose first mate moved to another computer ends for good (`docs/devices.md`, "Moving the first mate"): it says "Your first mate moved to another computer, so this run ends for good.", forgets its background so nothing starts it again, and exits 0.
+A run reset from a computer that controls it ends for good the same way (`docs/reset.md`, "A first mate with no window"): it says "Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time.", and a window beside it starts again, which finishes the reset.
 A move that failed after the first mate stopped, or that the captain answered with Start my first mate here again, ends the run with 75 as an update does, so its background starts it again here with nothing lost.
 It says "Your first mate starts again here, so this run ends." and "Start it again if nothing starts it for you.", and records the stop as `restart`, so a window beside it shows its ordinary stop words, never an update's.
 

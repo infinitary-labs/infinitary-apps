@@ -9,8 +9,12 @@ import { SettingRow } from "./settingRows";
  * never resets. Then the system's own confirmation (Touch ID, a password,
  * Windows Hello) follows; once given, the app quits, and its next start
  * wipes this computer's Infinitary and opens on the welcome screen.
+ *
+ * On a computer that controls another's first mate, `home` names that
+ * computer: the row resets it first, then this one (docs/reset.md, "From a
+ * computer that controls the first mate").
  */
-export function ResetRow() {
+export function ResetRow({ home }: { home?: string } = {}) {
   const [asking, setAsking] = useState(false);
   const [openTasks, setOpenTasks] = useState(0);
   const [resetting, setResetting] = useState(false);
@@ -18,6 +22,10 @@ export function ResetRow() {
   const keep = useRef<HTMLButtonElement>(null);
   const reset = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
+  const confirmButton = useRef<HTMLButtonElement>(null);
+  // A pending button is disabled, which drops focus; a reset that comes back
+  // unreached gives it back to Reset Infinitary, still on the question.
+  const refocus = useRef(false);
 
   useLayoutEffect(() => {
     if (asking) keep.current?.focus();
@@ -26,6 +34,12 @@ export function ResetRow() {
       reset.current?.focus();
     }
   }, [asking]);
+  useLayoutEffect(() => {
+    if (!resetting && refocus.current) {
+      refocus.current = false;
+      confirmButton.current?.focus();
+    }
+  }, [resetting]);
 
   const ask = () => {
     setError(null);
@@ -43,9 +57,15 @@ export function ResetRow() {
     setResetting(true);
     void window.infinitary.app.reset().then(
       ({ outcome }) => {
-        // The system's own confirmation was not given: nothing changed.
-        if (outcome !== "kept") return;
+        if (outcome === "restarting") return;
         setResetting(false);
+        // The system's own confirmation was not given, or the first mate's
+        // computer did not answer: nothing changed.
+        if (outcome === "unreached" && home) {
+          refocus.current = true;
+          setError(m.settingsGeneralResetUnreached({ home }));
+          return;
+        }
         keepEverything();
       },
       (caught: unknown) => {
@@ -61,7 +81,9 @@ export function ResetRow() {
       id="reset-infinitary"
       error={error}
       title={m.settingsGeneralReset()}
-      description={m.settingsGeneralResetDescription()}
+      description={
+        home ? m.settingsGeneralResetDescriptionBoth({ home }) : m.settingsGeneralResetDescription()
+      }
       detail={
         asking ? (
           <div
@@ -69,10 +91,12 @@ export function ResetRow() {
             style={{ display: "grid", gap: "var(--space-2)", marginBlockStart: "var(--space-3)" }}
           >
             <div style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
-              {m.settingsGeneralResetQuestion()}
+              {home
+                ? m.settingsGeneralResetQuestionBoth({ home })
+                : m.settingsGeneralResetQuestion()}
             </div>
             {[
-              m.settingsGeneralResetDeletes(),
+              home ? m.settingsGeneralResetDeletesBoth() : m.settingsGeneralResetDeletes(),
               ...(openTasks > 0 ? [m.settingsGeneralResetOpenTasks({ count: openTasks })] : []),
               m.settingsGeneralResetKeeps(),
             ].map((line) => (
@@ -100,6 +124,7 @@ export function ResetRow() {
               <Button
                 variant="danger"
                 size="sm"
+                ref={confirmButton}
                 onClick={confirm}
                 pending={resetting}
                 pendingLabel={m.settingsGeneralResetting()}

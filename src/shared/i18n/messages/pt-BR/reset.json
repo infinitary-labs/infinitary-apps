@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "O Infinitary foi redefinido. Na próxima vez, ele abre na tela de boas-vindas.",
+  "resetCommandHelp": "Apaga tudo o que o Infinitary guarda aqui, depois que você confirmar que é você.",
+  "resetCommandKept": "Você não confirmou, então nada foi redefinido.",
+  "resetCommandNoConfirmation": "Este computador não consegue confirmar aqui que é você, então nada foi redefinido. Use Redefinir o Infinitary em Ajustes → Geral, ou na tela que o Infinitary mostra quando não consegue abrir.",
+  "resetCommandRunning": "O Infinitary está aberto neste computador, então nada foi redefinido. Use Redefinir o Infinitary em Ajustes → Geral, ou feche o Infinitary e execute isto de novo.",
   "resetConfirmReason": "Redefinir o Infinitary neste computador.",
+  "resetConfirmReasonBoth": "Redefinir o Infinitary em {home} e neste computador.",
+  "resetConfirmReasonBothMac": "redefinir o Infinitary em {home} e neste computador",
   "resetConfirmReasonMac": "redefinir o Infinitary neste computador",
+  "resetCouldNotStartMessage": "Ele parou duas vezes antes de terminar de iniciar. Seu trabalho salvo não foi alterado.",
+  "resetCouldNotStartNext": "Tente de novo, ou redefina o Infinitary para recomeçar como se tivesse acabado de ser instalado.",
+  "resetCouldNotStartTitle": "O Infinitary não conseguiu iniciar",
   "resetHeldDetail": "Outro programa está usando a pasta do Infinitary. Feche-o e tente de novo.",
   "resetHeldMessage": "O Infinitary não conseguiu terminar a redefinição",
   "resetHeldQuit": "Sair",
   "resetHeldTryAgain": "Tentar de novo",
   "resetKeysAsk": "Redefinir todas as teclas para as da predefinição {preset}?",
   "resetKeysConfirm": "Redefinir todas as teclas",
-  "resetKeysDetail": "Cada atalho que você mudou nos ajustes do teclado volta para o que a predefinição {preset} dá a ele."
+  "resetKeysDetail": "Cada atalho que você mudou nos ajustes do teclado volta para o que a predefinição {preset} dá a ele.",
+  "resetRunEnded": "O Infinitary foi redefinido aqui, então esta execução termina de vez, e o Infinitary abre na tela de boas-vindas na próxima vez.",
+  "resetScreenKeeps": "Os projetos nas suas próprias pastas mantêm todos os arquivos e commits.",
+  "resetScreenKept": "Nada foi redefinido."
 }

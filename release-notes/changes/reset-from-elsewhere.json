@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reset-from-elsewhere",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Reset Infinitary from another computer, or when it cannot open",
+      "body": "A computer that controls your first mate now shows Reset Infinitary in Settings → General too, and resets the first mate's computer and itself once you confirm. The screens Infinitary shows when it cannot open your saved work offer Reset Infinitary, and after two starts that stopped before Infinitary finished starting, it shows Infinitary could not start, with Try again, Reset Infinitary and Quit. From a terminal, infinitary reset does the same once you confirm it is you.",
+      "picture": {
+        "dark": "reset-from-elsewhere-dark.webp",
+        "light": "reset-from-elsewhere-light.webp",
+        "alt": "Settings → General on a computer that controls another's first mate, asking whether to reset Infinitary on Mac mini and this computer, with Keep everything and Reset Infinitary buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

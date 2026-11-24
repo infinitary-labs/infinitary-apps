@@ -1288,7 +1288,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     ...accountHandlers(services, emit),
-    ...resetHandlers(services),
+    ...resetHandlers(services, host),
 
     // The sign-ins where projects live (git integration PR 1.2): the
     // service pushes the whole view as `inf:forges` after every change.

@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "Infinitary ist zurückgesetzt. Beim nächsten Mal öffnet es sich mit dem Willkommensbildschirm.",
+  "resetCommandHelp": "Löscht alles, was Infinitary hier aufbewahrt, sobald du bestätigst, dass du es bist.",
+  "resetCommandKept": "Du hast nicht bestätigt, also wurde nichts zurückgesetzt.",
+  "resetCommandNoConfirmation": "Dieser Computer kann hier nicht bestätigen, dass du es bist, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein oder auf dem Bildschirm, den Infinitary zeigt, wenn es sich nicht öffnen kann.",
+  "resetCommandRunning": "Infinitary ist auf diesem Computer geöffnet, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein, oder beende Infinitary und führe dies erneut aus.",
   "resetConfirmReason": "Infinitary auf diesem Computer zurücksetzen.",
+  "resetConfirmReasonBoth": "Infinitary auf {home} und diesem Computer zurücksetzen.",
+  "resetConfirmReasonBothMac": "Infinitary auf {home} und diesem Computer zurückzusetzen",
   "resetConfirmReasonMac": "Infinitary auf diesem Computer zurückzusetzen",
+  "resetCouldNotStartMessage": "Es wurde zweimal beendet, bevor es fertig gestartet war. Deine gespeicherte Arbeit wurde nicht verändert.",
+  "resetCouldNotStartNext": "Versuche es erneut, oder setze Infinitary zurück, um wie frisch installiert neu anzufangen.",
+  "resetCouldNotStartTitle": "Infinitary konnte nicht starten",
   "resetHeldDetail": "Ein anderes Programm verwendet den Ordner von Infinitary. Schließe es und versuche es dann erneut.",
   "resetHeldMessage": "Infinitary konnte das Zurücksetzen nicht abschließen",
   "resetHeldQuit": "Beenden",
   "resetHeldTryAgain": "Erneut versuchen",
   "resetKeysAsk": "Alle Tasten auf die der Vorlage {preset} zurücksetzen?",
   "resetKeysConfirm": "Alle Tasten zurücksetzen",
-  "resetKeysDetail": "Jedes Tastenkürzel, das du in den Tastatureinstellungen geändert hast, kehrt zu dem zurück, das die Vorlage {preset} vorsieht."
+  "resetKeysDetail": "Jedes Tastenkürzel, das du in den Tastatureinstellungen geändert hast, kehrt zu dem zurück, das die Vorlage {preset} vorsieht.",
+  "resetRunEnded": "Infinitary wurde hier zurückgesetzt, daher endet dieser Lauf endgültig, und Infinitary öffnet beim nächsten Mal den Willkommensbildschirm.",
+  "resetScreenKeeps": "Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.",
+  "resetScreenKept": "Es wurde nichts zurückgesetzt."
 }

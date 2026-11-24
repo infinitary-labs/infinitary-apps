@@ -9917,6 +9917,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Set in your file`;
   }
+  function accountsCustomApiFileReplaced() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُستخدم اتصال أحدث من الإدخال نفسه في ملف الاتصالات، لذا يبقى هذا الاتصال متوقفًا مؤقتًا. اقطعه إن لم تعد بحاجة إليه.`;
+      case "de":
+        return `Eine neuere Verbindung aus demselben Eintrag deiner Verbindungsdatei ist in Gebrauch, deshalb bleibt diese pausiert. Trenne sie, wenn du sie nicht mehr brauchst.`;
+      case "es":
+        return `Una conexión más reciente de la misma entrada de tu archivo de conexiones está en uso, así que esta sigue en pausa. Desconéctala si ya no la necesitas.`;
+      case "fr":
+        return `Une connexion plus récente issue de la même entrée de votre fichier de connexions est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.`;
+      case "ja":
+        return `接続ファイルの同じ項目から作った新しい接続を使っているため、この接続は一時停止したままです。不要なら接続を解除してください。`;
+      case "ko":
+        return `연결 파일의 같은 항목으로 만든 새 연결을 쓰고 있어서 이 연결은 일시 정지된 상태로 남아요. 필요 없으면 연결을 해제하세요.`;
+      case "pt-BR":
+        return `Uma conexão mais nova da mesma entrada do seu arquivo de conexões está em uso, então esta continua pausada. Desconecte-a se não precisar mais dela.`;
+      case "zh-Hans":
+        return `你的连接文件中同一条目的较新连接正在使用，因此此连接保持暂停。如果不再需要，请断开连接。`;
+      case "zh-Hant":
+        return `你的連線檔案中同一項目的較新連線正在使用，因此這個連線保持暫停。如果不再需要，請中斷連線。`;
+      case "en-XA":
+        return `[Å ñéŵéŕ çöññéçţîöñ ƒŕöɱ ţĥé šáɱé éñţŕý îñ ýöûŕ çöññéçţîöñ ƒîļé îš îñ ûšé, šö ţĥîš öñé šţáýš þáûšéð. Ðîšçöññéçţ îţ îƒ ýöû ñö ļöñĝéŕ ñééð îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A newer connection from the same entry in your connection file is in use, so this one stays paused. Disconnect it if you no longer need it.‬`;
+    }
+    return `A newer connection from the same entry in your connection file is in use, so this one stays paused. Disconnect it if you no longer need it.`;
+  }
   function accountsCustomApiFileSets(input2) {
     const who = input2.who;
     switch (currentLanguage()) {
@@ -107796,6 +107823,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiFileReadFailed,
     accountsCustomApiFileReadThis,
     accountsCustomApiFileReasoning,
+    accountsCustomApiFileReplaced,
     accountsCustomApiFileSets,
     accountsCustomApiFileStop,
     accountsCustomApiFileTag,
@@ -111246,6 +111274,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiFileReadFailed": [],
     "accountsCustomApiFileReadThis": [],
     "accountsCustomApiFileReasoning": [],
+    "accountsCustomApiFileReplaced": [],
     "accountsCustomApiFileSets": ["who"],
     "accountsCustomApiFileStop": [],
     "accountsCustomApiFileTag": [],

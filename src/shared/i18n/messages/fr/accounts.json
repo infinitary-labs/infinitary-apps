@@ -120,6 +120,7 @@
   "accountsCustomApiFileReadFailed": "Infinitary n’a pas pu lire ce fichier. Réessayez.",
   "accountsCustomApiFileReadThis": "Lire ce fichier",
   "accountsCustomApiFileReasoning": "Défini dans votre fichier",
+  "accountsCustomApiFileReplaced": "Une connexion plus récente issue de la même entrée de votre fichier de connexions est utilisée : celle-ci reste en pause. Déconnectez-la si vous n’en avez plus besoin.",
   "accountsCustomApiFileSets": "Votre fichier de connexions fixe le nom, l’adresse, le protocole, les en-têtes et les modèles de cette connexion. Saisissez la clé et les valeurs d’en-têtes secrètes à garder sur {who}, puis enregistrez pour vérifier chaque modèle.",
   "accountsCustomApiFileStop": "Arrêter la lecture",
   "accountsCustomApiFileTag": "Depuis votre fichier",

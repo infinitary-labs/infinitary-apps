@@ -10,6 +10,8 @@ import { readCustomApiFile } from "./customApiFile";
 const MAX_FILE_BYTES = 1024 * 1024;
 /** Editors and sync apps write a file in several steps; read once they settle. */
 const SETTLE_MS = 250;
+/** How often to try watching again while the file's folder cannot be watched, such as before it exists. */
+const WATCH_RETRY_MS = 10_000;
 
 /**
  * The connection file this computer reads custom connections from. It reads
@@ -25,6 +27,7 @@ export class CustomApiFileSource {
   private failure?: CustomApiFileView["failure"];
   private watcher?: FSWatcher;
   private timer?: ReturnType<typeof setTimeout>;
+  private retry?: ReturnType<typeof setTimeout>;
   /** Bumped by each new path and each close, so a read of an older one lands nowhere. */
   private generation = 0;
   private closed = false;
@@ -35,6 +38,7 @@ export class CustomApiFileSource {
       save: (path: string | null) => void;
       /** Each good reading's connections; null when no file is chosen, which holds nothing. */
       apply: (connections: CustomFileConnection[] | null) => void;
+      watchRetryMs?: number;
     },
   ) {}
 
@@ -73,15 +77,35 @@ export class CustomApiFileSource {
     this.watcher?.close();
     this.watcher = undefined;
     clearTimeout(this.timer);
+    clearTimeout(this.retry);
   }
 
   private follow(): Promise<void> {
     this.watcher?.close();
     this.watcher = undefined;
     clearTimeout(this.timer);
+    clearTimeout(this.retry);
     const generation = ++this.generation;
     const path = this.options.path();
     if (this.closed || path === null) return Promise.resolve();
+    this.watch(path, generation);
+    return this.read(path, generation);
+  }
+
+  /**
+   * Watches the file's folder. One not there yet, or a watch that ends with
+   * an error, is tried again on a timer; once watched, the file is read, since
+   * it may have arrived meanwhile.
+   */
+  private watch(path: string, generation: number): void {
+    const again = () => {
+      clearTimeout(this.retry);
+      this.retry = setTimeout(() => {
+        if (generation !== this.generation) return;
+        this.watch(path, generation);
+        if (this.watcher) void this.read(path, generation);
+      }, this.options.watchRetryMs ?? WATCH_RETRY_MS);
+    };
     try {
       // The folder, not the file: editors and sync apps replace a file, which ends a watch on it.
       this.watcher = watch(dirname(path), (_event, name) => {
@@ -92,11 +116,13 @@ export class CustomApiFileSource {
       this.watcher.on("error", () => {
         this.watcher?.close();
         this.watcher = undefined;
+        if (generation === this.generation) again();
       });
     } catch {
-      // A folder that is not there yet is read as a missing file below.
+      // A folder that is not there yet is read as a missing file meanwhile.
+      this.watcher = undefined;
+      again();
     }
-    return this.read(path, generation);
   }
 
   private async read(path: string, generation: number): Promise<void> {

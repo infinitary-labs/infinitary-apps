@@ -114,6 +114,7 @@
 "accountsCustomApiFileReadFailed" = "Infinitary 无法读取该文件。请重试。";
 "accountsCustomApiFileReadThis" = "读取此文件";
 "accountsCustomApiFileReasoning" = "在你的文件中设定";
+"accountsCustomApiFileReplaced" = "你的连接文件中同一条目的较新连接正在使用，因此此连接保持暂停。如果不再需要，请断开连接。";
 "accountsCustomApiFileSets" = "此连接的名称、地址、协议、请求头和模型由你的连接文件设定。输入要保存在 %1$@ 上的密钥和机密请求头的值，然后保存以检查每个模型。";
 "accountsCustomApiFileStop" = "停止读取";
 "accountsCustomApiFileTag" = "来自你的文件";

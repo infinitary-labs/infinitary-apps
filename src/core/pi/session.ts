@@ -1108,7 +1108,8 @@ async function openOneShot(
  * Budget compaction in Pi's own token count. Kept turns are a quarter of the
  * history room and never more than Pi's default; the reserve is sized so the
  * summary is that quarter, and never more than Pi's default. A connection's
- * stated values replace those, each within the history room. Rebudget at
+ * stated values replace those within the history room, kept turns within
+ * what the reserve leaves of it. Rebudget at
  * each prompt boundary so a resumed session uses the current model. Overflow
  * still uses Pi's real compactor and its single retry.
  */
@@ -1136,8 +1137,9 @@ function budgetCustomCompaction(
     compaction: {
       ...(custom
         ? {
+            // Kept turns and the summary share the history room: keeping all of it leaves nothing to summarize.
             keepRecentTokens: stated?.keepRecentTokens
-              ? within(stated.keepRecentTokens)
+              ? Math.max(1, Math.min(stated.keepRecentTokens, historyRoom - reserve))
               : Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter),
           }
         : {}),

@@ -164,6 +164,34 @@ describe("a connection file in Pi's models.json format", () => {
     expect(connection?.definition?.models[0]?.cost).toEqual({ input: 1 });
   });
 
+  it("reads header values as Pi does: a reference anywhere is never sent, and an escaped mark is plain", () => {
+    const [connection] = read({
+      gateway: {
+        ...base,
+        headers: {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: Pi's own reference syntax, as a file holds it
+          "X-Bearer": "Bearer ${TENANT_TOKEN}",
+          "X-Suffix": "team-$TENANT",
+          "X-Price": "$$5 and $!",
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: Pi's own reference syntax, as a file holds it
+          "X-Odd": "${not a name} costs $ 5",
+          "X-Gateway-Token": "$GATEWAY_TOKEN",
+        },
+        infinitary: { secretHeaders: ["X-Gateway-Token"] },
+      },
+    }).connections;
+    expect(connection?.warnings).toEqual([
+      { kind: "header-reference", key: "X-Bearer" },
+      { kind: "header-reference", key: "X-Suffix" },
+    ]);
+    expect(connection?.definition?.headers).toEqual([
+      { name: "X-Price", secret: false, value: "$5 and !" },
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Pi's own reference syntax, as a file holds it
+      { name: "X-Odd", secret: false, value: "${not a name} costs $ 5" },
+      { name: "X-Gateway-Token", secret: true },
+    ]);
+  });
+
   it("warns when kept history and the summary's room do not fit a model's window", () => {
     const [connection] = read({
       gateway: {
@@ -188,6 +216,8 @@ describe("a connection file in Pi's models.json format", () => {
       "no-id": { ...base, models: [{ name: "Unnamed" }] },
       twice: { ...base, models: [{ id: "a" }, { id: "a" }] },
       "bad-limit": { ...base, models: [{ id: "a", contextWindow: -1 }] },
+      "long-header": { ...base, headers: { [`X-${"a".repeat(200)}`]: "b" } },
+      "long-id": { ...base, models: [{ id: "m".repeat(300) }] },
     });
     expect(reading.connections.map(({ name, refused }) => ({ name, refused }))).toEqual([
       { name: "openai", refused: "built-in" },
@@ -196,6 +226,8 @@ describe("a connection file in Pi's models.json format", () => {
       { name: "no-id", refused: "invalid" },
       { name: "twice", refused: "invalid" },
       { name: "bad-limit", refused: "invalid" },
+      { name: "long-header", refused: "invalid" },
+      { name: "long-id", refused: "invalid" },
     ]);
   });
 });

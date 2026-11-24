@@ -114,6 +114,7 @@
 "accountsCustomApiFileReadFailed" = "Infinitary couldn't read that file. Try again.";
 "accountsCustomApiFileReadThis" = "Read this file";
 "accountsCustomApiFileReasoning" = "Set in your file";
+"accountsCustomApiFileReplaced" = "A newer connection from the same entry in your connection file is in use, so this one stays paused. Disconnect it if you no longer need it.";
 "accountsCustomApiFileSets" = "Your connection file sets this connection's name, address, protocol, headers and models. Type the key and secret header values to keep on %1$@, then save to check each model.";
 "accountsCustomApiFileStop" = "Stop reading";
 "accountsCustomApiFileTag" = "From your file";

@@ -7,11 +7,12 @@ import {
   customCacheRetentionSchema,
   customProtocolSchema,
 } from "@shared/customApi";
-import type {
-  CustomApiFileView,
-  CustomFileConnection,
-  CustomFileDefinition,
-  CustomFileWarning,
+import {
+  type CustomApiFileView,
+  type CustomFileConnection,
+  type CustomFileDefinition,
+  type CustomFileWarning,
+  customFileDefinitionSchema,
 } from "@shared/customApiFile";
 import { cutText } from "@shared/textCut";
 
@@ -78,6 +79,38 @@ function stripJsonComments(text: string): string {
     );
 }
 
+/**
+ * A header value as Pi reads it (its resolve-config-value template): a
+ * leading `!` runs a command, `$NAME` or `${NAME}` anywhere fills in an
+ * environment variable, and `$$` or `$!` stand for a plain `$` or `!`.
+ * Infinitary runs and reads neither, so a value holding one is undefined;
+ * any other value comes back unescaped, as Pi would send it.
+ */
+function literalHeaderValue(value: string): string | undefined {
+  if (value.startsWith("!")) return undefined;
+  let literal = "";
+  for (let at = 0; at < value.length; ) {
+    const dollar = value.indexOf("$", at);
+    if (dollar < 0) return literal + value.slice(at);
+    literal += value.slice(at, dollar);
+    const next = value.slice(dollar + 1);
+    if (next[0] === "$" || next[0] === "!") {
+      literal += next[0];
+      at = dollar + 2;
+    } else if (next[0] === "{" && next.includes("}")) {
+      const name = next.slice(1, next.indexOf("}"));
+      if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return undefined;
+      literal += `\${${name}}`;
+      at = dollar + name.length + 3;
+    } else if (/^[A-Za-z_]/.test(next)) return undefined;
+    else {
+      literal += "$";
+      at = dollar + 1;
+    }
+  }
+  return literal;
+}
+
 /** The file's connections, each with what it refuses or warns of; `invalid` when it is not a models.json. */
 export function readCustomApiFile(text: string): Omit<CustomApiFileView, "path"> {
   let parsed: unknown;
@@ -99,11 +132,10 @@ export function readCustomApiFile(text: string): Omit<CustomApiFileView, "path">
           return { name, refused: "address", warnings };
         const protocol = customProtocolSchema.safeParse(entry.api);
         if (!protocol.success) return { name, refused: "protocol", warnings };
-        return {
-          name,
-          warnings,
-          definition: definitionOf(name, entry, protocol.data, warnings),
-        };
+        const definition = definitionOf(name, entry, protocol.data, warnings);
+        // Held to the view's own bounds, so one odd entry never refuses the whole file view.
+        if (!customFileDefinitionSchema.safeParse(definition).success) throw new Invalid();
+        return { name, warnings, definition };
       } catch (error) {
         if (!(error instanceof Invalid)) throw error;
         return { name, refused: "invalid", warnings: [] };
@@ -131,23 +163,20 @@ function definitionOf(
   const own = objectOr(entry.infinitary);
   for (const key of Object.keys(own))
     if (key !== "secretHeaders" && key !== "compaction") warn("unused", `infinitary.${key}`);
-  const headers: CustomFileDefinition["headers"] = [];
-  for (const [header, value] of Object.entries(objectOr(entry.headers))) {
-    if (typeof value !== "string") throw new Invalid();
-    // Pi reads these as an environment variable or a command's output; neither is ever run here.
-    if (value.startsWith("$") || value.startsWith("!")) warn("header-reference", header);
-    else headers.push({ name: header, secret: false, value });
-  }
   const secret = own.secretHeaders ?? [];
   if (!Array.isArray(secret) || secret.some((header) => typeof header !== "string"))
     throw new Invalid();
-  for (const header of secret as string[]) {
-    const lower = header.toLowerCase();
-    const named = headers.findIndex((entry) => entry.name.toLowerCase() === lower);
-    // A secret header's value is typed on each computer, never read from the file.
-    if (named >= 0) headers.splice(named, 1);
-    headers.push({ name: header, secret: true });
+  // A secret header's value is typed on each computer, never read from the file.
+  const secretNames = new Set((secret as string[]).map((header) => header.toLowerCase()));
+  const headers: CustomFileDefinition["headers"] = [];
+  for (const [header, value] of Object.entries(objectOr(entry.headers))) {
+    if (typeof value !== "string") throw new Invalid();
+    if (secretNames.has(header.toLowerCase())) continue;
+    const literal = literalHeaderValue(value);
+    if (literal === undefined) warn("header-reference", header);
+    else headers.push({ name: header, secret: false, value: literal });
   }
+  for (const header of secret as string[]) headers.push({ name: header, secret: true });
   const names = headers.map((header) => header.name.toLowerCase());
   if (new Set(names).size !== names.length) throw new Invalid();
   const compaction = compactionOf(own.compaction);

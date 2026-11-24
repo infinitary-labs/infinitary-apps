@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CustomFileConnection } from "@shared/customApiFile";
 import { afterEach, expect, it } from "vitest";
@@ -11,7 +11,7 @@ afterEach(() => {
   for (const source of sources.splice(0)) source.close();
 });
 
-function source() {
+function source(watchRetryMs?: number) {
   let saved: string | null = null;
   const applied: (string[] | null)[] = [];
   const result = new CustomApiFileSource({
@@ -21,6 +21,7 @@ function source() {
     },
     apply: (connections: CustomFileConnection[] | null) =>
       applied.push(connections?.map((connection) => connection.name) ?? null),
+    ...(watchRetryMs ? { watchRetryMs } : {}),
   });
   result.start();
   sources.push(result);
@@ -69,6 +70,23 @@ it("keeps the last good reading while the file is broken or gone, and says why",
   const none = await file.set(null);
   expect(none).toEqual({ path: null, connections: [] });
   expect(applied.at(-1)).toBeNull();
+});
+
+it("picks up a file whose folder appears only after it was chosen", async () => {
+  const folder = join(scratchDir("connection-file-"), "synced-later");
+  const path = join(folder, "models.json");
+  const { source: file, applied } = source(100);
+  expect((await file.set(path)).failure).toBe("missing");
+
+  mkdirSync(folder);
+  writeFileSync(path, fixture);
+  await expect.poll(() => applied, { timeout: 5000 }).toEqual([["my-provider", "my-local-server"]]);
+
+  // Watched now: a later edit is read too.
+  const edited = JSON.parse(fixture);
+  delete edited.providers["my-local-server"];
+  writeFileSync(path, JSON.stringify(edited));
+  await expect.poll(() => applied.at(-1), { timeout: 5000 }).toEqual(["my-provider"]);
 });
 
 it("refuses a path that is not a full one", async () => {

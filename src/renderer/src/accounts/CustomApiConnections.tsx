@@ -160,17 +160,17 @@ export function CustomApiAccountsSection() {
       window.infinitary.accounts.custom.list(),
       window.infinitary.accounts.list(),
       window.infinitary.settings.getFirstmateModel(),
-      window.infinitary.accounts.custom.file(),
     ])
-      .then(([custom, accounts, selected, read]) => {
+      .then(([custom, accounts, selected]) => {
         setViews(custom);
-        setFile(read);
         setProviders(
           Object.fromEntries(accounts.map((account) => [account.id, account.providerId])),
         );
         if (!choosing.current) setChosen(selected);
       })
       .catch(() => setError(m.accountsCustomApiListFailed()));
+    // On its own: a home too old to read a connection file still lists every connection.
+    window.infinitary.accounts.custom.file().then(setFile, () => setFile(undefined));
   }, []);
   useEffect(() => {
     refresh();
@@ -211,6 +211,15 @@ export function CustomApiAccountsSection() {
         const running = view.enabled && !held;
         const ready = running && checked;
         const fromFile = fileConnection(view);
+        // Approved again as a new connection, the same entry already runs; this one only waits to be disconnected.
+        const replaced =
+          view.file?.state === "changed" &&
+          views.some(
+            (other) =>
+              other !== view &&
+              other.file?.name === view.file?.name &&
+              other.file?.state === "current",
+          );
         return (
           <section className="fm-custom-conn" data-custom-account={accountId} key={accountId}>
             {view.tokenCommandFailed && (
@@ -252,7 +261,7 @@ export function CustomApiAccountsSection() {
                       : m.accountsCustomApiStatusPausedNotChecked()}
               </span>
               <span className="fm-custom-acts">
-                {view.file?.state === "changed" && fromFile?.definition ? (
+                {replaced ? null : view.file?.state === "changed" && fromFile?.definition ? (
                   <Button variant="secondary" size="sm" onClick={() => setApproving(view)}>
                     {m.accountsCustomApiFileApproveAgain()}
                   </Button>
@@ -349,7 +358,7 @@ export function CustomApiAccountsSection() {
             })}
             {view.file?.state === "changed" && (
               <p className="fm-custom-lock" data-custom-file-held>
-                {m.accountsCustomApiFileChanged()}
+                {replaced ? m.accountsCustomApiFileReplaced() : m.accountsCustomApiFileChanged()}
               </p>
             )}
             {view.file?.state === "missing" && (

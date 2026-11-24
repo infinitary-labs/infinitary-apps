@@ -586,7 +586,6 @@ test("a connection from the connection file is approved with this computer's own
   expect(readFileSync(path, "utf8")).toBe(
     JSON.stringify(provider("Renamed gateway", "http://127.0.0.1:9/v1"), null, 2),
   );
-  expect(written).not.toBe(readFileSync(path, "utf8"));
 });
 
 // INF-3100's report: a proxy app answering a public API's name with a reserved

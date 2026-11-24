@@ -82,6 +82,27 @@ it("checks a model again, with the saved key, when the file changes its limits",
   expect(usable()).toEqual(["operator-model"]);
 });
 
+it("leaves a model saved unchecked for the person's own check when the file is read again", async () => {
+  const api = await fixture();
+  const world = vault();
+  const models = [operator];
+  const definition: CustomFileDefinition = {
+    label: "Team gateway",
+    baseUrl: api.baseUrl,
+    protocol: "openai-completions",
+    headers: [],
+    models,
+  };
+  const draft = world.vault.customPrepare({ ...input(api.baseUrl), models, file: NAME });
+  const account = await world.vault.customSave(draft.draftId ?? "", true);
+  const sent = api.requests.length;
+  await Promise.all(world.vault.applyCustomFile([{ name: NAME, warnings: [], definition }]));
+  expect(api.requests.length).toBe(sent);
+  expect(
+    world.vault.customViews().find((entry) => entry.accountId === account.id)?.models,
+  ).toMatchObject([{ id: "operator-model", checked: false }]);
+});
+
 it("pauses a connection whose address changed or that left the file, until the file agrees again", async () => {
   const { api, definition, apply, reading, view, usable } = await approved([operator]);
   const sent = api.requests.length;
@@ -129,7 +150,7 @@ it.each([
 );
 
 it("compacts a long session at the reserve the file states, instead of Pi's", async () => {
-  const run = async (compaction?: { reserveTokens: number }) => {
+  const run = async (compaction?: { reserveTokens: number; keepRecentTokens?: number }) => {
     const api = await fixture();
     api.count();
     const world = vault();
@@ -174,4 +195,6 @@ it("compacts a long session at the reserve the file states, instead of Pi's", as
   };
   expect(await run()).toBe(0);
   expect(await run({ reserveTokens: 90000 })).toBeGreaterThan(0);
+  // Kept history stated past the window still leaves the summary its room.
+  expect(await run({ reserveTokens: 90000, keepRecentTokens: 1e8 })).toBeGreaterThan(0);
 });

@@ -120,6 +120,7 @@ public enum PhoneMessages {
     public static func `accountsCustomApiFileReadFailed`() -> String { PhoneWords.format("accountsCustomApiFileReadFailed", []) }
     public static func `accountsCustomApiFileReadThis`() -> String { PhoneWords.format("accountsCustomApiFileReadThis", []) }
     public static func `accountsCustomApiFileReasoning`() -> String { PhoneWords.format("accountsCustomApiFileReasoning", []) }
+    public static func `accountsCustomApiFileReplaced`() -> String { PhoneWords.format("accountsCustomApiFileReplaced", []) }
     public static func `accountsCustomApiFileSets`(`who`: String) -> String { PhoneWords.format("accountsCustomApiFileSets", [`who`]) }
     public static func `accountsCustomApiFileStop`() -> String { PhoneWords.format("accountsCustomApiFileStop", []) }
     public static func `accountsCustomApiFileTag`() -> String { PhoneWords.format("accountsCustomApiFileTag", []) }
@@ -4652,6 +4653,7 @@ extension PhoneWords {
         "accountsCustomApiFileReadFailed": [],
         "accountsCustomApiFileReadThis": [],
         "accountsCustomApiFileReasoning": [],
+        "accountsCustomApiFileReplaced": [],
         "accountsCustomApiFileSets": ["who"],
         "accountsCustomApiFileStop": [],
         "accountsCustomApiFileTag": [],

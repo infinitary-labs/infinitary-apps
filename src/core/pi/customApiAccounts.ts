@@ -551,8 +551,8 @@ export class CustomApiAccountOwner {
    * left the file. A changed address, protocol or header holds it until it
    * is approved again here, and never inherits a key. Otherwise the file's
    * names, prices, limits, pictures, reasoning, cache and compaction apply
-   * at once, against the address already approved; `recheck` says a model
-   * no longer has a check that counts, which `recheck` then runs.
+   * at once, against the address already approved; `recheck` says this
+   * reading cost a model its check or added one, which `recheck` then runs.
    * `applied` says the definition is the one in use, so its name is too.
    * A model whose reasoning profile this computer's catalog lacks keeps
    * what it had.
@@ -568,6 +568,10 @@ export class CustomApiAccountOwner {
       live.file = definition ? "changed" : "missing";
       return { applied: false, recheck: false };
     }
+    const checkedBefore = new Set(
+      input.models.filter((model) => this.proofMatches(live.stored, model.id)).map((m) => m.id),
+    );
+    const listedBefore = new Set(input.models.map((model) => model.id));
     const catalog = this.catalog();
     const capabilities: Record<string, CustomCapabilities> = {};
     const models: CustomApiInput["models"] = [];
@@ -624,7 +628,15 @@ export class CustomApiAccountOwner {
       if (live.ready) this.registerRuntime(live, live.ready);
     }
     if (wasHeld && live.enabled) for (const wake of [...live.waiters]) wake();
-    return { applied: true, recheck: !this.allChecked(live.stored) };
+    // Only a model this reading cost its check, or one it added, is checked
+    // again: a model left unchecked before, such as on a connection saved
+    // paused, waits for the person's own check.
+    const recheck = live.stored.input.models.some(
+      (model) =>
+        (checkedBefore.has(model.id) || !listedBefore.has(model.id)) &&
+        !this.proofMatches(live.stored, model.id),
+    );
+    return { applied: true, recheck };
   }
 
   setEnabled(accountId: string, enabled: boolean): void {

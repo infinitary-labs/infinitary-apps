@@ -119,6 +119,7 @@
   "accountsCustomApiFileReadFailed": "Infinitary konnte diese Datei nicht lesen. Versuch es noch einmal.",
   "accountsCustomApiFileReadThis": "Diese Datei lesen",
   "accountsCustomApiFileReasoning": "In deiner Datei festgelegt",
+  "accountsCustomApiFileReplaced": "Eine neuere Verbindung aus demselben Eintrag deiner Verbindungsdatei ist in Gebrauch, deshalb bleibt diese pausiert. Trenne sie, wenn du sie nicht mehr brauchst.",
   "accountsCustomApiFileSets": "Deine Verbindungsdatei legt Name, Adresse, Protokoll, Header und Modelle dieser Verbindung fest. Gib den Schlüssel und die geheimen Header-Werte für {who} ein und speichere, um jedes Modell zu prüfen.",
   "accountsCustomApiFileStop": "Nicht mehr lesen",
   "accountsCustomApiFileTag": "Aus deiner Datei",

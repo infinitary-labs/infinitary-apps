@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "usage-cost-filter-menus",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Usage's Projects and Kinds menus are solid and close when you click away",
+      "body": "In Settings, Usage, the Projects and Kinds menus under Cost per task no longer show the chart through them or open on top of each other. A click anywhere else, or moving on with Tab, closes the open menu, and a small down arrow replaces the triangle that looked like a play button.",
+      "picture": {
+        "dark": "usage-cost-filter-menus-dark.webp",
+        "light": "usage-cost-filter-menus-light.webp",
+        "alt": "Cost per task in Settings, Usage, with the Kinds menu open as a solid panel over the readouts and the line, and a down arrow on each filter"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

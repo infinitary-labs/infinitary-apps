@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-pager-ring-swipe-busy-app",
+      "reason": "Test-only repair of the phone merge card journey: its swipe past the last card is the card row's shared press and drag from rest, which keeps its travel when a busy test run holds the app, with no app behavior change."
+    }
+  ]
+}

@@ -332,7 +332,7 @@ extension PhoneJourney {
         }
         XCTAssertEqual(waitForPhonePredicate(atRest(titles[2], "3 of 3"), object: nil, timeout: 10), .completed, app.debugDescription)
         waitForShownBodyRevealed()
-        cardHeading(titles[2]).swipeLeft()
+        swipeRowLeft(from: cardHeading(titles[2]))
         XCTAssertEqual(waitForPhonePredicate(atRest(titles[0], "1 of 3"), object: nil, timeout: 10), .completed,
                        "A swipe past the last card brings the first: \(pager.label)\n\(app.debugDescription)")
         // INF-4547 review, the captain's pick: a press made at once reaches a new card it has not shown, never waiting

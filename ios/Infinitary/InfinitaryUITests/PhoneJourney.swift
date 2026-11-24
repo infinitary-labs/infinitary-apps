@@ -396,6 +396,18 @@ import XCTest
         app.staticTexts.matching(identifier: "card-title").matching(NSPredicate(format: "label == %@", title)).firstMatch
     }
 
+    /// INF-5406, INF-6648: a swipe left on the card row presses on the title's far end and drags from rest to its near
+    /// end. XCTest's own swipe moves past the row's first 10 points in its first touch move; when a busy runner holds the
+    /// app's main thread through the whole swipe, its touches reach the app together, UIKit measures the row's travel
+    /// from where it recognized the swipe, at its end, and the row glides back. Held the same way, this press and drag
+    /// keeps its whole travel, and it lifts well within the half second that tells a swipe from a rest even when its
+    /// touches arrive late.
+    func swipeRowLeft(from title: XCUIElement) {
+        title.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo: title.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)),
+                   withVelocity: .fast, thenHoldForDuration: 0)
+    }
+
     func showCard(_ title: String) {
         if app.staticTexts["card-title"].label == title { return }
         // INF-1651: a pick made while the shown card finishes drawing is lost with the menu still open, so the pager

@@ -98,7 +98,7 @@ The rule: take each test's fastest measured run; the budget is **five times the 
 The investigation measured the ordinary loaded regime on the shared Mac at 1.5 to 3 times a quiet run on sequential spawn chains, so five times leaves headroom above the worst ordinary slowdown without hiding a tenfold regression.
 Past about 25 times (the concurrent-suite regime the investigation also recorded) no budget survives, and none is sized for it.
 On a Mac the product runs every git below the UI (`taskpolicy -c utility`, `src/core/utilityQos.ts`), where it yields to every busier process, so a long chain of them on a Mac loaded by other runs waits on that load rather than its own work, well past five times.
-A file whose cases chain the product's git and are not about that clamp runs them at the run's own priority: its `vi.mock` of `atUtilityQos` goes through `tests/helpers/unclampedQos.ts`, which gives it a host with no `taskpolicy`, and its row below says "at the run's own priority".
+A file whose cases chain the product's git, or other programs the product starts below the UI, and are not about that clamp runs them at the run's own priority: its `vi.mock` of `atUtilityQos` goes through `tests/helpers/unclampedQos.ts`, which gives it a host with no `taskpolicy`, and its row below says "at the run's own priority".
 `src/core/utilityQos.test.ts` holds the clamp itself, and `src/core/workspace/git.test.ts` keeps running the app's own git under it.
 
 A budget lives in the file, as `vi.setConfig({ testTimeout })` for the whole file, or on the describe or test that carries the work when only part of the file spawns.
@@ -336,7 +336,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/personal/panelInstructions.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/pi/customApiCertificates.integration.test.ts` | a local HTTPS server and the custom-API certificate review | 5 s default |
 | `tests/e2e/scenarios/mergeShell.test.ts` | disposable git commits and rebases through both merge scripts, with inline output or a job receipt and exit | 5 s default |
-| `src/core/integrations/providers/mcp/mcpIntegration.test.ts` | a stand-in MCP server in both protocol eras, as a Node child over stdio and on a local HTTP server, through the integrations service | 10 s (Mac slowest per-case minimum 0.643 s, two child starts) |
+| `src/core/integrations/providers/mcp/mcpIntegration.test.ts` | a stand-in MCP server in both protocol eras, as a Node child over stdio at the run's own priority and on a local HTTP server, through the integrations service | 10 s (Mac slowest per-case minimum 1.39 s, four child starts) |
 | `src/core/claude/claudeCli.test.ts` | stub client executables | 5 s default |
 | `src/core/hostEnv.gitSignIn.test.ts` | real git, openssl, a local HTTPS host | 5 s default |
 | `src/core/workspace/repoRegistry.test.ts` | real git, at the run's own priority | 5 s default |

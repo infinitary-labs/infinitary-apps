@@ -24,7 +24,7 @@ import { parseTasksQueryText } from "../pi/taskTools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { taskResolutionBody } from "../tasks/taskQuery";
-import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
+import { ANSWER_NOTICE_TITLE, ANSWER_ONLY_REFUSAL } from "./answerDelivery";
 import { ANSWER_MISSING_OPENING } from "./captainWakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -394,7 +394,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(notice).toMatchObject({
       id: `card-ask-${ask?.id}`,
       author: "host",
-      title: "Your first mate has not answered your message",
+      title: ANSWER_NOTICE_TITLE,
     });
     expect(notice?.actions.map((action) => action.id)).toEqual(["ask-again", "leave-it"]);
     expect(notice?.body).toContain("is PR 58 merged? &lt;b&gt;now&lt;/b&gt;");
@@ -762,6 +762,39 @@ describe("FirstmateAgent answer delivery", () => {
       `The captain's message ${ask?.id} ("what is two plus two?") now has no answering card up`,
     );
     await finish(f);
+  });
+
+  // INF-6317: the captain's message waited on a decision the retry showed;
+  // its author closed it before anyone chose, with the retry already spent,
+  // so the notice went up at once. It names that card as what the app saw.
+  it("names the card its author closed before the captain chose as the notice's reason (INF-6317)", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("for the apps repo");
+    await finish(f);
+    await drained(f.session, 2);
+    const tools = toolsOf(f.specs);
+    const shown = await tools.get("emit_card")?.execute("c1", {
+      title: "The panels plan is already in the apps repo",
+      body: "<p>Did you mean that plan?</p>",
+      actions: [
+        { id: "meant", label: "That's what I meant", default: true },
+        { id: "other", label: "I meant other work" },
+      ],
+    });
+    const id = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    await finish(f);
+    expect(states(f)).toEqual(["covered"]);
+    expect(noticeOf(f)).toBeUndefined();
+
+    notifyProse(f.db, f.agent, "[fm-op] the captain is done with that card", "agent");
+    await drained(f.session, 3);
+    await tools.get("close_card")?.execute("x1", { card_id: id });
+    await finish(f);
+    await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
+    expect(noticeOf(f)?.body).toContain(
+      "Your first mate showed you “The panels plan is already in the apps repo” for it, then closed that card before you chose.",
+    );
+    expect(retries(f)).toHaveLength(1);
   });
 
   // INF-2667 review of INF-2664: close_card names only the messages that

@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "%1$@ of %2$@ answered";
 "cardAnswersChanged" = "%2$@ · %1$@ changed";
 "cardAnswersPicked" = "%1$@ of %2$@ picked";
+"cardAskNoticeAskAgain" = "Ask again";
+"cardAskNoticeCardRefused" = "Your first mate tried to answer with a card the app refused.";
+"cardAskNoticeClosedCard" = "Your first mate showed you “%1$@” for it, then closed that card before you chose.";
+"cardAskNoticeClosing" = "Leave it if you already have what you need. Ask again sends it once more as a new message.";
+"cardAskNoticeCrewmateOwns" = "The crewmate working on it already owns the card for it, so your first mate's card was refused.";
+"cardAskNoticeLeaveIt" = "Leave it";
+"cardAskNoticeNothingSeen" = "The app saw no card or reply from your first mate for it.";
+"cardAskNoticeQuoteLabel" = "Your message, %1$@";
+"cardAskNoticeTitle" = "Your first mate may have missed your message";
 "cardAskedAutomation" = "Run by an automation";
 "cardAskedChoseOn" = "You chose on “%1$@”";
 "cardAskedFrom" = "From %1$@";

@@ -61,6 +61,16 @@ export const FRAME_BASE_STYLE = `
   h6 { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; }
   p, ul, ol, pre, blockquote, figure, dl, table, details { margin: 0 0 var(--space-2); }
   figcaption { font-size: var(--text-sm); color: var(--fg-3); margin-top: var(--space-1); }
+  /* A quote reads as the captain's words do in the task record: a hairline at its start. */
+  blockquote { padding-inline-start: var(--space-3); border-inline-start: 1px solid var(--line-1); }
+  blockquote > :last-child { margin-bottom: 0; }
+  /* The lit quote: the one passage a card asks the reader to notice, such as the captain's own
+     message on the app's unanswered-message notice, with an optional micro label above it. */
+  blockquote.inf-lit {
+    padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--accent);
+    background: var(--accent-dim); border-radius: var(--radius-s); color: var(--fg-1);
+  }
+  .inf-quote-k { display: block; font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-bottom: 2px; }
   mark { color: var(--fg-1); background: var(--accent-dim); border-radius: var(--radius-xs); padding: 0 var(--space-1); }
   kbd {
     font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-2);

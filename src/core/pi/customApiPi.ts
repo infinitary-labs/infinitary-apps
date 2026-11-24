@@ -93,6 +93,7 @@ export async function readCustomApiWithPi(
             (bytes, image) => bytes + image.data.length + image.mimeType.length + 128,
             0,
           ),
+          input.sessionId,
         );
         return guardFrames(response, FRAME_ALLOWANCE + 4 * output, remember);
       } catch (error) {

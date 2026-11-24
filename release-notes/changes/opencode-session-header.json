@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "opencode-session-header",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "A custom API connection to OpenCode Go saves and answers",
+      "body": "A custom API connection to an OpenCode address now sends the conversation ID OpenCode requires on every check and chat request. Before, OpenCode Go refused every request, so Save stopped with \"The server could not complete the request\".",
+      "noPicture": "The connection form looks the same; only the requests it sends change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,7 +1,7 @@
 // Writes tests/helpers/journeyTimings.json, the measured times
 // scripts/journey-groups.ts balances the journey groups by (INF-2987).
 //
-//   node scripts/journey-group-timings.ts [--jobs <jobs.json>]... <report>...
+//   node scripts/journey-group-timings.ts [--hosted] [--jobs <jobs.json>]... <report>...
 //
 // Each report is a passing full check's own result: a Linux journey group's
 // `journey-timing.json` (the `journey-timing-Linux-*` artifacts of
@@ -12,8 +12,10 @@
 // understated. Each `--jobs` file is GitHub's list of one such run's jobs
 // (GET /repos/{owner}/{repo}/actions/runs/{run}/jobs): it measures each Mac
 // job's time outside its journeys; without one the record keeps the times it
-// has. Run it again when journeys move or the groups drift apart, and commit
-// the result.
+// has. With `--hosted`, the Mac reports and job lists are of GitHub's own
+// Mac and write its times, `macHosted` and `macHostedJobs`, keeping the
+// project's Macs' times as they are. Run it again when journeys move or the
+// groups drift apart, and commit the result.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { posix } from "node:path";
@@ -56,10 +58,11 @@ export const JOURNEY_STEP = "Run this job's journeys";
 const LEGACY_JOURNEY_STEP = /^Run cores="\$\(node scripts\/job-cores\.ts\)"/;
 
 /** The Mac jobs whose time outside the journeys a group starts with, by the
- * end of their name (verify.yml's lane names). */
-const MAC_JOBS: Record<string, string> = {
-  parallel: "Parallel journeys (Mac)",
-  mac: "Native tests, replay and package (Mac)",
+ * end of their name (verify.yml's lane names): the parallel journeys job is
+ * one job, or one of several groups on GitHub's Macs. */
+const MAC_JOBS: Record<string, RegExp> = {
+  parallel: / · Parallel journeys \(Mac(; group \d+\/\d+)?\)$/,
+  mac: / · Native tests, replay and package \(Mac\)$/,
 };
 
 const seconds = (ms: number) => Math.max(0.1, Math.round(ms / 100) / 10);
@@ -93,7 +96,7 @@ export function macJobTimes(jobs: readonly Job[]): Record<string, number> {
   const span = (from: string | null, to: string | null) =>
     from && to ? Date.parse(to) - Date.parse(from) : Number.NaN;
   for (const [lane, name] of Object.entries(MAC_JOBS)) {
-    for (const job of jobs.filter((candidate) => candidate.name.endsWith(name))) {
+    for (const job of jobs.filter((candidate) => name.test(candidate.name))) {
       const whole = span(job.started_at, job.completed_at);
       const journeys = (job.steps ?? [])
         .filter((step) => step.name === JOURNEY_STEP || LEGACY_JOURNEY_STEP.test(step.name))
@@ -109,6 +112,7 @@ export function timingsFromJourneyReports(
   reports: readonly (LinuxReport | MacReport)[],
   jobLists: readonly (readonly Job[])[],
   kept: JourneyTimings,
+  hosted = false,
 ): JourneyTimings {
   const linux: Record<string, number> = {};
   const mac: Record<string, number> = {};
@@ -127,19 +131,26 @@ export function timingsFromJourneyReports(
   const macJobs: Record<string, number> = {};
   for (const jobs of jobLists)
     for (const [lane, time] of Object.entries(macJobTimes(jobs))) keepLongest(macJobs, lane, time);
+  const [files, own] = hosted ? (["macHosted", "macHostedJobs"] as const) : (["mac", "macJobs"] as const);
   return {
+    ...kept,
     linux: Object.keys(linux).length ? sorted(linux) : kept.linux,
-    mac: Object.keys(mac).length ? sorted(mac) : kept.mac,
-    macJobs: Object.keys(macJobs).length ? sorted(macJobs) : kept.macJobs,
+    [files]: Object.keys(mac).length ? sorted(mac) : kept[files],
+    [own]: Object.keys(macJobs).length ? sorted(macJobs) : kept[own],
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const jobFiles = args.flatMap((arg, at) => (args[at - 1] === "--jobs" ? [arg] : []));
-  const reportFiles = args.filter((arg, at) => arg !== "--jobs" && args[at - 1] !== "--jobs");
+  const hosted = args.includes("--hosted");
+  const reportFiles = args.filter(
+    (arg, at) => arg !== "--jobs" && arg !== "--hosted" && args[at - 1] !== "--jobs",
+  );
   if (reportFiles.length === 0) {
-    console.error("usage: node scripts/journey-group-timings.ts [--jobs <jobs.json>]... <report>...");
+    console.error(
+      "usage: node scripts/journey-group-timings.ts [--hosted] [--jobs <jobs.json>]... <report>...",
+    );
     process.exit(2);
   }
   const read = (path: string) => JSON.parse(readFileSync(path, "utf8"));
@@ -147,6 +158,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const answer = read(path);
     return (Array.isArray(answer) ? answer : (answer.jobs ?? answer.body?.jobs ?? [])) as Job[];
   });
-  const timings = timingsFromJourneyReports(reportFiles.map(read), jobLists, readJourneyTimings());
+  const timings = timingsFromJourneyReports(
+    reportFiles.map(read),
+    jobLists,
+    readJourneyTimings(),
+    hosted,
+  );
   writeFileSync(JOURNEY_TIMINGS_FILE, `${JSON.stringify(timings, null, 2)}\n`);
 }

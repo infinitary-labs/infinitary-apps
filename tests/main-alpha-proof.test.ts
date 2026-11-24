@@ -592,6 +592,17 @@ describe("an alpha's own verification (INF-2480)", () => {
       .map((name) => (name === macJourneys[1] ? "verify / Desktop journeys (Mac)" : name))
       .filter((name) => name !== macJourneys[2]);
     expect(run(oneDesktop)).toBe("all");
+    // On GitHub's Macs the parallel journeys run in four groups (INF-6330's
+    // plan): every group must pass.
+    const groups = [1, 2, 3, 4].map(
+      (group) => `verify / Parallel journeys (Mac; group ${group}/4)`,
+    );
+    const hosted = whole.flatMap((name) => (name === macJourneys[0] ? groups : [name]));
+    expect(run(hosted)).toBe("all");
+    for (const name of groups) {
+      expect(run(hosted.filter((each) => each !== name)), name).toBeNull();
+      expect(run(hosted, [name, { conclusion: "failure" }]), name).toBeNull();
+    }
     const main = completedMain();
     const splitMain = [
       ...main.jobs.filter(({ name }) => name !== "verify / mac"),

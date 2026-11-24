@@ -4,7 +4,7 @@
 // equal counts in listing order, so the group that drew the slow files ran
 // minutes past the others and held up every batch run.
 //
-//   node scripts/journey-groups.ts --platform <linux|mac> --lane <parallel|desktop>
+//   node scripts/journey-groups.ts --platform <linux|mac|mac-hosted> --lane <parallel|desktop>
 //     --group <index>/<count> [--jobs <job>,...] -- <playwright test arguments>
 //
 // runs `pnpm exec playwright test <arguments>` over the group's files, and
@@ -13,6 +13,9 @@
 // outside the journeys (the record's `macJobs`), so the job with other work
 // takes fewer journeys. The times are tests/helpers/journeyTimings.json,
 // written by scripts/journey-group-timings.ts from the runs' own results.
+// `mac-hosted` is GitHub's own Mac, which runs the same files about three
+// times slower than the project's Macs and with fewer workers, so its groups
+// are balanced by its own times.
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -20,17 +23,23 @@ import { fileURLToPath } from "node:url";
 import { APPLICATION_SUITES, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
 import { balanceShards, type ShardTimings } from "./shard-balance.ts";
 
-export type JourneyPlatform = "linux" | "mac";
+export type JourneyPlatform = "linux" | "mac" | "mac-hosted";
 export type JourneyLane = "parallel" | "desktop";
 
 /** Seconds of job time per journey file on each platform (a file's work over
  * the workers that ran it), and the seconds each Mac job spends outside its
- * share of the journeys, by the job's lane. */
+ * share of the journeys, by the job's lane, on the project's Macs and on
+ * GitHub's. */
 export type JourneyTimings = {
   linux: ShardTimings;
   mac: ShardTimings;
   macJobs: Readonly<Record<string, number>>;
+  macHosted: ShardTimings;
+  macHostedJobs: Readonly<Record<string, number>>;
 };
+
+const FILE_TIMES = { linux: "linux", mac: "mac", "mac-hosted": "macHosted" } as const;
+const JOB_TIMES = { linux: "macJobs", mac: "macJobs", "mac-hosted": "macHostedJobs" } as const;
 
 export const JOURNEY_TIMINGS_FILE = fileURLToPath(
   new URL("../tests/helpers/journeyTimings.json", import.meta.url),
@@ -77,11 +86,15 @@ export function journeyGroup(
   files: readonly string[] = laneFiles(options.lane),
 ): string[] {
   const headStarts = (options.jobs ?? []).map((job) => {
-    const seconds = timings.macJobs[job];
+    const seconds = timings[JOB_TIMES[options.platform]][job];
     if (seconds === undefined) throw new Error(`No measured time outside the journeys for job ${job}`);
     return seconds;
   });
-  return balanceShards(files, options.count, timings[options.platform], headStarts)[options.index - 1] ?? [];
+  return (
+    balanceShards(files, options.count, timings[FILE_TIMES[options.platform]], headStarts)[
+      options.index - 1
+    ] ?? []
+  );
 }
 
 /** Playwright's file argument is a regular expression over the absolute path:
@@ -104,7 +117,7 @@ function main(): void {
   const [index = 0, count = 0] = value("--group").split("/").map(Number);
   const jobs = value("--jobs").split(",").filter(Boolean);
   if (
-    (platform !== "linux" && platform !== "mac") ||
+    !Object.hasOwn(FILE_TIMES, platform) ||
     (lane !== "parallel" && lane !== "desktop") ||
     !Number.isInteger(index) ||
     !Number.isInteger(count) ||
@@ -113,11 +126,14 @@ function main(): void {
     (jobs.length > 0 && jobs.length !== count)
   ) {
     console.error(
-      "usage: node scripts/journey-groups.ts --platform <linux|mac> --lane <parallel|desktop> --group <index>/<count> [--jobs <job>,...] -- <playwright test arguments>",
+      "usage: node scripts/journey-groups.ts --platform <linux|mac|mac-hosted> --lane <parallel|desktop> --group <index>/<count> [--jobs <job>,...] -- <playwright test arguments>",
     );
     process.exit(2);
   }
-  const files = journeyGroup({ platform, lane, index, count, jobs }, readJourneyTimings());
+  const files = journeyGroup(
+    { platform: platform as JourneyPlatform, lane, index, count, jobs },
+    readJourneyTimings(),
+  );
   console.log(`Group ${index}/${count} of the ${lane} lane on ${platform}: ${files.length} files`);
   for (const file of files) console.log(`  ${file}`);
   if (files.length === 0) return;

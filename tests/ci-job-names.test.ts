@@ -111,7 +111,12 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: {
       github: { event_name: "workflow_dispatch" },
       inputs: { version: "0.2.0" },
-      needs: { resolve: { ...pass, outputs: { mode: "release" } }, phone: pass, testflight: pass },
+      needs: {
+        resolve: { ...pass, outputs: { mode: "release" } },
+        phone: pass,
+        testflight: pass,
+        availability: pass,
+      },
     },
   },
   {
@@ -120,7 +125,7 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: {
       github: { event_name: "workflow_dispatch" },
       inputs: { version: "0.2.0", check_build: "41.1" },
-      needs: { resolve: { ...pass, outputs: { mode: "status" } } },
+      needs: { resolve: { ...pass, outputs: { mode: "status" } }, availability: pass },
     },
   },
   ...[{ suite: "full" }, { suite: "alone" }].map((inputs) => ({

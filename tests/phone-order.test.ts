@@ -115,6 +115,41 @@ describe("the release order between the phone and the desktop app", () => {
     ]);
   });
 
+  // INF-1784: the run's external testing job goes on after availability passed,
+  // for ten minutes or more while Apple prepares the build for outside testers.
+  it("counts a build whose availability job passed while its run still adds it to external testing", async () => {
+    const running = (id: number, run_number: number, head_sha: string) => ({
+      ...run(id, run_number, head_sha, "Infinitary 0.7.0 — TestFlight"),
+      status: "in_progress",
+      conclusion: null,
+    });
+    const confirmed = running(40700000000, 9, "e".repeat(40));
+    const confirming = running(40800000000, 10, "f".repeat(40));
+    const builds = await testFlightBuilds([confirming, confirmed], async (one) =>
+      one.id === confirmed.id
+        ? [
+            {
+              name: "Requested TestFlight · Confirm TestFlight availability",
+              status: "completed",
+              conclusion: "success",
+            },
+            {
+              name: "Requested TestFlight · Add the build to external testing",
+              status: "in_progress",
+              conclusion: null,
+            },
+          ]
+        : [
+            {
+              name: "Requested TestFlight · Confirm TestFlight availability",
+              status: "in_progress",
+              conclusion: null,
+            },
+          ],
+    );
+    expect(builds).toEqual([{ build: "9.1", source: "e".repeat(40) }]);
+  });
+
   it("reads every page of runs, so a check of a build whose run is on a later page still counts", async () => {
     // INF-1649 review R6: GitHub answers at most 100 runs a page.
     const older = run(40000000000, 1, "c".repeat(40), "Infinitary 0.1.0 — TestFlight");

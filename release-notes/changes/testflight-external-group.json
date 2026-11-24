@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "testflight-external-group",
+      "reason": "How the project releases its phone app: the TestFlight workflow now adds each processed build to the app's external tester groups and submits it for Beta App Review; nothing in the Mac or phone app changes."
+    }
+  ]
+}

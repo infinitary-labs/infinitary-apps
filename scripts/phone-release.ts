@@ -1,4 +1,7 @@
-/** INF-64 piece 3 / INF-80: versioned TestFlight delivery; Apple reads never mutate account state. */
+/**
+ * INF-64 piece 3 / INF-80: versioned TestFlight delivery. Apple reads never mutate account
+ * state; the one writer only adds a build Apple confirmed to external testing (INF-1784).
+ */
 import { createPrivateKey, sign } from "node:crypto";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -79,22 +82,25 @@ type Resource = {
 type Page = { data: Resource[]; included?: Resource[]; links?: { next?: string | null } };
 export type AppleRead = (path: string) => Promise<Page>;
 
+function appleToken({ id, issuer, key }: ReturnType<typeof appleCredentials>): string {
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const unsigned = `${encode({ alg: "ES256", kid: id, typ: "JWT" })}.${encode({ iss: issuer, iat: now, exp: now + 300, aud: "appstoreconnect-v1" })}`;
+  return `${unsigned}.${sign("sha256", Buffer.from(unsigned), { key, dsaEncoding: "ieee-p1363" }).toString("base64url")}`;
+}
+
 export function appleReader(env: Environment, request: typeof fetch = fetch): AppleRead {
-  const { id, issuer, key } = appleCredentials(env);
+  const credentials = appleCredentials(env);
   return async (path) => {
     const url = new URL(path, APPLE);
     if (url.origin !== APPLE || !url.pathname.startsWith("/v1/") || url.username || url.password) {
       throw new Error("Apple returned an unexpected pagination address.");
     }
-    const now = Math.floor(Date.now() / 1000);
-    const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
-    const unsigned = `${encode({ alg: "ES256", kid: id, typ: "JWT" })}.${encode({ iss: issuer, iat: now, exp: now + 300, aud: "appstoreconnect-v1" })}`;
-    const jwt = `${unsigned}.${sign("sha256", Buffer.from(unsigned), { key, dsaEncoding: "ieee-p1363" }).toString("base64url")}`;
     let response: Response;
     try {
       response = await request(url, {
         method: "GET", redirect: "error", signal: AbortSignal.timeout(30_000),
-        headers: { Authorization: `Bearer ${jwt}`, Accept: "application/json" },
+        headers: { Authorization: `Bearer ${appleToken(credentials)}`, Accept: "application/json" },
       });
     } catch {
       throw new Error("Could not read App Store Connect; no Apple account changes were made.");
@@ -181,7 +187,12 @@ export async function readBuild(read: AppleRead, app: string, version: string, b
   if (processing !== "VALID") throw new Error("Apple returned an unknown processing state; do not upload again to check it.");
   const detail = answer.included?.find((item) => item.type === "buildBetaDetails" && item.id === record.relationships?.buildBetaDetail?.data?.id);
   const internal = detail?.attributes?.internalBuildState;
-  if (internal === "IN_BETA_TESTING") return { state: "ready" as const, reason: "Apple reports this build in internal TestFlight testing" };
+  if (internal === "IN_BETA_TESTING") {
+    return {
+      state: "ready" as const, reason: "Apple reports this build in internal TestFlight testing",
+      id: record.id, uploaded: record.attributes.uploadedDate, external: detail?.attributes?.externalBuildState,
+    };
+  }
   if (internal === "MISSING_EXPORT_COMPLIANCE" || internal === "IN_EXPORT_COMPLIANCE_REVIEW") {
     throw new Error("Apple needs export-compliance information in this build's TestFlight details; no second upload is needed.");
   }
@@ -197,6 +208,129 @@ export async function waitForBuild(read: AppleRead, app: string, version: string
     if (attempt + 1 < attempts) await pause();
   }
   throw new Error(`Apple has not confirmed internal testing yet. Run this workflow with version ${version} and check_build ${build} to check again without uploading.`);
+}
+
+export type AppleWrite = (path: string, body: unknown) => Promise<void>;
+
+// The only writes: a build joining an external group, and its Beta App Review
+// submission. Each answers with no body, so the status alone says Apple took it.
+const WRITES = [
+  { path: /^\/v1\/betaGroups\/[A-Za-z0-9-]+\/relationships\/builds$/, status: 204 },
+  { path: /^\/v1\/betaAppReviewSubmissions$/, status: 201 },
+];
+
+// Apple's error codes, such as ENTITY_UNPROCESSABLE.BETA_CONTRACT_MISSING, name what
+// to fix; its prose details stay out of the public log. An unreadable answer names none.
+function appleErrorCodes(text: string): string[] {
+  let errors: unknown;
+  try {
+    errors = (JSON.parse(text) as { errors?: unknown }).errors;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(errors)) return [];
+  const codes = errors.map((error) => (error as { code?: unknown })?.code);
+  return [...new Set(codes.filter((code): code is string => typeof code === "string" && /^[A-Z][A-Z0-9_.]{0,99}$/.test(code)))];
+}
+
+export function appleWriter(env: Environment, request: typeof fetch = fetch): AppleWrite {
+  const credentials = appleCredentials(env);
+  return async (path, body) => {
+    const write = WRITES.find((allowed) => allowed.path.test(path));
+    if (!write) throw new Error("The release may only add a build to external testing.");
+    let response: Response;
+    try {
+      response = await request(new URL(path, APPLE), {
+        method: "POST", redirect: "error", signal: AbortSignal.timeout(30_000),
+        headers: { Authorization: `Bearer ${appleToken(credentials)}`, Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      throw new Error("Lost App Store Connect while adding the build to external testing, so whether Apple took it is not known. A check_build request for this build reads what Apple holds and adds only what is missing.");
+    }
+    if (response.status === write.status) return;
+    const codes = appleErrorCodes(await response.text());
+    throw new Error(`App Store Connect refused adding the build to external testing (HTTP ${response.status}${codes.length ? `, ${codes.join(", ")}` : ""}). Nothing was retried. Fix what Apple names, such as the key's role or the app's TestFlight test information, then send a check_build request for this build.`);
+  };
+}
+
+// Apple's external-testing states (ExternalBetaState) of a build in an external
+// group, worded for the run's summary. READY_FOR_BETA_SUBMISSION is submitted first.
+const REVIEW_WORDS: Record<string, string> = {
+  WAITING_FOR_BETA_REVIEW: "waiting for Beta App Review",
+  IN_BETA_REVIEW: "in Beta App Review",
+  BETA_APPROVED: "approved by Beta App Review",
+  READY_FOR_BETA_TESTING: "ready for external testing",
+  IN_BETA_TESTING: "in external testing",
+};
+
+function uploadedAt(value: unknown): number {
+  const time = typeof value === "string" ? Date.parse(value) : Number.NaN;
+  if (Number.isNaN(time)) throw new Error("Apple omitted a build's upload date; which build is newer is not established.");
+  return time;
+}
+
+/**
+ * Adds a build Apple confirmed in internal testing to every external group that
+ * holds neither it nor a newer build, submits it for Beta App Review when Apple
+ * reports it ready for submission, and says where it went and its review state.
+ * Each write follows a read of what Apple holds, so a repeat adds nothing.
+ */
+export async function shareExternally(read: AppleRead, write: AppleWrite, app: string, version: string, build: string,
+  pause: () => Promise<unknown> = () => delay(30_000), attempts = 20): Promise<string[]> {
+  const ready = await readBuild(read, app, version, build);
+  if (ready.state !== "ready") throw new Error("Apple has not confirmed internal testing for this build, so it does not join external testing yet.");
+  const groups = (await all(read, `/v1/apps/${app}/betaGroups?limit=200`)).filter((group) => group.attributes?.isInternalGroup === false);
+  if (!groups.length) return ["Infinitary has no external TestFlight group, so this build went to internal testers only."];
+  const lines: string[] = [];
+  // A refusal still says what Apple already took, so nobody adds it again by hand.
+  const send = async (path: string, body: unknown) => {
+    try {
+      await write(path, body);
+    } catch (error) {
+      throw new Error([...lines, error instanceof Error ? error.message : "Adding the build to external testing failed."].join(" "));
+    }
+  };
+  let joined = false;
+  for (const group of groups) {
+    const name = JSON.stringify(String(group.attributes?.name ?? group.id));
+    const newest = (await read(`/v1/builds?filter[app]=${app}&filter[betaGroups]=${encodeURIComponent(group.id)}&sort=-uploadedDate&limit=1`)).data[0];
+    if (newest?.id === ready.id) {
+      lines.push(`Already in the external group ${name}.`);
+      joined = true;
+    } else if (newest && uploadedAt(newest.attributes?.uploadedDate) > uploadedAt(ready.uploaded)) {
+      lines.push(`Left out of the external group ${name}, which has the newer build ${String(newest.attributes?.version)}.`);
+    } else {
+      await send(`/v1/betaGroups/${encodeURIComponent(group.id)}/relationships/builds`, { data: [{ type: "builds", id: ready.id }] });
+      lines.push(`Added to the external group ${name}.`);
+      joined = true;
+    }
+  }
+  if (!joined) return lines;
+  const external = async () => {
+    for (let attempt = 1; ; attempt++) {
+      const now = await readBuild(read, app, version, build);
+      const state = now.state === "ready" && typeof now.external === "string" ? now.external : "";
+      if (state !== "PROCESSING" || attempt >= attempts) return state;
+      await pause();
+    }
+  };
+  let state = await external();
+  let submitted = false;
+  if (state === "READY_FOR_BETA_SUBMISSION") {
+    await send("/v1/betaAppReviewSubmissions", {
+      data: { type: "betaAppReviewSubmissions", relationships: { build: { data: { type: "builds", id: ready.id } } } },
+    });
+    lines.push("Submitted it for Beta App Review.");
+    submitted = true;
+    state = await external();
+  }
+  if (state === "PROCESSING") throw new Error(`${lines.join(" ")} Apple is still preparing this build for external testing; a check_build request for it later submits it.`);
+  if (state === "BETA_REJECTED") throw new Error(`${lines.join(" ")} Beta App Review rejected this build; Apple's notes are on the build's TestFlight page.`);
+  const words = REVIEW_WORDS[state] ?? (submitted && state === "READY_FOR_BETA_SUBMISSION" ? "submitted, and Apple has not listed the review yet" : undefined);
+  if (!words) throw new Error(`${lines.join(" ")} Apple returned an unexpected external-testing state (${state || "none"}); inspect the build's TestFlight page before another request.`);
+  lines.push(`Review state: ${words}.`);
+  return lines;
 }
 
 async function main() {
@@ -240,7 +374,13 @@ async function main() {
     const message = `Infinitary ${release.version} (${release.build_number}): ${result.reason}. This is not confirmation of installation on a physical phone.`;
     console.log(message);
     if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, `${message}\n`);
-  } else throw new Error("Use resolve, preflight, prepare-key, receipt or status.");
+  } else if (command === "external") {
+    const app = await findPhoneApp(read);
+    const lines = await shareExternally(read, appleWriter(env), app, release.version, release.build_number);
+    const message = `Infinitary ${release.version} (${release.build_number}): ${lines.join(" ")}`;
+    console.log(message);
+    if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, `${message}\n`);
+  } else throw new Error("Use resolve, preflight, prepare-key, receipt, status or external.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

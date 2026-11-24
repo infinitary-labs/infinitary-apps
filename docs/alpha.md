@@ -598,7 +598,7 @@ The captain's words: "alpha desktop builds wait for phone build is on testflight
 A phone build keeps changing things on a release when the release's view floor reaches the phone's contract, or the phone's own floor reaches the release's (`docs/contract.md`, "The version rule").
 
 - **Alpha.**
-  The release run's phone job (`scripts/phone-order.ts`) looks for such a build on TestFlight: an `ios-release.yml` run whose availability job passed, or a later status check of its build that passed.
+  The release run's phone job (`scripts/phone-order.ts`) looks for such a build on TestFlight: an `ios-release.yml` run whose availability job passed, also while its external testing job still runs, or a later status check of its build that passed.
   The release-notes checks start only after the phone job passes; the shared release workflow applies this order to stable releases too.
   A build Apple once confirmed stays enough, and the job does not ask Apple whether it is still on TestFlight (the captain's "A past success is enough").
   A major that kept views leaves the build already on TestFlight enough, so the alpha waits for nothing.

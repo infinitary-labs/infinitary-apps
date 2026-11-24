@@ -103,4 +103,27 @@ describe("the served-sentence list (INF-6559 part 2)", () => {
       },
     ]);
   });
+
+  it("names the copy still served when a repeat leaves one place", () => {
+    const repeat = `${CHECK_AFTER} Do no unrelated work on the side.`;
+    const before = { Crewmate: [crewmate("claude direct-pr/reviewed", PROMPT, repeat)] };
+    const after = {
+      Crewmate: [
+        crewmate(
+          "claude direct-pr/reviewed",
+          PROMPT.replace("Do no unrelated work on the side. ", ""),
+          repeat,
+        ),
+      ],
+    };
+    const [seat] = compareServed(before, after);
+    expect(seat?.removedOrAltered).toEqual([
+      {
+        where: "prompt",
+        before: "Do no unrelated work on the side.",
+        after: { where: "tool check_change", sentence: "Do no unrelated work on the side." },
+        readings: ["claude direct-pr/reviewed"],
+      },
+    ]);
+  });
 });

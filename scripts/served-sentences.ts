@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -136,13 +137,16 @@ export function compareSeat(
     const lost = item.readings.filter(
       (label) => afterLabels.has(label) && !(kept?.readings.includes(label) ?? false),
     );
-    if (kept && lost.length === 0) continue;
-    if (!kept && lost.length === 0) continue;
-    const moved = added.find((other) => other.sentence === item.sentence);
-    let best: { sentence: string; where: string; score: number } | undefined = moved
-      ? { ...moved, score: 1 }
-      : undefined;
-    if (!best)
+    if (lost.length === 0) continue;
+    // Where it is said now: a new sentence, or a copy those readings still
+    // had (a removed repeat), the same words first, then the likest new one.
+    const stillServed = [...now.entries()]
+      .filter(([other, entry]) => other !== key && was.has(other) && lost.some((label) => entry.readings.includes(label)))
+      .map(([, entry]) => ({ where: entry.where, sentence: entry.sentence }));
+    let best: { sentence: string; where: string; score: number } | undefined;
+    const same = [...added, ...stillServed].find((other) => other.sentence === item.sentence);
+    if (same) best = { ...same, score: 1 };
+    else
       for (const other of added) {
         const score =
           likeness(item.sentence, other.sentence) - (other.where === item.where ? 0 : 0.1);
@@ -193,7 +197,9 @@ export function renderChanges(changes: SeatChanges[]): string {
           ? `   - After${change.after.where === change.where ? "" : ` (${change.after.where})`}: ${change.after.sentence}`
           : "   - After: no served sentence resembles it",
       );
-      lines.push("   - Mark: kept, moved (quote its new place) or dropped");
+      lines.push(
+        "   - Mark: kept (says all it did), moved (quote its new place) or dropped (quote the cut words)",
+      );
     });
     if (seat.added.length) {
       lines.push("", `Added sentences: ${seat.added.length}.`, "");
@@ -237,7 +243,7 @@ function servedAt(rev: string): ServedSet {
   const scratch = mkdtempSync(join(tmpdir(), "served-sentences-"));
   try {
     const tree = join(scratch, "tree");
-    run("mkdir", ["-p", tree], ROOT);
+    mkdirSync(tree);
     const archive = spawnSync(
       "sh",
       [

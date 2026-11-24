@@ -212,6 +212,7 @@ It runs at the Careful level on the strongest model, so a second crewmate review
   It compares the working copy with where it left `origin/main`, or any two versions with `--base` and `--head`.
   The script only lists.
   The trimmer marks each listed sentence kept, with its meaning unchanged; moved, quoting its new place; or dropped.
+  A sentence still served that no longer says everything it did is marked dropped, quoting the cut words.
   The marked list goes in the change's verification, and the reviewer judges each mark.
 - **What a trim never edits.**
   A trim never edits a test's expected wording or a pinned digest of served text.

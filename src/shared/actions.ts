@@ -1108,7 +1108,7 @@ const actionLines = {
     "integrations",
     "hands",
     "The captain enters or removes an integration's key in Settings → Integrations, never in a message, a card or a task; integrations shows only whether each is kept.",
-    ["inf:integrations:secret"],
+    ["inf:integrations:secret", "inf:integrations:client"],
     "settings",
     "integration key changed",
   ),

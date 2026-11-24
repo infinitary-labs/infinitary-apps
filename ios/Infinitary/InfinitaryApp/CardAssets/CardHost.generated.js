@@ -39634,6 +39634,115 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${from} has not stopped`;
   }
+  function integrationsClientFileNotTaken(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقبل ${name} ملف عميل في هذا الإصدار من Infinitary.`;
+      case "de":
+        return `${name} nimmt in dieser Version von Infinitary keine Client-Datei an.`;
+      case "es":
+        return `${name} no acepta archivos de cliente en esta versión de Infinitary.`;
+      case "fr":
+        return `${name} n’accepte pas de fichier de client dans cette version d’Infinitary.`;
+      case "ja":
+        return `このバージョンの Infinitary では、${name} はクライアント ファイルを受け付けません。`;
+      case "ko":
+        return `이 버전의 Infinitary에서는 ${name}이(가) 클라이언트 파일을 받지 않습니다.`;
+      case "pt-BR":
+        return `${name} não aceita arquivo de cliente nesta versão do Infinitary.`;
+      case "zh-Hans":
+        return `此版本的 Infinitary 中，${name} 不接受客户端文件。`;
+      case "zh-Hant":
+        return `此版本的 Infinitary 中，${name} 不接受用戶端檔案。`;
+      case "en-XA":
+        return `[${name} ţáķéš ñö çļîéñţ ƒîļé îñ ţĥîš ṽéŕšîöñ öƒ Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ takes no client file in this version of Infinitary.‬`;
+    }
+    return `${name} takes no client file in this version of Infinitary.`;
+  }
+  function integrationsGoogleClientFileIncomplete() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملف العميل هذا لا يحتوي على معرّف العميل أو سرّه. نزّله من صفحة Google مجددًا.`;
+      case "de":
+        return `In dieser Client-Datei fehlen Client-ID oder Geheimnis. Lade sie auf Googles Seite erneut herunter.`;
+      case "es":
+        return `A ese archivo de cliente le falta el ID o el secreto del cliente. Vuelve a descargarlo desde la página de Google.`;
+      case "fr":
+        return `Ce fichier de client n’a pas d’identifiant ou de secret de client. Téléchargez-le de nouveau depuis la page de Google.`;
+      case "ja":
+        return `このクライアント ファイルにはクライアント ID かシークレットがありません。Google のページからもう一度ダウンロードしてください。`;
+      case "ko":
+        return `이 클라이언트 파일에 클라이언트 ID나 보안 비밀이 없습니다. Google 페이지에서 다시 내려받으세요.`;
+      case "pt-BR":
+        return `Falta o ID ou a chave secreta do cliente nesse arquivo. Baixe-o de novo na página do Google.`;
+      case "zh-Hans":
+        return `这个客户端文件缺少客户端 ID 或密钥。请从 Google 的页面重新下载。`;
+      case "zh-Hant":
+        return `這個用戶端檔案缺少用戶端 ID 或密鑰。請從 Google 的頁面重新下載。`;
+      case "en-XA":
+        return `[Ţĥáţ çļîéñţ ƒîļé ĥáš ñö çļîéñţ ÎÐ öŕ šéçŕéţ. Ðöŵñļöáð îţ áĝáîñ ƒŕöɱ Ĝööĝļé'š þáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That client file has no client ID or secret. Download it again from Google's page.‬`;
+    }
+    return `That client file has no client ID or secret. Download it again from Google's page.`;
+  }
+  function integrationsGoogleClientFileNotJson() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا ليس ملف عميل Google. نزّل ملف العميل من صفحة Google بزر Download JSON، ثم أفلته هنا.`;
+      case "de":
+        return `Das ist keine Google-Client-Datei. Lade auf Googles Seite die Datei deines Clients mit Download JSON herunter und lege sie dann hier ab.`;
+      case "es":
+        return `Ese no es un archivo de cliente de Google. En la página de Google, descarga el archivo de tu cliente con Download JSON y suéltalo aquí.`;
+      case "fr":
+        return `Ce n’est pas un fichier de client Google. Sur la page de Google, téléchargez le fichier de votre client avec Download JSON, puis déposez-le ici.`;
+      case "ja":
+        return `これは Google のクライアント ファイルではありません。Google のページで Download JSON からクライアントのファイルをダウンロードし、ここにドロップしてください。`;
+      case "ko":
+        return `Google 클라이언트 파일이 아닙니다. Google 페이지에서 Download JSON으로 클라이언트 파일을 내려받은 뒤 여기에 놓으세요.`;
+      case "pt-BR":
+        return `Esse não é um arquivo de cliente do Google. Na página do Google, baixe o arquivo do seu cliente com Download JSON e solte-o aqui.`;
+      case "zh-Hans":
+        return `这不是 Google 客户端文件。请在 Google 的页面上用 Download JSON 下载客户端文件，然后拖到这里。`;
+      case "zh-Hant":
+        return `這不是 Google 用戶端檔案。請在 Google 的頁面上用 Download JSON 下載用戶端檔案，然後拖到這裡。`;
+      case "en-XA":
+        return `[Ţĥáţ îšñ'ţ á Ĝööĝļé çļîéñţ ƒîļé. Öñ Ĝööĝļé'š þáĝé, ðöŵñļöáð ýöûŕ çļîéñţ'š ƒîļé ŵîţĥ Ðöŵñļöáð ĴŠÖÑ, ţĥéñ ðŕöþ îţ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That isn't a Google client file. On Google's page, download your client's file with Download JSON, then drop it here.‬`;
+    }
+    return `That isn't a Google client file. On Google's page, download your client's file with Download JSON, then drop it here.`;
+  }
+  function integrationsGoogleClientFileWeb() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا الملف لعميل تطبيق ويب. أنشئ عميل Desktop app في صفحة Google، ثم أفلت ملفه هنا.`;
+      case "de":
+        return `Diese Datei gehört zu einem Client für eine Webanwendung. Erstelle auf Googles Seite einen Desktop-App-Client und lege dann dessen Datei hier ab.`;
+      case "es":
+        return `Ese archivo es de un cliente de aplicación web. Crea un cliente de app de escritorio en la página de Google y suelta aquí su archivo.`;
+      case "fr":
+        return `Ce fichier est celui d’un client d’application Web. Créez un client d’application de bureau sur la page de Google, puis déposez son fichier ici.`;
+      case "ja":
+        return `このファイルはウェブ アプリケーション用のクライアントのものです。Google のページでデスクトップ アプリのクライアントを作成し、そのファイルをここにドロップしてください。`;
+      case "ko":
+        return `웹 애플리케이션 클라이언트의 파일입니다. Google 페이지에서 데스크톱 앱 클라이언트를 만든 뒤 그 파일을 여기에 놓으세요.`;
+      case "pt-BR":
+        return `Esse arquivo é de um cliente de aplicativo da Web. Crie um cliente de app para computador na página do Google e solte o arquivo dele aqui.`;
+      case "zh-Hans":
+        return `这个文件属于 Web 应用客户端。请在 Google 的页面上创建桌面应用客户端，然后把它的文件拖到这里。`;
+      case "zh-Hant":
+        return `這個檔案屬於網頁應用程式用戶端。請在 Google 的頁面上建立桌面應用程式用戶端，然後把它的檔案拖到這裡。`;
+      case "en-XA":
+        return `[Ţĥáţ ƒîļé îš ƒöŕ á ŵéƀ áþþļîçáţîöñ çļîéñţ. Ṁáķé á Ðéšķţöþ áþþ çļîéñţ öñ Ĝööĝļé'š þáĝé, ţĥéñ ðŕöþ îţš ƒîļé ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That file is for a web application client. Make a Desktop app client on Google's page, then drop its file here.‬`;
+    }
+    return `That file is for a web application client. Make a Desktop app client on Google's page, then drop its file here.`;
+  }
   function integrationsGoogleExchangeOperation() {
     switch (currentLanguage()) {
       case "ar":
@@ -39714,6 +39823,684 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
+  }
+  function integrationsGoogleReadyDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عميل Google الخاص بك محفوظ. سجّل الدخول به لتنتقل عن عميل Infinitary المشترك.`;
+      case "de":
+        return `Dein eigener Google-Client ist aufbewahrt. Melde dich damit an, um vom gemeinsamen Client von Infinitary zu wechseln.`;
+      case "es":
+        return `Tu propio cliente de Google está guardado. Inicia sesión con él para dejar el cliente compartido de Infinitary.`;
+      case "fr":
+        return `Votre propre client Google est gardé. Connectez-vous avec lui pour quitter le client partagé d’Infinitary.`;
+      case "ja":
+        return `自分の Google クライアントを保管しました。それでサインインすると、Infinitary の共有クライアントから移行できます。`;
+      case "ko":
+        return `내 Google 클라이언트가 보관되어 있습니다. 그것으로 로그인해 Infinitary의 공유 클라이언트에서 옮기세요.`;
+      case "pt-BR":
+        return `Seu próprio cliente do Google está guardado. Faça login com ele para deixar o cliente compartilhado do Infinitary.`;
+      case "zh-Hans":
+        return `你自己的 Google 客户端已保存。用它登录，即可不再使用 Infinitary 的共享客户端。`;
+      case "zh-Hant":
+        return `你自己的 Google 用戶端已保存。用它登入，即可不再使用 Infinitary 的共用用戶端。`;
+      case "en-XA":
+        return `[Ýöûŕ öŵñ Ĝööĝļé çļîéñţ îš ķéþţ. Šîĝñ îñ ŵîţĥ îţ ţö ɱöṽé öƒƒ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your own Google client is kept. Sign in with it to move off Infinitary's shared client.‬`;
+    }
+    return `Your own Google client is kept. Sign in with it to move off Infinitary's shared client.`;
+  }
+  function integrationsGoogleRetiring() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّ اتصالك الخاص`;
+      case "de":
+        return `Eigene Verbindung einrichten`;
+      case "es":
+        return `Configura tu propia conexión`;
+      case "fr":
+        return `Configurez votre propre connexion`;
+      case "ja":
+        return `自分の接続を設定してください`;
+      case "ko":
+        return `내 연결을 설정하세요`;
+      case "pt-BR":
+        return `Configure sua própria conexão`;
+      case "zh-Hans":
+        return `请设置你自己的连接`;
+      case "zh-Hant":
+        return `請設定你自己的連線`;
+      case "en-XA":
+        return `[Šéţ ûþ ýöûŕ öŵñ çöññéçţîöñ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set up your own connection‬`;
+    }
+    return `Set up your own connection`;
+  }
+  function integrationsGoogleRetiringDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Google متصل عبر عميل Infinitary المشترك، وهو في طريقه إلى التوقف. يظل يعمل حتى ذلك الحين؛ أعدّ عميلك الخاص لتبقى متصلًا.`;
+      case "de":
+        return `Google ist über den gemeinsamen Client von Infinitary verbunden, der eingestellt wird. Bis dahin funktioniert er weiter; richte deinen eigenen Client ein, um verbunden zu bleiben.`;
+      case "es":
+        return `Google está conectado mediante el cliente compartido de Infinitary, que se retirará. Seguirá funcionando hasta entonces; configura tu propio cliente para seguir conectado.`;
+      case "fr":
+        return `Google est connecté par le client partagé d’Infinitary, qui va être retiré. Il fonctionne jusque-là ; configurez votre propre client pour rester connecté.`;
+      case "ja":
+        return `Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。`;
+      case "ko":
+        return `Google은 곧 종료되는 Infinitary의 공유 클라이언트로 연결되어 있습니다. 그때까지는 작동하니, 연결을 유지하려면 내 클라이언트를 설정하세요.`;
+      case "pt-BR":
+        return `O Google está conectado pelo cliente compartilhado do Infinitary, que vai ser desativado. Ele continua funcionando até lá; configure seu próprio cliente para continuar conectado.`;
+      case "zh-Hans":
+        return `Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。`;
+      case "zh-Hant":
+        return `Google 目前透過 Infinitary 的共用用戶端連線，該用戶端即將停用。在那之前它仍可使用；請設定你自己的用戶端以保持連線。`;
+      case "en-XA":
+        return `[Ĝööĝļé îš çöññéçţéð ţĥŕöûĝĥ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ, ŵĥîçĥ îš ŕéţîŕîñĝ. Îţ ķééþš ŵöŕķîñĝ ûñţîļ ţĥéñ; šéţ ûþ ýöûŕ öŵñ çļîéñţ ţö šţáý çöññéçţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.‬`;
+    }
+    return `Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.`;
+  }
+  function integrationsGoogleSetUp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعداد`;
+      case "de":
+        return `Einrichten`;
+      case "es":
+        return `Configurar`;
+      case "fr":
+        return `Configurer`;
+      case "ja":
+        return `設定`;
+      case "ko":
+        return `설정`;
+      case "pt-BR":
+        return `Configurar`;
+      case "zh-Hans":
+        return `设置`;
+      case "zh-Hant":
+        return `設定`;
+      case "en-XA":
+        return `[Šéţ ûþ ~~]`;
+      case "ar-XB":
+        return `‮Set up‬`;
+    }
+    return `Set up`;
+  }
+  function integrationsGoogleSetUpAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعداد من جديد`;
+      case "de":
+        return `Erneut einrichten`;
+      case "es":
+        return `Volver a configurar`;
+      case "fr":
+        return `Configurer de nouveau`;
+      case "ja":
+        return `もう一度設定`;
+      case "ko":
+        return `다시 설정`;
+      case "pt-BR":
+        return `Configurar de novo`;
+      case "zh-Hans":
+        return `重新设置`;
+      case "zh-Hant":
+        return `重新設定`;
+      case "en-XA":
+        return `[Šéţ ûþ áĝáîñ ~~~~]`;
+      case "ar-XB":
+        return `‮Set up again‬`;
+    }
+    return `Set up again`;
+  }
+  function integrationsGoogleSetUpChip() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعداد Google`;
+      case "de":
+        return `Google einrichten`;
+      case "es":
+        return `Configurar Google`;
+      case "fr":
+        return `Configurer Google`;
+      case "ja":
+        return `Google を設定`;
+      case "ko":
+        return `Google 설정`;
+      case "pt-BR":
+        return `Configurar Google`;
+      case "zh-Hans":
+        return `设置 Google`;
+      case "zh-Hant":
+        return `設定 Google`;
+      case "en-XA":
+        return `[Šéţ ûþ Ĝööĝļé ~~~~~]`;
+      case "ar-XB":
+        return `‮Set up Google‬`;
+    }
+    return `Set up Google`;
+  }
+  function integrationsGoogleSetUpFirst() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّ عميل Google الخاص بك أولًا، من الإعدادات ← التكاملات ← إعداد Google.`;
+      case "de":
+        return `Richte zuerst deinen eigenen Google-Client ein, unter Einstellungen → Integrationen → Google einrichten.`;
+      case "es":
+        return `Primero configura tu propio cliente de Google, en Ajustes → Integraciones → Configurar Google.`;
+      case "fr":
+        return `Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Configurer Google.`;
+      case "ja":
+        return `先に自分の Google クライアントを設定してください（設定 → 連携 → Google を設定）。`;
+      case "ko":
+        return `먼저 내 Google 클라이언트를 설정하세요. 설정 → 연동 → Google 설정에서 할 수 있습니다.`;
+      case "pt-BR":
+        return `Primeiro configure seu próprio cliente do Google, em Ajustes → Integrações → Configurar Google.`;
+      case "zh-Hans":
+        return `请先设置你自己的 Google 客户端：设置 → 集成 → 设置 Google。`;
+      case "zh-Hant":
+        return `請先設定你自己的 Google 用戶端：設定 → 整合 → 設定 Google。`;
+      case "en-XA":
+        return `[Šéţ ûþ ýöûŕ öŵñ Ĝööĝļé çļîéñţ ƒîŕšţ, îñ Šéţţîñĝš → Îñţéĝŕáţîöñš → Šéţ ûþ Ĝööĝļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set up your own Google client first, in Settings → Integrations → Set up Google.‬`;
+    }
+    return `Set up your own Google client first, in Settings → Integrations → Set up Google.`;
+  }
+  function integrationsGoogleSetupChoose() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اختيار ملف`;
+      case "de":
+        return `Datei auswählen`;
+      case "es":
+        return `Elegir archivo`;
+      case "fr":
+        return `Choisir un fichier`;
+      case "ja":
+        return `ファイルを選択`;
+      case "ko":
+        return `파일 선택`;
+      case "pt-BR":
+        return `Escolher arquivo`;
+      case "zh-Hans":
+        return `选择文件`;
+      case "zh-Hant":
+        return `選擇檔案`;
+      case "en-XA":
+        return `[Çĥööšé ƒîļé ~~~~]`;
+      case "ar-XB":
+        return `‮Choose file‬`;
+    }
+    return `Choose file`;
+  }
+  function integrationsGoogleSetupChosen(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} جاهز للحفظ.`;
+      case "de":
+        return `${name} ist bereit zum Aufbewahren.`;
+      case "es":
+        return `${name} está listo para guardarse.`;
+      case "fr":
+        return `${name} est prêt à être gardé.`;
+      case "ja":
+        return `${name} を保管できます。`;
+      case "ko":
+        return `${name}을(를) 보관할 수 있습니다.`;
+      case "pt-BR":
+        return `${name} está pronto para ser guardado.`;
+      case "zh-Hans":
+        return `${name} 已可保存。`;
+      case "zh-Hant":
+        return `${name} 已可保存。`;
+      case "en-XA":
+        return `[${name} îš ŕéáðý ţö ķééþ. ~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ is ready to keep.‬`;
+    }
+    return `${name} is ready to keep.`;
+  }
+  function integrationsGoogleSetupDrop() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أفلت ملف العميل هنا`;
+      case "de":
+        return `Client-Datei hier ablegen`;
+      case "es":
+        return `Suelta aquí el archivo de cliente`;
+      case "fr":
+        return `Déposez le fichier de client ici`;
+      case "ja":
+        return `ここにクライアント ファイルをドロップ`;
+      case "ko":
+        return `여기에 클라이언트 파일을 놓으세요`;
+      case "pt-BR":
+        return `Solte o arquivo de cliente aqui`;
+      case "zh-Hans":
+        return `把客户端文件拖到这里`;
+      case "zh-Hant":
+        return `把用戶端檔案拖到這裡`;
+      case "en-XA":
+        return `[Ðŕöþ ţĥé çļîéñţ ƒîļé ĥéŕé ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Drop the client file here‬`;
+    }
+    return `Drop the client file here`;
+  }
+  function integrationsGoogleSetupField() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملف العميل`;
+      case "de":
+        return `Client-Datei`;
+      case "es":
+        return `Archivo de cliente`;
+      case "fr":
+        return `Fichier de client`;
+      case "ja":
+        return `クライアント ファイル`;
+      case "ko":
+        return `클라이언트 파일`;
+      case "pt-BR":
+        return `Arquivo de cliente`;
+      case "zh-Hans":
+        return `客户端文件`;
+      case "zh-Hant":
+        return `用戶端檔案`;
+      case "en-XA":
+        return `[Çļîéñţ ƒîļé ~~~~]`;
+      case "ar-XB":
+        return `‮Client file‬`;
+    }
+    return `Client file`;
+  }
+  function integrationsGoogleSetupKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `احفظ وسجّل الدخول`;
+      case "de":
+        return `Aufbewahren und anmelden`;
+      case "es":
+        return `Guardar e iniciar sesión`;
+      case "fr":
+        return `Garder et se connecter`;
+      case "ja":
+        return `保管してサインイン`;
+      case "ko":
+        return `보관하고 로그인`;
+      case "pt-BR":
+        return `Guardar e fazer login`;
+      case "zh-Hans":
+        return `保存并登录`;
+      case "zh-Hant":
+        return `保存並登入`;
+      case "en-XA":
+        return `[Ķééþ áñð šîĝñ îñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Keep and sign in‬`;
+    }
+    return `Keep and sign in`;
+  }
+  function integrationsGoogleSetupKeeping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ الحفظ…`;
+      case "de":
+        return `Wird aufbewahrt …`;
+      case "es":
+        return `Guardando…`;
+      case "fr":
+        return `Enregistrement…`;
+      case "ja":
+        return `保管しています…`;
+      case "ko":
+        return `보관하는 중…`;
+      case "pt-BR":
+        return `Guardando…`;
+      case "zh-Hans":
+        return `正在保存…`;
+      case "zh-Hant":
+        return `正在保存…`;
+      case "en-XA":
+        return `[Ķééþîñĝ… ~~~]`;
+      case "ar-XB":
+        return `‮Keeping…‬`;
+    }
+    return `Keeping…`;
+  }
+  function integrationsGoogleSetupLead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يصل Infinitary إلى Gmail والتقويم عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.`;
+      case "de":
+        return `Infinitary erreicht Gmail und Kalender über einen Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst. Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.`;
+      case "es":
+        return `Infinitary accede a Gmail y Calendar con un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google. Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.`;
+      case "fr":
+        return `Infinitary accède à Gmail et à Agenda par un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google. Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.`;
+      case "ja":
+        return `Infinitary は、あなたが自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントを通じて Gmail とカレンダーを使います。Google による審査や警告はなく、サインインが 7 日で切れることもありません。`;
+      case "ko":
+        return `Infinitary는 내 Google Cloud 프로젝트에서 Google의 개인 모드로 만든 클라이언트를 통해 Gmail과 캘린더에 접근합니다. Google의 검토나 경고가 없고, 로그인이 7일 후에 끝나지도 않습니다.`;
+      case "pt-BR":
+        return `O Infinitary acessa o Gmail e o Agenda por um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google. O Google não o revisa, não mostra aviso e não encerra o login dele depois de 7 dias.`;
+      case "zh-Hans":
+        return `Infinitary 通过你在自己的 Google Cloud 项目中以 Google 个人模式创建的客户端访问 Gmail 和日历。Google 不会审核它，不显示警告，也不会在 7 天后结束它的登录。`;
+      case "zh-Hant":
+        return `Infinitary 透過你在自己的 Google Cloud 專案中以 Google 個人模式建立的用戶端存取 Gmail 和日曆。Google 不會審核它，不顯示警告，也不會在 7 天後結束它的登入。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ŕéáçĥéš Ĝɱáîļ áñð Çáļéñðáŕ ţĥŕöûĝĥ á çļîéñţ ýöû ɱáķé îñ ýöûŕ öŵñ Ĝööĝļé Çļöûð þŕöĵéçţ, îñ Ĝööĝļé'š Þéŕšöñáļ ɱöðé. Ĝööĝļé ðöéšñ'ţ ŕéṽîéŵ îţ, šĥöŵš ñö ŵáŕñîñĝ, áñð ðöéšñ'ţ éñð îţš šîĝñ-îñ áƒţéŕ 7 ðáýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary reaches Gmail and Calendar through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.‬`;
+    }
+    return `Infinitary reaches Gmail and Calendar through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.`;
+  }
+  function integrationsGoogleSetupOpenPage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح صفحة Google`;
+      case "de":
+        return `Googles Seite öffnen`;
+      case "es":
+        return `Abrir la página de Google`;
+      case "fr":
+        return `Ouvrir la page de Google`;
+      case "ja":
+        return `Google のページを開く`;
+      case "ko":
+        return `Google 페이지 열기`;
+      case "pt-BR":
+        return `Abrir a página do Google`;
+      case "zh-Hans":
+        return `打开 Google 的页面`;
+      case "zh-Hant":
+        return `開啟 Google 的頁面`;
+      case "en-XA":
+        return `[Öþéñ Ĝööĝļé'š þáĝé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Google's page‬`;
+    }
+    return `Open Google's page`;
+  }
+  function integrationsGoogleSetupStays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الكمبيوتر. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
+      case "de":
+        return `Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf diesem Computer auf. Dein erster Offizier und deine Crew sehen es nie.`;
+      case "es":
+        return `Infinitary guarda el secreto del cliente en Secretos en esta computadora. Tu primer oficial y tu tripulación nunca lo ven.`;
+      case "fr":
+        return `Infinitary garde le secret du client dans Secrets sur cet ordinateur. Votre second et votre équipage ne le voient jamais.`;
+      case "ja":
+        return `Infinitary はクライアントのシークレットをこのコンピュータのシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。`;
+      case "ko":
+        return `Infinitary는 클라이언트의 보안 비밀을 이 컴퓨터의 비밀 정보에 보관합니다. 일등항해사와 선원들은 그것을 볼 수 없습니다.`;
+      case "pt-BR":
+        return `O Infinitary guarda a chave secreta do cliente em Segredos neste computador. Seu imediato e sua tripulação nunca a veem.`;
+      case "zh-Hans":
+        return `Infinitary 把客户端的密钥保存在这台电脑的机密中。你的大副和船员永远看不到它。`;
+      case "zh-Hant":
+        return `Infinitary 把用戶端的密鑰保存在這台電腦的機密中。你的大副和船員永遠看不到它。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ķééþš ţĥé çļîéñţ'š šéçŕéţ îñ Šéçŕéţš öñ ţĥîš çöɱþûţéŕ. Ýöûŕ ƒîŕšţ ɱáţé áñð ýöûŕ çŕéŵ ñéṽéŕ šéé îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary keeps the client's secret in Secrets on this computer. Your first mate and your crew never see it.‬`;
+    }
+    return `Infinitary keeps the client's secret in Secrets on this computer. Your first mate and your crew never see it.`;
+  }
+  function integrationsGoogleSetupStepFile() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم أفلته هنا أو اختره أو الصق محتواه.`;
+      case "de":
+        return `Lade die Client-Datei, die Google zeigt, mit Download JSON herunter. Lege sie dann hier ab, wähle sie aus oder füge ihren Inhalt ein.`;
+      case "es":
+        return `Descarga con Download JSON el archivo de cliente que muestra Google y luego suéltalo aquí, elígelo o pega su contenido.`;
+      case "fr":
+        return `Téléchargez avec Download JSON le fichier de client que Google affiche, puis déposez-le ici, choisissez-le ou collez son contenu.`;
+      case "ja":
+        return `Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここにドロップするか、選択するか、中身を貼り付けてください。`;
+      case "ko":
+        return `Google에 표시되는 클라이언트 파일을 Download JSON으로 내려받은 뒤 여기에 놓거나, 선택하거나, 내용을 붙여넣으세요.`;
+      case "pt-BR":
+        return `Baixe com Download JSON o arquivo de cliente que o Google mostra e depois solte-o aqui, escolha-o ou cole o conteúdo dele.`;
+      case "zh-Hans":
+        return `用 Download JSON 下载 Google 显示的客户端文件，然后拖到这里、选择它，或粘贴它的内容。`;
+      case "zh-Hant":
+        return `用 Download JSON 下載 Google 顯示的用戶端檔案，然後拖到這裡、選擇它，或貼上它的內容。`;
+      case "en-XA":
+        return `[Ðöŵñļöáð ţĥé çļîéñţ ƒîļé Ĝööĝļé šĥöŵš ŵîţĥ Ðöŵñļöáð ĴŠÖÑ, ţĥéñ ðŕöþ îţ ĥéŕé, çĥööšé îţ, öŕ þášţé ŵĥáţ îţ ĥöļðš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Download the client file Google shows with Download JSON, then drop it here, choose it, or paste what it holds.‬`;
+    }
+    return `Download the client file Google shows with Download JSON, then drop it here, choose it, or paste what it holds.`;
+  }
+  function integrationsGoogleSetupStepPage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.`;
+      case "de":
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drücke Continue.`;
+      case "es":
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, acepta la política de Google y pulsa Continue.`;
+      case "fr":
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, acceptez la règle de Google et appuyez sur Continue.`;
+      case "ja":
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。`;
+      case "ko":
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 Google의 정책에 동의한 뒤 Continue를 누르세요.`;
+      case "pt-BR":
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, aceite a política do Google e pressione Continue.`;
+      case "zh-Hans":
+        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。`;
+      case "zh-Hant":
+        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。`;
+      case "en-XA":
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.‬`;
+    }
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.`;
+  }
+  function integrationsGoogleSetupTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أعدّ اتصال Google الخاص بك`;
+      case "de":
+        return `Deine eigene Google-Verbindung einrichten`;
+      case "es":
+        return `Configura tu propia conexión con Google`;
+      case "fr":
+        return `Configurer votre propre connexion Google`;
+      case "ja":
+        return `自分の Google 接続を設定`;
+      case "ko":
+        return `내 Google 연결 설정`;
+      case "pt-BR":
+        return `Configure sua própria conexão com o Google`;
+      case "zh-Hans":
+        return `设置你自己的 Google 连接`;
+      case "zh-Hant":
+        return `設定你自己的 Google 連線`;
+      case "en-XA":
+        return `[Šéţ ûþ ýöûŕ öŵñ Ĝööĝļé çöññéçţîöñ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Set up your own Google connection‬`;
+    }
+    return `Set up your own Google connection`;
+  }
+  function integrationsGoogleSignIn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تسجيل الدخول`;
+      case "de":
+        return `Anmelden`;
+      case "es":
+        return `Iniciar sesión`;
+      case "fr":
+        return `Se connecter`;
+      case "ja":
+        return `サインイン`;
+      case "ko":
+        return `로그인`;
+      case "pt-BR":
+        return `Fazer login`;
+      case "zh-Hans":
+        return `登录`;
+      case "zh-Hant":
+        return `登入`;
+      case "en-XA":
+        return `[Šîĝñ îñ ~~~]`;
+      case "ar-XB":
+        return `‮Sign in‬`;
+    }
+    return `Sign in`;
+  }
+  function integrationsGoogleSignInHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سجّل الدخول بحساب Google الذي أنشأ عميلك: فهو لا يخدم إلا ذلك الحساب.`;
+      case "de":
+        return `Melde dich mit dem Google-Konto an, das deinen Client erstellt hat: Er dient nur diesem Konto.`;
+      case "es":
+        return `Inicia sesión con la cuenta de Google que creó tu cliente: solo sirve para esa cuenta.`;
+      case "fr":
+        return `Connectez-vous avec le compte Google qui a créé votre client : il ne sert que ce compte.`;
+      case "ja":
+        return `クライアントを作成した Google アカウントでサインインしてください。そのアカウントでしか使えません。`;
+      case "ko":
+        return `클라이언트를 만든 Google 계정으로 로그인하세요. 그 계정에서만 쓸 수 있습니다.`;
+      case "pt-BR":
+        return `Faça login com a conta do Google que criou seu cliente: ele só atende essa conta.`;
+      case "zh-Hans":
+        return `请用创建客户端的 Google 账号登录：它只为该账号服务。`;
+      case "zh-Hant":
+        return `請用建立用戶端的 Google 帳戶登入：它只為該帳戶服務。`;
+      case "en-XA":
+        return `[Šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ţĥáţ ɱáðé ýöûŕ çļîéñţ: îţ šéŕṽéš öñļý ţĥáţ áççöûñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sign in with the Google account that made your client: it serves only that account.‬`;
+    }
+    return `Sign in with the Google account that made your client: it serves only that account.`;
+  }
+  function integrationsGoogleStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقّف عميل Google الخاص بك`;
+      case "de":
+        return `Dein Google-Client funktioniert nicht mehr`;
+      case "es":
+        return `Tu cliente de Google dejó de funcionar`;
+      case "fr":
+        return `Votre client Google ne fonctionne plus`;
+      case "ja":
+        return `Google クライアントが停止しました`;
+      case "ko":
+        return `Google 클라이언트가 멈췄습니다`;
+      case "pt-BR":
+        return `Seu cliente do Google parou`;
+      case "zh-Hans":
+        return `你的 Google 客户端已停用`;
+      case "zh-Hant":
+        return `你的 Google 用戶端已停用`;
+      case "en-XA":
+        return `[Ýöûŕ Ĝööĝļé çļîéñţ šţöþþéð ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your Google client stopped‬`;
+    }
+    return `Your Google client stopped`;
+  }
+  function integrationsGoogleStoppedDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تعد Google تقبل عميلك، ربما لأنه حُذف في Google Cloud. أعدّه من جديد لتعيد ربط Google.`;
+      case "de":
+        return `Google akzeptiert deinen Client nicht mehr, vielleicht weil er in Google Cloud gelöscht wurde. Richte ihn erneut ein, um Google wieder zu verbinden.`;
+      case "es":
+        return `Google ya no acepta tu cliente; quizá se eliminó en Google Cloud. Vuelve a configurarlo para reconectar Google.`;
+      case "fr":
+        return `Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud. Configurez-le de nouveau pour reconnecter Google.`;
+      case "ja":
+        return `Google がクライアントを受け付けなくなりました。Google Cloud で削除された可能性があります。もう一度設定すると Google に再接続できます。`;
+      case "ko":
+        return `Google이 더 이상 클라이언트를 받지 않습니다. Google Cloud에서 삭제되었을 수 있습니다. 다시 설정하면 Google에 다시 연결됩니다.`;
+      case "pt-BR":
+        return `O Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud. Configure-o de novo para reconectar o Google.`;
+      case "zh-Hans":
+        return `Google 不再接受你的客户端，可能是它已在 Google Cloud 中被删除。重新设置即可重新连接 Google。`;
+      case "zh-Hant":
+        return `Google 不再接受你的用戶端，可能是它已在 Google Cloud 中被刪除。重新設定即可重新連接 Google。`;
+      case "en-XA":
+        return `[Ĝööĝļé ñö ļöñĝéŕ áççéþţš ýöûŕ çļîéñţ, þéŕĥáþš ƀéçáûšé îţ ŵáš ðéļéţéð îñ Ĝööĝļé Çļöûð. Šéţ îţ ûþ áĝáîñ ţö ŕéçöññéçţ Ĝööĝļé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Google no longer accepts your client, perhaps because it was deleted in Google Cloud. Set it up again to reconnect Google.‬`;
+    }
+    return `Google no longer accepts your client, perhaps because it was deleted in Google Cloud. Set it up again to reconnect Google.`;
+  }
+  function integrationsGoogleStops(input2) {
+    const date2 = input2.date;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتوقف ${date2}`;
+      case "de":
+        return `Endet ${date2}`;
+      case "es":
+        return `Deja de funcionar: ${date2}`;
+      case "fr":
+        return `S’arrête le ${date2}`;
+      case "ja":
+        return `${date2} に停止`;
+      case "ko":
+        return `${date2}에 멈춤`;
+      case "pt-BR":
+        return `Para em ${date2}`;
+      case "zh-Hans":
+        return `将于 ${date2} 停止`;
+      case "zh-Hant":
+        return `將於 ${date2} 停止`;
+      case "en-XA":
+        return `[Šţöþš ${date2} ~~]`;
+      case "ar-XB":
+        return `‮Stops ‬${date2}`;
+    }
+    return `Stops ${date2}`;
+  }
+  function integrationsGoogleStopsDetail(input2) {
+    const date2 = input2.date;
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا العميل ليس في الوضع الشخصي، لذا تُنهي Google تسجيل دخوله ${date2}. أعدّ عميلًا في الوضع الشخصي ليبقى Google متصلًا.`;
+      case "de":
+        return `Dieser Client ist nicht im persönlichen Modus, daher beendet Google seine Anmeldung ${date2}. Richte einen Client im persönlichen Modus ein, damit Google verbunden bleibt.`;
+      case "es":
+        return `Este cliente no está en modo personal, así que Google cerrará su sesión el ${date2}. Configura un cliente en modo personal para que Google siga conectado.`;
+      case "fr":
+        return `Ce client n’est pas en mode personnel : Google met fin à sa connexion le ${date2}. Configurez un client en mode personnel pour que Google reste connecté.`;
+      case "ja":
+        return `このクライアントは個人モードではないため、Google は ${date2} にサインインを終了します。Google の接続を保つには、個人モードのクライアントを設定してください。`;
+      case "ko":
+        return `이 클라이언트는 개인 모드가 아니어서 Google이 ${date2}에 로그인을 끝냅니다. Google 연결을 유지하려면 개인 모드 클라이언트를 설정하세요.`;
+      case "pt-BR":
+        return `Este cliente não está no modo pessoal, então o Google encerra o login dele em ${date2}. Configure um cliente no modo pessoal para manter o Google conectado.`;
+      case "zh-Hans":
+        return `这个客户端不在个人模式下，所以 Google 会在 ${date2} 结束它的登录。请设置一个个人模式的客户端，让 Google 保持连接。`;
+      case "zh-Hant":
+        return `這個用戶端不在個人模式下，所以 Google 會在 ${date2} 結束它的登入。請設定一個個人模式的用戶端，讓 Google 保持連線。`;
+      case "en-XA":
+        return `[Ţĥîš çļîéñţ îšñ'ţ îñ Þéŕšöñáļ ɱöðé, šö Ĝööĝļé éñðš îţš šîĝñ-îñ ${date2}. Šéţ ûþ á çļîéñţ îñ Þéŕšöñáļ ɱöðé ţö ķééþ Ĝööĝļé çöññéçţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This client isn't in Personal mode, so Google ends its sign-in ‬${date2}‮. Set up a client in Personal mode to keep Google connected.‬`;
+    }
+    return `This client isn't in Personal mode, so Google ends its sign-in ${date2}. Set up a client in Personal mode to keep Google connected.`;
   }
   function integrationsMcpAdd(input2) {
     const name = input2.name;
@@ -106898,9 +107685,38 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverStoppingTitle,
     handoverWontStopText,
     handoverWontStopTitle,
+    integrationsClientFileNotTaken,
+    integrationsGoogleClientFileIncomplete,
+    integrationsGoogleClientFileNotJson,
+    integrationsGoogleClientFileWeb,
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
+    integrationsGoogleReadyDetail,
+    integrationsGoogleRetiring,
+    integrationsGoogleRetiringDetail,
+    integrationsGoogleSetUp,
+    integrationsGoogleSetUpAgain,
+    integrationsGoogleSetUpChip,
+    integrationsGoogleSetUpFirst,
+    integrationsGoogleSetupChoose,
+    integrationsGoogleSetupChosen,
+    integrationsGoogleSetupDrop,
+    integrationsGoogleSetupField,
+    integrationsGoogleSetupKeep,
+    integrationsGoogleSetupKeeping,
+    integrationsGoogleSetupLead,
+    integrationsGoogleSetupOpenPage,
+    integrationsGoogleSetupStays,
+    integrationsGoogleSetupStepFile,
+    integrationsGoogleSetupStepPage,
+    integrationsGoogleSetupTitle,
+    integrationsGoogleSignIn,
+    integrationsGoogleSignInHint,
+    integrationsGoogleStopped,
+    integrationsGoogleStoppedDetail,
+    integrationsGoogleStops,
+    integrationsGoogleStopsDetail,
     integrationsMcpAdd,
     integrationsMcpNeedsSignIn,
     integrationsMcpOfferBody,
@@ -110288,9 +111104,38 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverStoppingTitle": ["from"],
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
+    "integrationsClientFileNotTaken": ["name"],
+    "integrationsGoogleClientFileIncomplete": [],
+    "integrationsGoogleClientFileNotJson": [],
+    "integrationsGoogleClientFileWeb": [],
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
+    "integrationsGoogleReadyDetail": [],
+    "integrationsGoogleRetiring": [],
+    "integrationsGoogleRetiringDetail": [],
+    "integrationsGoogleSetUp": [],
+    "integrationsGoogleSetUpAgain": [],
+    "integrationsGoogleSetUpChip": [],
+    "integrationsGoogleSetUpFirst": [],
+    "integrationsGoogleSetupChoose": [],
+    "integrationsGoogleSetupChosen": ["name"],
+    "integrationsGoogleSetupDrop": [],
+    "integrationsGoogleSetupField": [],
+    "integrationsGoogleSetupKeep": [],
+    "integrationsGoogleSetupKeeping": [],
+    "integrationsGoogleSetupLead": [],
+    "integrationsGoogleSetupOpenPage": [],
+    "integrationsGoogleSetupStays": [],
+    "integrationsGoogleSetupStepFile": [],
+    "integrationsGoogleSetupStepPage": [],
+    "integrationsGoogleSetupTitle": [],
+    "integrationsGoogleSignIn": [],
+    "integrationsGoogleSignInHint": [],
+    "integrationsGoogleStopped": [],
+    "integrationsGoogleStoppedDetail": [],
+    "integrationsGoogleStops": ["date"],
+    "integrationsGoogleStopsDetail": ["date"],
     "integrationsMcpAdd": ["name"],
     "integrationsMcpNeedsSignIn": [],
     "integrationsMcpOfferBody": ["name"],

@@ -1354,6 +1354,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:integrations:check": (id) => services.integrations.check(id),
     "inf:integrations:secret": (id, slot, value) =>
       services.integrations.setSecret(id, slot, value),
+    "inf:integrations:client": (kind, file) => services.integrations.keepClient(kind, file),
 
     "inf:settings:firstmate-account:get": () => services.settings.getFirstmateAccount(),
 

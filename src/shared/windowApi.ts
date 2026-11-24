@@ -1121,6 +1121,8 @@ export type FirstmateApi = {
     check: (id: string) => Promise<IntegrationsView>;
     /** Keep the captain's key for one slot, or forget it with null; nothing hands it back. */
     secret: (id: string, slot: string, value: string | null) => Promise<IntegrationsView>;
+    /** Keep the person's own client from the file they dropped or pasted (Google's). */
+    keepClient: (kind: IntegrationKind, file: string) => Promise<IntegrationsView>;
     onChange: (listener: (view: IntegrationsView) => void) => () => void;
   };
   observe: {

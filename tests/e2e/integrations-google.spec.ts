@@ -4,6 +4,7 @@ import { expect, type Locator, test } from "@playwright/test";
 import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import {
+  GOOGLE_CLIENT_SETUP_PAGE,
   GOOGLE_DATA_KEPT,
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -18,14 +19,16 @@ import {
   CALENDAR_CHANGED_EVENT,
   GMAIL_MESSAGE_EVENT,
   GOOGLE_DATA_FENCE,
-  GOOGLE_OAUTH_CLIENT,
 } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
+import type { CustodySlot } from "../../src/core/secrets/custody";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { SECRETS_WORDS } from "../../src/shared/secrets";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
+  OWN_CLIENT_ID,
+  OWN_CLIENT_SECRET,
   STAND_IN_ACCOUNT,
   STAND_IN_CLIENT_ID,
   STAND_IN_CLIENT_SECRET,
@@ -40,7 +43,7 @@ import {
   type AutomationEventsSeen,
   automationEvents,
 } from "./scenarios/automationEvents";
-import { launchSecrets } from "./secretsHarness";
+import { launchSecrets, type SecretsJourneyGlobal } from "./secretsHarness";
 import { settingRow, settingsSection } from "./settings";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -99,37 +102,64 @@ test.afterEach(async () => {
   google = undefined;
 });
 
+/** The file Google Cloud gives for a Desktop app client, as it downloads it. */
+const OWN_CLIENT_FILE = JSON.stringify({
+  installed: {
+    client_id: OWN_CLIENT_ID,
+    project_id: "ada-mail-assistant",
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_secret: OWN_CLIENT_SECRET,
+    redirect_uris: ["http://localhost"],
+  },
+});
+
+/** Puts a client file in the setup's masked field by keys and keeps it with Enter. */
+async function keepClientFile(setup: Locator, file: string): Promise<void> {
+  const field = setup.getByLabel(m.integrationsGoogleSetupField(), { exact: true });
+  await focusOn(field);
+  await typeInto(field, file, { insert: true });
+  await pressKey(field, "Enter");
+}
+
 /**
- * INF-887: the captain asks this PR to match an unverified production audience
- * for private testing, using stable for testers and alpha for personal development.
- * Data: fresh isolated homes with the real registered public client, no account.
- * Completion: development and packaged Settings offer one Google chip; keys open
- * Google's notice, whose Cancel opens nothing (INF-949), then its accept opens
- * registered-client consent, cancelled without saving a connection. Packaged
- * setup also ignores development overrides. No external browser is opened.
- * Prerequisites: hermetic launcher, including its inert packaged bootstrap.
+ * INF-5549's plan, piece 3: "the Google row offers Set up: it opens the
+ * Personal mode link, then asks Secrets to keep the client file through a
+ * drop target", Google's notice and consent page then run for that client,
+ * and "new sign-ins use only an own client"; INF-887's development and
+ * released builds both take that path, and a released build still ignores
+ * development overrides.
+ * Data: fresh isolated homes, no account; the own client's file as Google
+ * Cloud gives it, with the stand-in's own-client id.
+ * Completion: development and packaged Settings offer Set up Google; keys
+ * open the setup, whose Cancel opens nothing, then its first step opens
+ * Google's Personal mode page, the file pasted by keys is kept, Google's
+ * notice comes next, and its accept opens Google's real consent page for the
+ * person's own client, cancelled without saving a connection; the chip then
+ * signs in with the kept client. No external browser is opened.
+ * Prerequisites: hermetic launcher with disposable Secrets, including its
+ * inert packaged bootstrap.
  * Shared resources: none beyond the desktop lane's packaged connection port.
  */
-test("development and released builds offer the registered Google client by keys", async () => {
+test("development and released builds set up the person's own Google client by keys", async () => {
   for (const packaged of [false, true]) {
     await test.step(
       packaged
         ? "released Google ignores development overrides"
-        : "development uses the registered client",
+        : "development needs the person's own client",
       async () => {
-        launched = await launchApp({
-          packaged,
-          withMockProvider: true,
-          ...(packaged
-            ? {
-                env: {
-                  INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
-                  INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
-                  INFINITARY_GOOGLE_URL: "http://127.0.0.1:1",
-                },
-              }
-            : {}),
-        });
+        launched = packaged
+          ? await launchApp({
+              packaged,
+              withMockProvider: true,
+              env: {
+                INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+                INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+                INFINITARY_GOOGLE_URL: "http://127.0.0.1:1",
+              },
+            })
+          : await launchSecrets({ withMockProvider: true });
         const { app, page } = launched;
         try {
           await app.evaluate(({ shell }) => {
@@ -141,36 +171,51 @@ test("development and released builds offer the registered Google client by keys
           await runFromSearch(app, page, "settings.integrations");
           const tab = settingsSection(page, "integrations");
           const chip = tab.locator('[data-integration-add="google"] button');
-          await expect(chip).toHaveCount(1);
+          await expect(chip).toHaveText(m.integrationsGoogleSetUpChip());
           const opening = () =>
             app.evaluate(() => (globalThis as { googleOpened?: string[] }).googleOpened ?? []);
-          // INF-949: the notice comes first, and its Cancel asks Google nothing.
           await pressKey(chip, "Enter");
-          const notice = tab.locator('[data-integration-notice="google"]');
-          await expect(notice).toBeFocused();
-          await pressKey(notice.getByRole("button", { name: NOTICE.cancel, exact: true }), "Enter");
-          await expect(notice).toHaveCount(0);
+          const setup = tab.locator('[data-integration-setup="google"]');
+          await expect(setup).toBeFocused();
+          await pressKey(
+            setup.getByRole("button", { name: m.integrationsSignInCancel(), exact: true }),
+            "Enter",
+          );
+          await expect(setup).toHaveCount(0);
           await expect(chip).toBeFocused();
           expect(await opening()).toEqual([]);
+
           await pressKey(chip, "Enter");
-          await acceptGoogleNotice(tab);
-          await expect(tab.locator('[data-integration-signing-in="google"]')).toBeVisible();
-          const opened = await opening();
-          // A boolean failure cannot print the registered client configuration.
-          expect(
-            opened.length === 1 &&
-              new URL(opened[0] ?? "").origin === "https://accounts.google.com" &&
-              new URL(opened[0] ?? "").searchParams.get("client_id") === GOOGLE_OAUTH_CLIENT.id,
-          ).toBe(true);
           await pressKey(
-            tab.locator('[data-integration-signing-in="google"]').getByRole("button", {
+            setup.getByRole("button", { name: m.integrationsGoogleSetupOpenPage(), exact: true }),
+            "Enter",
+          );
+          await expect.poll(opening).toEqual([GOOGLE_CLIENT_SETUP_PAGE]);
+          if (packaged) {
+            // The packaged launcher has no disposable Secrets, so keeping the file stays with the development step.
+            await expect(setup).toBeVisible();
+            return;
+          }
+          await keepClientFile(setup, OWN_CLIENT_FILE);
+          await expect(setup).toHaveCount(0);
+          await expect(tab.locator('[data-integration-notice="google"]')).toBeFocused();
+          await acceptGoogleNotice(tab);
+          const waiting = tab.locator('[data-integration-signing-in="google"]');
+          await expect(waiting).toContainText(m.integrationsGoogleSignInHint());
+          await expect.poll(async () => (await opening()).length).toBe(2);
+          const consent = new URL((await opening())[1] ?? "");
+          expect(consent.origin).toBe("https://accounts.google.com");
+          // Google's page names the person's own client.
+          expect(consent.searchParams.get("client_id") === OWN_CLIENT_ID).toBe(true);
+          await pressKey(
+            waiting.getByRole("button", {
               name: INTEGRATIONS_BROWSER_SIGN_IN_WORDS.cancel,
               exact: true,
             }),
             "Enter",
           );
-          await expect(tab.locator('[data-integration-signing-in="google"]')).toHaveCount(0);
-          await expect(chip).toHaveCount(1);
+          await expect(waiting).toHaveCount(0);
+          await expect(chip).toHaveText(INTEGRATION_KIND_NAMES.google);
           expect(
             await page.evaluate(
               async () => (await window.infinitary.integrations.list()).integrations.length,
@@ -183,6 +228,157 @@ test("development and released builds offer the registered Google client by keys
       },
     );
   }
+});
+
+/**
+ * INF-5549's plan, piece 3: the Google row's states and the switch-over. "A
+ * sign-in made with Infinitary's client keeps renewing until piece 5 and
+ * shows Set up your own Google connection"; "while Google's page is open, the
+ * row reminds the person to sign in with the account that made the client";
+ * "if the token answer carries a lifetime, the row says the client is not in
+ * Personal mode and how to set it up again"; a client Google refused reads as
+ * stopped, with Set up again.
+ * Data: the stand-in Google (`tests/helpers/googleStandIn.ts`) as the run's
+ * Google, first as a development run's own client for the earlier sign-in,
+ * then with no run client, as a released build; the own client's file as
+ * Google Cloud gives it, and a Web application client's file it refuses.
+ * Completion: the row's state words, detail line and one next step at each
+ * state, the consent page's client, and the setup's focus.
+ * Prerequisites: the hermetic launcher with disposable Secrets, relaunched on
+ * the same data folder.
+ * Shared resources: none; its own userData, HOME and stand-in Google.
+ */
+test("the Google row moves a sign-in to the person's own client by keys", async () => {
+  const userDataDir = scratchDir("infinitary-google-own-");
+  google = await startGoogleStandIn();
+  const stand = google;
+  const recordOpened = (app: LaunchedApp["app"]) =>
+    app.evaluate(({ shell }) => {
+      (globalThis as { googleOpened?: string[] }).googleOpened = [];
+      shell.openExternal = async (url) => {
+        (globalThis as { googleOpened?: string[] }).googleOpened?.push(url);
+      };
+    });
+  const opening = (app: LaunchedApp["app"]) =>
+    app.evaluate(() => (globalThis as { googleOpened?: string[] }).googleOpened ?? []);
+  let custody: Map<CustodySlot, Buffer> = new Map();
+
+  await test.step("an earlier sign-in made with Infinitary's client", async () => {
+    stand.knobs.lasts = undefined;
+    launched = await launchSecrets({
+      userDataDir,
+      withMockProvider: true,
+      env: {
+        ...SHORT_TICK,
+        INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+        INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+        INFINITARY_GOOGLE_URL: stand.base,
+      },
+    });
+    const { app, page } = launched;
+    await recordOpened(app);
+    await runFromSearch(app, page, "settings.integrations");
+    const tab = settingsSection(page, "integrations");
+    await pressKey(tab.locator('[data-integration-add="google"] button'), "Enter");
+    await acceptGoogleNotice(tab);
+    await expect.poll(async () => (await opening(app)).length).toBe(1);
+    await fetch((await opening(app))[0] ?? "");
+    await expect(tab.locator('[data-integration-row="google"]')).toContainText(STAND_IN_ACCOUNT);
+    // The computer's custody outlives the app, so the relaunch opens the same Secrets.
+    const slots = await app.evaluate(() =>
+      [...(globalThis as SecretsJourneyGlobal).secretsJourney.custody.slots].map(
+        ([slot, bytes]) => [slot, bytes.toString("base64")] as const,
+      ),
+    );
+    custody = new Map(slots.map(([slot, bytes]) => [slot, Buffer.from(bytes, "base64")]));
+    await launched.close();
+    launched = undefined;
+  });
+
+  launched = await launchSecrets({
+    userDataDir,
+    withMockProvider: true,
+    leftCustody: custody,
+    env: { ...SHORT_TICK, INFINITARY_GOOGLE_URL: stand.base },
+  });
+  const { app, page } = launched;
+  await recordOpened(app);
+  await runFromSearch(app, page, "settings.integrations");
+  const tab = settingsSection(page, "integrations");
+  const row = tab.locator('[data-integration-row="google"]');
+  const state = row.locator("[data-integration-client]");
+  const next = (words: string) => row.getByRole("button", { name: words, exact: true });
+  const detail = tab.locator('[data-integration-client-detail="google"]');
+  const setup = tab.locator('[data-integration-setup="google"]');
+
+  await test.step("the sign-in on Infinitary's client says to set up an own one", async () => {
+    await expect(state).toHaveText(m.integrationsGoogleRetiring());
+    await expect(detail).toHaveText(m.integrationsGoogleRetiringDetail());
+    await expect(next(m.integrationsGoogleSetUp())).toBeVisible();
+    await expect(row).toHaveAttribute("data-integration-state", "ok");
+  });
+
+  await test.step("a Web application client's file is refused and nothing is kept", async () => {
+    await pressKey(next(m.integrationsGoogleSetUp()), "Enter");
+    await expect(setup).toBeFocused();
+    await keepClientFile(
+      setup,
+      JSON.stringify({ web: { client_id: OWN_CLIENT_ID, client_secret: OWN_CLIENT_SECRET } }),
+    );
+    await expect(setup.locator("[data-integration-setup-problem]")).toHaveText(
+      m.integrationsGoogleClientFileWeb(),
+    );
+    await expect(state).toHaveText(m.integrationsGoogleRetiring());
+  });
+
+  await test.step("the own client's file is kept and Google's page names that client", async () => {
+    stand.knobs.lasts = 604_799;
+    await keepClientFile(setup, OWN_CLIENT_FILE);
+    await expect(setup).toHaveCount(0);
+    await expect(tab.locator('[data-integration-notice="google"]')).toBeFocused();
+    await acceptGoogleNotice(tab);
+    await expect(tab.locator('[data-integration-signing-in="google"]')).toContainText(
+      m.integrationsGoogleSignInHint(),
+    );
+    await expect.poll(async () => (await opening(app)).length).toBe(1);
+    const consent = (await opening(app))[0] ?? "";
+    expect(new URL(consent).searchParams.get("client_id") === OWN_CLIENT_ID).toBe(true);
+    await fetch(consent);
+    await expect(tab.locator('[data-integration-signing-in="google"]')).toHaveCount(0);
+  });
+
+  await test.step("a client Google ends after seven days says so", async () => {
+    // The stand-in names the lasting key's lifetime, as Google does for a client in Testing;
+    // the date is the computer's own form, so the words around it are what the row is held to.
+    const [before = "", after = ""] = m.integrationsGoogleStops({ date: "\u0000" }).split("\u0000");
+    const shown = async () => (await state.textContent()) ?? "";
+    await expect
+      .poll(async () => {
+        const words = await shown();
+        return (
+          words.length > before.length + after.length &&
+          words.startsWith(before) &&
+          words.endsWith(after)
+        );
+      })
+      .toBe(true);
+    const date = (await shown()).slice(before.length, (await shown()).length - after.length);
+    await expect(detail).toHaveText(m.integrationsGoogleStopsDetail({ date }));
+    await expect(next(m.integrationsGoogleSetUpAgain())).toBeVisible();
+  });
+
+  await test.step("a client Google refused reads as stopped and sets up again by keys", async () => {
+    stand.knobs.deleted.add(OWN_CLIENT_ID);
+    stand.lapse();
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(state).toHaveText(m.integrationsGoogleStopped());
+    await expect(detail).toHaveText(m.integrationsGoogleStoppedDetail());
+    await pressKey(next(m.integrationsGoogleSetUpAgain()), "Enter");
+    await expect(setup).toBeFocused();
+    await expect(setup.locator("[data-integration-setup-refused]")).toHaveText(
+      m.integrationsGoogleStoppedDetail(),
+    );
+  });
 });
 
 test("one Google sign-in from Settings by keys, and a message arriving fires a rule", async () => {

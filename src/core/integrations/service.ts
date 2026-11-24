@@ -295,7 +295,11 @@ export class IntegrationsService {
       integrations: rows.map((row) => this.viewOf(row)),
       addable: this.options.bindings
         .filter((binding) => binding.many || !connected.has(binding.kind))
-        .map((binding) => ({ kind: binding.kind, name: INTEGRATION_KIND_NAMES[binding.kind] })),
+        .map((binding) => ({
+          kind: binding.kind,
+          name: INTEGRATION_KIND_NAMES[binding.kind],
+          ...(binding.client ? { client: binding.client() } : {}),
+        })),
       // The app's own events, always there, which a rule listens to the same way.
       appEvents: APP_EVENTS.map((source) => ({
         id: source.id,
@@ -1300,6 +1304,26 @@ Do not repeat this call; read ${name} to check what happened first.`
     }
   }
 
+  /**
+   * Keep the person's own client for a kind that signs in as one, from the
+   * file its place gave them (Google's client file). The file's secret goes
+   * into Secrets inside the binding and is never answered back; the next
+   * sign-in uses the client.
+   */
+  async keepClient(kind: IntegrationKind, file: string): Promise<IntegrationsView> {
+    const binding = this.options.bindings.find((entry) => entry.kind === kind);
+    if (!binding?.keepClientFile)
+      throw new IntegrationRefusal(
+        m.integrationsClientFileNotTaken({ name: INTEGRATION_KIND_NAMES[kind] }),
+      );
+    try {
+      await binding.keepClientFile(file);
+    } catch (error) {
+      throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
+    }
+    return this.changed();
+  }
+
   cancelSignIn(): void {
     this.signingIn?.abort();
     this.signingIn = undefined;
@@ -1633,6 +1657,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       ...(row.connection.runs !== undefined ? { runs: row.connection.runs } : {}),
       ...(row.connection.door ? { door: row.connection.door } : {}),
       ...(row.connection.signIn ? { signIn: true as const } : {}),
+      ...(row.binding.client ? { client: row.binding.client() } : {}),
       actions: row.connection.actions.map((spec) => {
         const enabled = !row.settings.off?.includes(spec.name);
         return {

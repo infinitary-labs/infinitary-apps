@@ -25,6 +25,7 @@ import {
 import {
   integrationActionNameSchema,
   integrationAddHowSchema,
+  integrationClientFileSchema,
   integrationIdSchema,
   integrationKindSchema,
   integrationMcpAddSchema,
@@ -384,6 +385,17 @@ export const signInChannels = {
       integrationSecretNameSchema,
       integrationSecretValueSchema.nullable(),
     ]),
+    response: integrationsViewSchema,
+  },
+  // The person's own client for a kind that signs in as one (Google's
+  // client file, docs/integrations.md "Your own Google client"), dropped or
+  // pasted: its secret goes into Secrets, and the answer says only whether a
+  // client is kept.
+  "inf:integrations:client": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([integrationKindSchema, integrationClientFileSchema]),
     response: integrationsViewSchema,
   },
   "inf:integrations:add": {

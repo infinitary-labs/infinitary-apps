@@ -29830,6 +29830,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -29864,6 +29893,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -30276,6 +30334,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -30310,6 +30397,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -30698,6 +30814,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -30732,6 +30877,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31113,6 +31287,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31147,6 +31350,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31528,6 +31760,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31562,6 +31823,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31959,6 +32249,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -31993,6 +32312,522 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          },
+          "appEvents": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "events": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "every": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "filters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "defaultValue": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "label"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "every"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "events"
+              ]
+            }
+          },
+          "signingIn": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "page": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8192
+              }
+            },
+            "required": [
+              "name",
+              "page"
+            ]
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
+    "inf:integrations:client": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "enum": [
+              "github",
+              "gitlab",
+              "github-enterprise",
+              "bitbucket",
+              "google",
+              "mcp",
+              "inbox",
+              "stand-in"
+            ]
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github",
+                    "gitlab",
+                    "github-enterprise",
+                    "bitbucket",
+                    "google",
+                    "mcp",
+                    "inbox",
+                    "stand-in"
+                  ]
+                },
+                "host": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "runs": {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                },
+                "events": {
+                  "maxItems": 256,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "every": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "filters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "defaultValue": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "label"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "every"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
+                    ]
+                  }
+                },
+                "door": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    "line": {
+                      "type": "string",
+                      "maxLength": 8192
+                    },
+                    "link": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "linked",
+                            "offered",
+                            "unwritable",
+                            "taken"
+                          ]
+                        },
+                        "path": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "path"
+                      ]
+                    },
+                    "oldName": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "number"
+                        },
+                        "cwd": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "cwd"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "line",
+                    "link"
+                  ]
+                },
+                "signIn": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github",
+                    "gitlab",
+                    "github-enterprise",
+                    "bitbucket",
+                    "google",
+                    "mcp",
+                    "inbox",
+                    "stand-in"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -32410,6 +33245,35 @@
                     "signIn": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "client": {
+                      "type": "object",
+                      "properties": {
+                        "kept": {
+                          "type": "boolean"
+                        },
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_client",
+                            "deleted_client"
+                          ]
+                        },
+                        "retiring": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "runClient": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "endsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kept"
+                      ]
                     }
                   },
                   "required": [
@@ -32444,6 +33308,35 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "client": {
+                      "type": "object",
+                      "properties": {
+                        "kept": {
+                          "type": "boolean"
+                        },
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_client",
+                            "deleted_client"
+                          ]
+                        },
+                        "retiring": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "runClient": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "endsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kept"
+                      ]
                     }
                   },
                   "required": [
@@ -32831,6 +33724,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -32865,6 +33787,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -33239,6 +34190,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -33273,6 +34253,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -33683,6 +34692,35 @@
                     "signIn": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "client": {
+                      "type": "object",
+                      "properties": {
+                        "kept": {
+                          "type": "boolean"
+                        },
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_client",
+                            "deleted_client"
+                          ]
+                        },
+                        "retiring": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "runClient": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "endsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kept"
+                      ]
                     }
                   },
                   "required": [
@@ -33717,6 +34755,35 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "client": {
+                      "type": "object",
+                      "properties": {
+                        "kept": {
+                          "type": "boolean"
+                        },
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_client",
+                            "deleted_client"
+                          ]
+                        },
+                        "retiring": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "runClient": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "endsAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "kept"
+                      ]
                     }
                   },
                   "required": [
@@ -34147,6 +35214,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -34181,6 +35277,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -34555,6 +35680,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -34589,6 +35743,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -103411,6 +104594,35 @@
                 "signIn": {
                   "type": "boolean",
                   "const": true
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [
@@ -103445,6 +104657,35 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "client": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean"
+                    },
+                    "refused": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client",
+                        "deleted_client"
+                      ]
+                    },
+                    "retiring": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "runClient": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "endsAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
                 }
               },
               "required": [

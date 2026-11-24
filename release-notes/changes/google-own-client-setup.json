@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "google-own-client-setup",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Connect Gmail and Calendar through your own Google client",
+      "body": "Settings → Integrations now sets up Google through a client you make in your own Google Cloud project, in Google's Personal mode: open Google's page, then drop the client file it gives you. Google shows no warning for it and keeps you signed in. The Google row also says when your client stopped, when Google will end a sign-in after seven days, and when a connection made earlier needs your own client.",
+      "picture": {
+        "dark": "google-own-client-setup-dark.webp",
+        "light": "google-own-client-setup-light.webp",
+        "alt": "The Google setup in Settings → Integrations, with a button that opens Google's page and a place to drop the client file"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

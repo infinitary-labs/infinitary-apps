@@ -51,6 +51,12 @@ import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { DeviceForgeRows } from "./DeviceForgeRows";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
+import {
+  GoogleClientSetup,
+  type GoogleClientState,
+  googleClientState,
+  googleNextWords,
+} from "./GoogleClientSetup";
 import { OutsideDataRow } from "./OutsideDataRow";
 import { PrivateSitesSection } from "./PrivateSitesSection";
 import {
@@ -130,6 +136,8 @@ export function IntegrationsTab() {
   /** The kind whose notice is open, and what had the focus when it opened. */
   const [notice, setNotice] = useState<IntegrationKind | null>(null);
   const noticeFrom = useRef<HTMLElement | null>(null);
+  /** Google's own-client setup is open (docs/integrations.md, "Google"). */
+  const [setup, setSetup] = useState(false);
   const hostSignIn = useForgeHostSignIn();
   const pending = useShellStore((s) => s.pendingForgeSignIn);
   // The words from outside this build keeps for a while, deleted in the Data section below.
@@ -248,6 +256,37 @@ export function IntegrationsTab() {
     setNotice(null);
     noticeFrom.current?.focus();
   };
+  // Google signs in only as the person's own client: with none kept, or one
+  // Google refused, its sign-in is the setup, which goes on to the notice.
+  const googleClient =
+    view.integrations.find((row) => row.kind === "google")?.client ??
+    view.addable.find((entry) => entry.kind === "google")?.client;
+  const googleNeedsSetup =
+    googleClient !== undefined &&
+    ((!googleClient.kept && !googleClient.runClient) || googleClient.refused !== undefined);
+  const openSetup = useCallback(() => {
+    setError(null);
+    setNotice(null);
+    noticeFrom.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSetup(true);
+  }, []);
+  const beginSignIn = useCallback(
+    (kind: IntegrationKind) => {
+      if (kind === "google" && googleNeedsSetup) openSetup();
+      else startBrowserSignIn(kind);
+    },
+    [googleNeedsSetup, openSetup, startBrowserSignIn],
+  );
+  const cancelSetup = () => {
+    setSetup(false);
+    noticeFrom.current?.focus();
+  };
+  const setupKept = (next: IntegrationsView) => {
+    setView(next);
+    setSetup(false);
+    startBrowserSignIn("google");
+  };
   // The page again, for the sign-in waiting now: a kind with a notice waits
   // only once its notice was accepted, so the accept still stands.
   const signInAgain = (kind: IntegrationKind) =>
@@ -316,8 +355,8 @@ export function IntegrationsTab() {
     const kind =
       view.addable.find((entry) => entry.kind === pending)?.kind ??
       view.integrations.find((row) => row.kind === pending)?.kind;
-    if (kind) startBrowserSignIn(kind);
-  }, [pending, loaded, signIn, view, forges, startBrowserSignIn]);
+    if (kind) beginSignIn(kind);
+  }, [pending, loaded, signIn, view, forges, beginSignIn]);
 
   // The inbox has nothing to wait for: it is on when the answer comes back.
   const turnOnInbox = () => {
@@ -364,6 +403,14 @@ export function IntegrationsTab() {
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
         {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(INTEGRATION_KIND_NAMES[browser])}
       </div>
+      {browser === "google" && googleClient?.kept && (
+        <div
+          data-integration-sign-in-hint=""
+          style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}
+        >
+          {m.integrationsGoogleSignInHint()}
+        </div>
+      )}
       {uncaught && (
         <ReturnPaste
           key={uncaught.id}
@@ -395,6 +442,14 @@ export function IntegrationsTab() {
     />
   );
 
+  const setupAside = setup && (
+    <GoogleClientSetup
+      refused={googleClient?.refused !== undefined}
+      onKept={setupKept}
+      onCancel={cancelSetup}
+    />
+  );
+
   const inbox = view.integrations.find((integration) => integration.kind === "inbox");
   const connected = view.integrations.filter((integration) => integration.kind !== "inbox");
 
@@ -418,74 +473,93 @@ export function IntegrationsTab() {
             {INTEGRATIONS_WORDS.quiet}
           </div>
         )}
-        {connected.map((integration) => (
-          <div key={integration.id}>
-            <IntegrationRow
-              integration={integration}
-              way={
-                integration.kind === "github" || integration.host
-                  ? forges.signIns.find(
-                      (row) => row.host === (integration.host ?? INTEGRATIONS_SIGN_IN_HOST),
-                    )?.way
-                  : undefined
-              }
-              open={open === integration.id}
-              busy={
-                integration.kind === "github"
-                  ? starting
-                  : integration.kind === "mcp"
-                    ? mcpWait === integration.id
-                    : browser === integration.kind
-              }
-              onToggle={() =>
-                setOpen((current) => (current === integration.id ? null : integration.id))
-              }
-              onSignIn={
-                integration.kind === "github"
-                  ? signIn
-                  : integration.kind === "mcp"
-                    ? () => mcpSignInAgain(integration.id)
-                    : integration.host
-                      ? () => hostSignIn.connect(integration.host ?? "")
-                      : () => startBrowserSignIn(integration.kind)
-              }
-              onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
-              onPause={(paused) => configure(integration.id, { paused })}
-              onRemove={() => change(() => window.infinitary.integrations.remove(integration.id))}
-            />
-            {integration.renamed && (
-              <p className="fm-integrations-renamed" data-integration-renamed={integration.id}>
-                {integrationRenameWords(integration.renamed)}
-              </p>
-            )}
-            {open === integration.id && (
-              <IntegrationActions
+        {connected.map((integration) => {
+          const client =
+            integration.kind === "google"
+              ? googleClientState(integration.client, integration.health)
+              : undefined;
+          return (
+            <div key={integration.id}>
+              <IntegrationRow
                 integration={integration}
-                onRule={(name, allowed) =>
-                  change(() => window.infinitary.integrations.rule(integration.id, name, allowed))
+                client={client}
+                onClient={
+                  client?.next === "sign-in" ? () => startBrowserSignIn("google") : openSetup
                 }
-                onAction={(name, enabled) =>
-                  configure(integration.id, { actions: { [name]: enabled } })
+                way={
+                  integration.kind === "github" || integration.host
+                    ? forges.signIns.find(
+                        (row) => row.host === (integration.host ?? INTEGRATIONS_SIGN_IN_HOST),
+                      )?.way
+                    : undefined
                 }
+                open={open === integration.id}
+                busy={
+                  integration.kind === "github"
+                    ? starting
+                    : integration.kind === "mcp"
+                      ? mcpWait === integration.id
+                      : browser === integration.kind
+                }
+                onToggle={() =>
+                  setOpen((current) => (current === integration.id ? null : integration.id))
+                }
+                onSignIn={
+                  integration.kind === "github"
+                    ? signIn
+                    : integration.kind === "mcp"
+                      ? () => mcpSignInAgain(integration.id)
+                      : integration.host
+                        ? () => hostSignIn.connect(integration.host ?? "")
+                        : () => beginSignIn(integration.kind)
+                }
+                onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
+                onPause={(paused) => configure(integration.id, { paused })}
+                onRemove={() => change(() => window.infinitary.integrations.remove(integration.id))}
               />
-            )}
-            {open === integration.id && integration.secrets && (
-              <IntegrationKeys
-                integration={integration}
-                onSave={(slot, value) =>
-                  change(() => window.infinitary.integrations.secret(integration.id, slot, value))
-                }
-              />
-            )}
-            {integration.host && hostSignIn.asideFor(integration.host)}
-            {integration.kind === "github" && aside}
-            {notice === integration.kind && noticeAside}
-            {browser === integration.kind && browserAside}
-            {mcpWait === integration.id && mcpSignInWait && (
-              <div className="fm-connect-aside fm-forges-aside">{mcpSignInWait}</div>
-            )}
-          </div>
-        ))}
+              {integration.renamed && (
+                <p className="fm-integrations-renamed" data-integration-renamed={integration.id}>
+                  {integrationRenameWords(integration.renamed)}
+                </p>
+              )}
+              {client && (
+                <p
+                  className="fm-integrations-renamed"
+                  data-integration-client-detail={integration.id}
+                >
+                  {client.detail}
+                </p>
+              )}
+              {open === integration.id && (
+                <IntegrationActions
+                  integration={integration}
+                  onRule={(name, allowed) =>
+                    change(() => window.infinitary.integrations.rule(integration.id, name, allowed))
+                  }
+                  onAction={(name, enabled) =>
+                    configure(integration.id, { actions: { [name]: enabled } })
+                  }
+                />
+              )}
+              {open === integration.id && integration.secrets && (
+                <IntegrationKeys
+                  integration={integration}
+                  onSave={(slot, value) =>
+                    change(() => window.infinitary.integrations.secret(integration.id, slot, value))
+                  }
+                />
+              )}
+              {integration.host && hostSignIn.asideFor(integration.host)}
+              {integration.kind === "github" && aside}
+              {integration.kind === "google" && setupAside}
+              {notice === integration.kind && noticeAside}
+              {browser === integration.kind && browserAside}
+              {mcpWait === integration.id && mcpSignInWait && (
+                <div className="fm-connect-aside fm-forges-aside">{mcpSignInWait}</div>
+              )}
+            </div>
+          );
+        })}
         {/* Each other computer's own GitHub, GitHub Enterprise and GitLab sign-ins, for its clones and pushes (docs/forge.md, "A computer's own sign-in"). */}
         <DeviceForgeRows onAny={setComputerRows} />
         {view.addable.length > 0 && (
@@ -517,11 +591,23 @@ export function IntegrationsTab() {
                         busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
                         onConnect={signIn}
                       />
+                    ) : kind.kind === "google" && googleNeedsSetup ? (
+                      <button
+                        type="button"
+                        className="fm-connect-chip"
+                        data-forge-chip={kind.kind}
+                        aria-expanded={setup}
+                        disabled={browser === kind.kind}
+                        onClick={openSetup}
+                      >
+                        {plusIcon}
+                        <span>{m.integrationsGoogleSetUpChip()}</span>
+                      </button>
                     ) : (
                       <HostChip
                         host={{ host: kind.kind, name: kind.name }}
                         busy={browser === kind.kind}
-                        onConnect={() => startBrowserSignIn(kind.kind)}
+                        onConnect={() => beginSignIn(kind.kind)}
                       />
                     )}
                   </span>
@@ -565,6 +651,7 @@ export function IntegrationsTab() {
             )}
             {hostSignIn.foot}
             {!github && aside}
+            {!view.integrations.some((row) => row.kind === "google") && setupAside}
             {notice && !view.integrations.some((row) => row.kind === notice) && noticeAside}
             {browser && !view.integrations.some((row) => row.kind === browser) && browserAside}
           </div>
@@ -807,6 +894,8 @@ function integrationRowView(
 
 function IntegrationRow({
   integration,
+  client,
+  onClient,
   way,
   open,
   busy,
@@ -817,6 +906,9 @@ function IntegrationRow({
   onRemove,
 }: {
   integration: IntegrationView;
+  /** Google's client state, which outranks the row's health, and its one next step. */
+  client?: GoogleClientState | undefined;
+  onClient?: () => void;
   /** The sign-in is GitHub CLI's: signed in again there, so the row offers Check now. */
   way?: "cli" | undefined;
   open: boolean;
@@ -843,9 +935,9 @@ function IntegrationRow({
     >
       <span className="fm-forges-dot">
         <StatusDot
-          tone={integration.paused ? "idle" : row.tone}
-          label={integration.paused ? m.settingsIntegrationsPaused() : row.label}
-          nativeTitle={row.label !== row.badge && !row.reauth && row.problem === null}
+          tone={integration.paused ? "idle" : (client?.tone ?? row.tone)}
+          label={integration.paused ? m.settingsIntegrationsPaused() : (client?.words ?? row.label)}
+          nativeTitle={!client && row.label !== row.badge && !row.reauth && row.problem === null}
           focusable
         />
       </span>
@@ -878,7 +970,11 @@ function IntegrationRow({
         </svg>
       </button>
       <span className="fm-forges-who">
-        {row.problem ? (
+        {client ? (
+          <span className="fm-forges-state" data-tone={client.tone} data-integration-client="">
+            {client.words}
+          </span>
+        ) : row.problem ? (
           <span className="fm-forges-state" data-tone="danger">
             {row.problem}
           </span>
@@ -890,12 +986,24 @@ function IntegrationRow({
         <span className="fm-forges-sub">{integrationRowSub(integration, way)}</span>
       </span>
       <span className="fm-forges-action">
-        {row.reauth && way === "cli" && (
+        {client && (
+          <Button
+            variant="primary"
+            size="sm"
+            pending={busy}
+            pendingLabel={m.settingsIntegrationsStarting()}
+            data-integration-client-next={client.next}
+            onClick={onClient}
+          >
+            {googleNextWords(client.next)}
+          </Button>
+        )}
+        {!client && row.reauth && way === "cli" && (
           <Button variant="primary" size="sm" onClick={onCheck}>
             {m.settingsIntegrationsCheckNow()}
           </Button>
         )}
-        {row.reauth && way !== "cli" && (
+        {!client && row.reauth && way !== "cli" && (
           <Button
             variant="primary"
             size="sm"

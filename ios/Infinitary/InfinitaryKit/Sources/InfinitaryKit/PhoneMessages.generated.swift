@@ -1714,6 +1714,7 @@ public enum PhoneMessages {
     public static func `panelChangeCrewSlots`() -> String { PhoneWords.format("panelChangeCrewSlots", []) }
     public static func `panelChangeCrewSlotsReset`() -> String { PhoneWords.format("panelChangeCrewSlotsReset", []) }
     public static func `panelChangeCrewSpeed`() -> String { PhoneWords.format("panelChangeCrewSpeed", []) }
+    public static func `panelChangeCustomConnectionFile`() -> String { PhoneWords.format("panelChangeCustomConnectionFile", []) }
     public static func `panelChangeDecisionModel`() -> String { PhoneWords.format("panelChangeDecisionModel", []) }
     public static func `panelChangeDecisionUseOff`() -> String { PhoneWords.format("panelChangeDecisionUseOff", []) }
     public static func `panelChangeDeviceFixWork`() -> String { PhoneWords.format("panelChangeDeviceFixWork", []) }
@@ -6245,6 +6246,7 @@ extension PhoneWords {
         "panelChangeCrewSlots": [],
         "panelChangeCrewSlotsReset": [],
         "panelChangeCrewSpeed": [],
+        "panelChangeCustomConnectionFile": [],
         "panelChangeDecisionModel": [],
         "panelChangeDecisionUseOff": [],
         "panelChangeDeviceFixWork": [],

@@ -44016,6 +44016,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The crew's speed`;
   }
+  function panelChangeCustomConnectionFile() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملف الاتصالات`;
+      case "de":
+        return `Verbindungsdatei`;
+      case "es":
+        return `El archivo de conexiones`;
+      case "fr":
+        return `Le fichier de connexions`;
+      case "ja":
+        return `接続ファイル`;
+      case "ko":
+        return `연결 파일`;
+      case "pt-BR":
+        return `O arquivo de conexões`;
+      case "zh-Hans":
+        return `连接文件`;
+      case "zh-Hant":
+        return `連線檔案`;
+      case "en-XA":
+        return `[Ţĥé çöññéçţîöñ ƒîļé ~~~~~~~]`;
+      case "ar-XB":
+        return `‮The connection file‬`;
+    }
+    return `The connection file`;
+  }
   function panelChangeDecisionModel() {
     switch (currentLanguage()) {
       case "ar":
@@ -108731,6 +108758,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeCrewSlots,
     panelChangeCrewSlotsReset,
     panelChangeCrewSpeed,
+    panelChangeCustomConnectionFile,
     panelChangeDecisionModel,
     panelChangeDecisionUseOff,
     panelChangeDeviceFixWork,
@@ -112180,6 +112208,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeCrewSlots": [],
     "panelChangeCrewSlotsReset": [],
     "panelChangeCrewSpeed": [],
+    "panelChangeCustomConnectionFile": [],
     "panelChangeDecisionModel": [],
     "panelChangeDecisionUseOff": [],
     "panelChangeDeviceFixWork": [],

@@ -1390,6 +1390,7 @@
   {"said":{"m":"panelChangeCrewSlots"},"words":"The crew's models"},
   {"said":{"m":"panelChangeCrewSlotsReset"},"words":"Reset the crew's models"},
   {"said":{"m":"panelChangeCrewSpeed"},"words":"The crew's speed"},
+  {"said":{"m":"panelChangeCustomConnectionFile"},"words":"The connection file"},
   {"said":{"m":"panelChangeDecisionModel"},"words":"The decision model"},
   {"said":{"m":"panelChangeDecisionUseOff"},"words":"Turn off one use of the decision model"},
   {"said":{"m":"panelChangeDeviceFixWork"},"words":"Fix a computer that runs work"},

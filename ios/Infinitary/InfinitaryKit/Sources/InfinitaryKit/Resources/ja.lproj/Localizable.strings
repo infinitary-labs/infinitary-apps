@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "クルーのモデル";
 "panelChangeCrewSlotsReset" = "クルーのモデルをリセット";
 "panelChangeCrewSpeed" = "クルーの速度";
+"panelChangeCustomConnectionFile" = "接続ファイル";
 "panelChangeDecisionModel" = "判断モデル";
 "panelChangeDecisionUseOff" = "判断モデルの用途を一つオフにする";
 "panelChangeDeviceFixWork" = "作業を実行するコンピュータを直す";

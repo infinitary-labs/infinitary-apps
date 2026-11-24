@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "نماذج الطاقم";
 "panelChangeCrewSlotsReset" = "إعادة ضبط نماذج الطاقم";
 "panelChangeCrewSpeed" = "سرعة الطاقم";
+"panelChangeCustomConnectionFile" = "ملف الاتصالات";
 "panelChangeDecisionModel" = "نموذج القرارات";
 "panelChangeDecisionUseOff" = "إيقاف أحد استخدامات نموذج القرارات";
 "panelChangeDeviceFixWork" = "إصلاح حاسوب ينفّذ العمل";

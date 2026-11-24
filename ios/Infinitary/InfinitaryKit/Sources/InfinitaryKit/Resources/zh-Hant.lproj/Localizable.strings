@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "船員的模型";
 "panelChangeCrewSlotsReset" = "重設船員的模型";
 "panelChangeCrewSpeed" = "船員的速度";
+"panelChangeCustomConnectionFile" = "連線檔案";
 "panelChangeDecisionModel" = "決策模型";
 "panelChangeDecisionUseOff" = "關閉決策模型的一項用途";
 "panelChangeDeviceFixWork" = "修復執行工作的電腦";

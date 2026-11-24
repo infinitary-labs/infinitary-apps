@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "크루의 모델";
 "panelChangeCrewSlotsReset" = "크루 모델 초기화";
 "panelChangeCrewSpeed" = "크루의 속도";
+"panelChangeCustomConnectionFile" = "연결 파일";
 "panelChangeDecisionModel" = "판단 모델";
 "panelChangeDecisionUseOff" = "판단 모델의 용도 하나 끄기";
 "panelChangeDeviceFixWork" = "작업 실행 컴퓨터 고치기";

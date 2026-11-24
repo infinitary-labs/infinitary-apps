@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "Modelle der Crew";
 "panelChangeCrewSlotsReset" = "Modelle der Crew zurücksetzen";
 "panelChangeCrewSpeed" = "Tempo der Crew";
+"panelChangeCustomConnectionFile" = "Verbindungsdatei";
 "panelChangeDecisionModel" = "Entscheidungsmodell";
 "panelChangeDecisionUseOff" = "Eine Verwendung des Entscheidungsmodells ausschalten";
 "panelChangeDeviceFixWork" = "Arbeitscomputer reparieren";

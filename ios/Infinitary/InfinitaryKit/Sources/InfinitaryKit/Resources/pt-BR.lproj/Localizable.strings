@@ -1632,6 +1632,7 @@
 "panelChangeCrewSlots" = "Os modelos da tripulação";
 "panelChangeCrewSlotsReset" = "Redefinir os modelos da tripulação";
 "panelChangeCrewSpeed" = "A velocidade da tripulação";
+"panelChangeCustomConnectionFile" = "O arquivo de conexões";
 "panelChangeDecisionModel" = "O modelo de decisões";
 "panelChangeDecisionUseOff" = "Desativar um uso do modelo de decisões";
 "panelChangeDeviceFixWork" = "Corrigir um computador que executa trabalho";

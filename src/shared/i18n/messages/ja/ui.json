@@ -108,6 +108,10 @@
   "uiTaskFactsSkipped": "スキップ",
   "uiTaskFactsTask": "タスク",
   "uiTaskResourceRun": "実行",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "other": "次に実行 · 空き {processors} プロセッサ・{memory} GB"
+  },
   "uiTaskResourceRunUnavailable": "{computer} の実行状況を取得できません",
   "uiTaskResourceUse": "使用",
   "uiVoiceAbandon": "破棄",

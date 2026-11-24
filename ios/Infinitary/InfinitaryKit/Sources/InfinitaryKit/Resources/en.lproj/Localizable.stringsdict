@@ -2467,6 +2467,22 @@
       <string>· %1$ld skipped</string>
     </dict>
   </dict>
+  <key>uiTaskResourceRunFree</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@processors@</string>
+    <key>processors</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>first in line · %2$ld processor and %1$@ GB free</string>
+      <key>other</key>
+      <string>first in line · %2$ld processors and %1$@ GB free</string>
+    </dict>
+  </dict>
   <key>updateSourceAvailable</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

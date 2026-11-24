@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "usage-cost-filter-name-press",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Picking a project or kind by its name no longer crashes the app",
+      "body": "In Settings, Usage, clicking a project's or a kind's name in the Projects and Kinds menus under Cost per task crashed the window. The click now ticks that choice and leaves the menu open, as clicking its checkbox does.",
+      "noPicture": "The menus look the same as before; only the click on a name no longer crashes the window.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

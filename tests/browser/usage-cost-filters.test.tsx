@@ -63,6 +63,21 @@ test("Cost per task's filter menus close on a press or focus outside, one at a t
   await userEvent.click(heading);
   await expect.poll(opened).toEqual({ projects: false, kinds: false });
 
+  // A press on a choice's name ticks it too and leaves the menu open. The
+  // name takes no focus, so the press focuses the Settings panel around the
+  // menu; closing the menu then hid the pressed text mid-press, and Chromium
+  // crashed the page as it began selecting it.
+  for (const menu of [projects, kinds]) {
+    await userEvent.click(part(menu, "summary"));
+    const name = part<HTMLElement>(menu, "input[value]:not(:checked) + span");
+    const named = part<HTMLInputElement>(menu, "input[value]:not(:checked)");
+    await userEvent.click(name);
+    await expect.poll(() => named.checked).toBe(true);
+    expect(menu.open).toBe(true);
+    await userEvent.click(heading);
+    await expect.poll(() => menu.open).toBe(false);
+  }
+
   // From the keyboard, Tab past the last choice closes the menu as focus
   // reaches the Kinds row.
   part<HTMLElement>(projects, "summary").focus();

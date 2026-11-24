@@ -397,8 +397,11 @@ function CostFilter<K extends string | null>({
     const close = (event: Event) => {
       if (box.current && outside(event.target)) box.current.open = false;
     };
-    // A press on a part of the menu that takes no focus moves focus to the
-    // body, which fires no focusin, so the menu stays open for it.
+    // A press on a part of the menu that takes no focus, such as a choice's
+    // name, focuses the menu's fieldset (tabIndex -1), not the Settings panel
+    // around it, so its focusin stays inside. Closing the menu during that
+    // press would hide the pressed text as Chromium starts selecting it,
+    // which crashes the page.
     document.addEventListener("pointerdown", close);
     document.addEventListener("focusin", close);
     return () => {
@@ -433,7 +436,7 @@ function CostFilter<K extends string | null>({
         </span>
         {chevron}
       </summary>
-      <fieldset className="fm-usage-cost-menu">
+      <fieldset className="fm-usage-cost-menu" tabIndex={-1}>
         <legend className="fm-usage-cost-menu-legend">{label}</legend>
         <div className="fm-usage-cost-menu-list">
           <label>

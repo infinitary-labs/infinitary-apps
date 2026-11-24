@@ -2513,7 +2513,6 @@ public enum PhoneMessages {
     public static func `refuseThisCardIsWorking`() -> String { PhoneWords.format("refuseThisCardIsWorking", []) }
     public static func `refuseThisCardTakesNoReply`() -> String { PhoneWords.format("refuseThisCardTakesNoReply", []) }
     public static func `refuseThisIsTheOnlyCard`() -> String { PhoneWords.format("refuseThisIsTheOnlyCard", []) }
-    public static func `refuseYourFirstMateHasNotRepliedYet`() -> String { PhoneWords.format("refuseYourFirstMateHasNotRepliedYet", []) }
     public static func `resetKeysAsk`(`preset`: String) -> String { PhoneWords.format("resetKeysAsk", [`preset`]) }
     public static func `resetKeysConfirm`() -> String { PhoneWords.format("resetKeysConfirm", []) }
     public static func `resetKeysDetail`(`preset`: String) -> String { PhoneWords.format("resetKeysDetail", [`preset`]) }
@@ -4047,7 +4046,22 @@ public enum PhoneMessages {
     public static func `shellCommandSearchList`() -> String { PhoneWords.format("shellCommandSearchList", []) }
     public static func `shellCommandSearchNoMatch`() -> String { PhoneWords.format("shellCommandSearchNoMatch", []) }
     public static func `shellComposerNoticeDismiss`() -> String { PhoneWords.format("shellComposerNoticeDismiss", []) }
+    public static func `shellConversationAnswered`() -> String { PhoneWords.format("shellConversationAnswered", []) }
+    public static func `shellConversationCards`() -> String { PhoneWords.format("shellConversationCards", []) }
+    public static func `shellConversationChose`(`label`: String) -> String { PhoneWords.format("shellConversationChose", [`label`]) }
+    public static func `shellConversationCrewmate`() -> String { PhoneWords.format("shellConversationCrewmate", []) }
+    public static func `shellConversationEmpty`() -> String { PhoneWords.format("shellConversationEmpty", []) }
+    public static func `shellConversationEverything`() -> String { PhoneWords.format("shellConversationEverything", []) }
     public static func `shellConversationHeading`() -> String { PhoneWords.format("shellConversationHeading", []) }
+    public static func `shellConversationNoCards`() -> String { PhoneWords.format("shellConversationNoCards", []) }
+    public static func `shellConversationPartial`() -> String { PhoneWords.format("shellConversationPartial", []) }
+    public static func `shellConversationReadingEarlier`() -> String { PhoneWords.format("shellConversationReadingEarlier", []) }
+    public static func `shellConversationShow`() -> String { PhoneWords.format("shellConversationShow", []) }
+    public static func `shellConversationToday`() -> String { PhoneWords.format("shellConversationToday", []) }
+    public static func `shellConversationWaitingOnYou`() -> String { PhoneWords.format("shellConversationWaitingOnYou", []) }
+    public static func `shellConversationYesterday`() -> String { PhoneWords.format("shellConversationYesterday", []) }
+    public static func `shellConversationYouChose`(`label`: String) -> String { PhoneWords.format("shellConversationYouChose", [`label`]) }
+    public static func `shellConversationYouReplied`(`words`: String) -> String { PhoneWords.format("shellConversationYouReplied", [`words`]) }
     public static func `shellDiagnosticsOk`() -> String { PhoneWords.format("shellDiagnosticsOk", []) }
     public static func `shellDiagnosticsRetry`() -> String { PhoneWords.format("shellDiagnosticsRetry", []) }
     public static func `shellDiagnosticsSaving`() -> String { PhoneWords.format("shellDiagnosticsSaving", []) }
@@ -4114,8 +4128,6 @@ public enum PhoneMessages {
     public static func `shellReducedMotionMateText`() -> String { PhoneWords.format("shellReducedMotionMateText", []) }
     public static func `shellReducedMotionWaveformSubject`() -> String { PhoneWords.format("shellReducedMotionWaveformSubject", []) }
     public static func `shellReducedMotionWaveformText`() -> String { PhoneWords.format("shellReducedMotionWaveformText", []) }
-    public static func `shellReplyNoteFirstMate`() -> String { PhoneWords.format("shellReplyNoteFirstMate", []) }
-    public static func `shellReplyNoteYou`() -> String { PhoneWords.format("shellReplyNoteYou", []) }
     public static func `shellTopBarBack`() -> String { PhoneWords.format("shellTopBarBack", []) }
     public static func `shellTopBarCloseWindow`() -> String { PhoneWords.format("shellTopBarCloseWindow", []) }
     public static func `shellTopBarMaximize`() -> String { PhoneWords.format("shellTopBarMaximize", []) }
@@ -6893,7 +6905,6 @@ extension PhoneWords {
         "refuseThisCardIsWorking": [],
         "refuseThisCardTakesNoReply": [],
         "refuseThisIsTheOnlyCard": [],
-        "refuseYourFirstMateHasNotRepliedYet": [],
         "resetKeysAsk": ["preset"],
         "resetKeysConfirm": [],
         "resetKeysDetail": ["preset"],
@@ -8427,7 +8438,22 @@ extension PhoneWords {
         "shellCommandSearchList": [],
         "shellCommandSearchNoMatch": [],
         "shellComposerNoticeDismiss": [],
+        "shellConversationAnswered": [],
+        "shellConversationCards": [],
+        "shellConversationChose": ["label"],
+        "shellConversationCrewmate": [],
+        "shellConversationEmpty": [],
+        "shellConversationEverything": [],
         "shellConversationHeading": [],
+        "shellConversationNoCards": [],
+        "shellConversationPartial": [],
+        "shellConversationReadingEarlier": [],
+        "shellConversationShow": [],
+        "shellConversationToday": [],
+        "shellConversationWaitingOnYou": [],
+        "shellConversationYesterday": [],
+        "shellConversationYouChose": ["label"],
+        "shellConversationYouReplied": ["words"],
         "shellDiagnosticsOk": [],
         "shellDiagnosticsRetry": [],
         "shellDiagnosticsSaving": [],
@@ -8494,8 +8520,6 @@ extension PhoneWords {
         "shellReducedMotionMateText": [],
         "shellReducedMotionWaveformSubject": [],
         "shellReducedMotionWaveformText": [],
-        "shellReplyNoteFirstMate": [],
-        "shellReplyNoteYou": [],
         "shellTopBarBack": [],
         "shellTopBarCloseWindow": [],
         "shellTopBarMaximize": [],

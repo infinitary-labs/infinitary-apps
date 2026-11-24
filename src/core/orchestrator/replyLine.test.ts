@@ -47,8 +47,9 @@ describe("the reply line beside the captain's last message", () => {
 });
 
 // INF-1103, the captain's Approve and build on INF-1102's plan: the reply
-// note shows the words "As the first mate wrote them, with their line breaks".
-describe("the reply's words as written, for the reply note", () => {
+// is shown "As the first mate wrote them, with their line breaks", now in
+// the conversation.
+describe("the reply's words as written, for the conversation", () => {
   it("keeps the closing words' line breaks when they are the line", () => {
     const closing =
       "I've started a read-only crewmate. It's looking at:\n- which Linux checks run today;\n- the security risk.\n";

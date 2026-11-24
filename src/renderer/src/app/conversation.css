@@ -1,0 +1,232 @@
+/*
+ * The conversation (docs/composer.md "The conversation"; design skill
+ * components/cards/Conversation.prompt.md). The captain's words sit in a
+ * soft grey bubble on the right, whole, as the strip draws them; the first
+ * mate's words are plain type beside its mark on the left, unboxed; a card
+ * the captain acted on is a small tile before the act.
+ */
+.conversation-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.conversation-heading {
+  margin: 0;
+  color: var(--fg-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-body);
+  white-space: nowrap;
+}
+
+.conversation-rounds,
+.conversation-cards ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversation-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.conversation-round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.conversation-day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-2);
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.conversation-day::before,
+.conversation-day::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--line-1);
+}
+
+.conversation-time {
+  align-self: center;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+}
+
+.conversation-you {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.conversation-through {
+  flex: none;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}
+
+.conversation-bubble {
+  box-sizing: border-box;
+  max-width: 82%;
+  padding: 3px 10px;
+  border-radius: 11px 11px 4px 11px;
+  background: color-mix(in srgb, var(--fg-1) 8%, transparent);
+  color: var(--fg-1);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.conversation-mate {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 92%;
+  min-width: 0;
+}
+
+.conversation-mate .mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  /* Level with the first line of the words beside it. */
+  margin-top: calc((var(--text-base) * var(--leading-body) - 14px) / 2);
+  color: var(--accent);
+  transition: color var(--dur-med) linear;
+}
+.conversation-mate .mark[data-working] {
+  color: var(--hot);
+  transition-duration: var(--dur-fast);
+}
+.conversation-mate .mark .o,
+.conversation-mate .mark .i {
+  stroke: currentColor;
+}
+.conversation-mate .mark .i {
+  opacity: 0.45;
+}
+.conversation-mate .mark .d {
+  fill: currentColor;
+}
+
+.conversation-crew {
+  flex: none;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: calc(var(--text-base) * var(--leading-body));
+}
+
+.conversation-words {
+  min-width: 0;
+  color: var(--fg-1);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.conversation-words[data-state="working"] {
+  color: var(--fg-3);
+}
+.conversation-words[data-state="problem"] {
+  color: var(--danger);
+}
+
+.conversation-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+}
+.conversation-tile:hover {
+  border-color: var(--line-2);
+  background: var(--bg-3);
+}
+.conversation-tile-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conversation-tile-key {
+  flex: none;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.conversation-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.conversation-cards ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conversation-section {
+  margin: 0 0 var(--space-3);
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.conversation-card-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.conversation-card-fact {
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+
+.conversation-empty,
+.conversation-notice {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+.conversation-notice {
+  margin-bottom: var(--space-3);
+  text-align: center;
+}

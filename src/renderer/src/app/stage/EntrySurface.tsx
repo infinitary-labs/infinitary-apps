@@ -14,7 +14,7 @@ import type { StageRole } from "../../cards/SurfaceReveal";
 import { TaskBrowserView } from "../../cards/TaskBrowserView";
 import { CARD_MAX_HEIGHT, cardFloor } from "../../design/cards/ResponseCard";
 import { useCardKind } from "../../plugins/host";
-import { ReplyNoteCard } from "../ReplyNote";
+import { ConversationCard } from "../ConversationCard";
 import type { StackEntry } from "../stack";
 import { useShellStore } from "../store";
 import { BrowserRequestColumn, BrowserRequestLine } from "./BrowserRequestColumn";
@@ -119,7 +119,7 @@ export function EntrySurface({
     entry.recordTaskId
       ? "task-record"
       : !entry.pastCardId &&
-          !entry.replyNote &&
+          !entry.conversation &&
           !entry.browserTaskId &&
           !entry.crewmateTaskId &&
           !entry.panelCard
@@ -198,8 +198,10 @@ export function EntrySurface({
       />
     );
   }
-  if (entry.replyNote) {
-    return <ReplyNoteCard note={entry.replyNote} width="100%" onDrawn={drew} />;
+  if (entry.conversation) {
+    return (
+      <ConversationCard entry={entry.conversation} width="100%" onDrawn={drew} shown={active} />
+    );
   }
   if (entry.recordTaskId) {
     return (

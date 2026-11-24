@@ -53,6 +53,9 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * alone use it (taskInvariants.ts). The
  * invariants index holds only the rows missing a key, project or update
  * time, which the start's record check counts without reading every row.
+ * The conversation's read (conversationRead.ts) pages the captain's own
+ * card presses by time, and seeks the message that names a line typed
+ * under a card, instead of walking every observation or every message.
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -101,6 +104,10 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS captain_asks_delivery ON captain_asks (delivery, at);
     CREATE INDEX IF NOT EXISTS captain_asks_continues ON captain_asks (continues, at);
     CREATE INDEX IF NOT EXISTS captain_asks_unanswered ON captain_asks (followed, answered_at, at);
+    CREATE INDEX IF NOT EXISTS captain_asks_typed ON captain_asks (typed_card_id, typed_line)
+      WHERE typed_card_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS card_observations_captain_actions ON card_observations (recorded_at)
+      WHERE kind = 'action' AND actor = 'captain';
     CREATE INDEX IF NOT EXISTS cards_resolved_at ON cards (resolved_at);
     CREATE INDEX IF NOT EXISTS card_messages_at ON card_messages (at);
     CREATE INDEX IF NOT EXISTS task_placement_requests_computer_move

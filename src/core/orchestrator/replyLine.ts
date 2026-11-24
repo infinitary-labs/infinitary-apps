@@ -31,8 +31,8 @@ export function replyLine(facts: ReplyFacts): string | undefined {
 
 /**
  * The closing words as the Firstmate wrote them, line breaks kept, when they
- * are the reply line and differ from it: the reply note shows them
- * (docs/composer.md "The reply note"). Otherwise nothing, and the note shows
+ * are the reply line and differ from it: the conversation shows them
+ * (docs/composer.md "The conversation"). Otherwise nothing, and it shows
  * the line.
  */
 export function replyWords(facts: ReplyFacts): string | undefined {

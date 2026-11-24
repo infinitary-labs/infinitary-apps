@@ -865,8 +865,8 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     : null;
 
   // Finding words in the shown entry (docs/keyboard.md, "Finding in the
-  // shown card"): a card, a past card or a task's record or Crewmate tab;
-  // never a panel's card, the reply note or a task's browser.
+  // shown card"): a card, a past card, the conversation or a task's record
+  // or Crewmate tab; never a panel's card or a task's browser.
   const findable = card !== undefined && cardFindable(card);
   const cardFind: CardFind | null = findable
     ? { open: finding, start: () => openCardFind(true), field: <CardFindField />, ...findKeys }

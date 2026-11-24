@@ -35,6 +35,12 @@ export function openingCardWidth(
 
 export const CARD_DRAG_MIN = 480;
 /**
+ * The conversation's width until it is dragged (INF-6337's plan, the
+ * captain's chosen 720 px): between the regular and wide sizes, which no
+ * card width names.
+ */
+export const CONVERSATION_WIDTH = 720;
+/**
  * A card wider than regular needs this much of the docked stage; under it,
  * with a dock occupied, the docks fold as they do for a thread and unfold
  * when the card leaves.

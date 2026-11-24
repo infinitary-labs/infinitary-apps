@@ -9,6 +9,7 @@ import {
 import type { DefaultCardSize } from "@shared/preferences";
 import { dockedCardOf } from "../../cards/browserRequest";
 import {
+  CONVERSATION_WIDTH,
   cardPlacement,
   maximizedPlacement,
   openingCardWidth,
@@ -105,7 +106,7 @@ export function entryView(
   const threadOpen = pastCard ? pastCard.messages.length > 0 : replyable && count > 0 && !collapsed;
   const sized = {
     width: openingCardWidth(pastCard?.width ?? entry.width, facts.defaultCardSize),
-    dragged: facts.cardDrags[entry.id],
+    dragged: facts.cardDrags[entry.id] ?? (entry.conversation ? CONVERSATION_WIDTH : undefined),
   };
   const { windowWidth, railsWidth } = facts.layout;
   const request = facts.cards ? dockedCardOf(facts.cards, entry)?.card : undefined;

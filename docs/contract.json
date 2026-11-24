@@ -1175,6 +1175,293 @@
         ]
       }
     },
+    "inf:conversation:thread": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "before": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "number"
+                  },
+                  "id": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "at",
+                  "id"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          }
+        ],
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "rounds": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "message"
+                    },
+                    "you": {
+                      "type": "string"
+                    },
+                    "reply": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "problem": {
+                              "type": "boolean"
+                            },
+                            "eligibility": {
+                              "type": "string",
+                              "enum": [
+                                "completed",
+                                "queued"
+                              ]
+                            },
+                            "words": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "through": {
+                      "type": "string",
+                      "const": "command"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "at",
+                    "kind",
+                    "you",
+                    "reply"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "choice"
+                    },
+                    "card": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "presentation": {
+                          "type": "string",
+                          "enum": [
+                            "note",
+                            "decision",
+                            "attention"
+                          ]
+                        },
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "taskKey": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "presentation"
+                      ]
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "at",
+                    "kind",
+                    "card",
+                    "label"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "reply"
+                    },
+                    "card": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "presentation": {
+                          "type": "string",
+                          "enum": [
+                            "note",
+                            "decision",
+                            "attention"
+                          ]
+                        },
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "taskKey": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "presentation"
+                      ]
+                    },
+                    "you": {
+                      "type": "string"
+                    },
+                    "answer": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "who": {
+                              "type": "string",
+                              "enum": [
+                                "firstmate",
+                                "crewmate"
+                              ]
+                            },
+                            "text": {
+                              "type": "string"
+                            },
+                            "at": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "who",
+                            "text",
+                            "at"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reply": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "problem": {
+                              "type": "boolean"
+                            },
+                            "eligibility": {
+                              "type": "string",
+                              "enum": [
+                                "completed",
+                                "queued"
+                              ]
+                            },
+                            "words": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "at",
+                    "kind",
+                    "card",
+                    "you",
+                    "answer"
+                  ]
+                }
+              ]
+            }
+          },
+          "more": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rounds",
+          "more"
+        ]
+      }
+    },
     "inf:task:abort": {
       "effect": "change",
       "reach": "views",

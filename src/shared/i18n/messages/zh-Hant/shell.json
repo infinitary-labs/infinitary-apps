@@ -36,7 +36,7 @@
   "shellDiagnosticsTurnOff": "關閉",
   "shellGateBack": "我住在哪裡",
   "shellGateChoiceAnother": "另一台電腦",
-  "shellGateChoiceAnotherSub": "告訴我它的位址，我會透過 SSH 在那裡設定自己。你在這裡控制我。",
+  "shellGateChoiceAnotherSub": "讓我在另一台電腦上執行。你在這裡控制我。",
   "shellGateChoiceHere": "這台電腦",
   "shellGateChoiceHereSub": "在這裡登入一個訂閱。我在這台電腦上生活和工作。",
   "shellGateChoiceRunning": "一台已在執行的電腦",

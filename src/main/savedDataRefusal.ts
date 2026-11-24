@@ -20,6 +20,7 @@ const SAVED_DATA_REFUSAL: DataRefusal = {
   title: SAVED_DATA_REFUSAL_TITLE,
   message: SAVED_DATA_REFUSAL_MESSAGE,
   next: "You can close this window and use a compatible version.",
+  offersReset: true,
 };
 
 /** A standalone, offline refusal: no preload, service bridge, or normal shell. */
@@ -31,15 +32,16 @@ export async function showSavedDataRefusal(
 }
 
 /**
- * Shows why the folder is not opened. With `reset`, the window also offers
- * Reset Infinitary, which asks in place first (./reset/screen.ts,
- * docs/reset.md, "Where a reset can start").
+ * Shows why the folder is not opened. With `reset`, a refusal that
+ * `offersReset` also offers Reset Infinitary, which asks in place first
+ * (./reset/screen.ts, docs/reset.md, "Where a reset can start").
  */
 export async function showDataRefusal(
   hidden: boolean,
   refusal: DataRefusal,
-  reset?: () => Promise<ResetAnswer>,
+  resetAsked?: () => Promise<ResetAnswer>,
 ): Promise<void> {
+  const reset = refusal.offersReset ? resetAsked : undefined;
   const win = standaloneWindow({
     title: "Infinitary",
     width: 640,

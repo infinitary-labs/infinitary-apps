@@ -535,7 +535,7 @@ test("the conversation holds a card the captain answered, lists it under Cards, 
 // conversation at that round. Fixture: the conversation scenario's note,
 // answered with Got it. Failure: no row, a reply line under it, the name not opening
 // the past card, or the conversation opening somewhere else.
-test("a press of a card's button shows on the strip with the card's name, which opens it, and the row opens the conversation there", async () => {
+test("a press of a card's button shows on the strip with the card's name, which opens it by click and Enter, and the row opens the conversation there", async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
@@ -558,6 +558,14 @@ test("a press of a card's button shows on the strip with the card's name, which 
 
   await test.step("the card's name opens the card it answered, as a past card", async () => {
     await row.locator("[data-last-turn-card]").click();
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
+    await expect(conversation(page)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  });
+
+  await test.step("Enter on the focused card name opens it too", async () => {
+    await pressKey(row.locator("[data-last-turn-card]"), "Enter");
     await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible();
     await expect(conversation(page)).toHaveCount(0);
     await page.keyboard.press("Escape");

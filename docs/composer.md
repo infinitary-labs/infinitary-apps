@@ -118,7 +118,7 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 
 ## The last turn
 
-The captain's last two messages, each with the first mate's reply kept beside it, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: "Working…"; INF-2483's plan, the captain's Approve and build: "turn the mark to orange and spin it"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
+The captain's last two rounds, a message with the first mate's reply kept beside it or, on desktop, an answer to a card, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: "Working…"; INF-2483's plan, the captain's Approve and build: "turn the mark to orange and spin it"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
 They replace the activity line that used to pass there; the Activity panel keeps every line.
 A round is one thing the captain did and what came back: a message and the reply line kept beside it, or, on desktop, a card round (below).
 
@@ -177,7 +177,7 @@ A round is one thing the captain did and what came back: a message and the reply
   A message sent becomes the newest round at once (`user_turn`), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
   A new card round does the same once the strip reads it.
   The older round comes back as the older round on a new round even after it dissolved.
-  Becoming the second-to-last round starts 15 seconds of visible reading time, then only that older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next message.
+  Becoming the second-to-last round starts 15 seconds of visible reading time, then only that older round dissolves in place over `--dur-slow` (700 ms), with no movement; the newest round stays until the next round.
   The clock belongs to the older round’s arrival, not the newest reply’s completion or eligibility: work, a queued receipt, an unanswered newest message or a newest problem neither delays nor restarts it.
   It pauses while the window is inactive, the older round is hidden (Settings or any stack entry), or the pointer, a text selection or reply focus is on the lines.
   Each window keeps its own remaining time across those temporary hides.

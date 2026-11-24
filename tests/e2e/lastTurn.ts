@@ -15,8 +15,9 @@ declare global {
 
 /**
  * The last turn above the input (`data-last-turn`, painted by `LastTurn`;
- * docs/composer.md "The last turn"): the captain's last two messages, each
- * with the Firstmate's bubble beside it. The older round is marked
+ * docs/composer.md "The last turn"): the captain's last two rounds, a
+ * message with the Firstmate's bubble beside it or a card round's row
+ * (`cardRound`). The older round is marked
  * `data-older`, and the round a newer message pushes out leaves marked
  * `data-leaving`, so `yourBubble` and `mateBubble` read only the newest
  * round. A spec never types the reply's words: they are the mock provider's

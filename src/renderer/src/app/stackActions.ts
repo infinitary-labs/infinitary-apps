@@ -104,8 +104,9 @@ export type StackSlice = {
   openPastCard: (cardId: string, from?: EntryFrom) => void;
   /**
    * Opens the conversation at the front (docs/composer.md "The
-   * conversation"), at its newest round or, with `at: "older"`, the older
-   * round the strip shows. Opening it tells the Firstmate nothing.
+   * conversation"), at its newest round, with `at: "older"` at the older
+   * round the strip shows, or with `round` at that round's id, which it
+   * outlines for a moment. Opening it tells the Firstmate nothing.
    */
   openConversation: (entry?: ConversationEntry) => void;
   /** Closes the conversation wherever it sits; the shown entry stays shown. */

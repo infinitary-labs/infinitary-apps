@@ -36,18 +36,21 @@ import "./lastTurn.css";
 /**
  * The last turn above the input (FI3-1089's plan, redrawn as INF-1770's
  * Chat layout, the captain's Approve and build; behavior documented in
- * docs/composer.md "The last turn"): the captain's last two messages, each
- * with the Firstmate's reply line kept beside it. A round is the captain's
- * words in a soft grey bubble on the right and, under them, the reply as
- * plain type beside the first mate's mark on the left. The older round sits
- * above at half strength; while a card is up only the newest shows.
+ * docs/composer.md "The last turn"): the captain's last two rounds. A
+ * message round is the captain's words in a soft grey bubble on the right
+ * and, under them, the reply as plain type beside the first mate's mark on
+ * the left. A card round (./strip, INF-6337's plan) is one 22 px row: the
+ * card's glyph and title, a button that opens the card, then the bubble,
+ * outlined for a press of the card's button and filled for a typed line,
+ * with no reply line. The older round sits above at half strength; while a
+ * card is up only the newest shows.
  *
  * While the Firstmate works, the newest round's mark turns ember and spins
  * (INF-2483's plan, the captain's Approve and build: "turn the mark to
  * orange and spin it"); a message with no reply yet shows the spinning mark
  * and "Working…" in its reply's place. Working never hides a reply. Becoming the older round starts 15
  * seconds of visible reading time (./lastTurnFade), after which only that
- * round dissolves, even during work; the newest stays until the next message. Each
+ * round dissolves, even during work; the newest stays until the next round. Each
  * reply line is a button that opens the conversation at that round
  * (./ConversationCard, docs/composer.md "The conversation"), as a press on
  * the round anywhere does unless it selected words; the captain's words

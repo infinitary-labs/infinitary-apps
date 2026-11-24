@@ -19,6 +19,24 @@ afterEach(() => {
   for (const view of views.splice(0)) view.dispose();
 });
 
+const notUsed = (action: keyof UpdateChecker) => () => {
+  throw new Error(`The update checker's ${action} is not used by this test.`);
+};
+
+/**
+ * This Mac's own update checker, which no test here uses: a test that reaches one of its actions
+ * fails saying so. It has no `follow`, `installFollowed` or `unfollow`, like a copy that cannot
+ * follow the other Mac's version, because every view's dispose calls `unfollow` when it is there.
+ */
+const unusedUpdates: UpdateChecker = {
+  getStatus: notUsed("getStatus"),
+  checkNow: notUsed("checkNow"),
+  setChannel: notUsed("setChannel"),
+  openReleasePage: notUsed("openReleasePage"),
+  install: notUsed("install"),
+  later: notUsed("later"),
+};
+
 // Accepted token-command plan forbids silent fixed-key fallback; INF-3508 found
 // optional-field stripping at an older home, on both local and work-account routes.
 it("refuses command settings before forwarding to an old or unknown home, without changing fixed-key calls", async () => {
@@ -55,7 +73,7 @@ it("refuses command settings before forwarding to an old or unknown home, withou
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: () => ({
       start: () => {},
       state: () => ({ ...state, homeVersion, homeChanges: changes }),
@@ -140,7 +158,7 @@ it("hands a streamed reply piece and a computers' reading the home sent live to 
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: (options) => {
       hear = options.onLive;
       return {
@@ -225,7 +243,7 @@ function viewWithHeldLook() {
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: (options) => {
       hear = options.onPush;
       return {
@@ -325,7 +343,7 @@ it("passes a pointing event on live, and drops one a welcome sends again after a
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     dial: async (dialing, reached) => {
       const socket = await dialHome(dialing, { reached });
       sockets.push(socket);
@@ -381,7 +399,7 @@ function pressView(
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: () => ({
       start: () => {},
       state: () => ({
@@ -543,7 +561,7 @@ it("tells the window it replays from the welcome until the replay's last push, a
         said.push({ replaying: thisMac.replaying === true, caughtUp: thisMac.caughtUp });
     },
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: (options) => {
       link = options;
       return {
@@ -616,7 +634,7 @@ it("tells the window each return of the link, replayed or not, even one that cha
       if (thisMac.role === "view") said.push(thisMac.linkBack);
     },
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: (options) => {
       link = options;
       return {
@@ -681,7 +699,7 @@ it("asks the fold once, at the first welcome from a home that lists it", () => {
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     fold,
     link: (options) => {
       link = options;
@@ -731,7 +749,7 @@ it("tells the first mate there when this Mac's window is in front and when it le
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: (options) => {
       caughtUp = options.onCaughtUp;
       return {
@@ -807,7 +825,7 @@ it("answers a panel's settings read from this Mac's own look, asking the other M
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
     onRemoved: () => {},
-    updates: {} as UpdateChecker,
+    updates: unusedUpdates,
     link: () => ({
       start: () => {},
       state: () => ({

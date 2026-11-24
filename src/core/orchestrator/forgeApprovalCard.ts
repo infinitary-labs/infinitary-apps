@@ -78,8 +78,11 @@ export function readerApprovalCard(
   const buildRows = builds.map((ask, index) =>
     buildRowLines(ask, writes.length + index + 1, options.joined?.has(ask.id) === true),
   );
-  const legend = integrationApprovalsButtonLines(undefined).filter(({ choice }) =>
-    (choices as readonly string[]).includes(choice),
+  // Only this time's line speaks of ticked rows; a card of Build rows alone
+  // has none, and its own lines already say what each row's choice files.
+  const legend = integrationApprovalsButtonLines(undefined).filter(
+    ({ choice }) =>
+      (choices as readonly string[]).includes(choice) && (choice !== "once" || writes.length > 0),
   );
   // Writes on one place keep the words that name it; integration calls, or
   // writes on several places, are spoken of as calls; waiting web pages add

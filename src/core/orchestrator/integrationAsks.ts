@@ -329,6 +329,7 @@ export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnsw
     call: sent.call,
     place: sent.place,
     outcome: sent.outcome.kind,
+    ...(sent.ask?.kind === "build" ? { build: true as const } : {}),
     ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
     ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
       ? { why: sent.outcome.why }

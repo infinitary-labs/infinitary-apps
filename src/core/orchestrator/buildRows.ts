@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import type { WorkShape } from "@shared/routingPolicy";
+import { taskTitleRefusal } from "@shared/taskTitle";
 import type { BuildRowAsk, BuildRowChoice, BuildRowStart, WriteAsk } from "@shared/writeAsk";
 import { scanKnowledgeThreat } from "../knowledge/threatScan";
 import type { FollowupInput } from "../session/tools";
@@ -138,6 +139,10 @@ export class BuildRows {
     // i18n-exempt: a tool answer served to the crewmate's model
     if (!title || !goal || !why)
       return "A Build row needs a title, a goal and a why. Nothing was kept.";
+    // The row's title is the task's title when filed: past its room it is refused, never cut.
+    const titleRefused = taskTitleRefusal(title);
+    // i18n-exempt: a tool answer served to the crewmate's model
+    if (titleRefused) return `Nothing was kept. ${titleRefused}`;
     const threat = scanKnowledgeThreat(`${title}\n${goal}\n${why}`);
     // i18n-exempt: a tool answer served to the crewmate's model
     if (threat)

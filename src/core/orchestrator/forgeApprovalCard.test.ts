@@ -90,12 +90,20 @@ describe("the reader's approval card with a Build row", () => {
     // The write keeps its tick and the tally counts it alone.
     expect(all(doc, hasClass("inf-ask"))).toHaveLength(1);
     expect(card.title).toBe("Allow writes on GitHub?");
+    expect(
+      all(all(doc, hasClass("inf-asks-buttons"))[0], (node) => node.name === "dt").map(textOf),
+    ).toEqual(["Only this time", "Not now"]);
   });
 
   it("names the card for Build rows when it holds no write", () => {
     const card = forgeApprovalCard([BUILD], { id: "reader", title: "Triage the issues" });
     expect(card.title).toBe("File tasks from GitHub issues?");
-    expect(all(parse(card.body ?? ""), hasClass("inf-asks-tally"))).toEqual([]);
+    const doc = parse(card.body ?? "");
+    expect(all(doc, hasClass("inf-asks-tally"))).toEqual([]);
+    // No row has a tick, so the legend keeps only Not now's line.
+    expect(
+      all(all(doc, hasClass("inf-asks-buttons"))[0], (node) => node.name === "dt").map(textOf),
+    ).toEqual(["Not now"]);
   });
 
   it("reads each row's pick from the click, and Keep for later where it carries none", () => {

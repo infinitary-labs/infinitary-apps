@@ -30,6 +30,7 @@ import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
+import { buildRowShape, REPRODUCE_RESULT_SCHEMA } from "./buildRows";
 import { READER_DATA_LABEL } from "./readerData";
 import { renderWake } from "./wakes";
 
@@ -1108,5 +1109,42 @@ describe("the task graph (R1)", () => {
     await tick();
     expect(tasks.get(result.task.id)?.parentId).toBeNull();
     expect(crewmate.promptCalls[0]).toContain("The draft is written; tests remain.");
+  });
+
+  // Intent: INF-6426 piece A. A Build row's reproduce step started again is
+  // the same captain-picked step on the same outside issue, and a fix's
+  // closing link is the work's, not its attempt's.
+  it("start again keeps a Build row's reproduce step, its typed result and a fix's issue link", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const url = "https://github.com/octo/meter/issues/7";
+    const step = seedTask(tasks, {
+      id: "dropped-step",
+      title: "Reproduce the negative reading",
+      status: "cancelled",
+      shape: buildRowShape({ start: "reproduce", issue: 7, issueUrl: url }),
+    });
+    const fix = seedTask(tasks, {
+      id: "dropped-fix",
+      title: "Fix the negative reading",
+      status: "cancelled",
+      shape: { kind: "fix", issue: { number: 7, url, closes: true } },
+    });
+    for (const old of [step, fix]) tasks.placement.markWorkspaceRemoved(old.id);
+    const again = (id: string) => {
+      const result = supervisor.starts.startAgain(id);
+      if (!result.ok) throw new Error(result.text);
+      return result.task;
+    };
+    const freshStep = again(step.id);
+    const freshFix = again(fix.id);
+    expect(tasks.get(freshStep.id)?.shape).toMatchObject({
+      kind: "reproduce",
+      kind_source: "firstmate:build-row",
+      deliverable: "answer",
+      internal_step: true,
+      result_schema: REPRODUCE_RESULT_SCHEMA,
+      issue: { number: 7, url },
+    });
+    expect(tasks.get(freshFix.id)?.shape?.issue).toEqual({ number: 7, url, closes: true });
   });
 });

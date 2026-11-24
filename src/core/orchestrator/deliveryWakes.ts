@@ -817,6 +817,8 @@ export type WriteAnswered = {
   status?: number;
   /** `filed`: a Build row's task, by key, and whether the captain asked for its start and what it answered. */
   filed?: { task: string; started: boolean; start?: string };
+  /** The ask was a reader's Build row, asked again through file_followup, never a write. */
+  build?: true;
   why?: string;
   /** The host's answer as github_write renders it, within the gateway's caps. */
   answer?: string;
@@ -880,6 +882,9 @@ export function afterMergeWords(
     .join(" ");
 }
 
+// i18n-exempt: a wake served to the crewmate's model
+const BUILD_ROW_ASK_AGAIN = "To ask again, call file_followup again with its issue and start_as.";
+
 function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string {
   if (facts.web) return webAnsweredWords(facts);
   const allowed = facts.allowed
@@ -895,7 +900,7 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
       ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once. ${facts.place} answered ${facts.status}. It is never sent again; continue from this answer.\n${facts.answer ?? ""}`
       : facts.outcome === "unknown"
         ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once, and what came of it is unknown${because(facts.why)} It is never sent again; read ${facts.place} to see what happened before you do anything that depends on it.`
-        : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing${because(facts.why)} ${facts.to === "firstmate" ? "To ask again, call the integration again with a reason." : "To ask again, make a new write with github_write or call the integration again."}`
+        : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing${because(facts.why)} ${facts.build ? BUILD_ROW_ASK_AGAIN : facts.to === "firstmate" ? "To ask again, call the integration again with a reason." : "To ask again, make a new write with github_write or call the integration again."}`
   }${allowed}`;
 }
 

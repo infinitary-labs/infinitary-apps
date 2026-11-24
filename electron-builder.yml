@@ -165,13 +165,13 @@ mac:
         - universal
   hardenedRuntime: true
   gatekeeperAssess: false
-  # The signing standard (docs/architecture.md section 10):
-  # Developer ID Application, team 9T2J7MNUP9 - the existing certificate,
-  # never a new one. CI restores it into a throwaway keychain; local builds
-  # use electron-builder.dev.yml, which signs with a machine-local
+  # The signing standard (docs/architecture.md section 10): the Developer ID
+  # Application certificate of the team packaging/release-identity.json
+  # names, never a new one. CI restores it into a throwaway keychain; local
+  # builds use electron-builder.dev.yml, which signs with a machine-local
   # self-signed certificate (docs/local-code-signing.md) and never with
   # this one.
-  identity: "Kun Chen (9T2J7MNUP9)"
+  identity: "Infinitary Labs, Inc. (Y44V95NP6K)"
   # Signs as electron-builder would, and gives the app bundle a designated
   # requirement naming every team in packaging/release-identity.json, so an
   # installed copy accepts the next team's update (docs/alpha.md, "Moving

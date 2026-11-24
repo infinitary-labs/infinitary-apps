@@ -9,8 +9,8 @@ import { readPhoneReleaseArchive } from "./phone-release-archive.ts";
 
 export const PHONE = {
   name: "Infinitary",
-  bundle: "com.getinfinitary.infinitary",
-  team: "9T2J7MNUP9",
+  bundle: "com.getinfinitary.app",
+  team: "Y44V95NP6K",
 } as const;
 const APPLE = "https://api.appstoreconnect.apple.com";
 type Environment = Record<string, string | undefined>;

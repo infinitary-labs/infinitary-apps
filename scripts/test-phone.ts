@@ -28,7 +28,7 @@ import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { PHONE_BOOT_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePartNames, devicePhotos, endPhoneGate, firstPhoneLanes, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, PHONE_APP, devicePhotos, endPhoneGate, firstPhoneLanes, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -216,7 +216,7 @@ const run = async (command: string, args: string[], cleanup = false, onLine?: (l
 const demo = phoneRecording(values["raw-demo"] ? "raw" : values.demo ? "encoded" : "off", run);
 // The part's simulator, which the gate started and owns; the part only uses it.
 let simulator: string | undefined = values.simulator;
-const phoneBundle = "com.getinfinitary.infinitary";
+const phoneBundle = PHONE_APP;
 // The UI test runner Xcode installs beside the app, which a part's `xcodebuild` reinstalls.
 const runnerBundle = `${phoneBundle}.uitests.xctrunner`;
 // The processes behind a failed part's photo and card steps: the app, its card pages and Photos.

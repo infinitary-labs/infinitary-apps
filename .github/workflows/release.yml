@@ -134,9 +134,7 @@ concurrency:
   cancel-in-progress: ${{ inputs.dry_run == true }}
 
 env:
-  TEAM_ID: 9T2J7MNUP9
   BUNDLE_ID: com.getinfinitary.infinitary
-  SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
   APP_NAME: "Infinitary.app"
   # The private alpha (roadmap 1.2, docs/alpha.md): the product repository
   # stays private through the beta gate, so the artifact the casks point at
@@ -194,6 +192,9 @@ jobs:
       alpha_run: ${{ steps.verification.outputs.alpha_run }}
       release_repository: ${{ steps.destination.outputs.repository }}
       download_base: ${{ steps.destination.outputs.download_base }}
+      team_id: ${{ steps.signing.outputs.team_id }}
+      sign_identity: ${{ steps.signing.outputs.sign_identity }}
+      signing_secrets: ${{ steps.signing.outputs.signing_secrets }}
     steps:
       - name: Require main for destination releases and rehearsals
         env:
@@ -409,6 +410,21 @@ jobs:
           if (base.protocol !== 'https:' || base.username || base.password || base.pathname !== '/' || base.search || base.hash) throw new Error('Invalid download origin');
           appendFileSync(process.env.GITHUB_OUTPUT, `repository=${c.repository}\ndownload_base=${base.href}\n`);
           JS
+
+      # The Apple team the source names signs it, with the secrets that hold
+      # that team's material, so a stable promoting an alpha an earlier team
+      # signed still signs as that alpha's electron-builder.yml asks. A team
+      # the channel's current release does not accept is refused here, since
+      # its subscribers would refuse the update (docs/alpha.md, "Moving
+      # releases to another Apple team").
+      - name: Read the source's signing team
+        id: signing
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          SOURCE_COMMIT: ${{ steps.resolve.outputs.source_commit }}
+          CHANNEL: ${{ steps.resolve.outputs.channel }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: node scripts/release-signing-team.ts
 
       # A stable inherits its alpha's checks, or is refused. Do not infer
       # assurance from today's workflow or a tag alone: read the published
@@ -743,9 +759,9 @@ jobs:
           DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
           SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
           GH_TOKEN: ${{ github.token }}
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
         run: node scripts/phone-order.ts
 
   release:
@@ -917,9 +933,9 @@ jobs:
       - name: Restore App Store Connect API key
         id: asc-key
         env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets[format('{0}APP_STORE_CONNECT_KEY_ID', needs.resolve.outputs.signing_secrets)] }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets[format('{0}APP_STORE_CONNECT_ISSUER_ID', needs.resolve.outputs.signing_secrets)] }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets[format('{0}APP_STORE_CONNECT_API_KEY', needs.resolve.outputs.signing_secrets)] }}
           KEY_DIR: ${{ runner.temp }}/app-store-connect-key
         run: |
           set -euo pipefail
@@ -945,8 +961,10 @@ jobs:
       - name: Restore Developer ID Application certificate
         id: developer_id_cert
         env:
-          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
-          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
+          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets[format('{0}MAC_DEVELOPER_ID_CERT_P12', needs.resolve.outputs.signing_secrets)] }}
+          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets[format('{0}MAC_DEVELOPER_ID_CERT_PASSWORD', needs.resolve.outputs.signing_secrets)] }}
+          TEAM_ID: ${{ needs.resolve.outputs.team_id }}
+          SIGN_IDENTITY: ${{ needs.resolve.outputs.sign_identity }}
           # The removal step below names the same path, so it removes the
           # keychain even when this step stopped before it said where.
           KEYCHAIN_PATH: ${{ runner.temp }}/infinitary-signing.keychain-db
@@ -1089,8 +1107,8 @@ jobs:
         id: notarize
         env:
           APPLE_API_KEY: ${{ steps.asc-key.outputs.key_path }}
-          APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets[format('{0}APP_STORE_CONNECT_KEY_ID', needs.resolve.outputs.signing_secrets)] }}
+          APPLE_API_ISSUER: ${{ secrets[format('{0}APP_STORE_CONNECT_ISSUER_ID', needs.resolve.outputs.signing_secrets)] }}
         run: |
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/notary" && mkdir -p "$RUNNER_TEMP/notary"
@@ -1161,8 +1179,9 @@ jobs:
           RECORDED_ZIP: ${{ steps.recorded.outputs.zip }}
           CSC_KEYCHAIN: ${{ steps.developer_id_cert.outputs.keychain_path }}
           APPLE_API_KEY: ${{ steps.asc-key.outputs.key_path }}
-          APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets[format('{0}APP_STORE_CONNECT_KEY_ID', needs.resolve.outputs.signing_secrets)] }}
+          APPLE_API_ISSUER: ${{ secrets[format('{0}APP_STORE_CONNECT_ISSUER_ID', needs.resolve.outputs.signing_secrets)] }}
+          SIGN_IDENTITY: ${{ needs.resolve.outputs.sign_identity }}
         run: |
           set -euo pipefail
           WORK="$RUNNER_TEMP/dmg-job"

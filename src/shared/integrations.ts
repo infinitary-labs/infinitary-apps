@@ -330,7 +330,6 @@ export const INTEGRATION_SECRET_WORDS = {
 export const MCP_SIGN_IN_PICKS: readonly IntegrationMcpAdd[] = [
   { name: "Notion", runs: "https://mcp.notion.com/mcp" },
   { name: "Linear", runs: "https://mcp.linear.app/mcp" },
-  { name: "Todoist", runs: "https://ai.todoist.net/mcp" },
 ];
 
 export const INTEGRATIONS_MCP_WORDS = {

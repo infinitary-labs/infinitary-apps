@@ -242,7 +242,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       needs_merge: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "On batched pull requests each blocked_by starts this task at its approval. List those it needs merged, not only their code, such as for a release.",
+            "The blocked_by tasks it needs merged, not only approved, such as for a release.",
         }),
       ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
@@ -301,7 +301,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Drop with drop true and reason; confirm true also supersedes open children. Use replaced_by for replacement, settle_task for started work.",
       "start_now applies edits first, stops on refusals, and starts queued work despite allowance waits.",
       "When the user names a model, pass override_model_id (start_now starts it): it keeps its key and links; never drop it to spawn a replacement.",
-      "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them.",
+      "Explicit captain requests alone authorize delivery/autonomy/rigor edits; don't re-ask. Project resets overrides, omission keeps them. Policy edits never start/restart work.",
       "Local Careful = Default; keep request. No silent PR close or fallback without access.",
     ].join(" "),
     parameters: Type.Object({
@@ -415,7 +415,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then the answered basis's computer, then room), or project to reset. Name a computer only on captain’s words or crew need.",
+            "Before start, for task and parts: computer name/id, this-mac, automatic (model preference, then the answered basis's computer, then room), or project to reset. Name a computer only on captain’s words or reported crew need.",
         }),
       ),
       direction: Type.Optional(
@@ -747,8 +747,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     label: "Link tasks",
     description: [
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
-      "until `from` closes; on batched pull requests `to` starts at `from`'s merge approval unless",
-      "its needs_merge names `from`, and a cycle is refused as text. related: work neither task is waiting on.",
+      "until `from` closes, except on batched pull requests as your wait rule says, and a cycle is refused as text.",
+      "related: work neither task is waiting on.",
       "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now: `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",
     ].join(" "),

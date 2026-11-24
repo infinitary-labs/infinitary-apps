@@ -41,7 +41,7 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your branch as a GitHub pull request, GitLab merge request, or pushed branch on a plain Git host.",
   "On GitHub or GitLab, push first; the app's sign-in answers the host.",
-  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR: report the blocker. Other hosts publish text; plain Git keeps the story on its card.",
+  "Native-media hosts upload inspected media before opening or replacing a story, unless the host marks it card-only. A failed or uncertain upload opens no PR: report the blocker, never omit evidence. Other hosts publish text; plain Git keeps the story on its card.",
   "body replaces the description; the answer reads it back. A saved-story replacement preserves surrounding text; change it with around.",
 ].join(" ");
 
@@ -54,7 +54,7 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "Read the latest pull request's checks, runs, workflows, events, mergeability and version changes. facts.main: the failed check's latest default-branch run, evidence of cause, never a merge input.",
-  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome.",
+  "The merge card signals readiness. Checks hold merges; the captain authorizes them separately. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome; explain renamed jobs.",
   "repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw readings never settle a repair.",
   "Empty or all-skipped hosted readings stay pending. absentChecks records positive no-CI evidence from trusted default-branch policy and the local gate, with pull or on your own PR; time, history or missing workflows prove nothing.",
   "The app wakes you on first failure and completion of watched checks; end your turn. No watchable checks means no wake.",
@@ -63,16 +63,13 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
 ].join(" ");
 
 /**
- * The batch parameter's own words: the answers to a held batch a Claude
- * crewmate must see are here (docs/forge.md, "Batches of your own"). What
- * follows each answer, and a flake's owner, are the batch-repair
- * skill's, which the repair task's brief names.
+ * The batch parameter's own words. What each answer means, and what follows
+ * it, is the batch-repair skill's, which the repair task's brief names and
+ * its crewmate reads before declaring (docs/forge.md, "Batches of your own").
  */
 export const BATCH_DECLARATION_DESCRIPTION = [
-  "From the task repairing a held batch in your project (batch-repair skill): fix true makes your own change its fix, which joins the batch and ends the hold once approved;",
-  "sendBack names each change at fault by task key, with the reason its crewmate reads; it keeps its approval, and its crewmate's repair goes back in line if declared unchanged or comes back on a new merge card if changed;",
-  "passed, never beside sendBack, names the held version when a rerun passed its failed checks: it merges once its other checks pass, and a fix you declare goes to the next batch;",
-  "evidence accounts for every failed test against every change. Give fix, sendBack, passed, or fix with one of them (with sendBack, the batch stays held until your fix joins).",
+  "From the task repairing a held batch in your project, declared as the batch-repair skill says, which you read first: fix true makes your own change its fix; sendBack names each change at fault by task key, with the reason its crewmate reads; passed, never beside sendBack, names the held version when a rerun passed its failed checks;",
+  "evidence accounts for every failed test against every change. Give fix, sendBack, passed, or fix with one of them.",
 ].join(" ");
 
 /**

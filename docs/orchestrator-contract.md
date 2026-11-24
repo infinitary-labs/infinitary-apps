@@ -200,6 +200,7 @@ It runs at the Careful level on the strongest model, so a second crewmate review
      A passage moves to a page read when needed, such as a runbook skill or a tool the agent opens for that work, only when it is conditionally useful, never because it is long.
      It leaves one sentence in the always-served text saying when to open its page.
      A refusal the agent meets only after the mistake is never the new home of a rule.
+     The first mate reads no skills: its pages read when needed are the wakes that bring the work, and a test holds most of their words, so a move into one is a change of its own.
   2. Remove true repeats, quoting the copy that stays.
   3. Shorten a sentence only when its meaning is unchanged.
 - **Its target.**

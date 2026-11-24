@@ -239,6 +239,19 @@ export const START_PROGRAM_TOOL = crewmateTool({
     })),
 });
 
+/**
+ * The validation record's whole shape, which the careful-change skill keeps
+ * as validation-shape.json (`scripts/generate-validation-shape.ts`) so the
+ * report tool need not serve it to every crewmate.
+ */
+export const VALIDATION_SHAPE = zodParameter<LiveValidationInput>(liveValidationInputSchema, {
+  dropPatterns: true,
+});
+
+/** Where a crewmate reads that shape, before it writes a record. */
+export const VALIDATION_SHAPE_POINTER =
+  "Before writing one, read its JSON Schema, validation-shape.json in the careful-change skill.";
+
 export const REPORT_TOOL = crewmateTool({
   name: REPORT_TOOL_NAME,
   label: "Report",
@@ -292,11 +305,13 @@ export const REPORT_TOOL = crewmateTool({
         },
       ),
     ),
+    // Only validation work writes one, so its shape is the careful-change
+    // skill's validation-shape.json (VALIDATION_SHAPE), not this schema; the
+    // host parses each with liveValidationInputSchema.
     validation: Type.Optional(
-      zodParameter<LiveValidationInput>(liveValidationInputSchema, {
-        dropPatterns: true,
-        description:
-          "Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.",
+      Type.Unsafe<LiveValidationInput>({
+        type: "object",
+        description: `Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. ${VALIDATION_SHAPE_POINTER} Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.`,
       }),
     ),
     text: Type.String({

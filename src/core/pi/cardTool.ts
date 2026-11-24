@@ -743,7 +743,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   "The app pauses your browser before the card goes up; its commands refuse until the captain returns control, and only their Return control resumes you, once, with your earlier refs gone. Put the steps and values to copy in the card body.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
-  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
+  `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
   "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it; ask the captain.",
   UNKNOWN_OUTCOME_WORDS,

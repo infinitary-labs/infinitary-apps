@@ -1,0 +1,606 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "plan"
+        },
+        "previousRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string"
+        },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "importance": {
+                "type": "string",
+                "enum": [
+                  "required",
+                  "supplementary"
+                ]
+              },
+              "action": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "adverse": {
+                "type": "string"
+              },
+              "environment": {
+                "type": "string"
+              },
+              "signal": {
+                "type": "string"
+              },
+              "boundary": {
+                "type": "string"
+              },
+              "resources": {
+                "type": "string"
+              },
+              "cost": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "source",
+              "importance",
+              "action",
+              "expected",
+              "adverse",
+              "environment",
+              "signal",
+              "boundary"
+            ]
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "previousRevision",
+        "reason",
+        "scenarios"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "run"
+        },
+        "id": {
+          "type": "string"
+        },
+        "head": {
+          "type": "string"
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completion": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "interrupted",
+            "unknown"
+          ]
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "go",
+            "no-go",
+            "inconclusive",
+            "no-surface"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scenario": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "untested"
+                ]
+              },
+              "live": {
+                "type": "boolean"
+              },
+              "actual": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "standIns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "unproven": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "attempted": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "missingCapability": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "scenario",
+              "result",
+              "live",
+              "actual",
+              "evidence",
+              "standIns",
+              "unproven",
+              "attempted"
+            ]
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "poster": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "path",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "head",
+        "scenarioRevision",
+        "completion",
+        "verdict",
+        "reason",
+        "observations",
+        "evidence"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "review"
+        },
+        "head": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "clear",
+            "findings",
+            "blocked"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info"
+                ]
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "auto-fix",
+                  "ask-user",
+                  "no-op"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "severity",
+              "text",
+              "action"
+            ]
+          }
+        },
+        "risk": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "why": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "level",
+            "why"
+          ]
+        },
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "missing"
+          ]
+        },
+        "coverageReason": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "omitted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "go",
+            "no-go",
+            "inconclusive",
+            "no-surface"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "head",
+        "revision",
+        "code",
+        "coverage",
+        "coverageReason",
+        "effects",
+        "omitted",
+        "verdict",
+        "reason"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "request"
+        },
+        "request": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "effect"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "head": {
+                  "type": "string"
+                },
+                "scenario": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "audience": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "captain-only",
+                    "others",
+                    "uncertain"
+                  ]
+                },
+                "persistent": {
+                  "type": "boolean"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "lastingEffects": {
+                  "type": "string"
+                },
+                "cleanup": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "string"
+                },
+                "preChange": {
+                  "type": "boolean"
+                },
+                "prerequisitePublication": {
+                  "type": "boolean"
+                },
+                "publication": {
+                  "type": "object",
+                  "properties": {
+                    "repoId": {
+                      "type": "string"
+                    },
+                    "branch": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "repoId",
+                    "branch"
+                  ]
+                },
+                "forgeWrite": {
+                  "type": "object",
+                  "properties": {
+                    "host": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "POST",
+                        "PATCH",
+                        "PUT",
+                        "DELETE"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "bodyDigest": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "host",
+                    "method",
+                    "path"
+                  ]
+                },
+                "allowance": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "head",
+                "scenario",
+                "action",
+                "destination",
+                "audience",
+                "visibility",
+                "persistent",
+                "purpose",
+                "lastingEffects",
+                "cleanup",
+                "access",
+                "preChange",
+                "prerequisitePublication"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "gap"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "head": {
+                  "type": "string"
+                },
+                "scenario": {
+                  "type": "string"
+                },
+                "missingCapability": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "alternatives": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "attempted": {
+                        "type": "string"
+                      },
+                      "result": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "attempted",
+                      "result"
+                    ]
+                  }
+                },
+                "remedies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "head",
+                "scenario",
+                "missingCapability",
+                "reason",
+                "alternatives",
+                "remedies"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "check"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "head": {
+                  "type": "string"
+                },
+                "scenario": {
+                  "type": "string"
+                },
+                "allowance": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "head",
+                "scenario"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "request"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "effect-state"
+        },
+        "request": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "started",
+            "succeeded",
+            "failed",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "request",
+        "state",
+        "evidence"
+      ]
+    }
+  ]
+}

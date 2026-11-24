@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "move-conditional-prompt-text",
+      "reason": "This change moves instructions only some agent work needs into the pages that work reads, and puts back sentences earlier shortening removed; nothing a person sees in the app changes."
+    }
+  ]
+}

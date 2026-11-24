@@ -431,7 +431,7 @@ A development run may stand in the publisher check with `INFINITARY_CODESIGN`; a
 
 ### Saving its work before an update
 
-A run whose hello lists `work-update-saving` saves its own crew's work before its home updates it, by any of the home's routes, the way the home's own update saves the home's work (`SessionHost.saveForUpdate`, `src/core/helper/sessionHost.ts`; `docs/alpha.md`, "Saving work before an update").
+A run whose hello lists `work-update-saving` saves its own crew's work before its home updates it, by any of the home's routes, the way the home's own update saves the home's work (`UpdateSaves.saveForUpdate`, `src/core/helper/updateSaves.ts`; `docs/alpha.md`, "Saving work before an update").
 This computer, not the home, decides when its work is saved:
 
 1. The home asks `inf:session:save-for-update` once the update goes ahead.

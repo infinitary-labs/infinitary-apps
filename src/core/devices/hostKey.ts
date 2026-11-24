@@ -176,14 +176,17 @@ function scan(host: string, port: number): Promise<HostKeyRead> {
     const chosen = preferHostKey(keys);
     if (chosen) return chosen;
     if (hostPlatform() === "win32" && /unsupported KEX method/i.test(ran.stderr))
-      return readWithWindowsSsh(host, port);
+      return readWithSystemSsh(host, port);
     // macOS ssh-keyscan says "Broken pipe" when nothing answers the port.
     if (/Connection refused|connect\(\) failed|Connection reset|Broken pipe/i.test(ran.stderr))
       return { refusal: "remote-login-off" };
     // A Mac never dials it itself, which its local network privacy would
-    // ask, so it cannot tell a silent port from one that sent no key.
-    if (hostPlatform() === "darwin")
-      return { refusal: "unreachable", reach: { step: "key", port } };
+    // ask. Its ssh-keyscan ends without a word when its wait reports the
+    // refused connection as a hang-up rather than as something to read, as
+    // on GitHub's busy macOS 15 Mac (INF-6336), so the system's own ssh asks
+    // again: it names a refused connection itself, and cannot tell a silent
+    // port from one that sent no key either.
+    if (hostPlatform() === "darwin") return readWithSystemSsh(host, port);
     // Linux's and Windows' say nothing when the port is refused, so it is
     // asked once itself; what answers there tells the rest apart.
     const answer = await portAnswer(host, port);
@@ -200,16 +203,17 @@ function scan(host: string, port: number): Promise<HostKeyRead> {
 }
 
 /**
- * The key a server answers Windows' own ssh.exe with, for the server
- * Windows' own ssh-keyscan.exe cannot read: that ssh-keyscan offers a key
+ * The key a server answers the system's own ssh with, where its
+ * ssh-keyscan read none: Windows' own ssh-keyscan.exe offers a key
  * exchange it cannot finish (sntrup761x25519), which every OpenSSH server
- * from 8.5 on picks, so it stops before any key. Windows' ssh.exe does not
- * offer it. It reads no SSH settings, writes the one key it was offered to
- * a known-hosts file of its own, and offers no key and no password, so it
+ * from 8.5 on picks, so it stops before any key, and Windows' ssh.exe does
+ * not offer it; a Mac's ssh-keyscan can end on a refused port without a
+ * word. It reads no SSH settings, writes the one key it was offered to a
+ * known-hosts file of its own, and offers no key and no password, so it
  * stops before it signs in; a server that lets anyone in with no key at all
  * runs only `exit`.
  */
-function readWithWindowsSsh(host: string, port: number): Promise<HostKeyRead> {
+function readWithSystemSsh(host: string, port: number): Promise<HostKeyRead> {
   const dir = mkdtempSync(join(tmpdir(), "infinitary-host-key-"));
   const offered = join(dir, "offered");
   const none = join(dir, "none");
@@ -292,7 +296,8 @@ function readWithWindowsSsh(host: string, port: number): Promise<HostKeyRead> {
     );
     if (chosen) return chosen;
     if (/Connection refused/i.test(ran.stderr)) return { refusal: "remote-login-off" };
-    // Its ssh-keyscan already reached an SSH server there, so this says the port and no more.
+    // Windows' ssh-keyscan already reached an SSH server there, and a Mac never dials the
+    // port itself, so this says the port and no more.
     return { refusal: "unreachable", reach: { step: "key", port } };
   });
 }

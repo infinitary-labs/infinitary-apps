@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "mac-refused-port-says-ssh-off",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Adding a computer from a busy Mac says to turn on Remote Login",
+      "body": "When you add a computer by its address and nothing answers over Remote Login there, a busy Mac sometimes said only that it could not read that computer's SSH key. It now says the computer did not answer over Remote Login and how to turn it on, as a less busy Mac already did.",
+      "noPicture": "The existing Remote Login refusal is shown in place of the unreachable words; no view changes how it looks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

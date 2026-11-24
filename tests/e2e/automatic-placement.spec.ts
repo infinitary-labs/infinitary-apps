@@ -50,6 +50,17 @@ import { pressKey, pressWindowKey, typeInto } from "./windowKeys";
  */
 
 const PROJECT = "ledger";
+const PROJECT_ID = "repo-ledger";
+
+/**
+ * The size the project declares for its tasks. The journey proves the wait
+ * and the start against this computer's own memory, so the task asks only
+ * for room every computer the suite runs on has spare beside the app and
+ * the suite: a standard task asks 2 GiB above the margin, and GitHub's 7 GB
+ * Mac read 1.98 GiB there (INF-6336). Counting only empty pages (FI3-1733)
+ * still leaves no room even for this size.
+ */
+const PROFILE = "conversation";
 
 /**
  * The words a task waits with while the sampler reads too little spare
@@ -57,7 +68,7 @@ const PROJECT = "ledger";
  */
 const BUSY_WAIT = placementWait(
   [{ name: HERE.This, rejections: ["cpu-busy"], capacity: null }],
-  PLACEMENT_DEMANDS.standard,
+  PLACEMENT_DEMANDS[PROFILE],
 ).words;
 
 /**
@@ -72,7 +83,7 @@ const UNREAD_WAITS = (["resources-unknown", "resources-stale"] as const).map(
   (reason) =>
     placementWait(
       [{ name: HERE.This, rejections: [reason], capacity: null }],
-      PLACEMENT_DEMANDS.standard,
+      PLACEMENT_DEMANDS[PROFILE],
     ).words,
 );
 
@@ -215,7 +226,7 @@ function seedAutomaticProject(userDataDir: string, throughVersion?: number): voi
   const { repoDir } = seedRepo(userDataDir);
   const db = openDatabase(userDataDir, throughVersion);
   seedProject(db, {
-    id: "repo-ledger",
+    id: PROJECT_ID,
     path: repoDir,
     name: PROJECT,
     setupKind: "clone",
@@ -226,6 +237,16 @@ function seedAutomaticProject(userDataDir: string, throughVersion?: number): voi
   });
   seedHostedOrigins(db, userDataDir);
   db.close();
+}
+
+/** The project's tasks declare `PROFILE`, as a person's Computer requirements setting saves it. */
+async function declareProfile(app: LaunchedApp): Promise<void> {
+  const repo = await app.page.evaluate(
+    ([id, profile]) =>
+      window.infinitary.repos.configure(id, { placementRequirements: { profile } }),
+    [PROJECT_ID, PROFILE] as const,
+  );
+  expect(repo.placementRequirements).toEqual({ profile: PROFILE });
 }
 
 async function askForTask(app: LaunchedApp): Promise<{ key: string; id: string | undefined }> {
@@ -267,6 +288,7 @@ test("a new task in an Automatic project waits for CPU room, then starts with th
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
   try {
+    await declareProfile(app);
     const release = await holdCpuBusy(app);
     const asked = await askForTask(app);
     const { key } = asked;
@@ -317,6 +339,7 @@ test("a new task in an Automatic project whose routing names no model starts on 
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
   try {
+    await declareProfile(app);
     const release = await holdCpuBusy(app);
     const asked = await askForTask(app);
     id = asked.id;

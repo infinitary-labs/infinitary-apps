@@ -83,6 +83,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | inspector | التفاصيل | The side pane that shows one entry. |
 | Integrations | التكاملات | |
 | Intelligence | الذكاء | |
+| issue (where the project lives) | بلاغ | |
 | job (one a computer's scheduler keeps running) | عملية | Plural "عمليات"; kept apart from "مهمة", a task. |
 | key (an integration's key) | مفتاح | Also a keyboard key; the sentence makes it clear. |
 | knowledge (Knowledge used) | المعرفة | "المعرفة المستخدمة"; a finding is "نتيجة" and a concept "مفهوم". |

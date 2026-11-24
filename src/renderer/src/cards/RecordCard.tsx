@@ -394,7 +394,7 @@ export function RecordCard({
               lead={
                 <>
                   <RecordDelivered detail={shown} />
-                  <RecordRelations detail={shown} parentKey={parentKey} />
+                  <RecordRelations detail={shown} parentKey={parentKey} onOpenLink={openLink} />
                   <RecordGoal detail={shown} open={wordsOpen} onToggle={toggleWords} />
                 </>
               }

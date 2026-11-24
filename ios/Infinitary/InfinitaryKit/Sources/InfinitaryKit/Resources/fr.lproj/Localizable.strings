@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "Rien ne répond sur %1$@, donc Infinitary le relance. La page s’affiche ici dès qu’il répond.";
 "cardBrowserUnansweredWorking" = "Rien ne répond sur %1$@, et l’équipier travaille en ce moment. La page s’affiche ici dès qu’il répond.";
 "cardBrowserWord" = "Navigateur";
+"cardBuildRowChoice" = "Quand la démarrer";
+"cardBuildRowGoal" = "Objectif";
+"cardBuildRowIssue" = "Ticket #%1$@";
+"cardBuildRowLater" = "Garder pour plus tard";
+"cardBuildRowPlan" = "Planifier d’abord";
+"cardBuildRowReproduce" = "Reproduire d’abord";
+"cardBuildRowSkip" = "Ne pas classer";
+"cardBuildRowStart" = "Démarrer maintenant";
+"cardBuildRowWhy" = "Pourquoi";
+"cardBuildRowsHow" = "Une ligne Build ne classe sa tâche que si vous approuvez cette carte. Démarrer maintenant la classe et la démarre, Garder pour plus tard la classe sans la démarrer et Ne pas classer l’écarte.";
+"cardBuildRowsLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire : chaque tâche qu’il propose attend donc votre décision. Chaque ligne Build montre la consigne que recevrait son équipier.";
+"cardBuildRowsTitle" = "Classer des tâches à partir des tickets %1$@ ?";
 "cardConsentChanges" = "Modifie";
 "cardConsentChangesDetail" = "Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.";
 "cardConsentChangesLine" = "Peut modifier un réglage quand vous cliquez : %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "pourquoi il n’y avait pas de plan";
 "cardRecordGoal" = "Objectif";
 "cardRecordHoldsUp" = "Bloque";
+"cardRecordIssue" = "Ticket";
 "cardRecordLoading" = "Chargement";
 "cardRecordNoPlanWhy" = "Pourquoi votre second a construit sans plan";
 "cardRecordNoReason" = "Aucune raison n’a été enregistrée.";
@@ -1014,6 +1027,9 @@
 "feedBatchRetried" = "%2$@ : %1$@ a été regroupé de nouveau et ses vérifications s’exécutent de nouveau.";
 "feedBatchSentBack" = "%1$@ : « %3$@ » a été renvoyée de son lot : %2$@";
 "feedBranchPushed" = "Branche poussée";
+"feedBuildRowKept" = "« %2$@ » classée comme %1$@ pour plus tard.";
+"feedBuildRowNotFiled" = "« %1$@ » n’a pas été classée.";
+"feedBuildRowStarted" = "« %2$@ » classée comme %1$@ et démarrée.";
 "feedBuiltInPlace" = "Construite sur place";
 "feedByCaptain" = "Capitaine · ";
 "feedByCaptainInPanel" = "Capitaine, dans le panneau %1$@ · ";

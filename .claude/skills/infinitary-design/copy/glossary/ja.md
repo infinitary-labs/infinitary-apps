@@ -84,6 +84,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | inspector | インスペクター | The Knowledge pane that reads one entry. |
 | Integrations | 連携 | Settings section name. |
 | Intelligence | インテリジェンス | Settings section name. |
+| issue (where the project lives) | Issue | As GitHub's Japanese pages keep it. |
 | join (the phone joins a computer) | 接続する | 「{computer} に接続しますか？」 |
 | key (an integration's key) | キー | 「Linear キー」; never シークレット or トークン. |
 | Knowledge (the panel) | ナレッジ | The panel's name; 知識 reads as schooling. |

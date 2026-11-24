@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "Nothing answers at %1$@, so Infinitary is starting it again. The page shows here once it answers.";
 "cardBrowserUnansweredWorking" = "Nothing answers at %1$@, and its crewmate is working now. The page shows here once it answers.";
 "cardBrowserWord" = "Browser";
+"cardBuildRowChoice" = "When to start it";
+"cardBuildRowGoal" = "Goal";
+"cardBuildRowIssue" = "Issue #%1$@";
+"cardBuildRowLater" = "Keep for later";
+"cardBuildRowPlan" = "Plan first";
+"cardBuildRowReproduce" = "Reproduce first";
+"cardBuildRowSkip" = "Don't file";
+"cardBuildRowStart" = "Start now";
+"cardBuildRowWhy" = "Why";
+"cardBuildRowsHow" = "A Build row files its task only when you approve this card. Start now files and starts it, Keep for later files it without starting, and Don't file drops it.";
+"cardBuildRowsLead" = "The crewmate on “%1$@” reads words anyone can write, so each task it proposes waits for you. Each Build row shows the brief its crewmate would get.";
+"cardBuildRowsTitle" = "File tasks from %1$@ issues?";
 "cardConsentChanges" = "Changes";
 "cardConsentChangesDetail" = "These settings, each only when you click or press a key in the panel. It never deletes anything.";
 "cardConsentChangesLine" = "Can change a setting when you click: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "why there was no plan";
 "cardRecordGoal" = "Goal";
 "cardRecordHoldsUp" = "Holds up";
+"cardRecordIssue" = "Issue";
 "cardRecordLoading" = "Loading";
 "cardRecordNoPlanWhy" = "Why your first mate built without a plan";
 "cardRecordNoReason" = "No reason was recorded.";
@@ -1014,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@ was combined again and its checks run again.";
 "feedBatchSentBack" = "%1$@: \"%3$@\" was sent back from its batch: %2$@";
 "feedBranchPushed" = "Pushed the branch";
+"feedBuildRowKept" = "Filed “%2$@” as %1$@ for later.";
+"feedBuildRowNotFiled" = "Did not file “%1$@”.";
+"feedBuildRowStarted" = "Filed “%2$@” as %1$@ and started it.";
 "feedBuiltInPlace" = "Built in place";
 "feedByCaptain" = "Captain · ";
 "feedByCaptainInPanel" = "Captain, in the %1$@ panel · ";

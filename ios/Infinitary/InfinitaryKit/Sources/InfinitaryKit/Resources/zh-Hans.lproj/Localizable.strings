@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "%1$@ 没有响应，Infinitary 正在重新启动它。它一响应，页面就会显示在这里。";
 "cardBrowserUnansweredWorking" = "%1$@ 没有响应，船员正在工作。它一响应，页面就会显示在这里。";
 "cardBrowserWord" = "浏览器";
+"cardBuildRowChoice" = "何时开始";
+"cardBuildRowGoal" = "目标";
+"cardBuildRowIssue" = "议题 #%1$@";
+"cardBuildRowLater" = "留待以后";
+"cardBuildRowPlan" = "先规划";
+"cardBuildRowReproduce" = "先复现";
+"cardBuildRowSkip" = "不放入";
+"cardBuildRowStart" = "立即开始";
+"cardBuildRowWhy" = "原因";
+"cardBuildRowsHow" = "只有在你批准这张卡片时，Build 行才会创建任务。立即开始会创建并开始它，留待以后会把它放入待办，不放入会放弃它。";
+"cardBuildRowsLead" = "“%1$@”上的船员会读取任何人都能写的内容，所以它提议的每个任务都要等你决定。每个 Build 行显示其船员将收到的说明。";
+"cardBuildRowsTitle" = "根据 %1$@ 上的议题创建任务吗？";
 "cardConsentChanges" = "更改";
 "cardConsentChangesDetail" = "这些设置，每次仅在你于面板中点击或按键时更改。它从不删除任何内容。";
 "cardConsentChangesLine" = "在你点击时可更改设置：%1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "为什么没有计划";
 "cardRecordGoal" = "目标";
 "cardRecordHoldsUp" = "阻挡";
+"cardRecordIssue" = "议题";
 "cardRecordLoading" = "正在载入";
 "cardRecordNoPlanWhy" = "你的大副为什么没有计划就开始构建";
 "cardRecordNoReason" = "没有记录原因。";
@@ -1014,6 +1027,9 @@
 "feedBatchRetried" = "%2$@：%1$@ 已重新合成，检查会再次运行。";
 "feedBatchSentBack" = "%1$@：“%3$@”已从这批改动中退回：%2$@";
 "feedBranchPushed" = "已推送分支";
+"feedBuildRowKept" = "已将“%2$@”创建为 %1$@，留待以后。";
+"feedBuildRowNotFiled" = "未放入“%1$@”。";
+"feedBuildRowStarted" = "已将“%2$@”创建为 %1$@ 并开始。";
 "feedBuiltInPlace" = "已就地构建";
 "feedByCaptain" = "船长 · ";
 "feedByCaptainInPanel" = "船长，在 %1$@ 面板中 · ";

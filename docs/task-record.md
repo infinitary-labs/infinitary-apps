@@ -618,7 +618,7 @@ The window draws its overview from the shared task facts (`TaskFactRows`, `TaskF
 
 1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
 2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
-3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts (`RecordRelations`).
+3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts, and the outside issue it answers as a link under Issue (`RecordRelations`; `docs/agents-reach.md`, "A reader's Build rows").
 4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
    The title stays the task's one line in the chrome.
 5. Project, Now, Progress and the Browser line, as the summary draws them.

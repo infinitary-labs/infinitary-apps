@@ -65,6 +65,8 @@ export function writeAskStrip(ask: WriteAsk): string {
       `<div class="inf-call-line" data-inf-call-line>${escapeCardText(`GET ${ask.url}`)}</div>`,
       "</div>",
     ].join("");
+  // A Build row is drawn only on its approval card, which no crewmate card repeats.
+  if (ask.kind === "build") return "";
   if (ask.feedback) return feedbackAskStrip(ask, ask.feedback);
   let body = ask.body;
   if (body !== undefined) {

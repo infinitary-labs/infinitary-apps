@@ -527,6 +527,14 @@ export type CrewSupervisorOptions = {
   /** An unsafe data reader's `web_read` (`ReaderWebService.read`). */
   webRead?: (taskId: string, input: WebReadInput, signal?: AbortSignal) => Promise<string>;
   /**
+   * Whether a number is an open issue of an unsafe data reader's own project
+   * (`GithubGatewayService.readerOpenIssue`), before its Build row is kept.
+   */
+  readerOpenIssue?: (
+    taskId: string,
+    issue: number,
+  ) => Promise<{ url: string; place: string } | { refused: string }>;
+  /**
    * The check watch's quiet read (`ChangeChecks.readWatched`, docs/forge.md
    * "The check watch"): the host reads a watched change's checks on the
    * shared tick, wakes the crewmate on the first failed check, and wakes it

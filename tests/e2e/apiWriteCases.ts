@@ -6,6 +6,7 @@ import {
 import { savedDeliveryReader } from "../../src/core/storage/taskDeliveryFields";
 import { taskReadTable } from "../../src/core/storage/taskRecordFields";
 import type { WriteAsk } from "../../src/shared/writeAsk";
+import { STUB_OPEN_ISSUE } from "./githubStub";
 import { readSavedData } from "./savedData";
 
 export const API_WRITE_GUARD_MARKER = "check the merge API guard";
@@ -154,6 +155,15 @@ export const UNSAFE_DATA_READER_OTHER_PAGE = "https://forum.meterlab.example/t/i
 export const UNSAFE_DATA_READER_PAGE_WORDS = {
   named: "A cold start idles for ninety seconds while the meter warms.",
   other: "Someone else saw the idle after a firmware update.",
+};
+
+/** The Build row an unsafe data reader proposes on its project's open issue, a bug to reproduce first. */
+export const UNSAFE_DATA_READER_BUILD_ROW = {
+  title: "Reproduce the meter's stuck reading",
+  goal: "The meter's reading updates within a minute after the meter wakes from sleep.",
+  why: "The issue's reporter sees the same reading for an hour after the meter wakes.",
+  issue: STUB_OPEN_ISSUE,
+  start_as: "reproduce",
 };
 
 /** What an unsafe data reader's first report asks of the first mate, which reaches it marked. */

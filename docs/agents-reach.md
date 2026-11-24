@@ -147,3 +147,22 @@ What it says reaches the first mate between `reader-data` marks (`src/core/orche
   That split rests on the frame's own report, so a reader's card carries no script, which could set a field or rewrite the answers the frame sends (`CrewmateCards.crewmateCardWrite`).
 - A card's saved words are marked the same way on every read: the fence is a keyed digest under a secret the process draws once (`readerSavedAnswer`), so the context, which sends only what changed, leaves an unchanged reader card out, and the by-key read still shows a body its newest card and closing choice share once.
 - Its report refuses `recovery_ways`, `work_wait`, `result` and `check_back`, and a reader takes no `result_schema`: each is free text the host would pass on unmarked, so what it would say goes in the report's own words.
+
+### A reader's Build rows
+
+A reader proposes work on an open issue of its own project with `file_followup`'s `issue` and `start_as`: `reproduce` for a bug, `plan` for an idea.
+The host keeps it as a Build row on the reader's approval card instead of filing it (`BuildRows`, `src/core/orchestrator/buildRows.ts`); a follow-up with neither field is filed at once, marked as above.
+
+- The host refuses a row whose number is not an open issue of its own project, read once through the project's own sign-in (`GithubGatewayService.readerOpenIssue`), a row whose words `scanKnowledgeThreat` flags, one whose title is past a task title's room, and one with `blocks_me`, `test_failure` or `test_path`; the reader hears why and writes it again.
+  Build rows are offered on GitHub only.
+- A row is a `WriteAsk` of kind `build` (`src/shared/writeAsk.ts`): it joins the task's waiting card of writes, counts toward the same cap, and is drawn with its title, the issue as a link, Reproduce first or Plan first, its goal and why whole, and one choice that arrives on Keep for later (`forgeApprovalCard`).
+- On Only this time, Start now files the task and asks for its start as the captain's Start does, so the first mate's directions apply; Keep for later files it on request; Don't file files nothing; Not now files none of them (`BuildRows.answer`).
+  The reader hears which in its `write-answered` steer, which marks the ask as a Build row so a row not filed is asked again with `file_followup`, never as a write.
+- The filed task's brief is the row's goal and why as the captain read them, one line on where they come from, and how it starts (`buildRowBrief`); it carries no issue number or link, and the record keeps the reader's goal and why marked as every reader follow-up's.
+- A bug files as a read-only internal reproduce step whose report fits a typed result: whether it reproduced, the version tried, and a question for the reporter when one is needed (`REPRODUCE_RESULT_SCHEMA`).
+  An idea files as a read-only plan step that designs for the underlying problem, not the literal ask.
+- The record keeps the issue as a typed link on the task's shape (`WorkShape.issue`), drawn on its record's Info tab.
+  A task built on a linked step carries it: a fix built on its reproduce step closes the issue, and each piece built on its plan is part of it, the first mate marking the last piece with `closes_issue`.
+  Where the change is published, its description says Closes #N or Part of #N ("A change that answers an issue" in `docs/forge.md`).
+  Start again on a dropped linked task keeps its issue link, and on a Build row's step its kind and typed result too.
+- Every reader's brief lists the tasks of its project linked to an issue, newest first, with each one's key, kind, state and typed result and nothing else (`linkedIssuesSection`), so it proposes no row an open task already answers.

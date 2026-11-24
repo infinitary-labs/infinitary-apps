@@ -81,6 +81,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | Infinitary | Infinitary | Never translated. |
 | Integrations | Integrationen | The Settings section; one of them is "eine Integration". |
 | Intelligence | Intelligenz | |
+| issue (where the project lives) | Issue | As GitHub's German pages keep it. |
 | join (the phone joins a computer) | sich mit … verbinden | "Mit {computer} verbinden?", "Erneut verbinden"; reads more naturally than "beitreten". |
 | key (an integration's key) | Schlüssel | "Linear-Schlüssel", "API-Schlüssel". |
 | Knowledge (panel) | Wissen | "Wissen öffnen" |

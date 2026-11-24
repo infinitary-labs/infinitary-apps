@@ -1,3 +1,4 @@
+import type { ForgeKind } from "@shared/forge";
 import { BATCH_STORIES_MARKER, presentationMarkdownText } from "../forge";
 
 /**
@@ -8,7 +9,34 @@ import { BATCH_STORIES_MARKER, presentationMarkdownText } from "../forge";
 export type BatchLimits = { description: number; comment: number };
 
 /** A change of the batch, in its order, with its story when it could be written. */
-export type BatchEntry = { title: string; region?: string };
+export type BatchEntry = { title: string; region?: string; issue?: string };
+
+/** The outside issue a change answers (`WorkShape.issue`): closed by a fix or a plan's last piece. */
+export type ChangeIssue = { number: number; closes?: boolean };
+
+/**
+ * The words that link a published change to the outside issue it answers
+ * (docs/forge.md, "A change that answers an issue"): Closes #N for a change
+ * that closes it, Part of #N for any other, on a host whose issues read
+ * them - GitHub, the one host a reader's Build row files from.
+ */
+export function issueLine(issue: ChangeIssue | undefined, kind: ForgeKind): string | undefined {
+  if (!issue || kind !== "github") return undefined;
+  // i18n-exempt: GitHub's own closing keywords, read where the project lives
+  return issue.closes ? `Closes #${issue.number}` : `Part of #${issue.number}`;
+}
+
+/** Each change's title and the line linking it to its outside issue, where the host reads one. */
+export function batchEntries(
+  members: readonly { taskId: string; title: string }[],
+  issueOf: ((taskId: string) => ChangeIssue | undefined) | undefined,
+  kind: ForgeKind,
+): BatchEntry[] {
+  return members.map((member) => {
+    const issue = issueLine(issueOf?.(member.taskId), kind);
+    return { title: member.title, ...(issue ? { issue } : {}) };
+  });
+}
 
 export type BatchDescription = {
   body: string;
@@ -33,8 +61,8 @@ export const BATCH_DESCRIPTION_WORDS = {
 } as const;
 
 /** A batch's changes as a list, in order: in its description and in its squash commit's message. */
-export const batchList = (titles: readonly string[]) =>
-  titles.map((title) => `- ${title}`).join("\n");
+export const batchList = (entries: readonly Pick<BatchEntry, "title" | "issue">[]) =>
+  entries.map((entry) => `- ${entry.title}${entry.issue ? ` (${entry.issue})` : ""}`).join("\n");
 
 /** Characters as the hosts count them: by code point. */
 const length = (text: string) => Array.from(text).length;
@@ -53,10 +81,7 @@ export function batchDescription(
   entries: readonly BatchEntry[],
   limits: BatchLimits,
 ): BatchDescription {
-  const head = [
-    BATCH_DESCRIPTION_WORDS.opening(entries.length),
-    batchList(entries.map((entry) => entry.title)),
-  ];
+  const head = [BATCH_DESCRIPTION_WORDS.opening(entries.length), batchList(entries)];
   const stories = entries.flatMap((entry, index) =>
     entry.region === undefined
       ? []

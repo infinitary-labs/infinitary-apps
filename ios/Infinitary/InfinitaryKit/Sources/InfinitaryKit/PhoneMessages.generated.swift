@@ -380,6 +380,18 @@ public enum PhoneMessages {
     public static func `cardBrowserUnansweredStarting`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredStarting", [`site`]) }
     public static func `cardBrowserUnansweredWorking`(`site`: String) -> String { PhoneWords.format("cardBrowserUnansweredWorking", [`site`]) }
     public static func `cardBrowserWord`() -> String { PhoneWords.format("cardBrowserWord", []) }
+    public static func `cardBuildRowChoice`() -> String { PhoneWords.format("cardBuildRowChoice", []) }
+    public static func `cardBuildRowGoal`() -> String { PhoneWords.format("cardBuildRowGoal", []) }
+    public static func `cardBuildRowIssue`(`number`: String) -> String { PhoneWords.format("cardBuildRowIssue", [`number`]) }
+    public static func `cardBuildRowLater`() -> String { PhoneWords.format("cardBuildRowLater", []) }
+    public static func `cardBuildRowPlan`() -> String { PhoneWords.format("cardBuildRowPlan", []) }
+    public static func `cardBuildRowReproduce`() -> String { PhoneWords.format("cardBuildRowReproduce", []) }
+    public static func `cardBuildRowSkip`() -> String { PhoneWords.format("cardBuildRowSkip", []) }
+    public static func `cardBuildRowStart`() -> String { PhoneWords.format("cardBuildRowStart", []) }
+    public static func `cardBuildRowWhy`() -> String { PhoneWords.format("cardBuildRowWhy", []) }
+    public static func `cardBuildRowsHow`() -> String { PhoneWords.format("cardBuildRowsHow", []) }
+    public static func `cardBuildRowsLead`(`task`: String) -> String { PhoneWords.format("cardBuildRowsLead", [`task`]) }
+    public static func `cardBuildRowsTitle`(`place`: String) -> String { PhoneWords.format("cardBuildRowsTitle", [`place`]) }
     public static func `cardCarriedNotes`(`count`: Int) -> String { PhoneWords.format("cardCarriedNotes", [`count`]) }
     public static func `cardCarriedPictures`(`count`: Int) -> String { PhoneWords.format("cardCarriedPictures", [`count`]) }
     public static func `cardCarriedWithChoice`(`count`: Int, `items`: String) -> String { PhoneWords.format("cardCarriedWithChoice", [`count`, `items`]) }
@@ -513,6 +525,7 @@ public enum PhoneMessages {
     public static func `cardRecordFoldNoPlan`() -> String { PhoneWords.format("cardRecordFoldNoPlan", []) }
     public static func `cardRecordGoal`() -> String { PhoneWords.format("cardRecordGoal", []) }
     public static func `cardRecordHoldsUp`() -> String { PhoneWords.format("cardRecordHoldsUp", []) }
+    public static func `cardRecordIssue`() -> String { PhoneWords.format("cardRecordIssue", []) }
     public static func `cardRecordLoading`() -> String { PhoneWords.format("cardRecordLoading", []) }
     public static func `cardRecordNoPlanWhy`() -> String { PhoneWords.format("cardRecordNoPlanWhy", []) }
     public static func `cardRecordNoReason`() -> String { PhoneWords.format("cardRecordNoReason", []) }
@@ -1067,6 +1080,9 @@ public enum PhoneMessages {
     public static func `feedBatchRetried`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchRetried", [`label`, `project`]) }
     public static func `feedBatchSentBack`(`project`: String, `reason`: String, `title`: String) -> String { PhoneWords.format("feedBatchSentBack", [`project`, `reason`, `title`]) }
     public static func `feedBranchPushed`() -> String { PhoneWords.format("feedBranchPushed", []) }
+    public static func `feedBuildRowKept`(`task`: String, `title`: String) -> String { PhoneWords.format("feedBuildRowKept", [`task`, `title`]) }
+    public static func `feedBuildRowNotFiled`(`title`: String) -> String { PhoneWords.format("feedBuildRowNotFiled", [`title`]) }
+    public static func `feedBuildRowStarted`(`task`: String, `title`: String) -> String { PhoneWords.format("feedBuildRowStarted", [`task`, `title`]) }
     public static func `feedBuiltInPlace`() -> String { PhoneWords.format("feedBuiltInPlace", []) }
     public static func `feedByCaptain`() -> String { PhoneWords.format("feedByCaptain", []) }
     public static func `feedByCaptainInPanel`(`panel`: String) -> String { PhoneWords.format("feedByCaptainInPanel", [`panel`]) }
@@ -4852,6 +4868,18 @@ extension PhoneWords {
         "cardBrowserUnansweredStarting": ["site"],
         "cardBrowserUnansweredWorking": ["site"],
         "cardBrowserWord": [],
+        "cardBuildRowChoice": [],
+        "cardBuildRowGoal": [],
+        "cardBuildRowIssue": ["number"],
+        "cardBuildRowLater": [],
+        "cardBuildRowPlan": [],
+        "cardBuildRowReproduce": [],
+        "cardBuildRowSkip": [],
+        "cardBuildRowStart": [],
+        "cardBuildRowWhy": [],
+        "cardBuildRowsHow": [],
+        "cardBuildRowsLead": ["task"],
+        "cardBuildRowsTitle": ["place"],
         "cardCarriedNotes": ["count"],
         "cardCarriedPictures": ["count"],
         "cardCarriedWithChoice": ["count", "items"],
@@ -4985,6 +5013,7 @@ extension PhoneWords {
         "cardRecordFoldNoPlan": [],
         "cardRecordGoal": [],
         "cardRecordHoldsUp": [],
+        "cardRecordIssue": [],
         "cardRecordLoading": [],
         "cardRecordNoPlanWhy": [],
         "cardRecordNoReason": [],
@@ -5539,6 +5568,9 @@ extension PhoneWords {
         "feedBatchRetried": ["label", "project"],
         "feedBatchSentBack": ["project", "reason", "title"],
         "feedBranchPushed": [],
+        "feedBuildRowKept": ["task", "title"],
+        "feedBuildRowNotFiled": ["title"],
+        "feedBuildRowStarted": ["task", "title"],
         "feedBuiltInPlace": [],
         "feedByCaptain": [],
         "feedByCaptainInPanel": ["panel"],

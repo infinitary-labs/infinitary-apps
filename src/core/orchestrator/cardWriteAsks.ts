@@ -1,5 +1,5 @@
 import { type IntegrationApprovalChoice, NOT_ALLOWED_WHY } from "@shared/integrations";
-import { allowanceCovers, type IntegrationAllowance } from "@shared/writeAsk";
+import { allowanceCovers, buildRowChoiceOf, type IntegrationAllowance } from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";
@@ -42,6 +42,8 @@ export class CardWriteAsks {
    * An Allow for the rest of this task also runs the task's other waiting
    * asks inside it. Every ask is taken before the first runs, so none can
    * drop or run twice, and the crewmate hears every outcome in one steer.
+   * A reader's Build row is never sent: the click files it as the captain
+   * picked on its row (`BuildRows.answer`).
    */
   async answerIntegrationCard(
     cardId: string,
@@ -49,6 +51,7 @@ export class CardWriteAsks {
     askId: string,
     choice: IntegrationApprovalChoice,
     notAllowed: readonly string[],
+    answers?: readonly { name: string; values: readonly string[] }[],
   ): Promise<void> {
     const delivery = this.core.options.tasks.delivery;
     const send = this.core.options.sendTakenIntegrationAsk;
@@ -71,7 +74,11 @@ export class CardWriteAsks {
     }
     const allowances: IntegrationAllowance[] = [];
     const run = async (id: string, took: IntegrationAskTaken, as: IntegrationApprovalChoice) => {
-      const sent: WriteAskSent = await send(taskId, took, as).catch((caught: unknown) => {
+      const build = "ask" in took && took.ask.kind === "build" ? took.ask : undefined;
+      const sending = build
+        ? this.core.buildRows.answer(taskId, build, as, buildRowChoiceOf(answers, id))
+        : send(taskId, took, as);
+      const sent: WriteAskSent = await sending.catch((caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in took ? took.ask : undefined;
         if (ask) delivery.recordWriteAskOutcome(taskId, id, { kind: "unknown", why });

@@ -1,5 +1,7 @@
+import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import {
+  type BuildRowAsk,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -64,10 +66,14 @@ export class IntegrationAsks {
     return open !== undefined;
   }
 
-  /** An unsafe data reader's kept write where its project lives, or a web page it waits to open (`askReader`). */
+  /**
+   * An unsafe data reader's kept write where its project lives, a web page it
+   * waits to open, or a Build row (docs/agents-reach.md, "A reader's Build
+   * rows"): each joins the reader's one approval card (`askReader`).
+   */
   askForge(
     taskId: string,
-    ask: ForgeWriteAsk | WebReadAsk,
+    ask: ForgeWriteAsk | WebReadAsk | BuildRowAsk,
     dropped: readonly WriteAsk[] = [],
   ): boolean {
     return this.askReader(taskId, ask, dropped);
@@ -253,6 +259,13 @@ export class IntegrationAsks {
 
 /** The task's timeline line for a kept write the captain's click took. */
 export function writeSentLine(sent: WriteAskSent): string {
+  // A Build row's line names its title, as its card did, never the call.
+  const title = sent.ask?.kind === "build" ? sent.ask.title : sent.call;
+  if (sent.outcome.kind === "filed")
+    return sent.outcome.started
+      ? m.feedBuildRowStarted({ title, task: sent.outcome.task })
+      : m.feedBuildRowKept({ title, task: sent.outcome.task });
+  if (sent.ask?.kind === "build") return m.feedBuildRowNotFiled({ title });
   switch (sent.outcome.kind) {
     case "answered":
       return `Sent ${sent.call} to ${sent.place} once, on the captain's click: it answered ${sent.outcome.status}.`;
@@ -278,10 +291,10 @@ export function waitingIntegrationAsks(asks: readonly WriteAsk[] | undefined): I
 /** An unsafe data reader's writes and pages still waiting on the host's approval card, oldest first. */
 export function waitingForgeCardAsks(
   asks: readonly WriteAsk[] | undefined,
-): ((ForgeWriteAsk | WebReadAsk) & { card: string })[] {
+): ((ForgeWriteAsk | WebReadAsk | BuildRowAsk) & { card: string })[] {
   return (asks ?? [])
     .filter(
-      (ask): ask is (ForgeWriteAsk | WebReadAsk) & { card: string } =>
+      (ask): ask is (ForgeWriteAsk | WebReadAsk | BuildRowAsk) & { card: string } =>
         ask.kind !== "integration" && ask.card !== undefined && ask.sentAt === undefined,
     )
     .sort((a, b) => a.at - b.at);
@@ -302,7 +315,10 @@ export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string):
 
 /** How a kept ask's call is named on the task's timeline and to its crewmate. */
 export function askCall(ask: WriteAsk): string {
-  return ask.kind === "integration" ? ask.action : readerAskCall(ask);
+  if (ask.kind === "integration") return ask.action;
+  // i18n-exempt: the call the crewmate's model hears; the feed names a Build row by its catalog line
+  if (ask.kind === "build") return `Build row "${ask.title}" for issue #${ask.issue}`;
+  return readerAskCall(ask);
 }
 
 /** The facts of one `write-answered` steer for a click's outcome on one ask. */
@@ -313,9 +329,19 @@ export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnsw
     call: sent.call,
     place: sent.place,
     outcome: sent.outcome.kind,
+    ...(sent.ask?.kind === "build" ? { build: true as const } : {}),
     ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
     ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
       ? { why: sent.outcome.why }
+      : {}),
+    ...(sent.outcome.kind === "filed"
+      ? {
+          filed: {
+            task: sent.outcome.task,
+            started: sent.outcome.started,
+            ...(sent.outcome.start ? { start: sent.outcome.start } : {}),
+          },
+        }
       : {}),
     ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
     ...(sent.allowance ? { allowed: sent.allowance.words } : {}),

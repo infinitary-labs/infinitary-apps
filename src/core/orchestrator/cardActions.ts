@@ -845,6 +845,7 @@ export class CardActions {
             askId,
             effect.integration,
             refused,
+            answers,
           );
           return {};
         }

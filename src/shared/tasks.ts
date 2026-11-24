@@ -886,6 +886,12 @@ export const taskDetailSchema = taskViewSchema.extend({
       verdict: z.string().nullable(),
     })
     .optional(),
+  /**
+   * The outside issue the task answers where its project lives
+   * (`WorkShape.issue`), drawn as a link on the record's Info tab; absent
+   * when it answers none.
+   */
+  issue: z.object({ number: z.number().int().positive(), url: z.string() }).optional(),
   /** Present only while Drop task applies. The footer confirms these lists. */
   dropEffects: dropEffectsSchema.optional(),
   /**

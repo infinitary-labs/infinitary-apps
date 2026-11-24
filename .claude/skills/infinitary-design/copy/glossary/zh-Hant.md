@@ -76,6 +76,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |
 | Integrations | 整合 | Standard. |
 | Intelligence (Settings tab) | 智慧等級 | 智慧 is Taiwan's word for intelligence; 等級 says it is a level, not reasoning. |
+| issue (where the project lives) | 議題 | |
 | join (the phone joins a computer) | 加入 |  |
 | key (an integration's key) | 金鑰 | Taiwan's word; 密鑰 reads as mainland. |
 | Knowledge (the panel) | 知識 | The panel's name. |

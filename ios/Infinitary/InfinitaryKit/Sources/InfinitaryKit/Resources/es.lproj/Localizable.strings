@@ -356,6 +356,18 @@
 "cardBrowserUnansweredStarting" = "Nada responde en %1$@, así que Infinitary lo está volviendo a iniciar. La página aparecerá aquí en cuanto responda.";
 "cardBrowserUnansweredWorking" = "Nada responde en %1$@ y el tripulante está trabajando ahora. La página aparecerá aquí en cuanto responda.";
 "cardBrowserWord" = "Navegador";
+"cardBuildRowChoice" = "Cuándo empezarla";
+"cardBuildRowGoal" = "Objetivo";
+"cardBuildRowIssue" = "Incidencia #%1$@";
+"cardBuildRowLater" = "Guardar para después";
+"cardBuildRowPlan" = "Planificar primero";
+"cardBuildRowReproduce" = "Reproducir primero";
+"cardBuildRowSkip" = "No anotar";
+"cardBuildRowStart" = "Empezar ahora";
+"cardBuildRowWhy" = "Por qué";
+"cardBuildRowsHow" = "Una fila de Build anota su tarea solo si apruebas esta tarjeta. Empezar ahora la anota y la empieza, Guardar para después la anota sin empezarla y No anotar la descarta.";
+"cardBuildRowsLead" = "El tripulante de «%1$@» lee palabras que cualquiera puede escribir, así que cada tarea que propone espera tu decisión. Cada fila de Build muestra el encargo que recibiría su tripulante.";
+"cardBuildRowsTitle" = "¿Anotar tareas a partir de incidencias de %1$@?";
 "cardConsentChanges" = "Cambia";
 "cardConsentChangesDetail" = "Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.";
 "cardConsentChangesLine" = "Puede cambiar un ajuste cuando haces clic: %1$@";
@@ -475,6 +487,7 @@
 "cardRecordFoldNoPlan" = "por qué no hubo plan";
 "cardRecordGoal" = "Objetivo";
 "cardRecordHoldsUp" = "Bloquea a";
+"cardRecordIssue" = "Incidencia";
 "cardRecordLoading" = "Cargando";
 "cardRecordNoPlanWhy" = "Por qué tu primer oficial construyó sin un plan";
 "cardRecordNoReason" = "No se registró ningún motivo.";
@@ -1014,6 +1027,9 @@
 "feedBatchRetried" = "%2$@: %1$@ se combinó de nuevo y sus comprobaciones se ejecutan otra vez.";
 "feedBatchSentBack" = "%1$@: «%3$@» se devolvió de su lote: %2$@";
 "feedBranchPushed" = "Insertó la rama";
+"feedBuildRowKept" = "«%2$@» anotada como %1$@ para después.";
+"feedBuildRowNotFiled" = "«%1$@» no se anotó.";
+"feedBuildRowStarted" = "«%2$@» anotada como %1$@ y empezada.";
 "feedBuiltInPlace" = "Construida en el lugar";
 "feedByCaptain" = "Capitán · ";
 "feedByCaptainInPanel" = "Capitán, en el panel %1$@ · ";

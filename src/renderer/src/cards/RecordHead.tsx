@@ -134,10 +134,14 @@ export function RecordDelivered({ detail }: { detail: TaskDetail }) {
 export function RecordRelations({
   detail,
   parentKey,
+  onOpenLink,
 }: {
   detail: TaskDetail;
   parentKey: string | undefined;
+  /** Where a click on the outside issue's link goes; without it the issue is plain text. */
+  onOpenLink?: (url: string) => void;
 }) {
+  const issue = detail.issue;
   const keys = (list: readonly string[]) => <KeyedText text={list.join("  ")} own={detail.id} />;
   return (
     <>
@@ -159,6 +163,26 @@ export function RecordRelations({
         <Row label={m.cardRecordHoldsUp()}>
           <div className="keys" data-record-fact="blocks">
             {keys(detail.blocks)}
+          </div>
+        </Row>
+      )}
+      {issue && (
+        <Row label={m.cardRecordIssue()}>
+          <div className="keys" data-record-fact="issue">
+            {onOpenLink ? (
+              <a
+                className="change-link"
+                href={issue.url}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onOpenLink(issue.url);
+                }}
+              >
+                #{issue.number}
+              </a>
+            ) : (
+              <span>#{issue.number}</span>
+            )}
           </div>
         </Row>
       )}

@@ -40,10 +40,16 @@ extension PhoneJourney {
         try await launchJoined()
         _ = try await home("empty-cards")
         tab("Tasks", repeatDiscarded: false)
-        _ = try await home("task-list-seed", body: "{\"prefix\":\"D0\",\"working\":3,\"backlog\":60,\"done\":30}")
+        let working = 3
+        _ = try await home("task-list-seed", body: "{\"prefix\":\"D0\",\"working\":\(working),\"backlog\":60,\"done\":30}")
         let backlog = app.buttons["group-backlog"]
+        // Backlog already exists before seeding; the inserted Working rows must reach the screen before its tap.
+        XCTAssertTrue(app.buttons["task-task-list-D0-w-\(working - 1)"].waitForPresence(timeout: 20))
         XCTAssertTrue(backlog.waitForPresence(timeout: 20))
         tapOnPhone(backlog)
+        picture("task-list-D0-after-backlog")
+        XCTAssertTrue(app.buttons["task-task-list-D0-b-0"].waitForPresence(timeout: 10),
+                      "Backlog must be open before scrolling its long list")
         let list = app.scrollViews["tasks-list"]
         let done = app.buttons["group-landed"]
         for _ in 0..<45 {
@@ -51,6 +57,7 @@ extension PhoneJourney {
             list.swipeUp(velocity: .slow)
         }
         for _ in 0..<3 { list.swipeUp(velocity: .fast) }
+        picture("task-list-D0-after-scroll")
         XCTAssertTrue(done.exists && done.isHittable, "Done must be visible at the bottom before opening it")
         picture("task-list-D0-before")
         _ = try await home("capture-start")

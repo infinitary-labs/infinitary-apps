@@ -14,7 +14,7 @@ A card's reply row is shaped like the message capsule: one shape with the messag
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
 Every lit mark inside it, such as Point at while it is on, is a 32-point circle, so nothing sticks out of its rounded ends.
 A note being written is a raised panel inside the card at the reply row's width, at the card radius on the raised fill with the strong hairline, its comment a plain field beside buttons of the same control radius; queued and sent notes share one row, a 2-point bar, what the note points at on one line, then its comment, the bar in the accent only while the note waits to be sent.
-The app follows the device's appearance unless this device's own Theme in Settings says Dark or Light; its read-only Reply sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md`, without extending that treatment to ordinary cards or their threads.
+The app follows the device's appearance unless this device's own Theme in Settings says Dark or Light; its read-only Conversation sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md` and `../cards/Conversation.prompt.md`, without extending that treatment to ordinary cards or their threads.
 One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
 Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.
 
@@ -204,7 +204,7 @@ The join stage uses idle; the empty stage shows working only from the Mac's publ
 A stopped or lost connection clears that reading; an older home without the scene-observation capability stays unknown until a real busy event arrives.
 Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.
 
-The conversation owner puts the message box at the foot of Home, with the last turn's two lines above it; Tasks and Activity run to the foot with nothing over them.
+The conversation owner puts the message box at the foot of Home, with the conversation's last two rounds above it; Tasks and Activity run to the foot with nothing over them.
 One capsule sits in Home's column under the card's pager and grows with the message, photos, last turn and problems; no panel sits behind it.
 On iOS 26 the capsule is native glass; on iOS 18 it is the field's fill and hairline.
 In the landscape sidebar layout it sits at the stage's foot.

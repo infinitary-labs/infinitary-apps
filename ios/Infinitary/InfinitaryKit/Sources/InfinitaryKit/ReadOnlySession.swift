@@ -69,6 +69,17 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var threadRevisions: [String: Int] = [:]
     public private(set) var board: PhoneBoard?
     public private(set) var lastTurn: PhoneLastTurn?
+    /// INF-6366: the conversation's newest rounds for the strip, nil before the first read and while the computer
+    /// cannot answer it; the strip then shows the last turn alone (`stripRounds`).
+    public private(set) var stripPage: [PhoneConversationRound]?
+    /// The last turn as `stripPage` was read, which says which of its messages were sent since (`sentSince`).
+    public private(set) var stripReadAt: PhoneLastTurn?
+    /// Moves each time the newest rounds read differently, so an open Conversation reads its newest page again.
+    public private(set) var conversationRevision = 0
+    @ObservationIgnored private var stripReading: Task<Void, Never>?
+    @ObservationIgnored private var stripOwed = false
+    /// False once this connection's computer refused the read: an older one, which answers it at no later ask.
+    @ObservationIgnored private var conversationReadable = true
     /// INF-2553: the home's own snapshots, never edited; the shown values above are these with `intents` folded over.
     @ObservationIgnored private var syncedCards: [PhoneCard] = [] {
         // INF-5445 piece 2: a card or opening the phone did not hold before may have a draft it never read.
@@ -496,6 +507,42 @@ public struct PhoneNotice: Equatable, Sendable {
         return stack.contains(id) ? .stack : .past
     }
 
+    /// INF-6366: the strip's rounds, newest first.
+    public var stripRounds: [PhoneConversationRound] {
+        PhoneConversation.strip(turn: lastTurn, page: stripPage, readAt: stripReadAt)
+    }
+
+    /// One page of the conversation, newest first, older than `before` when given.
+    public func readConversation(before: PhoneConversationRound? = nil, limit: Int) async throws -> PhoneConversationPage {
+        var query: [String: Any] = ["limit": limit]
+        if let before { query["before"] = ["at": before.at, "id": before.id] }
+        return try await request(.conversation, args: [query], as: PhoneConversationPage.self)
+    }
+
+    /// Reads the strip's rounds again; asks made while a read is out are owed one read after it.
+    private func readStrip() {
+        guard conversationReadable, contact == "in-reach" else { return }
+        guard stripReading == nil else { stripOwed = true; return }
+        let current = generation
+        let turn = lastTurn
+        stripReading = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let page = try await self.readConversation(limit: PhoneConversation.roundsAtRest).rounds
+                // A page read across a message sent meanwhile cannot say which messages it holds; the turn's change
+                // owes a read after this one.
+                if current == self.generation, PhoneConversation.sentSince(turn, self.lastTurn) == 0 {
+                    self.stripReadAt = self.lastTurn
+                    if page != self.stripPage { self.stripPage = page; self.conversationRevision += 1 }
+                }
+            } catch PhoneError.refused, PhoneError.invalidReply {
+                if current == self.generation { self.conversationReadable = false; self.stripPage = nil; self.stripReadAt = nil }
+            } catch {}
+            self.stripReading = nil
+            if self.stripOwed { self.stripOwed = false; self.readStrip() }
+        }
+    }
+
     public func readPast(_ id: String) async throws {
         let result = try await ask(.past, [.string(id)])
         guard result != .null else { return }
@@ -515,6 +562,7 @@ public struct PhoneNotice: Equatable, Sendable {
         held = nil
         syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
         syncedThreads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
+        stripPage = nil; stripReadAt = nil; conversationReadable = true
         ledger.clear(); restorers = [:]; changeNotice = nil; takenBack = [:]; refold()
         notified = [:]; awaited = []; primed = false; workRevision += 1
         wakeReachWaiters()
@@ -694,6 +742,8 @@ public struct PhoneNotice: Equatable, Sendable {
         let after = Set(ledger.intents.map(\.id))
         for id in before where !after.contains(id) { restorers.removeValue(forKey: id) }
         if !show { return }
+        // A press, a line under a card or a message each change the rounds; cards and threads push for the first two.
+        switch snapshot { case .cards, .thread, .turn: readStrip(); default: break }
         if after.count != before.count { refold(); return }
         switch snapshot {
         case .cards: cards = PhoneIntentFold.cards(syncedCards, ledger.intents)
@@ -724,7 +774,7 @@ public struct PhoneNotice: Equatable, Sendable {
             for id in departed { Task { try? await self.readPast(id) } }
             observeCards(syncedCards)
         }
-        refold()
+        refold(); readStrip()
         if fold.work { workRevision += 1 }
         if let busy = fold.busy { firstmateBusy = busy; firstmateObserved = true }
         if let computers = fold.computers { self.computers = computers }
@@ -1442,6 +1492,7 @@ public struct PhoneNotice: Equatable, Sendable {
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
         if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage(); onReached?(); readDrafts()
+            conversationReadable = true; readStrip()
             if let id = openOnReach { openOnReach = nil; openCard(id) }
         }
         settleCatchUp()

@@ -70,6 +70,15 @@ export function assertPhoneReaderShapes(contract: ReaderContract): void {
   const last = object(contract.requests["inf:conversation:last-turn"]?.response);
   requireFields("last turn", last, { you: "string" });
   requireFields("last reply", last?.properties?.reply, { text: "string" });
+  // INF-6366: the phone's strip and Conversation read the computer's paged conversation.
+  const page = contract.requests["inf:conversation:thread"]?.response;
+  requireFields("inf:conversation:thread", page, { rounds: "array", more: "boolean" });
+  const round = page?.properties?.rounds?.items;
+  for (const variant of round?.anyOf ?? round?.oneOf ?? [round]) {
+    requireFields("conversation round", variant, { id: "string", at: "number", kind: "string" });
+    if (variant?.properties?.card)
+      requireFields("conversation card", variant.properties.card, { id: "string", title: "string", presentation: "string" });
+  }
   const crew = contract.requests["inf:tasks:crewmate"]?.response;
   requireFields("crewmate", crew, { taskId: "string", earlier: "integer", lines: "array" });
   const line = crew?.properties?.lines?.items;

@@ -2,7 +2,7 @@ import InfinitaryKit
 import SwiftUI
 
 /// INF-1963: the question bubble itself opens and folds the message, with no separate Show all link.
-/// INF-2219 reuses this view in its reply sheet; the caller owns its label, time and expansion state.
+/// The caller owns its label, time and expansion state.
 struct PhoneQuestionBubble: View {
     let text: String
     @Binding var open: Bool

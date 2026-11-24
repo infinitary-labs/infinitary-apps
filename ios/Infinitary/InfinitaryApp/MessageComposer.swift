@@ -16,7 +16,10 @@ struct MessageComposer: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var replyOpen: OpenedReply?
+    /// INF-6366: the Conversation, open at the strip round pressed, and what it read, kept only while a card a tile
+    /// opened is in front.
+    @State private var conversationOpen: ConversationOpening?
+    @State private var conversation = PhoneConversationModel()
     /// The reading clock (docs/composer.md "The last turn"): the reply it counts, the time left, and whether it faded.
     @State private var fadeKey: String?
     @State private var remaining = Self.readingTime
@@ -40,11 +43,12 @@ struct MessageComposer: View {
         let mark: PhoneTurnMark?
         let reply: String?
         let words: String?
+        let rounds: [String]
     }
 
     private var turnReading: TurnReading {
         TurnReading(mark: PhoneTurnMark(session.lastTurn), reply: session.lastTurn?.reply?.text,
-                    words: session.lastTurn?.reply?.words)
+                    words: session.lastTurn?.reply?.words, rounds: session.stripRounds.map(\.id))
     }
 
     typealias Photo = PhonePhoto
@@ -52,7 +56,7 @@ struct MessageComposer: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             // INF-589 item 17: on its side an iPhone gives the card this height; the last turn returns upright.
-            if let turn = session.lastTurn, !compact, !messageContext.replyTucked { lastTurn(turn) }
+            if !session.stripRounds.isEmpty, !compact, !messageContext.replyTucked { lastTurn(session.stripRounds) }
             // AnyLayout moves the same controls; neither rotation nor a tab creates a second draft.
             draftLayout {
                 if !photos.isEmpty {
@@ -141,63 +145,75 @@ struct MessageComposer: View {
             }
             // INF-589 item 12: a soft tap once the computer accepts the message.
             .sensoryFeedback(.phone, trigger: sent)
+            .sheet(item: $conversationOpen) { opening in
+                PhoneConversationSheet(session: session, model: conversation, landing: opening.landing, openCard: openCard)
+            }
+            // A card a tile opened: once Home showed it and it left, the Conversation comes back as it was.
+            .onChange(of: messageContext.card) { _, card in
+                guard let opened = conversation.opened else { return }
+                if card == .current(opened.id) || card == .past(opened.id) { conversation.opened?.shown = true }
+                else if opened.shown { conversation.opened = nil; conversationOpen = ConversationOpening(landing: nil) }
+            }
+            .onChange(of: messageContext.cardsVisible) { _, visible in if !visible { conversation.opened = nil } }
     }
 
-    /// The Mac's last turn (src/renderer/src/app/LastTurn.tsx), drawn as INF-1770's Chat layout: the last two rounds,
-    /// each the captain's words in a soft grey bubble on the right and the first mate's reply beside its mark on the
-    /// left, the older round at half strength and only the newest while a card is up. While the first mate works, the
-    /// newest round's mark turns ember and spins (INF-2483), beside its reply or Working…. After 15 seconds of a completed
-    /// reply on screen the older round dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet
-    /// glance": 15-point rows, 12 points between rounds and 12 above the box, one line each. With the box at the top for
-    /// Apple Pencil only the newest round shows, card or no card, so a card coming or going never moves the box.
-    private func lastTurn(_ turn: PhoneLastTurn) -> some View {
-        let key = Self.fadeKey(turn)
+    /// The Mac's last turn (src/renderer/src/app/LastTurn.tsx), drawn as INF-1770's Chat layout: the last two rounds, the
+    /// older at half strength and only the newest while a card is up. A message round is the captain's words in a soft
+    /// grey bubble on the right and the first mate's reply beside its mark on the left; while the first mate works, the
+    /// newest round's mark turns ember and spins (INF-2483), beside its reply or Working…. A card round (INF-6337's plan)
+    /// is one row: a card glyph and the card's title, which opens the card, then the button's words in an outlined bubble
+    /// or the typed words in the filled one. After 15 seconds of a complete newest round on screen the older round
+    /// dissolves and keeps its room, so the input never moves. INF-1846 chose "A quiet glance": 15-point rows, 12 points
+    /// between rounds and 12 above the box, one line each. With the box at the top for Apple Pencil only the newest round
+    /// shows, card or no card, so a card coming or going never moves the box. Pressing a round anywhere else opens the
+    /// Conversation at it.
+    private func lastTurn(_ rounds: [PhoneConversationRound]) -> some View {
+        let key = PhoneConversation.fadeKey(rounds[0])
         let hidden = faded && key != nil && key == fadeKey
         // The count runs only while Home is shown, the app is open, the phone is upright and the first mate is idle.
         let readable = messageContext.cardsVisible && phase == .active && !compact && !session.firstmateBusy
         let cardUp = messageContext.cardsVisible && messageContext.cardShown
-        let older = cardUp || messageContext.pencilRoom ? nil : turn.previous
+        let older = cardUp || messageContext.pencilRoom || rounds.count < 2 ? nil : rounds[1]
         return VStack(spacing: 12) {
             if let older {
                 round(older, newest: false)
                     .opacity(hidden ? 0 : 1).accessibilityHidden(hidden).disabled(hidden)
             }
-            round(PhoneLastRound(you: turn.you, reply: turn.reply), newest: true)
+            round(rounds[0], newest: true)
         }.font(PhoneFont.subheadline).lineLimit(1)
             // The composer's stack adds 8 points; these 4 make the 12 above the box.
             .frame(maxWidth: .infinity).padding(.bottom, 4)
             .task(id: "\(key ?? "")|\(readable)") { await read(key, readable: readable) }
-            .sheet(item: $replyOpen) { opened in PhoneReplySheet(round: opened.round) }
     }
 
     /// One round: the captain's bubble, then the first mate's line, 4 points apart. The bubble hugs its words up to three
     /// quarters of the column, and the reply row is 24 points tall, in the secondary colour, pressable across its width.
-    /// The older round's identifiers carry `older`.
-    private func round(_ round: PhoneLastRound, newest: Bool) -> some View {
+    /// A card round has no reply row unless its words were also a message. The older round's identifiers carry `older`.
+    private func round(_ round: PhoneConversationRound, newest: Bool) -> some View {
         let id = newest ? "last-turn" : "last-turn-older"
-        let busy = newest && session.firstmateBusy
+        let busy = newest && session.firstmateBusy && round.sentAsMessage
         let strength = newest ? 1.0 : 0.5
-        let bubble = UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14, bottomTrailingRadius: 5, topTrailingRadius: 14)
+        // A press opens the Conversation afresh (docs/composer.md, "The conversation"): only the return after a tile's
+        // card keeps the reading. A round the phone made itself is on no page, so the Conversation lands on the newest.
+        let open = {
+            conversation = PhoneConversationModel()
+            conversationOpen = ConversationOpening(landing: PhoneConversation.heldOnPhone(round) ? nil : round.id)
+        }
         return VStack(alignment: .leading, spacing: 4) {
-            BubbleColumn {
-                WholeWordsLine(words: round.you.isEmpty ? PhoneMessages.phoneComposerPictureOnly() : round.you)
-                    .foregroundStyle(PhoneTheme.text)
-                    .padding(.vertical, 4).padding(.horizontal, 12)
-                    .background(PhoneTheme.text.opacity(0.1), in: bubble)
+            if let card = round.card {
+                cardRow(round, card: card, id: id, working: newest && session.firstmateBusy && !round.sentAsMessage, open: open)
                     .opacity(strength)
-                    // INF-3462, the captain's pick: the bubble is solid in the colour it always showed, so the crew scene
-                    // passing behind it is hidden.
-                    .background(PhoneTheme.background, in: bubble)
-                    .accessibilityIdentifier("\(id)-you")
+            } else {
+                BubbleColumn { bubble(round, id: id, open: open).opacity(strength) }
             }
-            if round.reply != nil || busy || (newest && session.messageSending) {
+            if round.sentAsMessage && (round.reply != nil || busy || (newest && session.messageSending && round.card == nil)) {
                 HStack(spacing: 8) {
                     MateMark(working: busy, still: reduceMotion).frame(width: 16, height: 16)
                     if let reply = round.reply {
-                        Button { replyOpen = OpenedReply(round: round) } label: {
+                        Button(action: open) {
                             WholeWordsLine(words: reply.text).foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.secondary)
                                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerReplyHint())
+                        }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerConversationHint())
                             .accessibilityIdentifier("\(id)-reply")
                     } else if newest && session.messageSending {
                         // INF-2553: the message is the last turn at the tap, marked sending until the computer has it.
@@ -208,19 +224,82 @@ struct MessageComposer: View {
                             .frame(minHeight: 24).accessibilityElement(children: .combine).accessibilityIdentifier("\(id)-reply")
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).opacity(strength)
-            } else {
+            } else if round.card == nil {
                 Text(verbatim: " ").frame(minHeight: 24).accessibilityHidden(true)
             }
         }
     }
 
-    /// The reply this clock may fade, or nil while the line must stay: a problem, a queued receipt or an unknown line.
-    static func fadeKey(_ turn: PhoneLastTurn) -> String? {
-        guard let reply = turn.reply, reply.problem != true, reply.eligibility == "completed" else { return nil }
-        return "\(turn.you)\u{0}\(reply.text)"
+    /// The captain's words in the bubble: filled for words they wrote, outlined for a button's own words. INF-3462, the
+    /// captain's pick: the bubble is solid in the colour it always showed, so the crew scene passing behind it is hidden.
+    /// A message's bubble stays words with a tap, its reply line the round's button; a card round's bubble is its button.
+    @ViewBuilder
+    private func bubble(_ round: PhoneConversationRound, id: String, open: @escaping () -> Void) -> some View {
+        let shape = PhoneConversationBubble()
+        let choice = round.kind == .choice
+        let words = WholeWordsLine(words: round.you.isEmpty ? PhoneMessages.phoneComposerPictureOnly() : round.you)
+            .foregroundStyle(PhoneTheme.text)
+            .padding(.vertical, 4).padding(.horizontal, 12)
+            .background(choice ? Color.clear : PhoneTheme.text.opacity(0.1), in: shape)
+            .overlay { if choice { shape.stroke(PhoneTheme.text.opacity(0.3), lineWidth: 1) } }
+            .background(PhoneTheme.background, in: shape)
+            .contentShape(shape)
+        if round.card == nil {
+            words.onTapGesture(perform: open).accessibilityIdentifier("\(id)-you")
+        } else {
+            Button(action: open) { words }.buttonStyle(.plain)
+                .accessibilityHint(PhoneMessages.phoneComposerConversationHint()).accessibilityIdentifier("\(id)-you")
+        }
     }
 
-    /// A new reply starts a fresh 15 seconds; leaving Home, the background, a turn on its side or work in flight
+    /// A card round's one row: the card glyph and title on the left, which open the card, and the bubble on the right.
+    /// A round that is not also a message has no reply line, so while it is the newest and the first mate works the row
+    /// starts with the spinning mark and no words, at its own height (INF-6365's review, the captain's choice).
+    private func cardRow(_ round: PhoneConversationRound, card: PhoneConversationRound.Card, id: String, working: Bool,
+                         open: @escaping () -> Void) -> some View {
+        HStack(spacing: PhoneTheme.space2) {
+            if working {
+                MateMark(working: true, still: reduceMotion).frame(width: 16, height: 16)
+                    .accessibilityElement(children: .ignore).accessibilityLabel(PhoneMessages.phoneComposerWorking())
+                    .accessibilityIdentifier("\(id)-card-working")
+            }
+            Button { openCard(card.id) } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "rectangle.portrait").font(.system(size: 11)).foregroundStyle(PhoneTheme.muted)
+                    WholeWordsLine(words: card.title).foregroundStyle(PhoneTheme.secondary)
+                }.frame(minHeight: 28).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityHint(PhoneMessages.phoneComposerCardHint())
+                .accessibilityIdentifier("\(id)-card")
+            Spacer(minLength: 0)
+            bubble(round, id: id, open: open).layoutPriority(1)
+        }.frame(maxWidth: .infinity)
+    }
+
+    /// A card from a strip row or a Conversation tile, shown on Home: one on the stage comes forward, one put aside comes
+    /// back first, and an ended one opens as a past card. The Conversation steps away while it shows.
+    private func openCard(_ id: String) {
+        let leave = {
+            conversation.opened = .init(id: id, shown: messageContext.card == .current(id) || messageContext.card == .past(id))
+            conversationOpen = nil
+        }
+        if let card = session.cards.first(where: { $0.id == id }), card.awaiting == nil || card.sentBackAt != nil {
+            if card.minimized {
+                guard session.canChange else { return }
+                Task { try? await session.change(.bringBack(card: id), .minimize, [.string(id), .bool(false)]) }
+            }
+            if conversationOpen != nil { leave() }
+            messageContext.restoring = id
+            return
+        }
+        Task {
+            try? await session.readPast(id)
+            guard session.pastCards.contains(where: { $0.id == id }) else { return }
+            if conversationOpen != nil { leave() }
+            messageContext.pastCard = id
+        }
+    }
+
+    /// A new newest round starts a fresh 15 seconds; leaving Home, the background, a turn on its side or work in flight
     /// pauses the count and keeps what is left. The dissolve takes 0.7 seconds, an instant under reduced motion.
     private func read(_ key: String?, readable: Bool) async {
         if key != fadeKey { fadeKey = key; remaining = Self.readingTime; faded = false }
@@ -281,7 +360,7 @@ struct MessageComposer: View {
 }
 
 /// The captain's bubble on the right, hugging its words up to three quarters of the width it is offered.
-private struct BubbleColumn: Layout {
+struct BubbleColumn: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let bubble = subviews.first?.sizeThatFits(widest(proposal.width)) ?? .zero
         return CGSize(width: proposal.width ?? bubble.width, height: bubble.height)
@@ -337,17 +416,17 @@ private struct WholeWordsFit: Layout {
     }
 }
 
-/// The round whose reply line was pressed: the newest or the older one.
-private struct OpenedReply: Identifiable {
+/// The Conversation's opening from the strip: at the round pressed, or where it was left.
+private struct ConversationOpening: Identifiable {
     let id = UUID()
-    let round: PhoneLastRound
+    let landing: String?
 }
 
 /// The first mate's mark beside each reply line: the app's hexagon in accent, as the Mac draws it (lastTurn.css,
 /// LastTurn.tsx). While the first mate works it turns ember over 0.16 s and spins one steady turn every 2 s (INF-2483's
 /// plan, the captain's Approve and build: "turn the mark to orange and spin it"); when work ends it eases on to its next
 /// resting sixth of a turn over 0.36 s as it fades back to accent. Under reduced motion it turns ember and stands still.
-private struct MateMark: View {
+struct MateMark: View {
     let working: Bool
     let still: Bool
     /// One whole turn, in seconds: INF-2483's chosen steady turn.
@@ -401,51 +480,6 @@ private struct MarkDot: Shape {
         let scale = min(rect.width, rect.height) / 16
         let dot = 1.3 * scale
         return Path(ellipseIn: CGRect(x: rect.midX - dot, y: rect.midY - dot, width: dot * 2, height: dot * 2))
-    }
-}
-
-/// INF-2218, A · Open reply: the saved question in the shared bubble above an unboxed answer.
-/// Reading stays inside the existing sheet, with native sizing and Done dismissal; nothing is sent.
-private struct PhoneReplySheet: View {
-    let round: PhoneLastRound
-    @Environment(\.dismiss) private var dismiss
-    @State private var questionOpen = false
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
-                    BubbleColumn {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(PhoneMessages.phoneComposerYou()).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
-                            PhoneQuestionBubble(
-                                text: round.you,
-                                open: $questionOpen,
-                                identifier: "reply-note-question")
-                        }
-                    }
-                    if let reply = round.reply {
-                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                            HStack(spacing: PhoneTheme.space2) {
-                                MateMark(working: false, still: true).frame(width: 16, height: 16)
-                                Text(PhoneMessages.phoneComposerFirstMate()).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
-                            }
-                            Text(reply.words ?? reply.text).font(PhoneFont.callout)
-                                .foregroundStyle(reply.problem == true ? PhoneTheme.danger : PhoneTheme.text)
-                                .textSelection(.enabled).accessibilityIdentifier("reply-note-words")
-                                .padding(.leading, PhoneTheme.space4 + PhoneTheme.space2)
-                        }
-                    }
-                }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .accessibilityIdentifier("reply-note-scroll")
-            .phoneTitle(PhoneMessages.phoneComposerReplyTitle())
-            .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button(PhoneMessages.phoneCommonDone()) { dismiss() }.accessibilityIdentifier("close-reply-note")
-            } }
-        }
-        .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
     }
 }
 

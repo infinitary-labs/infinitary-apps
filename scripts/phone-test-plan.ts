@@ -216,6 +216,11 @@ export const PHONE_TOOL_TESTS = [
   "InfinitaryTests/PhoneSceneEvidenceTests/testLongIdleSampleNamesTheActualUnexpectedMode",
 ] as const;
 
+/** The entry of PHONE_TOOL_TESTS that holds a test identifier: the test itself or the tool class it is in. */
+export function phoneToolEntry(test: string): string | undefined {
+  return PHONE_TOOL_TESTS.find((entry) => test === entry || test.startsWith(`${entry}/`));
+}
+
 /** A selection of tests in the rest part's place instead of a part's own: the native wait clock alone, or every
  * test of the phone check's tools. */
 export type PhoneToolSelection = "waits" | "tools";
@@ -255,8 +260,9 @@ export function phoneWorkPast(jobs: readonly PhoneJob[], ends: readonly (PhonePa
   });
 }
 
-/** The xcodebuild arguments that choose one part's tests from the built test plan. */
-export function partSelection(name: string, only?: PhoneToolSelection): string[] {
+/** The xcodebuild arguments that choose one part's tests from the built test plan. `tools` names the rest part's tool
+ * tests whose own code changed, which it then runs rather than skips. */
+export function partSelection(name: string, only?: PhoneToolSelection, tools: readonly string[] = []): string[] {
   // INF-1083: prove the native clock in either mode without grading unrelated UI journeys.
   if (only) {
     if (name !== "rest") throw new Error("Native wait-clock and tool tests belong to the rest part");
@@ -265,10 +271,15 @@ export function partSelection(name: string, only?: PhoneToolSelection): string[]
   }
   const index = PHONE_PARTS.findIndex((part) => part.name === name);
   if (index < 0) throw new Error(`No phone journey part is named ${name}`);
+  if (tools.length && index < PHONE_PARTS.length - 1) throw new Error(`The ${name} part runs no tool tests; the rest part does`);
+  for (const test of tools) if (!phoneToolEntry(test)) throw new Error(`${test} is not a test of the phone check's own tools`);
   if (index < PHONE_PARTS.length - 1) return [`-only-testing:${partIdentifier(PHONE_PARTS[index]!)}`];
+  // xcodebuild lets no -only-testing bring back a test a -skip-testing names, so a tool class that holds an edited
+  // test is no longer skipped, and its other tests run beside it.
+  const running = new Set(tools.map((test) => phoneToolEntry(test)));
   // A part on the Mac runs a package test target the app's test plan does not hold.
   return [...PHONE_PARTS.slice(0, -1).filter((part) => !partOnMac(part.name)).map((part) => `-skip-testing:${partIdentifier(part)}`),
-    ...PHONE_TOOL_TESTS.map((test) => `-skip-testing:${test}`)];
+    ...PHONE_TOOL_TESTS.filter((test) => !running.has(test)).map((test) => `-skip-testing:${test}`)];
 }
 
 /** INF-4326: whether a part runs on the Mac itself, beside the simulated devices, rather than on a device. */
@@ -306,29 +317,36 @@ export function partTestStarted(name: string, output: string): boolean {
   return output.includes(`Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${part.test}]' started.`);
 }
 
-/** Exact repeat selectors retain the ordinary part when the change could not be read. */
-export function phoneTestSelection(part: string, tests: readonly string[] = [], only?: PhoneToolSelection): string[] {
-  const selection = partSelection(part, only);
+/** Exact repeat selectors retain the ordinary part when the change could not be read; a pass's edited tool tests
+ * (`tools`) run beside whichever it selects. */
+export function phoneTestSelection(part: string, tests: readonly string[] = [], only?: PhoneToolSelection,
+  tools: readonly string[] = []): string[] {
+  const selection = partSelection(part, only, tools);
+  const named = [...new Set([...tests, ...tools])];
+  for (const test of named)
+    if (!/^(?:InfinitaryTests|InfinitaryUITests|PhoneWeakLinkTests)\/\w+\/test\w+$/.test(test)) throw new Error(`Invalid phone test: ${test}`);
   if (!tests.length) return selection;
   const matches = (test: string, selected: string) => test === selected || test.startsWith(`${selected}/`);
   for (const test of tests) {
-    if (!/^(?:InfinitaryTests|InfinitaryUITests|PhoneWeakLinkTests)\/\w+\/test\w+$/.test(test)) throw new Error(`Invalid phone test: ${test}`);
     if (selection.some((arg) => arg.startsWith("-only-testing:") && !matches(test, arg.slice("-only-testing:".length))) ||
       selection.some((arg) => arg.startsWith("-skip-testing:") && matches(test, arg.slice("-skip-testing:".length)) &&
         // INF-4241: a tool test the rest part skips is still the rest part's to run when its own code changed.
         !(part === "rest" && (PHONE_TOOL_TESTS as readonly string[]).includes(arg.slice("-skip-testing:".length)))))
       throw new Error(`The ${part} part does not own ${test}`);
   }
-  return tests.map((test) => `-only-testing:${test}`);
+  return named.map((test) => `-only-testing:${test}`);
 }
-export function phoneSelectionRunsJourney(part: string, tests: readonly string[] = []): boolean {
-  return tests.length ? tests.some((test) => test.startsWith(`${PHONE_JOURNEY}/`)) : partRunsJourney(part);
+export function phoneSelectionRunsJourney(part: string, tests: readonly string[] = [], tools: readonly string[] = []): boolean {
+  return tests.length ? [...tests, ...tools].some((test) => test.startsWith(`${PHONE_JOURNEY}/`)) : partRunsJourney(part);
 }
-export function phoneTestsStarted(part: string, output: string, tests: readonly string[] = []): boolean {
-  return tests.length ? tests.every((test) => {
+/** Whether the part's own test, or each named test, started, and each edited tool test the pass runs beside them,
+ * since xcodebuild passes a selection that ran none of them. */
+export function phoneTestsStarted(part: string, output: string, tests: readonly string[] = [], tools: readonly string[] = []): boolean {
+  const started = (test: string) => {
     const [target, suite, method] = test.split("/");
     return output.includes(`Test Case '-[${target}.${suite} ${method}]' started.`);
-  }) : partTestStarted(part, output);
+  };
+  return (tests.length ? tests.every(started) : partTestStarted(part, output)) && tools.every(started);
 }
 
 /** Every device's parts in start order: each part on the slower iPad first, then on the iPhone, and each only on the
@@ -342,8 +360,9 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
     .map((device) => ({ device, part: part.name })));
 }
 
-/** One part's run in a gate: its device, its part, and which pass of the gate it belongs to. */
-export type PhoneJob = { device: PhoneDevice; part: string; round: number; tests?: readonly string[] };
+/** One part's run in a gate: its device, its part, which pass of the gate it belongs to, any tests it runs in the
+ * part's place, and the edited tool tests it runs beside them (`partSelection`). */
+export type PhoneJob = { device: PhoneDevice; part: string; round: number; tests?: readonly string[]; tools?: readonly string[] };
 
 /** The passes after the ordinary one that a part whose test code changed takes (INF-2259: three in all). */
 export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
@@ -354,20 +373,23 @@ export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
  * then run `repeats` again on the iPhone alone, after its round one; the iPad runs a repeated part
  * once (INF-2732, the captain's "run each edited phone part three times on the iPhone and once on the iPad").
  * A part runs only on the devices its row of PHONE_PARTS names, so the iPad runs only the parts about the iPad.
+ * Every pass of a part in `toolTests` runs those edited tool tests too, so they get the part's rounds.
  * Each device's jobs are in the order its lane runs them (`runDeviceLanes`), and the iPad's lane starts
  * first, as `phoneJobs`. */
-export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [], repeatTests = {} }: {
+export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [], repeatTests = {}, toolTests = {} }: {
   parts?: readonly string[]; iphoneOnly?: readonly string[]; repeats?: readonly string[]; repeatTests?: Record<string, readonly string[]>;
+  toolTests?: Record<string, readonly string[]>;
 }): PhoneJob[] {
-  for (const part of [...parts, ...iphoneOnly, ...repeats]) partSelection(part);
+  for (const part of [...parts, ...iphoneOnly, ...repeats]) partSelection(part, undefined, toolTests[part]);
+  const tools = (job: PhoneJob): PhoneJob => (toolTests[job.part]?.length ? { ...job, tools: toolTests[job.part] } : job);
   const first = phoneJobs(devices, [...parts, ...iphoneOnly])
     .filter(({ device, part }) => device === "iphone" || !iphoneOnly.includes(part) || parts.includes(part))
-    .map((job) => ({ ...job, round: 1 }));
+    .map((job) => tools({ ...job, round: 1 }));
   const order: PhoneDevice[] = ["ipad", "duo", "iphone"];
   return order.filter((device) => devices.includes(device)).flatMap((device) => [
     ...first.filter((job) => job.device === device),
     ...(device === "iphone"
-      ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round, ...(repeatTests[job.part]?.length ? { tests: repeatTests[job.part] } : {}) })))
+      ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => tools({ ...job, round, ...(repeatTests[job.part]?.length ? { tests: repeatTests[job.part] } : {}) })))
       : []),
   ]);
 }
@@ -447,22 +469,24 @@ export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTim
 }
 
 /** A dealt job's passes as the gate reads them from `--plan` (`dealPhonePasses`): each a device and a part its row of
- * PHONE_PARTS runs there, its round (a further round on the iPhone alone) and any named tests the part owns, every pass
- * once. Anything else is refused before a simulator starts. */
+ * PHONE_PARTS runs there, its round (a further round on the iPhone alone), any named tests the part owns and any edited
+ * tool tests of the rest part, every pass once. Anything else is refused before a simulator starts. */
 export function readPhonePlan(text: string): PhoneJob[] {
   const read = JSON.parse(text) as unknown;
   if (!Array.isArray(read) || !read.length) throw new Error("A dealt phone job's plan lists its passes, at least one");
   const jobs = read.map((pass: unknown): PhoneJob => {
-    const { device, part, round, tests } = (pass ?? {}) as Record<string, unknown>;
+    const { device, part, round, tests, tools } = (pass ?? {}) as Record<string, unknown>;
     if (!(PHONE_DEVICES as readonly unknown[]).includes(device) || typeof part !== "string")
       throw new Error(`A dealt phone pass names a device and a part: ${JSON.stringify(pass)}`);
     if (!partDevices(part).includes(device as PhoneDevice)) throw new Error(`The ${part} part does not run on the ${String(device)}`);
     if (!(round === 1 || (device === "iphone" && (PHONE_REPEAT_ROUNDS as readonly unknown[]).includes(round))))
       throw new Error(`A dealt phone pass of ${part} on the ${String(device)} has no round ${String(round)}`);
-    if (tests !== undefined && (!Array.isArray(tests) || tests.some((test) => typeof test !== "string")))
-      throw new Error(`A dealt phone pass's tests are identifiers: ${JSON.stringify(pass)}`);
-    if (tests) phoneTestSelection(part, tests as string[]);
-    return { device: device as PhoneDevice, part, round: round as number, ...(tests ? { tests: tests as string[] } : {}) };
+    for (const named of [tests, tools])
+      if (named !== undefined && (!Array.isArray(named) || named.some((test) => typeof test !== "string")))
+        throw new Error(`A dealt phone pass's tests are identifiers: ${JSON.stringify(pass)}`);
+    if (tests || tools) phoneTestSelection(part, (tests ?? []) as string[], undefined, (tools ?? []) as string[]);
+    return { device: device as PhoneDevice, part, round: round as number, ...(tests ? { tests: tests as string[] } : {}),
+      ...(tools ? { tools: tools as string[] } : {}) };
   });
   const names = jobs.map(phonePassName);
   const twice = names.find((name, index) => names.indexOf(name) !== index);

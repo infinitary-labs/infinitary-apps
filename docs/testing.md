@@ -989,7 +989,9 @@ This holds for a proper subset as for a complete selection (INF-2811), so a bran
 Named `parts` and every-part requests run their parts on every device their rows name.
 Shared helpers and setup reach their consumers without repeating them; changed test bodies, signatures and helpers used by only one part retain three rounds.
 For a part containing a suite, the chooser carries exact changed-test identifiers into the two further rounds, so the other tests run only in ordinary coverage.
+A test's identity is the XCTest class around it, a class or an extension of one, so a file of two test classes still names each test exactly.
 An unreadable test identity conservatively repeats its containing part; each exact selection must witness every selected test starting.
+A changed test of the phone check's own tools, which the rest part otherwise skips, runs by name in every pass of the rest part, round one included, and a named-parts request runs none (`docs/ios.md`, beside the `tools` input).
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
 Within a job the iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and in a complete selection or a request with edited-part passes the first failure stops every later part and pass, with no retries, and the first failed job cancels the request's other jobs (`fail-fast`).
 A later pass writes its part's folder beside the ordinary one, named `<part>-round-<n>`, so its logs, pictures and failure results ride the ordinary artifacts.

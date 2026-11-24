@@ -752,6 +752,67 @@ describe("the native clock proof selection", () => {
   });
 });
 
+// The rest part skips the phone check's own tool tests, so a pass of it runs a tool test whose own code changed only by
+// name (`tools`), beside whatever else the pass selects.
+describe("an edited tool test in a pass of the rest part", () => {
+  const holding = everyTest.filter((test) => test.startsWith("InfinitaryUITests/PhoneWaitsTests/"));
+  const [edited] = holding;
+  const restRuns = (test: string) => chosen(partSelection("rest"), test);
+  it("runs the tool class that holds it beside the part's own tests, and skips every other tool test", () => {
+    expect(holding.length).toBeGreaterThan(1);
+    expect(restRuns(edited!)).toBe(false);
+    const selection = phoneTestSelection("rest", [], undefined, [edited!]);
+    for (const test of everyTest)
+      expect(chosen(selection, test), test).toBe(restRuns(test) || holding.includes(test));
+    // A further round that names its tests runs them and the edited tool test, and nothing else.
+    const named = ["InfinitaryUITests/PhoneJourney/testCharacterAndPastChoices"];
+    const further = phoneTestSelection("rest", named, undefined, [edited!]);
+    expect(everyTest.filter((test) => chosen(further, test))).toEqual(
+      everyTest.filter((test) => test === named[0] || test === edited),
+    );
+    expect(() => partSelection("cards-form", undefined, [edited!])).toThrow(
+      "The cards-form part runs no tool tests; the rest part does",
+    );
+    expect(() => partSelection("rest", undefined, named)).toThrow(
+      `${named[0]} is not a test of the phone check's own tools`,
+    );
+  });
+  it("is in every pass of the rest part, and the gate reads it from a dealt plan", () => {
+    const passes = phonePasses(["iphone", "ipad"], {
+      parts: ["rest"],
+      repeats: ["rest"],
+      toolTests: { rest: [edited!] },
+    });
+    expect(passes.map(({ device, round, tools }) => `${device} ${round} ${tools}`)).toEqual([
+      `ipad 1 ${edited}`,
+      `iphone 1 ${edited}`,
+      `iphone 2 ${edited}`,
+      `iphone 3 ${edited}`,
+    ]);
+    expect(readPhonePlan(JSON.stringify(passes))).toEqual(passes);
+    expect(() =>
+      readPhonePlan(
+        JSON.stringify([{ device: "iphone", part: "talk-tasks", round: 1, tools: [edited] }]),
+      ),
+    ).toThrow("The talk-tasks part runs no tool tests; the rest part does");
+    expect(() =>
+      readPhonePlan(JSON.stringify([{ device: "iphone", part: "rest", round: 1, tools: [7] }])),
+    ).toThrow(/tests are identifiers/);
+  });
+  it("fails a pass whose own test started but whose edited tool test never did", () => {
+    // The iPhone's join-read part in the 0.8.0 phone release check, as its log printed it.
+    const joinRead = readFileSync(
+      "tests/fixtures/phone-test-plan/join-read-xcodebuild.log",
+      "utf8",
+    );
+    const [, suite, method] = edited!.split("/");
+    expect(phoneTestsStarted("join-read", joinRead)).toBe(true);
+    expect(phoneTestsStarted("join-read", joinRead, [], [edited!])).toBe(false);
+    const started = `${joinRead}\nTest Case '-[InfinitaryUITests.${suite} ${method}]' started.\n`;
+    expect(phoneTestsStarted("join-read", started, [], [edited!])).toBe(true);
+  });
+});
+
 // INF-1541 piece 1 (the captain's choice "The test code skips Apple's animation wait and checks each target itself"):
 // the gate fails a journey part whose log never says it skipped XCTest's animation wait, and counts every animation
 // wait XCTest still ran out. The first lines are INF-1538's stalled iPhone talk part, as its log printed them.

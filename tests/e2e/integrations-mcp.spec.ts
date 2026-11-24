@@ -4,9 +4,11 @@ import { expect, type Page, test } from "@playwright/test";
 import { WHOLE_ACTION } from "../../src/core/integrations/scopes";
 import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { ACTIONS } from "../../src/shared/actions";
+import * as m from "../../src/shared/i18n/messages.generated";
 import {
   INTEGRATION_APPROVAL_WORDS,
   INTEGRATION_RULE_WORDS,
+  INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_WORDS,
   integrationApprovalsTitle,
@@ -14,6 +16,7 @@ import {
   integrationTaskAllowLine,
   NOT_ALLOWED_WHY,
 } from "../../src/shared/integrations";
+import { serveSignInNotes } from "../helpers/mcpSignInStandIn";
 import { addedNote, NOTES_ADD_TOOL, NOTES_LIST_TITLE, SAMPLE_NOTES } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -44,6 +47,7 @@ import {
   mcpNotesThree,
   mcpNotesTwice,
 } from "./scenarios/mcpNotes";
+import { launchSecrets } from "./secretsHarness";
 import { settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
 import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
@@ -491,4 +495,108 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
       shown.id.startsWith("integration-ask-"),
     ),
   ).toEqual([]);
+});
+
+/**
+ * An MCP server at an address that asks for a sign-in (docs/integrations.md,
+ * "MCP servers that sign in"; the plan for web MCP sign-ins: "the journey
+ * signs in by keyboard").
+ *
+ * - Promised result: the MCP form, filled and sent by keys, opens the
+ *   server's sign-in page in the browser and says to finish there, naming
+ *   the page's address, with Open the page again taking the keyboard; that
+ *   button opens the same page again, and once the browser comes back the
+ *   row opens on the server's tools, its lasting key in Secrets and in no
+ *   file.
+ * - Data: the stand-in notes server behind its sign-in
+ *   (`tests/helpers/mcpSignInStandIn.ts`), both on this computer.
+ * - Completion signal: the row's tools, and the stand-in's record of one
+ *   registered app and one lasting key.
+ * - Platform prerequisites: none beyond the app; the system browser is a
+ *   recorder, and the test follows the page itself the way a browser does.
+ * - Shared resources: none; the app, its folder, its Secrets and the
+ *   servers are this test's own.
+ */
+test("an MCP server that asks for a sign-in signs in from Settings by keys", async () => {
+  const userDataDir = scratchDir("infinitary-mcp-sign-in-");
+  const stand = await serveSignInNotes("modern");
+  try {
+    launched = await launchSecrets({ userDataDir });
+    const { app, page } = launched;
+    await app.evaluate(({ shell }) => {
+      const opened: string[] = [];
+      (globalThis as { __fmOpened?: string[] }).__fmOpened = opened;
+      shell.openExternal = async (url: string) => {
+        opened.push(url);
+      };
+    });
+    const opened = () =>
+      app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []);
+
+    await test.step("Connect opens the sign-in page and the form says to finish in the browser", async () => {
+      await runFromSearch(app, page, "settings.integrations");
+      const tab = settingsSection(page, "integrations");
+      await pressKey(tab.locator('[data-integration-add="mcp"] button'), "Enter");
+      const form = tab.locator("[data-integration-mcp-form]");
+      const name = form.getByLabel(INTEGRATIONS_MCP_WORDS.name);
+      await untilFocused(name);
+      await typeInto(name, MCP_NOTES_NAME);
+      await pressKey(name, "Tab");
+      const runsField = form.getByLabel(INTEGRATIONS_MCP_WORDS.runs);
+      await untilFocused(runsField);
+      await typeInto(runsField, stand.url, { insert: true });
+      await pressKey(runsField, "Enter");
+
+      const waiting = tab.locator(`[data-integration-mcp-signing-in="${MCP_NOTES_NAME}"]`);
+      await expect(waiting).toContainText(
+        INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(MCP_NOTES_NAME),
+        { timeout: 30_000 },
+      );
+      await expect(waiting).toContainText(
+        m.integrationsSignInPageAt({ host: new URL(stand.issuer).host }),
+      );
+      await expect.poll(async () => (await opened()).length).toBe(1);
+      expect((await opened())[0]?.startsWith(`${stand.issuer}/authorize?`)).toBe(true);
+
+      const again = waiting.getByRole("button", {
+        name: INTEGRATIONS_BROWSER_SIGN_IN_WORDS.again,
+        exact: true,
+      });
+      await untilFocused(again);
+      await pressKey(again, "Enter");
+      await expect.poll(async () => (await opened()).length).toBe(2);
+      const [first, second] = await opened();
+      expect(second).toBe(first);
+    });
+
+    await test.step("the browser comes back and the row opens on the server's tools", async () => {
+      const tab = settingsSection(page, "integrations");
+      const [page0 = ""] = await opened();
+      expect(await stand.browse(page0)).toContain(
+        m.integrationsSignInPageSignedIn({ name: MCP_NOTES_NAME }),
+      );
+      const row = tab.locator('[data-integration-row="mcp-notes"]');
+      await expect(row).toContainText(INTEGRATIONS_MCP_WORDS.connected, { timeout: 30_000 });
+      await expect(tab.locator("[data-integration-mcp-signing-in]")).toHaveCount(0);
+      const actions = tab.locator('[data-integration-actions="mcp-notes"]');
+      await expect(
+        actions.locator(`[data-integration-action="${MCP_NOTES_ACTION}"] [data-integration-rule]`),
+      ).toHaveText(INTEGRATION_RULE_WORDS.ask);
+      expect(stand.clients.size).toBe(1);
+      expect(stand.lasting.size).toBe(1);
+      const view = await page.evaluate(() => window.infinitary.integrations.list());
+      expect(view.integrations.map((entry) => [entry.id, entry.signIn, entry.health])).toEqual([
+        ["mcp-notes", true, "ok"],
+      ]);
+      const written = ["mcp.json", "mcp-sign-ins.json"]
+        .map((file) => readFileSync(join(userDataDir, "integrations", file), "utf8"))
+        .join("\n");
+      for (const key of [...stand.lasting, ...stand.access]) expect(written).not.toContain(key);
+      expect(JSON.stringify(view)).not.toContain([...stand.lasting][0]);
+    });
+  } finally {
+    await launched?.close();
+    launched = undefined;
+    await stand.close();
+  }
 });

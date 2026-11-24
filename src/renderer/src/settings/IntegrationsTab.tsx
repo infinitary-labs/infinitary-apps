@@ -16,16 +16,26 @@ import {
   INTEGRATIONS_WORDS,
   type IntegrationDoorView,
   type IntegrationKind,
+  type IntegrationMcpAdd,
   type IntegrationNotice,
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
   type IntegrationsView,
   type IntegrationView,
   integrationRenameWords,
+  MCP_SIGN_IN_PICKS,
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import type { KeptOutsideData } from "@shared/savedOutsideData";
-import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
@@ -106,6 +116,13 @@ export function IntegrationsTab() {
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const addChip = useRef<HTMLButtonElement>(null);
+  /** What the MCP form opens with - a pick, or a card's server - and whether it connects at once. */
+  const [mcpPreset, setMcpPreset] = useState<{ server: IntegrationMcpAdd; go: boolean } | null>(
+    null,
+  );
+  const mcpForm = useRef(0);
+  /** Where an MCP server's sign-in waits for the browser: the form, or the row signing in again. */
+  const [mcpWait, setMcpWait] = useState<"form" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** The kind whose sign-in waits for the person's browser. */
   const [browser, setBrowser] = useState<IntegrationKind | null>(null);
@@ -240,6 +257,48 @@ export function IntegrationsTab() {
     setBrowser(null);
     void window.infinitary.integrations.cancelSignIn().then(setView);
   };
+  const openMcpForm = useCallback((preset: { server: IntegrationMcpAdd; go: boolean } | null) => {
+    setError(null);
+    mcpForm.current++;
+    setMcpPreset(preset);
+    setAdding(true);
+  }, []);
+  // A signed-out MCP server signs in again in the browser; its row waits meanwhile.
+  const mcpSignInAgain = (id: string) => {
+    setError(null);
+    setMcpWait(id);
+    window.infinitary.integrations
+      .signInAgain(id)
+      .then(setView)
+      .catch((caught: unknown) =>
+        setError(caught instanceof Error ? caught.message : String(caught)),
+      )
+      .finally(() => setMcpWait((current) => (current === id ? null : current)));
+  };
+  const mcpSignInWait = mcpWait !== null && view.signingIn && (
+    <McpSignInWait
+      signingIn={view.signingIn}
+      onAgain={() => change(() => window.infinitary.integrations.openSignInPage())}
+      onCancel={() => void window.infinitary.integrations.cancelSignIn().then(setView)}
+    />
+  );
+
+  // A card's MCP server (`settingsItem` "mcp?name=…&runs=…") opens the form
+  // filled in; connecting stays the captain's press.
+  const mcpArrival = useShellStore((s) =>
+    s.settingsItem?.section === "integrations" && /^mcp(\?|$)/.test(s.settingsItem.item)
+      ? s.settingsItem.item
+      : null,
+  );
+  useEffect(() => {
+    if (!mcpArrival || !loaded) return;
+    useShellStore.getState().clearSettingsItem();
+    const asked = new URLSearchParams(mcpArrival.slice("mcp".length));
+    openMcpForm({
+      server: { name: asked.get("name") ?? "", runs: asked.get("runs") ?? "" },
+      go: false,
+    });
+  }, [mcpArrival, loaded, openMcpForm]);
 
   // A card's "Sign in to GitHub" lands here with the sign-in to start, so
   // the code is on screen when the tab opens; a card's Google sign-in opens
@@ -371,16 +430,24 @@ export function IntegrationsTab() {
                   : undefined
               }
               open={open === integration.id}
-              busy={integration.kind === "github" ? starting : browser === integration.kind}
+              busy={
+                integration.kind === "github"
+                  ? starting
+                  : integration.kind === "mcp"
+                    ? mcpWait === integration.id
+                    : browser === integration.kind
+              }
               onToggle={() =>
                 setOpen((current) => (current === integration.id ? null : integration.id))
               }
               onSignIn={
                 integration.kind === "github"
                   ? signIn
-                  : integration.host
-                    ? () => hostSignIn.connect(integration.host ?? "")
-                    : () => startBrowserSignIn(integration.kind)
+                  : integration.kind === "mcp"
+                    ? () => mcpSignInAgain(integration.id)
+                    : integration.host
+                      ? () => hostSignIn.connect(integration.host ?? "")
+                      : () => startBrowserSignIn(integration.kind)
               }
               onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
               onPause={(paused) => configure(integration.id, { paused })}
@@ -414,6 +481,9 @@ export function IntegrationsTab() {
             {integration.kind === "github" && aside}
             {notice === integration.kind && noticeAside}
             {browser === integration.kind && browserAside}
+            {mcpWait === integration.id && mcpSignInWait && (
+              <div className="fm-connect-aside fm-forges-aside">{mcpSignInWait}</div>
+            )}
           </div>
         ))}
         {/* Each other computer's own GitHub, GitHub Enterprise and GitLab sign-ins, for its clones and pushes (docs/forge.md, "A computer's own sign-in"). */}
@@ -436,10 +506,7 @@ export function IntegrationsTab() {
                         className="fm-connect-chip"
                         aria-label={INTEGRATIONS_MCP_WORDS.title}
                         aria-expanded={adding}
-                        onClick={() => {
-                          setError(null);
-                          setAdding(true);
-                        }}
+                        onClick={() => openMcpForm(null)}
                       >
                         {plusIcon}
                         <span>{INTEGRATIONS_MCP_WORDS.add}</span>
@@ -459,10 +526,33 @@ export function IntegrationsTab() {
                     )}
                   </span>
                 ))}
+              {view.addable.some((entry) => entry.kind === "mcp") &&
+                MCP_SIGN_IN_PICKS.filter(
+                  (pick) =>
+                    !view.integrations.some((row) => row.kind === "mcp" && row.runs === pick.runs),
+                ).map((pick) => (
+                  <button
+                    key={pick.runs}
+                    type="button"
+                    className="fm-connect-chip"
+                    data-integration-mcp-pick={pick.name}
+                    aria-label={m.integrationsMcpAdd({ name: pick.name })}
+                    onClick={() => openMcpForm({ server: pick, go: true })}
+                  >
+                    {plusIcon}
+                    <span>{pick.name}</span>
+                  </button>
+                ))}
               {hostSignIn.chips}
             </div>
             {adding && (
               <McpAddForm
+                key={mcpForm.current}
+                preset={mcpPreset}
+                waiting={mcpWait === "form" ? mcpSignInWait : null}
+                onSigningIn={(waiting) =>
+                  setMcpWait((current) => (waiting ? "form" : current === "form" ? null : current))
+                }
                 onAdded={(id) => {
                   setAdding(false);
                   setOpen(id);
@@ -693,6 +783,17 @@ function integrationRowView(
         : null,
     };
   }
+  // A server whose sign-in ended signs in again from its row.
+  if (integration.signIn && integration.health === "needs_reauth") {
+    const signedOut = m.integrationsMcpNeedsSignIn();
+    return {
+      tone: "danger",
+      label: signedOut,
+      reauth: true,
+      badge: INTEGRATIONS_MCP_WORDS.connected,
+      problem: signedOut,
+    };
+  }
   const problem = integration.health === "unavailable" ? m.settingsIntegrationsUnreachable() : null;
   return {
     tone:
@@ -819,6 +920,9 @@ function IntegrationRow({
               onSelect: () => onPause(!integration.paused),
             },
             { separator: true },
+            ...(integration.kind === "mcp" && integration.signIn
+              ? [{ id: "sign-in", label: m.settingsIntegrationsSignInAgain(), onSelect: onSignIn }]
+              : []),
             { id: "check", label: m.settingsIntegrationsCheckNow(), onSelect: onCheck },
             { separator: true },
             {
@@ -1170,39 +1274,60 @@ function IntegrationKeys({
  * answers the new row - or says, in the status line, why it could not.
  */
 function McpAddForm({
+  preset,
+  waiting,
+  onSigningIn,
   onAdded,
   onCancel,
 }: {
+  /** The server it opens with, and whether it connects at once (a pick). */
+  preset: { server: IntegrationMcpAdd; go: boolean } | null;
+  /** The sign-in its connect waits on, which takes the place of Connect and Cancel. */
+  waiting: ReactNode;
+  /** Its connect may wait for the browser's sign-in, from start to answer. */
+  onSigningIn: (waiting: boolean) => void;
   onAdded: (id: string) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [runs, setRuns] = useState("");
+  const [name, setName] = useState(preset?.server.name ?? "");
+  const [runs, setRuns] = useState(preset?.server.runs ?? "");
   const [connecting, setConnecting] = useState(false);
   const [problem, setProblem] = useState("");
   const ids = useId();
   const here = useHereAs();
   const ready = name.trim() !== "" && runs.trim() !== "";
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const connect = async () => {
     if (!ready || connecting) return;
     setConnecting(true);
     setProblem("");
+    onSigningIn(true);
     try {
-      const { id } = await window.infinitary.integrations.addMcp({ name, runs });
+      const { id } = await window.infinitary.integrations.addMcp({ name, runs }, { signIn: true });
       onAdded(id);
     } catch (caught) {
       setProblem(caught instanceof Error ? caught.message : String(caught));
     } finally {
+      onSigningIn(false);
       setConnecting(false);
     }
   };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void connect();
+  };
+  // A pick connects as it opens; the form stays, saying why if it cannot.
+  const picked = useRef(preset?.go === true);
+  useEffect(() => {
+    if (!picked.current) return;
+    picked.current = false;
+    void connect();
+  });
   return (
     <form
       className="fm-connect-aside fm-forges-aside"
       data-integration-mcp-form=""
       aria-label={INTEGRATIONS_MCP_WORDS.title}
-      onSubmit={(event) => void submit(event)}
+      onSubmit={submit}
     >
       <div className="fm-forges-field">
         <label htmlFor={`${ids}-name`}>{INTEGRATIONS_MCP_WORDS.name}</label>
@@ -1211,7 +1336,7 @@ function McpAddForm({
           value={name}
           placeholder={INTEGRATIONS_MCP_WORDS.namePlaceholder}
           autoComplete="off"
-          autoFocus
+          autoFocus={!preset?.go}
           onChange={(event) => setName(event.target.value)}
         />
       </div>
@@ -1240,21 +1365,63 @@ function McpAddForm({
       >
         {problem}
       </span>
+      {waiting || (
+        <div className="fm-forges-aside-actions">
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            pending={connecting}
+            pendingLabel={INTEGRATIONS_MCP_WORDS.connecting}
+            disabled={!ready}
+          >
+            {INTEGRATIONS_MCP_WORDS.connect}
+          </Button>
+          <Button variant="ghost" size="sm" disabled={connecting} onClick={onCancel}>
+            {INTEGRATIONS_MCP_WORDS.cancel}
+          </Button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+/**
+ * An MCP server's sign-in waiting for the person's browser: finish there,
+ * the page's address, and the page again or Cancel. Its first button takes
+ * the keyboard, since what had it is now pending.
+ */
+function McpSignInWait({
+  signingIn,
+  onAgain,
+  onCancel,
+}: {
+  signingIn: { name: string; page: string };
+  onAgain: () => void;
+  onCancel: () => void;
+}) {
+  const again = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (again.current) focusWithRing(again.current);
+  }, []);
+  let host = signingIn.page;
+  try {
+    host = new URL(signingIn.page).host;
+  } catch {}
+  return (
+    <div data-integration-mcp-signing-in={signingIn.name}>
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+        {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(signingIn.name)}{" "}
+        {m.integrationsSignInPageAt({ host })}
+      </div>
       <div className="fm-forges-aside-actions">
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          pending={connecting}
-          pendingLabel={INTEGRATIONS_MCP_WORDS.connecting}
-          disabled={!ready}
-        >
-          {INTEGRATIONS_MCP_WORDS.connect}
+        <Button ref={again} variant="secondary" size="sm" onClick={onAgain}>
+          {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.again}
         </Button>
-        <Button variant="ghost" size="sm" disabled={connecting} onClick={onCancel}>
-          {INTEGRATIONS_MCP_WORDS.cancel}
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.cancel}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

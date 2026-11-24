@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "{name} 추가",
+  "integrationsMcpNeedsSignIn": "다시 로그인해야 함",
+  "integrationsMcpOfferBody": "{name}은(는) 로그인을 요청해요. 로그인은 브라우저에서 해요. 그 뒤 도구는 “항상 허용”을 고를 때까지 카드로 물어봐요.",
+  "integrationsMcpOfferButton": "연동 열기",
+  "integrationsMcpOfferNotNow": "나중에",
+  "integrationsMcpOfferOpen": "연동을 여세요. MCP 서버 양식이 채워져 있고, 연결하면 로그인 페이지가 열려요.",
+  "integrationsMcpRenewOperation": "도구가 계속 작동하도록 {name} 로그인을 갱신",
+  "integrationsMcpRenewReason": "도구가 계속 작동하도록 Infinitary가 {name} 로그인을 갱신해요.",
+  "integrationsMcpRenewResult": "새 {name} 접근 키, 앱 메모리에만 보관",
+  "integrationsMcpRevokeOperation": "삭제한 로그인을 잊도록 {name}에 알리기",
+  "integrationsMcpRevokeReason": "Infinitary가 삭제한 로그인을 잊도록 {name}에 알려요.",
+  "integrationsMcpRevokeResult": "아무것도 보관하지 않음: 로그인은 그곳에서 끝나요",
   "integrationsSignInAgain": "페이지 다시 열기",
   "integrationsSignInCancel": "취소",
+  "integrationsSignInCancelled": "로그인이 취소됐어요.",
+  "integrationsSignInNoneAgain": "{name}에는 다시 할 로그인이 없어요.",
+  "integrationsSignInNoneWaiting": "기다리는 로그인이 없어요.",
+  "integrationsSignInPageAt": "페이지 주소는 {host}예요.",
+  "integrationsSignInPageNotSignedIn": "{name}에 로그인하지 않았어요. 이 탭을 닫고 Infinitary로 돌아가도 돼요.",
+  "integrationsSignInPageSignedIn": "{name}에 로그인했어요. 이 탭을 닫고 Infinitary로 돌아가도 돼요.",
   "integrationsSignInWaiting": "브라우저에서 {name} 로그인을 마무리하세요."
 }

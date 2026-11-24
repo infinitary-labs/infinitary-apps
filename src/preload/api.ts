@@ -778,8 +778,17 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     },
     integrations: {
       list: () => invoke("inf:integrations:list"),
-      addMcp: (server) =>
-        readableRequest("inf:integrations:add", () => invoke("inf:integrations:add", server)),
+      addMcp: (server, how) =>
+        readableRequest("inf:integrations:add", () =>
+          how
+            ? invoke("inf:integrations:add", server, how)
+            : invoke("inf:integrations:add", server),
+        ),
+      signInAgain: (id) =>
+        readableRequest("inf:integrations:sign-in-again", () =>
+          invoke("inf:integrations:sign-in-again", id),
+        ),
+      openSignInPage: () => invoke("inf:integrations:sign-in-page"),
       signIn: (kind, consent) =>
         readableRequest("inf:integrations:sign-in", () =>
           invoke("inf:integrations:sign-in", kind, consent),

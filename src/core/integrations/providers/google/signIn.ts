@@ -1,22 +1,16 @@
 import { createHash, randomBytes } from "node:crypto";
-import { createServer, type Server } from "node:http";
 import { cutText } from "@shared/textCut";
 import type { SignInReturnTo } from "../../../signInReturns";
+import { listenOnLoopback } from "../../loopback";
 import type { GoogleClient, GoogleEndpoints } from "./client";
 
 /**
  * Google's sign-in for an installed app (docs/integrations.md, "Google"):
- * Google's device flow does not reach Gmail or Calendar, so the app listens
- * on this computer's loopback address, at a port the system picks, opens
- * Google's consent page in the person's own browser, and takes the code the
- * browser brings back. PKCE (S256) ties the code to this sign-in, and the
- * state ties the browser's answer to this page; anything else that reaches
- * the listener is turned away. The listener closes as soon as the browser
- * answers, or the sign-in is cancelled.
- *
- * The page may open on another computer that controls this first mate: it
- * is told the port, catches the browser's return there and hands it to this
- * listener (src/core/signInReturns.ts), until the sign-in ends.
+ * Google's device flow does not reach Gmail or Calendar, so the app opens
+ * Google's consent page in the person's own browser and takes the code the
+ * browser brings back to this computer's loopback address (`../../loopback`).
+ * PKCE (S256) ties the code to this sign-in, and the state ties the
+ * browser's answer to this page.
  */
 
 /** What Google issued: kept by the binding in the integration's key store, never shown. */
@@ -45,18 +39,8 @@ export type LoopbackSignInOptions = {
 
 export const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
 
-/** The page the browser shows once it has brought the answer back. */
-const PAGE = {
-  signedIn: "Signed in to Google. You can close this tab and go back to Infinitary.",
-  declined: "Not signed in to Google. You can close this tab and go back to Infinitary.",
-} as const;
-
 function base64url(bytes: Buffer): string {
   return bytes.toString("base64url");
-}
-
-function page(words: string): string {
-  return `<!doctype html><meta charset="utf-8"><title>Infinitary</title><body style="font:15px system-ui;margin:3em">${words}</body>`;
 }
 
 /** Sign in on the loopback address and answer what Google issued; throws words otherwise. */
@@ -64,10 +48,15 @@ export async function signInOnLoopback(options: LoopbackSignInOptions): Promise<
   const verifier = base64url(randomBytes(32));
   const challenge = base64url(createHash("sha256").update(verifier).digest());
   const state = base64url(randomBytes(16));
-  const server = createServer();
   const ended = new AbortController();
+  const loopback = await listenOnLoopback({
+    state,
+    path: "/",
+    signal: options.signal,
+    name: "Google",
+  });
   try {
-    const port = await listen(server, options.signal);
+    const { port } = loopback;
     const redirectUri = `http://127.0.0.1:${port}`;
     const consent = new URL(options.endpoints.auth);
     for (const [name, value] of Object.entries({
@@ -83,66 +72,13 @@ export async function signInOnLoopback(options: LoopbackSignInOptions): Promise<
       prompt: "consent",
     }))
       consent.searchParams.set(name, value);
-    const answered = waitForCode(server, state, options.signal);
-    // A cancel while the page is still opening is read below, not lost.
-    answered.catch(() => {});
     await options.open(consent.href, { port, ended: ended.signal });
-    const code = await answered;
+    const { code } = await loopback.answered;
     return await exchange(options, code, verifier, redirectUri);
   } finally {
     ended.abort();
-    server.close();
-    server.closeAllConnections();
+    loopback.close();
   }
-}
-
-function listen(server: Server, signal: AbortSignal): Promise<number> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new Error("The sign-in was cancelled."));
-      return;
-    }
-    server.once("error", () => reject(new Error("Could not listen on this computer for Google.")));
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (address && typeof address === "object") resolve(address.port);
-      else reject(new Error("Could not listen on this computer for Google."));
-    });
-  });
-}
-
-/** The code the browser brings back with this sign-in's state; anything else is turned away. */
-function waitForCode(server: Server, state: string, signal: AbortSignal): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const cancelled = () => reject(new Error("The sign-in was cancelled."));
-    if (signal.aborted) cancelled();
-    signal.addEventListener("abort", cancelled, { once: true });
-    server.on("request", (request, response) => {
-      const url = new URL(request.url ?? "/", "http://127.0.0.1");
-      if (
-        request.method !== "GET" ||
-        url.pathname !== "/" ||
-        url.searchParams.get("state") !== state
-      ) {
-        response.writeHead(404).end();
-        return;
-      }
-      const code = url.searchParams.get("code");
-      const error = url.searchParams.get("error");
-      response.writeHead(200, { "content-type": "text/html; charset=utf-8", connection: "close" });
-      response.end(page(code ? PAGE.signedIn : PAGE.declined));
-      signal.removeEventListener("abort", cancelled);
-      if (code) resolve(code);
-      else
-        reject(
-          new Error(
-            error === "access_denied"
-              ? "The sign-in was declined on Google's page."
-              : `Google did not sign in${error ? ` (${cutText(error, 64)})` : ""}.`,
-          ),
-        );
-    });
-  });
 }
 
 async function exchange(

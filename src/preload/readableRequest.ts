@@ -2,6 +2,11 @@ import { COMPUTER, HERE } from "@shared/deviceNames";
 import { ZodError } from "zod";
 
 const SIGN_IN_FALLBACK = "Could not sign in to this account. Please try again.";
+// The binding's own words already say why the sign-in did not finish.
+const INTEGRATION_SIGN_IN = {
+  fallback: "Could not sign in. Please try again.",
+  prefix: "",
+} as const;
 
 // Only requests whose caught rejection is shown directly to the captain.
 // Other channels retain their existing error contract.
@@ -263,8 +268,8 @@ export const REQUEST_COPY = {
   },
   // The binding's own words already say why the server could not connect.
   "inf:integrations:add": { fallback: "Could not add this server. Please try again.", prefix: "" },
-  // The binding's own words already say why the sign-in did not finish.
-  "inf:integrations:sign-in": { fallback: "Could not sign in. Please try again.", prefix: "" },
+  "inf:integrations:sign-in": INTEGRATION_SIGN_IN,
+  "inf:integrations:sign-in-again": INTEGRATION_SIGN_IN,
 } as const;
 
 type ReadableRequestChannel = keyof typeof REQUEST_COPY;

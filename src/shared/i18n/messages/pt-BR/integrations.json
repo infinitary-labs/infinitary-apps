@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "Adicionar {name}",
+  "integrationsMcpNeedsSignIn": "precisa fazer login de novo",
+  "integrationsMcpOfferBody": "{name} pede um login, que você faz no seu navegador. Depois, as ferramentas dele perguntam a você em um cartão até você escolher “Sempre permitida”.",
+  "integrationsMcpOfferButton": "Abrir Integrações",
+  "integrationsMcpOfferNotNow": "Agora não",
+  "integrationsMcpOfferOpen": "Abra Integrações: o formulário do servidor MCP já está preenchido, e conectar abre a página de login.",
+  "integrationsMcpRenewOperation": "Renovar o login no {name} para as ferramentas dele continuarem funcionando",
+  "integrationsMcpRenewReason": "O Infinitary renova seu login no {name} para as ferramentas dele continuarem funcionando.",
+  "integrationsMcpRenewResult": "Uma nova chave de acesso do {name}, guardada só na memória do app",
+  "integrationsMcpRevokeOperation": "Pedir ao {name} que esqueça o login que você removeu",
+  "integrationsMcpRevokeReason": "O Infinitary pede ao {name} que esqueça o login que você removeu.",
+  "integrationsMcpRevokeResult": "Nada é guardado: o login termina lá",
   "integrationsSignInAgain": "Abrir a página de novo",
   "integrationsSignInCancel": "Cancelar",
+  "integrationsSignInCancelled": "O login foi cancelado.",
+  "integrationsSignInNoneAgain": "{name} não tem login para fazer de novo.",
+  "integrationsSignInNoneWaiting": "Nenhum login está esperando.",
+  "integrationsSignInPageAt": "A página está em {host}.",
+  "integrationsSignInPageNotSignedIn": "Login não feito no {name}. Você pode fechar esta aba e voltar ao Infinitary.",
+  "integrationsSignInPageSignedIn": "Login feito no {name}. Você pode fechar esta aba e voltar ao Infinitary.",
   "integrationsSignInWaiting": "Termine de fazer login no {name} no seu navegador."
 }

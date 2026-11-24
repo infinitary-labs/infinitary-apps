@@ -183,11 +183,15 @@ export const upkeepChannels = {
     request: z.tuple([presenceSettingsSchema]),
     response: presenceSettingsSchema,
   },
-  /** What Reset Infinitary's question counts before the person answers it (docs/reset.md). */
+  /**
+   * What Reset Infinitary's question counts before the person answers it
+   * (docs/reset.md), asked by this computer's window or by a computer that
+   * controls this first mate, whose own row resets both.
+   */
   "inf:app:reset-scope": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: resetScopeSchema,
   },
@@ -201,6 +205,21 @@ export const upkeepChannels = {
     effect: "change",
     surface: "core",
     reach: "home",
+    request: z.tuple([]),
+    response: okSchema,
+  },
+  /**
+   * Reset Infinitary from a computer that controls this first mate, once the
+   * person there confirmed it with that computer's own system confirmation
+   * (docs/reset.md, "From a computer that controls the first mate"). Only
+   * that computer's window program asks it, over the connection; the home
+   * answers no phone and no request of its own, then resets itself as its
+   * own row would.
+   */
+  "inf:home-reset:start": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
     request: z.tuple([]),
     response: okSchema,
   },

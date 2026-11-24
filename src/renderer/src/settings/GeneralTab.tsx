@@ -666,8 +666,8 @@ export function GeneralTab() {
             </Button>
           }
         />
-        {/* A view of another computer's first mate resets nothing here (docs/reset.md). */}
-        {!remote && <ResetRow />}
+        {/* On a computer that controls another's first mate, the row resets both (docs/reset.md). */}
+        {!remote ? <ResetRow /> : thisMac.homeResets && <ResetRow home={thisMac.name} />}
       </div>
       <SharingSection />
       {/* In Secrets wherever this window offers it (WebsiteSignInsSection.tsx). */}

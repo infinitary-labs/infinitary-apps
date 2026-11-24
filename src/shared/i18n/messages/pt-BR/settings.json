@@ -676,7 +676,9 @@
   "settingsGeneralReset": "Redefinir o Infinitary",
   "settingsGeneralResetButton": "Redefinir",
   "settingsGeneralResetDeletes": "O Infinitary apaga tudo o que guarda aqui, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados, e depois abre como se tivesse acabado de ser instalado.",
+  "settingsGeneralResetDeletesBoth": "O Infinitary apaga tudo o que guarda nos dois, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados, e depois cada um abre como se tivesse acabado de ser instalado.",
   "settingsGeneralResetDescription": "Deixa o Infinitary neste computador como estava logo depois de instalado.",
+  "settingsGeneralResetDescriptionBoth": "Deixa o Infinitary em {home} e neste computador como estava logo depois de instalado.",
   "settingsGeneralResetKeep": "Manter tudo",
   "settingsGeneralResetKeeps": "Os projetos nas suas próprias pastas mantêm todos os arquivos e commits. Para apagar só as tarefas, use Excluir dados das tarefas.",
   "settingsGeneralResetOpenTasks": {
@@ -686,6 +688,8 @@
     "other": "{count} tarefas abertas param."
   },
   "settingsGeneralResetQuestion": "Redefinir o Infinitary neste computador?",
+  "settingsGeneralResetQuestionBoth": "Redefinir o Infinitary em {home} e neste computador?",
+  "settingsGeneralResetUnreached": "{home} não respondeu, então nada foi redefinido. Tente de novo quando ele estiver ao alcance.",
   "settingsGeneralResetting": "Redefinindo…",
   "settingsGeneralShowInDock": "Mostrar no Dock",
   "settingsGeneralShowInDockDescription": "Desligado oculta o ícone do Dock, e a janela continua.",

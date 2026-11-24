@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "Infinitary se restableció. La próxima vez se abre en la pantalla de bienvenida.",
+  "resetCommandHelp": "Elimina todo lo que Infinitary guarda aquí, una vez que confirmes que eres tú.",
+  "resetCommandKept": "No lo confirmaste, así que no se restableció nada.",
+  "resetCommandNoConfirmation": "Este ordenador no puede confirmar aquí que eres tú, así que no se restableció nada. Usa Restablecer Infinitary en Configuración → General, o en la pantalla que muestra Infinitary cuando no puede abrirse.",
+  "resetCommandRunning": "Infinitary está abierto en este ordenador, así que no se restableció nada. Usa Restablecer Infinitary en Configuración → General, o cierra Infinitary y vuelve a ejecutar esto.",
   "resetConfirmReason": "Restablecer Infinitary en este ordenador.",
+  "resetConfirmReasonBoth": "Restablecer Infinitary en {home} y en este ordenador.",
+  "resetConfirmReasonBothMac": "restablecer Infinitary en {home} y en este ordenador",
   "resetConfirmReasonMac": "restablecer Infinitary en este ordenador",
+  "resetCouldNotStartMessage": "Se detuvo dos veces antes de terminar de iniciarse. Tu trabajo guardado no ha cambiado.",
+  "resetCouldNotStartNext": "Vuelve a intentarlo, o restablece Infinitary para empezar de nuevo como recién instalado.",
+  "resetCouldNotStartTitle": "Infinitary no pudo iniciarse",
   "resetHeldDetail": "Otro programa está usando la carpeta de Infinitary. Ciérralo y vuelve a intentarlo.",
   "resetHeldMessage": "Infinitary no pudo terminar de restablecerse",
   "resetHeldQuit": "Salir",
   "resetHeldTryAgain": "Reintentar",
   "resetKeysAsk": "¿Restablecer todas las teclas a las del preajuste {preset}?",
   "resetKeysConfirm": "Restablecer todas las teclas",
-  "resetKeysDetail": "Cada atajo que cambiaste en la configuración del teclado vuelve al que le da el preajuste {preset}."
+  "resetKeysDetail": "Cada atajo que cambiaste en la configuración del teclado vuelve al que le da el preajuste {preset}.",
+  "resetRunEnded": "Infinitary se restableció aquí, así que esta ejecución termina definitivamente, e Infinitary se abrirá en la pantalla de bienvenida la próxima vez.",
+  "resetScreenKeeps": "Los proyectos en tus propias carpetas conservan todos sus archivos y commits.",
+  "resetScreenKept": "No se restableció nada."
 }

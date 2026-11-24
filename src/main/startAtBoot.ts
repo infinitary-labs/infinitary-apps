@@ -22,6 +22,7 @@ import {
 } from "@core/helper/windowsTask";
 import { lingerStays } from "@core/helper/words";
 import { HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import type { StartEntry } from "./besideRun";
 import {
   lockHolder,
@@ -543,6 +544,8 @@ export function helpWords(
     "  status           Says whether it runs, and why it last stopped.",
     "  link             Prints a link for another computer, or a code for a phone.",
     "  start-at-boot    Starts it with no window whenever this computer starts.",
+    // i18n-exempt: the command's own word; its line is in the catalog
+    `  reset            ${m.resetCommandHelp()}`,
     "  help run         Lists ways to start it.",
   ];
   return { code: words.length === 0 ? 0 : 2, lines: usage };

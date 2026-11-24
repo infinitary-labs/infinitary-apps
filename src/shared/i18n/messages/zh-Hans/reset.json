@@ -1,11 +1,24 @@
 {
+  "resetCommandDone": "Infinitary 已重置。下次打开时会显示欢迎界面。",
+  "resetCommandHelp": "确认是你本人后，删除 Infinitary 在这里保存的一切。",
+  "resetCommandKept": "你没有确认，所以没有重置任何内容。",
+  "resetCommandNoConfirmation": "这台电脑无法在这里确认是你本人，所以没有重置任何内容。请使用“设置 → 通用”中的“重置 Infinitary”，或 Infinitary 无法打开时显示的界面。",
+  "resetCommandRunning": "Infinitary 正在这台电脑上运行，所以没有重置任何内容。请使用“设置 → 通用”中的“重置 Infinitary”，或退出 Infinitary 后再运行一次。",
   "resetConfirmReason": "在这台电脑上重置 Infinitary。",
+  "resetConfirmReasonBoth": "在 {home} 和这台电脑上重置 Infinitary。",
+  "resetConfirmReasonBothMac": "在 {home} 和这台电脑上重置 Infinitary",
   "resetConfirmReasonMac": "在这台电脑上重置 Infinitary",
+  "resetCouldNotStartMessage": "它在完成启动前停止了两次。你保存的工作没有被更改。",
+  "resetCouldNotStartNext": "请重试，或重置 Infinitary，像刚安装时一样重新开始。",
+  "resetCouldNotStartTitle": "Infinitary 无法启动",
   "resetHeldDetail": "另一个程序正在使用 Infinitary 的文件夹。请关闭它，然后重试。",
   "resetHeldMessage": "Infinitary 未能完成重置",
   "resetHeldQuit": "退出",
   "resetHeldTryAgain": "重试",
   "resetKeysAsk": "要将所有按键重置为 {preset} 预设的按键吗？",
   "resetKeysConfirm": "重置所有按键",
-  "resetKeysDetail": "你在键盘设置中改过的每个快捷键，都会恢复为 {preset} 预设给它的按键。"
+  "resetKeysDetail": "你在键盘设置中改过的每个快捷键，都会恢复为 {preset} 预设给它的按键。",
+  "resetRunEnded": "此电脑上的 Infinitary 已重置，因此这次运行将彻底结束，下次 Infinitary 会打开欢迎界面。",
+  "resetScreenKeeps": "你自己文件夹中的项目会保留所有文件和提交。",
+  "resetScreenKept": "没有重置任何内容。"
 }

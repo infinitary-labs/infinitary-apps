@@ -648,7 +648,9 @@
   "settingsGeneralReset": "Infinitary 재설정",
   "settingsGeneralResetButton": "재설정",
   "settingsGeneralResetDeletes": "Infinitary가 작업, 로그인, 비밀 정보, 설정, 연결된 기기를 포함해 여기에 보관한 모든 것을 지우고, 처음 설치한 것처럼 열려요.",
+  "settingsGeneralResetDeletesBoth": "Infinitary가 작업, 로그인, 비밀 정보, 설정, 연결된 기기를 포함해 두 컴퓨터에 보관한 모든 것을 지우고, 각각 처음 설치한 것처럼 열려요.",
   "settingsGeneralResetDescription": "이 컴퓨터의 Infinitary를 처음 설치했을 때의 상태로 되돌려요.",
+  "settingsGeneralResetDescriptionBoth": "{home}와 이 컴퓨터의 Infinitary를 처음 설치했을 때의 상태로 되돌려요.",
   "settingsGeneralResetKeep": "모두 유지",
   "settingsGeneralResetKeeps": "내 폴더에 있는 프로젝트는 모든 파일과 커밋이 그대로 남아요. 작업만 지우려면 작업 데이터 완전 삭제를 사용하세요.",
   "settingsGeneralResetOpenTasks": {
@@ -656,6 +658,8 @@
     "other": "진행 중인 작업 {count}개가 멈춰요."
   },
   "settingsGeneralResetQuestion": "이 컴퓨터의 Infinitary를 재설정할까요?",
+  "settingsGeneralResetQuestionBoth": "{home}와 이 컴퓨터의 Infinitary를 재설정할까요?",
+  "settingsGeneralResetUnreached": "{home}에서 응답이 없어서 아무것도 재설정하지 않았어요. 연결되면 다시 시도하세요.",
   "settingsGeneralResetting": "재설정하는 중…",
   "settingsGeneralShowInDock": "Dock에 표시",
   "settingsGeneralShowInDockDescription": "끄면 창은 그대로 두고 Dock 아이콘만 숨겨요.",

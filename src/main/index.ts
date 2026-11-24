@@ -10,6 +10,7 @@ import { linkCommand, runLinkCommand } from "./linkCommand";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { personWordArg } from "./personWordArg";
 import { installMainProcessErrorHandlers } from "./processErrors";
+import { resetCommand } from "./reset/command";
 import { askLoginShellEarly, runCommand } from "./runCommand";
 import { takeRunAgentMark } from "./runEnvironment";
 import { statusCommand } from "./runStatus";
@@ -24,7 +25,8 @@ import { workCommand } from "./workCommand";
  * docs/run.md); `<app> status` and `<app> link` read that app's status or ask
  * it for a link, and start nothing (./runStatus.ts, ./linkCommand.ts);
  * `<app> start-at-boot` sets that run up to start at boot, and `<app> help`
- * says how to start it (./startAtBoot.ts); any
+ * says how to start it (./startAtBoot.ts); `<app> reset` resets Infinitary
+ * on this computer once the person confirms (./reset/command.ts); any
  * other start is the app itself, its window and its core (./app.ts). Each is
  * a chunk of its own, so the work mode never evaluates the app's modules.
  */
@@ -62,6 +64,10 @@ const help =
   work || run || status || link || boot
     ? null
     : helpCommand(process.argv, Boolean(process.defaultApp));
+const reset =
+  work || run || status || link || boot || help
+    ? null
+    : resetCommand(process.argv, Boolean(process.defaultApp));
 
 /**
  * The data folder `run` opens in this account, chosen as it chooses it but
@@ -165,6 +171,22 @@ if (word) {
   if (result.out) await new Promise((done) => process.stdout.write(result.out, done));
   if (result.error) await new Promise((done) => process.stderr.write(result.error, done));
   process.exit(result.code);
+} else if (reset) {
+  // Reset Infinitary from a terminal (./reset/command.ts): no Dock icon or
+  // window, and readiness awaited off this module's own top level.
+  if (hostPlatform() === "darwin") (await import("electron")).app.setActivationPolicy("prohibited");
+  const { choice, dataDir } = await commandDataChoice();
+  const { runResetCommand } = await import("./reset/commandRun");
+  void runResetCommand({ words: reset, choice, dataDir }).then(
+    async (result) => {
+      if (result.out) await new Promise((done) => process.stdout.write(result.out, done));
+      if (result.error) await new Promise((done) => process.stderr.write(result.error, done));
+      process.exit(result.code);
+    },
+    (error: unknown) => {
+      process.stderr.write(`${String(error)}\n`, () => process.exit(1));
+    },
+  );
 } else if (boot || help) {
   // Answered before readiness, as link is: no screen, Dock icon, lock or core.
   if (hostPlatform() === "darwin") (await import("electron")).app.setActivationPolicy("prohibited");

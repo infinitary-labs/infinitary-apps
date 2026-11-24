@@ -648,7 +648,9 @@
   "settingsGeneralReset": "重置 Infinitary",
   "settingsGeneralResetButton": "重置",
   "settingsGeneralResetDeletes": "Infinitary 会删除它在这里保存的一切，包括任务、登录、机密、设置和已配对的设备，然后像刚安装时一样打开。",
+  "settingsGeneralResetDeletesBoth": "Infinitary 会删除它在两台电脑上保存的一切，包括任务、登录、机密、设置和已配对的设备，然后两台都像刚安装时一样打开。",
   "settingsGeneralResetDescription": "让这台电脑上的 Infinitary 回到刚安装时的样子。",
+  "settingsGeneralResetDescriptionBoth": "让 {home} 和这台电脑上的 Infinitary 回到刚安装时的样子。",
   "settingsGeneralResetKeep": "全部保留",
   "settingsGeneralResetKeeps": "你自己文件夹中的项目会保留所有文件和提交。如果只想清除任务，请使用“清除任务数据”。",
   "settingsGeneralResetOpenTasks": {
@@ -656,6 +658,8 @@
     "other": "{count} 个进行中的任务会停止。"
   },
   "settingsGeneralResetQuestion": "要重置这台电脑上的 Infinitary 吗？",
+  "settingsGeneralResetQuestionBoth": "要重置 {home} 和这台电脑上的 Infinitary 吗？",
+  "settingsGeneralResetUnreached": "{home} 没有回应，所以没有重置任何内容。等它能连上后再试一次。",
   "settingsGeneralResetting": "正在重置…",
   "settingsGeneralShowInDock": "在程序坞中显示",
   "settingsGeneralShowInDockDescription": "关闭后会隐藏程序坞图标，窗口仍会保留。",

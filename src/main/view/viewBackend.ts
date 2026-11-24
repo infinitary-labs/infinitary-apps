@@ -65,6 +65,9 @@ import { ViewLook } from "./viewLook";
 import { ViewNotices } from "./viewNotices";
 import { type TakeOverOutcome, ViewTakeOver, viewTakeOverWords } from "./viewTakeOver";
 
+/** A reset of the first mate's computer asked from here (`home-reset.md`, docs/reset.md). */
+const HOME_RESET = contractChange("home-reset");
+
 /**
  * The app as a view of another Mac (docs/view.md): the main process's
  * stand-in for the core it no longer runs. The window keeps every call it
@@ -559,6 +562,7 @@ export class ViewBackend {
       ...(homeAnswersUpdate(state.homeVersion, state.homeChanges)
         ? { homeUpdates: true as const }
         : {}),
+      ...(listsChange(state.homeChanges, HOME_RESET) ? { homeResets: true as const } : {}),
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
       ...(this.linkBack > 0 ? { linkBack: this.linkBack } : {}),

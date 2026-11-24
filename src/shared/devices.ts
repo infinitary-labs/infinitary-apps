@@ -1182,6 +1182,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * mate's computer").
      */
     homeUpdates: z.literal(true).optional(),
+    /**
+     * The first mate's computer resets itself when this Mac's Reset
+     * Infinitary row asks (`inf:home-reset:start`, the `home-reset` contract
+     * change), so Settings → General offers that row (docs/reset.md).
+     */
+    homeResets: z.literal(true).optional(),
     heardAt: z.number().int().nonnegative().nullable(),
     caughtUp: z.number().int().nonnegative(),
     /**

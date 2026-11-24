@@ -13,7 +13,6 @@ import { dueMove, type FolderMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
-import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { type RunPipes, watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
@@ -90,7 +89,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
-import { resetInApp } from "./reset/inApp";
+import { resetsFor } from "./reset/wiring";
 import {
   answerLaunch,
   bringWindowForward,
@@ -842,6 +841,14 @@ export async function startApp(
     // a run clears it once it noted that it holds the folder (below), in the
     // same step as it took the lock.
     if (privacy?.temp && !besideRun && !windowless) await clearPrivateTemp(privacy.temp);
+    const resets = resetsFor({
+      ...{ dataDir, choice: userDataChoice, starter, work, isolated: Boolean(isolatedUserDataDir) },
+      countsStarts: !windowless && !move && !besideRun && app.getPath("userData") === dataDir,
+      relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
+      quit: () => app.quit(),
+      ...(windowless ? { endRun: () => endForGood(RUN_WORDS.reset()) } : {}),
+    });
+    if (resets.couldNotStart(hideWindow, confirmationWindow)) return;
     // What a launch on an accepted folder recovers once it is known to open its own first mate there
     // (`recover`, below).
     const recoveries: (() => void)[] = [];
@@ -897,6 +904,13 @@ export async function startApp(
       stopRun();
     };
     const endUpdated = () => endToStartAgain("updated");
+    // A run whose first mate moved away or was reset ends with 0, and nothing starts it again here.
+    const endForGood = (line: string) => {
+      resets.forgetRunEntries();
+      process.stdout.write(`${line}\n`);
+      runEnd = { reason: "quit", exitCode: 0, lines: [line] };
+      stopRun();
+    };
     if (windowless) {
       const observed = (keychain: RunEnvironment["keychain"]) =>
         runEnvironment({
@@ -1135,7 +1149,7 @@ export async function startApp(
       );
       if (!opens) {
         if (windowless) runExitCode = 1;
-        app.quit();
+        resets.personQuit();
         return;
       }
       // A Windows PC needs Git for Windows: the app uses a suitable one it
@@ -1173,7 +1187,7 @@ export async function startApp(
               lines: [GIT_SETUP_WORDS.ask.message],
             };
           }
-          app.quit();
+          resets.personQuit();
           return;
         }
       }
@@ -1229,6 +1243,7 @@ export async function startApp(
           ? { ...ownSecrets, standbyLock: standbyLock.custody }
           : ownSecrets);
       const host = createElectronHost({
+        resetForController: resets.forController,
         // Beside a command's first mate, that first mate ends first, with its
         // crew's work saved, before this window's update replaces the copy.
         prepareUpdateRestart: async () => {
@@ -1375,6 +1390,7 @@ export async function startApp(
                 crewmatesDir: appPathsFor(dataDir).crewmatesDir,
                 look: new JoinedHome(join(app.getPath("userData"), "look")),
                 status: () => readRunStatus(dataDir),
+                resetAsked: resets.resetWaiting,
                 // The agent this window set up starts the command again too.
                 startEntry: () =>
                   ownStartEntry(dataDir) ??
@@ -1433,15 +1449,7 @@ export async function startApp(
                   endToStartAgain("restart");
                   return;
                 }
-                forgetRunAgentFiles({
-                  label: runLabelOf(work.place.flavor),
-                  dataDir,
-                  homeDir: homedir(),
-                  unitsDir: userUnitsDir(process.env, homedir()),
-                });
-                process.stdout.write(`${RUN_WORDS.movedAway}\n`);
-                runEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.movedAway] };
-                stopRun();
+                endForGood(RUN_WORDS.movedAway);
               },
             }
           : {}),
@@ -1612,10 +1620,11 @@ export async function startApp(
       configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
       // A folder that moved to Infinitary, or one a move holds, is never opened
       // here: nothing is started on it (./savedDataRefusal.ts).
+      const startOver = resets.withoutFirstMate(secrets?.authentication);
       const refusal = dataFolderRefusal(dataDir, privacy);
       if (refusal) {
         if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
-        else await showDataRefusal(hideWindow, refusal);
+        else await showDataRefusal(hideWindow, refusal, startOver);
         return;
       }
       // A run quits cleanly from here on: its core's disposal waits for a start still going on
@@ -1647,6 +1656,7 @@ export async function startApp(
       }
       try {
         await shell.start();
+        resets.started();
       } catch (error) {
         if (windowless && stopping) return;
         if (!(error instanceof UnsupportedSavedDataError)) throw error;
@@ -1654,7 +1664,7 @@ export async function startApp(
           endRun(1, RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: error.message }));
           return;
         }
-        await showSavedDataRefusal(hideWindow);
+        await showSavedDataRefusal(hideWindow, startOver);
         return;
       }
       if (windowless && stopping) return;
@@ -1701,17 +1711,7 @@ export async function startApp(
         host,
         frameMounts,
         voice: { place: voicePlace, helper: voiceHelper },
-        reset: resetInApp({
-          shell,
-          authentication: secrets?.authentication,
-          dataDir,
-          choice: userDataChoice,
-          isolated: Boolean(isolatedUserDataDir),
-          starter,
-          work: { ...work.place, spelling: work.place.folderSpelling, serviceManager },
-          relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
-          quit: () => app.quit(),
-        }),
+        reset: resets.inApp(shell, secrets?.authentication),
       });
       handleVoiceModelProtocol(voiceModel);
       handleFrameProtocol({

@@ -81,6 +81,7 @@ import type {
 import { raiseMoveCard, showMoveCardPast } from "./phoneMoveCard";
 import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
+import { removeEveryDevice } from "./phoneRemove";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
@@ -3577,13 +3578,10 @@ export async function startPhoneHome(
           await connection.settled();
           result = { ok: true };
           break;
-        case "POST remove": {
-          const before = { ...readings };
-          for (const device of core.services.devices.list())
-            await core.dispatch("inf:devices:remove", [device.id]);
-          result = { ok: true, before };
+        case "POST remove":
+          result = { ok: true, before: { ...readings } };
+          await removeEveryDevice(core, await controlBody(request));
           break;
-        }
         default:
           result = await takeOver.command(`${request.method} ${command}`);
           if (result === undefined) {

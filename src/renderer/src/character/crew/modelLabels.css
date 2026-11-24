@@ -25,6 +25,7 @@
 }
 .fm-crew-model-name {
   position: absolute;
+  left: 0; /* physical: translate(-50%) centres the box on its painted anchor */
   transform-origin: 50% 100%;
   transform: translate(-50%, calc(-100% - var(--crew-name-gap) / var(--crew-fit-scale)))
     scale(calc(1 / var(--crew-fit-scale)));

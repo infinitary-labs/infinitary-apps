@@ -32,9 +32,18 @@ vi.setConfig({ testTimeout: 10_000 });
 /** The full check's Mac lanes: their stages, their evidence and the signing proof (verify.yml). */
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
-  /** verify.yml's lanes: the Linux checks and, since INF-2779, three Mac jobs. */
-  type Lane = "linux-checks" | "mac" | "parallel" | "desktop-1" | "desktop-2";
-  const JOURNEY_LANES = ["parallel", "desktop-1", "desktop-2"] as const;
+  /** verify.yml's lanes: the Linux checks and, since INF-2779, three Mac jobs; on GitHub's
+   * Macs the parallel journeys are four jobs, parallel-1 to parallel-4. */
+  type Lane = "linux-checks" | "mac" | (typeof JOURNEY_LANES)[number];
+  const JOURNEY_LANES = [
+    "parallel",
+    "parallel-1",
+    "parallel-2",
+    "parallel-3",
+    "parallel-4",
+    "desktop-1",
+    "desktop-2",
+  ] as const;
   /**
    * Whether Actions runs a step in a lane (the mac lane unless named) once
    * the earlier steps ended with these outcomes: its condition through
@@ -191,7 +200,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       stepRuns(step, { e2e: e2eOutcome }, lane);
     const outcomes = ["success", "failure", "skipped"];
     // Each journey job keeps its own result and evidence, under a name of its
-    // own so the two jobs' uploads never meet (INF-2779).
+    // own so no two jobs' uploads meet (INF-2779).
     for (const lane of JOURNEY_LANES) {
       expect(outcomes.map((outcome) => runsAfter(kept, outcome, lane))).toEqual([
         true,
@@ -210,7 +219,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         inputs: { all_journeys: true },
       });
     for (const step of [kept, failures])
-      expect(new Set(JOURNEY_LANES.map((lane) => named(step, lane))).size).toBe(3);
+      expect(new Set(JOURNEY_LANES.map((lane) => named(step, lane))).size).toBe(7);
     // A requested demo is kept whether the suite passed or failed, by the
     // desktop job, where the journeys that record one run (tests/e2e/lanes.ts).
     expect(outcomes.map((outcome) => runsAfter(demos, outcome, "desktop-1"))).toEqual([
@@ -218,11 +227,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       true,
       false,
     ]);
-    expect(outcomes.map((outcome) => runsAfter(demos, outcome, "parallel"))).toEqual([
-      false,
-      false,
-      false,
-    ]);
+    for (const lane of ["parallel", "parallel-1"] as const)
+      expect(outcomes.map((outcome) => runsAfter(demos, outcome, lane))).toEqual([
+        false,
+        false,
+        false,
+      ]);
     for (const step of [kept, failures, demos]) {
       expect(step?.with?.["if-no-files-found"]).toBe("ignore");
       expect(Number(step?.with?.["retention-days"])).toBeGreaterThan(0);

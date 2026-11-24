@@ -5,7 +5,13 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { budget, linuxParts } from "../scripts/journey-budget.ts";
 import { fileArgument, laneFiles } from "../scripts/journey-groups.ts";
-import { loadYamlFile, root, workflowString, workflowValue } from "./helpers/releaseWorkflows";
+import {
+  journeysRun,
+  loadYamlFile,
+  root,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2267: portable workflow contracts keep the integration cohort and its isolation;
@@ -434,42 +440,6 @@ describe("each Mac job's kind", () => {
     },
   );
 });
-
-/** The arguments verify.yml's journeys step gives Playwright in `lane`, with
- * a stand-in pnpm that only records them. */
-function journeysRun(
-  lane: string,
-  { cores, hosted = false, part = "" }: { cores?: string; hosted?: boolean; part?: string },
-): string {
-  const verify = loadYamlFile(".github/workflows/verify.yml") as {
-    jobs: Record<string, { steps?: { id?: string; run?: string }[] }>;
-  };
-  const run = verify.jobs.lane?.steps?.find((step) => step.id === "e2e")?.run ?? "";
-  const dir = scratchDir("infinitary-job-cores-");
-  const bin = join(dir, "bin");
-  mkdirSync(bin);
-  const log = join(dir, "pnpm.log");
-  writeFileSync(log, "");
-  writeFileSync(join(bin, "pnpm"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n');
-  chmodSync(join(bin, "pnpm"), 0o755);
-  const { RUNNER_UP_CORES: _unset, ...env } = process.env;
-  const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", run], {
-    cwd: root,
-    env: {
-      ...env,
-      PATH: `${bin}:${process.env.PATH}`,
-      COMMAND_LOG: log,
-      INFINITARY_E2E_TAG: "",
-      LANE: lane,
-      PART: part,
-      RUNNER_KIND: hosted ? "github-hosted" : "self-hosted",
-      ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
-    },
-    encoding: "utf8",
-  });
-  expect(result.status, result.stderr).toBe(0);
-  return readFileSync(log, "utf8").trim();
-}
 
 /**
  * INF-1720's approved plan: every Linux job of every workflow runs where the

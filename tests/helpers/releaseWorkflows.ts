@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -122,16 +122,42 @@ export function recordedWorkflowCall(
   return readFileSync(log, "utf8").trim().split("\n");
 }
 
-/** verify.yml's full Mac e2e command, on half the job's cores (scripts/job-cores.ts): the
- * job's group of the desktop lane alone, or the job's group of the parallel lanes (scripts/journey-groups.ts, INF-2987). */
+/** verify.yml's full Mac e2e command: half the job's cores on the project's own Macs, whose
+ * runner slots share a processor, and every core but one on GitHub's (scripts/job-cores.ts); the
+ * job's group of the desktop lane alone, or the job's group of the parallel lanes
+ * (scripts/journey-groups.ts, INF-2987). */
 export const VERIFY_E2E_RUN = [
   'cores="$(node scripts/job-cores.ts)"',
+  "platform=mac",
   'workers="--workers=$(( cores > 1 ? cores / 2 : 1 ))"',
+  'if [ "$RUNNER_KIND" = github-hosted ]; then',
+  "  platform=mac-hosted",
+  '  workers="--workers=$(( cores > 1 ? cores - 1 : 1 ))"',
+  "fi",
   'if [ "${LANE#desktop-}" != "$LANE" ]; then',
-  '  node scripts/journey-groups.ts --platform mac --lane desktop --group "${LANE#desktop-}/2" -- --no-deps --project=desktop "$workers"',
+  '  node scripts/journey-groups.ts --platform "$platform" --lane desktop --group "${LANE#desktop-}/2" -- --no-deps --project=desktop "$workers"',
   "else",
+  "  # The parallel jobs' groups come first, in their order, and the",
+  "  # mac job's last. On GitHub's Macs the parallel jobs are four",
+  "  # (parallel-1 to parallel-4) and the mac job is there too, since",
+  "  # one runs-on label sends both; elsewhere one, parallel.",
+  "  parallel=1",
+  '  [ "$LANE" = parallel ] || [ "$platform" = mac ] || parallel=4',
+  '  case "$LANE" in',
+  "    parallel) index=1 ;;",
+  '    parallel-*) index="${LANE#parallel-}" ;;',
+  "    *) index=$((parallel + 1)) ;;",
+  "  esac",
+  '  if [ "$PART" = journeys ]; then',
+  "    # No mac job: the parallel jobs take every group.",
+  '    group="$index/$parallel"',
+  "    jobs=",
+  "  else",
+  '    group="$index/$((parallel + 1))"',
+  '    jobs="--jobs $(printf \'parallel,%.0s\' $(seq "$parallel"))mac"',
+  "  fi",
   "  # shellcheck disable=SC2086 # one word per job name",
-  '  node scripts/journey-groups.ts --platform mac --lane parallel --group "$GROUP" $JOBS -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests',
+  '  node scripts/journey-groups.ts --platform "$platform" --lane parallel --group "$group" $jobs -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests',
   "fi",
   "",
 ].join("\n");
@@ -412,9 +438,13 @@ export function signedChannel(release: ChannelWorkflow, verify: ChannelWorkflow)
     return found;
   };
   const lane = jobOf(verify, "lane");
-  /** The lanes verify runs for a profile, through its own matrix expression. */
-  const lanes = (profile?: string) =>
-    workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: profile ? { profile } : {} });
+  /** The lanes verify runs for a profile, through its own matrix expression; `vars` are the
+   * project's variables, none by default, so the Mac jobs go to GitHub's Macs. */
+  const lanes = (profile?: string, vars: Record<string, unknown> = {}) =>
+    workflowValue(lane.strategy?.matrix.lane ?? "", {
+      inputs: profile ? { profile } : {},
+      vars,
+    });
 
   return { jobOf, signingSteps, uploadSteps, publishSteps, steps, step, lane, lanes };
 }
@@ -445,4 +475,40 @@ export function signingOutputs(team: string): Record<string, string> {
   const known = SIGNING_TEAMS[team];
   if (!known) throw new Error(`The workflow keeps no signing material for team ${team}.`);
   return { team_id: team, sign_identity: known.identity, signing_secrets: known.secrets };
+}
+
+/** The arguments verify.yml's journeys step gives Playwright in `lane`, with
+ * a stand-in pnpm that only records them. */
+export function journeysRun(
+  lane: string,
+  { cores, hosted = false, part = "" }: { cores?: string; hosted?: boolean; part?: string },
+): string {
+  const verify = loadYamlFile(".github/workflows/verify.yml") as {
+    jobs: Record<string, { steps?: { id?: string; run?: string }[] }>;
+  };
+  const run = verify.jobs.lane?.steps?.find((step) => step.id === "e2e")?.run ?? "";
+  const dir = scratchDir("infinitary-job-cores-");
+  const bin = join(dir, "bin");
+  mkdirSync(bin);
+  const log = join(dir, "pnpm.log");
+  writeFileSync(log, "");
+  writeFileSync(join(bin, "pnpm"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n');
+  chmodSync(join(bin, "pnpm"), 0o755);
+  const { RUNNER_UP_CORES: _unset, ...env } = hostEnv();
+  const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", run], {
+    cwd: root,
+    env: {
+      ...env,
+      PATH: `${bin}:${env.PATH}`,
+      COMMAND_LOG: log,
+      INFINITARY_E2E_TAG: "",
+      LANE: lane,
+      PART: part,
+      RUNNER_KIND: hosted ? "github-hosted" : "self-hosted",
+      ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
+    },
+    encoding: "utf8",
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return readFileSync(log, "utf8").trim();
 }

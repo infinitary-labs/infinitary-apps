@@ -426,8 +426,11 @@ describe("explicit manual verification scope (INF-2374)", () => {
       inputs,
       needs: { "linux-tests": { result: "failure" } },
     }) === true;
-  const lanes = (inputs: Record<string, unknown>) =>
-    workflowValue(verify.jobs.lane?.strategy?.matrix.lane ?? "", { inputs });
+  /** The project's own Mac, which MAC_RUNNER names; with no variables the Mac jobs go to
+   * GitHub's Macs. */
+  const ownMac = { MAC_RUNNER: "mini-mac" };
+  const lanes = (inputs: Record<string, unknown>, vars: Record<string, unknown> = ownMac) =>
+    workflowValue(verify.jobs.lane?.strategy?.matrix.lane ?? "", { inputs, vars });
   const valid = {
     full_system: true,
     ref: head,
@@ -597,6 +600,10 @@ describe("explicit manual verification scope (INF-2374)", () => {
     expect(lanes(full)).toEqual(["linux-checks", "mac", "parallel", "desktop-1", "desktop-2"]);
     expect(Object.keys(verify.jobs).filter((id) => runs(id, mac))).toEqual(["request", "lane"]);
     expect(lanes(mac)).toEqual(["mac", "parallel", "desktop-1", "desktop-2"]);
+    // On GitHub's Macs the parallel journeys are four jobs.
+    const hosted = ["parallel-1", "parallel-2", "parallel-3", "parallel-4"];
+    expect(lanes(full, {})).toEqual(["linux-checks", "mac", ...hosted, "desktop-1", "desktop-2"]);
+    expect(lanes(mac, {})).toEqual(["mac", ...hosted, "desktop-1", "desktop-2"]);
 
     const ran = (lane: string, inputs: Record<string, unknown>) => {
       const outcomes: Record<string, { outcome: string }> = {};
@@ -610,18 +617,22 @@ describe("explicit manual verification scope (INF-2374)", () => {
       }
       return commands;
     };
-    for (const lane of lanes(mac) as string[]) {
-      expect(
-        workflowValue(verify.jobs.lane?.["runs-on"] ?? "", {
-          matrix: { lane },
-          inputs: mac,
-          vars: { MAC_RUNNER: "mini-mac" },
-        }),
-        lane,
-      ).toBe("mini-mac");
-      expect(ran(lane, mac), lane).toEqual(ran(lane, full));
-      expect(ran(lane, mac), lane).toContain(lane === "mac" ? "dev-signing" : "e2e");
-    }
+    for (const [vars, machine] of [
+      [ownMac, "mini-mac"],
+      [{}, "macos-15"],
+    ] as const)
+      for (const lane of lanes(mac, vars) as string[]) {
+        expect(
+          workflowValue(verify.jobs.lane?.["runs-on"] ?? "", {
+            matrix: { lane },
+            inputs: mac,
+            vars,
+          }),
+          lane,
+        ).toBe(machine);
+        expect(ran(lane, mac), lane).toEqual(ran(lane, full));
+        expect(ran(lane, mac), lane).toContain(lane === "mac" ? "dev-signing" : "e2e");
+      }
   });
   // INF-5097's plan, piece 2, the captain's pick: "Every Linux test and journey the batch
   // runs". A change sent back from its batch passes the batch's Linux jobs before it goes

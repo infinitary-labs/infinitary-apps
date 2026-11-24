@@ -924,7 +924,16 @@ describe("public CI admission", () => {
     // The batch's Mac lanes reached GitHub's Mac, its Linux test groups and
     // journeys hosted Ubuntu, and the Windows build GitHub's Windows; the
     // PC's fresh Windows 11 check and the signed installer checks took none.
-    for (const lane of ["mac", "parallel", "desktop-1", "desktop-2"])
+    // On GitHub's Macs the parallel journeys are four jobs.
+    for (const lane of [
+      "mac",
+      "parallel-1",
+      "parallel-2",
+      "parallel-3",
+      "parallel-4",
+      "desktop-1",
+      "desktop-2",
+    ])
       expect(reached).toContain(`.github/workflows/verify.yml:lane ${lane} macos-15`);
     expect(reached).toContain(".github/workflows/verify.yml:lane linux-checks ubuntu-24.04");
     expect(

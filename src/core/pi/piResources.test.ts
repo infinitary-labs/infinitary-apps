@@ -163,7 +163,11 @@ describe("the tradeoff chart's rules reach every card author (INF-6293)", () => 
   it("serves the one text to the first mate and every crewmate runtime", () => {
     const facts = [
       "A question whose options differ under two or more whole-product qualities carries a <table data-inf-tradeoff> under its options",
-      "Headings are qualities wanted more of, in one or two words that fit any change",
+      "Headings are qualities wanted more of, named positively so high is better (save cost, never cost",
+      "in one or two words that fit any change",
+      // The captain: headings are open, "the agent should have the freedom to
+      // choose what to use", so the list is examples, never a closed set.
+      "choose whichever the choice turns on, such as",
       "Its options' labels are a dozen words at most",
       "An option for what the project does now marks its input data-inf-current, tagged As built, and has its row.",
       "No table for a look, wording or layout, one quality, a yes or no, a consent",
@@ -723,9 +727,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A prompt-budget trim says the draft button, the browser, files and risk words, the strip and the closing reply lines in fewer words.
   // INF-6293's approved plan adds the one tradeoff chart text every author reads; the token list, the write-in row and time and language say the same in fewer words.
   // The fact strip's wording calls the task's setting its rigor level.
+  // INF-6614's approved plan names tradeoff headings positively so high is better (save cost), the suggestions examples only.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "dcb88cc47c26c23140927f810b68fb50ab0a854e5131903daad7f01b9a688c82",
+    "6d9a0aaab3e4dccda666edae8528bd7402bcf0ba63c499ef64e60f6442ababce",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

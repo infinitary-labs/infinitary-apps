@@ -208,7 +208,7 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         expect(
           await service.publication.prepareStory(id, staged(repaired, original)),
         ).toMatchObject({
-          said: expect.stringContaining("Keep the original Before base and project"),
+          said: expect.stringContaining(`Keep the original Before base ${original}`),
         });
         // The project went public at the same address: the next revision is
         // prepared at the audience read now, with the same base and identity.

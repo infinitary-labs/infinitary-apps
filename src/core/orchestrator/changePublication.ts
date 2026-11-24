@@ -39,6 +39,7 @@ import {
   numberLabel,
   reviewOf,
 } from "./changeContext";
+import type { StartingCommit } from "./changePresentations";
 import type { DraftReadiness } from "./draftReadiness";
 import { mergedAheadWords, mergedStory } from "./mergedStory";
 import { publicationRepo } from "./publicationRepo";
@@ -221,6 +222,34 @@ export class ChangePublication {
     // checked out: the task's own branch, or an existing branch or another
     // change the crewmate checked out to deliver (INF-2184, INF-2490).
     return git(dir, ["rev-parse", `${record.deviceId ? record.branch : "HEAD"}^{commit}`]);
+  }
+
+  /**
+   * Whether a story's starting commit is a commit in the project that `head`
+   * descends from, read in the project's own folder: a working copy here
+   * shares its commits, and a branch from another computer arrives there
+   * (`presentationHead`). Where `head` is not there, nothing is judged.
+   */
+  async startingCommit(taskId: string, base: string, head: string): Promise<StartingCommit> {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return "unread";
+    let dir: string;
+    try {
+      dir = this.context.projectDir(record.repoId, record.repoDir);
+    } catch {
+      return "unread";
+    }
+    const commit = (sha: string) =>
+      git(dir, ["cat-file", "-e", `${sha}^{commit}`]).then(
+        () => true,
+        () => false,
+      );
+    if (!(await commit(head))) return "unread";
+    if (!(await commit(base))) return "missing";
+    return git(dir, ["merge-base", "--is-ancestor", base, head]).then(
+      () => "descends" as const,
+      () => "unrelated" as const,
+    );
   }
 
   /**

@@ -416,23 +416,24 @@ export class ChangeContext {
     // held version the combine carries it from, never the members' it builds on; any other
     // change names every commit past the default branch (docs/forge.md, "A held batch").
     const record = repoId && fixOf ? this.batches?.record(repoId) : undefined;
-    const entry = [...(record?.line ?? []), ...(record?.open?.members ?? [])].find(
-      (change) => change.taskId === fixOf,
+    const kept = [...(record?.line ?? []), ...(record?.open?.members ?? [])].filter(
+      (change) => change.taskId === fixOf && change.heldBase,
     );
     // Another task's branch at the exact commit a repair declared carries that repair's
     // declaration, and is measured from the version that repair was verified on.
-    const at = record?.fixHeads
-      ? await git(dir, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]).catch(() => head)
-      : head;
+    const at =
+      record?.fixHeads || kept.length
+        ? await git(dir, ["rev-parse", "--verify", "--quiet", `${head}^{commit}`]).catch(() => head)
+        : head;
     const repair = record && fixOf ? declarationOf(record, { taskId: fixOf, head: at }) : undefined;
+    // The held version verified for this exact version, in line or in the batch, comes first,
+    // as the combine reads it (`carried`): another version of the task lends it none.
+    const verified =
+      kept.find((change) => change.head === at)?.heldBase ??
+      (repair ? record?.fixBases?.[repair] : undefined);
     const found =
-      record && repair
-        ? await fixBase(
-            dir,
-            head,
-            record.fixBases?.[repair] ?? entry?.heldBase,
-            heldVersions(record),
-          )
+      record && (repair || verified)
+        ? await fixBase(dir, head, verified, heldVersions(record))
         : undefined;
     if (found && "lost" in found)
       throw new Error(

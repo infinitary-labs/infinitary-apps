@@ -409,9 +409,11 @@ export function carried(
   /** Whether a task closed, merged or not; absent, none has. */
   closed: (taskId: string) => boolean = () => false,
 ): BatchChange[] {
-  // A declared fix goes with the base its repair was verified on, whichever version of it this is.
+  // A declared fix goes with the base its repair was verified on, whichever version of it this
+  // is; the held version verified for this very version comes first, whatever is declared now.
   const based = (change: BatchChange): BatchChange => {
-    const heldBase = record.fixBases?.[declarationOf(record, change) ?? change.taskId];
+    const heldBase =
+      change.heldBase ?? record.fixBases?.[declarationOf(record, change) ?? change.taskId];
     return heldBase ? { ...change, heldBase } : change;
   };
   // A change rebuilt on an open batch goes right behind the changes it was built on: first

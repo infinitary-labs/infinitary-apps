@@ -806,6 +806,7 @@ describe("the route a held batch's fix is published on", () => {
       // builds on is refused on the route that carries the fix from it, and on no other.
       run("checkout", "--quiet", "-b", "elsewhere", "main");
       const elsewhere = commit("other.md", "chore: an unrelated version");
+      const earlier = commit("parser.ts", "fix(parser): read dates in one zone");
       run("checkout", "--quiet", "fm/task-ab12cd34");
       record = { ...record, fixBases: { [repair]: elsewhere } };
       expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toContain(
@@ -822,6 +823,29 @@ describe("the route a held batch's fix is published on", () => {
       expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toContain(
         inherited,
       );
+      // The third review's finding, a bug being fixed: the held version kept with an earlier
+      // version of this task in line was read for this one, refusing it for a version it never
+      // built on. Only the one kept with this exact version is, and it comes first, with a
+      // declaration verified elsewhere and with none left.
+      const waits = (head: string, heldBase: string): BatchChange => ({
+        taskId: "ab12cd34",
+        branch: "fm/task-ab12cd34",
+        head,
+        title,
+        body: "",
+        at: 1,
+        heldBase,
+      });
+      for (const kept of [
+        { ...declared, fixBases: {}, line: [waits(earlier, elsewhere)] },
+        { ...declared, line: [waits(fix, held)] },
+        { ...EMPTY_BATCH_RECORD, held: [held], line: [waits(fix, held)] },
+      ]) {
+        record = kept;
+        expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toBe(
+          BATCH_OPEN_WORDS.confirmed("fm/task-ab12cd34"),
+        );
+      }
       record = { ...declared, fixBases: { [repair]: held } };
 
       expect(await at.service.publication.open("ab12cd34", { title, presentation: 1 })).toBe(

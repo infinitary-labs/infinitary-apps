@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  appPanelFilesRequestSchema,
+  appPanelFilesSchema,
+  appPanelsSchema,
+} from "../personal/appPanels";
+import {
   panelIntegrationsRequestSchema,
   panelIntegrationsResponseSchema,
   personalIdSchema,
@@ -80,6 +85,24 @@ export const panelChannels = {
     reach: "views",
     request: z.tuple([panelLibraryRequestSchema]),
     response: panelLibrarySchema,
+  },
+  // The app's own panels whose gate is open now, for a view that carries no
+  // copy of this build, as a phone never does (docs/view.md, "The app's own
+  // panels on the phone"), pushed whole as `inf:plugins:app-panels` when the
+  // set changes; and one of them's compiled files, each with its build pin.
+  "inf:plugins:app-panels": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: appPanelsSchema,
+  },
+  "inf:plugins:app-panel-files": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([appPanelFilesRequestSchema]),
+    response: appPanelFilesSchema,
   },
   // What the window did with each panel (docs/personal-panels.md, "Placed
   // on the rail"): drawn, refused and why, sent whenever it changes.

@@ -306,13 +306,29 @@ Infinitary on iPhone and iPad draws them on its Panels tab (`docs/ios.md`, "Pane
 
 - **The library.**
   A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which only a window on that version serves, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version.
-  It answers every file of the library its own build made, each with its pin, but the app's own panels under `builtin/` (`readPanelLibrary`, `src/core/personal/panelLibrary.ts`).
+  It answers every file of the library its own build made, each with its pin, but the app's own panels under `builtin/` (`readPanelLibrary`, `src/core/personal/panelLibrary.ts`), which it answers one panel at a time ("The app's own panels on the phone" below).
   It answers nothing for another version, and refuses a file whose bytes no longer match its pin, as the shell never serves one to its own frames.
   It reads the library once a run, from where the host says this build put it (`HostCapabilities.frameLib`).
 - **Desktop windows.**
   A window on another computer still draws a panel only on the first mate's own version and never asks for the library ("Versions" above).
 - **An older first mate.**
   A first mate older than major 16 that does not list `panels-on-the-phone` refuses the library as not a request it answers.
+
+### The app's own panels on the phone
+
+The first mate also serves a phone the app's own panels it shows now, so the phone draws them from the desktop's own panel code as it draws the captain's.
+
+- **The list.**
+  `inf:plugins:app-panels` (`src/shared/personal/appPanels.ts`) names every app panel whose gate is open and whose files this build made, in the order the rails know them, with what the panel list gives one of the captain's panels and a version that is a hash of this build's version and its files' pins, so a device that keeps the files by that version keeps the library they import with them (`appPanelsFor`, `src/core/personal/appPanelsServed.ts`).
+  The gates are the window's: Knowledge while this build keeps knowledge and there is some, Automation while a rule is saved or a job is kept running past its task's close, and a built-in runbook's panel, such as Batches, while that runbook is on (`appPanelGates`); the first mate's own surfaces read the same rule.
+  The first mate names every panel it shows; which of them the phone already draws as a screen of its own is the phone's call (`docs/ios.md`, "Panels").
+- **Its push.**
+  The first mate reads the list again after each event that may move a gate and each change to the record of kept jobs, which a task's close writes after its own events, and pushes `inf:plugins:app-panels` when it changed (`watchAppPanels`).
+- **A panel's files.**
+  `inf:plugins:app-panel-files` answers the panel's files under its `builtin/` folder of the library, each by its path in that folder with the pin the build gave it, and the version of the app they import the library of (`readAppPanelFiles`).
+  It answers nothing for a panel not shown now or for another version, and refuses a file whose bytes no longer match its pin.
+- **An older first mate.**
+  A first mate that does not list `app-panels-on-the-phone` serves none of the app's own panels, and the phone shows only the captain's.
 
 ## Pages it would open
 

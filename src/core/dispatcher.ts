@@ -53,9 +53,14 @@ import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import type { OwnWindow } from "./ownWindow";
+import { appPanelGatesOf, appPanelsFor, appPanelVersion } from "./personal/appPanelsServed";
 import { panelChange } from "./personal/panelChange";
 import { readPanelGraph } from "./personal/panelGraph";
-import { type PanelLibraryFile, readPanelLibrary } from "./personal/panelLibrary";
+import {
+  type PanelLibraryFile,
+  readAppPanelFiles,
+  readPanelLibrary,
+} from "./personal/panelLibrary";
 import { answerPhoneAsk, isPhoneAsk, phoneOnly } from "./phoneAsks";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
@@ -1546,6 +1551,17 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         throw error;
       });
       return { version, files: await panelLibrary };
+    },
+    // The app's own panels a phone may draw (docs/view.md, "The app's own
+    // panels on the phone"), and one of them's files at the version listed.
+    "inf:plugins:app-panels": () =>
+      appPanelsFor(appPanelGatesOf(services), host.frameLib?.pins, host.app.version),
+    "inf:plugins:app-panel-files": async ({ id, version }) => {
+      const lib = host.frameLib;
+      if (!lib) return null;
+      const shown = appPanelsFor(appPanelGatesOf(services), lib.pins, host.app.version);
+      if (appPanelVersion(shown, id) !== version) return null;
+      return { builtFor: host.app.version, files: await readAppPanelFiles(lib, id) };
     },
     // The placement a crewmate waits on is this computer's window's: a
     // window on another computer places its panels its own way.

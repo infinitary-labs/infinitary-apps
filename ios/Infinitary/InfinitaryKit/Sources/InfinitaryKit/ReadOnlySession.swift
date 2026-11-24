@@ -238,6 +238,9 @@ public struct PhoneNotice: Equatable, Sendable {
     /// INF-3830 piece 2: the computer serves its panels to a phone (`panels-on-the-phone`), said in its welcome or folded
     /// into major 16; an older computer shows no panel here (docs/ios.md, "Panels").
     public private(set) var servesPanels = false
+    /// INF-6295 piece A: the computer also serves the app's own panels it shows (`app-panels-on-the-phone`); an older one
+    /// answers only the captain's.
+    public private(set) var servesAppPanels = false
     /// Each push a panel's page hears (`PhonePanelRequest.pushes`), live or replayed, and each welcome that reloads what
     /// the phone held, after which every panel read runs again.
     @ObservationIgnored public var onPanelPush: ((String, PhoneJSON) -> Void)?
@@ -1208,6 +1211,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
+            servesAppPanels = servesPanels && (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.appPanelsChange)
             if catchUp == "reload" { onPanelResync?(); for page in readPages.values { page.resync() } }
             homeUpdates = PhoneHomeUpdate.supported(homeVersion: frame["protocolVersion"] as? String,
                                                     changes: frame["changes"] as? [String] ?? [])

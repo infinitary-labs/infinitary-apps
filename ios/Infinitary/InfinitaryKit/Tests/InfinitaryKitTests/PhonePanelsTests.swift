@@ -71,4 +71,52 @@ struct PhonePanelsTests {
         try Data("tampered".utf8).write(to: kept)
         #expect(PhonePanelLibrary.load(from: caches, version: "1.0.0") == nil)
     }
+
+    /// One entry of `inf:plugins:app-panels` as the computer answers it: no source, maker or presence of its own.
+    private func appPanel(_ id: String, title: String, order: Int) throws -> PhoneJSON {
+        try PhoneJSON.read([
+            "id": id, "title": title, "placement": ["x": "right", "y": "top"], "order": order, "size": "content",
+            "ownPresence": id != "activity", "moves": false, "reads": ["tasks.board"], "sql": [], "cardViews": [],
+            "cards": [:], "header": [], "frame": ["version": "89abcdef01234567"],
+        ] as [String: Any])
+    }
+
+    /// The captain, on INF-6295: show the built-in panels on the Panels tab "unless there's a dedicated native tab for
+    /// it (tasks, activities)".
+    @Test func theAppsOwnPanelsJoinTheColumnButTheOnesDrawnAsTabs() throws {
+        let answer = PhoneJSON.object(["panels": .array([
+            try appPanel("activity", title: "Activity", order: 10), try appPanel("now", title: "Tasks", order: 20),
+            try appPanel("automation", title: "Automation", order: 40), try appPanel("batches-panel", title: "Batches", order: 50),
+            try appPanel("tokens", title: "Tokens", order: 60),
+        ])])
+        let personal = PhonePanelList.decode(.object(["extensions": .array([try panel("tokens")])]))
+        let app = PhoneAppPanelList.decode(answer, besides: personal)
+        #expect(app.map(\.id) == ["automation", "batches-panel"])
+        #expect(app.allSatisfy { $0.isApp && $0.owner == nil && $0.filesSource == "app" && $0.present })
+    }
+
+    @Test func anAppPanelsFilesAreCheckedAgainstTheirPinsWhenReadAndWhenKept() throws {
+        let panel = Data("export default () => null;".utf8), cards = Data("export default {};".utf8)
+        let answer = { (cardsPin: String) in PhoneJSON.object(["builtFor": .string("1.0.0"), "files": .array([
+            .object(["path": .string("panel.mjs"), "integrity": .string(PhonePanelFile.pin(panel)), "data": .string(panel.base64EncodedString())]),
+            .object(["path": .string("cards.mjs"), "integrity": .string(cardsPin), "data": .string(cards.base64EncodedString())]),
+        ])]) }
+        let files = try PhonePanelFiles.readPinned(answer(PhonePanelFile.pin(cards)))
+        #expect(files.builtFor == "1.0.0")
+        #expect(files.files["cards.mjs"]?.data == cards)
+        #expect(throws: PhonePanelFailure.integrity) { try PhonePanelFiles.readPinned(answer(PhonePanelFile.pin(panel))) }
+        #expect(throws: PhonePanelFailure.notServed) { try PhonePanelFiles.readPinned(.null) }
+
+        // Kept on the device by panel and version, and refused when a kept file no longer matches its pin.
+        let caches = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: caches) }
+        let folder = PhonePanelFiles.folder(in: caches, app: "knowledge", version: "89abcdef01234567")
+        try files.save(in: folder)
+        let kept = try #require(PhonePanelFiles.load(from: folder))
+        #expect(kept.builtFor == "1.0.0")
+        #expect(kept.files == files.files)
+        let cardsFile = try #require(FileManager.default.contentsOfDirectory(atPath: folder.path).sorted().first { $0.hasSuffix(".bin") })
+        try Data("tampered".utf8).write(to: folder.appendingPathComponent(cardsFile))
+        #expect(PhonePanelFiles.load(from: folder) == nil)
+    }
 }

@@ -48,8 +48,8 @@ struct PhonePanelCardPane: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.title).font(.custom("SpaceGrotesk-Light", size: 17, relativeTo: .headline).weight(.medium))
                     .lineLimit(2).accessibilityIdentifier("panel-card-title")
-                if let panel = model.panel(of: entryID) {
-                    Text(panel.owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                if let owner = model.panel(of: entryID)?.owner {
+                    Text(owner).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).lineLimit(1)
                 }
             }
             Spacer(minLength: PhoneTheme.space2)

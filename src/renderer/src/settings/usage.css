@@ -556,29 +556,62 @@
   background: var(--bg-2);
 }
 
+/* The open filter lifts its menu over everything after it in the section:
+   the readouts, the line and Values. */
+.fm-usage .fm-usage-cost-filter[open] {
+  z-index: 5;
+}
+
 .fm-usage .fm-usage-cost-filter > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
   padding: var(--space-1) var(--space-2);
   color: var(--fg-1);
+}
+
+.fm-usage .fm-usage-cost-filter > summary::-webkit-details-marker {
+  display: none;
 }
 
 .fm-usage-cost-filter-label {
   color: var(--fg-2);
 }
 
+.fm-usage-cost-filter-chevron {
+  flex-shrink: 0;
+  color: var(--fg-3);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.fm-usage-cost-filter[open] .fm-usage-cost-filter-chevron {
+  transform: rotate(180deg);
+}
+
+/* The menu floats over the readouts and the line, so it keeps the theme's
+   opaque fill on the see-through window too, where Settings redefines
+   --bg-2 at 55% and keeps the solid value as --settings-solid-bg-2
+   (settingsScreen.css). */
 .fm-usage-cost-menu {
   position: absolute;
-  z-index: 5;
   top: calc(100% + 4px);
   inset-inline-start: -1px;
   min-width: 240px;
-  max-height: 280px;
-  overflow: auto;
   margin: 0;
   padding: var(--space-2);
-  background: var(--bg-2);
+  background: var(--settings-solid-bg-2, var(--bg-2));
   border: 1px solid var(--line-2);
   border-radius: var(--radius-m);
   box-shadow: var(--shadow-2);
+}
+
+/* The choices scroll inside the menu's padding, so a long list ends at an
+   inner edge with the frame still around it, never cut at the border. */
+.fm-usage-cost-menu-list {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fm-usage-cost-menu-legend {

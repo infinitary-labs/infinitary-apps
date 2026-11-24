@@ -29,9 +29,10 @@ A `details` "Daily values" holds the same days as a table, Local date and the un
 **Cost per task.**
 Under the daily bars, when the work is all or task work (INF-6217's plan): an `h3` "Cost per task" with "Estimated USD · Median per task" (or "Tokens · Median per task") on the right, then the `--fg-3` line "Each finished task with its reviews.
 A line that climbs means tasks are taking more work than before."
-Then two filters, Projects and Kinds, each a disclosure row in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: its `--fg-3` name and what it holds, "All projects", one or two names ("Website and Docs") or "3 picked".
-Open, it drops a `--bg-1` panel with `--shadow-2`: an All checkbox, then a checkbox for each project or kind the period's tasks name, its count in mono `--fg-3` at the right, most tasks first; no box ticked is All, and Reviews is never a kind here.
-Escape closes it onto its row.
+Then two filters, Projects and Kinds, each a dropdown row in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: its `--fg-2` name, what it holds, "All projects", one or two names ("Website and Docs") or "3 picked", and the app's 14px down chevron in `--fg-3`, turned up while open; never the browser's disclosure triangle.
+Open, it drops a solid `--bg-2` panel with a `--line-2` hairline and `--shadow-2` over the readouts and the line, the theme's opaque fill even on the see-through window: an All checkbox, then a checkbox for each project or kind the period's tasks name, its count in mono `--fg-3` at the right, most tasks first; no box ticked is All, and Reviews is never a kind here.
+The choices scroll inside the panel's padding past 420px or 60% of the window, whichever is less.
+One panel shows at a time: a press anywhere outside it, or focus moving past it, closes it, and Escape closes it onto its row.
 Three readouts in the tab's readout shape: "Median now" · "$3.10" · "12 tasks in the last 7 days"; "At the start" · "$2.37" · "Window ending Sep 6"; "Change" · "Up 31%" (or "Down 12%", "No change") · "Over the period shown".
 Then the line, drawn by hand 200 high in the 750 wide frame: three `--line-1` hairlines with mono `--text-xs --fg-3` values on the left, the middle half as an `--accent-dim` band and the median as a 2 px `--accent` line over it, "Sep 6" and "Today" under it.
 A week with fewer than 5 finished tasks has no point: the line and band break there, and a selection with none at all reads "Too few finished tasks in this selection to draw a median.

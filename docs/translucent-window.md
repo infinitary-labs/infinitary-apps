@@ -48,6 +48,8 @@ On a translucent window, and only there, Settings is retuned (`settings/settings
   A Settings row next to another row gives up its inner corners and the stack's 12 px gap, so each section's rows sit in one box parted by `--line-1` hairlines.
 - **Quiet text lifts.**
   Tab labels at rest, section labels and row descriptions use `--fg-2` instead of `--fg-3`.
+- **Menus stay solid.**
+  A menu drawn inside a section floats over the boxes and figures under it, so it paints the theme's opaque `--bg-2`, kept as `--settings-solid-bg-2`, as Usage's Cost per task filters do.
 
 Reduce transparency answers with today's opaque Settings, as do hidden windows and other desktops, which never mark the window translucent.
 

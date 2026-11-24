@@ -212,7 +212,9 @@ extension PhoneJourney {
         XCTAssertTrue(chose.waitForPresence(timeout: 10), "The Conversation opens at the card round: \(app.debugDescription)")
         let pressedTile = app.buttons["conversation-tile-\(try XCTUnwrap(pressed["id"] as? String))"]
         XCTAssertTrue(pressedTile.exists, "The card's tile stands before the press")
-        try await appearances("conversation-everything", showing: chose)
+        // On an iPad's half-height sheet the lazily drawn newest rounds leave the accessibility tree after the
+        // appearance redraw, so the pictures follow the scroll area that holds them.
+        try await appearances("conversation-everything", showing: app.scrollViews["conversation-scroll"])
         tapOnPhone(app.segmentedControls["conversation-show"].buttons.element(boundBy: 1))
         let waitingTile = app.buttons["conversation-tile-\(try XCTUnwrap(waiting["id"] as? String))"]
         XCTAssertTrue(waitingTile.waitForPresence(timeout: 10), "Cards lists the card waiting on you: \(app.debugDescription)")

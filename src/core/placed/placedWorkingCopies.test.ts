@@ -922,6 +922,48 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["show", `${kept?.ref}:notes.txt`])).toBe("still thinking");
   });
 
+  it("says when this Mac brought a task's branch here even when asked while the bring is landing it", async () => {
+    // The move picker's left-behind line and the record pane's name the same
+    // commit and when it came (tests/e2e/task-move.spec.ts): a read asked
+    // after the branch's ref is written here, before this Mac records when
+    // it came, answers once that record is written.
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.from("")), {
+      runsHere: true,
+      signedInTo: [computerAccount("acct_placed_there", PROVIDER)],
+      served: [{ accountId: "acct_placed_there", models: [{ provider: PROVIDER, id: MODEL }] }],
+    });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-landing", "Make the footer blue.", repo.id);
+    const there = at.folders("t-landing").work;
+    await expect.poll(() => home.tasks.get("t-landing")?.activity).toBe("idle");
+    await expect
+      .poll(() => home.tasks.get("t-landing")?.shape?.home_copy?.sha)
+      .toBe(await git(there, ["rev-parse", "HEAD"]));
+    const branch = home.tasks.get("t-landing")?.branch ?? "";
+    writeFileSync(join(there, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(there, "feat: a blue footer");
+
+    const record = home.tasks.placement.recordHomeCopy.bind(home.tasks.placement);
+    let read: ReturnType<typeof home.placed.homeCopy> | undefined;
+    const recording = vi
+      .spyOn(home.tasks.placement, "recordHomeCopy")
+      .mockImplementation((id, copy) => {
+        // The branch's ref here already names the new commit.
+        read ??= home.placed.homeCopy(id);
+        record(id, copy);
+      });
+    await home.placed.bringBranchHome("t-landing");
+    recording.mockRestore();
+
+    expect(await git(project.home, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
+    const brought = home.tasks.get("t-landing")?.shape?.home_copy;
+    expect(brought?.sha).toBe(tip);
+    expect(await read).toMatchObject({ head: tip, at: brought?.at, branch });
+  });
+
   it("removes the copy a task left on a computer out of reach once the task closes, its work saved here first", async () => {
     // INF-4851's review, the captain: "Remove kept copies when the task
     // closes, after saving their work".

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "home-copy-read-waits-for-landing",
+      "reason": "A read of the branch this Mac holds for a task on another computer now waits for a bring that is writing it, so the move picker's left-behind line always carries when the commit came, as the record pane's does; the two disagreed only within milliseconds of a bring, which a journey caught and a person would not notice."
+    }
+  ]
+}

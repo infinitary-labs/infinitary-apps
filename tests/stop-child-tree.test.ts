@@ -12,7 +12,9 @@ import { stopChildTree } from "./helpers/stopChildTree";
 // The approved cleanup repair: a shell-launched work app must not leave its
 // app or display keeper running. Real children reproduce the shell, app,
 // detached keeper and display tree without Electron's build prerequisite.
-it.each(["detached-keeper", "exited-shell"])(
+// The adopted keeper is the work app's update watcher, left by a run that
+// ended on its own (INF-6534): only the folder the child started in owns it.
+it.each(["detached-keeper", "exited-shell", "adopted-keeper"])(
   "ends a %s tree, not just the direct child",
   async (mode) => {
     const folder = scratchDir("infinitary-child-tree-");
@@ -32,12 +34,12 @@ it.each(["detached-keeper", "exited-shell"])(
       `
     const {spawn} = require('node:child_process');
     const keeper = spawn(process.execPath, [${JSON.stringify(keeper)}], {
-      detached: ${mode === "detached-keeper"}, stdio: ['ignore', 'ignore', 'ignore', 'ipc']
+      detached: ${mode !== "exited-shell"}, stdio: ['ignore', 'ignore', 'ignore', 'ipc']
     });
     keeper.once('message', pid => {
       process.stdout.write(JSON.stringify([process.pid, keeper.pid, pid]) + '\\n');
       keeper.disconnect(); keeper.unref();
-      ${mode === "exited-shell" ? "process.exit(0);" : "setInterval(() => {}, 1000);"}
+      ${mode === "detached-keeper" ? "setInterval(() => {}, 1000);" : "process.exit(0);"}
     });
   `,
     );
@@ -61,8 +63,8 @@ it.each(["detached-keeper", "exited-shell"])(
           if (said.includes("\n")) resolve(JSON.parse(said.trim()) as number[]);
         });
       });
-      if (mode === "exited-shell") await closed;
-      await stopChildTree(child);
+      if (mode !== "detached-keeper") await closed;
+      await stopChildTree(child, mode === "adopted-keeper" ? { folder } : {});
       await closed;
       const rows = await readProcesses();
       expect(rows).not.toBeNull();
@@ -130,6 +132,46 @@ it("waits for a killed child the system still lists after the kill window", asyn
     const rows = await readProcesses();
     expect(rows).not.toBeNull();
     expect(rows?.filter((row) => row.pid === child.pid && !row.exited)).toEqual([]);
+  } finally {
+    try {
+      if (child.pid) process.kill(-child.pid, "SIGKILL");
+    } catch {
+      /* Already ended. */
+    }
+    await closed;
+  }
+}, 30_000);
+
+// The update watcher starts a sleep each second, so one started after the
+// stop's first reading outlived a single pass (INF-6534). A real tree's
+// second sleep stands in for it: the first reading leaves it out, as one
+// that had not started yet.
+it("ends a program of the tree that only a later reading lists", async () => {
+  const folder = scratchDir("infinitary-child-tree-");
+  const sleep = "/bin/sleep 300 >/dev/null 2>&1 &";
+  const child = spawn("/bin/sh", ["-c", `${sleep} echo $!; ${sleep} wait`], {
+    cwd: folder,
+    env: hostEnv(),
+    detached: true,
+  });
+  const closed = once(child, "close");
+  let late = 0;
+  try {
+    late = await new Promise<number>((resolve, reject) => {
+      child.once("error", reject);
+      child.stdout.once("data", (chunk) => resolve(Number(String(chunk).trim())));
+    });
+    let readings = 0;
+    const processes = async () => {
+      const rows = await readProcesses();
+      readings += 1;
+      return readings === 1 ? (rows?.filter((row) => row.pid !== late) ?? null) : rows;
+    };
+    await stopChildTree(child, { processes });
+    await closed;
+    const rows = await readProcesses();
+    expect(rows).not.toBeNull();
+    expect(rows?.filter((row) => row.pid === late && !row.exited)).toEqual([]);
   } finally {
     try {
       if (child.pid) process.kill(-child.pid, "SIGKILL");

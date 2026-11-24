@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-work-update-watcher-stop",
+      "reason": "Test-only: the work-mode journeys' child stop also ends programs still working in the child's own folder, such as the update's return watcher a finished run leaves behind, so the Mac journeys no longer fail the run's leftover-program check; the app is unchanged."
+    }
+  ]
+}

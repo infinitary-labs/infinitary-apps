@@ -61,8 +61,10 @@ export type SecretBroker = {
   id: string;
   /**
    * The adapter spends a sign-in the person made in the app itself, at an
-   * address its own code names (docs/secrets.md, "App sign-ins"). That sign-in
-   * is the consent: a use naming only hidden entries runs with no question.
+   * address its own code names or, for an MCP server's, one that sign-in's
+   * documents named and the binding saved with it (docs/secrets.md, "App
+   * sign-ins"). That sign-in is the consent: a use naming only hidden
+   * entries runs with no question.
    */
   signIn?: true;
   /**

@@ -1,4 +1,5 @@
 import { createServer, type Server } from "node:http";
+import { escapeHtml } from "@shared/cardBodyMarkup";
 import * as m from "@shared/i18n/messages.generated";
 import { cutText } from "@shared/textCut";
 
@@ -29,8 +30,9 @@ export type Loopback = {
   close: () => void;
 };
 
+/** The browser's page after the sign-in; its words name the place, which may hold markup, so they are escaped. */
 function page(words: string): string {
-  return `<!doctype html><meta charset="utf-8"><title>Infinitary</title><body style="font:15px system-ui;margin:3em">${words}</body>`;
+  return `<!doctype html><meta charset="utf-8"><title>Infinitary</title><body style="font:15px system-ui;margin:3em">${escapeHtml(words)}</body>`;
 }
 
 /**

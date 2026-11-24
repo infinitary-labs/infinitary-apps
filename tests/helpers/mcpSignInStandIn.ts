@@ -24,9 +24,17 @@ export type SignInStandInOptions = {
   rotate?: boolean;
   /** Seconds an access key lasts. */
   lifetime?: number;
+  /** Addresses the sign-in's document names in place of its own, as a hostile or broken one might. */
+  endpoints?: { token?: string };
+  /** The sign-in gives each app a key of its own and takes it this way at its token address (RFC 7591 §3.2.1). */
+  clientAuth?: "client_secret_basic" | "client_secret_post";
+  /** The server refuses every key, even one the sign-in just issued. */
+  refuseKeys?: boolean;
+  /** The sign-in's document never answers. */
+  silent?: boolean;
 };
 
-type Client = { id: string; redirects: string[] };
+type Client = { id: string; redirects: string[]; secret?: string };
 type Code = {
   client: string;
   redirect: string;
@@ -45,8 +53,12 @@ export type SignInStandIn = {
   clients: Map<string, Client>;
   /** Each renewal's lasting key, in order. */
   renewals: string[];
+  /** Every lasting key a renewal was asked with, refused or not, in order. */
+  renewalsAsked: string[];
   /** Every token revoked, in order. */
   revoked: string[];
+  /** How many times the sign-in's document was asked for. */
+  readonly documentsAsked: number;
   /** The access keys the server still takes. */
   access: Set<string>;
   /** The lasting keys the sign-in still renews. */
@@ -84,9 +96,11 @@ export async function serveSignInNotes(
   const access = new Set<string>();
   const lasting = new Set<string>();
   const renewals: string[] = [];
+  const renewalsAsked: string[] = [];
   const revoked: string[] = [];
   const token = () => randomBytes(18).toString("base64url");
   let notesOrigin = "";
+  let documentsAsked = 0;
   let issuer = "";
 
   const issue = (code: Pick<Code, "scope">, refresh?: string) => {
@@ -113,16 +127,18 @@ export async function serveSignInNotes(
       const raw = request.method === "POST" ? await read(request) : "";
       const body = new URLSearchParams(raw);
       if (request.method === "GET" && url.pathname === "/.well-known/oauth-authorization-server") {
+        documentsAsked += 1;
+        if (options.silent) return;
         json(reply, 200, {
           issuer,
           authorization_endpoint: `${issuer}/authorize`,
-          token_endpoint: `${issuer}/token`,
+          token_endpoint: options.endpoints?.token ?? `${issuer}/token`,
           revocation_endpoint: `${issuer}/revoke`,
           ...(options.register === false ? {} : { registration_endpoint: `${issuer}/register` }),
           response_types_supported: ["code"],
           grant_types_supported: ["authorization_code", "refresh_token"],
           code_challenge_methods_supported: ["S256"],
-          token_endpoint_auth_methods_supported: ["none"],
+          token_endpoint_auth_methods_supported: [options.clientAuth ?? "none"],
           authorization_response_iss_parameter_supported: true,
         });
         return;
@@ -137,14 +153,16 @@ export async function serveSignInNotes(
           return;
         }
         const id = `client-${clients.size + 1}`;
-        clients.set(id, { id, redirects });
+        const secret = options.clientAuth ? token() : undefined;
+        clients.set(id, { id, redirects, ...(secret ? { secret } : {}) });
         json(reply, 201, {
           client_id: id,
+          ...(secret ? { client_secret: secret, client_secret_expires_at: 0 } : {}),
           client_id_issued_at: Math.floor(Date.now() / 1000),
           redirect_uris: redirects,
           grant_types: ["authorization_code", "refresh_token"],
           response_types: ["code"],
-          token_endpoint_auth_method: "none",
+          token_endpoint_auth_method: options.clientAuth ?? "none",
         });
         return;
       }
@@ -183,8 +201,19 @@ export async function serveSignInNotes(
         return;
       }
       if (request.method === "POST" && url.pathname === "/token") {
-        const client = body.get("client_id") ?? "";
-        if (!clients.has(client)) {
+        const basic = /^Basic (.+)$/.exec(request.headers.authorization ?? "")?.[1];
+        const [basicId, basicSecret] = basic
+          ? Buffer.from(basic, "base64").toString("utf8").split(":")
+          : [];
+        const client = basicId ?? body.get("client_id") ?? "";
+        const registered = clients.get(client);
+        const secret = basic ? basicSecret : body.get("client_secret");
+        if (
+          !registered ||
+          (registered.secret !== undefined && secret !== registered.secret) ||
+          (options.clientAuth === "client_secret_basic" && !basic) ||
+          (options.clientAuth === "client_secret_post" && basic)
+        ) {
           json(reply, 401, { error: "invalid_client" });
           return;
         }
@@ -208,6 +237,7 @@ export async function serveSignInNotes(
         }
         if (body.get("grant_type") === "refresh_token") {
           const refresh = body.get("refresh_token") ?? "";
+          renewalsAsked.push(refresh);
           if (!lasting.has(refresh) || body.get("resource") !== `${notesOrigin}/mcp`) {
             json(reply, 400, { error: "invalid_grant" });
             return;
@@ -244,7 +274,7 @@ export async function serveSignInNotes(
       return true;
     }
     const bearer = /^Bearer (.+)$/.exec(request.headers.authorization ?? "")?.[1];
-    if (bearer && access.has(bearer)) return false;
+    if (bearer && access.has(bearer) && !options.refuseKeys) return false;
     reply.writeHead(401, {
       "www-authenticate": `Bearer resource_metadata="${notesOrigin}/.well-known/oauth-protected-resource/mcp", scope="${SCOPE}"`,
     });
@@ -259,7 +289,11 @@ export async function serveSignInNotes(
     issuer,
     clients,
     renewals,
+    renewalsAsked,
     revoked,
+    get documentsAsked() {
+      return documentsAsked;
+    },
     access,
     lasting,
     browse: async (page, answer = "approve") => {

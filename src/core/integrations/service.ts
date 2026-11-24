@@ -694,7 +694,10 @@ export class IntegrationsService {
       const text = redact(answer.text);
       const label = answer.refused ? undefined : (row.connection.fence ?? row.binding.fence);
       return {
-        answer: { ...answer, text: label ? fencedAnswer(text, this.fence(label, caller)) : text },
+        answer: {
+          ...answer,
+          text: label ? fencedAnswer(text, this.fence(label, caller, !row.connection.fence)) : text,
+        },
       };
     } catch (error) {
       return {
@@ -748,7 +751,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       throw new Error("only a task's crewmate can save a file.");
     const saved = await files.save(caller.taskId, file.name, file.bytes);
     const label = row.connection.fence ?? row.binding.fence;
-    if (label)
+    if (label && !row.connection.fence)
       this.options.reads?.saved?.(
         caller.taskId,
         saved.file,
@@ -1215,13 +1218,13 @@ Do not repeat this call; read ${name} to check what happened first.`
     // A rule's events reach the first mate; a panel's, that panel; a hold's
     // rule's, its task. A rule's run also keeps a copy in Automation's
     // history, which the first mate's pass cleans, so that is noted too.
-    if (reader.kind === "task" && look.items.length > 0)
+    if (reader.kind === "task" && look.items.length > 0 && !row.connection.fence)
       this.options.reads?.note(FIRSTMATE_READER, (this.options.now ?? Date.now)());
     return {
       ...look,
       items: look.items.map((item) => ({
         ...item,
-        summary: fenced(item.summary, this.fence(label, reader)),
+        summary: fenced(item.summary, this.fence(label, reader, !row.connection.fence)),
       })),
     };
   }
@@ -1231,11 +1234,15 @@ Do not repeat this call; read ${name} to check what happened first.`
    * can write (`IntegrationBinding.fence`): a random value nobody who wrote
    * them could know, and the moment they were read, noted against the
    * conversation that receives them so they go when due (`OutsideReads`).
+   * A connection's own fence keeps no days, so its reads are not `noted`:
+   * they never tie a reader to another kind's deletion.
    */
-  private fence(label: string, reader: IntegrationCaller): Fence {
+  private fence(label: string, reader: IntegrationCaller, noted = true): Fence {
     const at = (this.options.now ?? Date.now)();
-    if (reader.kind === "panel") this.options.panelReads?.(reader.panel.key, label, at);
-    else this.options.reads?.note(reader.kind === "task" ? reader.taskId : FIRSTMATE_READER, at);
+    if (noted) {
+      if (reader.kind === "panel") this.options.panelReads?.(reader.panel.key, label, at);
+      else this.options.reads?.note(reader.kind === "task" ? reader.taskId : FIRSTMATE_READER, at);
+    }
     return { label, value: randomBytes(FENCE_VALUE_BYTES).toString("hex"), at };
   }
 

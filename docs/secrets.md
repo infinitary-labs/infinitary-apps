@@ -361,7 +361,7 @@ The Google integration's sign-in, MCP servers' keys and the sign-ins of MCP serv
 ### App sign-ins
 
 A sign-in the person makes in the app itself is their consent to the app's own use of it, so that use asks nothing.
-A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names.
+A broker declares it with `signIn` (`SecretBroker`, `httpSecretBroker`): its adapter spends a sign-in made in the app, sent only to an address its own code names or, for an MCP server's sign-in (`mcp-sign-in`), the token or revocation address that sign-in's own documents named when the person signed in, saved with it and checked again on each send.
 `prepareBrokered` allows a use with no card, no system confirmation and no saved decision only when the adapter declares `signIn` and every secret it names is a hidden entry not marked `forProgram`; the journal records the method `sign-in`, and history marks the use `signIn` with no approval ("Your sign-in" in Use history).
 Anything else is evaluated as before: an undeclared broker, a declaring broker that names a crew-visible secret, and every crewmate run.
 Signing out where the sign-in was made withdraws the consent: the service forgets its hidden entry.

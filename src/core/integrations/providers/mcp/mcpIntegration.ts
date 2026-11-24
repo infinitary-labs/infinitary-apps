@@ -45,7 +45,13 @@ import {
   readMcpDestination,
 } from "./guardedFetch";
 import { type McpRuns, McpRunsError, parseRuns, runsWithKeys, STAYS_ON_LINE } from "./runs";
-import { expiryOf, type McpChallenge, McpSignInError, signInToServer } from "./signIn";
+import {
+  expiryOf,
+  type McpChallenge,
+  McpSignInError,
+  SIGN_IN_REQUEST_MS,
+  signInToServer,
+} from "./signIn";
 import {
   type McpSavedResource,
   type McpSavedServer,
@@ -139,8 +145,6 @@ const RUNS_LENGTH = 2048;
 const SIGN_IN_BROKER = "mcp-sign-in";
 /** An access key this close to running out is renewed before a request. */
 const RENEW_EARLY_MS = 30_000;
-/** How long one request to a server's sign-in may take. */
-const SIGN_IN_REQUEST_MS = 30_000;
 /**
  * The label an address server's answers and event summaries reach agents
  * under: words anyone who can write to that service wrote
@@ -198,7 +202,7 @@ export function mcpIntegration(
    */
   const forgetting = new Map<
     string,
-    { signIn: McpSavedSignIn; network: NonNullable<McpSavedServer["network"]> }
+    { signIn: McpSavedSignIn; name: string; network: NonNullable<McpSavedServer["network"]> }
   >();
   /** The network class each sign-in address the broker sends to was reached under. */
   const brokerNetworks = new Map<string, NonNullable<McpSavedServer["network"]>>();
@@ -402,7 +406,7 @@ export function mcpIntegration(
           const signIn = op === "renew" ? signInOf(id) : held?.signIn;
           const url = op === "renew" ? signIn?.token : signIn?.revoke;
           if (!signIn?.key || !url) return undefined;
-          const name = nameOf(id);
+          const name = op === "renew" ? nameOf(id) : (held?.name ?? nameOf(id));
           const form: Record<string, string> =
             op === "renew"
               ? {
@@ -542,6 +546,7 @@ export function mcpIntegration(
     signIn: McpSavedSignIn,
     network: NonNullable<McpSavedServer["network"]>,
     token: string | undefined,
+    name = nameOf(signIn.id),
   ) => {
     const keys = options.keys;
     if (signIn.revoke) {
@@ -558,11 +563,11 @@ export function mcpIntegration(
         }).catch(() => undefined);
       if (signIn.key && keys?.shown()) {
         registerSignIn(keys);
-        forgetting.set(signIn.id, { signIn, network });
+        forgetting.set(signIn.id, { signIn, name, network });
         await keys
           .use({
             id: randomUUID(),
-            reason: m.integrationsMcpRevokeReason({ name: nameOf(signIn.id) }),
+            reason: m.integrationsMcpRevokeReason({ name }),
             broker: SIGN_IN_BROKER,
             input: { server: signIn.id, op: "revoke" },
           })
@@ -762,7 +767,28 @@ export function mcpIntegration(
     return connectOver(link, () => transportOf(server, link, heard), heard ? undefined : server.id);
   };
 
+  /** Reach a server with the sign-in just made: a refusal now is the server's, not an ended sign-in. */
+  const connectSignedIn = async (
+    server: Pick<McpSavedServer, "id" | "name" | "runs" | "network">,
+  ): Promise<Link> => {
+    try {
+      return await connect(server);
+    } catch (error) {
+      if (!(error instanceof McpSignedOutError)) throw error;
+      throw new McpConnectError(
+        `${server.name} refused the sign-in you just made. Check that the account you signed in with can use it.`,
+      );
+    }
+  };
+
   const linkOf = async (id: string): Promise<Link> => {
+    // A signed-out row asks for nothing until the person signs in again, even
+    // over a link still open from before: its key is dead.
+    const saved = servers.find((entry) => entry.id === id);
+    if (saved?.health === "needs_reauth" && signInOf(id)) {
+      await stop(id);
+      throw signedOut(id);
+    }
     const running = links.get(id);
     if (running) {
       const link = await running.catch(() => undefined);
@@ -770,8 +796,6 @@ export function mcpIntegration(
       if (links.get(id) === running) links.delete(id);
     }
     const server = serverOf(id);
-    // A signed-out row asks for nothing until the person signs in again.
-    if (server.health === "needs_reauth" && signInOf(id)) throw signedOut(id);
     const starting = connect(server);
     links.set(id, starting);
     let started: Link | undefined;
@@ -1013,7 +1037,7 @@ export function mcpIntegration(
               `${name} asks for a sign-in, which you make in your browser from Settings → Integrations → ${INTEGRATION_KIND_NAMES.mcp}.`,
             );
           await signInFor(id, name, address, network ?? "public", challenge, signIn);
-          link = await connect({ id, name, runs, network });
+          link = await connectSignedIn({ id, name, runs, network });
         }
         try {
           const lists = savedLists(await listed(link.client));
@@ -1064,7 +1088,7 @@ export function mcpIntegration(
       access.delete(id);
       try {
         await signInFor(id, server.name, url, network, challenge, handle);
-        const link = await connect(server);
+        const link = await connectSignedIn(server);
         try {
           const made = pendingSignIns.get(id);
           if (made) saveSignIns([...signIns.filter((entry) => entry.id !== id), made]);
@@ -1099,7 +1123,7 @@ export function mcpIntegration(
         saveSignIns(signIns.filter((entry) => entry.id !== id));
         const token = access.get(id)?.token;
         access.delete(id);
-        await forgetSignIn(signIn, removed?.network ?? "public", token);
+        await forgetSignIn(signIn, removed?.network ?? "public", token, removed?.name);
       }
       // Its keys go with it, unless another line names them.
       const keys = options.keys;

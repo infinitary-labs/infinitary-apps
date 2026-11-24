@@ -67,6 +67,7 @@ function serviceIn(
   root: string,
   keys?: IntegrationKeys,
   signIn?: Pick<Parameters<typeof mcpIntegration>[0], "open" | "now">,
+  reads?: Pick<ConstructorParameters<typeof IntegrationsService>[0], "reads" | "panelReads">,
 ): {
   service: IntegrationsService;
   tasks: TaskService;
@@ -96,6 +97,7 @@ function serviceIn(
       record: (taskId, askId, outcome) =>
         tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
+    ...reads,
   });
   return { service, tasks, binding, close: () => db.close() };
 }
@@ -1239,10 +1241,10 @@ describe("an MCP server that asks for a sign-in", () => {
     expect(refused.refused).toBe("refused");
     expect(refused.text).toBe(`Error: ${SIGNED_OUT}`);
     expect(world.row()?.health).toBe("needs_reauth");
-    // Signed out, a call asks nothing of the server.
-    const renewals = world.standIn.renewals.length;
+    // Signed out, a call asks nothing of the server or its sign-in.
+    const asked = world.standIn.renewalsAsked.length;
     expect((await world.list()).text).toBe(`Error: ${SIGNED_OUT}`);
-    expect(world.standIn.renewals).toHaveLength(renewals);
+    expect(world.standIn.renewalsAsked).toHaveLength(asked);
     const [before] = await world.secrets.entries();
 
     const view = await world.service.signInAgain("mcp-notes");
@@ -1269,6 +1271,9 @@ describe("an MCP server that asks for a sign-in", () => {
     const access = [...world.standIn.access];
     await world.service.remove("mcp-notes");
     expect(world.standIn.revoked).toEqual(expect.arrayContaining([...lasting, ...access]));
+    expect((await world.secrets.keys.view()).history.map((item) => item.reason)).toEqual([
+      "Infinitary tells Notes to forget the sign-in you removed.",
+    ]);
     expect(world.standIn.lasting.size).toBe(0);
     expect(await world.secrets.entries()).toEqual([]);
     expect(JSON.parse(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8"))).toEqual({
@@ -1318,6 +1323,86 @@ describe("an MCP server that asks for a sign-in", () => {
     expect(await world.secrets.entries()).toEqual([]);
   });
 
+  it.each(["client_secret_basic", "client_secret_post"] as const)(
+    "signs in, renews and is forgotten as an app with a key of its own (%s)",
+    async (clientAuth) => {
+      const world = await signInWorld("modern", { clientAuth });
+      await world.add();
+      const [client] = [...world.standIn.clients.values()];
+      expect(client?.secret).toEqual(expect.any(String));
+      const entries = await world.secrets.entries();
+      expect(entries.map((entry) => [entry.label, entry.discoverable])).toEqual(
+        expect.arrayContaining([
+          ["Notes sign-in", false],
+          ["Notes sign-in app", false],
+        ]),
+      );
+      expect(entries).toHaveLength(2);
+      expect(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8")).not.toContain(
+        client?.secret ?? "",
+      );
+
+      allowIntegrationReads(world.service);
+      world.standIn.expireAccess();
+      expect((await world.list()).refused).toBeUndefined();
+      expect(world.standIn.renewals).toHaveLength(1);
+      await world.service.remove("mcp-notes");
+      expect(await world.secrets.entries()).toEqual([]);
+    },
+  );
+
+  it.each([
+    [
+      "in a private network",
+      "http://10.0.0.5/token",
+      "The server's sign-in at 10.0.0.5 is in a private network, but the server is not, so Infinitary does not reach it.",
+    ],
+    [
+      "over plain http",
+      "http://93.184.215.14/token",
+      "The server's sign-in is at 93.184.215.14 over plain http, which Infinitary does not use. It needs https.",
+    ],
+  ])(
+    "refuses a sign-in whose document names an address %s, before the browser opens",
+    async (_where, token, words) => {
+      const world = await signInWorld("modern", { endpoints: { token } });
+      await expect(world.add()).rejects.toThrow(words);
+      expect(world.pages).toEqual([]);
+      expect(world.standIn.clients.size).toBe(0);
+      expect(world.service.view().integrations).toEqual([]);
+    },
+  );
+
+  it("ends at Cancel while the sign-in's document does not answer", async () => {
+    const world = await signInWorld("modern", { silent: true });
+    const adding = world.service.add("mcp", { name: "Notes", runs: world.standIn.url }, true);
+    await expect.poll(() => world.standIn.documentsAsked).toBe(1);
+    world.service.cancelSignIn();
+    await expect(adding).rejects.toThrow(/^The sign-in was cancelled\.$/);
+    expect(world.pages).toEqual([]);
+    expect(world.service.view().integrations).toEqual([]);
+  });
+
+  it("says the server refused the sign-in just made, keeping no row and no key", async () => {
+    const world = await signInWorld("modern", { refuseKeys: true });
+    await expect(world.add()).rejects.toThrow(
+      /^Notes refused the sign-in you just made\. Check that the account you signed in with can use it\.$/,
+    );
+    expect(world.service.view().integrations).toEqual([]);
+    expect(await world.secrets.entries()).toEqual([]);
+  });
+
+  it("escapes the name on the browser's page after the sign-in", async () => {
+    const world = await signInWorld("modern");
+    const name = '<meta http-equiv="refresh" content="0;url=https://example.com">';
+    await world.service.add("mcp", { name, runs: world.standIn.url }, true);
+    const page = await world.browsed();
+    expect(page).not.toContain("<meta http-equiv");
+    expect(page).toContain(
+      "Signed in to &lt;meta http-equiv=&quot;refresh&quot; content=&quot;0;url=https://example.com&quot;&gt;.",
+    );
+  });
+
   it("refuses the first mate's addition with words, opening no browser", async () => {
     const world = await signInWorld("modern");
     await expect(
@@ -1342,6 +1427,32 @@ describe("an MCP server that asks for a sign-in", () => {
     expect(JSON.parse(readFileSync(join(world.root, "mcp-sign-ins.json"), "utf8"))).toEqual({
       signIns: [],
     });
+  });
+});
+
+describe("an MCP server's words read by a task", () => {
+  // Fenced, but kept for no days: they never tie the task's conversation to
+  // another kind's deletion, as a Gmail read does.
+  it("are fenced and noted for no deletion", async () => {
+    const root = scratchDir("mcp-integration");
+    const noted: string[] = [];
+    const { service, close } = serviceIn(root, undefined, undefined, {
+      reads: { note: (reader) => noted.push(reader) },
+      panelReads: (panel) => noted.push(panel),
+    });
+    const http = await serveNotesHttp("modern");
+    opened.push({ service, http, close });
+    await service.add("mcp", { name: "Notes", runs: http.url });
+    allowIntegrationReads(service);
+    const listed = await service.call(
+      task,
+      "Notes",
+      "list_notes",
+      {},
+      "To perform the task’s requested action.",
+    );
+    expect(fencedSpans(listed.text).map((span) => span.label)).toEqual(["mcp-data"]);
+    expect(noted).toEqual([]);
   });
 });
 

@@ -58,6 +58,8 @@ export type McpIssued = {
 export class McpSignInError extends Error {}
 
 const CALLBACK_PATH = "/callback";
+/** How long one request to the sign-in may take. */
+export const SIGN_IN_REQUEST_MS = 30_000;
 
 /** When a key given `expires_in` seconds from now runs out, on the app's clock. */
 export function expiryOf(expiresIn: unknown, now: number): number | undefined {
@@ -82,7 +84,18 @@ export async function signInToServer(options: {
   resolve?: McpResolver;
 }): Promise<McpIssued> {
   const { name, server, network, signal } = options;
-  const fetchFn = guardedSignInFetch(network, options.resolve);
+  const guarded = guardedSignInFetch(network, options.resolve);
+  // Each request ends at Cancel or when the sign-in stops answering, so a
+  // silent address never holds Connect.
+  const fetchFn: typeof guarded = (url, init = {}) =>
+    guarded(url, {
+      ...init,
+      signal: AbortSignal.any([
+        signal,
+        AbortSignal.timeout(SIGN_IN_REQUEST_MS),
+        ...(init.signal ? [init.signal] : []),
+      ]),
+    });
   let info: Awaited<ReturnType<typeof discoverOAuthServerInfo>>;
   try {
     info = await discoverOAuthServerInfo(server, {
@@ -92,6 +105,7 @@ export async function signInToServer(options: {
         : {}),
     });
   } catch (error) {
+    if (signal.aborted) throw new McpSignInError("The sign-in was cancelled.");
     throw signInError(error, name);
   }
   const metadata = info.authorizationServerMetadata;

@@ -389,15 +389,22 @@ describe("a held batch", () => {
   });
 
   // Intent: upstream issue #55's third review, a bug being fixed: the base of whichever
-  // declaration a waiting version carried replaced the held version its own approval verified.
-  it("carries an approved version from the held version verified for it, whatever a declaration at its commit was verified on", () => {
+  // declaration a waiting version carried replaced the held version its own approval verified,
+  // and the combine that carried the version would have replaced that declaration's in turn.
+  it("keeps the held version verified for an approved version and the one its repair was verified on apart", () => {
     const held = hold(openBatch(), failed).record;
     const approved = { ...LEGEND, taskId: "t-takeover", at: 4_000, heldBase: failed.head };
     const record = {
       ...declared({ ...held, line: [approved] }, "t-repair", approved.head),
       fixBases: { "t-repair": PARSER_COMMIT },
     };
-    expect(carried(record, "line").at(-1)).toEqual({ ...approved, fix: true });
+    const fix = carried(record, "line").at(-1);
+    expect(fix).toEqual({ ...approved, fix: true });
+    const pushed = combined(record, combineOf([member(fix ?? approved, LEGEND_COMMIT)]), {
+      branch: "infinitary-batch/7c41",
+      at: 7_000,
+    });
+    expect(pushed.fixBases).toEqual(record.fixBases);
   });
 
   // Intent: the same review's finding, a bug being fixed: a takeover that declared the fix

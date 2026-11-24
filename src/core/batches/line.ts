@@ -526,6 +526,8 @@ function asChange(member: BatchMember): BatchChange {
  * The record with the base each combine verified for a declared fix, whether
  * the fix joined or was left out. It is saved before the batch is pushed, so
  * a push that never comes back still keeps the base the repair was checked on.
+ * A repair keeps the first base verified for it: a version verified on another
+ * keeps that one itself (`carried`).
  */
 export function withBases<T extends Pick<BatchRecord, "fixes" | "fixBases" | "fixHeads">>(
   record: T,
@@ -538,7 +540,7 @@ export function withBases<T extends Pick<BatchRecord, "fixes" | "fixBases" | "fi
     },
   );
   return verified.length
-    ? { ...record, fixBases: { ...record.fixBases, ...Object.fromEntries(verified) } }
+    ? { ...record, fixBases: { ...Object.fromEntries(verified), ...record.fixBases } }
     : record;
 }
 

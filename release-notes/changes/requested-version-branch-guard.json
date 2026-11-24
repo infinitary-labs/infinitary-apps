@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "requested-version-branch-guard",
+      "reason": "The project's own checks requested by hand now refuse a version no branch of the project holds, so an outside pull request's code cannot reach the project's own machines that way; it changes only how the project is checked, and nothing in the app changes."
+    }
+  ]
+}

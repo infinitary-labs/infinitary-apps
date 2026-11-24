@@ -55,6 +55,7 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 
 The crew's safety rule: a crewmate reviewing an outside pull request runs nothing from it on the project's own machines or the captain's computers before the click; it reads the change and GitHub's runs, and starts nothing on the project's own runners for it.
 The fork guard on the project's own runners refuses a job whose pull request comes from another copy of the project in any case.
+A check requested by hand carries no pull request, so that guard never sees it; the request itself refuses a version no branch of the project holds ("A check requested by hand").
 
 Routing is not the guard: a pull request runs the check files it carries, so it can send itself to the project's own machines by editing them.
 The guards are GitHub's approval of each outside run and the fork guard on the project's own runners.
@@ -67,6 +68,25 @@ It marks and never fails or blocks a pull request, and leaves the project's own 
 Like the agreement check below, it runs from the default branch on `pull_request_target`, checks out only its script and `scripts/intake-labels.mjs`, never the pull request's code, uses no secret beyond its own token, holds only issue and pull request writes (GitHub refuses a label on a pull request without pull request writes), and runs on GitHub's hosted Ubuntu (`tests/check-file-flag.test.ts`).
 Started by hand with a pull request number, it reads any pull request of the project, its own included, so the flag can be proved before an outside copy exists.
 Keep fork workflow write tokens and secrets restricted at the host: an outside pull request gets a read-only token and no secrets.
+
+### A check requested by hand
+
+A check requested by hand (`workflow_dispatch`) runs only a version a branch of this project holds.
+GitHub hands out any commit a pull request holds, another copy's included, at this project's own address, so a request naming an outside pull request's commit or `refs/pull/<number>/head` would otherwise check out and run the contributor's code on the project's own machines.
+`verify.yml`, `source-journeys.yml`, `windows.yml` and `linux-packages.yml`, the workflows whose request names the version it checks (`ref`), open with the same step, "Check a branch of this project holds the requested version":
+
+- it reads the project's branches and tags as commits alone, with no file of any version, and fetches nothing more (`GIT_NO_LAZY_FETCH`);
+- it reads the name as `actions/checkout` does: a full commit id, a branch or tag by its full name, or a short name of a branch, else of a tag;
+- it passes when a branch holds that commit, whether as its newest version or an older one, and when the request names no version, so the request's own branch runs;
+- it refuses a commit only a pull request or a tag holds, any other full name such as `refs/pull/7/head`, and a name no branch or tag has, and the run checks nothing.
+
+In `verify.yml` it is a step of the `request` job, which every other job needs, so no other job of a refused request starts.
+In the other three it runs before the checkout of each job that starts the run, every group of `source-journeys.yml` and the build of `windows.yml` and `linux-packages.yml`, and their later jobs need the build, so a refused version never reaches the clean Windows machine and no job checks it out.
+Under the routing variables above, those first jobs run on GitHub's hosted machines; on one of the project's own places the step still runs nothing of the version, since it reads commits alone.
+A call from another workflow (`main.yml`, `release.yml`, the swept batch, an outside pull request's `contributors.yml`) skips it: the caller chose the version, and an outside pull request's call runs on GitHub's machines alone.
+It cannot stop a version someone with push access first put on a branch of the project; that stays the crew's safety rule above.
+After a refusal only the steps that run after any failure go on, such as keeping results, and none of them checks out the requested version: a checkout's second try runs only once its first try failed, and the journeys' timing exporter checks out the workflow's own commit.
+`tests/requested-version.test.ts` holds the four steps equal, holds that no checkout of the requested version and no later job runs once the step refused, and runs the step against a stand-in for GitHub's address that hands out a pull request's commit, as GitHub does.
 
 ### Intake
 

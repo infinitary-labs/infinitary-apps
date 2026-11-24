@@ -129,6 +129,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | repair (the task repairing a held batch) | Reparatur | Feminine ("die Reparatur"); "{key} repariert es" for the task at work; the change it makes stays Korrektur. |
 | report | Bericht, berichten | |
 | repository (one of a project's) | Repository | Neuter, plural Repositorys; "Ein Repository hinzufügen", "2 Repositorys". Names one of a project's repositories; what work belongs to stays Projekt. |
+| reset (Infinitary on this computer) | zurücksetzen | Settings → General's row that deletes everything the app keeps on this computer; apart from "endgültig löschen", which clears tasks only. |
 | review | Review | Neuter ("das Review"), so it does not collide with "Überprüfungen". |
 | revision (of a knowledge entry) | Revision | "Revision 3"; kept apart from "Version" |
 | rigor levels: Quick, Default, Careful | Schnell, Standard, Sorgfältig | "{care} rigor" is "Sorgfalt: {care}". |

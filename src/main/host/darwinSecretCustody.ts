@@ -2,6 +2,7 @@ import koffi from "koffi";
 import { hostPlatform } from "../../core/platform";
 import type {
   CustodyRead,
+  CustodyRemove,
   CustodySlot,
   CustodyWrite,
   SecretCustody,
@@ -34,6 +35,8 @@ export type DarwinCustodyApi = {
   setUserInteractionAllowed(allowed: boolean): void;
   read(service: string, account: string): { status: number; bytes?: Buffer };
   write(service: string, account: string, bytes: Buffer): number;
+  /** Deletes the item; errSecItemNotFound when there is none. */
+  remove(service: string, account: string): number;
 };
 
 export type DarwinCustodyOptions = {
@@ -78,6 +81,18 @@ export function createDarwinSecretCustody(
         return "unavailable";
       } finally {
         encoded.fill(0);
+      }
+    },
+    async remove(slot: CustodySlot): Promise<CustodyRemove> {
+      if (!api) return "unavailable";
+      try {
+        api.setUserInteractionAllowed(options.interactive === true);
+        const status = api.remove(options.service, slot);
+        if (status === SEC_SUCCESS) return "removed";
+        if (status === SEC_ITEM_NOT_FOUND) return "absent";
+        return SEC_LOCKED.has(status) ? "locked" : "unavailable";
+      } catch {
+        return "unavailable";
       }
     },
   };
@@ -132,6 +147,7 @@ function bindKeychain(keychainPath?: string): DarwinCustodyApi {
     "void *",
   ]);
   const freeContent = security.func("SecKeychainItemFreeContent", "int32", ["void *", "void *"]);
+  const deleteItem = security.func("SecKeychainItemDelete", "int32", ["void *"]);
   const setInteraction = security.func("SecKeychainSetUserInteractionAllowed", "int32", ["uint8"]);
   const cfRelease = coreFoundation.func("CFRelease", "void", ["void *"]);
 
@@ -195,6 +211,16 @@ function bindKeychain(keychainPath?: string): DarwinCustodyApi {
           bytes,
           null,
         ) as number;
+      } finally {
+        if (found.data != null) freeContent(null, found.data);
+        if (found.item != null) cfRelease(found.item);
+      }
+    },
+    remove: (service, account) => {
+      const found = lookup(service, account, true);
+      try {
+        if (found.status !== SEC_SUCCESS || found.item == null) return found.status;
+        return deleteItem(found.item) as number;
       } finally {
         if (found.data != null) freeContent(null, found.data);
         if (found.item != null) cfRelease(found.item);

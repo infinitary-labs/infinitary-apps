@@ -3147,6 +3147,30 @@
       <string>%1$ld حاسوب</string>
     </dict>
   </dict>
+  <key>settingsGeneralResetOpenTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>تتوقف %1$ld مهمة مفتوحة.</string>
+      <key>one</key>
+      <string>تتوقف %1$ld مهمة مفتوحة.</string>
+      <key>two</key>
+      <string>تتوقف %1$ld مهمتان مفتوحتان.</string>
+      <key>few</key>
+      <string>تتوقف %1$ld مهام مفتوحة.</string>
+      <key>many</key>
+      <string>تتوقف %1$ld مهمةً مفتوحة.</string>
+      <key>other</key>
+      <string>تتوقف %1$ld مهمة مفتوحة.</string>
+    </dict>
+  </dict>
   <key>settingsGeneralTasksPurged</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

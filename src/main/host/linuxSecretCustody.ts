@@ -1,6 +1,7 @@
 import koffi from "koffi";
 import type {
   CustodyRead,
+  CustodyRemove,
   CustodySlot,
   CustodyWrite,
   SecretCustody,
@@ -15,6 +16,13 @@ import type {
  * Potentially blocking native calls use Koffi's worker pool, not the main thread.
  * Nothing falls back to a file, another backend or another collection.
  */
+// i18n-exempt: a C type name koffi reads
+const C_STRING = "const char *";
+// i18n-exempt: Chromium's own Secret Service schema name for its key
+const CHROMIUM_KEY_SCHEMA = "chrome_libsecret_os_crypt_password_v2";
+// i18n-exempt: Chromium's own attribute name for its key
+const CHROMIUM_KEY_ATTRIBUTE = "application";
+
 export type LibsecretAnswer =
   | { kind: "value"; bytes: Buffer }
   | { kind: "absent" }
@@ -31,11 +39,20 @@ export type LibsecretApi = {
   ): Promise<LibsecretAnswer>;
   /** Only the person's explicit Unlock request reaches this method. */
   unlock(store: string): Promise<boolean>;
+  /** Deletes every item of the slot; only a reset asks it (docs/reset.md). */
+  remove(store: string, slot: CustodySlot): Promise<"removed" | "absent" | LibsecretAnswer>;
+  /**
+   * Deletes the key Chromium keeps for the app's saved window data, found by
+   * the app's name; only a reset asks it (docs/reset.md).
+   */
+  removeSafeStorage(application: string): Promise<"removed" | "absent" | LibsecretAnswer>;
 };
 
 /** The low-level service operations: none but unlock may invoke Secret Service Unlock/Prompt. */
 export type LibsecretService = {
   search(store: string, slot: CustodySlot): Promise<{ unlocked: string[]; locked: string[] }>;
+  /** Chromium's own safe-storage key items for the application name. */
+  searchSafeStorage(application: string): Promise<{ unlocked: string[]; locked: string[] }>;
   read(path: string): Promise<Buffer | undefined>;
   replace(path: string, password: Buffer): Promise<void>;
   collection(): Promise<{ path: string; locked: boolean } | undefined>;
@@ -47,6 +64,8 @@ export type LibsecretService = {
     password: Buffer,
   ): Promise<boolean>;
   unlock(paths: string[]): Promise<void>;
+  /** Deletes the item; false when the provider asked for a prompt, which is never run. */
+  delete(path: string): Promise<boolean>;
 };
 
 /** Classified native failure, never a library message that might contain private data. */
@@ -60,7 +79,10 @@ export class LibsecretFailure extends Error {
 }
 
 export type LinuxCustodyOptions = { store: string };
-export type LinuxSecretCustody = SecretCustody & { unlock(): Promise<boolean> };
+export type LinuxSecretCustody = SecretCustody & {
+  unlock(): Promise<boolean>;
+  remove(slot: CustodySlot): Promise<CustodyRemove>;
+};
 
 const LABEL: Record<CustodySlot, string> = {
   root: "Infinitary Secrets root key",
@@ -110,6 +132,16 @@ export function createLinuxSecretCustody(
         return false;
       }
     },
+    async remove(slot): Promise<CustodyRemove> {
+      if (!api) return "unavailable";
+      try {
+        const answer = await api.remove(options.store, slot);
+        if (answer === "removed" || answer === "absent") return answer;
+        return answer.kind === "error" && answer.locked ? "locked" : "unavailable";
+      } catch {
+        return "unavailable";
+      }
+    },
   };
 }
 
@@ -125,6 +157,20 @@ export function libsecretFromService(service: LibsecretService): LibsecretApi {
     const next = tail.then(operation);
     tail = next.catch(() => {});
     return next;
+  };
+  const removeFound = async (
+    found: Promise<{ unlocked: string[]; locked: string[] }>,
+  ): Promise<"removed" | "absent" | LibsecretAnswer> => {
+    try {
+      const { unlocked, locked } = await found;
+      if (locked.length) return { kind: "error", locked: true };
+      if (unlocked.length === 0) return "absent";
+      for (const path of unlocked)
+        if (!(await service.delete(path))) return { kind: "error", locked: false };
+      return "removed";
+    } catch (error) {
+      return failure(error);
+    }
   };
   return {
     lookup: (store, slot) =>
@@ -174,6 +220,9 @@ export function libsecretFromService(service: LibsecretService): LibsecretApi {
           return failure(error);
         }
       }),
+    remove: (store, slot) => run(() => removeFound(service.search(store, slot))),
+    removeSafeStorage: (application) =>
+      run(() => removeFound(service.searchSafeStorage(application))),
     unlock: (store) =>
       run(async () => {
         try {
@@ -350,6 +399,20 @@ function bindLibsecret(): LibsecretService {
     null,
   );
   if (isNull(schema)) throw new LibsecretFailure(false);
+  // Chromium's own schema for the key that encrypts a window's saved data
+  // (its cookies), kept under the app's name. Searching with it matches the
+  // schema name too, so another Chromium app's key is never found.
+  const safeStorageSchema = schemaNew(
+    CHROMIUM_KEY_SCHEMA,
+    0,
+    C_STRING,
+    CHROMIUM_KEY_ATTRIBUTE,
+    "int",
+    0,
+    "void *",
+    null,
+  );
+  if (isNull(safeStorageSchema)) throw new LibsecretFailure(false);
 
   const checked = (error: unknown) => {
     if (isNull(error)) return;
@@ -401,6 +464,30 @@ function bindLibsecret(): LibsecretService {
       typeFree(type);
     }
   };
+  const searchWith = async (service: unknown, which: unknown, attributes: unknown) => {
+    const unlocked: [unknown] = [null];
+    const locked: [unknown] = [null];
+    const error: [unknown] = [null];
+    try {
+      const ok = await secretNativeCall(
+        search,
+        service,
+        which,
+        attributes,
+        null,
+        unlocked,
+        locked,
+        error,
+      );
+      checked(error[0]);
+      if (!ok) throw new LibsecretFailure(false);
+      return { unlocked: strings(unlocked[0]), locked: strings(locked[0]) };
+    } finally {
+      hashUnref(attributes);
+      if (!isNull(unlocked[0])) strvFree(unlocked[0]);
+      if (!isNull(locked[0])) strvFree(locked[0]);
+    }
+  };
   const rpc = async (
     service: unknown,
     path: string,
@@ -439,43 +526,41 @@ function bindLibsecret(): LibsecretService {
 
   return {
     search: (store, slot) =>
-      withService(async (service) => {
-        const attributes = attributesBuild(
+      withService((service) =>
+        searchWith(
+          service,
           schema,
-          "const char *",
-          "store",
-          "const char *",
-          store,
-          "const char *",
-          "slot",
-          "const char *",
-          slot,
-          "void *",
-          null,
-        );
-        const unlocked: [unknown] = [null];
-        const locked: [unknown] = [null];
-        const error: [unknown] = [null];
-        try {
-          const ok = await secretNativeCall(
-            search,
-            service,
+          attributesBuild(
             schema,
-            attributes,
+            "const char *",
+            "store",
+            "const char *",
+            store,
+            "const char *",
+            "slot",
+            "const char *",
+            slot,
+            "void *",
             null,
-            unlocked,
-            locked,
-            error,
-          );
-          checked(error[0]);
-          if (!ok) throw new LibsecretFailure(false);
-          return { unlocked: strings(unlocked[0]), locked: strings(locked[0]) };
-        } finally {
-          hashUnref(attributes);
-          if (!isNull(unlocked[0])) strvFree(unlocked[0]);
-          if (!isNull(locked[0])) strvFree(locked[0]);
-        }
-      }),
+          ),
+        ),
+      ),
+    searchSafeStorage: (application) =>
+      withService((service) =>
+        searchWith(
+          service,
+          safeStorageSchema,
+          attributesBuild(
+            safeStorageSchema,
+            C_STRING,
+            CHROMIUM_KEY_ATTRIBUTE,
+            C_STRING,
+            application,
+            "void *",
+            null,
+          ),
+        ),
+      ),
     read: (path) =>
       withService(async (service) => {
         await session(service);
@@ -611,6 +696,38 @@ function bindLibsecret(): LibsecretService {
           return false;
         }
         return created !== "/";
+      }),
+    delete: (path) =>
+      withService(async (service) => {
+        const answer = await rpc(
+          service,
+          path,
+          "org.freedesktop.Secret.Item",
+          "Delete",
+          null,
+          "(o)",
+        );
+        const prompt = child(answer, 0);
+        let needed: string;
+        try {
+          needed = getString(prompt, null) as string;
+        } finally {
+          variantUnref(prompt);
+          variantUnref(answer);
+        }
+        if (needed === "/") return true;
+        // A provider may ask for a prompt; it is never run here, as with CreateItem.
+        const dismissed = await rpc(
+          service,
+          needed,
+          "org.freedesktop.Secret.Prompt",
+          // i18n-exempt: a D-Bus method name
+          "Dismiss",
+          null,
+          "()",
+        );
+        variantUnref(dismissed);
+        return false;
       }),
     unlock: (paths) =>
       withService(async (service) => {

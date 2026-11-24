@@ -444,3 +444,17 @@ export class LeftoverPrograms {
     }
   }
 }
+
+/** The app's own leftover programs, logging to its console. */
+export function leftoverProgramsAt(
+  crewmatesDir: string,
+  keptJobs: KeptJobs,
+  tasks: LeftoverProgramsOptions["tasks"],
+): LeftoverPrograms {
+  return new LeftoverPrograms({
+    crewmatesDir,
+    keptJobs,
+    tasks,
+    log: (line) => console.warn(`[leftovers] ${line}`),
+  });
+}

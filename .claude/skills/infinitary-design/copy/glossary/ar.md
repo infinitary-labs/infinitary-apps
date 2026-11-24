@@ -140,6 +140,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | repo (never said) | مشروع | The app's noun for what work belongs to stays مشروع. |
 | report | تقرير | |
 | repository (one of a project's) | مستودع | Plural مستودعات; "إضافة مستودع", "{count} مستودعات". Names one of a project's repositories, or the thing on GitHub. |
+| reset (Infinitary on this computer) | إعادة تعيين | Settings → General's row that deletes everything the app keeps on this computer; stronger than محو, which clears tasks only. |
 | review | المراجعة | |
 | Review carefully (a merge card's button) | «مراجعة متأنية» | Echoes "متأنٍّ" for Careful. |
 | revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |

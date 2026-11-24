@@ -19069,6 +19069,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The crewmate on “${task}” reads words anyone can write, so these calls wait for you. Each row is one call, where it goes and what it sends.`;
   }
+  function cardReaderCallsPagesTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تسمح بهذه الاستدعاءات وبصفحات الويب؟`;
+      case "de":
+        return `Diese Aufrufe und Webseiten erlauben?`;
+      case "es":
+        return `¿Permitir estas llamadas y páginas web?`;
+      case "fr":
+        return `Autoriser ces appels et des pages web ?`;
+      case "ja":
+        return `これらの呼び出しと Web ページを許可しますか？`;
+      case "ko":
+        return `이 호출들과 웹 페이지를 허용할까요?`;
+      case "pt-BR":
+        return `Permitir estas chamadas e páginas da web?`;
+      case "zh-Hans":
+        return `允许这些调用并打开网页吗？`;
+      case "zh-Hant":
+        return `允許這些呼叫並開啟網頁嗎？`;
+      case "en-XA":
+        return `[Åļļöŵ ţĥéšé çáļļš áñð ŵéƀ þáĝéš? ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Allow these calls and web pages?‬`;
+    }
+    return `Allow these calls and web pages?`;
+  }
   function cardReaderCallsTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -106029,6 +106056,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardReaderCallWhy,
     cardReaderCallsHow,
     cardReaderCallsLead,
+    cardReaderCallsPagesTitle,
     cardReaderCallsTitle,
     cardReaderPagesHow,
     cardReaderPagesLead,
@@ -109413,6 +109441,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardReaderCallWhy": [],
     "cardReaderCallsHow": [],
     "cardReaderCallsLead": ["task"],
+    "cardReaderCallsPagesTitle": [],
     "cardReaderCallsTitle": [],
     "cardReaderPagesHow": [],
     "cardReaderPagesLead": ["task"],

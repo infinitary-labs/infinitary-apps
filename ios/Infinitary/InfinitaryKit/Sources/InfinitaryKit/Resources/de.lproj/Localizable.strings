@@ -453,6 +453,7 @@
 "cardReaderCallWhy" = "Warum, in den Worten des Crewmitglieds:";
 "cardReaderCallsHow" = "Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht laufen sollen. Die angehakten Zeilen laufen je einmal, die älteste zuerst, mit deiner Anmeldung beim jeweiligen Ziel.";
 "cardReaderCallsLead" = "Das Crewmitglied von „%1$@“ liest Texte, die jeder schreiben kann, darum warten diese Aufrufe auf deine Entscheidung. Jede Zeile ist ein Aufruf, sein Ziel und was er sendet.";
+"cardReaderCallsPagesTitle" = "Diese Aufrufe und Webseiten erlauben?";
 "cardReaderCallsTitle" = "Diese Aufrufe erlauben?";
 "cardReaderPagesHow" = "Jede Zeile ist angehakt; entferne den Haken bei allen, die nicht geöffnet werden sollen. Jede angehakte Seite öffnet sich einmal, ohne Anmeldung, und danach darf das Crewmitglied diese Adresse erneut lesen.";
 "cardReaderPagesLead" = "Das Crewmitglied von „%1$@“ liest Texte, die jeder schreiben kann, und hat jetzt etwas von dir, darum wartet jede neue Webadresse, die es öffnet, auf deine Entscheidung: Eine Adresse kann das Gelesene an den Betreiber der Website tragen. Jede Zeile ist eine Seite mit ihrer ganzen Adresse.";

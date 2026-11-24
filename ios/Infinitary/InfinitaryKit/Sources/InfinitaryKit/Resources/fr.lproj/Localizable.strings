@@ -453,6 +453,7 @@
 "cardReaderCallWhy" = "Pourquoi, selon les mots du membre d’équipage :";
 "cardReaderCallsHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas lancer. Les lignes cochées s’exécutent une fois chacune, de la plus ancienne à la plus récente, avec votre connexion à chaque destination.";
 "cardReaderCallsLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire : ces appels attendent donc votre décision. Chaque ligne est un appel, sa destination et ce qu’il envoie.";
+"cardReaderCallsPagesTitle" = "Autoriser ces appels et des pages web ?";
 "cardReaderCallsTitle" = "Autoriser ces appels ?";
 "cardReaderPagesHow" = "Toutes les lignes arrivent cochées ; décochez celles que vous ne voulez pas ouvrir. Chaque page cochée s’ouvre une fois, sans connexion, et l’équipier peut ensuite relire cette adresse.";
 "cardReaderPagesLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire et détient maintenant quelque chose à vous : chaque nouvelle adresse web qu’il ouvre attend donc votre décision, car une adresse peut porter ce qu’il a lu jusqu’à qui gère le site. Chaque ligne est une page, avec son adresse complète.";

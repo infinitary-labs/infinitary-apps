@@ -78,7 +78,7 @@ export function readerApprovalCard(
             how: m.cardReaderWritesHow({ place }),
           }
         : {
-            title: m.cardReaderCallsTitle(),
+            title: pages ? m.cardReaderCallsPagesTitle() : m.cardReaderCallsTitle(),
             lead: m.cardReaderCallsLead({ task: task.title }),
             how: m.cardReaderCallsHow(),
           };

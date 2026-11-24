@@ -6,6 +6,8 @@
  */
 import {
   cardReaderAsksTitle,
+  cardReaderCallsLead,
+  cardReaderCallsPagesTitle,
   cardReaderPagesLead,
   cardReaderPagesTitle,
   cardReaderWritesLead,
@@ -329,6 +331,46 @@ describe("a reader's web pages on its approval card", () => {
     expect(card?.body).not.toContain(
       cardReaderWritesLead({ task: "Triage the waiting issues", place: "GitHub" }),
     );
+  });
+
+  it("joins a reader's waiting integration call on its one card, whose title names the calls and the pages", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Triage the waiting issues",
+      intent: {
+        ...intentOf("triage the waiting issues"),
+        constraints: [{ kind: "read-only" as const }],
+      },
+      shape: { unsafe_data_reader: true },
+    });
+    await tick();
+    const note: IntegrationAsk = {
+      id: "ia-note",
+      kind: "integration",
+      integration: "mcp-notes",
+      connection: "mcp-notes#1",
+      place: "Notes",
+      action: "add_note",
+      label: "Add a note",
+      effect: "changes",
+      signature: "add_note:changes",
+      input: JSON.stringify({ text: "The meter idles on a cold start" }),
+      at: 1,
+    };
+    h.tasks.delivery.keepWriteAsk(taskId, note);
+    h.supervisor.integrationAsks.askIntegration(taskId, note);
+    h.tasks.delivery.keepWriteAsk(taskId, page);
+    expect(h.supervisor.integrationAsks.askForge(taskId, page)).toBe(true);
+
+    const cards = h.supervisor.cards.snapshot().filter((card) => card.taskId === taskId);
+    expect(cards.map((card) => card.id)).toEqual([`write-ask-${note.id}`]);
+    const card = cards[0];
+    expect(card?.title).toBe(cardReaderCallsPagesTitle());
+    expect(card?.body).toContain(cardReaderCallsLead({ task: "Triage the waiting issues" }));
+    expect(card?.body).toContain(cardReaderPagesLead({ task: "Triage the waiting issues" }));
+    expect(card?.body).toContain(`GET ${page.url}`);
+    expect(card?.body?.match(/checked>/g)).toHaveLength(2);
   });
 
   it("joins a waiting write's card as a second ticked row, and the click opens the page once", async () => {

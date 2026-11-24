@@ -261,6 +261,7 @@
   "cardReaderCallWhy": "Por quê, nas palavras do tripulante:",
   "cardReaderCallsHow": "Todas as linhas vêm marcadas; desmarque as que você não quer executar. As linhas marcadas são executadas uma vez cada, da mais antiga à mais recente, com o seu login em cada lugar.",
   "cardReaderCallsLead": "O tripulante de “{task}” lê textos que qualquer pessoa pode escrever, então estas chamadas esperam a sua decisão. Cada linha é uma chamada, para onde ela vai e o que ela envia.",
+  "cardReaderCallsPagesTitle": "Permitir estas chamadas e páginas da web?",
   "cardReaderCallsTitle": "Permitir estas chamadas?",
   "cardReaderPagesHow": "Todas as linhas vêm marcadas; desmarque as que você não quer abrir. Cada página marcada abre uma vez, sem login, e depois disso o tripulante pode ler esse endereço de novo.",
   "cardReaderPagesLead": "O tripulante de “{task}” lê textos que qualquer pessoa pode escrever e agora tem algo seu, então cada novo endereço da web que ele abre espera a sua decisão: um endereço pode levar o que ele leu a quem mantém o site. Cada linha é uma página, com o endereço completo.",

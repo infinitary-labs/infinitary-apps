@@ -490,6 +490,7 @@ public enum PhoneMessages {
     public static func `cardReaderCallWhy`() -> String { PhoneWords.format("cardReaderCallWhy", []) }
     public static func `cardReaderCallsHow`() -> String { PhoneWords.format("cardReaderCallsHow", []) }
     public static func `cardReaderCallsLead`(`task`: String) -> String { PhoneWords.format("cardReaderCallsLead", [`task`]) }
+    public static func `cardReaderCallsPagesTitle`() -> String { PhoneWords.format("cardReaderCallsPagesTitle", []) }
     public static func `cardReaderCallsTitle`() -> String { PhoneWords.format("cardReaderCallsTitle", []) }
     public static func `cardReaderPagesHow`() -> String { PhoneWords.format("cardReaderPagesHow", []) }
     public static func `cardReaderPagesLead`(`task`: String) -> String { PhoneWords.format("cardReaderPagesLead", [`task`]) }
@@ -4956,6 +4957,7 @@ extension PhoneWords {
         "cardReaderCallWhy": [],
         "cardReaderCallsHow": [],
         "cardReaderCallsLead": ["task"],
+        "cardReaderCallsPagesTitle": [],
         "cardReaderCallsTitle": [],
         "cardReaderPagesHow": [],
         "cardReaderPagesLead": ["task"],

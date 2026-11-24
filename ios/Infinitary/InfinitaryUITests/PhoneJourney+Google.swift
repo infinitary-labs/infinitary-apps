@@ -102,11 +102,11 @@ extension PhoneJourney {
         let confirm = app.buttons["google-sign-out-confirm"].firstMatch
         XCTAssertTrue(confirm.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(confirm, repeatDiscarded: false)
-        // The client stays kept on the computer, so the row offers the sign-in itself again.
-        let signIn = app.buttons["google-sign-in"]
-        XCTAssertTrue(signIn.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertEqual(signIn.label, "Sign in")
+        // Removing Google forgets the person's own client too (docs/integrations.md), so the row offers Set up again.
+        XCTAssertTrue(setUp.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(setUp.label, "Set up")
         let signedOut = try await home("google-state", method: "GET")
         XCTAssertTrue(signedOut["account"] is NSNull)
+        XCTAssertEqual(signedOut["kept"] as? Bool, false)
     }
 }

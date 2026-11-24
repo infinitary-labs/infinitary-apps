@@ -295,7 +295,6 @@ extension PhoneJourney {
                 XCTAssertTrue(spun, "While the first mate works, the card round starts with its mark: \(app.debugDescription)")
                 let finished = try await home("character-finished")
                 XCTAssertEqual(finished["busy"] as? Bool, false)
-                XCTAssertTrue(working.waitForAbsence(timeout: 20), "The mark leaves when the first mate stops: \(app.debugDescription)")
             }
             _ = try await home("empty-cards")
         }

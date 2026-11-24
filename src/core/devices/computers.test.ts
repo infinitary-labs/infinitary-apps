@@ -13,8 +13,8 @@ import {
 import * as m from "@shared/i18n/messages.generated";
 import { englishOf, type Said, said } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
-import { WORK_PROGRESS_ORDER, WORK_SOURCE_ORDER } from "@shared/work";
 import { WORK_REACH_GRACE_MS, WORK_SETUP_LIVE } from "@shared/workSetup";
+import { WORK_PROGRESS_ORDER, WORK_SOURCE_ORDER } from "@shared/workUpdate";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";

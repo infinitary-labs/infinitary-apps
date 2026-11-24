@@ -45,10 +45,9 @@ name: ci
 # The repository variable LINUX_QUEUES (DOP-251's plan) can send a job's
 # kind to another queue, such as the Mac mini's Linux guests, before
 # LINUX_RUNNER; a kind it leaves out keeps the label above (docs/testing.md,
-# "Each Linux job's kind"). The branch check's three jobs share the
-# `typecheck` kind, which the project's own branches send to the project's
-# own Linux places (fleet-linux-pr; INF-5577's review, the captain's pick
-# "Run your own task branches' checks on your own Linux machines again").
+# "Each Linux job's kind"). The branch check's jobs share the `typecheck`
+# kind, which the project's own home leaves out of LINUX_QUEUES, so they run
+# on hosted Ubuntu (INF-6330's plan).
 # Self-hosted images supply Node 24 and their own
 # pnpm store (DOP-67/68), so only GitHub-hosted jobs restore setup-node's
 # pnpm cache (DOP-66 fix 1).

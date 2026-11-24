@@ -25,6 +25,7 @@ import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import { approvedChangeBase, followBase, recordedBases } from "./baseFollow";
 import type { CardService } from "./cardService";
+import { checkedOutHead } from "./checkedOutHead";
 import { briefCarriesPictures } from "./crewBrief";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
@@ -92,8 +93,9 @@ export class Reviews {
 
   /**
    * The review target and evidence are read where the builder actually runs.
-   * The target is that computer's committed branch head, even when an older
-   * pull request already records a different head (INF-288).
+   * The target is the commit the builder's working copy there has checked
+   * out (`checkedOutHead`), even when an older pull request already records
+   * a different head (INF-288).
    */
   async reviewFacts(builder: TaskRecord): Promise<ReviewBriefFacts> {
     // Only a pull request's page: a batched branch's compare page (INF-4196)
@@ -117,7 +119,12 @@ export class Reviews {
           "The builder's computer is out of reach; the review must wait for it, not run here instead.",
           { deviceId: device },
         );
-      const read = await machines.revision(device, builder.id, undefined, builtOn?.head);
+      const read = await machines.revision(
+        device,
+        builder.id,
+        await checkedOutHead(this.options, builder),
+        builtOn?.head,
+      );
       ({ headSha, changedFiles, changeReading } = read);
       // Named only where that computer read from it: an older one reads from the default branch.
       builtOnHead = read.builtOn;
@@ -125,7 +132,8 @@ export class Reviews {
       evidenceDir = folders.evidence;
     } else {
       headSha = builder.branch
-        ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
+        ? ((await checkedOutHead(this.options, builder)) ??
+          (await this.options.workspace.branchHead(builder.repoDir, builder.branch)))
         : null;
       // A head that holds a newer approved version of the part under it reads from that version.
       if (headSha && builtOn) {

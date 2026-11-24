@@ -436,10 +436,10 @@ export class TaskIntake {
    * tool error before a row exists: the builder must be crewmate work that
    * is still open, must have reported, must have commits on its branch to
    * read, and must not already have a review open. The reviewer reads the
-   * builder's branch at its current head (worktrees share the repository's
-   * refs, so the diff against the default branch is the change); whether
-   * the push, PR and CI wait for the pass is the care guidance's, which
-   * the builder follows. An existing PR never hides a
+   * commit the builder's working copy has checked out (worktrees share the
+   * repository's refs, so its diff against the default branch is the
+   * change); whether the push, PR and CI wait for the pass is the care
+   * guidance's, which the builder follows. An existing PR never hides a
    * newer builder version; an unreadable current branch holds the review.
    * The reviewer is a fresh crewmate on the
    * builder's repository, briefed by the host with the fixed review text,
@@ -482,8 +482,8 @@ export class TaskIntake {
     // change with commits can be reviewed on request, at any care. Care is
     // a name the record carries; what it asks for is runbook guidance.
     const delivery = this.host.taskDelivery(builder.id) ?? "local-only";
-    // The reviewer reads the builder's branch at its current head and
-    // evidence, including unpublished repairs to an existing PR.
+    // The reviewer reads the commit the builder's working copy has checked
+    // out and its evidence, including unpublished repairs to an existing PR.
     const facts = await this.host.reviews.reviewFacts(builder);
     const { headSha, prUrl } = facts;
     const open = this.host.openReviewOf(builder.id);

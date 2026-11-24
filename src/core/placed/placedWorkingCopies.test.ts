@@ -211,6 +211,38 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(clone, ["for-each-ref", "refs/remotes/origin"])).toBe(originRefs);
   });
 
+  // INF-6225's builder committed on a second branch and pushed it to the
+  // task's branch where the project lives; its reviews were blocked three
+  // times at the task branch left behind, never at the version it built.
+  it("reviews the commit its working copy there has checked out, not the task's branch left behind when the crewmate commits on another branch", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-dev", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-dev")?.activity).toBe("idle");
+    const work = at.folders("t-dev").work;
+    const branch = await git(work, ["branch", "--show-current"]);
+    await git(work, ["switch", "--quiet", "-c", `${branch}-dev`]);
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+    await git(work, ["push", "--quiet", "origin", `HEAD:refs/heads/${branch}`]);
+    expect(await git(work, ["rev-parse", `refs/heads/${branch}`])).toBe(project.main);
+
+    model([{ text: "Reading the footer change." }]);
+    const handle = await home.supervisor.intake.commission({
+      title: "Review",
+      intent: { goal: "Review the footer.", userWords: "make the footer blue" },
+      shape: { review_of: "t-dev" },
+    });
+    await handle.started;
+    expect(home.tasks.get(handle.taskId)?.delivery?.headSha).toBe(tip);
+    expect(home.tasks.get(handle.taskId)?.prompt).toContain('- "footer.html"');
+    expect(await git(at.folders(handle.taskId).work, ["rev-parse", "HEAD"])).toBe(tip);
+  });
+
   it("prepares a story on the home after transferring the work computer's inspected pictures, without showing a card or uploading (INF-92)", async () => {
     const project = await gitProject();
     const upload = vi.fn(async () => {

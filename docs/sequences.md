@@ -100,7 +100,7 @@ A declared direct build is the whole ask and has no parent; the host prints its 
 `start_policy` is worded in the host's terms: `when-ready` means the host starts a crewmate on the task once nothing blocks or holds it, and a parent stays on request.
 `create_task` requires an explicit `blocked_by` list before admitting automatic creation; what `[]` declares, and what an update adds, is `docs/task-graph.md`, "Tools".
 Its description names the purpose, recording project work without starting, and the immediate start rather than promising that creation never starts work; approved pieces carry all prerequisites at creation.
-`create_task`'s answer for an admitted `when-ready` row nothing waits on says a crewmate starts on it now, and the queued-started wake says a crewmate is working on the task.
+`create_task`'s answer for an admitted `when-ready` row nothing waits on says a crewmate starts on it now, and the next context block's crew rows show a crewmate working on it; no wake says so unless it started on another model than the one named (`queued-started`).
 The host judges nothing: no dispatch rule reads a row's children.
 `spawn_crewmate` does not offer `plan-first`; a recorded spawn or stored intent that names it still parses as a free constraint with the same words.
 

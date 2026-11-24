@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queued-start-wakes-no-one",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your first mate no longer stops to say a queued task started",
+      "body": "When a queued task starts because what it waited for finished, your first mate sees it with its next message instead of taking a turn of its own to tell you. This saves your plan's allowance on busy days. It still tells you when a queued task could not start, or started on another model than the one you named.",
+      "noPicture": "This changes when the first mate is woken, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

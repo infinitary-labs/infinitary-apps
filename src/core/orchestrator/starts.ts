@@ -1382,15 +1382,16 @@ export class CrewStarts {
           type: "firstmate_note",
           text: `Starting "${record.title}"${because ? ` - ${because}` : ""}.`,
         });
-      // Only a start whose wait ended wakes the Firstmate with this line. The
-      // captain's Start reaches its next context block the way the captain's
-      // card choices do (FI3-695), and a program's part was started by its
-      // program, which is what waits on it (INF-799). A start behind the first
-      // mate's answer - which said only that it is starting - wakes it here
-      // only when a task named a model it did not start on, or none is
-      // recorded to confirm it (INF-5123): a start on the named model is no
-      // news, and the crew list names the model; a failure or a wait its
-      // tile does not name wakes it from `startBehind`.
+      // A start wakes the Firstmate with this line only when a task named a
+      // model it did not start on, or none is recorded to confirm it
+      // (INF-5123): any other start is no news, since the next context
+      // block's crew rows show the task running and the model it runs on.
+      // A start whose wait ended follows the same rule (INF-6536): a wake
+      // of its own cost the first mate a turn that did nothing. The captain's
+      // Start reaches the next context block the way the captain's card
+      // choices do (FI3-695), and a program's part was started by its
+      // program, which is what waits on it (INF-799). A failure, or a wait
+      // its tile does not name, wakes it from `startBehind`.
       const started = this.core.options.tasks.get(taskId);
       const model = started && namedModelOf(started);
       if (lost) {
@@ -1409,14 +1410,19 @@ export class CrewStarts {
             },
             "agent",
           );
-      } else if (!options.requested && !record.shape?.program_part) {
+      } else if (
+        !options.requested &&
+        !record.shape?.program_part &&
+        model &&
+        namedModelDiffers(model)
+      ) {
         this.core.routeCrewEvent(
           taskId,
           {
             facts: {
               kind: "queued-started",
               task: { id: taskId, title: record.title },
-              ...(model ? { model } : {}),
+              model,
             },
           },
           "agent",

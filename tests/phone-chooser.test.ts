@@ -40,6 +40,7 @@ import {
   PHONE_DEVICES,
   PHONE_PART_TIMES,
   PHONE_PARTS,
+  PHONE_TOOL_TESTS,
   type PhoneDevice,
   type PhoneJob,
   partDevices,
@@ -434,6 +435,64 @@ describe("the short phone parts", () => {
   });
 });
 
+type Edit = { path: string; old: string; next: string };
+/** How far each part is from UI test files changed by `edits`, each replacing one exact passage of `source`, read as
+ * the chooser reads a change: from its zero-context diff and the files it leaves. */
+function editedReach(
+  edits: Edit[],
+  source: Record<string, string>,
+  parts: PartTable = PHONE_PARTS,
+  unreadable?: string,
+) {
+  const files = { ...source };
+  let diff = "";
+  for (const path of new Set(edits.map((edit) => edit.path))) {
+    const original = files[path]!;
+    let next = original;
+    for (const edit of edits.filter((edit) => edit.path === path)) {
+      expect(next.split(edit.old)).toHaveLength(2);
+      next = next.replace(edit.old, () => edit.next);
+    }
+    files[path] = next;
+    const oldLines = original.split("\n");
+    const newLines = next.split("\n");
+    diff += `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n`;
+    // Independent, line-preserving replacements keep unrelated tests out of the diff.
+    if (oldLines.length === newLines.length) {
+      for (let at = 0; at < oldLines.length; at++)
+        if (oldLines[at] !== newLines[at])
+          diff += `@@ -${at + 1} +${at + 1} @@\n-${oldLines[at]}\n+${newLines[at]}\n`;
+    } else {
+      let start = 0;
+      while (oldLines[start] === newLines[start]) start++;
+      let oldEnd = oldLines.length;
+      let newEnd = newLines.length;
+      while (oldEnd > start && newEnd > start && oldLines[oldEnd - 1] === newLines[newEnd - 1]) {
+        oldEnd--;
+        newEnd--;
+      }
+      diff += `@@ -${start + 1},${oldEnd - start} +${newEnd === start ? start : start + 1},${newEnd - start} @@\n`;
+      diff += oldLines
+        .slice(start, oldEnd)
+        .map((line) => `-${line}\n`)
+        .join("");
+      diff += newLines
+        .slice(start, newEnd)
+        .map((line) => `+${line}\n`)
+        .join("");
+    }
+  }
+  const paths = [...new Set(edits.map((edit) => edit.path))];
+  const reach = partReach(
+    paths,
+    diff,
+    Object.keys(files),
+    (path) => (path === unreadable ? undefined : files[path]),
+    parts,
+  );
+  return { paths, reach };
+}
+
 // INF-2257: approved “Narrower selection only; retain local repeats”. These mutations
 // replay declarations and consumers captured from the real UI tests, not invented call graphs.
 describe("declaration-aware phone selection", () => {
@@ -449,59 +508,13 @@ describe("declaration-aware phone selection", () => {
   const patternParts = fixture.parts
     .filter((part) => part.name === "cards" || part.name === "rest")
     .map((part) => part.name);
-  type Edit = { path: string; old: string; next: string };
   function selection(
     edits: Edit[],
     unreadable?: string,
     source = fixture.testFiles,
     parts: PartTable = fixture.parts,
   ) {
-    const files = { ...source };
-    let diff = "";
-    for (const path of new Set(edits.map((edit) => edit.path))) {
-      const original = files[path]!;
-      let next = original;
-      for (const edit of edits.filter((edit) => edit.path === path)) {
-        expect(next.split(edit.old)).toHaveLength(2);
-        next = next.replace(edit.old, edit.next);
-      }
-      files[path] = next;
-      const oldLines = original.split("\n");
-      const newLines = next.split("\n");
-      diff += `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n`;
-      // Independent, line-preserving replacements keep unrelated tests out of the diff.
-      if (oldLines.length === newLines.length) {
-        for (let at = 0; at < oldLines.length; at++)
-          if (oldLines[at] !== newLines[at])
-            diff += `@@ -${at + 1} +${at + 1} @@\n-${oldLines[at]}\n+${newLines[at]}\n`;
-      } else {
-        let start = 0;
-        while (oldLines[start] === newLines[start]) start++;
-        let oldEnd = oldLines.length;
-        let newEnd = newLines.length;
-        while (oldEnd > start && newEnd > start && oldLines[oldEnd - 1] === newLines[newEnd - 1]) {
-          oldEnd--;
-          newEnd--;
-        }
-        diff += `@@ -${start + 1},${oldEnd - start} +${newEnd === start ? start : start + 1},${newEnd - start} @@\n`;
-        diff += oldLines
-          .slice(start, oldEnd)
-          .map((line) => `-${line}\n`)
-          .join("");
-        diff += newLines
-          .slice(start, newEnd)
-          .map((line) => `+${line}\n`)
-          .join("");
-      }
-    }
-    const paths = [...new Set(edits.map((edit) => edit.path))];
-    const reach = partReach(
-      paths,
-      diff,
-      Object.keys(files),
-      (path) => (path === unreadable ? undefined : files[path]),
-      parts,
-    );
+    const { paths, reach } = editedReach(edits, source, parts, unreadable);
     return requestedParts(paths, reach).map((part) => part.part);
   }
   const pattern = fixture.testFiles[waits]!.split("\n").find((line) =>
@@ -906,6 +919,114 @@ it("repeats only the edited app-hosted test within the weak-link suite", () => {
   expect(renamedReach.find(({ part }) => part === "weak-link")!.repeatTests).toEqual([
     `PhoneWeakLinkTests/PhoneWeakLinkTests/${renamed}`,
   ]);
+});
+
+// The rest part skips the phone check's own tool tests, so an affected request runs one whose own code changed only by
+// name: in every pass of the rest part, three rounds on the iPhone and one on the iPad, even when the change also edits a
+// shared test helper. The change is a real one on main's files: the steady-target tool test, added to a file of two
+// test classes, and the two lines of waitForTarget's rule it checks.
+describe("an edited tool test of the phone check", () => {
+  const files = Object.fromEntries(
+    readdirSync(UI_TESTS)
+      .filter((name) => name.endsWith(".swift"))
+      .map((name) => [UI_TESTS + name, readFileSync(UI_TESTS + name, "utf8")]),
+  );
+  const tests = `${UI_TESTS}PhoneWaitsTests.swift`;
+  const waits = `${UI_TESTS}PhoneWaits.swift`;
+  const name = "testSteadyTargetHoldsStillOnOnePictureOrTheSameTwoInTurn";
+  const tool = `InfinitaryUITests/PhoneWaitsTests/${name}`;
+  const added = swiftFunctions(files[tests]!)!.find((fn) => fn.name === name)!;
+  const lines = files[tests]!.split("\n");
+  // The test file before the change: without the test and the blank line after it.
+  const without = [...lines.slice(0, added.start - 1), ...lines.slice(added.end + 1)].join("\n");
+  const addTest: Edit = { path: tests, old: without, next: files[tests]! };
+  const rule: Edit[] = [
+    {
+      path: waits,
+      old: "    var steady = PhoneSteadyReading<PhoneTargetReading>()",
+      next: "    var steady = PhoneSteadyTarget()",
+    },
+    {
+      path: waits,
+      old: "        return steady.read(last) && last.map(settled) == true",
+      next: "        return steady.read(last).map(settled) == true",
+    },
+  ];
+  const undo = (edits: Edit[]) => {
+    const base = { ...files };
+    for (const edit of edits) {
+      expect(base[edit.path]!.split(edit.next)).toHaveLength(2);
+      base[edit.path] = base[edit.path]!.replace(edit.next, () => edit.old);
+    }
+    return base;
+  };
+  const request = (edits: Edit[], source: Record<string, string>) => {
+    const { paths, reach } = editedReach(edits, source);
+    const parts = requestedParts(paths, reach);
+    const passes = requestPasses(
+      chooseRequest(
+        parts.map(({ part }) => part),
+        parts,
+      ),
+    );
+    return {
+      rest: reach.find(({ part }) => part === "rest")!,
+      passes: passes.filter(({ part }) => part === "rest"),
+    };
+  };
+  const rounds = (passes: PhoneJob[]) =>
+    passes
+      .map(({ device, round, tools }) => ({ device, round, tools }))
+      .sort((a, b) => a.device.localeCompare(b.device) || a.round - b.round);
+  const everyRound = [
+    { device: "ipad", round: 1, tools: [tool] },
+    { device: "iphone", round: 1, tools: [tool] },
+    { device: "iphone", round: 2, tools: [tool] },
+    { device: "iphone", round: 3, tools: [tool] },
+  ];
+
+  it("runs an added tool test in every rest pass, named by the class around it in a file of two", () => {
+    const { rest, passes } = request([addTest], undo([addTest]));
+    expect(rest.toolTests).toEqual([tool]);
+    expect(rest.repeatTests).toEqual([tool]);
+    expect(rounds(passes)).toEqual(everyRound);
+  });
+
+  it("still runs it when the change also edits the shared waitForTarget it checks", () => {
+    const { rest, passes } = request([addTest, ...rule], undo([addTest, ...rule]));
+    expect(rest.toolTests).toEqual([tool]);
+    expect(rounds(passes)).toEqual(everyRound);
+  });
+
+  it("still runs it when a shared helper repeats the whole rest part", () => {
+    // An XCTest observation callback is shared setup, which repeats every part whole.
+    const callback = "        guard issue.isFailure else { return }";
+    const keys: Edit = { path: `${UI_TESTS}PhoneKeys.swift`, old: callback, next: `${callback} ` };
+    const { rest, passes } = request([addTest, keys], undo([addTest]));
+    expect(rest.repeatTests).toBeUndefined();
+    expect(passes.every(({ tests }) => tests === undefined)).toBe(true);
+    expect(rounds(passes)).toEqual(everyRound);
+  });
+
+  it("runs an edited app-hosted tool test in every rest pass too", () => {
+    const hosted = PHONE_TOOL_TESTS.find((test) => test.startsWith("InfinitaryTests/"))!;
+    const path = `ios/Infinitary/InfinitaryTests/${hosted.split("/")[1]}.swift`;
+    const text = readFileSync(path, "utf8");
+    const own = swiftFunctions(text)!.find((fn) => fn.name === hosted.split("/")[2])!;
+    const line = text.split("\n")[own.start - 1]!;
+    const after = text.replace(line, () => `${line} `);
+    const diff = `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -${own.start} +${own.start} @@\n-${line}\n+${line} \n`;
+    const reach = partReach([path], diff, [], () => after);
+    expect(reach.find(({ part }) => part === "rest")!.toolTests).toEqual([hosted]);
+    const parts = requestedParts([path], reach);
+    const passes = requestPasses(
+      chooseRequest(
+        parts.map(({ part }) => part),
+        parts,
+      ),
+    ).filter(({ part }) => part === "rest");
+    expect(rounds(passes)).toEqual(everyRound.map((pass) => ({ ...pass, tools: [hosted] })));
+  });
 });
 
 // INF-3379 (the captain's "File the checked cuts" and "start the checked ones now in a single change"): the reach

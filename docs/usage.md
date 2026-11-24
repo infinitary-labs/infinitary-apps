@@ -14,6 +14,7 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | Its recent tasks | `UsageStore.tasks`, served as `services.usage.tasks` on `inf:usage:tasks`, read as `usage.tasks` |
 | Its cost per task | `UsageStore.taskCosts`, served as `services.usage.taskCosts` on `inf:usage:task-costs`, read as `usage.taskCosts` |
 | Its shapes and pure math | `src/shared/usage.ts` |
+| What leaves the computer, and in which format | Infinitary's own usage report (`docs/usage-report.md`) |
 | The tab, its words and numbers | `src/renderer/src/settings/UsageTab.tsx`, `UsageCostPerTask.tsx`, `usageWords.ts`, `usage.css` |
 | The remembered unit | `appearance.usageUnit` (`src/shared/preferences.ts`), written through `setAppearance` |
 | The two commands | `settings.usage` and `usage.unit` (`src/shared/keyboardCommands.ts`, `docs/keyboard.md`) |

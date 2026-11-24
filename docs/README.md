@@ -77,6 +77,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `personal-panels.md`: writing panels: the library, skills, lint, build loop and switch.
 - `subscriptions-tab.md`: the Subscriptions tab and the honesty rules its rows keep.
 - `usage.md`: Settings → Usage and the usage ledger's models and estimates.
+- `usage-report.md`: Infinitary's own usage report to a company's or a person's collector, one format per destination.
 - `freeze-recorder.md`: the freeze recorder, its watchdog thread and the freeze journey.
 
 ## Accounts, models and quota

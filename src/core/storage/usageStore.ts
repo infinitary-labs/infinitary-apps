@@ -55,6 +55,21 @@ export type UsageInput = {
  */
 export type ModelSource = "served" | "requested";
 
+/** One ledger row as `UsageStore.record` wrote it; a token kind or cost the session left out stays null. */
+export type UsageRow = {
+  taskId: string;
+  accountId: string | null;
+  provider: string | null;
+  model: string | null;
+  modelSource: ModelSource | null;
+  input: number | null;
+  output: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+  cost: number | null;
+  at: number;
+};
+
 /** The Firstmate's own conversation keeps its usage under this task id (orchestrator/homeFirstmate.ts). */
 export const FIRSTMATE_USAGE_TASK_ID = "firstmate";
 
@@ -216,7 +231,9 @@ export class UsageStore {
     return { cost: row.cost, partial: row.incomplete === 1 };
   }
 
-  record(input: UsageInput): void {
+  /** Writes one response's usage and answers the rows it wrote, one per served model. */
+  record(input: UsageInput): UsageRow[] {
+    const written: UsageRow[] = [];
     const insert = this.db.prepare(
       `INSERT INTO usage_events (task_id, account_id, provider, model, model_source,
          input, output, cache_read, cache_write, cost, cost_source,
@@ -227,7 +244,20 @@ export class UsageStore {
       model: { provider: string | null; id: string } | undefined,
       source: ModelSource | null,
       counts: Omit<FmModelUsage, "model">,
-    ) =>
+    ) => {
+      written.push({
+        taskId: input.taskId,
+        accountId: input.accountId ?? null,
+        provider: model?.provider ?? null,
+        model: model?.id ?? null,
+        modelSource: model ? source : null,
+        input: counts.input ?? null,
+        output: counts.output ?? null,
+        cacheRead: counts.cacheRead ?? null,
+        cacheWrite: counts.cacheWrite ?? null,
+        cost: counts.cost ?? null,
+        at: input.at,
+      });
       insert.run(
         input.taskId,
         input.accountId ?? null,
@@ -247,16 +277,23 @@ export class UsageStore {
         counts.reasoning ?? null,
         input.at,
       );
+    };
     const served = input.usage.models ?? [];
     if (served.length === 0) {
       row(input.model, "requested", input.usage);
-      return;
+      return written;
     }
     this.db.transaction(() => {
       for (const { model, ...counts } of served) {
         row({ provider: input.model?.provider ?? null, id: model }, "served", counts);
       }
     })();
+    return written;
+  }
+
+  /** The kind of work a task's shape saved, as the summary groups it; null when none or unknown. */
+  workKind(taskId: string): UsageWorkKind | null {
+    return this.taskFacts([taskId]).get(taskId)?.kind ?? null;
   }
 
   /**
@@ -311,7 +348,7 @@ export class UsageStore {
             amount: byDay.get(date) ?? EMPTY_USAGE_AMOUNT,
           }));
 
-    const tasks = this.taskFacts(groups);
+    const tasks = this.taskFactsOf(groups);
     const places = (slice: readonly LedgerGroup[]): UsagePlace[] => {
       const amounts = [...sumBy(slice, placeKey)];
       const largest = (rank: (amount: UsageAmount) => number) =>
@@ -394,8 +431,13 @@ export class UsageStore {
     };
   }
 
-  private taskFacts(groups: readonly LedgerGroup[]): Map<string, TaskFacts> {
-    const ids = [...new Set(groups.flatMap((group) => (group.task_id ? [group.task_id] : [])))];
+  private taskFactsOf(groups: readonly LedgerGroup[]): Map<string, TaskFacts> {
+    return this.taskFacts([
+      ...new Set(groups.flatMap((group) => (group.task_id ? [group.task_id] : []))),
+    ]);
+  }
+
+  private taskFacts(ids: readonly string[]): Map<string, TaskFacts> {
     if (ids.length === 0) return new Map();
     // Read the two owners of the fields, not the compatibility view's composed shape.
     const split = taskReadTable(this.db) === "task_records";

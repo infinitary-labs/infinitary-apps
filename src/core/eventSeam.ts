@@ -29,6 +29,8 @@ export type EventSeam = {
   attachObserve: (observe: (event: FmEvent) => void) => void;
   /** The first launch hears each crewmate's start from here on (docs/first-launch.md). */
   attachFirstLaunch: (started: () => void) => void;
+  /** The usage report hears every session's turns and tool runs from here on (docs/usage-report.md). */
+  attachUsageReport: (hear: (event: FmEvent) => void) => void;
 };
 
 export function createEventSeam(options: {
@@ -43,6 +45,7 @@ export function createEventSeam(options: {
   let observeEvent: (event: FmEvent) => void = () => {};
   let hearPresentation: (event: FmEvent) => void = () => {};
   let crewmateStarted: () => void = () => {};
+  let hearUsageReport: (event: FmEvent) => void = () => {};
   // The run whose line is Activity's newest, with that line's row
   // (`feedRunOf`): the captain's settled run on one setting
   // (docs/orchestrator-contract.md, "Settled runs"), or a copy's count of
@@ -82,6 +85,7 @@ export function createEventSeam(options: {
     const milestone = crewMilestoneFor(event);
     if (milestone) sharing.record(milestone);
     observeEvent(event);
+    hearUsageReport(event);
     crewLive.apply(event);
     emit("inf:event", event);
     // After the start reached every window, so its note follows the crewmate.
@@ -98,6 +102,9 @@ export function createEventSeam(options: {
     },
     attachFirstLaunch: (started) => {
       crewmateStarted = started;
+    },
+    attachUsageReport: (hear) => {
+      hearUsageReport = hear;
     },
   };
 }

@@ -1,0 +1,386 @@
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
+import type { FmEvent } from "@shared/events";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { openInMemoryDatabase } from "../storage/db";
+import { homeUsage } from "../storage/homeUsage";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import type { UsageReportDestination } from "./usageReporter";
+
+/**
+ * INF-6587's approved plan, piece 2: Infinitary's own usage report, in one
+ * format per destination, read from the ledger rows `UsageStore.record`
+ * writes. The collector is a real local HTTP server reading what arrives.
+ */
+
+type Received = { path: string; headers: Record<string, string | string[] | undefined>; body: any };
+
+let server: Server | undefined;
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
+  server = undefined;
+});
+
+async function collector(statuses: number[] = []): Promise<{ url: string; received: Received[] }> {
+  const received: Received[] = [];
+  const listening = createServer((request, response) => {
+    let text = "";
+    request.on("data", (chunk) => {
+      text += chunk;
+    });
+    request.on("end", () => {
+      received.push({ path: request.url ?? "", headers: request.headers, body: JSON.parse(text) });
+      response.statusCode = statuses.shift() ?? 200;
+      response.end("{}");
+    });
+  });
+  server = listening;
+  await new Promise<void>((resolve) => listening.listen(0, "127.0.0.1", resolve));
+  return { url: `http://127.0.0.1:${(listening.address() as AddressInfo).port}`, received };
+}
+
+function destination(
+  url: string,
+  format: UsageReportDestination["format"],
+  name: string,
+): UsageReportDestination {
+  return {
+    id: name,
+    format,
+    endpoints: {
+      metrics: `${url}/${name}/v1/metrics`,
+      logs: `${url}/${name}/v1/logs`,
+      traces: `${url}/${name}/v1/traces`,
+    },
+    headers: async () => ({ authorization: "Bearer company-secret-token" }),
+    resource: { "user.email": "dev@example.com", team: "platform" },
+  };
+}
+
+function home(destinations: () => UsageReportDestination[]) {
+  const db = openInMemoryDatabase();
+  const tasks = new TaskService({ db });
+  seedTask(tasks, {
+    id: "task-1",
+    title: "Fix the login timeout",
+    status: "queued",
+    startPolicy: "on-request",
+    shape: { kind: "fix" },
+  });
+  let hear: (event: FmEvent) => void = () => {};
+  const usage = homeUsage(db, {
+    appLimit: () => DEFAULT_COST_LIMIT,
+    projectLimit: () => null,
+    isTask: (taskId) => tasks.get(taskId) !== undefined,
+    hearEvents: (listener) => {
+      hear = listener;
+    },
+    reportDestinations: destinations,
+  });
+  return { usage, hear: (event: FmEvent) => hear(event) };
+}
+
+/** A Codex crewmate call as Pi reports it: listed prices split by category. */
+const CODEX_CALL = {
+  taskId: "task-1",
+  accountId: "acct-codex",
+  model: { provider: "openai-codex", id: "gpt-5.5" },
+  usage: {
+    input: 1200,
+    output: 340,
+    cacheRead: 8000,
+    cost: 0.0123,
+    costSource: "listed-prices" as const,
+    costParts: { input: 0.0015, output: 0.0034, cacheRead: 0.0074 },
+  },
+};
+
+/** A Claude crewmate result as the normalizer reports it: each served model's own share. */
+const CLAUDE_CALL = {
+  taskId: "task-1",
+  accountId: "acct-claude",
+  model: { provider: "anthropic-claude", id: "claude-opus-5-5" },
+  usage: {
+    input: 12,
+    output: 900,
+    cacheRead: 40000,
+    cacheWrite: 3000,
+    cost: 0.41,
+    costSource: "claude" as const,
+    models: [
+      {
+        model: "claude-opus-5-5",
+        input: 12,
+        output: 900,
+        cacheRead: 40000,
+        cacheWrite: 3000,
+        cost: 0.41,
+        costSource: "claude" as const,
+      },
+    ],
+  },
+};
+
+function metricsOf(received: Received[], path: string) {
+  return received
+    .filter((entry) => entry.path === path)
+    .flatMap((entry) => entry.body.resourceMetrics)
+    .flatMap((resource: any) => resource.scopeMetrics)
+    .flatMap((scope: any) => scope.metrics);
+}
+
+function attrs(point: { attributes: { key: string; value: Record<string, unknown> }[] }) {
+  return Object.fromEntries(
+    point.attributes.map(({ key, value }) => [key, Object.values(value)[0]]),
+  );
+}
+
+/** The metric names, log event names and span names one destination received. */
+function namesAt(received: Received[], prefix: string): string[] {
+  const at = received.filter((entry) => entry.path.startsWith(prefix));
+  return [
+    ...at.flatMap((entry) =>
+      (entry.body.resourceMetrics ?? []).flatMap((resource: any) =>
+        resource.scopeMetrics.flatMap((scope: any) =>
+          scope.metrics.map((metric: any) => metric.name),
+        ),
+      ),
+    ),
+    ...at.flatMap((entry) =>
+      (entry.body.resourceLogs ?? []).flatMap((resource: any) =>
+        resource.scopeLogs.flatMap((scope: any) =>
+          scope.logRecords.map((record: any) => record.body.stringValue),
+        ),
+      ),
+    ),
+    ...at.flatMap((entry) =>
+      (entry.body.resourceSpans ?? []).flatMap((resource: any) =>
+        resource.scopeSpans.flatMap((scope: any) => scope.spans.map((span: any) => span.name)),
+      ),
+    ),
+  ];
+}
+
+describe("UsageReporter", () => {
+  it("reports every provider but Claude's own client in Claude Code's names", async () => {
+    const { url, received } = await collector();
+    const { usage } = home(() => [destination(url, "claude-code", "company")]);
+    usage.recordUsage(CODEX_CALL);
+    usage.recordUsage(CLAUDE_CALL);
+    await usage.usageReporter.flush();
+
+    const metrics = metricsOf(received, "/company/v1/metrics");
+    const cost = metrics.find((metric: any) => metric.name === "claude_code.cost.usage");
+    expect(cost.unit).toBe("USD");
+    expect(cost.sum.dataPoints.map((point: any) => [attrs(point), point.asDouble])).toEqual([
+      [
+        {
+          model: "gpt-5.5",
+          provider: "openai-codex",
+          "infinitary.role": "crewmate",
+          "infinitary.work_kind": "fix",
+        },
+        0.0123,
+      ],
+    ]);
+    const tokens = metrics.find((metric: any) => metric.name === "claude_code.token.usage");
+    expect(tokens.sum.dataPoints.map((point: any) => [attrs(point).type, point.asInt])).toEqual([
+      ["input", "1200"],
+      ["output", "340"],
+      ["cacheRead", "8000"],
+    ]);
+    const logs = received
+      .filter((entry) => entry.path === "/company/v1/logs")
+      .flatMap((entry) => entry.body.resourceLogs[0].scopeLogs[0].logRecords);
+    expect(logs.map((record: any) => [record.body.stringValue, attrs(record)])).toEqual([
+      [
+        "claude_code.api_request",
+        expect.objectContaining({
+          "event.name": "api_request",
+          model: "gpt-5.5",
+          provider: "openai-codex",
+          cost_usd: 0.0123,
+          input_tokens: "1200",
+          output_tokens: "340",
+          cache_read_tokens: "8000",
+        }),
+      ],
+    ]);
+    expect(JSON.stringify(received)).not.toContain("anthropic-claude");
+    expect(received.map((entry) => entry.path)).not.toContain("/company/v1/traces");
+    expect(
+      attrs(
+        received[0]?.body.resourceMetrics?.[0]?.resource ??
+          received[0]?.body.resourceLogs[0].resource,
+      ),
+    ).toEqual({
+      "service.name": "infinitary",
+      "user.email": "dev@example.com",
+      team: "platform",
+    });
+  });
+
+  it("reports all work, Claude's included, in the standard names with one trace per turn", async () => {
+    const { url, received } = await collector();
+    const { usage, hear } = home(() => [destination(url, "standard", "tool")]);
+    hear({ type: "assistant_delta", taskId: "task-1", text: "Reading the file." });
+    hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" });
+    hear({
+      type: "tool_end",
+      taskId: "task-1",
+      callId: "call-7",
+      toolName: "read",
+      isError: false,
+    });
+    hear({ type: "tool_start", taskId: "task-1", callId: "c-1", toolName: "compact_context" });
+    usage.recordUsage(CODEX_CALL);
+    hear({ type: "turn_end", taskId: "task-1" });
+    usage.recordUsage({ ...CLAUDE_CALL, taskId: "firstmate" });
+    await usage.usageReporter.flush();
+
+    const metrics = metricsOf(received, "/tool/v1/metrics");
+    const cost = metrics.find((metric: any) => metric.name === "infinitary.cost.usage");
+    expect(
+      cost.sum.dataPoints.map((point: any) => [
+        attrs(point)["gen_ai.provider.name"],
+        attrs(point)["infinitary.role"],
+        point.asDouble,
+      ]),
+    ).toEqual([
+      ["openai-codex", "crewmate", 0.0123],
+      ["anthropic-claude", "firstmate", 0.41],
+    ]);
+    const tokens = metrics.find((metric: any) => metric.name === "gen_ai.client.token.usage");
+    expect(
+      tokens.histogram.dataPoints.map((point: any) => [
+        attrs(point)["gen_ai.provider.name"],
+        attrs(point)["gen_ai.token.type"],
+        point.sum,
+      ]),
+    ).toEqual([
+      ["openai-codex", "input", 1200],
+      ["openai-codex", "output", 340],
+      ["openai-codex", "cache_read", 8000],
+      ["anthropic-claude", "input", 12],
+      ["anthropic-claude", "output", 900],
+      ["anthropic-claude", "cache_read", 40000],
+      ["anthropic-claude", "cache_creation", 3000],
+    ]);
+    expect(
+      received.find((entry) => entry.path === "/tool/v1/metrics")?.body.resourceMetrics[0]
+        .schemaUrl,
+    ).toBe("https://opentelemetry.io/schemas/1.37.0");
+
+    const spans = received
+      .filter((entry) => entry.path === "/tool/v1/traces")
+      .flatMap((entry) => entry.body.resourceSpans[0].scopeSpans[0].spans);
+    const turn = spans.find((span: any) => span.name === "invoke_agent crewmate");
+    expect(attrs(turn)).toEqual({
+      "gen_ai.operation.name": "invoke_agent",
+      "gen_ai.agent.name": "crewmate",
+      "infinitary.role": "crewmate",
+      "infinitary.work_kind": "fix",
+    });
+    const tool = spans.find((span: any) => span.name === "execute_tool read");
+    const call = spans.find((span: any) => span.name === "chat gpt-5.5");
+    for (const child of [tool, call]) {
+      expect([child.traceId, child.parentSpanId]).toEqual([turn.traceId, turn.spanId]);
+    }
+    expect(spans.map((span: any) => span.name).sort()).toEqual([
+      "chat claude-opus-5-5",
+      "chat gpt-5.5",
+      "execute_tool read",
+      "invoke_agent crewmate",
+    ]);
+    expect(JSON.stringify(received)).not.toContain("Reading the file.");
+    expect(JSON.stringify(received)).not.toContain("Fix the login timeout");
+  });
+
+  it("sends each destination only its own format, each call once", async () => {
+    const { url, received } = await collector();
+    const { usage } = home(() => [
+      destination(url, "claude-code", "company"),
+      destination(url, "standard", "tool"),
+    ]);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+
+    expect(namesAt(received, "/company/").sort()).toEqual([
+      "claude_code.api_request",
+      "claude_code.cost.usage",
+      "claude_code.token.usage",
+    ]);
+    expect(namesAt(received, "/tool/").sort()).toEqual([
+      "chat gpt-5.5",
+      "gen_ai.client.token.usage",
+      "infinitary.cost.usage",
+    ]);
+    for (const [path, name] of [
+      ["/company/v1/metrics", "claude_code.cost.usage"],
+      ["/tool/v1/metrics", "infinitary.cost.usage"],
+    ]) {
+      const points = metricsOf(received, path ?? "").find((metric: any) => metric.name === name).sum
+        .dataPoints;
+      expect(points.map((point: any) => point.asDouble)).toEqual([0.0123]);
+    }
+  });
+
+  it("drops a refused batch with one line naming no header, and sends the next", async () => {
+    const { url, received } = await collector([500]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const company = destination(url, "claude-code", "company");
+    const { usage } = home(() => [
+      { ...company, endpoints: { metrics: company.endpoints.metrics } },
+    ]);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    usage.recordUsage({ ...CODEX_CALL, usage: { ...CODEX_CALL.usage, cost: 0.5 } });
+    await usage.usageReporter.flush();
+
+    expect(warn.mock.calls).toEqual([
+      [
+        expect.stringMatching(
+          /^\[usage report\] 127\.0\.0\.1:\d+ refused a metrics batch \(HTTP 500\); dropped$/,
+        ),
+      ],
+    ]);
+    expect(received.map((entry) => entry.headers.authorization)).toEqual([
+      "Bearer company-secret-token",
+      "Bearer company-secret-token",
+    ]);
+    const second = metricsOf([received[1] as Received], "/company/v1/metrics").find(
+      (metric: any) => metric.name === "claude_code.cost.usage",
+    );
+    expect(second.sum.dataPoints.map((point: any) => point.asDouble)).toEqual([0.5]);
+  });
+
+  it("drops a batch for an unreachable collector without failing the recording", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { usage } = home(() => [destination("http://127.0.0.1:9", "claude-code", "company")]);
+    expect(() => usage.recordUsage(CODEX_CALL)).not.toThrow();
+    await usage.usageReporter.flush();
+    expect(warn.mock.calls.map(([line]) => line)).toEqual([
+      expect.stringMatching(
+        /^\[usage report\] 127\.0\.0\.1:9 unreachable for a (metrics|logs) batch/,
+      ),
+      expect.stringMatching(
+        /^\[usage report\] 127\.0\.0\.1:9 unreachable for a (metrics|logs) batch/,
+      ),
+    ]);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("company-secret-token");
+  });
+
+  it("keeps nothing while there is no destination", async () => {
+    const { url, received } = await collector();
+    let destinations: UsageReportDestination[] = [];
+    const { usage, hear } = home(() => destinations);
+    hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" });
+    usage.recordUsage(CODEX_CALL);
+    destinations = [destination(url, "standard", "tool")];
+    await usage.usageReporter.flush();
+    expect(received).toEqual([]);
+  });
+});

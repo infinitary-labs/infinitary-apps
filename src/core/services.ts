@@ -1,13 +1,11 @@
 import { join } from "node:path";
 import { emptyTranscript } from "@shared/crewTranscript";
-import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
 import type { KnownForgeHost } from "@shared/forge";
 import { englishOf, saidLine } from "@shared/i18n/said";
 import { speakChoice } from "@shared/i18n/start";
-import { modelNames } from "@shared/modelDisplayName";
-import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
+import { parseOfferingKey } from "@shared/modelSlots";
 import { PHONE_PUSH_RELAY } from "@shared/phonePush";
 import { desktopConventions } from "@shared/platform";
 import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
@@ -145,7 +143,7 @@ import { ActivityStore } from "./storage/activityStore";
 import { type CardResolution, CardStore } from "./storage/cardStore";
 import { assertSavedDataCompatible, openCheckedDatabase } from "./storage/db";
 import { DecisionStore } from "./storage/decisionStore";
-import { homeUsage } from "./storage/homeUsage";
+import { homeUsage, usageReads } from "./storage/homeUsage";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "./storage/inboxStore";
 import { SettingsStore } from "./storage/settingsStore";
 import type { TaskRecord } from "./storage/taskRecords";
@@ -752,6 +750,8 @@ export async function createServices(
   const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
     appLimit: () => settings.getTaskCostLimit(),
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
+    isTask: (taskId) => tasks.get(taskId) !== undefined,
+    hearEvents: (hear) => eventSeam.attachUsageReport(hear),
   });
   taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center, and each paired phone
@@ -1770,6 +1770,7 @@ export async function createServices(
       clearInterval(livenessInterval);
       // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
       notifier.stop();
+      void usage.usageReporter.stop();
     },
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,
@@ -1780,28 +1781,8 @@ export async function createServices(
     localOrchestrator,
     observe,
     crewLive,
-    usage: {
-      // Models and providers by the names Settings gives them, read once per summary.
-      summary: (query) => {
-        const view = slots.view();
-        const rows = [...view.models, ...view.byName];
-        const modelName = modelNames(rows);
-        const providers = new Map(rows.map((row) => [row.provider, row.providerLabel]));
-        return usageStore.summary(query, {
-          now: Date.now(),
-          names: {
-            model: (ref) => modelName(offeringKey(ref)),
-            // A custom API's own connection name while it is connected, else the
-            // words General's model picker uses; never the raw provider id.
-            provider: (provider) =>
-              providers.get(provider) ??
-              (isCustomApiProvider(provider) ? "Custom API" : providerLabel(provider)),
-          },
-        });
-      },
-      tasks: (query) => usageStore.tasks(query, { now: Date.now() }),
-      taskCosts: (query) => usageStore.taskCosts(query, { now: Date.now() }),
-    },
+    // The words General's model picker uses for a custom API.
+    usage: usageReads(usageStore, slots, "Custom API"),
     costLimit: {
       view: () => appCostLimitView(),
       set: (limit) => {

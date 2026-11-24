@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "usage-report-per-destination",
+      "reason": "Adds Infinitary's own usage report (both formats and the batched sender) with no destination source yet; nothing is sent until a company's Claude Code setup or a connection the person adds is wired in by a later change, which carries the note."
+    }
+  ]
+}

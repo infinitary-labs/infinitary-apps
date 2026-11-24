@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-keyboard-catalog",
+      "reason": "How the project's code is laid out: the keyboard command catalog moved unchanged out of src/shared/keyboard.ts into its own file to keep the file under the size warning; every command, key and word stays the same, and nothing a person sees changes."
+    }
+  ]
+}

@@ -6,7 +6,6 @@ import {
   boundCommand,
   COMMAND_IDS,
   type CommandId,
-  type CommandScope,
   chordAccelerator,
   chordLabel,
   chordMatches,
@@ -15,9 +14,6 @@ import {
   isMoveCommand,
   isShellCommand,
   isWindowCommand,
-  KEYBOARD_COMMANDS,
-  type KeyboardCommand,
-  type KeyChord,
   type KeyContext,
   type KeyPress,
   keyHint,
@@ -31,6 +27,12 @@ import {
   secondKeyCommand,
   startsTwoKeys,
 } from "./keyboard";
+import {
+  type CommandScope,
+  KEYBOARD_COMMANDS,
+  type KeyboardCommand,
+  type KeyChord,
+} from "./keyboardCommands";
 
 const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
   key,

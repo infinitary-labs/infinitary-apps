@@ -17,14 +17,7 @@ import {
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShellStore } from "../app/store";
-import {
-  Button,
-  IconButton,
-  Input,
-  type InputProps,
-  StatusDot,
-  type StatusDotTone,
-} from "../design";
+import { Button, IconButton, StatusDot, type StatusDotTone } from "../design";
 import { useModalKeys } from "../design/core/modalKeys";
 import { focusWithRing } from "../design/focus";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
@@ -41,6 +34,7 @@ import { formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { FirstmateChoice } from "./CustomApiFirstmate";
 import { CustomModelPrice, type PriceText, priceText, typedCost } from "./CustomModelPrice";
+import { FormInput } from "./FormInput";
 
 type RowState = "run" | "ok" | "bad";
 const emptyModel = (): FormModel => ({ id: "", context: 0, output: 0, uiId: crypto.randomUUID() });
@@ -110,17 +104,6 @@ const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; readonly label: 
     },
   },
 };
-function FormInput({ invalid = false, ...rest }: InputProps & { invalid?: boolean }) {
-  return (
-    <Input
-      {...rest}
-      aria-invalid={invalid || undefined}
-      style={{
-        ...(invalid ? { borderColor: "var(--danger)" } : {}),
-      }}
-    />
-  );
-}
 /** The address as typed, the key an approval is remembered under. */
 const addressKey = (value: string) => value.trim().replace(/\/+$/, "");
 /** The host an address names, as the exception's words call it. */

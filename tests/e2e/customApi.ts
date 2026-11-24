@@ -37,8 +37,6 @@ export function customApiForm(page: Page) {
       return {
         open: part.locator("summary"),
         name: part.getByLabel("Display name", { exact: true }),
-        input: part.getByLabel("Input", { exact: true }),
-        output: part.getByLabel("Output", { exact: true }),
         free: part.getByLabel("Free", { exact: true }),
       };
     },

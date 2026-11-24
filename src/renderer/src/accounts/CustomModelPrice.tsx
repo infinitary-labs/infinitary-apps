@@ -2,6 +2,7 @@ import type { CustomModelCost } from "@shared/customApi";
 import * as m from "@shared/i18n/messages.generated";
 import { useState } from "react";
 import { Input } from "../design";
+import { FormInput } from "./FormInput";
 
 export const PRICE_KEYS = ["input", "output", "cacheRead", "cacheWrite"] as const;
 export type PriceKey = (typeof PRICE_KEYS)[number];
@@ -85,14 +86,13 @@ export function CustomModelPrice({
           return (
             <label key={key} className="fm-custom-field" htmlFor={`${idPrefix}-${key}`}>
               <span>{LABEL[key]()}</span>
-              <Input
+              <FormInput
                 id={`${idPrefix}-${key}`}
                 mono
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder="$"
-                aria-invalid={wrong || undefined}
-                style={wrong ? { borderColor: "var(--danger)" } : undefined}
+                invalid={wrong}
                 value={prices?.[key] ?? ""}
                 onChange={(event) => onChange({ prices: { ...prices, [key]: event.target.value } })}
               />

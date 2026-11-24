@@ -123,6 +123,8 @@ function publish(what: string, schema: z.ZodType, io: "input" | "output", open: 
 
 // Keywords whose values are data, not schemas: a "type" inside them is a value.
 const DATA_KEYWORDS = new Set(["const", "enum", "default", "examples"]);
+// Keywords whose keys are names a shape chose, such as a field called "default".
+const NAME_MAPS = new Set(["properties", "patternProperties", "$defs", "dependentSchemas"]);
 
 /**
  * zod folds a union of bare types into one `type` list, after overrides run.
@@ -130,13 +132,16 @@ const DATA_KEYWORDS = new Set(["const", "enum", "default", "examples"]);
  * one type and null (Ajv's strictTypes), so the contract spells every union
  * of types as anyOf, one type to a branch, at the place `type` stood.
  */
-function oneTypeEach(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(oneTypeEach);
+function oneTypeEach(node: unknown, names = false): unknown {
+  if (Array.isArray(node)) return node.map((item) => oneTypeEach(item));
   if (!node || typeof node !== "object") return node;
   const spelled: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(node)) {
-    if (key === "type" && Array.isArray(value)) spelled.anyOf = value.map((type) => ({ type }));
-    else spelled[key] = DATA_KEYWORDS.has(key) ? value : oneTypeEach(value);
+    if (names) spelled[key] = oneTypeEach(value);
+    else if (key === "type" && Array.isArray(value))
+      spelled.anyOf = value.map((type) => ({ type }));
+    else if (DATA_KEYWORDS.has(key)) spelled[key] = value;
+    else spelled[key] = oneTypeEach(value, NAME_MAPS.has(key));
   }
   return spelled;
 }

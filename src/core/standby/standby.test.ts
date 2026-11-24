@@ -62,6 +62,11 @@ vi.mock("node:fs", async (load) => {
   return { ...actual, watch };
 });
 
+/** Until the test ends, every watch the stream starts names nothing, so a change reaches it only through `rescan` or `flush`. */
+function unwatched(): void {
+  watching.silent = scratchDir("infinitary-standby-unwatched-");
+}
+
 type Home = {
   userData: string;
   db: ReturnType<typeof openDatabase>;
@@ -72,6 +77,7 @@ type Home = {
 const opened: { close: () => void }[] = [];
 afterEach(() => {
   for (const each of opened.splice(0).reverse()) each.close();
+  watching.silent = null;
 });
 
 function home(): Home {
@@ -195,8 +201,6 @@ async function until(check: () => boolean, what: string): Promise<void> {
   }
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
-
 const copyOf = (there: Computer) => join(there.workDir, STANDBY_DIR, STANDBY_COPY);
 
 vi.setConfig({ testTimeout: 20_000 });
@@ -289,21 +293,17 @@ describe("keeping a copy on other computers", () => {
   it("the home's own write of the list reaches a copy back from away before it reads in sync, though the watch names nothing", async () => {
     const at = home();
     const one = computer("one");
-    watching.silent = scratchDir("infinitary-standby-unwatched-");
-    try {
-      const { s, state, reach } = stream(at, [one]);
-      s.start();
-      s.name("one", true);
-      await until(() => state("one")?.state === "in-sync", "in sync");
-      // Going away is a save of the home's own: when that copy is from, in the list every copy holds.
-      reach(one, false);
-      await until(() => state("one")?.state === "away", "away");
-      reach(one, true);
-      await until(() => state("one")?.state === "in-sync", "back in sync");
-      expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
-    } finally {
-      watching.silent = null;
-    }
+    unwatched();
+    const { s, state, reach } = stream(at, [one]);
+    s.start();
+    s.name("one", true);
+    await until(() => state("one")?.state === "in-sync", "in sync");
+    // Going away is a save of the home's own: when that copy is from, in the list every copy holds.
+    reach(one, false);
+    await until(() => state("one")?.state === "away", "away");
+    reach(one, true);
+    await until(() => state("one")?.state === "in-sync", "back in sync");
+    expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
   });
 
   it("a change too large to send inline ahead of a file's change still sends the file's change", async () => {
@@ -316,11 +316,14 @@ describe("keeping a copy on other computers", () => {
           .run(`before-${index}-${"b".repeat(4000)}`);
     })();
     const one = computer("one");
+    // A watch's late report of the file, once the copy is back, would send the file's change
+    // again on its own and hide one the stream left out behind the big change.
+    unwatched();
     const { s, state, reach } = stream(at, [one]);
     s.start();
     s.name("one", true);
     await until(() => state("one")?.state === "in-sync", "in sync");
-    // Away while they happen, so both reach it in one batch.
+    // Away while they happen, so both wait in the stream when it is back, the big change first.
     reach(one, false);
     await until(() => state("one")?.state === "away", "away");
     // One commit whose pages fill more than an order holds, then a file the first mate wrote.
@@ -334,7 +337,6 @@ describe("keeping a copy on other computers", () => {
     writeFileSync(join(at.userData, "crewmates", "t3", "card.html"), "<p>after the big change</p>");
     await s.rescan();
     s.flush();
-    await settle();
     reach(one, true);
     await until(() => state("one")?.state === "in-sync", "in sync again");
     expect(recordDigest(copyOf(one))).toEqual(recordDigest(at.userData));
@@ -346,6 +348,9 @@ describe("keeping a copy on other computers", () => {
     const one = computer("one");
     const card = join(at.userData, "crewmates", "t1", "card.html");
     writeFileSync(card, "<p>first</p>");
+    // A watch's late report of the card, once the copy is back, would send it again in an apply
+    // whose answer arrives, and the home would know what the copy holds after all.
+    unwatched();
     const { s, state, reach } = stream(at, [one]);
     s.start();
     s.name("one", true);
@@ -356,7 +361,6 @@ describe("keeping a copy on other computers", () => {
     writeFileSync(card, "<p>second</p>");
     await s.rescan();
     s.flush();
-    await settle();
     one.loseApplyAnswer = true;
     reach(one, true);
     await until(

@@ -3,9 +3,9 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { clock, revisedLine as revisedWords } from "../../src/renderer/src/cards/revisedLine";
 import { cardBody, cardBodyElement } from "./frames";
-import { type LaunchedApp, launchApp } from "./launch";
+import { askFirstmate } from "./lastTurn";
+import { launchApp } from "./launch";
 import { pseudoBox } from "./layout";
-import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
 import {
   CHANGE_MARKS_NEXT_RUN,
@@ -56,16 +56,6 @@ async function shownOffer(page: Page): Promise<string | undefined> {
   }, CHANGE_MARKS_TITLE);
 }
 
-async function providerQuiet(page: Page, mock: LaunchedApp["mockProvider"]): Promise<void> {
-  let last = mock?.requestBodies().length ?? 0;
-  for (let i = 0; i < 20; i++) {
-    await page.waitForTimeout(150);
-    const next = mock?.requestBodies().length ?? 0;
-    if (next === last) return;
-    last = next;
-  }
-}
-
 // The whole journey is one test: each revision is compared with what the
 // window last showed, so the sections depend on one another by design.
 test("a revised card says what is new since the captain last saw it, and marks it", async () => {
@@ -76,19 +66,19 @@ test("a revised card says what is new since the captain last saw it, and marks i
   };
   const transcript: string[] = [];
   try {
-    const { page, userDataDir, mockProvider } = launched;
+    const { page, userDataDir } = launched;
     const frame = cardBody(page, CHANGE_MARKS_TITLE);
     const marks = changeMarks(frame);
-    // Each version is on the stage once the words only it shows are.
+    // Each version is asked for only once the turn that drew the one before
+    // has ended: a message sent mid-turn steers that turn instead of
+    // starting the next. The version is on the stage once the words only it
+    // shows are.
     const show = async (version: keyof typeof CHANGE_MARKS_SIGNS) => {
       const text = CHANGE_MARKS_SIGNS[version];
-      const input = promptInput(page);
-      await input.fill(`${CHANGE_MARKS_PROMPT_MARKER}${version}`);
-      await input.press("Enter");
+      await askFirstmate(page, `${CHANGE_MARKS_PROMPT_MARKER}${version}`);
       await expect(frame.getByText(text).or(frame.getByRole("img", { name: text }))).toBeVisible({
         timeout: 30_000,
       });
-      await providerQuiet(page, mockProvider);
     };
     // The window reports the version in front of the captain; wait for the record to hold it.
     const recordedSeen = async () => {

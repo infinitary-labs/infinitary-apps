@@ -509,9 +509,15 @@ const sharedCardParams = {
   contribution_reason: Type.Optional(Type.String()),
   operation_id: Type.Optional(Type.String()),
   answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
-  // Served bare too: the refusal of a repeated question says when to pass it
-  // and what the card then opens with (INF-6523 part 4).
-  asks_again: Type.Optional(Type.Object({ card: Type.String(), why: Type.String() })),
+  // The refusal of a repeated question says when to pass it and what the
+  // card then opens with (INF-6523 part 4); its fields are named here, since
+  // a nested field carries no description of its own.
+  asks_again: Type.Optional(
+    Type.Object(
+      { card: Type.String(), why: Type.String() },
+      { description: CARD_PARAMS.asks_again },
+    ),
+  ),
   actions: Type.Optional(
     Type.Array(
       actionParam(Type.Union([mergeEffectParam, settleEffectParam, firstmateOpenEffectParam])),

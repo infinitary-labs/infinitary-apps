@@ -504,6 +504,8 @@ function nestedFields(schema: Schema | undefined): string[] {
  * the census below until the phrase that carries its rule is named here.
  */
 const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {
+  "asks_again.card": "card names the card it cited",
+  "asks_again.why": "why says what changed",
   "required_actions[].id": "id (stable kebab-case)",
   "required_actions[].sharedId": "sharedId (explicitly shared outstanding action)",
   "required_actions[].target": "target, title (imperative)",

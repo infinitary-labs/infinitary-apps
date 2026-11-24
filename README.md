@@ -1,81 +1,112 @@
-# Infinitary
+<h1 align="center">Infinitary</h1>
 
-**Your own AI studio.** A first mate and crew that work for you, on a computer that is yours. Open source.
+<p align="center">
+  <a href="https://github.com/infinitary-labs/infinitary-apps/actions/workflows/main.yml"
+    ><img
+      alt="CI"
+      src="https://img.shields.io/github/actions/workflow/status/infinitary-labs/infinitary-apps/main.yml?branch=main&style=flat-square&label=ci"
+  /></a>
+  <a href="https://github.com/infinitary-labs/infinitary-apps/releases/latest"
+    ><img
+      alt="Release"
+      src="https://img.shields.io/github/v/release/infinitary-labs/infinitary-apps?style=flat-square&label=release"
+  /></a>
+  <a href="https://getinfinitary.com/downloads/"
+    ><img
+      alt="Platform"
+      src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue?style=flat-square"
+  /></a>
+  <a href="https://x.com/kunchenguid"
+    ><img
+      alt="X"
+      src="https://img.shields.io/badge/X-@kunchenguid-black?style=flat-square"
+  /></a>
+  <a href="https://discord.gg/Wsy2NpnZDu"
+    ><img
+      alt="Discord"
+      src="https://img.shields.io/discord/1439901831038763092?style=flat-square&label=discord"
+  /></a>
+</p>
 
-Infinitary is a desktop app for Mac and Linux. You talk to one AI assistant, the first mate, by typing or by holding a key and speaking. It plans the work and hands each task to a crewmate: an AI agent that does that one task in its own working copy. It comes back to you with short cards: a decision to make, or a result to see. Many crewmates work at once, each on its own task.
+<h3 align="center">Your own AI studio.</h3>
 
-## Made with care
+<p align="center">
+  <a href="https://getinfinitary.com"
+    ><img
+      alt="Infinitary at work: an ask is sent to the first mate, eight crewmates arrive, a finished change comes back as a card with its pictures, a recording and a map, and Merge is pressed."
+      src=".github/readme/hero.webp"
+      width="800"
+  /></a>
+</p>
 
-Craftsmanship, not mass production. Every piece of work is made the same way:
+Not another bot, assistant, or factory. A studio that's yours. A place to focus on your taste, craft, and ambition.
 
-- **One task, one crewmate.** Each task gets its own working copy and branch, so work never collides.
-- **Checked.** A crewmate runs your project's own tests and checks. A change can get an independent review before it reaches you.
-- **Shown.** The result arrives as a card with what changed and the evidence: pictures, recordings, test results.
-- **Recorded.** Every task keeps a record of your words, the plan, each report, the pull request and its checks.
-- **Yours to decide.** Nothing merges until you say so, unless you turn on autonomy for a project.
+Infinitary is a free, open source desktop app for macOS and Linux. You tell one first mate what you want, by typing or by holding a key and speaking. It plans the work and hands each task to a crewmate, an AI agent that does that one task in its own working copy. The work comes back to you as cards: a decision to make, or a result to see.
 
-## Yours
+- **Tell one first mate. A crew does the work.** - Brought to you by the creator of [firstmate](https://github.com/kunchenguid/firstmate), Infinitary offers a state-of-the-art orchestrator agent that manages your entire crew. Many crewmates work at once, each on its own task.
+- **Decisions come to you as cards.** - Your crew brings back intelligently generated cards for efficient decision making. A card carries what changed and the evidence: pictures, recordings, test results.
+- **Rigorous engineering.** - Infinitary guides your LLMs to write good code by default, through a rigorous engineering stack. A crewmate runs your project's own tests and checks, a change can get an independent review, and nothing merges until you say so.
+- **Your computers, your subscriptions.** - Run your crew on your own computers and the AI subscriptions you already have. Add your other Macs and Linux computers once; they connect over your own private network.
+- **Intelligent model routing.** - Use the full power of every AI model you have. Infinitary gives each task the right model.
+- **Automate repetitive work.** - Give your chores to your first mate and watch it get done. It runs the schedules you set, answers research questions on a card and drives a web page while you watch.
+- **Make it personal.** - Tell your first mate to make [custom widgets](https://docs.getinfinitary.com/panels/) that turn Infinitary into exactly what you need.
 
-- **Your computer.** The first mate, your tasks, what it knows and the record of every task live on your computer.
-- **Your model provider, on your own account.** Sign in with the Claude, Codex or Grok subscription you already pay for, or connect OpenRouter or another provider with a key.
-- **Straight to the provider.** Your work goes from your computer to that provider. Infinitary never sits in between, never charges you for model use and never resells it.
-- **Your projects.** Work in a folder on your computer, or on projects that live on GitHub or GitLab.
-- **Your knowledge and panels.** Your standing directions, saved knowledge and the panels you build are yours to read and change.
-- **Your other computers.** Add your other Macs and Linux computers once. Each can control your first mate or run a project's work with its own sign-ins. They connect over your own private network, with no account and no service of ours in between.
-- **Open source.** [infinitary-apps](https://github.com/infinitary-labs/infinitary-apps) is the public home for Infinitary’s source code and releases.
+Watch each of these at [getinfinitary.com](https://getinfinitary.com).
 
-## Beyond code
+## Install
 
-The same first mate answers research questions on a card. It drives a web page in a task's own browser while you watch. It runs schedules you set, teaches a subject across days, and builds panels for your window.
+Download Infinitary from the downloads page:
 
-## What you need
+- **[Download for macOS](https://getinfinitary.com/downloads/#macos)**
+- **[Download for Linux](https://getinfinitary.com/downloads/#linux)**
+
+Homebrew is a backup way to install on a Mac, if you would rather use it than the download. A copy from Homebrew updates through Homebrew instead of inside the app.
+
+```sh
+brew install --cask infinitary-labs/tap/infinitary
+```
+
+What you need:
 
 - A Mac with Apple silicon or Intel, or a Linux computer with an x64 chip.
 - At least one AI subscription or API key. For Claude, install Claude Code first; Infinitary uses your copy.
 - Ideally a computer that stays on. The first mate works while that computer is awake, and your other devices reach it there.
 
-## What leaves your computer
+Infinitary for iPhone and iPad is in private TestFlight; the [downloads page](https://getinfinitary.com/downloads/#ios) says how to ask for an invitation.
 
-Your work goes to the model provider you chose, and to GitHub or GitLab for a project that lives there. Nothing you write comes to us. An installed build sends anonymous usage events, such as the app opening or first-time setup advancing, with a random install ID. It tells you on first launch, and Settings → General → Sharing turns it off. Whatever that switch says, an installed build's first update check of each day and month also says it is the first, with no ID, so we can count the computers using Infinitary. A build you make from this source sends nothing. `DATA-TERMS.md` is the draft of the terms for anything you choose to share with us.
+## Your own studio
 
-## License
+Infinitary is free and open source. It runs on your computer, through the AI subscriptions you already have.
 
-Infinitary Labs, Inc. licenses its own code and documentation under the [MIT License](LICENSE). [NOTICE](NOTICE) identifies separately licensed components and credits.
+- **Your computer.** The first mate, the crew and your projects live on your computer. Work happens in working copies of your own projects, and your files stay where they are.
+- **Your model account.** Infinitary works through the subscriptions you already have. No credits and no metering: your provider's bill is your model bill. Sign in with the Claude, Codex or Grok subscription you already pay for, or connect OpenRouter or another provider with a key. Your work goes straight from your computer to that provider.
+- **Your record.** Every task leaves a record: what you asked, what changed, the evidence and what you decided. It stays with you, not with us.
 
-## Develop
+### What leaves your computer
 
-```
-git clone <this repo> infinitary-apps
+Your work goes to the model provider you chose, and to GitHub or GitLab for a project that lives there. Nothing you write comes to us. An installed build sends anonymous usage events, such as the app opening or first-time setup advancing, with a random install ID. It tells you on first launch, and Settings → General → Sharing turns it off. Whatever that switch says, an installed build's first update check of each day and month also says it is the first, with no ID, so we can count the computers using Infinitary. A build you make from this source sends nothing. The [privacy policy](https://getinfinitary.com/privacy/) and the docs page [What leaves your computer](https://docs.getinfinitary.com/what-leaves-your-computer/) have the rest.
+
+## Docs and community
+
+- [Docs](https://docs.getinfinitary.com/) - how a task goes, cards, projects, automation and panels.
+- [Discord](https://discord.gg/Wsy2NpnZDu) - questions, and what people build.
+- [Releases](https://github.com/infinitary-labs/infinitary-apps/releases) - what changed in each version.
+
+## Build from source
+
+```sh
+git clone https://github.com/infinitary-labs/infinitary-apps.git
 cd infinitary-apps
 pnpm install
 pnpm dev
 ```
 
-A dev run opens your own saved data, `~/Library/Application Support/infinitary`,
-as the installed app does, so quit the installed app first; only one of them opens
-the folder at a time (`src/shared/userDataFolders.ts`). Before it first opens that
-data, and again before a version that changes how it is saved, it keeps a copy in
-the folder's `before-source-run`, and says in the terminal how to go back. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR`
-to an empty folder.
+A run from source opens [your own saved data](docs/saved-data-compatibility.md#a-run-from-source), as the installed app does, so quit the installed app first. To run on throwaway data instead, set `INFINITARY_USER_DATA_DIR` to an empty folder. The pages under [`docs/`](docs/README.md) cover [updates from source](docs/alpha.md#updates-from-source) and [local code signing](docs/local-code-signing.md).
 
-A dev run is a daily app: closing its window keeps it running, and when the branch
-your copy follows, `main` for a clone, has newer commits, the app offers Update and
-restart. It saves the crew's work, then `pnpm dev` moves the copy forward, runs
-`pnpm install` when the packages changed and starts the app again; a commit that does
-not install or build goes back to the one before. A copy with edits that are not
-committed, or with commits of its own, is never moved. Run it from a clone of your own,
-not the project folder Infinitary manages, which it brings up to date after each merge
-(`docs/alpha.md`, "Updates from source").
+## Contributing
 
-That's it - no hidden step to fetch the Electron binary. `pnpm install`'s postinstall
-downloads it for you (see `scripts/ensure-electron-installed.mjs` and the note on
-Electron's dropped `postinstall` in `docs/architecture.md`).
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the Contributor License Agreement, how a change is checked and how to report a security issue.
 
-`pnpm dev` also gives the local app a stable macOS code identity, so a
-Keychain "Always Allow" survives relaunches, reinstalls, and Electron upgrades
-instead of being re-asked each time. It generates a self-signed certificate on
-your machine only - no shared secret, no Apple certificate, nothing committed.
-It does not touch that signing keychain when the dev app is already signed, and
-an install never does: pnpm also installs on its own, so `pnpm install` only
-checks. `pnpm codesign:verify` reports what it did; `docs/local-code-signing.md`
-explains it and how to reset it.
+## License
+
+Infinitary Labs, Inc. licenses its own code and documentation under the [MIT License](LICENSE). [NOTICE](NOTICE) identifies separately licensed components and credits.

@@ -32,7 +32,7 @@ describe("generate-self-source", () => {
     if (outDir) rmSync(outDir, { recursive: true, force: true });
   });
 
-  it("archives source without test data or draft terms and indexes live behavior", async () => {
+  it("archives source without test data, draft terms or README pictures and indexes live behavior", async () => {
     outDir = scratchDir("infinitary-self-source-");
     const result = spawnSync(process.execPath, [scriptPath, "--out", "."], {
       cwd: outDir,
@@ -44,6 +44,7 @@ describe("generate-self-source", () => {
     const selfSource = join(outDir, "self-source");
     expect(existsSync(join(selfSource, "tests/fixtures"))).toBe(false);
     expect(existsSync(join(selfSource, "DATA-TERMS.md"))).toBe(false);
+    expect(existsSync(join(selfSource, ".github/readme"))).toBe(false);
     expect(existsSync(join(selfSource, "LICENSE"))).toBe(true);
     expect(existsSync(join(selfSource, "NOTICE"))).toBe(true);
     expect(existsSync(join(selfSource, "AGENTS.md"))).toBe(true);

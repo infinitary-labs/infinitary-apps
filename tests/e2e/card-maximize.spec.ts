@@ -397,3 +397,66 @@ test("under Vim keys, Escape on a maximized card goes to the card and stops ther
     await launched.close();
   }
 });
+
+test("a maximized card whose body overflows by a few pixels stays inside the window", async () => {
+  // INF-6510: a body that still scrolls a little once the card is maximized
+  // left the stage's shell at its unmaximized height plus that little, while
+  // the card's surface filled the room a maximized card has; the stage centred
+  // the short shell, so the surface hung past the window's foot with its
+  // buttons cut off.
+  test.setTimeout(150_000);
+  const userDataDir = scratchDir("infinitary-card-maximize-snug-");
+  const db = openDatabase(userDataDir);
+  try {
+    new CardStore(db).upsert({
+      ...card("card-snug", READ, 30),
+      body: `<p>I recommend the second plan.</p><div data-spacer style="height: 900px"></div>`,
+    });
+  } finally {
+    db.close();
+  }
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 760 });
+    await showCard(page, READ);
+    const frame = cardBody(page, READ);
+    const scroller = cardScroller(page);
+    const responseCard = shownEntry(page).locator("[data-response-card]");
+    const overflow = () => scroller.evaluate((e) => e.scrollHeight - e.clientHeight);
+    const OVER = 6;
+
+    await test.step("its body is set to overflow the maximized card by a few pixels", async () => {
+      await sizeControl(page, MAXIMIZE_LABEL).click();
+      await expect(promptInput(page)).toBeHidden();
+      const over = await settled(page, overflow);
+      expect(over).toBeGreaterThan(OVER);
+      await frame.locator("[data-spacer]").evaluate((spacer, by) => {
+        spacer.style.height = `${spacer.getBoundingClientRect().height - by}px`;
+      }, over - OVER);
+      await expect.poll(overflow).toBeGreaterThanOrEqual(OVER - 1);
+      await expect.poll(overflow).toBeLessThanOrEqual(OVER + 1);
+      await sizeControl(page, RESTORE_LABEL).click();
+      await expect(promptInput(page)).toBeVisible();
+      await expect.poll(overflow).toBeGreaterThan(OVER + 1);
+    });
+
+    await test.step("maximized again, the whole card and its buttons lie inside the window", async () => {
+      await sizeControl(page, MAXIMIZE_LABEL).click();
+      await expect(promptInput(page)).toBeHidden();
+      const shown = await settled(page, () =>
+        responseCard.evaluate((e) => e.getBoundingClientRect().toJSON()),
+      );
+      expect(await overflow()).toBeGreaterThan(1);
+      expect(within(shown, await windowBox(page))).toEqual([]);
+      const bar = await box(page, "[data-topbar]");
+      expect(shown.y).toBeGreaterThanOrEqual(bar.y + bar.height);
+      const approve = await shownEntry(page)
+        .getByRole("button", { name: "Approve" })
+        .evaluate((e) => e.getBoundingClientRect().toJSON());
+      expect(within(approve, shown)).toEqual([]);
+    });
+  } finally {
+    await launched.close();
+  }
+});

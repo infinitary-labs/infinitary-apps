@@ -65,7 +65,7 @@ afterAll(() => {
 });
 
 it.skipIf(!enabled)(
-  "holds the root and the authority head in a scratch keychain, refuses while it is locked, and serves a protected owner",
+  "holds the root and the authority head in a scratch keychain, refuses while it is locked, reads them for Unlock off the main thread, and serves a protected owner",
   async () => {
     const api = loadDarwinCustodyApi(keychainPath);
     expect(api).toBeDefined();
@@ -89,6 +89,11 @@ it.skipIf(!enabled)(
     expect(await custody.write("root", Buffer.alloc(32))).toBe("locked");
     security("unlock-keychain", "-p", SCRATCH_PASSWORD, keychainPath);
     expect(await custody.read("root")).toEqual({ kind: "value", bytes: root });
+    // Unlock's read, on the native worker thread: items this process made
+    // trust it, so no dialog is shown.
+    const asking = createDarwinSecretCustody(api, { service: SERVICE, interactive: true });
+    expect(await asking.read("root")).toEqual({ kind: "value", bytes: root });
+    expect(await asking.read("authority-head")).toEqual({ kind: "value", bytes: next });
 
     const owner = join(home, "owner");
     const fresh = createDarwinSecretCustody(api, { service: `${SERVICE} owner` });

@@ -20,6 +20,9 @@ export type CustodyRead =
 
 export type CustodyWrite = "stored" | "locked" | "unavailable";
 
+/** What removing a slot's item answers: gone now, never there, or a refusal the person must act on. */
+export type CustodyRemove = "removed" | "absent" | "locked" | "unavailable";
+
 /**
  * Host capability, effects only: macOS Keychain (`src/main/host/darwinSecretCustody.ts`)
  * and the Linux Secret Service (`src/main/host/linuxSecretCustody.ts`). An
@@ -30,6 +33,12 @@ export interface SecretCustody {
   read(slot: CustodySlot): Promise<CustodyRead>;
   /** A lost write reply rejects; it is not a definite locked/unavailable refusal. */
   write(slot: CustodySlot, bytes: Buffer): Promise<CustodyWrite>;
+  /**
+   * Deletes the slot's item. Only Reset Infinitary asks it, after the
+   * person's own confirmation (docs/reset.md): the Secrets owner never
+   * removes custody, since a missing root beside sealed records is `lost`.
+   */
+  remove?(slot: CustodySlot): Promise<CustodyRemove>;
 }
 
 /** Why the owner cannot open: the person must act, or this computer has no custody. */

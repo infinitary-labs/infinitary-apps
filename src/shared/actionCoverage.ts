@@ -135,6 +135,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "credential",
     `Adds a ${COMPUTER.one} over Remote Login on the captain's click in Settings; device-invite only offers the card, and the feed says each step`,
   ],
+  "inf:app:reset-prepare": [
+    "destructive",
+    "Reset Infinitary's own undoing before the wipe, asked only by the window's own program after the captain's click and the system's confirmation",
+  ],
   "inf:devices:home-at": [
     "credential",
     `Sets the first mate up on another ${COMPUTER.one} over the person's own SSH from the welcome screen, on their click, with their password once`,
@@ -549,6 +553,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
   "inf:app:stop-command": [
     "destructive",
     "Stops the first mate and crew a command started; the first mate runs inside what it would stop, and every crewmate stops mid-work",
+  ],
+  "inf:app:reset": [
+    "destructive",
+    "Wipes this computer's Infinitary back to a fresh install; only the captain's click in Settings and the system's own confirmation start it",
   ],
   "inf:app:quit": [
     "destructive",

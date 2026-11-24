@@ -21,6 +21,7 @@ import {
   type PushPayload,
 } from "@shared/ipc";
 import { isMoveCommand } from "@shared/keyboard";
+import type { ResetAnswer } from "@shared/reset";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
 import {
   app,
@@ -87,10 +88,12 @@ export type IpcOptions = {
   frameMounts: FrameMountRegistry;
   /** Where this computer transcribes, asked once per run, and the voice helper that does it there. */
   voice: { place: () => Promise<RecognizerPlace>; helper: RecognizerClient };
+  /** Reset Infinitary, once the person confirmed it in Settings (./reset/running.ts). */
+  reset: () => Promise<ResetAnswer>;
 };
 
 export function registerIpc(options: IpcOptions): void {
-  const { rendererSource, dataDir, shell, keyReminders, host, frameMounts, voice } = options;
+  const { rendererSource, dataDir, shell, keyReminders, host, frameMounts, voice, reset } = options;
 
   // The protocol proper: one adapter over the dispatcher, with no
   // per-channel knowledge beyond the program-only skip below. A channel
@@ -232,6 +235,12 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:app:start-here", rendererSource, () => shell.startHere());
   handleInvoke("inf:app:restart-command", rendererSource, () => shell.restartCommand());
   handleInvoke("inf:app:stop-command", rendererSource, () => shell.stopCommand());
+  // Only this window's own Reset Infinitary row asks it, never a view of
+  // another computer's first mate (docs/reset.md).
+  handleInvoke("inf:app:reset", rendererSource, () => {
+    if (!shell.resettable()) throw new Error("Reset Infinitary runs only on its own computer.");
+    return reset();
+  });
   handleInvoke("inf:app:quit", rendererSource, () => {
     // After this answer, so the window is not torn down under its own request.
     setImmediate(() => app.quit());

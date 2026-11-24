@@ -47856,6 +47856,168 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This is the only card`;
   }
+  function resetConfirmReason() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على هذا الكمبيوتر.`;
+      case "de":
+        return `Infinitary auf diesem Computer zurücksetzen.`;
+      case "es":
+        return `Restablecer Infinitary en este ordenador.`;
+      case "fr":
+        return `Réinitialiser Infinitary sur cet ordinateur.`;
+      case "ja":
+        return `このコンピュータの Infinitary をリセットします。`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary를 재설정합니다.`;
+      case "pt-BR":
+        return `Redefinir o Infinitary neste computador.`;
+      case "zh-Hans":
+        return `在这台电脑上重置 Infinitary。`;
+      case "zh-Hant":
+        return `在這台電腦上重設 Infinitary。`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary on this computer.‬`;
+    }
+    return `Reset Infinitary on this computer.`;
+  }
+  function resetConfirmReasonMac() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary على هذا الكمبيوتر`;
+      case "de":
+        return `Infinitary auf diesem Computer zurückzusetzen`;
+      case "es":
+        return `restablecer Infinitary en este ordenador`;
+      case "fr":
+        return `réinitialiser Infinitary sur cet ordinateur`;
+      case "ja":
+        return `このコンピュータの Infinitary をリセット`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary 재설정`;
+      case "pt-BR":
+        return `redefinir o Infinitary neste computador`;
+      case "zh-Hans":
+        return `在这台电脑上重置 Infinitary`;
+      case "zh-Hant":
+        return `在這台電腦上重設 Infinitary`;
+      case "en-XA":
+        return `[ŕéšéţ Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮reset Infinitary on this computer‬`;
+    }
+    return `reset Infinitary on this computer`;
+  }
+  function resetHeldDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `برنامج آخر يستخدم مجلد Infinitary. أغلقه ثم حاول مرة أخرى.`;
+      case "de":
+        return `Ein anderes Programm verwendet den Ordner von Infinitary. Schließe es und versuche es dann erneut.`;
+      case "es":
+        return `Otro programa está usando la carpeta de Infinitary. Ciérralo y vuelve a intentarlo.`;
+      case "fr":
+        return `Un autre programme utilise le dossier d’Infinitary. Fermez-le, puis réessayez.`;
+      case "ja":
+        return `別のプログラムが Infinitary のフォルダを使用しています。そのプログラムを閉じてから、もう一度お試しください。`;
+      case "ko":
+        return `다른 프로그램이 Infinitary의 폴더를 사용하고 있어요. 그 프로그램을 닫은 다음 다시 시도하세요.`;
+      case "pt-BR":
+        return `Outro programa está usando a pasta do Infinitary. Feche-o e tente de novo.`;
+      case "zh-Hans":
+        return `另一个程序正在使用 Infinitary 的文件夹。请关闭它，然后重试。`;
+      case "zh-Hant":
+        return `另一個程式正在使用 Infinitary 的資料夾。請關閉它，然後再試一次。`;
+      case "en-XA":
+        return `[Åñöţĥéŕ þŕöĝŕáɱ îš ûšîñĝ Îñƒîñîţáŕý'š ƒöļðéŕ. Çļöšé îţ, ţĥéñ ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Another program is using Infinitary's folder. Close it, then try again.‬`;
+    }
+    return `Another program is using Infinitary's folder. Close it, then try again.`;
+  }
+  function resetHeldMessage() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary إكمال إعادة التعيين`;
+      case "de":
+        return `Infinitary konnte das Zurücksetzen nicht abschließen`;
+      case "es":
+        return `Infinitary no pudo terminar de restablecerse`;
+      case "fr":
+        return `Infinitary n’a pas pu terminer sa réinitialisation`;
+      case "ja":
+        return `Infinitary はリセットを完了できませんでした`;
+      case "ko":
+        return `Infinitary가 재설정을 마치지 못했어요`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu terminar a redefinição`;
+      case "zh-Hans":
+        return `Infinitary 未能完成重置`;
+      case "zh-Hant":
+        return `Infinitary 無法完成重設`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ ƒîñîšĥ îţš ŕéšéţ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not finish its reset‬`;
+    }
+    return `Infinitary could not finish its reset`;
+  }
+  function resetHeldQuit() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إنهاء`;
+      case "de":
+        return `Beenden`;
+      case "es":
+        return `Salir`;
+      case "fr":
+        return `Quitter`;
+      case "ja":
+        return `終了`;
+      case "ko":
+        return `종료`;
+      case "pt-BR":
+        return `Sair`;
+      case "zh-Hans":
+        return `退出`;
+      case "zh-Hant":
+        return `結束`;
+      case "en-XA":
+        return `[Ǫûîţ ~~]`;
+      case "ar-XB":
+        return `‮Quit‬`;
+    }
+    return `Quit`;
+  }
+  function resetHeldTryAgain() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة المحاولة`;
+      case "de":
+        return `Erneut versuchen`;
+      case "es":
+        return `Reintentar`;
+      case "fr":
+        return `Réessayer`;
+      case "ja":
+        return `もう一度試す`;
+      case "ko":
+        return `다시 시도`;
+      case "pt-BR":
+        return `Tentar de novo`;
+      case "zh-Hans":
+        return `重试`;
+      case "zh-Hant":
+        return `再試一次`;
+      case "en-XA":
+        return `[Ţŕý áĝáîñ ~~~]`;
+      case "ar-XB":
+        return `‮Try again‬`;
+    }
+    return `Try again`;
+  }
   function resetKeysAsk(input2) {
     const preset = input2.preset;
     switch (currentLanguage()) {
@@ -68843,56 +69005,56 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralPurgeDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها.`;
+        return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها. تبقى مشاريعك وتسجيلات دخولك وإعداداتك.`;
       case "de":
-        return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten.`;
+        return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten. Deine Projekte, Anmeldungen und Einstellungen bleiben.`;
       case "es":
-        return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas.`;
+        return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas. Tus proyectos, inicios de sesión y configuración se conservan.`;
       case "fr":
-        return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes.`;
+        return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes. Vos projets, connexions et réglages restent.`;
       case "ja":
-        return `すべてのタスクを、その作業コピー、メモ、カードとともに削除します。`;
+        return `すべてのタスクを、その作業コピー、メモ、カードとともに削除します。プロジェクト、サインイン、設定は残ります。`;
       case "ko":
-        return `모든 작업을 작업 사본, 메모, 카드와 함께 지워요.`;
+        return `모든 작업을 작업 사본, 메모, 카드와 함께 지워요.프로젝트, 로그인, 설정은 그대로 남아요.`;
       case "pt-BR":
-        return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma.`;
+        return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma. Seus projetos, logins e ajustes ficam.`;
       case "zh-Hans":
-        return `移除每个任务及其工作副本、笔记和卡片。`;
+        return `移除每个任务及其工作副本、笔记和卡片。你的项目、登录和设置会保留。`;
       case "zh-Hant":
-        return `移除每一項任務，連同它的工作副本、筆記和卡片。`;
+        return `移除每一項任務，連同它的工作副本、筆記和卡片。你的專案、登入和設定會保留。`;
       case "en-XA":
-        return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš. Ýöûŕ þŕöĵéçţš, šîĝñ-îñš áñð šéţţîñĝš šţáý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Removes every task, with its working copy, its notes and its cards.‬`;
+        return `‮Removes every task, with its working copy, its notes and its cards. Your projects, sign-ins and settings stay.‬`;
     }
-    return `Removes every task, with its working copy, its notes and its cards.`;
+    return `Removes every task, with its working copy, its notes and its cards. Your projects, sign-ins and settings stay.`;
   }
   function settingsGeneralPurgeDescriptionKnowledge() {
     switch (currentLanguage()) {
       case "ar":
-        return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها، وكل المعرفة التي دوّنها الطاقم.`;
+        return `يزيل كل مهمة مع نسخة العمل الخاصة بها وملاحظاتها وبطاقاتها، وكل المعرفة التي دوّنها الطاقم. تبقى مشاريعك وتسجيلات دخولك وإعداداتك.`;
       case "de":
-        return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten sowie das gesamte Wissen, das die Crew festgehalten hat.`;
+        return `Entfernt jede Aufgabe samt Arbeitskopie, Notizen und Karten sowie das gesamte Wissen, das die Crew festgehalten hat. Deine Projekte, Anmeldungen und Einstellungen bleiben.`;
       case "es":
-        return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas, y todo el conocimiento que registró la tripulación.`;
+        return `Elimina todas las tareas, con su copia de trabajo, sus notas y sus tarjetas, y todo el conocimiento que registró la tripulación. Tus proyectos, inicios de sesión y configuración se conservan.`;
       case "fr":
-        return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes, ainsi que toutes les connaissances enregistrées par l’équipage.`;
+        return `Efface toutes les tâches, avec leur copie de travail, leurs notes et leurs cartes, ainsi que toutes les connaissances enregistrées par l’équipage. Vos projets, connexions et réglages restent.`;
       case "ja":
-        return `すべてのタスクを、その作業コピー、メモ、カードとともに削除し、乗組員が記録したナレッジもすべて削除します。`;
+        return `すべてのタスクを、その作業コピー、メモ、カードとともに削除し、乗組員が記録したナレッジもすべて削除します。プロジェクト、サインイン、設定は残ります。`;
       case "ko":
-        return `모든 작업을 작업 사본, 메모, 카드와 함께 지우고, 선원들이 기록한 지식도 모두 지워요.`;
+        return `모든 작업을 작업 사본, 메모, 카드와 함께 지우고, 선원들이 기록한 지식도 모두 지워요.프로젝트, 로그인, 설정은 그대로 남아요.`;
       case "pt-BR":
-        return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma, e todo o conhecimento que a tripulação registrou.`;
+        return `Remove todas as tarefas, com a cópia de trabalho, as notas e os cartões de cada uma, e todo o conhecimento que a tripulação registrou. Seus projetos, logins e ajustes ficam.`;
       case "zh-Hans":
-        return `移除每个任务及其工作副本、笔记和卡片，以及船员们记录的所有知识。`;
+        return `移除每个任务及其工作副本、笔记和卡片，以及船员们记录的所有知识。你的项目、登录和设置会保留。`;
       case "zh-Hant":
-        return `移除每一項任務，連同它的工作副本、筆記和卡片，以及船員記錄的所有知識。`;
+        return `移除每一項任務，連同它的工作副本、筆記和卡片，以及船員記錄的所有知識。你的專案、登入和設定會保留。`;
       case "en-XA":
-        return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš, áñð áļļ ţĥé ķñöŵļéðĝé ţĥé çŕéŵ ŕéçöŕðéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ŕéɱöṽéš éṽéŕý ţášķ, ŵîţĥ îţš ŵöŕķîñĝ çöþý, îţš ñöţéš áñð îţš çáŕðš, áñð áļļ ţĥé ķñöŵļéðĝé ţĥé çŕéŵ ŕéçöŕðéð. Ýöûŕ þŕöĵéçţš, šîĝñ-îñš áñð šéţţîñĝš šţáý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded.‬`;
+        return `‮Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded. Your projects, sign-ins and settings stay.‬`;
     }
-    return `Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded.`;
+    return `Removes every task, with its working copy, its notes and its cards, and all the knowledge the crew recorded. Your projects, sign-ins and settings stay.`;
   }
   function settingsGeneralPurging() {
     switch (currentLanguage()) {
@@ -68920,6 +69082,316 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Purging...‬`;
     }
     return `Purging...`;
+  }
+  function settingsGeneralReset() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين Infinitary`;
+      case "de":
+        return `Infinitary zurücksetzen`;
+      case "es":
+        return `Restablecer Infinitary`;
+      case "fr":
+        return `Réinitialiser Infinitary`;
+      case "ja":
+        return `Infinitary をリセット`;
+      case "ko":
+        return `Infinitary 재설정`;
+      case "pt-BR":
+        return `Redefinir o Infinitary`;
+      case "zh-Hans":
+        return `重置 Infinitary`;
+      case "zh-Hant":
+        return `重設 Infinitary`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý ~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary‬`;
+    }
+    return `Reset Infinitary`;
+  }
+  function settingsGeneralResetButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إعادة تعيين`;
+      case "de":
+        return `Zurücksetzen`;
+      case "es":
+        return `Restablecer`;
+      case "fr":
+        return `Réinitialiser`;
+      case "ja":
+        return `リセット`;
+      case "ko":
+        return `재설정`;
+      case "pt-BR":
+        return `Redefinir`;
+      case "zh-Hans":
+        return `重置`;
+      case "zh-Hant":
+        return `重設`;
+      case "en-XA":
+        return `[Ŕéšéţ ~~]`;
+      case "ar-XB":
+        return `‮Reset‬`;
+    }
+    return `Reset`;
+  }
+  function settingsGeneralResetDeletes() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحذف Infinitary كل ما يحتفظ به هنا، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كأنه ثُبّت للتو.`;
+      case "de":
+        return `Infinitary löscht alles, was es hier aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und öffnet sich dann wie frisch installiert.`;
+      case "es":
+        return `Infinitary elimina todo lo que guarda aquí, incluidas las tareas, los inicios de sesión, los Secretos, la configuración y los dispositivos vinculados, y después se abre como recién instalado.`;
+      case "fr":
+        return `Infinitary supprime tout ce qu’il garde ici, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés, puis s’ouvre comme s’il venait d’être installé.`;
+      case "ja":
+        return `Infinitary は、タスク、サインイン、シークレット、設定、ペアリングしたデバイスなど、ここに保存しているものをすべて削除し、インストール直後と同じ状態で開きます。`;
+      case "ko":
+        return `Infinitary가 작업, 로그인, 비밀 정보, 설정, 연결된 기기를 포함해 여기에 보관한 모든 것을 지우고, 처음 설치한 것처럼 열려요.`;
+      case "pt-BR":
+        return `O Infinitary apaga tudo o que guarda aqui, incluindo tarefas, logins, Segredos, ajustes e dispositivos pareados, e depois abre como se tivesse acabado de ser instalado.`;
+      case "zh-Hans":
+        return `Infinitary 会删除它在这里保存的一切，包括任务、登录、机密、设置和已配对的设备，然后像刚安装时一样打开。`;
+      case "zh-Hant":
+        return `Infinitary 會刪除它在這裡保存的一切，包括任務、登入、機密、設定和已配對的裝置，然後像剛安裝時一樣開啟。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ðéļéţéš éṽéŕýţĥîñĝ îţ ķééþš ĥéŕé, îñçļûðîñĝ ţášķš, šîĝñ-îñš, Šéçŕéţš, šéţţîñĝš áñð þáîŕéð ðéṽîçéš, ţĥéñ öþéñš áš îƒ ĵûšţ îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary deletes everything it keeps here, including tasks, sign-ins, Secrets, settings and paired devices, then opens as if just installed.‬`;
+    }
+    return `Infinitary deletes everything it keeps here, including tasks, sign-ins, Secrets, settings and paired devices, then opens as if just installed.`;
+  }
+  function settingsGeneralResetDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُعيد Infinitary على هذا الحاسوب إلى ما كان عليه بعد تثبيته مباشرة.`;
+      case "de":
+        return `Setzt Infinitary auf diesem Computer in den Zustand direkt nach der Installation zurück.`;
+      case "es":
+        return `Devuelve Infinitary en esta computadora al estado en que quedó al instalarlo.`;
+      case "fr":
+        return `Remet Infinitary sur cet ordinateur dans l’état où il était juste après l’installation.`;
+      case "ja":
+        return `このコンピューターの Infinitary を、インストールした直後の状態に戻します。`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary를 처음 설치했을 때의 상태로 되돌려요.`;
+      case "pt-BR":
+        return `Deixa o Infinitary neste computador como estava logo depois de instalado.`;
+      case "zh-Hans":
+        return `让这台电脑上的 Infinitary 回到刚安装时的样子。`;
+      case "zh-Hant":
+        return `讓這台電腦上的 Infinitary 回到剛安裝時的樣子。`;
+      case "en-XA":
+        return `[Ţáķéš Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ ƀáçķ ţö ĥöŵ îţ ŵáš ĵûšţ îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Takes Infinitary on this computer back to how it was just installed.‬`;
+    }
+    return `Takes Infinitary on this computer back to how it was just installed.`;
+  }
+  function settingsGeneralResetKeep() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الاحتفاظ بكل شيء`;
+      case "de":
+        return `Alles behalten`;
+      case "es":
+        return `Conservar todo`;
+      case "fr":
+        return `Tout garder`;
+      case "ja":
+        return `すべて残す`;
+      case "ko":
+        return `모두 유지`;
+      case "pt-BR":
+        return `Manter tudo`;
+      case "zh-Hans":
+        return `全部保留`;
+      case "zh-Hant":
+        return `全部保留`;
+      case "en-XA":
+        return `[Ķééþ éṽéŕýţĥîñĝ ~~~~~]`;
+      case "ar-XB":
+        return `‮Keep everything‬`;
+    }
+    return `Keep everything`;
+  }
+  function settingsGeneralResetKeeps() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
+      case "de":
+        return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit. Um nur Aufgaben zu löschen, nutze Aufgabendaten endgültig löschen.`;
+      case "es":
+        return `Los proyectos en tus propias carpetas conservan todos sus archivos y commits. Para borrar solo las tareas, usa Eliminar los datos de las tareas.`;
+      case "fr":
+        return `Les projets dans vos propres dossiers gardent tous leurs fichiers et commits. Pour effacer seulement les tâches, utilisez Effacer les données des tâches.`;
+      case "ja":
+        return `ご自身のフォルダにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。タスクだけを消すには「タスクのデータを消去」を使ってください。`;
+      case "ko":
+        return `내 폴더에 있는 프로젝트는 모든 파일과 커밋이 그대로 남아요. 작업만 지우려면 작업 데이터 완전 삭제를 사용하세요.`;
+      case "pt-BR":
+        return `Os projetos nas suas próprias pastas mantêm todos os arquivos e commits. Para apagar só as tarefas, use Excluir dados das tarefas.`;
+      case "zh-Hans":
+        return `你自己文件夹中的项目会保留所有文件和提交。如果只想清除任务，请使用“清除任务数据”。`;
+      case "zh-Hant":
+        return `你自己資料夾中的專案會保留所有檔案和提交。如果只想清除任務，請使用「清除任務資料」。`;
+      case "en-XA":
+        return `[Þŕöĵéçţš îñ ýöûŕ öŵñ ƒöļðéŕš ķééþ éṽéŕý ƒîļé áñð çöɱɱîţ. Ţö çļéáŕ ţášķš öñļý, ûšé Þûŕĝé ţášķ ðáţá. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Projects in your own folders keep every file and commit. To clear tasks only, use Purge task data.‬`;
+    }
+    return `Projects in your own folders keep every file and commit. To clear tasks only, use Purge task data.`;
+  }
+  function settingsGeneralResetOpenTasks(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `تتوقف ${count} مهمة مفتوحة.`;
+          case "one":
+            return `تتوقف ${count} مهمة مفتوحة.`;
+          case "two":
+            return `تتوقف ${count} مهمتان مفتوحتان.`;
+          case "few":
+            return `تتوقف ${count} مهام مفتوحة.`;
+          case "many":
+            return `تتوقف ${count} مهمةً مفتوحة.`;
+          default:
+            return `تتوقف ${count} مهمة مفتوحة.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} offene Aufgabe wird beendet.`;
+          default:
+            return `${count} offene Aufgaben werden beendet.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Se detiene ${count} tarea abierta.`;
+          case "many":
+            return `Se detienen ${count} de tareas abiertas.`;
+          default:
+            return `Se detienen ${count} tareas abiertas.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche ouverte s’arrête.`;
+          case "many":
+            return `${count} tâches ouvertes s’arrêtent.`;
+          default:
+            return `${count} tâches ouvertes s’arrêtent.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `進行中の${count}件のタスクが停止します。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `진행 중인 작업 ${count}개가 멈춰요.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa aberta para.`;
+          case "many":
+            return `${count} tarefas abertas param.`;
+          default:
+            return `${count} tarefas abertas param.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个进行中的任务会停止。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 項進行中的任務會停止。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} öþéñ ţášķ šţöþš. ~~~~~~]`;
+          default:
+            return `[${count} öþéñ ţášķš šţöþ. ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ open task stops.‬`;
+          default:
+            return `${count}‮ open tasks stop.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} open task stops.`;
+      default:
+        return `${count} open tasks stop.`;
+    }
+  }
+  function settingsGeneralResetQuestion() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هل تريد إعادة تعيين Infinitary على هذا الحاسوب؟`;
+      case "de":
+        return `Infinitary auf diesem Computer zurücksetzen?`;
+      case "es":
+        return `¿Restablecer Infinitary en esta computadora?`;
+      case "fr":
+        return `Réinitialiser Infinitary sur cet ordinateur ?`;
+      case "ja":
+        return `このコンピューターの Infinitary をリセットしますか？`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary를 재설정할까요?`;
+      case "pt-BR":
+        return `Redefinir o Infinitary neste computador?`;
+      case "zh-Hans":
+        return `要重置这台电脑上的 Infinitary 吗？`;
+      case "zh-Hant":
+        return `要重設這台電腦上的 Infinitary 嗎？`;
+      case "en-XA":
+        return `[Ŕéšéţ Îñƒîñîţáŕý öñ ţĥîš çöɱþûţéŕ? ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reset Infinitary on this computer?‬`;
+    }
+    return `Reset Infinitary on this computer?`;
+  }
+  function settingsGeneralResetting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ إعادة التعيين…`;
+      case "de":
+        return `Wird zurückgesetzt …`;
+      case "es":
+        return `Restableciendo…`;
+      case "fr":
+        return `Réinitialisation…`;
+      case "ja":
+        return `リセット中…`;
+      case "ko":
+        return `재설정하는 중…`;
+      case "pt-BR":
+        return `Redefinindo…`;
+      case "zh-Hans":
+        return `正在重置…`;
+      case "zh-Hant":
+        return `正在重設…`;
+      case "en-XA":
+        return `[Ŕéšéţţîñĝ… ~~~~]`;
+      case "ar-XB":
+        return `‮Resetting…‬`;
+    }
+    return `Resetting…`;
   }
   function settingsGeneralShowInDock() {
     switch (currentLanguage()) {
@@ -103709,6 +104181,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThisCardIsWorking,
     refuseThisCardTakesNoReply,
     refuseThisIsTheOnlyCard,
+    resetConfirmReason,
+    resetConfirmReasonMac,
+    resetHeldDetail,
+    resetHeldMessage,
+    resetHeldQuit,
+    resetHeldTryAgain,
     resetKeysAsk,
     resetKeysConfirm,
     resetKeysDetail,
@@ -104430,6 +104908,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsGeneralPurgeDescription,
     settingsGeneralPurgeDescriptionKnowledge,
     settingsGeneralPurging,
+    settingsGeneralReset,
+    settingsGeneralResetButton,
+    settingsGeneralResetDeletes,
+    settingsGeneralResetDescription,
+    settingsGeneralResetKeep,
+    settingsGeneralResetKeeps,
+    settingsGeneralResetOpenTasks,
+    settingsGeneralResetQuestion,
+    settingsGeneralResetting,
     settingsGeneralShowInDock,
     settingsGeneralShowInDockDescription,
     settingsGeneralStartAtLogin,
@@ -107018,6 +107505,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThisCardIsWorking": [],
     "refuseThisCardTakesNoReply": [],
     "refuseThisIsTheOnlyCard": [],
+    "resetConfirmReason": [],
+    "resetConfirmReasonMac": [],
+    "resetHeldDetail": [],
+    "resetHeldMessage": [],
+    "resetHeldQuit": [],
+    "resetHeldTryAgain": [],
     "resetKeysAsk": ["preset"],
     "resetKeysConfirm": [],
     "resetKeysDetail": ["preset"],
@@ -107739,6 +108232,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsGeneralPurgeDescription": [],
     "settingsGeneralPurgeDescriptionKnowledge": [],
     "settingsGeneralPurging": [],
+    "settingsGeneralReset": [],
+    "settingsGeneralResetButton": [],
+    "settingsGeneralResetDeletes": [],
+    "settingsGeneralResetDescription": [],
+    "settingsGeneralResetKeep": [],
+    "settingsGeneralResetKeeps": [],
+    "settingsGeneralResetOpenTasks": ["count"],
+    "settingsGeneralResetQuestion": [],
+    "settingsGeneralResetting": [],
     "settingsGeneralShowInDock": [],
     "settingsGeneralShowInDockDescription": [],
     "settingsGeneralStartAtLogin": [],

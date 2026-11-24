@@ -20,6 +20,7 @@ import { isView } from "../devices/viewWords";
 import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
 import { HomeUpdateRow } from "./HomeUpdateRow";
 import { LocalSeatSection } from "./LocalSeatSection";
+import { ResetRow } from "./ResetRow";
 import { SharingSection } from "./SharingSection";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
 import { UpdateChannelRow } from "./UpdateChannelRow";
@@ -665,6 +666,8 @@ export function GeneralTab() {
             </Button>
           }
         />
+        {/* A view of another computer's first mate resets nothing here (docs/reset.md). */}
+        {!remote && <ResetRow />}
       </div>
       <SharingSection />
       {/* In Secrets wherever this window offers it (WebsiteSignInsSection.tsx). */}

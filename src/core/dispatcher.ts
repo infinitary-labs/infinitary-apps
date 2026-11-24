@@ -45,6 +45,7 @@ import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import { type CoreHandlers, createCatalogDispatch } from "./dispatcher/catalogDispatch";
 import { renameProject } from "./dispatcher/projectRename";
 import { moveRepositories } from "./dispatcher/repositoryMove";
+import { resetHandlers } from "./dispatcher/resetHandlers";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
 import { homeMoveHandlers } from "./homeMove/handlers";
@@ -1287,6 +1288,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     ...accountHandlers(services, emit),
+    ...resetHandlers(services),
 
     // The sign-ins where projects live (git integration PR 1.2): the
     // service pushes the whole view as `inf:forges` after every change.

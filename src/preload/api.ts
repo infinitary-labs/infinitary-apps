@@ -146,6 +146,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       restartCommand: () => invoke("inf:app:restart-command"),
       stopCommand: () => invoke("inf:app:stop-command"),
       quit: () => invoke("inf:app:quit"),
+      resetScope: () => invoke("inf:app:reset-scope"),
+      reset: () => invoke("inf:app:reset"),
       controlWindow: (control) => invoke("inf:window:control", control),
       windowState: () => invoke("inf:window:state"),
       onWindowState: (listener) => subscribe("inf:window:state", listener),

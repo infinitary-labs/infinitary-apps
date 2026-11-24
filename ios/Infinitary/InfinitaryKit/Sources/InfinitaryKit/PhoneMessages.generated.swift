@@ -2513,6 +2513,12 @@ public enum PhoneMessages {
     public static func `refuseThisCardIsWorking`() -> String { PhoneWords.format("refuseThisCardIsWorking", []) }
     public static func `refuseThisCardTakesNoReply`() -> String { PhoneWords.format("refuseThisCardTakesNoReply", []) }
     public static func `refuseThisIsTheOnlyCard`() -> String { PhoneWords.format("refuseThisIsTheOnlyCard", []) }
+    public static func `resetConfirmReason`() -> String { PhoneWords.format("resetConfirmReason", []) }
+    public static func `resetConfirmReasonMac`() -> String { PhoneWords.format("resetConfirmReasonMac", []) }
+    public static func `resetHeldDetail`() -> String { PhoneWords.format("resetHeldDetail", []) }
+    public static func `resetHeldMessage`() -> String { PhoneWords.format("resetHeldMessage", []) }
+    public static func `resetHeldQuit`() -> String { PhoneWords.format("resetHeldQuit", []) }
+    public static func `resetHeldTryAgain`() -> String { PhoneWords.format("resetHeldTryAgain", []) }
     public static func `resetKeysAsk`(`preset`: String) -> String { PhoneWords.format("resetKeysAsk", [`preset`]) }
     public static func `resetKeysConfirm`() -> String { PhoneWords.format("resetKeysConfirm", []) }
     public static func `resetKeysDetail`(`preset`: String) -> String { PhoneWords.format("resetKeysDetail", [`preset`]) }
@@ -3234,6 +3240,15 @@ public enum PhoneMessages {
     public static func `settingsGeneralPurgeDescription`() -> String { PhoneWords.format("settingsGeneralPurgeDescription", []) }
     public static func `settingsGeneralPurgeDescriptionKnowledge`() -> String { PhoneWords.format("settingsGeneralPurgeDescriptionKnowledge", []) }
     public static func `settingsGeneralPurging`() -> String { PhoneWords.format("settingsGeneralPurging", []) }
+    public static func `settingsGeneralReset`() -> String { PhoneWords.format("settingsGeneralReset", []) }
+    public static func `settingsGeneralResetButton`() -> String { PhoneWords.format("settingsGeneralResetButton", []) }
+    public static func `settingsGeneralResetDeletes`() -> String { PhoneWords.format("settingsGeneralResetDeletes", []) }
+    public static func `settingsGeneralResetDescription`() -> String { PhoneWords.format("settingsGeneralResetDescription", []) }
+    public static func `settingsGeneralResetKeep`() -> String { PhoneWords.format("settingsGeneralResetKeep", []) }
+    public static func `settingsGeneralResetKeeps`() -> String { PhoneWords.format("settingsGeneralResetKeeps", []) }
+    public static func `settingsGeneralResetOpenTasks`(`count`: Int) -> String { PhoneWords.format("settingsGeneralResetOpenTasks", [`count`]) }
+    public static func `settingsGeneralResetQuestion`() -> String { PhoneWords.format("settingsGeneralResetQuestion", []) }
+    public static func `settingsGeneralResetting`() -> String { PhoneWords.format("settingsGeneralResetting", []) }
     public static func `settingsGeneralShowInDock`() -> String { PhoneWords.format("settingsGeneralShowInDock", []) }
     public static func `settingsGeneralShowInDockDescription`() -> String { PhoneWords.format("settingsGeneralShowInDockDescription", []) }
     public static func `settingsGeneralStartAtLogin`() -> String { PhoneWords.format("settingsGeneralStartAtLogin", []) }
@@ -6906,6 +6921,12 @@ extension PhoneWords {
         "refuseThisCardIsWorking": [],
         "refuseThisCardTakesNoReply": [],
         "refuseThisIsTheOnlyCard": [],
+        "resetConfirmReason": [],
+        "resetConfirmReasonMac": [],
+        "resetHeldDetail": [],
+        "resetHeldMessage": [],
+        "resetHeldQuit": [],
+        "resetHeldTryAgain": [],
         "resetKeysAsk": ["preset"],
         "resetKeysConfirm": [],
         "resetKeysDetail": ["preset"],
@@ -7627,6 +7648,15 @@ extension PhoneWords {
         "settingsGeneralPurgeDescription": [],
         "settingsGeneralPurgeDescriptionKnowledge": [],
         "settingsGeneralPurging": [],
+        "settingsGeneralReset": [],
+        "settingsGeneralResetButton": [],
+        "settingsGeneralResetDeletes": [],
+        "settingsGeneralResetDescription": [],
+        "settingsGeneralResetKeep": [],
+        "settingsGeneralResetKeeps": [],
+        "settingsGeneralResetOpenTasks": ["count"],
+        "settingsGeneralResetQuestion": [],
+        "settingsGeneralResetting": [],
         "settingsGeneralShowInDock": [],
         "settingsGeneralShowInDockDescription": [],
         "settingsGeneralStartAtLogin": [],
@@ -8920,6 +8950,7 @@ extension PhoneWords {
         "settingsDevicesTasks": "count",
         "settingsDevicesTasksWait": "count",
         "settingsDevicesWayCount": "count",
+        "settingsGeneralResetOpenTasks": "count",
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
         "settingsPhonePauseAllAsk": "count",

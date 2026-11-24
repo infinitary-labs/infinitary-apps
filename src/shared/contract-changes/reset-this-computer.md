@@ -1,0 +1,3 @@
+Adds `inf:app:reset-scope`, which answers how many open tasks a reset of this computer's Infinitary would stop.
+Adds `inf:app:reset-prepare`, which only the window's own program asks once the person confirmed Reset Infinitary: the first mate removes its paired devices, discards its open tasks so their stops run, removes kept jobs, undoes what it set in projects outside its folder, signs out its accounts and removes its integrations.
+Both reach only this computer's own window, never a view or a command; an older first mate without them answers neither, and the window's Reset Infinitary row then shows the failure.

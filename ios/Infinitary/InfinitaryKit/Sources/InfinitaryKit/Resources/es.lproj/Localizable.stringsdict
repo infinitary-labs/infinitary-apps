@@ -2361,6 +2361,24 @@
       <string>%1$ld computadoras</string>
     </dict>
   </dict>
+  <key>settingsGeneralResetOpenTasks</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Se detiene %1$ld tarea abierta.</string>
+      <key>many</key>
+      <string>Se detienen %1$ld de tareas abiertas.</string>
+      <key>other</key>
+      <string>Se detienen %1$ld tareas abiertas.</string>
+    </dict>
+  </dict>
   <key>settingsGeneralTasksPurged</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

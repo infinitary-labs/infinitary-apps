@@ -3,7 +3,6 @@ import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
-import { isatty } from "node:tty";
 import { openCommandDoor } from "@core/axi/commandDoor";
 import { startConnection } from "@core/connection/connection";
 import type { LocalDoorRun } from "@core/connection/localDoor";
@@ -91,6 +90,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
+import { resetInApp } from "./reset/inApp";
 import {
   answerLaunch,
   bringWindowForward,
@@ -127,7 +127,7 @@ import {
   runEnvironment,
   startedByAgent,
 } from "./runEnvironment";
-import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
+import { handOverInRun, type RunHandOver, STOP_SIGNALS } from "./runHandOver";
 import { bundleOf, endRefusedLaunch, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
 import { readRunStatus } from "./runStatus";
@@ -166,7 +166,6 @@ import {
 } from "./windows";
 import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
 import { windowsAppUserModelId } from "./windowsStartup";
-import { windowsStdin } from "./windowsStdin";
 import { type WorkContext, workContext } from "./workContext";
 
 /**
@@ -208,45 +207,6 @@ function carryStartAtLogin(move: FolderMove): void {
   if (isDev) return;
   startAtLoginFor(basename(move.to)).set(true);
   forgetAutostart(basename(move.from));
-}
-
-/**
- * The one-time move for a run a command started (docs/run.md, "Before it
- * starts"): in the terminal, before Electron is ready, so the run goes on
- * from this app's own folder once the work is in. A stop the run is asked
- * for meanwhile ends the hand-over as it ends the move, with nothing changed
- * once the copy is not yet checked; the older copy is ended only on a yes
- * typed at a terminal.
- */
-async function handOverInRun(move: FolderMove, work: WorkContext): Promise<RunHandOver> {
-  const stop = new AbortController();
-  const onStop = () => stop.abort();
-  for (const signal of STOP_SIGNALS) process.on(signal, onStop);
-  // Only a person at a terminal can answer; a run a service manager started has none.
-  const ask = (lines: readonly string[], prompt: string) => {
-    const input = hostPlatform() === "win32" ? windowsStdin() : process.stdin;
-    const question = terminalQuestion({
-      input,
-      output: process.stdout,
-      interrupted: onStop,
-      signal: stop.signal,
-    });
-    return question(lines, prompt).finally(() => input.pause());
-  };
-  try {
-    return await runHandOverInTerminal(move, {
-      names: handOverNames(move),
-      ...handOverReach(move, work),
-      say: (lines) => process.stdout.write(`${lines.join("\n")}\n`),
-      ...(isatty(0) ? { ask } : {}),
-      signal: stop.signal,
-      // At once, as the work comes in: a run that ends before Electron is
-      // ready never reaches the move again, so a later carry would be lost.
-      startAtLogin: () => carryStartAtLogin(move),
-    });
-  } finally {
-    for (const signal of STOP_SIGNALS) process.off(signal, onStop);
-  }
 }
 
 // This desktop's conventions (design skill readme, "Linux desktop
@@ -377,8 +337,6 @@ function createMainWindow(
 /** A run's words after `run`, and the mark its agent gave it (`takeRunAgentMark`), already taken. */
 export type RunStart = { args: readonly string[]; agentMark?: string };
 
-/** The signals that stop a run: Ctrl-C, its starter stopping it, its terminal closing. */
-const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 /** What a run asked to stop as its core accepted its saved data throws there, so the core starts nothing; never shown. */
 // i18n-exempt: the reason a start ends on a stop asked before it, read by no person
 const RUN_START_STOPPED = "stop asked before start";
@@ -483,9 +441,10 @@ export async function startApp(
   // taking over from an older copy with no window that still holds the
   // older one, and then goes on from its own (./runHandOver.ts).
   if (move && windowless) {
+    const moving = move;
     let handed: RunHandOver;
     try {
-      handed = await handOverInRun(move, workContext());
+      handed = await handOverInRun(moving, workContext(), () => carryStartAtLogin(moving));
     } catch (error) {
       endRun(1, RUN_WORDS.couldNotStart(error instanceof Error ? error.message : String(error)));
       return;
@@ -1742,6 +1701,17 @@ export async function startApp(
         host,
         frameMounts,
         voice: { place: voicePlace, helper: voiceHelper },
+        reset: resetInApp({
+          shell,
+          authentication: secrets?.authentication,
+          dataDir,
+          choice: userDataChoice,
+          isolated: Boolean(isolatedUserDataDir),
+          starter,
+          work: { ...work.place, spelling: work.place.folderSpelling, serviceManager },
+          relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
+          quit: () => app.quit(),
+        }),
       });
       handleVoiceModelProtocol(voiceModel);
       handleFrameProtocol({

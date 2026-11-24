@@ -247,6 +247,12 @@
       "group": "Saved state"
     },
     {
+      "name": "reset",
+      "path": "src/core/reset",
+      "about": "Taking this computer's Infinitary back to how it was just installed",
+      "group": "Saved state"
+    },
+    {
       "name": "preferences",
       "path": "src/core/preferences",
       "about": "Appearance and panel layout",
@@ -1784,6 +1790,26 @@
       "from": "homeMove",
       "to": "standby",
       "why": "stops the copies before a move's last copy"
+    },
+    {
+      "from": "reset",
+      "to": "storage",
+      "why": "takes the reset's lock by the move lock's rules"
+    },
+    {
+      "from": "reset",
+      "to": "workspace",
+      "why": "undoes the settings it wrote into a project's git"
+    },
+    {
+      "from": "reset",
+      "to": "shared",
+      "why": "reads the reset's answer shapes"
+    },
+    {
+      "from": "dispatcher",
+      "to": "reset",
+      "why": "answers how many tasks a reset stops and undoes the first mate's side"
     }
   ],
   "machines": [
@@ -2443,6 +2469,26 @@
           "to": "stepped down",
           "why": "the captain keeps the other",
           "by": "dispatcher"
+        }
+      ]
+    },
+    {
+      "name": "a reset",
+      "in": "reset",
+      "about": "The mark beside the data folder that asks the next start to wipe it, written once the person confirms Reset Infinitary",
+      "states": ["asked", "moved", "outside"],
+      "moves": [
+        {
+          "from": "asked",
+          "to": "moved",
+          "why": "the next start renames the folder aside",
+          "by": "reset"
+        },
+        {
+          "from": "moved",
+          "to": "outside",
+          "why": "the renamed folder and its older copies are deleted",
+          "by": "reset"
         }
       ]
     }

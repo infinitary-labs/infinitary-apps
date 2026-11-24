@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import { isatty } from "node:tty";
 import type { FolderMove } from "@core/folderMove/due";
 import {
   type MoveDeps,
@@ -9,11 +10,15 @@ import {
 } from "@core/folderMove/move";
 import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "@core/folderMove/takeOver";
 import type { Service } from "@core/helper/background";
+import { hostPlatform } from "@core/platform";
 import { isProfileRetired } from "@core/storage/retiredProfile";
 import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { fillOf, type HandOverNames, sizeOf } from "./handOverPage";
+import { handOverNames, handOverReach } from "./handOverReach";
 import { RUN_WORDS, type RunEnd } from "./runCommand";
+import { windowsStdin } from "./windowsStdin";
+import type { WorkContext } from "./workContext";
 
 /**
  * The one-time move's hand-over for a run a command started (docs/run.md,
@@ -219,4 +224,50 @@ export function terminalQuestion(options: {
       reader.once("close", close);
       reader.question(prompt, done);
     });
+}
+
+/** The signals that stop a run: Ctrl-C, its starter stopping it, its terminal closing. */
+export const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+
+/**
+ * The one-time move for a run a command started (docs/run.md, "Before it
+ * starts"): in the terminal, before Electron is ready, so the run goes on
+ * from this app's own folder once the work is in. A stop the run is asked
+ * for meanwhile ends the hand-over as it ends the move, with nothing changed
+ * once the copy is not yet checked; the older copy is ended only on a yes
+ * typed at a terminal.
+ */
+export async function handOverInRun(
+  move: FolderMove,
+  work: WorkContext,
+  carryStartAtLogin: () => void,
+): Promise<RunHandOver> {
+  const stop = new AbortController();
+  const onStop = () => stop.abort();
+  for (const signal of STOP_SIGNALS) process.on(signal, onStop);
+  // Only a person at a terminal can answer; a run a service manager started has none.
+  const ask = (lines: readonly string[], prompt: string) => {
+    const input = hostPlatform() === "win32" ? windowsStdin() : process.stdin;
+    const question = terminalQuestion({
+      input,
+      output: process.stdout,
+      interrupted: onStop,
+      signal: stop.signal,
+    });
+    return question(lines, prompt).finally(() => input.pause());
+  };
+  try {
+    return await runHandOverInTerminal(move, {
+      names: handOverNames(move),
+      ...handOverReach(move, work),
+      say: (lines) => process.stdout.write(`${lines.join("\n")}\n`),
+      ...(isatty(0) ? { ask } : {}),
+      signal: stop.signal,
+      // At once, as the work comes in: a run that ends before Electron is
+      // ready never reaches the move again, so a later carry would be lost.
+      startAtLogin: carryStartAtLogin,
+    });
+  } finally {
+    for (const signal of STOP_SIGNALS) process.off(signal, onStop);
+  }
 }

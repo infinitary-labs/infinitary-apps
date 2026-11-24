@@ -69,6 +69,7 @@ Each app flavor uses its own custody name, so the local dev bundle and an isolat
 `pnpm dev` on the person's own data folder is the release flavor for its folders and reads the release root, as the installed app does (`docs/saved-data-compatibility.md`, "A run from source").
 On a Mac every Electron signed with the local development identity shares one designated requirement, so an Always Allow the person gives `pnpm dev` on the release root lets every such build on that Mac read it.
 Every adapter reports what the platform answered (`value`, `absent`, `locked` or `unavailable`) and never falls back to a file, an environment variable or another store.
+Each adapter can also remove a slot's item, which only Reset Infinitary asks (`docs/reset.md`), answering `removed`, `absent`, `locked` or `unavailable`.
 
 On macOS, [`../src/main/host/darwinSecretCustody.ts`](../src/main/host/darwinSecretCustody.ts) keeps each slot as a generic password item in one keychain file it opens by its path, through Security.framework in the app's own process.
 The app aims it at the account's own login keychain, and a check at a scratch keychain file it made.
@@ -126,7 +127,7 @@ On Windows it composes the Credential Manager custody and Windows Hello with the
 Where the platform's native store cannot load (no Security framework, no libsecret, or no Credential Manager), the app supplies no capability rather than a tab that cannot open.
 The custody opens the login keychain by its path under the home folder the account's user record names, never the default keychain, because a run outside the logged-in session, such as a system job, can get the Mac's System Keychain as its default.
 That path ignores `HOME`, so a check that injects this composition reaches the account's real login keychain even under a throwaway home folder; only the data-folder rule above keeps end-to-end launches off it, and a check names a scratch keychain file instead.
-A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record, and offers a restore from recovery files or Start over ("Starting over").
+A data folder removed while its flavor's custody items remain opens as `tampered` (Reset Infinitary removes those items with the folder, `docs/reset.md`), the same reading as a rolled-back rules record, and offers a restore from recovery files or Start over ("Starting over").
 
 ## The vault
 
@@ -670,7 +671,7 @@ The Settings controller replaces values a computer already keeps only when the c
 
 ### Starting over
 
-A data folder removed while its flavor's custody items remain opens as `tampered`, the same reading as a rolled-back rules record: the owner cannot tell a removed folder from an agent hiding one, so it never treats leftover items as a fresh start.
+A data folder removed while its flavor's custody items remain opens as `tampered` (Reset Infinitary removes those items with the folder, `docs/reset.md`), the same reading as a rolled-back rules record: the owner cannot tell a removed folder from an agent hiding one, so it never treats leftover items as a fresh start.
 A root missing beside sealed records opens as `lost`, and a damaged rules record as `tampered`, with the same way out.
 `ProtectedSecrets.startOver` is that way out when no recovery backup exists: Settings → Secrets offers Start over only where storage reads `lost` or `tampered`, and an available, uninitialized, locked or unavailable store is left as it is without asking anything.
 An owner that opened without its records keeps that opening's reading, so the Settings controller opens the store again before asking, as Unlock does: a data folder or root item that came back while the app ran is used, never replaced.

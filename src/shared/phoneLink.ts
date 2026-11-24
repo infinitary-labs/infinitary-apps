@@ -17,6 +17,13 @@ import { PAIRING_LINK_PREFIX } from "./devices";
 /** The first word of every answer line the phone reads. */
 export const PHONE_LINK_HEADER = "infinitary-phone-link";
 
+/**
+ * The comment that ends a phone's key line in this computer's
+ * `authorized_keys`, as the phone writes it (`PhoneSSHKey.line` in the iOS
+ * app); a reset finds the lines phones placed by it.
+ */
+export const PHONE_KEY_COMMENT = "infinitary-phone";
+
 /** The door's own version, the second word: a phone reads only this one. */
 export const PHONE_LINK_VERSION = "1";
 

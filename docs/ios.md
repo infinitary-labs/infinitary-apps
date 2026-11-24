@@ -960,7 +960,7 @@ The captain's one-time Apple setup is:
    A missing eligible tester is managed through App Store Connect → Users and Access, not by this workflow.
 4. On `infinitary-apps`, put a team key authorized for the app and Xcode automatic signing in the `ios-release` environment's three `COMPANY_` secrets, not in repository-wide secrets.
    Configure the environment to allow deployments only from the `main` branch, with no tag rule.
-   Apple readiness, upload and availability read their credentials from that environment.
+   Apple readiness, upload, availability and external testing read their credentials from that environment.
    The private-key secret contains base64 of the downloaded `.p8` file, never a value pasted into a task or a command argument.
 5. For card pushes, the app identifier needs the Push Notifications capability, and the notification part its own identifier, `com.getinfinitary.app.notifications`.
    Xcode's automatic signing registers both with the team key during the archive when the key may; otherwise register the second identifier and turn on Push Notifications for the first in the same Identifiers page.
@@ -1010,7 +1010,7 @@ Apple's internal-testing state means testers can install the build, not that a p
 ### External testing
 
 An external TestFlight group receives no build by itself, and Apple's Beta App Review must pass a build before outside testers can install it, so the workflow's last job, `external`, adds and submits each build (INF-1784).
-It starts once the availability job has passed, in a release and in a `check_build` request, with the same `ios-release` environment key, and nothing waits on it: the alpha's phone order reads the availability job alone (`docs/alpha.md`, "The phone goes first"), so a failure here never takes back the build's place on TestFlight.
+It starts once the availability job has passed, in a release and in a `check_build` request, with the same `ios-release` environment key, and nothing waits on it: the alpha's phone order reads the availability job alone, also while this job still runs (`docs/alpha.md`, "The phone goes first"), so a failure here never takes back the build's place on TestFlight.
 `node scripts/phone-release.ts external` reads the app's beta groups and, for each group Apple marks as not internal, the newest build in it.
 A group that already holds this build is left as it is; one that holds a newer build, by Apple's upload date, keeps that build, so a `check_build` request for an old build never hands testers an older one.
 Every other external group receives the build with `POST /v1/betaGroups/{id}/relationships/builds`.
@@ -1021,6 +1021,7 @@ These two POSTs are the release's only App Store Connect writes, and the writer 
 A refusal names Apple's error codes, such as `ENTITY_UNPROCESSABLE.BETA_CONTRACT_MISSING`, without Apple's prose, says what Apple already took, and is never retried; a lost connection leaves the outcome unknown, and a `check_build` request reads what Apple holds and adds only what is missing.
 The key needs a role that may add builds to external groups and submit them for review.
 The captain's one-time setup for outside testers is in App Store Connect: the app's Test Information (beta description, feedback email, contact and review notes, including the transport-security reason in "Joining and trust"), an external group under External Testing, and its testers or public link.
+Groups, testers and Test Information belong to one App Store Connect record, so the personal team's old record keeps its own: the Infinitary Labs record needs that setup of its own, and its testers are invited to it again.
 
 ## Disposable verification
 

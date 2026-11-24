@@ -192,7 +192,7 @@ Place credentials in the environment of their consumers, not in repository- or o
 | --- | --- |
 | `desktop-release` | Developer ID certificate and password, App Store Connect values for notarization and the phone gate, download-storage credentials and Homebrew tokens |
 | `mac-installer-signing` | Developer ID certificate and password and the App Store Connect values used by signed installer verification |
-| `ios-release` | App Store Connect values used for TestFlight readiness, upload and availability |
+| `ios-release` | App Store Connect values used for TestFlight readiness, upload, availability and external testing |
 | `docs-site` | Docs site publishing credentials |
 | `release-announcement` | The Discord webhook that announces each stable (`docs/alpha.md`, "Announcing a stable") |
 

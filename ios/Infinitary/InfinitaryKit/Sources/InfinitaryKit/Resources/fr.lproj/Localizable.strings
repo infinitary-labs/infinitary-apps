@@ -2416,6 +2416,7 @@
 "resetKeysAsk" = "Rétablir tous les raccourcis du préréglage %1$@ ?";
 "resetKeysConfirm" = "Réinitialiser tous les raccourcis";
 "resetKeysDetail" = "Chaque raccourci modifié dans les réglages du clavier reprend celui que lui donne le préréglage %1$@.";
+"resetRunEnded" = "Infinitary a été réinitialisé ici, donc cette exécution s’arrête définitivement, et Infinitary s’ouvrira sur l’écran d’accueil la prochaine fois.";
 "resetScreenKeeps" = "Les projets dans vos propres dossiers gardent tous leurs fichiers et commits.";
 "resetScreenKept" = "Rien n’a été réinitialisé.";
 "riskBehavior" = "Comportement";

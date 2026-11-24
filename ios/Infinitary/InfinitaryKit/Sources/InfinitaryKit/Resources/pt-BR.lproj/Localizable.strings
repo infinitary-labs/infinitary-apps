@@ -2416,6 +2416,7 @@
 "resetKeysAsk" = "Redefinir todas as teclas para as da predefinição %1$@?";
 "resetKeysConfirm" = "Redefinir todas as teclas";
 "resetKeysDetail" = "Cada atalho que você mudou nos ajustes do teclado volta para o que a predefinição %1$@ dá a ele.";
+"resetRunEnded" = "O Infinitary foi redefinido aqui, então esta execução termina de vez, e o Infinitary abre na tela de boas-vindas na próxima vez.";
 "resetScreenKeeps" = "Os projetos nas suas próprias pastas mantêm todos os arquivos e commits.";
 "resetScreenKept" = "Nada foi redefinido.";
 "riskBehavior" = "Comportamento";

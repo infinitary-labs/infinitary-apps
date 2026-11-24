@@ -18,6 +18,7 @@
   "resetKeysAsk": "Reset every key to the {preset} preset's?",
   "resetKeysConfirm": "Reset All Keys",
   "resetKeysDetail": "Every shortcut you changed in Keyboard settings goes back to the one the {preset} preset gives it.",
+  "resetRunEnded": "Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time.",
   "resetScreenKeeps": "Projects in your own folders keep every file and commit.",
   "resetScreenKept": "Nothing was reset."
 }

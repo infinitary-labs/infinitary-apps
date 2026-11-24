@@ -48373,6 +48373,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Every shortcut you changed in Keyboard settings goes back to the one the ${preset} preset gives it.`;
   }
+  function resetRunEnded() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تمت إعادة تعيين Infinitary هنا، لذا ينتهي هذا التشغيل نهائيًا، وسيفتح Infinitary على شاشة الترحيب في المرة القادمة.`;
+      case "de":
+        return `Infinitary wurde hier zurückgesetzt, daher endet dieser Lauf endgültig, und Infinitary öffnet beim nächsten Mal den Willkommensbildschirm.`;
+      case "es":
+        return `Infinitary se restableció aquí, así que esta ejecución termina definitivamente, e Infinitary se abrirá en la pantalla de bienvenida la próxima vez.`;
+      case "fr":
+        return `Infinitary a été réinitialisé ici, donc cette exécution s’arrête définitivement, et Infinitary s’ouvrira sur l’écran d’accueil la prochaine fois.`;
+      case "ja":
+        return `このコンピュータの Infinitary はリセットされたため、この実行は完全に終了します。次回、Infinitary はようこそ画面で開きます。`;
+      case "ko":
+        return `이 컴퓨터의 Infinitary가 재설정되어 이 실행은 완전히 끝나요. 다음에는 Infinitary가 시작 화면으로 열려요.`;
+      case "pt-BR":
+        return `O Infinitary foi redefinido aqui, então esta execução termina de vez, e o Infinitary abre na tela de boas-vindas na próxima vez.`;
+      case "zh-Hans":
+        return `此电脑上的 Infinitary 已重置，因此这次运行将彻底结束，下次 Infinitary 会打开欢迎界面。`;
+      case "zh-Hant":
+        return `此電腦上的 Infinitary 已重設，因此這次執行將徹底結束，下次 Infinitary 會開啟歡迎畫面。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ĥéŕé ŵáš ŕéšéţ, šö ţĥîš ŕûñ éñðš ƒöŕ ĝööð, áñð Îñƒîñîţáŕý öþéñš öñ ţĥé ŵéļçöɱé šçŕééñ ñéẋţ ţîɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time.‬`;
+    }
+    return `Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time.`;
+  }
   function resetScreenKeeps() {
     switch (currentLanguage()) {
       case "ar":
@@ -104637,6 +104664,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     resetKeysAsk,
     resetKeysConfirm,
     resetKeysDetail,
+    resetRunEnded,
     resetScreenKeeps,
     resetScreenKept,
     riskBehavior,
@@ -107977,6 +108005,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "resetKeysAsk": ["preset"],
     "resetKeysConfirm": [],
     "resetKeysDetail": ["preset"],
+    "resetRunEnded": [],
     "resetScreenKeeps": [],
     "resetScreenKept": [],
     "riskBehavior": [],

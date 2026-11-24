@@ -18,6 +18,7 @@
   "resetKeysAsk": "要将所有按键重置为 {preset} 预设的按键吗？",
   "resetKeysConfirm": "重置所有按键",
   "resetKeysDetail": "你在键盘设置中改过的每个快捷键，都会恢复为 {preset} 预设给它的按键。",
+  "resetRunEnded": "此电脑上的 Infinitary 已重置，因此这次运行将彻底结束，下次 Infinitary 会打开欢迎界面。",
   "resetScreenKeeps": "你自己文件夹中的项目会保留所有文件和提交。",
   "resetScreenKept": "没有重置任何内容。"
 }

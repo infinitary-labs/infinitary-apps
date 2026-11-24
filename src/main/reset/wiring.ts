@@ -1,4 +1,5 @@
 import { hostPlatform } from "@core/platform";
+import { readResetMark } from "@core/reset/mark";
 import type { FreshAuthentication } from "@core/secrets/approvals";
 import type { ResetAnswer } from "@shared/reset";
 import type { CommandStarter } from "../commandStarter";
@@ -8,6 +9,7 @@ import type { WorkContext } from "../workContext";
 import { couldNotStartYet } from "./couldNotStart";
 import { freshAuthenticationFor } from "./freshAuthentication";
 import { type ResetAsk, type ResetPlace, resetInApp, restartForReset } from "./inApp";
+import { forgetOwnRunEntries as forgetEntries } from "./ownEntries";
 import { clearStartAttempts } from "./startAttempts";
 import { resetWithoutFirstMate } from "./withoutFirstMate";
 
@@ -15,7 +17,9 @@ import { resetWithoutFirstMate } from "./withoutFirstMate";
  * Every place a window start reaches Reset Infinitary (docs/reset.md, "Where
  * a reset can start"), sharing one folder and one restart: Infinitary could
  * not start, the screens shown when the folder cannot open, the window's own
- * row, and a computer that controls this one.
+ * row, and a computer that controls this one. A run with no window resets
+ * as a window does, then ends for good instead of starting again
+ * (docs/reset.md, "A first mate with no window").
  */
 export function resetsFor(input: {
   dataDir: string;
@@ -29,11 +33,15 @@ export function resetsFor(input: {
   /** Starts the app again with these arguments once it quits. */
   relaunch: (args: string[]) => void;
   quit: () => void;
+  /** A run with no window: ends it with 0, its own start entries taken away (`forgetOwnRunEntries`). */
+  endRun?: () => void;
 }) {
-  const restart = restartForReset(input);
+  const { endRun } = input;
+  const restart = endRun ? async () => endRun() : restartForReset(input);
   const { work } = input;
   const spot: Omit<ResetPlace, "authentication"> = {
     dataDir: input.dataDir,
+    inRun: endRun !== undefined,
     choice: input.choice,
     starter: input.starter,
     work: {
@@ -91,4 +99,14 @@ export function resetsFor(input: {
       });
     },
   };
+}
+
+/** What would start this run again goes, the run left going (./inApp.ts, `forgetOwnRunEntries`). */
+export function forgetOwnRunEntries(work: WorkContext, dataDir: string): void {
+  forgetEntries(work.place.flavor, dataDir);
+}
+
+/** Whether a reset waits for the next start to finish it (docs/reset.md, "At the next start"). */
+export function resetAskedOf(dataDir: string): boolean {
+  return readResetMark(dataDir) !== null;
 }

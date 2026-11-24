@@ -2416,6 +2416,7 @@
 "resetKeysAsk" = "すべてのキーを %1$@ プリセットの割り当てに戻しますか？";
 "resetKeysConfirm" = "すべてのキーをリセット";
 "resetKeysDetail" = "キーボード設定で変更したショートカットは、すべて %1$@ プリセットの割り当てに戻ります。";
+"resetRunEnded" = "このコンピュータの Infinitary はリセットされたため、この実行は完全に終了します。次回、Infinitary はようこそ画面で開きます。";
 "resetScreenKeeps" = "ご自身のフォルダにあるプロジェクトは、すべてのファイルとコミットがそのまま残ります。";
 "resetScreenKept" = "何もリセットしていません。";
 "riskBehavior" = "動作";

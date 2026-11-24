@@ -12,6 +12,7 @@ import { hostPlatform } from "@core/platform";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
 import { APP_IDENTITIES } from "@shared/codeNames";
 import { COMPUTER } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { z } from "zod";
 import { type RunEnvironment, RunEnvironmentSchema } from "./runEnvironment";
@@ -85,6 +86,8 @@ export const RUN_WORDS = {
   started: "Infinitary is running here with no window, started by a command.",
   stopped: "Infinitary stopped.",
   movedAway: "Your first mate moved to another computer, so this run ends for good.",
+  /** A reset this run took (docs/reset.md): nothing starts this run again, and the next start wipes the folder. */
+  reset: () => m.resetRunEnded(),
   /** Why a run on Windows stopped: a stop asked through its data folder, where no signal can ask one. */
   stopAsked: "Infinitary stopped when asked.",
   usage: [

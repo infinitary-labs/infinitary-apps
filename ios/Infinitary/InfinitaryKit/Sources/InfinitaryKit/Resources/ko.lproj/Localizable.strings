@@ -2416,6 +2416,7 @@
 "resetKeysAsk" = "모든 키를 %1$@ 프리셋의 키로 재설정할까요?";
 "resetKeysConfirm" = "모든 키 재설정";
 "resetKeysDetail" = "키보드 설정에서 바꾼 단축키가 모두 %1$@ 프리셋의 단축키로 돌아가요.";
+"resetRunEnded" = "이 컴퓨터의 Infinitary가 재설정되어 이 실행은 완전히 끝나요. 다음에는 Infinitary가 시작 화면으로 열려요.";
 "resetScreenKeeps" = "내 폴더에 있는 프로젝트는 모든 파일과 커밋이 그대로 남아요.";
 "resetScreenKept" = "아무것도 재설정하지 않았어요.";
 "riskBehavior" = "동작";

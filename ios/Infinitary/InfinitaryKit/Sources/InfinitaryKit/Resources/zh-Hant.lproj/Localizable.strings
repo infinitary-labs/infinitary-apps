@@ -2416,6 +2416,7 @@
 "resetKeysAsk" = "要把每個按鍵重設為「%1$@」配置的設定嗎？";
 "resetKeysConfirm" = "重設所有按鍵";
 "resetKeysDetail" = "你在鍵盤設定中改過的每個快速鍵，都會回到「%1$@」配置給它的按鍵。";
+"resetRunEnded" = "此電腦上的 Infinitary 已重設，因此這次執行將徹底結束，下次 Infinitary 會開啟歡迎畫面。";
 "resetScreenKeeps" = "你自己資料夾中的專案會保留所有檔案和提交。";
 "resetScreenKept" = "沒有重設任何內容。";
 "riskBehavior" = "行為";

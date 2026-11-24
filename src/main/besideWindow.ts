@@ -80,6 +80,12 @@ export type BesideOptions = {
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
   /**
+   * Whether the command's first mate took a reset its next start finishes
+   * (docs/reset.md, "A first mate with no window"): once the command ends,
+   * the window starts again, which finishes it.
+   */
+  resetAsked?: () => boolean;
+  /**
    * The command running now when it is the starter's own, read from the same
    * reading of the records as whether one runs: one this app's own agent
    * started, as the run's own note says (`ownedRunOf`, ./runCommand.ts);
@@ -1181,7 +1187,7 @@ export class BesideWindow {
     const { beside, now } = this.options;
     const waitMs = entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs);
     const status = beside.status();
-    if (this.moved && status.running === false) {
+    if (status.running === false && (this.moved || beside.resetAsked?.() === true)) {
       this.stopReading();
       if (this.recoveryPending()) {
         this.relaunchDeferred = true;

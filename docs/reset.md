@@ -30,6 +30,15 @@ Then this computer's program asks the home `inf:home-reset:start` over the conne
 
 A home that does not answer, or refuses, resets nothing on either computer: the row says the home did not answer and stays on its question.
 
+### A first mate with no window
+
+A home whose first mate a command started (`<app> run`, at boot, by its service or behind a window opened beside it; `docs/run.md`) takes the reset in that run, as a window would, with three differences (`resetsFor`'s `endRun`, `src/main/reset/wiring.ts`):
+
+- Its own start-at-boot entry is not turned off through the service manager, whose stop would end the run before its mark is written: on a Mac or Linux the run takes the entry's files away and goes on (`bootEntryOff`, `src/main/reset/ownEntries.ts`), and the mark leaves the entry to the next start too; removing a Windows task leaves its run going.
+- A window opened beside it keeps its own profile inside the folder (`window-profile`), so ending the leftover programs leaves that window alone.
+- The run starts nothing again: it ends with 0 and says so, and its starters' files are gone, so nothing starts it again.
+  A window beside it starts again by itself once the run ended and the mark is there (`BesideOptions.resetAsked`), and that start wipes the folder and opens on the welcome screen; with no window there, the next start of Infinitary on that computer does.
+
 ## Where a reset can start
 
 A reset starts in three places, each confirmed by the person at this computer:
@@ -68,7 +77,7 @@ The window's program runs the reset (`runReset`, `src/main/reset/running.ts`) on
 3. It writes the mark beside the folder, naming the outside kinds the next start still clears.
 4. It stops the first mate - beside a command, whichever run holds the folder, with its starter let go for good (`Shell.stopForReset`).
 5. It ends every program of this account still holding a file or working folder in the data folder, such as a server a task started or a terminal the person opened in a task's working copy (`endLeftoverPrograms`, `src/main/reset/leftovers.ts`): each gets 15 seconds to end by itself, then an end request and a kill; never this app or a program it started.
-6. It starts the app again.
+6. It starts the app again; a run with no window ends instead ("A first mate with no window").
    On Windows the new start waits for this program to end, through the same hand-over an update uses (`restartOnWindows`, `src/main/reset/windowsRestart.ts`), so it finds the folder free.
 
 Nothing before the quit deletes the folder, which this start still holds.

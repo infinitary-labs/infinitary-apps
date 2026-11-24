@@ -2532,6 +2532,7 @@ public enum PhoneMessages {
     public static func `resetKeysAsk`(`preset`: String) -> String { PhoneWords.format("resetKeysAsk", [`preset`]) }
     public static func `resetKeysConfirm`() -> String { PhoneWords.format("resetKeysConfirm", []) }
     public static func `resetKeysDetail`(`preset`: String) -> String { PhoneWords.format("resetKeysDetail", [`preset`]) }
+    public static func `resetRunEnded`() -> String { PhoneWords.format("resetRunEnded", []) }
     public static func `resetScreenKeeps`() -> String { PhoneWords.format("resetScreenKeeps", []) }
     public static func `resetScreenKept`() -> String { PhoneWords.format("resetScreenKept", []) }
     public static func `riskBehavior`() -> String { PhoneWords.format("riskBehavior", []) }
@@ -6956,6 +6957,7 @@ extension PhoneWords {
         "resetKeysAsk": ["preset"],
         "resetKeysConfirm": [],
         "resetKeysDetail": ["preset"],
+        "resetRunEnded": [],
         "resetScreenKeeps": [],
         "resetScreenKept": [],
         "riskBehavior": [],

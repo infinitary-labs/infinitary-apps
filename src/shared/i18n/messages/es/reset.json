@@ -18,6 +18,7 @@
   "resetKeysAsk": "¿Restablecer todas las teclas a las del preajuste {preset}?",
   "resetKeysConfirm": "Restablecer todas las teclas",
   "resetKeysDetail": "Cada atajo que cambiaste en la configuración del teclado vuelve al que le da el preajuste {preset}.",
+  "resetRunEnded": "Infinitary se restableció aquí, así que esta ejecución termina definitivamente, e Infinitary se abrirá en la pantalla de bienvenida la próxima vez.",
   "resetScreenKeeps": "Los proyectos en tus propias carpetas conservan todos sus archivos y commits.",
   "resetScreenKept": "No se restableció nada."
 }

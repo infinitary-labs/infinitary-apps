@@ -1602,6 +1602,7 @@
   {"said":{"m":"resetKeysAsk","a":{"preset":"‹preset›"}},"words":"Reset every key to the ‹preset› preset's?"},
   {"said":{"m":"resetKeysConfirm"},"words":"Reset All Keys"},
   {"said":{"m":"resetKeysDetail","a":{"preset":"‹preset›"}},"words":"Every shortcut you changed in Keyboard settings goes back to the one the ‹preset› preset gives it."},
+  {"said":{"m":"resetRunEnded"},"words":"Infinitary here was reset, so this run ends for good, and Infinitary opens on the welcome screen next time."},
   {"said":{"m":"resetScreenKeeps"},"words":"Projects in your own folders keep every file and commit."},
   {"said":{"m":"resetScreenKept"},"words":"Nothing was reset."},
   {"said":{"m":"riskBehavior"},"words":"Behavior"},

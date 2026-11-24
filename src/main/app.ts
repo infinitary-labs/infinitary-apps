@@ -13,7 +13,6 @@ import { dueMove, type FolderMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { STOPPED_RUN_WAIT_MS } from "@core/helper/lock";
-import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { type RunPipes, watchRunForce } from "@core/helper/runForce";
 import { watchRunStop } from "@core/helper/windowsTask";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
@@ -90,7 +89,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
-import { resetsFor } from "./reset/wiring";
+import { forgetOwnRunEntries, resetAskedOf, resetsFor } from "./reset/wiring";
 import {
   answerLaunch,
   bringWindowForward,
@@ -847,6 +846,7 @@ export async function startApp(
       countsStarts: !windowless && !move && !besideRun && app.getPath("userData") === dataDir,
       relaunch: (args) => relaunchWith(args, besideRun ? process.env.APPIMAGE : undefined),
       quit: () => app.quit(),
+      ...(windowless ? { endRun: () => endForGood(RUN_WORDS.reset()) } : {}),
     });
     if (resets.couldNotStart(hideWindow, confirmationWindow)) return;
     // What a launch on an accepted folder recovers once it is known to open its own first mate there
@@ -904,6 +904,13 @@ export async function startApp(
       stopRun();
     };
     const endUpdated = () => endToStartAgain("updated");
+    // A run whose first mate moved away or was reset ends with 0, and nothing starts it again here.
+    const endForGood = (line: string) => {
+      forgetOwnRunEntries(work, dataDir);
+      process.stdout.write(`${line}\n`);
+      runEnd = { reason: "quit", exitCode: 0, lines: [line] };
+      stopRun();
+    };
     if (windowless) {
       const observed = (keychain: RunEnvironment["keychain"]) =>
         runEnvironment({
@@ -1383,6 +1390,7 @@ export async function startApp(
                 crewmatesDir: appPathsFor(dataDir).crewmatesDir,
                 look: new JoinedHome(join(app.getPath("userData"), "look")),
                 status: () => readRunStatus(dataDir),
+                resetAsked: () => resetAskedOf(dataDir),
                 // The agent this window set up starts the command again too.
                 startEntry: () =>
                   ownStartEntry(dataDir) ??
@@ -1441,15 +1449,7 @@ export async function startApp(
                   endToStartAgain("restart");
                   return;
                 }
-                forgetRunAgentFiles({
-                  label: runLabelOf(work.place.flavor),
-                  dataDir,
-                  homeDir: homedir(),
-                  unitsDir: userUnitsDir(process.env, homedir()),
-                });
-                process.stdout.write(`${RUN_WORDS.movedAway}\n`);
-                runEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.movedAway] };
-                stopRun();
+                endForGood(RUN_WORDS.movedAway);
               },
             }
           : {}),

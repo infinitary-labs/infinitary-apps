@@ -13,6 +13,7 @@ import { app } from "electron";
 import { LET_GO_JOB_ARG, START_HERE_ARG } from "../besideRun";
 import type { CommandStarter } from "../commandStarter";
 import { startAtLoginFor } from "../host/electronHost";
+import { windowProfileDir } from "../runCommand";
 import type { Shell } from "../shell";
 import { answerBootCommand } from "../startAtBootContext";
 import type { UserDataChoice } from "../userDataDir";
@@ -24,6 +25,7 @@ import {
   ownCommand,
   passwordStoreCustodies,
 } from "./outside";
+import { bootEntryOff, forgetOwnRunEntries } from "./ownEntries";
 import { runReset } from "./running";
 import { restartOnWindows } from "./windowsRestart";
 import { leaveWorkHome } from "./workHome";
@@ -50,6 +52,13 @@ export type ResetPlace = {
    * password, Windows Hello, polkit. None on an isolated or chosen folder.
    */
   authentication: FreshAuthentication | undefined;
+  /**
+   * A run with no window (docs/run.md): a stop through its own start entry
+   * would end it before the reset is done, so it takes the entry's files
+   * away instead and the next start turns it off; a window beside it keeps
+   * its own profile in the folder and starts again once the run ends.
+   */
+  inRun?: boolean;
 };
 
 /**
@@ -112,10 +121,17 @@ export function resetInApp(
           }
         : {}),
       clear,
-      atStart: own ? outsideAtStart(input.choice) : [],
+      atStart: own
+        ? [...outsideAtStart(input.choice), ...(input.inRun ? ["start-entries" as const] : [])]
+        : [],
       dataDir: input.dataDir,
       stopFirstMate: () => input.shell.stopForReset(),
-      endLeftovers: () => endLeftoverPrograms(input.dataDir),
+      endLeftovers: () =>
+        endLeftoverPrograms(
+          input.dataDir,
+          undefined,
+          input.inRun ? [windowProfileDir(input.dataDir)] : [],
+        ),
       restart: input.restart,
       within: withinMs,
       confirm: () =>
@@ -150,7 +166,7 @@ export function outsideNow(
     ? {
         "password-store": () =>
           clearPasswordStore(passwordStoreCustodies({ platform, flavor: own.flavor })),
-        "start-entries": () => clearStartEntries(input, own.dir),
+        "start-entries": () => clearStartEntries(input, own),
         "phone-keys": async () =>
           clearPhoneKeys({
             platform,
@@ -209,9 +225,10 @@ export async function confirmPerson(
  * once every one is gone.
  */
 async function clearStartEntries(
-  input: Pick<ResetPlace, "starter" | "work">,
-  folder: string,
+  input: Pick<ResetPlace, "starter" | "work" | "inRun">,
+  own: { flavor: BuildFlavor; dir: string },
 ): Promise<boolean> {
+  const folder = own.dir;
   let cleared = true;
   const attempt = async (work: () => unknown) => {
     try {
@@ -221,10 +238,18 @@ async function clearStartEntries(
     }
   };
   await attempt(() => input.starter?.stop({ forget: true }));
-  await attempt(async () => {
-    const answer = await answerBootCommand({ boot: ["--off"], help: null }, folder);
-    if (answer.code !== 0) throw new Error(answer.error);
-  });
+  await attempt(() =>
+    bootEntryOff(
+      { inRun: input.inRun === true, platform: hostPlatform() },
+      {
+        forget: () => forgetOwnRunEntries(own.flavor, folder),
+        off: async () => {
+          const answer = await answerBootCommand({ boot: ["--off"], help: null }, folder);
+          if (answer.code !== 0) throw new Error(answer.error);
+        },
+      },
+    ),
+  );
   await attempt(() => startAtLoginFor(basename(folder)).set(false));
   const { serviceManager } = input.work;
   const background = serviceManager

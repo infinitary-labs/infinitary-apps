@@ -470,28 +470,14 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           description: "Captain's words: raise the put-off card now.",
         }),
       ),
+      // The description spells the object's fields and the run below refuses
+      // a missing one by name, so the served schema stays open.
       hold: Type.Optional(
-        Type.Union(
-          [
-            Type.Object({
-              until: Type.String(),
-              reason: Type.String(),
-              on_event: Type.Optional(
-                Type.Object({
-                  integration: Type.String(),
-                  event: Type.String(),
-                  filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
-                }),
-              ),
-              on_update: Type.Optional(Type.Object({ version: Type.Optional(Type.String()) })),
-            }),
-            Type.Null(),
-          ],
-          {
-            description:
-              "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update, or a newer one, on its computer. No reminders except unanswered captain replies; notify once at deadline if held. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
-          },
-        ),
+        Type.Unsafe<HoldParam | null>({
+          anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }],
+          description:
+            "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update, or a newer one, on its computer. No reminders except unanswered captain replies; notify once at deadline if held. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
+        }),
       ),
       take_back_yes: Type.Optional(
         Type.String({
@@ -580,7 +566,14 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         const until = Date.parse(params.hold.until);
         if (!Number.isFinite(until))
           return { text: "hold.until takes an ISO time, such as 2026-11-20T09:00:00-08:00." };
+        if (typeof params.hold.reason !== "string" || !params.hold.reason.trim())
+          return { text: "hold.reason takes a one-line wait." };
         const onEvent = params.hold.on_event;
+        if (
+          onEvent &&
+          (typeof onEvent.integration !== "string" || typeof onEvent.event !== "string")
+        )
+          return { text: "hold.on_event takes an integration and an event." };
         const onUpdate = params.hold.on_update;
         return {
           text: await delegate.hold({
@@ -781,6 +774,13 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     ),
   ];
 }
+
+type HoldParam = {
+  until: string;
+  reason: string;
+  on_event?: { integration: string; event: string; filter?: Record<string, string> };
+  on_update?: { version?: string };
+};
 
 export const TASKS_QUERY_TOOL_NAME = "tasks";
 

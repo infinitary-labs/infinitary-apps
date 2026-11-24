@@ -207,3 +207,47 @@ export function changeProjectTags(
     };
   })();
 }
+
+/**
+ * A project that empties into another brings its tags along with its
+ * tasks: each tag lands on the other project's tag of the same name in any
+ * case, or joins its list with its description, and every task keeps the
+ * rows it had, on or off, with who set each. A row landing on a tag the
+ * other project already had loses the description revision it was judged
+ * at, since that tag's description may say something else. The emptied
+ * project keeps no tags. Inside the caller's write, after the tasks moved.
+ */
+export function carryProjectTags(
+  writer: TaskWriter,
+  move: { fromProjectId: string; toProjectId: string; taskIds: readonly string[] },
+  at: number,
+): void {
+  const tags = writer.projects.tags;
+  const from = tags.of(move.fromProjectId);
+  if (from.length === 0) return;
+  const target = tags.of(move.toProjectId);
+  const onto = new Map<string, { id: string; revision: number | null }>();
+  for (const tag of from) {
+    const same = target.find((other) => sameTagName(other.name, tag.name));
+    if (same) onto.set(tag.id, { id: same.id, revision: null });
+    else {
+      const added = tags.add(move.toProjectId, tag.name, tag.description, at);
+      target.push(added);
+      onto.set(tag.id, { id: added.id, revision: added.revision });
+    }
+  }
+  for (const taskId of move.taskIds)
+    for (const row of writer.store.tags.rowsOf(taskId).values()) {
+      const landed = onto.get(row.tagId);
+      if (!landed) continue;
+      writer.store.tags.set({
+        ...row,
+        tagId: landed.id,
+        revision: row.revision === null ? null : landed.revision,
+      });
+    }
+  for (const tag of from) {
+    writer.store.tags.deleteTag(tag.id);
+    tags.remove(tag.id);
+  }
+}

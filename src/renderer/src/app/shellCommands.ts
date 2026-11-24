@@ -25,6 +25,7 @@ import { focusWithRing } from "../design/focus";
 import { giveFocusBack, moveInFrame } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
+import { boardOnScreen } from "../plugins/reads/appExecutor";
 import { HOME_UPDATE_ROW } from "../settings/HomeUpdateRow";
 import { startSecretsMove } from "../settings/secretsMove";
 import { signInsInSecrets } from "../settings/WebsiteSignInsSection";
@@ -132,6 +133,28 @@ const closeDoneButton = (entryId: string) => shownPart(entryId, "[data-record-cl
 
 /** The shown record's Edit tags, on its Info tab while its project has tags. */
 const editTagsButton = (entryId: string) => shownPart(entryId, "[data-record-tags] button");
+
+/**
+ * Whether the shown card or task tab is about a task whose project has tags
+ * or that carries one, as the board last presented it: Edit tags then opens
+ * the record's Info tab first (docs/task-tags.md).
+ */
+function shownTaskTaggable(): boolean {
+  const entry = shownEntry(useShellStore.getState());
+  if (!entry) return false;
+  const taskId = isHeldEntry(entry) ? tabTaskOf(entry) : cardTaskOf(entry)?.id;
+  const board = boardOnScreen();
+  const task = taskId ? board?.tasks.find((row) => row.id === taskId) : undefined;
+  if (!task) return false;
+  const project = board?.projects.find((row) => row.id === task.projectId);
+  return (project?.tags?.length ?? 0) > 0 || (task.tags?.length ?? 0) > 0;
+}
+
+function editTags(): void {
+  const entryId = shownEntry(useShellStore.getState())?.id;
+  if (entryId && !editTagsButton(entryId)) toTab("cards.show-info");
+  toShownPart(editTagsButton, (button) => button.click());
+}
 
 /** The shown card's jump down in its thread, while the captain reads above its foot. */
 const threadJumpButton = (entryId: string) => shownPart(entryId, "[data-thread-jump]");
@@ -369,7 +392,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   // The click itself: the one confirm opens with focus on Cancel.
   "task.close-done": () => toShownPart(closeDoneButton, (button) => button.click()),
   // The click itself: the menu opens with focus on its first tag.
-  "task.edit-tags": () => toShownPart(editTagsButton, (button) => button.click()),
+  "task.edit-tags": editTags,
   "cards.show-browser": () => toTab("cards.show-browser"),
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
@@ -553,7 +576,7 @@ function windowFacts(): WindowFacts {
     })(),
     taskEditTags: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
-      return !!id && editTagsButton(id) !== null;
+      return !!id && (editTagsButton(id) !== null || shownTaskTaggable());
     })(),
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     checksUpdates: checksUpdates(useUpdateState.getState().status),

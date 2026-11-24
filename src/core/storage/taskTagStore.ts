@@ -1,6 +1,6 @@
 import { byTagName, type TagSetter, type TaskTagView } from "@shared/tags";
-import type { Statement } from "better-sqlite3";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * The tags each task carries (docs/task-tags.md), one `task_tags` row per
@@ -61,60 +61,36 @@ export class TaskTagStore {
     return rows;
   }
 
-  /**
-   * The tags each of these tasks carries, alphabetical: only tags of the
-   * task's own project, and only those on.
-   */
-  viewsFor(taskIds: readonly string[]): Map<string, TaskTagView[]> {
-    const byTask = new Map<string, TaskTagView[]>();
-    if (!this.exists() || taskIds.length === 0) return byTask;
-    const read = this.db.prepare(
-      // i18n-exempt: SQL, never shown to a person
-      `SELECT x.task_id, p.id, p.name, x.set_by FROM task_tags x
-       JOIN project_tags p ON p.id = x.tag_id
-       JOIN tasks t ON t.id = x.task_id AND t.project_id = p.project_id
-       WHERE x.state = 'on' AND x.task_id IN (SELECT value FROM json_each(?))`,
-    );
-    const rows = read.all(JSON.stringify(taskIds)) as {
-      task_id: string;
-      id: string;
-      name: string;
-      set_by: TagSetter;
-    }[];
-    for (const row of rows) {
-      const list = byTask.get(row.task_id) ?? [];
-      list.push({ id: row.id, name: row.name, by: row.set_by });
-      byTask.set(row.task_id, list);
-    }
-    for (const list of byTask.values()) list.sort(byTagName);
-    return byTask;
-  }
-
-  private one: Statement | undefined;
   private carried: boolean | undefined;
 
   /**
-   * One task's tags, as `viewsFor` reads them: every row view the board
-   * builds asks it, so it reads nothing until some task carries a tag.
+   * One task's tags, alphabetical: only tags of the task's own project, and
+   * only those on. Every row view the board builds asks it, so until some
+   * task carries a tag it reads only `any`'s one row, through statements
+   * compiled once (`prepared`).
    */
   viewsOf(taskId: string): TaskTagView[] {
     if (!this.exists()) return [];
     this.carried ||= this.any();
     if (!this.carried) return [];
-    this.one ??= this.db.prepare(
+    const read = prepared(
+      this.db,
       // i18n-exempt: SQL, never shown to a person
       `SELECT p.id, p.name, x.set_by AS by FROM task_tags x
        JOIN project_tags p ON p.id = x.tag_id
        JOIN tasks t ON t.id = x.task_id AND t.project_id = p.project_id
        WHERE x.state = 'on' AND x.task_id = ?`,
     );
-    return (this.one.all(taskId) as TaskTagView[]).sort(byTagName);
+    return (read.all(taskId) as TaskTagView[]).sort(byTagName);
   }
 
   /** Whether any task carries any tag, so a board with none reads nothing more. */
   any(): boolean {
-    // i18n-exempt: SQL, never shown to a person
-    return this.exists() && this.db.prepare("SELECT 1 FROM task_tags LIMIT 1").get() !== undefined;
+    return (
+      this.exists() &&
+      // i18n-exempt: SQL, never shown to a person
+      prepared(this.db, "SELECT 1 FROM task_tags LIMIT 1").get() !== undefined
+    );
   }
 
   set(row: TaskTagRow): void {

@@ -4,6 +4,7 @@ import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { type TaskGraph, TaskGraphRefusal } from "./taskGraph";
 import type { TaskServiceOptions } from "./taskService";
+import { carryProjectTags } from "./taskTags";
 import { keyOrId, type TaskWriter } from "./taskWriter";
 
 /**
@@ -200,6 +201,11 @@ export function joinWithRepositories(
 ): number {
   const movedRepos = new Map(move.repos.map((repo) => [repo.id, repo.name]));
   const moving = tasksJoining(writer.store, move);
+  const emptying = new Set(
+    move.sources
+      .filter((source) => source.whole && source.projectId !== move.to.id)
+      .map((source) => source.projectId),
+  );
   const staying = (record: TaskRecord | undefined): record is TaskRecord =>
     record !== undefined &&
     !moving.has(record.id) &&
@@ -225,7 +231,9 @@ export function joinWithRepositories(
   for (const record of moving.values()) {
     const repository = record.repoId ? movedRepos.get(record.repoId) : undefined;
     writer.patch(record.id, { projectId: move.to.id });
-    writer.store.tags.deleteFor(record.id);
+    // A task leaving a project that keeps other repositories leaves its
+    // tags behind; a project that empties brings them (carryProjectTags).
+    if (!emptying.has(record.projectId)) writer.store.tags.deleteFor(record.id);
     writer.addEvent({
       taskId: record.id,
       at,
@@ -240,5 +248,17 @@ export function joinWithRepositories(
       feed: false,
     });
   }
+  for (const fromProjectId of emptying)
+    carryProjectTags(
+      writer,
+      {
+        fromProjectId,
+        toProjectId: move.to.id,
+        taskIds: [...moving.values()]
+          .filter((record) => record.projectId === fromProjectId)
+          .map((record) => record.id),
+      },
+      at,
+    );
   return moving.size;
 }

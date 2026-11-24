@@ -7,10 +7,10 @@ import { piToolsOf } from "./toolSpec";
  * (docs/task-tags.md, "Where a task's tags are changed"): the approved plan's
  * first piece says they accept tags, set as the first mate's own.
  */
-function toolset() {
+function toolset(planned = { taskId: "ab12cd34", key: "SCR-3", text: "Planned SCR-3" }) {
   const order: string[] = [];
   const delegate: TaskToolsDelegate = {
-    plan: vi.fn(() => ({ taskId: "ab12cd34", key: "SCR-3", text: "Planned SCR-3" })),
+    plan: vi.fn(() => planned),
     update: vi.fn(() => {
       order.push("update");
       return { text: "SCR-3 moved to website as WEB-1", ok: true };
@@ -49,6 +49,18 @@ describe("the first mate's tags on a task", () => {
     });
     expect(delegate.tags).toHaveBeenCalledWith({ task: "ab12cd34", names: ["bug"] });
     expect(text).toBe("Planned SCR-3\nab12cd34's tags: bug.");
+  });
+
+  it("answers a refused filing with its own words and tags nothing", async () => {
+    const refusal = "A task with this title is already open: SCR-2.";
+    const { delegate, run } = toolset({ taskId: "", key: "", text: refusal });
+    const text = await run("create_task", {
+      title: "Fix the sign-in",
+      goal: "Signing in works after a restart.",
+      tags: ["bug"],
+    });
+    expect(text).toBe(refusal);
+    expect(delegate.tags).not.toHaveBeenCalled();
   });
 
   it("applies update_task's tags after its other edits, and alone without an empty update", async () => {

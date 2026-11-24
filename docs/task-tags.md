@@ -48,18 +48,20 @@ A tag already in the asked state is left as it is and writes nothing.
 Each change to a task's tags writes one quiet `note` on its timeline for each direction, tags added or tags taken off, naming who did it ("You tagged this task bug."), with `news: false` and no feed line, so it raises no card and no Activity line.
 
 A task reads a tag only while the tag belongs to its own project.
-Moving a task to another project deletes its tag rows, on and off, in the same write as the move (`src/core/tasks/projectMove.ts`).
+Moving a task to another project deletes its tag rows, on and off, in the same write as the move (`src/core/tasks/projectMove.ts`), and so does moving repositories out of a project that keeps others.
+A project that empties into another, its repositories all moved, brings its tags along (`carryProjectTags`, `src/core/tasks/taskTags.ts`): each lands on the other project's tag of the same name in any case, or joins its list with its description, and every task keeps its rows, on and off, with who set each.
+A row landing on a tag the other project already had loses the description revision it was judged at, and the emptied project keeps no tags.
 A purged task's rows go with it.
 
 A task's view (`taskViewSchema`) carries the tags it carries in `tags`, alphabetical, each with its id, name and setter; the field is absent while it carries none.
-Until any task carries a tag, building a row's view reads nothing more (`TaskTagStore.viewsOf`).
+Until any task carries a tag, building a row's view reads only one row of `task_tags`, through a statement compiled once (`TaskTagStore.viewsOf`, `prepared`).
 
 ## Where a task's tags are changed
 
 - **The record.**
   The Info tab's Tags row follows Project once the project has tags or the task carries one: the tags it carries, then Edit tags, a menu of the project's tags with each ticked on or off (`RecordTags`, `src/renderer/src/cards/RecordTags.tsx`).
   A tick saves at once, by `inf:task:tags` with every tag the task should carry, and leaves the menu open.
-  Edit tags in command search (`task.edit-tags`) opens the same menu on the shown record.
+  Edit tags in command search (`task.edit-tags`) opens the same menu from the shown card or any of a task's tabs, turning its record to the Info tab first.
 - **The first mate.** create_task and update_task take `tags`, the project's tag names the task carries, exactly; an empty list clears them.
   On update_task they apply after the call's other edits, so a move to another project comes first.
   The tasks tool lists a task's tags by name.

@@ -186,4 +186,46 @@ describe("the tags a task carries", () => {
       f.db.close();
     }
   });
+
+  it("brings a project's tags along when it empties into another, onto same-named tags", () => {
+    const { f, projectId, add } = withProject();
+    try {
+      add("bug", "Broken now.");
+      const idea = add("idea", "Design first.").tags.find((tag) => tag.name === "idea")
+        ?.id as string;
+      seedProject(f.db, { id: "r2", name: "website", path: "/fleet/website", addedAt: 2 });
+      f.tasks.create({ id: "site", title: "Redo the footer", prompt: "", repoId: "r2" });
+      const website = f.tasks.get("site")?.projectId as string;
+      const targetBug = f.tasks.changeProjectTags({
+        op: "add",
+        projectId: website,
+        name: "Bug",
+        description: "Something on the site is broken.",
+      }).tags[0]?.id as string;
+      f.tasks.replaceTags("work", { names: ["bug"] }, "captain");
+      f.tasks.setTags("work", [{ tagId: idea, on: true }], "decision");
+
+      f.tasks.joinWithRepositories(
+        { sources: [{ projectId, whole: true }], repos: [{ id: "r1", name: "app" }] },
+        "captain",
+        () => ({ id: website, name: "website" }),
+      );
+
+      const carried = f.tasks.tagsOf("work");
+      expect(carried.map((tag) => [tag.name, tag.by])).toEqual([
+        ["Bug", "captain"],
+        ["idea", "decision"],
+      ]);
+      expect(carried[0]?.id).toBe(targetBug);
+      const listed = f.fresh().projects.find((project) => project.id === website)?.tags;
+      expect(listed?.map((tag) => [tag.name, tag.description, tag.tasks])).toEqual([
+        ["Bug", "Something on the site is broken.", 1],
+        ["idea", "Design first.", 1],
+      ]);
+      expect(f.fresh().projects.find((project) => project.id === projectId)?.tags).toBeUndefined();
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
 });

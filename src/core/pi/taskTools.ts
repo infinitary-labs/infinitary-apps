@@ -183,7 +183,7 @@ function undeclaredPrerequisites(verb: "filed" | "changed") {
 
 const TAGS_PARAM = Type.Array(Type.String(), {
   description:
-    "Its project's tag names (project-tags): exactly these, an empty list none. Set as the captain asks or a tag's description plainly fits.",
+    "Its project's tag names (project-tags): exactly these, an empty list none. Set only as the captain asks.",
 });
 
 export function createTaskTools(delegate: TaskToolsDelegate) {
@@ -298,7 +298,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(Object.keys(shape).length > 0 ? { shape } : {}),
         ...(params.captain_stop ? { captainStop: true } : {}),
       });
-      if (params.tags === undefined) return { text: planned.text };
+      // A refused filing answers with no task id, and its words alone.
+      if (params.tags === undefined || !planned.taskId) return { text: planned.text };
       return { text: `${planned.text}\n${tagsOf(planned.taskId, params.tags)}` };
     },
   });

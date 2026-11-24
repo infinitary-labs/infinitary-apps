@@ -100,13 +100,16 @@ test("a project's tags are added, renamed and removed by keys, and Edit tags tic
       await expect(tagsBox).toHaveCount(0);
     });
 
-    await test.step("Edit tags in command search ticks the tag on the shown record", async () => {
+    await test.step("Edit tags in command search, from the Activity tab, ticks the tag on the shown record", async () => {
       await expandDock(page, "now");
       await openGroup(page, "backlog");
       await pressRow(page, task.key);
       await expectRecordBody(page);
       const facts = recordCard(page).locator("[data-record-tags-row]");
       await expect(facts).toContainText(m.recordTagsNone());
+      // From another tab, Edit tags turns the record back to Info first.
+      await runFromSearch(app, page, "cards.show-activity");
+      await expect(facts).toHaveCount(0);
       await runFromSearch(app, page, "task.edit-tags");
       const item = page.getByRole("menuitemcheckbox", { name: /^defect/ });
       await expect(item).toHaveAttribute("aria-checked", "false");

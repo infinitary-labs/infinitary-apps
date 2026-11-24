@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { byTagName, type ProjectTagView, sameTagName } from "@shared/tags";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * A project's tags (docs/task-tags.md): the one writer of `project_tags`,
@@ -75,13 +76,13 @@ export class ProjectTagStore {
   views(): Map<string, ProjectTagView[]> {
     const byProject = new Map<string, ProjectTagView[]>();
     if (!this.exists()) return byProject;
-    const rows = this.db
-      .prepare(
-        // i18n-exempt: SQL, never shown to a person
-        `SELECT t.*, (SELECT COUNT(*) FROM task_tags x WHERE x.tag_id = t.id AND x.state = 'on') AS carried
+    // Every project view asks this, so its statement is compiled once.
+    const rows = prepared(
+      this.db,
+      // i18n-exempt: SQL, never shown to a person
+      `SELECT t.*, (SELECT COUNT(*) FROM task_tags x WHERE x.tag_id = t.id AND x.state = 'on') AS carried
          FROM project_tags t`,
-      )
-      .all() as (Row & { carried: number })[];
+    ).all() as (Row & { carried: number })[];
     for (const row of rows) {
       const list = byProject.get(row.project_id) ?? [];
       list.push({
@@ -141,7 +142,7 @@ export class ProjectTagStore {
     return this.get(tag.id) as ProjectTag;
   }
 
-  /** The caller took it off every task first (`TaskService.clearTag`), in the same write. */
+  /** The caller took it off every task first (`changeProjectTags`, `src/core/tasks/taskTags.ts`), in the same write. */
   remove(tagId: string): void {
     // i18n-exempt: SQL, never shown to a person
     this.db.prepare("DELETE FROM project_tags WHERE id = ?").run(tagId);

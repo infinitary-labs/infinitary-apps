@@ -7,7 +7,7 @@ import { SettingError } from "./settingRows";
 
 /**
  * The rows inside a project page's Tags box (design skill
- * components/projects/ProjectTags; docs/task-tags.md): one row per tag,
+ * components/projects/ProjectPage; docs/task-tags.md): one row per tag,
  * alphabetical, with Edit and Remove, then Add a tag. Edit and Add open a
  * form in the row's place; Remove turns its row into one question that
  * names how many tasks lose the tag, with Cancel focused so Enter never

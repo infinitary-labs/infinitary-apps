@@ -348,8 +348,8 @@ export class CrewBrief {
       }
       const basis = basisFacts(this.options, this.host.cards, record);
       if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
-      // A review's basis is the builder it reads; the plan that builder is
-      // built on is what settles a finding without the captain (INF-6608).
+      // A review's basis is the builder it reads; the task that builder is
+      // built on, such as its plan, may settle a finding (INF-6608).
       const reviewed =
         basis && record?.shape?.kind === "review"
           ? this.options.tasks.get(basis.taskId ?? "")

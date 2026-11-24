@@ -1071,10 +1071,11 @@ export function basisSectionParts(
 }
 
 /**
- * The approved plan a reviewed builder is built on (INF-6608's plan, part
- * 4): its key, title, saved card and the captain's choice on it, never its
- * reports, which the builder's own basis section already carries in part
- * and the reviewer reads with tasks when a finding turns on them.
+ * The task a reviewed builder is built on, its verified basis (INF-6608's
+ * plan, part 4): its key, title, saved card and the captain's choice on it,
+ * never its reports. A verified basis is only done or reported, and may be
+ * a reproduction the captain never saw, so whether it is an approved plan
+ * is the reviewer's to judge from the card and the choice.
  */
 export function renderReviewedPlanSection(
   builderKey: string,
@@ -1082,11 +1083,11 @@ export function renderReviewedPlanSection(
 ): string {
   // i18n-exempt: served to the reviewer crewmate in its brief, stays English
   const lines = [
-    `${builderKey} is built on the approved plan ${facts.key} "${facts.title}": a finding it answers for this very case is settled. Read it with tasks, key ${facts.key}, when a finding turns on it.`,
+    `${builderKey} is built on ${facts.key} "${facts.title}". When it is a plan the captain approved, a finding it answers for this very case is settled. Read it with tasks, key ${facts.key}, when a finding turns on it.`,
     ...(facts.cardFile
       ? [
           "",
-          "The plan's card, as the captain read it, is saved whole in this file on this machine:",
+          "Its card, as the captain read it, is saved whole in this file on this machine:",
           `- ${facts.cardFile}`,
         ]
       : []),

@@ -545,12 +545,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 });
 
-// INF-6608's plan, part 4: INF-6603 reviewed INF-6592, built on the plan
-// INF-6581, with a brief that named only the builder; its "Decided so far"
-// held no choice from the plan card, so it asked the captain a question the
-// plan answered. A review of plan-built work now names the plan and the
-// captain's choice on it.
-
 describe("a review of plan-built work", () => {
   const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
@@ -618,14 +612,12 @@ describe("a review of plan-built work", () => {
       const brief = reviewer.promptCalls[0] ?? "";
       const builderKey = h.tasks.get(builderId)?.key;
       expect(brief).toContain(
-        `${builderKey} is built on the approved plan ${plan?.key} "Plan custom model prices"`,
+        `${builderKey} is built on ${plan?.key} "Plan custom model prices". When it is a plan the captain approved`,
       );
-      expect(brief).toMatch(
-        /The plan's card, as the captain read it, is saved whole .*\n- .+\.html/,
-      );
+      expect(brief).toMatch(/Its card, as the captain read it, is saved whole .*\n- .+\.html/);
       expect(brief).toContain('The captain closed it by choosing "Approve and build".');
       expect(brief).toContain(
-        `- The captain chose "build" on the approved plan ${plan?.key}'s card "Plan: type a price for each custom model" (${card.id}), answering:`,
+        `- The captain chose "build" on ${plan?.key}'s card, the task this change is built on, "Plan: type a price for each custom model" (${card.id}), answering:`,
       );
     } finally {
       repo.dispose();
@@ -659,6 +651,7 @@ describe("a review of plan-built work", () => {
         shape: { review_of: builderId },
       });
       await tick();
+      expect(reviewer.promptCalls[0]).not.toContain("is built on");
       const zero = {
         id: "F1",
         severity: "error" as const,
@@ -690,12 +683,17 @@ describe("a review of plan-built work", () => {
       expect(received()).not.toContain("F2 warning");
       await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The plan settles F2.", {
         code: "findings",
-        findings: [zero, { ...save, action: "auto-fix" }],
+        findings: [
+          zero,
+          { ...save, action: "auto-fix" },
+          { ...save, id: "F3", line: 40, text: "a renamed model loses its price" },
+        ],
         risk: { level: "medium", why: "Save changes." },
       });
       expect(received()).toContain(
         "F2 warning src/accounts.ts:316 every Save keeps earlier checks - auto-fix",
       );
+      expect(received()).not.toContain("F3 warning");
     } finally {
       repo.dispose();
     }

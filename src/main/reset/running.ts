@@ -17,6 +17,12 @@ export type RunningResetSeams = {
    * row's question; false changes nothing.
    */
   confirm: () => Promise<boolean>;
+  /**
+   * On a computer that controls another's first mate, asks that computer to
+   * reset itself once the person here confirmed; false when it did not
+   * answer, and nothing changes here either.
+   */
+  askHome?: () => Promise<boolean>;
   /** The first mate's own undoing (`inf:app:reset-prepare`). */
   prepare: () => Promise<unknown>;
   /**
@@ -47,17 +53,21 @@ export const RESET_LEFTOVERS_MS = 45_000;
 
 export async function runReset(seams: RunningResetSeams): Promise<ResetAnswer> {
   if (!(await seams.confirm().catch(() => false))) return { outcome: "kept" };
+  if (seams.askHome && !(await seams.askHome().catch(() => false))) return { outcome: "unreached" };
   await seams.within(seams.prepare(), RESET_PREPARE_MS).catch(() => undefined);
+  const clears = Object.entries(seams.clear ?? {}) as [ResetOutsideKind, () => Promise<boolean>][];
+  // Written before anything that can end this program - a clearer that stops
+  // the run it is in, the first mate's stop hanging, a crash - naming every
+  // kind still to clear, so the next start wipes the folder and clears them.
+  writeResetMark(
+    seams.dataDir,
+    askedResetMark([...seams.atStart, ...clears.map(([kind]) => kind)]),
+  );
   const left = new Set<ResetOutsideKind>(seams.atStart);
-  for (const [kind, clear] of Object.entries(seams.clear ?? {}) as [
-    ResetOutsideKind,
-    () => Promise<boolean>,
-  ][]) {
+  for (const [kind, clear] of clears) {
     const cleared = await clear().catch(() => false);
     if (!cleared) left.add(kind);
   }
-  // Written before the first mate stops: a stop that hangs or a crash after
-  // it still leaves the next start to wipe the folder.
   writeResetMark(seams.dataDir, askedResetMark([...left]));
   await seams.within(seams.stopFirstMate(), RESET_STOP_MS).catch(() => undefined);
   await seams.within(seams.endLeftovers(), RESET_LEFTOVERS_MS).catch(() => undefined);

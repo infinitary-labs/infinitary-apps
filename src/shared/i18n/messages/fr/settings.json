@@ -676,7 +676,9 @@
   "settingsGeneralReset": "Réinitialiser Infinitary",
   "settingsGeneralResetButton": "Réinitialiser",
   "settingsGeneralResetDeletes": "Infinitary supprime tout ce qu’il garde ici, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés, puis s’ouvre comme s’il venait d’être installé.",
+  "settingsGeneralResetDeletesBoth": "Infinitary supprime tout ce qu’il garde sur les deux, y compris les tâches, les connexions, les Secrets, les réglages et les appareils jumelés, puis chacun s’ouvre comme s’il venait d’être installé.",
   "settingsGeneralResetDescription": "Remet Infinitary sur cet ordinateur dans l’état où il était juste après l’installation.",
+  "settingsGeneralResetDescriptionBoth": "Remet Infinitary sur {home} et sur cet ordinateur dans l’état où il était juste après l’installation.",
   "settingsGeneralResetKeep": "Tout garder",
   "settingsGeneralResetKeeps": "Les projets dans vos propres dossiers gardent tous leurs fichiers et commits. Pour effacer seulement les tâches, utilisez Effacer les données des tâches.",
   "settingsGeneralResetOpenTasks": {
@@ -686,6 +688,8 @@
     "other": "{count} tâches ouvertes s’arrêtent."
   },
   "settingsGeneralResetQuestion": "Réinitialiser Infinitary sur cet ordinateur ?",
+  "settingsGeneralResetQuestionBoth": "Réinitialiser Infinitary sur {home} et sur cet ordinateur ?",
+  "settingsGeneralResetUnreached": "{home} n’a pas répondu, rien n’a donc été réinitialisé. Réessayez quand il sera joignable.",
   "settingsGeneralResetting": "Réinitialisation…",
   "settingsGeneralShowInDock": "Afficher dans le Dock",
   "settingsGeneralShowInDockDescription": "Désactivé, l’icône du Dock est masquée et la fenêtre reste.",

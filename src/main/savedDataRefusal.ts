@@ -5,12 +5,14 @@ import {
   SAVED_DATA_REFUSAL_MESSAGE,
   SAVED_DATA_REFUSAL_TITLE,
 } from "@core/storage/savedDataCompatibility";
+import type { ResetAnswer } from "@shared/reset";
 import { app, BrowserWindow } from "electron";
 import colors from "../renderer/src/design/tokens/colors.css?raw";
 import effects from "../renderer/src/design/tokens/effects.css?raw";
 import spacing from "../renderer/src/design/tokens/spacing.css?raw";
 import typography from "../renderer/src/design/tokens/typography.css?raw";
 import { frameFontFiles } from "./frames/fontFiles";
+import { followResetScreen } from "./reset/screen";
 import { REQUIRED_WEB_PREFERENCES } from "./security/baseline";
 import { markRefusalWindow } from "./windows";
 
@@ -18,18 +20,41 @@ const SAVED_DATA_REFUSAL: DataRefusal = {
   title: SAVED_DATA_REFUSAL_TITLE,
   message: SAVED_DATA_REFUSAL_MESSAGE,
   next: "You can close this window and use a compatible version.",
+  offersReset: true,
 };
 
 /** A standalone, offline refusal: no preload, service bridge, or normal shell. */
-export async function showSavedDataRefusal(hidden: boolean): Promise<void> {
-  await showDataRefusal(hidden, SAVED_DATA_REFUSAL);
+export async function showSavedDataRefusal(
+  hidden: boolean,
+  reset?: () => Promise<ResetAnswer>,
+): Promise<void> {
+  await showDataRefusal(hidden, SAVED_DATA_REFUSAL, reset);
 }
 
-export async function showDataRefusal(hidden: boolean, refusal: DataRefusal): Promise<void> {
-  const win = standaloneWindow({ title: "Infinitary", width: 640, height: 360 });
+/**
+ * Shows why the folder is not opened. With `reset`, a refusal that
+ * `offersReset` also offers Reset Infinitary, which asks in place first
+ * (./reset/screen.ts, docs/reset.md, "Where a reset can start").
+ */
+export async function showDataRefusal(
+  hidden: boolean,
+  refusal: DataRefusal,
+  resetAsked?: () => Promise<ResetAnswer>,
+): Promise<void> {
+  const reset = refusal.offersReset ? resetAsked : undefined;
+  const win = standaloneWindow({
+    title: "Infinitary",
+    width: 640,
+    height: reset ? 420 : 360,
+  });
   // The window a second launch brings forward (./windows.ts), unless held hidden for a capture.
   if (!hidden) markRefusalWindow(win);
   win.on("closed", () => app.quit());
+  if (reset) {
+    await followResetScreen({ win, words: refusal, again: false, reset });
+    if (!hidden) win.show();
+    return;
+  }
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   const html = standaloneDocument({
     title: "Infinitary",

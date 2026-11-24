@@ -59,6 +59,20 @@ export function entryWaitMs(restartMs = START_ENTRY_RESTART_MS, joinMs = JOIN_WA
 }
 
 /**
+ * Whether the window beside a command starts over once the command ended,
+ * instead of saying it stopped (docs/run.md, "When the command stops"): only
+ * when its first mate moved to another computer, or a reset another program
+ * took waits for the next start to finish it (docs/reset.md, "A first mate
+ * with no window"). Any other stop leaves the first mate stopped.
+ */
+export function startsOverOnStop(
+  status: Pick<RunStatus, "running">,
+  after: { moved: boolean; resetWaiting: () => boolean },
+): boolean {
+  return status.running === false && (after.moved || after.resetWaiting());
+}
+
+/**
  * How the command ended, or null while one runs or none ever did. The
  * command records why it stopped only on a clean stop, so a record that
  * names another command than the one the window joined means the joined

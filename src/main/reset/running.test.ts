@@ -66,6 +66,13 @@ describe("running a reset", () => {
     }
   });
 
+  it("changes nothing on this computer when the first mate it controls did not answer", async () => {
+    const { steps, dataDir, seams: s } = seams({ askHome: async () => false });
+    expect(await runReset(s)).toEqual({ outcome: "unreached" });
+    expect(steps).toEqual([]);
+    expect(existsSync(`${dataDir}.reset`)).toBe(false);
+  });
+
   it("leaves each kind it could not clear now, and each start-only kind, on the mark", async () => {
     const cleared: string[] = [];
     const { dataDir, seams: s } = seams({
@@ -81,6 +88,22 @@ describe("running a reset", () => {
     await runReset(s);
     expect(cleared).toEqual(["start-entries"]);
     expect(readResetMark(dataDir)?.outside).toEqual(["password-store", "app-files"]);
+  });
+
+  it("has the mark naming every kind still to clear before a clearer runs, which may end this program", async () => {
+    const marked: string[][] = [];
+    const { dataDir, seams: s } = seams({
+      atStart: ["app-files"],
+      clear: {
+        "start-entries": async () => {
+          marked.push([...(readResetMark(dataDir)?.outside ?? [])].sort());
+          return true;
+        },
+      },
+    });
+    await runReset(s);
+    expect(marked).toEqual([["app-files", "start-entries"]]);
+    expect(readResetMark(dataDir)?.outside).toEqual(["app-files"]);
   });
 
   it("goes on when the first mate's side fails, hangs or a clearer throws", async () => {

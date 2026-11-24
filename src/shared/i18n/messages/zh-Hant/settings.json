@@ -648,7 +648,9 @@
   "settingsGeneralReset": "重設 Infinitary",
   "settingsGeneralResetButton": "重設",
   "settingsGeneralResetDeletes": "Infinitary 會刪除它在這裡保存的一切，包括任務、登入、機密、設定和已配對的裝置，然後像剛安裝時一樣開啟。",
+  "settingsGeneralResetDeletesBoth": "Infinitary 會刪除它在兩台電腦上保存的一切，包括任務、登入、機密、設定和已配對的裝置，然後兩台都像剛安裝時一樣開啟。",
   "settingsGeneralResetDescription": "讓這台電腦上的 Infinitary 回到剛安裝時的樣子。",
+  "settingsGeneralResetDescriptionBoth": "讓 {home} 和這台電腦上的 Infinitary 回到剛安裝時的樣子。",
   "settingsGeneralResetKeep": "全部保留",
   "settingsGeneralResetKeeps": "你自己資料夾中的專案會保留所有檔案和提交。如果只想清除任務，請使用「清除任務資料」。",
   "settingsGeneralResetOpenTasks": {
@@ -656,6 +658,8 @@
     "other": "{count} 項進行中的任務會停止。"
   },
   "settingsGeneralResetQuestion": "要重設這台電腦上的 Infinitary 嗎？",
+  "settingsGeneralResetQuestionBoth": "要重設 {home} 和這台電腦上的 Infinitary 嗎？",
+  "settingsGeneralResetUnreached": "{home} 沒有回應，所以沒有重設任何內容。等它能連上後再試一次。",
   "settingsGeneralResetting": "正在重設…",
   "settingsGeneralShowInDock": "在 Dock 中顯示",
   "settingsGeneralShowInDockDescription": "關閉後會隱藏 Dock 圖像，視窗仍會保留。",

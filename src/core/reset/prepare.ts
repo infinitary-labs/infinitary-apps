@@ -47,8 +47,16 @@ export function resetScope(deps: ResetPrepareDeps): ResetScope {
   return { tasks: deps.openTasks().length };
 }
 
-/** Undoes each kind in turn; a step that fails or times out never stops the next. */
-export async function prepareReset(deps: ResetPrepareDeps): Promise<{ ok: true }> {
+/**
+ * Undoes each kind in turn; a step that fails or times out never stops the
+ * next. `keep` names a paired computer left on the list: the one that asked
+ * this reset, which resets itself (docs/reset.md, "From a computer that
+ * controls the first mate").
+ */
+export async function prepareReset(
+  deps: ResetPrepareDeps,
+  options: { keep?: string } = {},
+): Promise<{ ok: true }> {
   const within = deps.within ?? withinMs;
   const attempt = async (work: () => unknown, ms: number): Promise<boolean> => {
     try {
@@ -61,8 +69,10 @@ export async function prepareReset(deps: ResetPrepareDeps): Promise<{ ok: true }
 
   // Devices first, while the connection still runs: a phone or computer
   // that hears it was removed stops dialing a first mate that is going.
-  for (const device of deps.devices())
+  for (const device of deps.devices()) {
+    if (device.id === options.keep) continue;
     await attempt(() => deps.removeDevice(device.id), RESET_STEP_MS);
+  }
 
   // Tasks close as discarded, so each one's stops end what it started and
   // each keep's remove runs, before the folder holding their records goes.

@@ -662,7 +662,9 @@
   "settingsGeneralReset": "Reset Infinitary",
   "settingsGeneralResetButton": "Reset",
   "settingsGeneralResetDeletes": "Infinitary deletes everything it keeps here, including tasks, sign-ins, Secrets, settings and paired devices, then opens as if just installed.",
+  "settingsGeneralResetDeletesBoth": "Infinitary deletes everything it keeps on both, including tasks, sign-ins, Secrets, settings and paired devices, then each opens as if just installed.",
   "settingsGeneralResetDescription": "Takes Infinitary on this computer back to how it was just installed.",
+  "settingsGeneralResetDescriptionBoth": "Takes Infinitary on {home} and this computer back to how it was just installed.",
   "settingsGeneralResetKeep": "Keep everything",
   "settingsGeneralResetKeeps": "Projects in your own folders keep every file and commit. To clear tasks only, use Purge task data.",
   "settingsGeneralResetOpenTasks": {
@@ -671,6 +673,8 @@
     "other": "{count} open tasks stop."
   },
   "settingsGeneralResetQuestion": "Reset Infinitary on this computer?",
+  "settingsGeneralResetQuestionBoth": "Reset Infinitary on {home} and this computer?",
+  "settingsGeneralResetUnreached": "{home} did not answer, so nothing was reset. Try again once it is in reach.",
   "settingsGeneralResetting": "Resetting…",
   "settingsGeneralShowInDock": "Show in dock",
   "settingsGeneralShowInDockDescription": "Off hides the dock icon while the window stays.",

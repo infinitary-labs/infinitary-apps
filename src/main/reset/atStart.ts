@@ -21,6 +21,7 @@ import {
   ownCommand,
   passwordStoreCustodies,
 } from "./outside";
+import { startAttemptsPath } from "./startAttempts";
 
 /**
  * Finishes a reset asked before the app quit (docs/reset.md, "At the next
@@ -34,13 +35,18 @@ export async function finishResetAtStart(input: {
   dataDir: string;
 }): Promise<ResetFinish> {
   const { choice, dataDir } = input;
+  // The count of starts that did not get through sits beside any folder,
+  // and a fresh start begins with none (./startAttempts.ts).
   if (choice.kind !== "flavor")
-    return finishReset(dataDir, { ...RESET_FINISH_SEAMS, olderCopies: () => [] });
+    return finishReset(dataDir, {
+      ...RESET_FINISH_SEAMS,
+      olderCopies: () => [startAttemptsPath(dataDir)],
+    });
   const platform = hostPlatform();
   const flavor = choice.flavor;
   return finishReset(dataDir, {
     ...RESET_FINISH_SEAMS,
-    olderCopies: () => olderCopies(dataDir, flavor),
+    olderCopies: () => [startAttemptsPath(dataDir), ...olderCopies(dataDir, flavor)],
     clearOutside: (kind) => clearAtStart(kind, { platform, flavor, dataDir }),
   });
 }

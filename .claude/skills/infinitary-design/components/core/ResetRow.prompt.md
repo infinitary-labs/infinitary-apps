@@ -1,6 +1,7 @@
 "Reset Infinitary": the row under Purge task data in Settings -> General that takes this computer's Infinitary back to how it was just installed (docs/reset.md).
 The shared `SettingRow` shape: the title "Reset Infinitary" at weight 500, the `--text-sm --fg-3` line "Takes Infinitary on this computer back to how it was just installed.", and a small ghost "Reset" at the row's end.
-A window that controls another computer's first mate never shows the row.
+A window that controls another computer's first mate shows the row once that computer can be reset from here, naming it: "Takes Infinitary on {home} and this computer back to how it was just installed.", and the question "Reset Infinitary on {home} and this computer?"; when {home} does not answer, the row stays on its question with a `--danger` line saying nothing was reset.
+The screens shown when Infinitary cannot open draw the same question on their standalone page: Keep everything focused, then a danger-outlined Reset Infinitary.
 Reset asks on the row, never on a card, as Secrets' Forget does: the button goes, and under the description the question "Reset Infinitary on this computer?" at `--text-sm` weight 500 `--fg-1`, then its sentences in `--text-sm --fg-2`: what it deletes, "{count} open tasks stop." only when tasks are open, and what stays with "To clear tasks only, use Purge task data." last.
 Then a small secondary "Keep everything", which has focus so Enter never resets, and a small danger "Reset Infinitary" that waits as "Resetting…" while the app quits.
 Reset Infinitary then asks the system's own confirmation (Touch ID or the password, Windows Hello, the Linux prompt) before anything changes; cancelling it puts the row back with focus on Reset, as Keep everything does.

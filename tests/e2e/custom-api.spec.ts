@@ -245,7 +245,10 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
     await price.name.fill("Operator");
     await price.free.check();
     expect(await saveCustomApi(page)).toBe("saved");
-    expect(api.requests).toHaveLength(sentBeforePrice);
+    // Save reads the model list again, and sends no check.
+    expect(api.requests.slice(sentBeforePrice).map(({ path }) => path)).toEqual([
+      `${new URL(api.baseUrl).pathname}/models`,
+    ]);
     expect(
       (await page.evaluate(() => window.infinitary.accounts.custom.list()))[0]?.models[0],
     ).toMatchObject({

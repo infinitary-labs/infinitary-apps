@@ -35,6 +35,7 @@ function setup(
       controlling: (id: string) => reach.controlling?.includes(id) ?? false,
       version: (id: string) => (reach.versions?.includes(id) ? "1.0.0" : undefined),
     },
+    resetFarewells: { add: () => {} },
     computers: { list: () => devices },
     vault: { list: () => [] },
     integrations: { view: () => ({ integrations: [] }) },

@@ -5,7 +5,6 @@ import type { CoreServices } from "../coreServices";
 import type { HostCapabilities } from "../host";
 import { prepareReset, type ResetPrepareDeps, resetScope } from "../reset/prepare";
 import { real, undoProjectSettings, within } from "../reset/projectGit";
-import { addResetRemoval } from "../reset/removals";
 
 type ResetHandlers = {
   [C in Extract<
@@ -80,7 +79,7 @@ export function resetDeps(services: CoreServices): ResetPrepareDeps {
         )
         .map((device) => device.id);
       if (away.length > 0)
-        addResetRemoval(dataDir(), services.devices.resetRemoval(away, Date.now()));
+        services.resetFarewells.add(services.devices.resetRemoval(away, Date.now()));
     },
     accounts: () => services.vault.list(),
     signOut: (id) => services.vault.remove(id),

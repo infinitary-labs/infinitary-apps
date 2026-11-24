@@ -11,6 +11,7 @@ import {
   type ResetRemoval,
   type ResetRemovalComputer,
   readResetRemovals,
+  withResetRemoval,
   writeResetRemovals,
 } from "../reset/removals";
 import { farFolderArgs, REMOVE } from "./farSystems";
@@ -101,6 +102,18 @@ export class ResetFarewells {
     );
   }
 
+  /**
+   * A reset on this install adds its own computers out of reach, keeping
+   * every earlier reset's that still waits under its own key and date. It
+   * goes through the record this holds, which is the one that saves it.
+   */
+  add(reset: ResetRemoval | null): void {
+    if (!reset || reset.computers.length === 0) return;
+    this.resets = withResetRemoval(this.resets, reset);
+    this.save();
+    this.changed();
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -156,14 +169,14 @@ export class ResetFarewells {
   /**
    * A dial finished its handshake: one that showed a waiting computer's key
    * is shown that computer's old key from its address's next dial; one an
-   * old key was shown that is no waiting computer's is shown the first
-   * mate's own key again.
+   * old key was shown that is no waiting computer's, or that shows no key,
+   * such as a computer's join probe, is shown the first mate's own key again.
    */
   noticed(socket: TLSSocket, servedCert: string): void {
     const address = socket.remoteAddress ? plain(socket.remoteAddress) : undefined;
+    if (!address) return;
     const pin = peerPin(socket);
-    if (!address || !pin) return;
-    const found = this.find(pin);
+    const found = pin ? this.find(pin) : undefined;
     if (!found) {
       if (this.resets.some((reset) => reset.home.cert === servedCert)) this.learned.delete(address);
       return;
@@ -247,9 +260,7 @@ export class ResetFarewells {
     for (const computer of this.sshComputers()) this.tryThere(computer.id, true);
     for (const reset of this.resets)
       for (const computer of reset.computers) this.waitQuiet(computer.id);
-    this.horizon = setInterval(() => {
-      if (this.prune()) this.changed();
-    }, HORIZON_LOOK_MS);
+    this.horizon = setInterval(() => this.prune(), HORIZON_LOOK_MS);
     this.horizon.unref?.();
     return () => this.stop();
   }
@@ -344,11 +355,15 @@ export class ResetFarewells {
     this.changed();
   }
 
-  /** Every reset whose 30 days are up goes, with its key, naming each computer that stayed. */
-  private prune(): boolean {
+  /**
+   * Every reset whose 30 days are up goes, with its key, naming each computer
+   * that stayed. Whoever reads `waiting()` hears it: the connection's own
+   * reads of it, which come first, are what end it.
+   */
+  private prune(): void {
     const now = this.now();
     const ended = this.resets.filter((reset) => reset.at + RESET_REMOVAL_MS <= now);
-    if (ended.length === 0) return false;
+    if (ended.length === 0) return;
     this.resets = this.resets.filter((reset) => !ended.includes(reset));
     for (const reset of ended) for (const computer of reset.computers) this.forget(computer.id);
     this.forgetLearned();
@@ -356,7 +371,7 @@ export class ResetFarewells {
     for (const reset of ended)
       for (const computer of reset.computers)
         this.options.said({ id: computer.id, name: computer.name }, "stayed");
-    return true;
+    this.changed();
   }
 
   /** Stops every wait for one computer. */

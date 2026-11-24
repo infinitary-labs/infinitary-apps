@@ -121,18 +121,18 @@ A paired computer the reset cannot reach - none of its connections is up, neithe
 Before removing any device, the first mate writes each such computer to the removal record, `<folder>.reset-removals.json` beside the folder (`src/core/reset/removals.ts`, its one writer), readable by this account alone: its id, its name as Devices showed it, the pin of its key, and the address and checked host key of its Remote Login, if the first mate reached it that way.
 The record keeps the old first mate's key, used only to answer such a computer's dial with a removal.
 Phones and the computer that asked the reset are never written, and a reset that reached every computer writes no record.
-A second reset keeps the first's computers, each reset under its own key and date, up to eight resets.
+A second reset keeps the first's computers, each reset under its own key and date, up to eight resets; the running first mate adds it to the record it holds, so its next save keeps both.
 
 The fresh first mate (`ResetFarewells`, `src/core/devices/resetFarewells.ts`) never treats such a computer as paired:
 
 - **Its dial**: while the record waits, the connection listens even with nothing paired, and shows the newest reset's old key until the fresh first mate pairs anything, so it makes no key of its own meanwhile.
-  Once it pairs something, it shows its own key; an address whose dial gave up on a key it did not expect is shown the next one - its own, then each waiting reset's from the newest - from its next dial (`identityFor`, `docs/connection.md`).
+  Once it pairs something, it shows its own key; an address whose dial gave up on a key it did not expect is shown the next one - its own, then each waiting reset's from the newest - from its next dial (`identityFor`, `docs/connection.md`), and an address shown an old key whose dial shows no key of its own, such as a computer's join probe, is shown its own key again.
   A waiting computer's dial shown its old key is refused, which it reads as removed at the second time in a row (`docs/devices.md`, "Remove"); one refused twice in a row that then dials no more for 30 seconds is removed, since one not removed dials again within seconds.
 - **Over Remote Login**: one the old first mate reached that way has the old first mate's removal asked there (`work remove --from-home`, with the old first mate's pin and its id), on the Mac's own SSH and only the host key the person checked, at once, then after 1, 5 and 15 minutes and every 30 after, and at once when this computer wakes.
   Nothing of the first mate's own SSH key is kept, so this works only where the person's own SSH signs in there.
 
 Each computer removed is said once on the feed and leaves the record; the last takes the record and its keys with it.
-30 days after a reset, its computers still waiting are said once on the feed to have stayed, and go from the record with that reset's key: what the old first mate set up there stays until the person removes it there.
+30 days after a reset, its computers still waiting are said once on the feed to have stayed, and go from the record with that reset's key, and the connection stops listening for them: what the old first mate set up there stays until the person removes it there.
 Nothing answers a waiting computer while no first mate runs on this computer.
 
 ## Outside the folder

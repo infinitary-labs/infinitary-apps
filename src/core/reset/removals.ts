@@ -114,6 +114,13 @@ export function writeResetRemovals(dataDir: string, resets: readonly ResetRemova
  */
 export function addResetRemoval(dataDir: string, reset: ResetRemoval | null): void {
   if (!reset || reset.computers.length === 0) return;
-  const earlier = readResetRemovals(dataDir).filter((each) => each.home.pin !== reset.home.pin);
-  writeResetRemovals(dataDir, [...earlier, reset].slice(-RESETS_KEPT));
+  writeResetRemovals(dataDir, withResetRemoval(readResetRemovals(dataDir), reset));
+}
+
+/** `earlier` with `reset` added last, in place of one under the same key, keeping the newest few. */
+export function withResetRemoval(
+  earlier: readonly ResetRemoval[],
+  reset: ResetRemoval,
+): ResetRemoval[] {
+  return [...earlier.filter((each) => each.home.pin !== reset.home.pin), reset].slice(-RESETS_KEPT);
 }

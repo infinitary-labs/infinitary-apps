@@ -1,7 +1,7 @@
 import { constants as cryptoConstants } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
-import { createServer as createNetServer, type Server as NetServer } from "node:net";
+import { Server as NetServer, type Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import {
   channelIn,
@@ -1373,6 +1373,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       handshakeTimeout: 10_000,
       headersTimeout: 10_000,
       requestTimeout: 10_000,
+      // Node looks for connections past those limits this often: 30 s unless told.
+      connectionsCheckingInterval: 1_000,
     });
     const bind = async (
       host: string,
@@ -1384,6 +1386,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       // address and port: a TLS socket whose handshake failed no longer
       // knows its address, so the front, which read it first, says it.
       const handshaking = new Set<string>();
+      // A reset's old key is shown to an address that asks for it
+      // (`identityFor`, docs/reset.md, "Computers out of reach"): TLS picks
+      // its key before the device says anything that names the key it
+      // expects, so the choice is made on the bare socket, by its address,
+      // and the socket is handed to the TLS listener that shows that key.
+      const choosing = !door && devices.identityFor;
       const serve = (shown: { key: string; cert: string }) => {
         const made = createServer(tlsWith(shown), (request, response) => {
           const path = new URL(request.url ?? "/", "https://home").pathname;
@@ -1400,18 +1408,15 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             handshaking.delete(`${socket.remoteAddress}|${socket.remotePort}`);
             devices.noticed?.(socket, shown.cert);
           });
+        // Node starts a server's header and request timers only when it
+        // listens, and one behind the front never does.
+        if (choosing) made.emit("listening");
         return made;
       };
       const tls = serve(identity);
-      // A reset's old key is shown to an address that asks for it
-      // (`identityFor`, docs/reset.md, "Computers out of reach"): TLS picks
-      // its key before the device says anything that names the key it
-      // expects, so the choice is made on the bare socket, by its address,
-      // and the socket is handed to the TLS listener that shows that key.
-      const choosing = !door && devices.identityFor;
       const shownBy = new Map<string, Server>([[identity.cert, tls]]);
       const server: NetServer = choosing
-        ? createNetServer((socket) => {
+        ? new KeyFront(shownBy, (socket) => {
             const address = socket.remoteAddress;
             const other = devices.identityFor?.(address);
             const shown = other ?? identity;
@@ -1718,4 +1723,23 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       await reconcile();
     },
   };
+}
+
+/**
+ * The listener that picks which key a connection is shown and hands it to the
+ * TLS listener showing that key (`identityFor`); those never listen
+ * themselves, so closing it closes them too.
+ */
+class KeyFront extends NetServer {
+  constructor(
+    private readonly shownBy: ReadonlyMap<string, Server>,
+    handOn: (socket: Socket) => void,
+  ) {
+    super(handOn);
+  }
+
+  override close(callback?: (error?: Error) => void): this {
+    for (const listener of this.shownBy.values()) listener.close();
+    return super.close(callback);
+  }
 }

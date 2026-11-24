@@ -10,10 +10,10 @@ How a device pairs, and the keys both sides prove themselves with, is `docs/devi
 
 ## When and where it listens
 
-- **For devices, only while something is paired or a link is open.**
+- **For devices, only while something is paired, a link is open, or a reset's computer out of reach has yet to hear it was removed.**
   `startConnection` follows the pairing seam (`PairedDevices`, below) and listens for devices while `any()` holds.
   When the last pairing goes and no link is open it stops listening for them at once and closes every device.
-  The desktop app composes it with the real pairing (`core.services.devices`), so with nothing paired and no link the shipped app listens for devices on no address.
+  The desktop app composes it with the real pairing (`core.services.devices`), answered through a reset's record (`docs/reset.md`, "Computers out of reach"), so with nothing paired, no link and no record waiting the shipped app listens for devices on no address.
 - **On the local door, always.**
   Given `localDoor`, a folder, it also listens on a loopback port the system chooses, from start to quit, whatever is paired ("The local door" below).
   A change to where devices are listened for restarts only the devices' listeners and closes only devices; the door and its clients stay.
@@ -21,7 +21,7 @@ How a device pairs, and the keys both sides prove themselves with, is `docs/devi
   Each listener serves the home's own key (`docs/devices.md`, "Keys") and asks the device for its own; it accepts no older protocol, resumes no session, and has no plain listener, loopback included.
   A seam with `identityFor(address)` picks the key per connection instead, before the handshake, by the address it comes from, since a device that dials an address names no key: the app's does so to show a reset's old key to a computer that reset could not reach (`docs/reset.md`, "Computers out of reach").
   It hears each handshake that finished (`noticed`) and each that ended before it did (`abandoned`), as a device's does when it was shown a key it does not expect, and listens anew when `identityTag()` names another key.
-  A handshake, the request headers and a whole request each have 10 seconds.
+  A handshake, the request headers and a whole request each have 10 seconds, behind that per-address choice too.
 - **Loopback plus every address a link may carry.**
   It always listens on `127.0.0.1`.
   `listenOn` (`src/core/connection/addresses.ts`) adds each offered address, and `listenAddresses` admits one only when it is an address (never a name to resolve), private (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, the shared `100.64.0.0/10` a private network service such as Tailscale hands out, IPv6 `fc00::/7`), and on one of this Mac's own interfaces right now.

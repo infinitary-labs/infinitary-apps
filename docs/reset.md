@@ -38,7 +38,7 @@ A home whose first mate a command started (`<app> run`, at boot, by its service 
   On Windows the run removes its task through Task Scheduler, after the mark is written, so a removal that ended the run still leaves the next start to finish the reset.
 - A window opened beside it keeps its own profile inside the folder (`window-profile`), so ending the leftover programs leaves that window alone.
 - The run starts nothing again: it ends with 0 and says so, and its starters' files are gone, so nothing starts it again; on a chosen or isolated folder only the agent file inside the folder goes, since the entries in the home folder start the person's own folder.
-  A window beside it starts again by itself once the run ended and the mark is there (`BesideOptions.resetAsked`), but never while its own reset runs, which writes the mark before the clearer that ends the run (`resetWatch`, `src/main/reset/ownReset.ts`), and that start wipes the folder and opens on the welcome screen; with no window there, the next start of Infinitary on that computer does.
+  A window beside it starts again by itself once the run ended and the mark still asks for the wipe (`BesideOptions.resetAsked`; a mark left at its later steps by a folder that could not be deleted asks none), but never while its own reset runs, which writes the mark before the clearer that ends the run (`resetWatch`, `src/main/reset/ownReset.ts`), and that start wipes the folder and opens on the welcome screen; with no window there, the next start of Infinitary on that computer does.
 
 ## Where a reset can start
 

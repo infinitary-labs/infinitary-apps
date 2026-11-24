@@ -26,6 +26,13 @@ describe("whether a reset waits for the window beside a run", () => {
     expect(watch.waiting()).toBe(true);
   });
 
+  it("is none for a mark left at moved by a folder renamed aside that could not be deleted, as the fresh install already runs", () => {
+    const dataDir = folder();
+    const watch = resetWatch(dataDir);
+    writeResetMark(dataDir, { ...askedResetMark([]), stage: "moved", asideTries: 1 });
+    expect(watch.waiting()).toBe(false);
+  });
+
   it("is none while this program's own reset runs, through the clearer that ends the run and every step after it", async () => {
     const dataDir = folder();
     const watch = resetWatch(dataDir);

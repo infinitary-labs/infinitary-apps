@@ -949,7 +949,7 @@ The phone release's call keeps its job's 345 minutes, 165 for setup, the ordinar
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 `tests/phone-ci.test.ts` evaluates the required queue, rejects missing configuration and proves former overrides cannot change routing or suppress guest setup.
-The device gate runs as many simulators of its one device as the phone Mac's processors and memory hold, two on today's compute Mac VMs, and shares the device's parts among them by their recorded times (INF-4241 piece 3; `docs/ios.md`, "Disposable verification").
+The device gate runs as many simulators of its one device as the phone Mac's processors and memory hold, two on today's compute Mac VMs, where an iPhone Duo takes both (`docs/ios.md`, "Disposable verification"), and shares the device's parts among them by their recorded times (INF-4241 piece 3; `docs/ios.md`, "Disposable verification").
 This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request's dealt jobs each take their own phone Mac, and the TestFlight call runs every device in its one job.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 

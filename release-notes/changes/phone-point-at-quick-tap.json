@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-point-at-quick-tap",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Point at picks the part you tap on a busy iPhone or iPad",
+      "body": "On your iPhone or iPad, tapping a paragraph of a card after Point at could do nothing while the device was busy, and the note editor stayed closed. Your tap now picks the part you point at and opens its note editor, however briefly your finger touches it.",
+      "noPicture": "The note editor looks as it did; only a tap that was lost now reaches it, which one picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

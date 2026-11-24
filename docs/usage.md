@@ -92,6 +92,9 @@ Infinitary reads that setup and passes Claude's own records on to the company's 
   The setup's other keys, such as `OTEL_RESOURCE_ATTRIBUTES`, an export interval or the switches that put prompts in the logs, reach the client unchanged, so the company receives what Claude's client would have sent; traces stay off.
 - **Headers.**
   The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are refused, and a failed command sends without its headers, leaves one log line without its output and runs again after 10 seconds.
+- **Certificates.**
+  The forward checks a collector's certificate against the list of certificate authorities built into the app, not the computer's own trusted certificates, and sends no client certificate; a certificate, client key or insecure key in the person's settings file or shell is not honored.
+  So a collector on a company's own certificate authority, or one that asks for a client certificate, refuses every batch and receives nothing from Infinitary; the client hears the refusal, and nothing in the app says so yet.
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**

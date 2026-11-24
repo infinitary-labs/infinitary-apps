@@ -26,7 +26,11 @@ import {
 import type { ClaudeCallCost } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { claudeCostReportingAllowed } from "./claudeCostPolicy";
-import { ClaudeCostReports, decodeLogsProtobuf } from "./claudeCostReports";
+import {
+  ClaudeCostReports,
+  type ClaudeCostSubscription,
+  decodeLogsProtobuf,
+} from "./claudeCostReports";
 import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { readClaudeCompanyReporting, resetHeadersHelperForTests } from "./claudeReporting";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
@@ -163,6 +167,52 @@ function headersHelper(home: string): string {
 }
 
 /**
+ * A recorder between Claude's client and the receiver: it keeps each batch
+ * exactly as the client sent it, then hands it on and answers with the
+ * receiver's answer, so a batch the receiver altered on its way to the
+ * collector would differ from what is kept here.
+ */
+async function clientTap(kept: { signal: string; body: string }[]) {
+  let receiverOrigin = "";
+  const server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", async () => {
+      const body = Buffer.concat(chunks);
+      kept.push({ signal: (req.url ?? "").split("/").pop() ?? "", body: body.toString("base64") });
+      const answer = await fetch(`${receiverOrigin}${req.url}`, {
+        method: "POST",
+        headers: { "content-type": req.headers["content-type"] ?? "application/json" },
+        body,
+      });
+      res.writeHead(answer.status, {
+        "content-type": answer.headers.get("content-type") ?? "application/json",
+      });
+      res.end(Buffer.from(await answer.arrayBuffer()));
+    });
+  });
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  return {
+    between: (subscription: ClaudeCostSubscription): ClaudeCostSubscription => {
+      const env = { ...subscription.env };
+      for (const key of [
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+      ]) {
+        const endpoint = env[key];
+        if (!endpoint) continue;
+        const url = new URL(endpoint);
+        receiverOrigin = url.origin;
+        env[key] = `${origin}${url.pathname}`;
+      }
+      return { ...subscription, env };
+    },
+  };
+}
+
+/**
  * A crewmate in a throwaway HOME whose settings file holds `env` and, when
  * given, a header command; the session reads that file with the client
  * library's own settings reader, as production does.
@@ -185,9 +235,9 @@ async function turnWithSettings(
   });
   const notes: string[] = [];
   const priced: ClaudeCallCost[] = [];
-  // What Claude's client sent the receiver, to set beside what the collector got.
   const fromClient: { signal: string; body: string }[] = [];
   const receiver = new ClaudeCostReports();
+  const tap = await clientTap(fromClient);
   const launch = { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub };
   const factory = createClaudeSessionFactory({
     configDir,
@@ -207,20 +257,16 @@ async function turnWithSettings(
       claudeCostReportingAllowed(resolvePlacedClaudePolicyFixture(managedPolicy(home, env))),
     companyReporting: (launchEnv) => readClaudeCompanyReporting(launchEnv, { shell: () => ({}) }),
     costReports: {
-      subscribe: (id, report, forward) =>
-        receiver.subscribe(
-          id,
-          (cost) => {
-            priced.push(cost);
-            report(cost);
-          },
-          forward && {
-            ...forward,
-            send: (signal, body, contentType) => {
-              fromClient.push({ signal, body: body.toString("base64") });
-              return forward.send(signal, body, contentType);
+      subscribe: async (id, report, forward) =>
+        tap.between(
+          await receiver.subscribe(
+            id,
+            (cost) => {
+              priced.push(cost);
+              report(cost);
             },
-          },
+            forward,
+          ),
         ),
     },
   });

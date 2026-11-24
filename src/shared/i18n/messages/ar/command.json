@@ -3,7 +3,7 @@
   "commandAllowanceRecheckWords": "رصيد, حصة, تحديث, استخدام, حد, حساب, تبديل",
   "commandAmbientStyle": "اختيار الموسيقى الهادئة",
   "commandAmbientStyleWords": "موسيقى، نمط، لوفاي، صوت، أجواء، اختيار، تغيير",
-  "commandAmbientToggle": "تشغيل الموسيقى الهادئة أو إيقافها مؤقتًا",
+  "commandAmbientToggle": "تشغيل الموسيقى الهادئة أو إيقافها",
   "commandAmbientToggleWords": "موسيقى, lofi, صوت, أجواء, إيقاف",
   "commandAutomationPauseAll": "إيقاف كل عمليات الأتمتة مؤقتًا",
   "commandAutomationPauseAllWords": "جدولة, مجدولة, متكررة, إيقاف",

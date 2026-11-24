@@ -10,6 +10,7 @@ import {
   type Appearance,
   DEFAULT_APPEARANCE,
   DEFAULT_LAYOUT,
+  foldAmbientPause,
   type Layout,
   type PersonalPanels,
   type ShellPreferences,
@@ -56,7 +57,8 @@ export class ViewLook implements PreferenceSource {
 
   get(): ShellPreferences {
     return {
-      appearance: this.look?.appearance ?? DEFAULT_APPEARANCE,
+      // A look kept or followed from before the pause retired reads off (docs/ambient-music.md).
+      appearance: foldAmbientPause(this.look?.appearance ?? DEFAULT_APPEARANCE),
       layout: this.look?.layout ?? DEFAULT_LAYOUT,
       panels: this.panels,
     };
@@ -99,8 +101,9 @@ export class ViewLook implements PreferenceSource {
   }
 
   setAppearance(appearance: Appearance): Appearance {
-    this.save({ ...this.own(), appearance });
-    return appearance;
+    const folded = foldAmbientPause(appearance);
+    this.save({ ...this.own(), appearance: folded });
+    return folded;
   }
 
   setLayout(layout: Layout): Layout {

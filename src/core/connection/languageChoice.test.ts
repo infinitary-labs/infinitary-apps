@@ -115,7 +115,7 @@ it("leaves the ambient music out of the look a view without ambient-music is pus
     appearance: {
       ...DEFAULT_SHELL_PREFERENCES.appearance,
       ambientMusic: true,
-      ambientPaused: true,
+      ambientPaused: false,
       ambientVolume: 55,
     },
   };

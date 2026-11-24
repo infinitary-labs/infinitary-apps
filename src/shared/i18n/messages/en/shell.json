@@ -1,7 +1,7 @@
 {
-  "shellAmbientPause": "Pause ambient music",
   "shellAmbientPlay": "Play ambient music",
   "shellAmbientQuiet": "Quiet while you talk",
+  "shellAmbientStop": "Stop ambient music",
   "shellAmbientStyleNamed": "Style: {name}",
   "shellCardFoldPanels": "Fold panels",
   "shellCardMateAnswering": "Your first mate is answering on this card",

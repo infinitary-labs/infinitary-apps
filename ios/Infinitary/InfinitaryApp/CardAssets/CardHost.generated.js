@@ -20647,29 +20647,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function commandAmbientToggle() {
     switch (currentLanguage()) {
       case "ar":
-        return `تشغيل الموسيقى الهادئة أو إيقافها مؤقتًا`;
+        return `تشغيل الموسيقى الهادئة أو إيقافها`;
       case "de":
-        return `Ambient-Musik abspielen oder pausieren`;
+        return `Ambient-Musik abspielen oder stoppen`;
       case "es":
-        return `Reproducir o pausar la música ambiental`;
+        return `Reproducir o detener la música ambiental`;
       case "fr":
-        return `Lire ou mettre en pause la musique d’ambiance`;
+        return `Lire ou arrêter la musique d’ambiance`;
       case "ja":
-        return `アンビエント音楽を再生または一時停止`;
+        return `アンビエント音楽を再生または停止`;
       case "ko":
-        return `앰비언트 음악 재생 또는 일시 정지`;
+        return `앰비언트 음악 재생 또는 정지`;
       case "pt-BR":
-        return `Tocar ou pausar a música ambiente`;
+        return `Tocar ou parar a música ambiente`;
       case "zh-Hans":
-        return `播放或暂停环境音乐`;
+        return `播放或停止环境音乐`;
       case "zh-Hant":
-        return `播放或暫停環境音樂`;
+        return `播放或停止環境音樂`;
       case "en-XA":
-        return `[Þļáý öŕ þáûšé áɱƀîéñţ ɱûšîç ~~~~~~~~~]`;
+        return `[Þļáý öŕ šţöþ áɱƀîéñţ ɱûšîç ~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Play or pause ambient music‬`;
+        return `‮Play or stop ambient music‬`;
     }
-    return `Play or pause ambient music`;
+    return `Play or stop ambient music`;
   }
   function commandAmbientToggleWords() {
     switch (currentLanguage()) {
@@ -91620,33 +91620,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The project address changed. Show a new merge card.`;
   }
-  function shellAmbientPause() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `إيقاف الموسيقى المحيطية مؤقتًا`;
-      case "de":
-        return `Hintergrundmusik pausieren`;
-      case "es":
-        return `Pausar música ambiental`;
-      case "fr":
-        return `Mettre en pause la musique d’ambiance`;
-      case "ja":
-        return `環境音楽を一時停止`;
-      case "ko":
-        return `배경 음악 일시 정지`;
-      case "pt-BR":
-        return `Pausar música ambiente`;
-      case "zh-Hans":
-        return `暂停环境音乐`;
-      case "zh-Hant":
-        return `暫停環境音樂`;
-      case "en-XA":
-        return `[Þáûšé áɱƀîéñţ ɱûšîç ~~~~~~~]`;
-      case "ar-XB":
-        return `‮Pause ambient music‬`;
-    }
-    return `Pause ambient music`;
-  }
   function shellAmbientPlay() {
     switch (currentLanguage()) {
       case "ar":
@@ -91700,6 +91673,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Quiet while you talk‬`;
     }
     return `Quiet while you talk`;
+  }
+  function shellAmbientStop() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إيقاف الموسيقى المحيطية`;
+      case "de":
+        return `Hintergrundmusik stoppen`;
+      case "es":
+        return `Detener música ambiental`;
+      case "fr":
+        return `Arrêter la musique d’ambiance`;
+      case "ja":
+        return `環境音楽を停止`;
+      case "ko":
+        return `배경 음악 정지`;
+      case "pt-BR":
+        return `Parar música ambiente`;
+      case "zh-Hans":
+        return `停止环境音乐`;
+      case "zh-Hant":
+        return `停止環境音樂`;
+      case "en-XA":
+        return `[Šţöþ áɱƀîéñţ ɱûšîç ~~~~~~]`;
+      case "ar-XB":
+        return `‮Stop ambient music‬`;
+    }
+    return `Stop ambient music`;
   }
   function shellAmbientStyleNamed(input2) {
     const name = input2.name;
@@ -105035,9 +105035,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settleMergingChange,
     settleMergingChangeAfterTurn,
     settleProjectAddressChanged,
-    shellAmbientPause,
     shellAmbientPlay,
     shellAmbientQuiet,
+    shellAmbientStop,
     shellAmbientStyleNamed,
     shellCardFoldPanels,
     shellCardMateAnswering,
@@ -108344,9 +108344,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settleMergingChange": ["change"],
     "settleMergingChangeAfterTurn": ["change"],
     "settleProjectAddressChanged": [],
-    "shellAmbientPause": [],
     "shellAmbientPlay": [],
     "shellAmbientQuiet": [],
+    "shellAmbientStop": [],
     "shellAmbientStyleNamed": ["name"],
     "shellCardFoldPanels": [],
     "shellCardMateAnswering": [],

@@ -129,14 +129,19 @@ test("a panel shows the music and the theme as Settings changes them, and is ref
   await expect(
     music.getByText(`Music on, not paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
   ).toBeVisible();
+  // INF-6406: a pause, as an older build's sound button still saves one, reads as off.
   await setLook({ ambientPaused: true });
   await expect(
-    music.getByText(`Music on, paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
+    music.getByText(`Music off, not paused, ${DEFAULT_AMBIENT_STYLE} at 40%, dark theme`),
   ).toBeVisible();
   await setLook({ ambientStyle: "quiet-cove", ambientVolume: 25 });
-  await expect(music.getByText("Music on, paused, quiet-cove at 25%, dark theme")).toBeVisible();
+  await expect(
+    music.getByText("Music off, not paused, quiet-cove at 25%, dark theme"),
+  ).toBeVisible();
   await setLook({ theme: "light" });
-  await expect(music.getByText("Music on, paused, quiet-cove at 25%, light theme")).toBeVisible();
+  await expect(
+    music.getByText("Music off, not paused, quiet-cove at 25%, light theme"),
+  ).toBeVisible();
 
   // The setting with no panel value, asked in the light theme, is refused and delivers nothing.
   await expect
@@ -149,7 +154,9 @@ test("a panel shows the music and the theme as Settings changes them, and is ref
     )
     .toBeDefined();
   await setLook({ ambientVolume: 30 });
-  await expect(music.getByText("Music on, paused, quiet-cove at 30%, light theme")).toBeVisible();
+  await expect(
+    music.getByText("Music off, not paused, quiet-cove at 30%, light theme"),
+  ).toBeVisible();
   await expect(music.getByText("Project settings: no value")).toBeVisible();
   // A panel that does not declare the read is refused at its call and reads nothing.
   await expect(

@@ -1,5 +1,5 @@
 ---
-source: ae7178f2ee99eec5
+source: 454b7a23fdc82430
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -88,10 +88,10 @@ Algunas partes de Infinitary todavía se muestran en inglés.
 Sigue a la tripulación, y suena cuando algo te espera.
 Está desactivada hasta que la activas, y **Volumen** define qué tan fuerte suena.
 
-Mientras está activada, un botón de sonido aparece justo antes de **Configuración**, en la parte superior de la ventana.
-Presiónalo para pausar o reanudar.
+Un botón de sonido aparece justo antes de **Configuración**, en la parte superior de la ventana, esté la música activada o desactivada.
+Presiónalo para activar o desactivar la música; el interruptor **Música ambiental** cambia con él.
 Deja el puntero sobre él y muestra el nombre de la música que suena; déjalo sobre el nombre, o presiónalo, para elegir otro estilo de la lista que aparece debajo.
-La búsqueda de comandos también tiene **Reproducir o pausar la música ambiental** y **Elegir la música ambiental**.
+La búsqueda de comandos también tiene **Reproducir o detener la música ambiental** y **Elegir la música ambiental**.
 
 ## Manuales {#runbooks}
 

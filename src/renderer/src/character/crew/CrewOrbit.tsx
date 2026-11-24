@@ -1,3 +1,4 @@
+import { awayWord } from "@shared/devices";
 import type { CrewWord } from "@shared/firstRun";
 import { formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
@@ -1187,9 +1188,14 @@ export function CrewOrbit({
             style={{ left: 0, top: 0, transform: clusterNameTransform(cluster, extent) }}
           >
             <span>{cluster.name}</span>
-            {!cluster.reachable && (
-              <span className="fm-computer-unreachable">{m.crewOutOfReach()}</span>
-            )}
+            {!cluster.reachable &&
+              (cluster.away ? (
+                <span className="fm-computer-away">
+                  {awayWord(cluster.away === "connecting", cluster.away === "updating")}
+                </span>
+              ) : (
+                <span className="fm-computer-unreachable">{m.crewOutOfReach()}</span>
+              ))}
           </div>
         ))}
         <div className="fm-crew-state-words" aria-live="off">

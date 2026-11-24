@@ -25,6 +25,13 @@ export const BUDGET_TESTS = [
 ] as const;
 export const BUDGET_TEST_NAME = "under its hard line";
 
+/** What a red run tells the trim task it files. */
+const TRIM_POINTER = [
+  "A reading is over its budget. A trim brings each reading to its trimTarget above, 90% of the budget,",
+  'by the order of work in docs/orchestrator-contract.md, "How a trim works".',
+  "List every served sentence it removes or alters with: node scripts/served-sentences.ts",
+].join("\n");
+
 export function budgetArgs(): string[] {
   return [
     "exec",
@@ -46,6 +53,7 @@ function main(): void {
     stdio: "inherit",
     env: { ...process.env, PROMPT_BUDGET_LINE: "budget" },
   });
+  if (run.status !== 0) console.error(TRIM_POINTER);
   process.exit(run.status ?? 1);
 }
 

@@ -78,7 +78,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.
 - Merge, discard, a stronger model and unrelated work asked for under a crewmate's card are not the crewmate's to run: it closes its card and reports the captain's words verbatim with `needs_firstmate`.
-- Cards are threads (`docs/card-threads.md`): a reply goes to the card's author and resolves nothing but a crewmate's signed-off line, and putting it away resolves nothing; nothing in the host reads the captain’s words.
+- Cards are threads (`docs/card-threads.md`): a reply goes to the card's author and resolves nothing but its author's signed-off line, and putting it away resolves nothing; nothing in the host reads the captain’s words.
 - Required actions on a merge card are display-only: they grant no execution permission, and a confirmation runs nothing (`docs/required-actions.md`).
 - A Careful validation question binds its approval to one ordinary action with `emit_card.validation_request` (`docs/delivery-rigor.md`, "Careful live validation").
   A check approval is kept on the check by id while it declares the same resources and cost per run.

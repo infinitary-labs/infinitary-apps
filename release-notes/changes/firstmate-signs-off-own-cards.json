@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-signs-off-own-cards",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Telling your first mate you are done with its card counts as your answer",
+      "body": "When you write under one of your first mate's cards that you need nothing more from it, your first mate now ends the card as read, and the message it answered counts as answered. Before, it took the card back, and the app could then tell you your first mate had not answered that message.",
+      "noPicture": "The card ends the way it does when you press Done; no view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

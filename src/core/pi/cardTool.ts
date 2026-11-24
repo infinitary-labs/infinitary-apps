@@ -322,9 +322,19 @@ export type ReplyAlone = {
   text: string;
   answersMessage?: number;
   operationId?: string;
+  /** The first mate judged the captain's words say they are done with the card (INF-6317). */
+  signsOff?: boolean;
 };
 
-export type OnReplyAlone = (reply: ReplyAlone) => CardMutation | Promise<CardMutation>;
+/** The line's mutation, or the words a sign-off answers with. */
+export type OnReplyAlone = (
+  reply: ReplyAlone,
+) => CardMutation | string | Promise<CardMutation | string>;
+
+/** The refusal of a first mate emit_card that marks signs_off beside a body (INF-6317). */
+// i18n-exempt: a refusal served only to the first mate's model
+export const FIRSTMATE_SIGN_OFF_BODY_REFUSAL =
+  "Card refused: signs_off goes on a reply alone. Leave body out, keep id, reply and answers_message. Nothing was shown.";
 
 /** The refusal of a first mate emit_card that gives no body and is no reply alone. */
 // i18n-exempt: a refusal served only to the first mate's model
@@ -530,6 +540,8 @@ const firstmateCardParams = {
   // (`FIRSTMATE_CARD_ADDENDUM`), so id and task_id are served bare to it, and
   // body says only what leaving it out does: a reply alone (INF-6128).
   body: Type.Optional(Type.String({ description: CARD_PARAMS.firstmateBody })),
+  // Top-level, so a Claude first mate reads it whole (INF-6317 part 1).
+  signs_off: Type.Optional(Type.Boolean({ description: CARD_PARAMS.firstmateSignsOff })),
   id: Type.Optional(Type.String()),
   task_id: Type.Optional(Type.String()),
   review_task_id: Type.Optional(Type.String({ description: CARD_PARAMS.review_task_id })),
@@ -540,6 +552,7 @@ export type EmitCardRole = "crewmate" | "firstmate";
 
 type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"> & {
   actions?: Static<typeof crewmateBrowserCardParams>["actions"];
+  signs_off?: boolean;
   /** As the call carried it: the host reads it again (`riskDeclarationOf`). */
   risk?: unknown;
   task_id?: string;
@@ -979,18 +992,21 @@ async function emitCard(
   // The first mate answers in a thread without sending the card again
   // (INF-6128): with a body required, the placeholder it sent beside its
   // answer replaced the card's own body. Left out, only the line is written.
+  if (options.firstmate && params.signs_off === true && params.body !== undefined) {
+    throw new Error(FIRSTMATE_SIGN_OFF_BODY_REFUSAL);
+  }
   if (options.firstmate && params.body === undefined && params.body_file === undefined) {
     const text = params.reply?.trim();
     const cardId = params.id?.trim();
     if (!text || !cardId || !options.onReplyAlone) throw new Error(REPLY_ALONE_REFUSAL);
-    return cardMutationText(
-      await options.onReplyAlone({
-        cardId,
-        text,
-        ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
-        ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
-      }),
-    );
+    const written = await options.onReplyAlone({
+      cardId,
+      text,
+      ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
+      ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
+      ...(params.signs_off === true ? { signsOff: true } : {}),
+    });
+    return typeof written === "string" ? written : cardMutationText(written);
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
     // INF-961: a merge card given neither may have meant its saved story.

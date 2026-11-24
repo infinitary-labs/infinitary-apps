@@ -389,8 +389,9 @@ export class AskEnding {
    * reads never call this acknowledgement path. A decision put aside
    * answers nothing. A message whose reply is still running counts too: a
    * quick choice lands before the turn that showed the card ends.
-   * `signed-off` is the captain's line under the card that its crewmate
-   * marked as saying they are done (INF-2845, `CardThreads.signOff`): it
+   * `signed-off` is the captain's line under the card that its author - a
+   * crewmate, or the first mate on its own card (INF-6317) - marked as
+   * saying they are done (INF-2845, `CardThreads.signOff`): it
    * answers each message the card is about, as a choice does.
    */
   captainResponded(card: Card, response: "choice" | "close" | "signed-off", action?: string): void {
@@ -404,7 +405,7 @@ export class AskEnding {
     for (const thread of this.openThreads(true)) {
       // A choice on a decision about its work answers it; an acknowledged
       // note answers it only when shaped as its answer, not a note along the way.
-      // A line its crewmate signed off (INF-2845) answers it like a choice.
+      // A line its author signed off (INF-2845, INF-6317) answers it like a choice.
       const answers =
         response === "close" ? this.candidate(thread, card) : this.about(thread, card);
       if (!answers || this.host.shownAt(card) < thread.ask.at) continue;

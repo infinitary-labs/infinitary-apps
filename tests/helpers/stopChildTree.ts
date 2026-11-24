@@ -1,12 +1,23 @@
 import type { ChildProcess } from "node:child_process";
 import { endHolder } from "../../src/core/placed/folderHolders";
 import { type ProcessReading, readProcesses } from "../../src/core/placed/processResources";
+import { prefixesOf, readWorkingFolders, under } from "../../src/core/placed/workingFolders";
 
-/** Register at launch, so cleanup can await close even when the direct child exits on its own. */
-export function trackChildTree(child: ChildProcess): () => Promise<void> {
+/** What a journey child's stop reads in place of the system's own readings. */
+export type ChildTreeReadings = {
+  processes?: () => Promise<ProcessReading[] | null>;
+  workingFolders?: (pids: readonly number[]) => Promise<Map<number, string> | null>;
+};
+
+/**
+ * Register at launch, so cleanup can await close even when the direct child
+ * exits on its own. `folder` is the working folder the child was started in,
+ * made for it alone.
+ */
+export function trackChildTree(child: ChildProcess, folder?: string): () => Promise<void> {
   const closed = new Promise<void>((resolve) => child.once("close", () => resolve()));
   return async () => {
-    await stopChildTree(child);
+    await stopChildTree(child, { folder });
     await closed;
   };
 }
@@ -19,11 +30,19 @@ const POLL_MS = 100;
  * group (the work app's display keeper does). Snapshot them before ending
  * their parent, or the system adopts them and the tree loses its owner.
  * Group members still belong to the fixture after the direct child exits.
- * `processes` reads the table in place of the system's own reading.
+ *
+ * A descendant in a session of its own whose parent already ended on its
+ * own was adopted before any snapshot: the work app's update leaves its
+ * watcher (src/core/helper/updateTrial.ts) that way as its run ends. Every
+ * program inherits its parent's working folder, so with `folder`, the one
+ * the child was started in, a program still working there belongs to the
+ * tree too. Programs keep starting while others end - the watcher starts a
+ * `sleep` each second - so the stop reads again after each pass and returns
+ * only once a reading finds nothing of the tree.
  */
 export async function stopChildTree(
   child: ChildProcess,
-  options: { processes?: () => Promise<ProcessReading[] | null> } = {},
+  options: ChildTreeReadings & { folder?: string } = {},
 ): Promise<void> {
   if (child.pid === undefined) return;
   if (process.platform === "win32") {
@@ -31,16 +50,42 @@ export async function stopChildTree(
     return;
   }
   const read = options.processes ?? readProcesses;
+  const prefixes = options.folder ? await prefixesOf([options.folder]) : [];
+  for (;;) {
+    const targets = await treeOf(child.pid, read, prefixes, options.workingFolders);
+    if (targets.length === 0) return;
+    await endAll(targets, read);
+  }
+}
+
+/** The tree's programs still running: the child, its group, what works in its folder, and their descendants. */
+async function treeOf(
+  pid: number,
+  read: () => Promise<ProcessReading[] | null>,
+  prefixes: readonly string[],
+  workingFolders = readWorkingFolders,
+): Promise<ProcessReading[]> {
   const rows = await read();
   if (!rows) throw new Error("Could not read the journey child's process tree");
-  const owned = new Set([child.pid]);
-  for (const row of rows) if (row.group === child.pid) owned.add(row.pid);
+  const owned = new Set([pid]);
+  for (const row of rows) if (row.group === pid) owned.add(row.pid);
+  if (prefixes.length > 0) {
+    const folders = await workingFolders(rows.map((row) => row.pid));
+    if (!folders) throw new Error(`Could not read where journey child ${pid}'s programs work`);
+    for (const [holder, folder] of folders) if (under(folder, prefixes)) owned.add(holder);
+  }
   for (;;) {
     const before = owned.size;
     for (const row of rows) if (owned.has(row.parent)) owned.add(row.pid);
     if (owned.size === before) break;
   }
-  const targets = rows.filter((row) => owned.has(row.pid) && !row.exited);
+  return rows.filter((row) => owned.has(row.pid) && !row.exited);
+}
+
+async function endAll(
+  targets: readonly ProcessReading[],
+  read: () => Promise<ProcessReading[] | null>,
+): Promise<void> {
   const outcomes = await Promise.all(
     targets.map((row) =>
       endHolder(

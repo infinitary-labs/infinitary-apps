@@ -1,5 +1,6 @@
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { describe, expect, it } from "vitest";
+import { renderAnswerShapeSection } from "../orchestrator/intentBrief";
 import {
   CLAUDE_TOOL_DESCRIPTION_CAP,
   CREWMATE_EMIT_CARD_DESCRIPTION,
@@ -264,7 +265,7 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
       // INF-6552's approved plan: a test the change adds that cannot fail is
       // its builder's to repair, never a question for the captain.
       "A test your change adds that you cannot make fail is yours to repair before you report: make it able to fail, or cut its name and checks to what it proves, and say which.",
-      "Name patterns in your report, never fixing or copying them.",
+      "Name patterns elsewhere in your report, never fixing or copying them.",
       // INF-840, the captain's direction 2: a change's own test is never a
       // suspected flake, and its crewmate repeats it locally before the card.
       "A test whose own code your change adds or edits is never a suspected flake",
@@ -445,7 +446,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("offering both for each proposed task");
     expect(prompt).toContain("the default after required answers, others whatever is picked");
     expect(prompt).not.toContain("check or select the option you propose");
-    expect(prompt).toContain(
+    // A preview's rules reach an answer task in its answer-shape section
+    // (INF-6570's budget card), not every crewmate's prompt.
+    expect(prompt).not.toContain("Controls update only the preview");
+    expect(renderAnswerShapeSection()).toContain(
       "Controls update only the preview and the card's unsent draft, never an author turn",
     );
     expect(prompt).not.toContain('inf.action("use-settings"');

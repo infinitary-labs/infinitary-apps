@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "move-crewmate-held-passages",
+      "reason": "Internal: a crewmate reads the plan hand-over, preview and purchase review rules only in the brief or browser help of work that needs them, and a few trimmed sentences come back; nothing a person sees changes."
+    }
+  ]
+}

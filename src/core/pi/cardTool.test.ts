@@ -1,7 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { RISK_WHY_MAX } from "@shared/risk";
-import { UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { bindTool, type DeclaredCardInput } from "../session/tools";
@@ -773,18 +772,10 @@ it('carries a crewmate\'s request that the captain take its browser over (docs/t
   expect(description).toContain('{ kind: "open", target: "browser" }');
   expect(description).toContain("never permission to buy, pay or submit");
   // The final submission is the captain's, and the card is its review
-  // (docs/task-browser.md, "A final submission"): the knowledge rides here.
+  // (docs/task-browser.md, "A final submission"); what the review names is
+  // the browser's to say, held in browserCommands.test.ts.
   expect(description).toContain("is the captain's to make: prepare it up to its last step");
-  expect(description).toContain(
-    "dates and times with time zones, passengers, seller, total and currency",
-  );
-  expect(description).toContain(
-    "If the price or terms change after a review, stop and review again",
-  );
-  expect(description).toContain("the outcome is unknown: never submit, reload or resend it");
-  // An unconfirmed outcome stays unknown in its words too: no guess either
-  // way from a missing booking, and no hint that anyone may try again.
-  expect(description).toContain(UNKNOWN_OUTCOME_WORDS);
+  expect(description).toContain("your browser's home view says what a review names");
   expect(description.length).toBeLessThan(2048);
   await withBrowser.run(request);
   expect(onCard.mock.calls[0]?.[0]).toMatchObject({

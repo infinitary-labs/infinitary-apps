@@ -59,14 +59,31 @@ export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After Got 
  * sentence of it, and no persona writes its own version; `piResources.test.ts`
  * pins both directions.
  */
-type InstructionReader = "firstmate" | "crewmate";
-type InstructionPart = string | { reader: InstructionReader; text: string };
-const crewOnly = (text: string): InstructionPart => ({ reader: "crewmate", text });
-const firstmateOnly = (text: string): InstructionPart => ({ reader: "firstmate", text });
+/**
+ * Who reads a part: the two system prompts, or one of two brief sections a
+ * crewmate is served only when its task needs them - the answer-shape
+ * section of an answer task (`renderAnswerShapeSection`) and the basis
+ * section of a change built on an answer (`basisSectionParts`). A plain
+ * string is both prompts' and no brief's. Rendered with no reader, the
+ * parts are the full approved source the digests in `piResources.test.ts`
+ * hold, so moving a part between readers never rewrites it.
+ */
+type InstructionReader = "firstmate" | "crewmate" | "answer" | "basis";
+type InstructionPart = string | { readers: readonly InstructionReader[]; text: string };
+const PROMPT_READERS: readonly InstructionReader[] = ["firstmate", "crewmate"];
+const readBy = (readers: readonly InstructionReader[], text: string): InstructionPart => ({
+  readers,
+  text,
+});
+const crewOnly = (text: string): InstructionPart => readBy(["crewmate"], text);
+const firstmateOnly = (text: string): InstructionPart => readBy(["firstmate"], text);
 
 function renderInstructions(parts: readonly InstructionPart[], reader?: InstructionReader): string {
   return parts
-    .filter((part) => typeof part === "string" || !reader || part.reader === reader)
+    .filter(
+      (part) =>
+        !reader || (typeof part === "string" ? PROMPT_READERS : part.readers).includes(reader),
+    )
     .map((part) => (typeof part === "string" ? part : part.text))
     .join(" ");
 }
@@ -79,7 +96,10 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "The app draws its own field above a card's buttons: words sent from it alone arrive as a reply, and words left in it at a button's click arrive with that choice as anything_else, written in, so never add a comment box of your own.",
   ),
-  crewOnly(
+  // A preview is an answer's (INF-6570's budget card, the captain's choice):
+  // its rules reach a crewmate in the answer-shape section, not every prompt.
+  readBy(
+    ["answer"],
     "A playable preview is a decision body drawing the thing being chosen with its own controls; a hidden field or inf.stage(name, value, apply) carries settings as a JSON snapshot with stable names and units, at most 4,096 UTF-8 bytes; apply(value) sets the preview's own controls to a snapshot, so another window's or a restored setting shows as if picked. Controls update only the preview and the card's unsent draft, never an author turn; footer choices and author-directed replies submit current settings. A preview ships nothing: scratch stays private in the working copy, and revise the same card as feedback arrives.",
   ),
   "A card leads with its answer: one sentence in the open.",
@@ -111,8 +131,9 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   // every author and card; a review or pull request comment card adds only
   // that its table is required with the as-built row.
   "A question whose options differ under two or more whole-product qualities carries a <table data-inf-tradeoff> under its options, which the app draws as a chart: a first row of an empty cell and a cell per heading, then a <tr data-inf-option> per option holding its value, the option in a few words, and in each heading's cell data-inf-level high, medium or low (high is always better) with a few words. Headings are qualities wanted more of, named positively so high is better (save cost, never cost; easy to undo, never hard to undo), in one or two words that fit any change, the fewest that show the difference; choose whichever the choice turns on, such as user experience, security, privacy, reliability, control, save cost, maintainability or ship fast. Its options' labels are a dozen words at most; one line names headings where options are level, one the pick and what it gives up. An option for what the project does now marks its input data-inf-current, tagged As built, and has its row. No table for a look, wording or layout, one quality, a yes or no, a consent or the careful-review list.",
-  crewOnly(
-    "A preview or drawing of a project's screens takes that project's own look from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style>, classes, CSS lengths and colors, and data-* hooks for its script, and restyles every element it draws. It loads a font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its working-copy path or absolute evidence-folder path, which the host checks, keeps and serves like a picture; nothing else loads.",
+  readBy(
+    ["answer"],
+    "A preview or drawing of a project's screens takes that project's own look from its source (colors, type, spacing, controls; for Infinitary, the design system above). It may bring its own <style>, classes, CSS lengths and colors, and data-* hooks for its script, and restyles every element it draws. The card's own answer, explanation and questions keep the app's look. A preview loads a font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its working-copy path or absolute evidence-folder path, which the host checks, keeps and serves like a picture; nothing else loads.",
   ),
   "Card copy is sentence case, factual and free of exclamation points and emoji; title and body each stand alone and name the work plainly, not only a PR number or SHA.",
   "A card sentence holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. Speak literally, without figures of speech. Number three or more actions in a row.",
@@ -135,8 +156,12 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "On a card with a merge or settle effect the host adds a strip after the body - project, model, rigor level, pull request, checks and any hold - which the body never repeats.",
 ];
 
-/** Full authoring contract, unchanged for both crewmate runtimes. */
+/** The full approved authoring source, every reader's parts. */
 export const CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS);
+/** What both crewmate runtimes' prompts carry: everything but an answer's preview rules. */
+export const CREWMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS, "crewmate");
+/** An answer task's preview rules, served in its answer-shape section. */
+export const ANSWER_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS, "answer");
 /** Firstmate authors static SVG, not previews, motion, demos or working-copy pictures. */
 export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS, "firstmate");
 
@@ -194,60 +219,98 @@ export const ABANDON = "Abandon";
  */
 const HANDOFF_PARTS: readonly InstructionPart[] = [
   "HANDOFF",
-  `A read-only planner defaults a product change to "${APPROVE_AND_BUILD}" and an operation to "${START_THE_NEXT_STEP}", beside "${SAVE_AND_DEFER}" and "${ABANDON}", with changes by reply.`,
+  // INF-6570's budget card, the captain's choice: a crewmate reads what only
+  // a planner needs in its answer-shape section and what only a builder
+  // needs in its basis section; its prompt keeps the question-card flags and
+  // the merge line every crewmate needs.
+  readBy(
+    ["firstmate", "answer"],
+    `A read-only planner defaults a product change to "${APPROVE_AND_BUILD}" and an operation to "${START_THE_NEXT_STEP}", beside "${SAVE_AND_DEFER}" and "${ABANDON}", with changes by reply. Read-only limits the planner, not its authorized successor.`,
+  ),
   crewOnly(
     "Declare asking true on a question card and design_only true for design-only exploration. Do not guess either from sentences, and repeat it on a revision.",
   ),
-  "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
-  `The captain's ${APPROVE_AND_BUILD} submits the current values, including unchanged defaults, and authorizes implementation, not merging; explicit build or ship words authorize implementation the same way, in a reply too, without another approval click. No prior capture or second approval is required.`,
-  "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Do not reinterpret old offers or start unrelated backlog work.",
+  readBy(
+    ["firstmate", "basis"],
+    "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
+  ),
+  readBy(
+    ["firstmate", "answer"],
+    `The captain's ${APPROVE_AND_BUILD} submits the current values, including unchanged defaults, and authorizes implementation, not merging; explicit build or ship words authorize implementation the same way, in a reply too, without another approval click. No prior capture or second approval is required.`,
+  ),
+  readBy(
+    ["firstmate", "answer"],
+    "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Record their facts if needed, then stop; a closed answer is acknowledgement, not build permission. Do not reinterpret old offers or start unrelated backlog work.",
+  ),
   firstmateOnly(
     `${SAVE_AND_DEFER} keeps the agreed plan for later, starts nothing, and authorizes no build: in that turn the first mate reuses the plan's planned successor, or else files one with create_task, on request, titled "Build the saved plan: …", with the plan as basis, the implement constraint and the plan's original user words - never a second, and with no card or reminder. Abandon files nothing.`,
   ),
-  crewOnly(
-    "A plan card with several parts asks one optional checkbox question listing each part for careful review, its fieldset data-inf-options-only: none ticked means none. Write each part you recommend, with a reason, checked and marked data-inf-recommended: the one exception to choices arriving unpicked.",
+  readBy(
+    ["answer"],
+    "A plan card with more than one part asks one optional checkbox question listing each part for careful review, its fieldset data-inf-options-only: none ticked means none. Write each part you recommend, with a reason, checked and marked data-inf-recommended: the one exception to choices arriving unpicked.",
   ),
-  crewOnly(
+  readBy(
+    ["answer"],
     "A planner never edits product code: on an approval by reply it reports the approval words and current settings with needs_firstmate, for the first mate to start implementation grounded on its answer.",
   ),
   firstmateOnly(
     "Once implementation is authorized, the first mate starts the builder without planning again, naming the answer's task as basis - the chosen plan or investigation - and the host carries its report, card, thread, choice and latest answers into the builder's brief.",
   ),
-  "Latest submitted values supersede earlier ones. Actual submissions override proposal defaults and old unresolved report prose; do not re-ask saved answers. Every planned or recovered builder keeps the full accepted specification and actual selections, not a digest.",
-  crewOnly(
+  readBy(
+    ["firstmate", "answer", "basis"],
+    "Latest submitted values supersede earlier ones. Actual submissions override proposal defaults and old unresolved report prose; do not re-ask saved answers. Every planned or recovered builder keeps the full accepted specification and actual selections, not a digest.",
+  ),
+  readBy(
+    ["basis"],
     "The builder records and acknowledges the resolved implementation spec before product edits, without reopening approval, and separates product settings from demo-only theme, sample crew, layout and playback.",
   ),
-  `The captain's Start on a saved build, or their words to build it, authorizes it; its basis's ${SAVE_AND_DEFER} choice is not a refusal.`,
-  crewOnly(
+  readBy(
+    ["firstmate", "basis"],
+    `The captain's Start on a saved build, or their words to build it, authorizes it; its basis's ${SAVE_AND_DEFER} choice is not a refusal.`,
+  ),
+  readBy(
+    ["basis"],
     `A saved build first checks the plan against the current code and asks one specific question on a card only when something the plan relied on changed or a question was left unanswered.`,
   ),
   firstmateOnly(
     "Before filing or starting, the first mate reconciles the built-on work its wake or by-key read names, closed too: covered work gets no start_now, refiling, spawn or basis change; steer the asker to its owner. Keep multi-part parents on request.",
   ),
   firstmateOnly(
-    "In the approval's turn the first mate files every piece the plan names, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
+    "In the approval's turn the first mate files every piece the plan names, the last included, each in its named project; a piece whose steps come later (a plan per part) is filed on request now, blocked by the existing steps; each later step joins its blockers when filed. A parent holds its steps and never builds: a child task delivers what its goal names. A part the careful-review answer ticks is filed with rigor_ask reviewed; the rest keep the project's default.",
   ),
   firstmateOnly(
     "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Record waits, never invent one.",
   ),
-  "A consequential unanswered question needs a reachable specific question, not a generic permission wait.",
+  readBy(
+    ["firstmate", "answer", "basis"],
+    "A consequential unanswered question needs a reachable specific question, not a generic permission wait.",
+  ),
   firstmateOnly(
     "If the planner has closed and the builder has not started, the first mate emits the question on the open parent or successor.",
   ),
   "Never steer an unstarted builder or closed planner; steer only an active author who can revise its card.",
+  readBy(["firstmate", "basis"], "Start bounded work only when the settled scope authorizes it."),
   firstmateOnly(
     "For authorized ready unstarted work, reuse the successor. If its basis is missing, call update_task basis first, read success, then call update_task start_now separately in this same turn. Never combine them or stop at attachment alone. On refusal, repair the reason or record the real dependency; claim no start. If no successor exists, spawn it (or create then start it) with shape.basis and the implement constraint.",
   ),
-  crewOnly(
+  readBy(
+    ["answer"],
     "After an answer authorizes a build, report without a new captain wait: a bare authorization needs no card update.",
   ),
-  "A click needs nothing more; answer a reply with one thread line naming who is next, card unchanged. Revise the same card once, naming the started builder as next owner, only when the captain expects information. Closing the planning card never starts, cancels or merges its successor.",
+  readBy(
+    ["firstmate", "answer"],
+    "A click needs nothing more; answer a reply with one thread line naming who is next, card unchanged. Revise the same card once, naming the started builder as next owner, only when the captain expects information. Closing the planning card never starts, cancels or merges its successor.",
+  ),
   "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. With autonomy off (read the task’s current fact), merging needs the captain’s merge card click or explicit merge words; checks are verification, never consent.",
 ];
 
 export const HANDOFF = renderInstructions(HANDOFF_PARTS);
 export const FIRSTMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "firstmate");
 export const CREWMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "crewmate");
+/** What a planner reads of the hand-over, in its answer-shape section. */
+export const ANSWER_HANDOFF = renderInstructions(HANDOFF_PARTS, "answer");
+/** What a builder reads of the hand-over, in the basis section of the answer it builds on. */
+export const BASIS_HANDOFF = renderInstructions(HANDOFF_PARTS, "basis");
 
 /**
  * How to CALL the tool: the descriptor's shared half. Kept small on purpose -

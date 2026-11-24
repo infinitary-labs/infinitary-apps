@@ -61,12 +61,16 @@ const browserIdentity = {
 export const TASK_BROWSER_CONTROLS = ["waiting", "taking", "captain"] as const;
 export type TaskBrowserControl = (typeof TASK_BROWSER_CONTROLS)[number];
 
+/** The label a purchase review gives as its example of the captain's step to pay. */
+// i18n-exempt: an example label in the crewmate's browser help, stays English
+export const BROWSER_PAY_STEP = "Open browser and pay";
+
 /**
  * How a crewmate speaks of a payment or submission the site never confirmed
  * (docs/task-browser.md, "A final submission"): it stays unknown until the
  * seller or its payment service shows what happened, and the crewmate never
- * guesses either way. The handoff's description and every browser wake that
- * meets an unknown outcome carry these same words.
+ * guesses either way. The browser's purchase review and every browser wake
+ * that meets an unknown outcome carry these same words.
  */
 export const UNKNOWN_OUTCOME_WORDS =
   "Until the seller or its payment service shows the result, say plainly you do not know whether it went through: a missing booking or charge proves nothing, so never guess either way or suggest trying again.";

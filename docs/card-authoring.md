@@ -5,7 +5,7 @@ Each kind lives in `src/core/prompts/cardContract.ts`:
 
 - **`CARD_AUTHORING`** - what a card IS and how it should look.
   Every persona renders its reader’s text exactly once (`buildCrewmateSystemPrompt` on Pi and Claude; `buildFirstmateSystemPrompt`) and no descriptor repeats a sentence of it.
-  Crewmates keep the full text word for word; the first mate’s `FIRSTMATE_CARD_AUTHORING` omits only playable previews, moving-figure rules, demos, working-copy pictures and preview styles, because its cards are static SVG (FI3-566, the captain’s approved cut).
+  A crewmate's prompt carries `CREWMATE_CARD_AUTHORING`, the full text but for a playable preview's two passages, which an answer task reads once in its brief's answer-shape section as `ANSWER_CARD_AUTHORING`, since only an answer draws a preview (INF-6570's budget card, the captain's choice); the first mate’s `FIRSTMATE_CARD_AUTHORING` omits playable previews, moving-figure rules, demos, working-copy pictures and preview styles, because its cards are static SVG (FI3-566, the captain’s approved cut).
   The system prompt is the only channel that arrives whole on every backend, and it is where the deliverable is already defined.
 - **`CARD_MECHANICS`** - how to CALL the tool.
   It stays in the `emit_card` description, under the 2,048-character cap the Claude client silently truncates at; `claudeToolSurface.test.ts` is the guard that what the transport serves equals the source.
@@ -602,7 +602,7 @@ A preview or a drawing of a project's screens takes that project's own look, rea
 It may bring its own `<style>` sheet, its own classes, ordinary CSS lengths and colors, and `data-*` hooks its script reads, and it restyles every element it draws, since the frame stylesheet dresses whatever it leaves bare.
 It loads the project's own font files by reference (Fonts by reference, above).
 The card's own answer, explanation and questions keep the app's look.
-The crewmate's instructions say this; the first mate's copy of them does not, since it never draws a preview.
+An answer task's brief says this in its answer-shape section; the first mate's instructions do not, since it never draws a preview.
 
 The vocabulary beyond plain text:
 
@@ -1170,8 +1170,8 @@ The path stays for cards already stored: the optional fourth `inf:cards:act` arg
 
 `HANDOFF` is the fourth constant in `cardContract.ts` (contract v4.41): what a choice on a plan or investigation authorizes, who builds it, and what the builder starts from.
 The host decides none of it - it records the closing choice and answers, verifies the basis and mints the brief - so the judgment is the agents'.
-One source marks reader-specific passages: `FIRSTMATE_HANDOFF` omits five planner/builder passages and `CREWMATE_HANDOFF` omits seven first-mate-only passages.
-Both retain shared authorization boundaries, submitted settings and merge consent; the first mate also retains the opening sentence naming all plan buttons and the shared click/reply/next-owner guidance.
+One source marks each passage's readers: the first mate's prompt (`FIRSTMATE_HANDOFF`), every crewmate's prompt (`CREWMATE_HANDOFF`), an answer task's answer-shape section (`ANSWER_HANDOFF`, what a planner acts on) and the basis section of a change built on an answer (`BASIS_HANDOFF`, what a builder acts on).
+A crewmate's prompt keeps only what every crewmate needs - the question-card flags, the steering limit and merge consent - and reads the planner's and builder's passages in the brief of the work that needs them (INF-6570's budget card, the captain's choice); the first mate reads every passage but those two briefs' crewmate-only steps.
 
 - A ready plan for a product change offers **Approve and build** as its default, and a ready plan for an operation offers **Start the next step**, each beside **Save and defer** and **Abandon**; a plan with a preview offers the same three for a product change.
   Choosing that default queues the approved pieces with their prerequisites; the existing queue starts each when its blockers clear.
@@ -1194,7 +1194,7 @@ Both retain shared authorization boundaries, submitted settings and merge consen
 
 Merge, discard, stronger-model and unrelated-work requests keep `CARD_REPLY`'s close-and-report-verbatim routing; merge permission is unchanged.
 Until v4.40 the rule was restated in the first mate core, three `CARD_AUTHORING` paragraphs, `CARD_REPLY`, the sequences seed and the brief's basis section, in three vocabularies (audit FI3-377).
-`piResources.test.ts` pins that every persona carries its reader’s text once and that none of those texts, no tool description and no basis section repeats a sentence of it, and checks that each fact still reaches every agent that acts on it.
+`piResources.test.ts` pins that every persona carries its reader’s text once, that the answer-shape and basis sections each carry their part once and nothing else of it, and that no tool description repeats a sentence of it, and checks that each fact still reaches every agent that acts on it.
 
 Whether a first mate acts on it is scored on recordings: the replay gate's `approval_handoff_share` counts the builders grounded on a plan that the first mate's answer to a hand-labelled captain choice started, starting from the real FI3-309 to FI3-310 session (`docs/replay-harness.md`, "The plan-to-build handoff").
 A recording keeps the judgment it was made with, so a new text is measured on a new recording or by the account evaluation (`docs/account-evaluation.md`).

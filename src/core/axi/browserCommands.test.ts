@@ -1,5 +1,6 @@
 import { decode } from "@toon-format/toon";
 import { afterEach, describe, expect, it } from "vitest";
+import { UNKNOWN_OUTCOME_WORDS } from "../../shared/taskBrowser";
 import type { BrowserAnswer } from "../browser/crewmateCommands";
 import {
   BROWSER_COMMANDS,
@@ -247,6 +248,21 @@ describe("infinitary-browser-axi's commands", () => {
     // The payment rule rides the help of each command that presses.
     expect((await run(["click", "--help"])).stdout).toContain(BROWSER_RULES.payment);
     expect((await run(["press", "--help"])).stdout).toContain(BROWSER_RULES.payment);
+    // What a purchase review names rides beside it (docs/task-browser.md, "A
+    // final submission"), read only by a crewmate whose work reaches a purchase.
+    for (const command of ["click", "press"]) {
+      const help = (await run([command, "--help"])).stdout;
+      expect(help, command).toContain(
+        "dates and times with time zones, passengers, seller, total and currency",
+      );
+      expect(help, command).toContain(
+        "If the price or terms change after a review, stop and review again",
+      );
+      expect(help, command).toContain("the outcome is unknown: never submit, reload or resend it");
+      // An unconfirmed outcome stays unknown in its words too: no guess either
+      // way from a missing booking, and no hint that anyone may try again.
+      expect(help, command).toContain(UNKNOWN_OUTCOME_WORDS);
+    }
     // INF-2375: the click that downloads a site's one-time letter carries
     // the rule to keep it before the page expires.
     expect((await run(["click", "--help"])).stdout).toContain(BROWSER_RULES.document);
@@ -383,6 +399,7 @@ describe("infinitary-browser-axi's commands", () => {
     expect(open.stdout).toContain("title: Sign up");
     expect(open.calls).toEqual([{ command: "snapshot", op: "inspect", input: {} }]);
     expect(open.stdout).toContain(BROWSER_RULES.payment);
+    expect(open.stdout).toContain("label the step, such as Open browser and pay");
     expect(open.stdout).toContain(BROWSER_RULES.document);
 
     const none = await run([], () => ({

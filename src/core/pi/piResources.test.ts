@@ -1,12 +1,16 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { renderBasisSection } from "../orchestrator/intentBrief";
+import { renderAnswerShapeSection, renderBasisSection } from "../orchestrator/intentBrief";
 import { SEQUENCES_SEED } from "../personal/sequencesSkill";
 import {
+  ANSWER_CARD_AUTHORING,
+  ANSWER_HANDOFF,
+  BASIS_HANDOFF,
   CARD_AUTHORING,
   CARD_MECHANICS,
   CARD_REPLY,
   CLAUDE_TOOL_DESCRIPTION_CAP,
+  CREWMATE_CARD_AUTHORING,
   CREWMATE_EMIT_CARD_DESCRIPTION,
   CREWMATE_HANDOFF,
   cardAuthoringSentences,
@@ -197,11 +201,17 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     choice: "Approve and build",
     answers: ['- look: {"tiltDeg":57}, changed'],
   });
+  // A crewmate reads what only a planner acts on in an answer task's
+  // answer-shape section, and what only a builder acts on in the basis
+  // section of the answer it builds on (INF-6570's budget card).
+  const planner = renderAnswerShapeSection();
+  const crewmate = (backend?: "pi" | "claude") =>
+    `${buildCrewmateSystemPrompt(backend)}\n\n${planner}\n\n${builderBasis}`;
   const agents = [
     ["firstmate", `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED}`],
-    ["crewmate", `${buildCrewmateSystemPrompt()}\n\n${builderBasis}`],
-    ["crewmate/pi", `${buildCrewmateSystemPrompt("pi")}\n\n${builderBasis}`],
-    ["crewmate/claude", `${buildCrewmateSystemPrompt("claude")}\n\n${builderBasis}`],
+    ["crewmate", crewmate()],
+    ["crewmate/pi", crewmate("pi")],
+    ["crewmate/claude", crewmate("claude")],
   ] as const;
 
   it("tells every agent what authorizes implementation and what does not", () => {
@@ -390,10 +400,16 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       "An answer implying any captain next step, even optional, is a decision; only a pure fact is a note.";
     expect(CARD_AUTHORING.split(decisionFirst).length - 1).toBe(1);
     for (const [name, prompt] of personas) {
-      const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CARD_AUTHORING;
+      const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CREWMATE_CARD_AUTHORING;
       expect(prompt.split(text).length - 1, name).toBe(1);
       expect(prompt.split(decisionFirst).length - 1, name).toBe(1);
+      // A preview's rules are an answer's (INF-6570's budget card, the
+      // captain's choice): no prompt carries them.
+      expect(prompt, name).not.toContain(ANSWER_CARD_AUTHORING);
     }
+    // An answer task reads them once, in its answer-shape section.
+    expect(renderAnswerShapeSection().split(ANSWER_CARD_AUTHORING).length - 1).toBe(1);
+    expect(ANSWER_CARD_AUTHORING).toContain("A preview ships nothing");
   });
 
   it("gives every persona the five sentence habits for card copy, once (contract v4.58)", () => {
@@ -496,8 +512,22 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       choice: "Approve and build",
       answers: ['- look: {"tiltDeg":57}, changed'],
     });
+    // INF-6570's budget card, the captain's choice: what only a planner acts
+    // on is served once in an answer task's answer-shape section, and what
+    // only a builder acts on once in the basis section; neither section says
+    // a hand-over sentence beyond its own part or one the prompt already says.
+    for (const [section, part] of [
+      [renderAnswerShapeSection(), ANSWER_HANDOFF],
+      [basis, BASIS_HANDOFF],
+    ] as const) {
+      expect(section.split(part).length - 1, part).toBe(1);
+      const rest = section.replace(part, "");
+      for (const sentence of handoff) {
+        expect(rest, sentence).not.toContain(sentence);
+        if (part.includes(sentence)) expect(CREWMATE_HANDOFF, sentence).not.toContain(sentence);
+      }
+    }
     for (const text of [
-      basis,
       FIRSTMATE_EMIT_CARD_DESCRIPTION,
       ...CREWMATE_TOOLS.map((tool) => tool.description),
     ]) {
@@ -728,9 +758,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-6293's approved plan adds the one tradeoff chart text every author reads; the token list, the write-in row and time and language say the same in fewer words.
   // The fact strip's wording calls the task's setting its rigor level.
   // INF-6614's approved plan names tradeoff headings positively so high is better (save cost), the suggestions examples only.
+  // INF-6639 (the captain's yes) moves a preview's rules to an answer's brief and restores its app's-look sentence.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "6d9a0aaab3e4dccda666edae8528bd7402bcf0ba63c499ef64e60f6442ababce",
+    "e7e9a4ab1e1c7b4960b9a4b105b7438f4a0664b0f879457bed7e7081d0c267da",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
@@ -743,5 +774,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // A prompt-budget trim after INF-4425 says the first mate's filing of a plan's pieces in fewer words.
   // A later prompt-budget trim drops three restatements: the planner's read-only limit, the closed-answer line and the bounded-work line.
   // INF-6293's approved plan makes room for the tradeoff chart text: the merge permission line says the same in fewer words.
-  expect(hash(HANDOFF)).toBe("60089ed6f97cdb96a4ce0617e436615551f23720121fab969685c498a935ea8e");
+  // INF-6639 (the captain's yes) restores the read-only, closed-answer, bounded-work, last-piece and parent lines and "more than one part", and serves the planner's and builder's parts in their briefs.
+  expect(hash(HANDOFF)).toBe("40dfd591664691d124e6843efd42e4045210d7523e805c245f0c50befc07f22a");
 });

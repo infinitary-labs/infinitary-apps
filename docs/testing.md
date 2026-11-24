@@ -1115,6 +1115,7 @@ So a journey the change only reaches some other way, by a word, a hook, a helper
 | Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, or `mac_only` for its Mac jobs alone, task and reason |
 
 Each request goes once per task, at the final version, after the branch's own check passed.
+A request that names its version (`ref`) names one a branch of the project holds, the task's pushed branch normally; the workflow refuses any other before anything checks it out (`docs/public-ci.md`, "A check requested by hand").
 A request made while the change is still being written is a diagnostic, never its proof.
 A phone request that failed with nothing to repair is retried by rerunning its failed job, which runs only the parts that did not pass and turns that run green; after a repair, a retry names only its failing part and device, and the whole affected selection runs once at the final version ("A retry after a failed phone request").
 Before a request, read the runs already on that version, running ones included, and reuse one that passed or is still running.

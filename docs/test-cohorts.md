@@ -197,6 +197,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/release-workflows-*.test.ts` (one file per workflow owner) | node, git, shell stand-ins, and real Vitest file discovery; portable workflow contracts, isolated in the integration cohort and absent from the Mac-only file list | 10 s default, 15 s on file discovery |
 | `tests/release-publication.test.ts` | the release workflow's tap and release-asset scripts: real git on a stand-in tap, the publication CLI, a stand-in `gh`, `brew` and `curl` | 50 s |
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |
+| `tests/requested-version.test.ts` | a by-hand check request's version guard run through bash and real git, against a scratch bare repository standing in for GitHub's address | 5 s default |
 | `tests/universal-file-types.test.ts` | the system `file` behind a counting stand-in, over Electron's distribution and darwin prebuilds | 15 s (Mac whole file 2.4 s) |
 | `tests/cask-consumers.test.ts` | a scratch clone of the installed Homebrew (macOS only, skipped without it), git, ditto, the publication CLI | 340 s |
 | `tests/installed-update-fixtures.test.ts` | real ASAR archives, SQLite, scratch saved-work moves, child-command failures and ZIP ticket-byte comparisons; no signing | 5 s default |

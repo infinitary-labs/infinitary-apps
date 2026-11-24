@@ -571,6 +571,7 @@
         "!tests/release-workflows-verify-evidence.test.ts",
         "!tests/release-publication.test.ts",
         "!tests/release-notes.test.ts",
+        "!tests/requested-version.test.ts",
         "!tests/replay-captain-session.test.ts",
         "!tests/replay-synthetic-recordings.test.ts",
         "!tests/replay-claude-session.test.ts",

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-published-contract-refresh",
+      "reason": "Internal: regenerate the published contract for the combined batch without changing app behavior."
+    }
+  ]
+}

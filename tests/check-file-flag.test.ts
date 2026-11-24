@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { asCode, checkFilesIn, flag, flagComment, LABEL } from "../scripts/check-file-flag.mjs";
+import { NEEDS_TRIAGE } from "../scripts/intake-labels.mjs";
 import { loadYamlFile } from "./helpers/releaseWorkflows";
 
 // Part A of INF-3559's approved plan (the captain's pick "Check setup,
@@ -215,6 +216,24 @@ describe("the check-file flag", () => {
     expect(api.comments).toHaveLength(1);
   });
 
+  // Piece 2 of INF-6358's approved plan: a new outside pull request waits
+  // for the next intake round (docs/public-ci.md, "Intake").
+  it("puts a newly opened outside pull request in triage, and the project's own in none", async () => {
+    const pull = pullRequest();
+    const api = gitHub(pull, editsNone);
+    const opened = { ...event(pull), payload: { action: "opened", pull_request: pull } };
+    expect(await flag({ github: api.github, context: opened, core })).toBe("no check files");
+    expect([...api.labels]).toEqual([NEEDS_TRIAGE]);
+    const own = pullRequest({ own: true });
+    const ownApi = gitHub(own, editsNone);
+    await flag({
+      github: ownApi.github,
+      context: { ...event(own), payload: { action: "opened", pull_request: own } },
+      core,
+    });
+    expect(ownApi.writes()).toBe(0);
+  });
+
   it("changes nothing on an outside pull request that edits no check file", async () => {
     const pull = pullRequest();
     const api = gitHub(pull, editsNone);
@@ -317,7 +336,10 @@ describe("check-file-flag.yml", () => {
         "sparse-checkout-cone-mode",
       ]);
       expect(step.with?.["persist-credentials"]).toBe(false);
-      expect(String(step.with?.["sparse-checkout"]).trim()).toBe("scripts/check-file-flag.mjs");
+      expect(String(step.with?.["sparse-checkout"]).trim().split("\n").toSorted()).toEqual([
+        "scripts/check-file-flag.mjs",
+        "scripts/intake-labels.mjs",
+      ]);
     }
     expect(steps.filter((step) => step.run)).toEqual([]);
   });

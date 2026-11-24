@@ -1,0 +1,20 @@
+name: Ask a question
+description: How to do something in Infinitary, or why it works the way it does.
+labels: ["question", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A maintainer usually answers within two working days.
+        The guide at https://docs.getinfinitary.com may already answer it.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried
+      description: What you looked at or tried so far.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-intake-github-files",
+      "reason": "Adds issue forms, intake labels, the triage-mark and waiting-on-author workflows and the contributor guide's intake section to the project's GitHub home, and points /feedback's no-sign-in link at a matching issue form so it keeps its prefilled report once blank issues are off; how the project receives outside issues and pull requests, nothing a person using the app notices."
+    }
+  ]
+}

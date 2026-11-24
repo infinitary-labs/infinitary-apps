@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "far-linux-sweep-groups-on-x64",
+      "reason": "Puts the Linux journeys that reach this computer over SSH in one group of each lane of a full Linux sweep and keeps those two jobs on the project's x64 Linux places; only where the project's checks run changes, and nothing in the app does."
+    }
+  ]
+}

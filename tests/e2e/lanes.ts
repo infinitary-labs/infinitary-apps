@@ -257,8 +257,10 @@ export const APPLICATION_SUITES = [
  * computer needs an SSH server and an x64 chip, the one chip Infinitary for
  * Linux runs on (`LINUX` in src/core/devices/farSystems.ts), and a compute
  * Mac's arm64 Linux guest has neither. So a journey request's Linux part that
- * holds one runs where LINUX_RUNNER sends it, never on the journeys kind's
- * queue (scripts/journey-budget.ts; docs/testing.md, "Each Linux job's kind").
+ * holds one (scripts/journey-budget.ts), and the full sweep's Linux group of
+ * each lane that holds them all (FAR_LINUX_GROUP, scripts/journey-groups.ts),
+ * run where LINUX_RUNNER sends them, never on the journeys kind's queue
+ * (docs/testing.md, "Each Linux job's kind").
  */
 export const FAR_LINUX_JOURNEYS = [
   "devices-address.spec.ts",

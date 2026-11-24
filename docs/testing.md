@@ -1718,6 +1718,8 @@ A compute Mac's guest is an arm64 Ubuntu 24.04 container, so the branch check's 
 A test that passes on only one of them is a defect in the test, repaired at its owner.
 A journey whose far computer is this one is the exception: it reaches this computer over its own SSH server, or runs the command for another computer on it, and on Linux that far computer needs an SSH server and an x64 chip, the one chip Infinitary for Linux runs on, where a guest has neither.
 So a journey request's Linux part that holds one (`FAR_LINUX_JOURNEYS`, `tests/e2e/lanes.ts`) runs where `LINUX_RUNNER` sends it, never on the `journeys` kind's queue: `scripts/journey-budget.ts` marks the part and `source-journeys.yml` reads it as `far-linux`.
+A full Linux sweep picks each job's group inside the job, after its machine is chosen, so on Linux `scripts/journey-groups.ts` puts every one of them in the first group of its lane (`FAR_LINUX_GROUP`), and `source-journeys.yml`'s full-suite matrix marks those two jobs `farLinux` to keep them off the queue too; the other groups still take it.
+The fresh-start sweep runs alone only the later tests of a file that shares one app, and none of these files shares one, so its four jobs hold none of them; `tests/release-workflows-runners.test.ts` holds both facts.
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
@@ -1725,7 +1727,7 @@ So a journey request's Linux part that holds one (`FAR_LINUX_JOURNEYS`, `tests/e
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), the two choosers a Mac job waits on (INF-5387's plan, piece 1) | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |
-| `journeys` | `source-journeys.yml`'s `source-desktop`, the app journeys a request, an alpha or the swept batch runs on Linux, unless the caller asks for hosted or a request's part holds a journey whose far computer is this one: a queue whose places are the PC's Linux places first and then each compute Mac's arm64 Linux guest, which takes the job only while no PC place can | `LINUX_RUNNER` |
+| `journeys` | `source-journeys.yml`'s `source-desktop`, the app journeys a request, an alpha or the swept batch runs on Linux, unless the caller asks for hosted or a request's part or a full sweep's group holds a journey whose far computer is this one: a queue whose places are the PC's Linux places first and then each compute Mac's arm64 Linux guest, which takes the job only while no PC place can | `LINUX_RUNNER` |
 | `typecheck` | `ci.yml`'s `code-checks`, `reached-tests`, `reached-tests-parts` and `build`, the branch check; the project's own home names no queue for it, so it runs on hosted Ubuntu like every other Linux job: on hosted four-processor Ubuntu its steps take about as long as on the project's own Linux places (INF-6330's plan) | `LINUX_RUNNER` |
 
 ### Each Mac job's kind and size
@@ -1905,6 +1907,7 @@ Playwright's own `--shard` cuts a lane into equal counts of files in listing ord
 A group with no file runs nothing, since Playwright given no file runs every one.
 The times are `tests/helpers/journeyTimings.json`: each file's job seconds on Linux, on the project's Macs and on GitHub's Mac (its work over the workers that ran it), and each Mac job's seconds outside its journeys on each kind of Mac, the head start its group begins with.
 A file with no measured time, a new journey, weighs the median of the measured ones.
+On Linux the journeys whose far computer is this one go to the first group of their lane before the rest are split, their seconds its head start, so that group's job can keep an x64 place with an SSH server ("Each Linux job's kind").
 `scripts/journey-group-timings.ts` writes the record from a passing full run's results: the Linux groups' `journey-timing-Linux-*` artifacts, the Mac jobs' `e2e-results-<lane>` artifacts, and that run's job list for the Mac jobs' own work; with `--hosted` the Mac results and job list are a run on GitHub's Macs and write their times alone.
 Write it again and commit it when journeys move or the groups' times drift apart.
 A manual `verify.yml` request instead requires `full_system: true`, or `mac_only: true` for its Mac jobs alone, plus task, source and reason before expensive jobs can start.

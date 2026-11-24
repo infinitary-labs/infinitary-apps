@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { confirmFiles, confirmRound } from "../scripts/batch-confirm.ts";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { RUNS_DIR } from "./e2e/runEvidence.ts";
-import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
+import {
+  loadYamlFile,
+  sourceJourneyJobs,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows.ts";
 
 // INF-2430 piece 3, the captain's approved plan for the swept batch, which
 // since INF-3759's piece 3 runs on a batch pull request's own version
@@ -87,11 +92,10 @@ describe("batch-checks.yml", () => {
     });
     expect(change?.run).toContain(`--files ${job?.with?.files} `);
     expect(change?.run).toContain("-- --project=desktop");
-    const journeys = workflow(".github/workflows/source-journeys.yml").jobs["source-desktop"] as {
-      "runs-on": string;
-    };
     const vars = { LINUX_RUNNER: "shell-pc-linux" };
-    expect(workflowString(journeys["runs-on"], { inputs: job?.with, vars })).toBe("ubuntu-24.04");
+    expect(sourceJourneyJobs(job?.with ?? {}, vars).map((group) => group.runner)).toEqual([
+      "ubuntu-24.04",
+    ]);
   });
 
   // The captain's pick on INF-3052, "In the batch check, beside the

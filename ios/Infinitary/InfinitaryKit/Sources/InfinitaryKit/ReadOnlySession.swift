@@ -817,6 +817,10 @@ public struct PhoneNotice: Equatable, Sendable {
     /// How long a round's addresses have to open before the round fails, as the watchdog allowed one address before.
     static let dialLimit: Duration = .seconds(10)
 
+    /// Whether a greeting or a read is still out, which gives a quiet connection `answerWait` rather than `patience`.
+    /// The weak-link tests read it too, to start a silence the captain's 20 s applies to.
+    var awaitsAnswer: Bool { contact != "in-reach" || !waitingSince.isEmpty }
+
     /// Why the last connection that opened ended, for the app-hosted tests.
     enum Cut: Equatable { case unanswered, quiet, failed }
     @ObservationIgnored private(set) var lastCut: Cut?
@@ -1092,9 +1096,8 @@ public struct PhoneNotice: Equatable, Sendable {
                 guard !Task.isCancelled, let self, let socket, self.socket === socket else { return }
                 let leaveWait = self.leaveStarted.map { Date().timeIntervalSince($0) > 15 } ?? false
                 if leaveWait { self.cut(socket, .quiet); return }
-                let awaiting = self.contact != "in-reach" || !self.waitingSince.isEmpty
                 let since = max(opened, self.heard ?? opened)
-                if ContinuousClock.now - since > (awaiting ? Self.answerWait : Self.patience) {
+                if ContinuousClock.now - since > (self.awaitsAnswer ? Self.answerWait : Self.patience) {
                     self.cut(socket, .quiet); return
                 }
                 // A computer that answers pings but not a read for `answerWait`, while it sends nothing else, is stuck.

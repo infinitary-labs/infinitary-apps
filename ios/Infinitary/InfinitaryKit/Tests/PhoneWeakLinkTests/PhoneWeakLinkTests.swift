@@ -478,12 +478,26 @@ import XCTest
         try await finish(session)
     }
 
-    /// A dead path is still noticed: a 32 s silence is cut after the captain's 20 s, named, and redialed.
+    /// Waits until the phone has waited on nothing for a whole second. An instant with nothing out is not enough: In
+    /// reach starts the drafts read in a task of its own, which may not have sent it yet.
+    private func settled(_ session: ReadOnlySession, _ watch: Watch) async throws {
+        var since = watch.now
+        try await watch.until(30, "nothing out for a second") {
+            if session.awaitsAnswer { since = watch.now }
+            return watch.now - since >= 1
+        }
+    }
+
+    /// A dead path is still noticed: a 32 s silence is cut after the captain's 20 s, named, and redialed. That 20 s is
+    /// for a connection with nothing out, so the silence starts once the phone has settled: a read still out, such as
+    /// the board or drafts a busy Mac's home is still answering as In reach shows, gives the connection
+    /// `ReadOnlySession.answerWait`, which outlasts the silence, so nothing is cut and the line never leaves In reach.
     func testALongSilenceIsStillCutAndRedialed() async throws {
         let session = try await joined()
         let watch = Watch(session)
         session.start()
         try await inReach(session, watch, within: 30)
+        try await settled(session, watch)
         _ = try await home("relay-stall", ["ms": 32_000])
         let stalled = watch.now
         let quiet = try watch.quietSince(session)

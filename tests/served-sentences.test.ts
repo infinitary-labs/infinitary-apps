@@ -43,7 +43,7 @@ describe("the served-sentence list (INF-6559 part 2)", () => {
       ],
     };
     const [seat] = compareServed(before, after);
-    expect(seat.removedOrAltered).toEqual([
+    expect(seat?.removedOrAltered).toEqual([
       {
         where: "tool check_change",
         before:
@@ -83,7 +83,7 @@ describe("the served-sentence list (INF-6559 part 2)", () => {
       ],
     };
     const [seat] = compareServed(before, after);
-    expect(seat.removedOrAltered).toEqual([
+    expect(seat?.removedOrAltered).toEqual([
       {
         where: "prompt",
         before: "Do no unrelated work on the side.",

@@ -106,12 +106,12 @@ export function likeness(a: string, b: string): number {
   for (const word of x) {
     let diagonal = 0;
     for (let j = 1; j <= y.length; j++) {
-      const above = row[j];
-      row[j] = word === y[j - 1] ? diagonal + 1 : Math.max(row[j], row[j - 1]);
+      const above = row[j] ?? 0;
+      row[j] = word === y[j - 1] ? diagonal + 1 : Math.max(above, row[j - 1] ?? 0);
       diagonal = above;
     }
   }
-  return (2 * row[y.length]) / (x.length + y.length);
+  return (2 * (row[y.length] ?? 0)) / (x.length + y.length);
 }
 
 /** Below this, an added sentence is not offered as the after of a removed one. */

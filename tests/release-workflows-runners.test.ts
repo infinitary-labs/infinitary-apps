@@ -457,6 +457,10 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The feedback labels, which hold a write token on any new issue
     // (docs/feedback.md, "Triage").
     "feedback-labels.yml:label",
+    // The triage mark and the waiting-on-author timer, which hold a write
+    // token on any issue or pull request (docs/public-ci.md, "Intake").
+    "triage-mark.yml:mark",
+    "waiting-on-author.yml:tick",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

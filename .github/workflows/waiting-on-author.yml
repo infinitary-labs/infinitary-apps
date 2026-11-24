@@ -1,0 +1,48 @@
+name: waiting-on-author
+
+# The waiting-on-author timer (scripts/waiting-on-author.mjs;
+# docs/public-ci.md, "Intake"): once a day it reminds an issue or pull request
+# that has waited on its author for 14 days, and closes one 14 days after
+# that reminder with a note saying how to pick it up again. It touches only
+# items labeled "waiting on author".
+#
+# It checks out only its two scripts, runs no pull request's code, uses no
+# secret beyond its own token, and runs on GitHub's own machines.
+
+on:
+  schedule:
+    - cron: "23 16 * * *"
+  workflow_dispatch:
+
+# A read of the project; the job names the writes it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: waiting-on-author
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual request' || 'Daily' }} · Waiting on author
+    runs-on: ubuntu-24.04
+    # GitHub refuses a comment or a close on a pull request to a token
+    # without pull request writes, even with issue writes.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/waiting-on-author.mjs
+            scripts/intake-labels.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {tick} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/waiting-on-author.mjs`).href);
+            await tick({github, context, core});

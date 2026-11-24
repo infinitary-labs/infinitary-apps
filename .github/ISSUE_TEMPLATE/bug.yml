@@ -1,0 +1,44 @@
+name: Report a problem
+description: Something in Infinitary does not work as it should.
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report this. A maintainer usually answers within two working days.
+        From inside the app, `/feedback` in the message box writes this report for you, with the app's version and diagnostics and no personal details.
+        Please do not post a security issue here: write to help@getinfinitary.com instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: The steps, one per line, if you know them.
+      placeholder: |
+        1. Open ...
+        2. Click ...
+  - type: input
+    id: version
+    attributes:
+      label: Infinitary version
+      description: "The About window shows it: on a Mac, the Infinitary menu, then About."
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Computer and system
+      description: For example, a Mac with macOS 26, a Windows 11 PC, or an iPhone with iOS 26.
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots or log lines help. Please remove names, addresses and keys first.

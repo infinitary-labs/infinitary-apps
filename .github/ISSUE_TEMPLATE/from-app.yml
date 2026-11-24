@@ -1,0 +1,16 @@
+name: Feedback from the app
+description: A problem or an idea that /feedback in Infinitary wrote for you.
+labels: ["needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Infinitary's `/feedback` fills this in. Read it, change anything you like, and submit it.
+        A maintainer usually answers within two working days.
+  - type: textarea
+    id: report
+    attributes:
+      label: Your report
+      description: Your words, then the app's diagnostics. Please keep the hidden line at the end, which sorts the report.
+    validations:
+      required: true

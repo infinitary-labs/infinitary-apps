@@ -1,0 +1,27 @@
+name: Suggest an idea
+description: Something Infinitary could do, or do better.
+labels: ["idea", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the idea. A maintainer usually answers within two working days.
+        From inside the app, `/feedback` in the message box writes this for you.
+        We read each idea as a problem to solve, so the problem matters more than the exact feature.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you were trying to do, and what got in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How you picture it working.
+  - type: textarea
+    id: now
+    attributes:
+      label: What you do today instead
+      description: Any way around it you use now.

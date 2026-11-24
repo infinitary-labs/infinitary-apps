@@ -1,7 +1,7 @@
 import { FEEDBACK_LINK_MAX } from "@shared/feedback";
 import type { FeedbackAskFacts } from "@shared/writeAsk";
 import { describe, expect, it } from "vitest";
-import type { FeedbackDiagnostics } from "./diagnostics";
+import { FEEDBACK_FORM, type FeedbackDiagnostics } from "./diagnostics";
 import { type FeedbackHost, taskFeedback } from "./feedbackCommand";
 
 /**
@@ -158,7 +158,8 @@ describe("the feedback command's draft", () => {
       "https://github.com/infinitary-labs/infinitary-apps/issues/new",
     );
     expect(url.searchParams.get("title")).toBe("Let me pin a card");
-    const body = url.searchParams.get("body") ?? "";
+    expect(url.searchParams.get("template")).toBe(FEEDBACK_FORM.file);
+    const body = url.searchParams.get(FEEDBACK_FORM.field) ?? "";
     const steps = (text: string) =>
       (/- Steps \(minute: kind\): (.*)/.exec(text)?.[1] ?? "").split(", ").filter(Boolean).length;
     // The words go whole; the earliest steps went to fit, the full draft keeps every one.
@@ -180,7 +181,7 @@ describe("the feedback command's draft", () => {
     });
     const link = String(answer.data?.link);
     expect(link.length).toBeLessThanOrEqual(FEEDBACK_LINK_MAX);
-    const body = new URL(link).searchParams.get("body") ?? "";
+    const body = new URL(link).searchParams.get(FEEDBACK_FORM.field) ?? "";
     expect(body).toContain("The rest was too long for a link");
     expect(body).toContain("<!-- infinitary-feedback v1 kind=bug");
   });

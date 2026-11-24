@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "browser-handover-takes-keys",
+      "kind": "fix",
+      "title": "Type into a crewmate's browser as soon as it is handed to you",
+      "body": "When a crewmate asks for your help on a page and you press its card's button to open the browser, your typing now goes straight to the page once it is yours, so you can enter a user name or password without clicking the page first.",
+      "area": "tasks",
+      "noPicture": "Where your typing goes cannot show in a still picture; the page looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

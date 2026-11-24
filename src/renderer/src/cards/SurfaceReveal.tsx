@@ -13,6 +13,9 @@ import { readingScrollTop } from "./cardKeys";
 const EntranceContext = createContext(false);
 const StageRoleContext = createContext<StageRole>("shown");
 export const useStageRole = () => useContext(StageRoleContext);
+/** Whether the entry can take focus now: shown and ready, so not inert. */
+const StageFocusableContext = createContext(true);
+export const useStageFocusable = () => useContext(StageFocusableContext);
 let initialSurfacePainted = false;
 const BodyEntranceContext = createContext({ reveal: false, onDrawn: () => {} });
 
@@ -85,7 +88,9 @@ export function StageEntry({
             // behind the card and in front of the stage.
             style={{ isolation: "isolate", ...style }}
           >
-            {children}
+            <StageFocusableContext.Provider value={role === "shown" && ready}>
+              {children}
+            </StageFocusableContext.Provider>
           </div>
         </BodyEntranceContext.Provider>
       </EntranceContext.Provider>

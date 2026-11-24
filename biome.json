@@ -408,6 +408,7 @@
         "!src/core/orchestrator/changePublication.test.ts",
         "!src/core/orchestrator/changePublication.stories.test.ts",
         "!src/core/orchestrator/changePublication.mergedStory.test.ts",
+        "!src/core/orchestrator/storyBase.test.ts",
         "!src/core/orchestrator/mergeReviews.test.ts",
         "!tests/gitlabMergeReview.test.ts",
         "!tests/mergeCardWay.test.ts",

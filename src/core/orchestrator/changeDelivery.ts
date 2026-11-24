@@ -39,6 +39,9 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
   const merges = new ChangeMerge(context, checks);
   const reviews = new MergeReviews(context, checks, merges);
   const publication = new ChangePublication(context, checks, readiness);
+  options.presentations?.startingCommitsFrom((taskId, base, head) =>
+    publication.startingCommit(taskId, base, head),
+  );
   return {
     checks,
     merges,

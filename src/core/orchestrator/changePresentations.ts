@@ -163,19 +163,7 @@ const STORY_SHRINK =
 
 /** What the project says of a story's Before base, read beside its version. */
 export type StartingCommit = "descends" | "missing" | "unrelated" | "unread";
-
-/** A Before base the project holds no commit for, or one the version does not start from. */
-function startingCommitRefusal(
-  found: StartingCommit | undefined,
-  base: string,
-  head: string,
-): string | undefined {
-  if (found === "missing")
-    return `The Before base ${base} is not a commit in this project. Give the full id git rev-parse prints for the commit the change started from, then prepare the story again.`;
-  if (found === "unrelated")
-    return `The committed version ${head} does not descend from the Before base ${base}. Give the full id of the commit the change started from, such as git merge-base prints against the default branch, then prepare the story again.`;
-  return undefined;
-}
+type ReadStartingCommit = (taskId: string, base: string, head: string) => Promise<StartingCommit>;
 
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
 export class ChangePresentations {
@@ -200,14 +188,19 @@ export class ChangePresentations {
        * and the view shows its picture.
        */
       mapPart?: () => Promise<string | undefined>;
-      /**
-       * Whether a story's Before base is a commit in the project that its
-       * version descends from (`ChangePublication.startingCommit`); undefined
-       * where it cannot be read, and nothing is looked up.
-       */
-      startsFrom?: (taskId: string, base: string, head: string) => Promise<StartingCommit>;
     },
   ) {}
+
+  /**
+   * Whether a story's Before base is a commit in the project that its
+   * version descends from, bound by the delivery that reads the version
+   * (`ChangePublication.startingCommit`); unbound, nothing is looked up.
+   */
+  private startsFrom?: ReadStartingCommit;
+
+  startingCommitsFrom(read: ReadStartingCommit): void {
+    this.startsFrom = read;
+  }
 
   async prepare(
     taskId: string,
@@ -264,24 +257,24 @@ export class ChangePresentations {
             throw new Error(
               "Keep the story's original project; reconcile a changed project identity before publishing.",
             );
-          const startsFrom = this.options.startsFrom;
           if (!prior || prior.base !== staged.base) {
             // A later revision keeps the first base; the one exception is a
             // first base that names no commit in the project, which nothing
             // could ever be compared against.
-            if (
-              prior &&
-              (await startsFrom?.(taskId, prior.base, staged.head)) !== "missing"
-            )
+            const startsFrom = this.startsFrom;
+            if (prior && (await startsFrom?.(taskId, prior.base, staged.head)) !== "missing")
               throw new Error(
                 `Keep the original Before base ${prior.base}: every story revision names the starting commit the first one named.`,
               );
-            const refusal = startingCommitRefusal(
-              await startsFrom?.(taskId, staged.base, staged.head),
-              staged.base,
-              staged.head,
-            );
-            if (refusal) throw new Error(refusal);
+            const found = await startsFrom?.(taskId, staged.base, staged.head);
+            if (found === "missing")
+              throw new Error(
+                `The Before base ${staged.base} is not a commit in this project. Give the full id git rev-parse prints for the commit the change started from, then prepare the story again.`,
+              );
+            if (found === "unrelated")
+              throw new Error(
+                `The committed version ${staged.head} does not descend from the Before base ${staged.base}. Give the full id of the commit the change started from, such as git merge-base prints against the default branch, then prepare the story again.`,
+              );
           }
           const revision = (prior?.revision ?? 0) + 1;
           if (staged.version === 2)

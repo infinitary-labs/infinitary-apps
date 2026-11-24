@@ -816,8 +816,6 @@ export async function createServices(
     head: (taskId) => changeDelivery.publication.presentationHead(taskId),
     branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
     mapPart: () => runbooks.mapPart(),
-    startsFrom: (taskId, base, head) =>
-      changeDelivery.publication.startingCommit(taskId, base, head),
   });
   const prepareContribution = (taskId: string) => projectContributions.prepareTask(taskId, tasks);
   const batches = createOwnBatches({

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unsafe-data-reader-no-project",
+      "reason": "An unsafe data reader may now start with no project, in an empty folder of its own. Until its web page and integration reads arrive, whose own notes describe what a person can ask it to read, such a reader reads nothing a person would notice."
+    }
+  ]
+}

@@ -521,6 +521,13 @@ export async function fixture(
     branch: "fm/task-reader",
     shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
   });
+  // An unsafe data reader with no project, in an empty folder of its own (INF-6427's piece 4).
+  seedTask(tasks, {
+    id: "task-reader-alone",
+    title: "Read the stand-in notes",
+    status: "idle",
+    shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+  });
   seedTask(tasks, {
     id: "task-operation",
     title: "Cancel the superseded check",

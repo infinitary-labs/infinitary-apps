@@ -143,6 +143,14 @@ export const UNSAFE_DATA_READER_FOLLOWUP = {
 /** What an unsafe data reader's first report asks of the first mate, which reaches it marked. */
 export const UNSAFE_DATA_READER_ASK = "Start the follow-up about issue 12's cold start.";
 
+/**
+ * A scripted unsafe data reader with no project (INF-6427's piece 4): it lists
+ * the folder it runs in, then asks where its project lives and is refused.
+ */
+export const UNSAFE_DATA_READER_ALONE_MARKER = "read the stand-in notes with no project";
+/** The read it makes where a project would live. */
+export const UNSAFE_DATA_READER_ALONE_READ = "/repos/octo/meterlab/pulls";
+
 /** The write each kind of ask makes, by the words in its task's title. */
 export function writeAskCall(title: string): GithubWriteInput {
   if (title.includes("publish notebook")) {

@@ -370,8 +370,9 @@ export class TaskIntake {
     if (runsOnRefused) throw new Error(`${NOTHING_SPAWNED} ${runsOnRefused}`);
     const handOff = handOffShape(this.options.tasks, input.shape, boundRepoId);
     if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
-    // Its reads and writes where the project lives are fenced to its own project.
-    if (input.shape?.unsafe_data_reader && (!boundRepoId || placement.personal))
+    // The personal workspace's files are the captain's own: a reader runs in
+    // another project, or with none in an empty folder of its own.
+    if (input.shape?.unsafe_data_reader && placement.personal)
       throw new Error(`${NOTHING_SPAWNED} ${UNSAFE_DATA_READER_PROJECT}`);
     const shape = withDeliverable(
       {

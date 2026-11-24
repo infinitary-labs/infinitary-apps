@@ -10,6 +10,7 @@ const SERVICE = "Infinitary Secrets (development)";
 function keychain(status?: number) {
   const items = new Map<string, Buffer>();
   const interaction: boolean[] = [];
+  const offThread: string[] = [];
   const api: DarwinCustodyApi = {
     setUserInteractionAllowed: (allowed) => {
       interaction.push(allowed);
@@ -18,6 +19,10 @@ function keychain(status?: number) {
       if (status !== undefined) return { status };
       const bytes = items.get(`${service}/${account}`);
       return bytes ? { status: 0, bytes: Buffer.from(bytes) } : { status: -25300 };
+    },
+    readOffThread: async (service, account) => {
+      offThread.push(account);
+      return api.read(service, account);
     },
     write: (service, account, bytes) => {
       if (status !== undefined) return status;
@@ -29,7 +34,7 @@ function keychain(status?: number) {
       return items.delete(`${service}/${account}`) ? 0 : -25300;
     },
   };
-  return { api, items, interaction };
+  return { api, items, interaction, offThread };
 }
 
 describe("macOS Keychain custody", () => {
@@ -49,6 +54,50 @@ describe("macOS Keychain custody", () => {
       "root",
     );
     expect(asking.interaction).toEqual([true]);
+  });
+
+  // Intent: INF-6556 - Unlock's read with the Keychain's dialog allowed waits
+  // off the main thread (INF-6543 measured 15.6 s stopped while it waited),
+  // and silent reads keep their synchronous call.
+  it("reads off the main thread only when the dialog is allowed", async () => {
+    const { api, offThread } = keychain();
+    const silent = createDarwinSecretCustody(api, { service: SERVICE });
+    await silent.write("root", Buffer.alloc(32, 5));
+    expect(await silent.read("root")).toEqual({ kind: "value", bytes: Buffer.alloc(32, 5) });
+    expect(offThread).toEqual([]);
+    const asking = createDarwinSecretCustody(api, { service: SERVICE, interactive: true });
+    expect(await asking.read("root")).toEqual({ kind: "value", bytes: Buffer.alloc(32, 5) });
+    expect(await asking.read("authority-head")).toEqual({ kind: "absent" });
+    expect(offThread).toEqual(["root", "authority-head"]);
+  });
+
+  // Intent: INF-6556 - the dialog switch is one for the whole process, so no
+  // other custody call may flip it while an interactive read waits on its dialog.
+  it("holds every other custody call until a waiting interactive read settles", async () => {
+    const { api, interaction } = keychain();
+    let answer: (found: { status: number }) => void = () => {};
+    api.readOffThread = () => new Promise((resolve) => (answer = resolve));
+    const waiting = createDarwinSecretCustody(api, { service: SERVICE, interactive: true }).read(
+      "root",
+    );
+    const other = keychain();
+    const silent = createDarwinSecretCustody(other.api, { service: `${SERVICE} other` });
+    const order: string[] = [];
+    const held = [
+      silent.read("root").then(() => order.push("read")),
+      silent.write("root", Buffer.alloc(32)).then(() => order.push("write")),
+      silent.remove?.("root").then(() => order.push("remove")),
+    ];
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(interaction).toEqual([true]);
+    expect(other.interaction).toEqual([]);
+    expect(order).toEqual([]);
+
+    answer({ status: -128 });
+    expect(await waiting).toEqual({ kind: "locked" });
+    await Promise.all(held);
+    expect(order).toEqual(["read", "write", "remove"]);
+    expect(other.interaction).toEqual([false, false, false]);
   });
 
   it.each([
@@ -91,6 +140,7 @@ describe("macOS Keychain custody", () => {
           throw new Error("Security.framework is missing");
         },
         read: () => ({ status: 0 }),
+        readOffThread: async () => ({ status: 0 }),
         write: () => 0,
         remove: () => 0,
       },

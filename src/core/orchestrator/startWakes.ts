@@ -48,8 +48,9 @@ export type StartFacts =
     }
   | {
       /**
-       * A queued task's wait ended and a crewmate started on it. A start
-       * someone asked for - the Firstmate's start_now, the captain's Start -
+       * A queued task started on another model than the one named, or with
+       * none recorded to confirm it (INF-5123, INF-6536): any other start is
+       * told by the next context block's crew rows. The captain's Start
        * raises none (FI3-695).
        */
       kind: "queued-started";

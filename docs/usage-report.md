@@ -6,6 +6,7 @@ Each destination gets one format, and nothing is ever sent in two formats.
 | Piece | Where |
 | --- | --- |
 | The destination shape and the sender | `UsageReportDestination`, `UsageReporter` (`src/core/usageReport/usageReporter.ts`) |
+| The company's Claude Code setup as a destination | `companyDestination`, `companyUsageDestinations` (`src/core/usageReport/companyDestination.ts`) |
 | The two formats, from ledger rows and heard turns | `claudeCodeBodies`, `standardBodies`, `callSpan` (`src/core/usageReport/usageReportFormats.ts`) |
 | The rows it reads | what `UsageStore.record` answers it wrote (`docs/usage.md`, "What the ledger records") |
 | Where it is built and hears turns | `homeUsage` (`src/core/storage/homeUsage.ts`), `EventSeam.attachUsageReport` (`src/core/eventSeam.ts`) |
@@ -16,6 +17,11 @@ Each destination gets one format, and nothing is ever sent in two formats.
 A destination is one place the report goes, with exactly one format, the full OTLP/HTTP address of each signal it takes, the headers it asks for per batch, and its own resource attributes (who and which team, as the company set them).
 Its source owns where it comes from and which format it was saved with: a company's Claude Code reporting setup defaults to Claude Code's format, a connection the person adds to the standard one.
 With no destination, the reporter keeps nothing and sends nothing.
+
+The company's Claude Code reporting setup (`docs/usage.md`, "A company's Claude Code setup") is one destination in Claude Code's format.
+It takes the setup's per-signal addresses, its headers (the header command's included, through `companyHeaders`) and its `OTEL_RESOURCE_ATTRIBUTES` and `OTEL_SERVICE_NAME`.
+It exists only where the receiver passes Claude's records on to that setup; under a managed setup Claude's own client reports and Infinitary reads no address, so other providers' calls are not sent there.
+The setup is read again at most once a minute, when the reporter asks.
 
 ## The two formats
 
@@ -43,4 +49,4 @@ The reporter runs on the computer that keeps the ledger, whichever computer the 
 A batch goes five seconds after its first row or span, as Claude's client batches its own reports, and once more as the app stops.
 Each signal is one OTLP/HTTP JSON request with the destination's headers; redirects are refused and a request gives up after ten seconds.
 A refused or unreachable destination drops that batch with one log line naming its host and the HTTP status or failure, never a header value; recording a row never waits on the network.
-A setup that names only gRPC takes no JSON request, so its source offers no address for it.
+A signal a setup sends over gRPC takes no JSON request, so its source offers no address for it; a signal set to `http/protobuf` takes the JSON body at the same address, which OTLP/HTTP collectors accept.

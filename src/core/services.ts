@@ -159,6 +159,7 @@ import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
 import { DEV_STARTER_SETTING, readStarterSession } from "./update/devStarter";
 import { createInstalledUpdateChecker } from "./update/updateChecker";
+import { companyUsageDestinations } from "./usageReport/companyDestination";
 import { WindowsInFront } from "./windowsInFront";
 import { adoptBundledGit } from "./workspace/bundledGit";
 import { ProjectContributions } from "./workspace/projectContributions";
@@ -752,6 +753,7 @@ export async function createServices(
     projectLimit: (repoId) => repos.get(repoId)?.costLimit,
     isTask: (taskId) => tasks.get(taskId) !== undefined,
     hearEvents: (hear) => eventSeam.attachUsageReport(hear),
+    reportDestinations: companyUsageDestinations(),
   });
   taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center, and each paired phone

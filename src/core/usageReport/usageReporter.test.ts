@@ -3,10 +3,12 @@ import type { AddressInfo } from "node:net";
 import { DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import type { FmEvent } from "@shared/events";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { companyReportingFrom } from "../claude/claudeReporting";
 import { openInMemoryDatabase } from "../storage/db";
 import { homeUsage } from "../storage/homeUsage";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { companyDestination } from "./companyDestination";
 import type { UsageReportDestination } from "./usageReporter";
 
 /**
@@ -380,6 +382,89 @@ describe("UsageReporter", () => {
     hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" });
     usage.recordUsage(CODEX_CALL);
     destinations = [destination(url, "standard", "tool")];
+    await usage.usageReporter.flush();
+    expect(received).toEqual([]);
+  });
+});
+
+/**
+ * The company's Claude Code setup as piece 1 reads it, mapped into the
+ * report's "claude-code" destination: Claude Code's guide example, sent
+ * over HTTP to a local collector.
+ */
+function companySetup(url: string, protocol = "http/protobuf") {
+  return companyReportingFrom({
+    CLAUDE_CODE_ENABLE_TELEMETRY: "1",
+    OTEL_METRICS_EXPORTER: "otlp",
+    OTEL_LOGS_EXPORTER: "otlp",
+    OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf",
+    OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: protocol,
+    OTEL_EXPORTER_OTLP_ENDPOINT: `${url}/otel`,
+    OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer%20your-token",
+    OTEL_RESOURCE_ATTRIBUTES: "department=engineering,team.id=platform",
+  });
+}
+
+describe("the company's Claude Code setup as a destination", () => {
+  it("sends other providers' calls to the setup's collector with its headers and attributes", async () => {
+    const { url, received } = await collector();
+    const source = companyDestination({
+      env: () => ({}),
+      costReportingAllowed: async () => true,
+      read: async () => companySetup(url),
+    });
+    await source.refresh();
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+
+    expect(received.map((entry) => entry.path).sort()).toEqual([
+      "/otel/v1/logs",
+      "/otel/v1/metrics",
+    ]);
+    for (const entry of received) expect(entry.headers.authorization).toBe("Bearer your-token");
+    expect(namesAt(received, "/otel")).toEqual([
+      "claude_code.cost.usage",
+      "claude_code.token.usage",
+      "claude_code.api_request",
+    ]);
+    expect(
+      attrs(
+        received[0]?.body.resourceMetrics?.[0]?.resource ??
+          received[0]?.body.resourceLogs[0].resource,
+      ),
+    ).toEqual({
+      "service.name": "infinitary",
+      department: "engineering",
+      "team.id": "platform",
+    });
+  });
+
+  it("leaves out a signal the setup sends over gRPC", async () => {
+    const { url, received } = await collector();
+    const source = companyDestination({
+      env: () => ({}),
+      costReportingAllowed: async () => true,
+      read: async () => companySetup(url, "grpc"),
+    });
+    await source.refresh();
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
+    await usage.usageReporter.flush();
+    expect(received.map((entry) => entry.path)).toEqual(["/otel/v1/logs"]);
+  });
+
+  it("sends nothing under a managed setup, whose own client reports", async () => {
+    const { url, received } = await collector();
+    const source = companyDestination({
+      env: () => ({}),
+      costReportingAllowed: async () => false,
+      read: async () => companySetup(url),
+    });
+    await source.refresh();
+    expect(source.destinations()).toEqual([]);
+    const { usage } = home(source.destinations);
+    usage.recordUsage(CODEX_CALL);
     await usage.usageReporter.flush();
     expect(received).toEqual([]);
   });

@@ -11,4 +11,4 @@ The captain chose a careful review of part 1 and no first mate screen of each qu
 - A reviewer's brief names the task its builder is built on (`renderReviewedPlanSection`), with its key, title, saved card file and the captain's choice and answers, and leaves to the reviewer whether it is a plan the captain approved, since a verified basis may be a reproduction; "Decided so far" carries the captain's answers on that task's cards.
 - The crewmate's card rules add one sentence after the answered-card sentence: the approved plan the work is built from settles what it names in the same way.
 
-The crewmate's fixed context grows by one sentence of 15 words; the reviewer's brief by about 150 words, plus the plan section when the builder has a plan.
+The crewmate's fixed context grows by one sentence of 15 words; the reviewer's brief by about 150 words, plus a short section naming the task the builder is built on, when it has one.

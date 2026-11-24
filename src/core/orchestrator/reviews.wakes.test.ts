@@ -694,6 +694,24 @@ describe("a review of plan-built work", () => {
         "F2 warning src/accounts.ts:316 every Save keeps earlier checks - auto-fix",
       );
       expect(received()).not.toContain("F3 warning");
+      expect(
+        received().split(
+          "F2 warning src/accounts.ts:316 every Save keeps earlier checks - auto-fix",
+        ).length - 1,
+      ).toBe(1);
+      const handoffs = [
+        ...reviewer.promptCalls,
+        ...vi.mocked(reviewer.steer).mock.calls.map(([text]) => text),
+      ].filter((text) =>
+        text.includes(`Your review of "Type a price for each custom model" holds`),
+      );
+      expect(handoffs).toHaveLength(2);
+      const last = handoffs.at(-1) ?? "";
+      expect(last).toContain("holds a finding for the captain");
+      expect(last).toContain(
+        "F3 warning src/accounts.ts:40 a renamed model loses its price - ask-user",
+      );
+      expect(last.split("Decided so far")[0]).not.toContain("F2 warning");
     } finally {
       repo.dispose();
     }

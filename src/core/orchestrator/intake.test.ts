@@ -14,7 +14,7 @@ import { fencedSpans } from "@shared/outsideData";
 import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { HostChildSpawner } from "@core/host";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
   fakeCrewTimersEachTest,
@@ -137,7 +137,8 @@ describe("new work", () => {
       enabled: () => true,
       version: () => ({ version: "a".repeat(64), since: 1, files: 1 }),
     };
-    const h = { ...setup(crewmate, { machines, personal }) };
+    const webRead = vi.fn(async () => "page part");
+    const h = { ...setup(crewmate, { machines, personal, webRead }) };
     const folder = join(h.paths.fleetDir, "meter");
     mkdirSync(join(folder, ".git"), { recursive: true });
     const repo = seedProject(h.db, { id: "meter", name: "meter", path: folder, setupKind: "init" });
@@ -173,6 +174,9 @@ describe("new work", () => {
     expect(spec?.fenced).toBe(true);
     expect(spec?.onReadCard).toBeUndefined();
     expect(spec?.onQueryTasks).toBeUndefined();
+    // Its one way onto the web is web_read, answered for its own task.
+    expect(await spec?.onWebRead?.({ url: "https://docs.example.org/a" })).toBe("page part");
+    expect(webRead).toHaveBeenCalledWith(taskId, { url: "https://docs.example.org/a" }, undefined);
     expect(h.sessionSpecs.at(-1)).toMatchObject({ fenced: true, personalResources: false });
     expect(h.sessionSpecs.at(-1)?.runbookSkills).toBeUndefined();
     expect(crewmate.promptCalls.at(-1)).toContain(UNSAFE_DATA_READER_WORDS);

@@ -39,6 +39,7 @@ import {
   type TaskQueryReach,
   type TaskQueryRow,
 } from "../tasks/taskQuery";
+import type { WebReadInput } from "../web/publicPage";
 import { cardMutationText } from "./cardMutationText";
 import { declareRunCheck } from "./checkRepair";
 import type { CrewCore } from "./crewCore";
@@ -500,20 +501,29 @@ export class CrewToolHooks {
     | "onDownloadArtifact"
     | "onGithubRead"
     | "onGithubWrite"
+    | "onWebRead"
   > {
     if (this.core.facts.isPersonalTask(task.id)) return {};
     // An unsafe data reader reaches where its project lives only through the
     // API pair, whose answers the gateway fences and whose writes all wait
     // for the captain: a workflow log or artifact would bring outside words
     // in unfenced (docs/agents-reach.md, "An unsafe data reader").
+    // Its one way onto the web is web_read, whose pages come fenced and whose
+    // new addresses wait for the captain once it holds something of theirs.
     if (this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true) {
-      const { githubRead, githubWrite } = this.core.options;
+      const { githubRead, githubWrite, webRead } = this.core.options;
       return {
         ...(githubRead
           ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
           : {}),
         ...(githubWrite
           ? { onGithubWrite: (input: GithubWriteInput) => githubWrite(task.id, input) }
+          : {}),
+        ...(webRead
+          ? {
+              onWebRead: (input: WebReadInput, signal?: AbortSignal) =>
+                webRead(task.id, input, signal),
+            }
           : {}),
       };
     }

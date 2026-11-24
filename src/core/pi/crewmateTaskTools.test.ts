@@ -170,6 +170,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     },
     callback: "onUseIntegration",
   },
+  web_read: { params: { url: "https://example.com/docs", part: 2 }, callback: "onWebRead" },
   prepare_change: {
     params: {
       story: {

@@ -441,6 +441,9 @@ export function hermeticEnv(input: {
     // A task browser resolves only the names a spec gives it, so no page
     // reaches a real network (docs/task-browser.md, "Where a page may go").
     INFINITARY_TASK_BROWSER_HOSTS: "{}",
+    // An unsafe data reader's web_read finds only the pages a spec serves,
+    // so no read reaches a real network (docs/agents-reach.md, "Web pages").
+    INFINITARY_WEB_READ_HOSTS: "{}",
     // Only an explicit Chrome trial may use an installed browser.
     INFINITARY_TASK_BROWSER_ENGINE:
       process.env.INFINITARY_TASK_BROWSER_ENGINE === "chrome" ? "chrome" : "built-in",

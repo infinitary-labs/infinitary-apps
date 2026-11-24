@@ -140,6 +140,22 @@ export const UNSAFE_DATA_READER_FOLLOWUP = {
   why: "Issue 12 says the meter idles on a cold start.",
 };
 
+/**
+ * An unsafe data reader that also reads web pages (docs/agents-reach.md,
+ * "Web pages"): its brief names one page, which opens at once though its
+ * project is private, and it asks for another, which waits on the approval card.
+ */
+export const UNSAFE_DATA_READER_WEB_MARKER = "with the outside docs at";
+/** The page its brief names, served by the journey's stand-in. */
+export const UNSAFE_DATA_READER_NAMED_PAGE = "https://docs.meterlab.example/cold-start";
+/** The page its brief does not name, which waits for the captain's click. */
+export const UNSAFE_DATA_READER_OTHER_PAGE = "https://forum.meterlab.example/t/idle?from=12";
+/** Each stand-in page's words, as its text reaches the reader. */
+export const UNSAFE_DATA_READER_PAGE_WORDS = {
+  named: "A cold start idles for ninety seconds while the meter warms.",
+  other: "Someone else saw the idle after a firmware update.",
+};
+
 /** What an unsafe data reader's first report asks of the first mate, which reaches it marked. */
 export const UNSAFE_DATA_READER_ASK = "Start the follow-up about issue 12's cold start.";
 

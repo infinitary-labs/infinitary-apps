@@ -3,6 +3,7 @@ import {
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
+  type WebReadAsk,
   type WriteAsk,
 } from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
@@ -10,7 +11,7 @@ import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
 import type { WriteAnswered } from "./deliveryWakes";
-import { readerApprovalCard } from "./forgeApprovalCard";
+import { readerApprovalCard, readerAskCall } from "./forgeApprovalCard";
 import type { WriteAskSent } from "./githubGateway";
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import type { TypedWake } from "./wakes";
@@ -63,23 +64,21 @@ export class IntegrationAsks {
     return open !== undefined;
   }
 
-  /**
-   * An unsafe data reader's kept write where its project lives
-   * (docs/agents-reach.md, "An unsafe data reader"): it joins its task's card of
-   * waiting writes, revised in place to list it, or raises its own, the way
-   * a crewmate's integration ask does. The waiting asks the cap dropped to
-   * keep it are refused first.
-   */
-  askForge(taskId: string, ask: ForgeWriteAsk, dropped: readonly WriteAsk[] = []): boolean {
+  /** An unsafe data reader's kept write where its project lives, or a web page it waits to open (`askReader`). */
+  askForge(
+    taskId: string,
+    ask: ForgeWriteAsk | WebReadAsk,
+    dropped: readonly WriteAsk[] = [],
+  ): boolean {
     return this.askReader(taskId, ask, dropped);
   }
 
   /**
-   * An unsafe data reader's kept call - a write where its project lives or
-   * an integration call - joins the one approval card of its task still
-   * waiting, whatever it reaches, revised in place to list it, or raises its
-   * own (docs/agents-reach.md, "An unsafe data reader"). The waiting asks the
-   * cap dropped to keep it are refused first.
+   * An unsafe data reader's kept call - a write where its project lives, an
+   * integration call or a web page it waits to open - joins the one approval
+   * card of its task still waiting, whatever it reaches, revised in place to
+   * list it, or raises its own (docs/agents-reach.md, "An unsafe data
+   * reader"). The waiting asks the cap dropped to keep it are refused first.
    */
   private askReader(taskId: string, ask: WriteAsk, dropped: readonly WriteAsk[]): boolean {
     const task = this.options.tasks.get(taskId);
@@ -276,13 +275,13 @@ export function waitingIntegrationAsks(asks: readonly WriteAsk[] | undefined): I
     .sort((a, b) => a.at - b.at);
 }
 
-/** An unsafe data reader's writes still waiting on the host's approval card, oldest first. */
+/** An unsafe data reader's writes and pages still waiting on the host's approval card, oldest first. */
 export function waitingForgeCardAsks(
   asks: readonly WriteAsk[] | undefined,
-): (ForgeWriteAsk & { card: string })[] {
+): ((ForgeWriteAsk | WebReadAsk) & { card: string })[] {
   return (asks ?? [])
     .filter(
-      (ask): ask is ForgeWriteAsk & { card: string } =>
+      (ask): ask is (ForgeWriteAsk | WebReadAsk) & { card: string } =>
         ask.kind !== "integration" && ask.card !== undefined && ask.sentAt === undefined,
     )
     .sort((a, b) => a.at - b.at);
@@ -303,7 +302,7 @@ export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string):
 
 /** How a kept ask's call is named on the task's timeline and to its crewmate. */
 export function askCall(ask: WriteAsk): string {
-  return ask.kind === "integration" ? ask.action : `${ask.method} ${ask.path}`;
+  return ask.kind === "integration" ? ask.action : readerAskCall(ask);
 }
 
 /** The facts of one `write-answered` steer for a click's outcome on one ask. */
@@ -320,5 +319,6 @@ export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnsw
       : {}),
     ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
     ...(sent.allowance ? { allowed: sent.allowance.words } : {}),
+    ...(sent.ask?.kind === "web" ? { web: true as const } : {}),
   };
 }

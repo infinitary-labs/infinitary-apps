@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "unsafe-data-reader-web",
+      "kind": "feature",
+      "title": "A crewmate that reads strangers' words can read public web pages",
+      "body": "An unsafe data reader can now read public web pages as text, signed out, with nothing on your computer or private network in reach, and everything it reads there is marked as words from outside. While it holds nothing of yours it opens any public page at once. Once it reads something of yours, such as a private project, it still opens a page its task names, and any other address waits as a row on its approval card, with the whole address, until you choose Only this time.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "unsafe-data-reader-web-dark.webp",
+        "light": "unsafe-data-reader-web-light.webp",
+        "alt": "An approval card asking to open a web page an unsafe data reader asked for, its one ticked row showing GET and the page's whole address"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

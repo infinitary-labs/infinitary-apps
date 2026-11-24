@@ -116,6 +116,29 @@ describe("the GitHub gateway for an unsafe data reader", () => {
     expect(tasks.get("task-reader-alone")?.delivery?.writeAsks ?? []).toEqual([]);
   });
 
+  // The captain's answer on INF-6432's review: on a public project, a read
+  // beyond what anyone may see (here Actions secrets) makes the reader hold,
+  // so its later web pages wait for the captain's click.
+  it("marks an unsafe data reader as holding once it reads its project beyond the public areas", async () => {
+    const { service, tasks } = await fixture();
+    const read = bindTool(GITHUB_READ_TOOL, {
+      onGithubRead: (i) => service.readForCrew("task-reader", i),
+    });
+    for (const path of [
+      "/repos/octo/meter/pulls",
+      "/repos/octo/meter/issues/2/comments",
+      "/repos/octo/meter/actions/runs?per_page=1",
+      "/repos/octo/meter/contents/README.md",
+    ]) {
+      await read.run({ path });
+      expect(tasks.get("task-reader")?.delivery?.readerHolds).toBeUndefined();
+    }
+    await read.run({ path: "/repos/octo/meter/actions/secrets" });
+    expect(tasks.get("task-reader")?.delivery?.readerHolds?.what).toBe(
+      "its project's actions/secrets, which the public may not see",
+    );
+  });
+
   // INF-6388's review: a reader has no shell and its fence refuses the
   // temporary folder, so an answer saved there as a file would never be read.
   it("serves an unsafe data reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {

@@ -597,7 +597,9 @@ export type TaskDelivery = {
   integrationAllowances?: IntegrationAllowance[];
   /**
    * When an unsafe data reader first held something of the captain's, such
-   * as an integration's answer, and where it came from. Only
+   * as an integration's answer or a read of its project past the public
+   * areas, and what: from then on a web address it has not opened waits for
+   * the captain's click (docs/agents-reach.md, "Web pages"). Only
    * `TaskDeliveries.markReaderHolds` writes it, and the first mark stays.
    */
   readerHolds?: { at: number; what: string };

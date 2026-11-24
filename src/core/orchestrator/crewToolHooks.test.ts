@@ -143,6 +143,7 @@ describe("the sign-in where a project lives", () => {
       checkChange: vi.fn(async () => "green"),
       readWorkflow: vi.fn(async () => "workflow log"),
       downloadArtifact: vi.fn(async () => "downloaded ZIP"),
+      webRead: vi.fn(async () => "page part"),
     });
     await supervisor.intake.commission({
       title: "Read the router",
@@ -157,6 +158,8 @@ describe("the sign-in where a project lives", () => {
     expect(specs[0]?.onCheckChange).toBeUndefined();
     expect(specs[0]?.onReadWorkflow).toBeDefined();
     expect(specs[0]?.onDownloadArtifact).toBeDefined();
+    // web_read is an unsafe data reader's alone; every other crewmate keeps its own web reach.
+    expect(specs[0]?.onWebRead).toBeUndefined();
   });
 
   // INF-2146 piece 2: an operation that reads a red workflow run reserves its one

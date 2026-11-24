@@ -157,7 +157,12 @@ export class ReportIntake {
       text: `Task ${origin.title} follow-up filed: ${record.key} ${title}${input.blocksMe ? `; ${origin.title} must wait` : ""}`,
     });
     this.host.broadcastCrewCounts();
-    task.filedThisTurn.push({ key: record.key, title, blocks: Boolean(input.blocksMe) });
+    // The first mate hears of it in the report's wake, its title marked as its goal is.
+    task.filedThisTurn.push({
+      key: record.key,
+      title: reader ? readerDataLine(title, at) : title,
+      blocks: Boolean(input.blocksMe),
+    });
     return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
   }
 
@@ -843,6 +848,12 @@ export class ReportIntake {
   noteProgress(task: TaskRuntime, text: string, plan?: unknown): string {
     const line = text.replace(/\s+/g, " ").trim();
     if (!line) throw new Error("text is required: one line of progress.");
+    const reader = this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
+    // A reader's plan labels would reach the first mate unmarked: its line is kept, its plan never.
+    if (reader && plan !== undefined)
+      throw new Error(
+        "Nothing was noted. An unsafe data reader sends note_progress with text only, never a plan.",
+      );
     let items: PlanItem[] | undefined;
     if (plan !== undefined) {
       const read = readPlanItems(plan);
@@ -860,7 +871,6 @@ export class ReportIntake {
         );
     const kept = cutText(line, 500);
     // An unsafe data reader's line is marked after the cut, so no cut splits its marks.
-    const reader = this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
     this.options.tasks.noteProgress(
       task.id,
       reader ? readerDataLine(kept, Date.now()) : kept,

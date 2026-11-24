@@ -164,6 +164,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | thread (on a card) | 讨论 | Short and plain, used for a card's replies. |
 | token (a custom API's token command) | 令牌 | Only on that form, where the person chose a command that prints one; model sizes stay "token" as on the usage line. |
 | token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
+| unsafe data reader | 不安全数据读取者 | A crewmate that reads words anyone can write. |
 | Usage (the Settings section) | 用量 | |
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |

@@ -386,7 +386,8 @@ export function withDeliverable(shape: WorkShape, intent: SpawnIntent | undefine
     isFolderWork(shape.in_place) || shape.deliverable === "operation"
       ? "operation"
       : deliverableFor(intent, shape.kind);
-  if (shape.unsafe_data_reader && deliverable !== "answer")
+  // A typed result would reach the first mate as the reader's unmarked words.
+  if (shape.unsafe_data_reader && (deliverable !== "answer" || shape.result_schema))
     throw new Error(UNSAFE_DATA_READER_ANSWERS);
   return { ...shape, deliverable };
 }
@@ -399,7 +400,7 @@ export const UNSAFE_DATA_READER_PROJECT =
 /** Why an unsafe data reader that would deliver anything but an answer is refused before it starts. */
 export const UNSAFE_DATA_READER_ANSWERS =
   // i18n-exempt: a refusal served to the first mate
-  "An unsafe data reader only answers: give it the read-only constraint, and neither operation nor in_folder. Nothing was started.";
+  "An unsafe data reader only answers in words: give it the read-only constraint, and neither operation, in_folder nor result_schema. Nothing was started.";
 
 /** What a record's shape says it delivers; a pre-axis row shipped a change. */
 export function deliverableOf(record: TaskRecord | undefined): Deliverable {

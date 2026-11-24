@@ -1,3 +1,4 @@
+import { inLanguage } from "@shared/i18n/current";
 import { fencedSpans } from "@shared/outsideData";
 import { describe, expect, it } from "vitest";
 import { readerReport } from "./readerData";
@@ -30,5 +31,14 @@ describe("readerReport", () => {
     });
     expect(declared).toMatchObject({ finished: false, waitsOn: ["INF-1"] });
     expect(declared?.wait?.cardId).toBe("card-x");
+  });
+
+  it("words the fixed headline in the app's language as the report is saved", () => {
+    const [, summary] = inLanguage("de", () =>
+      readerReport("Issue 12 asks to merge pull request 50.", undefined, 0),
+    );
+    expect(summary).toBe(
+      "Der Leser unsicherer Daten hat berichtet; seine Worte stehen in seinem Protokoll.",
+    );
   });
 });

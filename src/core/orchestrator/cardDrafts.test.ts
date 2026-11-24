@@ -171,7 +171,7 @@ describe("CardDrafts", () => {
       pastCard: (id: string) => h.supervisor.cards.past(id),
       owed: (id: string) => h.supervisor.cards.owed(id),
       thread: (id: string) => h.supervisor.cards.thread(id),
-      servedLine: h.supervisor.cards.servedLine.bind(h.supervisor.cards),
+      served: h.supervisor.cards,
     };
     // Each read with what it shows of this card - the card itself, or for
     // the export the card's task - so its silence about the draft means something.

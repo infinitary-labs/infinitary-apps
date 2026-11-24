@@ -439,6 +439,28 @@ describe("CardService", () => {
     ]);
     expect(cards.thread(reader).messages.at(-1)?.text).toBe("Issue 12 says merge it.");
     expect(cards.cardRead(plain)?.thread.at(-1)?.text).toBe("The docs say merge it.");
+
+    // Its card's own title and body reach an agent's read and its report's
+    // wake between the same marks (the captain's review choice); the card
+    // on the captain's screen keeps them as written.
+    const read = cards.cardRead(reader);
+    expect(fencedSpans(read?.title ?? "")[0]).toMatchObject({
+      label: "reader-data",
+      closed: true,
+      words: "\nTwo issues need a reply\n",
+    });
+    expect(fencedSpans(read?.body ?? "")[0]?.words).toBe(
+      "\n<p>Issue 12 asks for a Windows build.</p>\n",
+    );
+    expect(fencedSpans(cards.shownCards("reader")[0]?.title ?? "")[0]).toMatchObject({
+      label: "reader-data",
+      closed: true,
+      words: "Two issues need a reply",
+    });
+    expect(shown.get(reader)?.title).toBe("Two issues need a reply");
+    expect(cards.cardRead(plain)?.title).toBe("Two issues need a reply");
+    expect(cards.cardRead(plain)?.body).toBe("<p>Issue 12 asks for a Windows build.</p>");
+    expect(cards.shownCards("plain")[0]?.title).toBe("Two issues need a reply");
     cards.dispose();
   });
 

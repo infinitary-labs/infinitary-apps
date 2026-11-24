@@ -1074,6 +1074,7 @@
 "feedStarted" = "بدأت";
 "feedStopped" = "توقفت";
 "feedUndelivered" = "لم تُسلَّم الرسالة: %1$@";
+"feedUnsafeDataReaderReported" = "أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.";
 "feedUpdated" = "تحديث: %1$@";
 "feedYouChose" = "اخترت «%1$@»";
 "feedbackStripAccount" = "لا يُرسل شيء قبل نقرتك. يُنشر باسم حسابك على GitHub ‏%1$@.";

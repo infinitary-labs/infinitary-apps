@@ -1159,6 +1159,7 @@
   {"said":{"m":"feedStarted"},"words":"Started"},
   {"said":{"m":"feedStopped"},"words":"Stopped"},
   {"said":{"m":"feedUndelivered","a":{"why":"‹why›"}},"words":"Message undelivered: ‹why›"},
+  {"said":{"m":"feedUnsafeDataReaderReported"},"words":"The unsafe data reader reported; its words are on its record."},
   {"said":{"m":"feedUpdated","a":{"text":"‹text›"}},"words":"Updated: ‹text›"},
   {"said":{"m":"feedYouChose","a":{"choice":"‹choice›"}},"words":"You chose \"‹choice›\""},
   {"said":{"m":"feedbackStripAccount","a":{"login":"‹login›"}},"words":"Nothing is sent before your click. It goes under your GitHub account ‹login›."},

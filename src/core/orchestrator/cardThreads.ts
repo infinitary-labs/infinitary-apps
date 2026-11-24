@@ -446,6 +446,21 @@ export class CardThreads {
     return this.fromReader(card, message) ? readerDataAnswer(text, message.at) : text;
   }
 
+  /**
+   * A card's own title or body as an agent reads it: an unsafe data reader's
+   * card's between reader-data marks, as its thread lines are; the captain's
+   * card keeps the words as written.
+   */
+  servedCardWords(card: Pick<Card, "author" | "taskId">, words: string): string {
+    return this.readerCard(card) ? readerDataAnswer(words, Date.now()) : words;
+  }
+
+  /** Whether an unsafe data reader wrote this card. */
+  readerCard(card: Pick<Card, "author" | "taskId">): boolean {
+    if (card.author !== "crewmate" || !card.taskId) return false;
+    return this.host.tasks.get(card.taskId)?.shape?.unsafe_data_reader === true;
+  }
+
   /** Whether an unsafe data reader wrote this thread line. */
   fromReader(card: Pick<Card, "taskId">, message: CardMessage): boolean {
     const writer = crewmateWriterOf(card, message);
@@ -523,7 +538,7 @@ export class CardThreads {
         : undefined;
     return {
       id: card.id,
-      title: card.title,
+      title: this.servedCardWords(card, card.title),
       author: card.author,
       ...(task ? { task: task.key || task.id } : {}),
       open,
@@ -537,7 +552,7 @@ export class CardThreads {
         label: action.label,
         ...(action.effect ? { effect: action.effect.kind } : {}),
       })),
-      body: card.body,
+      body: this.servedCardWords(card, card.body),
       thread: this.host.cardStore.messages(id).map((message) => ({
         id: message.id,
         who: message.who,

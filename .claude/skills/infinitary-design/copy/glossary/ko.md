@@ -166,6 +166,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | thread | 스레드 | |
 | token (a sign-in token a command prints) | 토큰 | Only in the custom API form, where the person enters a "token command"; elsewhere 로그인 or 키 |
 | token, OAuth, credential | (not used) | 로그인 or 키 instead; "billable tokens" stays 토큰 where English names them |
+| unsafe data reader | 안전하지 않은 데이터 읽기 작업 | A crewmate that reads words anyone can write. |
 | Usage | 사용량 | |
 | version | 버전 | Replaces SHA and hash |
 | Waiting on you (board lane) | 선장님을 기다림 | |

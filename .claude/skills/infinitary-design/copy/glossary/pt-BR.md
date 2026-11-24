@@ -160,6 +160,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | token, credential (avoided) | login, chave | "tokens" stays only where it means billed model text. |
 | Turn on / Turn off | Ativar / Desativar | Also for "Turn on…": "Ativar…". |
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
+| unsafe data reader | leitor de dados não seguros | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
 | window wash | véu da janela | The theme color laid over the blurred background. |

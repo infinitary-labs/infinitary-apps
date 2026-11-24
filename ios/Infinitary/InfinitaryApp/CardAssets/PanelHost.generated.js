@@ -36497,6 +36497,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Message undelivered: ${why}`;
   }
+  function feedUnsafeDataReaderReported() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.`;
+      case "de":
+        return `Der Leser unsicherer Daten hat berichtet; seine Worte stehen in seinem Protokoll.`;
+      case "es":
+        return `El lector de datos no seguros informó; sus palabras están en su registro.`;
+      case "fr":
+        return `Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.`;
+      case "ja":
+        return `安全でないデータの読み手が報告しました。その内容は記録にあります。`;
+      case "ko":
+        return `안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.`;
+      case "pt-BR":
+        return `O leitor de dados não seguros relatou; as palavras dele estão no registro.`;
+      case "zh-Hans":
+        return `不安全数据读取者已汇报；内容在它的记录里。`;
+      case "zh-Hant":
+        return `不安全資料讀取者已回報；內容在它的紀錄裡。`;
+      case "en-XA":
+        return `[Ţĥé ûñšáƒé ðáţá ŕéáðéŕ ŕéþöŕţéð; îţš ŵöŕðš áŕé öñ îţš ŕéçöŕð. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The unsafe data reader reported; its words are on its record.‬`;
+    }
+    return `The unsafe data reader reported; its words are on its record.`;
+  }
   function feedUpdated(input2) {
     const text = input2.text;
     switch (currentLanguage()) {
@@ -104516,6 +104543,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedStarted,
     feedStopped,
     feedUndelivered,
+    feedUnsafeDataReaderReported,
     feedUpdated,
     feedYouChose,
     feedbackStripAccount,
@@ -107866,6 +107894,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedStarted": [],
     "feedStopped": [],
     "feedUndelivered": ["why"],
+    "feedUnsafeDataReaderReported": [],
     "feedUpdated": ["text"],
     "feedYouChose": ["choice"],
     "feedbackStripAccount": ["login"],

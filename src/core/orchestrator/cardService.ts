@@ -56,6 +56,7 @@ import {
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
+import { readerDataLine } from "./readerData";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
@@ -562,7 +563,11 @@ export class CardService {
   shownCards(taskId: string): WakeCard[] {
     return [...this.cards.values()]
       .filter((card) => card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate")
-      .map((card) => ({ id: card.id, word: cardWord(card), title: card.title }));
+      .map((card) => ({
+        id: card.id,
+        word: cardWord(card),
+        title: this.readerCard(card) ? readerDataLine(card.title, Date.now()) : card.title,
+      }));
   }
 
   /**
@@ -652,7 +657,7 @@ export class CardService {
         ...shown,
         ...(about ? { asked: about } : {}),
         ...(this.quickAnswer(shown) ? { quick: true as const } : {}),
-        ...(this.fromUnsafeDataReader(shown) ? { unsafeData: true as const } : {}),
+        ...(this.readerCard(shown) ? { unsafeData: true as const } : {}),
       };
     });
   }
@@ -684,10 +689,9 @@ export class CardService {
     return isQuickAnswer(this.host.tasks.get(card.taskId)?.shape);
   }
 
-  /** Whether a card is a crewmate's from an unsafe data reader, read from its task's recorded shape. */
-  private fromUnsafeDataReader(card: Card): boolean {
-    if (card.author !== "crewmate" || !card.taskId) return false;
-    return this.host.tasks.get(card.taskId)?.shape?.unsafe_data_reader === true;
+  /** Whether a card is a crewmate's from an unsafe data reader, read from its task's recorded shape (`CardThreads.readerCard`). */
+  readerCard(card: Pick<Card, "author" | "taskId">): boolean {
+    return this.threads.readerCard(card);
   }
 
   /**
@@ -1815,6 +1819,11 @@ export class CardService {
   /** A thread line's words as an agent reads them (`CardThreads.servedLine`). */
   servedLine(card: Pick<Card, "taskId">, message: CardMessage): string {
     return this.threads.servedLine(card, message);
+  }
+
+  /** A card's title or body as an agent reads it (`CardThreads.servedCardWords`). */
+  servedCardWords(card: Pick<Card, "author" | "taskId">, words: string): string {
+    return this.threads.servedCardWords(card, words);
   }
 
   /** Whether an unsafe data reader wrote this thread line (`CardThreads.fromReader`). */

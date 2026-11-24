@@ -107,6 +107,7 @@
   "feedStarted": "開始",
   "feedStopped": "停止",
   "feedUndelivered": "メッセージ未送達：{why}",
+  "feedUnsafeDataReaderReported": "安全でないデータの読み手が報告しました。その内容は記録にあります。",
   "feedUpdated": "更新：{text}",
   "feedYouChose": "「{choice}」を選びました"
 }

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Card, CardMessage } from "@shared/cards";
-import { fenced, fencedAnswer } from "@shared/outsideData";
+import * as m from "@shared/i18n/messages.generated";
+import { fenced, fencedAnswer, fencedListReminder } from "@shared/outsideData";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 
 /**
@@ -30,13 +31,43 @@ export function readerDataLine(words: string, at: number): string {
 }
 
 /**
- * A reader's report headline in the feed, the task row and the outcome
- * summary. It holds none of the reader's words: a headline is cut short,
- * so marked words would lose their closing mark, and the first sentence of
- * marked words is the reminder, not the report.
+ * Text the first mate reads, with the one reminder after it that covers every
+ * reader-data span written inline by `readerDataLine`, when it holds any.
  */
-// i18n-exempt: saved as record text in place of a crewmate's own headline, which the crew writes in its own words
-export const READER_HEADLINE = "The unsafe data reader reported; its words are on its record.";
+export function withReaderDataReminder(text: string): string {
+  return text.includes(`[[${READER_DATA_LABEL} fence=`)
+    ? `${text}\n${fencedListReminder(READER_DATA_LABEL)}`
+    : text;
+}
+
+/**
+ * Why an unsafe data reader's report is refused when it declares free text
+ * the host would pass on unmarked: its recovery ways, work wait, typed
+ * result or check-back. What they would say goes in the report's own words.
+ */
+export function readerReportRefusal(declared: ReportDeclaration | undefined): string | undefined {
+  const named = [
+    declared?.recoveryWays?.length ? "recovery_ways" : undefined,
+    declared?.workWait ? "work_wait" : undefined,
+    declared?.result ? "result" : undefined,
+    declared?.checkBack ? "check_back" : undefined,
+  ].filter((name) => name !== undefined);
+  return named.length > 0
+    ? // i18n-exempt: a refusal served to the crewmate, never shown to a person
+      `Nothing was reported. An unsafe data reader's report takes no ${named.join(", ")}: put what it would say in the report's text, which reaches the first mate marked as data.`
+    : undefined;
+}
+
+/**
+ * A reader's report headline in the feed, the task row and the outcome
+ * summary, worded in the app's language as it is saved, as a crewmate's own
+ * headline is. It holds none of the reader's words: a headline is cut
+ * short, so marked words would lose their closing mark, and the first
+ * sentence of marked words is the reminder, not the report.
+ */
+export function readerHeadline(): string {
+  return m.feedUnsafeDataReaderReported();
+}
 
 /**
  * The task that wrote a thread line, when a crewmate did: its own card's
@@ -64,7 +95,7 @@ export function readerReport(
 ): [string, string | undefined, ReportDeclaration | undefined] {
   return [
     readerDataAnswer(text, at),
-    READER_HEADLINE,
+    readerHeadline(),
     declared && {
       ...declared,
       ...(declared.needsFirstmate

@@ -1074,6 +1074,7 @@
 "feedStarted" = "Iniciada";
 "feedStopped" = "Parada";
 "feedUndelivered" = "Mensagem não entregue: %1$@";
+"feedUnsafeDataReaderReported" = "O leitor de dados não seguros relatou; as palavras dele estão no registro.";
 "feedUpdated" = "Atualizada: %1$@";
 "feedYouChose" = "Você escolheu “%1$@”";
 "feedbackStripAccount" = "Nada é enviado antes do seu clique. Vai com a sua conta do GitHub %1$@.";

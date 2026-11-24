@@ -1074,6 +1074,7 @@
 "feedStarted" = "開始";
 "feedStopped" = "停止";
 "feedUndelivered" = "メッセージ未送達：%1$@";
+"feedUnsafeDataReaderReported" = "安全でないデータの読み手が報告しました。その内容は記録にあります。";
 "feedUpdated" = "更新：%1$@";
 "feedYouChose" = "「%1$@」を選びました";
 "feedbackStripAccount" = "クリックするまで何も送信されません。あなたの GitHub アカウント %1$@ で投稿されます。";

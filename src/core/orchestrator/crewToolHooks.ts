@@ -47,7 +47,7 @@ import { CrewmatePrograms } from "./crewmatePrograms";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
-import { readerReport } from "./readerData";
+import { readerReport, readerReportRefusal } from "./readerData";
 import type { WakeBody } from "./wakes";
 import { deliverableOf } from "./workShape";
 
@@ -124,13 +124,15 @@ export class CrewToolHooks {
         ? { onStartProgram: (input) => this.programs.start(task, input) }
         : {}),
       onProgress: (text, plan) => this.core.reportIntake.noteProgress(task, text, plan),
-      onReport: (text, summary, declared) =>
-        reader
-          ? this.core.turns.recordReportFromSession(
-              task,
-              ...readerReport(text, declared, Date.now()),
-            )
-          : this.core.turns.recordReportFromSession(task, text, summary, declared),
+      onReport: (text, summary, declared) => {
+        if (!reader) return this.core.turns.recordReportFromSession(task, text, summary, declared);
+        const refused = readerReportRefusal(declared);
+        if (refused) throw new Error(refused);
+        return this.core.turns.recordReportFromSession(
+          task,
+          ...readerReport(text, declared, Date.now()),
+        );
+      },
       onReply: (input) => this.core.cards.replyFromCrewmate(task.id, input),
       onReviseRequiredAction: (input) =>
         cardMutationText(

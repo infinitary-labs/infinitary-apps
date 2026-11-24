@@ -107,6 +107,7 @@
   "feedStarted": "已開始",
   "feedStopped": "已停止",
   "feedUndelivered": "訊息未送達：{why}",
+  "feedUnsafeDataReaderReported": "不安全資料讀取者已回報；內容在它的紀錄裡。",
   "feedUpdated": "已更新：{text}",
   "feedYouChose": "你選了「{choice}」"
 }

@@ -44,7 +44,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { type BriefPart, briefText } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce } from "./jobWakes";
 import { outageFailedWake, stuckWake } from "./outageWakes";
-import { READER_HEADLINE, readerDataAnswer } from "./readerData";
+import { readerDataAnswer, readerHeadline } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
@@ -725,7 +725,7 @@ export class CrewTurns {
       task.explicitReport !== undefined
         ? task.explicitSummary
         : reader && finalText !== undefined
-          ? READER_HEADLINE
+          ? readerHeadline()
           : undefined;
     // A report the provider-failed turn made before it failed is already on
     // the record (`holdReport`): its wake names it (INF-3165).

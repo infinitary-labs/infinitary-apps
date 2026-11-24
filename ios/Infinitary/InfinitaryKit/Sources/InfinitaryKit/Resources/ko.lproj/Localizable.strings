@@ -1074,6 +1074,7 @@
 "feedStarted" = "시작함";
 "feedStopped" = "중지됨";
 "feedUndelivered" = "메시지 전달 안 됨: %1$@";
+"feedUnsafeDataReaderReported" = "안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.";
 "feedUpdated" = "업데이트: %1$@";
 "feedYouChose" = "\"%1$@\" 선택함";
 "feedbackStripAccount" = "클릭하기 전에는 아무것도 보내지 않습니다. GitHub 계정 %1$@(으)로 게시됩니다.";

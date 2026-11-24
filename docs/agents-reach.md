@@ -115,7 +115,8 @@ Every other crewmate's shell and the merge card's rules are unchanged; this is a
 The brief names the fence to its crewmate (`UNSAFE_DATA_READER_WORDS`).
 What it says reaches the first mate between `reader-data` marks with a fresh fence (`src/core/orchestrator/readerData.ts`), since it may carry words anyone can write:
 
-- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its headline in the feed, the task row and the outcome is the host's fixed line saying the reader reported, which carries none of its words, since a headline is cut short and would split the marks.
-- A follow-up it files keeps its goal and why marked in the record and in the brief a builder would start from, so no builder takes them as instructions.
-- Its progress notes are kept marked, cut before they are marked.
-- Its card replies stay as written in the captain's thread and are marked where an agent reads them: a card read, the open-work read and the first mate's thread activity (`CardThreads.servedLine`).
+- Its report, its closing words when it makes none, and what it asks with `needs_firstmate` or `waiting_on_captain` are kept marked; its headline in the feed, the task row and the outcome is the host's fixed line saying the reader reported, worded in the app's language as it is saved and carrying none of its words, since a headline is cut short and would split the marks.
+- A follow-up it files keeps its goal and why marked in the record and in the brief a builder would start from, so no builder takes them as instructions; its title stays as written on the captain's screens and is marked in the report's wake.
+- Its progress notes are kept marked, cut before they are marked; a plan with them is refused, since its labels would go unmarked.
+- Its card replies, and its cards' own titles and bodies, stay as written on the captain's screens and are marked where an agent reads them: a card read, the open-work read, the report's wake and every card line of the first mate's context (`CardThreads.servedLine`, `CardThreads.servedCardWords`), which ends with one reminder covering them all.
+- Its report refuses `recovery_ways`, `work_wait`, `result` and `check_back`, and a reader takes no `result_schema`: each is free text the host would pass on unmarked, so what it would say goes in the report's own words.

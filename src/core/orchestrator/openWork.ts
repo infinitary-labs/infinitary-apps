@@ -34,8 +34,11 @@ export type OpenWorkHost = {
   pastCard: (cardId: string) => PastCard | undefined;
   owed: (cardId: string) => ThreadOwed;
   thread: (cardId: string) => CardThread;
-  /** A thread line's words as an agent reads them, an unsafe data reader's marked (`CardThreads.servedLine`). */
-  servedLine: (card: Pick<Card, "taskId">, message: CardMessage) => string;
+  /** A card's words as an agent reads them, an unsafe data reader's marked (`CardThreads`). */
+  served: {
+    servedLine: (card: Pick<Card, "taskId">, message: CardMessage) => string;
+    servedCardWords: (card: Pick<Card, "author" | "taskId">, words: string) => string;
+  };
 };
 
 /** A message's words in the overview; the whole is one `ask` read away. */
@@ -210,7 +213,7 @@ function cardSummary(host: OpenWorkHost, card: Card) {
     kind: cardPresentation(card),
     from: card.author,
     ...(card.taskId ? { task: task?.key || card.taskId, task_id: card.taskId } : {}),
-    title: card.title,
+    title: host.served.servedCardWords(card, card.title),
     ...(card.offerId ? { revision: card.offerId } : {}),
     ...(card.answering ? { answering: true } : {}),
     actions: card.actions.map((action) => ({
@@ -292,7 +295,7 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       {
         ...cardSummary(host, open),
         state: "open",
-        body: open.body,
+        body: host.served.servedCardWords(open, open.body),
         messages: host.thread(cardId).messages.map((message) => threadLine(host, open, message)),
       },
       null,
@@ -308,8 +311,8 @@ function readCard(host: OpenWorkHost, cardId: string): string {
       state: "closed",
       from: past.author,
       ...(past.taskId ? { task_id: past.taskId } : {}),
-      title: past.title,
-      body: past.body,
+      title: host.served.servedCardWords(past, past.title),
+      body: host.served.servedCardWords(past, past.body),
       actions: past.actions.map((action) => ({ id: action.id, label: action.label })),
       ending: {
         how: past.ending.how,
@@ -328,7 +331,9 @@ function readCard(host: OpenWorkHost, cardId: string): string {
 /** A thread message as its author reads it: the captain's words with the settings they sent. */
 function threadLine(host: OpenWorkHost, card: Pick<Card, "taskId">, message: CardMessage) {
   const text =
-    message.who === "captain" ? (captainWords(message) ?? "") : host.servedLine(card, message);
+    message.who === "captain"
+      ? (captainWords(message) ?? "")
+      : host.served.servedLine(card, message);
   return { who: message.who, at: iso(message.at), text };
 }
 

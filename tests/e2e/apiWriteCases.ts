@@ -132,6 +132,9 @@ export const UNSAFE_DATA_READER_FOLLOWUP = {
   why: "Issue 12 says the meter idles on a cold start.",
 };
 
+/** What an unsafe data reader's first report asks of the first mate, which reaches it marked. */
+export const UNSAFE_DATA_READER_ASK = "Start the follow-up about issue 12's cold start.";
+
 /** The write each kind of ask makes, by the words in its task's title. */
 export function writeAskCall(title: string): GithubWriteInput {
   if (title.includes("publish notebook")) {

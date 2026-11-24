@@ -1,5 +1,6 @@
 import { FOLLOWUP_PROVENANCE_OPENING } from "../../../src/core/orchestrator/intentBrief";
 import {
+  UNSAFE_DATA_READER_ASK,
   UNSAFE_DATA_READER_CARD,
   UNSAFE_DATA_READER_FILE,
   UNSAFE_DATA_READER_FOLLOWUP,
@@ -14,7 +15,8 @@ import { sinceLastUser } from "../providerRequest";
 /**
  * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
  * file read and two reads where its project lives, two writes and a follow-up, then a
- * report; once the captain's click answers, a decision card and a report of what it answered.
+ * report asking the first mate to start that follow-up; once the captain's click answers, a
+ * decision card and a report of what it answered.
  * Its kept writes go on the app's own approval card, never its own.
  */
 export const unsafeDataReader: Scenario =
@@ -69,6 +71,8 @@ export const unsafeDataReader: Scenario =
             args: {
               text: results.join("\n---\n"),
               summary: "Two writes wait on the captain's card.",
+              // The app's approval card is up, so only an ask wakes the first mate (`sortReport`).
+              needs_firstmate: UNSAFE_DATA_READER_ASK,
             },
           },
         ],

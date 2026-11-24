@@ -52,6 +52,7 @@ import {
   PAGED_REPOSITORY,
   READS_ANYWHERE_MARKER,
   savedWriteAsks,
+  UNSAFE_DATA_READER_ASK,
   UNSAFE_DATA_READER_CARD,
   UNSAFE_DATA_READER_CHANGE_MARKER,
   UNSAFE_DATA_READER_FILE,
@@ -1060,28 +1061,25 @@ for (const runtime of READER_RUNTIMES) {
     expect(firstReport).toContain("github-data");
     expect(firstReport).toContain("Nothing was read");
     // Its report is kept between reader-data marks, and reaches the first
-    // mate's own turn that way.
+    // mate's own turn that way, its ask of the first mate marked too.
     expect(firstReport).toMatch(/\[\[reader-data fence=[0-9a-f]{16} /);
-    await expect
-      .poll(
-        () =>
-          (launched.mockProvider?.requestBodies() ?? []).some(
-            (raw) =>
-              raw.includes("spawn_crewmate") &&
-              /\[\[reader-data fence=[0-9a-f]{16} [^\]]*\]\][\s\S]*Nothing was read/.test(raw),
-          ),
-        { timeout: 45_000 },
-      )
-      .toBe(true);
+    const firstmateRead = (words: string) =>
+      (launched.mockProvider?.requestBodies() ?? []).some(
+        (raw) => raw.includes("spawn_crewmate") && readerMarked(words).test(raw),
+      );
+    await expect.poll(() => firstmateRead(UNSAFE_DATA_READER_ASK), { timeout: 45_000 }).toBe(true);
+    expect(
+      (launched.mockProvider?.requestBodies() ?? []).some(
+        (raw) =>
+          raw.includes("spawn_crewmate") &&
+          /\[\[reader-data fence=[0-9a-f]{16} [^\]]*\]\][\s\S]*Nothing was read/.test(raw),
+      ),
+    ).toBe(true);
     // Its headline is the host's own line, never its words or the reminder.
     expect(
       (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcomeSummary,
     ).toBe(feedUnsafeDataReaderReported());
     // The follow-up it filed reaches the first mate's turn with its title marked.
-    const firstmateRead = (words: string) =>
-      (launched.mockProvider?.requestBodies() ?? []).some(
-        (raw) => raw.includes("spawn_crewmate") && readerMarked(words).test(raw),
-      );
     await expect
       .poll(() => firstmateRead(UNSAFE_DATA_READER_FOLLOWUP.title), { timeout: 45_000 })
       .toBe(true);

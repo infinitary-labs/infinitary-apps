@@ -2,7 +2,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CardPicture } from "@shared/cards";
 import type { FirstRunRecord } from "@shared/firstRun";
-import type { ReleaseIdentity, ReleaseTrackingRecord } from "@shared/releaseTracking";
+import {
+  type ReleaseIdentity,
+  type ReleaseTrackingRecord,
+  starAskOf,
+} from "@shared/releaseTracking";
 import { compareSemver, parseSemver } from "@shared/semver";
 import { type LaunchOutcome, recordLaunch, type TrackingStore } from "../releaseTracking";
 import {
@@ -14,6 +18,7 @@ import {
 } from "./briefing";
 import { type Catalog, PACKAGED_PICTURES_DIR, verifyCatalog } from "./catalog";
 import { listedEntries, type Selection, selectEntries } from "./select";
+import { starAskDue, withStarAskShown } from "./starAsk";
 
 /**
  * The startup release note (docs/release-notes.md "The startup note"). After
@@ -85,6 +90,8 @@ export type ReleaseNotesDeps = {
    * refused.
    */
   keepPicture: (file: string) => (ShownPicture & { id: string }) | undefined;
+  /** A github.com sign-in is on file, for the star ask (./starAsk). */
+  githubSignedIn: () => boolean;
   now: () => number;
 };
 
@@ -268,14 +275,22 @@ export class ReleaseNotesService {
   ): ReleaseNotesOutcome {
     const { version, source } = this.identity;
     const { shown, pictures } = this.heroPictures(selection, load);
+    const now = this.deps.now();
+    const starAsk = starAskDue({
+      listsChanges: selection.coverage !== "unavailable" && listedEntries(selection).length > 0,
+      thirdCrewmateDoneAt: this.deps.settings.getFirstRun().thirdCrewmateDoneAt,
+      githubSignedIn: this.deps.githubSignedIn(),
+      ask: starAskOf(tracking),
+      now,
+    });
     const note = renderNote({
       mode,
       from: mode === "upgrade" ? (known?.version ?? null) : null,
       to: version,
       selection,
       pictures: shown,
+      starAsk,
     });
-    const now = this.deps.now();
     this.deps.createNote({ ...note, ...(pictures.length > 0 ? { pictures } : {}) }, (cardId) => {
       this.deps.settings.setReleaseTracking({
         ...tracking,
@@ -292,6 +307,8 @@ export class ReleaseNotesService {
           },
         },
         unresolved: selection.unresolved,
+        // Stamped with the delivery, so a failed write never counts a show.
+        ...(starAsk ? { starAsk: withStarAskShown(tracking, now) } : {}),
       });
     });
     return "delivered";

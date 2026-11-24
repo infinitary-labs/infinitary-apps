@@ -15,6 +15,7 @@ import { configureGitSignIn } from "../hostEnv";
 import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import type { FirstmateAgentOptions } from "../orchestrator/firstmateAgent";
 import type { AppPaths } from "../paths";
+import type { TrackingStore } from "../releaseTracking";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { Forge, ForgeLocation } from "./forge";
@@ -41,6 +42,7 @@ import { readGitLabOpenChanges } from "./providers/gitlab/changes";
 import { gitlabApiBaseFor } from "./providers/gitlab/client";
 import { GitLabForge } from "./providers/gitlab/gitlabForge";
 import { type ForgeHealthChange, ForgeSignInStore, ForgeSignIns } from "./signIns";
+import { StarRead } from "./starRead";
 
 /**
  * The home's wiring where projects live (git integration PRs 1.1-1.3,
@@ -82,6 +84,8 @@ export type HomeForges = {
     supervisor: Pick<CrewSupervisor, "cards" | "resumeForgeSignInTasks">;
     tasks: Pick<TaskService, "listLive">;
     broadcastEvent: (event: FmEvent) => void;
+    /** The version tracking record, where the star ask keeps the github.com sign-in's answer. */
+    settings: TrackingStore;
   }) => void;
 };
 
@@ -331,7 +335,20 @@ export function startHomeForges(options: {
     attachIntegrations: (changed) => {
       integrationsChanged = changed;
     },
-    attachCrew: ({ supervisor, tasks, broadcastEvent }) => {
+    attachCrew: ({ supervisor, tasks, broadcastEvent, settings }) => {
+      // The release note's star ask (docs/release-notes.md "The star ask"):
+      // read whenever the github.com sign-in reads ok, so the next note,
+      // built offline at startup, knows the answer.
+      const starRead = new StarRead({
+        store: settings,
+        signedIn: () => forgeSignIns.stateOf(GITHUB_COM) === "ok",
+        get: (path) => {
+          const api = githubForge({ kind: "github", host: GITHUB_COM, dir: "" }).api;
+          if (!api) return Promise.reject(new Error("GitHub's API is not reachable here"));
+          return api.call("GET", path);
+        },
+        now: Date.now,
+      });
       const waitingChangesOn = (forgeHost: string): number => {
         const onHost = new Set(
           repos
@@ -367,6 +384,7 @@ export function startHomeForges(options: {
           supervisor.cards.hostCards.clearAuthDecisionCard(cardId);
           if (change.to === "ok") void supervisor.resumeForgeSignInTasks(change.host);
         }
+        if (change.host === GITHUB_COM && change.to === "ok") void starRead.read();
         const note = forgeHealthNote(change, projectsOnForge(change.host));
         if (note) broadcastEvent({ type: "firstmate_note", text: note });
       };

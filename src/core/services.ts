@@ -1242,7 +1242,7 @@ export async function createServices(
   });
   // A sign-in where projects live, as the captain meets it (PR 1.2), and
   // the first read of every sign-in, below the UI.
-  forges.attachCrew({ supervisor, tasks, broadcastEvent });
+  forges.attachCrew({ supervisor, tasks, broadcastEvent, settings });
   // The quiet-crewmate watchdog (P4): a stalled turn surfaces instead of
   // spinning forever; escalation only, never an automatic interrupt.
   supervisor.watch.startWatchdog(ticker);

@@ -401,7 +401,7 @@ const SHAPE_FIELD_RULES = {
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
   unsafe_data_reader:
-    "True only on a read-only task whose brief has it read words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell, web or browser, reads only its own project, and every write it makes waits for the captain's click.",
+    "True only on a read-only task whose brief has it read words strangers can write, such as its project's issues and pull requests. Its crewmate gets no shell, web or browser, reads only its own project, or with no repo_id an empty folder of its own, and every write it makes waits for the captain's click.",
   in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
     "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",

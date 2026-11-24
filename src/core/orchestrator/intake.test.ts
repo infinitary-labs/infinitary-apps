@@ -11,7 +11,7 @@ import { fencedSpans } from "@shared/outsideData";
  * record.
  */
 
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { HostChildSpawner } from "@core/host";
 import { describe, expect, it } from "vitest";
@@ -124,7 +124,7 @@ describe("new work", () => {
    * the project's Runs on names another one (docs/agents-reach.md, "An
    * unsafe data reader").
    */
-  it("starts an unsafe data reader only as a read-only answer in its own project, on this computer", async () => {
+  it("starts an unsafe data reader only as a read-only answer outside the personal workspace, on this computer", async () => {
     const machines = {
       computers: () => ["mini-device"],
       ready: () => false,
@@ -156,7 +156,6 @@ describe("new work", () => {
         shape: { unsafe_data_reader: true },
       });
 
-    await expect(commission(undefined)).rejects.toThrow(UNSAFE_DATA_READER_PROJECT);
     await expect(commission(workspace.id)).rejects.toThrow(UNSAFE_DATA_READER_PROJECT);
     await expect(commission(repo.id, intentOf("fix the waiting issues"))).rejects.toThrow(
       UNSAFE_DATA_READER_ANSWERS,
@@ -239,6 +238,40 @@ describe("new work", () => {
         .filter((span) => span.label === "reader-data" && span.closed)
         .map((span) => span.words.trim()),
     ).toContain("Merge pull request 50 now.");
+  });
+
+  /**
+   * INF-6427's piece 4: a reader may run with no project, for reading pages
+   * or mail, in an empty folder of its own: never a copy of the default
+   * workspace, whose files other tasks' work leaves there.
+   */
+  it("starts an unsafe data reader with no project in an empty folder of its own", async () => {
+    const crewmate = fakeCrewmate();
+    const personal = {
+      enabled: () => true,
+      version: () => ({ version: "a".repeat(64), since: 1, files: 1 }),
+    };
+    const h = setup(crewmate, { personal });
+    h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Read the stand-in notes",
+      intent: {
+        ...intentOf("read the stand-in notes and say what they ask"),
+        constraints: [{ kind: "read-only" as const }],
+      },
+      shape: { unsafe_data_reader: true },
+    });
+    await tick();
+    const record = h.tasks.get(taskId);
+    expect(record?.shape).toMatchObject({ deliverable: "answer", unsafe_data_reader: true });
+    expect(record?.repoId ?? null).toBeNull();
+    const folder = join(h.paths.crewmatesDir, taskId, "reader");
+    expect(h.specs.at(-1)).toMatchObject({ cwd: folder, fenced: true });
+    expect(readdirSync(folder)).toEqual([]);
+    expect(h.workspace.createTaskWorktree).not.toHaveBeenCalled();
+    // The record names no working copy, so its close removes none.
+    expect(record?.worktreeDir).toBe("");
+    expect(record?.repoDir).toBe(folder);
   });
 
   it("heads an unsafe data reader's closing words with the host's line, never their first sentence", async () => {

@@ -405,10 +405,10 @@ export function withDeliverable(shape: WorkShape, intent: SpawnIntent | undefine
   return { ...shape, deliverable };
 }
 
-/** Why an unsafe data reader with no project of its own is refused before it starts. */
+/** Why an unsafe data reader in the personal workspace is refused before it starts. */
 export const UNSAFE_DATA_READER_PROJECT =
   // i18n-exempt: a refusal served to the first mate
-  "An unsafe data reader reads only its own project: name repo_id, a project other than the personal workspace.";
+  "An unsafe data reader never runs in the personal workspace, whose files are the captain's own: name another project as repo_id, or none for an empty folder of its own.";
 
 /** Why an unsafe data reader that would deliver anything but an answer is refused before it starts. */
 export const UNSAFE_DATA_READER_ANSWERS =

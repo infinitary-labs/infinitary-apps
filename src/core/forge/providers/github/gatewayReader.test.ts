@@ -90,6 +90,32 @@ describe("the GitHub gateway for an unsafe data reader", () => {
     ]);
   });
 
+  // INF-6427's piece 4: a reader with no project never falls back to the
+  // captain's own github.com sign-in, which an ordinary task with none uses.
+  it("refuses every read and write of an unsafe data reader with no project, sending nothing", async () => {
+    const { service, writeAs, seen, presentReaderAsk, tasks } = await fixture();
+    const read = bindTool(GITHUB_READ_TOOL, {
+      onGithubRead: (i) => service.readForCrew("task-reader-alone", i),
+    });
+    const refused =
+      "Refused: this unsafe data reader has no project, so it reads and writes nothing where projects live.";
+    for (const path of ["/repos/octo/meter/pulls", "/user", "/search/issues?q=meter"])
+      expect((await read.run({ path })).text).toContain(refused);
+    const write = writeAs("task-reader-alone");
+    expect(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/issues/1/comments",
+          body: '{"body":"Thanks."}',
+        })
+      ).text,
+    ).toContain(refused);
+    expect(seen).toEqual([]);
+    expect(presentReaderAsk).not.toHaveBeenCalled();
+    expect(tasks.get("task-reader-alone")?.delivery?.writeAsks ?? []).toEqual([]);
+  });
+
   // INF-6388's review: a reader has no shell and its fence refuses the
   // temporary folder, so an answer saved there as a file would never be read.
   it("serves an unsafe data reader's long listing as the largest page its model reads whole, and refuses one no page fits", async () => {

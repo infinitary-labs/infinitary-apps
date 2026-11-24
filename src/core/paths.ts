@@ -244,6 +244,16 @@ export function crewmateTempDir(paths: AppPaths, taskId: string): string {
 }
 
 /**
+ * The working folder of an unsafe data reader with no project:
+ * `crewmates/<taskId>/reader/`, made empty when it starts. It holds none
+ * of the default workspace's files, which other tasks' work leaves there,
+ * and goes with the task's other leftover files (`tasks/closedTaskFiles.ts`).
+ */
+export function crewmateReaderDir(paths: AppPaths, taskId: string): string {
+  return join(paths.crewmatesDir, taskId, "reader");
+}
+
+/**
  * The verified copies of the files a task's reports hand on (INF-992):
  * `crewmates/<taskId>/handover-out/`, each 0600, kept past the task's close
  * for every steer that hands them, and removed with its other leftover files

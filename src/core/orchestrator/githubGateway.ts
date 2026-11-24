@@ -97,6 +97,9 @@ const READER_READ_REFUSAL =
 const READER_WRITE_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
   "Refused: an unsafe data reader writes only to its own project, through its own sign-in, as a JSON request. Nothing was kept or sent.";
+const READER_NO_PROJECT_REFUSAL =
+  // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+  "Refused: this unsafe data reader has no project, so it reads and writes nothing where projects live. Nothing was read, kept or sent.";
 const READER_VALIDATION_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
   "Refused: an unsafe data reader's writes carry no validation effect. Nothing was kept or sent.";
@@ -206,8 +209,8 @@ export class GithubGatewayService {
     through?: "account" | { host: string },
     propagate: boolean | "transient" = false,
   ): Promise<string> {
-    return this.answer(
-      taskId,
+    return this.answerWith(
+      () => this.readerTarget(taskId, through),
       async (target) => {
         const { api, via, integration } = target;
         if (through || integration || via !== "project")
@@ -224,9 +227,18 @@ export class GithubGatewayService {
           );
         return fenced;
       },
-      through,
       propagate,
     );
+  }
+
+  /**
+   * Where a reader's call goes: its own project, never the captain's own
+   * sign-in, so a reader with no project is refused before any is chosen.
+   */
+  private readerTarget(taskId: string, through?: "account" | { host: string }): Target {
+    if (!this.options.tasks.get(taskId)?.repoId)
+      throw new ForgeError("refused", READER_NO_PROJECT_REFUSAL);
+    return this.targetOf(taskId, through);
   }
 
   /** Words from outside, fenced with a fresh value so none can forge the closing mark. */
@@ -426,11 +438,11 @@ export class GithubGatewayService {
     through?: "account" | { host: string },
     integrationAllowed = false,
   ): Promise<string> {
-    return this.answer(
-      taskId,
+    const reader = this.isReader(taskId);
+    return this.answerWith(
+      () => (reader ? this.readerTarget(taskId, through) : this.targetOf(taskId, through)),
       async (target) => {
         const { api, forge } = target;
-        const reader = this.isReader(taskId);
         // An unsafe data reader writes only to its own project, through its own
         // sign-in, a JSON request alone: every one waits for the captain.
         if (
@@ -495,7 +507,6 @@ export class GithubGatewayService {
         const answered = render(response, api);
         return `${answered}${await this.afterWrite(taskId, target, route, response, dispatched)}`;
       },
-      through,
       integrationAllowed,
     );
   }

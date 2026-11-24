@@ -27,6 +27,7 @@ import {
 } from "../helpers/anthropicDialect";
 import type { ScriptedArgs, ScriptedCall } from "../helpers/scriptedCalls";
 import {
+  UNSAFE_DATA_READER_ALONE_MARKER,
   UNSAFE_DATA_READER_CHANGE_MARKER,
   UNSAFE_DATA_READER_MARKER,
   WRITE_ASK_ANSWER_MARKER,
@@ -1163,7 +1164,8 @@ export async function startMockProvider(
                   ...(bound ? { repo_id: bound[1] } : {}),
                   // A task that only answers, in its project (FI3-1571 piece 4).
                   ...(title.includes(WRITE_ASK_ANSWER_MARKER) ||
-                  title.includes(UNSAFE_DATA_READER_MARKER)
+                  title.includes(UNSAFE_DATA_READER_MARKER) ||
+                  title.includes(UNSAFE_DATA_READER_ALONE_MARKER)
                     ? { constraints: [{ kind: "read-only" as const }] }
                     : {}),
                   ...(title.includes(THREAD_TREE_PROMPT_MARKER) ||
@@ -1183,7 +1185,8 @@ export async function startMockProvider(
                   shape: {
                     ...(title.includes(AUTONOMY_ASK_MARKER) ? { autonomy_ask: true } : {}),
                     ...(title.includes(UNSAFE_DATA_READER_MARKER) ||
-                    title.includes(UNSAFE_DATA_READER_CHANGE_MARKER)
+                    title.includes(UNSAFE_DATA_READER_CHANGE_MARKER) ||
+                    title.includes(UNSAFE_DATA_READER_ALONE_MARKER)
                       ? { unsafe_data_reader: true }
                       : {}),
                     ...(title.includes(CLAUDE_CREW_PROMPT_MARKER) ||

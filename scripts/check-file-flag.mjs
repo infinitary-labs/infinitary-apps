@@ -13,6 +13,9 @@
  *   longer edits check files;
  * - otherwise changes nothing.
  *
+ * A new outside pull request also gets "needs triage", so the next intake
+ * round reads it (docs/public-ci.md, "Intake").
+ *
  * It marks and never fails or blocks a pull request. On a pull request event
  * it reads only outside pull requests; started by hand on a pull request
  * number it reads any, so the crew can prove it without an outside copy.
@@ -21,6 +24,8 @@
  * project's own copy of this file, never the pull request's code, and reads
  * the file names only as data.
  */
+
+import { NEEDS_TRIAGE } from "./intake-labels.mjs";
 
 export const LABEL = "edits checks";
 const MARK = "<!-- check-file-flag -->";
@@ -115,6 +120,8 @@ export async function flag({ github, context, core, pullNumber }) {
     ? (await github.rest.pulls.get({ owner, repo, pull_number: number })).data
     : context.payload.pull_request;
   if (!byHand && pull.head.repo?.full_name === project) return "own branch";
+  if (!byHand && context.payload.action === "opened")
+    await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [NEEDS_TRIAGE] });
 
   const files = await github.paginate(github.rest.pulls.listFiles, {
     owner,

@@ -7,11 +7,13 @@ name: contributor-agreement
 # one passes once its author accepted the agreement's current version, by
 # ticking the template's box or replying with its sentence, and the check
 # writes each acceptance to the project's locked record issue
-# (scripts/contributor-agreement.mjs).
+# (scripts/contributor-agreement.mjs). After it writes the status, it labels
+# an outside pull request "waiting on author" while either required check
+# fails (scripts/intake-labels.mjs).
 #
 # It writes on an outside pull request, as check-file-flag.yml does, so it runs
 # from this project's default branch (pull_request_target and issue_comment)
-# rather than from the pull request's own files, checks out only its script
+# rather than from the pull request's own files, checks out only its scripts
 # and CLA.md from that branch, never the pull request's code, reads the
 # contributor's words as data, uses no secret beyond its own token, and runs
 # on GitHub's own machines.
@@ -52,6 +54,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/contributor-agreement.mjs
+            scripts/intake-labels.mjs
             CLA.md
           sparse-checkout-cone-mode: false
       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
@@ -61,4 +64,6 @@ jobs:
             const {pathToFileURL} = require('node:url');
             const root = process.env.GITHUB_WORKSPACE;
             const {check} = await import(pathToFileURL(`${root}/scripts/contributor-agreement.mjs`).href);
+            const {syncWaiting} = await import(pathToFileURL(`${root}/scripts/intake-labels.mjs`).href);
             core.info(await check({github, context, core, agreement: readFileSync(`${root}/CLA.md`, 'utf8')}));
+            core.info(`Waiting on author: ${await syncWaiting({github, context})}`);

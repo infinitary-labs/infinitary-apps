@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-minimize-reads-task-detail",
+      "reason": "The card-minimize journey now checks what the task's record returns after a decision is put aside: the task and that decision, open and put aside. It previously only checked that the read did not fail; a test-only change with nothing a person notices."
+    }
+  ]
+}

@@ -1670,10 +1670,10 @@ export async function createServices(
     hasConnections: () => integrations.hasConnections() || devices.mayHoldDevices(),
     supervisor,
     sharing,
+    deviceSetup,
     now: ticker.now,
     emit,
   });
-  const { firstRun } = firstLaunch;
   reconcileFirstRun = () => firstLaunch.reconcile();
   onCardsChanged = () => firstLaunch.cardsChanged();
   onCaptainTurnAccepted = () => firstLaunch.captainTurnAccepted();
@@ -1777,7 +1777,7 @@ export async function createServices(
     tasks,
     taskProtocol,
     firstmate,
-    firstRun,
+    firstRun: firstLaunch.firstRun,
     localOrchestrator,
     observe,
     crewLive,

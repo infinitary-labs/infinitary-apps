@@ -41,6 +41,13 @@ export type FirstRunOptions = {
    */
   createFirstCrewmateNote: (record: (cardId: string) => void, welcomeCardId?: string) => void;
   onStep?: (step: FirstRunStep) => void;
+  /**
+   * A read found the gate closed where the last one found it open, or at a
+   * launch's first read: said after this read's welcome is committed, so a
+   * card waiting for the gate goes up behind the welcome and never stands in
+   * for the use that skips it.
+   */
+  onGateClosed?: () => void;
   now?: () => number;
 };
 
@@ -118,6 +125,15 @@ export class FirstRunService {
 
   constructor(private readonly options: FirstRunOptions) {}
 
+  /**
+   * The gate as the last read found it, up until a first read: what a card
+   * waiting for the first mate to answer reads, so it never goes up before
+   * the read that commits the welcome.
+   */
+  gateUpAsRead(): boolean {
+    return this.lastOpen !== false;
+  }
+
   /** A readiness read cannot bypass delivery reconciliation. */
   view(): FirstRunView {
     return this.reconcile();
@@ -193,6 +209,7 @@ export class FirstRunService {
       // holding otherwise usable input or recording consumption alone.
       console.warn("[first-run] introduction could not be committed:", error);
     }
+    if (!open && was !== false) this.options.onGateClosed?.();
     const freshCheck = open ? this.options.freshCheck?.() : undefined;
     const record = this.options.settings.getFirstRun();
     // Nothing done here yet: no turn, no saved sign-in or connection, and no

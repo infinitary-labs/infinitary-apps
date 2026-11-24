@@ -73,6 +73,7 @@ function world() {
     DeviceView,
     "id" | "kind" | "name" | "user" | "onThisMac" | "inReach" | "workSetup"
   >[] = [MINI];
+  const gate = { up: false };
   const setup = new DeviceSetup({
     devices: () => devices,
     repos: { list: () => repos },
@@ -102,6 +103,7 @@ function world() {
     forgeNeeded: (deviceId, host, repo) => forge.push(`needed ${deviceId} ${host} ${repo.name}`),
     forgeReady: (deviceId, host) => forge.push(`ready ${deviceId} ${host}`),
   });
+  setup.readsGate(() => gate.up);
   /** The captain's click on the card's own button: the card resolves and remembers the action. */
   const click = (action: string) => {
     stack.delete(CARD);
@@ -125,6 +127,7 @@ function world() {
     repos,
     forge,
     devices,
+    gate,
     click,
     rows,
     notes,
@@ -197,6 +200,47 @@ describe("finishing a computer's setup", () => {
     at.setup.reachChanged(at.devices);
     expect(card()?.body).toContain("not connected for work yet");
     expect(actions()).toEqual([DEVICE_SETUP_ACTIONS.notNow]);
+  });
+
+  // A first mate set up from another computer's first launch has no
+  // subscription yet: that window's subscription step comes first, and the
+  // card for the computer that joined it follows.
+  it("waits for a computer that joined from its own first launch while no subscription answers the Firstmate, then goes up with the rows as they stand", () => {
+    const at = world();
+    at.gate.up = true;
+    at.devices.push({ ...MINI, id: "d2", name: "Mac Studio" });
+    at.setup.joined(MINI, { git: true, claudeCode: true }, false, true);
+    at.said.set("d1", { providers, accounts: [], quota: null, forges: GITHUB_OFFERED });
+    at.setup.signInsChanged("d1");
+    at.setup.reachChanged(at.devices);
+    expect(at.raised).toEqual([]);
+    at.said.set("d1", {
+      providers: [],
+      accounts: [account("acct", "openai-codex")],
+      quota: null,
+      forges: GITHUB_OFFERED,
+    });
+    at.setup.signInsChanged("d1");
+    expect(at.raised).toEqual([]);
+    at.gate.up = false;
+    at.setup.firstmateAnswers();
+    // Only the computer that joined this run: Mac Studio joined before it and never had the card.
+    expect(at.raised).toEqual([CARD]);
+    expect(at.rows()).toEqual(["subscription:true", "github:false", "project:false"]);
+    at.setup.firstmateAnswers();
+    expect(at.raised).toEqual([CARD]);
+  });
+
+  // A window a command joined controls this Firstmate rather than signing it
+  // in: its card is what that window shows while no subscription answers.
+  it("raises the card at once for a computer a command joined, while no subscription answers the Firstmate", () => {
+    const at = world();
+    at.gate.up = true;
+    at.setup.joined(MINI, { git: true, claudeCode: true }, false);
+    expect(at.raised).toEqual([CARD]);
+    at.gate.up = false;
+    at.setup.firstmateAnswers();
+    expect(at.raised).toEqual([CARD]);
   });
 
   it("raises nothing for a Mac that controls this Firstmate, or a computer that found this Mac again", () => {

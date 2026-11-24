@@ -34,9 +34,15 @@ export type DevicePairingOptions = {
   /**
    * A device used its link and is on the list; told after the list is
    * written, with what a computer that runs work said it found there.
-   * `again` when one already on the list used it to find this Mac again.
+   * `again` when one already on the list used it to find this Mac again;
+   * `window` when the app joined at its own first launch, with its window.
    */
-  onJoined?: (device: DeviceView, found: FoundTools | undefined, again: boolean) => void;
+  onJoined?: (
+    device: DeviceView,
+    found: FoundTools | undefined,
+    again: boolean,
+    window: boolean,
+  ) => void;
   /** A device's person chose Leave and it is off the list; told after the list is written. */
   onLeft?: (device: DeviceView) => void;
   /** This Mac's network interfaces right now; tests stand in their own. */

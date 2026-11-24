@@ -268,7 +268,7 @@ export async function startHomeDevices(options: {
     // One feed line when a device joins, or finds this Mac again; it names
     // the device, never the link. A computer that runs work then gets its
     // setup card (docs/devices.md, "Finishing its setup").
-    onJoined: (device, found, again) => {
+    onJoined: (device, found, again, window) => {
       broadcastEvent({
         type: "device_joined",
         deviceId: device.id,
@@ -280,7 +280,7 @@ export async function startHomeDevices(options: {
         ...(again ? { again } : {}),
         ...(device.reachedOn ? { reachedOn: device.reachedOn } : {}),
       });
-      deviceSetup?.joined(device, found, again);
+      deviceSetup?.joined(device, found, again, window);
     },
     onLeft: (device) =>
       broadcastEvent({

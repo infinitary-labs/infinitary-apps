@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "maximized-card-inside-window",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A maximized card keeps its buttons inside the window",
+      "body": "When a card's words were only a little too long for a maximized card, its bottom edge and its buttons could sit below the window, out of reach. A maximized card now always fits inside the window, with its buttons in view.",
+      "picture": {
+        "dark": "maximized-card-inside-window-dark.webp",
+        "light": "maximized-card-inside-window-light.webp",
+        "alt": "A maximized decision card fills the window with its reply field and its Decline, Save for later and Approve buttons in view at the bottom"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

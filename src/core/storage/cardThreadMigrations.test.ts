@@ -38,7 +38,9 @@ describe("clearing the answers interim lines kept", () => {
     older.exec("ALTER TABLE card_messages ADD COLUMN captain_text TEXT");
     // Fixture writes use today's card service, which looks up task origins by
     // index even on this database opened before the current schema is installed.
-    older.exec(`CREATE INDEX task_events_origin ON task_events (task_id, at, id) WHERE ${ORIGIN_EVENT}`);
+    older.exec(
+      `CREATE INDEX task_events_origin ON task_events (task_id, at, id) WHERE ${ORIGIN_EVENT}`,
+    );
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

@@ -31,7 +31,7 @@ The comparison ignores the host's own picture-copy names and the host's fact str
 
 The conversation is the one read-only card that reads like a chat, a narrow exception to cards-not-chat for people who still think in threads.
 It keeps the Note shell, stack and close behavior; its own treatment is in `Conversation.prompt.md`.
-The iPhone and iPad keep their own Reply sheet until the phone's part of the conversation is built.
+The iPhone and iPad open the same conversation as a sheet with the same two views.
 
 ### The unsafe data line
 
@@ -55,7 +55,7 @@ A source on another task adds "· through 3 tasks" to the label, in its voice.
 A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
 Only when the words are cut, the bubble itself is the control: click or tap it to open the whole message with its paragraphs as written, and again to fold it; no separate Show all or Show less link is drawn (INF-1963).
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
-`QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line, and the phone's Reply sheet; callers provide the words and expansion state, keeping their own label and time.
+`QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
 
 Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).

@@ -82,6 +82,7 @@ import type {
 import { raiseMoveCard, showMoveCardPast } from "./phoneMoveCard";
 import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
+import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
@@ -95,7 +96,7 @@ import {
   seedPhoneSettings,
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
-import { seedReplyReading } from "./replyReading";
+import { raiseConversationCard, seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
 import { type SshServer, startSshServer } from "./sshServer";
@@ -2376,6 +2377,12 @@ export async function startPhoneHome(
           result = { title };
           break;
         }
+        case "POST conversation-card":
+        case "POST conversation-waiting":
+        case "POST conversation-crew-card":
+        case "POST conversation-mate-card":
+          result = raiseConversationCard(core, command);
+          break;
         // INF-3881: a card holding the Advanced architecture map part, filled with this project's own map files, with words
         // under it so the card is taller than the screen and a finger on the diagram has a card to scroll.
         case "POST map-card": {
@@ -3239,31 +3246,13 @@ export async function startPhoneHome(
           break;
         }
         case "POST capture-reply-start":
-          await controls?.start("card-reply");
-          result = { ok: true };
-          break;
         case "POST capture-media-start":
-          await controls?.start("card-recording");
-          result = { ok: true };
-          break;
         case "POST capture-picture-start":
-          await controls?.start("card-picture");
-          result = { ok: true };
-          break;
         case "POST capture-page-start":
-          await controls?.start("card-paging");
-          result = { ok: true };
-          break;
         case "POST capture-card-start":
-          await controls?.start("card-form");
-          result = { ok: true };
-          break;
         case "POST capture-conversation-start":
-          await controls?.start("conversation");
-          result = { ok: true };
-          break;
         case "POST capture-character-start":
-          await controls?.start("character");
+          await controls?.start(CARD_RECORDINGS[command ?? ""]);
           result = { ok: true };
           break;
         // A future home whose major broke views: its floor is its own major, so the phone reads only.

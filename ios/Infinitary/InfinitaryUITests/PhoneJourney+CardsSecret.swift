@@ -68,7 +68,11 @@ extension PhoneJourney {
         // name and place are read once, as the field's own label.
         let place = try XCTUnwrap(asked["place"] as? String)
         XCTAssertTrue(field.label.contains(place), field.label)
-        reveal(field); tapOnPhone(field)
+        // The reply shows as a card round on the strip, which shortens the card enough to leave the field half under the
+        // card scroller's foot. reveal() moves only body elements inside the scroller and reads this native field as
+        // hittable there, so its tap landed outside the field; this reveal brings it wholly inside first.
+        revealPhoneCardReading(field, in: app.scrollViews["card-scroll"], app: app)
+        tapOnPhone(field)
         field.typeText("sk_test_invented_phone_value")
         picture("2-secret-ask-typed")
         // A return in the only field saves, as the Save secret button does.

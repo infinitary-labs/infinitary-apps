@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "conversation-on-phone",
+      "kind": "feature",
+      "area": "message-box",
+      "title": "Your whole conversation on your iPhone and iPad",
+      "body": "Above the message box on your iPhone and iPad, a card you chose on or replied under now shows as its own round, and its title opens the card. Press a message to open the conversation: your messages, your first mate's whole replies and the cards you acted on, by day. Its Cards view lists the cards waiting on you, then the ones you answered. A press on a card opens it, and putting the card away brings the conversation back.",
+      "picture": {
+        "dark": "conversation-on-phone-dark.webp",
+        "light": "conversation-on-phone-light.webp",
+        "alt": "The conversation on an iPad, with the captain's messages on the right, the first mate's replies on the left and a card's tile before the choice made on it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

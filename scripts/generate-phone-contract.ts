@@ -16,6 +16,8 @@ for (const channel of Object.values(reads)) {
 }
 const requests = {
   converse: "inf:converse", lastTurn: "inf:conversation:last-turn", board: "inf:tasks:board",
+  // INF-6366: the strip's rounds and the Conversation, a page at a time (docs/ios.md, "Talk and tasks").
+  conversation: "inf:conversation:thread",
   detail: "inf:tasks:detail", search: "inf:tasks:search", crew: "inf:tasks:crewmate",
   live: "inf:tasks:crewmate:live", result: "inf:tasks:crewmate:result",
   run: "inf:task:run", pin: "inf:task:pin", steer: "inf:task:steer", interrupt: "inf:task:interrupt",

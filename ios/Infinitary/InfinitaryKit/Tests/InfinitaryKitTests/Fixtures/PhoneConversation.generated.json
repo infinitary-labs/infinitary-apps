@@ -1,0 +1,345 @@
+{
+  "lastTurn": {
+    "you": "also remind me to check usage on friday",
+    "reply": {
+      "text": "All set. I'll remind you Friday at 9:00 AM.",
+      "eligibility": "completed",
+      "words": "All set.\nI'll remind you Friday at 9:00 AM."
+    },
+    "previous": {
+      "you": "move it to Monday",
+      "reply": {
+        "text": "Moved to Monday.",
+        "eligibility": "completed"
+      }
+    }
+  },
+  "whole": {
+    "rounds": [
+      {
+        "id": "a:0000000000000000003",
+        "at": 1795453920000,
+        "kind": "message",
+        "you": "also remind me to check usage on friday",
+        "reply": {
+          "text": "All set. I'll remind you Friday at 9:00 AM.",
+          "eligibility": "completed",
+          "words": "All set.\nI'll remind you Friday at 9:00 AM."
+        }
+      },
+      {
+        "id": "o:0000000000000000018",
+        "at": 1795453800000,
+        "kind": "choice",
+        "card": {
+          "id": "card-fm-2",
+          "title": "Usage this week",
+          "presentation": "note"
+        },
+        "label": "Got it"
+      },
+      {
+        "id": "a:0000000000000000002",
+        "at": 1795453620000,
+        "kind": "reply",
+        "card": {
+          "id": "card-fm-1",
+          "title": "Your reminders",
+          "presentation": "note"
+        },
+        "you": "move it to Monday",
+        "answer": {
+          "who": "firstmate",
+          "text": "Moved to Monday at 9:00 AM.",
+          "at": 1795453680000
+        },
+        "reply": {
+          "text": "Moved to Monday.",
+          "eligibility": "completed"
+        }
+      },
+      {
+        "id": "m:0000000000000000001",
+        "at": 1795367100000,
+        "kind": "reply",
+        "card": {
+          "id": "card-panel-asked",
+          "title": "Which chart reads best?",
+          "presentation": "decision",
+          "taskId": "panel",
+          "taskKey": "SCR-1"
+        },
+        "you": "use bars, not lines",
+        "answer": {
+          "who": "crewmate",
+          "text": "Bars it is.",
+          "at": 1795367160000
+        }
+      },
+      {
+        "id": "o:0000000000000000004",
+        "at": 1795366980000,
+        "kind": "choice",
+        "card": {
+          "id": "card-panel-plan",
+          "title": "A panel that charts your backlog",
+          "presentation": "decision",
+          "taskId": "panel",
+          "taskKey": "SCR-1"
+        },
+        "label": "Approve and build"
+      },
+      {
+        "id": "a:0000000000000000001",
+        "at": 1795366860000,
+        "kind": "message",
+        "you": "can a panel track my backlog?",
+        "reply": {
+          "text": "Yes. I started a plan for it.",
+          "eligibility": "completed"
+        }
+      }
+    ],
+    "more": false
+  },
+  "pages": [
+    {
+      "rounds": [
+        {
+          "id": "a:0000000000000000003",
+          "at": 1795453920000,
+          "kind": "message",
+          "you": "also remind me to check usage on friday",
+          "reply": {
+            "text": "All set. I'll remind you Friday at 9:00 AM.",
+            "eligibility": "completed",
+            "words": "All set.\nI'll remind you Friday at 9:00 AM."
+          }
+        },
+        {
+          "id": "o:0000000000000000018",
+          "at": 1795453800000,
+          "kind": "choice",
+          "card": {
+            "id": "card-fm-2",
+            "title": "Usage this week",
+            "presentation": "note"
+          },
+          "label": "Got it"
+        },
+        {
+          "id": "a:0000000000000000002",
+          "at": 1795453620000,
+          "kind": "reply",
+          "card": {
+            "id": "card-fm-1",
+            "title": "Your reminders",
+            "presentation": "note"
+          },
+          "you": "move it to Monday",
+          "answer": {
+            "who": "firstmate",
+            "text": "Moved to Monday at 9:00 AM.",
+            "at": 1795453680000
+          },
+          "reply": {
+            "text": "Moved to Monday.",
+            "eligibility": "completed"
+          }
+        }
+      ],
+      "more": true
+    },
+    {
+      "rounds": [
+        {
+          "id": "m:0000000000000000001",
+          "at": 1795367100000,
+          "kind": "reply",
+          "card": {
+            "id": "card-panel-asked",
+            "title": "Which chart reads best?",
+            "presentation": "decision",
+            "taskId": "panel",
+            "taskKey": "SCR-1"
+          },
+          "you": "use bars, not lines",
+          "answer": {
+            "who": "crewmate",
+            "text": "Bars it is.",
+            "at": 1795367160000
+          }
+        },
+        {
+          "id": "o:0000000000000000004",
+          "at": 1795366980000,
+          "kind": "choice",
+          "card": {
+            "id": "card-panel-plan",
+            "title": "A panel that charts your backlog",
+            "presentation": "decision",
+            "taskId": "panel",
+            "taskKey": "SCR-1"
+          },
+          "label": "Approve and build"
+        },
+        {
+          "id": "a:0000000000000000001",
+          "at": 1795366860000,
+          "kind": "message",
+          "you": "can a panel track my backlog?",
+          "reply": {
+            "text": "Yes. I started a plan for it.",
+            "eligibility": "completed"
+          }
+        }
+      ],
+      "more": false
+    }
+  ],
+  "strip": {
+    "rounds": [
+      {
+        "id": "a:0000000000000000003",
+        "at": 1795453920000,
+        "kind": "message",
+        "you": "also remind me to check usage on friday",
+        "reply": {
+          "text": "All set. I'll remind you Friday at 9:00 AM.",
+          "eligibility": "completed",
+          "words": "All set.\nI'll remind you Friday at 9:00 AM."
+        }
+      },
+      {
+        "id": "o:0000000000000000018",
+        "at": 1795453800000,
+        "kind": "choice",
+        "card": {
+          "id": "card-fm-2",
+          "title": "Usage this week",
+          "presentation": "note"
+        },
+        "label": "Got it"
+      }
+    ],
+    "more": true
+  },
+  "cards": [
+    {
+      "id": "card-panel-asked",
+      "taskId": "panel",
+      "author": "crewmate",
+      "priority": 30,
+      "title": "Which chart reads best?",
+      "meta": "model",
+      "body": "<p>A panel that charts the backlog.</p>",
+      "actions": [
+        {
+          "id": "defer",
+          "label": "Save and defer",
+          "variant": "secondary"
+        },
+        {
+          "id": "build",
+          "label": "Approve and build",
+          "variant": "primary",
+          "default": true
+        },
+        {
+          "id": "app-decline",
+          "label": "Decline",
+          "variant": "ghost",
+          "declines": true
+        }
+      ],
+      "status": "ready",
+      "createdAt": 1795367040000,
+      "width": "regular",
+      "lifecycleId": "00000000-0000-4000-8000-000000000001",
+      "offerId": "00000000-0000-4000-8000-000000000002",
+      "awaiting": "answer",
+      "sentBackAt": 1795367100000,
+      "corner": {
+        "icon": "minus",
+        "label": "Put aside",
+        "restWords": "Put aside · waits in Tasks, back when it changes",
+        "operation": "aside"
+      },
+      "currentUpdateId": "00000000-0000-4000-8000-000000000003",
+      "currentUpdateSeen": false,
+      "seen": false
+    },
+    {
+      "id": "card-panel-waiting",
+      "taskId": "panel",
+      "author": "crewmate",
+      "priority": 30,
+      "title": "Which project goes first?",
+      "meta": "model",
+      "body": "<p>A panel that charts the backlog.</p>",
+      "actions": [
+        {
+          "id": "defer",
+          "label": "Save and defer",
+          "variant": "secondary"
+        },
+        {
+          "id": "build",
+          "label": "Approve and build",
+          "variant": "primary",
+          "default": true
+        },
+        {
+          "id": "app-decline",
+          "label": "Decline",
+          "variant": "ghost",
+          "declines": true
+        }
+      ],
+      "status": "ready",
+      "createdAt": 1795453860000,
+      "width": "regular",
+      "lifecycleId": "00000000-0000-4000-8000-000000000004",
+      "offerId": "00000000-0000-4000-8000-000000000005",
+      "corner": {
+        "icon": "minus",
+        "label": "Put aside",
+        "restWords": "Put aside · waits in Tasks, back when it changes",
+        "operation": "aside"
+      },
+      "currentUpdateId": "00000000-0000-4000-8000-000000000006",
+      "currentUpdateSeen": false,
+      "seen": false
+    },
+    {
+      "id": "card-fm-1",
+      "author": "firstmate",
+      "priority": 15,
+      "title": "Your reminders",
+      "meta": "firstmate",
+      "body": "<p>One reminder on Friday.</p>",
+      "actions": [],
+      "status": "ready",
+      "createdAt": 1795453560000,
+      "width": "regular",
+      "lifecycleId": "00000000-0000-4000-8000-000000000007",
+      "offerId": "00000000-0000-4000-8000-000000000008",
+      "awaiting": "answer",
+      "sentBackAt": 1795453620000,
+      "corner": {
+        "icon": "minus",
+        "label": "Put aside",
+        "restWords": "Put aside · waits in Tasks, back when it changes",
+        "operation": "aside"
+      },
+      "noteDone": {
+        "label": "Got it",
+        "restWords": "Got it · the note stays saved",
+        "closesTask": false
+      },
+      "currentUpdateId": "00000000-0000-4000-8000-000000000009",
+      "currentUpdateSeen": false,
+      "seen": false
+    }
+  ]
+}

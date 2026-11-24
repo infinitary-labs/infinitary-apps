@@ -118,9 +118,9 @@ The Edit menu's Redo item reaches the page only when the platform has something 
 
 ## The last turn
 
-The captain's last two rounds, a message with the first mate's reply kept beside it or, on desktop, an answer to a card, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: "Working…"; INF-2483's plan, the captain's Approve and build: "turn the mark to orange and spin it"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
+The captain's last two rounds, a message with the first mate's reply kept beside it or an answer to a card, sit just above the input, and nothing else does (FI3-1089's plan, the captain's Approve and build: "Working…"; INF-2483's plan, the captain's Approve and build: "turn the mark to orange and spin it"; drawn as INF-1770's Chat layout, the captain's Approve and build: "allow last two rounds of messages instead of one round, with the older one fading a bit", "'working' should not block the user from seeing the last message if there is one" and "looks a bit more like chat for familarity").
 They replace the activity line that used to pass there; the Activity panel keeps every line.
-A round is one thing the captain did and what came back: a message and the reply line kept beside it, or, on desktop, a card round (below).
+A round is one thing the captain did and what came back: a message and the reply line kept beside it, or a card round (below).
 
 - **What shows.**
   The newest round sits nearest the input and the older round above it at 50% opacity.
@@ -139,7 +139,7 @@ A round is one thing the captain did and what came back: a message and the reply
   Each reply line, the older one included, is a button that opens the conversation at its round: it takes a Tab stop and the focus ring, and no other chrome; the working words are not a button.
   While a card or another stack entry is up, only the newest round shows, so a card keeps about the room it had with one round.
 - **Card rounds.**
-  On desktop the captain's own press of a card's button, Got it and Done included, and a line they typed under a card are rounds too, among the messages by time (INF-6337's plan, the captain's Approve and build: "cards they interacted"; the strip's part of it).
+  The captain's own press of a card's button, Got it and Done included, and a line they typed under a card are rounds too, among the messages by time (INF-6337's plan, the captain's Approve and build: "cards they interacted"; the strip's part of it).
   A card round is one 22 px row on the right: a 12 px card glyph and the card's title in `--fg-3`, at most 45% of the width and cut on a whole word, 8 px, then the bubble.
   A press of a button draws the button's words in the bubble's outline with no fill; a line typed under a card draws in the filled bubble.
   A line typed under the first mate's own card is also a message: its row keeps the reply line under it.
@@ -205,6 +205,7 @@ A round is one thing the captain did and what came back: a message and the reply
   A line typed under the first mate's own card is saved both as a message and as a card line that message names (`typed_card_id`, `typed_line`), and it draws once, as a line under that card; one saved before that link existed draws twice.
   A card deleted with its task takes its tile rounds with it, and a message typed under a card now gone draws as a plain message.
   A home that cannot answer the read shows the two rounds the strip holds and says only those could be read.
+  The iPhone and iPad app reads the same rounds and draws the conversation as a sheet over Home, with the same two views and no field of its own (`docs/ios.md`, "Talk and tasks").
   Open the conversation (`firstmate.reply`, `docs/keyboard.md`) opens it at its newest round from command search, after the lines have faded too, and comes home from Settings first; it keeps the reply note's id, so a key bound to it keeps working.
 - **Motion.**
   A new round rises 6 px into place over `--dur-med`, the rounds that stay glide up to their new places over `--dur-med`, the newest eases to the older round's strength, and the round pushed out leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`.

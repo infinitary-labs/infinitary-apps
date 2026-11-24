@@ -84,6 +84,7 @@ public enum PhoneRequest: String, Sendable {
     case converse = "inf:converse"
     case lastTurn = "inf:conversation:last-turn"
     case board = "inf:tasks:board"
+    case conversation = "inf:conversation:thread"
     case detail = "inf:tasks:detail"
     case search = "inf:tasks:search"
     case crew = "inf:tasks:crewmate"

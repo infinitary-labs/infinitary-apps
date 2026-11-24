@@ -46,7 +46,7 @@ Open it to read the crewmate's session beside the page and write to it.
 Hide or Escape puts the view away, and the browser keeps running.
 
 A stopped browser says why it stopped.
-**Open again** starts a fresh browser, with nothing signed in, at the page it was on; it is not offered once the task has closed.
+**Open again** starts a fresh browser at the page it was on, signed in only to the sites this task may still use; it is not offered once the task has closed.
 
 ## Take control
 
@@ -83,17 +83,19 @@ The card goes away, the crewmate carries on, and any words left in the card's fi
 
 ## Signed-in sites
 
-When a crewmate asks you to sign in, what you sign in to stays in that computer's own browser profile.
+When a crewmate asks you to sign in, or to create an account, what you sign in to stays in that computer's own browser profile.
+It covers the whole site, so a sign-in made on example.com's separate sign-in page also serves its other pages, such as developer.example.com.
 When you press **Return control**, a question above the page asks what later tasks may do, such as "Your example.com sign-in stays on this computer. Later tasks:":
 
-- **Ask me each time** leads.
-  A later task that needs the site asks on its card, which adds **Use my example.com sign-in** beside **Sign in myself**.
-  One click lets that task's browser use the site, signed in, and you type nothing.
-- **Use it without asking** lets a later task open the site signed in, with no card, and its Activity says so each time.
+- **Use it without asking** leads and is picked for a new site.
+  A later task opens the site signed in, with no card, and its Activity says so each time.
   It never covers a payment or a final submission.
+- **Ask me each time** has a later task that needs the site ask on its card, which adds **Use my example.com sign-in** beside **Sign in myself**.
+  One click lets that task's browser use the site, signed in, and you type nothing.
 
 A rule applies to tasks across all projects on that computer.
 A browser using a signed-in site opens only that site and the sign-in pages it passed through; any other site opens signed out.
+A task keeps the signed-in sites it may use when its browser stops on its own or the app restarts, until you press **Stop browser** or the task closes.
 When you sign in for any other reason, such as after pressing **Take control** yourself, the sign-in usually lasts only until that browser stops.
 The line under the page says which, such as "temporary · keeps what you signed in to until it stops".
 

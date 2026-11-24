@@ -486,7 +486,10 @@ export class CrewmateCommands {
         return refused(`${HERE.This} could not open a browser for this task right now.`);
       this.core.stopped.delete(taskId);
       fresh = why
-        ? `Your earlier browser ${why}, so this is a fresh one with nothing signed in. `
+        ? browser.saved.size > 0
+          ? // i18n-exempt: the crewmate's tool answer, served only to a model
+            `Your earlier browser ${why}, so this is a fresh one; the captain's sign-ins this task may use stay. `
+          : `Your earlier browser ${why}, so this is a fresh one with nothing signed in. `
         : "";
     }
     browser.did = openedWords(check.url, site);
@@ -717,7 +720,7 @@ export class CrewmateCommands {
     this.core.stop(taskId, "crewmate");
     this.core.stopped.delete(taskId);
     return {
-      text: `Stopped this task's browser: its pages, history and site data are gone. ${browserCommand("open <url>")} opens a fresh one.`,
+      text: `Stopped this task's browser: its pages, history and site data are gone. The captain's sign-ins this task may use stay for its next browser. ${browserCommand("open <url>")} opens a fresh one.`,
     };
   }
 

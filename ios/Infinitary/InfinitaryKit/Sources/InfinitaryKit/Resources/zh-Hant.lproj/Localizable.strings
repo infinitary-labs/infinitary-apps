@@ -340,6 +340,7 @@
 "cardBrowserManage" = "管理";
 "cardBrowserMore" = "更多";
 "cardBrowserNone" = "這項任務在 %1$@ 上沒有瀏覽器。";
+"cardBrowserOpenAgainCaption" = "全新的瀏覽器，只帶有此任務可以使用的登入";
 "cardBrowserOpenFailed" = "%1$@ 現在無法為這項任務開啟瀏覽器。";
 "cardBrowserPageWatching" = "%1$@ 的網頁，顯示船員瀏覽器中的畫面";
 "cardBrowserPageYours" = "%1$@ 的網頁，由你控制";

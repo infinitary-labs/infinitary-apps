@@ -305,6 +305,7 @@
   {"said":{"m":"cardBrowserManage"},"words":"Manage"},
   {"said":{"m":"cardBrowserMore"},"words":"More"},
   {"said":{"m":"cardBrowserNone","a":{"place":"‹place›"}},"words":"This task has no browser on ‹place›."},
+  {"said":{"m":"cardBrowserOpenAgainCaption"},"words":"A fresh browser, with only the sign-ins this task may use"},
   {"said":{"m":"cardBrowserOpenFailed","a":{"place":"‹place›"}},"words":"‹place› could not open a browser for this task right now."},
   {"said":{"m":"cardBrowserPageWatching","a":{"site":"‹site›"}},"words":"The page at ‹site›, as the crewmate's browser shows it"},
   {"said":{"m":"cardBrowserPageYours","a":{"site":"‹site›"}},"words":"The page at ‹site›, under your control"},

@@ -1,5 +1,5 @@
 ---
-source: 30ff177c9864ccf9
+source: 72e8eba0a4de8933
 title: El navegador de la tripulación
 description: Un tripulante puede abrir sitios web en un navegador propio para su tarea. Míralo trabajar, toma el control cuando una página te necesite y decide cuáles de tus inicios de sesión pueden usar las tareas posteriores.
 ---
@@ -47,7 +47,7 @@ Debajo de la página, una línea plegada del tripulante muestra sus últimas pal
 Ocultar o Escape guarda la vista, y el navegador sigue funcionando.
 
 Un navegador detenido dice por qué se detuvo.
-**Abrir de nuevo** inicia un navegador nuevo, sin ninguna sesión iniciada, en la página donde estaba; no se ofrece una vez que la tarea se ha cerrado.
+**Abrir de nuevo** inicia un navegador nuevo en la página donde estaba, con sesión iniciada solo en los sitios que esta tarea todavía puede usar; no se ofrece una vez que la tarea se ha cerrado.
 
 ## Tomar el control {#take-control}
 
@@ -84,17 +84,19 @@ La tarjeta desaparece, el tripulante continúa, y las palabras que hayas dejado 
 
 ## Sitios con sesión iniciada {#signed-in-sites}
 
-Cuando un tripulante te pide que inicies sesión, aquello en lo que inicias sesión se queda en el propio perfil de navegador de esa computadora.
+Cuando un tripulante te pide que inicies sesión o que crees una cuenta, aquello en lo que inicias sesión se queda en el propio perfil de navegador de esa computadora.
+Cubre todo el sitio, así que un inicio de sesión hecho en la página de inicio de sesión aparte de example.com también sirve para sus otras páginas, como developer.example.com.
 Cuando presionas **Devolver el control**, una pregunta sobre la página te pide qué pueden hacer las tareas posteriores, como «Tu sesión de example.com se queda en esta computadora. Tareas posteriores:»:
 
-- **Preguntarme cada vez** va primero.
-  Una tarea posterior que necesita el sitio pregunta en su tarjeta, que agrega **Usar mi sesión de example.com** al lado de **Iniciar sesión yo**.
-  Un clic permite que el navegador de esa tarea use el sitio, con la sesión iniciada, y no escribes nada.
-- **Usarla sin preguntar** permite que una tarea posterior abra el sitio con la sesión iniciada, sin tarjeta, y su Actividad lo dice cada vez.
+- **Usarla sin preguntar** va primero y está elegida para un sitio nuevo.
+  Una tarea posterior abre el sitio con la sesión iniciada, sin tarjeta, y su Actividad lo dice cada vez.
   Nunca cubre un pago ni un envío final.
+- Con **Preguntarme cada vez**, una tarea posterior que necesita el sitio pregunta en su tarjeta, que agrega **Usar mi sesión de example.com** al lado de **Iniciar sesión yo**.
+  Un clic permite que el navegador de esa tarea use el sitio, con la sesión iniciada, y no escribes nada.
 
 Una regla se aplica a las tareas de todos los proyectos en esa computadora.
 Un navegador que usa un sitio con sesión iniciada solo abre ese sitio y las páginas de inicio de sesión por las que pasó; cualquier otro sitio se abre sin sesión iniciada.
+Una tarea conserva los sitios con sesión iniciada que puede usar cuando su navegador se detiene solo o la app se reinicia, hasta que presionas **Detener el navegador** o la tarea se cierra.
 Cuando inicias sesión por cualquier otro motivo, como después de presionar **Tomar el control** por tu cuenta, el inicio de sesión suele durar solo hasta que ese navegador se detiene.
 La línea debajo de la página dice cuál es el caso, como «temporal · conserva aquello en lo que iniciaste sesión hasta que se detiene».
 

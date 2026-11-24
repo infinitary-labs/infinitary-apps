@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-rule-file-scope-words",
+      "reason": "Internal: the project's own agent rule file regains words cut by an earlier trim and gains pointers to four rules on subsystem pages; nothing a person sees changes."
+    }
+  ]
+}

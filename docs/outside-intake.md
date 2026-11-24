@@ -30,7 +30,7 @@ The reader writes no file, so it keeps no rule notes; what a later round needs t
 
 ## What a round lists
 
-A round reads `/repos/{owner}/{repo}/issues` with `state=open`, which lists pull requests too, oldest first, and keeps an item when either holds:
+A round reads `/repos/{owner}/{repo}/issues?state=open&sort=created&direction=asc`, which lists pull requests too, oldest first, and keeps an item when any of these holds:
 
 - it carries `needs triage` and its author cannot write to the project;
 - it carries `from-app`, the label of an issue the app's `/feedback` files (`docs/feedback.md`, "Triage"), and either `needs triage` or no comment yet from an account that can write, whoever filed it;

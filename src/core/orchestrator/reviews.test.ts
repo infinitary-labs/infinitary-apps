@@ -1256,6 +1256,84 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
+  // INF-6225's builder committed on a second branch it checked out, leaving
+  // the task's branch behind, and its reviews were blocked three times at
+  // that branch: its review and its proof read the version it built.
+  it("reviews and proves the commit a builder's working copy has checked out, not the task's branch left behind on another branch", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, specs } = setup(builder, {
+        realWorkspace: true,
+        crewmates: [fakeCrewmate()],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId, started } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await started;
+      await tick();
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      const task = tasks.get(taskId)!;
+      const worktree = task.worktreeDir;
+      if (!worktree || !task.branch) throw new Error(`${taskId} has no working copy yet.`);
+      const run = (...args: string[]) =>
+        execFileSync(
+          "git",
+          ["-C", worktree, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
+          { encoding: "utf8" },
+        ).trim();
+      const left = run("rev-parse", "HEAD");
+      run("switch", "--quiet", "-c", `${task.branch}-dev`);
+      writeFileSync(join(worktree, "meter.test.ts"), "await queue.flush();\n");
+      run("add", "meter.test.ts");
+      run("commit", "-m", "fix: await the queue flush");
+      const built = run("rev-parse", "HEAD");
+      expect(run("rev-parse", task.branch)).toBe(left);
+
+      const { taskId: reviewId } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: taskId },
+      });
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.headSha).toBe(built);
+      expect(tasks.get(reviewId)?.prompt).toContain(`at head ${built}`);
+      expect(tasks.get(reviewId)?.prompt).toContain('- "meter.test.ts"');
+
+      await specs[0]!.onReport!("Planned the proof.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "The meter test has no running surface.",
+          scenarios: [],
+        },
+      });
+      await specs[0]!.onReport!("Ran the proof.", undefined, {
+        validation: {
+          kind: "run",
+          id: "meter",
+          head: built,
+          scenarioRevision: 1,
+          completion: "complete",
+          verdict: "no-surface",
+          reason: "The meter test has no running surface.",
+          observations: [],
+          evidence: [],
+        },
+      });
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.runs.map((entry) => entry.head)).toEqual([
+        built,
+      ]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
   it("retires the review with the builder: a discard cascades, the parent is fixed, no orphaned reviewer", async () => {
     const repo = gitRepo();
     try {
@@ -1623,6 +1701,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           sessions: `/${device}/${id}/sessions`,
           evidence: `/${device}/${id}/evidence`,
         }),
+        // It names no checkout, as a computer older than that answer does.
+        checkedOut: async () => null,
         revision: async (...args: unknown[]) => {
           revisionArgs.push(args);
           return {

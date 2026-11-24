@@ -291,6 +291,8 @@ export type GitHubStub = {
 export const GITHUB_STUB_KEY = "gho_e2e_sign_in";
 export const STUB_USER_CODE = "WDJB-MJHT";
 export const STUB_LOGIN = "octo";
+/** The one open issue every stand-in project holds, which a reader's Build row names. */
+export const STUB_OPEN_ISSUE = 14;
 /** The notification `/notifications` answers with, and the pull request on a listing's second page. */
 export const STUB_NOTIFICATION_TITLE = "Release 0.4.0 is out";
 export const STUB_SECOND_PAGE_TITLE = "Second page";
@@ -888,6 +890,14 @@ export async function startGitHubStub(
         }
         if (method === "GET" && rest === `/collaborators/${STUB_LOGIN}/permission`) {
           send(200, { permission: "write" });
+          return;
+        }
+        if (method === "GET" && rest === `/issues/${STUB_OPEN_ISSUE}`) {
+          send(200, {
+            number: STUB_OPEN_ISSUE,
+            state: "open",
+            html_url: `https://${webHost}/${owner}/${name}/issues/${STUB_OPEN_ISSUE}`,
+          });
           return;
         }
         if (method === "POST" && rest === "/issues") {

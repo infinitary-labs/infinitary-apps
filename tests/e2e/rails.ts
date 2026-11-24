@@ -191,12 +191,14 @@ export async function pressRow(page: Page, key: string, within?: string): Promis
  * Opens a collapsed Tasks group with a press inside its frame, and waits
  * until it is open. A group the panel always shows (`OPEN_BY_DEFAULT` in
  * `src/panels/now/rows.ts`) has a label for a header, with no
- * `aria-expanded` and nothing to press, so it is open already.
+ * `aria-expanded` and nothing to press, so it is open already; a group an
+ * earlier step opened is left open, since a press would fold it.
  */
 export async function openGroup(page: Page, group: NowGroup): Promise<void> {
   const header = nowFrame(page).locator(`[data-now-group-header="${group}"]`);
   await expect(header).toBeAttached();
-  if ((await header.getAttribute("aria-expanded")) === null) return;
+  const expanded = await header.getAttribute("aria-expanded");
+  if (expanded === null || expanded === "true") return;
   // In the frame itself: a press at screen coordinates can land on the list
   // while the group above is still opening and moving this header.
   await header.evaluate((element) => (element as HTMLElement).click());

@@ -1,6 +1,7 @@
 import { FOLLOWUP_PROVENANCE_OPENING } from "../../../src/core/orchestrator/intentBrief";
 import {
   UNSAFE_DATA_READER_ASK,
+  UNSAFE_DATA_READER_BUILD_ROW,
   UNSAFE_DATA_READER_CARD,
   UNSAFE_DATA_READER_CARD_WORDS,
   UNSAFE_DATA_READER_FILE,
@@ -15,11 +16,11 @@ import { sinceLastUser } from "../providerRequest";
 
 /**
  * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
- * file read and two reads where its project lives, two writes and a follow-up, then a
- * report asking the first mate to start that follow-up; once the captain's click answers, a
- * decision card with a question, its own reply under it and a report of what it answered;
+ * file read and two reads where its project lives, a Build row, two writes and a
+ * follow-up, then a report asking the first mate to start that follow-up; once the captain's
+ * click answers, a decision card with a question, its own reply under it and a report of what it answered;
  * once the captain answers that card, a last report.
- * Its kept writes go on the app's own approval card, never its own.
+ * Its kept writes and Build row go on the app's own approval card, never its own.
  */
 export const unsafeDataReader: Scenario =
   () =>
@@ -75,9 +76,12 @@ export const unsafeDataReader: Scenario =
     const reads = UNSAFE_DATA_READER_READS.length + 1;
     const read = UNSAFE_DATA_READER_READS[results.length - 1];
     if (read) return { calls: [{ name: "github_read", args: { path: read } }] };
-    const write = UNSAFE_DATA_READER_WRITES[results.length - reads];
+    // Its Build row raises the approval card, and the writes join it after.
+    if (results.length === reads)
+      return { calls: [{ name: "file_followup", args: UNSAFE_DATA_READER_BUILD_ROW }] };
+    const write = UNSAFE_DATA_READER_WRITES[results.length - reads - 1];
     if (write) return { calls: [{ name: "github_write", args: write }] };
-    const asked = reads + UNSAFE_DATA_READER_WRITES.length;
+    const asked = reads + 1 + UNSAFE_DATA_READER_WRITES.length;
     if (results.length === asked)
       return { calls: [{ name: "file_followup", args: UNSAFE_DATA_READER_FOLLOWUP }] };
     if (results.length === asked + 1)

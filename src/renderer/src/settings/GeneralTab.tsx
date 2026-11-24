@@ -655,11 +655,14 @@ export function GeneralTab() {
               : m.settingsGeneralPurgeDescription())
           }
           control={
+            // Only the armed press starts a purge, so only Confirm purge keeps
+            // room for Purging...: at rest that hidden room would centre
+            // Purge left of every other row's control on the right edge.
             <Button
               variant={purgeArmed ? "danger" : "ghost"}
               size="sm"
               onClick={purge}
-              pending={purging}
+              pending={purgeArmed ? purging : undefined}
               pendingLabel={m.settingsGeneralPurging()}
             >
               {purgeArmed ? m.settingsGeneralPurgeConfirm() : m.settingsGeneralPurgeButton()}

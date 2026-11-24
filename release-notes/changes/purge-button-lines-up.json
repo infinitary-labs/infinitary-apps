@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "purge-button-lines-up",
+      "kind": "fix",
+      "title": "The Purge button lines up with the other buttons in Settings",
+      "body": "In Settings → General, Purge sat a little left of Reset and the other controls on the right edge. It now ends on the same edge.",
+      "area": "settings",
+      "picture": {
+        "dark": "purge-button-lines-up-dark.webp",
+        "light": "purge-button-lines-up-light.webp",
+        "alt": "Settings, General, with the Purge task data and Reset Infinitary rows, their Purge and Reset buttons ending on the same right edge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

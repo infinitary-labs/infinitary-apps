@@ -28,6 +28,8 @@ function setup(initialOpen = true) {
   let clock = 1000;
   const steps: FirstRunStep[] = [];
   const published: string[][] = [];
+  /** Each gate close the service said, with the welcome's state at that moment. */
+  const closed: (string | undefined)[] = [];
   const makeCards = () =>
     new CardService({
       now: () => clock,
@@ -60,6 +62,7 @@ function setup(initialOpen = true) {
       createFirstCrewmateNote: (record, welcomeCardId) =>
         presentFirstCrewmateNote(cards)(record, welcomeCardId),
       onStep: (step) => steps.push(step),
+      onGateClosed: () => closed.push(settings.getFirstRun().welcomeState),
       now: () => clock,
     });
   let service = makeService();
@@ -77,6 +80,7 @@ function setup(initialOpen = true) {
     cardStore,
     steps,
     published,
+    closed,
     service: () => service,
     cards: () => cards,
     ready: () => {
@@ -348,6 +352,38 @@ describe("immediate welcome", () => {
     expect(welcomeFirst.cards().snapshot()).toHaveLength(1);
     inputFirst.close();
     welcomeFirst.close();
+  });
+});
+
+describe("the gate's close", () => {
+  // A card that waits for the first mate to answer, such as a joined
+  // computer's setup card, goes up on this word: after the welcome, so the
+  // card is never the use that skips it.
+  it("is said once per close, after the read that commits the welcome", () => {
+    const f = setup();
+    f.service().view();
+    expect(f.service().gateUpAsRead()).toBe(true);
+    expect(f.closed).toEqual([]);
+    f.ready();
+    f.service().view();
+    expect(f.closed).toEqual(["consumed"]);
+    expect(f.service().gateUpAsRead()).toBe(false);
+    f.service().view();
+    expect(f.closed).toEqual(["consumed"]);
+    f.reopen();
+    f.service().view();
+    expect(f.service().gateUpAsRead()).toBe(true);
+    f.ready();
+    f.service().view();
+    expect(f.closed).toEqual(["consumed", "consumed"]);
+  });
+
+  it("is said at a launch's first read when the gate is already closed, and the gate reads up before it", () => {
+    const f = setup(false);
+    expect(f.service().gateUpAsRead()).toBe(true);
+    f.service().reconcile();
+    expect(f.closed).toHaveLength(1);
+    expect(f.service().gateUpAsRead()).toBe(false);
   });
 });
 

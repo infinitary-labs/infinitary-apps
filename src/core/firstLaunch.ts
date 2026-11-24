@@ -69,6 +69,7 @@ export function startFirstLaunch(options: {
     cards: Pick<CrewSupervisor["cards"], "addRecordedFirstmateNote" | "has" | "takeDown">;
   };
   sharing: Pick<SharingService, "record">;
+  onGateClosed: () => void;
   now: () => number;
   emit: CoreEventSink;
 }): FirstLaunch {
@@ -138,6 +139,7 @@ export function startFirstLaunch(options: {
     createFirstCrewmateNote: presentFirstCrewmateNote(supervisor.cards),
     now,
     onStep: (step) => options.sharing.record({ name: `ftue_${step}`, data: {} }),
+    onGateClosed: options.onGateClosed,
   });
   // Release notes (docs/release-notes.md "The startup note"): a packaged
   // build reads the catalog it carries; a dev or e2e run reads one only from

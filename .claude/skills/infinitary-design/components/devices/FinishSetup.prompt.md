@@ -37,6 +37,7 @@ It runs website with its own sign-ins."
 Not now takes it down for good: nothing raises it again for that computer, even after a restart, until it is removed and added again.
 A computer taken off the list takes its card with it.
 A computer that joined before this card existed gets none; the backstop below speaks for one set up later, or signed out again.
+While no subscription answers the first mate itself, its first launch's subscription step comes first: the card waits off the stack and goes up behind the welcome once one answers (`SetUpThere.prompt.md`, step 7).
 
 **The backstop.**
 A task about to start on a computer with no sign-in at all waits, and the feed says "Mac mini has no sign-ins yet. website's next task waits until it has one."

@@ -633,6 +633,8 @@ export function startPlacedHome(options: {
       chosenAction: (id) => supervisor.cards.chosenAction(id),
     },
     broadcastEvent: (event) => events.push(event),
+    // This home composes no first launch: its Firstmate answers, so no card waits for a subscription.
+    held: () => false,
     forgeNeeded: (deviceId, host, repo) =>
       supervisor.placement.projectForgeSignInNeeded(deviceId, host, repo),
     forgeReady: (deviceId, host) =>

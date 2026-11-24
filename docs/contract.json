@@ -49755,6 +49755,11 @@
                     "type": "boolean",
                     "const": true
                   },
+                  "computer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
                   "rule": {
                     "type": "string",
                     "enum": [
@@ -79382,6 +79387,10 @@
                       "savedFailed": {
                         "type": "boolean",
                         "const": true
+                      },
+                      "signIn": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "required": [
@@ -88884,6 +88893,11 @@
                           "kept": {
                             "type": "boolean",
                             "const": true
+                          },
+                          "computer": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
                           },
                           "rule": {
                             "type": "string",
@@ -113509,6 +113523,11 @@
                           "kept": {
                             "type": "boolean",
                             "const": true
+                          },
+                          "computer": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
                           },
                           "rule": {
                             "type": "string",

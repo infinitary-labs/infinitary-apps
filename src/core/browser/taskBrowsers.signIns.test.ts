@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseInvokeRequest } from "@shared/ipc";
+import { browserOrders } from "@shared/workBrowsers";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
@@ -563,5 +565,66 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
     expect(kept[0]?.opened.proxy).toEqual(kept[1]?.opened.proxy);
     const own = h.pages.filter((page) => !page.opened.kept);
     expect(own.every((page) => page.opened.proxy !== kept[0]?.opened.proxy)).toBe(true);
+  });
+});
+
+// On a computer that runs work, a crewmate's sign-in request reaches its
+// browser only after crossing to the home as a card and back as an order.
+describe("a sign-in request from a computer that runs work, across its home", () => {
+  it("keeps the captain's sign-in in the kept profile past the browser's stop", async () => {
+    const site = "app.notion.example";
+    const [{ card }] = parseInvokeRequest("inf:work:card", [
+      {
+        task: "t1",
+        callId: "c1",
+        card: {
+          title: "Sign in to the notes site once",
+          body: "<p>Sign in.</p>",
+          actions: [],
+          browserHandoff: {
+            site,
+            reason: "The settings open only with your sign-in.",
+            after: "I read the settings list.",
+            signIn: true,
+          },
+        },
+      },
+    ]);
+    const handoff = card.browserHandoff;
+    if (!handoff) throw new Error("the home dropped the card's browser handoff");
+    const [{ request }] = browserOrders["inf:task-browser:request"].request.parse([
+      { task: "t1", request: handoff },
+    ]);
+    const signIns = new WebSignIns(scratchDir("infinitary-web-sign-ins-"), () => 1_000);
+    const h = harness({ signIns, now: () => 1_000 });
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: `https://${site}/login` });
+    const handle = { session: h.browsers.session, generation: 1 };
+    expect(await h.browsers.requestHelp("t1", request)).toEqual({ ok: true, handle });
+    expect(await h.browsers.takeControl("t1", handle)).toEqual({ ok: true });
+    const held = h.pages.at(-1) as FakePage;
+    expect(held.opened.kept).toBe(true);
+    held.cookies.cookies = [
+      {
+        name: "token_v2",
+        value: "stand-in",
+        domain: site,
+        hostOnly: true,
+        path: "/",
+        secure: true,
+        httpOnly: true,
+        sameSite: "lax",
+      },
+    ];
+    await held.load(`https://${site}/p/home`);
+    expect(await h.browsers.returnControl("t1", handle, { site, automatic: true })).toEqual({
+      ok: true,
+    });
+    expect(signIns.list().map((one) => one.site)).toEqual([site]);
+    await browser.close({});
+    await browser.navigate({ url: `https://${site}/` });
+    const reopened = h.pages.at(-1) as FakePage;
+    expect(reopened.opened.kept).toBe(true);
+    expect(reopened.cookies.cookies.map((cookie) => cookie.name)).toEqual(["token_v2"]);
   });
 });

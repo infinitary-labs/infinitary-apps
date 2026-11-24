@@ -112,7 +112,8 @@ export function readerApprovalCard(
     author: "host",
     priority: HOST_CARD_PRIORITY,
     title:
-      words?.title ?? (pages ? m.cardReaderPagesTitle() : m.cardBuildRowsTitle({ place: first.place })),
+      words?.title ??
+      (pages ? m.cardReaderPagesTitle() : m.cardBuildRowsTitle({ place: first.place })),
     meta: APPROVAL_CARD_META,
     body: [
       ...(words ? [`<p>${text(words.lead)}</p>`, `<p>${text(words.how)}</p>`] : []),

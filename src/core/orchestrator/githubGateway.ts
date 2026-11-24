@@ -675,7 +675,7 @@ export class GithubGatewayService {
           ? "a web page is not a write where a project lives, so it was not sent"
           : taken.ask.kind === "build"
             ? "a Build row is not a write where a project lives, so nothing was sent"
-          : "an integration's action is not a write where a project lives, so it was not sent";
+            : "an integration's action is not a write where a project lives, so it was not sent";
       this.options.tasks.delivery.recordWriteAskOutcome(taskId, taken.ask.id, {
         kind: "refused",
         why,

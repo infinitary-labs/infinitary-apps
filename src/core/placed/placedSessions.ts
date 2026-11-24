@@ -223,6 +223,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private readonly devices = new Map<string, Device>();
   private readonly placed = new Map<string, Placed>();
   private readonly closing = new Set<Promise<void>>();
+  /** Each contact's read of what its computer holds, while it runs (`settled`). */
+  private readonly reaching = new Set<Promise<void>>();
   private readonly stopTaskChanges: () => void;
   private readonly stopContacts: () => void;
   private stoppingCopies: Promise<void> | undefined;
@@ -327,6 +329,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     this.stopContacts();
     this.stoppingCopies = Promise.all(this.closing).then(() => this.copies.stop());
     return this.stoppingCopies;
+  }
+
+  /**
+   * Resolves once each contact's read of what its computer holds has
+   * finished, with everything that read awaits: for a test.
+   */
+  async settled(): Promise<void> {
+    while (this.reaching.size > 0) await Promise.all(this.reaching);
   }
 
   /** The supervisor, once it exists. */
@@ -995,9 +1005,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     // In reach is not caught up: its tasks say since when they catch up.
     device.reachedAt ??= this.options.now();
     this.options.reachMoved?.();
-    void this.reach(device, device.contact).catch((caught: unknown) =>
+    const reaching = this.reach(device, device.contact).catch((caught: unknown) =>
       this.log(`could not read what ${contact.deviceId} holds: ${errorText(caught)}`),
     );
+    this.reaching.add(reaching);
+    void reaching.then(() => this.reaching.delete(reaching));
   }
 
   /**

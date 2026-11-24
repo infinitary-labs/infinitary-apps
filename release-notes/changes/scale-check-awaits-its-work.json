@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "scale-check-awaits-its-work",
+      "reason": "The scale check now takes each count after the minute pass's own work, the closes' file passes and presentation refresh, and a work computer's roster read have finished, awaiting each one instead of a fixed number of event-loop turns; the presentation refresh and the computer contact gain a settled() for tests, and nothing a person sees changes."
+    }
+  ]
+}

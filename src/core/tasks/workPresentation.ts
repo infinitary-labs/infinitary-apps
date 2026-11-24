@@ -66,6 +66,16 @@ export class WorkPresentation {
     });
   }
 
+  /**
+   * Resolves once no pass waits on the event loop, a pass that pass asked
+   * for included: for a test. A turn awaited here comes after the pass's
+   * own, since the event loop runs them in the order they were asked. A
+   * pass a hold keeps is not waiting yet; its release asks for it.
+   */
+  async settled(): Promise<void> {
+    while (this.scheduled) await new Promise((resolve) => setImmediate(resolve));
+  }
+
   /** Share one presentation refresh across a housekeeping sweep's separate turns. */
   hold(): () => void {
     this.holds += 1;

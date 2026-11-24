@@ -207,10 +207,6 @@ async function counted(read: string, work: () => void | Promise<void>): Promise<
   return counts;
 }
 
-async function settle(): Promise<void> {
-  for (let turn = 0; turn < 20; turn += 1) await new Promise((resolve) => setImmediate(resolve));
-}
-
 async function buildRecord() {
   const paths = appPathsFor(scratchDir("infinitary-scale-check-"));
   const db = freshDatabase();
@@ -378,12 +374,32 @@ async function buildRecord() {
     coalesceMs: 60 * 60 * 1000,
   });
   // The minute pass as services.ts registers it: the crew's watchdog
-  // checks and the work presentation refresh.
-  const ticker = new Ticker({ now, timers: { repeat: () => 0, cancel: () => {} } });
+  // checks and the work presentation refresh. A pass that starts async
+  // work returns its promise, and the ticker runs each pass through its
+  // steps, as services.ts's freeze recorder follows them (`PassSteps.run`):
+  // these keep each promise for the count to await.
+  const passWork: unknown[] = [];
+  const ticker = new Ticker({
+    now,
+    timers: { repeat: () => 0, cancel: () => {} },
+    steps: {
+      passStarted: () => {},
+      run: <T>(_name: string, step: () => T): T => {
+        const result = step();
+        passWork.push(result);
+        return result;
+      },
+    },
+  });
+  let refreshes = 0;
   const presentation = new WorkPresentation({
     tasks,
     protocol,
     broadcastEvent: (event) => events.push(event),
+    step: (_name, run) => {
+      refreshes += 1;
+      return run();
+    },
   });
   supervisor.watch.startWatchdog(ticker);
   ticker.register("work-presentation", TICK_PERIOD_MS, () => presentation.schedule());
@@ -422,6 +438,8 @@ async function buildRecord() {
   devices.attach({
     ask: async (_deviceId, channel) => {
       if (channel !== "inf:session:roster") throw new Error(`${channel} is not asked here`);
+      // A connection's answer arrives in a later event-loop turn than its ask.
+      await new Promise((resolve) => setImmediate(resolve));
       return {
         tasksDir: join(paths.userData, "there", "tasks"),
         worktreesDir: join(paths.userData, "there", "worktrees"),
@@ -439,7 +457,7 @@ async function buildRecord() {
     },
     onViewDevice: () => () => {},
   });
-  new PlacedSessions({
+  const placed = new PlacedSessions({
     tasks,
     paths,
     devices,
@@ -451,6 +469,32 @@ async function buildRecord() {
     log: () => {},
   });
 
+  /**
+   * The asynchronous work a read set off, each part awaited by its own
+   * promise, in the order one part sets off the next: the minute pass's
+   * own work, a contact's roster read, the closed-task file passes a close
+   * starts, and the presentation refresh any of them asks for.
+   */
+  const settled = async () => {
+    await Promise.all(passWork.splice(0));
+    await placed.settled();
+    for (const sweeps of fileSweeps) await sweeps.settled();
+    await presentation.settled();
+  };
+  /**
+   * A read whose task writes or minute pass ask for a presentation refresh:
+   * the refresh runs in a later event-loop turn and is part of the read's
+   * reads, so the count holds it only if it ran before the count ended.
+   */
+  const refreshed = async (read: () => void) => {
+    const before = refreshes;
+    read();
+    await settled();
+    expect(refreshes, "the presentation refresh it asked for ran within its count").toBeGreaterThan(
+      before,
+    );
+  };
+
   return {
     addClosedHistory: async (count: number) => {
       const at = Date.now();
@@ -459,29 +503,23 @@ async function buildRecord() {
     },
     measure: async (): Promise<Record<string, Counts>> => {
       vi.setSystemTime(Date.now() + TICK_PERIOD_MS);
-      await settle();
+      // What the seeding or the last measure set off finishes outside every count.
+      await settled();
       const counts: Record<string, Counts> = {
         "first mate context": await counted("first mate context", () => {
           agent.buildContextBlock();
         }),
         "answer-delivery sweep": await counted("answer-delivery sweep", () => delivery.sweep()),
-        "minute pass": await counted("minute pass", async () => {
-          ticker.tick();
-          await settle();
-        }),
+        "minute pass": await counted("minute pass", () => refreshed(() => ticker.tick())),
         "task board update": await counted("task board update", () => {
           protocol.board();
         }),
       };
       const closing = `closing-${closes++}`;
       seedTask(tasks, { id: closing, title: `Closing work ${closing}`, status: "idle" });
-      counts["task close"] = await counted("task close", async () => {
-        tasks.close(closing, { status: "done", reason: "merged", actor: "host" });
-        for (const sweeps of fileSweeps) await sweeps.settled();
-        // The presentation pass the close asks for runs at the end of an
-        // event-loop turn; it is part of the close's reads.
-        await settle();
-      });
+      counts["task close"] = await counted("task close", () =>
+        refreshed(() => tasks.close(closing, { status: "done", reason: "merged", actor: "host" })),
+      );
       // A merged close whose change declared a required action: the step
       // that files the captain's action task (INF-4224, where it read every
       // task inside the close). The captain then does the action, so the
@@ -495,11 +533,10 @@ async function buildRecord() {
       });
       counts["merged close with a required action"] = await counted(
         "merged close with a required action",
-        async () => {
-          tasks.close(declaring, { status: "done", reason: "merged", actor: "host" });
-          for (const sweeps of fileSweeps) await sweeps.settled();
-          await settle();
-        },
+        () =>
+          refreshed(() =>
+            tasks.close(declaring, { status: "done", reason: "merged", actor: "host" }),
+          ),
       );
       for (const filed of tasks.listWithRequirementFrom(declaring, [])) {
         const shown = tasks.delivery.presentCaptainAction(filed.id);
@@ -509,13 +546,12 @@ async function buildRecord() {
         )
           throw new Error("The filed required action could not be confirmed");
       }
-      for (const sweeps of fileSweeps) await sweeps.settled();
-      await settle();
+      await settled();
       // A work computer coming back in reach: its roster read against the record.
       counts["work computer contact"] = await counted("work computer contact", async () => {
         contact({ deviceId: WORK_COMPUTER, contact: "gone" });
         contact({ deviceId: WORK_COMPUTER, contact: "in-reach" });
-        await settle();
+        await settled();
       });
       // A record without the crew facts, read as each such launch reads it.
       settings.setFirstRun({ welcomedAt: null, firstTurnAt: NOW, welcomeState: "skipped" });

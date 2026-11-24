@@ -20,6 +20,7 @@ import { alreadyAllowed, inheritedOverride } from "../tasks/alreadyAllowed";
 import { sha256OfFile } from "../tasks/handoverFiles";
 import type { TaskService } from "../tasks/taskService";
 import { checkedOutRefFor } from "../workspace/workspaceService";
+import { linkedIssuesSection } from "./buildRows";
 import type { CardService } from "./cardService";
 import { otherCheckedOutBranch } from "./checkedOutHead";
 import { type CrewmateProcedureFacts, crewmateProcedureFor } from "./crewSession";
@@ -271,7 +272,11 @@ export class CrewBrief {
         renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
       ]);
     }
-    if (record?.shape?.unsafe_data_reader) sections.push([UNSAFE_DATA_READER_WORDS]);
+    if (record?.shape?.unsafe_data_reader) {
+      sections.push([UNSAFE_DATA_READER_WORDS]);
+      const linked = linkedIssuesSection(this.options.tasks, record);
+      if (linked) sections.push([linked]);
+    }
     if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.

@@ -2,6 +2,7 @@ import type { ServedWakeOrigin } from "@shared/servedFrame";
 import type { EffectiveTaskPolicies, TaskPolicyEdits } from "@shared/taskPolicies";
 import type { CrewPrograms, ProgramRunner } from "../program/programRunner";
 import type { TaskRecord } from "../storage/taskRecords";
+import type { BuildRows } from "./buildRows";
 import type { CaptainOverrides } from "./captainOverrides";
 import type { CardActions } from "./cardActions";
 import type { CardService } from "./cardService";
@@ -66,6 +67,7 @@ export type CrewCore = {
   readonly toolHooks: CrewToolHooks;
 
   readonly briefs: CrewBrief;
+  readonly buildRows: BuildRows;
   readonly cards: CardService;
   readonly costLimits: CostLimits;
   readonly crewmateCards: CrewmateCards;

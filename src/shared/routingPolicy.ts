@@ -269,6 +269,20 @@ export const workShapeSchema = z.object({
    */
   result_schema: z.record(z.string(), z.unknown()).optional(),
   /**
+   * The outside issue this task answers, where its project lives
+   * (docs/agents-reach.md, "A reader's Build rows"): written by the host
+   * when the captain's click files a reader's Build row, and carried by a
+   * task built on such a task (`basis`). `closes` marks the change that
+   * closes the issue when it merges: a fix, or a plan's last piece.
+   */
+  issue: z
+    .object({
+      number: z.number().int().positive(),
+      url: z.string(),
+      closes: z.boolean().optional(),
+    })
+    .optional(),
+  /**
    * The task, by key, whose last commit this task's working copy starts at
    * (INF-799 piece 1): its branch head while its working copy is present,
    * else its kept ref. Declared by the first mate; the host checks it holds
@@ -513,6 +527,7 @@ export const HOST_KEPT_SHAPE_FIELDS = [
   "program_part",
   "built_on",
   "review_model",
+  "issue",
 ] as const satisfies readonly (keyof WorkShape)[];
 
 /** Derived at every read and never stored. */
@@ -587,6 +602,13 @@ export const workShapeAskSchema = workShapeSchema
      * `in_place: { folder: true }` from it.
      */
     in_folder: z.boolean().optional(),
+    /**
+     * The first mate's mark on a task built on one that answers an outside
+     * issue (`WorkShape.issue`): its change closes that issue when it
+     * merges, as a plan's last piece does. A fix built on a reproduce step
+     * closes it unmarked.
+     */
+    closes_issue: z.boolean().optional(),
   });
 export type WorkShapeAsk = z.infer<typeof workShapeAskSchema>;
 

@@ -347,6 +347,7 @@ export function startHomeCrew({
     githubRead: (taskId, input) => githubGateway.readForCrew(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
     webRead: (taskId, input, signal) => readerWeb.read(taskId, input, signal),
+    readerOpenIssue: (taskId, issue) => githubGateway.readerOpenIssue(taskId, issue),
     readCheckWatch: (taskId) => changeDelivery.checks.readWatched(taskId),
     readComments: (taskId) => changeDelivery.comments.readTask(taskId),
     readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),

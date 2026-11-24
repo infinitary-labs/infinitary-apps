@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { BUILD_ROW_PROVENANCE } from "../../../src/core/orchestrator/buildRows";
 import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../../src/core/prompts/cardContract";
 import { runbookManifestSchema } from "../../../src/shared/runbooks";
 import { completionCardBody } from "../../helpers/completionCard";
@@ -62,6 +63,33 @@ export const SEQ_BUG_NO = {
   reproduce: "Reproduce: the dock flicker",
   fix: "Fix: the dock flicker",
 } as const;
+/**
+ * Two bugs filed from an intake round's Build rows (docs/agents-reach.md,
+ * "A reader's Build rows"), each a reproduce step on the project's open
+ * issue that waits until the captain starts it: one reproduces, one does not.
+ */
+export const SEQ_ROW_ISSUE = { number: 14, url: "https://github.com/octo/meterlab/issues/14" };
+export const SEQ_ROW_YES = {
+  reproduce: "Reproduce: the gauge freeze",
+  goal: "The gauge needle moves again after the meter wakes from sleep.",
+  why: "The issue's reporter sees the needle stay put for an hour after a wake.",
+  fix: "Fix: the gauge freeze",
+} as const;
+export const SEQ_ROW_NO = {
+  reproduce: "Reproduce: the gauge blink",
+  goal: "The gauge stops blinking once the battery is full.",
+  why: "The issue's reporter sees the gauge blink on a full battery.",
+} as const;
+export const SEQ_ROW_REPRODUCED_YES =
+  "reproduced: yes - the needle stays put after a wake on the current version; the failing check is on the working copy.";
+export const SEQ_ROW_REPRODUCED_NO =
+  "reproduced: no - the gauge held steady on a full battery through ten charges on a clean setup.";
+export const SEQ_ROW_NOT_REPRODUCED_TITLE = "The gauge blink did not reproduce";
+export const SEQ_ROW_NOT_REPRODUCED_WAYS = [
+  "Ask the reporter",
+  "Keep for later",
+  "Close as not reproduced",
+] as const;
 const workflowRoot = join(process.cwd(), "resources/runbooks/sequences");
 const workflowSection = runbookManifestSchema.parse(
   JSON.parse(readFileSync(join(workflowRoot, "runbook.json"), "utf8")),
@@ -80,6 +108,7 @@ export const SEQ_PLAN_GOAL = "Propose two or three directions for the settings p
 export const SEQ_IMPLEMENT_GOAL = "Implement the accepted direction for the settings page";
 const SEQ_SMALL_GOAL = "The settings page title reads Settings";
 const SEQ_FIX_GOAL = "at its root; the failing check passes";
+export const SEQ_ROW_FIX_GOAL = `Fix the gauge freeze ${SEQ_FIX_GOAL}.`;
 export const SEQ_PLAN_CARD_TITLE = "Two ways to declutter settings";
 export const SEQ_PLAN_CHOICE = APPROVE_AND_BUILD;
 /** The plan card's second record answer, the one the captain picks. */
@@ -534,6 +563,26 @@ function sequencesFirstmateMove(
     }
     return { text: "Fix under way." };
   }
+  // A Build row's reproduce step said yes: nothing was planned after it, so
+  // the fix is spawned built on the reproduction, and the step closes as
+  // answered into it.
+  const rowYes = reproduced(SEQ_ROW_YES.reproduce, "yes");
+  if (rowYes) {
+    if (results.length === 0)
+      return {
+        calls: [
+          {
+            name: "spawn_crewmate",
+            args: { title: SEQ_ROW_YES.fix, goal: SEQ_ROW_FIX_GOAL, shape: { basis: rowYes } },
+          },
+        ],
+      };
+    if (results.length === 1)
+      return {
+        calls: [{ name: "settle_task", args: { task_id: rowYes, mode: "done", why: "answered" } }],
+      };
+    return { text: "Fix under way." };
+  }
   // The check's pass: the build it held carries on, so the check closes as
   // answered into it.
   const passed = user.match(
@@ -630,6 +679,50 @@ function sequencesCrewmateMove(
   if (body.includes(SEQ_CHECKED_BUILD_GOAL)) return { text: "Adding the battery meter now." };
   if (body.includes(SEQ_SMALL_GOAL)) return { text: "Fixing the title spelling now." };
   if (body.includes(SEQ_FIX_GOAL)) return { text: "The fix is under way." };
+  // A Build row's reproduce step, whose brief says where it came from.
+  if (body.includes(BUILD_ROW_PROVENANCE)) {
+    if (hasToolResults) return { text: "done" };
+    if (body.includes(SEQ_ROW_NO.goal))
+      return {
+        calls: [
+          {
+            name: "emit_card",
+            args: {
+              title: SEQ_ROW_NOT_REPRODUCED_TITLE,
+              body: "<p>The gauge did not blink on a full battery.</p><ul><li>Ten charges, no blink.</li></ul>",
+              actions: [
+                { id: "ask", label: SEQ_ROW_NOT_REPRODUCED_WAYS[0], default: true },
+                { id: "later", label: SEQ_ROW_NOT_REPRODUCED_WAYS[1] },
+                { id: "close", label: SEQ_ROW_NOT_REPRODUCED_WAYS[2] },
+              ],
+            },
+          },
+          {
+            name: "report",
+            args: {
+              text: SEQ_ROW_REPRODUCED_NO,
+              result: {
+                reproduced: false,
+                version: "the current version",
+                question: "Which charger was the meter on?",
+              },
+            },
+          },
+        ],
+      };
+    if (body.includes(SEQ_ROW_YES.goal))
+      return {
+        calls: [
+          {
+            name: "report",
+            args: {
+              text: SEQ_ROW_REPRODUCED_YES,
+              result: { reproduced: true, version: "the current version" },
+            },
+          },
+        ],
+      };
+  }
   if (body.includes(SEQ_REPRODUCE_GOAL)) {
     if (hasToolResults) return { text: "done" };
     const verdict = body.includes("the dock flicker") ? SEQ_REPRODUCED_NO : SEQ_REPRODUCED_YES;

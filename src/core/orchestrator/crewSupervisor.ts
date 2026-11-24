@@ -41,6 +41,7 @@ import type { CompletionOffer, TaskRecord } from "../storage/taskRecords";
 import { carryOnWords } from "../tasks/recordActivity";
 import { TaskService } from "../tasks/taskService";
 import { type AskEnding, askEndingOf } from "./askEnding";
+import { BuildRows } from "./buildRows";
 import { CaptainOverrides } from "./captainOverrides";
 import { CardActions } from "./cardActions";
 import { FIRSTMATE_CARD_PREFIX, type OwnCardWrite } from "./cardEmit";
@@ -154,6 +155,8 @@ export class CrewSupervisor {
   readonly crewmateCards: CrewmateCards;
   /** Integration calls held for the captain: their approval cards and what came of them. */
   readonly integrationAsks: IntegrationAsks;
+  /** An unsafe data reader's Build rows: kept on its approval card, filed on the captain's click. */
+  readonly buildRows: BuildRows;
   /** What a crewmate reports: its follow-ups, progress, report, responses and validation records. */
   readonly reportIntake: ReportIntake;
   /** The host's own work in a project's folder: its repairs, the start check and their close. */
@@ -257,6 +260,9 @@ export class CrewSupervisor {
       },
       get integrationAsks() {
         return supervisor.integrationAsks;
+      },
+      get buildRows() {
+        return supervisor.buildRows;
       },
       get ladder() {
         return supervisor.ladder;
@@ -621,6 +627,13 @@ export class CrewSupervisor {
       cards: this.cards,
       notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
       steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
+    });
+    this.buildRows = new BuildRows(options, {
+      present: (taskId, ask, dropped) => {
+        this.integrationAsks.askForge(taskId, ask, dropped);
+      },
+      startNow: (key) => this.starts.startQueuedNow(key, { audience: "captain" }),
+      now: this.now,
     });
     this.reportIntake = new ReportIntake(options, {
       cards: this.cards,

@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
-import type { ForgeKind } from "@shared/forge";
+import { type ForgeKind, forgeOf } from "@shared/forge";
 import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/forgeKinds";
 import { INTEGRATION_KIND_NAMES, type IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
@@ -101,6 +101,9 @@ const READER_WRITE_REFUSAL =
 const READER_NO_PROJECT_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
   "Refused: this unsafe data reader has no project, so it reads and writes nothing where projects live. Nothing was read, kept or sent.";
+const BUILD_ROW_GITHUB_ONLY =
+  // i18n-exempt: served to the crewmate as a tool answer
+  "A Build row names an issue of an unsafe data reader's own project on GitHub, read through its own sign-in.";
 const READER_VALIDATION_REFUSAL =
   // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
   "Refused: an unsafe data reader's writes carry no validation effect. Nothing was kept or sent.";
@@ -573,6 +576,66 @@ export class GithubGatewayService {
   }
 
   /**
+   * Whether a number is an open issue of an unsafe data reader's own project
+   * on GitHub, read through the project's own sign-in as one call of the
+   * task's allowance (docs/agents-reach.md, "A reader's Build rows"). A
+   * pull request shares the numbering and is never one; only GitHub's
+   * issues are offered, since only they read the closing line a change
+   * names its issue with.
+   */
+  async readerOpenIssue(
+    taskId: string,
+    issue: number,
+  ): Promise<{ url: string; place: string } | { refused: string }> {
+    let target: Target;
+    try {
+      target = this.targetOf(taskId);
+    } catch (caught) {
+      return { refused: messageOf(caught) };
+    }
+    const repoId = this.options.tasks.get(taskId)?.repoId;
+    const origin = forgeOf(repoId ? this.options.repos.get(repoId)?.origin : undefined);
+    if (
+      !this.isReader(taskId) ||
+      target.via !== "project" ||
+      apiDialectAt(target.forge.kind, target.forge.host) !== "github" ||
+      !origin.owner ||
+      !origin.name
+    )
+      return { refused: BUILD_ROW_GITHUB_ONLY };
+    let response: ForgeApiResponse;
+    try {
+      this.spend(taskId, target.api);
+      const route = target.api.route(
+        "GET",
+        `/repos/${origin.owner}/${origin.name}/issues/${issue}`,
+      );
+      response = await target.api.call("GET", route.path);
+    } catch (caught) {
+      // i18n-exempt: a refusal the reader's model hears in its tool answer
+      return { refused: `Could not read issue #${issue}: ${messageOf(caught)}` };
+    }
+    let read: { state?: unknown; pull_request?: unknown; html_url?: unknown } = {};
+    try {
+      read = JSON.parse(response.body);
+    } catch {}
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
+    if (response.status === 404 || response.status === 410)
+      return { refused: `#${issue} is not an issue of this project.` };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
+    if (response.status >= 300 || typeof read.html_url !== "string")
+      return {
+        refused: `Could not read issue #${issue}: ${target.api.place} answered ${response.status}.`,
+      };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
+    if (read.pull_request !== undefined)
+      return { refused: `#${issue} is a pull request, not an issue.` };
+    // i18n-exempt: a refusal the reader's model hears in its tool answer
+    if (read.state !== "open") return { refused: `Issue #${issue} is not open.` };
+    return { url: read.html_url, place: target.api.place };
+  }
+
+  /**
    * The captain's click on a `request_write` card (FI3-1571 piece 4): take
    * the kept write once - marked taken before anything is sent - and send
    * exactly what was kept, through the sign-in it was asked through. A call
@@ -598,14 +661,21 @@ export class GithubGatewayService {
     if ("refused" in taken) {
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     }
-    if (taken.ask.kind === "integration" || taken.ask.kind === "web") {
+    if (
+      taken.ask.kind === "integration" ||
+      taken.ask.kind === "web" ||
+      taken.ask.kind === "build"
+    ) {
       // An integration's ask runs through its binding (`IntegrationsService.sendAsk`),
-      // a reader's web page through its page reader (`ReaderWebService.sendTaken`).
-      // i18n-exempt: served to the crewmate as a write-answered outcome
+      // a reader's web page through its page reader (`ReaderWebService.sendTaken`),
+      // and a Build row is answered by the host (`BuildRows.answer`).
+      // i18n-exempt: the why the crewmate's model hears in its write-answered wake
       const why =
         taken.ask.kind === "web"
           ? "a web page is not a write where a project lives, so it was not sent"
-          : "an integration's action is not a write where a project lives, so it was not sent";
+          : taken.ask.kind === "build"
+            ? "a Build row is not a write where a project lives, so nothing was sent"
+            : "an integration's action is not a write where a project lives, so it was not sent";
       this.options.tasks.delivery.recordWriteAskOutcome(taskId, taken.ask.id, {
         kind: "refused",
         why,

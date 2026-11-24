@@ -1602,6 +1602,15 @@ export class CrewStarts {
         : {}),
     });
     if (old.shape?.policies) shape.policies = { ...old.shape.policies, revision: 0 };
+    // The outside issue is the work's, not the attempt's; a Build row's kind
+    // and typed result are the captain's pick on the row, which no ask restates.
+    if (old.shape?.issue) shape.issue = old.shape.issue;
+    if (old.shape?.kind_source === "firstmate:build-row") {
+      shape.kind = old.shape.kind;
+      shape.kind_source = old.shape.kind_source;
+      if (old.shape.deliverable) shape.deliverable = old.shape.deliverable;
+      if (old.shape.result_schema) shape.result_schema = old.shape.result_schema;
+    }
     const fresh = this.core.options.tasks.starts.startAgain(old.id, {
       id: randomUUID().slice(0, 8),
       shape: old.intent ? withDeliverable(shape, old.intent) : shape,

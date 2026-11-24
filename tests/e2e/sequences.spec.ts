@@ -1,8 +1,16 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import {
+  BUILD_ROW_PROVENANCE,
+  buildRowBrief,
+  buildRowShape,
+} from "../../src/core/orchestrator/buildRows";
 import { renderBasisSection } from "../../src/core/orchestrator/intentBrief";
 import { droppedLine, settlingText } from "../../src/core/orchestrator/settleWords";
+import { openDatabase } from "../../src/core/storage/db";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { DISCARDED_LINE } from "../../src/core/tasks/taskFeed";
+import { TaskService } from "../../src/core/tasks/taskService";
 import { planSkippedText } from "../../src/shared/routingPolicy";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -26,6 +34,7 @@ import {
   startedLine,
   statusLine,
 } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   SEQ_BUG_NO,
   SEQ_BUG_NO_ASK,
@@ -58,6 +67,13 @@ import {
   SEQ_PROTOTYPE_PLAN_GOAL,
   SEQ_PROTOTYPE_SPEC,
   SEQ_REPRODUCED_YES,
+  SEQ_ROW_FIX_GOAL,
+  SEQ_ROW_ISSUE,
+  SEQ_ROW_NO,
+  SEQ_ROW_NOT_REPRODUCED_TITLE,
+  SEQ_ROW_NOT_REPRODUCED_WAYS,
+  SEQ_ROW_REPRODUCED_YES,
+  SEQ_ROW_YES,
   SEQ_SAVED,
   SEQ_SAVED_ASK,
   SEQ_SAVED_BOTTOM_LABEL,
@@ -78,6 +94,9 @@ import {
   sequences,
 } from "./scenarios/sequences";
 import { cardReply, showCard, shownCard, shownCardFrame, shownEntry } from "./stack";
+
+const SEQ_ROW_YES_ID = "rowyes01";
+const SEQ_ROW_NO_ID = "rowno001";
 
 /**
  * The basis section's sentences that name work to start from, each up to
@@ -119,6 +138,34 @@ let userDataDir: string;
 
 test.beforeAll(async () => {
   userDataDir = scratchDir("infinitary-sequences-");
+  // Two bugs an intake round's Build rows filed for later, as the captain's
+  // Keep for later files them: a reproduce step on the open issue, waiting
+  // until someone starts it.
+  const db = openDatabase(userDataDir);
+  const tasks = new TaskService({ db });
+  for (const [id, row] of [
+    [SEQ_ROW_YES_ID, SEQ_ROW_YES],
+    [SEQ_ROW_NO_ID, SEQ_ROW_NO],
+  ] as const) {
+    const filed = {
+      start: "reproduce" as const,
+      issue: SEQ_ROW_ISSUE.number,
+      issueUrl: SEQ_ROW_ISSUE.url,
+      ...row,
+    };
+    tasks.create({
+      id,
+      kind: "work",
+      title: row.reproduce,
+      goal: row.goal,
+      prompt: buildRowBrief(filed),
+      shape: buildRowShape(filed),
+      repoId: null,
+      startPolicy: "on-request",
+      actor: "captain",
+    });
+  }
+  db.close();
   launched = await launchApp({ withMockProvider: true, scenarios: [sequences], userDataDir });
 });
 
@@ -623,4 +670,71 @@ test("a bug that does not reproduce: the owner shows the decision and no fix sta
     false,
   );
   expect(await detailOf(page, fix.id)()).toMatchObject({ status: "open" });
+});
+
+/** The captain's Start on a task waiting in the backlog, from its record. */
+async function startFromRecord(page: Page, key: string): Promise<void> {
+  await expandDock(page, "now");
+  await openGroup(page, "backlog");
+  await expect.poll(() => nowRowGroup(page, key), { timeout: 30_000 }).toBe("backlog");
+  await rowAtRest(page, key);
+  await pressRow(page, key);
+  await expectRecordBody(page);
+  expect(await expectRecordBar(page)).toMatchObject({ next: "start" });
+  await recordBarButton(page, "next").click();
+}
+
+test("a Build row's bug that reproduces: the fix starts built on the reproduction and carries the issue", async () => {
+  const { page } = launched;
+  const reproduce = await rowTitled(page, SEQ_ROW_YES.reproduce);
+  const reproduceDetail = detailOf(page, reproduce.id);
+  expect(await reproduceDetail()).toMatchObject({
+    status: "open",
+    startPolicy: "on-request",
+    deliverable: "answer",
+    issue: SEQ_ROW_ISSUE,
+  });
+  await startFromRecord(page, reproduce.key);
+  // Its crewmate starts from the row's goal and why and where they came
+  // from, never the issue's number or link.
+  const started = await servedBrief(BUILD_ROW_PROVENANCE);
+  expect(started).toContain(SEQ_ROW_YES.goal);
+  expect(started).not.toContain(`#${SEQ_ROW_ISSUE.number}`);
+  expect(started).not.toContain(SEQ_ROW_ISSUE.url);
+
+  // "reproduced: yes" starts the fix built on the reproduction; the issue
+  // rides with it, and its change closes the issue.
+  const fix = await rowTitled(page, SEQ_ROW_YES.fix);
+  await expect.poll(detailOf(page, fix.id), { timeout: 30_000 }).toMatchObject({
+    status: "active",
+    issue: SEQ_ROW_ISSUE,
+  });
+  const brief = await servedBrief(SEQ_ROW_FIX_GOAL);
+  expect(brief).toContain(`grounded in ${reproduce.key}`);
+  expect(brief).toContain(SEQ_ROW_REPRODUCED_YES);
+  expect(readSavedData(userDataDir, (db) => new TaskStore(db).get(fix.id)?.shape?.issue)).toEqual({
+    ...SEQ_ROW_ISSUE,
+    closes: true,
+  });
+  await expect.poll(reproduceDetail, { timeout: 30_000 }).toMatchObject({
+    status: "done",
+    closedReason: "answered",
+  });
+});
+
+test("a Build row's bug that does not reproduce: its crewmate's card offers asking the reporter, keeping it or closing it", async () => {
+  const { page } = launched;
+  const reproduce = await rowTitled(page, SEQ_ROW_NO.reproduce);
+  await startFromRecord(page, reproduce.key);
+  await cardShown(page, SEQ_ROW_NOT_REPRODUCED_TITLE);
+  for (const way of SEQ_ROW_NOT_REPRODUCED_WAYS)
+    await expect(page.getByRole("button", { name: way, exact: true })).toBeVisible();
+  const cards = await page.evaluate(() => window.infinitary.cards.list());
+  expect(cards.find((card) => card.title === SEQ_ROW_NOT_REPRODUCED_TITLE)).toMatchObject({
+    taskId: reproduce.id,
+    author: "crewmate",
+  });
+  await expect
+    .poll(async () => (await detailOf(page, reproduce.id)()).outcome ?? "", { timeout: 30_000 })
+    .toContain("reproduced: no");
 });

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reader-build-rows",
+      "kind": "feature",
+      "title": "Start work on an issue from the intake reader's card",
+      "body": "When a crewmate that reads your project's issues finds a bug or an idea worth doing, it can propose it as a Build row on its approval card. The row links the issue, says whether it starts by reproducing the bug or planning the idea, and shows the goal and why its crewmate would get. Pick Start now, Keep for later or Don't file; nothing is filed until you approve the card. On GitHub, a change built from it says it closes or is part of that issue, and the task's Info tab links the issue.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "reader-build-rows-dark.webp",
+        "light": "reader-build-rows-light.webp",
+        "alt": "An approval card with a Build row: its title, a link to the issue, Reproduce first, its goal and why, and the choice Start now, Keep for later or Don't file"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -17,6 +17,7 @@ import type {
   PlacedSecretUseAnswer,
   PlacedSecretUseInput,
 } from "@shared/workSecrets";
+import type { BuildRowStart } from "@shared/writeAsk";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
 import { z } from "zod";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
@@ -297,6 +298,10 @@ export type FollowupInput = {
   testFailure?: boolean;
   /** The failing test's path. The host dedupes open rows on it. */
   testPath?: string;
+  /** An unsafe data reader's Build row: the open issue of its own project it answers. */
+  issue?: number;
+  /** With `issue`: how the row's task starts, a bug's reproduce step or an idea's plan. */
+  startAs?: BuildRowStart;
 };
 
 /**

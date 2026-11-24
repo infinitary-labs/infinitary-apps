@@ -90,7 +90,15 @@ import { addedProjects, openProject, projectLine } from "./projects";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import { putInLine } from "./rails";
-import { copiesOf, firstmateTurnWith, READER_RUNTIMES, readerMarked } from "./readerJourney";
+import {
+  copiesOf,
+  crewmateTurnTools,
+  expectBuildRowFiled,
+  expectBuildRowShown,
+  firstmateTurnWith,
+  READER_RUNTIMES,
+  readerMarked,
+} from "./readerJourney";
 import { readSavedData } from "./savedData";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import {
@@ -1013,6 +1021,7 @@ for (const runtime of READER_RUNTIMES) {
     await expect(rows.nth(1)).toContainText(dispatch as string);
     await expect(rows.nth(1)).toContainText(ASK_ROW_WORDS.joined);
     for (const row of [0, 1]) await expect(rows.nth(row).getByRole("checkbox")).toBeChecked();
+    await expectBuildRowShown(page, cardBody(page, cardTitle));
     const shown = (await page.evaluate(() => window.infinitary.cards.list())).filter(
       (one) => one.meta === "Integration approval",
     );
@@ -1040,6 +1049,7 @@ for (const runtime of READER_RUNTIMES) {
     expect(firstReport).not.toMatch(/localhost/);
     expect(firstReport).toContain("github-data");
     expect(firstReport).toContain("Nothing was read");
+    expect(firstReport).toContain("Not filed: kept as Build row");
     // Its report is kept between reader-data marks, and reaches the first
     // mate's own turn that way, its ask of the first mate marked too.
     expect(firstReport).toMatch(/\[\[reader-data fence=[0-9a-f]{16} /);
@@ -1068,21 +1078,11 @@ for (const runtime of READER_RUNTIMES) {
     expect(github.requests()).not.toContain(issue);
     expect(github.dispatches()).toEqual([]);
     // Its session held only reads: no shell, no file changes and no browser; web_read is its one way onto the web.
-    const tools = (launched.mockProvider?.requestBodies() ?? [])
-      .map((raw) => JSON.parse(raw))
-      .filter((request) => JSON.stringify(request.messages).includes(UNSAFE_DATA_READER_MARKER))
-      .map((request) =>
-        (request.tools ?? []).map(
-          (tool: { name?: string; function?: { name: string } }) =>
-            tool.name ?? tool.function?.name,
-        ),
-      )
-      // The crewmate's own turns: the first mate's and the app's tool-less asks are left out.
-      .filter(
-        (names: string[]) =>
-          names.some((name) => name.endsWith("report")) &&
-          !names.some((name) => name.endsWith("spawn_crewmate")),
-      );
+    const tools = crewmateTurnTools(
+      (launched.mockProvider?.requestBodies() ?? []).filter((raw) =>
+        JSON.stringify(JSON.parse(raw).messages).includes(UNSAFE_DATA_READER_MARKER),
+      ),
+    );
     expect(tools.length).toBeGreaterThan(0);
     for (const names of tools) {
       for (const name of runtime.reads) expect(names).toContain(name);
@@ -1129,6 +1129,10 @@ for (const runtime of READER_RUNTIMES) {
     const oldestFirst = savedWriteAsks(userDataDir, id).sort((a, b) => a.at - b.at);
     expect(oldestFirst).toEqual([
       expect.objectContaining({
+        kind: "build",
+        outcome: expect.objectContaining({ kind: "filed", started: false }),
+      }),
+      expect.objectContaining({
         path: UNSAFE_DATA_READER_WRITES[0]?.path,
         sentAt: expect.any(Number),
         outcome: expect.objectContaining({ kind: "answered", status: 201 }),
@@ -1138,6 +1142,7 @@ for (const runtime of READER_RUNTIMES) {
         outcome: expect.objectContaining({ kind: "refused" }),
       }),
     ]);
+    await expectBuildRowFiled(page, github.requests());
     const detail = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
     const transcript = `First report:\n${firstReport}\n\nAfter the click:\n${detail?.outcome ?? ""}\n\nSaved asks:\n${JSON.stringify(oldestFirst, null, 2)}\n\nSession tools:\n${JSON.stringify(tools[0])}\n\nRequests:\n${github.requests().join("\n")}`;
     await test.info().attach(shot, { body: transcript, contentType: "text/plain" });
@@ -1231,16 +1236,9 @@ for (const runtime of READER_RUNTIMES) {
     // own crewmate's brief: the one offered the report tool, past the app's
     // tool-less ask that sorts the work's kind.
     const brief = async () =>
-      (launched.mockProvider?.requestBodies() ?? []).find((raw) => {
-        if (!raw.includes(FOLLOWUP_PROVENANCE_OPENING)) return false;
-        const names = (
-          (JSON.parse(raw).tools ?? []) as { name?: string; function?: { name: string } }[]
-        ).map((tool) => tool.name ?? tool.function?.name ?? "");
-        return (
-          names.some((name) => name.endsWith("report")) &&
-          !names.some((name) => name.endsWith("spawn_crewmate"))
-        );
-      }) ?? "";
+      (launched.mockProvider?.requestBodies() ?? []).find(
+        (raw) => raw.includes(FOLLOWUP_PROVENANCE_OPENING) && crewmateTurnTools([raw]).length > 0,
+      ) ?? "";
     await expect.poll(brief, { timeout: 60_000 }).not.toBe("");
     const started = await brief();
     if (evidence) writeFileSync(join(evidence, `${shot}-followup-request.json`), started);

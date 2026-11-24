@@ -1375,7 +1375,10 @@ export class CrewmateCards {
           ...action,
           id: action.id || "send",
           label:
-            ask?.kind !== "integration" && ask?.kind !== "web" && ask?.feedback
+            ask?.kind !== "integration" &&
+            ask?.kind !== "web" &&
+            ask?.kind !== "build" &&
+            ask?.feedback
               ? submitFeedbackWords()
               : sendWriteWords(ask?.place ?? "GitHub"),
           default: true,

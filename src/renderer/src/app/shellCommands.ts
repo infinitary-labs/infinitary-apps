@@ -20,6 +20,7 @@ import {
   tabTaskOf,
 } from "../cards/taskTabs";
 import { crewOrbit } from "../character/crew/crewSignal";
+import { SAVE_PICTURE_EVENT } from "../design/cards/PictureViewer";
 import { focusWithRing } from "../design/focus";
 import { giveFocusBack, moveInFrame } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
@@ -343,6 +344,9 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
         (button) => button.click(),
       );
   },
+  "viewer.save-picture": () => {
+    document.querySelector("[data-picture-viewer]")?.dispatchEvent(new Event(SAVE_PICTURE_EVENT));
+  },
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
   "cards.thread-new": () => toShownPart(threadJumpButton, (button) => button.click()),
   "cards.sound": () => toShownPart(soundToggle, (button) => button.click()),
@@ -489,6 +493,7 @@ function windowFacts(): WindowFacts {
   return {
     dialogOpen: modalOpen(),
     viewerPointAt: viewerPointAt() !== null,
+    viewerOpen: document.querySelector("[data-picture-viewer]") !== null,
     browserPointAt: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && browserPointAt(id) !== null;

@@ -496,6 +496,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "window",
     "Saves a card's file into Downloads on the computer whose window asked",
   ],
+  "inf:cards:save-picture": [
+    "window",
+    "Saves the picture or recording the picture viewer shows into Downloads on the computer whose window asked",
+  ],
   "inf:cards:save-files": [
     "window",
     "Saves a card's files into one new folder in Downloads on the computer whose window asked",

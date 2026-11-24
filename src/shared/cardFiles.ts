@@ -74,6 +74,20 @@ export const cardFileSavedSchema = z.object({
 export type CardFileSaved = z.infer<typeof cardFileSavedSchema>;
 
 /**
+ * What the picture viewer's Save to Downloads saves (the design skill's
+ * PictureViewer, "The picture's menu"): a card picture or a demo recording
+ * the home keeps, by the name the home minted, which the window's own
+ * process reads through the home; else a PNG the window drew itself, of a
+ * diagram or a picture the body carries.
+ */
+export const pictureSaveSourceSchema = z.union([
+  z.strictObject({ picture: z.string().min(1).max(128) }),
+  z.strictObject({ demo: z.string().min(1).max(128) }),
+  z.strictObject({ png: z.string().min(1) }),
+]);
+export type PictureSaveSource = z.infer<typeof pictureSaveSourceSchema>;
+
+/**
  * Where Save all put a card's files: the new folder's name in the window's
  * computer's Downloads and its full path, how many files were saved, and
  * each file that was not, by its id with why.

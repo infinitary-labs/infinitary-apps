@@ -716,6 +716,8 @@
 "commandUpdatesShowWords" = "更新, 重新啟動, 穩定版, 測試版";
 "commandUsageUnit" = "切換用量單位";
 "commandUsageUnitWords" = "用量, 費用, 美元, 估計";
+"commandViewerSavePicture" = "儲存圖片";
+"commandViewerSavePictureWords" = "下載, 圖片, 影像, 檢視器";
 "commandWhatsNewShow" = "顯示新功能";
 "commandWhatsNewShowWords" = "發布, 說明, 變更, 版本";
 "composerFolderNotProject" = "無法將該資料夾加入為專案。";
@@ -2315,6 +2317,7 @@
 "refuseNoCardThreadIsReadAboveIts" = "沒有卡片討論串停在最新訊息之前";
 "refuseNoOtherCardIsNew" = "沒有其他新卡片";
 "refuseNoPageToPointAt" = "沒有可指向的頁面";
+"refuseNoPictureIsOpen" = "請先開啟卡片中的圖片";
 "refuseNoReleaseNotesYet" = "還沒有版本說明";
 "refuseNoUpdateIsAvailable" = "沒有可用的更新";
 "refuseNoUpdateIsSavingWorkNow" = "目前沒有更新正在儲存工作";
@@ -3994,10 +3997,15 @@
 "uiPercentLeft" = "剩餘 %1$@%%";
 "uiPictureViewerActualSize" = "實際大小";
 "uiPictureViewerClose" = "關閉檢視器";
+"uiPictureViewerCopied" = "已複製圖片";
+"uiPictureViewerCopyFailed" = "無法複製圖片";
+"uiPictureViewerCopyPicture" = "複製圖片";
 "uiPictureViewerDemoFrom" = "來自 %1$@ 的示範";
+"uiPictureViewerFitToWindow" = "符合視窗";
 "uiPictureViewerHintFitted" = "%1$@ · 符合視窗 · 按一下或按 Z 以 1:1 顯示";
 "uiPictureViewerHintOne" = "%1$@ · 1:1 · 拖曳或捲動即可移動";
 "uiPictureViewerHintOwn" = "%1$@ · 以原始大小顯示";
+"uiPictureViewerMenu" = "圖片操作";
 "uiPictureViewerNext" = "下一張圖片";
 "uiPictureViewerPartFrom" = "%1$@（全螢幕）";
 "uiPictureViewerPause" = "暫停";
@@ -4005,6 +4013,8 @@
 "uiPictureViewerPlay" = "播放";
 "uiPictureViewerPrevious" = "上一張圖片";
 "uiPictureViewerReplay" = "重播";
+"uiPictureViewerSaveFailed" = "無法儲存圖片";
+"uiPictureViewerSaveToDownloads" = "儲存到「下載」";
 "uiPictureViewerSeek" = "跳轉";
 "uiPictureViewerSeekValue" = "%2$@ / %1$@";
 "uiPictureViewerShownAtOwnSize" = "以原始大小顯示";

@@ -252,6 +252,8 @@ const EMACS_CTRL: PresetTable = {
   "size.larger": [linX(lin("+")), linX(lin("=")), lin("+"), lin("=")],
   "size.smaller": [linX(lin("-")), lin("-")],
   "size.reset": [linX(lin("0")), lin("0")],
+  // Ctrl+S finds a task here, so the picture viewer's Save takes Emacs's own save.
+  "viewer.save-picture": [linX(lin("s"))],
 };
 
 /** The presets written as a table of their own; tmux is Vim's table plus its prefix layer. */

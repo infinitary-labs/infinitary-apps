@@ -182,6 +182,8 @@
   "commandUpdatesShowWords": "更新, 重新啟動, 穩定版, 測試版",
   "commandUsageUnit": "切換用量單位",
   "commandUsageUnitWords": "用量, 費用, 美元, 估計",
+  "commandViewerSavePicture": "儲存圖片",
+  "commandViewerSavePictureWords": "下載, 圖片, 影像, 檢視器",
   "commandWhatsNewShow": "顯示新功能",
   "commandWhatsNewShowWords": "發布, 說明, 變更, 版本"
 }

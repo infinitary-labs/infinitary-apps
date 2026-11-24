@@ -12,6 +12,7 @@
   "refuseNoCardThreadIsReadAboveIts": "최신 메시지보다 위를 읽고 있는 카드 스레드가 없어요",
   "refuseNoOtherCardIsNew": "다른 새 카드가 없어요",
   "refuseNoPageToPointAt": "가리킬 페이지가 표시되어 있지 않아요",
+  "refuseNoPictureIsOpen": "먼저 카드의 사진을 여세요",
   "refuseNoReleaseNotesYet": "아직 릴리스 노트가 없어요",
   "refuseNoUpdateIsAvailable": "사용 가능한 업데이트가 없어요",
   "refuseNoUpdateIsSavingWorkNow": "지금 작업을 저장 중인 업데이트가 없어요",

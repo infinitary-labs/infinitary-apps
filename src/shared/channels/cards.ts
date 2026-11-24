@@ -5,6 +5,7 @@ import {
   cardFileSavedSchema,
   cardFilesSavedSchema,
   openCardFileResultSchema,
+  pictureSaveSourceSchema,
   savedCardFilesSchema,
 } from "../cardFiles";
 import { cardNotesSchema } from "../cardNotes";
@@ -251,6 +252,16 @@ export const cardChannels = {
     effect: "change",
     surface: "host",
     request: z.tuple([z.string().min(1).max(256), z.string().min(1).max(128)]),
+    response: cardFileSavedSchema,
+  },
+  // The picture viewer's Save to Downloads: the picture or recording shown,
+  // as its own file, into Downloads on the computer whose window asked,
+  // named for the card and never over another file (the design skill's
+  // PictureViewer, "The picture's menu").
+  "inf:cards:save-picture": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.string().min(1).max(1024), pictureSaveSourceSchema]),
     response: cardFileSavedSchema,
   },
   // Save all on a card's files: every named file into one new folder in

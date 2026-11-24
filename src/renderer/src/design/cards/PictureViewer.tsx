@@ -7,6 +7,8 @@ import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
+import type { RowMenuItem } from "../core/MenuPanel";
+import { PointMenu } from "../core/PointMenu";
 import { useRestLabel } from "../core/restLabel";
 import { type ClientBox, type MarkTool, PictureMarks, placeClientBox } from "./PictureMarks";
 import { pictureHint, pictureSize } from "./pictureViewerWords";
@@ -103,6 +105,27 @@ export type ViewerDemo = {
   sound?: boolean | undefined;
 };
 
+/**
+ * The picture's menu's own actions (the design skill's PictureViewer, "The
+ * picture's menu"): what the card layer does with the picture shown. The
+ * viewer draws the menu and says what happened; absent, the menu offers only
+ * the viewer's own items.
+ */
+export type ViewerMenu = {
+  /** Puts the picture on the clipboard at its own pixels; rejects when it could not. */
+  copy: (picture: ViewerPicture) => Promise<void>;
+  /** Saves the file at `src` into Downloads named for `name`; answers the name it took there. */
+  save: (src: string, name: string) => Promise<string>;
+  /** The Save command's key, drawn at its item's end. */
+  saveKeys?: { keys?: string | undefined; "aria-keyshortcuts"?: string | undefined } | undefined;
+};
+
+/** The event the Save command sends the open viewer (`viewer.save-picture`). */
+export const SAVE_PICTURE_EVENT = "inf-save-picture";
+
+/** How long what the menu did stays where the foot's hint is. */
+const SAID_MS = 4000;
+
 export type PictureViewerProps = {
   /** The card's title: the header names the card. */
   title: string;
@@ -118,6 +141,8 @@ export type PictureViewerProps = {
   onSounding?: ((on: boolean) => void) | undefined;
   /** Point at for a picture, or undefined where it takes no mark. A demo takes none. */
   marking?: ((picture: ViewerPicture) => ViewerMarking | undefined) | undefined;
+  /** Copy and Save for the picture's menu. */
+  menu?: ViewerMenu | undefined;
   onClose: () => void;
 };
 
@@ -171,6 +196,7 @@ export function PictureViewer({
   onSound,
   onSounding,
   marking,
+  menu,
   onClose,
 }: PictureViewerProps) {
   const [index, setIndex] = useState(() => Math.min(Math.max(first, 0), pictures.length - 1));
@@ -191,6 +217,10 @@ export function PictureViewer({
   // A press that began while a note was being written closes that note, not the viewer.
   const pressedWriting = useRef(false);
   const captionId = useId();
+  // The picture's menu: where it opened, and what it last did, in words, for a while.
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+  const saidTimer = useRef<number | undefined>(undefined);
   // A demo's player: what its recording is doing now, as the element says.
   const videoRef = useRef<HTMLVideoElement>(null);
   const playRef = useRef<HTMLButtonElement>(null);
@@ -377,12 +407,71 @@ export function PictureViewer({
     setZoomed(!zoomed);
   }, [zoomable, zoomed, size, box]);
 
+  const say = useCallback((words: string) => {
+    window.clearTimeout(saidTimer.current);
+    setSaid(words);
+    saidTimer.current = window.setTimeout(() => setSaid(null), SAID_MS);
+  }, []);
+  useEffect(() => () => window.clearTimeout(saidTimer.current), []);
+  // What is shown changing takes the last words away with it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the picture shown is the index
+  useEffect(() => {
+    window.clearTimeout(saidTimer.current);
+    setSaid(null);
+  }, [index]);
+
+  const copy = useCallback(() => {
+    if (!menu || demo) return;
+    menu.copy(picture).then(
+      () => say(m.uiPictureViewerCopied()),
+      () => say(m.uiPictureViewerCopyFailed()),
+    );
+  }, [menu, demo, picture, say]);
+  const save = useCallback(() => {
+    if (!menu) return;
+    const name = pictures.length > 1 ? `${title} ${index + 1}` : title;
+    menu.save(demo ? demo.src : picture.src, name).then(
+      (savedAs) => say(m.cardFileSaved({ savedAs })),
+      () => say(m.uiPictureViewerSaveFailed()),
+    );
+  }, [menu, demo, picture.src, pictures.length, title, index, say]);
+  // ⌘S, from the window's command (`viewer.save-picture`).
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || leaving) return;
+    dialog.addEventListener(SAVE_PICTURE_EVENT, save);
+    return () => dialog.removeEventListener(SAVE_PICTURE_EVENT, save);
+  }, [save, leaving]);
+  // ⌘C copies the picture whenever no words are selected: with the caption
+  // selected, the system copies those words as it always did.
+  useEffect(() => {
+    if (leaving || !menu || demo) return;
+    const onCopy = (event: ClipboardEvent) => {
+      if (menuAt || (window.getSelection()?.toString() ?? "") !== "") return;
+      event.preventDefault();
+      copy();
+    };
+    document.addEventListener("copy", onCopy);
+    return () => document.removeEventListener("copy", onCopy);
+  }, [leaving, menu, demo, menuAt, copy]);
+
+  // The menu opens over the picture's middle from the keyboard, where no pointer says where.
+  const openMenuByKey = useCallback(() => {
+    const shown = rowRef.current?.querySelector(
+      "[data-picture], [data-demo-video], [data-demo-gif]",
+    );
+    const rect = (shown ?? rowRef.current)?.getBoundingClientRect();
+    if (rect) setMenuAt({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  }, []);
+
   // The keys, while it is open. Captured at the window so they reach the
   // viewer wherever focus stands and never the stack's paging or the
   // shell's own Escape underneath.
   useEffect(() => {
     if (leaving) return;
     const onKey = (event: KeyboardEvent) => {
+      // The picture's menu takes the keys while it is open: its Esc closes it alone.
+      if (menuAt) return;
       // A dialog of its own over the viewer, the note popover, keeps its keys.
       const over =
         event.target instanceof HTMLElement ? event.target.closest('[role="dialog"]') : null;
@@ -391,6 +480,13 @@ export function PictureViewer({
         event.target instanceof HTMLElement &&
         event.target.closest("button") !== null &&
         dialogRef.current?.contains(event.target);
+      // Shift+F10 or the menu key opens the picture's menu, on a demo too.
+      if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
+        openMenuByKey();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       // A demo's keys are its controls' own; only Esc and the Tab ring are the viewer's.
       if (demo && event.key !== "Escape" && event.key !== "Tab") return;
       let handled = true;
@@ -472,7 +568,20 @@ export function PictureViewer({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [leaving, close, go, toggle, index, pictures.length, demo, point, size, keyBox]);
+  }, [
+    leaving,
+    close,
+    go,
+    toggle,
+    index,
+    pictures.length,
+    demo,
+    point,
+    size,
+    keyBox,
+    menuAt,
+    openMenuByKey,
+  ]);
 
   // A queued mark opened from its note is written again where it is drawn, once it is drawn.
   const again = point?.again;
@@ -505,13 +614,15 @@ export function PictureViewer({
 
   const fitted = size ? { width: size.width * scale, height: size.height * scale } : null;
   const dims = size ? pictureSize(size) : "";
-  const hint = !size
-    ? ""
-    : point?.on
-      ? point.tool === "line"
-        ? m.cardNoteMarkHintLine()
-        : m.cardNoteMarkHintBox()
-      : pictureHint(size, atOne ? "one" : fitsAtOne ? "own" : "fitted");
+  const hint = said
+    ? said
+    : !size
+      ? ""
+      : point?.on
+        ? point.tool === "line"
+          ? m.cardNoteMarkHintLine()
+          : m.cardNoteMarkHintBox()
+        : pictureHint(size, atOne ? "one" : fitsAtOne ? "own" : "fitted");
   const count = demo
     ? clock(length)
     : pictures.length > 1
@@ -614,6 +725,13 @@ export function PictureViewer({
           const writing = pressedWriting.current;
           pressedWriting.current = false;
           if (event.target === event.currentTarget && !writing) close();
+        }}
+        // A right-click on the picture, a diagram or a recording opens its menu; on the space around it, nothing.
+        onContextMenu={(event) => {
+          event.preventDefault();
+          const target = event.target instanceof Element ? event.target : null;
+          if (!target?.closest(PICTURE_PARTS)) return;
+          setMenuAt({ x: event.clientX, y: event.clientY });
         }}
         style={{ position: "relative", flex: 1, minHeight: 0 }}
       >
@@ -738,7 +856,8 @@ export function PictureViewer({
               toggle();
             }}
             onPointerDown={(event) => {
-              if (!atOne) return;
+              // A right-button press opens the menu; only the main button drags.
+              if (!atOne || event.button !== 0) return;
               drag.current = { x: event.clientX, y: event.clientY, moved: false };
               event.currentTarget.setPointerCapture(event.pointerId);
             }}
@@ -1003,7 +1122,7 @@ export function PictureViewer({
           </div>
         ) : null}
         <span
-          hidden={demo !== undefined}
+          hidden={demo !== undefined && !said}
           data-picture-hint=""
           style={{
             fontFamily: "var(--font-mono)",
@@ -1069,8 +1188,73 @@ export function PictureViewer({
           </div>
         )}
       </div>
+      <PointMenu
+        label={m.uiPictureViewerMenu()}
+        items={menuItems()}
+        at={menuAt}
+        onClose={() => setMenuAt(null)}
+        zIndex={VIEWER_MENU_LAYER}
+      />
     </ViewerShell>
   );
+
+  function menuItems(): RowMenuItem[] {
+    const items: RowMenuItem[] = [];
+    if (menu && !demo)
+      items.push({
+        id: "copy",
+        label: m.uiPictureViewerCopyPicture(),
+        onSelect: copy,
+        ...menuKeys(fixedKeys("Copy")), // i18n-exempt: key name
+      });
+    if (menu)
+      items.push({
+        id: "save",
+        label: m.uiPictureViewerSaveToDownloads(),
+        onSelect: save,
+        ...menuKeys(menu.saveKeys),
+      });
+    if (demo) return items;
+    if (items.length > 0) items.push({ separator: true });
+    items.push({
+      id: "actual-size",
+      label: atOne ? m.uiPictureViewerFitToWindow() : m.uiPictureViewerActualSize(),
+      onSelect: toggle,
+      disabled: !zoomable,
+      ...(zoomable ? {} : { detail: m.uiPictureViewerShownAtOwnSize() }),
+      ...menuKeys(fixedKeys("Z")),
+    });
+    if (point)
+      items.push({
+        id: "point-at",
+        label: m.cardNotePointAt(),
+        onSelect: point.toggle,
+        disabled: point.off !== undefined,
+        ...(point.off === undefined ? {} : { detail: point.off }),
+        ...menuKeys({
+          keys: point.keys,
+          "aria-keyshortcuts": point.keyProps?.["aria-keyshortcuts"],
+        }),
+      });
+    return items;
+  }
+}
+
+/** The menu over the viewer's own surface (`ViewerShell`'s layer). */
+const VIEWER_MENU_LAYER = 31;
+
+/** What a right-click opens the menu on: the picture, its marks, a recording. */
+const PICTURE_PARTS = "[data-picture], [data-picture-marks], [data-demo-video], [data-demo-gif]";
+
+function menuKeys(
+  keys: { keys?: React.ReactNode; "aria-keyshortcuts"?: string | undefined } | undefined,
+): { keys?: string; keyShortcuts?: string } {
+  return typeof keys?.keys === "string"
+    ? {
+        keys: keys.keys,
+        ...(keys["aria-keyshortcuts"] ? { keyShortcuts: keys["aria-keyshortcuts"] } : {}),
+      }
+    : {};
 }
 
 function navStyle(side: "left" | "right"): React.CSSProperties {

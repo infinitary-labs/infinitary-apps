@@ -2,7 +2,12 @@ import { createHash, randomBytes } from "node:crypto";
 import { constants, createReadStream } from "node:fs";
 import { copyFile, link, lstat, mkdir, open, realpath, rm } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
-import type { CardFilePiece, CardFileSaved, CardFilesSaved } from "@shared/cardFiles";
+import {
+  CARD_FILE_PIECE_BYTES,
+  type CardFilePiece,
+  type CardFileSaved,
+  type CardFilesSaved,
+} from "@shared/cardFiles";
 
 /**
  * Saves a card's file for the captain into Downloads on the computer whose
@@ -136,6 +141,33 @@ export async function saveIntoDownloads(options: {
   } finally {
     await rm(part, { force: true });
   }
+}
+
+/**
+ * Saves bytes already in hand into Downloads the way a card's file is saved:
+ * checked, under a free name, never over another file. The bytes travel to
+ * `saveIntoDownloads` a piece at a time, as a card's file does.
+ */
+export function saveBytesIntoDownloads(options: {
+  folder: string;
+  name: string;
+  data: Buffer;
+  mark?: (path: string) => Promise<void>;
+}): Promise<CardFileSaved> {
+  const { data, name } = options;
+  if (data.length === 0) return Promise.reject(new Error(`${name} is empty.`));
+  const sha256 = createHash("sha256").update(data).digest("hex");
+  return saveIntoDownloads({
+    folder: options.folder,
+    mark: options.mark,
+    read: async (offset) => ({
+      name,
+      bytes: data.length,
+      sha256,
+      offset,
+      data: data.subarray(offset, offset + CARD_FILE_PIECE_BYTES).toString("base64"),
+    }),
+  });
 }
 
 /** A folder name from a task's title: one name, without slashes, control characters or a leading dot. */

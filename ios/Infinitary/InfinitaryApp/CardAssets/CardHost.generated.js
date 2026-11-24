@@ -25450,6 +25450,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `tokens, cost, dollars, estimate`;
   }
+  function commandViewerSavePicture() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ الصورة`;
+      case "de":
+        return `Bild sichern`;
+      case "es":
+        return `Guardar la imagen`;
+      case "fr":
+        return `Enregistrer l’image`;
+      case "ja":
+        return `画像を保存`;
+      case "ko":
+        return `사진 저장`;
+      case "pt-BR":
+        return `Salvar a imagem`;
+      case "zh-Hans":
+        return `保存图片`;
+      case "zh-Hant":
+        return `儲存圖片`;
+      case "en-XA":
+        return `[Šáṽé ţĥé þîçţûŕé ~~~~~~]`;
+      case "ar-XB":
+        return `‮Save the picture‬`;
+    }
+    return `Save the picture`;
+  }
+  function commandViewerSavePictureWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تنزيل, صورة, عارض`;
+      case "de":
+        return `Download, Bild, Foto, Betrachter`;
+      case "es":
+        return `descargar, imagen, foto, visor`;
+      case "fr":
+        return `télécharger, image, photo, visionneuse`;
+      case "ja":
+        return `ダウンロード, 画像, ピクチャ, ビューア`;
+      case "ko":
+        return `다운로드, 사진, 이미지, 보기`;
+      case "pt-BR":
+        return `baixar, imagem, foto, visualizador`;
+      case "zh-Hans":
+        return `下载, 图片, 图像, 查看器`;
+      case "zh-Hant":
+        return `下載, 圖片, 影像, 檢視器`;
+      case "en-XA":
+        return `[ðöŵñļöáð, þîçţûŕé, îɱáĝé, ṽîéŵéŕ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮download, picture, image, viewer‬`;
+    }
+    return `download, picture, image, viewer`;
+  }
   function commandWhatsNewShow() {
     switch (currentLanguage()) {
       case "ar":
@@ -45239,6 +45293,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No page is shown to point at‬`;
     }
     return `No page is shown to point at`;
+  }
+  function refuseNoPictureIsOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح صورة في بطاقة أولًا`;
+      case "de":
+        return `Öffne zuerst ein Bild in einer Karte`;
+      case "es":
+        return `Abre primero una imagen de una tarjeta`;
+      case "fr":
+        return `Ouvre d’abord une image d’une carte`;
+      case "ja":
+        return `まずカードの画像を開いてください`;
+      case "ko":
+        return `먼저 카드의 사진을 여세요`;
+      case "pt-BR":
+        return `Abra primeiro uma imagem de um cartão`;
+      case "zh-Hans":
+        return `请先打开卡片中的图片`;
+      case "zh-Hant":
+        return `請先開啟卡片中的圖片`;
+      case "en-XA":
+        return `[Öþéñ á þîçţûŕé îñ á çáŕð ƒîŕšţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open a picture in a card first‬`;
+    }
+    return `Open a picture in a card first`;
   }
   function refuseNoReleaseNotesYet() {
     switch (currentLanguage()) {
@@ -94950,6 +95031,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Close the viewer`;
   }
+  function uiPictureViewerCopied() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نُسخت الصورة`;
+      case "de":
+        return `Bild kopiert`;
+      case "es":
+        return `Imagen copiada`;
+      case "fr":
+        return `Image copiée`;
+      case "ja":
+        return `画像をコピーしました`;
+      case "ko":
+        return `사진을 복사함`;
+      case "pt-BR":
+        return `Imagem copiada`;
+      case "zh-Hans":
+        return `已复制图片`;
+      case "zh-Hant":
+        return `已複製圖片`;
+      case "en-XA":
+        return `[Þîçţûŕé çöþîéð ~~~~~]`;
+      case "ar-XB":
+        return `‮Picture copied‬`;
+    }
+    return `Picture copied`;
+  }
+  function uiPictureViewerCopyFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر نسخ الصورة`;
+      case "de":
+        return `Das Bild konnte nicht kopiert werden`;
+      case "es":
+        return `No se pudo copiar la imagen`;
+      case "fr":
+        return `Impossible de copier l’image`;
+      case "ja":
+        return `画像をコピーできませんでした`;
+      case "ko":
+        return `사진을 복사할 수 없어요`;
+      case "pt-BR":
+        return `Não foi possível copiar a imagem`;
+      case "zh-Hans":
+        return `无法复制图片`;
+      case "zh-Hant":
+        return `無法複製圖片`;
+      case "en-XA":
+        return `[Ţĥé þîçţûŕé çöûļð ñöţ ƀé çöþîéð ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The picture could not be copied‬`;
+    }
+    return `The picture could not be copied`;
+  }
+  function uiPictureViewerCopyPicture() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسخ الصورة`;
+      case "de":
+        return `Bild kopieren`;
+      case "es":
+        return `Copiar imagen`;
+      case "fr":
+        return `Copier l’image`;
+      case "ja":
+        return `画像をコピー`;
+      case "ko":
+        return `사진 복사`;
+      case "pt-BR":
+        return `Copiar imagem`;
+      case "zh-Hans":
+        return `复制图片`;
+      case "zh-Hant":
+        return `複製圖片`;
+      case "en-XA":
+        return `[Çöþý þîçţûŕé ~~~~]`;
+      case "ar-XB":
+        return `‮Copy picture‬`;
+    }
+    return `Copy picture`;
+  }
   function uiPictureViewerDemoFrom(input2) {
     const title = input2.title;
     switch (currentLanguage()) {
@@ -94977,6 +95139,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Demo from ‬${title}`;
     }
     return `Demo from ${title}`;
+  }
+  function uiPictureViewerFitToWindow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ملاءمة النافذة`;
+      case "de":
+        return `An Fenster anpassen`;
+      case "es":
+        return `Ajustar a la ventana`;
+      case "fr":
+        return `Ajuster à la fenêtre`;
+      case "ja":
+        return `ウインドウに合わせる`;
+      case "ko":
+        return `윈도우에 맞추기`;
+      case "pt-BR":
+        return `Ajustar à janela`;
+      case "zh-Hans":
+        return `适合窗口`;
+      case "zh-Hant":
+        return `符合視窗`;
+      case "en-XA":
+        return `[Ƒîţ ţö ŵîñðöŵ ~~~~~]`;
+      case "ar-XB":
+        return `‮Fit to window‬`;
+    }
+    return `Fit to window`;
   }
   function uiPictureViewerHintFitted(input2) {
     const size = input2.size;
@@ -95061,6 +95250,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${size}‮ · shown at its own size‬`;
     }
     return `${size} · shown at its own size`;
+  }
+  function uiPictureViewerMenu() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إجراءات الصورة`;
+      case "de":
+        return `Bildaktionen`;
+      case "es":
+        return `Acciones de la imagen`;
+      case "fr":
+        return `Actions sur l’image`;
+      case "ja":
+        return `画像の操作`;
+      case "ko":
+        return `사진 작업`;
+      case "pt-BR":
+        return `Ações da imagem`;
+      case "zh-Hans":
+        return `图片操作`;
+      case "zh-Hant":
+        return `圖片操作`;
+      case "en-XA":
+        return `[Þîçţûŕé áçţîöñš ~~~~~]`;
+      case "ar-XB":
+        return `‮Picture actions‬`;
+    }
+    return `Picture actions`;
   }
   function uiPictureViewerNext() {
     switch (currentLanguage()) {
@@ -95252,6 +95468,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Replay‬`;
     }
     return `Replay`;
+  }
+  function uiPictureViewerSaveFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر حفظ الصورة`;
+      case "de":
+        return `Das Bild konnte nicht gesichert werden`;
+      case "es":
+        return `No se pudo guardar la imagen`;
+      case "fr":
+        return `Impossible d’enregistrer l’image`;
+      case "ja":
+        return `画像を保存できませんでした`;
+      case "ko":
+        return `사진을 저장할 수 없어요`;
+      case "pt-BR":
+        return `Não foi possível salvar a imagem`;
+      case "zh-Hans":
+        return `无法保存图片`;
+      case "zh-Hant":
+        return `無法儲存圖片`;
+      case "en-XA":
+        return `[Ţĥé þîçţûŕé çöûļð ñöţ ƀé šáṽéð ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The picture could not be saved‬`;
+    }
+    return `The picture could not be saved`;
+  }
+  function uiPictureViewerSaveToDownloads() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ في التنزيلات`;
+      case "de":
+        return `In „Downloads“ sichern`;
+      case "es":
+        return `Guardar en Descargas`;
+      case "fr":
+        return `Enregistrer dans Téléchargements`;
+      case "ja":
+        return `「ダウンロード」に保存`;
+      case "ko":
+        return `다운로드에 저장`;
+      case "pt-BR":
+        return `Salvar em Downloads`;
+      case "zh-Hans":
+        return `保存到“下载”`;
+      case "zh-Hant":
+        return `儲存到「下載」`;
+      case "en-XA":
+        return `[Šáṽé ţö Ðöŵñļöáðš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Save to Downloads‬`;
+    }
+    return `Save to Downloads`;
   }
   function uiPictureViewerSeek() {
     switch (currentLanguage()) {
@@ -100365,6 +100635,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandUpdatesShowWords,
     commandUsageUnit,
     commandUsageUnitWords,
+    commandViewerSavePicture,
+    commandViewerSavePictureWords,
     commandWhatsNewShow,
     commandWhatsNewShowWords,
     composerFolderNotProject,
@@ -101031,6 +101303,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseNoCardThreadIsReadAboveIts,
     refuseNoOtherCardIsNew,
     refuseNoPageToPointAt,
+    refuseNoPictureIsOpen,
     refuseNoReleaseNotesYet,
     refuseNoUpdateIsAvailable,
     refuseNoUpdateIsSavingWorkNow,
@@ -102751,10 +103024,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uiPercentLeft,
     uiPictureViewerActualSize,
     uiPictureViewerClose,
+    uiPictureViewerCopied,
+    uiPictureViewerCopyFailed,
+    uiPictureViewerCopyPicture,
     uiPictureViewerDemoFrom,
+    uiPictureViewerFitToWindow,
     uiPictureViewerHintFitted,
     uiPictureViewerHintOne,
     uiPictureViewerHintOwn,
+    uiPictureViewerMenu,
     uiPictureViewerNext,
     uiPictureViewerPartFrom,
     uiPictureViewerPause,
@@ -102762,6 +103040,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uiPictureViewerPlay,
     uiPictureViewerPrevious,
     uiPictureViewerReplay,
+    uiPictureViewerSaveFailed,
+    uiPictureViewerSaveToDownloads,
     uiPictureViewerSeek,
     uiPictureViewerSeekValue,
     uiPictureViewerShownAtOwnSize,
@@ -103591,6 +103871,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandUpdatesShowWords": [],
     "commandUsageUnit": [],
     "commandUsageUnitWords": [],
+    "commandViewerSavePicture": [],
+    "commandViewerSavePictureWords": [],
     "commandWhatsNewShow": [],
     "commandWhatsNewShowWords": [],
     "composerFolderNotProject": [],
@@ -104257,6 +104539,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseNoCardThreadIsReadAboveIts": [],
     "refuseNoOtherCardIsNew": [],
     "refuseNoPageToPointAt": [],
+    "refuseNoPictureIsOpen": [],
     "refuseNoReleaseNotesYet": [],
     "refuseNoUpdateIsAvailable": [],
     "refuseNoUpdateIsSavingWorkNow": [],
@@ -105977,10 +106260,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "uiPercentLeft": ["percent"],
     "uiPictureViewerActualSize": [],
     "uiPictureViewerClose": [],
+    "uiPictureViewerCopied": [],
+    "uiPictureViewerCopyFailed": [],
+    "uiPictureViewerCopyPicture": [],
     "uiPictureViewerDemoFrom": ["title"],
+    "uiPictureViewerFitToWindow": [],
     "uiPictureViewerHintFitted": ["size"],
     "uiPictureViewerHintOne": ["size"],
     "uiPictureViewerHintOwn": ["size"],
+    "uiPictureViewerMenu": [],
     "uiPictureViewerNext": [],
     "uiPictureViewerPartFrom": ["title"],
     "uiPictureViewerPause": [],
@@ -105988,6 +106276,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "uiPictureViewerPlay": [],
     "uiPictureViewerPrevious": [],
     "uiPictureViewerReplay": [],
+    "uiPictureViewerSaveFailed": [],
+    "uiPictureViewerSaveToDownloads": [],
     "uiPictureViewerSeek": [],
     "uiPictureViewerSeekValue": ["length", "time"],
     "uiPictureViewerShownAtOwnSize": [],
@@ -106393,6 +106683,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The full path on the computer that saved it, for showing it in the file browser. */
     path: string()
   });
+  union([
+    strictObject({ picture: string().min(1).max(128) }),
+    strictObject({ demo: string().min(1).max(128) }),
+    strictObject({ png: string().min(1) })
+  ]);
   const cardFilesSavedSchema = object({
     savedAs: string(),
     path: string(),
@@ -111830,6 +112125,21 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [{ key: "a", meta: true, shift: true }],
       get searchWords() {
         return searchWords(commandCardsPointAtWords());
+      }
+    },
+    // The picture viewer's Save to Downloads, on the picture it shows (the
+    // design skill's PictureViewer, "The picture's menu").
+    "viewer.save-picture": {
+      get label() {
+        return commandViewerSavePicture();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [{ key: "s", meta: true }],
+      get searchWords() {
+        return searchWords(commandViewerSavePictureWords());
       }
     },
     "cards.thread": {

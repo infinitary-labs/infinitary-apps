@@ -79,6 +79,8 @@ export type WindowFacts = {
   dialogOpen: boolean;
   /** The open picture viewer offers Point at on its picture: the one command a viewer lets through. */
   viewerPointAt?: boolean;
+  /** The picture viewer is open over a card, with its picture or recording to save. */
+  viewerOpen?: boolean;
   /** The shown Browser tab offers Point at over its page. */
   browserPointAt?: boolean;
   browserControl?: boolean;
@@ -384,6 +386,7 @@ const REFUSALS: Readonly<
       ? m.refuseThisCardTakesNoReply()
       : null;
   },
+  "viewer.save-picture": (_s, facts) => (facts.viewerOpen ? null : m.refuseNoPictureIsOpen()),
   "cards.thread": (s, facts) => {
     const refused = cardRefusal(s);
     if (refused) return refused;
@@ -471,8 +474,10 @@ export function commandRefusal(
   if (s.pickingDictationKey) return m.refuseSettingsIsWaitingForADictationKey();
   if (s.recordingKeys) return m.refuseSettingsIsRecordingAKey();
   if (id !== "commands.search" && s.commandSearchOpen) return m.refuseCommandSearchIsOpen();
-  // The picture viewer is a dialog that takes one window command: Point at, on its picture.
-  const viewerOwn = id === "cards.point-at" && facts.viewerPointAt === true;
+  // The picture viewer is a dialog that takes two window commands on its picture: Point at and Save.
+  const viewerOwn =
+    (id === "cards.point-at" && facts.viewerPointAt === true) ||
+    (id === "viewer.save-picture" && facts.viewerOpen === true);
   if (!s.commandSearchOpen && facts.dialogOpen && !viewerOwn)
     return m.refuseCloseTheOpenDialogFirst();
   if (isPanelCommandId(id)) return facts.panelCommand?.(id, s.recording) ?? null;

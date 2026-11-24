@@ -12,6 +12,7 @@
   "refuseNoCardThreadIsReadAboveIts": "最新メッセージより上を読んでいるカードのスレッドはありません",
   "refuseNoOtherCardIsNew": "ほかに新着カードはありません",
   "refuseNoPageToPointAt": "指し示せるページが表示されていません",
+  "refuseNoPictureIsOpen": "まずカードの画像を開いてください",
   "refuseNoReleaseNotesYet": "リリースノートはまだありません",
   "refuseNoUpdateIsAvailable": "利用可能なアップデートはありません",
   "refuseNoUpdateIsSavingWorkNow": "作業を保存中のアップデートはありません",

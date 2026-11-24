@@ -543,6 +543,11 @@
     },
     {
       "from": "devices",
+      "to": "reset",
+      "why": "tells a reset's computers out of reach they were removed, from the record it left"
+    },
+    {
+      "from": "devices",
       "to": "tasks",
       "why": "names the tasks on a computer"
     },

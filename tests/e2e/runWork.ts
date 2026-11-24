@@ -256,16 +256,13 @@ export function user(model?: MockProviderServer) {
 
 /** `<app> work <args>` from Terminal, typing `input` when it asks. */
 export function work(args: string[], env: NodeJS.ProcessEnv, input = "", packaged = false) {
+  const cwd = scratchDir("infinitary-run-work-cwd-");
   const child = spawn(
     electronPath as unknown as string,
     [packaged ? packagedEntry() : builtAppDir(), "work", ...args],
-    {
-      env,
-      cwd: scratchDir("infinitary-run-work-cwd-"),
-      detached: process.platform !== "win32",
-    },
+    { env, cwd, detached: process.platform !== "win32" },
   );
-  children.push(trackChildTree(child));
+  children.push(trackChildTree(child, cwd));
   let out = "";
   let error = "";
   child.stderr.on("data", (chunk) => {
@@ -285,12 +282,13 @@ export function work(args: string[], env: NodeJS.ProcessEnv, input = "", package
  * Linux notes a session bus it cannot reach.
  */
 export function terminal(command: string, env: NodeJS.ProcessEnv, input: string) {
+  const cwd = scratchDir("infinitary-run-work-cwd-");
   const child = spawn("/bin/sh", ["-c", command], {
     env,
-    cwd: scratchDir("infinitary-run-work-cwd-"),
+    cwd,
     detached: process.platform !== "win32",
   });
-  children.push(trackChildTree(child));
+  children.push(trackChildTree(child, cwd));
   let out = "";
   let error = "";
   child.stdout.on("data", (chunk) => {

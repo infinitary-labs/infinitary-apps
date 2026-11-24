@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mcp-test-own-programs",
+      "reason": "Test only: the MCP integration tests read just their own child programs instead of every process on the computer, and run their stand-in servers at the test run's own priority, so they no longer fail on a busy computer whose process listing outgrows the read's buffer or whose load starves the servers; nothing in the app changes."
+    }
+  ]
+}

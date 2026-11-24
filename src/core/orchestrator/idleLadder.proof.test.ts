@@ -19,9 +19,10 @@ fakeCrewTimersEachTest();
 // typed waits do. An open review already reads it, so it wakes nobody then.
 describe("recorded proof that waits for a reader", () => {
   const HEAD = "4be7c1d90a2f3e5b6c7d8e9f0a1b2c3d4e5f6a7b";
+  const PUSHED = "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d";
   const unread = () => ({ ...noSurfaceProof(HEAD), reviews: [] });
 
-  async function builderWithProof() {
+  async function builderWithProof(checksRead = HEAD) {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
     const { taskId } = await h.supervisor.intake.commission({
@@ -29,7 +30,11 @@ describe("recorded proof that waits for a reader", () => {
       intent: intentOf("Sort the Now panel by whose turn it is"),
     });
     await tick();
-    seedDelivery(h.tasks, taskId, { headSha: HEAD, liveValidation: unread() });
+    seedDelivery(h.tasks, taskId, {
+      headSha: checksRead,
+      validationHead: HEAD,
+      liveValidation: unread(),
+    });
     return { h, crewmate, taskId };
   }
 
@@ -42,6 +47,13 @@ describe("recorded proof that waits for a reader", () => {
       rule: "proof-unread",
       verdict: "captain",
     });
+  });
+
+  it("wakes at the proof's version when the checks last read an older push", async () => {
+    const { h, crewmate, taskId } = await builderWithProof(PUSHED);
+    await reportTurn(crewmate, taskId, "Recorded the live validation run.");
+    const wake = h.ops.filter((line) => line.includes(`reported on task ${taskId}`)).at(-1);
+    expect(wake).toContain(proofUnreadText({ run: 1, head: HEAD }));
   });
 
   it("says nothing of it while a review of the task is open", async () => {

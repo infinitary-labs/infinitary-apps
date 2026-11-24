@@ -161,7 +161,6 @@ export const taskPullRequestSchema = z.object({
 });
 export type TaskPullRequest = z.infer<typeof taskPullRequestSchema>;
 
-/** Delivery facts as they become known (check_pr_ci, land, merge-pr, review). */
 /**
  * The earlier task whose passed review a takeover carries, at the very
  * commit that review read (INF-6536 finding 3), and whether the proof
@@ -175,6 +174,7 @@ export const reviewFromSchema = z.object({
 });
 export type ReviewFrom = z.infer<typeof reviewFromSchema>;
 
+/** Delivery facts as they become known (check_pr_ci, land, merge-pr, review). */
 export const taskDeliveryViewSchema = z.object({
   captainAction: captainActionSchema.optional(),
   mode: taskDeliveryModeSchema,

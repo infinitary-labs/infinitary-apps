@@ -650,8 +650,8 @@ export type ProofAwaitingReader = { run: number; head: string };
 
 /**
  * The proof that waits for an independent reader (INF-6536 finding 3):
- * acceptance at the task's committed version, or at the latest run's own
- * version while the task has recorded none, names the reviewer as what is
+ * acceptance at the version the task last recorded validation for, or at
+ * the latest run's own version while it has recorded none, names the reviewer as what is
  * missing. Whether a review is open to read it is the caller's typed fact.
  */
 export function proofAwaitingReader(

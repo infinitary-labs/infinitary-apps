@@ -385,7 +385,7 @@ export class IdleLadder {
       .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child));
     return reading
       ? undefined
-      : proofAwaitingReader(record.delivery?.liveValidation, record.delivery?.headSha);
+      : proofAwaitingReader(record.delivery?.liveValidation, record.delivery?.validationHead);
   }
 
   /**

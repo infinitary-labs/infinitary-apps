@@ -10,6 +10,8 @@ import {
 } from "../../src/core/forge";
 import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
+import { FOLLOWUP_PROVENANCE_OPENING } from "../../src/core/orchestrator/intentBrief";
+import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { UNSAFE_DATA_READER_ANSWERS } from "../../src/core/orchestrator/workShape";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
@@ -24,7 +26,11 @@ import {
   GITHUB_ENTERPRISE,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "../../src/shared/forges";
-import { cardReaderWritesTitle } from "../../src/shared/i18n/messages.generated";
+import {
+  cardReaderUnsafeData,
+  cardReaderWritesTitle,
+  feedUnsafeDataReaderReported,
+} from "../../src/shared/i18n/messages.generated";
 import {
   ASK_ROW_WORDS,
   INTEGRATION_APPROVAL_WORDS,
@@ -39,14 +45,17 @@ import {
 import { NEVER_SENT_AGAIN } from "../../src/shared/writeAsk";
 import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
+import type { ScriptedCall } from "../helpers/scriptedCalls";
 import {
   API_WRITE_GUARD_MARKER,
   mergeWriteCases,
   PAGED_REPOSITORY,
   READS_ANYWHERE_MARKER,
   savedWriteAsks,
+  UNSAFE_DATA_READER_CARD,
   UNSAFE_DATA_READER_CHANGE_MARKER,
   UNSAFE_DATA_READER_FILE,
+  UNSAFE_DATA_READER_FOLLOWUP,
   UNSAFE_DATA_READER_MARKER,
   UNSAFE_DATA_READER_WRITES,
   WRITE_ASK_ANSWER_MARKER,
@@ -55,6 +64,7 @@ import {
   writeAskCall,
 } from "./apiWriteCases";
 import { launchClaudeCrew } from "./claudeCrew";
+import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import {
   type GitHubStub,
@@ -75,6 +85,7 @@ import { heroShot, regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { addedProjects, openProject, projectLine } from "./projects";
 import { promptInput } from "./prompt";
+import { served } from "./providerRequest";
 import { putInLine } from "./rails";
 import { readSavedData } from "./savedData";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
@@ -331,6 +342,27 @@ async function send(page: Page, text: string) {
   await input.click();
   await input.fill(text);
   await input.press("Enter");
+}
+
+/** The captain asks the first mate, which answers with exactly these calls. */
+async function askFirstmate(words: string, calls: ScriptedCall[]): Promise<string[]> {
+  if (!launched.mockProvider) throw new Error("Asking the first mate needs the mock provider");
+  await waitForFirstmateIdle(launched.page);
+  const answer = launched.mockProvider.scriptFirstmateTurn(
+    served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) }),
+    calls,
+  );
+  await send(launched.page, words);
+  await expect
+    .poll(answer.outcome, { timeout: 30_000 })
+    .toMatchObject({ state: "closed", results: calls.map(() => expect.any(String)) });
+  return answer.outcome().results;
+}
+
+/** Words between reader-data marks, as a request's JSON text carries them. */
+function readerMarked(words: string): RegExp {
+  const escaped = words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\[\\[reader-data fence=[0-9a-f]{16} [^\\]]*\\]\\][^\\[]*${escaped}`);
 }
 
 const section = (page: Page) => page.locator("[data-integrations]");
@@ -1041,6 +1073,26 @@ for (const runtime of READER_RUNTIMES) {
         { timeout: 45_000 },
       )
       .toBe(true);
+    // Its headline is the host's own line, never its words or the reminder.
+    expect(
+      (await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))?.outcomeSummary,
+    ).toBe(feedUnsafeDataReaderReported());
+    // Its own card says it may carry a stranger's words, and its title and
+    // its follow-up's title reach the first mate's turn marked.
+    const readerCard = shownCard(page, UNSAFE_DATA_READER_CARD.title);
+    await expect(readerCard).toContainText(cardReaderUnsafeData(), { timeout: 45_000 });
+    await expect
+      .poll(
+        () =>
+          (launched.mockProvider?.requestBodies() ?? []).some(
+            (raw) =>
+              raw.includes("spawn_crewmate") &&
+              readerMarked(UNSAFE_DATA_READER_CARD.title).test(raw) &&
+              readerMarked(UNSAFE_DATA_READER_FOLLOWUP.title).test(raw),
+          ),
+        { timeout: 45_000 },
+      )
+      .toBe(true);
     expect(github.requests()).toContain("GET /repos/octo/meterlab/pulls");
     expect(github.requests()).not.toContain("GET /repos/octo/website/pulls");
     expect(github.requests()).not.toContain(issue);
@@ -1074,6 +1126,7 @@ for (const runtime of READER_RUNTIMES) {
     if (evidence) {
       await resizeWindow(launched.app, page, { width: 1100, height: 860 });
       await page.screenshot({ path: join(evidence, `${shot}-card.png`) });
+      await readerCard.screenshot({ path: join(evidence, `${shot}-reader-card.png`) });
       if (!runtime.claude)
         await heroShot(launched.app, page, {
           region: card,
@@ -1124,6 +1177,27 @@ for (const runtime of READER_RUNTIMES) {
       await page.screenshot({ path: join(evidence, `${shot}-after-click.png`) });
       writeFileSync(join(evidence, `${shot}.txt`), transcript);
     }
+    if (runtime.claude) return;
+    // The follow-up it filed, once started, carries its words marked in the brief.
+    const followup = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+      (row) => row.title === UNSAFE_DATA_READER_FOLLOWUP.title,
+    );
+    if (!followup) throw new Error("The reader filed no follow-up");
+    await askFirstmate(`Start ${followup.key}.`, [
+      { name: "update_task", args: { task: followup.key, start_now: true } },
+    ]);
+    const brief = async () =>
+      (launched.mockProvider?.requestBodies() ?? []).find(
+        (raw) =>
+          !raw.includes("spawn_crewmate") &&
+          raw.includes(FOLLOWUP_PROVENANCE_OPENING) &&
+          raw.includes(UNSAFE_DATA_READER_FOLLOWUP.goal),
+      ) ?? "";
+    await expect.poll(brief, { timeout: 60_000 }).not.toBe("");
+    const started = await brief();
+    expect(started).toMatch(readerMarked(UNSAFE_DATA_READER_FOLLOWUP.goal));
+    expect(started).toMatch(readerMarked(UNSAFE_DATA_READER_FOLLOWUP.why));
+    if (evidence) writeFileSync(join(evidence, `${shot}-followup-request.json`), started);
   });
 }
 

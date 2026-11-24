@@ -1,5 +1,8 @@
+import { FOLLOWUP_PROVENANCE_OPENING } from "../../../src/core/orchestrator/intentBrief";
 import {
+  UNSAFE_DATA_READER_CARD,
   UNSAFE_DATA_READER_FILE,
+  UNSAFE_DATA_READER_FOLLOWUP,
   UNSAFE_DATA_READER_MARKER,
   UNSAFE_DATA_READER_READS,
   UNSAFE_DATA_READER_WRITES,
@@ -10,8 +13,9 @@ import { sinceLastUser } from "../providerRequest";
 
 /**
  * An unsafe data reader's turn (docs/agents-reach.md, "An unsafe data reader"): a
- * file read and two reads where its project lives, two writes and a report, then a report of what the captain's click
- * answered. It emits no card: the app shows its kept writes on its own.
+ * file read and two reads where its project lives, two writes, a decision card and a
+ * follow-up, then a report, and later a report of what the captain's click answered.
+ * Its kept writes go on the app's own approval card, never its own.
  */
 export const unsafeDataReader: Scenario =
   () =>
@@ -20,6 +24,8 @@ export const unsafeDataReader: Scenario =
     // The last words a person or the app said, past tool results, which
     // Claude's client sends as user messages and Pi as tool messages.
     const { user, results } = sinceLastUser(body);
+    // The follow-up it filed names it in its brief; that crewmate is no reader.
+    if (user.includes(FOLLOWUP_PROVENANCE_OPENING)) return undefined;
     if (user.includes(WRITE_ASK_SENT_WAKE)) {
       if (results.length) return { text: "The answered writes are reported." };
       return {
@@ -49,7 +55,12 @@ export const unsafeDataReader: Scenario =
     if (read) return { calls: [{ name: "github_read", args: { path: read } }] };
     const write = UNSAFE_DATA_READER_WRITES[results.length - reads];
     if (write) return { calls: [{ name: "github_write", args: write }] };
-    if (results.length === reads + UNSAFE_DATA_READER_WRITES.length)
+    const asked = reads + UNSAFE_DATA_READER_WRITES.length;
+    if (results.length === asked)
+      return { calls: [{ name: "emit_card", args: UNSAFE_DATA_READER_CARD }] };
+    if (results.length === asked + 1)
+      return { calls: [{ name: "file_followup", args: UNSAFE_DATA_READER_FOLLOWUP }] };
+    if (results.length === asked + 2)
       return {
         calls: [
           {

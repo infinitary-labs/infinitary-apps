@@ -116,6 +116,22 @@ export const UNSAFE_DATA_READER_WRITES: GithubWriteInput[] = [
   },
 ];
 
+/** The decision an unsafe data reader puts to the captain, whose words reach the first mate marked. */
+export const UNSAFE_DATA_READER_CARD = {
+  title: "Reply to issue 12?",
+  body: "<p>Issue 12 asks for a reply about the cold start.</p>",
+  actions: [
+    { id: "reply", label: "Reply", default: true },
+    { id: "later", label: "Not now" },
+  ],
+};
+/** The follow-up an unsafe data reader files, whose brief carries its words marked. */
+export const UNSAFE_DATA_READER_FOLLOWUP = {
+  title: "Look at the cold start idle",
+  goal: "The meter no longer idles on a cold start.",
+  why: "Issue 12 says the meter idles on a cold start.",
+};
+
 /** The write each kind of ask makes, by the words in its task's title. */
 export function writeAskCall(title: string): GithubWriteInput {
   if (title.includes("publish notebook")) {

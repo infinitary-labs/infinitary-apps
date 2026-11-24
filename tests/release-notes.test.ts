@@ -4,7 +4,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { commitMessage } from "../scripts/batch-regenerate.ts";
-import { newestStables } from "../scripts/docs-site-whats-new.ts";
+import { stableReleases } from "../scripts/docs-site-whats-new.ts";
 import { run } from "../scripts/release-notes";
 import { webpBytes } from "./helpers/images";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -994,7 +994,7 @@ describe("a fresh history", () => {
       expect(() => f.cli("manifest", "--version", "1.0.3-alpha.8", "--write")).toThrow(diagnostic);
       expect(readFileSync(join(f.dir, "release-notes/archive.json"))).toEqual(before);
       if (file === path) {
-        expect(() => newestStables(f.dir)).toThrow(diagnostic);
+        expect(() => stableReleases(f.dir)).toThrow(diagnostic);
         writeFileSync(path, original);
       }
     }

@@ -150,9 +150,9 @@ export function firstSentence(text: string): string {
   return (match ? match[0] : text.trim()).replace(/\s+/g, " ");
 }
 
-/** The What's new heading's anchor, as the docs site writes it for "## 0.8.7". */
-export function whatsNewAnchor(version: string): string {
-  return version.replaceAll(".", "");
+/** A stable's own page on the docs site, as scripts/docs-site-whats-new.ts names it: 0.8.7 is /whats-new/0-8-7/. */
+export function whatsNewPage(version: string): string {
+  return `${WHATS_NEW_URL}${version.replaceAll(".", "-")}/`;
 }
 
 /** Text with nothing Discord's markdown would read as its own markup. */
@@ -170,7 +170,7 @@ export function renderMessage(
   highlights: readonly LedgerEntry[],
   repository: string,
 ): WebhookMessage {
-  const whatsNew = `${WHATS_NEW_URL}#${whatsNewAnchor(version)}`;
+  const whatsNew = whatsNewPage(version);
   const lines = highlights.map(
     (entry) => `**${plain(entry.title)}**\n${plain(firstSentence(entry.body ?? ""))}`.trimEnd(),
   );
@@ -285,14 +285,13 @@ async function jobNames(github: GitHub, run: string): Promise<string[]> {
   }
 }
 
-/** Whether the docs site's What's new page lists the version, read past any edge cache. */
+/** Whether the docs site serves the version's own What's new page, read past any edge cache. */
 async function whatsNewLists(version: string, deps: Deps): Promise<boolean> {
   try {
-    const response = await deps.fetch(`${WHATS_NEW_URL}?announce=${deps.now()}`, {
+    const response = await deps.fetch(`${whatsNewPage(version)}?announce=${deps.now()}`, {
       headers: { "cache-control": "no-cache" },
     });
-    if (!response.ok) return false;
-    return (await response.text()).includes(`id="${whatsNewAnchor(version)}"`);
+    return response.ok;
   } catch {
     return false;
   }

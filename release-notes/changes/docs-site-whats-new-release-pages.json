@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-whats-new-release-pages",
+      "reason": "Docs site only: What's new folds each note's detail under its title and links every stable to a page of its own, so no release drops off the site, and a stable's Discord announcement links to that release's own page; the app is unchanged."
+    }
+  ]
+}

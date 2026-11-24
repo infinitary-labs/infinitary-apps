@@ -656,7 +656,7 @@ It may leave `highlights` empty to keep the alpha reviews' ranks.
 ## Announcing a stable
 
 Each stable posts one message to the project's Discord channel, and an alpha or a rehearsal posts nothing (`.github/workflows/release-announce.yml`, `scripts/release-announce.ts`).
-The message shows the stable's three picked highlights, lead first, each with its title and the first sentence of its note, the lead's dark hero picture, and links to the version's heading on What's new and to the download page.
+The message shows the stable's three picked highlights, lead first, each with its title and the first sentence of its note, the lead's dark hero picture, and links to the version's own What's new page (`/whats-new/0-8-7/` for 0.8.7) and to the download page.
 It mentions nobody: `allowed_mentions` is empty.
 
 The workflow follows every release run's end, as the docs site's publish does, and runs only in this project, on main, for the operator, after a successful release run on main.
@@ -669,7 +669,7 @@ Every check comes before the post, and the first that fails stops the run with n
 3. The highlights are the `Highlights picked, lead first:` line of the stable's record, which the release run writes; each pick's words and the lead's picture come from `release-notes/changes/` at the stable's tag, and the picture is linked as the public file at that tag.
 4. The message must fit Discord's limits.
 5. A missing webhook stops the run red as `no_webhook` before anything is claimed.
-6. It waits up to 30 minutes for `https://docs.getinfinitary.com/whats-new/` to show the version's heading (`id="087"` for 0.8.7), reading past any cache, and otherwise stops red as `whats_new_not_listed`.
+6. It waits up to 30 minutes for the docs site to serve the version's own page (`https://docs.getinfinitary.com/whats-new/0-8-7/` for 0.8.7), reading past any cache, and otherwise stops red as `whats_new_not_listed`.
 7. It claims the version by creating `refs/announcements/discord/v<version>` at the tag's commit.
    GitHub creates a ref only once, so only the run that created it may post.
    If the claim already exists and `refs/announcements/discord-posted/v<version>` does too, the run ends green as `already_announced`; with no posted marker it stops red as `ambiguous`.

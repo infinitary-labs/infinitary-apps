@@ -1884,6 +1884,11 @@
     },
     {
       "from": "usageReport",
+      "to": "claude",
+      "why": "reads the company's Claude Code setup, its headers and the login's email"
+    },
+    {
+      "from": "usageReport",
       "to": "usage collectors",
       "why": "sends usage in each one's format"
     }

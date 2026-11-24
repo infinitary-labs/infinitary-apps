@@ -89,7 +89,7 @@ import { startOwnDisplay } from "./ownDisplay";
 import { OPEN_ONCE_CLOSED } from "./personWord";
 import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
-import { resetAskedOf, resetsFor } from "./reset/wiring";
+import { resetsFor } from "./reset/wiring";
 import {
   answerLaunch,
   bringWindowForward,
@@ -1390,7 +1390,7 @@ export async function startApp(
                 crewmatesDir: appPathsFor(dataDir).crewmatesDir,
                 look: new JoinedHome(join(app.getPath("userData"), "look")),
                 status: () => readRunStatus(dataDir),
-                resetAsked: () => resetAskedOf(dataDir),
+                resetAsked: resets.resetWaiting,
                 // The agent this window set up starts the command again too.
                 startEntry: () =>
                   ownStartEntry(dataDir) ??

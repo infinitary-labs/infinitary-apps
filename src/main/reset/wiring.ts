@@ -1,5 +1,4 @@
 import { hostPlatform } from "@core/platform";
-import { readResetMark } from "@core/reset/mark";
 import type { FreshAuthentication } from "@core/secrets/approvals";
 import type { ResetAnswer } from "@shared/reset";
 import type { CommandStarter } from "../commandStarter";
@@ -10,6 +9,7 @@ import { couldNotStartYet } from "./couldNotStart";
 import { freshAuthenticationFor } from "./freshAuthentication";
 import { type ResetAsk, type ResetPlace, resetInApp, restartForReset } from "./inApp";
 import { forgetOwnRunEntries } from "./ownEntries";
+import { resetWatch } from "./ownReset";
 import { clearStartAttempts } from "./startAttempts";
 import { resetWithoutFirstMate } from "./withoutFirstMate";
 
@@ -53,6 +53,7 @@ export function resetsFor(input: {
   };
   // Made once the shell's window side is wired; a computer that controls this one asks it too.
   let here: ((ask?: ResetAsk) => Promise<ResetAnswer>) | undefined;
+  const watch = resetWatch(input.dataDir);
   return {
     /** Shows Infinitary could not start instead of this start, answering true (./couldNotStart.ts). */
     couldNotStart: (hidden: boolean, window: () => Buffer | undefined): boolean =>
@@ -80,12 +81,14 @@ export function resetsFor(input: {
     /** The reset a screen shown when this folder cannot open offers, with no first mate running. */
     withoutFirstMate: (authentication: FreshAuthentication | undefined) =>
       resetWithoutFirstMate({ ...spot, authentication, questionConfirms: true, restart }),
+    /** Whether a reset waits for the next start, other than this program's own under way (./ownReset.ts). */
+    resetWaiting: watch.waiting,
     /** A run ending for good: what would start it again goes, the run left going (./ownEntries.ts). */
     forgetRunEntries: () =>
       forgetOwnRunEntries(work.place.flavor, input.dataDir, input.choice.kind === "flavor"),
     /** The window's own row's reset, also asked by a computer that controls this one. */
     inApp: (shell: Shell, authentication: FreshAuthentication | undefined) => {
-      here = resetInApp({ ...spot, authentication, shell, restart });
+      here = watch.own(resetInApp({ ...spot, authentication, shell, restart }));
       return here;
     },
     /**
@@ -102,9 +105,4 @@ export function resetsFor(input: {
       });
     },
   };
-}
-
-/** Whether a reset waits for the next start to finish it (docs/reset.md, "At the next start"). */
-export function resetAskedOf(dataDir: string): boolean {
-  return readResetMark(dataDir) !== null;
 }

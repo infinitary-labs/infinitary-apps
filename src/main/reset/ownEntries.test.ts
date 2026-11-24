@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
 import { runLabelOf } from "@shared/codeNames";
 import { afterEach, describe, expect, it } from "vitest";

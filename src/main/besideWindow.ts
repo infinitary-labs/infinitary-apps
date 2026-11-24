@@ -27,7 +27,14 @@ import {
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import type { UpdateStatus } from "@shared/update";
 import type { WindowKeyReminders } from "@shared/windowAnswer";
-import { commandNotice, entryWaitMs, type JoinedRun, runEnd, type StartEntry } from "./besideRun";
+import {
+  commandNotice,
+  entryWaitMs,
+  type JoinedRun,
+  runEnd,
+  type StartEntry,
+  startsOverOnStop,
+} from "./besideRun";
 import type { CommandStarter } from "./commandStarter";
 import { type OwnedRun, sameRun } from "./runCommand";
 import type { RunStatus } from "./runStatus";
@@ -80,9 +87,10 @@ export type BesideOptions = {
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
   /**
-   * Whether the command's first mate took a reset its next start finishes
-   * (docs/reset.md, "A first mate with no window"): once the command ends,
-   * the window starts again, which finishes it.
+   * Whether a reset another program took waits for the next start to
+   * finish it (docs/reset.md, "A first mate with no window"): once the
+   * command ends, the window starts again, which finishes it. A reset this
+   * program runs itself reads as none (./reset/ownReset.ts).
    */
   resetAsked?: () => boolean;
   /**
@@ -1187,7 +1195,8 @@ export class BesideWindow {
     const { beside, now } = this.options;
     const waitMs = entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs);
     const status = beside.status();
-    if (status.running === false && (this.moved || beside.resetAsked?.() === true)) {
+    const resetWaiting = () => beside.resetAsked?.() === true;
+    if (startsOverOnStop(status, { moved: this.moved, resetWaiting })) {
       this.stopReading();
       if (this.recoveryPending()) {
         this.relaunchDeferred = true;

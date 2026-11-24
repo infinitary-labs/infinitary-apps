@@ -11,6 +11,7 @@ import {
   runEnd,
   STARTED_HERE,
   startedHere,
+  startsOverOnStop,
 } from "./besideRun";
 import { RUN_SETTINGS_EXIT, RUN_UPDATED_EXIT } from "./runCommand";
 import type { RunStatus } from "./runStatus";
@@ -165,5 +166,26 @@ describe("what a window says once its command stops", () => {
     expect(startedHere(dataDir)).toEqual(JOINED);
     writeFileSync(join(dataDir, STARTED_HERE), "not a note");
     expect(startedHere(dataDir)).toBeNull();
+  });
+});
+
+describe("whether the window beside a command starts over once it ended", () => {
+  const none = () => false;
+  const waiting = () => true;
+
+  it("never on a plain stop or crash: the first mate stays stopped and the window says so", () => {
+    expect(startsOverOnStop({ running: false }, { moved: false, resetWaiting: none })).toBe(false);
+  });
+
+  it("once the first mate moved away, or a reset another program took waits for the next start", () => {
+    expect(startsOverOnStop({ running: false }, { moved: true, resetWaiting: none })).toBe(true);
+    expect(startsOverOnStop({ running: false }, { moved: false, resetWaiting: waiting })).toBe(
+      true,
+    );
+  });
+
+  it("never while a command runs or whether one runs is not known", () => {
+    for (const running of [true, null] as const)
+      expect(startsOverOnStop({ running }, { moved: true, resetWaiting: waiting })).toBe(false);
   });
 });

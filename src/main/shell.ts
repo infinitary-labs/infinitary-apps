@@ -698,6 +698,7 @@ export class Shell {
     core?.services.quota.onResumed();
     // Each computer out of reach over this Mac's own SSH is tried at once.
     core?.services.sshConnections.resume();
+    core?.services.resetFarewells.resume();
   }
 
   /** The Mac goes to sleep: no SSH connection is tried until it wakes. */
@@ -837,7 +838,13 @@ export class Shell {
     const unfollow = core.services.devices.followNetwork();
     // And those it added by their address through its own SSH connection to
     // each, which only an attached connection carries (docs/devices.md).
-    const stopSsh = core.services.sshConnections.start();
+    const stopConnections = core.services.sshConnections.start();
+    // And a reset's computers out of reach reached over Remote Login (docs/reset.md).
+    const stopFarewells = core.services.resetFarewells.start();
+    const stopSsh = () => {
+      stopFarewells();
+      return stopConnections();
+    };
     this.mode = {
       kind: "home",
       core,

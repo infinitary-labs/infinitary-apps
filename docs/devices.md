@@ -1482,6 +1482,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
   Its unmerged work stays on that computer.
   It has not heard it was removed, so its key's pin is kept in `removed.json` and the connection keeps listening for it; the next time it dials it is refused, reads that as removed, and removes what Infinitary set up there, but a working copy that still holds work.
   The pin is forgotten after three refusals - a device needs two in a row - or after thirty days.
+  A computer out of reach when the first mate was reset hears it the same way from the fresh first mate, under the old first mate's key (`docs/reset.md`, "Computers out of reach").
   A computer that runs work for another first mate now (`other-home`, above) is not coming back, so Devices asks only to remove it now, and the feed says nothing of this first mate's was there to remove (above, "Removing it there").
 
 ## The requests

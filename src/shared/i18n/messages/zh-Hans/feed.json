@@ -93,6 +93,8 @@
   },
   "feedReported": "已汇报：{summary}",
   "feedReportedBare": "已汇报",
+  "feedResetRemovalRemoved": "重置 Infinitary 时无法连接 {name}。它已恢复连接，Infinitary 在那里设置的内容已移除。",
+  "feedResetRemovalStayed": "重置 Infinitary 后 30 天内一直无法连接 {name}。Infinitary 在那里设置的内容会保留，直到你在那里删除。",
   "feedReviewBlocked": "审查未能完成",
   "feedReviewFindings": "审查发现了需要修复的地方",
   "feedReviewPassed": "已通过审查",

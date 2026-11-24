@@ -430,7 +430,7 @@ Every build offers it, stable, alpha and development alike (`docs/devices.md`, "
 What is in place:
 
 - **The connection** (`docs/connection.md`): the home serves the core's requests and pushes to paired devices over a WebSocket on TLS, on loopback plus one chosen private address, with pushes numbered so a device that dropped catches up exactly or reloads.
-  It listens for devices only while something is paired or a link is open, and on its local door, for the window and any other client on this Mac, whenever the app runs.
+  It listens for devices only while something is paired, a link is open or a reset's computer out of reach has yet to hear it was removed, and on its local door, for the window and any other client on this Mac, whenever the app runs.
 - **Pairing** (`docs/devices.md`): a one-use ten-minute link pairs a device as a Mac, which can control this first mate and run work, or as another user on this Mac, which only runs work.
   Each side proves itself in TLS with its own key - the home's pinned in the link, the device's pinned on the home's list - and Remove cuts a device off before it returns.
   `DevicePairing` is the one writer over `userData/devices/` and the seam the connection reads (`PairedDevices`).

@@ -12,6 +12,8 @@
 export const NEEDS_TRIAGE = "needs triage";
 export const WAITING = "waiting on author";
 export const ACCEPTED = "accepted";
+/** On an issue whose fix a release holds, once its reporter was thanked; it closes nothing. */
+export const RELEASED = "released";
 
 /** The commit statuses main's branch rule requires of an outside pull request. */
 export const REQUIRED = Object.freeze([

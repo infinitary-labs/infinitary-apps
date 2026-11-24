@@ -20,7 +20,7 @@
  * and reads the comment only as data.
  */
 
-import { ACCEPTED, NEEDS_TRIAGE, removeLabel, WAITING } from "./intake-labels.mjs";
+import { ACCEPTED, NEEDS_TRIAGE, RELEASED, removeLabel, WAITING } from "./intake-labels.mjs";
 
 const MARK = /<!-- infinitary-triage v1 disposition=([a-z-]+)(?: [^>]*)?-->/;
 const WRITERS = new Set(["admin", "write"]);
@@ -37,6 +37,7 @@ export const DISPOSITIONS = Object.freeze({
   declined: { add: [], close: "not_planned" },
   answered: { add: [], close: "completed" },
   "changes-requested": { add: [WAITING], pullOnly: true },
+  released: { add: [RELEASED] },
 });
 
 /** The disposition a comment's mark names, or null for none or one not on the list. */

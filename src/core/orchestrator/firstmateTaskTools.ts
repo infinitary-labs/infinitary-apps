@@ -15,6 +15,7 @@ import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import { startedReply } from "./replyLine";
 import { handOffShape, UNSAFE_DATA_READER_ANSWERS } from "./workShape";
 
@@ -639,8 +640,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         tasks,
         input,
         (repoId) => host.options.repos.get(repoId)?.name,
-        (taskId) => host.options.supervisor.cards.servedNewestBody(taskId),
-        (taskId) => host.options.supervisor.cards.servedResolutionForTask(taskId),
+        (taskId) => servedNewestBody(host.options.supervisor.cards, taskId),
+        (taskId) => servedResolutionForTask(host.options.supervisor.cards, taskId),
         host.options.supervisor.toolHooks.taskQueryReach(),
       ),
   };

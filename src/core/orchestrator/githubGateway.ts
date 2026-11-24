@@ -174,13 +174,21 @@ export class GithubGatewayService {
         write: ValidationForgeWrite,
       ) => Promise<void>;
       sleep?: (ms: number) => Promise<void>;
-      /**
-       * Put an unsafe data reader's kept write on its task's approval card
-       * (`IntegrationAsks.askForge`), with the waiting asks the cap dropped.
-       */
-      presentReaderAsk?: (taskId: string, ask: ForgeWriteAsk, dropped: WriteAsk[]) => void;
     },
   ) {}
+
+  private presentReaderAsk?: (taskId: string, ask: ForgeWriteAsk, dropped: WriteAsk[]) => void;
+
+  /**
+   * Who puts an unsafe data reader's kept write on its task's approval card
+   * (`IntegrationAsks.askForge`), with the waiting asks the cap dropped: the
+   * crew, which is built after this gateway.
+   */
+  presentReaderAsksWith(
+    present: (taskId: string, ask: ForgeWriteAsk, dropped: WriteAsk[]) => void,
+  ): void {
+    this.presentReaderAsk = present;
+  }
 
   /** The task is an unsafe data reader (docs/agents-reach.md, "An unsafe data reader"). */
   private isReader(taskId: string): boolean {
@@ -795,8 +803,8 @@ export class GithubGatewayService {
       at: this.options.now(),
     };
     const dropped = this.options.tasks.delivery.keepWriteAsk(taskId, ask);
-    if (this.isReader(taskId) && this.options.presentReaderAsk) {
-      this.options.presentReaderAsk(taskId, ask, dropped);
+    if (this.isReader(taskId) && this.presentReaderAsk) {
+      this.presentReaderAsk(taskId, ask, dropped);
       return [
         // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
         `Not sent: ${why}. Kept as ask ${ask.id}: ${ask.method} ${ask.path} on ${ask.place}.`,

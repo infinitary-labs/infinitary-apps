@@ -401,5 +401,8 @@ export function startHomeCrew({
       emit("inf:cards:thread", thread);
     },
   });
+  githubGateway.presentReaderAsksWith((taskId, ask, dropped) =>
+    supervisor.integrationAsks.askForge(taskId, ask, dropped),
+  );
   return supervisor;
 }

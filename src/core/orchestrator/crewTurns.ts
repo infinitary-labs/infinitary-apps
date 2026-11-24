@@ -44,7 +44,7 @@ import { JOB_BOUND_MS } from "./idleLadder";
 import { type BriefPart, briefText } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce } from "./jobWakes";
 import { outageFailedWake, stuckWake } from "./outageWakes";
-import { readerDataAnswer, readerHeadline } from "./readerData";
+import { closingWords } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
@@ -706,13 +706,7 @@ export class CrewTurns {
         cutOff = { ...cutOff, resetsAt: standing.resetsAt };
       }
     }
-    const spoken =
-      task.turnReport ?? (task.currentTurnText.trim() ? task.currentTurnText : undefined);
-    const reader = this.core.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true;
-    // An unsafe data reader's closing words stand in for its report, marked
-    // and headed as one is (`readerReport`).
-    const finalText =
-      spoken !== undefined && reader ? readerDataAnswer(spoken, Date.now()) : spoken;
+    const { text: finalText, headline } = closingWords(this.core.options.tasks.get(task.id), task);
     // A paused turn's last words are where it stopped, never its report.
     const candidate = providerError
       ? undefined
@@ -721,12 +715,7 @@ export class CrewTurns {
         : (task.explicitReport ?? finalText);
     // The tool's own headline belongs to the tool's report, never to a
     // final text that stood in for it.
-    const candidateSummary =
-      task.explicitReport !== undefined
-        ? task.explicitSummary
-        : reader && finalText !== undefined
-          ? readerHeadline()
-          : undefined;
+    const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : headline;
     // A report the provider-failed turn made before it failed is already on
     // the record (`holdReport`): its wake names it (INF-3165).
     const keptReport =

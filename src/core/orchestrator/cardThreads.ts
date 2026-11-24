@@ -13,6 +13,7 @@ import {
   cardMessageText,
   cardMutationSchema,
   cardTakesReplies,
+  cardWord,
   onStage,
   takesTaskFacts,
 } from "@shared/cards";
@@ -37,6 +38,7 @@ import {
   readerWroteCard,
   servedCardLine,
 } from "./readerData";
+import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 
 /**
@@ -469,6 +471,11 @@ export class CardThreads {
    */
   servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
     return servedCardLine(this.host.tasks, card, words);
+  }
+
+  /** A crewmate's shown card as its report wake lists it, a reader's title marked (`servedCardLine`). */
+  wakeCard(card: Card): WakeCard {
+    return { id: card.id, word: cardWord(card), title: this.servedCardLine(card, card.title) };
   }
 
   /** Whether an unsafe data reader wrote this card. */

@@ -48,6 +48,7 @@ import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
 import { readerReport, readerReportRefusal } from "./readerData";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import type { WakeBody } from "./wakes";
 import { deliverableOf } from "./workShape";
 
@@ -703,8 +704,8 @@ export class CrewToolHooks {
       this.core.options.tasks,
       input,
       (repoId) => this.core.options.repos.get(repoId)?.name,
-      (taskId) => this.core.cards.servedNewestBody(taskId),
-      (taskId) => this.core.cards.servedResolutionForTask(taskId),
+      (taskId) => servedNewestBody(this.core.cards, taskId),
+      (taskId) => servedResolutionForTask(this.core.cards, taskId),
       this.taskQueryReach(),
     );
   }

@@ -32,7 +32,6 @@ import {
   type PastCard,
 } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
-import { isQuickAnswer } from "@shared/routingPolicy";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
@@ -41,6 +40,7 @@ import type { SeenMergeAct } from "../storage/taskRecords";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX, type OwnCardWrite } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
+import { cardShapeMarks } from "./cardShapeMarks";
 import type { CardAuthorRef, CardServiceHost, CardStack, CloseOut } from "./cardStackTypes";
 import { CardStage } from "./cardStage";
 import {
@@ -56,7 +56,6 @@ import {
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
-import { answersWithAuthorWordsMarked } from "./readerData";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
@@ -563,11 +562,7 @@ export class CardService {
   shownCards(taskId: string): WakeCard[] {
     return [...this.cards.values()]
       .filter((card) => card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate")
-      .map((card) => ({
-        id: card.id,
-        word: cardWord(card),
-        title: this.threads.servedCardLine(card, card.title),
-      }));
+      .map((card) => this.threads.wakeCard(card));
   }
 
   /**
@@ -656,8 +651,7 @@ export class CardService {
       return {
         ...shown,
         ...(about ? { asked: about } : {}),
-        ...(this.quickAnswer(shown) ? { quick: true as const } : {}),
-        ...(this.readerCard(shown) ? { unsafeData: true as const } : {}),
+        ...cardShapeMarks(this.host.tasks, shown),
       };
     });
   }
@@ -677,21 +671,6 @@ export class CardService {
     if (!this.evidence.noteUpdateSeen(shown, lifecycleId, shown.offerId, updateId)) return;
     this.keepSeenMerge(shown, shown.offerId);
     this.scheduleBroadcast();
-  }
-
-  /**
-   * Whether a card wears the app's Quick answer mark (INF-4344): a
-   * crewmate's card whose task was sorted as a quick answer, read from the
-   * task's recorded kind (`isQuickAnswer`), never from the card's words.
-   */
-  private quickAnswer(card: Card): boolean {
-    if (card.author !== "crewmate" || !card.taskId) return false;
-    return isQuickAnswer(this.host.tasks.get(card.taskId)?.shape);
-  }
-
-  /** Whether a card is a crewmate's from an unsafe data reader, read from its task's recorded shape (`CardThreads.readerCard`). */
-  readerCard(card: Pick<Card, "author" | "taskId">): boolean {
-    return this.threads.readerCard(card);
   }
 
   /**
@@ -1814,71 +1793,6 @@ export class CardService {
       this.drop(cardId);
     }
     this.writerLeft(taskId);
-  }
-
-  /** A thread line's words as an agent reads them (`CardThreads.servedLine`). */
-  servedLine(card: Pick<Card, "taskId">, message: CardMessage): string {
-    return this.threads.servedLine(card, message);
-  }
-
-  /** A card's title, body or label as an agent reads it (`CardThreads.servedCardWords`). */
-  servedCardWords(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
-    return this.threads.servedCardWords(card, words);
-  }
-
-  /** A card's title or label inside a line of a list (`CardThreads.servedCardLine`). */
-  servedCardLine(card: Pick<Card, "id" | "author" | "taskId">, words: string): string {
-    return this.threads.servedCardLine(card, words);
-  }
-
-  /** A task's newest card body as the by-key read serves it (`newestBody`, `servedCardWords`). */
-  servedNewestBody(taskId: string): string | undefined {
-    const card = this.host.cardStore.newestForTask(taskId);
-    return card ? this.servedCardWords(card, card.body) : undefined;
-  }
-
-  /**
-   * A task's newest captain resolution as the by-key read serves it
-   * (`newestResolutionForTask`): a reader's card and closing offer with
-   * their title, body, button labels and the option labels in the
-   * captain's answers marked as data, the captain's own written words left
-   * as written, with the same marks as the newest body, so a body the two
-   * share is still shown once.
-   */
-  servedResolutionForTask(taskId: string): CardResolution | undefined {
-    const resolved = this.newestResolutionForTask(taskId);
-    if (!resolved || !this.readerCard(resolved.card)) return resolved;
-    const card = resolved.card;
-    const words = (text: string) => this.servedCardWords(card, text);
-    const actions = <T extends { label: string }>(list: T[]) =>
-      list.map((action) => ({ ...action, label: words(action.label) }));
-    return {
-      ...resolved,
-      ...(resolved.answers
-        ? { answers: answersWithAuthorWordsMarked(resolved.answers, words) }
-        : {}),
-      card: {
-        ...card,
-        title: words(card.title),
-        body: words(card.body),
-        actions: actions(card.actions),
-      },
-      ...(resolved.offer
-        ? {
-            offer: {
-              ...resolved.offer,
-              title: words(resolved.offer.title),
-              body: words(resolved.offer.body),
-              actions: actions(resolved.offer.actions),
-            },
-          }
-        : {}),
-    };
-  }
-
-  /** Whether an unsafe data reader wrote this thread line (`CardThreads.fromReader`). */
-  fromReader(card: Card, message: CardMessage): boolean {
-    return this.threads.fromReader(card, message);
   }
 
   /** Every card whose thread moved since `since`, newest first (`CardThreads`). */

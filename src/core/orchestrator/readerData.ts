@@ -192,6 +192,21 @@ export function readerHeadline(): string {
 }
 
 /**
+ * A crewmate's closing words, which stand in for a report it did not make
+ * (its turn's report text, or else what it last said): an unsafe data reader's marked and headed as its report is
+ * (`readerReport`), every other crewmate's as written with no headline.
+ */
+export function closingWords(
+  task: Origin | undefined,
+  turn: { turnReport?: string; currentTurnText: string },
+): { text?: string; headline?: string } {
+  const spoken =
+    turn.turnReport ?? (turn.currentTurnText.trim() ? turn.currentTurnText : undefined);
+  if (spoken === undefined || task?.shape?.unsafe_data_reader !== true) return { text: spoken };
+  return { text: readerDataAnswer(spoken, Date.now()), headline: readerHeadline() };
+}
+
+/**
  * The task that wrote a thread line, when a crewmate did: its own card's
  * crewmate, or a crewmate that wrote with its name on another's card.
  */

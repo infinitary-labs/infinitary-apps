@@ -340,7 +340,7 @@ export class FirstmateContext {
    */
   private readerMark(card: Pick<Card, "id" | "author" | "taskId">): (words: string) => string {
     const cards = this.options.supervisor.cards;
-    return (words) => cards.servedCardLine(card, words);
+    return (words) => cards.threads.servedCardLine(card, words);
   }
 
   /** A task's title inside a context line, a reader's follow-up's marked (`servedTaskTitle`). */
@@ -410,7 +410,7 @@ export class FirstmateContext {
           THREAD_EXCERPT_CHARS,
         );
         // An unsafe data reader's line is marked after the cut, so no cut splits its marks.
-        const excerpt = cards.fromReader(card, last) ? readerDataLine(cut, last.at) : cut;
+        const excerpt = cards.threads.fromReader(card, last) ? readerDataLine(cut, last.at) : cut;
         return `- card ${card.id} "${this.readerMark(card)(card.title)}" ${about}: ${count} message${
           count === 1 ? "" : "s"
         }, last from ${last.who}${last.through ? ` ${FROM_THE_COMMAND}` : ""} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;

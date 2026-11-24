@@ -937,7 +937,7 @@ export class CrewSupervisor {
     if (author && card && card.actions.length > 0)
       this.tasks.get(author)?.withdrawnThisTurn.push({
         id: card.id,
-        title: this.cards.servedCardLine(card, card.title),
+        title: this.cards.threads.servedCardLine(card, card.title),
       });
     // Withdrawal can leave a message without its answering offer. Re-read
     // coverage through the existing sweep, never a captain acknowledgement.

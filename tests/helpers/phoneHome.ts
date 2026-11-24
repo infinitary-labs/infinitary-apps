@@ -38,7 +38,6 @@ import {
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
 import { type HomeUpdate, homeUpdateSchema } from "@shared/homeUpdate";
-import { cardReaderUnsafeData } from "@shared/i18n/messages.generated";
 import { englishOf } from "@shared/i18n/said";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
@@ -69,6 +68,7 @@ import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
+import { clearPhoneCards, raiseReaderCard } from "./phoneCrewCards";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneCaretOutcome,
@@ -1855,55 +1855,14 @@ export async function startPhoneHome(
           };
           break;
         }
-        // INF-6388: a decision from an unsafe data reader, a crewmate that reads words anyone can write; its card
-        // says a link or request on it may come from a stranger.
-        case "POST reader-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
-          const reading = seedTask(core.services.tasks, {
-            id: "phone-reader",
-            title: "Triage the waiting outside issues",
-            status: "idle",
-            shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
-          });
-          const cards = core.services.supervisor.cards;
-          const title = "Reply to issue 12?";
-          cards.emitCrewmateCard(
-            reading.id,
-            {
-              id: "reader-reply",
-              title,
-              body: "<p>Issue 12 asks for a reply about the meter idling on a cold start.</p>",
-              actions: [
-                { id: "reply", label: "Reply", default: true },
-                { id: "later", label: "Not now" },
-              ],
-            },
-            reading.title,
-            "Opus 5.5",
-            "on Mac mini",
-          );
-          cards.closeOut({ kind: "crewmate", taskId: reading.id }, "idle");
-          cards.flushBroadcast();
-          result = { title, line: cardReaderUnsafeData() };
+        case "POST reader-card":
+          result = await raiseReaderCard(core);
           break;
-        }
         // INF-6136: a crewmate's decision with the tallest head a card draws (its task's key, place and model, a
         // four-line title and a revised line), a body several screens long with a required question, three choices
         // and a thread; beside it a short first mate card, its neighbour in the row.
         case "POST top-bar-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
+          await clearPhoneCards(core);
           const shortTitle = "The tide table is up to date";
           core.services.supervisor.addFirstmateCard({
             id: "phone-top-bar-short",

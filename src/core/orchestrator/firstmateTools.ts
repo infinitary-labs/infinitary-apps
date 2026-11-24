@@ -599,7 +599,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           pastCard: (id) => supervisor.cards.past(id),
           owed: (id) => supervisor.cards.owed(id),
           thread: (id) => supervisor.cards.thread(id),
-          served: supervisor.cards,
+          served: supervisor.cards.threads,
         },
         input,
       ),

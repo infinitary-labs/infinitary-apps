@@ -18,6 +18,7 @@ import { seedTask } from "../tasks/seedTask";
 import { queryTasksAsync } from "../tasks/taskQuery";
 import { TaskTimeline, type TimelineRecord } from "../tasks/taskTimeline";
 import type { CardService } from "./cardService";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import { hasMergeLine, MERGES_NEXT_WORDS, mergedLine, pendingMergeLine } from "./settleWords";
 
 /** A crewmate's whole risk declaration, as a saved story carries it. */
@@ -508,8 +509,8 @@ describe("CardService", () => {
         tasks,
         { key },
         () => undefined,
-        (taskId) => cards.servedNewestBody(taskId),
-        (taskId) => cards.servedResolutionForTask(taskId),
+        (taskId) => servedNewestBody(cards, taskId),
+        (taskId) => servedResolutionForTask(cards, taskId),
       );
     const first = (await read("reader")).rows[0];
     const words = (text: string | undefined) =>
@@ -595,8 +596,8 @@ describe("CardService", () => {
         tasks,
         { key: "reader", field: "timeline" },
         () => undefined,
-        (taskId) => cards.servedNewestBody(taskId),
-        (taskId) => cards.servedResolutionForTask(taskId),
+        (taskId) => servedNewestBody(cards, taskId),
+        (taskId) => servedResolutionForTask(cards, taskId),
         { timeline },
       )
     ).rows[0];

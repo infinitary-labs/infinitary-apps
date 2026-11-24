@@ -83,13 +83,14 @@ import {
 } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, within } from "./layout";
-import { CLAUDE_CREWMATE_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { addedProjects, openProject, projectLine } from "./projects";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import { putInLine } from "./rails";
+import { copiesOf, firstmateTurnWith, READER_RUNTIMES, readerMarked } from "./readerJourney";
 import { readSavedData } from "./savedData";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import {
@@ -360,32 +361,6 @@ async function askFirstmate(words: string, calls: ScriptedCall[]): Promise<strin
     .poll(answer.outcome, { timeout: 30_000 })
     .toMatchObject({ state: "closed", results: calls.map(() => expect.any(String)) });
   return answer.outcome().results;
-}
-
-/** Words between reader-data marks, as a request's JSON text carries them. */
-function readerMarked(words: string): RegExp {
-  const escaped = words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\[\\[reader-data fence=[0-9a-f]{16} [^\\]]*\\]\\][^\\[]*${escaped}`);
-}
-
-/**
- * How many copies of `words` a request's JSON text holds, and how many of
- * them sit outside every reader-data span (from its opening mark to the
- * closing mark with the same fence).
- */
-function copiesOf(raw: string, words: string): { total: number; unmarked: number } {
-  const spans = [
-    ...raw.matchAll(
-      /\[\[reader-data fence=([0-9a-f]{16})[^\]]*\]\][\s\S]*?\[\[\/reader-data fence=\1\]\]/g,
-    ),
-  ].map((span): [number, number] => [span.index, span.index + span[0].length]);
-  let total = 0;
-  let unmarked = 0;
-  for (let at = raw.indexOf(words); at >= 0; at = raw.indexOf(words, at + words.length)) {
-    total += 1;
-    if (!spans.some(([start, end]) => start < at && at + words.length <= end)) unmarked += 1;
-  }
-  return { total, unmarked };
 }
 
 const section = (page: Page) => page.locator("[data-integrations]");
@@ -1004,23 +979,6 @@ test("a task that only answers asks before writing even to its own project, and 
  * issue and a run start, wait on the app's one approval card. The captain
  * unticks the run start, so only the issue is sent, once.
  */
-const READER_RUNTIMES = [
-  {
-    name: "Pi",
-    claude: false,
-    suffix: "",
-    reads: ["read", "grep", "ls"],
-    gone: ["bash", "write", "edit", "find", "read_card", "tasks", "knowledge"],
-  },
-  {
-    name: "Claude",
-    claude: true,
-    suffix: ` ${CLAUDE_CREWMATE_MARKER}`,
-    reads: ["Read", "Grep", "Glob"],
-    gone: ["Bash", "Write", "Edit", "WebFetch", "WebSearch", "Task", "Agent", "NotebookEdit"],
-  },
-];
-
 for (const runtime of READER_RUNTIMES) {
   test(`an unsafe data reader on ${runtime.name} reads only its own project and its writes wait on one approval card`, async () => {
     await arrange({ signedIn: true, claude: runtime.claude });
@@ -1236,16 +1194,12 @@ for (const runtime of READER_RUNTIMES) {
     // In the first mate's turn after the answer, the reader's card title,
     // chosen button and option are marked and the captain's own words are not;
     // its read of the reader's record marks the card's body the same way.
-    const answered = (launched.mockProvider?.requestBodies() ?? [])
-      .slice(sent)
-      .find((raw) => raw.includes("spawn_crewmate") && raw.includes(UNSAFE_DATA_READER_WRITTEN));
+    const turns = (launched.mockProvider?.requestBodies() ?? []).slice(sent);
+    const answered = firstmateTurnWith(turns, UNSAFE_DATA_READER_WRITTEN);
     if (!answered) throw new Error("The first mate's turn did not carry the captain's answer");
     // Its read comes back whole in the request after it, where the scripted
     // turn's own outcome holds only its opening.
-    const readerRead =
-      (launched.mockProvider?.requestBodies() ?? [])
-        .slice(sent)
-        .find((raw) => raw.includes("spawn_crewmate") && raw.includes("matching task")) ?? "";
+    const readerRead = firstmateTurnWith(turns, "matching task") ?? "";
     if (evidence) {
       writeFileSync(join(evidence, `${shot}-answered-request.json`), answered);
       writeFileSync(join(evidence, `${shot}-reader-read-request.json`), readerRead);

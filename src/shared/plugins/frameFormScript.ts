@@ -550,9 +550,11 @@ ${FRAME_TAG_SCRIPT}
     dressForm();
     if (form.fill) fillForm(form.fill);
     form.fill = null;
-    // A draft filled into a new document shows its rows' fields: no watch
-    // heard that fill.
-    offerWriteIns();
+    // A draft filled into a new document shows as the captain's own picks
+    // do - its rows' fields, its chart marks, no Default ring on a question
+    // it answers - since no watch heard that fill. A mark left unpicked
+    // over a picked radio drops every press on it.
+    dressForm();
     if (form.locked) lockForm();
     if (!form.on) {
       form.on = true;

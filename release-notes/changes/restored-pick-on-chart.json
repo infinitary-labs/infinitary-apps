@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "restored-pick-on-chart",
+      "kind": "fix",
+      "area": "cards",
+      "title": "An option you picked earlier shows picked on a card's chart",
+      "body": "When a card comes back with an option you had already picked, such as after the card is revised or when you open it in another window, that option now shows picked on the card's chart. Before, it looked unpicked and pressing it did nothing until you picked another option and then picked it again.",
+      "picture": {
+        "dark": "restored-pick-on-chart-dark.webp",
+        "light": "restored-pick-on-chart-light.webp",
+        "alt": "A card's chart showing the recommended option picked after the card was revised"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

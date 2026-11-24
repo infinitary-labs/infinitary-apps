@@ -47,6 +47,8 @@ import SwiftUI
             if !deeper { more = page.more }
             read = true; partial = false
         } catch PhoneError.refused, PhoneError.invalidReply {
+            // Only a computer that never answered is one from before the Conversation; a later refusal keeps what was read.
+            guard !read || partial else { return }
             read = true; partial = true; rounds = []; more = false
         } catch {}
     }
@@ -114,11 +116,19 @@ struct PhoneConversationSheet: View {
             position = landing ?? model.place ?? model.shown(session.lastTurn).first?.id
         }
         .onDisappear { model.place = position }
-        // Read on opening, and again whenever the newest rounds changed.
-        .task(id: session.conversationRevision) {
+        // Read on opening, again whenever the newest rounds changed, once the computer is back in reach after a read
+        // that could not finish, and for a reading the composer started afresh while the sheet stayed up.
+        .task(id: ReadKey(revision: session.conversationRevision, inReach: session.contact == "in-reach",
+                          model: ObjectIdentifier(model))) {
             await model.readNewest(session)
             if let pending { await model.reach(pending, session) }
         }
+    }
+
+    private struct ReadKey: Equatable {
+        let revision: Int
+        let inReach: Bool
+        let model: ObjectIdentifier
     }
 
     private var everything: some View {

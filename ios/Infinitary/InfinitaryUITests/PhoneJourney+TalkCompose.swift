@@ -212,13 +212,14 @@ extension PhoneJourney {
         XCTAssertTrue(chose.waitForPresence(timeout: 10), "The Conversation opens at the card round: \(app.debugDescription)")
         let pressedTile = app.buttons["conversation-tile-\(try XCTUnwrap(pressed["id"] as? String))"]
         XCTAssertTrue(pressedTile.exists, "The card's tile stands before the press")
-        // On an iPad's half-height sheet the lazily drawn newest rounds leave the accessibility tree after the
-        // appearance redraw, so the pictures follow the scroll area that holds them.
+        // The pictures follow the scroll area, which stands whatever it holds, so a round lost in the redraw fails the
+        // assertion after them at once rather than holding the picture's wait.
         try await appearances("conversation-everything", showing: app.scrollViews["conversation-scroll"])
+        XCTAssertTrue(chose.waitForPresence(timeout: 10), "The Conversation keeps its rounds through a change of appearance: \(app.debugDescription)")
         tapOnPhone(app.segmentedControls["conversation-show"].buttons.element(boundBy: 1))
         let waitingTile = app.buttons["conversation-tile-\(try XCTUnwrap(waiting["id"] as? String))"]
         XCTAssertTrue(waitingTile.waitForPresence(timeout: 10), "Cards lists the card waiting on you: \(app.debugDescription)")
-        XCTAssertTrue(app.descendants(matching: .any)["conversation-section-answered"].exists, "Cards lists the answered card")
+        XCTAssertTrue(app.descendants(matching: .any)["conversation-section-answered"].exists, "Cards lists the answered card: \(app.debugDescription)")
         XCTAssertTrue(pressedTile.exists)
         XCTAssertLessThan(waitingTile.frame.minY, pressedTile.frame.minY, "Waiting on you comes first")
         try await appearances("conversation-cards", showing: pressedTile)

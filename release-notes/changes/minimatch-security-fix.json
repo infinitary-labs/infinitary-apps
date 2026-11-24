@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "minimatch-security-fix",
+      "reason": "Library upgrade: the packager, the universal Mac merge and the lint tools move to a minimatch release that fixes its open security alert; nothing in the app changes."
+    }
+  ]
+}

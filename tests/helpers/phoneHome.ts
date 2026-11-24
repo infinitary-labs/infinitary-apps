@@ -84,6 +84,7 @@ import { startPhonePushRelay } from "./phonePushRelay";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
+import { secretAskShown } from "./phoneSecretAsk";
 import {
   PHONE_SETTINGS_SESSION_LATER,
   phoneSettingsState,
@@ -1099,10 +1100,7 @@ export async function startPhoneHome(
             state: answer.state,
             // The field's label says its place once, beside the name (INF-5516's plan).
             place: SECRET_ASK_CARD_WORDS.place("Test"),
-            title:
-              (await core.dispatch("inf:cards:list", [])).find((card) =>
-                card.id.startsWith("card-secrets-ask-"),
-              )?.title ?? null,
+            ...secretAskShown(await core.dispatch("inf:cards:list", [])),
           };
           break;
         }

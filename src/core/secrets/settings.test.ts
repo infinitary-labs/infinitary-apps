@@ -819,6 +819,21 @@ describe("trusted Secrets settings", () => {
     expect((await f.settings.view()).uses[0]?.state).toBe("completed");
   });
 
+  // INF-6265 piece 1: the use card for a task's ask names that task and is
+  // answered by its crewmate; a use with no task has no one to answer it.
+  it("heads a task's use card with the task, for its crewmate to answer, and a taskless one as before", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    await f.request("asked-by-a-task", "task-a");
+    expect(f.cards.at(-1)).toMatchObject({
+      taskId: "task-a",
+      meta: TASK_TITLES["task-a"],
+      answeredBy: "crewmate",
+    });
+    await f.request("asked-by-no-task");
+    expect(f.cards.at(-1)?.answeredBy).toBeUndefined();
+  });
+
   it("does not reopen a use during confirmation and keeps the new choices if confirmation is refused", async () => {
     const f = fixture();
     await f.settings.put(INPUT);

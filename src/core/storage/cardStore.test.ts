@@ -42,6 +42,21 @@ describe("CardStore", () => {
     expect(restored[0]).toMatchObject({ id: "card-1", body: "Two options, updated." });
   });
 
+  // Intent: INF-6274's review: a saved answerer this build does not know, as a
+  // later alpha sharing the saved-data folder could write, leaves the card
+  // showing with no answerer instead of hiding it.
+  it("keeps a card's saved answerer, and shows a card whose answerer it cannot read", () => {
+    const db = openInMemoryDatabase();
+    const store = new CardStore(db);
+    store.upsert({ ...card, author: "host", answeredBy: "crewmate" });
+    expect(new CardStore(db).get(card.id)?.answeredBy).toBe("crewmate");
+    db.prepare("UPDATE cards SET answered_by = ? WHERE id = ?").run("reviewer", card.id);
+    const restored = new CardStore(db).get(card.id);
+    expect(restored).toMatchObject({ id: card.id, title: card.title });
+    expect(restored).not.toHaveProperty("answeredBy");
+    db.close();
+  });
+
   it("keeps a card's live attachment across instances, and leaves off one it cannot read", () => {
     const db = openInMemoryDatabase();
     const store = new CardStore(db);

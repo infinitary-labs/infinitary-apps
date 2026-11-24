@@ -17128,7 +17128,10 @@
             },
             "answeredBy": {
               "type": "string",
-              "const": "firstmate"
+              "enum": [
+                "firstmate",
+                "crewmate"
+              ]
             },
             "holdsPlace": {
               "type": "boolean",
@@ -18610,7 +18613,10 @@
               },
               "answeredBy": {
                 "type": "string",
-                "const": "firstmate"
+                "enum": [
+                  "firstmate",
+                  "crewmate"
+                ]
               },
               "holdsPlace": {
                 "type": "boolean",
@@ -92238,7 +92244,10 @@
             },
             "answeredBy": {
               "type": "string",
-              "const": "firstmate"
+              "enum": [
+                "firstmate",
+                "crewmate"
+              ]
             },
             "holdsPlace": {
               "type": "boolean",

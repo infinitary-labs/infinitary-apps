@@ -27,6 +27,11 @@ extension PhoneCardPane {
         }
     }
 
+    /// Save secret stays with its masked fields on the face: on the back it would sit under the thread's plain field.
+    func savesFromBack(_ action: PhoneJSON) -> Bool {
+        showsBack && action["id"].text != nil && action["id"].text == PhoneSecretAsk.of(card)?.pass
+    }
+
     var chosenID: PhoneJSON? { card.isPast && card.value["ending"]["how"].text != "closed" ? card.value["ending"]["actionId"] : nil }
 
     var foot: some View {
@@ -41,7 +46,9 @@ extension PhoneCardPane {
             // INF-3746: while a note is open the reply and the choices step aside for it; on an iPhone on its side the
             // editor takes their place in the foot.
             if pick != nil && shown && noteInFoot { noteEditor.modifier(PhoneFaceOnly(angle: turnAngle)) }
-            if takesReply && pick == nil {
+            // On an ask to keep a secret no plain field sits beside the masked ones: the reply is on the thread's back,
+            // as on the Mac, where Chat opens the thread beside the card.
+            if takesReply && pick == nil && PhoneSecretAsk.of(card) == nil {
                 replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle))
                     // INF-3468: the field and the margin under it, the place a typing field in a scrolling card rests.
                     .background(alignment: .top) {
@@ -87,10 +94,18 @@ extension PhoneCardPane {
                 approvalFoot(use, secrets)
             } else if !card.actions.isEmpty {
                 PhoneChoiceRow {
+                    // The Mac's Chat on a card with a masked field: the reply is typed on the thread's back, never beside it.
+                    if takesReply && !showsBack && PhoneSecretAsk.of(card) != nil {
+                        Button { chatOnBack() } label: { Text(PhoneCardWords.chat) }
+                            .buttonStyle(PhoneChoiceStyle(.secondary))
+                            .disabled(!session.canChange)
+                            .layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
+                            .accessibilityIdentifier("card-chat")
+                    }
                     if asking, let count = host.reading["of"].numeric {
                         answersCount(Int(count)).layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }
-                    ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
+                    ForEach(Array(footerOrder.filter { !savesFromBack($0) }.enumerated()), id: \.offset) { _, action in
                         Button { if !endsTypingInstead() { choose(action) } } label: {
                             HStack(spacing: 6) {
                                 Text(card.label(of: action) ?? PhoneMessages.phoneCardsChooseFallback())

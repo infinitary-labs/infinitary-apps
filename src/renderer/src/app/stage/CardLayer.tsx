@@ -218,6 +218,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const threads = useShellStore((s) => s.threads);
   const threadsLoaded = useShellStore((s) => s.threadsLoaded);
   const closedThreadIds = useShellStore((s) => s.closedThreadIds);
+  const openedThreadIds = useShellStore((s) => s.openedThreadIds);
   const crewActivity = useShellStore((s) => s.crewActivity);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
   const loadThread = useShellStore((s) => s.loadThread);
@@ -296,6 +297,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     threads,
     replyNotes,
     closedThreadIds,
+    openedThreadIds,
     cardDrags,
     defaultCardSize,
     cards,
@@ -970,15 +972,20 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       ? focused instanceof HTMLElement && focused.closest("[data-browser-page]") !== null
       : focused instanceof HTMLTextAreaElement &&
         focused.closest(`[data-card-reply="${CSS.escape(cardId)}"]`) !== null;
-    threadFocus.current = typing ? null : { cardId, to: open ? "collapse" : "cue", byKey };
+    // A Chat-first card's thread opens to take a reply: its field takes the caret instead.
+    const replying = open && view?.chatFirst === true;
+    threadFocus.current =
+      typing || replying ? null : { cardId, to: open ? "collapse" : "cue", byKey };
     if (browserColumn) setRequestColumn(request?.cardId ?? cardId, open ? "open" : "folded");
     else if (open) openThread(cardId);
     else closeThread(cardId);
   };
+  // A Chat-first card's thread opens by the same key before any message.
   const foldsThread =
     view?.request !== undefined ||
     view?.crewColumn === true ||
-    (view?.replyable === true && (view.collapsed || view.home === "beside"));
+    (view?.replyable === true &&
+      (view.collapsed || view.home === "beside" || view.chatFirst === true));
   lentStage.current =
     card && cardId
       ? {
@@ -989,7 +996,12 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           maximized,
           toggleSize: () => toggleSize(true),
           minimize: putAside,
-          ...(foldsThread ? { thread: () => showThread(view.collapsed, true) } : {}),
+          ...(foldsThread
+            ? {
+                thread: () =>
+                  showThread(view.collapsed || (view.chatFirst === true && !view.threadOpen), true),
+              }
+            : {}),
         }
       : null;
   const working = (entry: StackEntry) => entryWorking(entry, firstmateBusy, crewActivity);

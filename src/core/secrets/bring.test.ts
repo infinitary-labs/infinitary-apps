@@ -79,6 +79,7 @@ async function fixture(
         heard.push({ task, ended });
       },
       taskOpen: () => true,
+      taskTitle: () => "Deploy the staging site",
       ...(options.file ? { file: options.file } : {}),
       ...(options.lifetimeMs ? { lifetimeMs: options.lifetimeMs } : {}),
     });
@@ -187,6 +188,9 @@ describe("bringing secrets from another tool", () => {
       const card = f.cards.at(-1);
       expect(card?.title).toBe("Bring 2 secrets from Automic Vault?");
       expect(card?.taskId).toBe("task-a");
+      // INF-6265 piece 1: the card names the task, whose crewmate answers its thread.
+      expect(card?.meta).toBe("Deploy the staging site");
+      expect(card?.answeredBy).toBe("crewmate");
       expect(card?.body).toContain(`${realpathSync(av)} inject staging`);
       const { pass, rows } = f.offer();
       expect(rows.map((row) => [row.name, row.place, row.ticked])).toEqual([

@@ -12,6 +12,7 @@ import { CHOICE_ATTACHMENTS } from "@shared/choiceCarried";
 import { OWN_SPELLING } from "@shared/codeNames";
 import { THROUGH_THE_COMMAND } from "@shared/through";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   ANNOTATION_BODY,
   ANNOTATION_COMMENT,
@@ -168,6 +169,7 @@ describe("live reads compatibility", () => {
     through: true,
     skipped: true,
     places: true,
+    answeredByCrewmate: true,
   };
 
   it("leaves a card's reads and views out of a snapshot for a view without the change", () => {
@@ -187,6 +189,84 @@ describe("live reads compatibility", () => {
       JSON.parse(cardPushFor(entry, OWN_SPELLING, { ...reads, liveReads })).payload;
     expect(sent(false)[0]).not.toHaveProperty("reads");
     expect(sent(false)[0]).not.toHaveProperty("sql");
+    expect(sent(true)).toEqual([card]);
+  });
+});
+
+// INF-6265 piece 1 (`card-answered-by-crewmate.md`): an older desktop view
+// reads who answers a card as a closed set, so it is sent the app's own card
+// for a crewmate's ask without that answerer, and draws it with no reply row.
+describe("crewmate answerer compatibility", () => {
+  const card = cardSchema.parse({
+    id: "secret-ask-t1-0",
+    taskId: "t1",
+    author: "host",
+    priority: 10,
+    title: "Keep a secret for Tidy the docs",
+    meta: "Tidy the docs",
+    body: "<p>The crew asked to keep a secret.</p>",
+    actions: [
+      {
+        id: "keep",
+        label: "Save secret",
+        default: true,
+        effect: {
+          kind: "host",
+          op: "secrets-keep",
+          arg: JSON.stringify({ fields: [{ id: "s1", name: "Stripe test key", place: "Test" }] }),
+        },
+      },
+    ],
+    status: "ready",
+    createdAt: 1,
+    answeredBy: "crewmate",
+  });
+  const reads = {
+    updates: true,
+    ended: true,
+    annotations: true,
+    files: true,
+    through: true,
+    skipped: true,
+    places: true,
+    liveReads: true,
+  };
+  const olderCardSchema = cardSchema.extend({ answeredBy: z.literal("firstmate").optional() });
+
+  it("leaves a crewmate answerer out of a snapshot for a view without the change", () => {
+    const older = legacyCardSnapshot([card], { ...reads, answeredByCrewmate: false }) as unknown[];
+    const { answeredBy: _answeredBy, ...rest } = card;
+    expect(olderCardSchema.parse(older[0])).toEqual(rest);
+    expect(legacyCardSnapshot([card], { ...reads, answeredByCrewmate: true })).toEqual([card]);
+  });
+
+  it("keeps the first mate as answerer for that view", () => {
+    const stall = {
+      ...card,
+      id: "card-stall-t1",
+      title: "Tidy the docs has stopped",
+      actions: [{ id: "restart", label: "Start it again", default: true }],
+      answeredBy: "firstmate" as const,
+    };
+    expect(legacyCardSnapshot([stall], { ...reads, answeredByCrewmate: false })).toEqual([stall]);
+  });
+
+  it("leaves the first mate out as answerer of its own secret ask for that view", () => {
+    const own = { ...card, id: "secret-ask-firstmate-0", answeredBy: "firstmate" as const };
+    const older = legacyCardSnapshot([own], { ...reads, answeredByCrewmate: false }) as unknown[];
+    expect(older[0]).not.toHaveProperty("answeredBy");
+    expect(legacyCardSnapshot([own], { ...reads, answeredByCrewmate: true })).toEqual([own]);
+  });
+
+  it("does the same to a pushed card list", () => {
+    const entry = {
+      seq: 1,
+      channel: "inf:cards",
+      frame: JSON.stringify({ t: "push", seq: 1, channel: "inf:cards", payload: [card] }),
+    };
+    const sent = (answeredByCrewmate: boolean) =>
+      JSON.parse(cardPushFor(entry, OWN_SPELLING, { ...reads, answeredByCrewmate })).payload;
+    expect(sent(false)[0]).not.toHaveProperty("answeredBy");
     expect(sent(true)).toEqual([card]);
   });
 });

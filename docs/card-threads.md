@@ -51,6 +51,7 @@ Every choice still closes the card immediately; nothing keeps its page running w
 The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
 Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
 The card's buttons move with it, under the field: `StackedCard` draws them into the thread column's reply slot (`choicesIn`), so a button plainly carries the field's words, and its keys and Go to the card's buttons still find them there.
+A card with a secret's masked fields keeps its buttons under them instead (`EntryView.chatFirst`), so Save sits with the fields it sends and never under the thread's plain field; words left in the thread's field still go with a press.
 The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
 The author's answer redraws it at the close-out - see the next section.
 A refused reply moves nothing and keeps the draft.
@@ -281,13 +282,23 @@ Every other card keeps its row as its author allows.
 
 ### A host card's reply row
 
-Host cards that name the first mate as their answerer take a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply"), the next-move check's card (`card-next-move-<task>`, `docs/report-sort.md` "The next-move check"), the cost limit card (`card-cost-<task>`, `docs/usage.md`) and every card a core service raises through `HostCardStack.raiseHostCard` - the app's own offers, such as adding to the app, project setup, automation, devices and credits (INF-6265's plan, piece 2).
+Host cards that name the first mate as their answerer take a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply"), the next-move check's card (`card-next-move-<task>`, `docs/report-sort.md` "The next-move check"), the cost limit card (`card-cost-<task>`, `docs/usage.md`), every card a core service raises through `HostCardStack.raiseHostCard` - the app's own offers, such as adding to the app, project setup, automation, devices and credits (INF-6265's plan, piece 2) - and the app's card for the first mate's own ask: a secret to keep and an integration call ("The reply row on the app's card for a crewmate's ask", below).
 `raiseHostCard` names the first mate unless its caller names an answerer or marks the card as taking no reply; the agent-down set and the welcome never go through it, so they stay without a field.
 Words left in such a card's field when the captain presses one of its buttons reach the first mate once with the choice, as an app-carried choice does (`CardActions.carriedOut`), so the press never drops them.
 The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CardActions.replyToCard` read that field, never the id.
 A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.
 While the answer is owed the alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.
+
+### The reply row on the app's card for a crewmate's ask
+
+The app's own card for a crewmate's ask takes a reply that reaches the crewmate that asked (INF-6265): a secret to keep (`docs/secrets.md`), a secret to use, secrets to move in, and an integration call (`docs/integrations.md`).
+The host names that answerer when it raises the card (`Card.answeredBy` "crewmate", read through `cardAnswerer`), and its header names the asking task as a crewmate's card does.
+The crewmate answers in the thread with `reply` naming the message, as on its own card, but it cannot revise or close the app's card: its steer opens with its own preamble (`THREAD_APP_CARD_PREAMBLE`), which tells it to withdraw the ask where its command offers that when the work no longer needs it, and never to ask for a value in the thread.
+Words left in the field when the captain presses one of the card's buttons reach the same crewmate with the choice, told that the app carries the button out and its outcome reaches it on its own (`CARRIED_OUT_ASKER_WORDS`); the first mate is not told.
+The app's card for the first mate's own ask - a secret to keep, or an integration call, which name no task - names the first mate as its answerer, which answers in the thread as on the stuck alert.
+A panel's integration call still takes no reply, since a panel cannot answer one.
+A view whose hello does not list `card-answered-by-crewmate`, a phone included, is sent the card without a crewmate answerer, and a card with a secret's masked fields without any answerer, and draws it with no reply row.
 
 ## Images on steers (phase 2)
 
@@ -359,6 +370,8 @@ The design skill owns every visual rule (`.claude/skills/infinitary-design/compo
 
 While a card has no thread open beside it, its one field, reading "anything to add?", sits above the button row under one hairline, and Chat sits at the right edge of that row (INF-924; `docs/card-authoring.md`, "The card's one field").
 A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above); a host card the first mate answers has both ("A host card's reply row", above).
+A card whose own field is masked - a secret's field - draws no reply field under it, so a reply is never typed beside a secret: Chat (or its key) opens the thread beside the card at once, even with no message yet, and the thread's field takes the caret (`EntryView.chatFirst`, the captain's choice on INF-6265).
+On the phone, such a card's face draws no reply field either: Chat at the leading edge of its choices turns the card to its thread, even with no message yet, with the caret in the thread's field, and the thread's foot leaves Save secret off, so it stays with its fields on the face.
 
 The first sent message opens the thread beside the card in ONE container (tweak 1): one surface, border, radius and shadow, a single `--line-2` hairline between the columns, the pair centred as one object.
 For card and thread sizing, stage width is the window minus twice the larger expanded rail, so one-sided panels never shift the pair.

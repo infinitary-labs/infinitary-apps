@@ -154,6 +154,9 @@ const replyField = (cardId: string) =>
 const foldedRequest = (entryId: string) =>
   shownPart(entryId, "[data-browser-request-folded], [data-browser-crew-folded]");
 
+/** The Chat of a card whose thread opens before its field (an ask to keep a secret). */
+const chatOpens = (entryId: string) => shownPart(entryId, "[data-card-chat-opens]");
+
 /** The shown browser's page, while the captain holds it and it takes his keys. */
 const browserPage = (entryId: string) =>
   shownPart(entryId, '[data-browser-page][data-browser-input="captain"]');
@@ -284,9 +287,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "focus.main-message": () => useShellStore.getState().focusMainMessage(),
   // From Settings it goes home first; the words and caret wait in the field.
   "focus.card-reply": () => {
-    // A request folded under its browser's page opens beside it, its field with it.
+    // A request folded under its browser's page opens beside it, its field with it,
+    // and so does the thread of a card whose Chat opens it.
     const id = shownEntry(useShellStore.getState())?.id;
-    if (id && replyField(id) === null && foldedRequest(id) !== null)
+    if (id && replyField(id) === null && (foldedRequest(id) !== null || chatOpens(id) !== null))
       onShownCard((stage) => stage.thread?.());
     toShownPart(replyField, (field) => field.focus());
   },

@@ -9,6 +9,7 @@ import {
   type CardMutation,
   type CardObservation,
   type CardThread,
+  cardAnswerer,
   cardMessageText,
   cardMutationSchema,
   cardTakesReplies,
@@ -155,14 +156,20 @@ export class CardThreads {
   /**
    * Whether the Firstmate is the one that answers a card's thread: its own
    * card, a card the host named it the answerer of (the stuck alert and
-   * the app's own offers, `Card.answeredBy`), or a note a task closed done kept, whose crewmate
-   * is gone.
+   * the app's own offers, `Card.answeredBy`), or a crewmate's card - or the
+   * app's card for its ask - whose task has closed, so its crewmate is gone.
    */
   firstmateAnswers(card: Card): boolean {
-    if (card.author === "firstmate" || card.answeredBy === "firstmate") return true;
-    if (card.author !== "crewmate" || !card.taskId) return false;
+    const answerer = cardAnswerer(card);
+    if (answerer === "firstmate") return true;
+    if (answerer !== "crewmate" || !card.taskId) return false;
     const task = this.host.tasks.get(card.taskId);
     return task !== undefined && TaskService.isClosed(task);
+  }
+
+  /** Whether a task's crewmate answers a card's thread: its own card, or the app's card for its ask. */
+  crewmateAnswers(card: Card, taskId: string): boolean {
+    return cardAnswerer(card) === "crewmate" && card.taskId === taskId;
   }
 
   /**
@@ -362,12 +369,13 @@ export class CardThreads {
    */
   threadsAwaitingAuthor(taskId: string): { id: string; title: string }[] {
     // A reply the first mate answers on the host's behalf (`Card.answeredBy`)
-    // is never a thread the task's crewmate owes (INF-1670).
+    // is never a thread the task's crewmate owes (INF-1670); one on the app's
+    // own card for the crewmate's ask is (INF-6265).
     return [...this.stack.cards.values()]
       .filter(
         (card) =>
           card.taskId === taskId &&
-          card.answeredBy !== "firstmate" &&
+          cardAnswerer(card) === "crewmate" &&
           this.host.cardStore.awaitingAuthor(card.id),
       )
       .sort((a, b) => a.createdAt - b.createdAt)

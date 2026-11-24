@@ -390,7 +390,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
   "firstmate.reply": () => {
     const s = useShellStore.getState();
     if (s.view !== "home") s.setView("home");
-    s.openReplyNote();
+    s.openConversation();
   },
   "settings.runbooks": () => openSettingsAt("runbooks", "[data-runbooks] button"),
   "runbooks.open-folder": () =>

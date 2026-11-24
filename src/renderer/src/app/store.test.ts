@@ -2,7 +2,8 @@ import type { FmEvent } from "@shared/events";
 import type { LastTurn } from "@shared/lastTurn";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { takeCharacterEmote } from "../character/emoteSignal";
-import { isHeldEntry, shownCard, stackOf } from "./stack";
+import { keepConversationVisit, keptConversationVisit } from "./conversationVisit";
+import { CONVERSATION_ENTRY_ID, isHeldEntry, shownCard, stackOf } from "./stack";
 import { useShellStore } from "./store";
 import { card, DECIDE, resetShell } from "./storeTestKit";
 
@@ -209,54 +210,69 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     expect(state().lastTurn).toEqual({ you: "A newer message", reply: null, previous: null });
   });
 
-  // INF-1103, the captain's Approve and build on INF-1102's plan: a click
-  // on the reply line opens "A reading card the window holds, like a past
-  // card", showing the words "As the first mate wrote them".
-  it("opens the reply whole as one held note at the front, which Esc's close takes away", () => {
+  // INF-6337's plan, the captain's Approve and build: "clicking would open
+  // up a full card with something more like a chat UX" - one conversation
+  // the window holds at the front, at the round pressed, which a past card
+  // opened from it returns to and Esc's close takes away.
+  it("opens the conversation as one held entry at the round pressed, which a past card returns to", () => {
     useShellStore.setState({
       cards: [card({ id: "decision", status: "ready", actions: DECIDE })],
       records: [],
       cardIndex: 0,
     });
-    expect(state().openReplyNote()).toBe(false);
-    expect(state().records).toEqual([]);
-    state().applyEvent({ type: "user_turn", text: "Can the Mac mini run the Linux checks?" });
-    state().applyEvent({
-      type: "firstmate_reply",
-      text: "Looking at: - which checks run; - the risk.",
-      words: "Looking at:\n- which checks run;\n- the risk.",
-      eligibility: "completed",
-    });
-    expect(state().openReplyNote()).toBe(true);
     const shown = () => shownCard(state().cards, state().cardIndex, [], state().records);
-    expect(shown()?.replyNote).toEqual({
-      you: "Can the Mac mini run the Linux checks?",
-      words: "Looking at:\n- which checks run;\n- the risk.",
-      problem: false,
-    });
+    state().openConversation();
+    expect(state().records).toEqual([{ conversation: {} }]);
+    expect(shown()?.id).toBe(CONVERSATION_ENTRY_ID);
     expect(isHeldEntry(shown())).toBe(true);
     state().nextCard();
-    state().applyEvent({ type: "user_turn", text: "Merge it" });
-    state().applyEvent({ type: "firstmate_reply", text: "Something went wrong", problem: true });
-    state().openReplyNote();
-    expect(state().records).toEqual([
-      { replyNote: { you: "Merge it", words: "Something went wrong", problem: true } },
-    ]);
-    expect(shown()?.replyNote?.words).toBe("Something went wrong");
-    // INF-1770's plan: the older round's reply line opens its own reply.
-    state().openReplyNote("older");
-    expect(state().records).toEqual([
-      {
-        replyNote: {
-          you: "Can the Mac mini run the Linux checks?",
-          words: "Looking at:\n- which checks run;\n- the risk.",
-          problem: false,
-        },
-      },
-    ]);
+    state().openConversation({ at: "older" });
+    expect(state().records).toEqual([{ conversation: { at: "older" } }]);
+    expect(shown()?.conversation).toEqual({ at: "older" });
+    state().openPastCard("answered", { cardId: CONVERSATION_ENTRY_ID });
+    expect(shown()?.id).toBe("past:answered");
+    state().closeRecord();
+    expect(shown()?.id).toBe(CONVERSATION_ENTRY_ID);
     state().closeRecord();
     expect(state().records).toEqual([]);
     expect(shown()?.id).toBe("decision");
+  });
+
+  // The approved plan: "A press opens the card in front, and Hide returns to the conversation".
+  it("brings the conversation back up when a live card it opened is hidden, ahead of other cards", () => {
+    const other = card({ id: "other", status: "ready", actions: DECIDE });
+    const opened = card({ id: "decision", status: "ready", actions: DECIDE });
+    useShellStore.setState({
+      cards: [other, opened],
+      records: [],
+      cardIndex: 0,
+      cardsSeeded: true,
+    });
+    const shown = () => shownCard(state().cards, state().cardIndex, [], state().records);
+    state().openConversation();
+    state().setConversationView("cards");
+    state().openCardFromConversation("decision");
+    expect(shown()?.id).toBe("decision");
+    state().applyCards([other, { ...opened, minimized: true }]);
+    expect(shown()?.id).toBe(CONVERSATION_ENTRY_ID);
+    expect(state().records).toEqual([{ conversation: { view: "cards" } }]);
+  });
+
+  // INF-6364's review, the captain's choice: "Come back where you were reading, until you close it".
+  it("keeps the conversation's visit through a card opened from it, until it closes or opens afresh", () => {
+    useShellStore.setState({ cards: [], records: [], cardIndex: 0 });
+    const visit = { loaded: { rounds: [], more: true, fallback: false }, atFoot: false };
+    state().openConversation();
+    keepConversationVisit(visit);
+    state().openPastCard("answered", { cardId: CONVERSATION_ENTRY_ID });
+    state().closeRecord();
+    expect(keptConversationVisit()).toBe(visit);
+    state().openConversation({ at: "older" });
+    expect(keptConversationVisit()).toBeNull();
+    keepConversationVisit(visit);
+    state().closeRecord();
+    expect(state().records).toEqual([]);
+    expect(keptConversationVisit()).toBeNull();
   });
 
   it("still ends the first-run hint on the first send", () => {

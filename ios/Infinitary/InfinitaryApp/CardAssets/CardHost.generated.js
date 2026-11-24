@@ -22591,56 +22591,56 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function commandFirstmateReply() {
     switch (currentLanguage()) {
       case "ar":
-        return `فتح رد نائب القبطان`;
+        return `فتح المحادثة`;
       case "de":
-        return `Antwort des ersten Offiziers öffnen`;
+        return `Unterhaltung öffnen`;
       case "es":
-        return `Abrir la respuesta del primer oficial`;
+        return `Abrir la conversación`;
       case "fr":
-        return `Ouvrir la réponse du second`;
+        return `Ouvrir la conversation`;
       case "ja":
-        return `一等航海士の返信を開く`;
+        return `会話を開く`;
       case "ko":
-        return `일등항해사의 답장 열기`;
+        return `대화 열기`;
       case "pt-BR":
-        return `Abrir a resposta do imediato`;
+        return `Abrir a conversa`;
       case "zh-Hans":
-        return `打开大副的回复`;
+        return `打开对话`;
       case "zh-Hant":
-        return `開啟大副的回覆`;
+        return `開啟對話`;
       case "en-XA":
-        return `[Öþéñ ţĥé ƒîŕšţ ɱáţé'š ŕéþļý ~~~~~~~~~]`;
+        return `[Öþéñ ţĥé çöñṽéŕšáţîöñ ~~~~~~~]`;
       case "ar-XB":
-        return `‮Open the first mate's reply‬`;
+        return `‮Open the conversation‬`;
     }
-    return `Open the first mate's reply`;
+    return `Open the conversation`;
   }
   function commandFirstmateReplyWords() {
     switch (currentLanguage()) {
       case "ar":
-        return `إجابة, رسالة, ملاحظة, أخير`;
+        return `محادثة, دردشة, سجل, رد, رسالة, بطاقات`;
       case "de":
-        return `Antwort, Nachricht, Notiz, letzte`;
+        return `Unterhaltung, Chat, Verlauf, Antwort, Nachricht, Karten`;
       case "es":
-        return `respuesta, mensaje, nota, última`;
+        return `conversación, chat, historial, respuesta, mensaje, tarjetas`;
       case "fr":
-        return `réponse, message, note, dernière`;
+        return `conversation, discussion, historique, réponse, message, cartes`;
       case "ja":
-        return `回答, メッセージ, メモ, 最後`;
+        return `会話, チャット, 履歴, 返信, メッセージ, カード`;
       case "ko":
-        return `답변, 메시지, 알림, 마지막`;
+        return `대화, 채팅, 기록, 답장, 메시지, 카드`;
       case "pt-BR":
-        return `resposta, mensagem, nota, última`;
+        return `conversa, chat, histórico, resposta, mensagem, cartões`;
       case "zh-Hans":
-        return `回答, 消息, 便笺, 最后`;
+        return `对话, 聊天, 历史, 回复, 消息, 卡片`;
       case "zh-Hant":
-        return `回答, 訊息, 筆記, 最後`;
+        return `對話, 聊天, 歷史, 回覆, 訊息, 卡片`;
       case "en-XA":
-        return `[áñšŵéŕ, ɱéššáĝé, ñöţé, ļášţ ~~~~~~~~~]`;
+        return `[çöñṽéŕšáţîöñ, çĥáţ, ĥîšţöŕý, ŕéþļý, ɱéššáĝé, çáŕðš ~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮answer, message, note, last‬`;
+        return `‮conversation, chat, history, reply, message, cards‬`;
     }
-    return `answer, message, note, last`;
+    return `conversation, chat, history, reply, message, cards`;
   }
   function commandFocusCardActions() {
     switch (currentLanguage()) {
@@ -47663,33 +47663,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮This is the only card‬`;
     }
     return `This is the only card`;
-  }
-  function refuseYourFirstMateHasNotRepliedYet() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `لم يردّ نائب القبطان بعد`;
-      case "de":
-        return `Dein erster Offizier hat noch nicht geantwortet`;
-      case "es":
-        return `Tu primer oficial aún no ha respondido`;
-      case "fr":
-        return `Votre second n’a pas encore répondu`;
-      case "ja":
-        return `一等航海士はまだ返信していません`;
-      case "ko":
-        return `일등항해사가 아직 답하지 않았어요`;
-      case "pt-BR":
-        return `Seu imediato ainda não respondeu`;
-      case "zh-Hans":
-        return `你的大副还没有回复`;
-      case "zh-Hant":
-        return `你的大副還沒回覆`;
-      case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ĥáš ñöţ ŕéþļîéð ýéţ ~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your first mate has not replied yet‬`;
-    }
-    return `Your first mate has not replied yet`;
   }
   function resetKeysAsk(input2) {
     const preset = input2.preset;
@@ -92053,6 +92026,169 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Dismiss notice`;
   }
+  function shellConversationAnswered() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تمت الإجابة`;
+      case "de":
+        return `Beantwortet`;
+      case "es":
+        return `Respondidas`;
+      case "fr":
+        return `Réponse donnée`;
+      case "ja":
+        return `回答済み`;
+      case "ko":
+        return `답변함`;
+      case "pt-BR":
+        return `Respondidos`;
+      case "zh-Hans":
+        return `已回答`;
+      case "zh-Hant":
+        return `已回答`;
+      case "en-XA":
+        return `[Åñšŵéŕéð ~~~]`;
+      case "ar-XB":
+        return `‮Answered‬`;
+    }
+    return `Answered`;
+  }
+  function shellConversationCards() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `البطاقات`;
+      case "de":
+        return `Karten`;
+      case "es":
+        return `Tarjetas`;
+      case "fr":
+        return `Cartes`;
+      case "ja":
+        return `カード`;
+      case "ko":
+        return `카드`;
+      case "pt-BR":
+        return `Cartões`;
+      case "zh-Hans":
+        return `卡片`;
+      case "zh-Hant":
+        return `卡片`;
+      case "en-XA":
+        return `[Çáŕðš ~~]`;
+      case "ar-XB":
+        return `‮Cards‬`;
+    }
+    return `Cards`;
+  }
+  function shellConversationChose(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اخترت «${label}»`;
+      case "de":
+        return `„${label}“ gewählt`;
+      case "es":
+        return `Elegiste «${label}»`;
+      case "fr":
+        return `Choix : « ${label} »`;
+      case "ja":
+        return `「${label}」を選択`;
+      case "ko":
+        return `“${label}” 선택`;
+      case "pt-BR":
+        return `Escolheu “${label}”`;
+      case "zh-Hans":
+        return `选择了“${label}”`;
+      case "zh-Hant":
+        return `選擇了「${label}」`;
+      case "en-XA":
+        return `[Çĥöšé “${label}” ~~~]`;
+      case "ar-XB":
+        return `‮Chose “‬${label}‮”‬`;
+    }
+    return `Chose “${label}”`;
+  }
+  function shellConversationCrewmate() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فرد الطاقم`;
+      case "de":
+        return `Crewmitglied`;
+      case "es":
+        return `Tripulante`;
+      case "fr":
+        return `Équipier`;
+      case "ja":
+        return `乗組員`;
+      case "ko":
+        return `선원`;
+      case "pt-BR":
+        return `Tripulante`;
+      case "zh-Hans":
+        return `船员`;
+      case "zh-Hant":
+        return `船員`;
+      case "en-XA":
+        return `[Çŕéŵɱáţé ~~~]`;
+      case "ar-XB":
+        return `‮Crewmate‬`;
+    }
+    return `Crewmate`;
+  }
+  function shellConversationEmpty() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا شيء هنا بعد. تظهر هنا رسائلك والبطاقات التي تجيب عنها.`;
+      case "de":
+        return `Hier ist noch nichts. Deine Nachrichten und die Karten, die du beantwortest, erscheinen hier.`;
+      case "es":
+        return `Aún no hay nada. Aquí aparecen tus mensajes y las tarjetas que respondes.`;
+      case "fr":
+        return `Rien pour l’instant. Vos messages et les cartes auxquelles vous répondez s’affichent ici.`;
+      case "ja":
+        return `まだ何もありません。あなたのメッセージと回答したカードがここに表示されます。`;
+      case "ko":
+        return `아직 아무것도 없습니다. 보낸 메시지와 답한 카드가 여기에 표시됩니다.`;
+      case "pt-BR":
+        return `Nada aqui ainda. Suas mensagens e os cartões que você responde aparecem aqui.`;
+      case "zh-Hans":
+        return `这里还没有内容。你发的消息和回答过的卡片会显示在这里。`;
+      case "zh-Hant":
+        return `這裡還沒有內容。你傳的訊息和回答過的卡片會顯示在這裡。`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ ĥéŕé ýéţ. Ýöûŕ ɱéššáĝéš áñð ţĥé çáŕðš ýöû áñšŵéŕ šĥöŵ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing here yet. Your messages and the cards you answer show here.‬`;
+    }
+    return `Nothing here yet. Your messages and the cards you answer show here.`;
+  }
+  function shellConversationEverything() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الكل`;
+      case "de":
+        return `Alles`;
+      case "es":
+        return `Todo`;
+      case "fr":
+        return `Tout`;
+      case "ja":
+        return `すべて`;
+      case "ko":
+        return `전체`;
+      case "pt-BR":
+        return `Tudo`;
+      case "zh-Hans":
+        return `全部`;
+      case "zh-Hant":
+        return `全部`;
+      case "en-XA":
+        return `[Éṽéŕýţĥîñĝ ~~~~]`;
+      case "ar-XB":
+        return `‮Everything‬`;
+    }
+    return `Everything`;
+  }
   function shellConversationHeading() {
     switch (currentLanguage()) {
       case "ar":
@@ -92079,6 +92215,251 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Conversation‬`;
     }
     return `Conversation`;
+  }
+  function shellConversationNoCards() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد بطاقات بعد.`;
+      case "de":
+        return `Noch keine Karten.`;
+      case "es":
+        return `Aún no hay tarjetas.`;
+      case "fr":
+        return `Aucune carte pour l’instant.`;
+      case "ja":
+        return `まだカードはありません。`;
+      case "ko":
+        return `아직 카드가 없습니다.`;
+      case "pt-BR":
+        return `Nenhum cartão ainda.`;
+      case "zh-Hans":
+        return `还没有卡片。`;
+      case "zh-Hant":
+        return `還沒有卡片。`;
+      case "en-XA":
+        return `[Ñö çáŕðš ýéţ. ~~~~~]`;
+      case "ar-XB":
+        return `‮No cards yet.‬`;
+    }
+    return `No cards yet.`;
+  }
+  function shellConversationPartial() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذرت قراءة ما عدا آخر رسالتين لك.`;
+      case "de":
+        return `Nur deine letzten beiden Nachrichten konnten gelesen werden.`;
+      case "es":
+        return `Solo se pudieron leer tus dos últimos mensajes.`;
+      case "fr":
+        return `Seuls vos deux derniers messages ont pu être lus.`;
+      case "ja":
+        return `読み込めたのは最後の2件のメッセージだけです。`;
+      case "ko":
+        return `마지막 메시지 2개만 읽을 수 있었습니다.`;
+      case "pt-BR":
+        return `Só foi possível ler suas duas últimas mensagens.`;
+      case "zh-Hans":
+        return `只能读取你最近的两条消息。`;
+      case "zh-Hant":
+        return `只能讀取你最近的兩則訊息。`;
+      case "en-XA":
+        return `[Öñļý ýöûŕ ļášţ ţŵö ɱéššáĝéš çöûļð ƀé ŕéáð. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Only your last two messages could be read.‬`;
+    }
+    return `Only your last two messages could be read.`;
+  }
+  function shellConversationReadingEarlier() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ قراءة ما سبق…`;
+      case "de":
+        return `Frühere Einträge werden gelesen …`;
+      case "es":
+        return `Leyendo lo anterior…`;
+      case "fr":
+        return `Lecture des échanges précédents…`;
+      case "ja":
+        return `以前のやり取りを読み込み中…`;
+      case "ko":
+        return `이전 대화를 불러오는 중…`;
+      case "pt-BR":
+        return `Lendo o que veio antes…`;
+      case "zh-Hans":
+        return `正在读取更早的内容…`;
+      case "zh-Hant":
+        return `正在讀取更早的內容…`;
+      case "en-XA":
+        return `[Ŕéáðîñĝ éáŕļîéŕ ŕöûñðš… ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Reading earlier rounds…‬`;
+    }
+    return `Reading earlier rounds…`;
+  }
+  function shellConversationShow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ما يُعرض`;
+      case "de":
+        return `Was angezeigt wird`;
+      case "es":
+        return `Qué mostrar`;
+      case "fr":
+        return `Affichage`;
+      case "ja":
+        return `表示する内容`;
+      case "ko":
+        return `표시할 내용`;
+      case "pt-BR":
+        return `O que mostrar`;
+      case "zh-Hans":
+        return `显示内容`;
+      case "zh-Hant":
+        return `顯示內容`;
+      case "en-XA":
+        return `[Ŵĥáţ ţö šĥöŵ ~~~~]`;
+      case "ar-XB":
+        return `‮What to show‬`;
+    }
+    return `What to show`;
+  }
+  function shellConversationToday() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اليوم`;
+      case "de":
+        return `Heute`;
+      case "es":
+        return `Hoy`;
+      case "fr":
+        return `Aujourd’hui`;
+      case "ja":
+        return `今日`;
+      case "ko":
+        return `오늘`;
+      case "pt-BR":
+        return `Hoje`;
+      case "zh-Hans":
+        return `今天`;
+      case "zh-Hant":
+        return `今天`;
+      case "en-XA":
+        return `[Ţöðáý ~~]`;
+      case "ar-XB":
+        return `‮Today‬`;
+    }
+    return `Today`;
+  }
+  function shellConversationWaitingOnYou() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظارك`;
+      case "de":
+        return `Wartet auf dich`;
+      case "es":
+        return `Esperándote`;
+      case "fr":
+        return `En attente de vous`;
+      case "ja":
+        return `あなた待ち`;
+      case "ko":
+        return `선장님을 기다림`;
+      case "pt-BR":
+        return `Aguardando você`;
+      case "zh-Hans":
+        return `等你处理`;
+      case "zh-Hant":
+        return `等你處理`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ öñ ýöû ~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting on you‬`;
+    }
+    return `Waiting on you`;
+  }
+  function shellConversationYesterday() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أمس`;
+      case "de":
+        return `Gestern`;
+      case "es":
+        return `Ayer`;
+      case "fr":
+        return `Hier`;
+      case "ja":
+        return `昨日`;
+      case "ko":
+        return `어제`;
+      case "pt-BR":
+        return `Ontem`;
+      case "zh-Hans":
+        return `昨天`;
+      case "zh-Hant":
+        return `昨天`;
+      case "en-XA":
+        return `[Ýéšţéŕðáý ~~~]`;
+      case "ar-XB":
+        return `‮Yesterday‬`;
+    }
+    return `Yesterday`;
+  }
+  function shellConversationYouChose(input2) {
+    const label = input2.label;
+    switch (currentLanguage()) {
+      case "ar":
+        return `اخترت «${label}»`;
+      case "de":
+        return `Du hast „${label}“ gewählt`;
+      case "es":
+        return `Elegiste «${label}»`;
+      case "fr":
+        return `Vous avez choisi « ${label} »`;
+      case "ja":
+        return `「${label}」を選択しました`;
+      case "ko":
+        return `“${label}”을(를) 고름`;
+      case "pt-BR":
+        return `Você escolheu “${label}”`;
+      case "zh-Hans":
+        return `你选择了“${label}”`;
+      case "zh-Hant":
+        return `你選擇了「${label}」`;
+      case "en-XA":
+        return `[Ýöû çĥöšé “${label}” ~~~~]`;
+      case "ar-XB":
+        return `‮You chose “‬${label}‮”‬`;
+    }
+    return `You chose “${label}”`;
+  }
+  function shellConversationYouReplied(input2) {
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رددت «${words2}»`;
+      case "de":
+        return `Du hast „${words2}“ geantwortet`;
+      case "es":
+        return `Respondiste «${words2}»`;
+      case "fr":
+        return `Vous avez répondu « ${words2} »`;
+      case "ja":
+        return `「${words2}」と返信しました`;
+      case "ko":
+        return `“${words2}”(이)라고 답함`;
+      case "pt-BR":
+        return `Você respondeu “${words2}”`;
+      case "zh-Hans":
+        return `你回复了“${words2}”`;
+      case "zh-Hant":
+        return `你回覆了「${words2}」`;
+      case "en-XA":
+        return `[Ýöû ŕéþļîéð “${words2}” ~~~~~]`;
+      case "ar-XB":
+        return `‮You replied “‬${words2}‮”‬`;
+    }
+    return `You replied “${words2}”`;
   }
   function shellDiagnosticsOk() {
     switch (currentLanguage()) {
@@ -94006,60 +94387,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮holds still while you talk.‬`;
     }
     return `holds still while you talk.`;
-  }
-  function shellReplyNoteFirstMate() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `نائب القبطان`;
-      case "de":
-        return `Erster Offizier`;
-      case "es":
-        return `Primer oficial`;
-      case "fr":
-        return `Second`;
-      case "ja":
-        return `一等航海士`;
-      case "ko":
-        return `일등항해사`;
-      case "pt-BR":
-        return `Imediato`;
-      case "zh-Hans":
-        return `大副`;
-      case "zh-Hant":
-        return `大副`;
-      case "en-XA":
-        return `[Ƒîŕšţ ɱáţé ~~~~]`;
-      case "ar-XB":
-        return `‮First mate‬`;
-    }
-    return `First mate`;
-  }
-  function shellReplyNoteYou() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أنت`;
-      case "de":
-        return `Du`;
-      case "es":
-        return `Tú`;
-      case "fr":
-        return `Vous`;
-      case "ja":
-        return `あなた`;
-      case "ko":
-        return `나`;
-      case "pt-BR":
-        return `Você`;
-      case "zh-Hans":
-        return `你`;
-      case "zh-Hant":
-        return `你`;
-      case "en-XA":
-        return `[Ýöû ~]`;
-      case "ar-XB":
-        return `‮You‬`;
-    }
-    return `You`;
   }
   function shellTopBarBack() {
     switch (currentLanguage()) {
@@ -103095,7 +103422,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThisCardIsWorking,
     refuseThisCardTakesNoReply,
     refuseThisIsTheOnlyCard,
-    refuseYourFirstMateHasNotRepliedYet,
     resetKeysAsk,
     resetKeysConfirm,
     resetKeysDetail,
@@ -104629,7 +104955,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellCommandSearchList,
     shellCommandSearchNoMatch,
     shellComposerNoticeDismiss,
+    shellConversationAnswered,
+    shellConversationCards,
+    shellConversationChose,
+    shellConversationCrewmate,
+    shellConversationEmpty,
+    shellConversationEverything,
     shellConversationHeading,
+    shellConversationNoCards,
+    shellConversationPartial,
+    shellConversationReadingEarlier,
+    shellConversationShow,
+    shellConversationToday,
+    shellConversationWaitingOnYou,
+    shellConversationYesterday,
+    shellConversationYouChose,
+    shellConversationYouReplied,
     shellDiagnosticsOk,
     shellDiagnosticsRetry,
     shellDiagnosticsSaving,
@@ -104696,8 +105037,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     shellReducedMotionMateText,
     shellReducedMotionWaveformSubject,
     shellReducedMotionWaveformText,
-    shellReplyNoteFirstMate,
-    shellReplyNoteYou,
     shellTopBarBack,
     shellTopBarCloseWindow,
     shellTopBarMaximize,
@@ -106391,7 +106730,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThisCardIsWorking": [],
     "refuseThisCardTakesNoReply": [],
     "refuseThisIsTheOnlyCard": [],
-    "refuseYourFirstMateHasNotRepliedYet": [],
     "resetKeysAsk": ["preset"],
     "resetKeysConfirm": [],
     "resetKeysDetail": ["preset"],
@@ -107925,7 +108263,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellCommandSearchList": [],
     "shellCommandSearchNoMatch": [],
     "shellComposerNoticeDismiss": [],
+    "shellConversationAnswered": [],
+    "shellConversationCards": [],
+    "shellConversationChose": ["label"],
+    "shellConversationCrewmate": [],
+    "shellConversationEmpty": [],
+    "shellConversationEverything": [],
     "shellConversationHeading": [],
+    "shellConversationNoCards": [],
+    "shellConversationPartial": [],
+    "shellConversationReadingEarlier": [],
+    "shellConversationShow": [],
+    "shellConversationToday": [],
+    "shellConversationWaitingOnYou": [],
+    "shellConversationYesterday": [],
+    "shellConversationYouChose": ["label"],
+    "shellConversationYouReplied": ["words"],
     "shellDiagnosticsOk": [],
     "shellDiagnosticsRetry": [],
     "shellDiagnosticsSaving": [],
@@ -107992,8 +108345,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "shellReducedMotionMateText": [],
     "shellReducedMotionWaveformSubject": [],
     "shellReducedMotionWaveformText": [],
-    "shellReplyNoteFirstMate": [],
-    "shellReplyNoteYou": [],
     "shellTopBarBack": [],
     "shellTopBarCloseWindow": [],
     "shellTopBarMaximize": [],
@@ -114311,9 +114662,10 @@ ${FRAME_KEYBOARD_SCRIPT}
         return searchWords(commandFeedbackStartWords());
       }
     },
-    // The first mate's newest reply, whole, as a note at the front
-    // (docs/composer.md "The reply note"): chosen by name, so it opens after
-    // the line above the input has faded too.
+    // The conversation at the front, at its newest round (docs/composer.md
+    // "The conversation"): chosen by name, so it opens after the line above
+    // the input has faded too. Its id is the one the reply note had, so a key
+    // the captain bound to it keeps working.
     "firstmate.reply": {
       get label() {
         return commandFirstmateReply();
@@ -120473,8 +120825,8 @@ ${startersHtml()}`;
     eligibility: lastTurnEligibilitySchema.optional(),
     /**
      * The Firstmate's closing words as it wrote them, line breaks kept, when
-     * they differ from the one-line `text`: the reply note shows them
-     * (docs/composer.md "The reply note"). Absent, the note shows `text`.
+     * they differ from the one-line `text`: the conversation shows them
+     * (docs/composer.md "The conversation"). Absent, it shows `text`.
      */
     words: string().optional()
   });

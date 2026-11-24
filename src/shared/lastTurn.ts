@@ -28,8 +28,8 @@ export const lastTurnReplySchema = z.object({
   eligibility: lastTurnEligibilitySchema.optional(),
   /**
    * The Firstmate's closing words as it wrote them, line breaks kept, when
-   * they differ from the one-line `text`: the reply note shows them
-   * (docs/composer.md "The reply note"). Absent, the note shows `text`.
+   * they differ from the one-line `text`: the conversation shows them
+   * (docs/composer.md "The conversation"). Absent, it shows `text`.
    */
   words: z.string().optional(),
 });

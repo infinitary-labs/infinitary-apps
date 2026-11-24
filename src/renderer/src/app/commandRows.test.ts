@@ -22,10 +22,14 @@ describe("command search's list", () => {
   });
 
   it("finds the thread's command by the words a person might use for it", () => {
-    for (const words of ["collapse", "chat"])
-      expect(commandRows(words, () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
-        "cards.thread",
-      ]);
+    expect(commandRows("collapse", () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
+      "cards.thread",
+    ]);
+    // INF-6337: the conversation is the place for a person who thinks in a chat thread.
+    expect(commandRows("chat", () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
+      "cards.thread",
+      "firstmate.reply",
+    ]);
     // "thread" also names the thread's jump down (INF-3124), after the thread itself.
     expect(commandRows("thread", () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
       "cards.thread",
@@ -168,6 +172,8 @@ describe("command search's list", () => {
       { id: "cards.show-cards", label: "Show Cards", keys: undefined, refusal: null },
       // INF-4578's direction A: a card docked beside its browser page goes back to the card.
       { id: "browser.card", label: "Back to the card", keys: undefined, refusal: null },
+      // INF-6337: the conversation is where a person finds their recent cards.
+      { id: "firstmate.reply", label: "Open the conversation", keys: undefined, refusal: null },
     ]);
   });
 
@@ -198,6 +204,7 @@ describe("command search's list", () => {
       ["cards.sound", undefined],
       ["cards.show-cards", undefined],
       ["browser.card", undefined],
+      ["firstmate.reply", undefined],
     ]);
     expect(commandRows("keyboard", () => null, bindings).map((row) => row.label)).toEqual([
       "Open Keyboard settings",

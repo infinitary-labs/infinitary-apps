@@ -67,8 +67,8 @@ A new message resets the clock for its newly older round; a newest reply or work
 Phone keeps its existing completed-reply clock and appearance.
 After the dissolve the older round's room stays empty, so the input does not move, and there is no control to bring it back; the next message brings the round before it back as the older round.
 A relaunch shows the two saved rounds again and starts a fresh 15 seconds for the older round on desktop, or for a known completed reply on phone.
-The captain's words are not a control: the pointer stays an arrow, a click does nothing, Tab passes over them, and they draw no underline or focus ring; resting on a cut line shows its whole text.
-Each reply line, the older one included, is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens that whole reply as a note at the front of the stack, titled with its message in quotation marks, its words as the first mate wrote them; the shared minus or Esc puts it away (`docs/composer.md` "The reply note").
+On desktop a press anywhere on a round opens the conversation at that round (INF-6337's plan, the captain's Approve and build; `components/cards/Conversation.prompt.md`), unless it ended a drag that selected words; the captain's words take no Tab stop and draw no underline or focus ring, and resting on a cut line shows its whole text.
+Each reply line, the older one included, is a button with no chrome of its own: it takes a Tab stop and the focus ring, and Enter or Space opens the conversation at its round; the shared minus or Esc puts it away, and the lines are not drawn while the conversation is shown (`docs/composer.md` "The conversation").
 
 Keys: Enter sends.
 Shift+Enter or Option+Enter adds a line (right Option is the default voice key; Enter while recording is ignored).

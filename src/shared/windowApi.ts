@@ -30,6 +30,7 @@ import type {
   TurnImage,
 } from "./cards";
 import type { Presence, WindowControl, WindowState } from "./channels/shell";
+import type { ConversationPage, ConversationPageRequest } from "./conversation";
 import type { AppCostLimitView, CostLimit } from "./costLimit";
 import type { CrewSpeed } from "./crewSpeed";
 import type { CrewPicture, CrewResultText, CrewSendResult } from "./crewTranscript";
@@ -272,6 +273,8 @@ export type FirstmateApi = {
     ) => Promise<{ ok: true }>;
     /** The captain's newest message and the Firstmate's reply line beside it, or null before the first. */
     lastTurn: () => Promise<LastTurn | null>;
+    /** One page of the conversation, newest first (docs/composer.md "The conversation"). */
+    thread: (request?: ConversationPageRequest) => Promise<ConversationPage>;
   };
   task: {
     abort: (taskId: string) => Promise<{ ok: true }>;

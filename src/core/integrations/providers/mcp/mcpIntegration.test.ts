@@ -1,8 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { integrationsViewSchema } from "@shared/integrations";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
@@ -41,6 +42,13 @@ import { McpServerStore } from "./store";
  */
 
 vi.setConfig({ testTimeout: 10_000 });
+
+// This file chains stand-in server starts and is not about the utility-QoS
+// clamp, so what the binding spawns runs at this run's own priority
+// (tests/helpers/unclampedQos.ts).
+vi.mock("../../../utilityQos", async (importOriginal) =>
+  (await import("../../../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
 
 const STAND_IN = resolve(__dirname, "../../../../../tests/helpers/mcpStandIn.ts");
 const task = { kind: "task", taskId: "task-1" } as const;
@@ -626,11 +634,29 @@ describe("an MCP server that cannot connect", () => {
 // dropped without being closed, so each look - an Automation rule's every
 // minute, or Check again - left one more program running.
 describe("a connected server that fails its tool listing (INF-3367)", () => {
-  const runningWith = (file: string): number[] =>
-    execFileSync("ps", ["-A", "-o", "pid=,command="], { encoding: "utf8" })
-      .split("\n")
+  const execFileAsync = promisify(execFile);
+  // pgrep and ps exit 1 when none of the processes they look for runs.
+  const listed = async (program: string, args: string[]): Promise<string[]> => {
+    try {
+      const { stdout } = await execFileAsync(program, args, { encoding: "utf8" });
+      return stdout.split("\n").filter((line) => line.trim() !== "");
+    } catch (error) {
+      if ((error as { code?: unknown }).code === 1) return [];
+      throw error;
+    }
+  };
+
+  // The binding starts each server as this process's own child, with no shell
+  // between, so only those children are read: a listing of every process on a
+  // busy computer outgrew the read's buffer.
+  const runningWith = async (file: string): Promise<number[]> => {
+    const children = await listed("pgrep", ["-P", String(process.pid)]);
+    if (children.length === 0) return [];
+    const lines = await listed("ps", ["-ww", "-o", "pid=,args=", "-p", children.join(",")]);
+    return lines
       .filter((line) => line.includes(file))
       .map((line) => Number.parseInt(line.trim(), 10));
+  };
 
   it("is closed, leaving no program running per attempt", async () => {
     const root = scratchDir("mcp-integration");
@@ -639,7 +665,7 @@ describe("a connected server that fails its tool listing (INF-3367)", () => {
     const served = await serve("legacy", "stdio", root);
     const file = join(root, "notes.json");
     const { id } = await service.add("mcp", { name: "Notes", runs: served.runs });
-    expect(runningWith(file)).toHaveLength(1);
+    expect(await runningWith(file)).toHaveLength(1);
 
     publishNotes(file, {
       notes: served.notes(),
@@ -648,9 +674,9 @@ describe("a connected server that fails its tool listing (INF-3367)", () => {
     try {
       for (let attempt = 0; attempt < 3; attempt += 1) await service.check(id);
       expect(service.view().integrations[0]?.health).toBe("unavailable");
-      expect(runningWith(file)).toEqual([]);
+      expect(await runningWith(file)).toEqual([]);
     } finally {
-      for (const pid of runningWith(file)) process.kill(pid);
+      for (const pid of await runningWith(file)) process.kill(pid);
     }
   });
 });

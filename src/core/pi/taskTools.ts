@@ -502,7 +502,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       reason: Type.Optional(
         Type.String({
           description:
-            "Why it drops (covered by the key of the task that did or holds the work) or why on-request parks started work.",
+            "Why it drops (if another task did or holds the work, covered by its key) or why on-request parks started work.",
         }),
       ),
       confirm: Type.Optional(

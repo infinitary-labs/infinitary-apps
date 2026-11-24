@@ -13,7 +13,7 @@ import { boundTool } from "../session/tools";
 export const ASK_SECRET_TOOL_NAME = "ask_secret";
 
 export const ASK_SECRET_TOOL_DESCRIPTION =
-  "Ask the captain to keep a key, token or password in Secrets: name each short (place only tells two of one name apart) or a kept reference to replace, and why; never a value. Give how when the captain must make or find it. The app raises its masked card; emit none. You hear once what was kept; cancel withdraws. Never ask for one in another tool: a crewmate moves it (bring-secrets skill).";
+  "Ask the captain to keep a key, token or password in Secrets: name each short (place only tells two of one name apart) or a reference to replace, and why; never a value. Give how when the captain must make or find it. The app raises its masked card; emit none. You hear once what was kept; cancel withdraws. Never ask for one in another tool: a crewmate moves it (bring-secrets skill).";
 
 /** What the first mate's ask reaches: the Secrets owner's ask, for the first mate. */
 export type SecretAskReach = {
@@ -43,7 +43,7 @@ export function createSecretTools(reach: SecretAskReach, raised?: (askId: string
         how: Type.Optional(
           Type.String({
             description:
-              "How to get it, an HTML fragment you lay out: <ol> steps, <code> names, <table>, <details>. No script, style or field; each link a full https:// address shown as its text.",
+              "How to get it, an HTML fragment: <ol> steps, <code> names, <table>, <details>. No script, style or field; each link a full https:// address shown as its text.",
           }),
         ),
         cancel: Type.Optional(Type.Boolean()),

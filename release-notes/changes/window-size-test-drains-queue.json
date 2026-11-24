@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-size-test-drains-queue",
+      "reason": "Test-only: the window-size key tests wait for every queued size step by draining fake timers instead of sleeping 50 ms, so a slow machine cannot assert before the last write lands; nothing in the app changes."
+    }
+  ]
+}

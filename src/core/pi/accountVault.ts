@@ -263,6 +263,8 @@ export class AccountVault {
   private registryUnread = false;
   /** Each connection's checks a connection file edit asked for, in order. */
   private readonly fileChecks = new Map<string, Promise<void>>();
+  /** The models file edits cost a check, kept until a check of them runs to its end. */
+  private readonly fileChecksOwed = new Map<string, Set<string>>();
 
   private constructor(
     private readonly paths: Pick<AppPaths, "accountsDir">,
@@ -511,11 +513,11 @@ export class AccountVault {
    * connection that comes back fully checked gets it here, as a checked
    * replacement does, and its models are offered again.
    */
-  async customRecheck(accountId: string) {
+  async customRecheck(accountId: string, only?: readonly string[]) {
     const account = this.requireAccount(accountId);
     if (!isCustomApiProvider(account.providerId))
       throw new Error("Only a custom connection has saved checks.");
-    const view = await this.pi.custom.recheck(accountId);
+    const view = await this.pi.custom.recheck(accountId, only);
     if (account.enabled && this.pi.custom.checked(accountId)) await this.runtimeFor(accountId);
     return { ...view, label: account.label };
   }
@@ -542,7 +544,9 @@ export class AccountVault {
         account.label = definition.label;
         renamed = true;
       }
-      if (recheck) checks.push(this.fileCheck(account.id));
+      // A check this reading cancelled, by writing a newer record, runs again too.
+      if (recheck.length || this.fileChecksOwed.get(account.id)?.size)
+        checks.push(this.fileCheck(account.id, recheck));
       else if (applied && account.enabled && this.pi.custom.checked(account.id))
         void this.runtimeFor(account.id).catch(() => undefined);
     }
@@ -551,14 +555,21 @@ export class AccountVault {
   }
 
   /** One connection's checks after a file edit, run one after another however often it changes. */
-  private fileCheck(accountId: string): Promise<void> {
-    const next = (this.fileChecks.get(accountId) ?? Promise.resolve())
-      .then(() => this.customRecheck(accountId))
-      .then(
-        () => undefined,
+  private fileCheck(accountId: string, models: readonly string[]): Promise<void> {
+    const owed = this.fileChecksOwed.get(accountId) ?? new Set();
+    for (const model of models) owed.add(model);
+    this.fileChecksOwed.set(accountId, owed);
+    const next = (this.fileChecks.get(accountId) ?? Promise.resolve()).then(async () => {
+      const due = [...owed];
+      if (!due.length) return;
+      try {
+        await this.customRecheck(accountId, due);
         // A failed model stays unchecked, as its line in Settings says.
-        () => undefined,
-      );
+        for (const model of due) owed.delete(model);
+      } catch {
+        // Cancelled by a newer reading or closed: the next check takes these too.
+      }
+    });
     this.fileChecks.set(accountId, next);
     void next.then(() => {
       if (this.fileChecks.get(accountId) === next) this.fileChecks.delete(accountId);

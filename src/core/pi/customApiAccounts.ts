@@ -493,7 +493,7 @@ export class CustomApiAccountOwner {
    * proofs. Each passing model is saved at once; the first failure stops the
    * check and comes back on its model, as a draft's does.
    */
-  async recheck(accountId: string): Promise<CustomApiView> {
+  async recheck(accountId: string, only?: readonly string[]): Promise<CustomApiView> {
     const live = this.requireLive(accountId);
     if (live.rechecking) throw new Error("A connection check is already running.");
     const abort = new AbortController();
@@ -504,7 +504,7 @@ export class CustomApiAccountOwner {
     const superseded = () => live.closed || live.stored !== stored;
     try {
       for (const model of stored.input.models) {
-        if (this.proofMatches(stored, model.id)) continue;
+        if (this.proofMatches(stored, model.id) || (only && !only.includes(model.id))) continue;
         try {
           const proof = await checkCustomApiModel(this.candidate(stored, model.id), abort.signal);
           if (superseded()) throw new CustomApiError("cancelled");
@@ -551,8 +551,8 @@ export class CustomApiAccountOwner {
    * left the file. A changed address, protocol or header holds it until it
    * is approved again here, and never inherits a key. Otherwise the file's
    * names, prices, limits, pictures, reasoning, cache and compaction apply
-   * at once, against the address already approved; `recheck` says this
-   * reading cost a model its check or added one, which `recheck` then runs.
+   * at once, against the address already approved; `recheck` names each
+   * model this reading cost its check or added, which `recheck` then checks.
    * `applied` says the definition is the one in use, so its name is too.
    * A model whose reasoning profile this computer's catalog lacks keeps
    * what it had.
@@ -560,13 +560,13 @@ export class CustomApiAccountOwner {
   applyFile(
     accountId: string,
     definition: CustomFileDefinition | undefined,
-  ): { applied: boolean; recheck: boolean } {
+  ): { applied: boolean; recheck: string[] } {
     const live = this.live.get(accountId);
-    if (!live || live.closed || !live.stored.input.file) return { applied: false, recheck: false };
+    if (!live || live.closed || !live.stored.input.file) return { applied: false, recheck: [] };
     const input = live.stored.input;
     if (!definition || approvalOf(input) !== fileApprovalOf(definition, input.mode)) {
       live.file = definition ? "changed" : "missing";
-      return { applied: false, recheck: false };
+      return { applied: false, recheck: [] };
     }
     const checkedBefore = new Set(
       input.models.filter((model) => this.proofMatches(live.stored, model.id)).map((m) => m.id),
@@ -631,11 +631,13 @@ export class CustomApiAccountOwner {
     // Only a model this reading cost its check, or one it added, is checked
     // again: a model left unchecked before, such as on a connection saved
     // paused, waits for the person's own check.
-    const recheck = live.stored.input.models.some(
-      (model) =>
-        (checkedBefore.has(model.id) || !listedBefore.has(model.id)) &&
-        !this.proofMatches(live.stored, model.id),
-    );
+    const recheck = live.stored.input.models
+      .filter(
+        (model) =>
+          (checkedBefore.has(model.id) || !listedBefore.has(model.id)) &&
+          !this.proofMatches(live.stored, model.id),
+      )
+      .map((model) => model.id);
     return { applied: true, recheck };
   }
 

@@ -103,6 +103,42 @@ it("leaves a model saved unchecked for the person's own check when the file is r
   ).toMatchObject([{ id: "operator-model", checked: false }]);
 });
 
+it("checks again only the model the file changed, never one left unchecked beside it", async () => {
+  const api = await fixture();
+  const world = vault();
+  const unchecked = { ...operator, id: "unchecked-model" };
+  const models = [unchecked, operator];
+  const definition: CustomFileDefinition = {
+    label: "Team gateway",
+    baseUrl: api.baseUrl,
+    protocol: "openai-completions",
+    headers: [],
+    models,
+  };
+  const draft = world.vault.customPrepare({ ...input(api.baseUrl), models, file: NAME });
+  await world.vault.customCheck(draft.draftId ?? "", "operator-model");
+  const account = await world.vault.customSave(draft.draftId ?? "", true);
+  const sent = api.requests.length;
+  await Promise.all(
+    world.vault.applyCustomFile([
+      {
+        name: NAME,
+        warnings: [],
+        definition: { ...definition, models: [unchecked, { ...operator, context: 32768 }] },
+      },
+    ]),
+  );
+  const checks = api.requests.slice(sent);
+  expect(checks.length).toBeGreaterThan(0);
+  expect(checks.every((request) => request.body.model === "operator-model")).toBe(true);
+  expect(
+    world.vault.customViews().find((entry) => entry.accountId === account.id)?.models,
+  ).toMatchObject([
+    { id: "unchecked-model", checked: false },
+    { id: "operator-model", context: 32768, checked: true },
+  ]);
+});
+
 it("pauses a connection whose address changed or that left the file, until the file agrees again", async () => {
   const { api, definition, apply, reading, view, usable } = await approved([operator]);
   const sent = api.requests.length;
@@ -150,7 +186,10 @@ it.each([
 );
 
 it("compacts a long session at the reserve the file states, instead of Pi's", async () => {
-  const run = async (compaction?: { reserveTokens: number; keepRecentTokens?: number }) => {
+  const run = async (
+    compaction?: { reserveTokens: number; keepRecentTokens?: number },
+    maxContextTokens?: number,
+  ) => {
     const api = await fixture();
     api.count();
     const world = vault();
@@ -176,6 +215,7 @@ it("compacts a long session at the reserve the file states, instead of Pi's", as
       builtins: "none",
       tools: [],
       shape: { turns: "rolling", record: { dir: join(world.paths.userData, "sessions") } },
+      ...(maxContextTokens ? { compaction: { maxContextTokens } } : {}),
     });
     const events: SessionEvent[] = [];
     session.subscribe((event) => events.push(event));
@@ -197,4 +237,6 @@ it("compacts a long session at the reserve the file states, instead of Pi's", as
   expect(await run({ reserveTokens: 90000 })).toBeGreaterThan(0);
   // Kept history stated past the window still leaves the summary its room.
   expect(await run({ reserveTokens: 90000, keepRecentTokens: 1e8 })).toBeGreaterThan(0);
+  // A session capped below the window, as the first mate's is, keeps turns below that cap.
+  expect(await run({ reserveTokens: 4096, keepRecentTokens: 1e8 }, 30000)).toBeGreaterThan(0);
 });

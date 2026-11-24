@@ -1109,7 +1109,7 @@ async function openOneShot(
  * history room and never more than Pi's default; the reserve is sized so the
  * summary is that quarter, and never more than Pi's default. A connection's
  * stated values replace those within the history room, kept turns within
- * what the reserve leaves of it. Rebudget at
+ * what the reserve Pi is given leaves of it. Rebudget at
  * each prompt boundary so a resumed session uses the current model. Overflow
  * still uses Pi's real compactor and its single retry.
  */
@@ -1133,22 +1133,24 @@ function budgetCustomCompaction(
       ? within(stated.reserveTokens)
       : Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
     : defaultReserve;
+  // Pi triggers above window - reserve. Recompute rather than retaining a
+  // previous large-window reserve when the next attachment uses a smaller model.
+  const reserveTokens = Math.max(
+    reserve,
+    maxContextTokens === undefined ? 0 : model.contextWindow - maxContextTokens,
+  );
   session.settingsManager.applyOverrides({
     compaction: {
       ...(custom
         ? {
-            // Kept turns and the summary share the history room: keeping all of it leaves nothing to summarize.
+            // Kept turns and the summary share the history room below Pi's trigger:
+            // keeping more leaves the session above it right after compacting.
             keepRecentTokens: stated?.keepRecentTokens
-              ? Math.max(1, Math.min(stated.keepRecentTokens, historyRoom - reserve))
+              ? Math.max(1, Math.min(stated.keepRecentTokens, historyRoom - reserveTokens))
               : Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter),
           }
         : {}),
-      // Pi triggers above window - reserve. Recompute rather than retaining a
-      // previous large-window reserve when the next attachment uses a smaller model.
-      reserveTokens: Math.max(
-        reserve,
-        maxContextTokens === undefined ? 0 : model.contextWindow - maxContextTokens,
-      ),
+      reserveTokens,
     },
   });
 }

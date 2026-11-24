@@ -638,6 +638,8 @@ export function startPlacedHome(options: {
     forgeReady: (deviceId, host) =>
       void supervisor.placement.resumeDeviceForgeSignInTasks(deviceId, host),
   });
+  // This home composes no first launch: its Firstmate answers, so no card waits for a subscription.
+  setup.readsGate(() => false);
   repos.onRunsOn((repo) => setup.runsOnChanged(repo));
   devices.onWorkDevice((contact) => setup.contact(contact));
   signInsChanged = (deviceId) => {

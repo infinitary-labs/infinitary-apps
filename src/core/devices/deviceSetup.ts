@@ -31,7 +31,9 @@ import type { WorkDeviceContact } from "../connection/connection";
  * again under its id as those facts change, comes down by itself with one
  * feed line once every row is done, and stays down after Not now, which
  * the card's own resolution remembers across restarts. The Firstmate is
- * never asked to write or judge any of it.
+ * never asked to write or judge any of it. While no subscription answers
+ * the Firstmate itself, its first launch's subscription step comes first:
+ * the card waits, and goes up once one does (docs/first-launch.md).
  *
  * The same reader keeps the backstop in step: a project that lives on
  * GitHub set to run on a computer with no GitHub sign-in of its own raises
@@ -86,6 +88,8 @@ export class DeviceSetup {
   private readonly found = new Map<string, FoundTools | undefined>();
   /** Each computer whose card is this run's business, with its rows as last raised. */
   private readonly raised = new Map<string, string | undefined>();
+  /** Up until the first launch says, so no card goes up before its first read. */
+  private gateUp: () => boolean = () => true;
 
   constructor(private readonly options: DeviceSetupOptions) {}
 
@@ -140,6 +144,21 @@ export class DeviceSetup {
     const deviceId = contact.deviceId;
     if (!this.asking(deviceId) || this.options.signIns.lastSaid(deviceId)) return;
     void this.options.signIns.signInsOf(deviceId);
+  }
+
+  /**
+   * The first launch says from here on whether its gate is up, as its last
+   * read found it: no subscription answers the Firstmate yet, and a card not
+   * on the stack waits until one does.
+   */
+  readsGate(gateUp: () => boolean): void {
+    this.gateUp = gateUp;
+  }
+
+  /** A subscription answers the Firstmate now: each card that waited for one goes up. */
+  firstmateAnswers(): void {
+    for (const device of this.options.devices())
+      if (deviceRunsWork(device.kind)) this.refresh(device.id, device);
   }
 
   /** The Devices list follows both connections; only active setup cards follow those changes. */
@@ -206,6 +225,7 @@ export class DeviceSetup {
    * Reads the facts again and puts the card where they say: up with its
    * rows as they stand, revised only when a row moved since it was last
    * raised, or down for good with one feed line once every row is done.
+   * One not on the stack stays off it while the Firstmate cannot answer.
    */
   refresh(
     deviceId: string,
@@ -227,6 +247,7 @@ export class DeviceSetup {
       this.found.delete(deviceId);
       return;
     }
+    if (!up && this.gateUp()) return;
     const actions = deviceSetupActions(facts);
     const done = deviceSetupRows(facts);
     if (!up && this.options.cards.chosenAction(id)) {

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "subscription-before-setup-card",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A first mate you just set up asks for a subscription first",
+      "body": "When this computer joins a first mate that has no subscription yet, such as one you just set up from the welcome screen, you now see its subscription step right away. Its Finish setting up card for this computer waits until a subscription answers, then comes after the first mate's welcome. Before, the card covered the subscription step, and putting it away with Not now lost it for good.",
+      "picture": {
+        "dark": "subscription-before-setup-card-dark.webp",
+        "light": "subscription-before-setup-card-light.webp",
+        "alt": "A window controlling the first mate on studio, which asks to connect a subscription to begin, with a chip for each subscription and no card in the way."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

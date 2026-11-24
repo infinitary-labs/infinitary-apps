@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standby-test-proves-batch-order",
+      "reason": "Two tests of keeping a copy on another computer silence the folder watch instead of waiting 300 ms for its reports, so every change reaches the stream before the copy is back; nothing in the app changes."
+    }
+  ]
+}

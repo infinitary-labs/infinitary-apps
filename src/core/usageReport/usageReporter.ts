@@ -29,8 +29,13 @@ export type UsageReportDestination = {
   endpoints: Partial<Record<OtlpSignal, string>>;
   /** Asked per batch; values often hold a token, so they are never logged. */
   headers(signal: OtlpSignal): Promise<Record<string, string>>;
-  /** The destination's own resource attributes, such as who and which team. */
+  /** The destination's own resource attributes, such as which team. */
   resource: Record<string, string>;
+  /**
+   * Who the work is for, on each point and event, where Claude's client puts
+   * it (`user.email`): a per-person panel groups by it, not by the resource.
+   */
+  person?: Record<string, string>;
 };
 
 export type UsageReporterOptions = {
@@ -57,6 +62,8 @@ type Turn = {
   /** The last call's moment, where the next call's span starts. */
   since: number;
   open: boolean;
+  /** A step of it ended in a provider error. */
+  failed: boolean;
   tools: Map<string, { name: string; start: number }>;
 };
 
@@ -117,25 +124,45 @@ export class UsageReporter {
     this.schedule();
   }
 
-  /** Every broadcast event; only a session's turn and tool events are read. */
+  /**
+   * Every broadcast event; only a session's step and tool events and the
+   * moments its owner settles the turn are read. A session ends a step
+   * (`turn_end`, `turn_failed`) per model call, so a turn ends only where
+   * its owner settles it: the first mate no longer busy, a crewmate's task
+   * no longer running, or the task finished.
+   */
   heard(event: FmEvent): void {
     if (
       event.type !== "assistant_delta" &&
+      event.type !== "thinking_delta" &&
       event.type !== "tool_start" &&
       event.type !== "tool_end" &&
-      event.type !== "turn_end" &&
       event.type !== "turn_failed" &&
+      event.type !== "task_changed" &&
+      event.type !== "firstmate_state" &&
       event.type !== "task_finished"
     ) {
       return;
     }
     if (!this.active()) return;
     const at = Date.now();
+    if (event.type === "firstmate_state") {
+      if (!event.busy) this.settle(this.options.firstmateTaskId, at, false);
+      return;
+    }
+    if (event.type === "task_changed") {
+      if (event.activity !== "running" && event.activity !== "starting")
+        this.settle(event.taskId, at, false);
+      return;
+    }
     if (event.type === "task_finished") {
-      const turn = this.turns.get(event.taskId);
-      if (turn?.open) this.endTurn(event.taskId, turn, at, event.status !== "completed");
+      this.settle(event.taskId, at, event.status !== "completed");
       this.turns.delete(event.taskId);
-      this.schedule();
+      return;
+    }
+    if (event.type === "turn_failed") {
+      const turn = this.turns.get(event.taskId);
+      if (turn?.open) turn.failed = true;
       return;
     }
     const turn = this.openTurn(event.taskId, at);
@@ -160,10 +187,16 @@ export class UsageReporter {
             "gen_ai.tool.call.id": event.callId,
           },
         });
+        this.schedule();
       }
-    } else if (event.type === "turn_end" || event.type === "turn_failed") {
-      this.endTurn(event.taskId, turn, at, event.type === "turn_failed");
     }
+  }
+
+  /** Ends the task's open turn, if it has one. */
+  private settle(taskId: string, at: number, failed: boolean): void {
+    const turn = this.turns.get(taskId);
+    if (!turn?.open) return;
+    this.endTurn(taskId, turn, at, failed || turn.failed);
     this.schedule();
   }
 
@@ -185,6 +218,7 @@ export class UsageReporter {
       start: at,
       since: at,
       open: true,
+      failed: false,
       tools: new Map(),
     };
     this.turns.set(taskId, turn);
@@ -227,7 +261,7 @@ export class UsageReporter {
       this.options.destinations().map(async (destination) => {
         const bodies: OtlpBodies =
           destination.format === "claude-code"
-            ? claudeCodeBodies(rows, destination.resource, since)
+            ? claudeCodeBodies(rows, destination.resource, since, destination.person)
             : standardBodies(rows, spans, destination.resource, since);
         await Promise.all(
           (Object.keys(bodies) as OtlpSignal[]).map((signal) =>

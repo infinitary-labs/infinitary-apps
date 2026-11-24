@@ -1,5 +1,6 @@
 import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
 import { hasClaudeReporting } from "../claude/claudeCostReports";
+import { claudeLoginEmail, defaultClaudeConfigDir } from "../claude/claudeQuota";
 import {
   type ClaudeCompanyReporting,
   companyHeaders,
@@ -17,13 +18,16 @@ export type CompanyDestinationDeps = {
   env(): NodeJS.ProcessEnv;
   costReportingAllowed(): Promise<boolean>;
   read(env: NodeJS.ProcessEnv): Promise<ClaudeCompanyReporting | undefined>;
+  /** The person's own Claude Code login's email, which Claude's records carry as `user.email`. */
+  email(env: NodeJS.ProcessEnv): Promise<string | undefined>;
 };
 
 /**
  * The company's Claude Code reporting setup (`claudeReporting.ts`) as the
  * report's one "claude-code" destination: Claude's own records already reach
  * it through the receiver, so every other provider's calls go there under
- * Claude Code's names, with the setup's headers and resource attributes.
+ * Claude Code's names, with the setup's headers and resource attributes and
+ * the person's Claude Code login email where Claude's records carry it.
  *
  * None where the receiver steps aside, as `claudeReportingHost` decides: a
  * managed setup's own client reports and its address is never read here.
@@ -45,7 +49,8 @@ export function companyDestination(deps: CompanyDestinationDeps): {
         !hasClaudeReporting(withoutReportingKeys(env)) &&
         (await deps.costReportingAllowed().catch(() => false));
       const setup = allowed ? await deps.read(env).catch(() => undefined) : undefined;
-      held = setup ? toDestination(setup, deps.env) : [];
+      const email = setup ? await deps.email(env).catch(() => undefined) : undefined;
+      held = setup ? toDestination(setup, deps.env, email) : [];
     })().finally(() => {
       reading = undefined;
     });
@@ -64,6 +69,7 @@ export function companyDestination(deps: CompanyDestinationDeps): {
 function toDestination(
   setup: ClaudeCompanyReporting,
   env: () => NodeJS.ProcessEnv,
+  email: string | undefined,
 ): UsageReportDestination[] {
   const endpoints: UsageReportDestination["endpoints"] = {};
   for (const signal of ["logs", "metrics"] as const) {
@@ -84,6 +90,7 @@ function toDestination(
         ...parseOtlpHeaders(setup.clientEnv.OTEL_RESOURCE_ATTRIBUTES),
         ...(serviceName ? { "service.name": serviceName } : {}),
       },
+      ...(email ? { person: { "user.email": email } } : {}),
     },
   ];
 }
@@ -94,5 +101,6 @@ export function companyUsageDestinations(): () => readonly UsageReportDestinatio
     env: () => hostEnv(),
     costReportingAllowed: () => claudeCostReportingAllowed(),
     read: (env) => readClaudeCompanyReporting(env),
+    email: (env) => claudeLoginEmail(defaultClaudeConfigDir(env), env),
   }).destinations;
 }

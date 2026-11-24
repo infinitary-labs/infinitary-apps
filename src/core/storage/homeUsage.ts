@@ -64,7 +64,17 @@ export function homeUsage(db: AppDatabase, facts: HomeUsageFacts): HomeUsage {
     isTask: facts.isTask,
     firstmateTaskId: FIRSTMATE_USAGE_TASK_ID,
   });
-  facts.hearEvents((event) => usageReporter.heard(event));
+  // The report never costs a turn its cost limit or a window its event.
+  const reporting = (run: () => void): void => {
+    try {
+      run();
+    } catch (caught) {
+      console.warn(
+        `[usage report] skipped one update (${caught instanceof Error ? caught.name : "error"})`,
+      );
+    }
+  };
+  facts.hearEvents((event) => reporting(() => usageReporter.heard(event)));
   return {
     usageReporter,
     usageStore,
@@ -87,7 +97,7 @@ export function homeUsage(db: AppDatabase, facts: HomeUsageFacts): HomeUsage {
     },
     recordUsage: (input) => {
       const rows = usageStore.record({ ...input, at: Date.now() });
-      usageReporter.recorded(rows);
+      reporting(() => usageReporter.recorded(rows));
     },
   };
 }

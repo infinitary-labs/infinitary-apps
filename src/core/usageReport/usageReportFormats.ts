@@ -131,10 +131,12 @@ export function claudeCodeBodies(
   rows: readonly ReportedRow[],
   destination: Record<string, string>,
   since: number,
+  person: Record<string, string> = {},
 ): OtlpBodies {
   const reported = rows.filter((row) => !isClaudeClientRow(row));
   if (reported.length === 0) return {};
   const labels = (row: ReportedRow) => ({
+    ...person,
     model: row.model ?? "unknown",
     provider: row.provider ?? "unknown",
     ...grouping(row),
@@ -177,6 +179,7 @@ export function claudeCodeBodies(
     observedTimeUnixNano: nanos(row.at),
     body: { stringValue: "claude_code.api_request" },
     attributes: attributes({
+      ...person,
       "event.name": "api_request",
       "event.timestamp": new Date(row.at).toISOString(),
       model: row.model ?? "unknown",

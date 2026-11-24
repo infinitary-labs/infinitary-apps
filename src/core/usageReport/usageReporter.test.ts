@@ -62,7 +62,7 @@ function destination(
   };
 }
 
-function home(destinations: () => UsageReportDestination[]) {
+function home(destinations: () => readonly UsageReportDestination[]) {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db });
   seedTask(tasks, {
@@ -225,7 +225,7 @@ describe("UsageReporter", () => {
     });
   });
 
-  it("reports all work, Claude's included, in the standard names with one trace per turn", async () => {
+  it("reports all work, Claude's included, in the standard names with one trace per settled turn", async () => {
     const { url, received } = await collector();
     const { usage, hear } = home(() => [destination(url, "standard", "tool")]);
     hear({ type: "assistant_delta", taskId: "task-1", text: "Reading the file." });
@@ -239,7 +239,29 @@ describe("UsageReporter", () => {
     });
     hear({ type: "tool_start", taskId: "task-1", callId: "c-1", toolName: "compact_context" });
     usage.recordUsage(CODEX_CALL);
+    // A session ends a step per model call; the turn goes on until the task settles it.
     hear({ type: "turn_end", taskId: "task-1" });
+    hear({ type: "tool_start", taskId: "task-1", callId: "call-8", toolName: "edit" });
+    hear({
+      type: "tool_end",
+      taskId: "task-1",
+      callId: "call-8",
+      toolName: "edit",
+      isError: false,
+    });
+    hear({ type: "turn_end", taskId: "task-1" });
+    hear({ type: "turn_end", taskId: "task-1" });
+    hear({
+      type: "task_changed",
+      taskId: "task-1",
+      key: "INF-1",
+      kind: "work",
+      status: "active",
+      from: "active",
+      activity: "idle",
+      closedReason: null,
+      seq: 1,
+    });
     usage.recordUsage({ ...CLAUDE_CALL, taskId: "firstmate" });
     await usage.usageReporter.flush();
 
@@ -286,14 +308,14 @@ describe("UsageReporter", () => {
       "infinitary.role": "crewmate",
       "infinitary.work_kind": "fix",
     });
-    const tool = spans.find((span: any) => span.name === "execute_tool read");
-    const call = spans.find((span: any) => span.name === "chat gpt-5.5");
-    for (const child of [tool, call]) {
+    for (const name of ["execute_tool read", "chat gpt-5.5", "execute_tool edit"]) {
+      const child = spans.find((span: any) => span.name === name);
       expect([child.traceId, child.parentSpanId]).toEqual([turn.traceId, turn.spanId]);
     }
     expect(spans.map((span: any) => span.name).sort()).toEqual([
       "chat claude-opus-5-5",
       "chat gpt-5.5",
+      "execute_tool edit",
       "execute_tool read",
       "invoke_agent crewmate",
     ]);
@@ -385,6 +407,22 @@ describe("UsageReporter", () => {
     await usage.usageReporter.flush();
     expect(received).toEqual([]);
   });
+
+  it("never costs the ledger its row or the seam its event when the report fails", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { usage, hear } = home(() => {
+      throw new TypeError("unreadable destinations");
+    });
+    expect(() => usage.recordUsage(CODEX_CALL)).not.toThrow();
+    expect(() =>
+      hear({ type: "tool_start", taskId: "task-1", callId: "call-7", toolName: "read" }),
+    ).not.toThrow();
+    expect(usage.usageStore.latestForTask("task-1")).toMatchObject({ input: 1200, cost: 0.0123 });
+    expect(warn.mock.calls.map(([line]) => line)).toEqual([
+      "[usage report] skipped one update (TypeError)",
+      "[usage report] skipped one update (TypeError)",
+    ]);
+  });
 });
 
 /**
@@ -412,6 +450,7 @@ describe("the company's Claude Code setup as a destination", () => {
       env: () => ({}),
       costReportingAllowed: async () => true,
       read: async () => companySetup(url),
+      email: async () => "dev@example.com",
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -438,6 +477,14 @@ describe("the company's Claude Code setup as a destination", () => {
       department: "engineering",
       "team.id": "platform",
     });
+    // Where Claude's own records carry who the work is for, so per-person panels count it.
+    const cost = metricsOf(received, "/otel/v1/metrics").find(
+      (metric: any) => metric.name === "claude_code.cost.usage",
+    );
+    expect(attrs(cost.sum.dataPoints[0])["user.email"]).toBe("dev@example.com");
+    const event = received.find((entry) => entry.path === "/otel/v1/logs")?.body.resourceLogs[0]
+      .scopeLogs[0].logRecords[0];
+    expect(attrs(event)["user.email"]).toBe("dev@example.com");
   });
 
   it("leaves out a signal the setup sends over gRPC", async () => {
@@ -446,6 +493,7 @@ describe("the company's Claude Code setup as a destination", () => {
       env: () => ({}),
       costReportingAllowed: async () => true,
       read: async () => companySetup(url, "grpc"),
+      email: async () => undefined,
     });
     await source.refresh();
     const { usage } = home(source.destinations);
@@ -460,6 +508,7 @@ describe("the company's Claude Code setup as a destination", () => {
       env: () => ({}),
       costReportingAllowed: async () => false,
       read: async () => companySetup(url),
+      email: async () => "dev@example.com",
     });
     await source.refresh();
     expect(source.destinations()).toEqual([]);

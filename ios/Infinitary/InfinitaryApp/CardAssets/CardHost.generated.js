@@ -93098,29 +93098,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateChoiceAnotherSub() {
     switch (currentLanguage()) {
       case "ar":
-        return `أعطني عنوانه وسأُعدّ نفسي هناك عبر SSH. وتتحكم بي من هنا.`;
+        return `دعني أعمل على حاسوب آخر. وتتحكم بي من هنا.`;
       case "de":
-        return `Gib seine Adresse an, und ich richte mich dort über SSH ein. Du steuerst mich von hier aus.`;
+        return `Lass mich auf einem anderen Computer laufen. Du steuerst mich von hier aus.`;
       case "es":
-        return `Dame su dirección y me configuro allí por SSH. Me controlas desde aquí.`;
+        return `Déjame funcionar en otra computadora. Me controlas desde aquí.`;
       case "fr":
-        return `Donnez son adresse et je m'y installe par SSH. Vous me contrôlez d'ici.`;
+        return `Laissez-moi tourner sur un autre ordinateur. Vous me contrôlez d’ici.`;
       case "ja":
-        return `アドレスを教えてくれれば、SSH でそちらに私を準備します。操作はここから行います。`;
+        return `別のコンピューターで私を動かしてください。操作はここから行います。`;
       case "ko":
-        return `주소를 알려 주면 SSH로 그곳에 나를 설정합니다. 조작은 여기서 합니다.`;
+        return `다른 컴퓨터에서 저를 실행해 주세요. 조작은 여기서 합니다.`;
       case "pt-BR":
-        return `Informe o endereço dele e eu me configuro lá por SSH. Você me controla daqui.`;
+        return `Deixe-me rodar em outro computador. Você me controla daqui.`;
       case "zh-Hans":
-        return `告诉我它的地址，我会通过 SSH 在那里设置自己。你在这里控制我。`;
+        return `让我在另一台电脑上运行。你在这里控制我。`;
       case "zh-Hant":
-        return `告訴我它的位址，我會透過 SSH 在那裡設定自己。你在這裡控制我。`;
+        return `讓我在另一台電腦上執行。你在這裡控制我。`;
       case "en-XA":
-        return `[Ĝîṽé îţš áððŕéšš áñð Î šéţ ɱýšéļƒ ûþ ţĥéŕé öṽéŕ ŠŠĤ. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ļéţ ɱé ŕûñ öñ áñöţĥéŕ çöɱþûţéŕ. Ýöû çöñţŕöļ ɱé ƒŕöɱ ĥéŕé. ~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Give its address and I set myself up there over SSH. You control me from here.‬`;
+        return `‮Let me run on another computer. You control me from here.‬`;
     }
-    return `Give its address and I set myself up there over SSH. You control me from here.`;
+    return `Let me run on another computer. You control me from here.`;
   }
   function shellGateChoiceHere() {
     switch (currentLanguage()) {

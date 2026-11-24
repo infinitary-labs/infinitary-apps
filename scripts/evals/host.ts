@@ -243,13 +243,15 @@ export async function approvalHost(
   const receivedAcceptance = new Promise<void>((resolve) => {
     acceptReceived = resolve;
   });
+  const served: string[] = [];
   const seatFactory: SessionFactory = {
     backend: "pi",
     controlProfile: PI_CONTROL_PROFILE,
     open: async (spec) => {
       captured = spec;
       const session = inertSession();
-      session.prompt = async () => {
+      session.prompt = async (text) => {
+        served.push(text);
         acceptReceived();
       };
       return session;
@@ -634,6 +636,10 @@ export async function approvalHost(
     },
     /** The disposable task record, for a module that reads what the host saved. */
     tasks,
+    /** The isolated host's cards and threads, for a module that sets up a card turn. */
+    supervisor: host.supervisor,
+    /** Each input the production seat was served, in order, for a module that serves a later turn. */
+    served,
     close,
   };
 }

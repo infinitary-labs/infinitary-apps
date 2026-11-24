@@ -76,6 +76,14 @@ In `step-of-own-ask`, the captain asks for work in two steps; each step the firs
 Read each case's recorded `spawn_crewmate` and `create_task` calls independently; a dispatch shows what the model passed, not what a crewmate did.
 The same run-sheet approval and Claude-client requirements apply, with the unused builder selection named explicitly.
 
+## First mate sign-off evaluation
+
+Use `--module scripts/evals/firstmateSignOff.ts` for INF-6317's four first mate cases: the captain writes under the first mate's own card, and the case serves the production turn that line produces, `about:` line included.
+In `answer-close-now` and `answer-thanks` the captain says, in two phrasings, that they need nothing more from the first mate's answer card; the expected reply names the message with `signs_off` true and calls no `close_card`.
+In `answer-correction` the captain corrects the answer, and in `required-action-close` they write under a required action's card; neither should sign off, and the host refuses a mark on the second.
+The model's calls run against the isolated host, so each case's recorded `state` says whether the card ended or stayed up, beside its thread; read the recorded calls for whether `signs_off` or `close_card` ended it, since a refused mark answers in text the runner records as a success.
+The same run-sheet approval and Claude-client requirements apply, with the unused builder selection named explicitly.
+
 ## The Claude crewmate's client
 
 The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.

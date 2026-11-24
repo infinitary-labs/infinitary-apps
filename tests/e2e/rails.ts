@@ -449,10 +449,11 @@ export const RECORD_CARD_SELECTOR = `${SHOWN_ENTRY} [data-task-record]`;
 export function recordCard(page: Page): Locator {
   return page.locator(RECORD_CARD_SELECTOR);
 }
-export const RECORD_FRAME_SELECTOR = `${SHOWN_ENTRY} iframe[title="Task record body"]`;
+// The record owns this body container; its frame's accessible title is translated.
+const RECORD_BODY_FRAME = "[data-record-body] iframe";
+export const RECORD_FRAME_SELECTOR = `${SHOWN_ENTRY} ${RECORD_BODY_FRAME}`;
 /** The same frame once the stage has revealed its record: ready, or at its hold's end. */
-const REVEALED_RECORD_FRAME_SELECTOR =
-  '[data-card-layer] [data-card-presentation][data-card-revealed] > [data-stage-entry="shown"] iframe[title="Task record body"]';
+const REVEALED_RECORD_FRAME_SELECTOR = `[data-card-layer] [data-card-presentation][data-card-revealed] > [data-stage-entry="shown"] ${RECORD_BODY_FRAME}`;
 
 export function recordFrame(page: Page): FrameLocator {
   return drawnFrame(page, RECORD_FRAME_SELECTOR);

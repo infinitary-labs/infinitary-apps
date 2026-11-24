@@ -99,7 +99,9 @@ async function expectAboveSidebar(summary: Locator, obstacles: Locator[]) {
   for (const obstacle of obstacles) {
     const box = await obstacle.boundingBox();
     if (!box) throw new Error("A visible rail control has no geometry");
-    for (const fact of await summary.locator("[data-task-fact]").all()) {
+    // Values alone omit the label column, which sits over the rail in RTL.
+    // Inspect each complete semantic row, including both label and value.
+    for (const fact of await summary.locator("[data-task-fact-label]").locator("..").all()) {
       const row = await fact.boundingBox();
       if (!row || !intersects(row, box)) continue;
       const before = await regionShot(fact);
@@ -265,6 +267,11 @@ test("crewmate summaries clear both rails in both text directions", async () => 
       await restOnRow(page, task.key);
       await expect(rowSummaryBody(page)).toBeVisible();
       expect(await clearOfLosses(page, rowSummaryBody(page))).toEqual([]);
+      if (process.env.HOVER_EVIDENCE)
+        await windowShot(
+          page,
+          join(process.env.HOVER_EVIDENCE, `review-after-${choice}-row-summary.png`),
+        );
     }
   } finally {
     await launched.close();
@@ -304,8 +311,9 @@ test("a tall summary stays above sidebars only when the smallest window leaves n
         "The minimum-height fixture must exercise an otherwise unreadable summary",
       ).toBeGreaterThan(0);
     }
-    // Task-key summaries share the physical positioning rule, too. Use a
-    // real linked dependency inside the actual task record in Arabic.
+    // Task-key summaries share the physical positioning rule, too. The
+    // record's activity contains its actual dependency-link events; Info's
+    // dependency keys are window-drawn facts, not part of the body frame.
     const board = await page.evaluate(() => window.infinitary.tasks.board());
     const task = board.tasks.find((task) => task.status === "active");
     if (!task) throw new Error("No live task with dependency keys");
@@ -313,11 +321,13 @@ test("a tall summary stays above sidebars only when the smallest window leaves n
     await focusOn(target);
     await pressKey(target, "Enter");
     await expectRecordBody(page);
-    await showRecordTab(page, "info");
+    await showRecordTab(page, "activity");
     await restOnFramedKey(page, taskKeyLinks(recordFrame(page)).first());
     const summary = keySummary(page).locator("[data-crew-summary]");
     await expect(summary).toBeVisible();
     expect(await clearOfLosses(page, summary)).toEqual([]);
+    if (process.env.HOVER_EVIDENCE)
+      await windowShot(page, join(process.env.HOVER_EVIDENCE, "review-after-ar-key-summary.png"));
   } finally {
     await launched.close();
   }

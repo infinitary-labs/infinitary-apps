@@ -85,7 +85,7 @@ export const integrationLines = {
       name: integrationMcpAddSchema.shape.name.optional(),
       runs: integrationMcpAddSchema.shape.runs.optional(),
     }),
-    line: "Connect an integration (kind: github, gitlab, github-enterprise, google for Gmail and Calendar, inbox for the Infinitary command, or mcp with name and runs for an MCP server that asks for a sign-in; optional host for a server) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started, at the Infinitary command's switch, or at the MCP form filled in. A sign-in is always their hands.",
+    line: "Connect an integration when asked (kind: github, gitlab, github-enterprise, google for Gmail and Calendar, inbox for the Infinitary command, or mcp with name and runs for a server that asks for a sign-in; optional host): app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started, at the command's switch, or at the MCP form filled in. The sign-in is always theirs.",
     alwaysTrail: true,
     offer: (v, current) => {
       const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
@@ -155,7 +155,7 @@ export const integrationLines = {
     change: "inf:integrations:add",
     current: "inf:integrations:list",
     value: integrationMcpAddSchema,
-    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as they gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (each asks them until they choose Always allow) and answers the row; a server that cannot connect is refused with why. A server that asks for a sign-in is refused saying so: offer it through integration-add with kind mcp and the same name and runs, which hands the captain the form. Never put a key or token in runs.",
+    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as they gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (each asks them until they choose Always allow) and answers the row; a server that cannot connect is refused with why. A server that asks for a sign-in is refused: offer it through integration-add with kind mcp and the same name and runs. Never put a key or token in runs.",
     toRequest: (v) => [v],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Added MCP server ${v.name}`,

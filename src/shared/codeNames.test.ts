@@ -19,7 +19,7 @@ import {
   RELEASE_USER_DATA_FOLDER,
   USER_DATA_FOLDERS,
 } from "./userDataFolders";
-import { WORK_UPDATE_ORDER } from "./work";
+import { WORK_UPDATE_ORDER } from "./workUpdate";
 
 /**
  * Code names in both spellings (the Infinitary rename, FI3-1780 steps 2 and

@@ -45,7 +45,10 @@ describe("the old-name ledger", () => {
       ),
     ).toEqual([["FM3000_", "reader"]]);
     expect(
-      classOf("src/shared/work.ts", 'export const WORK_UPDATE_ORDER = "fm:firstmate:update";'),
+      classOf(
+        "src/shared/workUpdate.ts",
+        'export const WORK_UPDATE_ORDER = "fm:firstmate:update";',
+      ),
     ).toEqual([["fm:firstmate:update", "reader"]]);
     expect(classOf("electron-builder.yml", "appId: com.kunchenguid.firstmate3000")).toEqual([
       ["firstmate3000", "identity"],

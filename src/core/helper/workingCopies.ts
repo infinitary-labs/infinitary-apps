@@ -13,15 +13,14 @@ import { mkdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { forgeOf, type KnownForgeHost } from "@shared/forge";
 import {
-  type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
   placedTaskIdSchema,
-  type ReadableRef,
   type WorkingCopyBase,
   type WorkOrderRequest,
   type WorkOrderResponse,
   worktreesDirOf,
 } from "@shared/work";
+import type { BundledRef, ReadableRef } from "@shared/workCopies";
 import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";

@@ -79,6 +79,7 @@ export const PROBES = [
       "src/shared/sshConnection.ts",
       "src/shared/work.ts",
       "src/shared/workBrowsers.ts",
+      "src/shared/workUpdate.ts",
       "tests/helpers/computerClaude.ts",
       "tests/helpers/connectionClient.ts",
       "tests/helpers/dnsSdStandIn.ts",

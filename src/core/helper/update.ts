@@ -10,7 +10,7 @@ import { readsFetchAppSystem } from "@shared/contractFeatures";
 import { COMPUTER } from "@shared/deviceNames";
 import type { DeviceGrant } from "@shared/devices";
 import { spellingOfUserDataFolder, userDataFolderOf } from "@shared/userDataFolders";
-import type { UpdateDownload, UpdateProgress, WorkUpdateAnswer } from "@shared/work";
+import type { UpdateDownload, UpdateProgress, WorkUpdateAnswer } from "@shared/workUpdate";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { type DialOptions, fetchFirstmate } from "../devices/dial";
 import { LINUX_APP_FILE } from "../devices/farSystems";

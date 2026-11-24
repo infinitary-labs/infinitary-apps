@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-work-along-its-owners",
+      "reason": "Moves the update, download and source-build orders and the working-copy shapes out of src/shared/work.ts into workUpdate.ts and workCopies.ts unchanged, so the file stays under the size warning line; nothing a person sees changes."
+    }
+  ]
+}

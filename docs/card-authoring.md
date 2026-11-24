@@ -852,7 +852,7 @@ The form carries the two closed facts the host needs, and the bridge reads them 
   A question whose options are the only possible answers carries `data-inf-options-only` on its `<fieldset>` or `<select>` instead.
   "Something else" below says what the app does with each.
 - **A `<label>` bound to each option** is how a pick reads in words.
-  The wake quotes the label text of each picked radio, checkbox or option with its value beside it; an option with none reads as its value alone.
+  The wake quotes the label text of each picked radio, checkbox or option with its value beside it; an option with none is sent with its value as its label, so it still counts as the card's words, and reads as its value alone.
 - **The question's own words** (contract 4.34) sit in the `<legend>` of a `<fieldset>` around its options, or in a `<label>` bound to a lone field.
   Names and option values stay short and stable - a word, not a sentence - so a revision keeps the captain's picks and the record reads the same question across versions.
   Nothing refuses a card without them; the footer click records the question as "no prompt" instead (`docs/card-evidence.md` "Question definitions").

@@ -118,7 +118,27 @@ function publish(what: string, schema: z.ZodType, io: "input" | "output", open: 
   }
   // The dialect is named once, for the whole file.
   delete json.$schema;
-  return json;
+  return oneTypeEach(json) as JsonSchema;
+}
+
+// Keywords whose values are data, not schemas: a "type" inside them is a value.
+const DATA_KEYWORDS = new Set(["const", "enum", "default", "examples"]);
+
+/**
+ * zod folds a union of bare types into one `type` list, after overrides run.
+ * A strict validator, as a client would use, refuses a `type` list wider than
+ * one type and null (Ajv's strictTypes), so the contract spells every union
+ * of types as anyOf, one type to a branch, at the place `type` stood.
+ */
+function oneTypeEach(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(oneTypeEach);
+  if (!node || typeof node !== "object") return node;
+  const spelled: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "type" && Array.isArray(value)) spelled.anyOf = value.map((type) => ({ type }));
+    else spelled[key] = DATA_KEYWORDS.has(key) ? value : oneTypeEach(value);
+  }
+  return spelled;
 }
 
 /**

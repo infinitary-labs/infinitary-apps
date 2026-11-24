@@ -201,7 +201,10 @@ struct PhoneConversationSheet: View {
             Text(title.uppercased()).font(PhoneFont.label).tracking(PhoneFont.labelTracking).foregroundStyle(PhoneTheme.muted)
                 .accessibilityAddTraits(.isHeader)
             rows()
-        }.accessibilityIdentifier("conversation-section-\(id)")
+        }
+        // A container keeps each tile's own identifier; without it the section's identifier replaces theirs.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("conversation-section-\(id)")
     }
 }
 

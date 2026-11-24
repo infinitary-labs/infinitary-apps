@@ -783,7 +783,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     });
     // One sign-in card, and the Firstmate hears the cut-off once, for the account.
     await expect.poll(() => signInCards(at)).toEqual(["card-auth-t1"]);
-    expect(kinds(at)).toEqual(["queued-started", "provider-cut-off"]);
+    expect(kinds(at)).toEqual(["provider-cut-off"]);
     expect(home.wakes.at(-1)?.facts).toMatchObject({
       kind: "provider-cut-off",
       provider: "Claude on Mac mini",
@@ -817,7 +817,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(signInCards(at)).toEqual(["card-auth-t1"]);
     expect(home.cards().find((card) => card.id === "card-auth-t1")?.minimized).toBe(true);
     // Only the wait the first mate's start_now heard before those hours.
-    expect(kinds(at)).toEqual(["queued-started", "provider-cut-off", "asked-start-waits"]);
+    expect(kinds(at)).toEqual(["provider-cut-off", "asked-start-waits"]);
     expect(home.tasks.get("t2")?.status).toBe("open");
     // The captain's word meanwhile is kept for it.
     expect(await home.supervisor.steer.steerCrewmate("t1", "Also fix the header.", "captain")).toBe(

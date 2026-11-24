@@ -723,9 +723,9 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     ]);
   });
 
-  it("a queued start that failed, and the one that started", async () => {
+  it("a queued start that failed wakes the first mate, and the one that started does not (INF-6536)", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, workspace, ops } = setup(crewmate);
+    const { supervisor, workspace, ops, tasks } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({
       title: "Queued",
       intent: intentOf("do"),
@@ -739,8 +739,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await tick();
     expect(ops).toEqual([
       `[fm-op] queued task ${taskId} "Queued" could not start: Could not commission a crewmate: a branch named 'fm/task-x' already exists`,
-      `[fm-op] queued task ${taskId} "Queued" started - its wait ended. A crewmate is working on it now.`,
     ]);
+    expect(tasks.get(taskId)?.status).toBe("active");
   });
 
   it("a queued start of work the captain named a model for says which model took it (FI3-444)", async () => {

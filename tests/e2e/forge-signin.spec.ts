@@ -1177,7 +1177,6 @@ for (const runtime of READER_RUNTIMES) {
       (row) => row.title === UNSAFE_DATA_READER_FOLLOWUP.title,
     );
     if (!followup) throw new Error("The reader filed no follow-up");
-    // On Pi the first mate starts the follow-up; on Claude it only reads.
     await askFirstmate(
       runtime.claude ? "How is the crew doing?" : `Start ${followup.key}.`,
       runtime.claude

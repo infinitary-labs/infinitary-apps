@@ -122357,9 +122357,10 @@ ${startersHtml()}`;
     /** Declared the held batch's fix: it joins that batch and ends the hold. */
     fix: literal(true).optional(),
     /**
-     * The held batch version a fix was built on, once a combine verified it:
-     * the fix is carried as its own difference from it from then on, and is
-     * left out, never carried whole, when its branch no longer builds on it.
+     * The held batch version a fix was built on, once its approval or a combine
+     * verified it: the fix is carried as its own difference from it from then
+     * on, and is left out, never carried whole, when its branch no longer builds
+     * on it.
      */
     heldBase: string().optional(),
     /**

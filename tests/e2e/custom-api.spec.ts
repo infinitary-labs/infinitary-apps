@@ -603,6 +603,8 @@ test("a size the connection file leaves out is typed on this computer when it ap
           api: "openai-completions",
           models: [{ id: "operator-model", maxTokens: 4096 }],
         },
+        // Refused as a built-in provider's name: listed, but not counted as read.
+        openai: { baseUrl: api.baseUrl, api: "openai-completions" },
       },
     }),
   );
@@ -621,6 +623,10 @@ test("a size the connection file leaves out is typed on this computer when it ap
   await page.getByRole("tab", { name: "Intelligence" }).click();
   const file = customApiFile(page);
   await file.choose.click();
+  await expect(file.status).toHaveText(m.accountsCustomApiFileRead({ count: 1 }));
+  await expect(file.pending("openai").block).toContainText(
+    m.accountsCustomApiFileBuiltIn({ name: "openai" }),
+  );
   await file.pending("local-server").approve.click();
   const f = customApiForm(page);
   const row = f.row("operator-model");

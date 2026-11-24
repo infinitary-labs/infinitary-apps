@@ -72,7 +72,8 @@ export function CustomApiFileRow({
       .finally(() => setBusy(false));
   };
 
-  const count = file?.connections.length ?? 0;
+  // A refused entry is listed with why, but is not a connection read.
+  const count = file?.connections.filter((connection) => !connection.refused).length ?? 0;
   return (
     <div className="fm-custom-file" data-setting="custom-connection-file">
       <div className="fm-custom-file-line">

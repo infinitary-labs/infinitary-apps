@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-thread-decision-selectors",
+      "reason": "Test-only: the card-thread journeys check the active card's decision buttons separately from the composer strip's card shortcuts."
+    }
+  ]
+}

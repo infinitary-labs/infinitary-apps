@@ -222,7 +222,12 @@ test("a captain reply revises the card in place, or is answered in the thread", 
   await expect(page.getByRole("button", { name: "Next card" })).toHaveCount(0);
 
   // A reply resolves nothing: the decision's buttons are still there.
-  await expect(page.getByRole("button", { name: THREAD_CARD_DEFAULT_LABEL })).toBeEnabled();
+  await expect(
+    shownEntry(page).getByRole("button", {
+      name: THREAD_CARD_DEFAULT_LABEL,
+      exact: true,
+    }),
+  ).toBeEnabled();
 
   // The edge tab remains a way back to the panels while the thread is open.
   const rail = page.locator('[data-rail="left"]');
@@ -457,7 +462,12 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
       .slice(0, 3)
       .map((message) => message.who),
   ).toEqual(["captain", "host", "firstmate"]);
-  await expect(page.getByRole("button", { name: FM_THREAD_DEFAULT_LABEL })).toBeEnabled();
+  await expect(
+    shownEntry(page).getByRole("button", {
+      name: FM_THREAD_DEFAULT_LABEL,
+      exact: true,
+    }),
+  ).toBeEnabled();
 
   // The Firstmate's prose answer lands in the thread this time.
   // The reply is typed as keystrokes over two lines: Shift+Enter adds the

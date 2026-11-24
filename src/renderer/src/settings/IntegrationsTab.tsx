@@ -257,10 +257,17 @@ export function IntegrationsTab() {
   };
   const cancelNotice = () => {
     setNotice(null);
-    // A kept client turns the Set up Google chip into the sign-in chip, which takes its place.
+    // Keeping a client replaces the control that opened its setup: the Set up
+    // Google chip by the sign-in chip, a row's Set up again by its next step.
+    const row = view.integrations.find((integration) => integration.kind === notice);
     const back = noticeFrom.current?.isConnected
       ? noticeFrom.current
-      : document.querySelector<HTMLElement>(`[data-forge-chip="${notice}"]`);
+      : row
+        ? (document.querySelector<HTMLElement>(
+            `[data-integration-row="${CSS.escape(row.id)}"] .fm-forges-action button`,
+          ) ??
+          document.querySelector<HTMLElement>(`[data-integration-toggle="${CSS.escape(row.id)}"]`))
+        : document.querySelector<HTMLElement>(`[data-forge-chip="${notice}"]`);
     back?.focus();
   };
   // Google signs in only as the person's own client: with none kept, or one

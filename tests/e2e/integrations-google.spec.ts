@@ -387,6 +387,27 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
       m.integrationsGoogleStoppedDetail(),
     );
   });
+
+  await test.step("another client kept from Set up again leaves Sign in again, and Cancel returns there", async () => {
+    await keepClientFile(
+      setup,
+      JSON.stringify({
+        installed: {
+          client_id: "730158442917-another-desktop.apps.googleusercontent.com",
+          client_secret: "GOCSPX-another-stand-in-secret",
+          redirect_uris: ["http://localhost"],
+        },
+      }),
+    );
+    await expect(setup).toHaveCount(0);
+    const notice = tab.locator('[data-integration-notice="google"]');
+    await expect(notice).toBeFocused();
+    await pressKey(notice.getByRole("button", { name: NOTICE.cancel, exact: true }), "Enter");
+    await expect(row).toHaveAttribute("data-integration-state", "needs_reauth");
+    await expect(
+      row.getByRole("button", { name: m.settingsIntegrationsSignInAgain(), exact: true }),
+    ).toBeFocused();
+  });
 });
 
 test("one Google sign-in from Settings by keys, and a message arriving fires a rule", async () => {

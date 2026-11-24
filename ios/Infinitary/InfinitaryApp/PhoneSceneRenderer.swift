@@ -209,7 +209,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         commands.commit()
     }
 
-    /// The scene as the Canvas drew it: the warp's backdrop, the crew, the first mate, then the selection and brackets.
+    /// The scene as the Canvas drew it: the warp's backdrop and the supernova's blast, the crew, the first mate, then the selection and brackets.
     func paint(_ input: Input, in pen: inout ScenePen) {
         #if DEBUG
         let started = ProcessInfo.processInfo.systemUptime
@@ -218,12 +218,17 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         let pose = still ? CharacterPose.still(input.state, folding: input.fold.folding, at: 0)
             : character.advance(to: now, state: input.state, fold: input.fold)
         // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
-        let frame = crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27))
+        let frame = crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
+                               supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27))
         let palette = input.palette
         // A warp's wormhole and stars lie behind every crewmate and the first mate.
         if let warp = crew.warp {
             CharacterWarp.drawBackdrop(warp, at: CGPoint(x: roster.homeX, y: roster.height / 2), riders: crew.riders,
                                        scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
+        }
+        // A supernova's blast lies behind them too, reaching through the crew's orbits.
+        if let supernova = crew.supernova {
+            CharacterSupernova.drawBlast(supernova, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
         }
         PhoneCrewPainter.draw(frame, roster: roster, now: now, still: still, in: &pen, palette: palette)
         var firstmate = pen

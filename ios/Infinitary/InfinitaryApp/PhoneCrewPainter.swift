@@ -135,7 +135,8 @@ enum PhoneCrewPainter {
         let work = glyph.unknown ? 0 : glyph.work
         // A background wait banks to idle strength; its wires stay ember only for local work, ice cyan for checks (INF-1777).
         let waits = CharacterCatalog.shared.wait, wait = glyph.unknown ? 0 : glyph.wait
-        let color = palette.acc.mix(palette.hot, max(work, wait * glyph.job))
+        // A supernova's flash and kick light it toward white, as the desktop's flash does.
+        let color = palette.acc.mix(palette.hot, max(work, wait * glyph.job)).mix(CharacterPainter.RGB(255, 246, 230), min(1, glyph.flash * 0.5))
         let beacon = CharacterCatalog.shared.captain
         let working = 0.55 + 0.45 * work, banked = working + (waits["strength"]! - working) * wait
         let strength = (banked + (beacon["wire"]! - banked) * glyph.captain) * glyph.alpha * (glyph.unknown ? 0.45 : 1) * palette.boost

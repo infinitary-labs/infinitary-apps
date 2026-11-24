@@ -173,6 +173,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | thread (a card's) | 討論串 | Taiwan's forum word for a thread. |
 | token (a custom API's token command) | 權杖 | Microsoft Taiwan's word, only on that form; model sizes stay "token" as on the usage line. |
 | token, credential (never said for a sign-in) | 登入 | Billable tokens on the usage line stay as token, as in English. |
+| unsafe data reader | 不安全資料讀取者 | A crewmate that reads words anyone can write. |
 | Usage | 用量 | Standard. |
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |

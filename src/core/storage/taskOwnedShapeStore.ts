@@ -6,6 +6,7 @@ import { prepared } from "./statements";
 export const CONTRACT_FIELDS = [
   "ongoing",
   "internal_step",
+  "unsafe_data_reader",
   "result_schema",
   "skipped_plan_because",
   "deliverable",

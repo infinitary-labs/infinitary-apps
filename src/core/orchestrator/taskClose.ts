@@ -67,6 +67,8 @@ export type TaskClose = {
   answerHandoff?: AnswerTaskClosedPayload;
   /** What else the captain's closing choice carried, which the first mate's notice brings along. */
   answerCarried?: ChoiceCarriedRecord;
+  /** An unsafe data reader wrote the answer's card, so its notice marks the card's words. */
+  answerReader?: true;
   /** Extra facts the close records on its timeline event. */
   data?: Record<string, unknown>;
   /**
@@ -438,6 +440,7 @@ export class TaskClosing {
                     kind: "answer-closed",
                     handoff: close.answerHandoff,
                     ...(close.answerCarried ? { carried: close.answerCarried } : {}),
+                    ...(close.answerReader ? { readerCard: true as const } : {}),
                   },
                 },
                 "agent",

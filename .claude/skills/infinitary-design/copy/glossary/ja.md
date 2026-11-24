@@ -170,6 +170,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | time zone | タイムゾーン | The common software word; Apple's 時間帯 also means a time of day and would blur beside a schedule. |
 | token (a custom API's token command and model sizes) | トークン | Only where the person chose a command that prints one, and for context and output sizes. |
 | token (what Usage counts) | トークン | The same unit as the model sizes in the custom API row above; a sign-in or a key is never a トークン. |
+| unsafe data reader | 安全でないデータの読み手 | A crewmate that reads words anyone can write. |
 | Usage | 使用量 | Settings section name. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | Where changes go | 変更の届け先 | Row title in Settings → Projects; pairs with 届け方 for Delivery. |

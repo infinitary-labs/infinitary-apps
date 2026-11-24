@@ -446,6 +446,10 @@
 "cardPastSentLead" = "選択と一緒に送信：";
 "cardPastUnreadable" = "このカードを読み取れませんでした";
 "cardQuickAnswer" = "クイック回答";
+"cardReaderUnsafeData" = "この乗組員は誰でも書ける文章を読むため、このカードのリンクや依頼は見知らぬ人から来たものかもしれません。";
+"cardReaderWritesHow" = "各行は最初からチェックされています。送りたくない行はチェックを外してください。チェックされた行は古い順に 1 回ずつ、あなたの %1$@ のサインインで送信されます。";
+"cardReaderWritesLead" = "「%2$@」の担当の乗組員は誰でも書ける文章を読むため、%1$@ への書き込みはすべてあなたの判断を待ちます。各行は 1 回の呼び出しと、その送信内容です。";
+"cardReaderWritesTitle" = "%1$@ への書き込みを許可しますか？";
 "cardRecordBodyTitle" = "タスク記録の本文";
 "cardRecordCare" = "慎重さ：%1$@";
 "cardRecordChecking" = "開始したか確認中";
@@ -1070,6 +1074,7 @@
 "feedStarted" = "開始";
 "feedStopped" = "停止";
 "feedUndelivered" = "メッセージ未送達：%1$@";
+"feedUnsafeDataReaderReported" = "安全でないデータの読み手が報告しました。その内容は記録にあります。";
 "feedUpdated" = "更新：%1$@";
 "feedYouChose" = "「%1$@」を選びました";
 "feedbackStripAccount" = "クリックするまで何も送信されません。あなたの GitHub アカウント %1$@ で投稿されます。";

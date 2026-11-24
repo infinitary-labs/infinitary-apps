@@ -32,7 +32,6 @@ import {
   type PastCard,
 } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
-import { isQuickAnswer } from "@shared/routingPolicy";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
@@ -41,6 +40,7 @@ import type { SeenMergeAct } from "../storage/taskRecords";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX, type OwnCardWrite } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
+import { cardShapeMarks } from "./cardShapeMarks";
 import type { CardAuthorRef, CardServiceHost, CardStack, CloseOut } from "./cardStackTypes";
 import { CardStage } from "./cardStage";
 import {
@@ -562,7 +562,7 @@ export class CardService {
   shownCards(taskId: string): WakeCard[] {
     return [...this.cards.values()]
       .filter((card) => card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate")
-      .map((card) => ({ id: card.id, word: cardWord(card), title: card.title }));
+      .map((card) => this.threads.wakeCard(card));
   }
 
   /**
@@ -651,7 +651,7 @@ export class CardService {
       return {
         ...shown,
         ...(about ? { asked: about } : {}),
-        ...(this.quickAnswer(shown) ? { quick: true as const } : {}),
+        ...cardShapeMarks(this.host.tasks, shown),
       };
     });
   }
@@ -671,16 +671,6 @@ export class CardService {
     if (!this.evidence.noteUpdateSeen(shown, lifecycleId, shown.offerId, updateId)) return;
     this.keepSeenMerge(shown, shown.offerId);
     this.scheduleBroadcast();
-  }
-
-  /**
-   * Whether a card wears the app's Quick answer mark (INF-4344): a
-   * crewmate's card whose task was sorted as a quick answer, read from the
-   * task's recorded kind (`isQuickAnswer`), never from the card's words.
-   */
-  private quickAnswer(card: Card): boolean {
-    if (card.author !== "crewmate" || !card.taskId) return false;
-    return isQuickAnswer(this.host.tasks.get(card.taskId)?.shape);
   }
 
   /**

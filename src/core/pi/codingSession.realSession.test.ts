@@ -1,6 +1,10 @@
+import { symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { describe, expect, it, vi } from "vitest";
 import { codingSpec } from "../../../tests/helpers/codingSession";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BashOutcome } from "../jobs/jobManager";
 import { boundTool } from "../session/tools";
 import type { ModelRuntime } from "./types";
@@ -65,13 +69,14 @@ function openCodingSession(
     sessionFile?: string;
     toolNames?: string[];
     runBash?: (input: { ownerId: string; command: string; cwd: string }) => Promise<BashOutcome>;
+    fenced?: boolean;
   },
 ) {
   return createPiSessionFactory({
     agentDir: input.agentDir,
     ...(input.runBash ? { runBash: input.runBash } : {}),
-  }).open(
-    codingSpec({
+  }).open({
+    ...codingSpec({
       binding: { backend: "pi", runtime: input.modelRuntime },
       cwd: input.cwd,
       owner: input.taskId,
@@ -93,7 +98,8 @@ function openCodingSession(
         }),
       ),
     }),
-  );
+    ...(input.fenced ? { fenced: true as const } : {}),
+  });
 }
 
 function customToolNames(options: Record<string, unknown>): string[] {
@@ -362,6 +368,32 @@ describe("the Pi coding session's production contract", () => {
     session.dispose();
     await expect(session.closed()).rejects.toBe(failure);
     expect(piMocks.agentSession.dispose.mock.calls).toHaveLength(releases);
+  });
+
+  // INF-6358's piece 4: an unsafe data reader's session reads its working copy
+  // and nothing else - no shell, file change or find, even with a shell to hand.
+  it("serves a fenced session only reads, each refusing a path outside its working copy", async () => {
+    const cwd = scratchDir("fm-fenced-");
+    const outside = scratchDir("fm-outside-");
+    writeFileSync(join(cwd, "notes.md"), "inside");
+    writeFileSync(join(outside, "secret.md"), "outside");
+    symlinkSync(join(outside, "secret.md"), join(cwd, "link.md"));
+    const runBash = vi.fn(async () => ({ kind: "done" }) as unknown as BashOutcome);
+    await openCodingSession({ ...spec, cwd, toolNames: ["emit_card"], runBash, fenced: true });
+    const options = (piMocks.createAgentSession.mock.calls.at(-1) as unknown[])[0] as Record<
+      string,
+      unknown
+    >;
+    expect(options.tools).toEqual(["emit_card", "read", "grep", "ls"]);
+    expect(customToolNames(options)).toEqual(["emit_card", "read", "grep", "ls"]);
+    const read = (options.customTools as ToolDefinition[]).find((tool) => tool.name === "read");
+    const run = (path: string) =>
+      read?.execute("call-1", { path }, undefined, undefined, undefined as never);
+    const inside = await run("notes.md");
+    expect(JSON.stringify(inside?.content)).toContain("inside");
+    for (const path of [join(outside, "secret.md"), "../", "link.md", "~/.ssh/id_rsa"]) {
+      await expect(run(path)).rejects.toThrow("is outside this task's working copy");
+    }
   });
 
   it("lets a custom tool shadow a builtin by name (R2: the event-driven bash)", async () => {

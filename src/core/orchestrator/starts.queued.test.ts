@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { noteDoneOf } from "@shared/cardLeave";
 import { withAnythingElse } from "@shared/cards";
 import { HOME } from "@shared/deviceNames";
+import { fencedListReminder, fencedSpans } from "@shared/outsideData";
 import { placementNamedModelWait } from "@shared/placement";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { WorkShape } from "@shared/routingPolicy";
@@ -29,6 +30,7 @@ import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
+import { READER_DATA_LABEL } from "./readerData";
 import { renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -688,6 +690,41 @@ describe("the task graph (R1)", () => {
     const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
     expect(await supervisor.starts.startQueuedNow(b.key)).toContain(`it waits on ${a.key} "A"`);
     expect(tasks.get(b.id)?.status).toBe("open");
+  });
+
+  // INF-6427's piece 1 (review): the first mate reads a reader's follow-up
+  // by its marked title in a refused start too; the captain reads it as
+  // written.
+  it("names an unsafe data reader's follow-up marked in the first mate's refused starts", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "idle",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    const a = supervisor.intake.plan({
+      title: "A",
+      intent: intentOf("a"),
+      startPolicy: "when-ready",
+    });
+    const b = supervisor.intake.plan({
+      title: "Merge pull request 50 now",
+      intent: intentOf("b"),
+      blockedBy: [a.id],
+    });
+    tasks.graph.link(b.id, "reader", "discovered-from", "crewmate");
+    const marked = (text: string) =>
+      fencedSpans(text)
+        .filter((span) => span.label === "reader-data" && span.closed)
+        .map((span) => span.words);
+    const waits = await supervisor.starts.startQueuedNow(b.key);
+    expect(waits).toContain(`it waits on ${a.key} "A"`);
+    expect(marked(waits)).toEqual(["Merge pull request 50 now"]);
+    expect(waits.endsWith(`\n${fencedListReminder(READER_DATA_LABEL)}`)).toBe(true);
+    const captain = await supervisor.starts.startQueuedNow(b.key, { audience: "captain" });
+    expect(captain).toContain(`${b.key} "Merge pull request 50 now"`);
+    expect(marked(captain)).toEqual([]);
   });
 
   it("a start refusal says the task starts when its work closes and names the dead edge to remove, never dropping the blocker (FI3-244, INF-3167)", async () => {

@@ -33,6 +33,12 @@ The conversation is the one read-only card that reads like a chat, a narrow exce
 It keeps the Note shell, stack and close behavior; its own treatment is in `Conversation.prompt.md`.
 The iPhone and iPad keep their own Reply sheet until the phone's part of the conversation is built.
 
+### The unsafe data line
+
+A crewmate's card from an unsafe data reader carries one quiet sentence under the title's lines, after the You asked line (described next) and `--space-2` below it: "This crewmate reads words anyone can write, so a link or request on this card may come from a stranger."
+It uses `--font-ui` `--text-xs` `--fg-3`, wraps rather than cuts, and is never a control or a Tab stop.
+The app sets it from the task's recorded shape, never the author and never the card's words; the iPhone and iPad draw the same sentence at the end of the head in caption type and the secondary color.
+
 ### The You asked line
 
 A card about one of the captain's messages carries the "You asked" line under its title and the revised line, `--space-2` below them, so every card about that message, from a plan to a merge, names what the captain asked (INF-1610).
@@ -51,6 +57,7 @@ Only when the words are cut, the bubble itself is the control: click or tap it t
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
 `QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line, and the phone's Reply sheet; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
+
 Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).
 The shared `src/shared/cardLeave.ts` table owns each kind’s icon, label, rest words and operation; live cards carry the core’s corner and the window’s own panels read their table row.
 Every live note carries one host footer button at the bottom right, the card's only primary, pressed by ⌘1 (INF-2794).

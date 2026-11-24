@@ -1245,6 +1245,11 @@ struct PhoneCardPane: View {
                 .accessibilityIdentifier("card-title")
             if let revised { Text(revised).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-revised") }
             if let asked = card.asked { PhoneAskedLine(asked: asked, open: $askedOpen) }
+            // A crewmate's card from an unsafe data reader: a link or request on it may be a stranger's.
+            if card.value["unsafeData"].flag {
+                Text(PhoneMessages.cardReaderUnsafeData()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    .accessibilityIdentifier("card-unsafe-data")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space3)

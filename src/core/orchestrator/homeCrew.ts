@@ -304,7 +304,12 @@ export function startHomeCrew({
       "integration"
         ? integrations.sendAsk(taskId, askId, choice)
         : githubGateway.sendAsk(taskId, askId),
-    sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
+    // An unsafe data reader's write joins the same approval cards and is sent
+    // where its project lives (docs/agents-reach.md, "An unsafe data reader").
+    sendTakenIntegrationAsk: (rowId, taken, choice) =>
+      "ask" in taken && taken.ask.kind !== "integration"
+        ? githubGateway.sendTaken(rowId, taken, choice)
+        : integrations.sendTaken(rowId, taken, choice),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber, mergeTask, place) =>
@@ -396,5 +401,8 @@ export function startHomeCrew({
       emit("inf:cards:thread", thread);
     },
   });
+  githubGateway.presentReaderAsksWith((taskId, ask, dropped) =>
+    supervisor.integrationAsks.askForge(taskId, ask, dropped),
+  );
   return supervisor;
 }

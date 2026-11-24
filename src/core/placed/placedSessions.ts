@@ -1632,4 +1632,8 @@ function refuseUnheld(
     );
   if (spec.builtins !== "coding")
     throw new Error(`${name} held on another computer holds a crewmate's conversation only.`);
+  // The other computer's host rebuilds the spec with the whole coding set,
+  // so a fenced session would lose its fence there.
+  if (spec.fenced)
+    throw new Error(`${name} held on another computer cannot hold a fenced session.`);
 }

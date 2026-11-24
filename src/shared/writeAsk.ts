@@ -35,6 +35,13 @@ export type ForgeWriteAsk = {
    * strip draws its title and body as readable text, never JSON.
    */
   feedback?: FeedbackAskFacts;
+  /**
+   * The host's approval card that lists it: an unsafe data reader's write
+   * (docs/agents-reach.md, "An unsafe data reader") joins its task's card of
+   * waiting writes, or raises its own. Absent on every other crewmate's
+   * write, which its crewmate asks for on a card of its own.
+   */
+  card?: string;
   at: number;
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;

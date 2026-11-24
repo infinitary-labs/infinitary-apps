@@ -88,6 +88,61 @@ export const WRITE_ASK_CARD_TITLE = "Send this write for me?";
 /** What the crewmate hears once the captain's click sent it. */
 export const WRITE_ASK_SENT_WAKE = WRITE_ANSWERED_LEAD;
 
+/**
+ * A scripted unsafe data reader (docs/agents-reach.md, "An unsafe data reader"): it
+ * reads its own project and is refused another and a file outside its
+ * working copy, then makes two writes to its
+ * own project, an issue and a workflow run start, both kept for the app's one
+ * approval card.
+ */
+export const UNSAFE_DATA_READER_MARKER = "triage the waiting outside issues";
+/** The same ask as an unsafe data reader that would change its project, which the host refuses. */
+export const UNSAFE_DATA_READER_CHANGE_MARKER = "fix the waiting outside issues";
+/** A file outside every working copy, which its read tool refuses. */
+export const UNSAFE_DATA_READER_FILE = "/etc/hosts";
+/** The reads it makes: its own project, then one outside it. */
+export const UNSAFE_DATA_READER_READS = ["/repos/octo/meterlab/pulls", "/repos/octo/website/pulls"];
+/** The writes it makes, in order: an issue, then a run start. */
+export const UNSAFE_DATA_READER_WRITES: GithubWriteInput[] = [
+  {
+    method: "POST",
+    path: "/repos/octo/meterlab/issues",
+    body: JSON.stringify({ title: "Triage: the meter idles on a cold start" }),
+  },
+  {
+    method: "POST",
+    path: "/repos/octo/meterlab/actions/workflows/verify.yml/dispatches",
+    body: JSON.stringify({ ref: "main" }),
+  },
+];
+
+/** The decision an unsafe data reader puts to the captain, whose words reach the first mate marked. */
+export const UNSAFE_DATA_READER_CARD = {
+  title: "Reply to issue 12?",
+  body: '<p>Issue 12 asks for a reply about the cold start.</p><fieldset><legend>What should the reply say?</legend><label><input type="checkbox" name="reply_says" value="planned"> Say a fix is planned</label><label><input type="checkbox" name="reply_says" value="other" data-inf-write-in> Something else</label></fieldset>',
+  actions: [
+    { id: "reply", label: "Draft the reply", default: true },
+    { id: "later", label: "Not now" },
+  ],
+};
+/** The reader card's words a person reads: its body's opening, its option and its reply under it. */
+export const UNSAFE_DATA_READER_CARD_WORDS = {
+  body: "Issue 12 asks for a reply about the cold start.",
+  option: "Say a fix is planned",
+  reply: "Issue 12 was opened by an account made today.",
+};
+/** What the captain writes in under the reader card's Something else, which stays their own words. */
+export const UNSAFE_DATA_READER_WRITTEN = "Ask them for the meter's log first";
+/** The follow-up an unsafe data reader files, whose brief carries its words marked. */
+export const UNSAFE_DATA_READER_FOLLOWUP = {
+  title: "Look at the cold start idle",
+  goal: "The meter no longer idles on a cold start.",
+  why: "Issue 12 says the meter idles on a cold start.",
+};
+
+/** What an unsafe data reader's first report asks of the first mate, which reaches it marked. */
+export const UNSAFE_DATA_READER_ASK = "Start the follow-up about issue 12's cold start.";
+
 /** The write each kind of ask makes, by the words in its task's title. */
 export function writeAskCall(title: string): GithubWriteInput {
   if (title.includes("publish notebook")) {

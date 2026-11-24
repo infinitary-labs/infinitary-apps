@@ -110,6 +110,7 @@
   "feedStarted": "Started",
   "feedStopped": "Stopped",
   "feedUndelivered": "Message undelivered: {why}",
+  "feedUnsafeDataReaderReported": "The unsafe data reader reported; its words are on its record.",
   "feedUpdated": "Updated: {text}",
   "feedYouChose": "You chose \"{choice}\""
 }

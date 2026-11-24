@@ -51,6 +51,12 @@ import {
 } from "./contextDelivery";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { asksInTurn, IN_TURN } from "./openWork";
+import {
+  answersWithAuthorWordsMarked,
+  readerDataLine,
+  servedTaskTitle,
+  withReaderDataReminder,
+} from "./readerData";
 import { scheduleText } from "./scheduler";
 
 /** The open messages the context block lists, newest first; open_work reads them all. */
@@ -89,7 +95,9 @@ const SEQUENCES_FALLBACK_WORDS: Record<SequencesFallback, string> = {
 };
 
 function contextText(context: Record<string, unknown>): string {
-  return `[fm-op] context (not the user)\n${encode(context)}`;
+  // An unsafe data reader's words sit inline between reader-data marks
+  // wherever a line names them; one reminder after everything covers them all.
+  return withReaderDataReminder(`[fm-op] context (not the user)\n${encode(context)}`);
 }
 
 /**
@@ -105,8 +113,8 @@ export const FOLD_RECOVERY =
  * (contract v1, spec 2.2) so the prompt needs no rule about it: a hint
  * only, never assumed to be the topic.
  */
-function maybeCardContextLine(card: Card): string {
-  const head = `maybe on screen, a hint only, not necessarily the topic: card ${card.id} (${cardPresentation(card)}) "${card.title}"`;
+function maybeCardContextLine(card: Card, mark: (words: string) => string): string {
+  const head = `maybe on screen, a hint only, not necessarily the topic: card ${card.id} (${cardPresentation(card)}) "${mark(card.title)}"`;
   // A preview's body is markup, not copy: an 80-character excerpt of it is
   // noise in the prompt, so the line stops at the title (isPreviewBody).
   if (isPreviewBody(card.body)) return head;
@@ -116,7 +124,7 @@ function maybeCardContextLine(card: Card): string {
     excerpt.length <= CARD_EXCERPT_LIMIT
       ? excerpt
       : `${cutText(excerpt, CARD_EXCERPT_LIMIT).trimEnd()}…`;
-  return `${head}: ${clipped}`;
+  return `${head}: ${mark(clipped)}`;
 }
 
 /** The body digest an open card carries into the context block (WI-12). */
@@ -143,13 +151,16 @@ const CARD_FILES_RULE =
  * emitted it, title, the first 200 characters of its visible text, and the
  * choices it offers - enough to revise it or tell it apart, never the whole body.
  */
-function openCardContextLine(card: {
-  id: string;
-  title: string;
-  body: string;
-  actions: { id: string }[];
-  emitter: "firstmate" | "crewmate" | "host";
-}): string {
+function openCardContextLine(
+  card: {
+    id: string;
+    title: string;
+    body: string;
+    actions: { id: string }[];
+    emitter: "firstmate" | "crewmate" | "host";
+  },
+  mark: (words: string) => string,
+): string {
   const text = card.body
     .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ")
     .replace(/<[^>]*>/g, " ")
@@ -163,7 +174,7 @@ function openCardContextLine(card: {
   const choices = card.actions.map((action) => action.id);
   const by =
     card.emitter === "host" ? "the app" : card.emitter === "firstmate" ? "you" : "its crewmate";
-  return `open card ${card.id} (${cardWord(card)}, from ${by}) "${card.title}"${digest ? `: ${digest}` : ""}${
+  return `open card ${card.id} (${cardWord(card)}, from ${by}) "${mark(card.title)}"${digest ? `: ${mark(digest)}` : ""}${
     choices.length > 0 ? ` [actions: ${choices.join(", ")}]` : ""
   }`;
 }
@@ -304,18 +315,37 @@ export class FirstmateContext {
     const about = card.taskId
       ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
       : "no task";
+    const mark = this.readerMark(card);
     const label = card.actions.find((entry) => entry.id === action)?.label ?? action;
-    const what = action === "close" ? "dismissed" : `chose "${label}"`;
+    const what = action === "close" ? "dismissed" : `chose "${mark(label)}"`;
     // A choice the captain's own command made says so, as a panel's click names its panel.
     const from = through ? `${FROM_THE_COMMAND}, ` : "";
-    const line = `- card ${card.id} (${cardPresentation(card)}) "${card.title}" ${about}: ${what}, ${from}${ageText(now - resolvedAt)}`;
+    const line = `- card ${card.id} (${cardPresentation(card)}) "${mark(card.title)}" ${about}: ${what}, ${from}${ageText(now - resolvedAt)}`;
     // The answers to the body's own questions ride the choice (contract
     // 4.22), indented under it.
     if (!answers?.length) return [line];
     return [
       `${line}, answering its questions:`,
-      ...cardAnswerLines(answers).map((answer) => `  ${answer}`),
+      ...cardAnswerLines(answersWithAuthorWordsMarked(answers, mark)).map(
+        (answer) => `  ${answer}`,
+      ),
     ];
+  }
+
+  /**
+   * How a card's own words go into a context line: an unsafe data reader's
+   * card's between reader-data marks, the same on every turn, inline after
+   * any cut (`contextText` adds the one reminder), and every other card's
+   * as written.
+   */
+  private readerMark(card: Pick<Card, "id" | "author" | "taskId">): (words: string) => string {
+    const cards = this.options.supervisor.cards;
+    return (words) => cards.threads.servedCardLine(card, words);
+  }
+
+  /** A task's title inside a context line, a reader's follow-up's marked (`servedTaskTitle`). */
+  private taskTitle(task: { id: string; title: string }): string {
+    return servedTaskTitle(task, this.options.tasks.graph.discoveredOrigins(task.id), "line");
   }
 
   private taskCardClickLine(
@@ -343,7 +373,7 @@ export class FirstmateContext {
                   : op === "close-done"
                     ? `the captain closed it as done from its record (Close as done), ${age}; its unmerged work is kept and an open pull request stays open`
                     : `the captain stopped it and dropped it; its unfinished work is kept, ${age}`;
-    return `- task ${task?.key || taskId} (task_id: ${taskId}) "${task?.title ?? ""}": ${what}`;
+    return `- task ${task?.key || taskId} (task_id: ${taskId}) "${task ? this.taskTitle(task) : ""}": ${what}`;
   }
 
   /**
@@ -367,6 +397,7 @@ export class FirstmateContext {
       THREAD_CONTEXT_LIMIT,
     );
     if (summaries.length === 0) return [];
+    const cards = this.options.supervisor.cards;
     return [
       "thread activity since your last turn (already on the record; not a request - the card's author answers it; each line ends with what its card waits on now, not who wrote last):",
       ...summaries.map(({ card, count, last, owed }) => {
@@ -374,11 +405,13 @@ export class FirstmateContext {
         const about = card.taskId
           ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
           : "no task";
-        const excerpt = cutText(
+        const cut = cutText(
           cardMessageText(last).replace(/\s+/g, " ").trim(),
           THREAD_EXCERPT_CHARS,
         );
-        return `- card ${card.id} "${card.title}" ${about}: ${count} message${
+        // An unsafe data reader's line is marked after the cut, so no cut splits its marks.
+        const excerpt = cards.threads.fromReader(card, last) ? readerDataLine(cut, last.at) : cut;
+        return `- card ${card.id} "${this.readerMark(card)(card.title)}" ${about}: ${count} message${
           count === 1 ? "" : "s"
         }, last from ${last.who}${last.through ? ` ${FROM_THE_COMMAND}` : ""} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;
       }),
@@ -533,16 +566,20 @@ export class FirstmateContext {
         ? ` as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open${signOffGuide}`
         : "";
     const aboutCardLine = aboutCard
-      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${answerGuide}${requiredActionGuide}${hostAlertGuide}`
+      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${this.readerMark(aboutCard)(aboutCard.title)}" - the captain replied in its thread${answerGuide}${requiredActionGuide}${hostAlertGuide}`
       : undefined;
-    const maybeCard = aboutCardLine ? undefined : shown ? maybeCardContextLine(shown) : undefined;
+    const maybeCard = aboutCardLine
+      ? undefined
+      : shown
+        ? maybeCardContextLine(shown, this.readerMark(shown))
+        : undefined;
     // The task the turn points at (the open card, or the record card): the
     // fallback prefers it, and the agent should pass its task_id (P1). A
     // Firstmate-card reply names the card instead - that card IS the topic.
     const hinted = hintTaskId ? this.options.tasks.get(hintTaskId) : undefined;
     const past = pastCardId ? this.options.supervisor.cards.past(pastCardId) : undefined;
     const pastLine = past
-      ? `past card ${past.id} "${past.title}" (${inLanguage(SOURCE_LANGUAGE, () => pastCardEndingWords(past))}) - the captain is reading it as history${
+      ? `past card ${past.id} "${this.readerMark(past)(past.title)}" (${inLanguage(SOURCE_LANGUAGE, () => pastCardEndingWords(past))}) - the captain is reading it as history${
           hinted ? ` on ${hinted.key || hinted.id}` : ""
         }; it is closed and nothing on it can be clicked, so any change comes through your tools`
       : undefined;
@@ -550,7 +587,7 @@ export class FirstmateContext {
       aboutCardLine ??
       pastLine ??
       (hinted
-        ? `about: ${hinted.key || hinted.id} "${hinted.title}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
+        ? `about: ${hinted.key || hinted.id} "${this.taskTitle(hinted)}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
         : undefined);
     // The captain's window is focused on one project: a hint like the
     // shown record, one step weaker, never a limit on what can be done.
@@ -834,7 +871,10 @@ export class FirstmateContext {
               ? {
                   running: live
                     .slice(0, 4)
-                    .map((task) => `${task.key || task.id}: ${cutText(task.title, 80)}`),
+                    .map(
+                      (task) =>
+                        `${task.key || task.id}: ${this.taskTitle({ id: task.id, title: cutText(task.title, 80) })}`,
+                    ),
                 }
               : {}),
           },
@@ -897,7 +937,7 @@ export class FirstmateContext {
             ...(record.key ? { key: record.key } : {}),
             ...(record.kind === "work" ? {} : { kind: record.kind }),
             status: entry?.status ?? indexStatus(record),
-            title: record.title,
+            title: this.taskTitle(record),
             ...(answer
               ? {
                   answer_waiting: {
@@ -1016,11 +1056,14 @@ export class FirstmateContext {
           card_id: card.id,
           ...(card.taskId ? { task: task?.key || card.taskId, task_id: card.taskId } : {}),
           // A preview's body is markup, not copy: its line stops at the title.
-          line: openCardContextLine({
-            ...card,
-            body: isPreviewBody(card.body) ? "" : card.body,
-            emitter,
-          }),
+          line: openCardContextLine(
+            {
+              ...card,
+              body: isPreviewBody(card.body) ? "" : card.body,
+              emitter,
+            },
+            this.readerMark(card),
+          ),
           ...(owed === "firstmate" || owed === "author"
             ? { waits_on: THREAD_OWED_WORDS[owed] }
             : {}),

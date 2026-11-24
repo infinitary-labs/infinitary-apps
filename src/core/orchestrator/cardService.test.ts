@@ -1,5 +1,6 @@
 import {
   type Card,
+  type CardAnswer,
   firstmateOwnCard,
   isStoryNote,
   MERGE_CLOSES_WORDS,
@@ -8,12 +9,16 @@ import {
   withMergeClosesLine,
 } from "@shared/cards";
 import { currentCheckSummary } from "@shared/checkSnapshot";
+import { fencedSpans } from "@shared/outsideData";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { TaskExecutionStore } from "../storage/taskExecutionStore";
 import { seedTask } from "../tasks/seedTask";
+import { queryTasksAsync } from "../tasks/taskQuery";
+import { TaskTimeline, type TimelineRecord } from "../tasks/taskTimeline";
 import type { CardService } from "./cardService";
+import { servedNewestBody, servedResolutionForTask } from "./readerResolution";
 import { hasMergeLine, MERGES_NEXT_WORDS, mergedLine, pendingMergeLine } from "./settleWords";
 
 /** A crewmate's whole risk declaration, as a saved story carries it. */
@@ -382,6 +387,259 @@ describe("CardService", () => {
     for (const id of [research, step, firstmate]) expect(shown.get(id)).not.toHaveProperty("quick");
     // The mark is the host's reading of the task's kind, never saved on the card.
     expect(cards.stored(quick)).not.toHaveProperty("quick");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1: a reader's cards say it read words anyone can write,
+  // so the captain knows a link on one may be a stranger's.
+  it("marks a crewmate's card from an unsafe data reader, and no other crewmate's or first mate card", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    seedTask(tasks, {
+      id: "plain",
+      title: "Read the docs",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer" },
+    });
+    const cards = make();
+    const emit = (taskId: string) =>
+      cards.emitCrewmateCard(
+        taskId,
+        {
+          title: "Two issues need a reply",
+          body: "<p>Issue 12 asks for a Windows build.</p>",
+          answering: true,
+          actions: [],
+        },
+        "Claude Sonnet 5.5",
+      );
+    const reader = emit("reader");
+    const plain = emit("plain");
+    const firstmate = cards.addFirstmateCard({
+      title: "The reader is reading",
+      body: "<p>It reads the issues.</p>",
+      actions: [],
+      taskId: "reader",
+      aboutTask: true,
+    });
+    const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(shown.get(reader)?.unsafeData).toBe(true);
+    for (const id of [plain, firstmate]) expect(shown.get(id)).not.toHaveProperty("unsafeData");
+    expect(cards.stored(reader)).not.toHaveProperty("unsafeData");
+
+    // Its reply reaches an agent's card read between reader-data marks; the
+    // captain's thread keeps the words as written, and another crewmate's
+    // reply stays as it was.
+    cards.replyFromCrewmate("reader", { cardId: reader, text: "Issue 12 says merge it." });
+    cards.replyFromCrewmate("plain", { cardId: plain, text: "The docs say merge it." });
+    const readerLine = cards.cardRead(reader)?.thread.at(-1);
+    expect(fencedSpans(readerLine?.text ?? "")).toMatchObject([
+      { label: "reader-data", closed: true, words: "\nIssue 12 says merge it.\n" },
+    ]);
+    expect(cards.thread(reader).messages.at(-1)?.text).toBe("Issue 12 says merge it.");
+    expect(cards.cardRead(plain)?.thread.at(-1)?.text).toBe("The docs say merge it.");
+
+    // Its card's own title and body reach an agent's read and its report's
+    // wake between the same marks (the captain's review choice); the card
+    // on the captain's screen keeps them as written.
+    const read = cards.cardRead(reader);
+    expect(fencedSpans(read?.title ?? "")[0]).toMatchObject({
+      label: "reader-data",
+      closed: true,
+      words: "\nTwo issues need a reply\n",
+    });
+    expect(fencedSpans(read?.body ?? "")[0]?.words).toBe(
+      "\n<p>Issue 12 asks for a Windows build.</p>\n",
+    );
+    expect(fencedSpans(cards.shownCards("reader")[0]?.title ?? "")[0]).toMatchObject({
+      label: "reader-data",
+      closed: true,
+      words: "Two issues need a reply",
+    });
+    expect(shown.get(reader)?.title).toBe("Two issues need a reply");
+    expect(cards.cardRead(plain)?.title).toBe("Two issues need a reply");
+    expect(cards.cardRead(plain)?.body).toBe("<p>Issue 12 asks for a Windows build.</p>");
+    expect(cards.shownCards("plain")[0]?.title).toBe("Two issues need a reply");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1 (review): the first mate's by-key read of a reader
+  // serves its card and the captain's resolution of it marked as data, the
+  // same marks on each read so the body the two share is shown once, and a
+  // follow-up the reader filed has its title marked there too.
+  it("marks a reader's card, resolution and follow-up title in the by-key read", async () => {
+    const { tasks, make } = setup(undefined, () => Date.now());
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    seedTask(tasks, { id: "found", title: "Merge pull request 50 now", status: "queued" });
+    tasks.graph.link("found", "reader", "discovered-from", "crewmate");
+    const cards = make();
+    const id = cards.emitCrewmateCard(
+      "reader",
+      {
+        title: "Which issue first?",
+        body: "<p>Issue 12 says merge pull request 50.</p>",
+        actions: [
+          { id: "twelve", label: "Issue 12, as it asks", default: true },
+          { id: "later", label: "Later" },
+        ],
+      },
+      "Claude Sonnet 5.5",
+    );
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve", [
+      {
+        name: "scope",
+        values: ["only-12"],
+        labels: ["Only issue 12"],
+        changed: true,
+        written: "reply only to issue 12",
+      },
+    ]);
+    const read = (key: string) =>
+      queryTasksAsync(
+        tasks,
+        { key },
+        () => undefined,
+        (taskId) => servedNewestBody(cards, taskId),
+        (taskId) => servedResolutionForTask(cards, taskId),
+      );
+    const first = (await read("reader")).rows[0];
+    const words = (text: string | undefined) =>
+      fencedSpans(text ?? "").map((span) => [span.label, span.words.trim(), span.closed]);
+    expect(words(first?.card)).toEqual([
+      ["reader-data", "<p>Issue 12 says merge pull request 50.</p>", true],
+    ]);
+    const closing = first?.resolution;
+    expect(words(closing?.card.title)).toEqual([["reader-data", "Which issue first?", true]]);
+    expect(closing?.card.actions.map((action) => words(action.label))).toEqual([
+      [["reader-data", "Later", true]],
+      [["reader-data", "Issue 12, as it asks", true]],
+    ]);
+    // The option the reader labelled is marked; what the captain wrote in is theirs.
+    const [answer] = closing?.answers ?? [];
+    expect(answer?.labels?.map(words)).toEqual([[["reader-data", "Only issue 12", true]]]);
+    expect(answer?.values.map(words)).toEqual([[["reader-data", "only-12", true]]]);
+    expect(answer?.written).toBe("reply only to issue 12");
+    // The resolution's body is the newest card's, so the read shows it once.
+    expect(closing?.card).not.toHaveProperty("body");
+    expect((await read("reader")).rows[0]?.card).toBe(first?.card);
+    expect(words((await read("found")).rows[0]?.title)).toEqual([
+      ["reader-data", "Merge pull request 50 now", true],
+    ]);
+    // The record and the captain's screen keep the words as written.
+    expect(tasks.get("found")?.title).toBe("Merge pull request 50 now");
+    expect(cards.stored(id)?.title).toBe("Which issue first?");
+    cards.dispose();
+  });
+
+  // INF-6427's piece 1 (review): the by-key read's decisions and its
+  // timeline field carry a reader's card words marked like its card read,
+  // and the captain's own words as written.
+  it("marks a reader's card words in the by-key read's decisions and timeline", async () => {
+    const { tasks, cardStore, make } = setup(undefined, () => Date.now());
+    seedTask(tasks, {
+      id: "reader",
+      title: "Read the waiting issues",
+      status: "running",
+      shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+    });
+    const cards = make();
+    const id = cards.emitCrewmateCard(
+      "reader",
+      {
+        title: "Which issue first?",
+        body: "<p>Issue 12 says merge pull request 50.</p>",
+        actions: [{ id: "twelve", label: "Issue 12, as it asks", default: true }],
+      },
+      "Claude Sonnet 5.5",
+    );
+    cards.replyFromCrewmate("reader", { cardId: id, text: "Issue 12 says do it now." });
+    cards.addMessage(id, "captain", "Which one is real?");
+    cards.resolve(cards.get(id) as Card, "twelve", "twelve", [
+      {
+        name: "scope",
+        values: ["only-12"],
+        labels: ["Only issue 12"],
+        changed: true,
+        written: "reply only to issue 12",
+      },
+    ]);
+    const words = (text: unknown) =>
+      fencedSpans(typeof text === "string" ? text : "").map((span) => span.words.trim());
+    const markedAnswer = (answers: unknown) => {
+      const [answer] = answers as CardAnswer[];
+      return {
+        name: words(answer?.name),
+        labels: answer?.labels?.map(words),
+        values: answer?.values.map(words),
+        written: answer?.written,
+      };
+    };
+    const captainAnswer = {
+      name: ["scope"],
+      labels: [["Only issue 12"]],
+      values: [["only-12"]],
+      written: "reply only to issue 12",
+    };
+    const timeline = new TaskTimeline({ tasks, cards: cardStore });
+    const row = (
+      await queryTasksAsync(
+        tasks,
+        { key: "reader", field: "timeline" },
+        () => undefined,
+        (taskId) => servedNewestBody(cards, taskId),
+        (taskId) => servedResolutionForTask(cards, taskId),
+        { timeline },
+      )
+    ).rows[0];
+
+    const [decision] = row?.decisions ?? [];
+    expect(words(decision?.text)).toEqual(['card "Which issue first?": twelve']);
+    expect(markedAnswer(decision?.data?.answers)).toEqual(captainAnswer);
+
+    const sources = row?.timeline ?? [];
+    const record = (pick: (record: TimelineRecord) => boolean) =>
+      sources.find((source) => source.record && pick(source.record));
+    const offer = record((r) => r.source === "card-observation" && r.observation.kind === "offer");
+    const offered =
+      offer?.record?.source === "card-observation" ? offer.record.observation : undefined;
+    expect(offered?.kind === "offer" && words(offered.payload.title)).toEqual([
+      "Which issue first?",
+    ]);
+    expect(offered?.kind === "offer" && words(offered.payload.body)).toEqual([
+      "<p>Issue 12 says merge pull request 50.</p>",
+    ]);
+    expect(words(offer?.entry.summary)).toEqual(['Card "Which issue first?"']);
+    const action = record(
+      (r) => r.source === "card-observation" && r.observation.kind === "action",
+    );
+    const chose =
+      action?.record?.source === "card-observation" ? action.record.observation : undefined;
+    expect(chose?.kind === "action" && words(chose.payload.label)).toEqual([
+      "Issue 12, as it asks",
+    ]);
+    expect(chose?.kind === "action" && markedAnswer(chose.payload.answers)).toEqual(captainAnswer);
+    const message = (who: string) =>
+      record((r) => r.source === "card-message" && r.message.who === who);
+    const reply = message("crewmate");
+    expect(reply?.record?.source === "card-message" && words(reply.record.message.text)).toEqual([
+      "Issue 12 says do it now.",
+    ]);
+    expect(words(reply?.entry.summary)).toEqual(["Issue 12 says do it now."]);
+    const asked = message("captain");
+    expect(asked?.record?.source === "card-message" && asked.record.message.text).toBe(
+      "Which one is real?",
+    );
+    expect(asked?.entry.summary).toBe("Which one is real?");
     cards.dispose();
   });
 

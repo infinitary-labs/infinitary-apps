@@ -7,6 +7,7 @@ import { PROBE_FILES } from "./scripts/affected-probes.ts";
 import { writeCompiledMessages } from "./scripts/generate-messages.ts";
 import { inMemoryWorkers, integrationWorkers, jobCores, jobMemory } from "./scripts/job-cores.ts";
 import { FRAME_FOCUS_BLINK_FEATURE } from "./src/shared/plugins/containment.ts";
+import { chromiumLaunchOptions } from "./tests/helpers/browserChromiumTemp.ts";
 import { browserCommands } from "./tests/helpers/browserCommands.ts";
 import TimeBalancedSequencer from "./tests/helpers/timeBalancedSequencer.ts";
 
@@ -305,11 +306,13 @@ export default defineConfig({
             // on Linux, and beside it wherever a page styles them - where a
             // headless page hides them all, so the page keeps them
             // (tests/browser/card-resize.test.tsx reads a scrollbar's width).
+            // Its own temporary files stay out of the run's leftover scan
+            // (tests/helpers/browserChromiumTemp.ts).
             provider: playwright({
-              launchOptions: {
+              launchOptions: chromiumLaunchOptions({
                 ignoreDefaultArgs: ["--hide-scrollbars"],
                 args: [`--enable-blink-features=WebShare,${FRAME_FOCUS_BLINK_FEATURE}`],
-              },
+              }),
             }),
             instances: [{ browser: "chromium" }],
             commands: browserCommands,

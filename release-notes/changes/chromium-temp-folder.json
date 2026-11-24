@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "chromium-temp-folder",
+      "reason": "Test infrastructure only: the browser tests' Chromium keeps its temporary files in a folder of its own that the run removes after closing it, so a file Chromium leaves on Linux no longer fails the run's leftover check."
+    }
+  ]
+}

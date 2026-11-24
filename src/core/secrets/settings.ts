@@ -1229,11 +1229,15 @@ export class SecretsSettings {
         ...(action.kind ? { kind: action.kind } : {}),
       });
     this.offeredCard = `card-secrets-${group}`;
+    // A use a task asked for is its crewmate's to talk over: a reply under
+    // the card reaches it, and the head names its task.
+    const asker = taskId ? this.options.taskTitle?.(taskId) : undefined;
     this.options.raise({
       id: this.offeredCard,
       title,
       body,
-      meta: FIRSTMATE_CARD_META,
+      meta: asker ?? FIRSTMATE_CARD_META,
+      ...(taskId ? { answeredBy: "crewmate" as const } : {}),
       ...(taskId ? { taskId } : {}),
       actions: offered.map((action, i) => ({
         id: action.id,

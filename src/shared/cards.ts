@@ -931,14 +931,17 @@ export const cardSchema = z.strictObject({
    */
   replies: z.literal(false).optional(),
   /**
-   * Who answers a reply under a card whose author cannot (`cards.answered_by`):
-   * the host sets "firstmate" on its stuck alert (`card-stall-<task>`, INF-1670)
-   * and on every card it raises through `raiseHostCard`, so the chrome draws a
-   * reply row and the first mate answers in the thread, never the task's
-   * crewmate. Absent on every other card, which takes replies as its author
-   * allows.
+   * Who answers a reply under a card whose author cannot (`cards.answered_by`,
+   * read through `cardAnswerer`): "firstmate" on the host's stuck alert
+   * (`card-stall-<task>`, INF-1670) and on every card it raises through
+   * `raiseHostCard` unless the caller names another, so the first mate
+   * answers in the thread, never the task's crewmate; "crewmate" on the
+   * app's own card for a crewmate's ask (a secret to keep or use, secrets to
+   * move in, an integration call), so the crewmate that asked answers in the
+   * thread while its ask stays open. Absent on every other card, which takes
+   * replies as its author allows.
    */
-  answeredBy: z.literal("firstmate").optional(),
+  answeredBy: z.enum(["firstmate", "crewmate"]).optional(),
   /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
   holdsPlace: z.literal(true).optional(),
   /**
@@ -1257,20 +1260,41 @@ export type PastCard = z.infer<typeof pastCardSchema>;
 export const CONVERSE_TEXT_MAX_CHARS = 20_000;
 
 /**
- * Whether a card has an author a reply can reach. A crewmate card's reply
- * is a captain steer to that crewmate's session, which needs the task it
- * runs on. A Firstmate card's reply is a captain turn about that card
- * (cards-as-threads phase 2). The host's own agent-down cards answer to
+ * Who a reply under a card reaches, or undefined when nobody can answer it.
+ * A crewmate card's reply is a captain steer to that crewmate's session,
+ * which needs the task it runs on, and so is a reply under the app's own
+ * card for a crewmate's ask (`Card.answeredBy`). A Firstmate card's reply is
+ * a captain turn about that card (cards-as-threads phase 2), and so is one
+ * under a card the host named the first mate the answerer of (the stuck
+ * alert and the app's own offers). The host's agent-down cards answer to
  * nobody, and neither does a card the host marked as taking no reply (the
- * welcome, `Card.replies`), unless the host named the first mate as its
- * answerer (the stuck alert and the app's own offers, `Card.answeredBy`).
+ * welcome, `Card.replies`). A crewmate's card whose task has closed is the
+ * first mate's to answer, which the core decides from the task
+ * (`firstmateAnswers`).
  */
+export function cardAnswerer(
+  card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,
+): "firstmate" | "crewmate" | undefined {
+  if (card.replies === false) return undefined;
+  if (card.author === "firstmate" || card.answeredBy === "firstmate") return "firstmate";
+  if ((card.author === "crewmate" || card.answeredBy === "crewmate") && card.taskId !== undefined)
+    return "crewmate";
+  return undefined;
+}
+
+/**
+ * A saved answerer, read tolerantly: a value a later build wrote that this one
+ * does not know leaves the card showing with no answerer, never hides it.
+ */
+export function savedAnswerer(value: string | null): Pick<Card, "answeredBy"> {
+  return value === "firstmate" || value === "crewmate" ? { answeredBy: value } : {};
+}
+
+/** Whether a card has someone a reply can reach (`cardAnswerer`). */
 export function cardTakesReplies(
   card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,
 ): boolean {
-  if (card.replies === false) return false;
-  if (card.author === "firstmate" || card.answeredBy === "firstmate") return true;
-  return card.author === "crewmate" && card.taskId !== undefined;
+  return cardAnswerer(card) !== undefined;
 }
 
 /**
@@ -1324,6 +1348,11 @@ export function mergeEffectOf(action: Pick<CardAction, "effect">): MergeEffect |
   if (effect?.kind === "request_merge" && typeof effect.review === "string")
     return { kind: "merge", review: effect.review, after: "continue" };
   return undefined;
+}
+
+/** Whether a card's actions hold a merge, and so make it a merge decision. */
+export function isMergeDecision(actions: Pick<CardAction, "effect">[]): boolean {
+  return actions.some((action) => mergeEffectOf(action) !== undefined);
 }
 
 /**

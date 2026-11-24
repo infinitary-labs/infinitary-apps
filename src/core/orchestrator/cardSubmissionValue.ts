@@ -5,11 +5,14 @@ import {
   type CardAnswer,
   type ChoiceCarriedRecord,
   cardAnswersBytes,
+  cardSubmissionSchema,
   type TurnImage,
 } from "@shared/cards";
 import { type ChoiceCarried, cardChromeValueSchema } from "@shared/choiceCarried";
+import { z } from "zod";
 import { keepImages } from "../attachments";
 import { withPastedFiles } from "../overflow";
+import type { WakeChoice } from "./captainWakes";
 
 /**
  * The answers a footer click carries (inline decisions, contract 4.22), read
@@ -70,3 +73,23 @@ export function keptPictures(kept: KeptCarried | undefined): {
     ? { images: kept.images, attachments: kept.record.pictures }
     : {};
 }
+
+/** A choice without anything the field sent besides its words. */
+export function withoutCarried(choice: WakeChoice): WakeChoice {
+  const { carried: _carried, ...plain } = choice;
+  return plain;
+}
+
+/** The gesture's own id the shell minted at a click, when it sent a well-formed one. */
+export function interactionOf(submission: unknown): { interactionId?: string } {
+  const id = (submission as { id?: unknown } | null | undefined)?.id;
+  return typeof id === "string" && id.length >= 8 && id.length <= 64 ? { interactionId: id } : {};
+}
+
+/**
+ * A gesture as the card actions' consequential checks read it: its offer, lifecycle
+ * and remount decide, and what pressed the button (`input`) is never part
+ * of that reading, so an input this home cannot read never refuses a press
+ * (docs/card-evidence.md, "What a click carries").
+ */
+export const gestureSchema = cardSubmissionSchema.extend({ input: z.unknown().optional() });

@@ -9,6 +9,8 @@ extension PhoneJourney {
     /// Data: the real Secrets controller over disposable custody (`secrets-ready`), its kept calendar sign-in and an
     /// invented key. Completion: the computer's Secrets lists the replaced sign-in at version 3 and the asked secret at
     /// version 1, and no ask card is left.
+    /// INF-6265 piece 1: the card takes a reply for the crewmate that asked, never in a plain field beside the masked
+    /// one; Chat turns it to its thread with the caret in the thread's field, and the reply shows there.
     func testSecretAskKeptFromPhone() async throws {
         try await launchJoined()
         _ = try await home("secrets-ready")
@@ -42,13 +44,33 @@ extension PhoneJourney {
         waitForShownBodyRevealed()
         let field = app.secureTextFields["secret-ask-s1"]
         XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.textFields["card-reply"].exists, "A plain field sits beside the masked one\n\(app.debugDescription)")
+        let chat = app.buttons["card-chat"]
+        reveal(chat); tapOnPhone(chat)
+        let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
+        let reply = app.textFields["card-reply"]
+        XCTAssertTrue(reply.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForPresence(timeout: 10), "Chat left the thread's field without the caret")
+        let question = "Which Stripe account should this key come from?"
+        reply.typeText(question)
+        let send = app.buttons["send-reply"]
+        reveal(send); tapOnPhone(send)
+        XCTAssertTrue(back.staticTexts[question].waitForPresence(timeout: 10), app.debugDescription)
+        // Save secret stays with its field on the face, never under the thread's plain field.
+        let save = try XCTUnwrap(asked["save"] as? String)
+        XCTAssertFalse(back.buttons["card-action-\(save)"].exists, "Save secret sits under the thread's field\n\(app.debugDescription)")
+        XCTAssertTrue(back.buttons["card-action-\(try XCTUnwrap(asked["dontSave"] as? String))"].exists, app.debugDescription)
+        picture("1-secret-ask-thread")
+        tapOnPhone(app.buttons["thread-return"])
+        XCTAssertTrue(back.waitForAbsence(timeout: 10), app.debugDescription)
         // INF-5516's plan: the field sits under its secret's name, with its place beside it once; the visible
         // name and place are read once, as the field's own label.
         let place = try XCTUnwrap(asked["place"] as? String)
         XCTAssertTrue(field.label.contains(place), field.label)
         reveal(field); tapOnPhone(field)
         field.typeText("sk_test_invented_phone_value")
-        picture("1-secret-ask-typed")
+        picture("2-secret-ask-typed")
         // A return in the only field saves, as the Save secret button does.
         field.typeText("\n")
         let gone = NSPredicate { _, _ in !self.cardHeading(title).exists }
@@ -59,6 +81,6 @@ extension PhoneJourney {
             && $0["version"] as? Int == 1 }, "\(entries)")
         XCTAssertTrue(entries.contains { $0["label"] as? String == "Planning calendar" && $0["version"] as? Int == 3 }, "\(entries)")
         XCTAssertEqual(kept["asks"] as? Int, 0)
-        picture("2-secret-ask-kept")
+        picture("3-secret-ask-kept")
     }
 }

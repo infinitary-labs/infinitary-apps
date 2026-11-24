@@ -10,10 +10,10 @@ import {
   type Card,
   type CardAnswer,
   type CardThread,
+  cardAnswerer,
   cardAnswersBytes,
   cardAnswersSchema,
   cardMessageText,
-  cardSubmissionSchema,
   cardTakesReplies,
   mergeEffectOf,
   onStage,
@@ -30,7 +30,6 @@ import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { heldMerges } from "@shared/mergeHeld";
 import { SECRET_BRING_CARD_WORDS } from "@shared/secretBring";
 import { SECRET_ASK_CARD_WORDS } from "@shared/secrets";
-import { z } from "zod";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { askedFromAView } from "../askedFromAView";
 import { THROUGH_THE_COMMAND, throughNow } from "../askedFromTheCommand";
@@ -47,10 +46,13 @@ import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import {
   chromeValue,
+  gestureSchema,
+  interactionOf,
   type KeptCarried,
   keepCarried,
   keptPictures,
   type NotePress,
+  withoutCarried,
 } from "./cardSubmissionValue";
 import { CardWriteAsks } from "./cardWriteAsks";
 import type { CrewCore } from "./crewCore";
@@ -62,14 +64,6 @@ import { reviewHistory } from "./reviewHistory";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
-
-/**
- * A gesture as the consequential checks below read it: its offer, lifecycle
- * and remount decide, and what pressed the button (`input`) is never part
- * of that reading, so an input this home cannot read never refuses a press
- * (docs/card-evidence.md, "What a click carries").
- */
-const gestureSchema = cardSubmissionSchema.extend({ input: z.unknown().optional() });
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
 export class CardChoiceUnavailableError extends Error {
@@ -219,8 +213,7 @@ export class CardActions {
     const toFirstmate =
       feedback ||
       pressed?.closesTask === true ||
-      card.author === "firstmate" ||
-      card.answeredBy === "firstmate" ||
+      cardAnswerer(card) === "firstmate" ||
       (closedTask !== undefined && TaskService.isClosed(closedTask));
     // An accepted reply to a crewmate owns copies of its pictures before the
     // thread or the lane records it (the Firstmate's own turn keeps its own).
@@ -282,6 +275,7 @@ export class CardActions {
           notes,
           ...this.captainFrom(),
           ...(this.browsers.browserHeldFor(card) ? { browserHeld: true as const } : {}),
+          ...(card.author === "host" ? { appCard: true as const } : {}),
         },
       };
       void this.core.steer
@@ -742,15 +736,24 @@ export class CardActions {
     // Where no author hears the choice - the app carried it out, or nobody
     // reads it - the first mate is told once, with what went with it. An
     // answer task's own close carries it on the first mate's closing notice.
-    // Words left in the field of a host card the first mate answers go too,
-    // so a press beside them never drops them.
+    // On the app's own card for a crewmate's ask, what the captain wrote
+    // with a button goes to that crewmate instead, beside the outcome its
+    // ask hears on its own (`Card.answeredBy`). Words left in the field of a
+    // host card the first mate answers go to the first mate, so a press
+    // beside them never drops them.
+    const asker =
+      card.author === "host" && card.taskId && cardAnswerer(card) === "crewmate"
+        ? card.taskId
+        : undefined;
     const wordsForFirstmate =
       card.author === "host" &&
       card.answeredBy === "firstmate" &&
       anythingElseOf(answers) !== undefined;
     const tellFirstmate = () => {
-      if ((kept || wordsForFirstmate) && !closedAnswer)
-        this.carriedOut(card, choice, decisionTaskId);
+      if (closedAnswer) return;
+      if (asker && source === "chrome" && (kept || anythingElseOf(answers)))
+        this.steerChoice(asker, card, source, choice, undefined, kept, true);
+      else if (kept || wordsForFirstmate) this.carriedOut(card, choice, decisionTaskId);
     };
     // Review carefully (INF-562): the captain's care lands on the record
     // first, so its notice waits on the crewmate's lane ahead of the choice
@@ -972,6 +975,7 @@ export class CardActions {
     choice: WakeChoice,
     browserGone?: "stopped" | "quit",
     kept?: KeptCarried,
+    carriedOut?: true,
   ): void {
     void this.core.steer
       .steerCrewmate(
@@ -986,6 +990,7 @@ export class CardActions {
             choice,
             ...(source === "chrome" ? this.captainFrom() : {}),
             ...(browserGone ? { browserGone } : {}),
+            ...(carriedOut ? { carriedOut } : {}),
           },
         },
         source === "chrome" ? "captain" : "firstmate",
@@ -1154,16 +1159,4 @@ export class CardActions {
         });
       });
   }
-}
-
-/** A choice without anything the field sent besides its words. */
-function withoutCarried(choice: WakeChoice): WakeChoice {
-  const { carried: _carried, ...plain } = choice;
-  return plain;
-}
-
-/** The gesture's own id the shell minted at a click, when it sent a well-formed one. */
-function interactionOf(submission: unknown): { interactionId?: string } {
-  const id = (submission as { id?: unknown } | null | undefined)?.id;
-  return typeof id === "string" && id.length >= 8 && id.length <= 64 ? { interactionId: id } : {};
 }

@@ -20,6 +20,7 @@ import { SAVED_SIGN_IN_FAILED_WORDS, UNKNOWN_OUTCOME_WORDS } from "@shared/taskB
 import type { Through } from "@shared/through";
 import { browserCommand } from "../browser/commandWords";
 import { FROM_THE_COMMAND } from "../integrations/commandWords";
+import { appCardThreadPreamble } from "../prompts/appCardThread";
 import {
   ABANDON,
   APPROVE_AND_BUILD,
@@ -27,7 +28,11 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
-import { CARRIED_OUT_WORDS, CARRIED_WITH_CHOICE_LEAD } from "../prompts/choiceCarried";
+import {
+  CARRIED_OUT_ASKER_WORDS,
+  CARRIED_OUT_WORDS,
+  CARRIED_WITH_CHOICE_LEAD,
+} from "../prompts/choiceCarried";
 import { pageUnansweredWords } from "../prompts/pageUnanswered";
 import type { KindWords, TypedWake, WakeFacts, WakeLane } from "./wakes";
 
@@ -82,7 +87,8 @@ export type CaptainFacts =
        * The app already carried out the choice - a merge, a discard, an app
        * card's own button - and its author hears nothing of what the card's
        * field sent with it, so the first mate is told once, with it
-       * (`choice-attachments.md`).
+       * (`choice-attachments.md`); on the app's own card for a crewmate's
+       * ask, that crewmate is told instead (`Card.answeredBy`).
        */
       carriedOut?: true;
     }
@@ -160,6 +166,12 @@ export type CaptainFacts =
        * wrote from beside its page (docs/task-browser.md, "Asking for help").
        */
       browserHeld?: true;
+      /**
+       * The card is the app's own card for the crewmate's ask (a secret to
+       * keep or use, secrets to move in, an integration call), which the
+       * crewmate cannot revise or close (`Card.answeredBy`).
+       */
+      appCard?: true;
     }
   | {
       /**
@@ -277,6 +289,8 @@ function standingWordsRelay(where: string): string {
  * Firstmate on any backend (FI3-710) - the turn that then runs the settle
  * the captain would have got from the main input.
  */
+const THIS_CARD_RELAY = standingWordsRelay("this card's id");
+
 export const THREAD_STEER_PREAMBLE = [
   "The captain replied in the thread on your card.",
   "Do the work their words need first, then answer at once, before unrelated work: always give one short answer in the thread, one to three sentences, whether or not the card changes, with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call, saying what you changed and under which heading; every revision while you answer needs its own). Your answer names their message in answers_message, by its number below; until a line does, the card keeps showing them the version they replied under. Then report.",
@@ -286,7 +300,7 @@ export const THREAD_STEER_PREAMBLE = [
   "On your merge card, when their words change the work, post that one interim line, then answer with the revised card once the checks on the version you pushed pass: the app keeps the card from them until then, and a question the rework raises goes on a card of its own.",
   "On your answering card of an answer task, when their words, however put, say they need nothing more from your answer and ask, correct or approve nothing, answer naming answers_message with signs_off true: it closes the card as read and the task as answered, and nothing more is owed.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate naming this card's id, so the first mate runs it.",
-  standingWordsRelay("this card's id"),
+  THIS_CARD_RELAY,
 ].join(" ");
 
 /**
@@ -427,9 +441,11 @@ export function answerMissingWake(
 export const THREAD_BROWSER_HELD =
   "The captain has control of your browser and wrote this from beside its page, where your card stays docked. You cannot see the page or use the browser until they return control: answer from what you know, and revise the card under the same id when the steps or values on it should change.";
 
+export const THREAD_APP_CARD_PREAMBLE = appCardThreadPreamble(THIS_CARD_RELAY);
+
 export function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply" }>): string {
   return [
-    THREAD_STEER_PREAMBLE,
+    facts.appCard ? THREAD_APP_CARD_PREAMBLE : THREAD_STEER_PREAMBLE,
     ...(facts.browserHeld ? [THREAD_BROWSER_HELD] : []),
     `Card "${facts.card.title}" (${facts.card.id}).${facts.card.messageId !== undefined ? ` This is the captain's message ${facts.card.messageId}${facts.card.lifecycle ? ` in lifecycle ${facts.card.lifecycle}` : ""}; a line on this card answers it only when it names it in answers_message.` : ""}${fromText(facts.from, "wrote it")}`,
     "The captain's words, verbatim:",
@@ -540,7 +556,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
         : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${facts.carriedOut ? ` ${CARRIED_OUT_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice)}${carriedText(facts.choice.carried)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
-    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}${carriedText(facts.choice.carried)}`;
+    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${facts.carriedOut ? ` ${CARRIED_OUT_ASKER_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}${carriedText(facts.choice.carried)}`;
   },
   "card-closed": (facts) =>
     facts.duplicateOf

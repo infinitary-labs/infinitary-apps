@@ -61,7 +61,14 @@ export function integrationApprovalCard(
     author: "host",
     priority: HOST_CARD_PRIORITY,
     title: integrationApprovalTitle(ask.label ?? ask.action, ask.place),
-    meta: "Integration approval",
+    // Whoever asked answers a reply under the card, and a crewmate's heads
+    // with its task; a panel cannot answer one.
+    meta: task ? task.title : "Integration approval",
+    ...(task
+      ? { answeredBy: "crewmate" as const }
+      : panel
+        ? {}
+        : { answeredBy: "firstmate" as const }),
     body: [
       `<p>${asker} wants to use this action. ${effect}</p>`,
       `<p>${text(ask.description ?? "")}</p>`,
@@ -144,7 +151,8 @@ function integrationApprovalsCard(
     author: "host",
     priority: HOST_CARD_PRIORITY,
     title: integrationApprovalsTitle(listed.length, first.place),
-    meta: "Integration approval",
+    meta: task.title,
+    answeredBy: "crewmate",
     body: [
       `<p>The crewmate on “${text(task.title)}” asks to run these on ${place}. ${effect} ${descriptions.map((description) => text(description)).join(" ")}</p>`,
       `<p>Each row is one call: the input it runs, then the crewmate's reason. Every row comes ticked; untick ${ASK_ROW_WORDS.allow} on any you do not want to run.</p>`,

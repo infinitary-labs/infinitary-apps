@@ -623,6 +623,7 @@ export function stackSlice(set: ShellSet, get: ShellGet): StackSlice {
             ),
           ),
           closedThreadIds: s.closedThreadIds.filter((id) => present.has(id)),
+          openedThreadIds: s.openedThreadIds.filter((id) => present.has(id)),
           requestColumns: Object.fromEntries(
             Object.entries(s.requestColumns).filter(
               ([id]) => present.has(id) || s.records.some((r) => id === heldEntryId(r)),

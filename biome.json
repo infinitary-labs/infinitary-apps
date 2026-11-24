@@ -386,6 +386,7 @@
         "!src/core/orchestrator/taskMoves.computer.test.ts",
         "!src/core/program/programRunner.crew.test.ts",
         "!src/core/orchestrator/reviews.test.ts",
+        "!src/core/orchestrator/reviews.version.test.ts",
         "!src/core/orchestrator/reviews.wakes.test.ts",
         "!src/core/orchestrator/crewBrief.test.ts",
         "!src/core/orchestrator/firstmateAgent.actions.test.ts",

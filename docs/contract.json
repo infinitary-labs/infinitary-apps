@@ -44616,6 +44616,29 @@
                         "reviewedAt": {
                           "type": "number"
                         },
+                        "reviewFrom": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "proof": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "key",
+                            "title",
+                            "proof"
+                          ]
+                        },
                         "ciRounds": {
                           "type": "number"
                         },
@@ -46419,6 +46442,29 @@
                   },
                   "reviewedAt": {
                     "type": "number"
+                  },
+                  "reviewFrom": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "proof": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "taskId",
+                      "key",
+                      "title",
+                      "proof"
+                    ]
                   },
                   "ciRounds": {
                     "type": "number"
@@ -51573,6 +51619,29 @@
                     "reviewedAt": {
                       "type": "number"
                     },
+                    "reviewFrom": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "proof": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "key",
+                        "title",
+                        "proof"
+                      ]
+                    },
                     "ciRounds": {
                       "type": "number"
                     },
@@ -53290,6 +53359,29 @@
                     },
                     "reviewedAt": {
                       "type": "number"
+                    },
+                    "reviewFrom": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "proof": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "key",
+                        "title",
+                        "proof"
+                      ]
                     },
                     "ciRounds": {
                       "type": "number"
@@ -96224,6 +96316,29 @@
                         "reviewedAt": {
                           "type": "number"
                         },
+                        "reviewFrom": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "proof": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "key",
+                            "title",
+                            "proof"
+                          ]
+                        },
                         "ciRounds": {
                           "type": "number"
                         },
@@ -97990,6 +98105,29 @@
                         },
                         "reviewedAt": {
                           "type": "number"
+                        },
+                        "reviewFrom": {
+                          "type": "object",
+                          "properties": {
+                            "taskId": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "proof": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "taskId",
+                            "key",
+                            "title",
+                            "proof"
+                          ]
                         },
                         "ciRounds": {
                           "type": "number"

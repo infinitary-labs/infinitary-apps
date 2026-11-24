@@ -13,9 +13,11 @@ import {
   type CaptainAllowance,
 } from "@shared/captainAllowances";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
+import { englishOf, type Said } from "@shared/i18n/said";
 import {
   checkYesCovers,
   type KeptValidationInput,
+  type LiveValidation,
   validationConsentWords,
 } from "@shared/liveValidation";
 import { isForkReview } from "@shared/mergeReview";
@@ -319,6 +321,53 @@ export class TaskDeliveries {
     if (elsewhere.some((field) => Object.hasOwn(facts, field)))
       throw new Error("Change evidence cannot write permissions, turn declarations or history.");
     this.writer.writeDeliveryRecords(id, facts, event);
+  }
+
+  /**
+   * A takeover's carry of an earlier task's pass, and of the proof accepted
+   * with it, at the very commit that review read (INF-6536 finding 3;
+   * `carryTakenOverReview` decides it). Written only while the task still
+   * has no verdict of its own, and the proof only while it has recorded no
+   * scenarios of its own, so a carry never replaces work this task did.
+   * A note, never a `review` event: no review round ran here.
+   */
+  carryReview(
+    id: string,
+    carry: {
+      facts: Pick<
+        TaskDelivery,
+        | "reviewVerdict"
+        | "reviewSha"
+        | "reviewChange"
+        | "reviewRisk"
+        | "reviewRiskNote"
+        | "reviewedAt"
+      > & { reviewFrom: NonNullable<TaskDelivery["reviewFrom"]> };
+      liveValidation?: LiveValidation;
+    },
+    note: (proof: boolean) => Said,
+    data?: Record<string, unknown>,
+  ): boolean {
+    return this.writer.write(() => {
+      const delivery = this.writer.mustGet(id).delivery;
+      if (delivery?.reviewVerdict) return false;
+      const proof = carry.liveValidation && !delivery?.liveValidation?.scenarioRevision;
+      this.writer.writeDeliveryRecords(
+        id,
+        {
+          ...carry.facts,
+          reviewFrom: { ...carry.facts.reviewFrom, proof: Boolean(proof) },
+          ...(proof ? { liveValidation: carry.liveValidation } : {}),
+        },
+        {
+          kind: "note",
+          text: englishOf(note(Boolean(proof))),
+          feed: false,
+          data: { said: note(Boolean(proof)), ...data },
+        },
+      );
+      return true;
+    })();
   }
 
   /**

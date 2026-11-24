@@ -178,7 +178,7 @@ describe("a merge card's status line (INF-3709)", () => {
       { name: "typecheck-lint-build", state: "success" as const, startedAt, finishedAt },
     ],
   };
-  const strip = () => {
+  const strip = (review: Parameters<typeof seedDelivery>[2] = {}) => {
     const db = openInMemoryDatabase();
     const tasks = new TaskService({ db, strict: true, now: () => now });
     seedTask(tasks, { id: "t1", title: "Show the card's pictures", status: "completed" });
@@ -205,6 +205,7 @@ describe("a merge card's status line (INF-3709)", () => {
       reviewSha: HEAD,
       reviewRisk: "medium",
       reviewRiskNote: "one production line moves.",
+      ...review,
     });
     const facts = new SettleFacts(
       { tasks, repos: { get: () => undefined } } as unknown as CrewSupervisorOptions,
@@ -270,6 +271,26 @@ describe("a merge card's status line (INF-3709)", () => {
     expect(html).toContain(
       `<span class="inf-foot-rest" data-rest="checks" aria-hidden="true">${rest}</span>`,
     );
+  });
+
+  // INF-6536 finding 3: a pass a takeover carries from the task that earned
+  // it names that task on the merge card.
+  it("names the task that earned a carried pass", () => {
+    const line = states(
+      strip({
+        reviewVerdict: "pass",
+        reviewFrom: {
+          taskId: "t0",
+          key: "INF-6468",
+          title: "Show the card's pictures",
+          proof: false,
+        },
+      }),
+    );
+    expect(line.find(({ fact }) => fact === "review")).toMatchObject({
+      level: "ok",
+      words: "Review passed in INF-6468",
+    });
   });
 
   it("makes each state with words on rest a Tab stop, by itself or through its link", () => {

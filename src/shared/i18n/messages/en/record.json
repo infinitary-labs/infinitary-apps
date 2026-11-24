@@ -83,6 +83,9 @@
   "recordPolicyProject": "Project setting",
   "recordPolicyThisTask": "This task",
   "recordRecordedDetails": "Recorded details",
+  "recordReviewCarried": "This task carries the review {key} passed at {head}: the same commit.",
+  "recordReviewCarriedProof": "This task carries the review {key} passed at {head}, and the proof accepted there: the same commit.",
+  "recordReviewPassedIn": "passed in {key}",
   "recordShowCard": "Show the card",
   "recordShowEarlier": {
     "plural": "count",

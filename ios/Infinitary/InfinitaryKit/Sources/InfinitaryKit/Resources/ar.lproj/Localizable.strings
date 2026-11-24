@@ -2359,6 +2359,9 @@
 "recordPolicyProject" = "إعداد المشروع";
 "recordPolicyThisTask" = "هذه المهمة";
 "recordRecordedDetails" = "التفاصيل المسجّلة";
+"recordReviewCarried" = "تحمل هذه المهمة المراجعة التي اجتازتها %2$@ عند %1$@: الالتزام نفسه.";
+"recordReviewCarriedProof" = "تحمل هذه المهمة المراجعة التي اجتازتها %2$@ عند %1$@، والإثبات المقبول هناك: الالتزام نفسه.";
+"recordReviewPassedIn" = "اجتازت في %1$@";
 "recordShowCard" = "عرض البطاقة";
 "recordSourceGone" = "لم يعد هذا المصدر التاريخي متاحًا.";
 "recordStart" = "بدء";

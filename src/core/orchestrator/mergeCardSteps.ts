@@ -13,6 +13,7 @@ import { currentChange } from "../storage/changeProjection";
 import { type ChangeContext, changeWords, crewSignInText, numberLabel } from "./changeContext";
 import type { ChangePublication } from "./changePublication";
 import { type MergedStory, mergedAheadWords, mergedStory } from "./mergedStory";
+import { carryTakenOverReview } from "./takeoverCarry";
 
 /**
  * The steps show_merge_card walks, in their fixed order (INF-3717 piece 2):
@@ -149,6 +150,16 @@ export class MergeCardSteps {
     } catch (caught) {
       return stop("commit", wordsOf(caught), "crewmate");
     }
+    // A takeover at the very commit an earlier task's review passed shows
+    // that pass, and the proof accepted with it (INF-6536 finding 3).
+    const carried = options.proofDir
+      ? carryTakenOverReview({ tasks: options.tasks, taskId, head, proofDir: options.proofDir })
+      : undefined;
+    if (carried)
+      // i18n-exempt: served to the crewmate in show_merge_card's answer
+      did.push(
+        `This task carries the review ${carried.key} passed at this same commit${carried.proof ? ", with the proof accepted there" : ""}.`,
+      );
 
     // The change, resolved once: the branch the working copy has checked out.
     const local = this.publication.localStoryDestination(taskId) !== undefined;

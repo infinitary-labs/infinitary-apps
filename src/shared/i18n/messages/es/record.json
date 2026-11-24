@@ -88,6 +88,9 @@
   "recordPolicyProject": "Configuración del proyecto",
   "recordPolicyThisTask": "Esta tarea",
   "recordRecordedDetails": "Detalles registrados",
+  "recordReviewCarried": "Esta tarea conserva la revisión que {key} superó en {head}: el mismo commit.",
+  "recordReviewCarriedProof": "Esta tarea conserva la revisión que {key} superó en {head} y la prueba aceptada allí: el mismo commit.",
+  "recordReviewPassedIn": "superada en {key}",
   "recordShowCard": "Mostrar la tarjeta",
   "recordShowEarlier": {
     "plural": "count",

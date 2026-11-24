@@ -1,3 +1,5 @@
+import type { ProofAwaitingReader } from "@shared/liveValidation";
+
 /**
  * The whose-turn rule (S7c, captain call C7 A - heuristics only; the
  * restated rule at the end of the scout report's R4.8). A crewmate's report
@@ -31,6 +33,10 @@
  *     bring the new head, evidence revision or validation state that
  *     re-review needs, and only the Firstmate steers the reviewer; the
  *     verdict is a typed record on the task, never a reading of words.
+ *  0d. The task's latest live validation run waits for an independent
+ *     reader and no review of the task is open (INF-6536 finding 3): wake,
+ *     whatever card is up or still moves. Only the Firstmate starts the
+ *     reader; acceptance's own typed supplier says the reader is missing.
  *  1. An open DECISION card for the task: the CAPTAIN's turn. No wake; the
  *     report is already a feed line and the click returns to its author.
  *     A note never holds the turn on its own (R4.8 question 1 - a crewmate
@@ -108,6 +114,7 @@ export type ReportSortRule =
   | "recovery"
   | "waited-on"
   | "review-reread"
+  | "proof-unread"
   | "captain-card"
   | "put-off"
   | "finished"
@@ -274,6 +281,13 @@ export type Witnesses = {
    */
   reviewOpen?: boolean;
   /**
+   * The task's latest live validation run waits for an independent reader
+   * at the version it last recorded validation for, and no review of the
+   * task is open to read it (INF-6536 finding 3; `proofAwaitingReader`).
+   * Only the Firstmate starts one; the report's sort reads it.
+   */
+  proofUnread?: ProofAwaitingReader;
+  /**
    * The task has started and went back to the backlog (INF-2062;
    * `TaskRecord.backlogSince`): it waits for a Start, so it is nobody's
    * turn to move it. The idle ladder never nudges, wakes or raises a card
@@ -392,6 +406,16 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       wake: true,
       reason:
         "its open review returned findings, but this report made no handoff; the first mate reads it for a blocker or decision.",
+    };
+  }
+  if (facts.proofUnread) {
+    return {
+      rule: "proof-unread",
+      verdict: "captain",
+      wake: true,
+      // i18n-exempt: the sort's record for the first mate and the replay scorer
+      reason:
+        "its recorded proof waits for an independent reader and no review of it is open; the first mate starts one.",
     };
   }
   if (facts.answerReady || facts.decisionCardOpen || facts.finishedCardUp) {

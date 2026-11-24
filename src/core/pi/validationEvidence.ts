@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFileSync, realpathSync, statSync } from "node:fs";
+import { constants, copyFileSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import {
   CARD_MEDIA_KINDS,
+  type CardMediaExtension,
   type CardPictureExtension,
   cardMediaUrl,
   cardPictureUrl,
@@ -259,4 +260,62 @@ export function readKeptValidationEvidence(
       };
     }
   });
+}
+
+/**
+ * A takeover's copy of the proof an earlier task kept (INF-6536 finding 3):
+ * each kept file is checked where it is, then copied into the takeover's
+ * own folder under its id, so every later gate reads it as that task's own
+ * (`verifyKeptValidationEvidenceSync` holds proof to its task's folder and
+ * name). A copy already there with the same bytes stands.
+ */
+export function carryKeptValidationEvidence(
+  evidence: ValidationEvidence[],
+  from: { dir: string; taskId: string },
+  to: { dir: string; taskId: string },
+): ValidationEvidence[] {
+  if (!evidence.length) return [];
+  verifyKeptValidationEvidenceSync(evidence, from.dir, from.taskId);
+  const renamed = (file: string) => `${to.taskId}-${file.slice(from.taskId.length + 1)}`;
+  mkdirSync(to.dir, { recursive: true });
+  const home = keptPath(from.dir);
+  const carried = evidence.map((item) => {
+    for (const file of [item.file, ...(item.posterFile ? [item.posterFile] : [])]) {
+      const target = join(to.dir, renamed(file));
+      try {
+        copyFileSync(join(home, file), target, constants.COPYFILE_EXCL);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        if (!readFileSync(target).equals(readFileSync(join(home, file))))
+          throw new Error("A different file already holds this proof's name.");
+      }
+    }
+    const file = renamed(item.file);
+    const posterFile = item.posterFile ? renamed(item.posterFile) : undefined;
+    const poster = posterFile ?? file;
+    const moving = posterFile !== undefined;
+    return {
+      ...item,
+      file,
+      ...(posterFile ? { posterFile } : {}),
+      ...(item.picture
+        ? {
+            picture: cardPictureUrl(
+              basename(poster, extname(poster)),
+              extname(poster).slice(1) as CardPictureExtension,
+            ),
+          }
+        : {}),
+      ...(moving && item.media
+        ? {
+            media: cardMediaUrl(
+              basename(file, extname(file)),
+              extname(file).slice(1) as CardMediaExtension,
+            ),
+          }
+        : {}),
+    };
+  });
+  verifyKeptValidationEvidenceSync(carried, to.dir, to.taskId);
+  return carried;
 }

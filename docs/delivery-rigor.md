@@ -340,6 +340,13 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    A main edit farther from the change does not.
    The checks still run on every version and must pass before a merge.
    A pass recorded before the reading was stored carries the same way when its reviewed commit is still on this Mac and the task is not placed.
+   A takeover carries an earlier task's pass when its committed version is the very commit that review read (INF-6536 finding 3; `carryTakenOverReview`, `takeoverCarry.ts`).
+   The earlier tasks are the work it was handed, read the way a yes carries ("What the captain already allowed" below, `sameWorkLineage`).
+   Only the identical commit carries: a takeover one commit past the reviewed version carries nothing and needs its own review, as any new commit does.
+   The carry is written once, while the takeover has no verdict of its own, at the merge card's walk or when its crewmate records proof; a later verdict of its own replaces it.
+   The proof accepted with that pass carries too while the takeover has recorded no scenarios of its own: its kept files are copied into the takeover's own proof folder under its name, so every gate reads them as its own, and proof whose files cannot be read whole stays behind with the reason in the note's data.
+   A crewmate who records proof at a commit whose proof just carried is told nothing was recorded and to show the merge card.
+   The carried pass names the task that earned it (`reviewFrom`): a quiet timeline note on the takeover, `passed in <key>` in Details and in the merge card's Review state, and the line show_merge_card's answer adds.
 5. **Findings and blocked leave the reviewer idle and steerable.**
    The host sends auto-fix findings verbatim to the builder through its durable lane, with the fixer preamble (`REVIEW_FIX_RULES`): double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
    No brief carries the preamble, so a builder whose care rose after its brief was written reads it the same way (INF-1876).

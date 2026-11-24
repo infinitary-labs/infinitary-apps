@@ -522,6 +522,21 @@ describe("the shared task facts", () => {
     });
   });
 
+  // INF-6536 finding 3: a pass a takeover carries names the task that earned it.
+  it("names the task that earned a carried pass", () => {
+    const delivery = {
+      mode: "queue-pr" as const,
+      reviewVerdict: "pass" as const,
+      reviewSha: "4f1c2b9e8d7a6c5b4a39281706f5e4d3c2b1a098",
+      reviewRisk: "low" as const,
+      reviewFrom: { taskId: "t0", key: "INF-6468", title: "Sort the Now panel", proof: true },
+    };
+    expect(taskFactsOf(detail({ delivery }), names).delivery?.review).toEqual({
+      dot: "ok",
+      words: "passed in INF-6468 4f1c2b9 · risk low",
+    });
+  });
+
   // INF-3141 (the captain's direction 1): a screen that shows a review as
   // passed shows the version it read, and flags a pass that the home says
   // does not cover the version on offer.

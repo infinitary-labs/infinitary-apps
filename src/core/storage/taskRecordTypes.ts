@@ -16,7 +16,7 @@ import type { WorkShape } from "@shared/routingPolicy";
 import type { LevelWaitCause } from "@shared/taskHold";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { FirstRelease } from "@shared/taskRelease";
-import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
+import type { ReviewFrom, RunChecks, TaskDeliveryMode } from "@shared/tasks";
 import type { IntegrationAllowance, WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 
@@ -521,6 +521,13 @@ export type TaskDelivery = {
   reviewRisk?: ReviewRisk;
   reviewRiskNote?: string;
   reviewedAt?: number;
+  /**
+   * The earlier task whose pass the review facts above are (INF-6536
+   * finding 3): a takeover at the very commit that task's review passed
+   * carries the pass, and `proof` when the proof accepted there came with
+   * it. Absent on a pass this task's own review recorded.
+   */
+  reviewFrom?: ReviewFrom;
   /**
    * The declaration record and preserved legacy count fields.
    * The host never increments these counts or uses their caps as holds.

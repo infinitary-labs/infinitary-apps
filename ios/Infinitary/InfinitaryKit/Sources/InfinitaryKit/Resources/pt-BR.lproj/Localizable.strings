@@ -2359,6 +2359,9 @@
 "recordPolicyProject" = "Configuração do projeto";
 "recordPolicyThisTask" = "Esta tarefa";
 "recordRecordedDetails" = "Detalhes registrados";
+"recordReviewCarried" = "Esta tarefa herda a revisão aprovada em %2$@ no commit %1$@: o mesmo commit.";
+"recordReviewCarriedProof" = "Esta tarefa herda a revisão aprovada em %2$@ no commit %1$@ e a prova aceita ali: o mesmo commit.";
+"recordReviewPassedIn" = "aprovada em %1$@";
 "recordShowCard" = "Mostrar o cartão";
 "recordSourceGone" = "Esta fonte histórica não está mais disponível.";
 "recordStart" = "Iniciar";

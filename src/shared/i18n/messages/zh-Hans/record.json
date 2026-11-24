@@ -78,6 +78,9 @@
   "recordPolicyProject": "项目设置",
   "recordPolicyThisTask": "本任务",
   "recordRecordedDetails": "记录的详情",
+  "recordReviewCarried": "此任务沿用 {key} 在 {head} 通过的审查：同一个提交。",
+  "recordReviewCarriedProof": "此任务沿用 {key} 在 {head} 通过的审查，以及当时接受的证明：同一个提交。",
+  "recordReviewPassedIn": "已在 {key} 中通过",
   "recordShowCard": "显示卡片",
   "recordShowEarlier": {
     "plural": "count",

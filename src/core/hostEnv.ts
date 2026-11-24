@@ -38,10 +38,10 @@ export type LoginPathCapture = {
   source: LoginPathSource;
   entries: readonly string[];
   /**
-   * The shell's Claude Code reporting keys, from the same ask (`docs/usage.md`,
-   * "A company's Claude Code setup"). Never logged: a header key holds a token.
+   * The shell's Claude Code keys (`CLAUDE_KEYS_COMMAND` in `userBin.ts`),
+   * from the same ask. Never logged: a header key holds a token.
    */
-  reporting?: Readonly<Record<string, string>>;
+  claudeKeys?: Readonly<Record<string, string>>;
   interactiveMiss?: LoginShellMiss;
   /** Why the login-only ask did not answer, when it was needed and did not. */
   loginMiss?: LoginShellMiss;
@@ -109,14 +109,14 @@ async function runCapture(env: NodeJS.ProcessEnv): Promise<LoginPathCapture> {
   if ("entries" in first) {
     // The fallback's shell is still running; its answer is not needed.
     void login;
-    return { source: "interactive", entries: first.entries, reporting: first.reporting };
+    return { source: "interactive", entries: first.entries, claudeKeys: first.claudeKeys };
   }
   const second = await login;
   if ("entries" in second) {
     return {
       source: "login",
       entries: second.entries,
-      reporting: second.reporting,
+      claudeKeys: second.claudeKeys,
       interactiveMiss: first.miss,
     };
   }

@@ -192,7 +192,10 @@ export async function readClaudeCompanyReporting(
   const keys: Record<string, string> = {};
   for (const [key, value] of Object.entries(launch))
     if (isReportingKey(key) && value !== undefined) keys[key] = value;
-  Object.assign(keys, (options.shell ?? (() => loginPathCapture()?.reporting))() ?? {});
+  for (const [key, value] of Object.entries(
+    (options.shell ?? (() => loginPathCapture()?.claudeKeys))() ?? {},
+  ))
+    if (isReportingKey(key)) keys[key] = value;
   let fromSettings: ReturnType<typeof settingsKeys> = { keys: {} };
   try {
     fromSettings = settingsKeys(

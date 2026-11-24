@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "subscriptions",
       "title": "Your company's Claude Code usage reporting counts work done in Infinitary",
-      "body": "When your Claude Code settings file or your shell sets up usage reporting for your company, Infinitary now sends Claude's own usage records there, so your company's dashboards no longer show $0 for work done here. Claude's client still reports only to Infinitary, which keeps your cost limits up to date as it passes each record on. Settings → Usage names where the records go.",
+      "body": "When your Claude Code settings file or your shell sets up usage reporting for your company, Infinitary now sends Claude's own usage records there, so your company's dashboards no longer show $0 for work done here. Claude's client still reports only to Infinitary, which keeps your cost limits up to date as it passes each record on. Settings → Usage names where the records go. A custom header your company's gateway asks for in your Claude Code settings or shell, such as a team id, now reaches the gateway too.",
       "noPicture": "The change is in what your company's monitoring receives; Settings → Usage adds only one line of text naming where it goes.",
       "provenance": { "origin": "change" }
     }

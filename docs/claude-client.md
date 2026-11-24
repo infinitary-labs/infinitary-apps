@@ -357,6 +357,7 @@ The organization's tier needs nothing from the app, because the client reads it 
 Of the person's own settings only the token command and the address reach a session, as the app's own flag settings (`accessSettings` on the session deps, laid under the app's other flag settings), read again each time a client starts; everything else in that file stays out, and `settingSources` stays empty.
 The organization's tier ranks above flag settings in the client, so where it sets either key, its own wins.
 An address alone, with no token command, also reaches sessions, as it reaches Claude Code.
+So do the custom headers a gateway asks for (`env.ANTHROPIC_CUSTOM_HEADERS`, such as a team id), from the person's settings file or, where it sets none, their login shell, whose one-time ask (`src/core/userBin.ts`) prints that key beside the reporting keys and nothing else; `claudeAccess.integration.test.ts` holds that the header reaches the gateway from each.
 
 When either tier sets a token command, the account's access is that command (`ClaudeAuthBackend`, `src/core/claude/claudeAuth.ts`), ahead of any subscription sign-in in the store:
 

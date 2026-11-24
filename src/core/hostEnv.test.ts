@@ -146,7 +146,7 @@ describe("captureLoginPath (ask the person's shell once)", () => {
     expect(await runAsChild("node --version")).toBe("v99.0.0-planted");
   });
 
-  it("reads a company's Claude Code reporting keys from the startup file, and no other variable", async () => {
+  it("reads a company's Claude Code reporting keys and gateway headers from the startup file, and no other variable", async () => {
     const dir = scratch();
     const bin = join(dir, "tools");
     const stub = writeLoginShellStub(join(dir, "shell"), {
@@ -157,24 +157,24 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.example.com:4318
 export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Bearer tok=en,X-Team=platform'
 export OTEL_RESOURCE_ATTRIBUTES='department=engineering
 team.id=platform'
+export ANTHROPIC_CUSTOM_HEADERS='X-Team-Id: platform'
+export ANTHROPIC_API_KEY=do-not-read
 export UNRELATED_SECRET=do-not-read`,
     });
     process.env.SHELL = stub.shell;
 
     const capture = await captureLoginPath();
     expect(capture.entries[0]).toBe(bin);
-    const reporting = capture.reporting ?? {};
-    expect(reporting).toMatchObject({
+    const keys = capture.claudeKeys ?? {};
+    expect(keys).toMatchObject({
       CLAUDE_CODE_ENABLE_TELEMETRY: "1",
       OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.com:4318",
       OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer tok=en,X-Team=platform",
       OTEL_RESOURCE_ATTRIBUTES: "department=engineering\nteam.id=platform",
+      ANTHROPIC_CUSTOM_HEADERS: "X-Team-Id: platform",
     });
-    expect(
-      Object.keys(reporting).filter(
-        (key) => !key.startsWith("OTEL_") && key !== "CLAUDE_CODE_ENABLE_TELEMETRY",
-      ),
-    ).toEqual([]);
+    expect(Object.keys(keys)).not.toContain("ANTHROPIC_API_KEY");
+    expect(Object.keys(keys)).not.toContain("UNRELATED_SECRET");
   });
 
   it("reads through a noisy startup file: greetings, a title sequence, output after the command", async () => {

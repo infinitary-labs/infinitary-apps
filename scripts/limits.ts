@@ -650,6 +650,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PANEL_CARD_DATA_MAX_BYTES: physical("refused in words naming the bound; send smaller data"),
     PANEL_CARD_KEPT_MAX_BYTES: physical("refused in words naming the bound; keep less"),
   },
+  "src/shared/releaseTracking.ts": {
+    // The captain chose up to three asks, 30 or more days apart, on INF-6429.
+    STAR_ASKS_MAX: {
+      rests: "consent",
+      way: "later notes leave the ask out; the project's page stays a link anyone can open",
+    },
+  },
   "src/shared/remoteLogin.ts": {
     REMOTE_LOGIN_TIME_LIMIT_MS: physical("stopped in words naming 30 minutes; nothing changed there, ask again"),
   },

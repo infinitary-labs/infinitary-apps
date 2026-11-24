@@ -179,6 +179,7 @@ A run from source on the person's own data records nothing, since its package.js
   Each highlight is numbered with its kind and area ("01 / Added · Cards"); the first spans the card with its hero picture under its words, the next two sit side by side with theirs above, and one without a picture reads as text.
   The full list groups by area in the `NOTE_AREAS` order, skipping empty ones, features first inside each, then improvements, fixes, removals and maintenance, each tagged with its kind; an entry with no area is under Other changes, and the range line, not the list, names the versions.
   With no highlights the disclosure starts open.
+  Between the highlights and the full list, a note may carry the ask to star the project ("The star ask").
   It closes on where the notes came from and then, for a note that lists changes, on where to read it again: the Help menu's What’s New (`READ_AGAIN`).
   A note that says nothing is new, or that the notes could not be read, names no way back, because What's new opens the newest note that listed changes ("Reading a note again").
   Catalog text is escaped into these templates; the catalog never supplies markup, and the body carries no script or stylesheet of its own.
@@ -211,6 +212,27 @@ A run from source on the person's own data records nothing, since its package.js
   A previous version the catalog does not know gives this release's own changes and says so; a previous release marked `incomplete`, or a move to a version lacking changes the previous one had, is stated.
   A later upgrade recovers a gap once both its ends are in the catalog, listing it under its original range in a disclosure of its own, grouped by area inside; a closed note is never reopened.
   An unreadable or corrupt version records nothing new and invents no history.
+
+## The star ask
+
+The captain's INF-6429 choices: a note that lists changes may carry one panel after the highlights, before the full list, asking the person to star the project on GitHub (`src/core/releaseNotes/starAsk.ts`).
+It is never a card, toast or setting of its own, and it offers no reward.
+
+- **When it shows** (`starAskDue`).
+  Only on a note that lists changes, once the person's crew has finished three tasks (`firstRun.thirdCrewmateDoneAt`), at most three times and 30 or more days after the last.
+  It stops for good once the person's github.com sign-in shows a star, or once they opened the project's page.
+  With a github.com sign-in on file and no answer read yet, the note goes without it.
+- **What the button does.**
+  It is a plain link to `https://github.com/infinitary-labs/infinitary-apps`, where the person stars it themselves; the app never stars anything, since GitHub forbids automated starring.
+  Opening that address from a window of the computer that keeps the record stamps `starAsk.openedAt` (`src/main/ipc/index.ts`); a window controlling another computer, and the phone, record nothing.
+- **The star read** (`StarRead`, `src/core/forge/starRead.ts`).
+  Each time the github.com sign-in's health turns ok, as it does at each start, the app asks GitHub `GET /user/starred/infinitary-labs/infinitary-apps` through that sign-in, at most once a day and only while the ask could still show.
+  204 is starred and 404 is not; any other answer or a failure keeps the last one.
+  The answer waits on the record for the next note, which is built offline; nothing reaches Infinitary's makers.
+- **The record.**
+  `starAsk` on the version tracking record keeps each show, the visit and the last answer (`src/shared/releaseTracking.ts`).
+  A show is stamped in the same transaction as its note's delivery, so a failed write counts none.
+- **Its words** are saved facts (`saidMark`, docs/i18n.md "Saved facts"), so each window and the phone word them in their own language.
 
 ## Reading a note again
 

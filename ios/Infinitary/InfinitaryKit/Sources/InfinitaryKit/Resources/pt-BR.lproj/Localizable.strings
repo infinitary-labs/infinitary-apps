@@ -4016,6 +4016,9 @@
 "shellVoiceNotNow" = "Agora não";
 "shellVoiceOpenSettings" = "Abrir Ajustes do Sistema";
 "shellVoiceOpenWindowsSettings" = "Abrir Configurações do Windows";
+"starAskButton" = "Dar uma estrela no GitHub";
+"starAskLabel" = "Código aberto";
+"starAskWords" = "O Infinitary é de código aberto. Se ele for útil para você, uma estrela no GitHub ajuda mais pessoas a descobri-lo.";
 "taskBrowserDriverCaptain" = "você tem o controle";
 "taskBrowserDriverCrewmate" = "o tripulante está conduzindo";
 "taskBrowserDriverNobody" = "ninguém está conduzindo";

@@ -1,8 +1,10 @@
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { isCustomApiProvider } from "@shared/customApi";
+import { GITHUB_COM } from "@shared/forge";
 import { WELCOME_NOTE } from "@shared/welcome";
 import type { CoreEventSink } from "./events";
 import { crewFacts, FirstRunService, hasPriorActivity, presentFirstCrewmateNote } from "./firstRun";
+import { ForgeSignInStore } from "./forge";
 import type { HostCapabilities } from "./host";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
@@ -172,6 +174,9 @@ export function startFirstLaunch(options: {
               dir: crewmateCardPicturesDir(paths, RELEASE_NOTES_PICTURE_OWNER),
               taskId: RELEASE_NOTES_PICTURE_OWNER,
             }),
+          // Read from the sign-in's file: the note is built before the
+          // sign-ins are first checked, and never waits on GitHub.
+          githubSignedIn: () => new ForgeSignInStore(paths.forgesDir).present(GITHUB_COM),
           now,
         },
         { version: host.app.version, source: bundledSource(notesDir, host.app.version) },

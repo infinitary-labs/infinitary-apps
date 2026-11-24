@@ -2,7 +2,12 @@ import type { UsageReporting } from "@shared/usage";
 import type { ResolveClaudeSettings } from "./claudeAccess";
 import { hasClaudeReporting } from "./claudeCostReports";
 import type { ClaudeSessionDeps } from "./claudeQueryCore";
-import { readClaudeCompanyReporting, receiverStepsAside } from "./claudeReporting";
+import {
+  type ClaudeCompanyReporting,
+  readClaudeCompanyReporting,
+  readManagedClaudeReporting,
+  receiverStepsAside,
+} from "./claudeReporting";
 
 /**
  * The approved receiver must not overwrite an organization's reporting or
@@ -40,14 +45,22 @@ export function claudeReportingDeps(): Pick<
 }
 
 /**
- * The host Claude work is passed on to, for Settings → Usage: none where the
- * receiver steps aside (another reporting choice in the environment, or a
- * managed setup whose own client reports), as a session's attachment does.
+ * The host Claude work is reported to, for Settings → Usage: an
+ * administrator's managed collector, which Claude's client sends to itself
+ * and which ranks above every other setup; otherwise the person's setup the
+ * receiver passes on to, and none where the receiver steps aside, as a
+ * session's attachment does.
  */
 export async function claudeReportingHost(
   env: NodeJS.ProcessEnv,
-  deps: ReturnType<typeof claudeReportingDeps> = claudeReportingDeps(),
+  deps: ReturnType<typeof claudeReportingDeps> & {
+    managedReporting?: () => Promise<ClaudeCompanyReporting | undefined>;
+  } = claudeReportingDeps(),
 ): Promise<UsageReporting> {
+  const managed = await (deps.managedReporting ?? readManagedClaudeReporting)().catch(
+    () => undefined,
+  );
+  if (managed) return { host: managed.host };
   if (receiverStepsAside(env) || !(await deps.costReportingAllowed?.().catch(() => false)))
     return { host: null };
   const setup = await deps.companyReporting?.(env).catch(() => undefined);

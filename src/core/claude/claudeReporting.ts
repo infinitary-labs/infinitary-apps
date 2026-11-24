@@ -184,14 +184,17 @@ export function companyReportingFrom(
   };
 }
 
-function settingsKeys(resolved: ResolvedSettings): {
+function settingsKeys(
+  resolved: ResolvedSettings,
+  source: "user" | "managed" = "user",
+): {
   keys: Record<string, string>;
   helper?: string;
 } {
   const keys: Record<string, string> = {};
   let helper: string | undefined;
   for (const tier of resolved.sources) {
-    if (tier.source !== "user") continue;
+    if (tier.source !== source) continue;
     const settings = tier.settings as { env?: unknown; otelHeadersHelper?: unknown };
     const env = settings.env && typeof settings.env === "object" ? settings.env : {};
     for (const [key, value] of Object.entries(env as Record<string, unknown>))
@@ -233,6 +236,22 @@ export async function readClaudeCompanyReporting(
   }
   Object.assign(keys, fromSettings.keys);
   return companyReportingFrom(keys, fromSettings.helper);
+}
+
+/**
+ * An administrator's managed reporting setup, which Claude's client sends
+ * to directly: only the managed tiers are read, as the cost policy reads
+ * them (`claudeCostPolicy.ts`). A read that fails reads as none.
+ */
+export async function readManagedClaudeReporting(
+  resolve: ResolveClaudeSettings = resolveSettings,
+): Promise<ClaudeCompanyReporting | undefined> {
+  try {
+    const managed = settingsKeys(await resolve({ settingSources: [] }), "managed");
+    return companyReportingFrom(managed.keys, managed.helper);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Claude Code's own refresh period for `otelHeadersHelper`: 29 minutes. */

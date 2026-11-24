@@ -4016,6 +4016,9 @@
 "shellVoiceNotNow" = "Not now";
 "shellVoiceOpenSettings" = "Open System Settings";
 "shellVoiceOpenWindowsSettings" = "Open Windows Settings";
+"starAskButton" = "Star on GitHub";
+"starAskLabel" = "Open source";
+"starAskWords" = "Infinitary is open source. If you find it useful, a star on GitHub helps more people discover it.";
 "taskBrowserDriverCaptain" = "you have control";
 "taskBrowserDriverCrewmate" = "the crewmate is driving";
 "taskBrowserDriverNobody" = "nobody is driving";

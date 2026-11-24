@@ -10,6 +10,7 @@ import {
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { hostPlatform } from "@core/platform";
+import { recordStarPageOpened } from "@core/releaseNotes/starAsk";
 import { writePrivateFile } from "@core/secrets/custody";
 import { readStandIns } from "@core/standIns";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
@@ -21,6 +22,7 @@ import {
   type PushPayload,
 } from "@shared/ipc";
 import { isMoveCommand } from "@shared/keyboard";
+import { STAR_PAGE_URL } from "@shared/releaseTracking";
 import type { ResetAnswer } from "@shared/reset";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
 import {
@@ -216,6 +218,14 @@ export function registerIpc(options: IpcOptions): void {
     } catch (caught) {
       console.warn(`[infinitary] link ${url}: not opened, the system could not open it:`, caught);
       throw caught;
+    }
+    // The What's new note's star ask links here: once the person opened the
+    // page, later notes leave the ask out (docs/release-notes.md "The star
+    // ask"). Only this computer's own core keeps it; a window controlling
+    // another computer records nothing there.
+    if (url === STAR_PAGE_URL) {
+      const settings = shell.core()?.services.settings;
+      if (settings) recordStarPageOpened(settings, Date.now());
     }
     return { ok: true as const };
   });

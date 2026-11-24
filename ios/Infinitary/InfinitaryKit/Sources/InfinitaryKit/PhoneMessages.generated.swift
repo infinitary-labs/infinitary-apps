@@ -4172,6 +4172,9 @@ public enum PhoneMessages {
     public static func `shellVoiceNotNow`() -> String { PhoneWords.format("shellVoiceNotNow", []) }
     public static func `shellVoiceOpenSettings`() -> String { PhoneWords.format("shellVoiceOpenSettings", []) }
     public static func `shellVoiceOpenWindowsSettings`() -> String { PhoneWords.format("shellVoiceOpenWindowsSettings", []) }
+    public static func `starAskButton`() -> String { PhoneWords.format("starAskButton", []) }
+    public static func `starAskLabel`() -> String { PhoneWords.format("starAskLabel", []) }
+    public static func `starAskWords`() -> String { PhoneWords.format("starAskWords", []) }
     public static func `taskBrowserDriverCaptain`() -> String { PhoneWords.format("taskBrowserDriverCaptain", []) }
     public static func `taskBrowserDriverCrewmate`() -> String { PhoneWords.format("taskBrowserDriverCrewmate", []) }
     public static func `taskBrowserDriverNobody`() -> String { PhoneWords.format("taskBrowserDriverNobody", []) }
@@ -8580,6 +8583,9 @@ extension PhoneWords {
         "shellVoiceNotNow": [],
         "shellVoiceOpenSettings": [],
         "shellVoiceOpenWindowsSettings": [],
+        "starAskButton": [],
+        "starAskLabel": [],
+        "starAskWords": [],
         "taskBrowserDriverCaptain": [],
         "taskBrowserDriverCrewmate": [],
         "taskBrowserDriverNobody": [],

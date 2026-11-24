@@ -288,3 +288,41 @@ describe("escaping", () => {
     expect(body).toContain('alt="A &quot;quoted&quot; &lt;view&gt;"');
   });
 });
+
+/** The star ask the captain chose on INF-6429: a panel after the highlights linking to the project's page. */
+describe("the star ask", () => {
+  const withAsk = (from: string, to: string, starAsk: boolean) =>
+    renderNote({
+      mode: "upgrade",
+      from,
+      to,
+      selection: selectEntries({
+        catalog: catalogFor(to, RELEASES, AREA_ENTRIES),
+        from,
+        to,
+        delivered: new Set(),
+        unresolved: [],
+        mode: "upgrade",
+      }),
+      starAsk,
+    }).body;
+
+  it("sits between the highlights and the full list, its button a link to the project's page", () => {
+    const body = withAsk("0.1.25", "0.1.27", true);
+    const panel =
+      /<div class="inf-panel" data-star-ask=""[^>]*>.*?<\/a><\/div>/.exec(body)?.[0] ?? "";
+    expect(text(panel)).toBe(
+      "Open sourceInfinitary is open source. If you find it useful, a star on GitHub helps more people discover it.Star on GitHub",
+    );
+    expect(panel).toContain('<a href="https://github.com/infinitary-labs/infinitary-apps"');
+    const at = body.indexOf(panel);
+    expect(at).toBeGreaterThan(body.indexOf("</section>"));
+    expect(at).toBeLessThan(body.indexOf("<details><summary>All "));
+    expect(body).not.toContain("<script");
+  });
+
+  it("is left out when not asked for, and from a note with nothing new", () => {
+    expect(withAsk("0.1.25", "0.1.27", false)).not.toContain("data-star-ask");
+    expect(withAsk("0.1.27-alpha.20", "0.1.27", true)).not.toContain("data-star-ask");
+  });
+});

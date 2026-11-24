@@ -1,4 +1,5 @@
-import { versionName } from "../../shared/releaseTracking";
+import { said, saidMark } from "../../shared/i18n/said";
+import { STAR_PAGE_URL, versionName } from "../../shared/releaseTracking";
 import { isAlphaVersion, isStableVersion, parseSemver } from "../../shared/semver";
 import {
   ENTRY_KINDS,
@@ -69,6 +70,8 @@ export type NoteInput = {
   selection: Selection;
   /** Highlights' hero pictures, by entry id; a highlight without one reads as text. */
   pictures?: ReadonlyMap<string, HeroPicture>;
+  /** The ask to star the project (./starAsk), after the highlights; only a note that lists changes draws it. */
+  starAsk?: boolean;
 };
 
 export type NoteText = { title: string; body: string };
@@ -205,6 +208,19 @@ function allChanges(selection: Selection, open: boolean): string {
   return `<details${open ? " open" : ""}><summary>All ${count(total, "change", "changes")}</summary>${groups.join("")}</details>`;
 }
 
+const STAR_GLYPH =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="flex:none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" style="fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round"/></svg>';
+
+/**
+ * The ask to star the project, as the captain chose it on INF-6429: a panel
+ * whose button is a plain link to the project's page, where the person
+ * stars it themselves. Its words are saved facts, so each reader words them
+ * in its own language (docs/i18n.md, "Saved facts").
+ */
+function starAskPanel(): string {
+  return `<div class="inf-panel" data-star-ask="" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)"><div style="flex:1 1 18rem;min-width:0">${saidMark(said("starAskLabel"), "h6", 'style="margin:0 0 var(--space-1)"')}${saidMark(said("starAskWords"), "p", 'style="margin:0"')}</div><a href="${STAR_PAGE_URL}" style="display:inline-flex;align-items:center;gap:8px;flex:none;color:var(--fg-1);font-weight:500;line-height:1;text-decoration:none;border:1px solid var(--line-2);border-radius:var(--radius-m);padding:9px 16px">${STAR_GLYPH}${saidMark(said("starAskButton"))}</a></div>`;
+}
+
 /** What the note covers, in one line: the prototype's deck. */
 function deck(input: NoteInput): string {
   const { from, to, mode, selection } = input;
@@ -285,6 +301,7 @@ export function renderNote(input: NoteInput): NoteText {
   parts.push(
     `<p>${deck(input)}</p>`,
     highlightsBlock(top, input.pictures),
+    input.starAsk ? starAskPanel() : "",
     allChanges(selection, top.length === 0),
     `<p class="inf-muted">${
       selection.coverage === "complete"

@@ -44,6 +44,14 @@ export const JOURNAL_FILE = "journal.jsonl";
 /** The operating system's first process adopts a wrapper whose caller ended. */
 const ADOPTER_PID = 1;
 const CALLER_GONE = "The run's caller has ended, so the run left the line; nothing started.";
+const MIB = 1024 ** 2;
+/**
+ * How long a run that fits may start ahead of a bigger run first in line,
+ * counted from when that run became first (INF-6381, the captain's 10 minutes).
+ * After it nothing passes, so the bigger run waits at most this plus the
+ * passing runs' lengths. In memory only: a restart never restarts a window.
+ */
+export const PASSING_WINDOW_MS = 10 * 60_000;
 
 /** One journal line: what the line did, to which run, and what it compared against. */
 export type LoadJournalEntry = {
@@ -59,6 +67,8 @@ export type LoadJournalEntry = {
   pressure?: string;
   running?: number;
   ahead?: number;
+  /** A passing admission: the hold first in line that it started ahead of. */
+  passed?: string;
   residentBytes?: number;
   why?: string;
 };
@@ -131,6 +141,10 @@ export class LoadLine {
   /** Waiting groups that left because their caller ended; a later claim from one is refused. */
   private readonly left = new Set<string>();
   private blocked: string | undefined;
+  /** The run first in line and when it became first, on this host lifetime's monotonic clock. */
+  private front: { id: string; since: number } | undefined;
+  /** What the line had to give when it last compared the run first in line and it did not fit. */
+  private room: { id: string; free: LoadDemand } | undefined;
   private failure: unknown;
   private stopped = false;
 
@@ -163,6 +177,9 @@ export class LoadLine {
       this.track(held);
       if (held.launch) this.verified.set(held.id, this.now());
     }
+    const first = this.held.find((held) => held.state === "waiting");
+    // Its window may already have passed before the restart; it gets no new one.
+    if (first) this.front = { id: first.id, since: -Infinity };
     this.watch();
   }
 
@@ -299,7 +316,6 @@ export class LoadLine {
 
   snapshot(): LoadSnapshot {
     this.check();
-    const running = this.held.filter((held) => held.state === "running").length;
     let waiting = 0;
     const unavailable = this.capacity();
     const pressure = this.observation()?.value.memory.memoryPressure;
@@ -314,7 +330,7 @@ export class LoadLine {
             ahead: 0,
           };
         }
-        const ahead = running + waiting++;
+        const ahead = waiting++;
         const reason =
           pressure === "warning" || pressure === "critical"
             ? "pressure"
@@ -330,6 +346,7 @@ export class LoadLine {
           state: held.state,
           ahead,
           reason,
+          ...(reason === "capacity" && this.room?.id === held.id ? { free: this.room.free } : {}),
         };
       }),
     };
@@ -400,6 +417,11 @@ export class LoadLine {
         );
       return this.runOf(parent.id);
     }
+    const most = this.most();
+    if (most !== undefined && demand.memoryBytes > most && !this.options.overridden?.(taskId))
+      throw new Error(
+        `This run declares ${Math.ceil(demand.memoryBytes / MIB)} MiB of memory, more than this computer can ever give one run. Declare at most ${Math.floor(most / MIB)} MiB, its installed memory less the margin; nothing started.`,
+      );
     if (row.group !== row.pid && this.jobs()?.lead(row.pid, row.started) === row.started)
       row.group = row.pid;
     if (row.group !== row.pid)
@@ -455,7 +477,8 @@ export class LoadLine {
         taskId,
         hold: held.id,
         demand,
-        ahead: this.held.filter((other) => other.id !== held.id).length,
+        ahead: this.held.filter((other) => other.id !== held.id && other.state === "waiting")
+          .length,
       });
     }
     this.admit();
@@ -536,6 +559,14 @@ export class LoadLine {
       : undefined;
   }
 
+  /** The most memory one run can ever get here: installed less the margin, from a fresh reading. */
+  private most(): number | undefined {
+    const total = this.observation()?.value.memory.totalBytes;
+    return total === undefined
+      ? undefined
+      : Math.max(0, Math.floor(total - memoryMarginBytes(total)));
+  }
+
   private capacity(): LoadDemand | null {
     const current = this.observation();
     if (!current) return null;
@@ -555,6 +586,23 @@ export class LoadLine {
 
   private admit(): void {
     this.check();
+    const most = this.most();
+    if (most !== undefined) {
+      // Saved before refusals existed, or claimed without a fresh reading: it can never start.
+      const never = this.held.filter(
+        (held) =>
+          held.state === "waiting" &&
+          held.demand.memoryBytes > most &&
+          !this.options.overridden?.(held.taskId),
+      );
+      if (never.length)
+        this.commit(
+          this.held.filter((held) => !never.includes(held)),
+          // i18n-exempt: a journal line for reading later, never shown in the window
+          "it declares more memory than this computer can ever give one run",
+        );
+    }
+    this.markFront();
     const remaining = this.capacity();
     let running = 0;
     if (remaining) {
@@ -577,10 +625,11 @@ export class LoadLine {
     // With nothing running, the front run's memory ask is judged against installed
     // memory less the same margin, not today's free reading (INF-2165 direction A).
     // Pressure and a fresh reading still gate it through capacity().
-    const total = this.observation()?.value.memory.totalBytes ?? 0;
-    const installed = Math.max(0, Math.floor(total - memoryMarginBytes(total)));
-    let earlier = false;
+    const installed = most ?? 0;
+    const passing = this.front !== undefined && this.now() - this.front.since < PASSING_WINDOW_MS;
+    let front: string | undefined;
     let blocked: string | undefined;
+    let room: { id: string; free: LoadDemand } | undefined;
     const entries: Omit<LoadJournalEntry, "at">[] = [];
     const pressure = this.observation()?.value.memory.memoryPressure;
     const compared = (): LoadDemand | null =>
@@ -592,12 +641,19 @@ export class LoadLine {
     const next = this.held.map((held): Held => {
       if (held.state === "running") return held;
       const overridden = this.options.overridden?.(held.taskId) === true;
-      const fits =
-        !earlier &&
+      const measured =
         remaining !== null &&
-        (running === 0
-          ? held.demand.memoryBytes <= installed
-          : held.demand.cpu <= remaining.cpu && held.demand.memoryBytes <= remaining.memoryBytes);
+        running > 0 &&
+        held.demand.cpu <= remaining.cpu &&
+        held.demand.memoryBytes <= remaining.memoryBytes;
+      // Behind a blocked front only measured room counts: the lone-run rule is the front's.
+      const fits =
+        remaining !== null &&
+        (front !== undefined
+          ? passing && measured
+          : running === 0
+            ? held.demand.memoryBytes <= installed
+            : measured);
       const entry = {
         taskId: held.taskId,
         hold: held.id,
@@ -607,18 +663,28 @@ export class LoadLine {
         running,
       };
       if (!overridden && !fits) {
-        if (!earlier) {
+        if (front === undefined) {
+          front = held.id;
+          // Uncovered startup charges can push the room below zero; none is free then.
+          if (entry.capacity)
+            room = {
+              id: held.id,
+              free: {
+                cpu: Math.max(0, entry.capacity.cpu),
+                memoryBytes: Math.max(0, entry.capacity.memoryBytes),
+              },
+            };
           // One line per new front or new reason, not one per two-second pass.
           blocked = `${held.id}:${entry.capacity === null ? (pressure ?? "unread") : "capacity"}`;
           if (blocked !== this.blocked) entries.push({ ...entry, event: "blocked" });
         }
-        earlier = true;
         return held;
       }
       entries.push({
         ...entry,
         event: "admit",
         basis: !fits ? "override" : running === 0 ? "installed" : "capacity",
+        ...(fits && front !== undefined ? { passed: front } : {}),
       });
       if (remaining) {
         remaining.cpu -= held.demand.cpu;
@@ -628,8 +694,17 @@ export class LoadLine {
       return { ...held, state: "running" };
     });
     this.commit(next);
+    this.markFront();
     this.blocked = blocked;
+    this.room = room;
     for (const entry of entries) this.journal(entry);
+  }
+
+  /** A run that became first in line starts its passing window now. */
+  private markFront(): void {
+    const first = this.held.find((held) => held.state === "waiting");
+    if (first?.id === this.front?.id) return;
+    this.front = first ? { id: first.id, since: this.now() } : undefined;
   }
 
   private commit(next: Held[], why = "its process group ended"): void {

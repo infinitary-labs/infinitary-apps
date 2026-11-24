@@ -112,6 +112,11 @@
   "uiTaskFactsSkipped": "übersprungen",
   "uiTaskFactsTask": "Aufgabe",
   "uiTaskResourceRun": "Lauf",
+  "uiTaskResourceRunFree": {
+    "plural": "processors",
+    "one": "als Nächster an der Reihe · {processors} Prozessor und {memory} GB frei",
+    "other": "als Nächster an der Reihe · {processors} Prozessoren und {memory} GB frei"
+  },
   "uiTaskResourceRunUnavailable": "Laufstatus auf {computer} nicht verfügbar",
   "uiTaskResourceUse": "Auslastung",
   "uiVoiceAbandon": "Verwerfen",

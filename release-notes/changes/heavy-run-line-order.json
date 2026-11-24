@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "heavy-run-line-order",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Small heavy runs no longer wait behind one that cannot start",
+      "body": "When a crewmate's heavy run waits for room on a computer, a smaller run that fits now starts ahead of it during its first 10 minutes of waiting, and the bigger run still gets its turn. A run that asks more memory than the computer can ever give is turned down at once, naming the most it can ask for, instead of holding the line forever. The task's Run row now counts only runs waiting ahead, and the run first in line says how much room is free.",
+      "noPicture": "It changes the words of the existing Run row and the order runs start in; no layout changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

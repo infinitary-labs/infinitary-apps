@@ -89,7 +89,7 @@ The native supervisor keeps the payload in the same group, preserves its streams
 Claim and receipt polling clear the shell cap and shell ID and use separate stable operation identities, never another operation's kept answer.
 Processor reservations end only after verified launch and a complete following aggregate CPU interval; memory growth reservations continue.
 No command table can release a living group or bypass the recorded `load-line` hold.
-The caller's demand, FIFO admission, pressure behavior, nested runs and group lifetime are owned by [Declared heavy runs](heavy-runs.md).
+The caller's demand, admission order, pressure behavior, nested runs and group lifetime are owned by [Declared heavy runs](heavy-runs.md).
 The project-neutral served instruction has one home in `CREWMATE_LOAD_LINE`; it says what to declare and never names this project's test gates.
 
 ## The browser command

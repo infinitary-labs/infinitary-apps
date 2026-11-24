@@ -399,6 +399,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The Apple readiness job must not bring its credentials onto the fleet.
     "ios-release.yml:preflight",
     "ios-release.yml:availability",
+    "ios-release.yml:external",
     // Its callers (INF-2441): main.yml, the swept batch and a Linux-only request.
     "linux-startup.yml:runtime-facts",
     // INF-2465: main's wait for the alpha cut, which main.yml alone calls;

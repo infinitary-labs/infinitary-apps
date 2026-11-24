@@ -5,7 +5,7 @@ Its name is Infinitary, its bundle identifier is `com.getinfinitary.app`, and it
 Apple moves an app to another team only after an App Store release, so the app left the personal team's `com.getinfinitary.infinitary` for a new identifier and App Store Connect record: a tester installs it from TestFlight as a new app and pairs it again, and the old app's builds expire on their own.
 The phone is a view of the Mac, not a separate first mate or a place that runs work.
 It shows interactive cards on Home, with Tasks and Activity on their own tabs, sends the captain's messages and photos, and lets the captain start, continue, steer and interrupt work on the Mac.
-The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution and background notifications remain separate work.
+The version-dispatched TestFlight workflow and the square app icon support internal delivery, and the workflow adds each build to the app's external TestFlight groups; App Store distribution and background notifications remain separate work.
 The visual rules live in the design skill's `components/devices/PhoneView.prompt.md`.
 
 ## Joining and trust
@@ -924,6 +924,7 @@ Open **A phone** in the Mac app's Devices settings, scan or paste its link in th
 The phone should show Home, Tasks and Activity in its top bar, its cards on Home, and the Mac's name with In reach in the computer's sheet behind the bar's right-hand button.
 Type a message or use keyboard dictation, attach a library photo, and confirm the last turn on the Mac.
 Open a task’s record to start or continue it, and its Crewmate tab to steer or stop its running turn.
+A tester outside the team joins an external group instead, by the captain's email invitation or the group's public link; each build reaches that group once Beta App Review approves it ("External testing" below).
 TestFlight installation, camera scanning and the real Local Network prompt are the captain's checks on a physical phone.
 Someone working on the phone app can still run it on their own iPhone or iPad from `ios/Infinitary/Infinitary.xcodeproj` with the Infinitary scheme and their own development sign-in.
 Release signing runs only in the separately dispatched TestFlight workflow below.
@@ -1003,8 +1004,23 @@ An `attempted` receipt means the outcome is unknown; `accepted` means the upload
 The final Linux job reads the exact marketing-version/build pair until Apple reports it in internal beta testing, for up to 60 readings separated by 30 seconds.
 Rejected, expired or unknown states fail explicitly, and export-compliance holds name Apple's required action rather than uploading again.
 A processing timeout or uncertain upload is checked by dispatching the same workflow with `version` and `check_build` set to the existing build number.
-That mode performs only Apple reads, runs no Mac job and never uploads.
+That mode runs no Mac job and never uploads; once Apple confirms the build, it runs the external testing job below, which adds only what Apple does not hold yet.
 Apple's internal-testing state means testers can install the build, not that a phone has; a tester's installation through TestFlight is that check, and no Xcode installation is required of the captain.
+
+### External testing
+
+An external TestFlight group receives no build by itself, and Apple's Beta App Review must pass a build before outside testers can install it, so the workflow's last job, `external`, adds and submits each build (INF-1784).
+It starts once the availability job has passed, in a release and in a `check_build` request, with the same `ios-release` environment key, and nothing waits on it: the alpha's phone order reads the availability job alone (`docs/alpha.md`, "The phone goes first"), so a failure here never takes back the build's place on TestFlight.
+`node scripts/phone-release.ts external` reads the app's beta groups and, for each group Apple marks as not internal, the newest build in it.
+A group that already holds this build is left as it is; one that holds a newer build, by Apple's upload date, keeps that build, so a `check_build` request for an old build never hands testers an older one.
+Every other external group receives the build with `POST /v1/betaGroups/{id}/relationships/builds`.
+The job then reads the build's external state, waiting up to ten minutes while Apple reports `PROCESSING`, and submits it with `POST /v1/betaAppReviewSubmissions` when Apple reports `READY_FOR_BETA_SUBMISSION`; Apple may approve a later build of an approved version without a full review.
+The run's summary names each group, whether the build was added, already there or left out, and its review state in words: waiting for review, in review, approved, ready for testing or in testing.
+A rejected build or a state Apple has not documented fails the job; an app with no external group passes with a line saying the build went to internal testers only.
+These two POSTs are the release's only App Store Connect writes, and the writer refuses any other path.
+A refusal names Apple's error codes, such as `ENTITY_UNPROCESSABLE.BETA_CONTRACT_MISSING`, without Apple's prose, says what Apple already took, and is never retried; a lost connection leaves the outcome unknown, and a `check_build` request reads what Apple holds and adds only what is missing.
+The key needs a role that may add builds to external groups and submit them for review.
+The captain's one-time setup for outside testers is in App Store Connect: the app's Test Information (beta description, feedback email, contact and review notes, including the transport-security reason in "Joining and trust"), an external group under External Testing, and its testers or public link.
 
 ## Disposable verification
 

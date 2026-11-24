@@ -201,3 +201,30 @@ jobs:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
           CHECK_BUILD: ${{ needs.resolve.outputs.build_number }}
         run: node scripts/phone-release.ts status
+
+  external:
+    environment: ios-release
+    name: ${{ format('{0} · Add the build to external testing', (inputs.check_build && 'Requested TestFlight status' || 'Requested TestFlight')) }}
+    # Alphas read the availability job alone as the build being on TestFlight
+    # (scripts/phone-order.ts), so this job's own failure never undoes that.
+    # A status request runs it too: it adds only what Apple does not hold yet.
+    needs: [resolve, availability]
+    if: ${{ !cancelled() && needs.availability.result == 'success' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Add the build to every external TestFlight group and report its Beta App Review state
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.COMPANY_APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.COMPANY_APP_STORE_CONNECT_API_KEY }}
+          CHECK_BUILD: ${{ needs.resolve.outputs.build_number }}
+        run: node scripts/phone-release.ts external

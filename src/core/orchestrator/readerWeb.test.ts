@@ -65,9 +65,10 @@ async function reader(options: {
   if (options.brief !== undefined) tasks.recordBrief("reader", [options.brief]);
   const shown: WebReadAsk[] = [];
   let now = 1_000;
+  let visibility = options.visibility;
   const service = new ReaderWebService({
     tasks,
-    projectVisibility: async () => options.visibility,
+    projectVisibility: async () => visibility,
     presentAsk: (_taskId, ask) => shown.push(ask),
     network: webReadNetwork(false, {
       INFINITARY_WEB_READ_HOSTS: JSON.stringify(
@@ -82,6 +83,9 @@ async function reader(options: {
     shown,
     later: (ms: number) => {
       now += ms;
+    },
+    becomes: (next: typeof visibility) => {
+      visibility = next;
     },
   };
 }
@@ -155,6 +159,18 @@ describe("ReaderWebService", () => {
       "its project, whose host could not say it is public",
     );
     expect(unknown.tasks.get("reader")?.delivery?.readerHolds).toBeUndefined();
+
+    const marked = await reader({ visibility: "not-public" });
+    await marked.service.read("reader", { url: FORUM });
+    const mark = marked.tasks.get("reader")?.delivery?.readerHolds;
+    expect(mark?.what).toBe("its project, which is not public");
+    marked.becomes("public");
+    marked.later(60_000);
+    expect(await marked.service.read("reader", { url: DOCS })).toContain(
+      "Not opened: this task holds its project, which is not public",
+    );
+    expect(marked.tasks.get("reader")?.delivery?.readerHolds).toEqual(mark);
+    expect(opened).toEqual([]);
   });
 
   it("opens a kept page once on Only this time, then opens that address at once", async () => {

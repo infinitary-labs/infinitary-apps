@@ -1,5 +1,5 @@
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, createServer as createListener, type Socket } from "node:net";
 import { gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -11,7 +11,13 @@ import {
 } from "./publicPage";
 
 /** A page server on this computer, standing in for named public sites. */
-type Served = { status?: number; headers?: Record<string, string>; body?: string | Buffer };
+type Served = {
+  status?: number;
+  headers?: Record<string, string>;
+  body?: string | Buffer;
+  /** Send only the body's first half, then drop the connection. */
+  dropped?: boolean;
+};
 
 let server: Server | undefined;
 const seen: { host: string; path: string; headers: IncomingHttpHeaders }[] = [];
@@ -35,9 +41,13 @@ async function standIns(
       response.writeHead(404).end();
       return;
     }
-    response
-      .writeHead(page.status ?? 200, { "content-type": "text/html", ...page.headers })
-      .end(page.body ?? "");
+    response.writeHead(page.status ?? 200, { "content-type": "text/html", ...page.headers });
+    if (!page.dropped) {
+      response.end(page.body ?? "");
+      return;
+    }
+    const body = Buffer.from(page.body ?? "");
+    response.write(body.subarray(0, body.length / 2), () => response.socket?.destroy());
   });
   await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -168,12 +178,51 @@ describe("readPublicPage", () => {
     expect(notes.text).toBe("Line one\nLine two");
   });
 
+  it("answers that a packed page stopped part way when its connection drops", async () => {
+    const network = await standIns(["files.example.org"], {
+      "files.example.org/notes.txt": {
+        headers: { "content-type": "text/plain", "content-encoding": "gzip" },
+        body: gzipSync("Line one\n".repeat(20_000)),
+        dropped: true,
+      },
+    });
+    const refused = await refusal(readPublicPage("https://files.example.org/notes.txt", network));
+    expect(refused.message).toContain("The page stopped part way");
+  });
+
   it("finds no name a test did not list, so a test never reaches the real network", async () => {
     const network = await standIns(["docs.example.org"], {});
     const refused = await refusal(readPublicPage("https://example.com/", network));
     expect(refused.message).toBe("example.com could not be found. Nothing was sent.");
     expect(refused.beforeSend).toBe(true);
+    const numbered = await refusal(readPublicPage("https://1.1.1.1/", network));
+    expect(numbered.message).toContain("1.1.1.1 is not a stand-in page in this run");
     expect(seen).toEqual([]);
+  });
+
+  it("connects only to the checked address, never asking the resolver about the name", async () => {
+    const connections: Socket[] = [];
+    const listener = createListener((socket) => {
+      connections.push(socket);
+      socket.destroy();
+    });
+    await new Promise<void>((resolve) => listener.listen(0, "127.0.0.1", resolve));
+    const { port } = listener.address() as AddressInfo;
+    try {
+      const { send } = webReadNetwork(false, {});
+      const sent = await send(
+        new URL(`https://never.invalid:${port}/`),
+        ["127.0.0.1"],
+        AbortSignal.timeout(5_000),
+      ).then(
+        () => "answered",
+        (error: unknown) => (error as NodeJS.ErrnoException).code,
+      );
+      expect(sent).not.toBe("ENOTFOUND");
+      expect(connections).toHaveLength(1);
+    } finally {
+      await new Promise<void>((resolve) => listener.close(() => resolve()));
+    }
   });
 
   it("never reads stand-in names in a packaged app", () => {

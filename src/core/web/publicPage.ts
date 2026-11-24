@@ -3,6 +3,7 @@ import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
+import { pipeline } from "node:stream";
 import { rootCertificates } from "node:tls";
 import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
 import { settingFrom } from "@shared/envSettings";
@@ -191,8 +192,9 @@ function standInSend(origin: string, url: URL, signal: AbortSignal): Promise<Pag
  * The network a page read uses. An unpackaged run may name stand-in pages
  * with `INFINITARY_WEB_READ_HOSTS`, a JSON map of names to the http origin
  * on this computer that serves each, such as `{"pages.example":
- * "http://127.0.0.1:4123"}`; a listed name is never resolved, and any other
- * name is not found, so a test's reader reaches no real network. A
+ * "http://127.0.0.1:4123"}`; a listed name is never resolved, any other
+ * name is not found and nothing else is sent, an address written as
+ * numbers included, so a test's reader reaches no real network. A
  * packaged app never reads it.
  */
 export function webReadNetwork(packaged: boolean, env = process.env): WebReadNetwork {
@@ -212,7 +214,9 @@ export function webReadNetwork(packaged: boolean, env = process.env): WebReadNet
     resolve: async (hostname) => {
       throw Object.assign(new Error(`${hostname} not found`), { code: "ENOTFOUND" });
     },
-    send: pinnedSend,
+    send: async (url) => {
+      throw new Error(`${url.hostname} is not a stand-in page in this run`);
+    },
     standIn: (hostname) => hosts.get(hostname.toLowerCase()),
   };
 }
@@ -238,7 +242,10 @@ async function bodyBytes(reply: PageReply): Promise<{ bytes: Buffer; cut: boolea
       false,
     );
   }
-  const stream = unpack ? reply.body.pipe(unpack) : reply.body;
+  // pipeline, not pipe: pipe never passes the body's error on, so a packed
+  // page cut off by the time limit or a dropped connection would never end.
+  // pipeline destroys the unpacker with that error, which the loop below throws.
+  const stream = unpack ? pipeline(reply.body, unpack, () => {}) : reply.body;
   const chunks: Buffer[] = [];
   let size = 0;
   try {

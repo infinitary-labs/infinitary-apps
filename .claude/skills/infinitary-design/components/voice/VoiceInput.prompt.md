@@ -51,7 +51,14 @@ Hovering a round or focusing its reply lights only that round, never its sibling
 The newest round immediately restores ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving and blurring restores rest.
 The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
 The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; the working mark, Working… and problem colors stay unchanged.
-A round is 44 px; the lane is 108 px with two rounds and 54 px with one.
+A message round is 44 px; the lane is 108 px with two of them and 54 px with one, and a card row (below) takes 22 px of it.
+On desktop a card round takes a place among them (INF-6337's plan, the captain's Approve and build): the captain's own press of a card's button, Got it and Done included, or a line typed under a card.
+It is one 22 px row on the right: a 12 px card glyph in `--fg-3`, 6 px, the card's title in `--text-sm --fg-3`, cut after its last whole word and at most 45% of the width, 8 px, then the bubble.
+A choice draws its button's words in an outlined bubble: the bubble's shape and padding with no fill and a 1 px `--fg-1` border mixed at 16% (12% on the quiet newest round); a line typed under a card draws in the filled bubble.
+A line typed under the first mate's own card is also a message: its row keeps the reply line under it, 44 px as any message round; a lone card row is 22 px, and the lane is each round's height plus its 10 px.
+While the first mate works and a lone card row is the newest round, the row starts with the first mate's 14 px mark, ember and spinning as a reply's, at the line's start with no words, so the row stays 22 px.
+The card's title is a button: it opens that card, at the front while it is still up and as a past card once it closed; it takes a Tab stop and the focus ring, and resting on it lifts it to `--fg-1`.
+Putting a card aside, a card taken down and a choice its author or its script made are not rounds.
 No quotation marks: the side says who said it.
 A message of pictures alone reads "A picture".
 The reply is the first mate's closing sentence, about 40 characters saying what took effect (INF-772), and the app's own words, such as a card's title or "Started:" with the task's title, when it wrote none.

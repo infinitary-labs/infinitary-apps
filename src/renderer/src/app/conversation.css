@@ -40,6 +40,22 @@
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
+  border-radius: var(--radius-m);
+  outline: 1px solid transparent;
+  outline-offset: var(--space-2);
+}
+/* The round an open landed on, outlined for 1.6 s, then fading over
+   --dur-slow, which reduced motion cuts to a cut; one pass. */
+.conversation-round[data-landed] {
+  animation: conversation-landed var(--dur-slow) var(--ease-out) 1600ms 1 both;
+}
+@keyframes conversation-landed {
+  from {
+    outline-color: var(--accent);
+  }
+  to {
+    outline-color: transparent;
+  }
 }
 
 .conversation-day {

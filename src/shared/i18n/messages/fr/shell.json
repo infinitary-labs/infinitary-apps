@@ -69,6 +69,7 @@
   "shellKeyReminderHint": "appuyez une fois et ce rappel s’arrête",
   "shellKeyReminderNotTyping": "hors saisie",
   "shellLastTurnFromCommand": "Depuis {command}",
+  "shellLastTurnOpenCard": "Ouvrir cette carte",
   "shellLastTurnPictureOnly": "Une image",
   "shellLastTurnWorking": "En cours…",
   "shellMainMessageConnectFirst": "Connectez d’abord un abonnement",

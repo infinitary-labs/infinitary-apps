@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { lastTurnReplySchema } from "./lastTurn";
+import { type LastRound, type LastTurn, lastTurnReplySchema } from "./lastTurn";
 import { throughSchema } from "./through";
 
 /**
@@ -105,4 +105,97 @@ export function newerRound(a: ConversationCursor, b: ConversationCursor): number
 /** A round the captain sent as a message, as the strip's rounds are: one typed under a card included. */
 export function sentAsMessage(round: ConversationRound): boolean {
   return round.kind === "message" || (round.kind === "reply" && round.reply !== undefined);
+}
+
+/**
+ * One round the strip above the message box draws (docs/composer.md "The
+ * last turn"). A message keeps the window's live round - its reply line and
+ * working mark - and, when it was typed under the first mate's own card,
+ * that card. A press of a card's button or a line typed under a crewmate's
+ * card draws as one row with the card's name.
+ */
+export type StripRound = {
+  /** Stable while the round stays on the strip: a message's place in the window's sequence, else the round's id. */
+  key: string;
+  /** The conversation round's id once a read holds it: the conversation opens there. */
+  id?: string;
+  /** The card the round acted on. */
+  card?: ConversationCard;
+} & (
+  | { kind: "message"; round: LastRound }
+  | { kind: "choice"; label: string }
+  | { kind: "reply"; you: string }
+);
+
+/** The conversation's newest page as the strip keeps it, with the message sequence it was read at. */
+export type StripPage = { rounds: readonly ConversationRound[]; seq: number };
+
+/** The window's messages and the newest page of the conversation, as the strip reads them. */
+export type StripInput = {
+  turn: LastTurn | null;
+  /** The newest message's place in the window's sequence. */
+  seq: number;
+  /**
+   * The newest page and the `seq` it was read at; null while none was read
+   * or on a home that refuses the read, and the strip shows messages alone.
+   */
+  page: StripPage | null;
+  /** How many rounds the strip shows. */
+  limit: number;
+};
+
+/**
+ * The strip's rounds, oldest first: the newest `limit` of the window's
+ * messages and the page's card rounds, by time.
+ *
+ * A message's time comes from the page: the page's messages, newest first,
+ * are the window's messages after the ones sent since it was read (`seq`
+ * past the page's). A message sent since is newer than every round the page
+ * holds; a message the page does not reach is older than all of them.
+ */
+export function stripRounds(input: StripInput): StripRound[] {
+  const { turn, seq, page, limit } = input;
+  const messages = turn ? [turn, ...(turn.previous ? [turn.previous] : [])] : [];
+  const lag = page ? seq - page.seq : 0;
+  const sent = page ? page.rounds.filter(sentAsMessage) : [];
+  const timed: { at: number; order: number; round: StripRound }[] = messages.map((said, i) => {
+    const round: LastRound = {
+      you: said.you,
+      reply: said.reply,
+      ...(said.through ? { through: said.through } : {}),
+    };
+    const key = `m:${seq - i}`;
+    if (!page) return { at: -i, order: i, round: { key, kind: "message", round } };
+    const read = i - lag < 0 ? undefined : sent[i - lag];
+    const at = i - lag < 0 ? Number.POSITIVE_INFINITY : read ? read.at : Number.NEGATIVE_INFINITY;
+    return {
+      at,
+      order: i,
+      round: {
+        key,
+        kind: "message",
+        round,
+        ...(read ? { id: read.id } : {}),
+        ...(read?.kind === "reply" ? { card: read.card } : {}),
+      },
+    };
+  });
+  if (page)
+    page.rounds.forEach((read, order) => {
+      if (read.kind === "message" || sentAsMessage(read)) return;
+      const base = { key: read.id, id: read.id, card: read.card };
+      timed.push({
+        at: read.at,
+        order,
+        round:
+          read.kind === "choice"
+            ? { ...base, kind: "choice", label: read.label }
+            : { ...base, kind: "reply", you: read.you },
+      });
+    });
+  timed.sort((a, b) => b.at - a.at || a.order - b.order);
+  return timed
+    .slice(0, limit)
+    .reverse()
+    .map((entry) => entry.round);
 }

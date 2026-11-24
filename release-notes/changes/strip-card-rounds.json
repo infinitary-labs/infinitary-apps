@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "strip-card-rounds",
+      "kind": "improvement",
+      "area": "message-box",
+      "title": "See your answers to cards above the message box",
+      "body": "When you choose on a card, or reply under one, it shows above the message box beside your messages, with the card's name. Press the name to open that card again, or press the rest of the line to open your conversation right where it happened.",
+      "picture": {
+        "dark": "strip-card-rounds-dark.webp",
+        "light": "strip-card-rounds-light.webp",
+        "alt": "Above the message box, a question to the first mate with its reply, and under it a row with a card's name and the Got it choice made on it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

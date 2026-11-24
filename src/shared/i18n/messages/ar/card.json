@@ -82,6 +82,7 @@
   "cardBrowserManage": "إدارة",
   "cardBrowserMore": "المزيد",
   "cardBrowserNone": "ليس لهذه المهمة متصفح على {place}.",
+  "cardBrowserOpenAgainCaption": "متصفح جديد، فيه فقط تسجيلات الدخول التي يمكن لهذه المهمة استخدامها",
   "cardBrowserOpenFailed": "تعذّر على {place} فتح متصفح لهذه المهمة الآن.",
   "cardBrowserPageWatching": "الصفحة على {site}، كما يعرضها متصفح فرد الطاقم",
   "cardBrowserPageYours": "الصفحة على {site}، تحت تحكمك",

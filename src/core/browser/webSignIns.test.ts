@@ -3,7 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { HostCookie } from "../host";
-import { cookiesOfSite, sameSignInSite, siteHostname, WebSignIns } from "./webSignIns";
+import {
+  cookiesOfSite,
+  sameSignInSite,
+  signedInSiteOf,
+  siteHostname,
+  WebSignIns,
+} from "./webSignIns";
 
 /**
  * The signed-in sites a computer keeps (docs/task-browser.md, "Signed-in
@@ -180,5 +186,43 @@ describe("which cookies make up a site's sign-in", () => {
     expect(cookiesOfSite(local, "127.0.0.1:4000").map((c) => c.name)).toEqual(["other"]);
     expect(cookiesOfSite(local, "[::1]:4000").map((c) => c.name)).toEqual(["six"]);
     expect(siteHostname("[::1]:4000")).toBe("::1");
+  });
+});
+
+describe("the site a sign-in covers (INF-6279's plan: key each entry by the site its own cookies cover)", () => {
+  it("is the widest name the page's parent shares its cookies under, never a sibling's or a name under the page", () => {
+    const cookies = [
+      cookie(".apple.example", "myacinfo"),
+      cookie("idmsa.apple.example", "session"),
+      cookie(".deep.idmsa.apple.example", "below"),
+      cookie(".other.example", "tracker"),
+    ];
+    expect(signedInSiteOf("idmsa.apple.example", cookies)).toBe("apple.example");
+    // Only host-only cookies: the page's own host and port.
+    expect(signedInSiteOf("localhost:5173", [cookie("localhost", "sid")])).toBe("localhost:5173");
+    expect(signedInSiteOf("idmsa.apple.example", [cookie("idmsa.apple.example", "session")])).toBe(
+      "idmsa.apple.example",
+    );
+  });
+
+  it("folds an entry kept before under a narrower name into the wider one, keeping its id for a task allowed it", () => {
+    const store = new WebSignIns(folder(), () => 1_000);
+    const before = store.record("developer.apple.example", {
+      automatic: false,
+      via: ["idmsa.apple.example"],
+    });
+    const wider = store.record("apple.example", { automatic: true });
+    expect(store.records()).toEqual([
+      {
+        site: "apple.example",
+        savedAt: 1_000,
+        id: before.id,
+        automatic: true,
+        via: ["developer.apple.example", "idmsa.apple.example"],
+      },
+    ]);
+    expect(wider.id).toBe(before.id);
+    expect(store.find("appstoreconnect.apple.example")?.id).toBe(before.id);
+    expect(store.find("apple.example.attacker.example")).toBeUndefined();
   });
 });

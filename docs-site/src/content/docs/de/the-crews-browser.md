@@ -1,5 +1,5 @@
 ---
-source: 30ff177c9864ccf9
+source: 72e8eba0a4de8933
 title: Der Browser der Crew
 description: Ein Crewmitglied kann für seine Aufgabe Websites in einem eigenen Browser öffnen. Sieh ihm zu, übernimm die Steuerung, wenn eine Seite dich braucht, und entscheide, welche deiner Anmeldungen spätere Aufgaben nutzen dürfen.
 ---
@@ -47,7 +47,7 @@ Klapp sie auf, um die Unterhaltung des Crewmitglieds neben der Seite zu lesen un
 Mit „Ausblenden“ oder Esc legst du die Ansicht weg, und der Browser läuft weiter.
 
 Ein gestoppter Browser nennt den Grund.
-**Erneut öffnen** startet einen frischen Browser, bei nichts angemeldet, auf der Seite, auf der er war; die Schaltfläche gibt es nicht mehr, sobald die Aufgabe geschlossen ist.
+**Erneut öffnen** startet einen frischen Browser auf der Seite, auf der er war, nur bei den Websites angemeldet, die diese Aufgabe noch nutzen darf; die Schaltfläche gibt es nicht mehr, sobald die Aufgabe geschlossen ist.
 
 ## Die Steuerung übernehmen {#take-control}
 
@@ -84,17 +84,19 @@ Die Karte verschwindet, das Crewmitglied macht weiter, und alle Worte, die noch 
 
 ## Angemeldete Websites {#signed-in-sites}
 
-Wenn ein Crewmitglied dich bittet, dich anzumelden, bleibt das, wobei du dich anmeldest, im eigenen Browserprofil dieses Computers.
+Wenn ein Crewmitglied dich bittet, dich anzumelden oder ein Konto anzulegen, bleibt das, wobei du dich anmeldest, im eigenen Browserprofil dieses Computers.
+Die Anmeldung gilt für die ganze Website, sodass eine Anmeldung auf der eigenen Anmeldeseite von example.com auch für ihre anderen Seiten gilt, etwa developer.example.com.
 Wenn du **Steuerung zurückgeben** drückst, fragt dich eine Zeile über der Seite, was spätere Aufgaben tun dürfen, etwa „Deine Anmeldung bei example.com bleibt auf diesem Computer. Spätere Aufgaben:“:
 
-- **Jedes Mal fragen** steht vorn.
-  Braucht eine spätere Aufgabe die Website, fragt sie auf ihrer Karte, die neben **Selbst anmelden** zusätzlich **Meine Anmeldung bei example.com nutzen** zeigt.
-  Ein Klick lässt den Browser dieser Aufgabe die Website angemeldet nutzen, und du tippst nichts.
-- **Ohne Nachfrage nutzen** lässt eine spätere Aufgabe die Website angemeldet öffnen, ohne Karte, und ihre Aktivität nennt es jedes Mal.
+- **Ohne Nachfrage nutzen** steht vorn und ist für eine neue Website ausgewählt.
+  Eine spätere Aufgabe öffnet die Website angemeldet, ohne Karte, und ihre Aktivität nennt es jedes Mal.
   Eine Zahlung oder eine endgültige Übermittlung deckt das nie ab.
+- Bei **Jedes Mal fragen** fragt eine spätere Aufgabe, die die Website braucht, auf ihrer Karte, die neben **Selbst anmelden** zusätzlich **Meine Anmeldung bei example.com nutzen** zeigt.
+  Ein Klick lässt den Browser dieser Aufgabe die Website angemeldet nutzen, und du tippst nichts.
 
 Eine Regel gilt für Aufgaben aus allen Projekten auf diesem Computer.
 Ein Browser, der eine angemeldete Website nutzt, öffnet nur diese Website und die Anmeldeseiten, über die er gekommen ist; jede andere Website öffnet sich abgemeldet.
+Eine Aufgabe behält die angemeldeten Websites, die sie nutzen darf, wenn ihr Browser von selbst stoppt oder die App neu startet, bis du **Browser stoppen** drückst oder die Aufgabe geschlossen wird.
 Meldest du dich aus einem anderen Grund an, etwa nachdem du selbst **Steuerung übernehmen** gedrückt hast, hält die Anmeldung meist nur, bis dieser Browser stoppt.
 Die Zeile unter der Seite sagt, welcher Fall es ist, etwa „vorübergehend · behält, wobei du angemeldet bist, bis er stoppt“.
 

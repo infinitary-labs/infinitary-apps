@@ -1,5 +1,5 @@
 ---
-source: 30ff177c9864ccf9
+source: 72e8eba0a4de8933
 title: Le navigateur de l’équipage
 description: Un équipier peut ouvrir des sites web dans son propre navigateur pour sa tâche. Regardez-le, prenez le contrôle quand une page a besoin de vous, et décidez lesquelles de vos connexions les tâches suivantes peuvent utiliser.
 ---
@@ -47,7 +47,7 @@ Dépliez-la pour lire la conversation de l’équipier à côté de la page et l
 Masquer ou Échap range la vue, et le navigateur continue de tourner.
 
 Un navigateur arrêté dit pourquoi il s’est arrêté.
-**Rouvrir** démarre un navigateur neuf, sans aucune connexion, sur la page où il était ; ce n’est plus proposé une fois la tâche fermée.
+**Rouvrir** démarre un navigateur neuf sur la page où il était, connecté seulement aux sites que cette tâche peut encore utiliser ; ce n’est plus proposé une fois la tâche fermée.
 
 ## Prendre le contrôle {#take-control}
 
@@ -84,17 +84,19 @@ La carte disparaît, l’équipier poursuit, et les mots laissés dans le champ 
 
 ## Sites connectés {#signed-in-sites}
 
-Quand un équipier vous demande de vous connecter, ce à quoi vous vous connectez reste dans le profil de navigateur propre à cet ordinateur.
+Quand un équipier vous demande de vous connecter ou de créer un compte, ce à quoi vous vous connectez reste dans le profil de navigateur propre à cet ordinateur.
+La connexion couvre tout le site : une connexion faite sur la page de connexion distincte d’example.com sert aussi à ses autres pages, comme developer.example.com.
 Quand vous appuyez sur **Rendre le contrôle**, une question au-dessus de la page demande ce que les tâches suivantes peuvent faire, comme « Votre connexion à example.com reste sur cet ordinateur. Les tâches suivantes : » :
 
-- **Me demander à chaque fois** vient en premier.
-  Une tâche suivante qui a besoin du site le demande sur sa carte, qui ajoute **Utiliser ma connexion à example.com** à côté de **Me connecter moi-même**.
-  Un clic permet au navigateur de cette tâche d’utiliser le site, connecté, sans que vous ne tapiez rien.
-- **L’utiliser sans demander** permet à une tâche suivante d’ouvrir le site connecté, sans carte, et son Activité le signale à chaque fois.
+- **L’utiliser sans demander** vient en premier et est choisi pour un nouveau site.
+  Une tâche suivante ouvre le site connecté, sans carte, et son Activité le signale à chaque fois.
   Cela ne couvre jamais un paiement ni un envoi final.
+- Avec **Me demander à chaque fois**, une tâche suivante qui a besoin du site le demande sur sa carte, qui ajoute **Utiliser ma connexion à example.com** à côté de **Me connecter moi-même**.
+  Un clic permet au navigateur de cette tâche d’utiliser le site, connecté, sans que vous ne tapiez rien.
 
 Une règle s’applique aux tâches de tous les projets sur cet ordinateur.
 Un navigateur qui utilise un site connecté n’ouvre que ce site et les pages de connexion par lesquelles il est passé ; tout autre site s’ouvre déconnecté.
+Une tâche garde les sites connectés qu’elle peut utiliser quand son navigateur s’arrête de lui-même ou que l’app redémarre, jusqu’à ce que vous appuyiez sur **Arrêter le navigateur** ou que la tâche se ferme.
 Quand vous vous connectez pour une autre raison, par exemple après avoir appuyé vous-même sur **Prendre le contrôle**, la connexion ne dure en général que jusqu’à l’arrêt de ce navigateur.
 La ligne sous la page indique laquelle, comme « temporaire · garde ce à quoi vous vous êtes connecté jusqu’à son arrêt ».
 

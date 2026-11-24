@@ -13339,6 +13339,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This task has no browser on ${place}.`;
   }
+  function cardBrowserOpenAgainCaption() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متصفح جديد، فيه فقط تسجيلات الدخول التي يمكن لهذه المهمة استخدامها`;
+      case "de":
+        return `Ein neuer Browser, nur mit den Anmeldungen, die diese Aufgabe nutzen darf`;
+      case "es":
+        return `Un navegador nuevo, solo con los inicios de sesión que esta tarea puede usar`;
+      case "fr":
+        return `Un nouveau navigateur, avec seulement les connexions que cette tâche peut utiliser`;
+      case "ja":
+        return `新しいブラウザ。このタスクが使えるサインインだけが残ります`;
+      case "ko":
+        return `새 브라우저. 이 작업이 쓸 수 있는 로그인만 남습니다`;
+      case "pt-BR":
+        return `Um navegador novo, só com os logins que esta tarefa pode usar`;
+      case "zh-Hans":
+        return `全新的浏览器，只带有此任务可以使用的登录`;
+      case "zh-Hant":
+        return `全新的瀏覽器，只帶有此任務可以使用的登入`;
+      case "en-XA":
+        return `[Å ƒŕéšĥ ƀŕöŵšéŕ, ŵîţĥ öñļý ţĥé šîĝñ-îñš ţĥîš ţášķ ɱáý ûšé ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A fresh browser, with only the sign-ins this task may use‬`;
+    }
+    return `A fresh browser, with only the sign-ins this task may use`;
+  }
   function cardBrowserOpenFailed(input2) {
     const place = input2.place;
     switch (currentLanguage()) {
@@ -101457,6 +101484,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBrowserManage,
     cardBrowserMore,
     cardBrowserNone,
+    cardBrowserOpenAgainCaption,
     cardBrowserOpenFailed,
     cardBrowserPageWatching,
     cardBrowserPageYours,
@@ -104735,6 +104763,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBrowserManage": [],
     "cardBrowserMore": [],
     "cardBrowserNone": ["place"],
+    "cardBrowserOpenAgainCaption": [],
     "cardBrowserOpenFailed": ["place"],
     "cardBrowserPageWatching": ["site"],
     "cardBrowserPageYours": ["site"],
@@ -124279,7 +124308,7 @@ ${startersHtml()}`;
      */
     signIn: literal(true).optional()
   });
-  const SAVED_SIGN_INS_PER_BROWSER = 8;
+  const SAVED_SIGN_INS_PER_TASK = 8;
   const offeredSignInSchema = object({
     site: string(),
     savedAt: number(),
@@ -124341,7 +124370,7 @@ ${startersHtml()}`;
        * one whose rule lets tasks use it without asking, or one the captain
        * signed in to as he held it. Absent while it may use none.
        */
-      saved: array(string()).min(1).max(SAVED_SIGN_INS_PER_BROWSER).optional(),
+      saved: array(string()).min(1).max(SAVED_SIGN_INS_PER_TASK).optional(),
       /**
        * Its pages run in the computer's kept profile, where the captain's
        * sign-ins stay (docs/task-browser.md, "Signed-in sites"); absent while
@@ -124355,6 +124384,13 @@ ${startersHtml()}`;
        * computer lists no sign-in for the site.
        */
       rule: _enum(["ask", "automatic"]).optional(),
+      /**
+       * While the captain holds it in the kept profile, the wider site the
+       * page's sign-in would be kept under when its cookies cover a name above
+       * the page's (docs/task-browser.md, "The rule"): the Return control
+       * question names it. Absent while that is the page's own site.
+       */
+      keepAs: string().min(1).optional(),
       /**
        * While the captain does not hold it, the signed-in site the computer it
        * runs on keeps for the page's site, which a request card offers;

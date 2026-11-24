@@ -1,14 +1,23 @@
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { sharesOneApp } from "../scripts/e2e-alone.ts";
 import { budget, linuxParts } from "../scripts/journey-budget.ts";
-import { fileArgument, laneFiles } from "../scripts/journey-groups.ts";
+import {
+  fileArgument,
+  type JourneyLane,
+  journeyGroup,
+  laneFiles,
+  readJourneyTimings,
+} from "../scripts/journey-groups.ts";
+import { FAR_LINUX_JOURNEYS } from "./e2e/lanes.ts";
 import {
   journeysRun,
   loadYamlFile,
   root,
+  sourceJourneyJobs,
   workflowString,
   workflowValue,
 } from "./helpers/releaseWorkflows";
@@ -675,11 +684,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
  * "Each Linux job's kind").
  */
 it("keeps a journey request's Linux part whose far computer is this one on LINUX_RUNNER's places", () => {
-  type Job = { "runs-on"?: string; with?: Record<string, unknown> };
-  const jobs = (file: string) =>
-    (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> }).jobs;
-  const overflow = jobs("journeys.yml")["linux-overflow"];
-  const journeys = jobs("source-journeys.yml")["source-desktop"];
+  type Job = { with?: Record<string, unknown> };
+  const overflow = (loadYamlFile(".github/workflows/journeys.yml") as { jobs: Record<string, Job> })
+    .jobs["linux-overflow"];
   const vars = {
     LINUX_RUNNER: "shell-pc-linux",
     LINUX_QUEUES: JSON.stringify({ journeys: "fleet-linux-pr" }),
@@ -697,14 +704,16 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
     );
     const { linux } = budget(reasons, times, () => false, false, [], false, "linux");
     return linuxParts(linux).map((matrix) => {
-      const passed = (input: string) =>
-        workflowValue(String(overflow?.with?.[input] ?? ""), { matrix, inputs: { hosted } });
+      const passed = (input: string) => {
+        const value = String(overflow?.with?.[input] ?? "");
+        return value.includes("${{") ? workflowValue(value, { matrix, inputs: { hosted } }) : value;
+      };
+      const inputs = Object.fromEntries(
+        ["hosted", "far-linux", "suite", "lane"].map((input) => [input, passed(input)]),
+      );
       return {
         files: matrix.files,
-        runner: workflowValue(journeys?.["runs-on"] ?? "", {
-          inputs: { hosted: passed("hosted"), "far-linux": passed("far-linux") },
-          vars,
-        }),
+        runner: sourceJourneyJobs(inputs, vars).map((job) => job.runner),
       };
     });
   };
@@ -721,16 +730,73 @@ it("keeps a journey request's Linux part whose far computer is this one on LINUX
   const parts = placed(request);
   expect(parts.flatMap((part) => part.files.split(" ")).toSorted()).toEqual(request);
   for (const part of parts)
-    expect(part.runner, part.files).toBe(
+    expect(part.runner, part.files).toEqual([
       part.files.includes("run-work-ssh.spec.ts") ? "shell-pc-linux" : "fleet-linux-pr",
-    );
+    ]);
   const others = request.filter((file) => !file.includes("run-work-ssh"));
   expect(placed(others).map((part) => part.runner)).toEqual(
-    placed(others).map(() => "fleet-linux-pr"),
+    placed(others).map(() => ["fleet-linux-pr"]),
   );
   expect(placed(request, true).map((part) => part.runner)).toEqual(
-    placed(request, true).map(() => "ubuntu-24.04"),
+    placed(request, true).map(() => ["ubuntu-24.04"]),
   );
+});
+
+/**
+ * INF-5171: a requested full Linux sweep (a verify.yml request, or
+ * source-journeys.yml's own with suite full) picks each job's group inside
+ * the job, after its machine is chosen. So on Linux the journeys whose far
+ * computer is this one all go to one group of their lane, and that group's
+ * job keeps LINUX_RUNNER's places while LINUX_QUEUES sends the journeys kind
+ * to the queue that overflows to the compute Macs' arm64 guests; a hosted
+ * call still takes hosted Ubuntu (docs/testing.md, "Each Linux job's kind").
+ */
+it("keeps each full Linux sweep job that runs a journey whose far computer is this one on LINUX_RUNNER's places", () => {
+  const vars = {
+    LINUX_RUNNER: "shell-pc-linux",
+    LINUX_QUEUES: JSON.stringify({ journeys: "fleet-linux-pr" }),
+  };
+  const timings = readJourneyTimings();
+  const far = new Set(FAR_LINUX_JOURNEYS);
+  const hosted = sourceJourneyJobs({ suite: "full", hosted: true }, vars);
+  const jobs = sourceJourneyJobs({ suite: "full", hosted: false }, vars).map(
+    ({ matrix, runner }, at) => {
+      const { lane, shard, groups } = matrix as {
+        lane: JourneyLane;
+        shard: number;
+        groups: number;
+      };
+      const files = journeyGroup({ platform: "linux", lane, index: shard, count: groups }, timings);
+      return {
+        group: `${lane} ${shard}/${groups}`,
+        far: files.map((file) => basename(file)).filter((file) => far.has(file)),
+        runner,
+        hosted: hosted[at]?.runner,
+      };
+    },
+  );
+  expect(jobs.flatMap((job) => job.far).toSorted()).toEqual([...FAR_LINUX_JOURNEYS].toSorted());
+  for (const job of jobs) {
+    expect(job.runner, `${job.group}: ${job.far.join(" ")}`).toBe(
+      job.far.length > 0 ? "shell-pc-linux" : "fleet-linux-pr",
+    );
+    expect(job.hosted, job.group).toBe("ubuntu-24.04");
+  }
+});
+
+/**
+ * INF-5171: a requested fresh-start sweep (suite alone) runs alone only the
+ * later tests of a spec file that shares one app (scripts/e2e-alone.ts), and
+ * no journey whose far computer is this one shares one, so its four jobs
+ * hold none and may take the journeys kind's queue. A far journey that comes
+ * to share one app needs its fresh-start job kept on LINUX_RUNNER as the full
+ * sweep's group is.
+ */
+it("leaves every journey whose far computer is this one out of the fresh-start sweep", () => {
+  const shared = FAR_LINUX_JOURNEYS.filter((file) =>
+    sharesOneApp(readFileSync(join(root, "tests/e2e", file), "utf8")),
+  );
+  expect(shared).toEqual([]);
 });
 
 /**
@@ -760,7 +826,6 @@ describe("a release's hosted machines", () => {
   const release = workflow("release.yml").jobs;
   const main = workflow("main.yml").jobs;
   const verify = workflow("verify.yml").jobs;
-  const journeys = workflow("source-journeys.yml").jobs["source-desktop"];
   const packages = workflow("linux-packages.yml").jobs;
   const ios = workflow("ios-release.yml").jobs;
   const runsOn = (job: Job | undefined, contexts: Record<string, unknown>) =>
@@ -784,12 +849,19 @@ describe("a release's hosted machines", () => {
 
   /** Where verify.yml's Linux jobs start when a caller passes `hosted`. */
   const verified = (hosted: unknown, vars: Record<string, string>, fleetTests: unknown = false) => {
-    const journeysHosted = passed(verify["linux-e2e"], "hosted", { inputs: { hosted } });
+    const e2e = (input: string) => passed(verify["linux-e2e"], input, { inputs: { hosted } });
     return {
       request: runsOn(verify.request, { inputs: { hosted }, vars }),
       checks: runsOn(verify.lane, { matrix: { lane: "linux-checks" }, inputs: { hosted }, vars }),
       tests: runsOn(verify["linux-tests"], { inputs: { hosted, fleet_tests: fleetTests }, vars }),
-      journeys: runsOn(journeys, { inputs: { hosted: journeysHosted }, vars }),
+      // Each label the full suite's groups start on, one when they all agree.
+      journeys: [
+        ...new Set(
+          sourceJourneyJobs({ hosted: e2e("hosted"), suite: e2e("suite") }, vars).map(
+            (job) => job.runner,
+          ),
+        ),
+      ].join(" "),
     };
   };
   /** Where each of a release run's Linux jobs starts, through its calls' inputs. */

@@ -11,8 +11,10 @@ name: Source desktop journeys
 # ci.yml's do, and on GitHub's hosted ubuntu-24.04 when it is unset, or on
 # GitHub's hosted machines when the caller asks (hosted); the journeys kind's
 # queue in LINUX_QUEUES comes before LINUX_RUNNER, except for a part holding a
-# journey whose far computer is this one (far-linux); the PC's job image
-# supplies its own pnpm store, so only hosted jobs restore setup-node's cache.
+# journey whose far computer is this one (far-linux) and the full suite's
+# groups that hold them (farLinux, FAR_LINUX_GROUP in scripts/journey-groups.ts);
+# the PC's job image supplies its own pnpm store, so only hosted jobs restore
+# setup-node's cache.
 on:
   # Linux-only full-suite or fresh-state proof, without Mac or packaging work.
   workflow_dispatch:
@@ -99,8 +101,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"parallel","shard":1,"groups":6},{"lane":"parallel","shard":2,"groups":6},{"lane":"parallel","shard":3,"groups":6},{"lane":"parallel","shard":4,"groups":6},{"lane":"parallel","shard":5,"groups":6},{"lane":"parallel","shard":6,"groups":6},{"lane":"desktop","shard":1,"groups":3},{"lane":"desktop","shard":2,"groups":3},{"lane":"desktop","shard":3,"groups":3}]' || inputs.suite == 'alone' && '[{"lane":"alone","shard":1,"groups":4},{"lane":"alone","shard":2,"groups":4},{"lane":"alone","shard":3,"groups":4},{"lane":"alone","shard":4,"groups":4}]' || format('[{{"lane":"{0}","shard":1,"groups":1}}]', inputs.lane)) }}
-    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || !inputs.far-linux && fromJSON(vars.LINUX_QUEUES || '{}').journeys || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"parallel","shard":1,"groups":6,"farLinux":true},{"lane":"parallel","shard":2,"groups":6},{"lane":"parallel","shard":3,"groups":6},{"lane":"parallel","shard":4,"groups":6},{"lane":"parallel","shard":5,"groups":6},{"lane":"parallel","shard":6,"groups":6},{"lane":"desktop","shard":1,"groups":3,"farLinux":true},{"lane":"desktop","shard":2,"groups":3},{"lane":"desktop","shard":3,"groups":3}]' || inputs.suite == 'alone' && '[{"lane":"alone","shard":1,"groups":4},{"lane":"alone","shard":2,"groups":4},{"lane":"alone","shard":3,"groups":4},{"lane":"alone","shard":4,"groups":4}]' || format('[{{"lane":"{0}","shard":1,"groups":1}}]', inputs.lane)) }}
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || !inputs.far-linux && !matrix.farLinux && fromJSON(vars.LINUX_QUEUES || '{}').journeys || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate

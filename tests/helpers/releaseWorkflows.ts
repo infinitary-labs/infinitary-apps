@@ -72,6 +72,28 @@ export function workflowString(template: string, contexts: Record<string, unknow
 }
 
 /**
+ * Where source-journeys.yml's job starts for each group a call with these
+ * inputs runs: one for affected files, a full or fresh-start suite's groups
+ * each its own, as its matrix lists them.
+ */
+export function sourceJourneyJobs(
+  inputs: Record<string, unknown>,
+  vars: Record<string, string>,
+): { matrix: Record<string, unknown>; runner: unknown }[] {
+  const job = (
+    loadYamlFile(".github/workflows/source-journeys.yml") as {
+      jobs: Record<string, { "runs-on": string; strategy: { matrix: { include: string } } }>;
+    }
+  ).jobs["source-desktop"];
+  return (
+    workflowValue(job?.strategy.matrix.include ?? "", { inputs }) as Record<string, unknown>[]
+  ).map((matrix) => ({
+    matrix,
+    runner: workflowValue(job?.["runs-on"] ?? "", { matrix, inputs, vars }),
+  }));
+}
+
+/**
  * An actions/github-script body as a function of `parameters`, run with
  * Node's real module loader so its `await import(...)` of a checked-out
  * script works; Vitest's realm installs no loader on a constructed function.

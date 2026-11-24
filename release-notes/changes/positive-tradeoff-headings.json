@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "positive-tradeoff-headings",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Tradeoff charts read the same way on every heading",
+      "body": "The first mate and crew now name every tradeoff chart heading so that higher is better, such as Save cost instead of Cost, so an option further out on the chart is always the stronger one on that heading. They still choose whatever headings a decision turns on.",
+      "noPicture": "The chart looks as it did; only the heading words the first mate and crew write change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

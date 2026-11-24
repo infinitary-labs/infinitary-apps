@@ -18,6 +18,7 @@ import {
   SHOW_CHROME_WINDOW_LABEL,
   STALE_ATTACHMENT_WORDS,
   signInCaption,
+  signInPlace,
   signInRuleLegend,
   stopViewWords,
   TAKE_CONTROL_LABEL,
@@ -1327,7 +1328,7 @@ export function TaskBrowserView({
                   }}
                 >
                   <legend style={{ ...LINE, float: "inline-start", padding: 0, maxWidth: "100%" }}>
-                    {signInRuleLegend(fact.keepAs ?? fact.site, place)}
+                    {signInRuleLegend(fact.keepAs ?? fact.site, signInPlace(fact, place))}
                   </legend>
                   {(
                     [
@@ -1488,7 +1489,7 @@ export function TaskBrowserView({
               {m.cardBrowserRecord()}
             </button>
             <span data-browser-sign-ins="" style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>
-              · {signInCaption(fact, captain, place)}
+              · {signInCaption(fact, captain, signInPlace(fact, place))}
             </span>
           </div>
           {(refusal || saveWarning || (captain && offNote)) && (

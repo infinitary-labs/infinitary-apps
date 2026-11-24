@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "package-check-shared-memory",
+      "reason": "Release checks only: the Linux package checks' containers share the runner's shared memory instead of Docker's 64 MiB, so the window's screenshot no longer fails when the app's frames fill it."
+    }
+  ]
+}

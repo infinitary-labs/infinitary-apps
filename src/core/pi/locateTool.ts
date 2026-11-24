@@ -16,7 +16,7 @@ export function createLocateProjectTool(locate: (name: string) => string | Promi
     description: [
       "Find a named project directory on disk when not yet managed.",
       "return up to 8 candidates with git repo status, origin remote and repo_id when managed.",
-      "With the captain's sign-in, search up to 1,000 hosted projects too, including exact owner/name or pasted address;",
+      "With the captain's sign-in, also search up to 1,000 hosted projects, by owner/name or pasted address;",
       "matches first, else newest, each with the origin app_change project-setup kind clone takes.",
       "Not found or only described: spawn a read-only investigation using github_read before asking for a link.",
     ].join(" "),

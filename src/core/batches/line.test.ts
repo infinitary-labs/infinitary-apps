@@ -400,6 +400,22 @@ describe("a held batch", () => {
     expect(carried(record, "line").at(-1)).toEqual({ ...approved, fix: true });
   });
 
+  // Intent: the same review's finding, a bug being fixed: a takeover that declared the fix
+  // itself too was measured as its own declaration, not as the fix its batch waits for.
+  it("measures a takeover that declared the fix too from the version the awaited repair was verified on", () => {
+    const { open, ...held } = hold(openBatch(), failed).record;
+    if (!open) throw new Error("expected a held batch");
+    const delivered = { ...LEGEND, taskId: "t-takeover", at: 4_000 };
+    const waiting: BatchRecord = { ...held, open: { ...open, awaits: "t-repair" } };
+    const both = declared(
+      declared(waiting, "t-repair", delivered.head),
+      "t-takeover",
+      delivered.head,
+    );
+    const record = enqueue({ ...both, fixBases: { "t-repair": failed.head } }, delivered);
+    expect(carried(record, "line").at(-1)).toEqual({ ...delivered, heldBase: failed.head });
+  });
+
   it("ends when its checks run again", () => {
     const held = hold(openBatch(), failed).record;
     expect(release(held).open?.hold).toBeUndefined();

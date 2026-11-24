@@ -715,6 +715,48 @@ describe("a held batch", () => {
     expect(home.heard.combinedOn.slice(combines)).toEqual([[held.head]]);
   });
 
+  // Intent: the same issue, its third review's finding, a bug being fixed: a takeover that
+  // declared the fix itself too, as the issue's workaround did, was read as carrying its own
+  // declaration alone. A batch that waited for the repair's fix stayed held with that fix's
+  // exact commit approved, and the repair's declaration outlived the batch that merged with it.
+  it.each([
+    ["a batch that waits for that fix after a send-back", true, ["t-parser", "t-takeover"]],
+    ["a held batch", false, ["t-parser", "t-export", "t-takeover"]],
+  ])(
+    "takes a takeover that declared the fix itself at the repair's declared commit into %s, and answers both declarations at the merge",
+    async (_batch, sentBack, members) => {
+      const home = await heldBatch();
+      const held = home.open();
+      if (sentBack)
+        await home.batches.answer(
+          REPO,
+          {
+            action: "send-back",
+            head: held.head,
+            changes: [{ taskId: "t-export", reason: "its export test fails on the batch" }],
+          },
+          FIX.taskId,
+          FIX.taskId,
+          FIX.head,
+        );
+      else await home.batches.declareFix(REPO, FIX.taskId, FIX.head);
+      const delivered = { ...FIX, taskId: "t-takeover", branch: "fm/task-takeover", at: 8_000 };
+      expect(await home.batches.declareFix(REPO, delivered.taskId, FIX.head)).toBeUndefined();
+
+      home.approve(delivered);
+      await home.pass();
+      expect(home.members()).toEqual(members);
+      expect(home.open().hold).toBeUndefined();
+
+      home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
+      home.host.ready("clean");
+      await home.pass();
+      expect(home.place(delivered)).toMatchObject({ state: "merged" });
+      expect(home.record().fixes).toBeUndefined();
+      expect(home.record().fixHeads).toBeUndefined();
+    },
+  );
+
   // Intent: INF-4421's finding, a bug being fixed: Try again rebuilt the held batch from its
   // own changes and erased the fix declared for it, so the fix never joined.
   it("keeps a declared fix through Try again, and the fix joins when the batch holds again", async () => {

@@ -205,20 +205,35 @@ export function enqueue(record: BatchRecord, approved: BatchChange): BatchRecord
 }
 
 /**
- * The declared fix a change carries, by the task that declared it: its own
- * task's, or the one whose task had committed exactly this commit as it
+ * Every declared fix a change carries, by the task that declared it: its own
+ * task's, and each whose task had committed exactly this commit as it
  * declared it (`fixHeads`), as when another task takes that repair's delivery
  * over. No other commit of another task carries a declaration, and only the
  * change's own approval puts it in line.
  */
-export function declarationOf(
+export function declarationsOf(
   record: Pick<BatchRecord, "fixes" | "fixHeads">,
   change: Pick<BatchChange, "taskId" | "head">,
+): string[] {
+  return (record.fixes ?? []).filter(
+    (taskId) => taskId === change.taskId || record.fixHeads?.[taskId] === change.head,
+  );
+}
+
+/**
+ * The declared fix a change is carried as, of those it carries
+ * (`declarationsOf`): the one a held batch waits for first (`awaits`), so a
+ * change at that fix's exact commit ends the wait though its own task
+ * declared the fix too, then its own task's, then another's.
+ */
+export function declarationOf(
+  record: Pick<BatchRecord, "fixes" | "fixHeads" | "open">,
+  change: Pick<BatchChange, "taskId" | "head">,
 ): string | undefined {
-  const fixes = record.fixes ?? [];
-  return fixes.includes(change.taskId)
-    ? change.taskId
-    : fixes.find((taskId) => record.fixHeads?.[taskId] === change.head);
+  const carried = declarationsOf(record, change);
+  const awaits = record.open?.awaits;
+  if (awaits && carried.includes(awaits)) return awaits;
+  return carried.includes(change.taskId) ? change.taskId : carried[0];
 }
 
 /**
@@ -335,7 +350,9 @@ export function unfixed(record: BatchRecord, joined: readonly string[]): BatchRe
     ...(Object.keys(bases).length ? { fixBases: bases } : {}),
     ...(Object.keys(heads).length ? { fixHeads: heads } : {}),
     line: record.line.map(({ fix, ...entry }) =>
-      fix && declarationOf({ fixes: left, fixHeads: heads }, entry) ? { ...entry, fix } : entry,
+      fix && declarationsOf({ fixes: left, fixHeads: heads }, entry).length
+        ? { ...entry, fix }
+        : entry,
     ),
   };
 }
@@ -364,7 +381,7 @@ export function declared(record: BatchRecord, taskId: string, at?: string): Batc
     [],
   );
   return next.line
-    .filter((entry) => declarationOf(next, entry) === taskId)
+    .filter((entry) => declarationsOf(next, entry).includes(taskId))
     .reduce((marked, entry) => markFix(marked, entry.taskId), next);
 }
 
@@ -381,14 +398,15 @@ export function heldVersions(record: BatchRecord): string[] {
 /**
  * Whether the held batch's wait for its repair's fix ends now: the awaited
  * change is approved, its task's own or another task's that carries that
- * same declaration (`declarationOf`), or, once that repair's task closed
+ * same declaration (`declarationsOf`), or, once that repair's task closed
  * (`awaits` empty), any declared fix is.
  */
 export function awaitedJoins(record: BatchRecord): boolean {
   const awaits = record.open?.awaits;
-  const awaited = (entry: BatchChange) =>
-    entry.taskId === awaits || declarationOf(record, entry) === awaits;
-  return awaits ? record.line.some(awaited) : fixWaits(record);
+  if (!awaits) return fixWaits(record);
+  return record.line.some(
+    (entry) => entry.taskId === awaits || declarationsOf(record, entry).includes(awaits),
+  );
 }
 
 export function fixWaits(record: BatchRecord): boolean {

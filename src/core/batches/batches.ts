@@ -68,7 +68,7 @@ import {
   carried,
   clashesEnded,
   combined,
-  declarationOf,
+  declarationsOf,
   declared,
   enqueue,
   fixWaits,
@@ -454,7 +454,7 @@ export class Batches {
   async enqueue(repoId: string, change: BatchChange): Promise<void> {
     await this.write(repoId, (record) => {
       // Still a fix after its batch was closed and put back in line, until a batch merges or ends.
-      const fix = declarationOf(record, change) !== undefined;
+      const fix = declarationsOf(record, change).length > 0;
       return enqueue(record, fix ? { ...change, fix: true } : change);
     });
     void this.pass(repoId);
@@ -794,7 +794,7 @@ export class Batches {
     let next = record;
     for (const change of record.line) {
       if (change.onBatch || change.fix || change.after || change.base) continue;
-      if (declarationOf(record, change)) continue;
+      if (declarationsOf(record, change).length) continue;
       const told = record.rebuilds?.find((entry) => entry.taskId === change.taskId)?.on;
       const versions = [...new Set([told, open].filter((version) => version !== undefined))];
       if (versions.length === 0) continue;
@@ -1379,7 +1379,7 @@ export class Batches {
       repo.id,
       unfixed(
         merged(record, landed, this.options.now()),
-        open.members.flatMap((member) => declarationOf(record, member) ?? []),
+        open.members.flatMap((member) => declarationsOf(record, member)),
       ),
     );
     this.options.note(BATCH_WORDS.merged(repo.name, label, open.members.length));

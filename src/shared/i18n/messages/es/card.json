@@ -70,6 +70,7 @@
   "cardBrowserManage": "Administrar",
   "cardBrowserMore": "Más",
   "cardBrowserNone": "Esta tarea no tiene navegador en {place}.",
+  "cardBrowserOpenAgainCaption": "Un navegador nuevo, solo con los inicios de sesión que esta tarea puede usar",
   "cardBrowserOpenFailed": "{place} no pudo abrir un navegador para esta tarea en este momento.",
   "cardBrowserPageWatching": "La página de {site}, tal como la muestra el navegador del tripulante",
   "cardBrowserPageYours": "La página de {site}, bajo tu control",

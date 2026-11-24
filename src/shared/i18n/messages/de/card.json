@@ -66,6 +66,7 @@
   "cardBrowserManage": "Verwalten",
   "cardBrowserMore": "Mehr",
   "cardBrowserNone": "Diese Aufgabe hat keinen Browser auf {place}.",
+  "cardBrowserOpenAgainCaption": "Ein neuer Browser, nur mit den Anmeldungen, die diese Aufgabe nutzen darf",
   "cardBrowserOpenFailed": "{place} konnte gerade keinen Browser für diese Aufgabe öffnen.",
   "cardBrowserPageWatching": "Die Seite auf {site}, wie der Browser des Crewmitglieds sie zeigt",
   "cardBrowserPageYours": "Die Seite auf {site}, unter deiner Kontrolle",

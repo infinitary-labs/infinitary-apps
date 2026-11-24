@@ -756,7 +756,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
  * rules ride its own top-level description, which a Claude model reads.
  */
 const BROWSER_SIGN_IN_DESCRIPTION = [
-  "Optional, only beside browser_handoff: true when what you need from the captain is a sign-in to the site.",
+  "Optional, only beside browser_handoff: true whenever the captain will sign in to the site or create an account there.",
   "The captain's Take control then opens the site in this computer's kept browser profile, where the sign-in stays for later tasks under the captain's rule.",
   "Never for a code, a payment or a review alone.",
 ].join(" ");

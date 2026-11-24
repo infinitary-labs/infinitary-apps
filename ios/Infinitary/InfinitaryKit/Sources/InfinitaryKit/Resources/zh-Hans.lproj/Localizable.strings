@@ -340,6 +340,7 @@
 "cardBrowserManage" = "管理";
 "cardBrowserMore" = "更多";
 "cardBrowserNone" = "此任务在 %1$@ 上没有浏览器。";
+"cardBrowserOpenAgainCaption" = "全新的浏览器，只带有此任务可以使用的登录";
 "cardBrowserOpenFailed" = "%1$@ 暂时无法为此任务打开浏览器。";
 "cardBrowserPageWatching" = "%1$@ 上的网页，与船员浏览器中显示的一致";
 "cardBrowserPageYours" = "%1$@ 上的网页，由你控制";

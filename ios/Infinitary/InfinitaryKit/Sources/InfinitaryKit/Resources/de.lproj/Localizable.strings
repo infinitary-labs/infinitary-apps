@@ -340,6 +340,7 @@
 "cardBrowserManage" = "Verwalten";
 "cardBrowserMore" = "Mehr";
 "cardBrowserNone" = "Diese Aufgabe hat keinen Browser auf %1$@.";
+"cardBrowserOpenAgainCaption" = "Ein neuer Browser, nur mit den Anmeldungen, die diese Aufgabe nutzen darf";
 "cardBrowserOpenFailed" = "%1$@ konnte gerade keinen Browser für diese Aufgabe öffnen.";
 "cardBrowserPageWatching" = "Die Seite auf %1$@, wie der Browser des Crewmitglieds sie zeigt";
 "cardBrowserPageYours" = "Die Seite auf %1$@, unter deiner Kontrolle";

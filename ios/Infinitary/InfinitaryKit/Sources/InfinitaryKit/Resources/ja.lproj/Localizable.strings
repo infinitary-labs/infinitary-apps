@@ -340,6 +340,7 @@
 "cardBrowserManage" = "管理";
 "cardBrowserMore" = "その他";
 "cardBrowserNone" = "このタスクには %1$@ 上のブラウザがありません。";
+"cardBrowserOpenAgainCaption" = "新しいブラウザ。このタスクが使えるサインインだけが残ります";
 "cardBrowserOpenFailed" = "%1$@ は今、このタスク用のブラウザを開けませんでした。";
 "cardBrowserPageWatching" = "%1$@ のページ（乗組員のブラウザの表示）";
 "cardBrowserPageYours" = "%1$@ のページ（あなたが操作中）";

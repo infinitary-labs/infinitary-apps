@@ -62,6 +62,7 @@
   "cardBrowserManage": "관리",
   "cardBrowserMore": "더 보기",
   "cardBrowserNone": "이 작업은 {place}에 브라우저가 없어요.",
+  "cardBrowserOpenAgainCaption": "새 브라우저. 이 작업이 쓸 수 있는 로그인만 남습니다",
   "cardBrowserOpenFailed": "{place}에서 지금 이 작업의 브라우저를 열 수 없었어요.",
   "cardBrowserPageWatching": "{site} 페이지, 선원의 브라우저에 보이는 그대로",
   "cardBrowserPageYours": "{site} 페이지, 내가 제어 중",

@@ -39,6 +39,12 @@ export type SignedInSite = {
   automatic?: boolean;
   /** The sign-in pages the captain passed through on the way, by site. */
   via?: string[];
+  /**
+   * Other names under the site that task browsers opened with this sign-in,
+   * by site: Remove clears their page storage too, since page storage is
+   * kept per origin and cannot be cleared for a whole site at once.
+   */
+  opened?: string[];
   /** When a crewmate last said this sign-in did not sign its page in; absent while none has. */
   failedAt?: number;
 };
@@ -50,6 +56,7 @@ const recordSchema = z.object({
   id: z.string().min(1),
   automatic: z.boolean().optional(),
   via: z.array(z.string().min(1)).optional(),
+  opened: z.array(z.string().min(1)).optional(),
   failedAt: z.number().optional(),
 });
 
@@ -109,6 +116,47 @@ export function sameSignInSite(a: string, b: string): boolean {
   return one === two || one.endsWith(`.${two}`) || two.endsWith(`.${one}`);
 }
 
+/**
+ * The site a sign-in made at `site` covers, as the store keys its entry: the
+ * widest name among the cookies the browser sends to the page that its
+ * parent shares with every name under it (`apple.com` for a sign-in at
+ * `idmsa.apple.com`), otherwise the page's own host and port. The engine
+ * never accepts a cookie on a public suffix, so this stops at the
+ * registrable domain with no list of suffixes.
+ */
+export function signedInSiteOf(site: string, cookies: readonly HostCookie[]): string {
+  const name = siteHostname(site);
+  let widest: string | undefined;
+  for (const cookie of cookies) {
+    const domain = bare(cookie.domain);
+    if (cookie.hostOnly || !domain.includes(".")) continue;
+    if (domain !== name && !name.endsWith(`.${domain}`)) continue;
+    if (!widest || domain.length < widest.length) widest = domain;
+  }
+  return widest && widest !== name ? widest : signInSite(site);
+}
+
+/**
+ * Whether a name Return control's question showed covers the page at
+ * `page`: the page's own site, or a name strictly above its host that
+ * carries no port, as a cookie's domain never does, so another port of the
+ * same host is never covered by the site the question named.
+ */
+export function namesPage(shown: string, page: string): boolean {
+  const name = signInSite(shown);
+  const site = signInSite(page);
+  return (
+    name === site || (!/:\d+$/.test(name) && siteHostname(site).endsWith(`.${siteHostname(name)}`))
+  );
+}
+
+/** Whether a page at `site` lies at an entry's site or under it (`idmsa.apple.com` under `apple.com`). */
+function atOrUnder(site: string, entry: string): boolean {
+  const name = siteHostname(site);
+  const above = siteHostname(entry);
+  return name === above || name.endsWith(`.${above}`);
+}
+
 export class WebSignIns {
   constructor(
     private readonly root: string,
@@ -136,9 +184,25 @@ export class WebSignIns {
       .filter((record): record is SignedInSite => record !== undefined);
   }
 
-  /** The entry for a site, or nothing (an unreadable or retired file is nothing). */
+  /** The entry keyed by exactly this site, or nothing (an unreadable or retired file is nothing). */
   get(site: string): SignedInSite | undefined {
     return this.read(this.fileFor(signInSite(site)));
+  }
+
+  /**
+   * The entry a page at `site` may be signed in by: one whose site is the
+   * page's or a name above it, or whose sign-in pages passed through hold
+   * the page's site. One that also covers `prefer` (the browser's first
+   * address) comes first, then one the page lies under, then the newest.
+   */
+  find(site: string, prefer?: string): SignedInSite | undefined {
+    const covers = (record: SignedInSite, one: string): boolean =>
+      atOrUnder(one, record.site) || (record.via ?? []).some((via) => sameSignInSite(via, one));
+    const rank = (record: SignedInSite): number =>
+      (prefer && covers(record, prefer) ? 2 : 0) + (atOrUnder(site, record.site) ? 1 : 0);
+    return this.records()
+      .filter((record) => covers(record, site))
+      .sort((a, b) => rank(b) - rank(a) || b.savedAt - a.savedAt)[0];
   }
 
   /**
@@ -146,22 +210,54 @@ export class WebSignIns {
    * browser back: its entry, with the captain's rule and the sign-in pages
    * passed through. An entry already there keeps its id and the pages it named;
    * a crewmate's mark that it failed goes, since the captain signed in again.
+   * Entries for names under the site (an older `developer.apple.com` once
+   * `apple.com` is kept) fold into it, their id, pages and opened names with them, so a
+   * task allowed the narrower one keeps its allowance.
    */
   record(site: string, rule: { automatic: boolean; via?: readonly string[] }): SignedInSite {
     const key = signInSite(site);
     const before = this.get(key);
-    const via = [...new Set([...(before?.via ?? []), ...(rule.via ?? [])].map(signInSite))].filter(
-      (one) => one !== key,
+    const under = this.records().filter(
+      (record) => record.site !== key && atOrUnder(record.site, key),
     );
+    const via = [
+      ...new Set(
+        [
+          ...(before?.via ?? []),
+          ...under.flatMap((one) => [one.site, ...(one.via ?? [])]),
+          ...(rule.via ?? []),
+        ].map(signInSite),
+      ),
+    ].filter((one) => one !== key);
+    const opened = [
+      ...new Set([...(before?.opened ?? []), ...under.flatMap((one) => one.opened ?? [])]),
+    ].filter((one) => one !== key && !via.includes(one));
     const record: SignedInSite = {
       site: key,
       savedAt: this.now(),
-      id: before?.id ?? randomUUID(),
+      id: before?.id ?? under[0]?.id ?? randomUUID(),
       ...(rule.automatic ? { automatic: true } : {}),
       ...(via.length > 0 ? { via } : {}),
+      ...(opened.length > 0 ? { opened } : {}),
     };
     this.write(record);
+    for (const one of under) rmSync(this.fileFor(one.site), { force: true });
     return record;
+  }
+
+  /**
+   * A task browser opened `site` with the entry `id`: a name under the
+   * entry's own that neither it nor its pages passed through name yet joins
+   * its opened names. False when that entry was removed or replaced since.
+   */
+  opened(id: string, site: string): boolean {
+    const key = signInSite(site);
+    const record = this.records().find((one) => one.id === id);
+    if (!record) return false;
+    if (key === record.site || !atOrUnder(key, record.site)) return true;
+    if ([...(record.via ?? []), ...(record.opened ?? [])].includes(key)) return true;
+    this.write({ ...record, opened: [...(record.opened ?? []), key] });
+    return true;
   }
 
   /**

@@ -10,6 +10,7 @@ export const CONTRACT_FIELDS = [
   "result_schema",
   "skipped_plan_because",
   "deliverable",
+  "issue",
 ] as const satisfies readonly (keyof WorkShape)[];
 export const PROGRAM_FIELDS = [
   "program",

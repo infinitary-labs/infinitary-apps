@@ -168,7 +168,7 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
       }),
     ),
     start_as: Type.Optional(
-      Type.Union([Type.Literal("reproduce"), Type.Literal("plan")], {
+      stringEnum(["reproduce", "plan"], {
         description: "With issue: reproduce for a bug, plan for an idea.",
       }),
     ),

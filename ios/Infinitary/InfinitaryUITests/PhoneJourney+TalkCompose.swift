@@ -239,7 +239,9 @@ extension PhoneJourney {
     /// The review of INF-6366, from the captain's "the last couple of interactions" and "cards they interacted": two card
     /// acts in a row after a message keep both on the strip, newest first; a line typed under a crewmate's card is a
     /// card round with no reply line; one typed under the first mate's own card is also a message and keeps its reply
-    /// line. Data: this part's test home, the waiting card above and two more cards. Resources: this part's simulator.
+    /// line. While the first mate works, the newest card round that is no message starts with its spinning mark (INF-6365's
+    /// review, the captain's choice), so the crewmate's card is answered during a held first mate turn. Data: this part's
+    /// test home, the waiting card above, two more cards and the mock's held turn. Resources: this part's simulator.
     private func verifyCardActsOnTheStrip(chart: String, waiting: [String: Any]) async throws {
         let title = try XCTUnwrap(waiting["title"] as? String)
         let heading = cardHeading(title)
@@ -257,6 +259,14 @@ extension PhoneJourney {
         try await appearances("strip-two-card-rounds", showing: older)
         for (command, words, message) in [("conversation-crew-card", "Chart the south channel next.", false),
                                           ("conversation-mate-card", "Move it to Monday.", true)] {
+            if !message {
+                // A real first mate turn the mock holds open, so the line below lands while the first mate works.
+                _ = try await home("empty-cards")
+                let hold = try await home("character-fixture")
+                let box = app.textFields["message-box"]
+                focusForPhoneTyping(box, in: app); box.typeText(try XCTUnwrap(hold["text"] as? String))
+                tapOnPhone(app.buttons["send-message"])
+            }
             let card = try await home(command)
             let cardTitle = try XCTUnwrap(card["title"] as? String)
             XCTAssertTrue(cardHeading(cardTitle).waitForPresence(timeout: 10), app.debugDescription)
@@ -278,6 +288,14 @@ extension PhoneJourney {
                 try await appearances("strip-typed-under-card", showing: newest)
             } else {
                 XCTAssertFalse(line.exists, "A line under a crewmate's card is no message and has no reply line")
+                let working = app.descendants(matching: .any)["last-turn-card-working"]
+                let spun = working.waitForPresence(timeout: 20)
+                // Taken before the check, so a run without the mark still keeps its picture.
+                try await appearances("strip-card-working", showing: newest)
+                XCTAssertTrue(spun, "While the first mate works, the card round starts with its mark: \(app.debugDescription)")
+                let finished = try await home("character-finished")
+                XCTAssertEqual(finished["busy"] as? Bool, false)
+                XCTAssertTrue(working.waitForAbsence(timeout: 20), "The mark leaves when the first mate stops: \(app.debugDescription)")
             }
             _ = try await home("empty-cards")
         }

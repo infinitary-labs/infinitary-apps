@@ -260,6 +260,7 @@ struct MessageComposer: View {
         HStack(spacing: PhoneTheme.space2) {
             if working {
                 MateMark(working: true, still: reduceMotion).frame(width: 16, height: 16)
+                    .accessibilityElement(children: .ignore).accessibilityLabel(PhoneMessages.phoneComposerWorking())
                     .accessibilityIdentifier("\(id)-card-working")
             }
             Button { openCard(card.id) } label: {

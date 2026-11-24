@@ -100,10 +100,11 @@ export function servedTaskTitle(
  * passed through `mark`: each question's name, each option label and the
  * value it labels, a value the card proposed and the captain left as it
  * was (a hidden field, a prefilled field unchanged, a skipped Default) and
- * a staged settings snapshot, which the card's own script writes. What the
- * captain wrote in and a value they typed themselves stay as written, so
- * their own words are never served as data (`cardAnswerLines` prints the
- * result). `mark` must give the same words the same marks, so a label
+ * a settings snapshot the card carries. What the captain wrote in and a
+ * value they typed themselves stay as written, so their own words are never
+ * served as data (`cardAnswerLines` prints the result). The split rests on
+ * the frame's own report, which a script in the card could forge, so a
+ * reader's card carries none (`CrewmateCards.crewmateCardWrite`). `mark` must give the same words the same marks, so a label
  * equal to its value still reads once.
  */
 export function answersWithAuthorWordsMarked(

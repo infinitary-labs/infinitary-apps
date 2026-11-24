@@ -189,6 +189,17 @@ export class CrewmateCards {
   ): string | CardMutation | Promise<string> {
     const caller: CardCaller = { actor: "crewmate", taskId: task.id };
     const target = this.host.cards.targetOf(caller, input.id);
+    // A script shares the frame with the bridge that reports the captain's
+    // answers, so it could forge which words are theirs; a reader's words are
+    // marked by that split (`answersWithAuthorWordsMarked`).
+    if (
+      this.options.tasks.get(task.id)?.shape?.unsafe_data_reader === true &&
+      /<script\b/i.test(input.body)
+    ) {
+      // i18n-exempt: a refusal served to the crewmate, never shown to a person
+      const why = "an unsafe data reader's card carries no script; send the body as plain HTML.";
+      throw new CardRefusedError(`Card refused: ${why}`, "shape", why);
+    }
     // A computer from before shared cards would read the typed result as
     // its own card shown: it is refused before anything is written.
     const machine = this.host.machineOf(task.id);

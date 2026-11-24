@@ -103,6 +103,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 - `fleet.md`: how projects are set up, configured and removed, and how delivery and autonomy are enforced.
 - `forge.md`: where a project lives, pull requests, saved change stories, batches and verification requests.
 - `public-ci.md`: public CI admission and release credential boundaries.
+- `outside-intake.md`: the weekday intake rounds that answer outside issues and pull requests, and the method each round's reader follows.
 
 ## Tests, checks and releases
 

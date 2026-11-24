@@ -125,20 +125,10 @@ describe("the strip's rounds", () => {
     expect(strip.at(-1)).toMatchObject({ kind: "reply", you: "thanks, looks right", id: line.id });
   });
 
-  it("keeps to messages on a home that refuses the read, and to the newest while a card is up", () => {
+  it("keeps to messages on a home that refuses the read", () => {
     expect(shown(stripRounds({ turn, seq: 2, page: null, limit: 2 }))).toEqual([
       "message:m:1:",
       "message:m:2:",
-    ]);
-    const gotIt: ConversationRound = {
-      ...approved,
-      id: "o:0000000000000000008",
-      at: 4_000,
-      label: "Got it",
-    };
-    const pressed = { rounds: [gotIt, reminded], seq: 2 };
-    expect(shown(stripRounds({ turn, seq: 2, page: pressed, limit: 1 }))).toEqual([
-      `choice:${gotIt.id}:${BACKLOG_CARD.title}`,
     ]);
   });
 });

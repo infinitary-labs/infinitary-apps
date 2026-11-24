@@ -38,6 +38,9 @@ const childrenOf = (pid: number) =>
     .map(([own]) => own!);
 
 describe("a frozen simulator's command ends at its deadline", () => {
+  // 25 s: five times the case's fastest run on a Mac, 4.3 s, nearly all of it the 1-second deadline and then the hang
+  // record's 3-second `sample` of each process (docs/test-cohorts.md, "Budgets"). The test's clock slows only once the
+  // one-minute load passes the processor count, which lags a burst, so vitest's 5 s default left a loaded Mac 0.7 s.
   it("ends a command that never returns, with its child, keeps what it waited on, and starts it once", async () => {
     const evidence = scratchDir("phone-deadlines-");
     let started = 0;
@@ -74,7 +77,7 @@ describe("a frozen simulator's command ends at its deadline", () => {
     for (let tries = 0; alive(grandchild!) && tries < 100; tries++)
       await new Promise((resolve) => setTimeout(resolve, 20));
     expect(alive(grandchild!)).toBe(false);
-  });
+  }, 25_000);
 
   it("leaves a diagnostic whose close never returns, so the rest of the clean-up runs", async () => {
     const reports: string[] = [];

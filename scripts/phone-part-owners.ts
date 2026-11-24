@@ -212,7 +212,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneGoogle.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
-  // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home.
+  // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home;
+  // where a panel's point.openSettings opens Settings.
   { parts: family("panels"), files: [
     "ios/Infinitary/CardRuntime/panelHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
@@ -221,6 +222,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhonePanels.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanelCards.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePanels.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSettingsPlace.swift",
   ] },
   // INF-3563: the Settings list reads its five computer rows in the join-read part too, so what answers them is
   // both parts'; each page's own drawing is the settings part's.

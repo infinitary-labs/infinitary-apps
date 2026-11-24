@@ -57,7 +57,9 @@ import Observation
         async let fourth: Void = refresh(.projects)
         async let fifth: Void = refresh(.runbooks)
         _ = await (first, second, third, fourth, fifth)
-        read = true
+        // A cancelled reading asked for nothing it can vouch for: its pages stayed as they were, so Settings would read
+        // a page it never received as one the computer no longer has, and close a section a panel had just opened.
+        if !Task.isCancelled { read = true }
     }
 
     public func refresh(_ section: Section) async {

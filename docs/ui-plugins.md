@@ -593,6 +593,7 @@ A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plug
   The Automation panel's rows use it to open a rule's page, and its header's Open Automation, an ask, to open the full list (`docs/automation.md`).
   The sections that read an `item`: Projects opens a project's page by the project's id or key or a repository's id, Devices chooses a computer's row by its id, Secrets opens Manage on a page (`decisions`, `phone`, `history` or `copy`), Integrations focuses the Infinitary command's switch for `inbox`, and Automation opens a rule's page by its id or a kept job by `kept:<id>`.
   An item only chooses and shows; every control there stays the captain's, and the first mate's hand-over cards and `show-settings` name the same items (`primitives/app-actions.md`).
+  On the phone both `draft` and `openSettings` work the same way from the captain's own tap, over the phone's own message box and Settings (`docs/ios.md`, "Panels").
 - `focusProject(projectId)` focuses the window on a project the board lists, or on every project with null: the same focus as the top bar's project pill, saved with this computer's layout (`docs/project-focus.md`).
   It counts only from the captain's own click or key; the Tasks panel's and the board's project chips use it.
 

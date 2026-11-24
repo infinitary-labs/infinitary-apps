@@ -369,14 +369,6 @@ function renderBrowserReturned(facts: Extract<WakeFacts, { kind: "browser-return
   return `${renderBrowserReturnedLead(facts, after)}${facts.words ? `\n${BROWSER_RETURNED_WORDS_LEAD}\n${facts.words}` : ""}`;
 }
 
-/**
- * A sign-in made outside the kept profile ends with its browser (INF-6518):
- * a crewmate told the captain a sign-in was kept when nothing kept it.
- */
-// i18n-exempt: served to the crewmate, never shown to a person
-export const BROWSER_RETURNED_KEEPS_WORDS =
-  "A browser outside the kept profile keeps nothing past its stop: what the captain signed in to there is gone once this browser stops. Tell the captain a sign-in stays only when your browser said it opened the site in the kept profile.";
-
 export const BROWSER_RETURNED_WORDS_LEAD =
   "As they returned control, the captain left you these words in your request card's reply field. Do what they need first, and answer them in your next card or report. Their words, verbatim:";
 
@@ -387,7 +379,7 @@ function renderBrowserReturnedLead(
   if (facts.saved) {
     return `The captain let this task use the sign-in kept on ${HERE.this} for ${facts.site}, and your browser is yours again: its page opened with that sign-in. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, and check that it is signed in before you carry on.${after} ${SAVED_SIGN_IN_FAILED_WORDS} A kept sign-in gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first.`;
   }
-  return `${BROWSER_RETURNED_OPENING}, on ${facts.site}. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, including anything the captain signed in to, and check what changed before you carry on.${after} If you asked the captain to pay or submit something, read what the page says happened and keep only the result, such as a reference. If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain on a card to check in the browser. ${UNKNOWN_OUTCOME_WORDS} Returning control gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first. ${BROWSER_RETURNED_KEEPS_WORDS}`;
+  return `${BROWSER_RETURNED_OPENING}, on ${facts.site}. Your earlier refs are gone: run ${browserCommand()} for a fresh look at the page as it is now, including anything the captain signed in to, and check what changed before you carry on.${after} If you asked the captain to pay or submit something, read what the page says happened and keep only the result, such as a reference. If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain on a card to check in the browser. ${UNKNOWN_OUTCOME_WORDS} Returning control gives this task the signed-in site, not permission to buy, pay or submit anything that matters: ask on a card first. A browser outside the kept profile keeps nothing past its stop: what the captain signed in to there is gone once this browser stops. Tell the captain a sign-in stays only when your browser said it opened the site in the kept profile.`;
 }
 
 /** How the steer for a request card whose browser was gone opens; a scripted stand-in recognizes it by it. */

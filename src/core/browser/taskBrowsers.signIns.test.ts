@@ -568,9 +568,8 @@ describe('signed-in sites in the kept profile (docs/task-browser.md, "Signed-in 
   });
 });
 
-// INF-6518: on a computer that runs work, a crewmate's sign-in request reaches
-// its browser only after crossing to the home as a card and back as an order;
-// the mark lost on that way left the captain's sign-in in a throwaway context.
+// On a computer that runs work, a crewmate's sign-in request reaches its
+// browser only after crossing to the home as a card and back as an order.
 describe("a sign-in request from a computer that runs work, across its home", () => {
   it("keeps the captain's sign-in in the kept profile past the browser's stop", async () => {
     const site = "app.notion.example";

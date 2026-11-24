@@ -18,8 +18,6 @@ describe("what a computer that runs work tells its home", () => {
     expect(read({ ...ordinary, holdsPlace: "true" }).success).toBe(false);
   });
 
-  // INF-6518: a sign-in request from a computer that runs work reached its home
-  // without its mark, so the captain's sign-in never went to the kept profile.
   it("carries a browser handoff's sign-in mark to the home", () => {
     const request = workRequests["inf:work:card"].request;
     const handoff = {

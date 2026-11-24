@@ -1,6 +1,7 @@
 import type { AppDatabase } from "./db";
 import { UNRESOLVED_SEND } from "./taskDeliveryStore";
 import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
+import { ORIGIN_EVENT } from "./taskEventStore";
 import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
 
 /**
@@ -35,7 +36,9 @@ import { EVERY_STATUS, MISSING_INVARIANTS } from "./taskInvariants";
  * The roster's restart read names the restart-outcome index (INDEXED BY in
  * `latestRestartObservation`), so a database this block has not reached
  * refuses that read rather than walking every note of a running task
- * (INF-2341).
+ * (INF-2341). The origin read names the origin index the same way, so the
+ * open-message walk reads a task's asks and origin notes, never the rest
+ * of its history (`listOriginEvents`, INF-6434).
  * The reference index seeks the tasks whose basis, retry or branch names
  * a task by its trimmed, upper-cased name, which the answer-delivery sweep
  * reads for every task a message covers (INF-2971).
@@ -84,6 +87,8 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS task_events_restart_outcome ON task_events (task_id, at DESC, id DESC)
       WHERE kind = 'note'
       AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.restartOutcome') END = 'object';
+    CREATE INDEX IF NOT EXISTS task_events_origin ON task_events (task_id, at, id)
+      WHERE ${ORIGIN_EVENT};
     CREATE INDEX IF NOT EXISTS task_events_leftovers ON task_events (
       json_extract(data_json, '$.leftoversComputerId'), at, id
     ) WHERE kind = 'note'

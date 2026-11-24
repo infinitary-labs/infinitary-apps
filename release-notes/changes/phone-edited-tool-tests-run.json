@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-edited-tool-tests-run",
+      "reason": "Test only: an affected phone check request now runs a changed test of the phone check's own tools in every pass of its rest part, three rounds on the iPhone and one on the iPad, where it ran it in none before; it changes only how the project's phone check chooses tests."
+    }
+  ]
+}

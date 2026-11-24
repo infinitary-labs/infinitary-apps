@@ -1225,7 +1225,9 @@ The Cards journey keeps both its accessibility tree and the disposable home's ca
 A request to `phone.yml` can name `parts`, `starve` and `perf`; the load controller stops each part's owned process tree with twelve-second long stalls and a 60-minute experiment limit.
 The `waits` input (or `--waits`) selects only `PhoneWaitsTests` on both devices, so `perf: true, waits: true` proves the native deadline rule without also grading unrelated UI recovery latency.
 The `tools` input (or `--tools`) selects every test of the phone check's own tools on both devices, in the rest part's place: `PhoneWaitsTests`, `PhoneTargetPixelsTests`, the crew reveal's geometry and the scene evidence recorder's diagnostics (`PHONE_TOOL_TESTS` in `scripts/phone-test-plan.ts`).
-The rest part skips them, so no ordinary run or release runs them; a change to one of those tools requests `tools: true` once at its final version, and an affected request still repeats a tool test whose own code changed.
+The rest part skips them, so no ordinary run or release runs them; a change to one of those tools requests `tools: true` once at its final version.
+An affected request still runs a tool test whose own code changed: every pass of the rest part, its iPad round and its three iPhone rounds, runs that test by name beside the part's own tests, even when the same change repeats the whole rest part (`toolTests` in `scripts/affected-phone.ts`).
+Because xcodebuild runs no test a `-skip-testing` names, that pass stops skipping the whole tool class the test is in, so the class's other tests run with it.
 This proof-only selection writes no whole-gate timing sample; an ordinary gate still runs every selected product journey and native test.
 Selected parts, starvation, grading and proof-only selection use the normal or placed runner route; the fixed virtual-Mac switch refuses those options rather than silently dropping them.
 A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.

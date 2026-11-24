@@ -634,7 +634,11 @@ export type CrewSupervisorOptions = {
    * Integrations (docs/integrations.md): a crewmate on this Mac reaches them
    * through `infinitary-integrations-axi` on its task channel. Absent, it has none.
    */
-  integrations?: { forTask: (taskId: string) => TaskIntegrations };
+  integrations?: {
+    forTask: (taskId: string) => TaskIntegrations;
+    /** An unsafe data reader's reach, which its typed tools call (`IntegrationsService.forReader`). */
+    forReader?: (taskId: string) => TaskIntegrations;
+  };
   /**
    * Metadata and exact requests, never values or authority; and a task's uses
    * from a computer that runs work, decided here (docs/secrets.md, "On a

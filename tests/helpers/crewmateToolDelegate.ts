@@ -79,6 +79,8 @@ export function crewmateToolDelegate(): Required<
     onDownloadArtifact: async (input) => answer("onDownloadArtifact", "artifact downloaded")(input),
     onGithubRead: async (input) => answer("onGithubRead", "github answered")(input),
     onGithubWrite: async (input) => answer("onGithubWrite", "github changed")(input),
+    onIntegrations: async (input) => answer("onIntegrations", "integrations listed")(input),
+    onUseIntegration: async (input) => answer("onUseIntegration", "integration answered")(input),
     onPrepareChange: async (input) => answer("onPrepareChange", "story prepared")(input),
     onOpenChange: async (input) => answer("onOpenChange", "change opened")(input),
     onShowMergeCard: async (input) => answer("onShowMergeCard", "merge card shown")(input),

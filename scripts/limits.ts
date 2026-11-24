@@ -266,6 +266,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/hostEnv.ts": {
     SHELL_CAP_ENV: record("the operation goes on; the command prints running: and how to read it"),
   },
+  "src/core/integrations/readerReach.ts": {
+    READER_INTEGRATION_ANSWER_MAX: outside(
+      "not served, in words naming the length and asking for fewer items, one item or a narrower query",
+    ),
+  },
   "src/core/integrations/store.ts": {
     OLDER_BUILD_OFF_MAX: outside("an older build reads the first ones; the whole list is in actions-off.json"),
   },

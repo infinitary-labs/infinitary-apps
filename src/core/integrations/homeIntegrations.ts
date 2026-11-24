@@ -62,7 +62,7 @@ export function startHomeIntegrations(options: {
   /** Secrets, where a sign-in keeps its key (docs/integrations.md, "Keys"). */
   keys: IntegrationKeys;
   gateway: GithubGatewayService;
-  tasks: Pick<TaskService, "delivery">;
+  tasks: Pick<TaskService, "delivery" | "get">;
   /** A panel holds words from outside no longer than their kind does. */
   panelOutside: Pick<PanelOutsideData, "noted">;
   /** The crew, built after the integrations and read only once an ask comes. */
@@ -193,6 +193,11 @@ export function startHomeIntegrations(options: {
     files: {
       refusal: (taskId) => options.crew().sessions.outsideFileRefusal(taskId),
       save: (taskId, name, bytes) => options.crew().sessions.saveOutsideFile(taskId, name, bytes),
+    },
+    // An unsafe data reader's calls follow its own rule (docs/agents-reach.md).
+    readers: {
+      is: (taskId) => tasks.get(taskId)?.shape?.unsafe_data_reader === true,
+      holds: (taskId, what) => tasks.delivery.markReaderHolds(taskId, what),
     },
     now,
     push: (view) => options.emit("inf:integrations", view),

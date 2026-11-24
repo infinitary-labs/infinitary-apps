@@ -723,6 +723,11 @@
     },
     {
       "from": "integrations",
+      "to": "session",
+      "why": "bounds a reader's answers to what a session reads whole"
+    },
+    {
+      "from": "integrations",
       "to": "storage",
       "why": "scrubs saved outside data"
     },

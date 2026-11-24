@@ -91,8 +91,8 @@ A click answers exactly the asks the offer it showed listed: a click on an older
 The click takes every listed ask before the first runs; a row unticked is refused with `NOT_ALLOWED_WHY`, and the others run once each, oldest first, with the choice; a row the click carries no reading of stays allowed.
 One `write-answered` steer names every outcome of that click, the waiting asks an allowance ran included (`also`).
 A task keeps at most `WRITE_ASK_CAP` asks: past it the oldest answered ask drops first, and a waiting ask drops only when none answered is left; that ask leaves its card and its crewmate hears at once that it never ran (`DROPPED_ASK_WHY`).
-Asks from different tasks or to different connections never share a card.
-An unsafe data reader's writes where its project lives join a card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes").
+Asks from different tasks or to different connections never share a card, except an unsafe data reader's, whose asks to every connection share its one card.
+An unsafe data reader's writes where its project lives, and its kept integration calls, join one card of their own the same way, with only Only this time and Not now (`docs/forge.md`, "A reader's writes"; "A reader's integrations").
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
 The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.
@@ -128,6 +128,22 @@ That pass is how fenced words leave saved conversations: a kind declares how man
 The fence carries what the host knows, where the words came from, and never a verdict on them: no rule reads the words to judge whether they try to steer anyone (`docs/principles.md`).
 An unsafe data reader's `github_read` answers are fenced the same way, under its host's label such as `github-data`, and its own words reach the first mate as `reader-data` (`docs/agents-reach.md`, "An unsafe data reader").
 What the fence does not close, and how each way out stands, is in [Google verification material](google-verification.md#prompt-injection).
+
+## A reader's integrations
+
+An unsafe data reader has no shell, so it lists and calls integrations through two typed tools served to it alone, `integrations` and `use_integration` (`src/core/pi/integrationTools.ts`), on both kinds of model session (`docs/agents-reach.md`, "An unsafe data reader").
+They reach the same service as every task (`IntegrationsService.forReader`), with the same Off switch, input check and grants, and three rules of the reader's own:
+
+- A read runs at once only when the captain set it to Always allow and its connection is not an MCP server, whose read-only mark is the server's own claim.
+  Every other call, a read at Asks you, every MCP call and every change or send, is kept and joins the reader's one approval card, whatever its rule or the task's allowances say; that card offers only Only this time and Not now, and the service refuses any other choice for a reader's ask.
+  The list shows each action's rule as it holds for the reader, a file-saving action as off, and neither the list nor a show names the account a connection signed in as, which is the captain's own.
+  Each row on that card says whether the call reads, changes or sends, with its action's description, and names its reason as the crewmate's words.
+- Every answer, a binding's refusal or error included, comes fenced whole under its kind's label, or `integration-data` for a kind that declares none (`READER_INTEGRATION_FENCE`), so a kind with no fence of its own reaches the reader marked too.
+  An answer longer than a reader's model takes whole (`READER_INTEGRATION_ANSWER_MAX`) is not served, since the reader cannot open a saved answer file: the reader hears its length and is asked for less.
+- An integration where a project lives is refused, since the reader reaches its own project through `github_read` alone, and so is an action that saves a file, since the reader opens no hand-over folder.
+
+The first time a reader's call answers it, the host records on its task that it now holds something of the captain's (`delivery.readerHolds`, `TaskDeliveries.markReaderHolds`), keeping the first mark.
+Ordinary crewmates, the first mate and panels keep the rules above unchanged.
 
 ## Keys
 
@@ -386,6 +402,7 @@ It changes them through `app_change` in the area `integrations`, the same channe
 ## How a crewmate reaches them
 
 A crewmate runs `infinitary-integrations-axi` on its task channel (`docs/axi-commands.md`, "The integrations command"): discover, then call.
+An unsafe data reader has no shell, so it reaches them through its two typed tools instead ("A reader's integrations").
 Its instructions carry one line for it (`CREWMATE_INTEGRATIONS_LINE`, `src/core/integrations/commandWords.ts`).
 A task on this Mac is granted the command whenever the host has a command process.
 
@@ -440,6 +457,9 @@ The kept-request case in `mcpIntegration.test.ts` approves an ask saved before t
 Its INF-947 cases remove a stand-in notes server and add another under the same name and id: the ask kept for the first is refused and neither server changes, an ask kept for the replacement runs after a rename and a restart, an ask kept by an older build is refused, and a rule on the removed server never looks at the replacement until it is pointed there with `reconnect`, nor does a rule saved by an older build.
 The Google case of the same number keeps an ask through a renewal and a sign-in as the same person, and refuses it once the row signs in as another account.
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is kept, sent once through its seat when taken and refused when GitHub refuses it, and an action turned off reaches nothing.
+`src/core/integrations/service.reader.test.ts` holds a reader's rules ("A reader's integrations"): an Always allowed read runs at once, marked under `integration-data` for a kind with no label of its own, while an ordinary task reads it unmarked; an MCP read waits even when allowed; a change waits whatever its rule and runs only on Only this time; the list shows each rule as it holds for the reader and leaves out where projects live; those and a file-saving action are refused before reaching anything; and the holds record is written when a call runs, never for a kept one.
+`src/core/orchestrator/integrationAsks.reader.test.ts` puts a reader's write and its integration calls on one card with Not now and Only this time, runs only the ticked rows once, and serves the typed tools to a reader alone; `src/core/tasks/readerHolds.test.ts` keeps the first holds mark across a reopen.
+`tests/e2e/reader-integrations.spec.ts`, on Pi and on Claude's own client, has a reader list the integrations and run a stand-in read set to Always allow with no card, marked, while an MCP read set to Always allow, an MCP note and an issue where its project lives wait on its one card; on the captain's keyboard it unticks both changes and chooses Only this time, and sees the MCP read reach the reader marked, the note never added and the issue never opened.
 `src/core/orchestrator/integrationAsks.test.ts` holds the first mate's card: the call waits on the card's own row, an approval button runs it once, Not now refuses it, and either explicit choice wakes the first mate once; putting it aside leaves the call pending without a wake.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 The panel caller's cases in `service.test.ts` list and show only what a manifest names, refuse an undeclared connection or action, keep one ask per panel and action, and run a kept panel call as the panel's own.

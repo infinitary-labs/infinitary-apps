@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-deadlines-hang-budget",
+      "reason": "Test-only: the phone deadlines test's case that ends a hung command gets a budget sized to its measured work, so a loaded Mac no longer fails it at the 5 s default; no app behavior changes."
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegat
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { claudeCrewmateTools, zodShapeOf } from "../claude/claudeTaskTools";
 import { ORDINARY_NOTE_READ_ACK, ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
-import { crewmateTool } from "../session/tools";
+import { crewmateTool, zodParameter } from "../session/tools";
 import { CREWMATE_TOOLS, CREWMATE_TOOLS_MODULE, crewmateToolManifest } from "./crewmateTaskTools";
 import { createCrewmateTools } from "./crewmateTools";
 import { buildCrewmateSystemPrompt } from "./piResources";
@@ -780,5 +780,13 @@ describe("the crewmate tool spec", () => {
   it("refuses a parameter Claude's tool server cannot carry rather than loosening it", () => {
     const schema = Type.Object({ map: Type.Record(Type.String(), Type.String()) });
     expect(() => zodShapeOf(schema)).toThrow(/parameters\.map/);
+  });
+
+  it("carries a parameter that may be null as a tool declares it with zod", () => {
+    const schema = Type.Object({ account: zodParameter(z.string().nullable()) });
+    const parameters = z.object(zodShapeOf(schema));
+    expect(parameters.safeParse({ account: null }).success).toBe(true);
+    expect(parameters.safeParse({ account: "work-account" }).success).toBe(true);
+    expect(parameters.safeParse({ account: 7 }).success).toBe(false);
   });
 });

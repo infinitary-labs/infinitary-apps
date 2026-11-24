@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "origin-read-stalls",
+      "kind": "fix",
+      "title": "Fewer pauses when you press a card button or a task closes",
+      "body": "On a long task record, pressing a card's button, the first mate starting a turn or a task closing could pause the whole window while the app looked up where each open card's work came from. That lookup read every past event of each task. It now reads only the few events that say where the work came from.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes; the window pauses less, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

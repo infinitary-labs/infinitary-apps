@@ -146,6 +146,15 @@ export function timelineEventIdentity(
   return event.identity ?? `task-event:${encodeURIComponent(event.taskId)}:${event.id}`;
 }
 
+/**
+ * The events a task's origin is read from (`listOriginEvents`). The
+ * `task_events_origin` index repeats this text as its filter, and SQLite
+ * uses a partial index only for a query holding that same term.
+ */
+// i18n-exempt: SQL, never shown to a person
+export const ORIGIN_EVENT = `(kind = 'ask' OR (kind = 'note'
+  AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.origin') END = 'object'))`;
+
 export class TaskEventStore {
   private identities: boolean | undefined;
   constructor(private readonly db: AppDatabase) {}
@@ -702,14 +711,15 @@ export class TaskEventStore {
    * first: all a card's origin walk reads (`originAbout`, INF-2326). The walk
    * runs for every open card on each first mate turn, and a task's other
    * events (its checks, progress and reports, most of its history) are never
-   * decoded for it (INF-3412).
+   * decoded for it (INF-3412). It names the index whose rows are these
+   * events alone: left to choose, SQLite searched (task_id, at) and tested
+   * every event of the task, most of a walk's time on a long record (INF-6434).
    */
   listOriginEvents(taskId: string): TaskEvent[] {
     const rows = prepared(
       this.db,
-      `SELECT * FROM task_events WHERE task_id = ? AND (kind = 'ask' OR (kind = 'note'
-         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.origin') END = 'object'))
-       ORDER BY at, id`,
+      `SELECT * FROM task_events INDEXED BY task_events_origin
+       WHERE task_id = ? AND ${ORIGIN_EVENT} ORDER BY at, id`,
     ).all(taskId) as Row[];
     return rows.map(fromRow);
   }

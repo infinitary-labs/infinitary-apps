@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ForgeSignInState } from "@shared/forges";
+import * as m from "@shared/i18n/messages.generated";
 import { GOOGLE_DATA_KEPT, INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { httpSecretBroker } from "../../../secrets/httpBroker";
 import { type IntegrationBinding, IntegrationOutcomeUnknown } from "../../binding";
@@ -22,20 +23,24 @@ import {
 import { MovedGoogleKeys } from "./movedKeys";
 import {
   GOOGLE_REQUEST_TIMEOUT_MS,
+  type GoogleTokenExchange,
   issuedFrom,
   type LoopbackSignInOptions,
   signInOnLoopback,
 } from "./signIn";
-import { GoogleSignInStore } from "./store";
+import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from "./store";
 
 /**
  * Google as an integration (docs/integrations.md, "Google"): one row that
  * signs in once, in the person's own browser, for every permission Gmail
- * and Calendar need (the captain's q8 on INF-775), as Infinitary's own
- * Google client (q4). Its lasting key lives in Secrets, as a hidden entry
- * used only through the renewal broker below (INF-785): each renewal is a
- * brokered use, and the captain's one saved decision on the first covers
- * every later one. The access key a renewal gives lives only in the app's
+ * and Calendar need (the captain's q8 on INF-775), as the person's own
+ * Google client when they keep one (INF-5549's plan, piece 2), or else as
+ * the run's own client (`googleSetup`). The own client's secret is a
+ * second hidden Secrets entry the same broker adds to the code exchange and
+ * every renewal, so it never reaches this code either. Its lasting key
+ * lives in Secrets, as a hidden entry used only through the renewal broker
+ * below (INF-785): each renewal is a brokered use, and the captain's one
+ * saved decision on the first covers every later one. The access key a renewal gives lives only in the app's
  * memory and goes on each request to Gmail and Calendar, and on removal to
  * tell Google to forget the sign-in. A renewal the captain did not allow,
  * or let run out, is not asked again until the captain checks the row, signs in
@@ -43,8 +48,10 @@ import { GoogleSignInStore } from "./store";
  * about it is pasted.
  *
  * Health is the forge sign-in's words: `needs_reauth` only from proof - Google
- * refused the lasting key, or a request was refused again after a real
- * renewal - and `unavailable` when Google could not be reached or failed.
+ * refused the lasting key or the person's own client, a request was refused
+ * again after a real renewal, or the sign-in was made with a client the
+ * person no longer keeps - and `unavailable` when Google could not be
+ * reached or failed.
  * When Gmail asks the app to slow down and says for how long (Retry-After),
  * every request waits that long, and a rule's look tries again on its next
  * minute.
@@ -63,6 +70,11 @@ export const GOOGLE_DATA_FENCE = "google-data";
 const GOOGLE_BROKER = "google-sign-in";
 /** The words Secrets shows for the lasting key and for its broker. */
 const KEY_LABEL = "Google sign-in";
+/** The words Secrets shows for the person's own client's secret. */
+// i18n-exempt: the Secrets entry's name, kept with the entry, as the sign-in's is
+const CLIENT_LABEL = "Google client";
+/** Google's token answers that refuse the client itself, rather than the sign-in. */
+const CLIENT_REFUSALS = ["invalid_client", "deleted_client"] as const;
 
 const NO_SECRETS =
   "Google keeps its sign-in in Secrets, which this computer does not offer. Google is not available here.";
@@ -76,6 +88,7 @@ export type GoogleIntegrationOptions = {
   root: string;
   /** Secrets, where the lasting key is kept (`IntegrationKeys`). */
   keys: IntegrationKeys;
+  /** The run's own client, used while the person keeps none of their own. */
   client: GoogleClient;
   endpoints: GoogleEndpoints;
   /** Opens Google's consent page in the person's browser (`LoopbackSignInOptions.open`). */
@@ -116,15 +129,28 @@ function retryAfter(value: string | null, now: number): number | undefined {
   return Number.isNaN(at) ? undefined : Math.max(0, at - now);
 }
 
-export function googleIntegration(
-  options: GoogleIntegrationOptions,
-): IntegrationBinding & { moveKeys: () => Promise<void> } {
+/** The person's own Desktop app client, as they give it: its id and its secret. */
+export type GoogleOwnClient = { id: string; secret: Buffer };
+
+/** Which client a renewal speaks as: the person's own, or the run's when none. */
+type RenewingClient = { own?: GoogleClientRecord };
+
+export function googleIntegration(options: GoogleIntegrationOptions): IntegrationBinding & {
+  moveKeys: () => Promise<void>;
+  /**
+   * Keep the person's own client: its secret in Secrets, its id and that
+   * secret's reference in the client record. The next sign-in uses it; a
+   * sign-in made with another client stops renewing.
+   */
+  keepClient: (client: GoogleOwnClient) => Promise<void>;
+} {
   const store = new GoogleSignInStore(options.root);
+  const clients = new GoogleClientStore(options.root);
   const moved = new MovedGoogleKeys(options.root);
   const fetchImpl = options.fetch ?? fetch;
   const gmailRoot = `${options.endpoints.gmail.replace(/\/+$/, "")}/gmail/v1/users/me`;
   const calendarRoot = `${options.endpoints.calendar.replace(/\/+$/, "")}/calendar/v3`;
-  const client = {
+  const runClient = {
     client_id: options.client.id,
     ...(options.client.secret ? { client_secret: options.client.secret } : {}),
   };
@@ -133,8 +159,13 @@ export function googleIntegration(
   /** The access key, in memory only: a start renews it once. */
   let access: { token: string; expiresAt: number } | undefined;
   let registered = false;
-  /** Keys of sign-ins just removed, renewed once more only to revoke them at Google. */
-  const forgetting = new Set<string>();
+  /**
+   * Keys of sign-ins just removed, renewed once more only to revoke them at
+   * Google, with the client they were made with.
+   */
+  const forgetting = new Map<string, RenewingClient>();
+  /** Code exchanges of sign-ins in progress with the person's own client, by a one-use id. */
+  const exchanges = new Map<string, { own: GoogleClientRecord; form: Record<string, string> }>();
   /** Until when Gmail asked the app to wait, on the app's clock. */
   let waitUntil = 0;
 
@@ -145,6 +176,42 @@ export function googleIntegration(
     options.changed();
   };
   const timeout = () => AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS);
+
+  /**
+   * The client the current sign-in renews as: undefined when it was made
+   * with a client the person no longer keeps, which can never renew it.
+   */
+  const renewingClient = (record: { client?: string }): RenewingClient | undefined => {
+    if (!record.client) return {};
+    const own = clients.read();
+    return own?.id === record.client ? { own } : undefined;
+  };
+
+  /**
+   * When the lasting key ends, kept only for a sign-in made with the
+   * person's own client: a sign-in made with the run's own then stays
+   * readable to an older build, whose strict schema knows no such field.
+   */
+  const endOf = (own: GoogleClientRecord | undefined, endsAt: number | undefined) =>
+    own && endsAt !== undefined ? { endsAt } : {};
+
+  /** The person's own client's secret, added by Secrets to the form's client_secret field. */
+  const clientSecret = (own: GoogleClientRecord) => ({
+    client: { ref: own.secret, delivery: { kind: "form" as const, name: "client_secret" } },
+  });
+
+  /**
+   * Google refused the person's own client itself: kept on its record, so a
+   * client gone reads apart from a sign-in Google ended.
+   */
+  const clientRefused = (own: GoogleClientRecord | undefined, body: Record<string, unknown>) => {
+    const error = CLIENT_REFUSALS.find((reason) => errorOf(body).reasons.includes(reason));
+    if (!own || !error) return undefined;
+    const current = clients.read();
+    if (current?.id === own.id && current.secret === own.secret)
+      clients.write({ ...current, refused: { error, at: options.now() } });
+    return error;
+  };
 
   /**
    * The renewal broker: the lasting key in the form's refresh_token field,
@@ -162,17 +229,42 @@ export function googleIntegration(
         label: KEY_LABEL,
         signIn: true,
         resolve: (input) => {
-          const ref =
-            input && typeof input === "object" && !Array.isArray(input) ? input.ref : undefined;
+          const given = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+          // Only a code exchange this binding began, by its one-use id; never a form a caller made up.
+          if (typeof given.exchange === "string") {
+            const pending = exchanges.get(given.exchange);
+            if (!pending) return undefined;
+            return {
+              url: options.endpoints.token,
+              method: "POST",
+              headers: { accept: "application/json" },
+              form: pending.form,
+              credentials: clientSecret(pending.own),
+              operation: m.integrationsGoogleExchangeOperation(),
+              read: false,
+              result: m.integrationsGoogleExchangeResult(),
+            };
+          }
+          const ref = given.ref;
+          if (typeof ref !== "string") return undefined;
           // Only the key the current sign-in names; never a reference a caller made up.
-          if (typeof ref !== "string" || (ref !== store.read()?.key && !forgetting.has(ref)))
-            return undefined;
+          const record = store.read();
+          const renewing =
+            forgetting.get(ref) ?? (record?.key === ref ? renewingClient(record) : undefined);
+          if (!renewing) return undefined;
+          const { own } = renewing;
           return {
             url: options.endpoints.token,
             method: "POST",
             headers: { accept: "application/json" },
-            form: { ...client, grant_type: "refresh_token" },
-            credentials: { refresh: { ref, delivery: { kind: "form", name: "refresh_token" } } },
+            form: {
+              ...(own ? { client_id: own.id } : runClient),
+              grant_type: "refresh_token",
+            },
+            credentials: {
+              refresh: { ref, delivery: { kind: "form", name: "refresh_token" } },
+              ...(own ? clientSecret(own) : {}),
+            },
             operation: "Renew the Google sign-in so Gmail and Calendar keep working",
             read: false,
             result: "A new Gmail and Calendar access key, kept only in the app's memory",
@@ -231,6 +323,13 @@ export function googleIntegration(
   const renew = (): Promise<void> => {
     renewing ??= (async () => {
       const ref = await lastingKey();
+      const signedIn = store.read();
+      const renewingAs = signedIn ? renewingClient(signedIn) : undefined;
+      if (!renewingAs) {
+        // Made with a client the person no longer keeps: only a new sign-in serves.
+        setHealth("needs_reauth");
+        throw new Error(SIGN_IN_AGAIN);
+      }
       register();
       const used = await options.keys.use({
         id: randomUUID(),
@@ -250,6 +349,13 @@ export function googleIntegration(
       const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       const issued = response.ok ? issuedFrom(body, options.now()) : undefined;
       if (!issued) {
+        const refused = clientRefused(renewingAs.own, body);
+        if (refused) {
+          setHealth("needs_reauth");
+          throw new Error(
+            `Google no longer accepts your Google client (${refused}), so Google is signed out.`,
+          );
+        }
         // Google refused the lasting key itself: signed out there, or revoked.
         if (errorOf(body).reasons.includes("invalid_grant")) {
           setHealth("needs_reauth");
@@ -267,7 +373,12 @@ export function googleIntegration(
           value: Buffer.from(issued.refreshToken, "utf8"),
         });
       const record = store.read();
-      if (record) store.write({ ...record, expiresAt: issued.expiresAt });
+      if (record)
+        store.write({
+          ...record,
+          expiresAt: issued.expiresAt,
+          ...endOf(renewingAs.own, issued.endsAt),
+        });
     })().finally(() => {
       renewing = undefined;
     });
@@ -371,19 +482,24 @@ export function googleIntegration(
    * same sign-in consent as every renewal.
    */
   const forgetSignIn = (
-    record: { key?: string } | undefined,
+    record: { key?: string; client?: string } | undefined,
     token: string | undefined,
     renewToRevoke = true,
+    /** Removing the connection: the person's own client goes too, after the revoke. */
+    withClient = false,
   ) => {
+    const renewingAs = record ? renewingClient(record) : undefined;
+    const own = withClient ? clients.read() : undefined;
     store.remove();
+    if (withClient) clients.remove();
     access = undefined;
     waitUntil = 0;
     const earlier = moved.present() ? moved.lastingKey() : undefined;
     return (async () => {
       let bearer = token ?? earlier;
-      if (!bearer && record?.key && renewToRevoke) {
+      if (!bearer && record?.key && renewToRevoke && renewingAs) {
         register();
-        forgetting.add(record.key);
+        forgetting.set(record.key, renewingAs);
         const used = await options.keys
           .use({
             id: randomUUID(),
@@ -401,6 +517,7 @@ export function googleIntegration(
       }
       await revoke(bearer);
       if (record?.key) await options.keys.forgetHidden(record.key);
+      if (own) await options.keys.forgetHidden(own.secret);
       try {
         moved.remove();
       } catch {
@@ -408,6 +525,44 @@ export function googleIntegration(
       }
     })();
   };
+
+  /** The code exchange for the person's own client, run inside Secrets so its secret is added there. */
+  const exchangeAs =
+    (own: GoogleClientRecord): GoogleTokenExchange =>
+    async (form, signal) => {
+      if (signal.aborted) throw new Error("Could not reach Google to finish signing in.");
+      register();
+      const id = randomUUID();
+      exchanges.set(id, { own, form });
+      try {
+        const used = await options.keys.use({
+          id: randomUUID(),
+          reason: m.integrationsGoogleExchangeReason(),
+          broker: GOOGLE_BROKER,
+          input: { exchange: id },
+        });
+        if (used.state === "unavailable")
+          throw new Error(options.keys.shown() ? SECRETS_LOCKED : NO_SECRETS);
+        const response = used.state === "completed" ? used.result : undefined;
+        if (!(response instanceof Response))
+          throw new Error("Could not reach Google to finish signing in.");
+        // Cancelled while Google answered: the answer is dropped unread, as a direct exchange's
+        // aborted fetch drops it. Revoking it would end every sign-in this account made with
+        // this client at Google, the earlier one the person kept among them.
+        if (signal.aborted) throw new Error("Could not reach Google to finish signing in.");
+        if (!response.ok)
+          clientRefused(
+            own,
+            (await response
+              .clone()
+              .json()
+              .catch(() => ({}))) as Record<string, unknown>,
+          );
+        return response;
+      } finally {
+        exchanges.delete(id);
+      }
+    };
 
   return {
     /**
@@ -447,15 +602,32 @@ export function googleIntegration(
         },
       ];
     },
+    keepClient: async ({ id, secret }) => {
+      if (!id.trim()) throw new Error("A Google client needs its client id.");
+      if (!options.keys.shown()) throw new Error(NO_SECRETS);
+      const earlier = clients.read();
+      // The same client's new secret replaces the old in place; another client gets its own entry.
+      const ref = await options.keys.keepHidden({
+        ...(earlier?.id === id ? { ref: earlier.secret } : {}),
+        label: CLIENT_LABEL,
+        value: secret,
+      });
+      if (!ref) throw new Error(SECRETS_LOCKED);
+      clients.write({ id, secret: ref });
+      if (earlier && earlier.secret !== ref) await options.keys.forgetHidden(earlier.secret);
+      options.changed();
+    },
     signIn: async (signal) => {
+      const own = clients.read();
       const issued = await signInOnLoopback({
-        client: options.client,
+        client: own ? { id: own.id } : options.client,
         endpoints: options.endpoints,
         scopes: GOOGLE_SCOPES,
         open: options.open,
         signal,
         now: options.now,
         ...(options.fetch ? { fetch: options.fetch } : {}),
+        ...(own ? { exchange: exchangeAs(own) } : {}),
       });
       const earlier = store.read();
       // A new sign-in keeps its key under a fresh reference, so the captain is asked again.
@@ -511,7 +683,15 @@ export function googleIntegration(
         health: "ok",
         signedInAt: options.now(),
         key,
+        ...(own ? { client: own.id } : {}),
+        ...endOf(own, issued.endsAt),
       });
+      // Google took the client again, so an earlier refusal no longer stands.
+      const current = clients.read();
+      if (own && current?.id === own.id && current.refused) {
+        const { refused: _cleared, ...kept } = current;
+        clients.write(kept);
+      }
       // The sign-in this one replaces: its key goes, and an earlier version's file with it.
       if (earlier?.key && earlier.key !== key) await options.keys.forgetHidden(earlier.key);
       try {
@@ -531,7 +711,7 @@ export function googleIntegration(
     },
     remove: async () => {
       const token = access?.token;
-      const forgotten = forgetSignIn(store.read(), token);
+      const forgotten = forgetSignIn(store.read(), token, true, true);
       // With an access key in memory, Google is told before Settings answers;
       // a renewal to make one may wait on the captain, so it follows instead.
       if (token) await forgotten;

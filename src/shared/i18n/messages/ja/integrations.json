@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "自分の Google クライアントで Google へのサインインを完了する",
+  "integrationsGoogleExchangeReason": "Infinitary が自分の Google クライアントで Google へのサインインを完了します。",
+  "integrationsGoogleExchangeResult": "Google への新しいサインイン。シークレットとアプリのメモリに保持します",
   "integrationsMcpAdd": "{name} を追加",
   "integrationsMcpNeedsSignIn": "もう一度サインインが必要",
   "integrationsMcpOfferBody": "{name} はサインインを求めます。サインインはブラウザで行います。その後、ツールは「常に許可」を選ぶまでカードで確認します。",

@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { eventsWords } from "@shared/automation";
@@ -10,7 +10,6 @@ import {
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
-import { freshDatabase } from "../../../../../tests/helpers/database";
 import {
   type GoogleStandIn,
   STAND_IN_ACCOUNT,
@@ -18,8 +17,12 @@ import {
   STAND_IN_CLIENT_SECRET,
   startGoogleStandIn,
 } from "../../../../../tests/helpers/googleStandIn";
+import {
+  type GoogleWorld,
+  type GoogleWorldOptions,
+  googleWorld,
+} from "../../../../../tests/helpers/googleWorld";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
-import { integrationKeys } from "../../../../../tests/helpers/integrationKeys";
 import { serveNotesHttp } from "../../../../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../../../hostEnv";
@@ -28,9 +31,6 @@ import { renderWake } from "../../../orchestrator/wakes";
 import { createScheduleTools } from "../../../pi/scheduleTools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
 import { ScheduleStore } from "../../../storage/scheduleStore";
-import { handoverFileName } from "../../../tasks/handoverFiles";
-import { seedTask } from "../../../tasks/seedTask";
-import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
 import {
   GOOGLE_DATA_FENCE,
@@ -38,10 +38,8 @@ import {
   GOOGLE_SCOPES,
   googleIntegration,
   googleSetup,
-  IntegrationSettingsStore,
-  IntegrationsService,
+  type IntegrationsService,
   mcpIntegration,
-  OutsideReads,
 } from "../..";
 import { GoogleSignInStore } from "./store";
 
@@ -86,111 +84,9 @@ function olderMcp(dir: string) {
   });
 }
 
-async function fixture(
-  browser?: (url: string) => Promise<void>,
-  withMcp = false,
-  /** What an older version saved in the integrations folder before this one opens it. */
-  older?: (dir: string, google: GoogleStandIn) => Promise<void>,
-  keyOptions?: Parameters<typeof integrationKeys>[0],
-) {
-  const google: GoogleStandIn = await startGoogleStandIn();
-  cleanup.push(() => google.close());
-  const dir = join(scratchDir("fm-google-"), "integrations");
-  await older?.(dir, google);
-  const keys = integrationKeys(keyOptions);
-  // Each case owns a new database, but Google never needs to replay the task database's migrations.
-  const db = freshDatabase();
-  cleanup.push(() => {
-    db.close();
-  });
-  const tasks = new TaskService({ db, strict: true });
-  seedTask(tasks, { id: "task-1", title: "Answer Lena", status: "idle" });
-  const clock = { now: Date.UTC(2026, 9, 22, 16) };
-  const opened: string[] = [];
-  const pages: string[] = [];
-  const pushed: string[] = [];
-  const setup = googleSetup({
-    packaged: false,
-    env: {
-      INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
-      INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
-      INFINITARY_GOOGLE_URL: google.base,
-    },
-  });
-  if (!setup) throw new Error("a run that names a client has a Google setup");
-  const reads = new OutsideReads(dir);
-  // The task's hand-over folder, named as the crew names it; a task here may refuse a file.
-  const handover = scratchDir("fm-google-handover-");
-  const refusals = new Map<string, string>();
-  let integrations: IntegrationsService | undefined;
-  integrations = new IntegrationsService({
-    bindings: [
-      googleIntegration({
-        root: dir,
-        keys: keys.keys,
-        ...setup,
-        // The person's browser: it opens the page and follows Google back to the app.
-        open:
-          browser ??
-          (async (url) => {
-            opened.push(url);
-            pages.push(await (await fetch(url)).text());
-          }),
-        now: () => clock.now,
-        changed: () => integrations?.changed(),
-      }),
-      ...(withMcp
-        ? [
-            mcpIntegration({
-              root: dir,
-              env: () => hostEnv(),
-              belowUi: (file, args) => atUtilityQos(file, args),
-              cwd: () => dir,
-              version: "0.0.0-test",
-              changed: () => integrations?.changed(),
-            }),
-          ]
-        : []),
-    ],
-    store: new IntegrationSettingsStore(dir),
-    asks: {
-      keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
-      take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
-      record: (taskId, askId, outcome) =>
-        tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
-    },
-    reads,
-    files: {
-      refusal: (taskId) => refusals.get(taskId),
-      save: async (taskId, name, bytes) => {
-        const file = handoverFileName(name, createHash("sha256").update(bytes).digest("hex"));
-        const folder = join(handover, taskId);
-        mkdirSync(folder, { recursive: true, mode: 0o700 });
-        writeFileSync(join(folder, file), bytes, { mode: 0o600 });
-        return { file, path: join(folder, file) };
-      },
-    },
-    now: () => clock.now,
-    push: (view) => pushed.push(JSON.stringify(view)),
-  });
-  cleanup.push(() => integrations?.dispose());
-  return {
-    google,
-    dir,
-    tasks,
-    clock,
-    opened,
-    pages,
-    pushed,
-    integrations,
-    db,
-    reads,
-    refusals,
-    keys,
-  };
-}
-
-type Fixture = Awaited<ReturnType<typeof fixture>>;
+/** The Google binding and its service over a stand-in Google and real Secrets, cleaned up after each case. */
+const fixture = (...args: GoogleWorldOptions) => googleWorld(cleanup, ...args);
+type Fixture = GoogleWorld;
 
 /** The file an earlier version kept a sign-in's keys in: 0600 in a 0700 folder. */
 function earlierKeys(dir: string, keys: { access: string; refresh: string }) {

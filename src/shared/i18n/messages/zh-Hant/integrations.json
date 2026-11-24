@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "用你自己的 Google 用戶端完成 Google 登入",
+  "integrationsGoogleExchangeReason": "Infinitary 會用你自己的 Google 用戶端完成你的 Google 登入。",
+  "integrationsGoogleExchangeResult": "新的 Google 登入，保存在機密和 App 的記憶體中",
   "integrationsMcpAdd": "新增 {name}",
   "integrationsMcpNeedsSignIn": "需要重新登入",
   "integrationsMcpOfferBody": "{name} 需要登入，你在瀏覽器中完成。之後它的工具會在卡片上詢問你，直到你選擇「一律允許」。",

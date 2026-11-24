@@ -261,6 +261,15 @@ An older build refuses a recovery archive holding a server key, because its arch
 Each start of such a server is journaled with `given` on its request line and no approval line, and its history item carries `given: true` with no `approval`; an older build ignores the field and shows the use with no approval words, and its recovery archive takes that history as it is.
 The format revision therefore stays at 1.
 
+## A Google sign-in with the person's own client
+
+The person's own Google client is a file of its own, `integrations/google-client.json`, so a build that knows no own client never reads it (`docs/integrations.md`, "Google").
+A sign-in made with an own client carries two optional fields in `integrations/google.json`: `client`, the own client it was made with, and `endsAt`, when Google said its lasting key ends.
+A sign-in made with the run's own client carries neither, as before, so an older build reads and renews it unchanged.
+An older build reads a sign-in holding either field as unreadable, because its schema is strict, and shows Google as not signed in; nothing is rewritten, and a build that knows the fields reads it again.
+Such a sign-in could not renew in an older build anyway, since only this build adds the client's secret.
+No database migration or saved-data format revision is needed.
+
 ## An ask's how-to in waiting asks
 
 A waiting ask in `<userData>/secret-asks.json` may carry `how`, the how-to its card draws, already checked and drawn again (`docs/secrets.md`, "How to get it").

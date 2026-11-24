@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "google-own-client-sign-in",
+      "reason": "Google's sign-in and renewal can use a person's own Google client kept in Secrets, but nothing yet keeps one: until Settings offers its setup, every sign-in uses Infinitary's client as before, and a person sees no new screen, word or step."
+    }
+  ]
+}

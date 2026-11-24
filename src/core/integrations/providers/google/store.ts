@@ -9,11 +9,14 @@ import { z } from "zod";
  * folder) - who it is signed in as, what Google granted, when the access
  * runs out and its health, and which Secrets entry keeps its lasting key.
  * No key is here: the lasting key lives in Secrets (`IntegrationKeys`), and
- * the access key it renews lives only in the app's memory. The Google
- * binding is its one writer.
+ * the access key it renews lives only in the app's memory. The person's own
+ * Google client, when they set one up, is a second file beside it,
+ * `google-client.json`, so a build that knows no own client never reads it.
+ * The Google binding is the one writer of both.
  */
 
 const GOOGLE_FILE = "google.json";
+const CLIENT_FILE = "google-client.json";
 
 const recordSchema = z
   .object({
@@ -30,9 +33,37 @@ const recordSchema = z
      * before the key goes in (`movedKeys.ts`).
      */
     key: z.string().min(1).max(64).optional(),
+    /**
+     * The id of the person's own client this sign-in was made with; absent,
+     * it was made with the run's own client (`googleSetup`), which renews it.
+     */
+    client: z.string().min(1).max(256).optional(),
+    /**
+     * When Google said the lasting key itself runs out, on the app's clock
+     * (a token answer's `refresh_token_expires_in`); absent, Google named no end.
+     */
+    endsAt: z.number().optional(),
   })
   .strict();
 export type GoogleSignInRecord = z.infer<typeof recordSchema>;
+
+const clientSchema = z
+  .object({
+    /** The client id Google gave the person's own Desktop app client. */
+    id: z.string().min(1).max(256),
+    /** The Secrets reference of the client's secret, a hidden entry labelled Google client. */
+    secret: z.string().min(1).max(64),
+    /**
+     * Google refused the client itself on a token request: `invalid_client`
+     * (unknown or wrong secret) or `deleted_client`, and when.
+     */
+    refused: z
+      .object({ error: z.enum(["invalid_client", "deleted_client"]), at: z.number() })
+      .strict()
+      .optional(),
+  })
+  .strict();
+export type GoogleClientRecord = z.infer<typeof clientSchema>;
 
 export class GoogleSignInStore {
   constructor(readonly root: string) {}
@@ -69,6 +100,39 @@ export class GoogleSignInStore {
 
   remove(): void {
     rmSync(join(this.root, GOOGLE_FILE), { force: true });
+  }
+}
+
+/** The person's own Google client: its id and its secret's reference, never the secret. */
+export class GoogleClientStore {
+  constructor(readonly root: string) {}
+
+  /** The client, or none; an unreadable file reads as none, with a warning. */
+  read(): GoogleClientRecord | undefined {
+    let raw: string;
+    try {
+      raw = readFileSync(join(this.root, CLIENT_FILE), "utf8");
+    } catch {
+      return undefined;
+    }
+    try {
+      return clientSchema.parse(JSON.parse(raw));
+    } catch {
+      console.warn("[integrations] the Google client file could not be read; using none");
+      return undefined;
+    }
+  }
+
+  write(record: GoogleClientRecord): void {
+    mkdirSync(this.root, { recursive: true, mode: 0o700 });
+    const file = join(this.root, CLIENT_FILE);
+    const temp = `${file}.${process.pid}.tmp`;
+    writeFileSync(temp, `${JSON.stringify(record)}\n`, { mode: 0o600 });
+    renameSync(temp, file);
+  }
+
+  remove(): void {
+    rmSync(join(this.root, CLIENT_FILE), { force: true });
   }
 }
 

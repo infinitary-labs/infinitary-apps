@@ -112,7 +112,15 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
   "inf:accounts:custom:discover": ["credential", "Sign-in discovery"],
   "inf:accounts:custom:cancel": ["credential", "Sign-in cancellation"],
   "inf:forges:cancel": ["credential", "Sign-in cancellation"],
+  "inf:integrations:sign-in-again": [
+    "credential",
+    "Sign-in interaction: an MCP server's sign-in made again in the captain's browser from its row",
+  ],
   "inf:integrations:sign-in-cancel": ["credential", "Sign-in cancellation"],
+  "inf:integrations:sign-in-page": [
+    "credential",
+    "Sign-in interaction: the waiting sign-in's page opened once more in the captain's browser",
+  ],
   "inf:integrations:sign-in-return": [
     "credential",
     "Sign-in interaction: the browser's return from the computer the captain is at, handed once to the waiting sign-in",
@@ -387,6 +395,12 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
 export const ACTION_FIELD_EXCEPTIONS: Partial<
   Record<CoreInvokeChannel, Record<string, ActionException>>
 > = {
+  "inf:integrations:add": {
+    signIn: [
+      "credential",
+      "Opens the server's sign-in in the captain's browser from Settings; the first mate's add never passes it, and integration-add hands the captain the form",
+    ],
+  },
   "inf:settings:layout:set": {
     moved: [
       "not-a-setting",

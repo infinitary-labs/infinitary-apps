@@ -115,6 +115,39 @@ describe("action permissions and channel parity", () => {
     });
     expect(offer?.arrival).not.toHaveProperty("signIn");
   });
+  // The plan for web MCP sign-ins: the first mate's add of a server that
+  // asks for a sign-in opens no browser; its card hands the captain the
+  // MCP form, filled in.
+  it("integration-add for an MCP server opens the MCP form filled in, never a sign-in", () => {
+    const add = ACTIONS["integration-add"];
+    const view = { integrations: [], addable: [{ kind: "mcp", name: "MCP server" }] };
+    const value = { kind: "mcp", name: "Linear", runs: "https://mcp.linear.app/mcp" };
+    expect(add.value.parse(value)).toEqual(value);
+    const offer = add.offer?.(value, view, { platform: "darwin" });
+    expect(offer).toMatchObject({
+      title: "Add Linear",
+      label: "Open Integrations",
+      arrival: {
+        section: "integrations",
+        item: "mcp?name=Linear&runs=https%3A%2F%2Fmcp.linear.app%2Fmcp",
+      },
+    });
+    expect(offer?.arrival).not.toHaveProperty("signIn");
+    expect(() =>
+      add.offer?.({ kind: "mcp", name: "Notes", runs: "npx -y @example/notes" }, view, {
+        platform: "darwin",
+      }),
+    ).toThrow("https address");
+    expect(() =>
+      add.offer?.(
+        value,
+        { ...view, integrations: [{ kind: "mcp", name: "Linear" }] },
+        {
+          platform: "darwin",
+        },
+      ),
+    ).toThrow("already added");
+  });
   it("changes an OpenRouter decision pick without creating outbound consent", () => {
     const answerer = { kind: "openrouter" as const, model: "jaredpalmer/kev-4b" };
     const current = {

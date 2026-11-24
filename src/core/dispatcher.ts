@@ -1307,7 +1307,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     ...standbyHandlers(options.standbys),
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
-    "inf:integrations:add": (server) => services.integrations.add("mcp", server),
+    "inf:integrations:add": (server, how) =>
+      services.integrations.add("mcp", server, how?.signIn === true),
+    "inf:integrations:sign-in-again": (id) => services.integrations.signInAgain(id),
+    "inf:integrations:sign-in-page": () => services.integrations.openSignInPage(),
     "inf:integrations:sign-in": async (kind, consent) => {
       const signedIn = await services.integrations.signIn(kind, consent);
       // Adding the inbox turns its rule on with it (docs/integrations.md, "The inbox").

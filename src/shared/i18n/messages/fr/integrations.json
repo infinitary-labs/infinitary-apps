@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "Ajouter {name}",
+  "integrationsMcpNeedsSignIn": "doit se reconnecter",
+  "integrationsMcpOfferBody": "{name} demande une connexion, que vous faites dans votre navigateur. Ses outils vous demandent ensuite sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».",
+  "integrationsMcpOfferButton": "Ouvrir Intégrations",
+  "integrationsMcpOfferNotNow": "Pas maintenant",
+  "integrationsMcpOfferOpen": "Ouvrez Intégrations : le formulaire du serveur MCP est rempli, et se connecter ouvre la page de connexion.",
+  "integrationsMcpRenewOperation": "Renouveler la connexion à {name} pour que ses outils continuent de fonctionner",
+  "integrationsMcpRenewReason": "Infinitary renouvelle votre connexion à {name} pour que ses outils continuent de fonctionner.",
+  "integrationsMcpRenewResult": "Une nouvelle clé d’accès {name}, gardée seulement dans la mémoire de l’app",
+  "integrationsMcpRevokeOperation": "Demander à {name} d’oublier la connexion que vous avez retirée",
+  "integrationsMcpRevokeReason": "Infinitary demande à {name} d’oublier la connexion que vous avez retirée.",
+  "integrationsMcpRevokeResult": "Rien n’est gardé : la connexion y prend fin",
   "integrationsSignInAgain": "Rouvrir la page",
   "integrationsSignInCancel": "Annuler",
+  "integrationsSignInCancelled": "La connexion a été annulée.",
+  "integrationsSignInNoneAgain": "{name} n’a pas de connexion à refaire.",
+  "integrationsSignInNoneWaiting": "Aucune connexion n’est en attente.",
+  "integrationsSignInPageAt": "La page est sur {host}.",
+  "integrationsSignInPageNotSignedIn": "Non connecté à {name}. Vous pouvez fermer cet onglet et revenir à Infinitary.",
+  "integrationsSignInPageSignedIn": "Connecté à {name}. Vous pouvez fermer cet onglet et revenir à Infinitary.",
   "integrationsSignInWaiting": "Terminez la connexion à {name} dans votre navigateur."
 }

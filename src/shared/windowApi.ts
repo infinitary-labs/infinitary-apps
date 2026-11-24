@@ -72,6 +72,7 @@ import type {
 import type { HomeMoveProgress, HomeMoveReady } from "./homeMove";
 import type { HomeUpdate } from "./homeUpdate";
 import type {
+  IntegrationAddHow,
   IntegrationKind,
   IntegrationMcpAdd,
   IntegrationSettingsPatch,
@@ -1059,7 +1060,19 @@ export type FirstmateApi = {
    */
   integrations: {
     list: () => Promise<IntegrationsView>;
-    addMcp: (server: IntegrationMcpAdd) => Promise<{ id: string; view: IntegrationsView }>;
+    /**
+     * Add an MCP server. With `signIn`, a server at an address that asks for
+     * a sign-in opens its page in the person's browser (`IntegrationsView.signingIn`)
+     * and answers once the browser comes back; without it, such a server is refused.
+     */
+    addMcp: (
+      server: IntegrationMcpAdd,
+      how?: IntegrationAddHow,
+    ) => Promise<{ id: string; view: IntegrationsView }>;
+    /** Sign an MCP server's row in again in the person's browser; Always allow on its actions ends. */
+    signInAgain: (id: string) => Promise<IntegrationsView>;
+    /** Open the waiting sign-in's page once more. */
+    openSignInPage: () => Promise<IntegrationsView>;
     /**
      * Sign in to a kind that signs in in the person's browser (Google): it
      * opens the page there and answers once the browser comes back. A kind

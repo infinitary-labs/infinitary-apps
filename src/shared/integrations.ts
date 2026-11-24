@@ -221,6 +221,11 @@ export const integrationViewSchema = z
     secrets: z.array(integrationSecretViewSchema).max(32).optional(),
     /** The inbox's door, for Settings alone; absent on every other kind. */
     door: integrationDoorViewSchema.optional(),
+    /**
+     * It signs in in the person's browser and can be signed in again from
+     * its row (an MCP server that asked for a sign-in); absent otherwise.
+     */
+    signIn: z.literal(true).optional(),
   })
   .strict();
 export type IntegrationView = z.infer<typeof integrationViewSchema>;
@@ -246,6 +251,14 @@ export const integrationsViewSchema = z
           .strict(),
       )
       .max(8)
+      .optional(),
+    /**
+     * A sign-in waiting for the person's browser that said which page it
+     * opened (an MCP server's): the name it is for, and the page's address.
+     */
+    signingIn: z
+      .object({ name: integrationNameSchema, page: z.string().min(1).max(8192) })
+      .strict()
       .optional(),
   })
   .strict();
@@ -277,6 +290,14 @@ export const integrationMcpAddSchema = z
   .strict();
 export type IntegrationMcpAdd = z.infer<typeof integrationMcpAddSchema>;
 
+/**
+ * How Settings adds an MCP server: `signIn` lets a server that asks for a
+ * sign-in open it in the person's browser. The first mate's addition never
+ * passes it.
+ */
+export const integrationAddHowSchema = z.object({ signIn: z.literal(true) }).strict();
+export type IntegrationAddHow = z.infer<typeof integrationAddHowSchema>;
+
 /** The words Settings -> Integrations shows, and the host card's button that opens it. */
 export const INTEGRATIONS_WORDS = {
   title: "Integrations",
@@ -299,6 +320,18 @@ export const INTEGRATION_SECRET_WORDS = {
   remove: "Remove",
   stays: "It stays on this computer. Your first mate and your crew use it but never see it.",
 } as const;
+
+/**
+ * The MCP servers Settings adds with one press, beside the MCP server chip:
+ * each asks for a sign-in, which opens in the person's browser
+ * (docs/integrations.md, "MCP servers that sign in").
+ */
+// i18n-exempt: product names and their addresses
+export const MCP_SIGN_IN_PICKS: readonly IntegrationMcpAdd[] = [
+  { name: "Notion", runs: "https://mcp.notion.com/mcp" },
+  { name: "Linear", runs: "https://mcp.linear.app/mcp" },
+  { name: "Todoist", runs: "https://ai.todoist.net/mcp" },
+];
 
 export const INTEGRATIONS_MCP_WORDS = {
   add: "MCP server",

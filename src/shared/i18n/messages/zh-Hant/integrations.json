@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "新增 {name}",
+  "integrationsMcpNeedsSignIn": "需要重新登入",
+  "integrationsMcpOfferBody": "{name} 需要登入，你在瀏覽器中完成。之後它的工具會在卡片上詢問你，直到你選擇「一律允許」。",
+  "integrationsMcpOfferButton": "開啟整合",
+  "integrationsMcpOfferNotNow": "暫時不要",
+  "integrationsMcpOfferOpen": "開啟「整合」：MCP 伺服器表單已填好，連線後會開啟登入頁面。",
+  "integrationsMcpRenewOperation": "續期 {name} 的登入，讓它的工具繼續可用",
+  "integrationsMcpRenewReason": "Infinitary 會續期你的 {name} 登入，讓它的工具繼續可用。",
+  "integrationsMcpRenewResult": "新的 {name} 存取金鑰，只保存在 App 的記憶體中",
+  "integrationsMcpRevokeOperation": "讓 {name} 忘記你移除的登入",
+  "integrationsMcpRevokeReason": "Infinitary 會讓 {name} 忘記你移除的登入。",
+  "integrationsMcpRevokeResult": "不保存任何內容：登入在那裡結束",
   "integrationsSignInAgain": "重新開啟頁面",
   "integrationsSignInCancel": "取消",
+  "integrationsSignInCancelled": "登入已取消。",
+  "integrationsSignInNoneAgain": "{name} 沒有可重新進行的登入。",
+  "integrationsSignInNoneWaiting": "沒有正在等待的登入。",
+  "integrationsSignInPageAt": "頁面位於 {host}。",
+  "integrationsSignInPageNotSignedIn": "未登入 {name}。你可以關閉此分頁，回到 Infinitary。",
+  "integrationsSignInPageSignedIn": "已登入 {name}。你可以關閉此分頁，回到 Infinitary。",
   "integrationsSignInWaiting": "請在瀏覽器中完成登入 {name}。"
 }

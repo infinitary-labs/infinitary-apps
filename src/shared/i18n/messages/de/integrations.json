@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "{name} hinzufügen",
+  "integrationsMcpNeedsSignIn": "muss neu angemeldet werden",
+  "integrationsMcpOfferBody": "{name} verlangt eine Anmeldung, die du in deinem Browser machst. Seine Werkzeuge fragen dich danach auf einer Karte, bis du „Immer erlaubt“ wählst.",
+  "integrationsMcpOfferButton": "Integrationen öffnen",
+  "integrationsMcpOfferNotNow": "Nicht jetzt",
+  "integrationsMcpOfferOpen": "Öffne Integrationen: Das Formular für den MCP-Server ist ausgefüllt, und das Verbinden öffnet die Anmeldeseite.",
+  "integrationsMcpRenewOperation": "Die Anmeldung bei {name} erneuern, damit seine Werkzeuge weiter funktionieren",
+  "integrationsMcpRenewReason": "Infinitary erneuert deine Anmeldung bei {name}, damit seine Werkzeuge weiter funktionieren.",
+  "integrationsMcpRenewResult": "Ein neuer Zugangsschlüssel für {name}, nur im Speicher der App",
+  "integrationsMcpRevokeOperation": "{name} mitteilen, die entfernte Anmeldung zu vergessen",
+  "integrationsMcpRevokeReason": "Infinitary teilt {name} mit, die entfernte Anmeldung zu vergessen.",
+  "integrationsMcpRevokeResult": "Nichts wird behalten: Die Anmeldung endet dort",
   "integrationsSignInAgain": "Seite erneut öffnen",
   "integrationsSignInCancel": "Abbrechen",
+  "integrationsSignInCancelled": "Die Anmeldung wurde abgebrochen.",
+  "integrationsSignInNoneAgain": "{name} hat keine Anmeldung, die erneut gemacht werden kann.",
+  "integrationsSignInNoneWaiting": "Es wartet keine Anmeldung.",
+  "integrationsSignInPageAt": "Die Seite liegt auf {host}.",
+  "integrationsSignInPageNotSignedIn": "Nicht bei {name} angemeldet. Du kannst diesen Tab schließen und zu Infinitary zurückkehren.",
+  "integrationsSignInPageSignedIn": "Bei {name} angemeldet. Du kannst diesen Tab schließen und zu Infinitary zurückkehren.",
   "integrationsSignInWaiting": "Schließe die Anmeldung bei {name} in deinem Browser ab."
 }

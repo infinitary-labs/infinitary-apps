@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import * as m from "@shared/i18n/messages.generated";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -246,6 +247,8 @@ export class IntegrationRefusal extends Error {}
 export class IntegrationsService {
   /** The sign-in waiting for the person's browser, at most one at a time. */
   private signingIn: AbortController | undefined;
+  /** The page that sign-in opened, when its kind says (an MCP server's), and how to open it again. */
+  private signInPage: { name: string; page: string; again: () => Promise<void> } | undefined;
   /**
    * Names and ids an addition or a sign-in holds while it waits for the
    * place (docs/integrations.md, "Names"), by their compared form: another
@@ -281,6 +284,9 @@ export class IntegrationsService {
         name: source.name,
         events: source.events.map(eventView),
       })),
+      ...(this.signInPage
+        ? { signingIn: { name: this.signInPage.name, page: this.signInPage.page } }
+        : {}),
     };
   }
 
@@ -686,7 +692,7 @@ export class IntegrationsService {
       const { file: delivered, ...answer } = called;
       if (delivered && !answer.refused) answer.text = await this.saveFile(row, caller, delivered);
       const text = redact(answer.text);
-      const label = answer.refused ? undefined : row.binding.fence;
+      const label = answer.refused ? undefined : (row.connection.fence ?? row.binding.fence);
       return {
         answer: { ...answer, text: label ? fencedAnswer(text, this.fence(label, caller)) : text },
       };
@@ -741,7 +747,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (caller.kind !== "task" || !files)
       throw new Error("only a task's crewmate can save a file.");
     const saved = await files.save(caller.taskId, file.name, file.bytes);
-    const label = row.binding.fence;
+    const label = row.connection.fence ?? row.binding.fence;
     if (label)
       this.options.reads?.saved?.(
         caller.taskId,
@@ -1003,7 +1009,11 @@ Do not repeat this call; read ${name} to check what happened first.`
    * Add a connection of a kind the person adds from their own words (an
    * MCP server): the binding connects, and the new row shows what it found.
    */
-  async add(kind: IntegrationKind, input: { name: string } & Record<string, unknown>) {
+  async add(
+    kind: IntegrationKind,
+    input: { name: string } & Record<string, unknown>,
+    signIn = false,
+  ) {
     const binding = this.options.bindings.find((entry) => entry.kind === kind);
     if (!binding?.add)
       throw new IntegrationRefusal(
@@ -1014,20 +1024,92 @@ Do not repeat this call; read ${name} to check what happened first.`
     this.assertNameFree(input.name);
     const by = Symbol(kind);
     this.claim(input.name, kind, by);
+    // Only Settings' own form signs in, in the person's browser; the first
+    // mate's addition of a server that asks for one is refused with words.
+    const waiting = signIn ? this.waitForSignIn(input.name) : undefined;
     let id: string;
     try {
-      id = await binding.add(input, (candidate) => {
-        if (this.holder(candidate) || !integrationIdSchema.safeParse(candidate).success)
-          return false;
-        this.claim(candidate, kind, by);
-        return true;
-      });
+      id = await binding.add(
+        input,
+        (candidate) => {
+          if (this.holder(candidate) || !integrationIdSchema.safeParse(candidate).success)
+            return false;
+          this.claim(candidate, kind, by);
+          return true;
+        },
+        waiting?.handle,
+      );
     } catch (error) {
+      if (waiting?.handle.signal.aborted)
+        throw new IntegrationRefusal(m.integrationsSignInCancelled());
       throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
     } finally {
       this.release(by);
+      waiting?.done();
     }
     return { id, view: this.changed() };
+  }
+
+  /**
+   * Sign one connection in again in the person's browser (an MCP server
+   * whose sign-in ended). Its switches stay as they were; Always allow
+   * ends on each of its actions, since the sign-in may be another account.
+   */
+  async signInAgain(id: string): Promise<IntegrationsView> {
+    const row = this.byId(id);
+    if (!row.binding.signInAgain || !row.connection.signIn)
+      throw new IntegrationRefusal(m.integrationsSignInNoneAgain({ name: this.viewOf(row).name }));
+    const waiting = this.waitForSignIn(this.viewOf(row).name);
+    try {
+      await row.binding.signInAgain(row.connection.id, waiting.handle);
+    } catch (error) {
+      if (waiting.handle.signal.aborted)
+        throw new IntegrationRefusal(m.integrationsSignInCancelled());
+      throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
+    } finally {
+      waiting.done();
+    }
+    const after = this.byId(id);
+    for (const spec of after.connection.actions)
+      if (this.allowed(after, spec)) this.grant(after, spec, false);
+    return this.changed();
+  }
+
+  /** Open the page the waiting sign-in opened once more, as when the person closed it. */
+  async openSignInPage(): Promise<IntegrationsView> {
+    const page = this.signInPage;
+    if (!page) throw new IntegrationRefusal(m.integrationsSignInNoneWaiting());
+    await page.again();
+    return this.view();
+  }
+
+  /**
+   * One sign-in waiting for the person's browser, ending any before it;
+   * the page it opens shows in the view until `done`.
+   */
+  private waitForSignIn(name: string) {
+    this.signingIn?.abort();
+    this.signInPage = undefined;
+    const controller = new AbortController();
+    this.signingIn = controller;
+    return {
+      handle: {
+        signal: controller.signal,
+        opened: (page: { page: string; again: () => Promise<void> }) => {
+          if (this.signingIn !== controller) return;
+          this.signInPage = { name, ...page };
+          this.changed();
+        },
+      },
+      done: () => {
+        if (this.signingIn !== controller) return;
+        this.signingIn = undefined;
+        if (this.signInPage) {
+          this.signInPage = undefined;
+          this.changed();
+        }
+      },
+    };
   }
 
   /**
@@ -1071,27 +1153,30 @@ Do not repeat this call; read ${name} to check what happened first.`
             ? `${name} names the app's own ${holder.app} events, so ${kindName} cannot be added under it.`
             : `${name} belongs to your ${holder.reserved} connection, so ${kindName} cannot be added under it.`,
       );
-    this.signingIn?.abort();
-    const controller = new AbortController();
-    this.signingIn = controller;
+    const waiting = this.waitForSignIn(name);
     // The name is held while the browser is open; a sign-in this one ends lets go of its own.
     const by = Symbol(kind);
     this.claim(name, kind, by);
     try {
-      const id = await binding.signIn(controller.signal);
+      const id = await binding.signIn(waiting.handle.signal);
       return { id, view: this.changed() };
     } catch (error) {
-      if (controller.signal.aborted) throw new IntegrationRefusal("The sign-in was cancelled.");
+      if (waiting.handle.signal.aborted)
+        throw new IntegrationRefusal(m.integrationsSignInCancelled());
       throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
     } finally {
       this.release(by);
-      if (this.signingIn === controller) this.signingIn = undefined;
+      waiting.done();
     }
   }
 
   cancelSignIn(): void {
     this.signingIn?.abort();
     this.signingIn = undefined;
+    if (this.signInPage) {
+      this.signInPage = undefined;
+      this.changed();
+    }
   }
 
   /**
@@ -1125,7 +1210,7 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (Object.keys(filter ?? {}).some((key) => !fields.some((field) => field.name === key)))
       throw new IntegrationRefusal("This event does not declare that filter.");
     const look = await row.binding.look(row.connection.id, event, cursor, filter);
-    const label = row.binding.fence;
+    const label = row.connection.fence ?? row.binding.fence;
     if (!label) return look;
     // A rule's events reach the first mate; a panel's, that panel; a hold's
     // rule's, its task. A rule's run also keeps a copy in Automation's
@@ -1413,6 +1498,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       paused: row.settings.paused === true,
       ...(row.connection.runs !== undefined ? { runs: row.connection.runs } : {}),
       ...(row.connection.door ? { door: row.connection.door } : {}),
+      ...(row.connection.signIn ? { signIn: true as const } : {}),
       actions: row.connection.actions.map((spec) => {
         const enabled = !row.settings.off?.includes(spec.name);
         return {

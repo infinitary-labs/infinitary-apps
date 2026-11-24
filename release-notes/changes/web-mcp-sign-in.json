@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "web-mcp-sign-in",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Connect Notion, Linear, Todoist and other MCP servers that ask you to sign in",
+      "body": "Settings → Integrations now connects an MCP server at a web address that asks for a sign-in. Press Notion, Linear or Todoist beside the MCP server chip, or add any server's address, and its sign-in page opens in your browser. Once you finish there, the server's tools appear in its row. Infinitary keeps the sign-in in Secrets and renews it on its own; when the service ends it, the row offers Sign in again. Removing the server signs it out there too. A server that only works with an app of your own says so, since Infinitary does not offer that yet.",
+      "picture": {
+        "dark": "web-mcp-sign-in-dark.webp",
+        "light": "web-mcp-sign-in-light.webp",
+        "alt": "Settings, Integrations, with Notion, Linear and Todoist beside the MCP server chip"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

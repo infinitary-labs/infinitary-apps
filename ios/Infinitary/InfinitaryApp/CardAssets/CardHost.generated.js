@@ -36006,6 +36006,337 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${from} has not stopped`;
   }
+  function integrationsMcpAdd(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إضافة ${name}`;
+      case "de":
+        return `${name} hinzufügen`;
+      case "es":
+        return `Añadir ${name}`;
+      case "fr":
+        return `Ajouter ${name}`;
+      case "ja":
+        return `${name} を追加`;
+      case "ko":
+        return `${name} 추가`;
+      case "pt-BR":
+        return `Adicionar ${name}`;
+      case "zh-Hans":
+        return `添加 ${name}`;
+      case "zh-Hant":
+        return `新增 ${name}`;
+      case "en-XA":
+        return `[Åðð ${name} ~~]`;
+      case "ar-XB":
+        return `‮Add ‬${name}`;
+    }
+    return `Add ${name}`;
+  }
+  function integrationsMcpNeedsSignIn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يحتاج إلى تسجيل الدخول مجددًا`;
+      case "de":
+        return `muss neu angemeldet werden`;
+      case "es":
+        return `necesita volver a iniciar sesión`;
+      case "fr":
+        return `doit se reconnecter`;
+      case "ja":
+        return `もう一度サインインが必要`;
+      case "ko":
+        return `다시 로그인해야 함`;
+      case "pt-BR":
+        return `precisa fazer login de novo`;
+      case "zh-Hans":
+        return `需要重新登录`;
+      case "zh-Hant":
+        return `需要重新登入`;
+      case "en-XA":
+        return `[ñééðš á šîĝñ-îñ áĝáîñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮needs a sign-in again‬`;
+    }
+    return `needs a sign-in again`;
+  }
+  function integrationsMcpOfferBody(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يطلب ${name} تسجيل الدخول، وتُجريه في متصفحك. بعدها تسألك أدواته في بطاقة حتى تختار «مسموح دائمًا».`;
+      case "de":
+        return `${name} verlangt eine Anmeldung, die du in deinem Browser machst. Seine Werkzeuge fragen dich danach auf einer Karte, bis du „Immer erlaubt“ wählst.`;
+      case "es":
+        return `${name} pide iniciar sesión, lo que haces en tu navegador. Después, sus herramientas te preguntan en una tarjeta hasta que eliges «Siempre permitida».`;
+      case "fr":
+        return `${name} demande une connexion, que vous faites dans votre navigateur. Ses outils vous demandent ensuite sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».`;
+      case "ja":
+        return `${name} はサインインを求めます。サインインはブラウザで行います。その後、ツールは「常に許可」を選ぶまでカードで確認します。`;
+      case "ko":
+        return `${name}은(는) 로그인을 요청해요. 로그인은 브라우저에서 해요. 그 뒤 도구는 “항상 허용”을 고를 때까지 카드로 물어봐요.`;
+      case "pt-BR":
+        return `${name} pede um login, que você faz no seu navegador. Depois, as ferramentas dele perguntam a você em um cartão até você escolher “Sempre permitida”.`;
+      case "zh-Hans":
+        return `${name} 需要登录，你在浏览器中完成。之后它的工具会在卡片上询问你，直到你选择“始终允许”。`;
+      case "zh-Hant":
+        return `${name} 需要登入，你在瀏覽器中完成。之後它的工具會在卡片上詢問你，直到你選擇「一律允許」。`;
+      case "en-XA":
+        return `[${name} ášķš ƒöŕ á šîĝñ-îñ, ŵĥîçĥ ýöû ɱáķé îñ ýöûŕ ƀŕöŵšéŕ. Îţš ţööļš ţĥéñ ášķ ýöû öñ á çáŕð ûñţîļ ýöû çĥööšé Åļŵáýš áļļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ asks for a sign-in, which you make in your browser. Its tools then ask you on a card until you choose Always allow.‬`;
+    }
+    return `${name} asks for a sign-in, which you make in your browser. Its tools then ask you on a card until you choose Always allow.`;
+  }
+  function integrationsMcpOfferButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح التكاملات`;
+      case "de":
+        return `Integrationen öffnen`;
+      case "es":
+        return `Abrir Integraciones`;
+      case "fr":
+        return `Ouvrir Intégrations`;
+      case "ja":
+        return `連携を開く`;
+      case "ko":
+        return `연동 열기`;
+      case "pt-BR":
+        return `Abrir Integrações`;
+      case "zh-Hans":
+        return `打开集成`;
+      case "zh-Hant":
+        return `開啟整合`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations‬`;
+    }
+    return `Open Integrations`;
+  }
+  function integrationsMcpOfferNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsMcpOfferOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح التكاملات: نموذج خادم MCP معبّأ، والاتصال يفتح صفحة تسجيل الدخول.`;
+      case "de":
+        return `Öffne Integrationen: Das Formular für den MCP-Server ist ausgefüllt, und das Verbinden öffnet die Anmeldeseite.`;
+      case "es":
+        return `Abre Integraciones: el formulario del servidor MCP ya está completo, y al conectar se abre la página de inicio de sesión.`;
+      case "fr":
+        return `Ouvrez Intégrations : le formulaire du serveur MCP est rempli, et se connecter ouvre la page de connexion.`;
+      case "ja":
+        return `連携を開いてください。MCP サーバーのフォームは入力済みで、接続するとサインインページが開きます。`;
+      case "ko":
+        return `연동을 여세요. MCP 서버 양식이 채워져 있고, 연결하면 로그인 페이지가 열려요.`;
+      case "pt-BR":
+        return `Abra Integrações: o formulário do servidor MCP já está preenchido, e conectar abre a página de login.`;
+      case "zh-Hans":
+        return `打开“集成”：MCP 服务器表单已填好，连接后会打开登录页面。`;
+      case "zh-Hant":
+        return `開啟「整合」：MCP 伺服器表單已填好，連線後會開啟登入頁面。`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš: ţĥé ṀÇÞ šéŕṽéŕ ƒöŕɱ îš ƒîļļéð îñ, áñð çöññéçţîñĝ öþéñš ţĥé šîĝñ-îñ þáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations: the MCP server form is filled in, and connecting opens the sign-in page.‬`;
+    }
+    return `Open Integrations: the MCP server form is filled in, and connecting opens the sign-in page.`;
+  }
+  function integrationsMcpRenewOperation(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجديد تسجيل الدخول إلى ${name} لتبقى أدواته تعمل`;
+      case "de":
+        return `Die Anmeldung bei ${name} erneuern, damit seine Werkzeuge weiter funktionieren`;
+      case "es":
+        return `Renovar el inicio de sesión en ${name} para que sus herramientas sigan funcionando`;
+      case "fr":
+        return `Renouveler la connexion à ${name} pour que ses outils continuent de fonctionner`;
+      case "ja":
+        return `ツールが動き続けるよう ${name} のサインインを更新する`;
+      case "ko":
+        return `도구가 계속 작동하도록 ${name} 로그인을 갱신`;
+      case "pt-BR":
+        return `Renovar o login no ${name} para as ferramentas dele continuarem funcionando`;
+      case "zh-Hans":
+        return `续期 ${name} 的登录，让它的工具继续可用`;
+      case "zh-Hant":
+        return `續期 ${name} 的登入，讓它的工具繼續可用`;
+      case "en-XA":
+        return `[Ŕéñéŵ ţĥé ${name} šîĝñ-îñ šö îţš ţööļš ķééþ ŵöŕķîñĝ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Renew the ‬${name}‮ sign-in so its tools keep working‬`;
+    }
+    return `Renew the ${name} sign-in so its tools keep working`;
+  }
+  function integrationsMcpRenewReason(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجدد Infinitary تسجيل دخولك إلى ${name} لتبقى أدواته تعمل.`;
+      case "de":
+        return `Infinitary erneuert deine Anmeldung bei ${name}, damit seine Werkzeuge weiter funktionieren.`;
+      case "es":
+        return `Infinitary renueva tu inicio de sesión en ${name} para que sus herramientas sigan funcionando.`;
+      case "fr":
+        return `Infinitary renouvelle votre connexion à ${name} pour que ses outils continuent de fonctionner.`;
+      case "ja":
+        return `ツールが動き続けるよう、Infinitary が ${name} のサインインを更新します。`;
+      case "ko":
+        return `도구가 계속 작동하도록 Infinitary가 ${name} 로그인을 갱신해요.`;
+      case "pt-BR":
+        return `O Infinitary renova seu login no ${name} para as ferramentas dele continuarem funcionando.`;
+      case "zh-Hans":
+        return `Infinitary 会续期你的 ${name} 登录，让它的工具继续可用。`;
+      case "zh-Hant":
+        return `Infinitary 會續期你的 ${name} 登入，讓它的工具繼續可用。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ŕéñéŵš ýöûŕ ${name} šîĝñ-îñ šö îţš ţööļš ķééþ ŵöŕķîñĝ. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary renews your ‬${name}‮ sign-in so its tools keep working.‬`;
+    }
+    return `Infinitary renews your ${name} sign-in so its tools keep working.`;
+  }
+  function integrationsMcpRenewResult(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مفتاح وصول جديد إلى ${name}، محفوظ في ذاكرة التطبيق فقط`;
+      case "de":
+        return `Ein neuer Zugangsschlüssel für ${name}, nur im Speicher der App`;
+      case "es":
+        return `Una nueva clave de acceso de ${name}, guardada solo en la memoria de la app`;
+      case "fr":
+        return `Une nouvelle clé d’accès ${name}, gardée seulement dans la mémoire de l’app`;
+      case "ja":
+        return `${name} の新しいアクセスキー。アプリのメモリにだけ保持します`;
+      case "ko":
+        return `새 ${name} 접근 키, 앱 메모리에만 보관`;
+      case "pt-BR":
+        return `Uma nova chave de acesso do ${name}, guardada só na memória do app`;
+      case "zh-Hans":
+        return `新的 ${name} 访问密钥，只保存在应用的内存中`;
+      case "zh-Hant":
+        return `新的 ${name} 存取金鑰，只保存在 App 的記憶體中`;
+      case "en-XA":
+        return `[Å ñéŵ ${name} áççéšš ķéý, ķéþţ öñļý îñ ţĥé áþþ'š ɱéɱöŕý ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A new ‬${name}‮ access key, kept only in the app's memory‬`;
+    }
+    return `A new ${name} access key, kept only in the app's memory`;
+  }
+  function integrationsMcpRevokeOperation(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إبلاغ ${name} بنسيان تسجيل الدخول الذي أزلته`;
+      case "de":
+        return `${name} mitteilen, die entfernte Anmeldung zu vergessen`;
+      case "es":
+        return `Pedir a ${name} que olvide el inicio de sesión que quitaste`;
+      case "fr":
+        return `Demander à ${name} d’oublier la connexion que vous avez retirée`;
+      case "ja":
+        return `削除したサインインを忘れるよう ${name} に伝える`;
+      case "ko":
+        return `삭제한 로그인을 잊도록 ${name}에 알리기`;
+      case "pt-BR":
+        return `Pedir ao ${name} que esqueça o login que você removeu`;
+      case "zh-Hans":
+        return `让 ${name} 忘记你移除的登录`;
+      case "zh-Hant":
+        return `讓 ${name} 忘記你移除的登入`;
+      case "en-XA":
+        return `[Ţéļļ ${name} ţö ƒöŕĝéţ ţĥé šîĝñ-îñ ýöû ŕéɱöṽéð ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Tell ‬${name}‮ to forget the sign-in you removed‬`;
+    }
+    return `Tell ${name} to forget the sign-in you removed`;
+  }
+  function integrationsMcpRevokeReason(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يطلب Infinitary من ${name} نسيان تسجيل الدخول الذي أزلته.`;
+      case "de":
+        return `Infinitary teilt ${name} mit, die entfernte Anmeldung zu vergessen.`;
+      case "es":
+        return `Infinitary pide a ${name} que olvide el inicio de sesión que quitaste.`;
+      case "fr":
+        return `Infinitary demande à ${name} d’oublier la connexion que vous avez retirée.`;
+      case "ja":
+        return `削除したサインインを忘れるよう、Infinitary が ${name} に伝えます。`;
+      case "ko":
+        return `Infinitary가 삭제한 로그인을 잊도록 ${name}에 알려요.`;
+      case "pt-BR":
+        return `O Infinitary pede ao ${name} que esqueça o login que você removeu.`;
+      case "zh-Hans":
+        return `Infinitary 会让 ${name} 忘记你移除的登录。`;
+      case "zh-Hant":
+        return `Infinitary 會讓 ${name} 忘記你移除的登入。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ţéļļš ${name} ţö ƒöŕĝéţ ţĥé šîĝñ-îñ ýöû ŕéɱöṽéð. ~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary tells ‬${name}‮ to forget the sign-in you removed.‬`;
+    }
+    return `Infinitary tells ${name} to forget the sign-in you removed.`;
+  }
+  function integrationsMcpRevokeResult() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُحفظ شيء: ينتهي تسجيل الدخول هناك`;
+      case "de":
+        return `Nichts wird behalten: Die Anmeldung endet dort`;
+      case "es":
+        return `No se guarda nada: el inicio de sesión termina allí`;
+      case "fr":
+        return `Rien n’est gardé : la connexion y prend fin`;
+      case "ja":
+        return `何も保持しません。サインインはそこで終わります`;
+      case "ko":
+        return `아무것도 보관하지 않음: 로그인은 그곳에서 끝나요`;
+      case "pt-BR":
+        return `Nada é guardado: o login termina lá`;
+      case "zh-Hans":
+        return `不保存任何内容：登录在那里结束`;
+      case "zh-Hant":
+        return `不保存任何內容：登入在那裡結束`;
+      case "en-XA":
+        return `[Ñöţĥîñĝ ķéþţ: ţĥé šîĝñ-îñ éñðš ţĥéŕé ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Nothing kept: the sign-in ends there‬`;
+    }
+    return `Nothing kept: the sign-in ends there`;
+  }
   function integrationsSignInAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -36059,6 +36390,172 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Cancel‬`;
     }
     return `Cancel`;
+  }
+  function integrationsSignInCancelled() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُلغي تسجيل الدخول.`;
+      case "de":
+        return `Die Anmeldung wurde abgebrochen.`;
+      case "es":
+        return `Se canceló el inicio de sesión.`;
+      case "fr":
+        return `La connexion a été annulée.`;
+      case "ja":
+        return `サインインはキャンセルされました。`;
+      case "ko":
+        return `로그인이 취소됐어요.`;
+      case "pt-BR":
+        return `O login foi cancelado.`;
+      case "zh-Hans":
+        return `登录已取消。`;
+      case "zh-Hant":
+        return `登入已取消。`;
+      case "en-XA":
+        return `[Ţĥé šîĝñ-îñ ŵáš çáñçéļļéð. ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The sign-in was cancelled.‬`;
+    }
+    return `The sign-in was cancelled.`;
+  }
+  function integrationsSignInNoneAgain(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يملك ${name} تسجيل دخول يمكن إعادته.`;
+      case "de":
+        return `${name} hat keine Anmeldung, die erneut gemacht werden kann.`;
+      case "es":
+        return `${name} no tiene un inicio de sesión que repetir.`;
+      case "fr":
+        return `${name} n’a pas de connexion à refaire.`;
+      case "ja":
+        return `${name} にはやり直すサインインがありません。`;
+      case "ko":
+        return `${name}에는 다시 할 로그인이 없어요.`;
+      case "pt-BR":
+        return `${name} não tem login para fazer de novo.`;
+      case "zh-Hans":
+        return `${name} 没有可重新进行的登录。`;
+      case "zh-Hant":
+        return `${name} 沒有可重新進行的登入。`;
+      case "en-XA":
+        return `[${name} ĥáš ñö šîĝñ-îñ ţö ɱáķé áĝáîñ. ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ has no sign-in to make again.‬`;
+    }
+    return `${name} has no sign-in to make again.`;
+  }
+  function integrationsSignInNoneWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يوجد تسجيل دخول قيد الانتظار.`;
+      case "de":
+        return `Es wartet keine Anmeldung.`;
+      case "es":
+        return `No hay ningún inicio de sesión en espera.`;
+      case "fr":
+        return `Aucune connexion n’est en attente.`;
+      case "ja":
+        return `待機中のサインインはありません。`;
+      case "ko":
+        return `기다리는 로그인이 없어요.`;
+      case "pt-BR":
+        return `Nenhum login está esperando.`;
+      case "zh-Hans":
+        return `没有正在等待的登录。`;
+      case "zh-Hant":
+        return `沒有正在等待的登入。`;
+      case "en-XA":
+        return `[Ñö šîĝñ-îñ îš ŵáîţîñĝ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No sign-in is waiting.‬`;
+    }
+    return `No sign-in is waiting.`;
+  }
+  function integrationsSignInPageAt(input2) {
+    const host = input2.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصفحة على ${host}.`;
+      case "de":
+        return `Die Seite liegt auf ${host}.`;
+      case "es":
+        return `La página está en ${host}.`;
+      case "fr":
+        return `La page est sur ${host}.`;
+      case "ja":
+        return `ページは ${host} にあります。`;
+      case "ko":
+        return `페이지 주소는 ${host}예요.`;
+      case "pt-BR":
+        return `A página está em ${host}.`;
+      case "zh-Hans":
+        return `页面位于 ${host}。`;
+      case "zh-Hant":
+        return `頁面位於 ${host}。`;
+      case "en-XA":
+        return `[Ţĥé þáĝé îš áţ ${host}. ~~~~~~]`;
+      case "ar-XB":
+        return `‮The page is at ‬${host}‮.‬`;
+    }
+    return `The page is at ${host}.`;
+  }
+  function integrationsSignInPageNotSignedIn(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتم تسجيل الدخول إلى ${name}. يمكنك إغلاق هذا التبويب والعودة إلى Infinitary.`;
+      case "de":
+        return `Nicht bei ${name} angemeldet. Du kannst diesen Tab schließen und zu Infinitary zurückkehren.`;
+      case "es":
+        return `No se inició sesión en ${name}. Puedes cerrar esta pestaña y volver a Infinitary.`;
+      case "fr":
+        return `Non connecté à ${name}. Vous pouvez fermer cet onglet et revenir à Infinitary.`;
+      case "ja":
+        return `${name} にサインインしていません。このタブを閉じて Infinitary に戻れます。`;
+      case "ko":
+        return `${name}에 로그인하지 않았어요. 이 탭을 닫고 Infinitary로 돌아가도 돼요.`;
+      case "pt-BR":
+        return `Login não feito no ${name}. Você pode fechar esta aba e voltar ao Infinitary.`;
+      case "zh-Hans":
+        return `未登录 ${name}。你可以关闭此标签页，回到 Infinitary。`;
+      case "zh-Hant":
+        return `未登入 ${name}。你可以關閉此分頁，回到 Infinitary。`;
+      case "en-XA":
+        return `[Ñöţ šîĝñéð îñ ţö ${name}. Ýöû çáñ çļöšé ţĥîš ţáƀ áñð ĝö ƀáçķ ţö Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Not signed in to ‬${name}‮. You can close this tab and go back to Infinitary.‬`;
+    }
+    return `Not signed in to ${name}. You can close this tab and go back to Infinitary.`;
+  }
+  function integrationsSignInPageSignedIn(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم تسجيل الدخول إلى ${name}. يمكنك إغلاق هذا التبويب والعودة إلى Infinitary.`;
+      case "de":
+        return `Bei ${name} angemeldet. Du kannst diesen Tab schließen und zu Infinitary zurückkehren.`;
+      case "es":
+        return `Sesión iniciada en ${name}. Puedes cerrar esta pestaña y volver a Infinitary.`;
+      case "fr":
+        return `Connecté à ${name}. Vous pouvez fermer cet onglet et revenir à Infinitary.`;
+      case "ja":
+        return `${name} にサインインしました。このタブを閉じて Infinitary に戻れます。`;
+      case "ko":
+        return `${name}에 로그인했어요. 이 탭을 닫고 Infinitary로 돌아가도 돼요.`;
+      case "pt-BR":
+        return `Login feito no ${name}. Você pode fechar esta aba e voltar ao Infinitary.`;
+      case "zh-Hans":
+        return `已登录 ${name}。你可以关闭此标签页，回到 Infinitary。`;
+      case "zh-Hant":
+        return `已登入 ${name}。你可以關閉此分頁，回到 Infinitary。`;
+      case "en-XA":
+        return `[Šîĝñéð îñ ţö ${name}. Ýöû çáñ çļöšé ţĥîš ţáƀ áñð ĝö ƀáçķ ţö Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Signed in to ‬${name}‮. You can close this tab and go back to Infinitary.‬`;
+    }
+    return `Signed in to ${name}. You can close this tab and go back to Infinitary.`;
   }
   function integrationsSignInWaiting(input2) {
     const name = input2.name;
@@ -100479,8 +100976,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverStoppingTitle,
     handoverWontStopText,
     handoverWontStopTitle,
+    integrationsMcpAdd,
+    integrationsMcpNeedsSignIn,
+    integrationsMcpOfferBody,
+    integrationsMcpOfferButton,
+    integrationsMcpOfferNotNow,
+    integrationsMcpOfferOpen,
+    integrationsMcpRenewOperation,
+    integrationsMcpRenewReason,
+    integrationsMcpRenewResult,
+    integrationsMcpRevokeOperation,
+    integrationsMcpRevokeReason,
+    integrationsMcpRevokeResult,
     integrationsSignInAgain,
     integrationsSignInCancel,
+    integrationsSignInCancelled,
+    integrationsSignInNoneAgain,
+    integrationsSignInNoneWaiting,
+    integrationsSignInPageAt,
+    integrationsSignInPageNotSignedIn,
+    integrationsSignInPageSignedIn,
     integrationsSignInWaiting,
     keptCap,
     keptChecks,
@@ -103696,8 +104211,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverStoppingTitle": ["from"],
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
+    "integrationsMcpAdd": ["name"],
+    "integrationsMcpNeedsSignIn": [],
+    "integrationsMcpOfferBody": ["name"],
+    "integrationsMcpOfferButton": [],
+    "integrationsMcpOfferNotNow": [],
+    "integrationsMcpOfferOpen": [],
+    "integrationsMcpRenewOperation": ["name"],
+    "integrationsMcpRenewReason": ["name"],
+    "integrationsMcpRenewResult": ["name"],
+    "integrationsMcpRevokeOperation": ["name"],
+    "integrationsMcpRevokeReason": ["name"],
+    "integrationsMcpRevokeResult": [],
     "integrationsSignInAgain": [],
     "integrationsSignInCancel": [],
+    "integrationsSignInCancelled": [],
+    "integrationsSignInNoneAgain": ["name"],
+    "integrationsSignInNoneWaiting": [],
+    "integrationsSignInPageAt": ["host"],
+    "integrationsSignInPageNotSignedIn": ["name"],
+    "integrationsSignInPageSignedIn": ["name"],
     "integrationsSignInWaiting": ["name"],
     "keptCap": [],
     "keptChecks": [],

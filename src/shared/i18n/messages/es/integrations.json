@@ -1,5 +1,23 @@
 {
+  "integrationsMcpAdd": "Añadir {name}",
+  "integrationsMcpNeedsSignIn": "necesita volver a iniciar sesión",
+  "integrationsMcpOfferBody": "{name} pide iniciar sesión, lo que haces en tu navegador. Después, sus herramientas te preguntan en una tarjeta hasta que eliges «Siempre permitida».",
+  "integrationsMcpOfferButton": "Abrir Integraciones",
+  "integrationsMcpOfferNotNow": "Ahora no",
+  "integrationsMcpOfferOpen": "Abre Integraciones: el formulario del servidor MCP ya está completo, y al conectar se abre la página de inicio de sesión.",
+  "integrationsMcpRenewOperation": "Renovar el inicio de sesión en {name} para que sus herramientas sigan funcionando",
+  "integrationsMcpRenewReason": "Infinitary renueva tu inicio de sesión en {name} para que sus herramientas sigan funcionando.",
+  "integrationsMcpRenewResult": "Una nueva clave de acceso de {name}, guardada solo en la memoria de la app",
+  "integrationsMcpRevokeOperation": "Pedir a {name} que olvide el inicio de sesión que quitaste",
+  "integrationsMcpRevokeReason": "Infinitary pide a {name} que olvide el inicio de sesión que quitaste.",
+  "integrationsMcpRevokeResult": "No se guarda nada: el inicio de sesión termina allí",
   "integrationsSignInAgain": "Abrir la página otra vez",
   "integrationsSignInCancel": "Cancelar",
+  "integrationsSignInCancelled": "Se canceló el inicio de sesión.",
+  "integrationsSignInNoneAgain": "{name} no tiene un inicio de sesión que repetir.",
+  "integrationsSignInNoneWaiting": "No hay ningún inicio de sesión en espera.",
+  "integrationsSignInPageAt": "La página está en {host}.",
+  "integrationsSignInPageNotSignedIn": "No se inició sesión en {name}. Puedes cerrar esta pestaña y volver a Infinitary.",
+  "integrationsSignInPageSignedIn": "Sesión iniciada en {name}. Puedes cerrar esta pestaña y volver a Infinitary.",
   "integrationsSignInWaiting": "Termina de iniciar sesión en {name} en tu navegador."
 }

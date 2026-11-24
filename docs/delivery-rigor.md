@@ -4,7 +4,7 @@ The user-facing care labels are Quick (stored `quick`), Default (stored `standar
 These names do not alter the gates, review, fallback, or persisted values.
 
 This document is the care model's one home: the three care names the host records, how a task's care is derived, what the evidence contract is, how a review runs, and what the host holds as a record.
-What each care asks of a crewmate is the Rigor levels runbook's (`resources/runbooks/care`), served by the care's name and held by nothing of the host's (INF-1876, the captain: "the host only knows the three names as typed fact - a metadata. how to execute each care level becomes something the runbooks cover").
+What each care asks of a crewmate is the Rigor levels runbook's (`resources/runbooks/care`), served by the care's name and held by nothing of the host's (INF-1876, the captain: "the host only knows the three names as typed fact - a metadata. how to execute each rigor level becomes something the runbooks cover").
 
 Rigor derives from the user's words and the repository's configured rigor alone (captain rulings, 2026-09-19): standard is every project's standing value, never the intelligence tier or an escalation.
 Careful's guidance orders the review before the pull request, on the builder's branch; the host holds neither the push nor the merge on it.
@@ -271,7 +271,7 @@ What is left closes after After when decision-relevant, otherwise in details, no
 The crewmate's standing instructions carry one sentence; its card boundary refuses a declared settle-merge decision missing an ordered heading, but notes follow the instruction alone.
 Answer cards, previews included, keep their own shape.
 The report's five headings and rigor numbers are unchanged.
-The host appends the CI state, a review, the captain's override, the project, the PR link, the change's lines and a care level other than Default itself (`SettleFacts.strip` in `settleCardFacts.ts`, contract v2.0 ruling D4; a status line since INF-3709's plan), so the body never repeats those either.
+The host appends the CI state, a review, the captain's override, the project, the PR link, the change's lines and a rigor level other than Default itself (`SettleFacts.strip` in `settleCardFacts.ts`, contract v2.0 ruling D4; a status line since INF-3709's plan), so the body never repeats those either.
 
 `tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its care, and reports under the five headings, and a merge card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
 

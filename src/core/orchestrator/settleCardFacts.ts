@@ -337,7 +337,7 @@ export class SettleFacts {
    *   captain's override - each a state mark and its words on one line,
    *   sorted failing, warning, running or waiting, passed (`SETTLE_LEVELS`);
    *   and at the line's far end the reference in quiet mono: the project,
-   *   the change as a link, its lines, and the care level when it is not
+   *   the change as a link, its lines, and the rigor level when it is not
    *   Default. Counts, durations, read times and a review's risk ride each
    *   state's `title`, shown on rest; a state with such words is a Tab stop
    *   whose focus shows them on a line under the states.

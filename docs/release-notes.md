@@ -103,7 +103,7 @@ The captain's FI3-745 plan: every change a person can see keeps one hero picture
   A `feature`, `improvement`, `fix` or `removal` entry of origin `change` or `release-review` declares a `picture` or a `noPicture` sentence saying why there is nothing to see; maintenance and backfilled history are exempt.
   Entries recorded before hero pictures were kept say so in their reason, and a release review takes a pair for one it ranks.
 - **Who takes it.**
-  The crewmate that builds the change, at every care level, from one of its After views, cropped at build time with `heroShot` (`tests/e2e/pictures.ts`) by the recipe in `docs/testing.md` "A hero picture", and committed in the change's own pull request.
+  The crewmate that builds the change, at every rigor level, from one of its After views, cropped at build time with `heroShot` (`tests/e2e/pictures.ts`) by the recipe in `docs/testing.md` "A hero picture", and committed in the change's own pull request.
   It is part of the change, not evidence; the change's other pictures stay in its evidence folder.
   Nothing is drawn on it: the alt text and the note's title name the new thing.
 - **The release crewmate** looks at the pictures of the entries it ranks and re-takes a pair when it does not carry, rather than re-cropping it, since there is no larger source to cut from.

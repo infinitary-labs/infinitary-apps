@@ -70,7 +70,7 @@ describe("where a crewmate keeps its evidence", () => {
     expect(prompt).toContain("delete any copy of a database once you have read it");
   });
 
-  it("commits a picture the repository's own instructions keep with the change, at every care level", () => {
+  it("commits a picture the repository's own instructions keep with the change, at every rigor level", () => {
     const keep =
       "A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say.";
     // Beside the standard tier's rule, and in the evidence folder line every tier reads.

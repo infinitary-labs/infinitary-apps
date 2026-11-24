@@ -2,7 +2,7 @@
   "exclusions": [
     {
       "id": "care-is-a-runbook",
-      "reason": "Internal: what each care level asks of a change moved from the crewmate prompt and the host's own holds into the care runbook, and the host keeps the three care names as recorded facts; the names, cards and checks a person sees are unchanged."
+      "reason": "Internal: what each rigor level asks of a change moved from the crewmate prompt and the host's own holds into the care runbook, and the host keeps the three care names as recorded facts; the names, cards and checks a person sees are unchanged."
     }
   ]
 }

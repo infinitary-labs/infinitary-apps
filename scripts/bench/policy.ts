@@ -1,6 +1,6 @@
 /**
  * The attempt driver's policy, apart from the machinery so it reads (and is
- * tested) on its own: which rigor tier each care level asks for, which
+ * tested) on its own: which rigor tier each rigor level asks for, which
  * state directories an attempt may never boot against, and what the
  * scripted captain does with a card.
  */
@@ -12,11 +12,11 @@ import type { Card } from "@shared/cards";
 import type { Rigor } from "@shared/rigor";
 import { userDataFoldersNewestFirst } from "../../src/shared/userDataFolders.ts";
 
-/** The benchmark's care levels, named as the chart names them. */
+/** The benchmark's rigor levels, named as the chart names them. */
 export const CARE_LEVELS = ["quick", "default", "careful"] as const;
 export type Care = (typeof CARE_LEVELS)[number];
 
-/** Each care level is one of the app's own rigor tiers, written to the repository row. */
+/** Each rigor level is one of the app's own rigor tiers, written to the repository row. */
 export const RIGOR_FOR_CARE: Readonly<Record<Care, Rigor>> = {
   quick: "quick",
   default: "standard",

@@ -651,7 +651,7 @@ as many as the change needs, and the completion card's Before and After carry
 them; a figure marked data-fm-new is the new view and needs no Before, and a
 card that shows nothing says why in an element marked data-fm-no-picture.
 The crewmate card lint refuses a merge card with none of the three, except
-for a task at the quick care level. The Firstmate's own text is unchanged.
+for a task at the quick rigor level. The Firstmate's own text is unchanged.
 
 4.70: FI3-592, grounded on FI3-643 (the captain folded the thread waiting
 line into FI3-592 and answered its PR #656 question with one thread line).
@@ -741,7 +741,7 @@ picture beside its sentence under After. Something new sits in a figure marked
 `data-fm-new` and needs no Before picture; a change nobody can see says why in
 one sentence in an element marked `data-fm-no-picture`. The crewmate card lint
 refuses a merge card that has none of the three, and exempts a task at the
-quick care level (`docs/card-authoring.md`). The Firstmate's own text and
+quick rigor level (`docs/card-authoring.md`). The Firstmate's own text and
 cards are unchanged.
 
 ### Contract 4.68: a wait on work nobody has started

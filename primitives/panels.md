@@ -39,7 +39,7 @@ The manifest declares title, placement, order, size, reads, views, integrations,
 A personal panel lives in `userData/fleet/personal/<id>/` and is built by a crewmate on a personal task that builds in place ([projects-and-working-copies.md](projects-and-working-copies.md)); the rails keep the last commit while working files run apart as a draft.
 The compiler output is content-addressed, so a new hash is the version, the hot reload (a new frame) and the core's cache bust.
 A captain's own `server.ts` runs in a process of its own, owned by the core's `PanelRuntimes` for every source: actions are callable by name, its store answers asynchronously one ask at a time, background tasks run on its own timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
-A panel whose loop goes silent past `PANEL_SILENCE_MS`, or whose process ends, is stopped alone and stays stopped until the captain's Retry (`docs/personal-panels.md`, "Background work runs apart" and "A stopped panel").
+A panel whose loop goes silent past `PANEL_SILENCE_MS`, whose process does not start within `PANEL_START_MS`, or whose process ends, is stopped alone and stays stopped until the captain's Retry (`docs/personal-panels.md`, "Background work runs apart" and "A stopped panel").
 `personalize remove` takes a panel out in one commit (or uninstalls an installed one); a runbook's panel goes with its runbook's switch instead, and the `panels` switch and safe mode take back all three roots in the same tick.
 
 ## Authority

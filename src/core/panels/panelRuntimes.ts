@@ -26,8 +26,11 @@ import type { PanelRuntimeIdentity, PanelStop, PanelStops } from "./panelStops";
  * panel with no background module starts no process.
  *
  * Watching: the process beats from the event loop the panel's code runs on
- * every `PANEL_BEAT_MS`, starting before it imports the module. A loop
- * silent for `PANEL_SILENCE_MS` is stopped: the stop is written first (so an
+ * every `PANEL_BEAT_MS`, starting before it imports the module, and sends
+ * everything else from that loop too. Until it first sends anything it is
+ * still starting, which runs none of the panel's code, and it has
+ * `PANEL_START_MS` for that; from then on, a loop silent for
+ * `PANEL_SILENCE_MS` is stopped. The stop is written first (so an
  * app that ends mid-stop keeps it), then the process is killed, and its end
  * is waited for; one that has not ended after `PANEL_KILL_WAIT_MS` is
  * killed by its process id, and the stop says whether the end was seen.
@@ -39,14 +42,21 @@ import type { PanelRuntimeIdentity, PanelStop, PanelStops } from "./panelStops";
  */
 
 /**
- * How long a panel's loop may stay silent before it is stopped. A healthy
- * loop beats every `PANEL_BEAT_MS` (250 ms); the process's start and the
- * module's import run before the first beat after spawn, and on a loaded
- * build machine they take well under a second (the integration test's
- * measured runs). Ten seconds is forty missed beats: only code that holds
- * its loop is past it, never a slow await.
+ * How long a panel's loop may stay silent, once it has started, before it
+ * is stopped. A healthy loop beats every `PANEL_BEAT_MS` (250 ms), from
+ * before the module's import on. Ten seconds is forty missed beats: only
+ * code that holds its loop is past it, never a slow await.
  */
 export const PANEL_SILENCE_MS = 10_000;
+/**
+ * How long a process may take to start: from its spawn to the first thing
+ * it sends, the beat before its import. None of the panel's code runs in
+ * that time, and on a machine short of memory it can outlast
+ * `PANEL_SILENCE_MS`. A minute lets such a start finish, and still stops a
+ * process that never comes up, which the core's start of the panels would
+ * otherwise wait on.
+ */
+export const PANEL_START_MS = 60_000;
 /** How long a killed process has to end before it is killed by its process id. */
 export const PANEL_KILL_WAIT_MS = 2_000;
 
@@ -140,6 +150,7 @@ export type PanelRuntimesOptions = {
   killPid?: (pid: number) => void;
   beatMs?: number;
   silenceMs?: number;
+  startMs?: number;
   killWaitMs?: number;
   minIntervalMs?: number;
 };
@@ -195,6 +206,7 @@ export class PanelRuntimes {
     const runtime = new Runtime(identity, spawner.spawn(), services, this.clock, {
       beatMs: this.options.beatMs ?? PANEL_BEAT_MS,
       silenceMs: this.options.silenceMs ?? PANEL_SILENCE_MS,
+      startMs: this.options.startMs ?? PANEL_START_MS,
       killWaitMs: this.options.killWaitMs ?? PANEL_KILL_WAIT_MS,
       minIntervalMs: this.options.minIntervalMs ?? MIN_BACKGROUND_INTERVAL_MS,
       killPid: this.options.killPid ?? defaultKillPid,
@@ -233,6 +245,7 @@ function defaultKillPid(pid: number): void {
 type RuntimeSettings = {
   beatMs: number;
   silenceMs: number;
+  startMs: number;
   killWaitMs: number;
   minIntervalMs: number;
   killPid: (pid: number) => void;
@@ -247,7 +260,10 @@ class Runtime implements PanelRuntime {
   background: PanelLoadedTask[] = [];
   private calls = 0;
   private readonly waiting = new Map<number, Waiting>();
+  /** When the process last sent anything, or its spawn until it has. */
   private lastBeat: number;
+  /** Whether it has sent anything yet: until then it is still starting. */
+  private started = false;
   private lastCheck: number;
   private readonly watch: unknown;
   private exited = false;
@@ -268,7 +284,7 @@ class Runtime implements PanelRuntime {
     // stop too: the last lines of a process that ended on its own say why.
     child.onOutput?.((stream, line) => services.log(`${stream}: ${line}`));
     child.onExit(() => this.exitedOnItsOwn());
-    // The watch starts at spawn: the process's start and the import count.
+    // The watch starts at spawn, so a process that never comes up is stopped too.
     this.watch = clock.setInterval(() => this.check(), settings.beatMs);
   }
 
@@ -331,9 +347,11 @@ class Runtime implements PanelRuntime {
 
   private receive(message: PanelChildMessage): void {
     if (this.state === "disposed" || this.state === "stopped") return;
+    // Whatever it sends, it sent from its loop: the loop ran just now.
+    this.lastBeat = this.clock.now();
+    this.started = true;
     switch (message.type) {
       case "beat":
-        this.lastBeat = this.clock.now();
         return;
       case "loaded":
         this.actions = message.actions;
@@ -436,7 +454,8 @@ class Runtime implements PanelRuntime {
       return;
     }
     const silentMs = now - this.lastBeat;
-    if (silentMs >= this.settings.silenceMs) this.stop("unresponsive", Math.round(silentMs));
+    const deadline = this.started ? this.settings.silenceMs : this.settings.startMs;
+    if (silentMs >= deadline) this.stop("unresponsive", Math.round(silentMs));
   }
 
   private exitedOnItsOwn(): void {

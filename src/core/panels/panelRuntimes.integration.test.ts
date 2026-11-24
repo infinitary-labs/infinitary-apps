@@ -1,9 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import type { HostChildSpawner } from "../host";
 import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "../integrations";
 import { PersonalStore } from "../personal/personalStore";
 import { forkChildProcess } from "../sql/forkChildProcess";
@@ -46,16 +47,17 @@ afterEach(() => {
   for (const runtimes of open.splice(0)) runtimes.disposeAll();
 });
 
-function setup() {
+function setup(options: { spawner?: HostChildSpawner; startMs?: number } = {}) {
   const db = openInMemoryDatabase();
   const store = new PersonalStore(db);
   const stops = new PanelStops(db);
   const stopped: { runtime: PanelRuntime; stop: PanelStop }[] = [];
   const runtimes = new PanelRuntimes({
-    spawner: forkChildProcess(ENTRY),
+    spawner: options.spawner ?? forkChildProcess(ENTRY),
     stops,
     beatMs: 100,
     silenceMs: 1_500,
+    ...(options.startMs !== undefined ? { startMs: options.startMs } : {}),
     killWaitMs: 1_000,
     minIntervalMs: 50,
     onStop: (runtime, stop) => stopped.push({ runtime, stop }),
@@ -74,6 +76,22 @@ function setup() {
     return path;
   };
   return { runtimes, stops, store, stopped, servicesFor, module, logs };
+}
+
+/**
+ * The real panel process, held for `stallMs` before any of its own code
+ * runs: alive, with its pid, but silent, as a process starting on a machine
+ * short of memory is while it reads its code back in. What the owner sends
+ * meanwhile waits in the channel, as it waits for a utility process.
+ */
+function slowToStart(stallMs: number): HostChildSpawner {
+  const entry = join(scratchDir("panel-slow-start-"), "slow-start.mjs");
+  writeFileSync(
+    entry,
+    `Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${stallMs});
+await import(${JSON.stringify(pathToFileURL(ENTRY).href)});`,
+  );
+  return forkChildProcess(entry);
 }
 
 /** Resolves once `check` holds, polled on the event loop; the test's budget bounds it. */
@@ -228,6 +246,52 @@ export const background = {
     );
     expect(stops.holding(identity("broken"))).toBeNull();
     expect(runtimes.running).toBe(0);
+  });
+});
+
+// A process's start runs none of the panel's code, so it is not held to the
+// silence deadline the panel's loop is: on a machine short of memory a start
+// outlasted it and the panel's first call was refused.
+describe("a panel's process slow to start", () => {
+  const identity: PanelRuntimeIdentity = {
+    source: "yours",
+    id: "late",
+    runtime: "live",
+    version: "v1",
+  };
+
+  it("answers its first call though its start outlasts the silence deadline", async () => {
+    const { runtimes, stops, store, servicesFor, module } = setup({
+      spawner: slowToStart(2_500),
+      startMs: 6_000,
+    });
+    const entry = module(
+      "late",
+      `export const actions = {
+  fill: async (input, { db }) => { await db.set("items", input); return { filled: input.length }; },
+};`,
+    );
+    const runtime = await runtimes.start(identity, entry, servicesFor("late"));
+    await expect(runtime.invoke("fill", ["alpha", "beta", "gamma"])).resolves.toEqual({
+      filled: 3,
+    });
+    expect(store.get("late", "items")).toEqual(["alpha", "beta", "gamma"]);
+    expect(stops.holding(identity)).toBeNull();
+  });
+
+  it("stops one that never starts once its start allowance has passed, and sees it end", async () => {
+    const { runtimes, stops, servicesFor, module } = setup({
+      spawner: slowToStart(600_000),
+      startMs: 3_000,
+    });
+    const entry = module("never", "export const actions = {};");
+    const error = await runtimes
+      .start(identity, entry, servicesFor("never"))
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(PanelStoppedError);
+    expect((error as PanelStoppedError).stop).toMatchObject({ reason: "unresponsive" });
+    expect((error as PanelStoppedError).stop.silentMs).toBeGreaterThanOrEqual(3_000);
+    await until(() => stops.holding(identity)?.termination === "confirmed");
   });
 });
 

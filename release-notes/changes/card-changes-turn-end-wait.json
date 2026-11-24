@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-changes-turn-end-wait",
+      "reason": "Test-only: the change-marks journey sends each next card version only after the first mate's turn has ended, instead of after a timed quiet window in the mock provider's request log."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "welcome-another-computer-words",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Another computer on the welcome screen says it plainly",
+      "body": "At the first launch, the Another computer choice now reads \"Let me run on another computer. You control me from here.\", in every language the app speaks.",
+      "picture": {
+        "dark": "welcome-another-computer-words-dark.webp",
+        "light": "welcome-another-computer-words-light.webp",
+        "alt": "The welcome screen under the lower edge of the first mate's character: Welcome aboard Infinitary, Captain, the question Where should I live?, and three choices, with Another computer reading Let me run on another computer. You control me from here."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

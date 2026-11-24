@@ -3915,7 +3915,7 @@
 "shellDiagnosticsTurnOff" = "Turn off";
 "shellGateBack" = "Where I live";
 "shellGateChoiceAnother" = "Another computer";
-"shellGateChoiceAnotherSub" = "Give its address and I set myself up there over SSH. You control me from here.";
+"shellGateChoiceAnotherSub" = "Let me run on another computer. You control me from here.";
 "shellGateChoiceHere" = "This computer";
 "shellGateChoiceHereSub" = "Sign in to a subscription here. I live and work on this computer.";
 "shellGateChoiceRunning" = "One already running";

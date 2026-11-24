@@ -36,7 +36,7 @@
   "shellDiagnosticsTurnOff": "Désactiver",
   "shellGateBack": "Où je vis",
   "shellGateChoiceAnother": "Un autre ordinateur",
-  "shellGateChoiceAnotherSub": "Donnez son adresse et je m'y installe par SSH. Vous me contrôlez d'ici.",
+  "shellGateChoiceAnotherSub": "Laissez-moi tourner sur un autre ordinateur. Vous me contrôlez d’ici.",
   "shellGateChoiceHere": "Cet ordinateur",
   "shellGateChoiceHereSub": "Connectez-vous ici à un abonnement. Je vis et travaille sur cet ordinateur.",
   "shellGateChoiceRunning": "Un qui tourne déjà",

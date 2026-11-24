@@ -3915,7 +3915,7 @@
 "shellDiagnosticsTurnOff" = "オフにする";
 "shellGateBack" = "私の住む場所";
 "shellGateChoiceAnother" = "別のコンピューター";
-"shellGateChoiceAnotherSub" = "アドレスを教えてくれれば、SSH でそちらに私を準備します。操作はここから行います。";
+"shellGateChoiceAnotherSub" = "別のコンピューターで私を動かしてください。操作はここから行います。";
 "shellGateChoiceHere" = "このコンピューター";
 "shellGateChoiceHereSub" = "ここでサブスクリプションにサインインします。私はこのコンピューターに住んで働きます。";
 "shellGateChoiceRunning" = "すでに動いているもの";

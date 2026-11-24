@@ -3915,7 +3915,7 @@
 "shellDiagnosticsTurnOff" = "关闭";
 "shellGateBack" = "我住在哪里";
 "shellGateChoiceAnother" = "另一台电脑";
-"shellGateChoiceAnotherSub" = "告诉我它的地址，我会通过 SSH 在那里设置自己。你在这里控制我。";
+"shellGateChoiceAnotherSub" = "让我在另一台电脑上运行。你在这里控制我。";
 "shellGateChoiceHere" = "这台电脑";
 "shellGateChoiceHereSub" = "在这里登录一个订阅。我在这台电脑上生活和工作。";
 "shellGateChoiceRunning" = "一台已在运行的电脑";

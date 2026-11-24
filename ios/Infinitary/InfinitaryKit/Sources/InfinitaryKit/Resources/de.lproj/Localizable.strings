@@ -3915,7 +3915,7 @@
 "shellDiagnosticsTurnOff" = "Ausschalten";
 "shellGateBack" = "Wo ich wohne";
 "shellGateChoiceAnother" = "Ein anderer Computer";
-"shellGateChoiceAnotherSub" = "Gib seine Adresse an, und ich richte mich dort über SSH ein. Du steuerst mich von hier aus.";
+"shellGateChoiceAnotherSub" = "Lass mich auf einem anderen Computer laufen. Du steuerst mich von hier aus.";
 "shellGateChoiceHere" = "Dieser Computer";
 "shellGateChoiceHereSub" = "Melde dich hier bei einem Abo an. Ich wohne und arbeite auf diesem Computer.";
 "shellGateChoiceRunning" = "Einer, der schon läuft";

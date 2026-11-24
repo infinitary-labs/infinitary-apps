@@ -3917,7 +3917,7 @@
 "shellDiagnosticsTurnOff" = "끄기";
 "shellGateBack" = "제가 사는 곳";
 "shellGateChoiceAnother" = "다른 컴퓨터";
-"shellGateChoiceAnotherSub" = "주소를 알려 주면 SSH로 그곳에 나를 설정합니다. 조작은 여기서 합니다.";
+"shellGateChoiceAnotherSub" = "다른 컴퓨터에서 저를 실행해 주세요. 조작은 여기서 합니다.";
 "shellGateChoiceHere" = "이 컴퓨터";
 "shellGateChoiceHereSub" = "여기서 구독에 로그인하세요. 저는 이 컴퓨터에서 지내며 일해요.";
 "shellGateChoiceRunning" = "이미 실행 중인 컴퓨터";

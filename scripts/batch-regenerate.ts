@@ -4,8 +4,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * A merge batch regenerates the phone's generated files and the app parts
- * list itself, before its checks run (docs/testing.md, "The swept batch";
+ * A merge batch regenerates the phone's generated files, the app parts list
+ * and the published contract itself, before its checks run (docs/testing.md, "The swept batch";
  * the captain's pick in the daily velocity review, and the app parts list
  * since INF-6259's weekly audit). Each approved change regenerated them from
  * its own base, so changes combined in one batch can leave a generated file
@@ -39,6 +39,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
  */
 export const BATCH_GENERATORS = [
   "scripts/generate-runbook-parts.ts",
+  "scripts/generate-contract.ts",
   "scripts/generate-phone-contract.ts",
   "scripts/generate-phone-theme.ts",
   "scripts/generate-phone-scene.ts",

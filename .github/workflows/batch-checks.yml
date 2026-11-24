@@ -32,8 +32,8 @@ name: Batch checks
 # critical path, the startup fixtures, the release notes check and the
 # confirms end in a few minutes and run on.
 #
-# Before any of that, its first job regenerates the phone's generated files
-# and the app parts list on the batch's version; when they changed, it pushes them as one commit,
+# Before any of that, its first job regenerates the phone's generated files,
+# the app parts list and the published contract on the batch's version; when they changed, it pushes them as one commit,
 # every check here skips, and the app's push of that commit starts this
 # check again on it (scripts/batch-regenerate.ts).
 #
@@ -59,9 +59,11 @@ permissions:
   actions: read
 
 jobs:
-  # The phone's generated files and the app parts list, regenerated on the
+  # The phone's generated files, the app parts list and the published contract
+  # (docs/contract.json), regenerated on the
   # batch's version before any check runs (the captain's pick in the daily
-  # velocity review, and INF-6259's weekly audit for the parts list): each
+  # velocity review, INF-6259's weekly audit for the parts list, and the velocity review of
+  # 2026-11-24 for the contract, which held batch #61 once): each
   # change regenerated them from its own base, so changes combined here can
   # leave one out of step with the sources they changed together. When the
   # generators change files, the job after this one pushes them as one

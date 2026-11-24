@@ -1195,6 +1195,9 @@ public enum PhoneMessages {
     public static func `handoverStoppingTitle`(`from`: String) -> String { PhoneWords.format("handoverStoppingTitle", [`from`]) }
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
+    public static func `integrationsGoogleExchangeOperation`() -> String { PhoneWords.format("integrationsGoogleExchangeOperation", []) }
+    public static func `integrationsGoogleExchangeReason`() -> String { PhoneWords.format("integrationsGoogleExchangeReason", []) }
+    public static func `integrationsGoogleExchangeResult`() -> String { PhoneWords.format("integrationsGoogleExchangeResult", []) }
     public static func `integrationsMcpAdd`(`name`: String) -> String { PhoneWords.format("integrationsMcpAdd", [`name`]) }
     public static func `integrationsMcpNeedsSignIn`() -> String { PhoneWords.format("integrationsMcpNeedsSignIn", []) }
     public static func `integrationsMcpOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsMcpOfferBody", [`name`]) }
@@ -5664,6 +5667,9 @@ extension PhoneWords {
         "handoverStoppingTitle": ["from"],
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
+        "integrationsGoogleExchangeOperation": [],
+        "integrationsGoogleExchangeReason": [],
+        "integrationsGoogleExchangeResult": [],
         "integrationsMcpAdd": ["name"],
         "integrationsMcpNeedsSignIn": [],
         "integrationsMcpOfferBody": ["name"],

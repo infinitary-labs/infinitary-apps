@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "إكمال تسجيل الدخول إلى Google باستخدام عميل Google الخاص بك",
+  "integrationsGoogleExchangeReason": "يكمل Infinitary تسجيل دخولك إلى Google باستخدام عميل Google الخاص بك.",
+  "integrationsGoogleExchangeResult": "تسجيل دخول جديد إلى Google، محفوظ في الأسرار وذاكرة التطبيق",
   "integrationsMcpAdd": "إضافة {name}",
   "integrationsMcpNeedsSignIn": "يحتاج إلى تسجيل الدخول مجددًا",
   "integrationsMcpOfferBody": "يطلب {name} تسجيل الدخول، وتُجريه في متصفحك. بعدها تسألك أدواته في بطاقة حتى تختار «مسموح دائمًا».",

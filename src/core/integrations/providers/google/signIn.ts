@@ -21,7 +21,20 @@ export type GoogleIssued = {
   expiresAt: number;
   /** The permissions the person granted: they may uncheck some on Google's page. */
   scopes: string[];
+  /** When the lasting key itself runs out, on the app's clock, when Google says. */
+  endsAt?: number;
 };
+
+/**
+ * Sends the code exchange's form to Google's token address with the client's
+ * secret added by its keeper, answering Google's response; the form carries
+ * no secret of its own. It refuses once `signal` aborts, as a direct
+ * exchange's fetch does, so a cancelled sign-in goes no further.
+ */
+export type GoogleTokenExchange = (
+  form: Record<string, string>,
+  signal: AbortSignal,
+) => Promise<Response>;
 
 export type LoopbackSignInOptions = {
   client: GoogleClient;
@@ -35,6 +48,11 @@ export type LoopbackSignInOptions = {
   signal: AbortSignal;
   now: () => number;
   fetch?: typeof fetch;
+  /**
+   * The person's own client trades the code here, where Secrets adds its
+   * secret; without it, the code goes straight to Google with `client`'s own.
+   */
+  exchange?: GoogleTokenExchange;
 };
 
 export const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
@@ -87,25 +105,33 @@ async function exchange(
   verifier: string,
   redirectUri: string,
 ): Promise<GoogleIssued> {
+  const form = {
+    client_id: options.client.id,
+    code,
+    code_verifier: verifier,
+    grant_type: "authorization_code",
+    redirect_uri: redirectUri,
+  };
   let response: Response;
-  try {
-    response = await (options.fetch ?? fetch)(options.endpoints.token, {
-      method: "POST",
-      redirect: "error",
-      headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
-      body: new URLSearchParams({
-        client_id: options.client.id,
-        ...(options.client.secret ? { client_secret: options.client.secret } : {}),
-        code,
-        code_verifier: verifier,
-        grant_type: "authorization_code",
-        redirect_uri: redirectUri,
-      }),
-      signal: AbortSignal.any([options.signal, AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)]),
-    });
-  } catch {
-    throw new Error("Could not reach Google to finish signing in.");
-  }
+  if (options.exchange) response = await options.exchange(form, options.signal);
+  else
+    try {
+      response = await (options.fetch ?? fetch)(options.endpoints.token, {
+        method: "POST",
+        redirect: "error",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          accept: "application/json",
+        },
+        body: new URLSearchParams({
+          ...form,
+          ...(options.client.secret ? { client_secret: options.client.secret } : {}),
+        }),
+        signal: AbortSignal.any([options.signal, AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS)]),
+      });
+    } catch {
+      throw new Error("Could not reach Google to finish signing in.");
+    }
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const issued = issuedFrom(body, options.now());
   if (!response.ok || !issued)
@@ -124,9 +150,11 @@ export function issuedFrom(
 ): (Omit<GoogleIssued, "refreshToken"> & { refreshToken?: string }) | undefined {
   if (typeof body.access_token !== "string" || !body.access_token) return undefined;
   if (typeof body.expires_in !== "number" || !(body.expires_in > 0)) return undefined;
+  const lasts = body.refresh_token_expires_in;
   return {
     accessToken: body.access_token,
     expiresAt: now + body.expires_in * 1000,
+    ...(typeof lasts === "number" && lasts > 0 ? { endsAt: now + lasts * 1000 } : {}),
     scopes: typeof body.scope === "string" ? body.scope.split(/\s+/).filter(Boolean) : [],
     ...(typeof body.refresh_token === "string" && body.refresh_token
       ? { refreshToken: body.refresh_token }

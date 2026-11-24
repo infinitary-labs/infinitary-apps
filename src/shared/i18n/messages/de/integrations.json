@@ -1,4 +1,7 @@
 {
+  "integrationsGoogleExchangeOperation": "Die Anmeldung bei Google mit deinem eigenen Google-Client abschließen",
+  "integrationsGoogleExchangeReason": "Infinitary schließt deine Anmeldung bei Google mit deinem eigenen Google-Client ab.",
+  "integrationsGoogleExchangeResult": "Eine neue Anmeldung bei Google, in Geheimnisse und im Speicher der App",
   "integrationsMcpAdd": "{name} hinzufügen",
   "integrationsMcpNeedsSignIn": "muss neu angemeldet werden",
   "integrationsMcpOfferBody": "{name} verlangt eine Anmeldung, die du in deinem Browser machst. Seine Werkzeuge fragen dich danach auf einer Karte, bis du „Immer erlaubt“ wählst.",

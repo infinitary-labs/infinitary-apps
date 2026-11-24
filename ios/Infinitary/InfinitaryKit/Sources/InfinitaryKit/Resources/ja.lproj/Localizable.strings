@@ -1140,6 +1140,9 @@
 "handoverStoppingTitle" = "%1$@ のバックグラウンドの作業を停止しています";
 "handoverWontStopText" = "%1$@ は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。";
 "handoverWontStopTitle" = "%1$@ が停止していません";
+"integrationsGoogleExchangeOperation" = "自分の Google クライアントで Google へのサインインを完了する";
+"integrationsGoogleExchangeReason" = "Infinitary が自分の Google クライアントで Google へのサインインを完了します。";
+"integrationsGoogleExchangeResult" = "Google への新しいサインイン。シークレットとアプリのメモリに保持します";
 "integrationsMcpAdd" = "%1$@ を追加";
 "integrationsMcpNeedsSignIn" = "もう一度サインインが必要";
 "integrationsMcpOfferBody" = "%1$@ はサインインを求めます。サインインはブラウザで行います。その後、ツールは「常に許可」を選ぶまでカードで確認します。";

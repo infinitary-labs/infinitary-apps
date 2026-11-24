@@ -1,10 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { hostEnv } from "../src/core/hostEnv";
 import { findFolderHolders } from "../src/core/placed/folderHolders";
+import { CHROMIUM_TEMP } from "./helpers/browserChromiumTemp";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -15,6 +16,7 @@ import { scratchDir } from "./helpers/scratchDirs";
  */
 const repoRoot = join(__dirname, "..");
 const config = join(__dirname, "fixtures", "temp-leak", "vitest.config.ts");
+const browserConfig = join(__dirname, "fixtures", "temp-leak", "vitest.browser.config.ts");
 
 function runFixture(
   sharedTmp: string,
@@ -170,7 +172,7 @@ describe("the run's private temp root", () => {
             INFINITARY_FIXTURE_PROGRAM: mode === "clean" ? "" : mode,
             INFINITARY_FIXTURE_PID: pidFile,
           },
-          join(__dirname, "fixtures", "temp-leak", "vitest.browser.config.ts"),
+          browserConfig,
         );
         expect(run.status, run.output).toBe(mode === "clean" ? 0 : 1);
         if (mode === "multiple") {
@@ -189,6 +191,49 @@ describe("the run's private temp root", () => {
     },
     120_000,
   );
+
+  // Playwright's Chromium on Linux keeps its shared memory as files in
+  // TMPDIR, each unlinked right after it is made; one is left when a process
+  // ends in between, which the fixture stands in for beside the real ones.
+  it.runIf(process.platform === "linux")(
+    "keeps Chromium's shared memory in its own folder, so a file a Chromium process leaves fails no run",
+    () => {
+      const shared = scratchDir("infinitary-chromium-run-");
+      const record = join(shared, "shared-memory.txt");
+
+      const run = runFixture(shared, { INFINITARY_FIXTURE_CHROMIUM: record }, browserConfig);
+
+      const files = readFileSync(record, "utf8").split("\n").filter(Boolean);
+      expect(files.length).toBeGreaterThan(0);
+      for (const file of files) {
+        expect(basename(dirname(file))).toBe(CHROMIUM_TEMP);
+        expect(basename(dirname(dirname(file)))).toMatch(/^unit-\d+-/);
+      }
+      expect(run.status, run.output).toBe(0);
+      expect(readdirSync(shared)).toEqual(["shared-memory.txt"]);
+    },
+    120_000,
+  );
+
+  it("still fails a browser run that left a directory behind, naming only it", () => {
+    const shared = scratchDir("infinitary-browser-leak-");
+    const chromium: Record<string, string> =
+      process.platform === "linux"
+        ? { INFINITARY_FIXTURE_CHROMIUM: join(shared, "shared-memory.txt") }
+        : {};
+
+    const run = runFixture(
+      shared,
+      { ...chromium, INFINITARY_FIXTURE_LEAK: "infinitary-fixture-stray-" },
+      browserConfig,
+    );
+
+    expect(run.status).toBe(1);
+    expect(run.output).toContain("The unit run left 1 temp entry behind.");
+    expect(run.output).toMatch(/ {2}infinitary-fixture-stray-\w{6}\n/);
+    expect(run.output).not.toContain(".org.chromium.Chromium.");
+    expect(existsSync(join(shared, "infinitary-runs"))).toBe(false);
+  }, 120_000);
 
   it("leaves a non-provider program in a browser profile folder to that folder's owner", () => {
     const shared = scratchDir("infinitary-browser-owner-");

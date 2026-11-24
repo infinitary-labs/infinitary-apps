@@ -1,4 +1,5 @@
 import type { TestProject } from "vitest/node";
+import { closeChromiumTemp, openChromiumTemp } from "./browserChromiumTemp";
 import { leaveRunnerSession } from "./runnerSession";
 import { closeRunTempRoot, leakReport, openRunTempRoot } from "./runTempRoot";
 
@@ -25,6 +26,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   if (process.env[OWNED]) return async () => undefined;
   process.env[OWNED] = "1";
   const run = await openRunTempRoot("unit");
+  openChromiumTemp(run.root);
   return async () => {
     delete process.env[OWNED];
     try {
@@ -33,6 +35,9 @@ export default async function setup(project: TestProject): Promise<() => Promise
       // Ask the actual owner to close it before looking for leftovers: never
       // exempt arbitrary Chromium processes or all of the runner's children.
       await Promise.all(project.vitest.projects.map((p) => p.browser?.provider.close()));
+      // What a Chromium process left in its own folder goes with its browser;
+      // a program still holding a file there is still found below.
+      closeChromiumTemp(run.root);
       const leaked = await closeRunTempRoot(run, 0, BROWSER_ENTRIES);
       const report = leakReport("unit", leaked);
       if (report) throw new Error(report);

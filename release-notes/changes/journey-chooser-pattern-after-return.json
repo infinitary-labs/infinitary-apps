@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-chooser-pattern-after-return",
+      "reason": "Internal: the journey chooser reads a stand-in's pattern after return whole, so the code between two patterns no longer matches empty text and chooses every journey that reads the browser stand-in. Nothing in the app changes."
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import {
   JOURNEY_SELECTION_CAP,
   named,
   ownedHooks,
+  patternsIn,
   requested,
   select,
   selectionCoverage,
@@ -828,6 +829,43 @@ describe("words the core serves that a stand-in reads (INF-1255)", () => {
     const header = repair.sourceDiff.slice(0, repair.sourceDiff.indexOf("@@"));
     const value = `${header}@@ -9653 +9653 @@\n-        return "checked";\n+        return "check_change";\n`;
     expect(chosen({ ...repair, sourceDiff: value })).toEqual(chosen({ ...repair, sourceDiff: "" }));
+  });
+
+  // INF-4652: the browser stand-in's own patterns follow `return`. Misread,
+  // the code between them matched empty text in any served string, so
+  // INF-4645's footer change chose every journey that reads the stand-in.
+  it("reads a pattern after return whole, not the code between two patterns (INF-4652)", () => {
+    const stillRunning = [
+      "function stillRunning(text: string): boolean {",
+      "  const printed = shellOutput(text);",
+      "  return /^running: /m.test(printed) || /^code: BUSY$/m.test(printed);",
+      "}",
+    ].join("\n");
+    expect(patternsIn(stillRunning).map(String)).toEqual(["/^running: /m", "/^code: BUSY$/m"]);
+    const footer = [
+      "diff --git a/src/renderer/src/design/core/TaskFacts.tsx b/src/renderer/src/design/core/TaskFacts.tsx",
+      "--- a/src/renderer/src/design/core/TaskFacts.tsx",
+      "+++ b/src/renderer/src/design/core/TaskFacts.tsx",
+      "@@ -572 +573 @@ function SummaryStrip({ facts }: { facts: TaskFacts }) {",
+      '-            <div className="cell">',
+      '+            <div className="cell change">',
+      "",
+    ].join("\n");
+    const spec = "tests/e2e/task-browser-saved-sign-ins.spec.ts";
+    const files: Record<string, string> = {
+      [spec]: 'import { MOCK_LEAVE_WAITING } from "./browserScript";',
+      "tests/e2e/browserScript.ts": stillRunning,
+    };
+    expect(
+      Object.fromEntries(
+        select({
+          changed: ["src/renderer/src/design/core/TaskFacts.tsx"],
+          sourceDiff: footer,
+          specs: catalog([spec]),
+          read: (file) => files[file],
+        }),
+      ),
+    ).toEqual({});
   });
 });
 

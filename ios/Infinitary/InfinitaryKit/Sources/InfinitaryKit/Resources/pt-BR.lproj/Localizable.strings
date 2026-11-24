@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "%1$@ de %2$@ respondidas";
 "cardAnswersChanged" = "%2$@ · %1$@ alteradas";
 "cardAnswersPicked" = "%1$@ de %2$@ escolhidas";
+"cardAskNoticeAskAgain" = "Perguntar de novo";
+"cardAskNoticeCardRefused" = "Seu imediato tentou responder com um cartão que o app recusou.";
+"cardAskNoticeClosedCard" = "Seu imediato mostrou “%1$@” para ela e depois fechou esse cartão antes de você escolher.";
+"cardAskNoticeClosing" = "Deixe assim se você já tem o que precisa. Perguntar de novo a envia mais uma vez como uma nova mensagem.";
+"cardAskNoticeCrewmateOwns" = "O tripulante que trabalha nisso já tem o cartão dela, então o cartão do seu imediato foi recusado.";
+"cardAskNoticeLeaveIt" = "Deixar assim";
+"cardAskNoticeNothingSeen" = "O app não viu nenhum cartão nem resposta do seu imediato para ela.";
+"cardAskNoticeQuoteLabel" = "Sua mensagem, %1$@";
+"cardAskNoticeTitle" = "Seu imediato pode ter deixado passar sua mensagem";
 "cardAskedAutomation" = "Executado por uma automação";
 "cardAskedChoseOn" = "Você escolheu em “%1$@”";
 "cardAskedFrom" = "De %1$@";

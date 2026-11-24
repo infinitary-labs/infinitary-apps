@@ -326,6 +326,15 @@ public enum PhoneMessages {
     public static func `cardAnswersDefaults`(`count`: Int, `counted`: String) -> String { PhoneWords.format("cardAnswersDefaults", [`count`, `counted`]) }
     public static func `cardAnswersPicked`(`answered`: String, `total`: String) -> String { PhoneWords.format("cardAnswersPicked", [`answered`, `total`]) }
     public static func `cardAnswersToAnswer`(`count`: Int) -> String { PhoneWords.format("cardAnswersToAnswer", [`count`]) }
+    public static func `cardAskNoticeAskAgain`() -> String { PhoneWords.format("cardAskNoticeAskAgain", []) }
+    public static func `cardAskNoticeCardRefused`() -> String { PhoneWords.format("cardAskNoticeCardRefused", []) }
+    public static func `cardAskNoticeClosedCard`(`title`: String) -> String { PhoneWords.format("cardAskNoticeClosedCard", [`title`]) }
+    public static func `cardAskNoticeClosing`() -> String { PhoneWords.format("cardAskNoticeClosing", []) }
+    public static func `cardAskNoticeCrewmateOwns`() -> String { PhoneWords.format("cardAskNoticeCrewmateOwns", []) }
+    public static func `cardAskNoticeLeaveIt`() -> String { PhoneWords.format("cardAskNoticeLeaveIt", []) }
+    public static func `cardAskNoticeNothingSeen`() -> String { PhoneWords.format("cardAskNoticeNothingSeen", []) }
+    public static func `cardAskNoticeQuoteLabel`(`time`: String) -> String { PhoneWords.format("cardAskNoticeQuoteLabel", [`time`]) }
+    public static func `cardAskNoticeTitle`() -> String { PhoneWords.format("cardAskNoticeTitle", []) }
     public static func `cardAskedAutomation`() -> String { PhoneWords.format("cardAskedAutomation", []) }
     public static func `cardAskedChoseOn`(`card`: String) -> String { PhoneWords.format("cardAskedChoseOn", [`card`]) }
     public static func `cardAskedFrom`(`key`: String) -> String { PhoneWords.format("cardAskedFrom", [`key`]) }
@@ -4627,6 +4636,15 @@ extension PhoneWords {
         "cardAnswersDefaults": ["count", "counted"],
         "cardAnswersPicked": ["answered", "total"],
         "cardAnswersToAnswer": ["count"],
+        "cardAskNoticeAskAgain": [],
+        "cardAskNoticeCardRefused": [],
+        "cardAskNoticeClosedCard": ["title"],
+        "cardAskNoticeClosing": [],
+        "cardAskNoticeCrewmateOwns": [],
+        "cardAskNoticeLeaveIt": [],
+        "cardAskNoticeNothingSeen": [],
+        "cardAskNoticeQuoteLabel": ["time"],
+        "cardAskNoticeTitle": [],
         "cardAskedAutomation": [],
         "cardAskedChoseOn": ["card"],
         "cardAskedFrom": ["key"],

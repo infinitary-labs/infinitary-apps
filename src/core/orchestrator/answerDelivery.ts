@@ -1,4 +1,5 @@
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { cardWordsMark, englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import { cutText } from "@shared/textCut";
 import { escapeCardText } from "./cardText";
 
@@ -182,7 +183,20 @@ export const ANSWER_ONLY_REFUSAL =
 export const CREWMATE_ANSWER_ASK =
   "Report refused once: your task is the last work for the captain's message and no card of yours answers it. Show the card that answers it with emit_card and answering true - or revise your open card under the same id with answering true - then report. A note the captain closed stays closed: if they closed the note that answers it, or you cannot answer it, report finished again saying so, and the first mate answers it.";
 
-export const ANSWER_NOTICE_TITLE = "Your first mate has not answered your message";
+/**
+ * The notice's own words as saved facts (docs/i18n.md, "Saved facts"): the
+ * card keeps their English and carries the facts (`cardWordsMark`,
+ * `saidMark`), so each window and the phone word it in their own language.
+ * The title says "may have": the app reads only typed facts, never the
+ * captain's words, so an answer they took from a card's thread can escape it.
+ */
+export const NOTICE_SAID = {
+  title: said("cardAskNoticeTitle"),
+  askAgain: said("cardAskNoticeAskAgain"),
+  leaveIt: said("cardAskNoticeLeaveIt"),
+};
+
+export const ANSWER_NOTICE_TITLE = englishOf(NOTICE_SAID.title);
 
 const NOTICE_CARD_PREFIX = "card-ask-";
 
@@ -204,43 +218,81 @@ export function excerptOf(text: string): string {
   return flat.length <= EXCERPT_CHARS ? flat : `${cutText(flat, EXCERPT_CHARS - 1)}…`;
 }
 
-const REASON_SENTENCE: Record<DeliveryRefusal, string> = {
-  "crewmate-owns":
-    "The crewmate working on it already owns the card for it, so your first mate's card was refused.",
-  "card-refused": "Your first mate tried to answer with a card the app refused.",
+const REFUSAL_SAID: Record<DeliveryRefusal, Said> = {
+  "crewmate-owns": said("cardAskNoticeCrewmateOwns"),
+  "card-refused": said("cardAskNoticeCardRefused"),
 };
+
+/** What the app saw of the message, beyond its entries, when the notice goes up. */
+export type NoticeSeen = {
+  /** When the captain sent it. */
+  at: number;
+  /** The title of the newest card shown for it, when its author closed that card unchosen. */
+  withdrawnCard?: string;
+};
+
+/** The newest card the first mate showed for the message, by its entries. */
+export function shownCardOf(entries: readonly DeliveryEntry[]): string | undefined {
+  return entries.findLast(
+    (entry) => entry.outcome === "action" && entry.kind === "card" && entry.ref !== undefined,
+  )?.ref;
+}
+
+/**
+ * The one reason line, from typed facts only: a card shown for the message
+ * that its author closed before the captain chose, else a typed refusal,
+ * else no card or reply at all. A message that had cards or replies which
+ * none of these name gets no reason line rather than a guess.
+ */
+function reasonOf(entries: readonly DeliveryEntry[], seen: NoticeSeen): Said | undefined {
+  if (seen.withdrawnCard !== undefined) {
+    return said("cardAskNoticeClosedCard", { title: seen.withdrawnCard });
+  }
+  const refusal = refusalOf(entries);
+  if (refusal?.outcome === "refused") return REFUSAL_SAID[refusal.reason];
+  const answered = entries.some(
+    (entry) => entry.outcome === "action" && (entry.kind === "card" || entry.kind === "reply"),
+  );
+  return answered ? undefined : said("cardAskNoticeNothingSeen");
+}
 
 /**
  * The notice for a message that still had no action after its retry: the
- * captain's own words, escaped, a typed reason when one is known, and the two
- * ways out. It never quotes closing words, refusal text or an error.
+ * captain's own words, escaped, in a lit quote with when they sent it, a
+ * typed reason when one is known, and the two ways out. It never quotes
+ * closing words, refusal text or an error.
  */
 export function noticeCard(
   askId: string,
   text: string,
   entries: readonly DeliveryEntry[],
+  seen: NoticeSeen,
 ): Pick<Card, "id" | "title" | "meta" | "body" | "actions"> {
-  const refusal = refusalOf(entries);
-  const reason = refusal?.outcome === "refused" ? REASON_SENTENCE[refusal.reason] : undefined;
+  const reason = reasonOf(entries, seen);
+  const label = saidMark(
+    said("cardAskNoticeQuoteLabel", { time: { time: seen.at } }),
+    "span",
+    'class="inf-quote-k"',
+  );
   return {
     id: noticeCardId(askId),
     title: ANSWER_NOTICE_TITLE,
     meta: FIRSTMATE_CARD_META,
     body: [
-      `<p>Nothing came of this message, so you have no answer yet:</p>`,
-      `<blockquote>${escapeCardText(excerptOf(text))}</blockquote>`,
-      ...(reason ? [`<p>${reason}</p>`] : []),
-      `<p>Ask again sends it once more as a new message. Leave it keeps things as they are.</p>`,
+      `<blockquote class="inf-lit">${label}<p>${escapeCardText(excerptOf(text))}</p></blockquote>`,
+      ...(reason ? [saidMark(reason, "p")] : []),
+      saidMark(said("cardAskNoticeClosing"), "p"),
+      cardWordsMark([NOTICE_SAID.title, NOTICE_SAID.askAgain, NOTICE_SAID.leaveIt]),
     ].join(""),
     actions: [
       {
         id: "ask-again",
-        label: "Ask again",
+        label: englishOf(NOTICE_SAID.askAgain),
         variant: "primary",
         default: true,
         effect: { kind: "host", op: "ask-again", arg: askId },
       },
-      { id: "leave-it", label: "Leave it" },
+      { id: "leave-it", label: englishOf(NOTICE_SAID.leaveIt) },
     ],
   };
 }

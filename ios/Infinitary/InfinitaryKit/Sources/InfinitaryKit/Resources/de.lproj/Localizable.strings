@@ -303,6 +303,15 @@
 "cardAnswersAnswered" = "%1$@ von %2$@ beantwortet";
 "cardAnswersChanged" = "%2$@ · %1$@ geändert";
 "cardAnswersPicked" = "%1$@ von %2$@ gewählt";
+"cardAskNoticeAskAgain" = "Erneut fragen";
+"cardAskNoticeCardRefused" = "Dein erster Offizier wollte mit einer Karte antworten, die die App abgelehnt hat.";
+"cardAskNoticeClosedCard" = "Dein erster Offizier hat dir dafür „%1$@“ gezeigt und diese Karte dann geschlossen, bevor du gewählt hast.";
+"cardAskNoticeClosing" = "Lass sie so, wenn du schon hast, was du brauchst. Erneut fragen schickt sie noch einmal als neue Nachricht.";
+"cardAskNoticeCrewmateOwns" = "Das Crewmitglied, das daran arbeitet, hat schon die Karte dafür, deshalb wurde die Karte deines ersten Offiziers abgelehnt.";
+"cardAskNoticeLeaveIt" = "So lassen";
+"cardAskNoticeNothingSeen" = "Die App hat dafür keine Karte und keine Antwort deines ersten Offiziers gesehen.";
+"cardAskNoticeQuoteLabel" = "Deine Nachricht, %1$@";
+"cardAskNoticeTitle" = "Dein erster Offizier hat deine Nachricht vielleicht übersehen";
 "cardAskedAutomation" = "Von einer Automatisierung ausgelöst";
 "cardAskedChoseOn" = "Du hast auf „%1$@“ gewählt";
 "cardAskedFrom" = "Von %1$@";

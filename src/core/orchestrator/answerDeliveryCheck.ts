@@ -1,4 +1,4 @@
-import { type Card, onStage } from "@shared/cards";
+import { type Card, onStage, type PastCard } from "@shared/cards";
 import { type AskRecord, askReceipt } from "../storage/askStore";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
@@ -11,6 +11,7 @@ import {
   noticeCard,
   noticeCardId,
   refusalOf,
+  shownCardOf,
 } from "./answerDelivery";
 import type { AskEnding, AskThread } from "./askEnding";
 import { answerMissingWake } from "./captainWakes";
@@ -32,6 +33,11 @@ export type AnswerDeliveryHost = {
   withdrawNotice?: (cardId: string) => void;
   /** The title of a card the captain replied under, when it is still on the stack. */
   cardTitle: (cardId: string) => string | undefined;
+  /**
+   * The title of a closed card when its own author withdrew it before the
+   * captain chose, which the notice names as its reason. Absent, it names none.
+   */
+  withdrawnTitle?: (cardId: string) => string | undefined;
   ending: AskEnding;
   /**
    * Judge nothing: no verdict, no retry, no notice. The replay harness and
@@ -41,6 +47,20 @@ export type AnswerDeliveryHost = {
    */
   observe?: boolean;
 };
+
+/** The card reads the check takes from the card stack: open titles and closed cards' endings. */
+export function cardLookups(cards: {
+  snapshot: () => readonly Pick<Card, "id" | "title">[];
+  past: (cardId: string) => PastCard | undefined;
+}): Pick<AnswerDeliveryHost, "cardTitle" | "withdrawnTitle"> {
+  return {
+    cardTitle: (cardId) => cards.snapshot().find((card) => card.id === cardId)?.title,
+    withdrawnTitle: (cardId) => {
+      const past = cards.past(cardId);
+      return past?.ending.how === "author-withdrawal" ? past.title : undefined;
+    },
+  };
+}
 
 export type DeliveryTurnEnd = {
   /** The messages the turn opened or took in, still open when it ended. */
@@ -399,7 +419,15 @@ export class AnswerDeliveryCheck {
   private notify(id: string): void {
     const ask = this.host.tasks.capture.getAsk(id);
     if (!ask || ask.delivery === "unresolved") return;
-    this.host.raiseNotice(noticeCard(id, askReceipt(ask), ask.deliveryFacts.entries));
+    const entries = ask.deliveryFacts.entries;
+    const shown = shownCardOf(entries);
+    const withdrawnCard = shown ? this.host.withdrawnTitle?.(shown) : undefined;
+    this.host.raiseNotice(
+      noticeCard(id, askReceipt(ask), entries, {
+        at: ask.at,
+        ...(withdrawnCard !== undefined ? { withdrawnCard } : {}),
+      }),
+    );
     this.host.tasks.capture.markAskUnresolved(id, noticeCardId(id));
   }
 

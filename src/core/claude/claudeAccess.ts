@@ -24,8 +24,9 @@ import { loginPathCapture } from "../hostEnv";
  * every session whatever `settingSources` says. Of the person's own
  * settings only these two keys, and the custom headers a gateway asks for
  * (`ANTHROPIC_CUSTOM_HEADERS`, such as a team id), reach a session as the
- * app's own flag settings (`accessSettings`); everything else in that file
- * stays out, as it always has. The headers may also come from the person's
+ * app's own flag settings (`accessSettings`). The only other part of that
+ * file read is a company's usage reporting setup, which the app's receiver
+ * passes on (`claudeReporting.ts`); everything else stays out. The headers may also come from the person's
  * login shell, where the settings file's own win, as they do in the client.
  */
 

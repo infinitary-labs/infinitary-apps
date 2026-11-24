@@ -59,7 +59,7 @@ The client keeps its five-second default log batching; the app makes no allowanc
 With no company setup ("A company's Claude Code setup" below) it disables content, metric and trace exports for this app-owned path.
 It projects only required request-cost fields, and never persists the raw export, prompts, identity metadata or endpoint secret.
 The last attachment removes its route and stops the receiver; a failed startup or malformed export never fails the model prompt.
-A reporting choice in the host environment other than a company setup's keys, a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
+A reporting choice in the host environment other than a company setup's keys, a setup key the receiver cannot carry (a certificate, client key or insecure switch, or an exporter other than OTLP), a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
 The policy read loads no personal settings or credential.
 
 A provider request ID must join a completed SDK-streamed call to the client's price; model IDs use the existing canonical model-name owner.
@@ -88,16 +88,16 @@ Infinitary reads that setup and passes Claude's own records on to the company's 
 - **Who sends.**
   Claude's client reports only to the app's local receiver: the setup's keys leave the client's environment, and the receiver's take their place.
   With a setup that exports logs or metrics over OTLP, the receiver also takes the client's metrics, each signal in the encoding the collector takes (JSON for `http/json`, protobuf for `http/protobuf` and `grpc`).
-  It prices each call from the logs as before, so cost limits stay live, and posts each batch's bytes unchanged to the collector, over OTLP/HTTP or as one gRPC call; the collector's answer goes back to the client's exporter, so the client's own retries apply and a repeated batch is priced once.
+  It prices each call from the logs as before, so cost limits stay live (a batch over 1 MiB is passed on unpriced, up to the collector's default 20 MiB), and posts each batch's bytes unchanged to the collector, over OTLP/HTTP or as one gRPC call; the collector's answer goes back to the client's exporter, so the client's own retries apply and a repeated batch is priced once.
   The setup's other keys, such as `OTEL_RESOURCE_ATTRIBUTES`, an export interval or the switches that put prompts in the logs, reach the client unchanged, so the company receives what Claude's client would have sent; traces stay off.
 - **Headers.**
-  The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are refused, and a failed command sends without its headers and leaves one log line without its output.
+  The setup's static headers and what its header command prints (run with the session's environment, at most once each 29 minutes, as Claude Code runs it) ride each post; they are held in memory only, redirects are refused, and a failed command sends without its headers, leaves one log line without its output and runs again after 10 seconds.
 - **A managed setup.**
   An administrator's managed setup reaches Claude's client directly and cannot be overridden; there the receiver stays off as before and Infinitary passes nothing on, so nothing is counted twice.
 - **What a person sees.**
-  Usage shows one line naming the collector's host while a setup is found and passed on to (`usage.reporting`, `claudeReportingHost`).
+  Usage shows one line naming the collector's host while the first mate's computer has a setup it passes on to (`usage.reporting`, `claudeReportingHost`); each computer that runs work follows its own setup, which the line says.
 
-`claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command, and with a managed setup that leaves the collector empty.
+`claudeReporting.integration.test.ts` holds this on the client the product would run, boxed, with stand-in collectors over OTLP/HTTP JSON, protobuf and gRPC and a header command: the collector gets the client's own batches byte for byte, the token and cost counters among them, the person's resource attributes on logs and metrics, prompts only where the person's `OTEL_LOG_USER_PROMPTS` asks, and a managed setup leaves the collector empty.
 
 ## Daily totals
 

@@ -3,7 +3,7 @@ import { connect } from "node:http2";
 import type { ResolvedSettings } from "@anthropic-ai/claude-agent-sdk";
 import { loginPathCapture } from "../hostEnv";
 import { type ResolveClaudeSettings, resolveSettings } from "./claudeAccess";
-import type { ClaudeReportForward } from "./claudeCostReports";
+import { type ClaudeReportForward, hasClaudeReporting } from "./claudeCostReports";
 
 /**
  * A company's Claude Code reporting setup kept where Claude Code's guide puts
@@ -53,6 +53,33 @@ export function isReportingKey(key: string): boolean {
 /** The launch environment without the setup's keys: the client gets the receiver's instead. */
 export function withoutReportingKeys(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !isReportingKey(key)));
+}
+
+/**
+ * Launch keys the receiver's forward cannot carry - a certificate, a client
+ * key or an insecure switch, and an exporter other than OTLP, such as
+ * Prometheus or the console - which only the client can honor.
+ */
+const UNCARRIED_KEY =
+  /^OTEL_EXPORTER_OTLP_(?:(?:LOGS|METRICS|TRACES)_)?(?:CERTIFICATE|CLIENT_KEY|CLIENT_CERTIFICATE|INSECURE)$/;
+
+function uncarried(env: NodeJS.ProcessEnv): boolean {
+  return Object.entries(env).some(
+    ([key, value]) =>
+      value !== undefined &&
+      (UNCARRIED_KEY.test(key) ||
+        ((key === "OTEL_LOGS_EXPORTER" || key === "OTEL_METRICS_EXPORTER") &&
+          value.split(",").some((name) => !["", "otlp", "none"].includes(name.trim())))),
+  );
+}
+
+/**
+ * Whether the receiver leaves a session's reporting to the client, as it
+ * always has: a reporting choice in the launch environment other than a
+ * setup the receiver passes on, or one with a key it cannot carry.
+ */
+export function receiverStepsAside(env: NodeJS.ProcessEnv): boolean {
+  return hasClaudeReporting(withoutReportingKeys(env)) || uncarried(env);
 }
 
 /** The keys that say where and how to send; the receiver sets these for the client. */
@@ -211,14 +238,20 @@ export async function readClaudeCompanyReporting(
 /** Claude Code's own refresh period for `otelHeadersHelper`: 29 minutes. */
 export const HEADERS_HELPER_REFRESH_MS = 29 * 60 * 1000;
 const HEADERS_HELPER_TIMEOUT_MS = 10_000;
+/** How soon a header command that failed runs again: a batch sent without its token is lost. */
+const HEADERS_HELPER_RETRY_MS = 10_000;
 
-const helperRuns = new Map<string, { at: number; headers: Promise<Record<string, string>> }>();
+const helperRuns = new Map<
+  string,
+  { at: number; headers: Promise<Record<string, string> | undefined> }
+>();
 
 /**
  * The setup's headers for one signal: its static ones and what its header
  * command prints, run as Claude's client would run it, at most once per
  * refresh period per command. A command that fails or prints something else
- * than a JSON object adds nothing, and its output never reaches a log.
+ * than a JSON object adds nothing and runs again after a short wait, and its
+ * output never reaches a log.
  */
 export async function companyHeaders(
   setup: ClaudeCompanyReporting,
@@ -235,14 +268,17 @@ export async function companyHeaders(
     run = { at: now(), headers: runHeadersHelper(command, env, note) };
     helperRuns.set(command, run);
   }
-  return { ...fixed, ...(await run.headers) };
+  const headers = await run.headers;
+  if (!headers)
+    run.at = Math.min(run.at, now() - HEADERS_HELPER_REFRESH_MS + HEADERS_HELPER_RETRY_MS);
+  return { ...fixed, ...headers };
 }
 
 function runHeadersHelper(
   command: string,
   env: NodeJS.ProcessEnv,
   note: (line: string) => void,
-): Promise<Record<string, string>> {
+): Promise<Record<string, string> | undefined> {
   return new Promise((resolve) => {
     exec(
       command,
@@ -262,7 +298,7 @@ function runHeadersHelper(
         } catch {
           // i18n-exempt: a log line, never shown to a person
           note("the reporting header command did not print headers; sending without them");
-          resolve({});
+          resolve(undefined);
         }
       },
     );

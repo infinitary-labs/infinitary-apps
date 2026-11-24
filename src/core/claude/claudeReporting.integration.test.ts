@@ -18,7 +18,11 @@ import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
-import { resolvePlacedClaudePolicyFixture } from "./claudeAccess";
+import {
+  accessFlagSettings,
+  readClaudeAccess,
+  resolvePlacedClaudePolicyFixture,
+} from "./claudeAccess";
 import type { ClaudeCallCost } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { claudeCostReportingAllowed } from "./claudeCostPolicy";
@@ -49,6 +53,8 @@ vi.setConfig({ testTimeout: 30_000 });
 const MODEL = "claude-haiku-4-5";
 const COMPANY_TOKEN = "company-token-7f3a";
 const HELPER_TOKEN = "helper-token-91c2";
+const EMAIL = "dev@example.com";
+const PROMPT = "Say aye.";
 
 let api: StubApi;
 
@@ -180,6 +186,8 @@ async function turnWithSettings(
   });
   const notes: string[] = [];
   const priced: ClaudeCallCost[] = [];
+  // What Claude's client sent the receiver, to set beside what the collector got.
+  const fromClient: { signal: string; body: string }[] = [];
   const receiver = new ClaudeCostReports();
   const launch = { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub };
   const factory = createClaudeSessionFactory({
@@ -192,6 +200,9 @@ async function turnWithSettings(
       stores.push(store);
       return store;
     },
+    // The person's own Claude Code access keys, read from the same settings file as production does.
+    accessSettings: async () =>
+      accessFlagSettings(await readClaudeAccess(undefined, () => undefined)),
     costReportingAllowed: async () =>
       !options.managed ||
       claudeCostReportingAllowed(resolvePlacedClaudePolicyFixture(managedPolicy(home, env))),
@@ -204,7 +215,13 @@ async function turnWithSettings(
             priced.push(cost);
             report(cost);
           },
-          forward,
+          forward && {
+            ...forward,
+            send: (signal, body, contentType) => {
+              fromClient.push({ signal, body: body.toString("base64") });
+              return forward.send(signal, body, contentType);
+            },
+          },
         ),
     },
   });
@@ -219,11 +236,11 @@ async function turnWithSettings(
     { backend: "claude", accountId: "acct_claude_reporting" },
   );
   const session = await factory.open(spec);
-  await session.prompt("Say aye.");
+  await session.prompt(PROMPT);
   // The client flushes its exporters as it exits.
   session.dispose();
   await session.closed();
-  return { notes, priced };
+  return { notes, priced, fromClient };
 }
 
 /** The company's setup as Claude Code's guide writes it, with fast exports for the case. */
@@ -237,7 +254,7 @@ function setup(protocol: string, endpoint: string): Record<string, string> {
     OTEL_EXPORTER_OTLP_HEADERS: `Authorization=Bearer ${COMPANY_TOKEN}`,
     OTEL_METRIC_EXPORT_INTERVAL: "1000",
     OTEL_LOGS_EXPORT_INTERVAL: "1000",
-    OTEL_RESOURCE_ATTRIBUTES: "department=engineering,team.id=platform",
+    OTEL_RESOURCE_ATTRIBUTES: `department=engineering,user.email=${EMAIL}`,
   };
 }
 
@@ -264,11 +281,42 @@ function requestIds(logs: unknown): string[] {
 describe("a company's Claude Code setup in the person's settings file", () => {
   it("receives Claude's own logs and metrics through Infinitary over OTLP/HTTP JSON, while each call is still priced live", async () => {
     const collector = await httpCollector();
-    const { notes, priced } = await turnWithSettings(setup("http/json", collector.url), {
-      helper: true,
-    });
+    const from = api.requests.length;
+    const { notes, priced, fromClient } = await turnWithSettings(
+      {
+        ...setup("http/json", collector.url),
+        // The person's own choices: prompts in the records, and the gateway's custom header.
+        OTEL_LOG_USER_PROMPTS: "1",
+        ANTHROPIC_CUSTOM_HEADERS: "X-Team-Id: platform",
+      },
+      { helper: true },
+    );
     const logs = collector.received.filter((r) => r.path === "/v1/logs");
     const metrics = collector.received.filter((r) => r.path === "/v1/metrics");
+    expect(
+      collector.received.map((r) => r.body.toString("base64")),
+      "the collector got the client's own batches, byte for byte",
+    ).toEqual(fromClient.map((sent) => sent.body));
+    const metricText = metrics.map((r) => r.body.toString("utf8")).join("");
+    expect(metricText, "the token counter reached the company").toContain(
+      "claude_code.token.usage",
+    );
+    expect(metricText, "the cost counter reached the company").toContain("claude_code.cost.usage");
+    for (const request of [...logs, ...metrics])
+      expect(
+        request.body.toString("utf8"),
+        "the person's resource attributes ride every batch",
+      ).toContain(EMAIL);
+    expect(
+      logs.map((r) => r.body.toString("utf8")).join(""),
+      "the person's OTEL_LOG_USER_PROMPTS put the prompt in the records",
+    ).toContain(PROMPT);
+    const sent = api.requests.slice(from);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(
+      sent.map((request) => request.headers["x-team-id"]),
+      "the gateway's custom header reached the model API",
+    ).toEqual(sent.map(() => "platform"));
     const ids = logs.flatMap((r) => requestIds(JSON.parse(r.body.toString("utf8"))));
     expect(priced.length, "the local receiver priced the turn's call").toBeGreaterThan(0);
     expect(ids.sort(), "every priced call reached the company once").toEqual(
@@ -305,9 +353,15 @@ describe("a company's Claude Code setup in the person's settings file", () => {
 
   it("receives the same records as protobuf over OTLP/HTTP", async () => {
     const collector = await httpCollector();
-    const { priced } = await turnWithSettings(setup("http/protobuf", collector.url));
+    const { priced, fromClient } = await turnWithSettings(setup("http/protobuf", collector.url));
     const logs = collector.received.filter((r) => r.path === "/v1/logs");
     expect(logs[0]?.headers["content-type"]).toBe("application/x-protobuf");
+    expect(collector.received.map((r) => r.body.toString("base64"))).toEqual(
+      fromClient.map((sent) => sent.body),
+    );
+    const decoded = JSON.stringify(logs.map((r) => decodeLogsProtobuf(r.body)));
+    expect(decoded, "the email rides the protobuf logs too").toContain(EMAIL);
+    expect(decoded, "with OTEL_LOG_USER_PROMPTS unset the prompt stays out").not.toContain(PROMPT);
     const ids = logs.flatMap((r) => requestIds(decodeLogsProtobuf(r.body)));
     expect(priced.length).toBeGreaterThan(0);
     expect(ids.sort()).toEqual(priced.map((cost) => cost.requestId).sort());

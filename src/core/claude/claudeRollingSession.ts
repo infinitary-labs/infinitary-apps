@@ -30,7 +30,7 @@ import { assertClaudeWorkSettings } from "./claudeAccess";
 import { ClaudeCallUsage } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { ClaudeClientExit } from "./claudeClientProcess";
-import { type ClaudeCostSubscription, hasClaudeReporting } from "./claudeCostReports";
+import type { ClaudeCostSubscription } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
   type ClaudeTurnFailure,
@@ -49,7 +49,7 @@ import {
   refuseMissingClient,
   userMessage,
 } from "./claudeQueryCore";
-import { companyForward, withoutReportingKeys } from "./claudeReporting";
+import { companyForward, receiverStepsAside, withoutReportingKeys } from "./claudeReporting";
 import { ClaudeSafeStop } from "./claudeSafeStop";
 import { CLAUDE_STEER_PRIORITY, claudeSessionOptions } from "./claudeSessionOptions";
 import { ClaudeSessionRecord, type Pushed, sha256 } from "./claudeSessionRecord";
@@ -610,7 +610,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       // receiver passes records on to (`claudeReporting.ts`), not a reason
       // to step aside; any other reporting choice there still is.
       if (
-        !hasClaudeReporting(withoutReportingKeys(env)) &&
+        !receiverStepsAside(env) &&
         (await this.deps.costReportingAllowed?.().catch(() => false))
       ) {
         const company = await this.deps.companyReporting?.(env).catch(() => undefined);

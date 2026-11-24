@@ -354,7 +354,8 @@ The person's own tier is their user settings file; a project's settings stay unr
 Infinitary never runs the command and never sees what it prints: the client does both.
 
 The organization's tier needs nothing from the app, because the client reads it in every session whatever `settingSources` says.
-Of the person's own settings only the token command and the address reach a session, as the app's own flag settings (`accessSettings` on the session deps, laid under the app's other flag settings), read again each time a client starts; everything else in that file stays out, and `settingSources` stays empty.
+Of the person's own settings only the token command and the address reach a session, as the app's own flag settings (`accessSettings` on the session deps, laid under the app's other flag settings), read again each time a client starts, and `settingSources` stays empty.
+The only other part of that file read is a company's usage reporting setup: its `env` reporting keys and its `otelHeadersHelper`, which the app runs itself and passes on through its receiver (`docs/usage.md`, "A company's Claude Code setup"); everything else in that file stays out.
 The organization's tier ranks above flag settings in the client, so where it sets either key, its own wins.
 An address alone, with no token command, also reaches sessions, as it reaches Claude Code.
 So do the custom headers a gateway asks for (`env.ANTHROPIC_CUSTOM_HEADERS`, such as a team id), from the person's settings file or, where it sets none, their login shell, whose one-time ask (`src/core/userBin.ts`) prints that key beside the reporting keys and nothing else; `claudeAccess.integration.test.ts` holds that the header reaches the gateway from each.

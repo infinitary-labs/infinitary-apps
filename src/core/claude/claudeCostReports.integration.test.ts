@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ClaudeCallCost } from "./claudeCallUsage";
-import { CLAUDE_COST_REPORT_BODY_MAX, ClaudeCostReports } from "./claudeCostReports";
+import {
+  CLAUDE_COST_REPORT_BODY_MAX,
+  ClaudeCostReports,
+  type ClaudeReportForward,
+} from "./claudeCostReports";
 
 // Approved local-cost direction: actual OTLP/HTTP envelope and request values
 // observed from the boxed client, with identity and content added to verify
@@ -142,6 +146,35 @@ describe("the approved private same-computer cost receiver", () => {
       expect(seen).toHaveLength(1);
     } finally {
       next.close();
+    }
+  });
+
+  // INF-6616's review: a batch past the pricing bound still reaches the
+  // company's collector, since the client never resends a refused one.
+  it("passes a batch over the pricing bound on to the company's collector, unpriced", async () => {
+    const reports = new ClaudeCostReports();
+    const seen: ClaudeCallCost[] = [];
+    const sent: Buffer[] = [];
+    const forward: ClaudeReportForward = {
+      signals: { logs: { protocol: "http/json" } },
+      clientEnv: {},
+      send: async (_signal, body) => {
+        sent.push(body);
+        return { status: 200, body: Buffer.from("{}"), contentType: "application/json" };
+      },
+    };
+    const subscription = await reports.subscribe("session", (cost) => seen.push(cost), forward);
+    const endpoint = subscription.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT as string;
+    try {
+      const large = batch("session", { prompt: "x".repeat(CLAUDE_COST_REPORT_BODY_MAX) });
+      expect((await post(endpoint, large)).status).toBe(200);
+      expect(sent.map((body) => body.toString("utf8"))).toEqual([JSON.stringify(large)]);
+      expect(seen).toEqual([]);
+      await post(endpoint, batch("session"));
+      expect(seen).toHaveLength(1);
+      expect(sent).toHaveLength(2);
+    } finally {
+      subscription.close();
     }
   });
 });

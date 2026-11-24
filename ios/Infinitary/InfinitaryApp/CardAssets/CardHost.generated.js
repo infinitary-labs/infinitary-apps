@@ -93132,29 +93132,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const host = input2.host;
     switch (currentLanguage()) {
       case "ar":
-        return `يُبلَّغ عن عمل Claude أيضًا إلى ${host}، كما تطلب إعدادات Claude Code لديك.`;
+        return `يُبلَّغ عن عمل Claude على حاسوب نائب القبطان أيضًا إلى ${host}، كما تطلب إعدادات Claude Code عليه. تتبع الحواسيب الأخرى إعداداتها الخاصة.`;
       case "de":
-        return `Claude-Arbeit wird außerdem an ${host} gemeldet, wie es deine Claude-Code-Einstellungen verlangen.`;
+        return `Claude-Arbeit auf dem Computer deines ersten Offiziers wird außerdem an ${host} gemeldet, wie es dessen Claude-Code-Einstellungen verlangen. Andere Computer folgen ihren eigenen Einstellungen.`;
       case "es":
-        return `El trabajo de Claude también se informa a ${host}, como piden tus ajustes de Claude Code.`;
+        return `El trabajo de Claude en la computadora de tu primer oficial también se informa a ${host}, como piden sus ajustes de Claude Code. Las demás computadoras siguen sus propios ajustes.`;
       case "fr":
-        return `Le travail de Claude est aussi signalé à ${host}, comme le demandent vos réglages Claude Code.`;
+        return `Le travail de Claude sur l’ordinateur de votre second est aussi signalé à ${host}, comme le demandent ses réglages Claude Code. Les autres ordinateurs suivent leurs propres réglages.`;
       case "ja":
-        return `Claude Code の設定に従い、Claude の作業は ${host} にも報告されます。`;
+        return `一等航海士のコンピューターでの Claude の作業は、その Claude Code の設定に従い ${host} にも報告されます。ほかのコンピューターはそれぞれの設定に従います。`;
       case "ko":
-        return `Claude Code 설정에 따라 Claude 작업은 ${host}에도 보고됩니다.`;
+        return `일등항해사의 컴퓨터에서 하는 Claude 작업은 그 컴퓨터의 Claude Code 설정에 따라 ${host}에도 보고됩니다. 다른 컴퓨터는 각자의 설정을 따릅니다.`;
       case "pt-BR":
-        return `O trabalho do Claude também é informado a ${host}, como pedem seus ajustes do Claude Code.`;
+        return `O trabalho do Claude no computador do seu imediato também é informado a ${host}, como pedem os ajustes do Claude Code dele. Os outros computadores seguem os próprios ajustes.`;
       case "zh-Hans":
-        return `按照你的 Claude Code 设置，Claude 的工作也会报告给 ${host}。`;
+        return `按照你大副电脑上的 Claude Code 设置，Claude 在那台电脑上的工作也会报告给 ${host}。其他电脑按各自的设置。`;
       case "zh-Hant":
-        return `依照你的 Claude Code 設定，Claude 的工作也會回報給 ${host}。`;
+        return `依照你大副電腦上的 Claude Code 設定，Claude 在那台電腦上的工作也會回報給 ${host}。其他電腦依各自的設定。`;
       case "en-XA":
-        return `[Çļáûðé ŵöŕķ îš áļšö ŕéþöŕţéð ţö ${host}, áš ýöûŕ Çļáûðé Çöðé šéţţîñĝš ášķ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Çļáûðé ŵöŕķ öñ ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ îš áļšö ŕéþöŕţéð ţö ${host}, áš îţš Çļáûðé Çöðé šéţţîñĝš ášķ. Öţĥéŕ çöɱþûţéŕš ƒöļļöŵ ţĥéîŕ öŵñ šéţţîñĝš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Claude work is also reported to ‬${host}‮, as your Claude Code settings ask.‬`;
+        return `‮Claude work on your first mate’s computer is also reported to ‬${host}‮, as its Claude Code settings ask. Other computers follow their own settings.‬`;
     }
-    return `Claude work is also reported to ${host}, as your Claude Code settings ask.`;
+    return `Claude work on your first mate’s computer is also reported to ${host}, as its Claude Code settings ask. Other computers follow their own settings.`;
   }
   function settingsUsageScopeAll() {
     switch (currentLanguage()) {

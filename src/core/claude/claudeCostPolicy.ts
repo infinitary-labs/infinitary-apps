@@ -2,7 +2,7 @@ import type { UsageReporting } from "@shared/usage";
 import type { ResolveClaudeSettings } from "./claudeAccess";
 import { hasClaudeReporting } from "./claudeCostReports";
 import type { ClaudeSessionDeps } from "./claudeQueryCore";
-import { readClaudeCompanyReporting, withoutReportingKeys } from "./claudeReporting";
+import { readClaudeCompanyReporting, receiverStepsAside } from "./claudeReporting";
 
 /**
  * The approved receiver must not overwrite an organization's reporting or
@@ -48,10 +48,7 @@ export async function claudeReportingHost(
   env: NodeJS.ProcessEnv,
   deps: ReturnType<typeof claudeReportingDeps> = claudeReportingDeps(),
 ): Promise<UsageReporting> {
-  if (
-    hasClaudeReporting(withoutReportingKeys(env)) ||
-    !(await deps.costReportingAllowed?.().catch(() => false))
-  )
+  if (receiverStepsAside(env) || !(await deps.costReportingAllowed?.().catch(() => false)))
     return { host: null };
   const setup = await deps.companyReporting?.(env).catch(() => undefined);
   return { host: setup?.host ?? null };

@@ -3876,7 +3876,7 @@
 "settingsUsageRecentTokensLegend" = "入力にはキャッシュされたトークンは含まれません。合計では各カテゴリを一度だけ数えます。";
 "settingsUsageRecentUsdLegend" = "カテゴリ別の推定には記録された価格のみを使います。対象範囲が合計と異なる場合があります。";
 "settingsUsageRecordsOf" = "%2$@件の記録のうち%1$@件";
-"settingsUsageReportsTo" = "Claude Code の設定に従い、Claude の作業は %1$@ にも報告されます。";
+"settingsUsageReportsTo" = "一等航海士のコンピューターでの Claude の作業は、その Claude Code の設定に従い %1$@ にも報告されます。ほかのコンピューターはそれぞれの設定に従います。";
 "settingsUsageScopeAll" = "すべての作業";
 "settingsUsageScopeFirstmate" = "一等航海士";
 "settingsUsageScopeOther" = "その他の作業";

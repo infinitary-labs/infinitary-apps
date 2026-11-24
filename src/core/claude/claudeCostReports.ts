@@ -3,8 +3,19 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { ClaudeCallCost } from "./claudeCallUsage";
 import type { ForwardAnswer, ReportingSignal } from "./claudeReporting";
 
-/** Bound transient local log bodies; an oversized export retains result-only accounting. */
+/**
+ * Bound the log bodies priced here; an oversized export retains result-only
+ * accounting, and with a company setup is still passed on (`CLAUDE_FORWARD_BODY_MAX`).
+ */
 export const CLAUDE_COST_REPORT_BODY_MAX = 1024 * 1024;
+
+/**
+ * Bound a batch passed on to a company's collector: the OpenTelemetry
+ * Collector's own default request limit (20 MiB). A batch over the pricing
+ * bound is still passed on, unpriced, since the client never resends a
+ * refused one and the company's content switches can make batches large.
+ */
+export const CLAUDE_FORWARD_BODY_MAX = 20 * 1024 * 1024;
 
 export type ClaudeCostSubscription = {
   env: NodeJS.ProcessEnv;
@@ -128,12 +139,14 @@ export class ClaudeCostReports {
       req.resume();
       return;
     }
+    const forward = recipient.forward?.signals[signal] ? recipient.forward : undefined;
+    const max = forward ? CLAUDE_FORWARD_BODY_MAX : CLAUDE_COST_REPORT_BODY_MAX;
     const chunks: Buffer[] = [];
     let size = 0;
     try {
       for await (const chunk of req) {
         size += chunk.length;
-        if (size > CLAUDE_COST_REPORT_BODY_MAX) {
+        if (size > max) {
           res.writeHead(413).end();
           return;
         }
@@ -147,7 +160,7 @@ export class ClaudeCostReports {
     const body = Buffer.concat(chunks);
     const contentType = req.headers["content-type"] ?? "application/json";
     let priced = true;
-    if (signal === "logs") {
+    if (signal === "logs" && size <= CLAUDE_COST_REPORT_BODY_MAX) {
       try {
         const logs = contentType.startsWith(PROTOBUF)
           ? decodeLogsProtobuf(body)
@@ -160,7 +173,6 @@ export class ClaudeCostReports {
         priced = false;
       }
     }
-    const forward = recipient.forward?.signals[signal] ? recipient.forward : undefined;
     if (!forward) {
       if (priced) res.writeHead(200, { "content-type": "application/json" }).end("{}");
       else res.writeHead(400).end();

@@ -3876,7 +3876,7 @@
 "settingsUsageRecentTokensLegend" = "Eingabe enthält keine zwischengespeicherten Tokens. Die Summe zählt jede Kategorie einmal.";
 "settingsUsageRecentUsdLegend" = "Schätzungen pro Kategorie verwenden nur erfasste Preise. Ihre Abdeckung kann von der Summe abweichen.";
 "settingsUsageRecordsOf" = "%1$@ von %2$@ Einträgen";
-"settingsUsageReportsTo" = "Claude-Arbeit wird außerdem an %1$@ gemeldet, wie es deine Claude-Code-Einstellungen verlangen.";
+"settingsUsageReportsTo" = "Claude-Arbeit auf dem Computer deines ersten Offiziers wird außerdem an %1$@ gemeldet, wie es dessen Claude-Code-Einstellungen verlangen. Andere Computer folgen ihren eigenen Einstellungen.";
 "settingsUsageScopeAll" = "Alle Arbeit";
 "settingsUsageScopeFirstmate" = "Erster Offizier";
 "settingsUsageScopeOther" = "Andere Arbeit";

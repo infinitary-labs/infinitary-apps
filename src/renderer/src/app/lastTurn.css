@@ -14,7 +14,8 @@
  * takes the pointer, and resting on the strip or focusing its button lays
  * one --bg-3 fill behind the whole strip (INF-6623's plan, the captain's
  * words: "highlight the whole area"); a press between rounds opens the
- * round nearest it. A reply line, and a card round's name, is a
+ * round nearest it. Once the older round has dissolved, the newest round
+ * alone takes the pointer and lights. A reply line, and a card round's name, is a
  * button (docs/composer.md "The conversation"): a Tab stop and the focus
  * ring, and no other chrome, so it still reads as a line of type.
  *
@@ -45,6 +46,14 @@
 /* While the lines are up, the slot takes the pointer so resting on them pauses the fade. */
 [data-last-turn][data-last-turn-fade="shown"],
 [data-last-turn][data-last-turn-fade="fading"] {
+  pointer-events: auto;
+}
+/* Once the older round has dissolved, the slot lets the pointer through its
+   empty room, and the newest round alone takes it across its whole width,
+   so its fill stays on and any press on it opens the conversation (the
+   captain's choice on INF-6624's review: "Light the whole newest row and
+   open on any click there"). */
+[data-last-turn][data-last-turn-fade="hidden"] [data-last-turn-pair] {
   pointer-events: auto;
 }
 /* The round a new message pushes out leaves from where it stood. */

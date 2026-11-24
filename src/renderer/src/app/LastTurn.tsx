@@ -171,6 +171,38 @@ function useCuttingRef(
 
 const REPLY_COMMAND_WORDS = KEYBOARD_COMMANDS["firstmate.reply"].label;
 
+/**
+ * A round's one button on the strip, the reply line or a card round's name,
+ * opens the conversation at its round. On the newest round it names Open
+ * the conversation's key in the app's label on rest, after its words when
+ * they are cut short, else after the command's own words (docs/keyboard.md,
+ * "Key hints"). With no `opens` it is no button, and only cut words show.
+ */
+function useOpensConversation(
+  opens: ConversationEntry | undefined,
+  { older, cut, quiet = false }: { older: boolean; cut: string | undefined; quiet?: boolean },
+) {
+  const openConversation = useShellStore((s) => s.openConversation);
+  const keys = useCommandKeys(opens && !older ? "firstmate.reply" : null);
+  const rest = useRestLabel(
+    quiet ? undefined : (cut ?? (opens && keys.keys ? REPLY_COMMAND_WORDS : undefined)),
+    { keys: keys.keys },
+  );
+  const button = opens
+    ? {
+        type: "button" as const,
+        "aria-keyshortcuts": keys["aria-keyshortcuts"],
+        "data-key-command": keys["data-key-command"],
+        onClick: (event: MouseEvent) => {
+          // The round's own press opens it too: one open per press.
+          event.stopPropagation();
+          openConversation(opens);
+        },
+      }
+    : undefined;
+  return { rest, button };
+}
+
 /** The Firstmate's line, swapping its words with a leave and a rise. */
 function MateLine({
   target,
@@ -219,17 +251,13 @@ function MateLine({
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
   const mateCut = useWholeWords(shown ? mateWords : undefined, LANE);
   const mateRef = useCuttingRef(mateFit.ref, mateCut);
-  const openConversation = useShellStore((s) => s.openConversation);
   // A reply is a button that opens it whole; the working words are not.
   const Bubble = reply ? "button" : "span";
-  // The newest reply's button names the key of Open the conversation
-  // in the app's label on rest, after its words when they are cut short, else
-  // after the command's own words (docs/keyboard.md, "Key hints").
-  const replyKeys = useCommandKeys(reply && !older ? "firstmate.reply" : null);
-  const replyRest = useRestLabel(
-    reply ? (mateFit.title ?? (replyKeys.keys ? REPLY_COMMAND_WORDS : undefined)) : undefined,
-    { keys: replyKeys.keys },
-  );
+  const replyButton = useOpensConversation(reply ? opens : undefined, {
+    older,
+    cut: mateFit.title,
+    quiet: !reply,
+  });
   return (
     <>
       <div className="row mate">
@@ -238,18 +266,8 @@ function MateLine({
             <MateMark working={busy} />
             <span className="line">
               <Bubble
-                {...(reply
-                  ? {
-                      ...replyRest,
-                      type: "button" as const,
-                      "aria-keyshortcuts": replyKeys["aria-keyshortcuts"],
-                      "data-key-command": replyKeys["data-key-command"],
-                      onClick: (event: MouseEvent) => {
-                        // The round's own press opens it too: one open per press.
-                        event.stopPropagation();
-                        openConversation(opens);
-                      },
-                    }
+                {...(replyButton.button
+                  ? { ...replyButton.rest, ...replyButton.button }
                   : { title: mateFit.title })}
                 data-last-turn-bubble="firstmate"
                 data-state={
@@ -308,12 +326,11 @@ function CardName({
   const fit = useOverflowTitle(leaving ? undefined : card.title);
   const cut = useWholeWords(card.title, LANE);
   const ref = useCuttingRef(fit.ref, cut);
-  const openConversation = useShellStore((s) => s.openConversation);
-  const keys = useCommandKeys(opens && !older ? "firstmate.reply" : null);
-  const rest = useRestLabel(
-    leaving ? undefined : (fit.title ?? (opens && keys.keys ? REPLY_COMMAND_WORDS : undefined)),
-    { keys: keys.keys },
-  );
+  const { rest, button } = useOpensConversation(opens, {
+    older,
+    cut: fit.title,
+    quiet: leaving,
+  });
   const glyph = (
     <svg className="glyph" viewBox="0 0 12 12" fill="none" aria-hidden="true">
       <rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" />
@@ -325,7 +342,7 @@ function CardName({
       {card.title}
     </span>
   );
-  if (!opens)
+  if (!button)
     return (
       <span {...rest} className="card-name" data-last-turn-card={card.id}>
         {glyph}
@@ -333,19 +350,7 @@ function CardName({
       </span>
     );
   return (
-    <button
-      {...rest}
-      type="button"
-      className="card-name"
-      data-last-turn-card={card.id}
-      aria-keyshortcuts={keys["aria-keyshortcuts"]}
-      data-key-command={keys["data-key-command"]}
-      onClick={(event) => {
-        // The round's own press opens it too: one open per press.
-        event.stopPropagation();
-        openConversation(opens);
-      }}
-    >
+    <button {...rest} {...button} className="card-name" data-last-turn-card={card.id}>
       {glyph}
       {words}
     </button>

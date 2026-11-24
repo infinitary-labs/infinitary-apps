@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { READING_MS } from "../../src/renderer/src/app/lastTurnFade";
 import { CONVERSATION_HEADING, PICTURE_ONLY_WORDS } from "../../src/renderer/src/app/lastTurnWords";
 import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import * as m from "../../src/shared/i18n/messages.generated";
@@ -630,6 +631,53 @@ test("a press of a card's button shows on the strip with the card's name, and ev
     await yourBubble(page).click();
     await landedOnChoice();
   });
+});
+
+// Intent: the captain's choice on INF-6624's review, "Light the whole newest
+// row and open on any click there": once the older round has dissolved, the
+// newest round alone lights as one area wherever the pointer rests on it, and
+// a press on its blank part opens the conversation there. Fixture: the
+// conversation scenario's note answered with Got it, on the page's virtual
+// clock past the reading time and the dissolve. Failure: no fill over the
+// row's blank part, or a press there opening nothing.
+test("once the older round has dissolved, the whole newest row lights and a press anywhere on it opens the conversation", async () => {
+  launched = await launchApp({ withMockProvider: true, scenarios: [conversationRounds] });
+  const { page } = launched;
+  await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+  await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
+  await askFirstmate(page, BACKLOG_ASK);
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 100));
+  await noteDone(page).click();
+  await expect(shownCard(page, BACKLOG_CARD_TITLE)).toHaveCount(0);
+  const row = cardRound(page);
+  await expect(row).toHaveAttribute("data-card-round", "choice");
+  await page.mouse.move(0, 0);
+  await page.clock.runFor(READING_MS);
+  const strip = page.locator("[data-last-turn]");
+  await expect(strip).toHaveAttribute("data-last-turn-fade", "fading");
+  const dissolve = await page.evaluate(() =>
+    Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dur-slow")),
+  );
+  await page.clock.runFor(dissolve);
+  await expect(strip).toHaveAttribute("data-last-turn-fade", "hidden");
+  await expect(olderRound(page)).toHaveCount(0);
+  await page.clock.resume();
+
+  const fill = () => row.evaluate((round) => getComputedStyle(round, "::before").opacity);
+  const box = await row.boundingBox();
+  if (!box) throw new Error("The card round is not on screen");
+  // The row's blank part, left of the card's name, on the row's middle.
+  const blank = { x: box.x + 20, y: box.y + box.height / 2 };
+  await page.mouse.move(blank.x, blank.y);
+  await expect.poll(fill).toBe("1");
+  await page.mouse.move(0, 0);
+  await expect.poll(fill).toBe("0");
+  await page.mouse.click(blank.x, blank.y);
+  await expect(conversation(page)).toBeVisible();
+  const landed = conversation(page).locator("[data-conversation-round][data-landed]");
+  await expect(landed).toHaveAttribute("data-kind", "choice");
 });
 
 // Intent: INF-2218's accepted plan keeps saved words and picture-only and

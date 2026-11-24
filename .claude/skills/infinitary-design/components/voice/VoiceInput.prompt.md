@@ -47,7 +47,7 @@ A round is the captain's words and the reply under them; the newest round sits n
 The captain's words sit on the right in a soft grey bubble: `--fg-1` mixed at 8%, corners 11, 11, 4 and 11 px, padding 2 px by 10 px, `--text-sm` in `--fg-1` on a 22 px row, at most 75% of the width.
 2 px below, the reply sits on the left as plain `--text-sm` in `--fg-1` on a 20 px row, at most 80% of the width, after the first mate's mark: the app's 14 px hexagon in `--accent`, 8 px before the words.
 On desktop, newest ordinary words rest at 75% `--fg-2` mixed with 25% `--fg-3`, with a 4% `--fg-1` bubble over transparent (INF-1968’s C, the captain’s Approve and build).
-Hovering a round or focusing its button lights only that round's words, never its sibling's; resting anywhere on the strip lays one `--bg-3` fill with `--radius-m` corners behind the whole strip, 6 px past it on every side (the newest round alone once the older has dissolved); composer focus alone brightens neither.
+Hovering a round or focusing its button lights only that round's words, never its sibling's; resting anywhere on the strip lays one `--bg-3` fill with `--radius-m` corners behind the whole strip, 6 px past it on every side (once the older has dissolved, the newest round alone, which then takes presses across its whole width); composer focus alone brightens neither.
 The newest round immediately restores ordinary words to `--fg-1` and the bubble to 8%, with no animation or timer; leaving and blurring restores rest.
 The older round keeps its colors and lifts from 50% to full opacity while hovered or focused, returning to 50% afterwards.
 The captain’s written-in choice keeps the mark cyan (`--accent`) at rest and while reading; the working mark, Working… and problem colors stay unchanged.

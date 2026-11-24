@@ -777,8 +777,11 @@ struct PhoneCardPane: View {
         guard !showsBack, let readCount else { return 0 }
         return messages.dropFirst(readCount).filter { $0["who"].text != "captain" }.count
     }
-    /// INF-6136: the choices stay at the card's foot while the body keeps at least the room the top bar and they take;
-    /// otherwise they come after the body, as a short stage, such as an iPhone on its side with a long draft, needs.
+    /// The captain's share (INF-6269): the choices stay at the card's foot only while the top bar and they take at most a
+    /// quarter of the room the stage offers, so the body keeps three quarters; otherwise they come after the body. Half,
+    /// INF-6136's share, pinned most long cards on an upright iPhone once the head shrank to its one-line bar. One share
+    /// covers every device and orientation because it reads the stage's own room, never which device this is.
+    static let pinShare: CGFloat = 0.25
     @State var pinsFrame = true
     /// The stage, bar and foot heights at which the frame changed its shape.
     @State var shapedAt: Set<[CGFloat]> = []
@@ -790,7 +793,7 @@ struct PhoneCardPane: View {
     /// so the keyboard its focus raises, which shortens the stage, never reshapes the frame; the shape settles once it closes.
     func shapeFrame() {
         guard paneHeight > 0, replyFocus == nil, secretFocus == nil, pick == nil else { return }
-        let pins = paneHeight - barHeight - footHeight >= barHeight + footHeight
+        let pins = barHeight + footHeight <= paneHeight * Self.pinShare
         let measured = [paneHeight, barHeight, footHeight].map { $0.rounded() }
         guard pins != pinsFrame, !shapedAt.contains(measured) else { return }
         shapedAt.insert(measured)

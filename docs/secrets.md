@@ -505,13 +505,13 @@ An enrollment the computer holds under the earlier name stays until the captain 
 Each Allow evaluates a fresh `LAContext` with no reuse, naming exactly what it gives, before the key signs; a failed confirmation sends nothing.
 A use's approval card on the phone shows every choice the computer's card carries, in its footer order, and reads which answer each gives from the start of its pass (`allow-once:<id>`, `SECRET_USE_ANSWERS`).
 Allow once confirms and signs on an enrolled phone holding the use's challenge; on a phone that is not enrolled it stays drawn, sends nothing, and its press says to turn on Approves secret uses or allow on the computer, as the note above the choices does.
-A saved decision or a short read allowance is made only on the computer: Always allow this and Allow for 10 minutes stay on the phone as a small link after the card's note, so the choices made here keep one row and stay pinned; they send nothing, and their press says to do it on the computer, as the phone's other computer-only choices do.
+A saved decision or a short read allowance is made only on the computer: Always allow this and Allow for 10 minutes stay on the phone as a small link after the card's note, so the choices made here keep one row; they send nothing, and their press says to do it on the computer, as the phone's other computer-only choices do.
 Don't allow refuses from any phone.
 Only an executing or completed Allow, or a denied Don't allow, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
 A later successful key read clears an earlier locked-store problem without replacing the key.
 The computer's card title names one or two secrets as "the X secret" or "the X and Y secrets" and the task that asked.
 The phone names each secret by the `name` the computer sends with it, the one its card uses, so the title, the foot and the confirmation agree; from an older computer it names a secret from its label and environment.
-When the title holds that exact phrase, the foot above the choices names no secret again, so the choices stay pinned in the card's frame on an iPhone beside a title that runs to three lines.
+When the title holds that exact phrase, the foot above the choices names no secret again, rather than saying them twice beside a title that runs to three lines on an iPhone.
 Otherwise, with three or more secrets or an older computer's title, the foot names each requested secret, one line each: its name, then its environment label, and its reference only when another secret of the use shares its name and environment.
 The system's confirmation names the same secrets and the task (`task`), or the recipient when no task is named.
 The shared approval body names each secret the same way, describes confirmation without assigning it to a particular device, and labels temporary read access as available only on the computer.
@@ -527,7 +527,7 @@ An Allow once pressed in that Mac's window never reaches the home as a press: th
 A Mac never set up, or one whose key the home does not hold, refuses with where to set it up; a lasting allowance is refused with words that send the captain to the home, and Don't allow goes to the home as pressed.
 The home leaves any Allow pass a paired view presses unspent (`askingView`), so its own confirmation never rises for a press made elsewhere.
 The phone check's `testSecretsApprovals` enrolls the simulator, allows one brokered read with its Face ID and denies another, against the real controller with disposable custody.
-Before it allows, it reads the shared body's prepared environment and computer-only temporary scope, scrolling to that scope while the choices stay pinned.
+Before it allows, it reads the shared body's prepared environment and computer-only temporary scope, scrolling to that scope and then to the choices.
 
 ## History
 
